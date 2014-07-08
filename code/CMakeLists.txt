@@ -1,11 +1,11 @@
-#* Configuration in Qt Creator:
+#* Configuration in Qt Creator (for Debug build):
 #    * Build direcroy:
 #        /home/marek/root/E2/code/build/Debug
-#    * CMake arguments:
+#    * CMake arguments :
 #        -DCMAKE_BUILD_TYPE=Debug
-#        -DBOOST_INCLUDE_DIR=/home/marek/Software/boost_1_55_0/dist/include
-#        -DBOOST_LIBRARY_DIR=/home/marek/Software/boost_1_55_0/dist/lib
-#* For Release configuration change word Debug to Release in the data above.
+#        -DBOOST_ROOT="/home/marek/Software/boost_1_55_0/dist"
+#    * Build step (make) :
+#        - make install
 
 project(E2)
 
@@ -29,7 +29,7 @@ endif()
 set(CMAKE_INSTALL_RPATH "./")
 
 # find and add Boost
-set(BOOST_ROOT "/home/marek/Software/boost_1_55_0/dist")
+#set(BOOST_ROOT "/home/marek/Software/boost_1_55_0/dist")
 find_package(Boost REQUIRED)
 find_package(Boost COMPONENTS
                 thread
@@ -55,5 +55,5 @@ add_subdirectory(./utility)
 add_subdirectory(./cellab)
 
 # here follow all shared libraries which provide python access to
-#   the corresponding E2 libraries
+# the corresponding E2 libraries
 add_subdirectory(./pycellab)
