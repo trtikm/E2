@@ -31,9 +31,9 @@ bits_reference::bits_reference(
     , m_seek_in_the_first_byte(seek_in_the_first_byte)
     , m_num_bits(num_bits)
 {
-    ASSUMPTION(m_first_byte_ptr != 0);
-    ASSUMPTION(m_seek_in_the_first_byte < 8);
-    ASSUMPTION(m_num_bits > 0);
+    ASSUMPTION(m_first_byte_ptr != nullptr);
+    ASSUMPTION(m_seek_in_the_first_byte < 8U);
+    ASSUMPTION(m_num_bits > 0U);
 }
 
 unsigned char* bits_reference::first_byte_ptr()

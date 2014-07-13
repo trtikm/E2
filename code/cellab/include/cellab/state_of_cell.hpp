@@ -13,6 +13,8 @@ struct static_state_of_cell : boost::noncopyable
     unsigned int min_membrane_potential_to_emit_spike(CELL_KIND const cell_kind) const;
     unsigned int decay_coeficient_of_membrane_potential(CELL_KIND const cell_kind) const;
 
+    unsigned char radius_of_spatial_neighbourhood_of_cell(unsigned char const cell_kind) const;
+
 private:
     static_state_of_cell();
 
