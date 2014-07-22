@@ -1,9 +1,7 @@
 add_library(pycellab SHARED
     ./pycellab.cpp
-    ./accessors.cpp
-    ./data_classes.cpp
-    ./accessors.hpp
-    ./data_classes.hpp
+    ./pycellabutils.py
+    ./pycellabtest.py
     )
 set_target_properties(pycellab PROPERTIES PREFIX "")
 target_link_libraries(pycellab
@@ -13,4 +11,10 @@ target_link_libraries(pycellab
     ${PYTHON_LIBRARIES}
     )
 install(TARGETS pycellab DESTINATION "./")
-install(FILES ./pycellab.py DESTINATION "./")
+install(
+    FILES
+    ./pycellabutils.py
+    ./pycellabtest.py
+    DESTINATION
+    "./"
+    )

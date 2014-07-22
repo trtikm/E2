@@ -30,16 +30,21 @@ set(CMAKE_INSTALL_RPATH "./")
 
 # find and add Boost
 #set(BOOST_ROOT "/home/marek/Software/boost_1_55_0/dist")
+set(Boost_USE_MULTITHREADED ON)
 find_package(Boost REQUIRED)
 find_package(Boost COMPONENTS
+                system
                 thread
                 chrono
                 filesystem
+                log
+                log_setup
                 python
              REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}" "${Boost_LIBRARY_DIRS}")
+add_definitions("-DBOOST_LOG_DYN_LINK -DBOOST_LOG_SETUP")
 
 # find and add Python
 find_package(PythonLibs REQUIRED)

@@ -1,21 +1,24 @@
 add_library(cellab
-    ./src/neural_tissue.cpp
-    ./src/bits_reference.cpp
-    ./src/cell_kinds.cpp
-    ./include/cellab/neural_tissue.hpp
-    ./include/cellab/bits_reference.hpp
-    ./include/cellab/cell_kinds.hpp
+    ./include/cellab/static_state_of_cell.hpp
+    ./src/static_state_of_cell.cpp
+
+    ./include/cellab/dynamic_state_of_cell.hpp
+    ./src/dynamic_state_of_cell.cpp
+
+    ./include/cellab/static_state_of_synapse.hpp
+    ./src/static_state_of_synapse.cpp
+
+    ./include/cellab/dynamic_state_of_synapse.hpp
+    ./src/dynamic_state_of_synapse.cpp
 
     ./include/cellab/static_state_of_neural_tissue.hpp
-    ./include/cellab/dynamic_state_of_neural_tissue.hpp
-    ./include/cellab/static_state_of_cell.hpp
-    ./include/cellab/dynamic_state_of_cell.hpp
-    ./include/cellab/static_state_of_synapse.hpp
-    ./include/cellab/dynamic_state_of_synapse.hpp
+    ./src/static_state_of_neural_tissue.cpp
 
-    ./src/state_of_cell.cpp
-    ./include/cellab/state_of_cell.hpp
+    ./include/cellab/dynamic_state_of_neural_tissue.hpp
+    ./src/dynamic_state_of_neural_tissue.cpp
+
+    ./include/cellab/bits_reference.hpp
+    ./src/bits_reference.cpp
     )
 
 #install(TARGETS brod_utils DESTINATION lib/utils)
-

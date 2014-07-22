@@ -1,6 +1,9 @@
 #ifndef CELLAB_STATIC_STATE_OF_CELL_HPP_INCLUDED
 #   define CELLAB_STATIC_STATE_OF_CELL_HPP_INCLUDED
 
+namespace cellab {
+
+
 struct static_state_of_cell
 {
     static_state_of_cell(
@@ -16,5 +19,8 @@ struct static_state_of_cell
 private:
     unsigned short m_max_number_of_synapses_in_territory_of_cell;
 };
+
+
+}
 
 #endif

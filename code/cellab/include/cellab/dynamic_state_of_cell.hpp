@@ -1,6 +1,9 @@
 #ifndef CELLAB_DYNAMIC_STATE_OF_CELL_HPP_INCLUDED
 #   define CELLAB_DYNAMIC_STATE_OF_CELL_HPP_INCLUDED
 
+namespace cellab {
+
+
 struct bits_reference;
 
 struct dynamic_state_of_cell
@@ -29,5 +32,8 @@ private:
 };
 
 bits_reference& operator>>(dynamic_state_of_cell const& dynamic_data_of_cell, bits_reference& bits);
+
+
+}
 
 #endif

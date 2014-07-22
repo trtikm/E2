@@ -9,6 +9,9 @@
 #   include <tuple>
 #   include <memory>
 
+namespace cellab {
+
+
 struct reference_to_list_of_indices_of_synampses
 {
     reference_to_list_of_indices_of_synampses(
@@ -85,5 +88,8 @@ private:
     boost::scoped_array<std::array<std::pair<unsigned short,unsigned short>,7> >
         m_heads_and_tails_of_seven_lists_of_indices_of_synapses_in_territories_of_all_cells_organised_in_3D_array;
 };
+
+
+}
 
 #endif

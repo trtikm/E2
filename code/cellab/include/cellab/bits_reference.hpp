@@ -1,6 +1,9 @@
 #ifndef CELLAB_BITS_REFERENCE_HPP_INCLUDED
 #   define CELLAB_BITS_REFERENCE_HPP_INCLUDED
 
+namespace cellab {
+
+
 struct bits_reference
 {
     bits_reference(
@@ -37,5 +40,8 @@ void value_to_bits(
     bits_reference& target_bits,
     unsigned char index_of_the_first_target_bit
     );
+
+
+}
 
 #endif

@@ -5,6 +5,9 @@
 
 #include <utility/development.hpp>
 
+namespace cellab {
+
+
 static bool read_bit(unsigned char const* first_byte_ptr, unsigned long bit_index)
 {
     unsigned long const byte_index = bit_index >> 3U;
@@ -115,4 +118,7 @@ void value_to_bits(
     )
 {
     NOT_IMPLEMENTED_YET();
+}
+
+
 }

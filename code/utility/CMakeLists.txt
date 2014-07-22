@@ -3,6 +3,8 @@ add_library(utility
     ./src/endian.cpp
     ./src/fail_message.cpp
     ./src/timeprof.cpp
+    ./src/log.cpp
+    ./include/utility/log.hpp
     ./include/utility/assumptions.hpp
     ./include/utility/development.hpp
     ./include/utility/invariants.hpp
