@@ -57,12 +57,12 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
     ASSUMPTION(m_num_kinds_of_cells == m_static_state_of_cell_per_kind_of_cell.size());
     ASSUMPTION(m_num_kinds_of_cells * m_num_kinds_of_cells == m_static_state_of_synapse_per_pair_of_kinds_of_cells.size());
 
-    LOG(DEBUG,FUNCTION_PROTOTYPE());
+    LOG(debug,FUNCTION_PROTOTYPE());
 }
 
 static_state_of_neural_tissue::~static_state_of_neural_tissue()
 {
-    LOG(DEBUG,FUNCTION_PROTOTYPE());
+    LOG(debug,FUNCTION_PROTOTYPE());
 }
 
 unsigned char static_state_of_neural_tissue::num_kinds_of_cells() const

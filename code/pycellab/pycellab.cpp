@@ -6,6 +6,8 @@
 #include <vector>
 #include <memory>
 
+LOG_INITIALISE("pycellab.log")
+
 using namespace boost::python;
 
 static void push_back_ushort(std::vector<unsigned short>& VEC, unsigned short const value)
@@ -98,8 +100,6 @@ private:
 
 BOOST_PYTHON_MODULE(pycellab)
 {
-    def("LOG_SETUP",&::LOG_SETUP);
-
     class_<std::vector<unsigned short> >("vector_of_ushorts");
     def("push_back_ushort",&push_back_ushort);
 

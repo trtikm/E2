@@ -1,8 +1,5 @@
 import pycellab
 
-def LOG_SETUP(log_file_name = "pycellab.log"):
-    pycellab.LOG_SETUP(log_file_name)
-
 def create_static_state_of_neural_tissue(
         num_kinds_of_cells,
         num_bits_per_cell,
@@ -23,7 +20,6 @@ def create_static_state_of_neural_tissue(
             ):
         pycellab.push_back_static_state_of_synapse(vector
             )
-    LOG_SETUP()
     numbers_of_cells_in_column = pycellab.vector_of_ushorts()
     for num in array_where_indices_are_kinds_of_cells_and_values_are_numbers_of_cells_in_column:
         pycellab.push_back_ushort(numbers_of_cells_in_column,num)

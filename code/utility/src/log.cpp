@@ -3,21 +3,16 @@
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/attributes/clock.hpp>
 #include <boost/log/attributes/current_thread_id.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <vector>
+#include <iostream>
 
-std::string logging_severity_level_name(logging_severity_level const level)
-{
-    static std::vector<std::string> level_names{ "DEBUG", "INFO", "WARNING", "ERROR" };
-    ASSUMPTION(static_cast<unsigned int>(level) < level_names.size());
-    return level_names.at(static_cast<unsigned int>(level));
-}
-
-bool LOG_SETUP(std::string const& log_file_name)
+static bool LOG_SETUP(std::string const& log_file_name)
 {
     static bool first_call = true;
     if (!first_call)
     {
-        //LOG(INFO,"LOG_SETUP was already called ==> ignoring this call.");
+        LOG(info,"LOG_SETUP was already called ==> ignoring this call.");
         return false;
     }
     first_call = false;
@@ -28,17 +23,32 @@ bool LOG_SETUP(std::string const& log_file_name)
     namespace expr = boost::log::expressions;
     boost::log::add_file_log(
         boost::log::keywords::file_name = log_file_name,
+        boost::log::keywords::auto_flush = true,
+        boost::log::keywords::open_mode = (std::ios::out | std::ios::app),
         boost::log::keywords::format = "[%TimeStamp%][%ThreadID%][%File%][%Line%][%Level%]: %Message%"
     );
 
-//    boost::log::core::get()->set_filter(
-//        boost::log::severity >= DEBUG
-//        );
-
-//    LOG(DEBUG,"debug hlaska");
-//    LOG(INFO,"info hlaska");
-//    LOG(WARNING,"warning hlaska");
-//    LOG(ERROR,"error hlaska");
-
     return true;
+}
+
+std::string const& logging_severity_level_name(logging_severity_level const level)
+{
+    static std::vector<std::string> level_names{ "debug", "info", "warning", "error" };
+    ASSUMPTION(static_cast<unsigned int>(level) < level_names.size());
+    return level_names.at(static_cast<unsigned int>(level));
+}
+
+logging_setup_caller::logging_setup_caller(std::string const& log_file_name)
+    : m_log_file_name(log_file_name)
+{
+    boost::filesystem::ofstream f(m_log_file_name);
+    f << "HELLO!\n\n";
+    LOG_SETUP(m_log_file_name);
+}
+
+logging_setup_caller::~logging_setup_caller()
+{
+    boost::log::core::get()->remove_all_sinks();
+    boost::filesystem::ofstream f(m_log_file_name,std::ios::out | std::ios::app);
+    f << "\n\nBYE!\n";
 }
