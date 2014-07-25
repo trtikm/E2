@@ -14,12 +14,14 @@
             namespace attrs = boost::log::attributes;\
             lg.add_attribute("File",attrs::constant<std::string>(__FILE__));\
             lg.add_attribute("Line",attrs::constant<unsigned int>(__LINE__));\
-            lg.add_attribute("Level",attrs::constant<std::string>(logging_severity_level_name(LVL)));\
+            lg.add_attribute("Level",attrs::constant<std::string>(::logging_severity_level_name(LVL)));\
             BOOST_LOG(lg) << MSG;\
         }
-#   define LOG_INITIALISE(log_file_name)\
+#   define LOG_INITIALISE(log_file_path_name,add_creation_timestamp_to_filename,add_default_file_extension)\
         namespace E2 { namespace utility { namespace detail { namespace { namespace {\
-            ::logging_setup_caller __logger_setup_caller_instance(log_file_name);\
+            ::logging_setup_caller __logger_setup_caller_instance(log_file_path_name,\
+                                                                  add_creation_timestamp_to_filename,\
+                                                                  add_default_file_extension);\
         }}}}}
 
 
@@ -34,7 +36,9 @@ std::string const& logging_severity_level_name(logging_severity_level const leve
 
 struct logging_setup_caller
 {
-    logging_setup_caller(std::string const& log_file_name);
+    logging_setup_caller(std::string const& log_file_name = "./log.html",
+                         bool const add_creation_timestamp_to_filename = true,
+                         bool const add_default_file_extension = true);
     ~logging_setup_caller();
 private:
     std::string m_log_file_name;

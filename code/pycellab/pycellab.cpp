@@ -6,7 +6,7 @@
 #include <vector>
 #include <memory>
 
-LOG_INITIALISE("pycellab.log")
+LOG_INITIALISE("log-pycellab",true,true)
 
 using namespace boost::python;
 
