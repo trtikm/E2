@@ -64,9 +64,13 @@ link_directories(${PYTHON_LIBRARIES})
 include_directories(
     "${PROJECT_SOURCE_DIR}/utility/include"
     "${PROJECT_SOURCE_DIR}/cellab/include"
+    "${PROJECT_SOURCE_DIR}/efloop/include"
+    "${PROJECT_SOURCE_DIR}/envlab/include"
     )
 add_subdirectory(./utility)
 add_subdirectory(./cellab)
+add_subdirectory(./efloop)
+add_subdirectory(./envlab)
 
 # here follow all shared libraries which provide python access to
 # the corresponding E2 libraries

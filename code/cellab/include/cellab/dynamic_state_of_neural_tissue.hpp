@@ -71,6 +71,8 @@ struct dynamic_state_of_neural_tissue : private boost::noncopyable
             std::shared_ptr<static_state_of_neural_tissue const> const pointer_to_static_state_of_neural_tissue
             );
 
+    std::shared_ptr<static_state_of_neural_tissue const> get_static_state_of_neural_tissue() const;
+
     bits_reference find_bits_of_cell(
             unsigned int const seek_along_x_axis,
             unsigned int const seek_along_y_axis,
