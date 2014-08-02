@@ -48,14 +48,14 @@ def create_static_state_of_neural_tissue(
             array_where_indices_are_kinds_of_tissue_cells_and_values_are_static_states_of_tissue_cells
         has to be a dinctionary of the form:
             {
-                "max_number_of_synapses_in_territory_of_cell" : <a positive integer>,
+                "num_synapses_in_territory_of_cell" : <a positive integer>,
             }
 
         Any element of the list in:
             array_where_indices_are_kinds_of_sensory_cells_and_values_are_static_states_of_sensory_cells
         has to be a dinctionary of the form:
             {
-                "max_number_of_synapses_in_territory_of_cell" : 0,
+                "num_synapses_in_territory_of_cell" : 0,
             }
 
         Any element of the list in:
@@ -76,8 +76,8 @@ def create_static_state_of_neural_tissue(
             {}
     '''
 
-    def push_back_static_state_of_cell(vector,max_number_of_synapses_in_territory_of_cell):
-        pycellab.push_back_static_state_of_cell(vector,max_number_of_synapses_in_territory_of_cell)
+    def push_back_static_state_of_cell(vector,num_synapses_in_territory_of_cell):
+        pycellab.push_back_static_state_of_cell(vector,num_synapses_in_territory_of_cell)
 
     def push_back_static_state_of_synapse(vector):
         pycellab.push_back_static_state_of_synapse(vector)

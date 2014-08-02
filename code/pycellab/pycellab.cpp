@@ -16,11 +16,11 @@ static void push_back_ushort(std::vector<unsigned short>& VEC, unsigned short co
 }
 
 static void push_back_static_state_of_cell(std::vector<cellab::static_state_of_cell>& VEC,
-        unsigned short max_number_of_synapses_in_territory_of_cell)
+        unsigned short num_synapses_in_territory_of_cell)
 {
     VEC.push_back(
         cellab::static_state_of_cell(
-            max_number_of_synapses_in_territory_of_cell
+            num_synapses_in_territory_of_cell
             )
         );
 }
@@ -144,8 +144,8 @@ BOOST_PYTHON_MODULE(pycellab)
 
     class_<cellab::static_state_of_cell>("static_state_of_cell"
         ,init<unsigned int>())
-        .def("max_number_of_synapses_in_territory_of_cell",
-             &cellab::static_state_of_cell::max_number_of_synapses_in_territory_of_cell)
+        .def("num_synapses_in_territory_of_cell",
+             &cellab::static_state_of_cell::num_synapses_in_territory_of_cell)
         ;
 
     class_<cellab::static_state_of_synapse>("static_state_of_synapse")

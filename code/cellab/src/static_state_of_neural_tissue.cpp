@@ -77,6 +77,9 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
     ASSUMPTION(m_num_kinds_of_tissue_cells ==
                m_static_state_of_synapse_to_muscle_for_each_kind_of_tissue_cell.size());
     ASSUMPTION(m_num_sensory_cells >= m_num_kinds_of_sensory_cells);
+    ASSUMPTION(sizeof(unsigned char) == 1);
+    ASSUMPTION(sizeof(unsigned short) == 2);
+    ASSUMPTION(sizeof(unsigned int) == 4);
 
     LOG(debug,FUNCTION_PROTOTYPE());
 }
@@ -131,7 +134,7 @@ unsigned short static_state_of_neural_tissue::num_tissue_cells_in_column(
 unsigned char static_state_of_neural_tissue::compute_kind_of_tissue_cell_from_its_position_along_columnar_axis(
                     unsigned int position_of_tissue_cell_in_column) const
 {
-    ASSUMPTION(position_of_tissue_cell_in_column < num_kinds_of_cells_in_neural_tissue());
+    ASSUMPTION(position_of_tissue_cell_in_column < num_tissue_cells_along_columnar_axis());
     unsigned char kind = 0;
     while (position_of_tissue_cell_in_column >= num_tissue_cells_in_column(kind))
     {

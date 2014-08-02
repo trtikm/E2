@@ -16,18 +16,18 @@ def scriptMain():
                 ],
             "array_where_indices_are_kinds_of_tissue_cells_and_values_are_static_states_of_tissue_cells" : [
                     {
-                        "max_number_of_synapses_in_territory_of_cell" : 11
+                        "num_synapses_in_territory_of_cell" : 11
                     },
                     {
-                        "max_number_of_synapses_in_territory_of_cell" : 22
+                        "num_synapses_in_territory_of_cell" : 22
                     },
                     {
-                        "max_number_of_synapses_in_territory_of_cell" : 12
+                        "num_synapses_in_territory_of_cell" : 12
                     },
                 ],
             "array_where_indices_are_kinds_of_sensory_cells_and_values_are_static_states_of_sensory_cells" : [
                     {
-                        "max_number_of_synapses_in_territory_of_cell" : 0
+                        "num_synapses_in_territory_of_cell" : 0
                     },
                 ],
             "row_major_matrix_where_indices_are_pairs_of_kinds_of_tissue_cells_and_values_are_static_states_of_synapses" : [
@@ -103,18 +103,18 @@ def scriptMain():
         index = 0
         for D in construction_data["array_where_indices_are_kinds_of_tissue_cells_and_values_are_static_states_of_tissue_cells"]:
             assert(index < static_state_of_neural_tissue.num_kinds_of_cells_in_neural_tissue())
-            if not (D["max_number_of_synapses_in_territory_of_cell"] ==
+            if not (D["num_synapses_in_territory_of_cell"] ==
                     static_state_of_neural_tissue.get_static_state_of_tissue_cell(index)
-                                                 .max_number_of_synapses_in_territory_of_cell()):
+                                                 .num_synapses_in_territory_of_cell()):
                 return False
             index = index + 1
 
         index = 0
         for D in construction_data["array_where_indices_are_kinds_of_sensory_cells_and_values_are_static_states_of_sensory_cells"]:
             assert(index < static_state_of_neural_tissue.num_kinds_of_sensory_cells())
-            if not (D["max_number_of_synapses_in_territory_of_cell"] ==
+            if not (D["num_synapses_in_territory_of_cell"] ==
                     static_state_of_neural_tissue.get_static_state_of_sensory_cell(index)
-                                                 .max_number_of_synapses_in_territory_of_cell()):
+                                                 .num_synapses_in_territory_of_cell()):
                 return False
             index = index + 1
 
