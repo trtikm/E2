@@ -16,9 +16,6 @@ add_library(cellab
 
     ./include/cellab/dynamic_state_of_neural_tissue.hpp
     ./src/dynamic_state_of_neural_tissue.cpp
-
-    ./include/cellab/bits_reference.hpp
-    ./src/bits_reference.cpp
     )
 
 #install(TARGETS brod_utils DESTINATION lib/utils)

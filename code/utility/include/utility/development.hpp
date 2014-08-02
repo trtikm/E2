@@ -2,16 +2,19 @@
 #   define UTILITY_DEVELOPMENT_HPP_INCLUDED
 
 #   include <utility/fail_message.hpp>
+#   include <utility/log.hpp>
 #   include <stdexcept>
 #   include <string>
 #   include <iostream>
 
-#   define NOT_IMPLEMENTED_YET() { throw under_construction(FAIL_MSG("NOT IMPLEMENTED YET !")); }
-#   define NOT_SUPPORTED() { throw under_construction(FAIL_MSG("NOT SUPPORTED !")); }
-#   define TODO(MSG) { std::clog << "TODO: " << FAIL_MSG(MSG) << std::endl; }
+#   define NOT_IMPLEMENTED_YET() { LOG(error,"NOT IMPLEMENTED YET !");\
+                                   throw under_construction(FAIL_MSG("NOT IMPLEMENTED YET !")); }
+#   define NOT_SUPPORTED() { LOG(error,"NOT SUPPORTED !");\
+                             throw under_construction(FAIL_MSG("NOT SUPPORTED !")); }
+#   define TODO(MSG) { LOG(info,"TODO: " << MSG); }
 
 struct under_construction : public std::logic_error {
-    under_construction(std::string const& msg) : std::logic_error(msg) {}
+    explicit under_construction(std::string const& msg) : std::logic_error(msg) {}
 };
 
 #endif

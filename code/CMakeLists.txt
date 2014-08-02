@@ -25,7 +25,7 @@ elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
 endif()
 
 if(CMAKE_COMPILER_IS_GNUCXX)
-    add_definitions("-std=c++11 -Wall -fPIC")
+    add_definitions("-std=c++11 -Wall -Wno-unused-local-typedefs -fPIC")
     if ((CMAKE_BUILD_TYPE STREQUAL Debug) OR
         (CMAKE_BUILD_TYPE STREQUAL RelWithDebInfo))
         add_definitions("-ggdb3")

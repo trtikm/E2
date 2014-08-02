@@ -4,6 +4,8 @@ add_library(utility
     ./src/fail_message.cpp
     ./src/timeprof.cpp
     ./src/log.cpp
+    ./src/bits_reference.cpp
+    ./include/utility/bits_reference.hpp
     ./include/utility/log.hpp
     ./include/utility/assumptions.hpp
     ./include/utility/development.hpp

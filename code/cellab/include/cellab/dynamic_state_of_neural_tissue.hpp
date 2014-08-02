@@ -2,7 +2,7 @@
 #   define CELLAB_DYNAMIC_STATE_OF_NEURAL_TISSUE_HPP_INCLUDED
 
 #   include <cellab/static_state_of_neural_tissue.hpp>
-#   include <cellab/bits_reference.hpp>
+#   include <utility/bits_reference.hpp>
 #   include <boost/noncopyable.hpp>
 #   include <boost/scoped_array.hpp>
 #   include <array>
@@ -47,7 +47,9 @@ struct reference_to_synapses_in_territory_of_cell
             unsigned char num_bits_per_synapse
             );
 
-    bits_reference find_bits_of_synapse(unsigned short const index_of_synapse /* 0..(number_of_synapses()-1) */);
+    bits_reference find_bits_of_synapse(
+            unsigned short const index_of_synapse_in_range_from_0_to_number_of_synapses_minus_1);
+
     unsigned short number_of_synapses() const;
 
     reference_to_list_of_indices_of_synampses indices_of_connected_synapses();
@@ -83,10 +85,14 @@ struct dynamic_state_of_neural_tissue : private boost::noncopyable
             unsigned int const seek_along_y_axis,
             unsigned int const seek_along_columnar_axis
             );
+
+    bits_reference find_bits_of_sensory_cell(unsigned int const index_of_sensory_cell);
+    bits_reference find_bits_of_synapse_to_muscle(unsigned int const index_of_synapse_to_muscle);
+
 private:
     std::shared_ptr<static_state_of_neural_tissue const> m_static_state_of_neural_tissue;
-    boost::scoped_array<unsigned char> m_bits_of_all_cells_organised_in_3D_array;
-    boost::scoped_array<unsigned char> m_bits_of_all_synapses_of_all_cells_organised_in_4D_array;
+    boost::scoped_array<unsigned char> m_bits_of_all_cells_organised_in_3D_array_with_appendix_of_sensory_cells;
+    boost::scoped_array<unsigned char> m_bits_of_all_synapses_of_all_cells_organised_in_4D_array_with_appendix_of_synapses_to_muscles;
     boost::scoped_array<std::array<std::pair<unsigned short,unsigned short>,7> >
         m_heads_and_tails_of_seven_lists_of_indices_of_synapses_in_territories_of_all_cells_organised_in_3D_array;
 };

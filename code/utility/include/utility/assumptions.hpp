@@ -6,12 +6,14 @@
 #   if !((BUILD_DEBUG() == 1 && defined(DEBUG_DISABLE_ASSUMPTION_CHECKING)) || \
          (BUILD_RELEASE() == 1 && defined(RELEASE_DISABLE_ASSUMPTION_CHECKING)))
 #       include <utility/fail_message.hpp>
+#       include <utility/log.hpp>
 #       include <stdexcept>
 #       include <string>
         struct assumption_failure : public std::logic_error {
-            assumption_failure(std::string const& msg) : std::logic_error(msg) {}
+            explicit assumption_failure(std::string const& msg) : std::logic_error(msg) {}
         };
-#       define ASSUMPTION(C) { if (!(C)) { throw assumption_failure(FAIL_MSG("Assumption failure.")); } }
+#       define ASSUMPTION(C) { if (!(C)) { LOG(error,"Assumption failure.");\
+                                           throw assumption_failure(FAIL_MSG("Assumption failure.")); } }
 #   else
 #       define ASSUMPTION(C)
 #   endif

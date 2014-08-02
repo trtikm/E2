@@ -3,7 +3,7 @@
 
 #include <cellab/static_state_of_neural_tissue.hpp>
 #include <cellab/dynamic_state_of_neural_tissue.hpp>
-#include <cellab/bits_reference.hpp>
+#include <utility/bits_reference.hpp>
 #include <memory>
 
 namespace envlab {
@@ -26,7 +26,7 @@ struct read_write_access_to_sensory_cells
     cellab::static_state_of_cell const& get_static_state_of_sensory_cell(
             unsigned int const index_of_sensory_cell
             ) const;
-    cellab::bits_reference get_bits_of_sensory_cell(unsigned int const index_of_sensory_cell) const;
+    bits_reference get_bits_of_sensory_cell(unsigned int const index_of_sensory_cell) const;
 private:
     std::shared_ptr<cellab::dynamic_state_of_neural_tissue> m_dynamic_state_of_neural_tissue;
 };
@@ -40,7 +40,7 @@ struct read_access_to_synapses_to_muscles
     cellab::static_state_of_synapse const& get_static_state_of_synapse_to_muscle(
             unsigned int const index_of_synapse_to_muscle
             ) const;
-    cellab::bits_reference get_bits_of_synapse_to_muscle(unsigned int const index_of_synapse_to_muscle) const;
+    bits_const_reference get_bits_of_synapse_to_muscle(unsigned int const index_of_synapse_to_muscle) const;
 private:
     std::shared_ptr<cellab::dynamic_state_of_neural_tissue const> m_dynamic_state_of_neural_tissue;
 };

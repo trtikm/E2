@@ -1,11 +1,9 @@
-#include <cellab/bits_reference.hpp>
+#include <utility/bits_reference.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/endian.hpp>
 #include <algorithm>
 
 #include <utility/development.hpp>
-
-namespace cellab {
 
 
 static bool read_bit(unsigned char const* first_byte_ptr, unsigned long bit_index)
@@ -26,9 +24,9 @@ static void write_bit(unsigned char* first_byte_ptr, unsigned long bit_index, bo
 }
 
 bits_reference::bits_reference(
-    unsigned char* first_byte_ptr,
-    unsigned char seek_in_the_first_byte,
-    unsigned char num_bits
+    unsigned char* const first_byte_ptr,
+    unsigned char const seek_in_the_first_byte,
+    unsigned char const num_bits
     )
     : m_first_byte_ptr(first_byte_ptr)
     , m_seek_in_the_first_byte(seek_in_the_first_byte)
@@ -37,6 +35,11 @@ bits_reference::bits_reference(
     ASSUMPTION(m_first_byte_ptr != nullptr);
     ASSUMPTION(m_seek_in_the_first_byte < 8U);
     ASSUMPTION(m_num_bits > 0U);
+}
+
+bits_reference::operator bits_const_reference() const
+{
+    return bits_const_reference(*this);
 }
 
 unsigned char* bits_reference::first_byte_ptr()
@@ -57,6 +60,47 @@ unsigned char bits_reference::seek_in_the_first_byte() const
 unsigned char bits_reference::num_bits() const
 {
     return m_num_bits;
+}
+
+bits_const_reference::bits_const_reference(
+    unsigned char const* first_byte_ptr,
+    unsigned char const seek_in_the_first_byte,
+    unsigned char const num_bits
+    )
+    : m_first_byte_ptr(first_byte_ptr)
+    , m_seek_in_the_first_byte(seek_in_the_first_byte)
+    , m_num_bits(num_bits)
+{
+    ASSUMPTION(m_first_byte_ptr != nullptr);
+    ASSUMPTION(m_seek_in_the_first_byte < 8U);
+    ASSUMPTION(m_num_bits > 0U);
+}
+
+bits_const_reference::bits_const_reference(bits_reference const& bits)
+    : m_first_byte_ptr(bits.first_byte_ptr())
+    , m_seek_in_the_first_byte(bits.seek_in_the_first_byte())
+    , m_num_bits(bits.num_bits())
+{}
+
+unsigned char const* bits_const_reference::first_byte_ptr() const
+{
+    return m_first_byte_ptr;
+}
+
+unsigned char bits_const_reference::seek_in_the_first_byte() const
+{
+    return m_seek_in_the_first_byte;
+}
+
+unsigned char bits_const_reference::num_bits() const
+{
+    return m_num_bits;
+}
+
+bool get_bit(bits_const_reference const& bit_range, unsigned char const bit_index)
+{
+    ASSUMPTION(bit_range.seek_in_the_first_byte() + bit_index < bit_range.num_bits());
+    return read_bit(bit_range.first_byte_ptr(),bit_range.seek_in_the_first_byte() + bit_index);
 }
 
 bool get_bit(bits_reference const& bit_range, unsigned char const bit_index)
@@ -118,7 +162,4 @@ void value_to_bits(
     )
 {
     NOT_IMPLEMENTED_YET();
-}
-
-
 }

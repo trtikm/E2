@@ -1,5 +1,5 @@
-#ifndef ENDIAN_HPP_INCLUDED
-#   define ENDIAN_HPP_INCLUDED
+#ifndef UTILITY_ENDIAN_HPP_INCLUDED
+#   define UTILITY_ENDIAN_HPP_INCLUDED
 
 bool is_this_big_endian_machine();
 
