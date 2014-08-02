@@ -4,7 +4,7 @@
 
 static unsigned int num_bytes_to_store_bits(unsigned int const num_bits_to_store)
 {
-    return (num_bits_to_store >> 3U) + ((num_bits_to_store && 7U) == 0U) ? 0 : 1;
+    return (num_bits_to_store >> 3U) + ((num_bits_to_store & 7U) == 0U) ? 0 : 1;
 }
 
 static unsigned int total_count_of_numbers_in_seven_heads_and_tails_pairs_of_indices()
