@@ -6,17 +6,17 @@
 #include <utility/development.hpp>
 
 
-static bool read_bit(unsigned char const* first_byte_ptr, unsigned long bit_index)
+static bool read_bit(natural_8_bit const* first_byte_ptr, natural_64_bit bit_index)
 {
-    unsigned long const byte_index = bit_index >> 3U;
-    unsigned char const bit_mask = (unsigned char)0x80>>(unsigned char)(bit_index & 7U);
+    natural_64_bit const byte_index = bit_index >> 3U;
+    natural_8_bit const bit_mask = (natural_8_bit)0x80>>(natural_8_bit)(bit_index & 7U);
     return (first_byte_ptr[byte_index] & bit_mask) != 0;
 }
 
-static void write_bit(unsigned char* first_byte_ptr, unsigned long bit_index, bool const value)
+static void write_bit(natural_8_bit* first_byte_ptr, natural_64_bit bit_index, bool const value)
 {
-    unsigned long const byte_index = bit_index >> 3U;
-    unsigned char const bit_mask = (unsigned char)0x80>>(unsigned char)(bit_index & 7U);
+    natural_64_bit const byte_index = bit_index >> 3U;
+    natural_8_bit const bit_mask = (natural_8_bit)0x80>>(natural_8_bit)(bit_index & 7U);
     if (value)
         first_byte_ptr[byte_index] |= bit_mask;
     else
@@ -24,9 +24,9 @@ static void write_bit(unsigned char* first_byte_ptr, unsigned long bit_index, bo
 }
 
 bits_reference::bits_reference(
-    unsigned char* const first_byte_ptr,
-    unsigned char const seek_in_the_first_byte,
-    unsigned char const num_bits
+    natural_8_bit* const first_byte_ptr,
+    natural_8_bit const seek_in_the_first_byte,
+    natural_8_bit const num_bits
     )
     : m_first_byte_ptr(first_byte_ptr)
     , m_seek_in_the_first_byte(seek_in_the_first_byte)
@@ -42,30 +42,30 @@ bits_reference::operator bits_const_reference() const
     return bits_const_reference(*this);
 }
 
-unsigned char* bits_reference::first_byte_ptr()
+natural_8_bit* bits_reference::first_byte_ptr()
 {
     return m_first_byte_ptr;
 }
 
-unsigned char const* bits_reference::first_byte_ptr() const
+natural_8_bit const* bits_reference::first_byte_ptr() const
 {
     return m_first_byte_ptr;
 }
 
-unsigned char bits_reference::seek_in_the_first_byte() const
+natural_8_bit bits_reference::seek_in_the_first_byte() const
 {
     return m_seek_in_the_first_byte;
 }
 
-unsigned char bits_reference::num_bits() const
+natural_8_bit bits_reference::num_bits() const
 {
     return m_num_bits;
 }
 
 bits_const_reference::bits_const_reference(
-    unsigned char const* first_byte_ptr,
-    unsigned char const seek_in_the_first_byte,
-    unsigned char const num_bits
+    natural_8_bit const* first_byte_ptr,
+    natural_8_bit const seek_in_the_first_byte,
+    natural_8_bit const num_bits
     )
     : m_first_byte_ptr(first_byte_ptr)
     , m_seek_in_the_first_byte(seek_in_the_first_byte)
@@ -82,34 +82,34 @@ bits_const_reference::bits_const_reference(bits_reference const& bits)
     , m_num_bits(bits.num_bits())
 {}
 
-unsigned char const* bits_const_reference::first_byte_ptr() const
+natural_8_bit const* bits_const_reference::first_byte_ptr() const
 {
     return m_first_byte_ptr;
 }
 
-unsigned char bits_const_reference::seek_in_the_first_byte() const
+natural_8_bit bits_const_reference::seek_in_the_first_byte() const
 {
     return m_seek_in_the_first_byte;
 }
 
-unsigned char bits_const_reference::num_bits() const
+natural_8_bit bits_const_reference::num_bits() const
 {
     return m_num_bits;
 }
 
-bool get_bit(bits_const_reference const& bit_range, unsigned char const bit_index)
+bool get_bit(bits_const_reference const& bit_range, natural_8_bit const bit_index)
 {
     ASSUMPTION(bit_range.seek_in_the_first_byte() + bit_index < bit_range.num_bits());
     return read_bit(bit_range.first_byte_ptr(),bit_range.seek_in_the_first_byte() + bit_index);
 }
 
-bool get_bit(bits_reference const& bit_range, unsigned char const bit_index)
+bool get_bit(bits_reference const& bit_range, natural_8_bit const bit_index)
 {
     ASSUMPTION(bit_range.seek_in_the_first_byte() + bit_index < bit_range.num_bits());
     return read_bit(bit_range.first_byte_ptr(),bit_range.seek_in_the_first_byte() + bit_index);
 }
 
-void set_bit(bits_reference& bit_range, unsigned char const bit_index, bool const value)
+void set_bit(bits_reference& bit_range, natural_8_bit const bit_index, bool const value)
 {
     ASSUMPTION(bit_range.seek_in_the_first_byte() + bit_index < bit_range.num_bits());
     write_bit(bit_range.first_byte_ptr(),bit_range.seek_in_the_first_byte() + bit_index,value);
@@ -117,9 +117,9 @@ void set_bit(bits_reference& bit_range, unsigned char const bit_index, bool cons
 
 void bits_to_value(
     bits_reference const& source_of_bits,
-    unsigned char index_of_the_first_bit,
-    unsigned char how_many_bits,
-    unsigned int& variable_where_the_value_will_be_stored
+    natural_8_bit index_of_the_first_bit,
+    natural_8_bit how_many_bits,
+    natural_32_bit& variable_where_the_value_will_be_stored
     )
 {
     ASSUMPTION(index_of_the_first_bit + how_many_bits <= source_of_bits.num_bits());
@@ -127,7 +127,7 @@ void bits_to_value(
 
     variable_where_the_value_will_be_stored = 0U;
 
-    unsigned char* target_memory = reinterpret_cast<unsigned char*>(
+    natural_8_bit* target_memory = reinterpret_cast<natural_8_bit*>(
         &variable_where_the_value_will_be_stored
         );
 
@@ -137,7 +137,7 @@ void bits_to_value(
         sizeof(variable_where_the_value_will_be_stored) * 8U
         );
 
-    for (unsigned char i = 0; i < how_many_bits; ++i)
+    for (natural_8_bit i = 0; i < how_many_bits; ++i)
         set_bit(
             target_bits,
             target_bits.num_bits() - (i + 1),
@@ -155,10 +155,10 @@ void bits_to_value(
 }
 
 void value_to_bits(
-    unsigned int const& variable_where_the_value_is_stored,
-    unsigned char how_many_bits_to_transfer,
+    natural_32_bit const& variable_where_the_value_is_stored,
+    natural_8_bit how_many_bits_to_transfer,
     bits_reference& target_bits,
-    unsigned char index_of_the_first_target_bit
+    natural_8_bit index_of_the_first_target_bit
     )
 {
     NOT_IMPLEMENTED_YET();

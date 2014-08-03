@@ -82,9 +82,9 @@ def create_static_state_of_neural_tissue(
     def push_back_static_state_of_synapse(vector):
         pycellab.push_back_static_state_of_synapse(vector)
 
-    numbers_of_cells_in_column = pycellab.vector_of_ushorts()
+    numbers_of_cells_in_column = pycellab.vector_of_natural_16_bit()
     for num in array_where_indices_are_kinds_of_tissue_cells_and_values_are_numbers_of_tissue_cells_in_column:
-        pycellab.push_back_ushort(numbers_of_cells_in_column,num)
+        pycellab.push_back_natural_16_bit(numbers_of_cells_in_column,num)
     static_states_of_tissue_cells = pycellab.vector_of_static_states_of_cells()
     for cell in array_where_indices_are_kinds_of_tissue_cells_and_values_are_static_states_of_tissue_cells:
         push_back_static_state_of_cell(static_states_of_tissue_cells,**cell)

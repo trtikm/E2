@@ -1,20 +1,31 @@
 add_library(utility
+    ./include/utility/assumptions.hpp
+
+    ./include/utility/basic_numeric_types.hpp
+
     ./src/bitfield.cpp
-    ./src/endian.cpp
-    ./src/fail_message.cpp
-    ./src/timeprof.cpp
-    ./src/log.cpp
+    ./include/utility/bitfield.hpp
+
     ./src/bits_reference.cpp
     ./include/utility/bits_reference.hpp
-    ./include/utility/log.hpp
-    ./include/utility/assumptions.hpp
-    ./include/utility/development.hpp
-    ./include/utility/invariants.hpp
-    ./include/utility/bitfield.hpp
-    ./include/utility/endian.hpp
-    ./include/utility/fail_message.hpp
-    ./include/utility/timeprof.hpp
+
     ./include/utility/config.hpp
+
+    ./include/utility/development.hpp
+
+    ./src/endian.cpp
+    ./include/utility/endian.hpp
+
+    ./src/fail_message.cpp
+    ./include/utility/fail_message.hpp
+
+    ./include/utility/invariants.hpp
+
+    ./src/log.cpp
+    ./include/utility/log.hpp
+
+    ./src/timeprof.cpp
+    ./include/utility/timeprof.hpp
     )
 
 #install(TARGETS brod_utils DESTINATION lib/utils)

@@ -1,14 +1,19 @@
 #ifndef CELLAB_DYNAMIC_STATE_OF_CELL_HPP_INCLUDED
 #   define CELLAB_DYNAMIC_STATE_OF_CELL_HPP_INCLUDED
 
+#   include <utility/basic_numeric_types.hpp>
+
+
 namespace cellab {
 
 
 struct bits_reference;
+struct bits_const_reference;
 
 struct dynamic_state_of_cell
 {
     dynamic_state_of_cell& operator<<(bits_reference const& bits);
+    dynamic_state_of_cell& operator<<(bits_const_reference const& bits);
 
 //    unsigned int membrane_potential() const;
 //    void set_membrane_potential(unsigned int const value);
