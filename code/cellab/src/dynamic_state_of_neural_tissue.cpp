@@ -57,16 +57,16 @@ reference_to_synapses_in_territory_of_cell::reference_to_synapses_in_territory_o
         unsigned short* const array_of_seven_pairs_of_head_and_tail_synapse_indices,
         unsigned char* const pointer_to_memory_with_bits_of_all_synapses,
         unsigned char const seek_in_first_byte_in_memory_with_synapses,
-        unsigned short const total_number_of_synapses_in_the_territory,
-        unsigned char const num_bits_per_synapse
+        unsigned char const num_bits_per_synapse,
+        unsigned short const total_number_of_synapses_in_the_territory
         )
     : m_array_of_seven_pairs_of_head_and_tail_synapse_indices(
         array_of_seven_pairs_of_head_and_tail_synapse_indices
         )
     , m_bits_of_all_synapses(pointer_to_memory_with_bits_of_all_synapses)
     , m_seek_in_first_byte_in_memory_with_synapses(seek_in_first_byte_in_memory_with_synapses)
-    , m_number_of_synapses(total_number_of_synapses_in_the_territory)
     , m_num_bits_per_synapse(num_bits_per_synapse)
+    , m_number_of_synapses(total_number_of_synapses_in_the_territory)
 {}
 
 bits_reference reference_to_synapses_in_territory_of_cell::find_bits_of_synapse(
@@ -306,10 +306,10 @@ reference_to_synapses_in_territory_of_cell dynamic_state_of_neural_tissue::find_
                     [first_number_of_terriroty_lists],
                 &m_bits_of_synapses_in_teritories_of_all_cells_organised_in_3D_array_with_appendix_of_synapses_to_muscles
                     [first_bit_of_first_synapse_in_territory >> 3U],
-                m_static_state_of_neural_tissue->get_static_state_of_tissue_cell(cell_kind_of_territory)
-                                               .num_synapses_in_territory_of_cell(),
+                first_bit_of_first_synapse_in_territory & 7U,
                 m_static_state_of_neural_tissue->num_bits_per_synapse(),
-                first_bit_of_first_synapse_in_territory & 7U
+                m_static_state_of_neural_tissue->get_static_state_of_tissue_cell(cell_kind_of_territory)
+                                               .num_synapses_in_territory_of_cell()
                 )
                 ;
 }

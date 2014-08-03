@@ -43,8 +43,8 @@ struct reference_to_synapses_in_territory_of_cell
             unsigned short* const array_of_seven_pairs_of_head_and_tail_synapse_indices,
             unsigned char* const pointer_to_memory_with_bits_of_all_synapses,
             unsigned char const seek_in_first_byte_in_memory_with_synapses,
-            unsigned short const total_number_of_synapses_in_the_territory,
-            unsigned char const num_bits_per_synapse
+            unsigned char const num_bits_per_synapse,
+            unsigned short const total_number_of_synapses_in_the_territory
             );
 
     bits_reference find_bits_of_synapse(
@@ -65,8 +65,8 @@ private:
     unsigned short* m_array_of_seven_pairs_of_head_and_tail_synapse_indices;
     unsigned char* m_bits_of_all_synapses;
     unsigned char m_seek_in_first_byte_in_memory_with_synapses;
-    unsigned short m_number_of_synapses;
     unsigned char m_num_bits_per_synapse;
+    unsigned short m_number_of_synapses;
 };
 
 struct dynamic_state_of_neural_tissue : private boost::noncopyable
