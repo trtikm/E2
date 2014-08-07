@@ -12,7 +12,7 @@ struct bits_reference
     bits_reference(
         natural_8_bit* const first_byte_ptr,
         natural_8_bit const seek_in_the_first_byte,
-        natural_8_bit const num_bits
+        natural_16_bit const num_bits
         );
 
     operator bits_const_reference() const;
@@ -21,16 +21,16 @@ struct bits_reference
     natural_8_bit const* first_byte_ptr() const;
 
     natural_8_bit seek_in_the_first_byte() const;
-    natural_8_bit num_bits() const;
+    natural_16_bit num_bits() const;
 
 private:
     natural_8_bit* m_first_byte_ptr;
+    natural_16_bit m_num_bits;
     natural_8_bit m_seek_in_the_first_byte;
-    natural_8_bit m_num_bits;
 };
 
-bool get_bit(bits_reference const& bit_range, natural_8_bit const bit_index);
-void set_bit(bits_reference& bit_range, natural_8_bit const bit_index, bool const value);
+bool get_bit(bits_reference const& bit_range, natural_16_bit const bit_index);
+void set_bit(bits_reference& bit_range, natural_16_bit const bit_index, bool const value);
 
 void bits_to_value(
     bits_reference const& source_of_bits,
@@ -53,7 +53,7 @@ struct bits_const_reference
     bits_const_reference(
         natural_8_bit const* first_byte_ptr,
         natural_8_bit const seek_in_the_first_byte,
-        natural_8_bit const num_bits
+        natural_16_bit const num_bits
         );
 
     bits_const_reference(bits_reference const& bits);
@@ -61,15 +61,15 @@ struct bits_const_reference
     natural_8_bit const* first_byte_ptr() const;
 
     natural_8_bit seek_in_the_first_byte() const;
-    natural_8_bit num_bits() const;
+    natural_16_bit num_bits() const;
 
 private:
     natural_8_bit const* m_first_byte_ptr;
+    natural_16_bit m_num_bits;
     natural_8_bit m_seek_in_the_first_byte;
-    natural_8_bit m_num_bits;
 };
 
-bool get_bit(bits_const_reference const& bit_range, natural_8_bit const bit_index);
+bool get_bit(bits_const_reference const& bit_range, natural_16_bit const bit_index);
 
 template<typename target_variable_type>
 void bits_to_value(

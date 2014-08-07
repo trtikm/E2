@@ -95,12 +95,20 @@ struct dynamic_state_of_neural_tissue : private boost::noncopyable
 private:
     std::shared_ptr<static_state_of_neural_tissue const> m_static_state_of_neural_tissue;
     boost::scoped_array<natural_8_bit> m_bits_of_all_cells_organised_in_3D_array_with_appendix_of_sensory_cells;
-    natural_32_bit m_num_synapses_in_all_cell_territories_along_columnar_axis;
+    natural_64_bit m_num_synapses_in_all_cell_territories_along_columnar_axis;
     boost::scoped_array<natural_8_bit>
         m_bits_of_synapses_in_teritories_of_all_cells_organised_in_3D_array_with_appendix_of_synapses_to_muscles;
     boost::scoped_array<natural_16_bit>
         m_heads_and_tails_of_seven_lists_of_indices_of_synapses_in_territories_of_all_cells_organised_in_3D_array;
 };
+
+
+// This function can early-detects wrap error for unsigned integers which could
+// otherwise occure later when computing addresses of bits of individual cells inside
+// dynamic_state_of_neural_tissue. By 'early-detection' we mean that the function is
+// called in construction of static_state_of_neural_tissue. Therefore, it is safe to
+// completelly omit all such checks inside any instance of dynamic_state_of_neural_tissue.
+void check_for_unsigned_wrap_errors(static_state_of_neural_tissue const& tissue_props);
 
 
 }

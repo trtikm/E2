@@ -1,21 +1,22 @@
 #include <utility/bits_reference.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/endian.hpp>
+#include <utility/checked_number_operations.hpp>
 #include <algorithm>
 
 #include <utility/development.hpp>
 
 
-static bool read_bit(natural_8_bit const* first_byte_ptr, natural_64_bit bit_index)
+static bool read_bit(natural_8_bit const* first_byte_ptr, natural_16_bit bit_index)
 {
-    natural_64_bit const byte_index = bit_index >> 3U;
+    natural_16_bit const byte_index = bit_index >> 3U;
     natural_8_bit const bit_mask = (natural_8_bit)0x80>>(natural_8_bit)(bit_index & 7U);
     return (first_byte_ptr[byte_index] & bit_mask) != 0;
 }
 
-static void write_bit(natural_8_bit* first_byte_ptr, natural_64_bit bit_index, bool const value)
+static void write_bit(natural_8_bit* first_byte_ptr, natural_16_bit bit_index, bool const value)
 {
-    natural_64_bit const byte_index = bit_index >> 3U;
+    natural_16_bit const byte_index = bit_index >> 3U;
     natural_8_bit const bit_mask = (natural_8_bit)0x80>>(natural_8_bit)(bit_index & 7U);
     if (value)
         first_byte_ptr[byte_index] |= bit_mask;
@@ -26,15 +27,16 @@ static void write_bit(natural_8_bit* first_byte_ptr, natural_64_bit bit_index, b
 bits_reference::bits_reference(
     natural_8_bit* const first_byte_ptr,
     natural_8_bit const seek_in_the_first_byte,
-    natural_8_bit const num_bits
+    natural_16_bit const num_bits
     )
     : m_first_byte_ptr(first_byte_ptr)
-    , m_seek_in_the_first_byte(seek_in_the_first_byte)
     , m_num_bits(num_bits)
+    , m_seek_in_the_first_byte(seek_in_the_first_byte)
 {
     ASSUMPTION(m_first_byte_ptr != nullptr);
     ASSUMPTION(m_seek_in_the_first_byte < 8U);
     ASSUMPTION(m_num_bits > 0U);
+    checked_add_16_bit(static_cast<natural_16_bit>(m_seek_in_the_first_byte),m_num_bits);
 }
 
 bits_reference::operator bits_const_reference() const
@@ -57,7 +59,7 @@ natural_8_bit bits_reference::seek_in_the_first_byte() const
     return m_seek_in_the_first_byte;
 }
 
-natural_8_bit bits_reference::num_bits() const
+natural_16_bit bits_reference::num_bits() const
 {
     return m_num_bits;
 }
@@ -65,21 +67,22 @@ natural_8_bit bits_reference::num_bits() const
 bits_const_reference::bits_const_reference(
     natural_8_bit const* first_byte_ptr,
     natural_8_bit const seek_in_the_first_byte,
-    natural_8_bit const num_bits
+    natural_16_bit const num_bits
     )
     : m_first_byte_ptr(first_byte_ptr)
-    , m_seek_in_the_first_byte(seek_in_the_first_byte)
     , m_num_bits(num_bits)
+    , m_seek_in_the_first_byte(seek_in_the_first_byte)
 {
     ASSUMPTION(m_first_byte_ptr != nullptr);
     ASSUMPTION(m_seek_in_the_first_byte < 8U);
     ASSUMPTION(m_num_bits > 0U);
+    checked_add_16_bit(static_cast<natural_16_bit>(m_seek_in_the_first_byte),m_num_bits);
 }
 
 bits_const_reference::bits_const_reference(bits_reference const& bits)
     : m_first_byte_ptr(bits.first_byte_ptr())
-    , m_seek_in_the_first_byte(bits.seek_in_the_first_byte())
     , m_num_bits(bits.num_bits())
+    , m_seek_in_the_first_byte(bits.seek_in_the_first_byte())
 {}
 
 natural_8_bit const* bits_const_reference::first_byte_ptr() const
@@ -92,26 +95,35 @@ natural_8_bit bits_const_reference::seek_in_the_first_byte() const
     return m_seek_in_the_first_byte;
 }
 
-natural_8_bit bits_const_reference::num_bits() const
+natural_16_bit bits_const_reference::num_bits() const
 {
     return m_num_bits;
 }
 
-bool get_bit(bits_const_reference const& bit_range, natural_8_bit const bit_index)
+bool get_bit(bits_const_reference const& bit_range, natural_16_bit const bit_index)
 {
-    ASSUMPTION(bit_range.seek_in_the_first_byte() + bit_index < bit_range.num_bits());
+    ASSUMPTION(
+        static_cast<natural_32_bit>(bit_range.seek_in_the_first_byte()) +  static_cast<natural_32_bit>(bit_index)
+        < bit_range.num_bits()
+        );
     return read_bit(bit_range.first_byte_ptr(),bit_range.seek_in_the_first_byte() + bit_index);
 }
 
-bool get_bit(bits_reference const& bit_range, natural_8_bit const bit_index)
+bool get_bit(bits_reference const& bit_range, natural_16_bit const bit_index)
 {
-    ASSUMPTION(bit_range.seek_in_the_first_byte() + bit_index < bit_range.num_bits());
+    ASSUMPTION(
+        static_cast<natural_32_bit>(bit_range.seek_in_the_first_byte()) +  static_cast<natural_32_bit>(bit_index)
+        < bit_range.num_bits()
+        );
     return read_bit(bit_range.first_byte_ptr(),bit_range.seek_in_the_first_byte() + bit_index);
 }
 
-void set_bit(bits_reference& bit_range, natural_8_bit const bit_index, bool const value)
+void set_bit(bits_reference& bit_range, natural_16_bit const bit_index, bool const value)
 {
-    ASSUMPTION(bit_range.seek_in_the_first_byte() + bit_index < bit_range.num_bits());
+    ASSUMPTION(
+        static_cast<natural_32_bit>(bit_range.seek_in_the_first_byte()) +  static_cast<natural_32_bit>(bit_index)
+        < bit_range.num_bits()
+        );
     write_bit(bit_range.first_byte_ptr(),bit_range.seek_in_the_first_byte() + bit_index,value);
 }
 
@@ -122,8 +134,11 @@ void bits_to_value(
     natural_32_bit& variable_where_the_value_will_be_stored
     )
 {
-    ASSUMPTION(index_of_the_first_bit + how_many_bits <= source_of_bits.num_bits());
-    ASSUMPTION(how_many_bits <= sizeof(variable_where_the_value_will_be_stored) * 8U);
+    ASSUMPTION(
+        static_cast<natural_16_bit>(index_of_the_first_bit) +  static_cast<natural_16_bit>(how_many_bits)
+        < source_of_bits.num_bits()
+        );
+    ASSUMPTION(static_cast<natural_32_bit>(how_many_bits) <= sizeof(variable_where_the_value_will_be_stored) * 8U);
 
     variable_where_the_value_will_be_stored = 0U;
 

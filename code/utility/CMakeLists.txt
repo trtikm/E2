@@ -26,6 +26,9 @@ add_library(utility
 
     ./src/timeprof.cpp
     ./include/utility/timeprof.hpp
+
+    ./src/checked_number_operations.cpp
+    ./include/utility/checked_number_operations.hpp
     )
 
 #install(TARGETS brod_utils DESTINATION lib/utils)
