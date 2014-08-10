@@ -6,6 +6,7 @@
 #include <utility/bits_reference.hpp>
 #include <utility/basic_numeric_types.hpp>
 #include <memory>
+#include <thread>
 
 namespace envlab {
     struct rules_and_logic_of_environment;

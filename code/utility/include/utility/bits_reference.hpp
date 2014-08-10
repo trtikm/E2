@@ -64,6 +64,7 @@ struct bits_const_reference
     natural_16_bit num_bits() const;
 
 private:
+    //bits_reference m_bits_reference;
     natural_8_bit const* m_first_byte_ptr;
     natural_16_bit m_num_bits;
     natural_8_bit m_seek_in_the_first_byte;
