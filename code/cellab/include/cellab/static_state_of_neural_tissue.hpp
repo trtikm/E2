@@ -3,6 +3,7 @@
 
 #   include <cellab/static_state_of_cell.hpp>
 #   include <cellab/static_state_of_synapse.hpp>
+#   include <cellab/static_state_of_signalling.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <boost/noncopyable.hpp>
 #   include <boost/scoped_array.hpp>
