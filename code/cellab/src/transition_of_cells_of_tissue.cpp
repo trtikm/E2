@@ -27,13 +27,12 @@ void apply_transition_of_cells_of_tissue(
                 // NOTE: Coordinates (0,0,0) reference the signalling data of the updated cell.
                 get_bits_of_signalling_data_in_neighbourhood_of_the_updated_cell_at_given_coordiates,
             static_state_of_signalling const& static_state_of_signalling_data
-            )> single_threaded_transition_function_of_cell,
+            )> single_threaded_transition_function_of_packed_dynamic_state_of_cell,
         natural_32_bit num_avalilable_thread_for_creation_and_use
         )
 {
     NOT_IMPLEMENTED_YET();
 }
-
 
 
 }

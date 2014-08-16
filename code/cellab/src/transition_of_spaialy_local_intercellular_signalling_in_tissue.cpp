@@ -25,7 +25,7 @@ void apply_transition_of_spaialy_local_intercellular_signalling_in_tissue(
                 // NOTE: All coordinates range in [-N,N] where N is radius of local neighbourhood of the
                 //       updated signalling data, see 'static_state_of_signalling_data' data.
                 // NOTE: Coordinates (0,0,0) reference the static state of cell of the updated signalling data.
-                get_bits_of_static_state_of_cell_in_neighbourhood_of_updated_signalling_data_at_given_coordiates,
+                get_static_state_of_cell_in_neighbourhood_of_updated_signalling_data_at_given_coordiates,
             )> single_threaded_transition_function_of_local_intercellular_signalling,
         natural_32_bit num_avalilable_thread_for_creation_and_use
         )

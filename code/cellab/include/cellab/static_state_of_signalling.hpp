@@ -3,7 +3,6 @@
 
 #   include <utility/basic_numeric_types.hpp>
 
-
 namespace cellab {
 
 

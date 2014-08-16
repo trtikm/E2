@@ -3,13 +3,10 @@
 #include <utility/assumptions.hpp>
 #include <utility/log.hpp>
 
-
 namespace cellab {
-    extern void check_for_unsigned_wrap_errors(static_state_of_neural_tissue const& tissue_props);
-}
 
 
-namespace cellab {
+extern void check_for_unsigned_wrap_errors(static_state_of_neural_tissue const& tissue_props);
 
 
 static_state_of_neural_tissue::static_state_of_neural_tissue(
@@ -17,6 +14,7 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
         natural_16_bit const num_kinds_of_sensory_cells,
         natural_16_bit const num_bits_per_cell,
         natural_16_bit const num_bits_per_synapse,
+        natural_16_bit const num_bits_per_signalling,
         natural_32_bit const num_tissue_cells_along_x_axis,
         natural_32_bit const num_tissue_cells_along_y_axis,
         std::vector<natural_32_bit> const&
@@ -29,6 +27,8 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
             row_major_matrix_where_indices_are_pairs_of_kinds_of_tissue_cells_and_values_are_static_states_of_synapses,
         std::vector<cellab::static_state_of_synapse> const&
             array_where_indices_are_kinds_of_tissue_cells_and_values_are_static_states_of_synapses_to_muscles,
+        std::vector<cellab::static_state_of_signalling> const&
+            array_where_indices_are_kinds_of_sensory_cells_and_values_are_static_states_of_signalling_data,
         natural_32_bit num_sensory_cells,
         natural_32_bit num_synapses_to_muscles
         )
@@ -36,6 +36,7 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
     , m_num_kinds_of_sensory_cells(num_kinds_of_sensory_cells)
     , m_num_bits_per_cell(num_bits_per_cell)
     , m_num_bits_per_synapse(num_bits_per_synapse)
+    , m_num_bits_per_signalling(num_bits_per_signalling)
     , m_num_tissue_cells_along_x_axis(num_tissue_cells_along_x_axis)
     , m_num_tissue_cells_along_y_axis(num_tissue_cells_along_y_axis)
     , m_num_tissue_cells_along_columnar_axis(
@@ -67,6 +68,9 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
     , m_static_state_of_synapse_to_muscle_for_each_kind_of_tissue_cell(
         array_where_indices_are_kinds_of_tissue_cells_and_values_are_static_states_of_synapses_to_muscles
         )
+    , m_static_state_of_signalling_for_each_kind_of_sensory_cell(
+        array_where_indices_are_kinds_of_sensory_cells_and_values_are_static_states_of_signalling_data
+        )
     , m_num_sensory_cells(num_sensory_cells)
     , m_num_synapses_to_muscles(num_synapses_to_muscles)
 {
@@ -79,6 +83,7 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
     ASSUMPTION(m_num_kinds_of_tissue_cells == m_num_tissue_cells_in_column_per_kind_of_tissue_cell.size());
     ASSUMPTION(m_num_kinds_of_tissue_cells == m_static_state_of_tissue_cell_for_each_kind_of_tissue_cell.size());
     ASSUMPTION(m_num_kinds_of_sensory_cells == m_static_state_of_sensory_cell_for_each_kind_of_sensory_cell.size());
+    ASSUMPTION(m_num_kinds_of_tissue_cells == m_static_state_of_signalling_for_each_kind_of_sensory_cell.size());
     ASSUMPTION(checked_mul_32_bit(static_cast<natural_32_bit>(m_num_kinds_of_tissue_cells),
                                   static_cast<natural_32_bit>(m_num_kinds_of_tissue_cells))
                == m_static_state_of_synapse_for_each_pair_of_kinds_of_tissue_cells.size());
@@ -186,6 +191,12 @@ static_state_of_synapse const& static_state_of_neural_tissue::get_static_state_o
     return m_static_state_of_synapse_to_muscle_for_each_kind_of_tissue_cell.at(kind_of_tissue_cell);
 }
 
+static_state_of_signalling const& static_state_of_neural_tissue::get_static_state_of_signalling(
+        natural_16_bit const kind_of_sensory_cell) const
+{
+    ASSUMPTION(kind_of_tissue_cell < num_kinds_of_cells_in_neural_tissue());
+    return m_static_state_of_signalling_for_each_kind_of_sensory_cell.at(kind_of_tissue_cell);
+}
 
 natural_32_bit static_state_of_neural_tissue::num_sensory_cells() const
 {
