@@ -6,6 +6,7 @@
 #include <cellab/convertors_from_packed_to_unpacked_dynamic_states.hpp>
 #include <utility/basic_numeric_types.hpp>
 #include <utility/bits_reference.hpp>
+#include <utility/assumptions.hpp>
 #include <functional>
 #include <memory>
 
@@ -28,6 +29,10 @@ void single_threaded_transition_function_of_packed_synapse_to_muscle(
         static_state_of_cell const& static_state_of_source_cell,
         )
 {
+    ASSUMPTION(type_of_unpacked_dynamic_state_of_synapse_in_tissue::num_packed_bits() ==
+               bits_of_synapse_to_be_updated.num_bits());
+    ASSUMPTION(type_of_unpacked_dynamic_state_of_cell_in_tissue::num_packed_bits() ==
+               bits_of_source_cell.num_bits());
     type_of_unpacked_dynamic_state_of_synapse_in_tissue
             synapse_to_be_updated(bits_of_synapse_to_be_updated);
     type_of_unpacked_dynamic_state_of_cell_in_tissue

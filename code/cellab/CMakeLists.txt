@@ -24,6 +24,7 @@ add_library(cellab
     ./src/dynamic_state_of_neural_tissue.cpp
 
     ./include/cellab/algorithms_for_state_transition.hpp
+    ./include/cellab/transition_functions_of_neural_tissue.hpp
     ./include/cellab/transition_functions_of_packed_tissue_elements.hpp
     ./include/cellab/convertors_from_packed_to_unpacked_dynamic_states.hpp
 

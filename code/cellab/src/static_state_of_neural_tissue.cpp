@@ -192,7 +192,7 @@ static_state_of_synapse const& static_state_of_neural_tissue::get_static_state_o
 }
 
 static_state_of_signalling const& static_state_of_neural_tissue::get_static_state_of_signalling(
-        natural_16_bit const kind_of_sensory_cell) const
+        natural_16_bit const kind_of_tissue_cell) const
 {
     ASSUMPTION(kind_of_tissue_cell < num_kinds_of_cells_in_neural_tissue());
     return m_static_state_of_signalling_for_each_kind_of_sensory_cell.at(kind_of_tissue_cell);

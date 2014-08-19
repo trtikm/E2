@@ -68,8 +68,7 @@ struct static_state_of_neural_tissue : private boost::noncopyable
     static_state_of_synapse const& get_static_state_of_synapse_to_muscle(
             natural_16_bit const kind_of_tissue_cell) const;
 
-    static_state_of_signalling const& get_static_state_of_signalling(
-            natural_16_bit const kind_of_sensory_cell) const;
+    static_state_of_signalling const& get_static_state_of_signalling(natural_16_bit const kind_of_tissue_cell) const;
 
     natural_32_bit num_sensory_cells() const;
     natural_32_bit num_synapses_to_muscles() const;
