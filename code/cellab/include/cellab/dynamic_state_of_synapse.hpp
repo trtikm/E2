@@ -3,12 +3,11 @@
 
 #   include <utility/basic_numeric_types.hpp>
 
+struct bits_reference;
+struct bits_const_reference;
 
 namespace cellab {
 
-
-struct bits_reference;
-struct bits_const_reference;
 
 struct dynamic_state_of_synapse
 {

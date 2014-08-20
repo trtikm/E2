@@ -1,5 +1,5 @@
 #ifndef CELLAB_ALGORITHMS_FOR_STATE_TRANSITION_HPP_INCLUDED
-#   define CELLAB_DYNAMIC_STATE_OF_NEURAL_TISSUE_HPP_INCLUDED
+#   define CELLAB_ALGORITHMS_FOR_STATE_TRANSITION_HPP_INCLUDED
 
 #include <cellab/static_state_of_neural_tissue.hpp>
 #include <cellab/dynamic_state_of_neural_tissue.hpp>
@@ -18,7 +18,7 @@ void apply_transition_of_synapses_to_muscles(
             bits_reference bits_of_synapse_to_be_updated,
             static_state_of_synapse const& static_state_of_updated_synapse,
             bits_const_reference bits_of_source_cell,
-            static_state_of_cell const& static_state_of_source_cell,
+            static_state_of_cell const& static_state_of_source_cell
             )> single_threaded_transition_function_of_synapse_to_muscle,
         natural_32_bit num_avalilable_thread_for_creation_and_use
         );
@@ -63,7 +63,7 @@ void apply_transition_of_spaialy_local_intercellular_signalling_in_tissue(
                 // NOTE: All coordinates range in [-N,N] where N is radius of local neighbourhood of the
                 //       updated signalling data, see 'static_state_of_signalling_data' data.
                 // NOTE: Coordinates (0,0,0) reference the static state of cell of the updated signalling data.
-                get_static_state_of_cell_in_neighbourhood_of_updated_signalling_data_at_given_coordiates,
+                get_static_state_of_cell_in_neighbourhood_of_updated_signalling_data_at_given_coordiates
             )> single_threaded_transition_function_of_local_intercellular_signalling,
         natural_32_bit num_avalilable_thread_for_creation_and_use
         );

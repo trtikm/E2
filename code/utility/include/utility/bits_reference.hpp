@@ -4,7 +4,7 @@
 #   include <utility/basic_numeric_types.hpp>
 
 
-struct bits_const_reference;
+//struct bits_const_reference;
 
 
 struct bits_reference
@@ -15,7 +15,7 @@ struct bits_reference
         natural_16_bit const num_bits
         );
 
-    operator bits_const_reference() const;
+    //operator bits_const_reference() const;
 
     natural_8_bit* first_byte_ptr();
     natural_8_bit const* first_byte_ptr() const;

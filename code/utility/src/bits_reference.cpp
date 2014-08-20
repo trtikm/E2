@@ -39,10 +39,10 @@ bits_reference::bits_reference(
     checked_add_16_bit(static_cast<natural_16_bit>(m_seek_in_the_first_byte),m_num_bits);
 }
 
-bits_reference::operator bits_const_reference() const
-{
-    return bits_const_reference(*this);
-}
+//bits_reference::operator bits_const_reference() const
+//{
+//    return bits_const_reference(*this);
+//}
 
 natural_8_bit* bits_reference::first_byte_ptr()
 {

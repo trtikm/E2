@@ -21,12 +21,12 @@ void single_threaded_transition_function_of_packed_synapse_to_muscle(
             type_of_unpacked_dynamic_state_of_synapse_in_tissue& synapse_to_be_updated,
             static_state_of_synapse const& static_state_of_updated_synapse,
             type_of_unpacked_dynamic_state_of_cell_in_tissue const& dynamic_state_of_source_cell,
-            static_state_of_cell const& static_state_of_source_cell,
+            static_state_of_cell const& static_state_of_source_cell
             )> single_threaded_transition_function_of_unpacked_synapse_to_muscle,
         bits_reference bits_of_synapse_to_be_updated,
         static_state_of_synapse const& static_state_of_updated_synapse,
         bits_const_reference bits_of_source_cell,
-        static_state_of_cell const& static_state_of_source_cell,
+        static_state_of_cell const& static_state_of_source_cell
         )
 {
     ASSUMPTION(type_of_unpacked_dynamic_state_of_synapse_in_tissue::num_packed_bits() ==
@@ -77,6 +77,12 @@ void single_threaded_transition_function_of_packed_synapse_inside_tissue(
         static_state_of_signalling const& static_state_of_signalling_data
         )
 {
+    ASSUMPTION(type_of_unpacked_dynamic_state_of_synapse_in_tissue::num_packed_bits() ==
+               bits_of_synapse_to_be_updated.num_bits());
+    ASSUMPTION(type_of_unpacked_dynamic_state_of_cell_in_tissue::num_packed_bits() ==
+               bits_of_source_cell.num_bits());
+    ASSUMPTION(bits_of_source_cell.num_bits() ==
+               bits_of_target_cell_in_whose_territory_the_synapse_currently_appears.num_bits());
     type_of_unpacked_dynamic_state_of_synapse_in_tissue
             synapse_to_be_updated(bits_of_synapse_to_be_updated);
     type_of_unpacked_dynamic_state_of_cell_in_tissue const
@@ -115,16 +121,18 @@ void single_threaded_transition_function_of_packed_signalling(
                 // NOTE: All coordinates range in [-N,N] where N is radius of local neighbourhood of the
                 //       updated signalling data, see 'static_state_of_signalling_data' data.
                 // NOTE: Coordinates (0,0,0) reference the static state of cell of the updated signalling data.
-                get_static_state_of_cell_at_given_coordiates,
+                get_static_state_of_cell_at_given_coordiates
             )> single_threaded_transition_function_of_unpacked_signalling,
         bits_reference bits_of_signalling_data_to_be_updated,
         static_state_of_signalling const& static_state_of_signalling_data,
         std::function<bits_const_reference(natural_8_bit,natural_8_bit,natural_8_bit)>
             get_bits_of_cell_in_neighbourhood_of_updated_signalling_data_at_given_coordiates,
         std::function<static_state_of_cell const&(natural_8_bit,natural_8_bit,natural_8_bit)>
-            get_static_state_of_cell_in_neighbourhood_of_updated_signalling_data_at_given_coordiates,
+            get_static_state_of_cell_in_neighbourhood_of_updated_signalling_data_at_given_coordiates
         )
 {
+    ASSUMPTION(type_of_unpacked_dynamic_state_of_signaling_data::num_packed_bits() ==
+               bits_of_signalling_data_to_be_updated.num_bits());
     type_of_unpacked_dynamic_state_of_signaling_data
             signalling_data_to_be_updated(bits_of_signalling_data_to_be_updated);
     single_threaded_transition_function_of_unpacked_signalling(
@@ -170,6 +178,8 @@ void single_threaded_transition_function_of_packed_dynamic_state_of_cell(
         static_state_of_signalling const& static_state_of_signalling_data
         )
 {
+    ASSUMPTION(type_of_unpacked_dynamic_state_of_cell_in_tissue::num_packed_bits() ==
+               bits_of_cell_to_be_updated.num_bits());
     type_of_unpacked_dynamic_state_of_cell_in_tissue
             dynamic_state_of_cell_to_be_updated(bits_of_cell_to_be_updated);
     single_threaded_transition_function_of_unpacked_dynamic_state_cell(
