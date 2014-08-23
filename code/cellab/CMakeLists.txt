@@ -23,6 +23,9 @@ add_library(cellab
     ./include/cellab/dynamic_state_of_neural_tissue.hpp
     ./src/dynamic_state_of_neural_tissue.cpp
 
+    ./include/cellab/homogenous_slice_of_tissue.hpp
+    ./src/homogenous_slice_of_tissue.cpp
+
     ./include/cellab/algorithms_for_state_transition.hpp
     ./include/cellab/transition_functions_of_neural_tissue.hpp
     ./include/cellab/transition_functions_of_packed_tissue_elements.hpp

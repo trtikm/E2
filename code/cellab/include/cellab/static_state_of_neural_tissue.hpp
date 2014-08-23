@@ -33,7 +33,7 @@ struct static_state_of_neural_tissue : private boost::noncopyable
         std::vector<cellab::static_state_of_synapse> const&
             array_where_indices_are_kinds_of_tissue_cells_and_values_are_static_states_of_synapses_to_muscles,
         std::vector<cellab::static_state_of_signalling> const&
-            array_where_indices_are_kinds_of_sensory_cells_and_values_are_static_states_of_signalling_data,
+            array_where_indices_are_kinds_of_tissue_cells_and_values_are_static_states_of_signalling_data,
         natural_32_bit num_sensory_cells,
         natural_32_bit num_synapses_to_muscles
         );
@@ -90,7 +90,7 @@ private:
     std::vector<static_state_of_cell> m_static_state_of_sensory_cell_for_each_kind_of_sensory_cell;
     std::vector<static_state_of_synapse> m_static_state_of_synapse_for_each_pair_of_kinds_of_tissue_cells;
     std::vector<static_state_of_synapse> m_static_state_of_synapse_to_muscle_for_each_kind_of_tissue_cell;
-    std::vector<static_state_of_signalling> m_static_state_of_signalling_for_each_kind_of_sensory_cell;
+    std::vector<static_state_of_signalling> m_static_state_of_signalling_for_each_kind_of_tissue_cell;
 
     natural_32_bit m_num_sensory_cells;
     natural_32_bit m_num_synapses_to_muscles;

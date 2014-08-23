@@ -6,6 +6,9 @@ add_library(utility
     ./src/bitfield.cpp
     ./include/utility/bitfield.hpp
 
+    ./src/array_of_bit_units.cpp
+    ./include/utility/array_of_bit_units.hpp
+
     ./src/bits_reference.cpp
     ./include/utility/bits_reference.hpp
 
