@@ -22,6 +22,8 @@ struct static_state_of_neural_tissue : private boost::noncopyable
         natural_16_bit const num_bits_per_signalling,
         natural_32_bit const num_tissue_cells_along_x_axis,
         natural_32_bit const num_tissue_cells_along_y_axis,
+        natural_32_bit const num_sensory_cells,
+        natural_32_bit const num_synapses_to_muscles,
         std::vector<natural_32_bit> const&
             array_where_indices_are_kinds_of_tissue_cells_and_values_are_numbers_of_tissue_cells_in_column,
         std::vector<cellab::static_state_of_cell> const&
@@ -33,9 +35,7 @@ struct static_state_of_neural_tissue : private boost::noncopyable
         std::vector<cellab::static_state_of_synapse> const&
             array_where_indices_are_kinds_of_tissue_cells_and_values_are_static_states_of_synapses_to_muscles,
         std::vector<cellab::static_state_of_signalling> const&
-            array_where_indices_are_kinds_of_tissue_cells_and_values_are_static_states_of_signalling_data,
-        natural_32_bit num_sensory_cells,
-        natural_32_bit num_synapses_to_muscles
+            array_where_indices_are_kinds_of_tissue_cells_and_values_are_static_states_of_signalling_data
         );
 
     ~static_state_of_neural_tissue();
@@ -50,7 +50,10 @@ struct static_state_of_neural_tissue : private boost::noncopyable
     natural_32_bit num_tissue_cells_along_x_axis() const;
     natural_32_bit num_tissue_cells_along_y_axis() const;
     natural_32_bit num_tissue_cells_along_columnar_axis() const;
-    natural_32_bit num_tissue_cells_in_column(natural_16_bit const kind_of_tissue_cell) const;
+    natural_32_bit num_tissue_cells_in_column_of_cell_kind(natural_16_bit const kind_of_tissue_cell) const;
+
+    natural_32_bit num_sensory_cells() const;
+    natural_32_bit num_synapses_to_muscles() const;
 
     natural_16_bit compute_kind_of_tissue_cell_from_its_position_along_columnar_axis(
             natural_32_bit position_of_tissue_cell_in_column) const;
@@ -68,10 +71,8 @@ struct static_state_of_neural_tissue : private boost::noncopyable
     static_state_of_synapse const& get_static_state_of_synapse_to_muscle(
             natural_16_bit const kind_of_tissue_cell) const;
 
-    static_state_of_signalling const& get_static_state_of_signalling(natural_16_bit const kind_of_tissue_cell) const;
-
-    natural_32_bit num_sensory_cells() const;
-    natural_32_bit num_synapses_to_muscles() const;
+    static_state_of_signalling const& get_static_state_of_signalling(
+            natural_16_bit const kind_of_tissue_cell) const;
 
 private:
     natural_16_bit m_num_kinds_of_tissue_cells;
@@ -85,15 +86,15 @@ private:
     natural_32_bit m_num_tissue_cells_along_y_axis;
     natural_32_bit m_num_tissue_cells_along_columnar_axis;
 
+    natural_32_bit m_num_sensory_cells;
+    natural_32_bit m_num_synapses_to_muscles;
+
     std::vector<natural_32_bit> m_num_tissue_cells_in_column_per_kind_of_tissue_cell;
     std::vector<static_state_of_cell> m_static_state_of_tissue_cell_for_each_kind_of_tissue_cell;
     std::vector<static_state_of_cell> m_static_state_of_sensory_cell_for_each_kind_of_sensory_cell;
     std::vector<static_state_of_synapse> m_static_state_of_synapse_for_each_pair_of_kinds_of_tissue_cells;
     std::vector<static_state_of_synapse> m_static_state_of_synapse_to_muscle_for_each_kind_of_tissue_cell;
     std::vector<static_state_of_signalling> m_static_state_of_signalling_for_each_kind_of_tissue_cell;
-
-    natural_32_bit m_num_sensory_cells;
-    natural_32_bit m_num_synapses_to_muscles;
 };
 
 

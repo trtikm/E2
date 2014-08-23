@@ -6,6 +6,7 @@
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/array_of_bit_units.hpp>
 #   include <utility/bits_reference.hpp>
+#   include <boost/multiprecision/cpp_int.hpp>
 #   include <vector>
 #   include <memory>
 
@@ -50,17 +51,19 @@ private:
     std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_tissue_synapses;
     std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_tissue_signalling_data;
     std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_tissue_migration_data;
+    std::vector<natural_8_bit> m_num_bits_per_number_in_migration;
     array_of_bit_units m_bits_of_sensory_cells;
     array_of_bit_units m_bits_of_synapses_to_muscles;
 };
 
 
-// This function can early-detects wrap error for unsigned integers which could
-// otherwise occure later when computing addresses of bits of individual cells inside
-// dynamic_state_of_neural_tissue. By 'early-detection' we mean that the function is
-// called in construction of static_state_of_neural_tissue. Therefore, it is safe to
-// completelly omit all such checks inside any instance of dynamic_state_of_neural_tissue.
-void check_for_unsigned_wrap_errors(static_state_of_neural_tissue const& tissue_props);
+boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(
+        static_state_of_neural_tissue const& static_state_of_tissue
+        );
+
+boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(
+        std::shared_ptr<static_state_of_neural_tissue const> const static_state_ptr
+        );
 
 
 }

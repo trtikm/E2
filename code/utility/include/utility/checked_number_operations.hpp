@@ -5,7 +5,9 @@
 #   include <utility/basic_numeric_types.hpp>
 
 natural_16_bit checked_add_16_bit(natural_16_bit const a, natural_16_bit const b);
+natural_16_bit checked_mul_16_bit(natural_16_bit const a, natural_16_bit const b);
 
+natural_32_bit checked_add_32_bit(natural_32_bit const a, natural_32_bit const b);
 natural_32_bit checked_mul_32_bit(natural_32_bit const a, natural_32_bit const b);
 
 natural_64_bit checked_add_64_bit(natural_64_bit const a, natural_64_bit const b);
