@@ -158,7 +158,8 @@ void bits_to_value(
             target_bits.num_bits() - (i + 1),
             get_bit(
                 source_of_bits,
-                index_of_the_first_bit + how_many_bits - (i + 1)
+                index_of_the_first_bit + i
+                //index_of_the_first_bit + how_many_bits - (i + 1)
                 )
             );
 

@@ -3,9 +3,6 @@ add_library(utility
 
     ./include/utility/basic_numeric_types.hpp
 
-    ./src/bitfield.cpp
-    ./include/utility/bitfield.hpp
-
     ./src/array_of_bit_units.cpp
     ./include/utility/array_of_bit_units.hpp
 

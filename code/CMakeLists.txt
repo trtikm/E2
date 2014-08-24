@@ -37,6 +37,18 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif()
 set(CMAKE_INSTALL_RPATH "./")
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
+
+if(CMAKE_COMPILER_IS_GNUCXX)
+    set(DEFAULT_STATIC_LIB_PREFIX "lib")
+    set(DEFAULT_STATIC_LIB_SUFFIX ".a")
+    set(DEFAULT_DYNAMIC_LIB_SUFFIX ".so")
+else()
+    set(DEFAULT_STATIC_LIB_PREFIX "")
+    set(DEFAULT_STATIC_LIB_SUFFIX ".lib")
+    set(DEFAULT_DYNAMIC_LIB_SUFFIX ".dll")
+endif()
+
 # find and add Boost
 #set(BOOST_ROOT "/home/marek/Software/boost_1_55_0/dist")
 set(Boost_USE_MULTITHREADED ON)
@@ -54,11 +66,17 @@ include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}" "${Boost_LIBRARY_DIRS}")
 add_definitions("-DBOOST_LOG_DYN_LINK -DBOOST_LOG_SETUP")
+set(BOOST_LIST_OF_LIBRARIES_TO_LINK_WITH
+        ${Boost_LIBRARIES}
+    )
 
 # find and add Python
 find_package(PythonLibs REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 link_directories(${PYTHON_LIBRARIES})
+set(PYTHON_LIST_OF_LIBRARIES_TO_LINK_WITH
+        ${PYTHON_LIBRARIES}
+    )
 
 # here follow all libraries of E2
 include_directories(

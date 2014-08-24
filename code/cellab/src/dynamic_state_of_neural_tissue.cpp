@@ -1,6 +1,7 @@
 #include <cellab/dynamic_state_of_neural_tissue.hpp>
 #include <utility/checked_number_operations.hpp>
 #include <utility/assumptions.hpp>
+#include <utility/log.hpp>
 
 
 static natural_8_bit compute_num_of_bits_to_store_number(natural_32_bit number)
@@ -81,6 +82,13 @@ dynamic_state_of_neural_tissue::dynamic_state_of_neural_tissue(
                         )
                     );
     }
+
+    LOG(debug,FUNCTION_PROTOTYPE());
+}
+
+dynamic_state_of_neural_tissue::~dynamic_state_of_neural_tissue()
+{
+    LOG(debug,FUNCTION_PROTOTYPE());
 }
 
 boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(
