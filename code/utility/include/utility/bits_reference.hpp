@@ -39,13 +39,40 @@ void bits_to_value(
     natural_32_bit& variable_where_the_value_will_be_stored
     );
 
+template<typename T>
+T bits_to_value(
+    bits_reference const& source_of_bits,
+    natural_8_bit index_of_the_first_bit,
+    natural_8_bit how_many_bits,
+    )
+{
+    T variable_where_the_value_will_be_stored;
+    bits_to_value(
+            source_of_bits,
+            index_of_the_first_bit,
+            how_many_bits,
+            variable_where_the_value_will_be_stored
+            );
+    return T;
+}
+
+template<typename T>
+T bits_to_value( bits_reference const& source_of_bits )
+{
+    return bits_to_value( source_of_bits, 0U, source_of_bits.num_bits() );
+}
+
+
 void value_to_bits(
-    natural_32_bit const& variable_where_the_value_is_stored,
-    natural_8_bit how_many_bits_to_transfer,
+    natural_32_bit const variable_where_the_value_is_stored,
     bits_reference& target_bits,
-    natural_8_bit index_of_the_first_target_bit
+    natural_8_bit const how_many_bits_to_transfer
     );
 
+void value_to_bits(
+    natural_32_bit const variable_where_the_value_is_stored,
+    bits_reference& target_bits,
+    );
 
 
 struct bits_const_reference

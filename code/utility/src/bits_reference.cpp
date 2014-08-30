@@ -171,11 +171,18 @@ void bits_to_value(
 }
 
 void value_to_bits(
-    natural_32_bit const& variable_where_the_value_is_stored,
-    natural_8_bit how_many_bits_to_transfer,
+    natural_32_bit const variable_where_the_value_is_stored,
     bits_reference& target_bits,
-    natural_8_bit index_of_the_first_target_bit
+    natural_8_bit const how_many_bits_to_transfer
     )
 {
     NOT_IMPLEMENTED_YET();
+}
+
+void value_to_bits(
+    natural_32_bit const variable_where_the_value_is_stored,
+    bits_reference& target_bits,
+    )
+{
+    value_to_bits( variable_where_the_value_is_stored, target_bits, target_bits.num_bits() );
 }

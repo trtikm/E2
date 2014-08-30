@@ -36,6 +36,8 @@ add_library(${THIS_TARGET_NAME}
     ./src/transition_of_synapses_to_muscles.cpp
     ./src/transition_of_synapses_of_tissue.cpp
     ./src/transition_of_synaptic_migration_in_tissue.cpp
+    ./src/transition_of_synaptic_migration_to_proper_lists.cpp
+    ./src/transition_of_synaptic_migration_between_lists.cpp
     ./src/transition_of_signalling_in_tissue.cpp
     ./src/transition_of_cells_of_tissue.cpp
     )

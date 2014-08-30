@@ -235,7 +235,7 @@ void apply_transition_of_cells_of_tissue(
             dynamic_state_of_tissue->get_static_state_of_neural_tissue();
 
     std::vector<std::thread> threads;
-    for (natural_32_bit i = 0; i < num_avalilable_thread_for_creation_and_use; ++i)
+    for (natural_32_bit i = 0U; i < num_avalilable_thread_for_creation_and_use; ++i)
     {
         natural_32_bit x_coord = 0U;
         natural_32_bit y_coord = 0U;
