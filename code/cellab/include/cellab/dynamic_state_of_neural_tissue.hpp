@@ -21,25 +21,46 @@ struct dynamic_state_of_neural_tissue
 
     ~dynamic_state_of_neural_tissue();
 
-    std::shared_ptr<static_state_of_neural_tissue const> get_static_state_of_neural_tissue() const;
+    std::shared_ptr<static_state_of_neural_tissue const>  get_static_state_of_neural_tissue() const;
 
-    bits_reference find_bits_of_cell_in_tissue(
-            natural_32_bit const seek_along_x_axis,
-            natural_32_bit const seek_along_y_axis,
-            natural_32_bit const seek_along_columnar_axis
+    bits_reference  find_bits_of_cell_in_tissue(
+            natural_32_bit const coord_along_x_axis,
+            natural_32_bit const coord_along_y_axis,
+            natural_32_bit const coord_along_columnar_axis
             );
 
-    bits_reference find_bits_of_synapse_in_tissue(
-            natural_32_bit const seek_to_cell_along_x_axis,
-            natural_32_bit const seek_to_cell_along_y_axis,
-            natural_32_bit const seek_to_cell_along_columnar_axis,
+    bits_reference  find_bits_of_synapse_in_tissue(
+            natural_32_bit const coord_to_cell_along_x_axis,
+            natural_32_bit const coord_to_cell_along_y_axis,
+            natural_32_bit const coord_to_cell_along_columnar_axis,
             natural_32_bit const index_of_synapse_in_territory_of_cell
             );
 
-    bits_reference find_bits_of_signalling(
-            natural_32_bit const seek_to_cell_along_x_axis,
-            natural_32_bit const seek_to_cell_along_y_axis,
-            natural_32_bit const seek_to_cell_along_columnar_axis
+    bits_reference  find_bits_of_territorial_state_of_synapse_in_tissue(
+            natural_32_bit const coord_to_cell_along_x_axis,
+            natural_32_bit const coord_to_cell_along_y_axis,
+            natural_32_bit const coord_to_cell_along_columnar_axis,
+            natural_32_bit const index_of_synapse_in_territory_of_cell
+            );
+
+    bits_reference  find_bits_of_coords_of_source_cell_of_synapse_in_tissue(
+            natural_32_bit const coord_to_cell_along_x_axis,
+            natural_32_bit const coord_to_cell_along_y_axis,
+            natural_32_bit const coord_to_cell_along_columnar_axis,
+            natural_32_bit const index_of_synapse_in_territory_of_cell
+            );
+
+    bits_reference  find_bits_of_signalling(
+            natural_32_bit const coord_to_cell_along_x_axis,
+            natural_32_bit const coord_to_cell_along_y_axis,
+            natural_32_bit const coord_to_cell_along_columnar_axis
+            );
+
+    bits_reference  find_bits_of_delimiter_between_teritorial_lists(
+            natural_32_bit const coord_to_cell_along_x_axis,
+            natural_32_bit const coord_to_cell_along_y_axis,
+            natural_32_bit const coord_to_cell_along_columnar_axis,
+            natural_32_bit const index_of_delimiter
             );
 
     bits_reference find_bits_of_sensory_cell(natural_32_bit const index_of_sensory_cell);

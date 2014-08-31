@@ -2,6 +2,7 @@
 #   define UTILITY_BITS_REFERENCE_HPP_INCLUDED
 
 #   include <utility/basic_numeric_types.hpp>
+#   include <utility/assumptions.hpp>
 
 
 //struct bits_const_reference;
@@ -32,6 +33,8 @@ private:
 bool get_bit(bits_reference const& bit_range, natural_16_bit const bit_index);
 void set_bit(bits_reference& bit_range, natural_16_bit const bit_index, bool const value);
 
+void  swap_referenced_bits( bits_reference& left_bits, bits_reference& right_bits);
+
 void bits_to_value(
     bits_reference const& source_of_bits,
     natural_8_bit index_of_the_first_bit,
@@ -43,7 +46,7 @@ template<typename T>
 T bits_to_value(
     bits_reference const& source_of_bits,
     natural_8_bit index_of_the_first_bit,
-    natural_8_bit how_many_bits,
+    natural_8_bit how_many_bits
     )
 {
     T variable_where_the_value_will_be_stored;
@@ -53,13 +56,14 @@ T bits_to_value(
             how_many_bits,
             variable_where_the_value_will_be_stored
             );
-    return T;
+    return variable_where_the_value_will_be_stored;
 }
 
 template<typename T>
 T bits_to_value( bits_reference const& source_of_bits )
 {
-    return bits_to_value( source_of_bits, 0U, source_of_bits.num_bits() );
+    ASSUMPTION((source_of_bits.num_bits() >> 8U) == 0U);
+    return bits_to_value<T>( source_of_bits, 0U, source_of_bits.num_bits() );
 }
 
 
@@ -71,7 +75,7 @@ void value_to_bits(
 
 void value_to_bits(
     natural_32_bit const variable_where_the_value_is_stored,
-    bits_reference& target_bits,
+    bits_reference& target_bits
     );
 
 

@@ -1,41 +1,24 @@
-#include <cellab/dynamic_state_of_neural_tissue.hpp>
 #include <cellab/static_state_of_neural_tissue.hpp>
+#include <cellab/dynamic_state_of_neural_tissue.hpp>
+#include <cellab/utilities_for_transition_algorithms.hpp>
 #include <utility/basic_numeric_types.hpp>
 #include <utility/bits_reference.hpp>
-#include <utility/assumptions.hpp>
 #include <functional>
 #include <memory>
 #include <vector>
-#include <tuple>
 #include <thread>
-
-#include <utility/development.hpp>
-
-static natural_64_bit go_to_next_value_modulo_range(natural_64_bit const current_value,
-                                                    natural_64_bit const range,
-                                                    natural_64_bit& extent);
-
-static bool go_to_next_index(natural_32_bit& index, natural_32_bit const extent, natural_32_bit const size)
-{
-    natural_64_bit extent_64_bit = extent;
-    index = go_to_next_value_modulo_range(index,size,extent_64_bit);
-    return extent_64_bit == 0ULL;
-}
 
 namespace cellab {
 
 
-typedef natural_16_bit kind_of_cell;
-
-
 static void thread_apply_transition_of_synapses_to_muscles(
-        std::shared_ptr<dynamic_state_of_neural_tissue const> const dynamic_state_of_tissue,
+        std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue,
         std::function<
             void(
             bits_reference& bits_of_synapse_to_be_updated,
             kind_of_cell kind_of_source_cell,
-            bits_const_reference const& bits_of_source_cell,
+            bits_const_reference const& bits_of_source_cell
             )> single_threaded_transition_function_of_dynamic_state_of_synapse_to_muscle,
         natural_32_bit index,
         natural_32_bit const extent_of_index
@@ -46,8 +29,13 @@ static void thread_apply_transition_of_synapses_to_muscles(
         bits_reference bits_of_synapse =
             dynamic_state_of_tissue->find_bits_of_synapse_to_muscle(index);
 
-        tissue_coordinates const source_cell_coords =
-            dynamic_state_of_tissue->get_coordinates_of_source_cell_of_synapse_to_muscle(index);
+        tissue_coordinates const source_cell_coords(
+                    get_coordinates_of_source_cell_of_synapse_to_muscle(
+                            dynamic_state_of_tissue,
+                            static_state_of_tissue,
+                            index
+                            )
+                    );
 
         natural_16_bit const kind_of_source_cell =
             static_state_of_tissue->compute_kind_of_tissue_cell_from_its_position_along_columnar_axis(
@@ -64,20 +52,19 @@ static void thread_apply_transition_of_synapses_to_muscles(
         single_threaded_transition_function_of_dynamic_state_of_synapse_to_muscle(
                     bits_of_synapse,
                     kind_of_source_cell,
-                    bits_of_source_cell,
+                    bits_of_source_cell
                     );
     }
     while (go_to_next_index(index,extent_of_index,static_state_of_tissue->num_synapses_to_muscles()));
 }
 
 void apply_transition_of_synapses_to_muscles(
-        std::shared_ptr<dynamic_state_of_neural_tissue const> const dynamic_state_of_tissue,
+        std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         std::function<
             void(
-            bits_reference bits_of_synapse_to_be_updated,
-            static_state_of_synapse const& static_state_of_updated_synapse,
-            bits_const_reference bits_of_source_cell,
-            static_state_of_cell const& static_state_of_source_cell
+            bits_reference& bits_of_synapse_to_be_updated,
+            kind_of_cell kind_of_source_cell,
+            bits_const_reference const& bits_of_source_cell
             )> single_threaded_transition_function_of_dynamic_state_of_synapse_to_muscle,
         natural_32_bit num_avalilable_thread_for_creation_and_use
         )

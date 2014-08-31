@@ -31,6 +31,10 @@ add_library(utility
 
     ./src/checked_number_operations.cpp
     ./include/utility/checked_number_operations.hpp
+
+    ./src/random.cpp
+    ./include/utility/random.hpp
+
     )
 
 #install(TARGETS brod_utils DESTINATION lib/utils)

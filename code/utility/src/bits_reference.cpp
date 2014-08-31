@@ -127,6 +127,11 @@ void set_bit(bits_reference& bit_range, natural_16_bit const bit_index, bool con
     write_bit(bit_range.first_byte_ptr(),bit_range.seek_in_the_first_byte() + bit_index,value);
 }
 
+void  swap_referenced_bits( bits_reference& left_bits, bits_reference& right_bits)
+{
+    NOT_IMPLEMENTED_YET();
+}
+
 void bits_to_value(
     bits_reference const& source_of_bits,
     natural_8_bit index_of_the_first_bit,
@@ -181,7 +186,7 @@ void value_to_bits(
 
 void value_to_bits(
     natural_32_bit const variable_where_the_value_is_stored,
-    bits_reference& target_bits,
+    bits_reference& target_bits
     )
 {
     value_to_bits( variable_where_the_value_is_stored, target_bits, target_bits.num_bits() );
