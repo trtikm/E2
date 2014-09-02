@@ -66,7 +66,7 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
             [](std::vector<natural_32_bit> v)
             {
                 for (natural_32_bit i = 1U; i < v.size(); ++i)
-                    v.at(i) += v.at(i - 1);
+                    v.at(i) += v.at(i - 1U);
                 return v;
             }(num_cells_along_columnar_axis_of_cell_kind)
         )
@@ -238,7 +238,7 @@ kind_of_cell  static_state_of_neural_tissue::compute_kind_of_cell_from_its_posit
             natural_32_bit position_of_cell_in_column) const
 {
     ASSUMPTION(position_of_cell_in_column < num_cells_along_columnar_axis());
-    std::vector<natural_32_bit>::const_iterator it =
+    std::vector<natural_32_bit>::const_iterator const it =
             std::upper_bound(
                     m_end_index_along_columnar_axis_of_cell_kind.begin(),
                     m_end_index_along_columnar_axis_of_cell_kind.end(),
