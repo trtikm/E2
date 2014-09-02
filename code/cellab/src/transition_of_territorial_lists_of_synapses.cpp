@@ -94,8 +94,8 @@ static void move_synapses_into_proper_lists_in_territory_of_one_cell(
             bits_to_value<natural_32_bit>(bits_of_delimiters.at(3U)),
             bits_to_value<natural_32_bit>(bits_of_delimiters.at(4U)),
             bits_to_value<natural_32_bit>(bits_of_delimiters.at(5U)),
-            static_state_of_tissue->num_synapses_in_territory_of_cell(
-                    static_state_of_tissue->compute_kind_of_tissue_cell_from_its_position_along_columnar_axis(
+            static_state_of_tissue->num_synapses_in_territory_of_cell_kind(
+                    static_state_of_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(
                             c_coord
                             )
                     )
@@ -165,9 +165,9 @@ static void thread_apply_transition_of_territorial_lists_of_synapses(
     while (go_to_next_coordinates(
                x_coord,y_coord,c_coord,
                extent_in_coordinates,
-               static_state_of_tissue->num_tissue_cells_along_x_axis(),
-               static_state_of_tissue->num_tissue_cells_along_y_axis(),
-               static_state_of_tissue->num_tissue_cells_along_columnar_axis()
+               static_state_of_tissue->num_cells_along_x_axis(),
+               static_state_of_tissue->num_cells_along_y_axis(),
+               static_state_of_tissue->num_cells_along_columnar_axis()
                ));
 }
 
@@ -188,9 +188,9 @@ void apply_transition_of_territorial_lists_of_synapses(
         if (!go_to_next_coordinates(
                     x_coord,y_coord,c_coord,
                     i,
-                    static_state_of_tissue->num_tissue_cells_along_x_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_y_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_columnar_axis()
+                    static_state_of_tissue->num_cells_along_x_axis(),
+                    static_state_of_tissue->num_cells_along_y_axis(),
+                    static_state_of_tissue->num_cells_along_columnar_axis()
                     ))
             break;
 

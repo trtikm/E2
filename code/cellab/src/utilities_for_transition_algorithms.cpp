@@ -73,26 +73,26 @@ static natural_32_bit  shift_coordinate_in_torus_axis(
 tissue_coordinates  shift_coordinates(
         tissue_coordinates const& coords,
         shift_in_coordinates const& shift,
-        natural_32_bit const num_tissue_cells_along_x_axis,
-        natural_32_bit const num_tissue_cells_along_y_axis,
-        natural_32_bit const num_tissue_cells_along_columnar_axis
+        natural_32_bit const num_cells_along_x_axis,
+        natural_32_bit const num_cells_along_y_axis,
+        natural_32_bit const num_cells_along_columnar_axis
         )
 {
     return tissue_coordinates(
                 shift_coordinate_in_torus_axis(
                         coords.get_coord_along_x_axis(),
                         shift.get_shift_along_x_axis(),
-                        num_tissue_cells_along_x_axis
+                        num_cells_along_x_axis
                         ),
                 shift_coordinate_in_torus_axis(
                         coords.get_coord_along_y_axis(),
                         shift.get_shift_along_y_axis(),
-                        num_tissue_cells_along_y_axis
+                        num_cells_along_y_axis
                         ),
                 shift_coordinate_in_torus_axis(
                         coords.get_coord_along_columnar_axis(),
                         shift.get_shift_along_columnar_axis(),
-                        num_tissue_cells_along_columnar_axis
+                        num_cells_along_columnar_axis
                         )
                 );
 }
@@ -111,15 +111,15 @@ static natural_64_bit  go_to_next_value_modulo_range(
 bool  go_to_next_coordinates(
         natural_32_bit& x_coord, natural_32_bit& y_coord, natural_32_bit& c_coord,
         natural_32_bit const extent,
-        natural_32_bit const num_tissue_cells_along_x_axis,
-        natural_32_bit const num_tissue_cells_along_y_axis,
-        natural_32_bit const num_tissue_cells_along_columnar_axis
+        natural_32_bit const num_cells_along_x_axis,
+        natural_32_bit const num_cells_along_y_axis,
+        natural_32_bit const num_cells_along_columnar_axis
         )
 {
     natural_64_bit extent_64_bit = extent;
-    c_coord = go_to_next_value_modulo_range(c_coord,num_tissue_cells_along_columnar_axis,extent_64_bit);
-    x_coord = go_to_next_value_modulo_range(x_coord,num_tissue_cells_along_x_axis,extent_64_bit);
-    y_coord = go_to_next_value_modulo_range(y_coord,num_tissue_cells_along_y_axis,extent_64_bit);
+    c_coord = go_to_next_value_modulo_range(c_coord,num_cells_along_columnar_axis,extent_64_bit);
+    x_coord = go_to_next_value_modulo_range(x_coord,num_cells_along_x_axis,extent_64_bit);
+    y_coord = go_to_next_value_modulo_range(y_coord,num_cells_along_y_axis,extent_64_bit);
     return extent_64_bit == 0ULL;
 }
 
@@ -207,8 +207,8 @@ natural_32_bit  get_end_index_of_territorial_list_of_cell(
     ASSUMPTION(index_of_territorial_list < 7U);
 
     if (index_of_territorial_list == 6U)
-        return static_state_of_tissue->num_synapses_in_territory_of_cell(
-                    static_state_of_tissue->compute_kind_of_tissue_cell_from_its_position_along_columnar_axis(
+        return static_state_of_tissue->num_synapses_in_territory_of_cell_kind(
+                    static_state_of_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(
                             coordinates_of_cell.get_coord_along_columnar_axis()
                             )
                     );
@@ -307,9 +307,9 @@ std::pair<bits_const_reference,kind_of_cell>  get_signalling_callback_function(
             shift_coordinates(
                     neighbourhood.get_center_of_neighbourhood(),
                     shift,
-                    static_state_of_tissue->num_tissue_cells_along_x_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_y_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_columnar_axis()
+                    static_state_of_tissue->num_cells_along_x_axis(),
+                    static_state_of_tissue->num_cells_along_y_axis(),
+                    static_state_of_tissue->num_cells_along_columnar_axis()
                     );
     return std::make_pair(
                 bits_const_reference(
@@ -319,7 +319,7 @@ std::pair<bits_const_reference,kind_of_cell>  get_signalling_callback_function(
                                 cell_coords.get_coord_along_columnar_axis()
                                 )
                         ),
-                static_state_of_tissue->compute_kind_of_tissue_cell_from_its_position_along_columnar_axis(
+                static_state_of_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(
                         cell_coords.get_coord_along_columnar_axis()
                         )
                 );
@@ -345,7 +345,7 @@ std::tuple<bits_const_reference,kind_of_cell,kind_of_cell>  get_synapse_callback
                                 shift_to_start_index + shift_from_start_index
                                 )
                     ),
-                static_state_of_tissue->compute_kind_of_tissue_cell_from_its_position_along_columnar_axis(
+                static_state_of_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(
                     get_coordinates_of_source_cell_of_synapse_in_tissue(
                             dynamic_state_of_tissue,
                             static_state_of_tissue,
@@ -381,9 +381,9 @@ std::pair<bits_const_reference,kind_of_cell>  get_cell_callback_function(
             shift_coordinates(
                     neighbourhood.get_center_of_neighbourhood(),
                     shift,
-                    static_state_of_tissue->num_tissue_cells_along_x_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_y_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_columnar_axis()
+                    static_state_of_tissue->num_cells_along_x_axis(),
+                    static_state_of_tissue->num_cells_along_y_axis(),
+                    static_state_of_tissue->num_cells_along_columnar_axis()
                     );
     return std::make_pair(
                 bits_const_reference(
@@ -393,7 +393,7 @@ std::pair<bits_const_reference,kind_of_cell>  get_cell_callback_function(
                                 cell_coords.get_coord_along_columnar_axis()
                                 )
                         ),
-                static_state_of_tissue->compute_kind_of_tissue_cell_from_its_position_along_columnar_axis(
+                static_state_of_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(
                         cell_coords.get_coord_along_columnar_axis()
                         )
                 );

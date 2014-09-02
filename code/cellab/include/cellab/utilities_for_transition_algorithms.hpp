@@ -47,17 +47,17 @@ private:
 tissue_coordinates  shift_coordinates(
         tissue_coordinates const& coords,
         shift_in_coordinates const& shift,
-        natural_32_bit const num_tissue_cells_along_x_axis,
-        natural_32_bit const num_tissue_cells_along_y_axis,
-        natural_32_bit const num_tissue_cells_along_columnar_axis
+        natural_32_bit const num_cells_along_x_axis,
+        natural_32_bit const num_cells_along_y_axis,
+        natural_32_bit const num_cells_along_columnar_axis
         );
 
 bool  go_to_next_coordinates(
         natural_32_bit& x_coord, natural_32_bit& y_coord, natural_32_bit& c_coord,
         natural_32_bit const extent,
-        natural_32_bit const num_tissue_cells_along_x_axis,
-        natural_32_bit const num_tissue_cells_along_y_axis,
-        natural_32_bit const num_tissue_cells_along_columnar_axis
+        natural_32_bit const num_cells_along_x_axis,
+        natural_32_bit const num_cells_along_y_axis,
+        natural_32_bit const num_cells_along_columnar_axis
         );
 
 bool  go_to_next_index(

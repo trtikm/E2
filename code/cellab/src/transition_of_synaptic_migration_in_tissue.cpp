@@ -129,13 +129,13 @@ static void  thread_exchange_synapses_between_territorial_lists_of_all_cells(
                     list_index_in_pivot_cells,
                     tissue_coordinates(
                         clip_shift(shift.get_shift_along_x_axis(),x_coord,
-                                   static_state_of_tissue->num_tissue_cells_along_x_axis(),
+                                   static_state_of_tissue->num_cells_along_x_axis(),
                                    static_state_of_tissue->is_x_axis_torus_axis()),
                         clip_shift(shift.get_shift_along_y_axis(),y_coord,
-                                   static_state_of_tissue->num_tissue_cells_along_y_axis(),
+                                   static_state_of_tissue->num_cells_along_y_axis(),
                                    static_state_of_tissue->is_y_axis_torus_axis()),
                         clip_shift(shift.get_shift_along_columnar_axis(),c_coord,
-                                   static_state_of_tissue->num_tissue_cells_along_columnar_axis(),
+                                   static_state_of_tissue->num_cells_along_columnar_axis(),
                                    static_state_of_tissue->is_columnar_axis_torus_axis())
                         ),
                     list_index_in_shift_cells
@@ -145,9 +145,9 @@ static void  thread_exchange_synapses_between_territorial_lists_of_all_cells(
     while (go_to_next_coordinates(
                x_coord,y_coord,c_coord,
                extent_in_coordinates,
-               static_state_of_tissue->num_tissue_cells_along_x_axis(),
-               static_state_of_tissue->num_tissue_cells_along_y_axis(),
-               static_state_of_tissue->num_tissue_cells_along_columnar_axis()
+               static_state_of_tissue->num_cells_along_x_axis(),
+               static_state_of_tissue->num_cells_along_y_axis(),
+               static_state_of_tissue->num_cells_along_columnar_axis()
                ));
 
 }
@@ -175,9 +175,9 @@ static void  exchange_synapses_between_territorial_lists_of_all_cells(
         if (!go_to_next_coordinates(
                     x_coord,y_coord,c_coord,
                     i,
-                    static_state_of_tissue->num_tissue_cells_along_x_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_y_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_columnar_axis()
+                    static_state_of_tissue->num_cells_along_x_axis(),
+                    static_state_of_tissue->num_cells_along_y_axis(),
+                    static_state_of_tissue->num_cells_along_columnar_axis()
                     ))
             break;
 

@@ -38,7 +38,7 @@ static void thread_apply_transition_of_synapses_to_muscles(
                     );
 
         natural_16_bit const kind_of_source_cell =
-            static_state_of_tissue->compute_kind_of_tissue_cell_from_its_position_along_columnar_axis(
+            static_state_of_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(
                     source_cell_coords.get_coord_along_columnar_axis()
                     );
 

@@ -42,37 +42,37 @@ static void thread_apply_transition_of_cells_of_tissue(
             dynamic_state_of_tissue->find_bits_of_cell_in_tissue(x_coord,y_coord,c_coord);
 
         kind_of_cell const cell_kind =
-            static_state_of_tissue->compute_kind_of_tissue_cell_from_its_position_along_columnar_axis(c_coord);
+            static_state_of_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(c_coord);
 
         tissue_coordinates const cell_coordinates(x_coord,y_coord,c_coord);
 
         shift_in_coordinates shift_to_low_corner(
             clip_shift(-static_state_of_tissue->get_x_radius_of_signalling_neighbourhood_of_cell(cell_kind),
                        cell_coordinates.get_coord_along_x_axis(),
-                       static_state_of_tissue->num_tissue_cells_along_x_axis(),
+                       static_state_of_tissue->num_cells_along_x_axis(),
                        static_state_of_tissue->is_x_axis_torus_axis()),
             clip_shift(-static_state_of_tissue->get_y_radius_of_signalling_neighbourhood_of_cell(cell_kind),
                        cell_coordinates.get_coord_along_y_axis(),
-                       static_state_of_tissue->num_tissue_cells_along_y_axis(),
+                       static_state_of_tissue->num_cells_along_y_axis(),
                        static_state_of_tissue->is_y_axis_torus_axis()),
             clip_shift(-static_state_of_tissue->get_columnar_radius_of_signalling_neighbourhood_of_cell(cell_kind),
                        cell_coordinates.get_coord_along_columnar_axis(),
-                       static_state_of_tissue->num_tissue_cells_along_columnar_axis(),
+                       static_state_of_tissue->num_cells_along_columnar_axis(),
                        static_state_of_tissue->is_columnar_axis_torus_axis())
             );
 
         shift_in_coordinates shift_to_high_corner(
             clip_shift(static_state_of_tissue->get_x_radius_of_signalling_neighbourhood_of_cell(cell_kind),
                        cell_coordinates.get_coord_along_x_axis(),
-                       static_state_of_tissue->num_tissue_cells_along_x_axis(),
+                       static_state_of_tissue->num_cells_along_x_axis(),
                        static_state_of_tissue->is_x_axis_torus_axis()),
             clip_shift(static_state_of_tissue->get_y_radius_of_signalling_neighbourhood_of_cell(cell_kind),
                        cell_coordinates.get_coord_along_y_axis(),
-                       static_state_of_tissue->num_tissue_cells_along_y_axis(),
+                       static_state_of_tissue->num_cells_along_y_axis(),
                        static_state_of_tissue->is_y_axis_torus_axis()),
             clip_shift(static_state_of_tissue->get_columnar_radius_of_signalling_neighbourhood_of_cell(cell_kind),
                        cell_coordinates.get_coord_along_columnar_axis(),
-                       static_state_of_tissue->num_tissue_cells_along_columnar_axis(),
+                       static_state_of_tissue->num_cells_along_columnar_axis(),
                        static_state_of_tissue->is_columnar_axis_torus_axis())
             );
 
@@ -115,9 +115,9 @@ static void thread_apply_transition_of_cells_of_tissue(
     while (go_to_next_coordinates(
                     x_coord,y_coord,c_coord,
                     extent_in_coordinates,
-                    static_state_of_tissue->num_tissue_cells_along_x_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_y_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_columnar_axis()
+                    static_state_of_tissue->num_cells_along_x_axis(),
+                    static_state_of_tissue->num_cells_along_y_axis(),
+                    static_state_of_tissue->num_cells_along_columnar_axis()
                     ));
 }
 
@@ -150,9 +150,9 @@ void apply_transition_of_cells_of_tissue(
         if (!go_to_next_coordinates(
                     x_coord,y_coord,c_coord,
                     i,
-                    static_state_of_tissue->num_tissue_cells_along_x_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_y_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_columnar_axis()
+                    static_state_of_tissue->num_cells_along_x_axis(),
+                    static_state_of_tissue->num_cells_along_y_axis(),
+                    static_state_of_tissue->num_cells_along_columnar_axis()
                     ))
             break;
 

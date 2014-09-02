@@ -44,7 +44,7 @@ static void thread_apply_transition_of_synapses_of_tissue(
             dynamic_state_of_tissue->find_bits_of_cell_in_tissue(x_coord,y_coord,c_coord);
 
         natural_16_bit const kind_of_territory_cell =
-            static_state_of_tissue->compute_kind_of_tissue_cell_from_its_position_along_columnar_axis(c_coord);
+            static_state_of_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(c_coord);
 
         tissue_coordinates const territory_cell_coordinates(x_coord,y_coord,c_coord);
 
@@ -52,17 +52,17 @@ static void thread_apply_transition_of_synapses_of_tissue(
             clip_shift(-static_state_of_tissue->get_x_radius_of_signalling_neighbourhood_of_synapse(
                            kind_of_territory_cell),
                        territory_cell_coordinates.get_coord_along_x_axis(),
-                       static_state_of_tissue->num_tissue_cells_along_x_axis(),
+                       static_state_of_tissue->num_cells_along_x_axis(),
                        static_state_of_tissue->is_x_axis_torus_axis()),
             clip_shift(-static_state_of_tissue->get_y_radius_of_signalling_neighbourhood_of_synapse(
                            kind_of_territory_cell),
                        territory_cell_coordinates.get_coord_along_y_axis(),
-                       static_state_of_tissue->num_tissue_cells_along_y_axis(),
+                       static_state_of_tissue->num_cells_along_y_axis(),
                        static_state_of_tissue->is_y_axis_torus_axis()),
             clip_shift(-static_state_of_tissue->get_columnar_radius_of_signalling_neighbourhood_of_synapse(
                            kind_of_territory_cell),
                        territory_cell_coordinates.get_coord_along_columnar_axis(),
-                       static_state_of_tissue->num_tissue_cells_along_columnar_axis(),
+                       static_state_of_tissue->num_cells_along_columnar_axis(),
                        static_state_of_tissue->is_columnar_axis_torus_axis())
             );
 
@@ -70,17 +70,17 @@ static void thread_apply_transition_of_synapses_of_tissue(
             clip_shift(static_state_of_tissue->get_x_radius_of_signalling_neighbourhood_of_synapse(
                            kind_of_territory_cell),
                        territory_cell_coordinates.get_coord_along_x_axis(),
-                       static_state_of_tissue->num_tissue_cells_along_x_axis(),
+                       static_state_of_tissue->num_cells_along_x_axis(),
                        static_state_of_tissue->is_x_axis_torus_axis()),
             clip_shift(static_state_of_tissue->get_y_radius_of_signalling_neighbourhood_of_synapse(
                            kind_of_territory_cell),
                        territory_cell_coordinates.get_coord_along_y_axis(),
-                       static_state_of_tissue->num_tissue_cells_along_y_axis(),
+                       static_state_of_tissue->num_cells_along_y_axis(),
                        static_state_of_tissue->is_y_axis_torus_axis()),
             clip_shift(static_state_of_tissue->get_columnar_radius_of_signalling_neighbourhood_of_synapse(
                            kind_of_territory_cell),
                        territory_cell_coordinates.get_coord_along_columnar_axis(),
-                       static_state_of_tissue->num_tissue_cells_along_columnar_axis(),
+                       static_state_of_tissue->num_cells_along_columnar_axis(),
                        static_state_of_tissue->is_columnar_axis_torus_axis())
             );
 
@@ -89,7 +89,7 @@ static void thread_apply_transition_of_synapses_of_tissue(
                     );
 
         for (natural_32_bit synapse_index = 0U;
-             synapse_index < static_state_of_tissue->num_synapses_in_territory_of_cell(kind_of_territory_cell);
+             synapse_index < static_state_of_tissue->num_synapses_in_territory_of_cell_kind(kind_of_territory_cell);
              ++synapse_index)
         {
             bits_reference bits_of_synapse =
@@ -104,7 +104,7 @@ static void thread_apply_transition_of_synapses_of_tissue(
                         );
 
             natural_16_bit const kind_of_source_cell =
-                static_state_of_tissue->compute_kind_of_tissue_cell_from_its_position_along_columnar_axis(
+                static_state_of_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(
                         source_cell_coords.get_coord_along_columnar_axis()
                         );
 
@@ -146,9 +146,9 @@ static void thread_apply_transition_of_synapses_of_tissue(
     while (go_to_next_coordinates(
                     x_coord,y_coord,c_coord,
                     extent_in_coordinates,
-                    static_state_of_tissue->num_tissue_cells_along_x_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_y_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_columnar_axis()
+                    static_state_of_tissue->num_cells_along_x_axis(),
+                    static_state_of_tissue->num_cells_along_y_axis(),
+                    static_state_of_tissue->num_cells_along_columnar_axis()
                     ));
 }
 
@@ -182,9 +182,9 @@ void apply_transition_of_synapses_of_tissue(
         if (!go_to_next_coordinates(
                     x_coord,y_coord,c_coord,
                     i,
-                    static_state_of_tissue->num_tissue_cells_along_x_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_y_axis(),
-                    static_state_of_tissue->num_tissue_cells_along_columnar_axis()
+                    static_state_of_tissue->num_cells_along_x_axis(),
+                    static_state_of_tissue->num_cells_along_y_axis(),
+                    static_state_of_tissue->num_cells_along_columnar_axis()
                     ))
             break;
 
