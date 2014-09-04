@@ -2,94 +2,317 @@
 #include <utility/checked_number_operations.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/log.hpp>
+#include <algorithm>
+
+static natural_8_bit compute_num_of_bits_to_store_natural_32_bit_number(natural_32_bit number)
+{
+    natural_8_bit num_bits = 0U;
+    do
+    {
+        number >>= 1U;
+        ++num_bits;
+    }
+    while (number != 0U);
+    return num_bits;
+}
+
+static natural_8_bit num_delimiters()
+{
+    return 6U;
+}
+
+static natural_16_bit num_of_bits_to_store_territorial_state_of_synapse()
+{
+    return 3U; //compute_num_of_bits_to_store_natural_32_bit_number(6U);
+}
+
+static natural_64_bit compute_columnar_index_of_synapse_in_territorial_of_cell(
+        natural_64_bit const columnar_index_of_cell_in_slice_of_cell_kind,
+        natural_64_bit const num_synapses_in_territory_of_cell_kind,
+        natural_64_bit const index_of_synapse_in_territory_of_cell
+        )
+{
+    return columnar_index_of_cell_in_slice_of_cell_kind * num_synapses_in_territory_of_cell_kind
+           + index_of_synapse_in_territory_of_cell
+           ;
+}
+
+namespace cellab {
 
 
-//static natural_8_bit compute_num_of_bits_to_store_number(natural_32_bit number)
-//{
-//    natural_8_bit num_bits = 1;
-//    do
-//    {
-//        number >>= 1;
-//        ++num_bits;
-//    }
-//    while (number != 0U);
-//    return num_bits;
-//}
+dynamic_state_of_neural_tissue::dynamic_state_of_neural_tissue(
+        std::shared_ptr<static_state_of_neural_tissue const> const pointer_to_static_state_of_neural_tissue
+        )
+    : m_static_state_of_neural_tissue(pointer_to_static_state_of_neural_tissue)
+    , m_num_bits_per_source_cell_coordinate(
+          compute_num_of_bits_to_store_natural_32_bit_number(
+              std::max(m_static_state_of_neural_tissue->num_cells_along_x_axis(),
+                       std::max(m_static_state_of_neural_tissue->num_cells_along_y_axis(),
+                                m_static_state_of_neural_tissue->num_cells_along_columnar_axis()))
+              )
+          )
+    , m_num_bits_per_delimiter_number(m_static_state_of_neural_tissue->num_kinds_of_cells())
+    , m_slices_of_cells(m_static_state_of_neural_tissue->num_kinds_of_cells())
+    , m_slices_of_synapses(m_static_state_of_neural_tissue->num_kinds_of_cells())
+    , m_slices_of_territorial_states_of_synapses(m_static_state_of_neural_tissue->num_kinds_of_cells())
+    , m_slices_of_source_cell_coords_of_synapses(m_static_state_of_neural_tissue->num_kinds_of_cells())
+    , m_slices_of_signalling_data(m_static_state_of_neural_tissue->num_kinds_of_cells())
+    , m_slices_of_delimiters_between_teritorial_lists(m_static_state_of_neural_tissue->num_kinds_of_cells())
+    , m_bits_of_sensory_cells(m_static_state_of_neural_tissue->num_bits_per_cell(),
+                              m_static_state_of_neural_tissue->num_sensory_cells())
+    , m_bits_of_synapses_to_muscles(m_static_state_of_neural_tissue->num_bits_per_synapse(),
+                                    m_static_state_of_neural_tissue->num_synapses_to_muscles())
+{
+    for (kind_of_cell kind = 0U; kind < m_static_state_of_neural_tissue->num_kinds_of_cells(); ++kind)
+    {
+        m_num_bits_per_delimiter_number.at(kind) =
+                compute_num_of_bits_to_store_natural_32_bit_number(
+                        m_static_state_of_neural_tissue->num_cells_along_columnar_axis_of_cell_kind(kind)
+                        );
+        m_slices_of_cells.at(kind) =
+                pointer_to_homogenous_slice_of_tissue(
+                    new homogenous_slice_of_tissue(
+                        m_static_state_of_neural_tissue->num_bits_per_cell(),
+                        m_static_state_of_neural_tissue->num_cells_along_x_axis(),
+                        m_static_state_of_neural_tissue->num_cells_along_y_axis(),
+                        m_static_state_of_neural_tissue->num_cells_along_columnar_axis_of_cell_kind(kind)
+                        )
+                    );
+        m_slices_of_synapses.at(kind) =
+                pointer_to_homogenous_slice_of_tissue(
+                    new homogenous_slice_of_tissue(
+                        m_static_state_of_neural_tissue->num_bits_per_synapse(),
+                        m_static_state_of_neural_tissue->num_cells_along_x_axis(),
+                        m_static_state_of_neural_tissue->num_cells_along_y_axis(),
+                        checked_mul_64_bit(
+                            m_static_state_of_neural_tissue->num_cells_along_columnar_axis_of_cell_kind(kind),
+                            m_static_state_of_neural_tissue->num_synapses_in_territory_of_cell_kind(kind)
+                            )
+                        )
+                    );
+        m_slices_of_territorial_states_of_synapses.at(kind) =
+                pointer_to_homogenous_slice_of_tissue(
+                    new homogenous_slice_of_tissue(
+                        num_of_bits_to_store_territorial_state_of_synapse(),
+                        m_static_state_of_neural_tissue->num_cells_along_x_axis(),
+                        m_static_state_of_neural_tissue->num_cells_along_y_axis(),
+                        checked_mul_64_bit(
+                            m_static_state_of_neural_tissue->num_cells_along_columnar_axis_of_cell_kind(kind),
+                            m_static_state_of_neural_tissue->num_synapses_in_territory_of_cell_kind(kind)
+                            )
+                        )
+                    );
+        m_slices_of_source_cell_coords_of_synapses.at(kind) =
+                pointer_to_homogenous_slice_of_tissue(
+                    new homogenous_slice_of_tissue(
+                        checked_mul_16_bit(3U,m_num_bits_per_source_cell_coordinate),
+                        m_static_state_of_neural_tissue->num_cells_along_x_axis(),
+                        m_static_state_of_neural_tissue->num_cells_along_y_axis(),
+                        checked_mul_64_bit(
+                            m_static_state_of_neural_tissue->num_cells_along_columnar_axis_of_cell_kind(kind),
+                            m_static_state_of_neural_tissue->num_synapses_in_territory_of_cell_kind(kind)
+                            )
+                        )
+                    );
+        m_slices_of_signalling_data.at(kind) =
+                pointer_to_homogenous_slice_of_tissue(
+                    new homogenous_slice_of_tissue(
+                        m_static_state_of_neural_tissue->num_bits_per_signalling(),
+                        m_static_state_of_neural_tissue->num_cells_along_x_axis(),
+                        m_static_state_of_neural_tissue->num_cells_along_y_axis(),
+                        m_static_state_of_neural_tissue->num_cells_along_columnar_axis_of_cell_kind(kind)
+                        )
+                    );
+        m_slices_of_delimiters_between_teritorial_lists.at(kind) =
+                pointer_to_homogenous_slice_of_tissue(
+                    new homogenous_slice_of_tissue(
+                        checked_mul_16_bit(num_delimiters(),m_num_bits_per_delimiter_number.at(kind)),
+                        m_static_state_of_neural_tissue->num_cells_along_x_axis(),
+                        m_static_state_of_neural_tissue->num_cells_along_y_axis(),
+                        m_static_state_of_neural_tissue->num_cells_along_columnar_axis_of_cell_kind(kind)
+                        )
+                    );
+    }
 
+    LOG(debug,FUNCTION_PROTOTYPE());
+}
 
-//namespace cellab {
+dynamic_state_of_neural_tissue::~dynamic_state_of_neural_tissue()
+{
+    LOG(debug,FUNCTION_PROTOTYPE());
+}
 
+std::shared_ptr<static_state_of_neural_tissue const>
+dynamic_state_of_neural_tissue::get_static_state_of_neural_tissue() const
+{
+    return m_static_state_of_neural_tissue;
+}
 
-//dynamic_state_of_neural_tissue::dynamic_state_of_neural_tissue(
-//        std::shared_ptr<static_state_of_neural_tissue const> const pointer_to_static_state_of_neural_tissue
-//        )
-//    : m_static_state_of_neural_tissue(pointer_to_static_state_of_neural_tissue)
-//    , m_slices_of_tissue_cells(m_static_state_of_neural_tissue->num_kinds_of_cells_in_neural_tissue())
-//    , m_slices_of_tissue_synapses(m_static_state_of_neural_tissue->num_kinds_of_cells_in_neural_tissue())
-//    , m_slices_of_tissue_signalling_data(m_static_state_of_neural_tissue->num_kinds_of_cells_in_neural_tissue())
-//    , m_slices_of_tissue_migration_data(m_static_state_of_neural_tissue->num_kinds_of_cells_in_neural_tissue())
-//    , m_num_bits_per_number_in_migration(m_static_state_of_neural_tissue->num_kinds_of_cells_in_neural_tissue())
-//    , m_bits_of_sensory_cells(m_static_state_of_neural_tissue->num_bits_per_cell(),
-//                              m_static_state_of_neural_tissue->num_sensory_cells())
-//    , m_bits_of_synapses_to_muscles(m_static_state_of_neural_tissue->num_bits_per_synapse(),
-//                                    m_static_state_of_neural_tissue->num_synapses_to_muscles())
-//{
-//    for (natural_16_bit i = 0U; i < m_static_state_of_neural_tissue->num_kinds_of_cells_in_neural_tissue(); ++i)
-//    {
-//        m_slices_of_tissue_cells.at(i) =
-//                pointer_to_homogenous_slice_of_tissue(
-//                    new homogenous_slice_of_tissue(
-//                        m_static_state_of_neural_tissue->num_bits_per_cell(),
-//                        m_static_state_of_neural_tissue->num_cells_along_x_axis(),
-//                        m_static_state_of_neural_tissue->num_cells_along_y_axis(),
-//                        m_static_state_of_neural_tissue->num_tissue_cells_in_column_of_cell_kind(i)
-//                        )
-//                    );
-//        m_slices_of_tissue_synapses.at(i) =
-//                pointer_to_homogenous_slice_of_tissue(
-//                    new homogenous_slice_of_tissue(
-//                        m_static_state_of_neural_tissue->num_bits_per_synapse(),
-//                        m_static_state_of_neural_tissue->num_cells_along_x_axis(),
-//                        m_static_state_of_neural_tissue->num_cells_along_y_axis(),
-//                        checked_mul_64_bit(
-//                            m_static_state_of_neural_tissue->num_tissue_cells_in_column_of_cell_kind(i),
-//                            m_static_state_of_neural_tissue->get_static_state_of_tissue_cell(i)
-//                                                           .num_synapses_in_territory_of_cell_kind()
-//                            )
-//                        )
-//                    );
-//        m_slices_of_tissue_signalling_data.at(i) =
-//                pointer_to_homogenous_slice_of_tissue(
-//                    new homogenous_slice_of_tissue(
-//                        m_static_state_of_neural_tissue->num_bits_per_signalling(),
-//                        m_static_state_of_neural_tissue->num_cells_along_x_axis(),
-//                        m_static_state_of_neural_tissue->num_cells_along_y_axis(),
-//                        m_static_state_of_neural_tissue->num_tissue_cells_in_column_of_cell_kind(i)
-//                        )
-//                    );
-//        m_num_bits_per_number_in_migration.at(i) =
-//                compute_num_of_bits_to_store_number(
-//                    m_static_state_of_neural_tissue->get_static_state_of_tissue_cell(i)
-//                                                   .num_synapses_in_territory_of_cell_kind()
-//                    );
-//        m_slices_of_tissue_migration_data.at(i) =
-//                pointer_to_homogenous_slice_of_tissue(
-//                    new homogenous_slice_of_tissue(
-//                        natural_16_bit(8) * m_num_bits_per_number_in_migration.at(i),
-//                        m_static_state_of_neural_tissue->num_cells_along_x_axis(),
-//                        m_static_state_of_neural_tissue->num_cells_along_y_axis(),
-//                        m_static_state_of_neural_tissue->num_tissue_cells_in_column_of_cell_kind(i)
-//                        )
-//                    );
-//    }
+bits_reference  dynamic_state_of_neural_tissue::find_bits_of_cell_in_tissue(
+        natural_32_bit const coord_along_x_axis,
+        natural_32_bit const coord_along_y_axis,
+        natural_32_bit const coord_along_columnar_axis
+        )
+{
+    ASSUMPTION(coord_along_x_axis < get_static_state_of_neural_tissue()->num_cells_along_x_axis());
+    ASSUMPTION(coord_along_y_axis < get_static_state_of_neural_tissue()->num_cells_along_y_axis());
+    ASSUMPTION(coord_along_columnar_axis < get_static_state_of_neural_tissue()->num_cells_along_columnar_axis());
+    std::pair<kind_of_cell,natural_32_bit> const kind_and_index =
+        get_static_state_of_neural_tissue()->
+            compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(
+                coord_along_columnar_axis
+                );
+    return m_slices_of_cells.at(kind_and_index.first)->find_bits_of_unit(
+                coord_along_x_axis,
+                coord_along_y_axis,
+                kind_and_index.second
+                );
+}
 
-//    LOG(debug,FUNCTION_PROTOTYPE());
-//}
+bits_reference  dynamic_state_of_neural_tissue::find_bits_of_synapse_in_tissue(
+        natural_32_bit const coord_to_cell_along_x_axis,
+        natural_32_bit const coord_to_cell_along_y_axis,
+        natural_32_bit const coord_to_cell_along_columnar_axis,
+        natural_32_bit const index_of_synapse_in_territory_of_cell
+        )
+{
+    ASSUMPTION(coord_to_cell_along_x_axis < get_static_state_of_neural_tissue()->num_cells_along_x_axis());
+    ASSUMPTION(coord_to_cell_along_y_axis < get_static_state_of_neural_tissue()->num_cells_along_y_axis());
+    ASSUMPTION(coord_to_cell_along_columnar_axis < get_static_state_of_neural_tissue()->num_cells_along_columnar_axis());
+    std::pair<kind_of_cell,natural_32_bit> const kind_and_index =
+        get_static_state_of_neural_tissue()->
+            compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(
+                coord_to_cell_along_columnar_axis
+                );
+    ASSUMPTION(index_of_synapse_in_territory_of_cell <
+               get_static_state_of_neural_tissue()->num_synapses_in_territory_of_cell_kind(kind_and_index.first));
+    return m_slices_of_synapses.at(kind_and_index.first)->find_bits_of_unit(
+                coord_to_cell_along_x_axis,
+                coord_to_cell_along_y_axis,
+                compute_columnar_index_of_synapse_in_territorial_of_cell(
+                    kind_and_index.second,
+                    get_static_state_of_neural_tissue()->num_synapses_in_territory_of_cell_kind(
+                        kind_and_index.first
+                        ),
+                    index_of_synapse_in_territory_of_cell
+                    )
+                );
+}
 
-//dynamic_state_of_neural_tissue::~dynamic_state_of_neural_tissue()
-//{
-//    LOG(debug,FUNCTION_PROTOTYPE());
-//}
+bits_reference  dynamic_state_of_neural_tissue::find_bits_of_territorial_state_of_synapse_in_tissue(
+        natural_32_bit const coord_to_cell_along_x_axis,
+        natural_32_bit const coord_to_cell_along_y_axis,
+        natural_32_bit const coord_to_cell_along_columnar_axis,
+        natural_32_bit const index_of_synapse_in_territory_of_cell
+        )
+{
+    ASSUMPTION(coord_to_cell_along_x_axis < get_static_state_of_neural_tissue()->num_cells_along_x_axis());
+    ASSUMPTION(coord_to_cell_along_y_axis < get_static_state_of_neural_tissue()->num_cells_along_y_axis());
+    ASSUMPTION(coord_to_cell_along_columnar_axis < get_static_state_of_neural_tissue()->num_cells_along_columnar_axis());
+    std::pair<kind_of_cell,natural_32_bit> const kind_and_index =
+        get_static_state_of_neural_tissue()->
+            compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(
+                coord_to_cell_along_columnar_axis
+                );
+    ASSUMPTION(index_of_synapse_in_territory_of_cell <
+               get_static_state_of_neural_tissue()->num_synapses_in_territory_of_cell_kind(kind_and_index.first));
+    return m_slices_of_territorial_states_of_synapses.at(kind_and_index.first)->find_bits_of_unit(
+                coord_to_cell_along_x_axis,
+                coord_to_cell_along_y_axis,
+                compute_columnar_index_of_synapse_in_territorial_of_cell(
+                    kind_and_index.second,
+                    get_static_state_of_neural_tissue()->num_synapses_in_territory_of_cell_kind(
+                        kind_and_index.first
+                        ),
+                    index_of_synapse_in_territory_of_cell
+                    )
+                );
+}
+
+bits_reference  dynamic_state_of_neural_tissue::find_bits_of_coords_of_source_cell_of_synapse_in_tissue(
+        natural_32_bit const coord_to_cell_along_x_axis,
+        natural_32_bit const coord_to_cell_along_y_axis,
+        natural_32_bit const coord_to_cell_along_columnar_axis,
+        natural_32_bit const index_of_synapse_in_territory_of_cell
+        )
+{
+    ASSUMPTION(coord_to_cell_along_x_axis < get_static_state_of_neural_tissue()->num_cells_along_x_axis());
+    ASSUMPTION(coord_to_cell_along_y_axis < get_static_state_of_neural_tissue()->num_cells_along_y_axis());
+    ASSUMPTION(coord_to_cell_along_columnar_axis < get_static_state_of_neural_tissue()->num_cells_along_columnar_axis());
+    std::pair<kind_of_cell,natural_32_bit> const kind_and_index =
+        get_static_state_of_neural_tissue()->
+            compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(
+                coord_to_cell_along_columnar_axis
+                );
+    ASSUMPTION(index_of_synapse_in_territory_of_cell <
+               get_static_state_of_neural_tissue()->num_synapses_in_territory_of_cell_kind(kind_and_index.first));
+    return m_slices_of_source_cell_coords_of_synapses.at(kind_and_index.first)->find_bits_of_unit(
+                coord_to_cell_along_x_axis,
+                coord_to_cell_along_y_axis,
+                compute_columnar_index_of_synapse_in_territorial_of_cell(
+                    kind_and_index.second,
+                    get_static_state_of_neural_tissue()->num_synapses_in_territory_of_cell_kind(
+                        kind_and_index.first
+                        ),
+                    index_of_synapse_in_territory_of_cell
+                    )
+                );
+}
+
+bits_reference  dynamic_state_of_neural_tissue::find_bits_of_signalling(
+        natural_32_bit const coord_to_cell_along_x_axis,
+        natural_32_bit const coord_to_cell_along_y_axis,
+        natural_32_bit const coord_to_cell_along_columnar_axis
+        )
+{
+    ASSUMPTION(coord_to_cell_along_x_axis < get_static_state_of_neural_tissue()->num_cells_along_x_axis());
+    ASSUMPTION(coord_to_cell_along_y_axis < get_static_state_of_neural_tissue()->num_cells_along_y_axis());
+    ASSUMPTION(coord_to_cell_along_columnar_axis < get_static_state_of_neural_tissue()->num_cells_along_columnar_axis());
+    std::pair<kind_of_cell,natural_32_bit> const kind_and_index =
+        get_static_state_of_neural_tissue()->
+            compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(
+                coord_to_cell_along_columnar_axis
+                );
+    return m_slices_of_signalling_data.at(kind_and_index.first)->find_bits_of_unit(
+                coord_to_cell_along_x_axis,
+                coord_to_cell_along_y_axis,
+                kind_and_index.second
+                );
+}
+
+bits_reference  dynamic_state_of_neural_tissue::find_bits_of_delimiter_between_teritorial_lists(
+        natural_32_bit const coord_to_cell_along_x_axis,
+        natural_32_bit const coord_to_cell_along_y_axis,
+        natural_32_bit const coord_to_cell_along_columnar_axis,
+        natural_8_bit const index_of_delimiter
+        )
+{
+    ASSUMPTION(coord_to_cell_along_x_axis < get_static_state_of_neural_tissue()->num_cells_along_x_axis());
+    ASSUMPTION(coord_to_cell_along_y_axis < get_static_state_of_neural_tissue()->num_cells_along_y_axis());
+    ASSUMPTION(coord_to_cell_along_columnar_axis < get_static_state_of_neural_tissue()->num_cells_along_columnar_axis());
+    ASSUMPTION(index_of_delimiter < num_delimiters());
+    std::pair<kind_of_cell,natural_32_bit> const kind_and_index =
+        get_static_state_of_neural_tissue()->
+            compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(
+                coord_to_cell_along_columnar_axis
+                );
+    bits_reference bits_of_all_delimiters =
+            m_slices_of_delimiters_between_teritorial_lists.at(kind_and_index.first)->find_bits_of_unit(
+                coord_to_cell_along_x_axis,
+                coord_to_cell_along_y_axis,
+                kind_and_index.second
+                );
+    natural_16_bit const shift =
+            static_cast<natural_16_bit>(index_of_delimiter) *
+            static_cast<natural_16_bit>(m_num_bits_per_delimiter_number.at(kind_and_index.first)) +
+            static_cast<natural_16_bit>(bits_of_all_delimiters.seek_in_the_first_byte())
+            ;
+    return bits_reference(
+                bits_of_all_delimiters.first_byte_ptr() + (shift >> 3U),
+                shift & 7U,
+                m_num_bits_per_delimiter_number.at(kind_and_index.first)
+                );
+}
 
 //boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(
 //        static_state_of_neural_tissue const& static_state_of_tissue
@@ -153,4 +376,4 @@
 //}
 
 
-//}
+}

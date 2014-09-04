@@ -60,7 +60,7 @@ struct dynamic_state_of_neural_tissue
             natural_32_bit const coord_to_cell_along_x_axis,
             natural_32_bit const coord_to_cell_along_y_axis,
             natural_32_bit const coord_to_cell_along_columnar_axis,
-            natural_32_bit const index_of_delimiter
+            natural_8_bit const index_of_delimiter
             );
 
     bits_reference find_bits_of_sensory_cell(natural_32_bit const index_of_sensory_cell);
@@ -70,11 +70,14 @@ private:
     typedef std::shared_ptr<homogenous_slice_of_tissue> pointer_to_homogenous_slice_of_tissue;
 
     std::shared_ptr<static_state_of_neural_tissue const> m_static_state_of_neural_tissue;
-    std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_tissue_cells;
-    std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_tissue_synapses;
-    std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_tissue_signalling_data;
-    std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_tissue_migration_data;
-    std::vector<natural_8_bit> m_num_bits_per_number_in_migration;
+    natural_8_bit m_num_bits_per_source_cell_coordinate;
+    std::vector<natural_8_bit> m_num_bits_per_delimiter_number;
+    std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_cells;
+    std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_synapses;
+    std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_territorial_states_of_synapses;
+    std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_source_cell_coords_of_synapses;
+    std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_signalling_data;
+    std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_delimiters_between_teritorial_lists;
     array_of_bit_units m_bits_of_sensory_cells;
     array_of_bit_units m_bits_of_synapses_to_muscles;
 };

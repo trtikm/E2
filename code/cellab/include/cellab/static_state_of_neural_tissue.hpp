@@ -5,6 +5,7 @@
 #   include <boost/noncopyable.hpp>
 #   include <boost/scoped_array.hpp>
 #   include <vector>
+#   include <tuple>
 
 namespace cellab {
 
@@ -57,6 +58,10 @@ struct static_state_of_neural_tissue : private boost::noncopyable
     natural_32_bit  num_synapses_to_muscles() const;
 
     kind_of_cell  compute_kind_of_cell_from_its_position_along_columnar_axis(
+                natural_32_bit position_of_cell_in_column) const;
+
+    std::pair<kind_of_cell,natural_32_bit>
+    compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(
                 natural_32_bit position_of_cell_in_column) const;
 
     bool  is_x_axis_torus_axis() const;

@@ -1,6 +1,7 @@
 #include <cellab/static_state_of_neural_tissue.hpp>
 #include <utility/checked_number_operations.hpp>
 #include <utility/assumptions.hpp>
+#include <utility/invariants.hpp>
 #include <utility/log.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <algorithm>
@@ -120,6 +121,10 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
     ASSUMPTION(m_num_sensory_cells < std::numeric_limits<natural_32_bit>::max());
     ASSUMPTION(m_num_synapses_to_muscles < std::numeric_limits<natural_32_bit>::max());
 
+    INVARIANT(m_end_index_along_columnar_axis_of_cell_kind.front() ==
+              m_num_cells_along_columnar_axis_of_cell_kind.front());
+    INVARIANT(m_end_index_along_columnar_axis_of_cell_kind.back() == m_num_cells_along_columnar_axis);
+
     struct local
     {
         static bool check_radii(std::vector<integer_8_bit> const& v)
@@ -158,7 +163,7 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
     ASSUMPTION(m_num_kinds_of_cells == m_columnar_radius_of_cellular_neighbourhood_of_signalling.size());
     ASSUMPTION( local::check_radii(m_columnar_radius_of_cellular_neighbourhood_of_signalling) );
 
-    // Now follows not only computes number of bits which will be taken to store dynamic state of
+    // The following code computes not only a number of bits which will be taken to store dynamic state of
     // the neural tissue, but is also check for wrap error for unsigned integers which could
     // otherwise occure later when computing addresses of bits of individual element of the tissue in
     // an instance of dynamic_state_of_neural_tissue.
@@ -244,10 +249,28 @@ kind_of_cell  static_state_of_neural_tissue::compute_kind_of_cell_from_its_posit
                     m_end_index_along_columnar_axis_of_cell_kind.end(),
                     position_of_cell_in_column
                     );
-    if (it == m_end_index_along_columnar_axis_of_cell_kind.end())
-        return num_kinds_of_cells() - 1U;
-
+    INVARIANT(it != m_end_index_along_columnar_axis_of_cell_kind.end());
     return static_cast<kind_of_cell>(it - m_end_index_along_columnar_axis_of_cell_kind.begin());
+}
+
+std::pair<kind_of_cell,natural_32_bit>
+static_state_of_neural_tissue::
+    compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(
+            natural_32_bit position_of_cell_in_column) const
+{
+    ASSUMPTION(position_of_cell_in_column < num_cells_along_columnar_axis());
+    std::vector<natural_32_bit>::const_iterator const it =
+            std::upper_bound(
+                    m_end_index_along_columnar_axis_of_cell_kind.begin(),
+                    m_end_index_along_columnar_axis_of_cell_kind.end(),
+                    position_of_cell_in_column
+                    );
+    INVARIANT(it != m_end_index_along_columnar_axis_of_cell_kind.end());
+    return std::make_pair(static_cast<kind_of_cell>(it - m_end_index_along_columnar_axis_of_cell_kind.begin()),
+                          it == m_end_index_along_columnar_axis_of_cell_kind.begin() ?
+                                position_of_cell_in_column :
+                                position_of_cell_in_column - *(it - 1U)
+                          );
 }
 
 bool  static_state_of_neural_tissue::is_x_axis_torus_axis() const
