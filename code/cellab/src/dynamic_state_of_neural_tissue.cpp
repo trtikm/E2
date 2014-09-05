@@ -69,6 +69,8 @@ dynamic_state_of_neural_tissue::dynamic_state_of_neural_tissue(
                 compute_num_of_bits_to_store_natural_32_bit_number(
                         m_static_state_of_neural_tissue->num_cells_along_columnar_axis_of_cell_kind(kind)
                         );
+        checked_add_8_bit(checked_mul_8_bit(num_delimiters()-1U,m_num_bits_per_delimiter_number.at(kind)),7U);
+
         m_slices_of_cells.at(kind) =
                 pointer_to_homogenous_slice_of_tissue(
                     new homogenous_slice_of_tissue(
@@ -302,10 +304,9 @@ bits_reference  dynamic_state_of_neural_tissue::find_bits_of_delimiter_between_t
                 coord_to_cell_along_y_axis,
                 kind_and_index.second
                 );
-    natural_16_bit const shift =
-            static_cast<natural_16_bit>(index_of_delimiter) *
-            static_cast<natural_16_bit>(m_num_bits_per_delimiter_number.at(kind_and_index.first)) +
-            static_cast<natural_16_bit>(bits_of_all_delimiters.seek_in_the_first_byte())
+    natural_8_bit const shift =
+            ( index_of_delimiter * m_num_bits_per_delimiter_number.at(kind_and_index.first) )
+            + bits_of_all_delimiters.shift_in_the_first_byte()
             ;
     return bits_reference(
                 bits_of_all_delimiters.first_byte_ptr() + (shift >> 3U),
@@ -314,66 +315,132 @@ bits_reference  dynamic_state_of_neural_tissue::find_bits_of_delimiter_between_t
                 );
 }
 
-//boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(
-//        static_state_of_neural_tissue const& static_state_of_tissue
-//        )
-//{
-//    boost::multiprecision::int128_t num_bits = 0ULL;
+bits_reference  dynamic_state_of_neural_tissue::find_bits_of_sensory_cell(
+        natural_32_bit const index_of_sensory_cell
+        )
+{
+    ASSUMPTION(index_of_sensory_cell < get_static_state_of_neural_tissue()->num_sensory_cells());
+    return m_bits_of_sensory_cells.find_bits_of_unit(index_of_sensory_cell);
+}
 
-//    num_bits += compute_num_bits_of_all_array_units_with_checked_operations(
-//                        static_state_of_tissue.num_bits_per_cell(),
-//                        static_state_of_tissue.num_sensory_cells()
-//                        );
-//    num_bits += compute_num_bits_of_all_array_units_with_checked_operations(
-//                        static_state_of_tissue.num_bits_per_synapse(),
-//                        static_state_of_tissue.num_synapses_to_muscles()
-//                        );
+bits_reference  dynamic_state_of_neural_tissue::find_bits_of_synapse_to_muscle(
+        natural_32_bit const index_of_synapse_to_muscle
+        )
+{
+    ASSUMPTION(index_of_synapse_to_muscle < get_static_state_of_neural_tissue()->num_synapses_to_muscles());
+    return m_bits_of_synapses_to_muscles.find_bits_of_unit(index_of_synapse_to_muscle);
+}
 
-//    for (natural_16_bit i = 0U; i < static_state_of_tissue.num_kinds_of_cells_in_neural_tissue(); ++i)
-//    {
-//        num_bits += compute_num_bits_of_slice_of_tissue_with_checked_operations(
-//                        static_state_of_tissue.num_bits_per_cell(),
-//                        static_state_of_tissue.num_cells_along_x_axis(),
-//                        static_state_of_tissue.num_cells_along_y_axis(),
-//                        static_state_of_tissue.num_tissue_cells_in_column_of_cell_kind(i)
-//                        );
-//        num_bits += compute_num_bits_of_slice_of_tissue_with_checked_operations(
-//                        static_state_of_tissue.num_bits_per_synapse(),
-//                        static_state_of_tissue.num_cells_along_x_axis(),
-//                        static_state_of_tissue.num_cells_along_y_axis(),
-//                        checked_mul_64_bit(
-//                            static_state_of_tissue.num_tissue_cells_in_column_of_cell_kind(i),
-//                            static_state_of_tissue.get_static_state_of_tissue_cell(i)
-//                                                  .num_synapses_in_territory_of_cell_kind()
-//                            )
-//                        );
-//        num_bits += compute_num_bits_of_slice_of_tissue_with_checked_operations(
-//                        static_state_of_tissue.num_bits_per_signalling(),
-//                        static_state_of_tissue.num_cells_along_x_axis(),
-//                        static_state_of_tissue.num_cells_along_y_axis(),
-//                        static_state_of_tissue.num_tissue_cells_in_column_of_cell_kind(i)
-//                        );
-//        num_bits += compute_num_bits_of_slice_of_tissue_with_checked_operations(
-//                        natural_16_bit(8) * compute_num_of_bits_to_store_number(
-//                                                    static_state_of_tissue.get_static_state_of_tissue_cell(i)
-//                                                                          .num_synapses_in_territory_of_cell_kind()
-//                                                    ),
-//                        static_state_of_tissue.num_cells_along_x_axis(),
-//                        static_state_of_tissue.num_cells_along_y_axis(),
-//                        static_state_of_tissue.num_tissue_cells_in_column_of_cell_kind(i)
-//                        );
-//    }
 
-//    return num_bits;
-//}
+boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(
+        static_state_of_neural_tissue const& static_state_of_tissue
+        )
+{
+    ASSUMPTION(num_delimiters() > 0U);
+    ASSUMPTION(num_of_bits_to_store_territorial_state_of_synapse() > 0U);
 
-//boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(
-//        std::shared_ptr<static_state_of_neural_tissue const> const static_state_ptr
-//        )
-//{
-//    ASSUMPTION(static_state_ptr.operator bool());
-//    return compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(*static_state_ptr.get());
-//}
+    natural_8_bit const num_bits_per_source_cell_coordinate =
+          compute_num_of_bits_to_store_natural_32_bit_number(
+              std::max(static_state_of_tissue.num_cells_along_x_axis(),
+                       std::max(static_state_of_tissue.num_cells_along_y_axis(),
+                                static_state_of_tissue.num_cells_along_columnar_axis()))
+              );
+    ASSUMPTION(num_bits_per_source_cell_coordinate > 0U);
+    ASSUMPTION(num_bits_per_source_cell_coordinate < 32U);
+
+    // Let's start with 'sizeof' of our data structures
+    boost::multiprecision::int128_t num_bits =
+            checked_add_64_bit(
+                sizeof(dynamic_state_of_neural_tissue),
+                checked_mul_64_bit(
+                    static_state_of_tissue.num_kinds_of_cells(),
+                    sizeof(natural_8_bit) + 6U * (
+                        sizeof(std::shared_ptr<homogenous_slice_of_tissue>) +
+                        sizeof(homogenous_slice_of_tissue)
+                        )
+                    )
+                )
+            ;
+    // now let's compute the size of the memory to be allocated to store the tissue itself
+    for (kind_of_cell kind = 0U; kind < static_state_of_tissue.num_kinds_of_cells(); ++kind)
+    {
+        // slice of cells
+        num_bits += compute_num_bits_of_slice_of_tissue_with_checked_operations(
+                        static_state_of_tissue.num_bits_per_cell(),
+                        static_state_of_tissue.num_cells_along_x_axis(),
+                        static_state_of_tissue.num_cells_along_y_axis(),
+                        static_state_of_tissue.num_cells_along_columnar_axis_of_cell_kind(kind)
+                        );
+        // slice of synapses
+        num_bits += compute_num_bits_of_slice_of_tissue_with_checked_operations(
+                        static_state_of_tissue.num_bits_per_synapse(),
+                        static_state_of_tissue.num_cells_along_x_axis(),
+                        static_state_of_tissue.num_cells_along_y_axis(),
+                        checked_mul_64_bit(
+                            static_state_of_tissue.num_cells_along_columnar_axis_of_cell_kind(kind),
+                            static_state_of_tissue.num_synapses_in_territory_of_cell_kind(kind)
+                            )
+                        );
+        // slice of territorial states of synapses
+        num_bits += compute_num_bits_of_slice_of_tissue_with_checked_operations(
+                        num_of_bits_to_store_territorial_state_of_synapse(),
+                        static_state_of_tissue.num_cells_along_x_axis(),
+                        static_state_of_tissue.num_cells_along_y_axis(),
+                        checked_mul_64_bit(
+                            static_state_of_tissue.num_cells_along_columnar_axis_of_cell_kind(kind),
+                            static_state_of_tissue.num_synapses_in_territory_of_cell_kind(kind)
+                            )
+                        );
+        // slices of source cell coords of synapses
+        num_bits += compute_num_bits_of_slice_of_tissue_with_checked_operations(
+                        checked_mul_16_bit(3U,num_bits_per_source_cell_coordinate),
+                        static_state_of_tissue.num_cells_along_x_axis(),
+                        static_state_of_tissue.num_cells_along_y_axis(),
+                        checked_mul_64_bit(
+                            static_state_of_tissue.num_cells_along_columnar_axis_of_cell_kind(kind),
+                            static_state_of_tissue.num_synapses_in_territory_of_cell_kind(kind)
+                            )
+                        );
+        // slices of signalling
+        num_bits += compute_num_bits_of_slice_of_tissue_with_checked_operations(
+                        static_state_of_tissue.num_bits_per_signalling(),
+                        static_state_of_tissue.num_cells_along_x_axis(),
+                        static_state_of_tissue.num_cells_along_y_axis(),
+                        static_state_of_tissue.num_cells_along_columnar_axis_of_cell_kind(kind)
+                        );
+        // slices of delimiters between teritorial lists
+        natural_8_bit const num_bits_per_delimiter_number =
+                compute_num_of_bits_to_store_natural_32_bit_number(
+                        static_state_of_tissue.num_cells_along_columnar_axis_of_cell_kind(kind)
+                        );
+        checked_add_8_bit(checked_mul_8_bit(num_delimiters()-1U,num_bits_per_delimiter_number),7U);
+        num_bits += compute_num_bits_of_slice_of_tissue_with_checked_operations(
+                        checked_mul_16_bit(num_delimiters(),num_bits_per_delimiter_number),
+                        static_state_of_tissue.num_cells_along_x_axis(),
+                        static_state_of_tissue.num_cells_along_y_axis(),
+                        static_state_of_tissue.num_cells_along_columnar_axis_of_cell_kind(kind)
+                        );
+    }
+    // sensory cells
+    num_bits += compute_num_bits_of_all_array_units_with_checked_operations(
+                        static_state_of_tissue.num_bits_per_cell(),
+                        static_state_of_tissue.num_sensory_cells()
+                        );
+    // synapses to muscles
+    num_bits += compute_num_bits_of_all_array_units_with_checked_operations(
+                        static_state_of_tissue.num_bits_per_synapse(),
+                        static_state_of_tissue.num_synapses_to_muscles()
+                        );
+    return num_bits;
+}
+
+boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(
+        std::shared_ptr<static_state_of_neural_tissue const> const static_state_ptr
+        )
+{
+    ASSUMPTION(static_state_ptr.operator bool());
+    return compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(*static_state_ptr.get());
+}
 
 
 }

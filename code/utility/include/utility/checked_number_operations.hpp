@@ -4,6 +4,9 @@
 #   include <utility/assumptions.hpp>
 #   include <utility/basic_numeric_types.hpp>
 
+natural_16_bit checked_add_8_bit(natural_8_bit const a, natural_8_bit const b);
+natural_16_bit checked_mul_8_bit(natural_8_bit const a, natural_8_bit const b);
+
 natural_16_bit checked_add_16_bit(natural_16_bit const a, natural_16_bit const b);
 natural_16_bit checked_mul_16_bit(natural_16_bit const a, natural_16_bit const b);
 

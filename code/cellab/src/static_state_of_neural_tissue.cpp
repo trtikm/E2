@@ -250,7 +250,10 @@ kind_of_cell  static_state_of_neural_tissue::compute_kind_of_cell_from_its_posit
                     position_of_cell_in_column
                     );
     INVARIANT(it != m_end_index_along_columnar_axis_of_cell_kind.end());
-    return static_cast<kind_of_cell>(it - m_end_index_along_columnar_axis_of_cell_kind.begin());
+    kind_of_cell const cell_kind =
+            static_cast<kind_of_cell>(it - m_end_index_along_columnar_axis_of_cell_kind.begin());
+    INVARIANT(cell_kind != num_kinds_of_cells());
+    return cell_kind;
 }
 
 std::pair<kind_of_cell,natural_32_bit>
@@ -266,11 +269,15 @@ static_state_of_neural_tissue::
                     position_of_cell_in_column
                     );
     INVARIANT(it != m_end_index_along_columnar_axis_of_cell_kind.end());
-    return std::make_pair(static_cast<kind_of_cell>(it - m_end_index_along_columnar_axis_of_cell_kind.begin()),
-                          it == m_end_index_along_columnar_axis_of_cell_kind.begin() ?
-                                position_of_cell_in_column :
-                                position_of_cell_in_column - *(it - 1U)
-                          );
+    kind_of_cell const cell_kind =
+            static_cast<kind_of_cell>(it - m_end_index_along_columnar_axis_of_cell_kind.begin());
+    INVARIANT(cell_kind != num_kinds_of_cells());
+    natural_32_bit const index =
+            it == m_end_index_along_columnar_axis_of_cell_kind.begin() ?
+                  position_of_cell_in_column :
+                  position_of_cell_in_column - *(it - 1U);
+    INVARIANT(index < num_synapses_in_territory_of_cell_kind(cell_kind));
+    return std::make_pair(cell_kind,index);
 }
 
 bool  static_state_of_neural_tissue::is_x_axis_torus_axis() const

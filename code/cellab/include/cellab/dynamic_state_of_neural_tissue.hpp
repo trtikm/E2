@@ -63,8 +63,8 @@ struct dynamic_state_of_neural_tissue
             natural_8_bit const index_of_delimiter
             );
 
-    bits_reference find_bits_of_sensory_cell(natural_32_bit const index_of_sensory_cell);
-    bits_reference find_bits_of_synapse_to_muscle(natural_32_bit const index_of_synapse_to_muscle);
+    bits_reference  find_bits_of_sensory_cell(natural_32_bit const index_of_sensory_cell);
+    bits_reference  find_bits_of_synapse_to_muscle(natural_32_bit const index_of_synapse_to_muscle);
 
 private:
     typedef std::shared_ptr<homogenous_slice_of_tissue> pointer_to_homogenous_slice_of_tissue;
