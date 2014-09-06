@@ -87,8 +87,8 @@ include_directories(
     )
 add_subdirectory(./utility)
 add_subdirectory(./cellab)
-#add_subdirectory(./efloop)
-#add_subdirectory(./envlab)
+add_subdirectory(./efloop)
+add_subdirectory(./envlab)
 
 # here follow all shared libraries which provide python access to
 # the corresponding E2 libraries

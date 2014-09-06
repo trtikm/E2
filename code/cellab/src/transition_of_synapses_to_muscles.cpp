@@ -1,3 +1,4 @@
+#include <cellab/transition_algorithms.hpp>
 #include <cellab/static_state_of_neural_tissue.hpp>
 #include <cellab/dynamic_state_of_neural_tissue.hpp>
 #include <cellab/utilities_for_transition_algorithms.hpp>
@@ -14,12 +15,8 @@ namespace cellab {
 static void thread_apply_transition_of_synapses_to_muscles(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue,
-        std::function<
-            void(
-            bits_reference& bits_of_synapse_to_be_updated,
-            kind_of_cell kind_of_source_cell,
-            bits_const_reference const& bits_of_source_cell
-            )> single_threaded_transition_function_of_dynamic_state_of_synapse_to_muscle,
+        single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_to_muscle
+            transition_function_of_packed_synapse_to_muscle,
         natural_32_bit index,
         natural_32_bit const extent_of_index
         )
@@ -48,7 +45,7 @@ static void thread_apply_transition_of_synapses_to_muscles(
                     source_cell_coords.get_coord_along_columnar_axis()
                     );
 
-        single_threaded_transition_function_of_dynamic_state_of_synapse_to_muscle(
+        transition_function_of_packed_synapse_to_muscle(
                     bits_of_synapse,
                     kind_of_source_cell,
                     bits_of_source_cell
@@ -59,12 +56,8 @@ static void thread_apply_transition_of_synapses_to_muscles(
 
 void apply_transition_of_synapses_to_muscles(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
-        std::function<
-            void(
-            bits_reference& bits_of_synapse_to_be_updated,
-            kind_of_cell kind_of_source_cell,
-            bits_const_reference const& bits_of_source_cell
-            )> single_threaded_transition_function_of_dynamic_state_of_synapse_to_muscle,
+        single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_to_muscle
+            transition_function_of_packed_synapse_to_muscle,
         natural_32_bit num_avalilable_thread_for_creation_and_use
         )
 {
@@ -83,7 +76,7 @@ void apply_transition_of_synapses_to_muscles(
                         &cellab::thread_apply_transition_of_synapses_to_muscles,
                         dynamic_state_of_tissue,
                         static_state_of_tissue,
-                        single_threaded_transition_function_of_dynamic_state_of_synapse_to_muscle,
+                        transition_function_of_packed_synapse_to_muscle,
                         index,
                         num_avalilable_thread_for_creation_and_use
                         )

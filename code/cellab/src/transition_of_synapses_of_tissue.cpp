@@ -1,3 +1,4 @@
+#include <cellab/transition_algorithms.hpp>
 #include <cellab/static_state_of_neural_tissue.hpp>
 #include <cellab/dynamic_state_of_neural_tissue.hpp>
 #include <cellab/territorial_state_of_synapse.hpp>
@@ -19,19 +20,8 @@ namespace cellab {
 static void thread_apply_transition_of_synapses_of_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue,
-        std::function<
-            territorial_state_of_synapse(
-            bits_reference& bits_of_synapse_to_be_updated,
-            kind_of_cell kind_of_source_cell,
-            bits_const_reference const& bits_of_source_cell,
-            kind_of_cell kind_of_territory_cell,
-            bits_const_reference const& bits_of_territory_cell,
-            territorial_state_of_synapse current_territorial_state_of_synapse,
-            shift_in_coordinates const& shift_to_low_corner,
-            shift_in_coordinates const& shift_to_high_corner,
-            std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)>
-                get_signalling
-            )> single_threaded_transition_function_of_packed_dynamic_state_of_synapse_inside_tissue,
+        single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_inside_tissue
+            transition_function_of_packed_synapse_inside_tissue,
         natural_32_bit x_coord,
         natural_32_bit y_coord,
         natural_32_bit c_coord,
@@ -124,7 +114,7 @@ static void thread_apply_transition_of_synapses_of_tissue(
             INVARIANT( current_territorial_state_of_synapse < 7U );
 
             territorial_state_of_synapse const new_territorial_state_of_synapse =
-                single_threaded_transition_function_of_packed_dynamic_state_of_synapse_inside_tissue(
+                transition_function_of_packed_synapse_inside_tissue(
                             bits_of_synapse,
                             kind_of_source_cell, bits_of_source_cell,
                             kind_of_territory_cell, bits_of_territory_cell,
@@ -153,19 +143,8 @@ static void thread_apply_transition_of_synapses_of_tissue(
 
 void apply_transition_of_synapses_of_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
-        std::function<
-            territorial_state_of_synapse(
-            bits_reference& bits_of_synapse_to_be_updated,
-            kind_of_cell kind_of_source_cell,
-            bits_const_reference const& bits_of_source_cell,
-            kind_of_cell kind_of_territory_cell,
-            bits_const_reference const& bits_of_territory_cell,
-            territorial_state_of_synapse current_migration_attempt,
-            shift_in_coordinates const& shift_to_low_corner,
-            shift_in_coordinates const& shift_to_high_corner,
-            std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)>
-                get_signalling
-            )> single_threaded_transition_function_of_packed_dynamic_state_of_synapse_inside_tissue,
+        single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_inside_tissue
+            transition_function_of_packed_synapse_inside_tissue,
         natural_32_bit num_avalilable_thread_for_creation_and_use
         )
 {
@@ -192,7 +171,7 @@ void apply_transition_of_synapses_of_tissue(
                         &cellab::thread_apply_transition_of_synapses_of_tissue,
                         dynamic_state_of_tissue,
                         static_state_of_tissue,
-                        single_threaded_transition_function_of_packed_dynamic_state_of_synapse_inside_tissue,
+                        transition_function_of_packed_synapse_inside_tissue,
                         x_coord,y_coord,c_coord,
                         num_avalilable_thread_for_creation_and_use
                         )
