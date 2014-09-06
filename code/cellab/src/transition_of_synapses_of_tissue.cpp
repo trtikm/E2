@@ -98,7 +98,6 @@ static void thread_apply_transition_of_synapses_of_tissue(
             tissue_coordinates const source_cell_coords =
                 get_coordinates_of_source_cell_of_synapse_in_tissue(
                         dynamic_state_of_tissue,
-                        static_state_of_tissue,
                         territory_cell_coordinates,
                         synapse_index
                         );

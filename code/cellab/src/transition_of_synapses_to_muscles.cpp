@@ -32,7 +32,6 @@ static void thread_apply_transition_of_synapses_to_muscles(
         tissue_coordinates const source_cell_coords(
                     get_coordinates_of_source_cell_of_synapse_to_muscle(
                             dynamic_state_of_tissue,
-                            static_state_of_tissue,
                             index
                             )
                     );

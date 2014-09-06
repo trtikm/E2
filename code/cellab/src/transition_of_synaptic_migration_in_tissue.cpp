@@ -25,10 +25,14 @@ static void  exchange_all_data_of_synapses_between_territorial_lists_of_cells_at
         natural_32_bit const num_synapses_to_be_exchanged
         )
 {
+    if (num_synapses_to_be_exchanged == 0U)
+        return;
+
+    INVARIANT(begin_index_of_first_list < end_index_of_first_list);
     natural_32_bit index_of_current_synapse_in_first_list =
-            get_random_natural_32_bit_from_range(
+            get_random_natural_32_bit_in_range(
                 begin_index_of_first_list,
-                end_index_of_first_list
+                end_index_of_first_list - 1U
                 );
     for (natural_32_bit i = 0U; i < num_synapses_to_be_exchanged; ++i)
     {

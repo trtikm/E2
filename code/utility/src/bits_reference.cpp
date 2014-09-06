@@ -4,8 +4,6 @@
 #include <utility/checked_number_operations.hpp>
 #include <algorithm>
 
-#include <utility/development.hpp>
-
 
 static bool read_bit(natural_8_bit const* first_byte_ptr, natural_16_bit bit_index)
 {
@@ -83,7 +81,15 @@ static void  set_bit(bits_reference_impl& bits_ref, natural_16_bit const bit_ind
 
 static void  swap_referenced_bits( bits_reference_impl& left_bits, bits_reference_impl& right_bits)
 {
-    NOT_IMPLEMENTED_YET();
+    ASSUMPTION(left_bits.num_bits() == right_bits.num_bits());
+
+    for (natural_16_bit i = 0U; i < left_bits.num_bits(); ++i)
+    {
+        bool const left_ith_bit = get_bit(left_bits,i);
+        bool const right_ith_bit = get_bit(right_bits,i);
+        set_bit(left_bits,i,right_ith_bit);
+        set_bit(right_bits,i,left_ith_bit);
+    }
 }
 
 static void bits_to_value(
@@ -126,12 +132,39 @@ static void bits_to_value(
 }
 
 void value_to_bits(
-    natural_32_bit const variable_where_the_value_is_stored,
+    natural_32_bit variable_where_the_value_is_stored,
     bits_reference_impl& target_bits,
     natural_8_bit const how_many_bits_to_transfer
     )
 {
-    NOT_IMPLEMENTED_YET();
+    ASSUMPTION(how_many_bits_to_transfer < sizeof(variable_where_the_value_is_stored) * 8U);
+    ASSUMPTION(how_many_bits_to_transfer < target_bits.num_bits());
+
+    natural_8_bit* const source_memory = reinterpret_cast<natural_8_bit*>(
+        &variable_where_the_value_is_stored
+        );
+
+    if (is_this_big_endian_machine())
+        std::reverse(
+            source_memory,
+            source_memory + sizeof(variable_where_the_value_is_stored)
+            );
+
+    bits_reference_impl const source_bits(
+        source_memory,
+        0,
+        sizeof(variable_where_the_value_is_stored) * 8U
+        );
+
+    for (natural_8_bit i = 0; i < how_many_bits_to_transfer; ++i)
+        set_bit(
+            target_bits,
+            i,
+            get_bit(
+                source_bits,
+                source_bits.num_bits() - 1U - i
+                )
+            );
 }
 
 }

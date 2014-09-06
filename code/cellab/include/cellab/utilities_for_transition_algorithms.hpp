@@ -73,16 +73,16 @@ integer_8_bit  clip_shift(
         bool const is_it_torus_axis
         );
 
+tissue_coordinates  convert_bits_of_coordinates_to_tissue_coordinates(bits_reference const& bits_ref);
+
 tissue_coordinates  get_coordinates_of_source_cell_of_synapse_in_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
-        std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue,
         tissue_coordinates const& coords_of_territorial_cell_of_synapse,
         natural_32_bit const index_of_synapse_in_territory
         );
 
 tissue_coordinates  get_coordinates_of_source_cell_of_synapse_to_muscle(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
-        std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue,
         natural_32_bit const index_of_synapse_to_muscle
         );
 

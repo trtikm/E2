@@ -4,9 +4,9 @@
 #   include <utility/basic_numeric_types.hpp>
 
 
-natural_32_bit  get_random_natural_32_bit_from_range(
-    natural_32_bit const range_begin,
-    natural_32_bit const range_end
+natural_32_bit  get_random_natural_32_bit_in_range(
+    natural_32_bit const min_value,
+    natural_32_bit const max_value
     );
 
 

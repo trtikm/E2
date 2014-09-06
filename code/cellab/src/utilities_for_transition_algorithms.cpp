@@ -2,6 +2,7 @@
 #include <cellab/static_state_of_neural_tissue.hpp>
 #include <cellab/dynamic_state_of_neural_tissue.hpp>
 #include <utility/assumptions.hpp>
+#include <utility/invariants.hpp>
 
 #include <utility/development.hpp>
 
@@ -65,8 +66,10 @@ static natural_32_bit  shift_coordinate_in_torus_axis(
         natural_64_bit const length_of_axis
         )
 {
-    NOT_IMPLEMENTED_YET(); // THE FOLLOWING CODE REQUIRES A CHECK WHETHER IT REALY COMPUTES WHAT WE WANT!!!
-    integer_64_bit const result_coord = (coordinate + shift) % length_of_axis;
+    ASSUMPTION(coordinate >= 0 && natural_64_bit(coordinate) < length_of_axis);
+    ASSUMPTION(natural_64_bit(shift < 0 ? -shift : shift) < length_of_axis);
+    ASSUMPTION(length_of_axis > 0U);
+    integer_64_bit const result_coord = (length_of_axis + coordinate + shift) % length_of_axis;
     return static_cast<natural_32_bit>(result_coord);
 }
 
@@ -158,23 +161,47 @@ integer_8_bit  clip_shift(
     return shift;
 }
 
+tissue_coordinates  convert_bits_of_coordinates_to_tissue_coordinates(bits_reference const& bits_ref)
+{
+    natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
+    INVARIANT(num_bits * natural_16_bit(3U) == bits_ref.num_bits());
+
+    natural_32_bit coord_along_x_axis;
+    bits_to_value(bits_ref,0U,num_bits,coord_along_x_axis);
+
+    natural_32_bit coord_along_y_axis;
+    bits_to_value(bits_ref,num_bits,num_bits,coord_along_y_axis);
+
+    natural_32_bit coord_along_columnar_axis;
+    bits_to_value(bits_ref,num_bits + num_bits,num_bits,coord_along_columnar_axis);
+
+    return tissue_coordinates(coord_along_x_axis,coord_along_y_axis,coord_along_columnar_axis);
+}
+
 tissue_coordinates  get_coordinates_of_source_cell_of_synapse_in_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
-        std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue,
         tissue_coordinates const& coords_of_territorial_cell_of_synapse,
         natural_32_bit const index_of_synapse_in_territory
         )
 {
-    NOT_IMPLEMENTED_YET();
+    return convert_bits_of_coordinates_to_tissue_coordinates(
+                dynamic_state_of_tissue->find_bits_of_coords_of_source_cell_of_synapse_in_tissue(
+                            coords_of_territorial_cell_of_synapse.get_coord_along_x_axis(),
+                            coords_of_territorial_cell_of_synapse.get_coord_along_y_axis(),
+                            coords_of_territorial_cell_of_synapse.get_coord_along_columnar_axis(),
+                            index_of_synapse_in_territory
+                            )
+                );
 }
 
 tissue_coordinates  get_coordinates_of_source_cell_of_synapse_to_muscle(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
-        std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue,
         natural_32_bit const index_of_synapse_to_muscle
         )
 {
-    NOT_IMPLEMENTED_YET();
+    return convert_bits_of_coordinates_to_tissue_coordinates(
+                dynamic_state_of_tissue->find_bits_of_synapse_to_muscle(index_of_synapse_to_muscle)
+                );
 }
 
 natural_32_bit  get_begin_index_of_territorial_list_of_cell(
@@ -348,7 +375,6 @@ std::tuple<bits_const_reference,kind_of_cell,kind_of_cell>  get_synapse_callback
                 static_state_of_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(
                     get_coordinates_of_source_cell_of_synapse_in_tissue(
                             dynamic_state_of_tissue,
-                            static_state_of_tissue,
                             target_cell,
                             shift_to_start_index + shift_from_start_index
                             ).get_coord_along_columnar_axis()
