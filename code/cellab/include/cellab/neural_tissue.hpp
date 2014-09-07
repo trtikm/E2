@@ -74,24 +74,29 @@ struct instance_wrapper
         m_constructed = true;
     }
 
-    instance_type& reference_to_instance()
+    instance_type* operator->()
     {
         INVARIANT(m_constructed);
         return reinterpret_cast<instance_type*>(&m_memory[0]);
+    }
+
+    instance_type const* operator->() const
+    {
+        INVARIANT(m_constructed);
+        return reinterpret_cast<instance_type const*>(&m_memory[0]);
+    }
+
+    instance_type& reference_to_instance()
+    {
+        return *this->operator->();
     }
 
     instance_type const& reference_to_instance() const
     {
-        INVARIANT(m_constructed);
-        return reinterpret_cast<instance_type*>(&m_memory[0]);
+        return *this->operator->();
     }
 
-    operator instance_type&()
-    {
-        return reference_to_instance();
-    }
-
-    operator instance_type const&()
+    operator instance_type() const
     {
         return reference_to_instance();
     }
@@ -188,7 +193,7 @@ namespace private_internal_implementation_details {
 
 template<typename class_signalling>
 kind_of_cell  get_signalling_callback_function(
-        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)>
+        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)> const&
             get_signalling,
         shift_in_coordinates const& shift,
         instance_wrapper<class_signalling>& signalling_instance
@@ -201,7 +206,7 @@ kind_of_cell  get_signalling_callback_function(
 
 template<typename class_cell>
 kind_of_cell  get_cell_callback_function(
-        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)>
+        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)> const&
             get_cell,
         shift_in_coordinates const& shift,
         instance_wrapper<class_cell>& cell_instance
@@ -214,7 +219,7 @@ kind_of_cell  get_cell_callback_function(
 
 template<typename class_synapse>
 std::pair<kind_of_cell,kind_of_cell>  get_synapse_callback_function(
-        std::function<std::tuple<bits_const_reference,kind_of_cell,kind_of_cell>(natural_32_bit)>
+        std::function<std::tuple<bits_const_reference,kind_of_cell,kind_of_cell>(natural_32_bit)> const&
             get_connected_synapse_at_index,
         natural_32_bit const index_of_synapse,
         instance_wrapper<class_synapse>& synapse_instance
@@ -261,7 +266,7 @@ void transition_function_of_synapse_inside_tissue(
         territorial_state_of_synapse current_territorial_state_of_synapse,
         shift_in_coordinates const& shift_to_low_corner,
         shift_in_coordinates const& shift_to_high_corner,
-        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)>
+        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)> const&
             get_signalling
         )
 {
@@ -280,7 +285,7 @@ void transition_function_of_synapse_inside_tissue(
                 shift_to_high_corner,
                 std::bind(
                     &get_signalling_callback_function<class_signalling>,
-                    get_signalling,
+                    std::cref(get_signalling),
                     std::placeholders::_1,
                     std::placeholders::_2
                     )
@@ -297,7 +302,7 @@ void transition_function_of_signalling(
         kind_of_cell kind_of_territory_cell,
         shift_in_coordinates const& shift_to_low_corner,
         shift_in_coordinates const& shift_to_high_corner,
-        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)>
+        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)> const&
             get_cell
         )
 {
@@ -310,7 +315,7 @@ void transition_function_of_signalling(
                 shift_to_high_corner,
                 std::bind(
                     &get_cell_callback_function<class_cell>,
-                    get_cell,
+                    std::cref(get_cell),
                     std::placeholders::_1,
                     std::placeholders::_2
                     )
@@ -327,11 +332,11 @@ void transition_function_of_cell(
         bits_reference& bits_of_cell_to_be_updated,
         kind_of_cell kind_of_cell_to_be_updated,
         natural_32_bit num_of_synapses_connected_to_the_cell,
-        std::function<std::tuple<bits_const_reference,kind_of_cell,kind_of_cell>(natural_32_bit)>
+        std::function<std::tuple<bits_const_reference,kind_of_cell,kind_of_cell>(natural_32_bit)> const&
             get_connected_synapse_at_index,
         shift_in_coordinates const& shift_to_low_corner,
         shift_in_coordinates const& shift_to_high_corner,
-        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)>
+        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)> const&
             get_signalling
         )
 {
@@ -343,7 +348,7 @@ void transition_function_of_cell(
                 num_of_synapses_connected_to_the_cell,
                 std::bind(
                     &get_synapse_callback_function<class_synapse>,
-                    get_connected_synapse_at_index,
+                    std::cref(get_connected_synapse_at_index),
                     std::placeholders::_1,
                     std::placeholders::_2
                     ),
@@ -351,7 +356,7 @@ void transition_function_of_cell(
                 shift_to_high_corner,
                 std::bind(
                     &get_signalling_callback_function<class_signalling>,
-                    get_signalling,
+                    std::cref(get_signalling),
                     std::placeholders::_1,
                     std::placeholders::_2
                     )

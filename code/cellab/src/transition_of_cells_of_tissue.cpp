@@ -19,7 +19,7 @@ namespace cellab {
 static void thread_apply_transition_of_cells_of_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue,
-        single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_cell
+        single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_cell const&
             transition_function_of_packed_cell,
         natural_32_bit x_coord,
         natural_32_bit y_coord,
@@ -114,7 +114,7 @@ static void thread_apply_transition_of_cells_of_tissue(
 
 void apply_transition_of_cells_of_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
-        single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_cell
+        single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_cell const&
             transition_function_of_packed_cell,
         natural_32_bit num_avalilable_thread_for_creation_and_use
         )
