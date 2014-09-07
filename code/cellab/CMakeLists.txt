@@ -28,6 +28,7 @@ add_library(${THIS_TARGET_NAME}
     ./src/utilities_for_transition_algorithms.cpp
 
     ./include/cellab/neural_tissue.hpp
+    ./src/neural_tissue.cpp
     )
 
 #set_target_properties(${THIS_TARGET_NAME} PROPERTIES
