@@ -232,6 +232,7 @@ natural_32_bit  get_end_index_of_territorial_list_of_cell(
         )
 {
     ASSUMPTION(index_of_territorial_list < 7U);
+    ASSUMPTION(coordinates_of_cell.get_coord_along_columnar_axis() < static_state_of_tissue->num_cells_along_columnar_axis());
 
     if (index_of_territorial_list == 6U)
         return static_state_of_tissue->num_synapses_in_territory_of_cell_kind(
@@ -338,6 +339,7 @@ std::pair<bits_const_reference,kind_of_cell>  get_signalling_callback_function(
                     static_state_of_tissue->num_cells_along_y_axis(),
                     static_state_of_tissue->num_cells_along_columnar_axis()
                     );
+    ASSUMPTION(cell_coords.get_coord_along_columnar_axis() < static_state_of_tissue->num_cells_along_columnar_axis());
     return std::make_pair(
                 bits_const_reference(
                         dynamic_state_of_tissue->find_bits_of_signalling(
@@ -411,6 +413,8 @@ std::pair<bits_const_reference,kind_of_cell>  get_cell_callback_function(
                     static_state_of_tissue->num_cells_along_y_axis(),
                     static_state_of_tissue->num_cells_along_columnar_axis()
                     );
+    ASSUMPTION(cell_coords.get_coord_along_columnar_axis() < static_state_of_tissue->num_cells_along_columnar_axis());
+
     return std::make_pair(
                 bits_const_reference(
                         dynamic_state_of_tissue->find_bits_of_cell_in_tissue(

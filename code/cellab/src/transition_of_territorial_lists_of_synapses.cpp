@@ -65,6 +65,8 @@ static void move_synapses_into_proper_lists_in_territory_of_one_cell(
         natural_32_bit const c_coord
         )
 {
+    ASSUMPTION(c_coord < static_state_of_tissue->num_cells_along_columnar_axis());
+
     std::array<bits_reference,6U> bits_of_delimiters = {
             dynamic_state_of_tissue->find_bits_of_delimiter_between_teritorial_lists(
                     x_coord, y_coord, c_coord, 0U

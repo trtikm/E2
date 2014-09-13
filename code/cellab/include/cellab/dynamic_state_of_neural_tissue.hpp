@@ -23,6 +23,13 @@ struct dynamic_state_of_neural_tissue
 
     std::shared_ptr<static_state_of_neural_tissue const>  get_static_state_of_neural_tissue() const;
 
+    bits_reference  find_bits_of_cell(
+            natural_32_bit const coord_along_x_axis,
+            natural_32_bit const coord_along_y_axis,
+            kind_of_cell const cell_kind,
+            natural_32_bit const relative_index_of_cell
+            );
+
     bits_reference  find_bits_of_cell_in_tissue(
             natural_32_bit const coord_along_x_axis,
             natural_32_bit const coord_along_y_axis,

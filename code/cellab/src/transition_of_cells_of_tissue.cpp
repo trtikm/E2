@@ -7,6 +7,7 @@
 #include <utility/basic_numeric_types.hpp>
 #include <utility/bits_reference.hpp>
 #include <utility/assumptions.hpp>
+#include <utility/invariants.hpp>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -34,6 +35,7 @@ static void thread_apply_transition_of_cells_of_tissue(
 
         kind_of_cell const cell_kind =
             static_state_of_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(c_coord);
+        INVARIANT(cell_kind < static_state_of_tissue->num_kinds_of_tissue_cells());
 
         tissue_coordinates const cell_coordinates(x_coord,y_coord,c_coord);
 

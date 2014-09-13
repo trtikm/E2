@@ -35,6 +35,7 @@ static void thread_apply_transition_of_synapses_of_tissue(
 
         natural_16_bit const kind_of_territory_cell =
             static_state_of_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(c_coord);
+        INVARIANT(kind_of_territory_cell < static_state_of_tissue->num_kinds_of_tissue_cells());
 
         tissue_coordinates const territory_cell_coordinates(x_coord,y_coord,c_coord);
 
@@ -92,16 +93,17 @@ static void thread_apply_transition_of_synapses_of_tissue(
                         synapse_index
                         );
 
-            natural_16_bit const kind_of_source_cell =
-                static_state_of_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(
+            std::pair<kind_of_cell,natural_32_bit> const kind_and_index_of_source_cell =
+                static_state_of_tissue->compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(
                         source_cell_coords.get_coord_along_columnar_axis()
                         );
 
             bits_const_reference const bits_of_source_cell =
-                    dynamic_state_of_tissue->find_bits_of_cell_in_tissue(
+                    dynamic_state_of_tissue->find_bits_of_cell(
                         source_cell_coords.get_coord_along_x_axis(),
                         source_cell_coords.get_coord_along_y_axis(),
-                        source_cell_coords.get_coord_along_columnar_axis()
+                        kind_and_index_of_source_cell.first,
+                        kind_and_index_of_source_cell.second
                         );
 
             bits_reference bits_of_territorial_state_of_synapse =
@@ -116,7 +118,7 @@ static void thread_apply_transition_of_synapses_of_tissue(
             territorial_state_of_synapse const new_territorial_state_of_synapse =
                 transition_function_of_packed_synapse_inside_tissue(
                             bits_of_synapse,
-                            kind_of_source_cell, bits_of_source_cell,
+                            kind_and_index_of_source_cell.first, bits_of_source_cell,
                             kind_of_territory_cell, bits_of_territory_cell,
                             static_cast<territorial_state_of_synapse>(current_territorial_state_of_synapse),
                             shift_to_low_corner,

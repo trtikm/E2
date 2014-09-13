@@ -112,8 +112,8 @@ private:
         }
     }
 
-    bool m_constructed;
     natural_8_bit m_memory[sizeof(instance_type)];
+    bool m_constructed;
 };
 
 

@@ -4,6 +4,7 @@
 #include <cellab/utilities_for_transition_algorithms.hpp>
 #include <utility/basic_numeric_types.hpp>
 #include <utility/bits_reference.hpp>
+#include <utility/invariants.hpp>
 #include <functional>
 #include <memory>
 #include <vector>
@@ -33,21 +34,23 @@ static void thread_apply_transition_of_synapses_to_muscles(
                             )
                     );
 
-        natural_16_bit const kind_of_source_cell =
-            static_state_of_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(
+        std::pair<kind_of_cell,natural_32_bit> const kind_and_index_of_source_cell =
+            static_state_of_tissue->compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(
                     source_cell_coords.get_coord_along_columnar_axis()
                     );
+        //INVARIANT(kind_and_index_of_source_cell.first < static_state_of_tissue->num_kinds_of_tissue_cells());
 
         bits_const_reference const bits_of_source_cell =
-                dynamic_state_of_tissue->find_bits_of_cell_in_tissue(
+                dynamic_state_of_tissue->find_bits_of_cell(
                     source_cell_coords.get_coord_along_x_axis(),
                     source_cell_coords.get_coord_along_y_axis(),
-                    source_cell_coords.get_coord_along_columnar_axis()
+                    kind_and_index_of_source_cell.first,
+                    kind_and_index_of_source_cell.second
                     );
 
         transition_function_of_packed_synapse_to_muscle(
                     bits_of_synapse,
-                    kind_of_source_cell,
+                    kind_and_index_of_source_cell.first,
                     bits_of_source_cell
                     );
     }
