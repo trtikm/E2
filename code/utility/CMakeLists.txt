@@ -35,6 +35,8 @@ add_library(utility
     ./src/random.cpp
     ./include/utility/random.hpp
 
+    ./include/utility/instance_wrapper.hpp
+
     )
 
 #install(TARGETS brod_utils DESTINATION lib/utils)

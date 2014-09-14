@@ -21,6 +21,9 @@ neural_tissue::neural_tissue(
     , m_transition_function_of_packed_synapse_inside_tissue(transition_function_of_packed_synapse_inside_tissue)
     , m_transition_function_of_packed_signalling(transition_function_of_packed_signalling)
     , m_transition_function_of_packed_cell(transition_function_of_packed_cell)
+    , m_hash_code_of_class_for_cells(typeid(bits_reference).hash_code())
+    , m_hash_code_of_class_for_synapses(typeid(bits_reference).hash_code())
+    , m_hash_code_of_class_for_signalling(typeid(bits_reference).hash_code())
 {
     ASSUMPTION(m_dynamic_state_of_tissue.operator bool());
 }
@@ -99,6 +102,21 @@ void  neural_tissue::apply_transition_of_cells_of_tissue(
                 m_transition_function_of_packed_cell,
                 num_avalilable_thread_for_creation_and_use
                 );
+}
+
+std::size_t neural_tissue::get_hash_code_of_class_for_cells() const
+{
+    return m_hash_code_of_class_for_cells;
+}
+
+std::size_t neural_tissue::get_hash_code_of_class_for_synapses() const
+{
+    return m_hash_code_of_class_for_synapses;
+}
+
+std::size_t neural_tissue::get_hash_code_of_class_for_signalling() const
+{
+    return m_hash_code_of_class_for_signalling;
 }
 
 

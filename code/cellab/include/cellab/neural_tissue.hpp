@@ -6,10 +6,13 @@
 #   include <cellab/territorial_state_of_synapse.hpp>
 #   include <cellab/shift_in_coordinates.hpp>
 #   include <cellab/transition_algorithms.hpp>
+#   include <utility/basic_numeric_types.hpp>
+#   include <utility/instance_wrapper.hpp>
 #   include <utility/invariants.hpp>
 #   include <boost/noncopyable.hpp>
 #   include <type_traits>
 #   include <functional>
+#   include <typeinfo>
 #   include <tuple>
 #   include <memory>
 #   include <new>
@@ -52,68 +55,6 @@ struct automated_binding_of_transition_functions
             );
 
     static bool const use_bits_references = std::is_same<class_cell,bits_reference>::value;
-};
-
-template<typename instance_type>
-struct instance_wrapper
-{
-    instance_wrapper()
-        : m_constructed(false)
-    {}
-
-    ~instance_wrapper()
-    {
-        destruct_instance();
-    }
-
-    template<typename argument_type>
-    void construct_instance(argument_type const& argument)
-    {
-        destruct_instance();
-        new(&m_memory[0]) instance_type(argument);
-        m_constructed = true;
-    }
-
-    instance_type* operator->()
-    {
-        INVARIANT(m_constructed);
-        return reinterpret_cast<instance_type*>(&m_memory[0]);
-    }
-
-    instance_type const* operator->() const
-    {
-        INVARIANT(m_constructed);
-        return reinterpret_cast<instance_type const*>(&m_memory[0]);
-    }
-
-    instance_type& reference_to_instance()
-    {
-        return *this->operator->();
-    }
-
-    instance_type const& reference_to_instance() const
-    {
-        return *this->operator->();
-    }
-
-    operator instance_type() const
-    {
-        return reference_to_instance();
-    }
-
-private:
-
-    void destruct_instance()
-    {
-        if (m_constructed)
-        {
-            reference_to_instance().~instance_type();
-            m_constructed = false;
-        }
-    }
-
-    natural_8_bit m_memory[sizeof(instance_type)];
-    bool m_constructed;
 };
 
 
@@ -173,6 +114,10 @@ struct neural_tissue : private boost::noncopyable
             natural_32_bit num_avalilable_thread_for_creation_and_use
             );
 
+    std::size_t get_hash_code_of_class_for_cells() const;
+    std::size_t get_hash_code_of_class_for_synapses() const;
+    std::size_t get_hash_code_of_class_for_signalling() const;
+
 private:
 
     std::shared_ptr<cellab::dynamic_state_of_neural_tissue>
@@ -186,6 +131,10 @@ private:
         m_transition_function_of_packed_signalling;
     single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_cell
         m_transition_function_of_packed_cell;
+
+    std::size_t m_hash_code_of_class_for_cells;
+    std::size_t m_hash_code_of_class_for_synapses;
+    std::size_t m_hash_code_of_class_for_signalling;
 };
 
 
@@ -479,6 +428,9 @@ neural_tissue::neural_tissue(
                     std::placeholders::_5
                     )
         )
+    , m_hash_code_of_class_for_cells(typeid(class_cell).hash_code())
+    , m_hash_code_of_class_for_synapses(typeid(class_synapse).hash_code())
+    , m_hash_code_of_class_for_signalling(typeid(class_signalling).hash_code())
 {
     ASSUMPTION(m_dynamic_state_of_tissue.operator bool());
 }
