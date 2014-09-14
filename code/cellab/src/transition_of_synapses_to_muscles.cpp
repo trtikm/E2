@@ -61,14 +61,14 @@ void apply_transition_of_synapses_to_muscles(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_to_muscle const&
             transition_function_of_packed_synapse_to_muscle,
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
     std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue =
             dynamic_state_of_tissue->get_static_state_of_neural_tissue();
 
     std::vector<std::thread> threads;
-    for (natural_32_bit i = 0; i < num_avalilable_thread_for_creation_and_use; ++i)
+    for (natural_32_bit i = 1U; i < num_threads_avalilable_for_computation; ++i)
     {
         natural_32_bit index = 0U;
         if (!go_to_next_index(index,i,static_state_of_tissue->num_synapses_to_muscles()))
@@ -81,15 +81,22 @@ void apply_transition_of_synapses_to_muscles(
                         static_state_of_tissue,
                         transition_function_of_packed_synapse_to_muscle,
                         index,
-                        num_avalilable_thread_for_creation_and_use
+                        num_threads_avalilable_for_computation
                         )
                     );
     }
 
+    thread_apply_transition_of_synapses_to_muscles(
+                dynamic_state_of_tissue,
+                static_state_of_tissue,
+                transition_function_of_packed_synapse_to_muscle,
+                0U,
+                num_threads_avalilable_for_computation
+                );
+
     for(std::thread& thread : threads)
         thread.join();
 }
-
 
 
 }

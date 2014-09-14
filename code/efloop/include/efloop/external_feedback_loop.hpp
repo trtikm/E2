@@ -4,9 +4,6 @@
 #include <cellab/neural_tissue.hpp>
 #include <envlab/rules_and_logic_of_environment.hpp>
 #include <utility/basic_numeric_types.hpp>
-#include <utility/instance_wrapper.hpp>
-#include <utility/assumptions.hpp>
-#include <utility>
 #include <memory>
 
 namespace efloop {
@@ -26,8 +23,8 @@ struct external_feedback_loop
     std::shared_ptr<envlab::rules_and_logic_of_environment const> get_rules_and_logic_of_environment() const;
 
     void compute_next_state_of_both_neural_tissue_and_environment(
-            natural_32_bit max_number_of_threads_neural_tissue_can_create_and_run_simultaneously,
-            natural_32_bit max_number_of_threads_environment_can_create_and_run_simultaneously
+            natural_32_bit const  num_threads_avalilable_for_computation_of_neural_tissue,
+            natural_32_bit const  num_threads_avalilable_for_computation_of_environment
             );
 
 private:

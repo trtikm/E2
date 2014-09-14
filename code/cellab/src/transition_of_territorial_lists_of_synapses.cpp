@@ -175,14 +175,14 @@ static void thread_apply_transition_of_territorial_lists_of_synapses(
 
 void apply_transition_of_territorial_lists_of_synapses(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
     std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue =
             dynamic_state_of_tissue->get_static_state_of_neural_tissue();
 
     std::vector<std::thread> threads;
-    for (natural_32_bit i = 0U; i < num_avalilable_thread_for_creation_and_use; ++i)
+    for (natural_32_bit i = 1U; i < num_threads_avalilable_for_computation; ++i)
     {
         natural_32_bit x_coord = 0U;
         natural_32_bit y_coord = 0U;
@@ -202,10 +202,17 @@ void apply_transition_of_territorial_lists_of_synapses(
                         dynamic_state_of_tissue,
                         static_state_of_tissue,
                         x_coord,y_coord,c_coord,
-                        num_avalilable_thread_for_creation_and_use
+                        num_threads_avalilable_for_computation
                         )
                     );
     }
+
+    thread_apply_transition_of_territorial_lists_of_synapses(
+            dynamic_state_of_tissue,
+            static_state_of_tissue,
+            0U,0U,0U,
+            num_threads_avalilable_for_computation
+            );
 
     for(std::thread& thread : threads)
         thread.join();

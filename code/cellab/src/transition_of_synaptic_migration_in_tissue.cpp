@@ -162,7 +162,7 @@ static void  exchange_synapses_between_territorial_lists_of_all_cells(
         natural_8_bit const list_index_in_pivot_cells,
         shift_in_coordinates const& shift,
         natural_8_bit const list_index_in_shift_cells,
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
     ASSUMPTION(list_index_in_pivot_cells == 1U ||
@@ -171,7 +171,7 @@ static void  exchange_synapses_between_territorial_lists_of_all_cells(
     ASSUMPTION(list_index_in_shift_cells == list_index_in_pivot_cells + 1U);
 
     std::vector<std::thread> threads;
-    for (natural_32_bit i = 0U; i < num_avalilable_thread_for_creation_and_use; ++i)
+    for (natural_32_bit i = 1U; i < num_threads_avalilable_for_computation; ++i)
     {
         natural_32_bit x_coord = 0U;
         natural_32_bit y_coord = 0U;
@@ -194,10 +194,20 @@ static void  exchange_synapses_between_territorial_lists_of_all_cells(
                         shift,
                         list_index_in_shift_cells,
                         x_coord,y_coord,c_coord,
-                        num_avalilable_thread_for_creation_and_use
+                        num_threads_avalilable_for_computation
                         )
                     );
     }
+
+    thread_exchange_synapses_between_territorial_lists_of_all_cells(
+            dynamic_state_of_tissue,
+            static_state_of_tissue,
+            list_index_in_pivot_cells,
+            shift,
+            list_index_in_shift_cells,
+            0U,0U,0U,
+            num_threads_avalilable_for_computation
+            );
 
     for(std::thread& thread : threads)
         thread.join();
@@ -205,7 +215,7 @@ static void  exchange_synapses_between_territorial_lists_of_all_cells(
 
 void  apply_transition_of_synaptic_migration_in_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
     std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue =
@@ -217,7 +227,7 @@ void  apply_transition_of_synaptic_migration_in_tissue(
                 convert_territorial_state_of_synapse_to_territorial_list_index(MIGRATION_ALONG_POSITIVE_X_AXIS),
                 shift_in_coordinates(1,0,0),
                 convert_territorial_state_of_synapse_to_territorial_list_index(MIGRATION_ALONG_NEGATIVE_X_AXIS),
-                num_avalilable_thread_for_creation_and_use
+                num_threads_avalilable_for_computation
                 );
     exchange_synapses_between_territorial_lists_of_all_cells(
                 dynamic_state_of_tissue,
@@ -225,7 +235,7 @@ void  apply_transition_of_synaptic_migration_in_tissue(
                 convert_territorial_state_of_synapse_to_territorial_list_index(MIGRATION_ALONG_POSITIVE_Y_AXIS),
                 shift_in_coordinates(0,1,0),
                 convert_territorial_state_of_synapse_to_territorial_list_index(MIGRATION_ALONG_NEGATIVE_Y_AXIS),
-                num_avalilable_thread_for_creation_and_use
+                num_threads_avalilable_for_computation
                 );
     exchange_synapses_between_territorial_lists_of_all_cells(
                 dynamic_state_of_tissue,
@@ -233,7 +243,7 @@ void  apply_transition_of_synaptic_migration_in_tissue(
                 convert_territorial_state_of_synapse_to_territorial_list_index(MIGRATION_ALONG_POSITIVE_COLUMNAR_AXIS),
                 shift_in_coordinates(0,0,1),
                 convert_territorial_state_of_synapse_to_territorial_list_index(MIGRATION_ALONG_NEGATIVE_COLUMNAR_AXIS),
-                num_avalilable_thread_for_creation_and_use
+                num_threads_avalilable_for_computation
                 );
 }
 

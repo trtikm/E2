@@ -101,14 +101,14 @@ void apply_transition_of_signalling_in_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_signalling const&
             transition_function_of_packed_signalling,
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
     std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue =
             dynamic_state_of_tissue->get_static_state_of_neural_tissue();
 
     std::vector<std::thread> threads;
-    for (natural_32_bit i = 0; i < num_avalilable_thread_for_creation_and_use; ++i)
+    for (natural_32_bit i = 1U; i < num_threads_avalilable_for_computation; ++i)
     {
         natural_32_bit x_coord = 0U;
         natural_32_bit y_coord = 0U;
@@ -129,10 +129,18 @@ void apply_transition_of_signalling_in_tissue(
                         static_state_of_tissue,
                         transition_function_of_packed_signalling,
                         x_coord,y_coord,c_coord,
-                        num_avalilable_thread_for_creation_and_use
+                        num_threads_avalilable_for_computation
                         )
                     );
     }
+
+    thread_apply_transition_of_signalling_in_tissue(
+            dynamic_state_of_tissue,
+            static_state_of_tissue,
+            transition_function_of_packed_signalling,
+            0U,0U,0U,
+            num_threads_avalilable_for_computation
+            );
 
     for(std::thread& thread : threads)
         thread.join();

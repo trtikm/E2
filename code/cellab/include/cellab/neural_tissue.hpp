@@ -91,27 +91,27 @@ struct neural_tissue : private boost::noncopyable
     std::shared_ptr<dynamic_state_of_neural_tissue>  get_dynamic_state_of_neural_tissue();
 
     void  apply_transition_of_synapses_to_muscles(
-            natural_32_bit num_avalilable_thread_for_creation_and_use
+            natural_32_bit const  num_threads_avalilable_for_computation
             );
 
     void  apply_transition_of_synapses_of_tissue(
-            natural_32_bit num_avalilable_thread_for_creation_and_use
+            natural_32_bit const  num_threads_avalilable_for_computation
             );
 
     void  apply_transition_of_territorial_lists_of_synapses(
-            natural_32_bit num_avalilable_thread_for_creation_and_use
+            natural_32_bit const  num_threads_avalilable_for_computation
             );
 
     void  apply_transition_of_synaptic_migration_in_tissue(
-            natural_32_bit num_avalilable_thread_for_creation_and_use
+            natural_32_bit const  num_threads_avalilable_for_computation
             );
 
     void  apply_transition_of_signalling_in_tissue(
-            natural_32_bit num_avalilable_thread_for_creation_and_use
+            natural_32_bit const  num_threads_avalilable_for_computation
             );
 
     void  apply_transition_of_cells_of_tissue(
-            natural_32_bit num_avalilable_thread_for_creation_and_use
+            natural_32_bit const  num_threads_avalilable_for_computation
             );
 
     std::size_t get_hash_code_of_class_for_cells() const;

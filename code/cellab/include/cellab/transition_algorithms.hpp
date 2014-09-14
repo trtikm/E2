@@ -66,38 +66,38 @@ void apply_transition_of_synapses_to_muscles(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_to_muscle const&
             transition_function_of_packed_synapse_to_muscle,
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         );
 
 void apply_transition_of_synapses_of_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_inside_tissue const&
             transition_function_of_packed_synapse_inside_tissue,
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         );
 
 void apply_transition_of_territorial_lists_of_synapses(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         );
 
 void  apply_transition_of_synaptic_migration_in_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         );
 
 void apply_transition_of_signalling_in_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_signalling const&
             transition_function_of_packed_signalling,
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         );
 
 void apply_transition_of_cells_of_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_cell const&
             transition_function_of_packed_cell,
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         );
 
 

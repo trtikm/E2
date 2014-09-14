@@ -41,66 +41,66 @@ neural_tissue::get_dynamic_state_of_neural_tissue()
 }
 
 void  neural_tissue::apply_transition_of_synapses_to_muscles(
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
     cellab::apply_transition_of_synapses_to_muscles(
                 get_dynamic_state_of_neural_tissue(),
                 m_transition_function_of_packed_synapse_to_muscle,
-                num_avalilable_thread_for_creation_and_use
+                num_threads_avalilable_for_computation
                 );
 }
 
 void  neural_tissue::apply_transition_of_synapses_of_tissue(
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
     cellab::apply_transition_of_synapses_of_tissue(
                 get_dynamic_state_of_neural_tissue(),
                 m_transition_function_of_packed_synapse_inside_tissue,
-                num_avalilable_thread_for_creation_and_use
+                num_threads_avalilable_for_computation
                 );
 }
 
 void  neural_tissue::apply_transition_of_territorial_lists_of_synapses(
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
     cellab::apply_transition_of_territorial_lists_of_synapses(
                 get_dynamic_state_of_neural_tissue(),
-                num_avalilable_thread_for_creation_and_use
+                num_threads_avalilable_for_computation
                 );
 }
 
 void  neural_tissue::apply_transition_of_synaptic_migration_in_tissue(
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
     cellab::apply_transition_of_synaptic_migration_in_tissue(
                 get_dynamic_state_of_neural_tissue(),
-                num_avalilable_thread_for_creation_and_use
+                num_threads_avalilable_for_computation
                 );
 }
 
 void  neural_tissue::apply_transition_of_signalling_in_tissue(
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
     cellab::apply_transition_of_signalling_in_tissue(
                 get_dynamic_state_of_neural_tissue(),
                 m_transition_function_of_packed_signalling,
-                num_avalilable_thread_for_creation_and_use
+                num_threads_avalilable_for_computation
                 );
 }
 
 void  neural_tissue::apply_transition_of_cells_of_tissue(
-        natural_32_bit num_avalilable_thread_for_creation_and_use
+        natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
     cellab::apply_transition_of_cells_of_tissue(
                 get_dynamic_state_of_neural_tissue(),
                 m_transition_function_of_packed_cell,
-                num_avalilable_thread_for_creation_and_use
+                num_threads_avalilable_for_computation
                 );
 }
 
