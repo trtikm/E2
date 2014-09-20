@@ -30,12 +30,17 @@ if(CMAKE_COMPILER_IS_GNUCXX)
         (CMAKE_BUILD_TYPE STREQUAL RelWithDebInfo))
         add_definitions("-ggdb3")
     endif()
+    message("Compiler = GCC")
+else()
+    message("Compiler = UNKNOWN")
 endif()
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX "${PROJECT_SOURCE_DIR}/../dist")
+    set(CMAKE_INSTALL_PREFIX "${PROJECT_SOURCE_DIR}/../dist" CACHE STRING "Install path" FORCE)
 endif()
 set(CMAKE_INSTALL_RPATH "./")
+message("Project directory = " ${PROJECT_SOURCE_DIR})
+message("Install directory = " ${CMAKE_INSTALL_PREFIX})
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -50,7 +55,11 @@ else()
 endif()
 
 # find and add Boost
-#set(BOOST_ROOT "/home/marek/Software/boost_1_55_0/dist")
+if(NOT BOOST_ROOT)
+    message("****************************************")
+    set(BOOST_ROOT "/home/marek/Software/boost_1_55_0/dist" CACHE STRING "A path to Boost library." FORCE)
+endif()
+message("Searching for Boost library ...")
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost REQUIRED)
 find_package(Boost COMPONENTS
@@ -60,6 +69,7 @@ find_package(Boost COMPONENTS
                 filesystem
                 log
                 log_setup
+                program_options
                 python
              REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
@@ -69,27 +79,64 @@ add_definitions("-DBOOST_LOG_DYN_LINK -DBOOST_LOG_SETUP")
 set(BOOST_LIST_OF_LIBRARIES_TO_LINK_WITH
         ${Boost_LIBRARIES}
     )
+message("Boost was found in directory: " ${BOOST_ROOT})
+message("Boost includes was found in directory: " ${Boost_INCLUDE_DIRS})
+message("Boost libraries was found in directory: " ${Boost_LIBRARY_DIRS})
 
 # find and add Python
+message("Searching for Python ...")
 find_package(PythonLibs REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 link_directories(${PYTHON_LIBRARIES})
 set(PYTHON_LIST_OF_LIBRARIES_TO_LINK_WITH
         ${PYTHON_LIBRARIES}
     )
+message("Python includes was found in directory: " ${PYTHON_INCLUDE_DIRS})
+message("Python libraries was found in directory: " ${PYTHON_LIBRARIES})
 
 # here follow all libraries of E2
 include_directories(
-    "${PROJECT_SOURCE_DIR}/utility/include"
     "${PROJECT_SOURCE_DIR}/cellab/include"
     "${PROJECT_SOURCE_DIR}/efloop/include"
     "${PROJECT_SOURCE_DIR}/envlab/include"
+    "${PROJECT_SOURCE_DIR}/utility/include"
     )
-add_subdirectory(./utility)
+message("Including the following E2 libraries to the build:")
 add_subdirectory(./cellab)
+    message("-- cellab")
 add_subdirectory(./efloop)
+    message("-- efloop")
 add_subdirectory(./envlab)
+    message("-- envlab")
+add_subdirectory(./utility)
+    message("-- utility")
 
 # here follow all shared libraries which provide python access to
 # the corresponding E2 libraries
 #add_subdirectory(./pycellab)
+
+# here follow tests, if they should be included.
+if(NOT E2_BUILD_ALSO_TESTS)
+    set(E2_BUILD_ALSO_TESTS "Yes" CACHE STRING "Build also tests? (Yes/No)" FORCE)
+endif()
+message("Build also tests: " ${E2_BUILD_ALSO_TESTS})
+string( TOLOWER "${E2_BUILD_ALSO_TESTS}" E2_TEMPORARY_VARIBLE)
+if(E2_TEMPORARY_VARIBLE STREQUAL "yes")
+    message("Including the following E2 tests to the build:")
+    add_subdirectory(./tests/tissue_allocation_and_memory_accesses)
+        message("-- tissue_allocation_and_memory_accesses")
+endif()
+
+# here follow benchmarks, if they should be included.
+if(NOT E2_BUILD_ALSO_BENCHMARKS)
+    set(E2_BUILD_ALSO_BENCHMARKS "Yes" CACHE STRING "Build also benchmarks? (Yes/No)" FORCE)
+endif()
+message("Build also benchmarks: " ${E2_BUILD_ALSO_BENCHMARKS})
+string( TOLOWER "${E2_BUILD_ALSO_BENCHMARKS}" E2_TEMPORARY_VARIBLE)
+if(E2_TEMPORARY_VARIBLE STREQUAL "yes")
+    message("Including the following E2 benchmarks to the build:")
+#    add_subdirectory(./benchmarks/...)
+#        message("-- ")
+endif()
+
+message("Generating build files ...")
