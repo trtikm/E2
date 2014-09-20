@@ -3,6 +3,8 @@
 namespace efloop {
 
 
+std::mutex  access_to_sensory_cells::void_mutex;
+
 access_to_sensory_cells::access_to_sensory_cells(
         std::shared_ptr<cellab::neural_tissue> const  neural_tissue,
         std::mutex* const  mutex_to_sensory_cells

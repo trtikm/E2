@@ -3,19 +3,13 @@
 
 #   include <cellab/static_state_of_neural_tissue.hpp>
 #   include <cellab/dynamic_state_of_neural_tissue.hpp>
-#   include <cellab/territorial_state_of_synapse.hpp>
-#   include <cellab/shift_in_coordinates.hpp>
 #   include <cellab/transition_algorithms.hpp>
+#   include <cellab/utilities_for_construction_of_neural_tissue.hpp>
 #   include <utility/basic_numeric_types.hpp>
-#   include <utility/instance_wrapper.hpp>
-#   include <utility/invariants.hpp>
 #   include <boost/noncopyable.hpp>
 #   include <type_traits>
-#   include <functional>
 #   include <typeinfo>
-#   include <tuple>
 #   include <memory>
-#   include <new>
 
 namespace cellab {
 
@@ -60,6 +54,51 @@ struct automated_binding_of_transition_functions
 
 struct neural_tissue : private boost::noncopyable
 {
+    template<typename class_derived_from_neural_tissue,
+             typename class_cell,
+             typename class_synapse,
+             typename class_signalling>
+    neural_tissue(
+            natural_16_bit const num_kinds_of_tissue_cells,
+            natural_16_bit const num_kinds_of_sensory_cells,
+            natural_16_bit const num_bits_per_cell,
+            natural_16_bit const num_bits_per_synapse,
+            natural_16_bit const num_bits_per_signalling,
+            natural_32_bit const num_cells_along_x_axis,
+            natural_32_bit const num_cells_along_y_axis,
+            std::vector<natural_32_bit> const& num_tissue_cells_of_cell_kind,
+            std::vector<natural_32_bit> const& num_synapses_in_territory_of_cell_kind,
+            std::vector<natural_32_bit> const& num_sensory_cells_of_cell_kind,
+            natural_32_bit const num_synapses_to_muscles,
+            bool const is_x_axis_torus_axis,
+            bool const is_y_axis_torus_axis,
+            bool const is_columnar_axis_torus_axis,
+            std::vector<integer_8_bit> const& x_radius_of_signalling_neighbourhood_of_cell,
+            std::vector<integer_8_bit> const& y_radius_of_signalling_neighbourhood_of_cell,
+            std::vector<integer_8_bit> const& columnar_radius_of_signalling_neighbourhood_of_cell,
+            std::vector<integer_8_bit> const& x_radius_of_signalling_neighbourhood_of_synapse,
+            std::vector<integer_8_bit> const& y_radius_of_signalling_neighbourhood_of_synapse,
+            std::vector<integer_8_bit> const& columnar_radius_of_signalling_neighbourhood_of_synapse,
+            std::vector<integer_8_bit> const& x_radius_of_cellular_neighbourhood_of_signalling,
+            std::vector<integer_8_bit> const& y_radius_of_cellular_neighbourhood_of_signalling,
+            std::vector<integer_8_bit> const& columnar_radius_of_cellular_neighbourhood_of_signalling,
+            automated_binding_of_transition_functions<class_derived_from_neural_tissue,
+                                                      class_cell,class_synapse,class_signalling>
+                auto_binding
+            );
+
+    template<typename class_derived_from_neural_tissue,
+             typename class_cell,
+             typename class_synapse,
+             typename class_signalling>
+    neural_tissue(
+            std::shared_ptr<cellab::static_state_of_neural_tissue>
+                static_state_of_tissue,
+            automated_binding_of_transition_functions<class_derived_from_neural_tissue,
+                                                      class_cell,class_synapse,class_signalling>
+                auto_binding
+            );
+
     template<typename class_derived_from_neural_tissue,
              typename class_cell,
              typename class_synapse,
@@ -138,181 +177,150 @@ private:
 };
 
 
-namespace private_internal_implementation_details {
-
-template<typename class_signalling>
-kind_of_cell  get_signalling_callback_function(
-        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)> const&
-            get_signalling,
-        shift_in_coordinates const& shift,
-        instance_wrapper<class_signalling>& signalling_instance
-        )
-{
-    std::pair<bits_const_reference,kind_of_cell> const bits_and_kind = get_signalling(shift);
-    signalling_instance.construct_instance( bits_and_kind.first );
-    return bits_and_kind.second;
-}
-
-template<typename class_cell>
-kind_of_cell  get_cell_callback_function(
-        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)> const&
-            get_cell,
-        shift_in_coordinates const& shift,
-        instance_wrapper<class_cell>& cell_instance
-        )
-{
-    std::pair<bits_const_reference,kind_of_cell> const bits_and_kind = get_cell(shift);
-    cell_instance.construct_instance( bits_and_kind.first );
-    return bits_and_kind.second;
-}
-
-template<typename class_synapse>
-std::pair<kind_of_cell,kind_of_cell>  get_synapse_callback_function(
-        std::function<std::tuple<bits_const_reference,kind_of_cell,kind_of_cell>(natural_32_bit)> const&
-            get_connected_synapse_at_index,
-        natural_32_bit const index_of_synapse,
-        instance_wrapper<class_synapse>& synapse_instance
-        )
-{
-    std::tuple<bits_const_reference,kind_of_cell,kind_of_cell> const bits_and_kind_and_kind =
-            get_connected_synapse_at_index(index_of_synapse);
-    synapse_instance.construct_instance( std::get<0>(bits_and_kind_and_kind) );
-    return std::make_pair( std::get<1>(bits_and_kind_and_kind), std::get<2>(bits_and_kind_and_kind) );
-}
-
 template<typename class_derived_from_neural_tissue,
          typename class_cell,
-         typename class_synapse>
-void transition_function_of_synapse_to_muscle(
-        neural_tissue* const tissue,
-        bits_reference& bits_of_synapse_to_be_updated,
-        kind_of_cell const kind_of_source_cell,
-        bits_const_reference const& bits_of_source_cell
+         typename class_synapse,
+         typename class_signalling>
+neural_tissue::neural_tissue(
+        natural_16_bit const num_kinds_of_tissue_cells,
+        natural_16_bit const num_kinds_of_sensory_cells,
+        natural_16_bit const num_bits_per_cell,
+        natural_16_bit const num_bits_per_synapse,
+        natural_16_bit const num_bits_per_signalling,
+        natural_32_bit const num_cells_along_x_axis,
+        natural_32_bit const num_cells_along_y_axis,
+        std::vector<natural_32_bit> const& num_tissue_cells_of_cell_kind,
+        std::vector<natural_32_bit> const& num_synapses_in_territory_of_cell_kind,
+        std::vector<natural_32_bit> const& num_sensory_cells_of_cell_kind,
+        natural_32_bit const num_synapses_to_muscles,
+        bool const is_x_axis_torus_axis,
+        bool const is_y_axis_torus_axis,
+        bool const is_columnar_axis_torus_axis,
+        std::vector<integer_8_bit> const& x_radius_of_signalling_neighbourhood_of_cell,
+        std::vector<integer_8_bit> const& y_radius_of_signalling_neighbourhood_of_cell,
+        std::vector<integer_8_bit> const& columnar_radius_of_signalling_neighbourhood_of_cell,
+        std::vector<integer_8_bit> const& x_radius_of_signalling_neighbourhood_of_synapse,
+        std::vector<integer_8_bit> const& y_radius_of_signalling_neighbourhood_of_synapse,
+        std::vector<integer_8_bit> const& columnar_radius_of_signalling_neighbourhood_of_synapse,
+        std::vector<integer_8_bit> const& x_radius_of_cellular_neighbourhood_of_signalling,
+        std::vector<integer_8_bit> const& y_radius_of_cellular_neighbourhood_of_signalling,
+        std::vector<integer_8_bit> const& columnar_radius_of_cellular_neighbourhood_of_signalling,
+        automated_binding_of_transition_functions<class_derived_from_neural_tissue,
+                                                  class_cell,class_synapse,class_signalling>
+            auto_binding
         )
+    : m_dynamic_state_of_tissue(
+            new dynamic_state_of_neural_tissue(
+                    std::shared_ptr<static_state_of_neural_tissue>(new static_state_of_neural_tissue(
+                            num_kinds_of_tissue_cells,
+                            num_kinds_of_sensory_cells,
+                            num_bits_per_cell,
+                            num_bits_per_synapse,
+                            num_bits_per_signalling,
+                            num_cells_along_x_axis,
+                            num_cells_along_y_axis,
+                            num_tissue_cells_of_cell_kind,
+                            num_synapses_in_territory_of_cell_kind,
+                            num_sensory_cells_of_cell_kind,
+                            num_synapses_to_muscles,
+                            is_x_axis_torus_axis,
+                            is_y_axis_torus_axis,
+                            is_columnar_axis_torus_axis,
+                            x_radius_of_signalling_neighbourhood_of_cell,
+                            y_radius_of_signalling_neighbourhood_of_cell,
+                            columnar_radius_of_signalling_neighbourhood_of_cell,
+                            x_radius_of_signalling_neighbourhood_of_synapse,
+                            y_radius_of_signalling_neighbourhood_of_synapse,
+                            columnar_radius_of_signalling_neighbourhood_of_synapse,
+                            x_radius_of_cellular_neighbourhood_of_signalling,
+                            y_radius_of_cellular_neighbourhood_of_signalling,
+                            columnar_radius_of_cellular_neighbourhood_of_signalling
+                            ))
+                    )
+            )
+    , m_transition_function_of_packed_synapse_to_muscle(
+            private_internal_implementation_details::bind_transition_function_of_synapse_to_muscle<
+                class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
+                typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
+                >::get_function(this)
+            //private_internal_implementation_details::bind_transition_function_of_synapse_to_muscle(this,auto_binding)
+            )
+    , m_transition_function_of_packed_synapse_inside_tissue(
+            private_internal_implementation_details::bind_transition_function_of_synapse_inside_tissue<
+                class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
+                typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
+                >::get_function(this)
+            //private_internal_implementation_details::bind_transition_function_of_synapse_inside_tissue(this,auto_binding)
+            )
+    , m_transition_function_of_packed_signalling(
+            private_internal_implementation_details::bind_transition_function_of_signalling<
+                class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
+                typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
+                >::get_function(this)
+            //private_internal_implementation_details::bind_transition_function_of_signalling(this,auto_binding)
+            )
+    , m_transition_function_of_packed_cell(
+            private_internal_implementation_details::bind_transition_function_of_cell<
+                class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
+                typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
+                >::get_function(this)
+            //private_internal_implementation_details::transition_function_of_cell(this,auto_binding)
+            )
+    , m_hash_code_of_class_for_cells(typeid(class_cell).hash_code())
+    , m_hash_code_of_class_for_synapses(typeid(class_synapse).hash_code())
+    , m_hash_code_of_class_for_signalling(typeid(class_signalling).hash_code())
 {
-    class_synapse  synapse_to_be_updated( bits_const_reference(bits_of_synapse_to_be_updated) );
-    class_cell const  source_cell( bits_of_source_cell );
-    INVARIANT(dynamic_cast<class_derived_from_neural_tissue*>(tissue) != nullptr);
-    static_cast<class_derived_from_neural_tissue*>(tissue)->transition_function_of_synapse_to_muscle(
-                synapse_to_be_updated,
-                kind_of_source_cell,
-                source_cell
-                );
-    synapse_to_be_updated >> bits_of_synapse_to_be_updated;
+
 }
+
 
 template<typename class_derived_from_neural_tissue,
          typename class_cell,
          typename class_synapse,
          typename class_signalling>
-void transition_function_of_synapse_inside_tissue(
-        neural_tissue* const tissue,
-        bits_reference& bits_of_synapse_to_be_updated,
-        kind_of_cell kind_of_source_cell,
-        bits_const_reference const& bits_of_source_cell,
-        kind_of_cell kind_of_territory_cell,
-        bits_const_reference const& bits_of_territory_cell,
-        territorial_state_of_synapse current_territorial_state_of_synapse,
-        shift_in_coordinates const& shift_to_low_corner,
-        shift_in_coordinates const& shift_to_high_corner,
-        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)> const&
-            get_signalling
+neural_tissue::neural_tissue(
+        std::shared_ptr<cellab::static_state_of_neural_tissue>
+            static_state_of_tissue,
+        automated_binding_of_transition_functions<class_derived_from_neural_tissue,
+                                                  class_cell,class_synapse,class_signalling>
+            auto_binding
         )
+    : m_dynamic_state_of_tissue(
+            new dynamic_state_of_neural_tissue( static_state_of_tissue )
+            )
+    , m_transition_function_of_packed_synapse_to_muscle(
+            private_internal_implementation_details::bind_transition_function_of_synapse_to_muscle<
+                class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
+                typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
+                >::get_function(this)
+            //private_internal_implementation_details::bind_transition_function_of_synapse_to_muscle(this,auto_binding)
+            )
+    , m_transition_function_of_packed_synapse_inside_tissue(
+            private_internal_implementation_details::bind_transition_function_of_synapse_inside_tissue<
+                class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
+                typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
+                >::get_function(this)
+            //private_internal_implementation_details::bind_transition_function_of_synapse_inside_tissue(this,auto_binding)
+            )
+    , m_transition_function_of_packed_signalling(
+            private_internal_implementation_details::bind_transition_function_of_signalling<
+                class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
+                typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
+                >::get_function(this)
+            //private_internal_implementation_details::bind_transition_function_of_signalling(this,auto_binding)
+            )
+    , m_transition_function_of_packed_cell(
+            private_internal_implementation_details::bind_transition_function_of_cell<
+                class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
+                typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
+                >::get_function(this)
+            //private_internal_implementation_details::transition_function_of_cell(this,auto_binding)
+            )
+    , m_hash_code_of_class_for_cells(typeid(class_cell).hash_code())
+    , m_hash_code_of_class_for_synapses(typeid(class_synapse).hash_code())
+    , m_hash_code_of_class_for_signalling(typeid(class_signalling).hash_code())
 {
-    class_synapse  synapse_to_be_updated( bits_const_reference(bits_of_synapse_to_be_updated) );
-    class_cell const  source_cell( bits_of_source_cell );
-    class_cell const  territory_cell( bits_of_territory_cell );
-    INVARIANT(dynamic_cast<class_derived_from_neural_tissue*>(tissue) != nullptr);
-    static_cast<class_derived_from_neural_tissue*>(tissue)->transition_function_of_synapse_inside_tissue(
-                synapse_to_be_updated,
-                kind_of_source_cell,
-                source_cell,
-                kind_of_territory_cell,
-                territory_cell,
-                current_territorial_state_of_synapse,
-                shift_to_low_corner,
-                shift_to_high_corner,
-                std::bind(
-                    &get_signalling_callback_function<class_signalling>,
-                    std::cref(get_signalling),
-                    std::placeholders::_1,
-                    std::placeholders::_2
-                    )
-                );
-    synapse_to_be_updated >> bits_of_synapse_to_be_updated;
-}
-
-template<typename class_derived_from_neural_tissue,
-         typename class_cell,
-         typename class_signalling>
-void transition_function_of_signalling(
-        neural_tissue* const tissue,
-        bits_reference& bits_of_signalling_to_be_updated,
-        kind_of_cell kind_of_territory_cell,
-        shift_in_coordinates const& shift_to_low_corner,
-        shift_in_coordinates const& shift_to_high_corner,
-        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)> const&
-            get_cell
-        )
-{
-    class_signalling  signalling_to_be_updated( bits_const_reference(bits_of_signalling_to_be_updated) );
-    INVARIANT(dynamic_cast<class_derived_from_neural_tissue*>(tissue) != nullptr);
-    static_cast<class_derived_from_neural_tissue*>(tissue)->transition_function_of_signalling(
-                signalling_to_be_updated,
-                kind_of_territory_cell,
-                shift_to_low_corner,
-                shift_to_high_corner,
-                std::bind(
-                    &get_cell_callback_function<class_cell>,
-                    std::cref(get_cell),
-                    std::placeholders::_1,
-                    std::placeholders::_2
-                    )
-                );
-    signalling_to_be_updated >> bits_of_signalling_to_be_updated;
-}
-
-template<typename class_derived_from_neural_tissue,
-         typename class_cell,
-         typename class_synapse,
-         typename class_signalling>
-void transition_function_of_cell(
-        neural_tissue* const tissue,
-        bits_reference& bits_of_cell_to_be_updated,
-        kind_of_cell kind_of_cell_to_be_updated,
-        natural_32_bit num_of_synapses_connected_to_the_cell,
-        std::function<std::tuple<bits_const_reference,kind_of_cell,kind_of_cell>(natural_32_bit)> const&
-            get_connected_synapse_at_index,
-        shift_in_coordinates const& shift_to_low_corner,
-        shift_in_coordinates const& shift_to_high_corner,
-        std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)> const&
-            get_signalling
-        )
-{
-    class_cell  cell_to_be_updated( bits_const_reference(bits_of_cell_to_be_updated) );
-    INVARIANT(dynamic_cast<class_derived_from_neural_tissue*>(tissue) != nullptr);
-    static_cast<class_derived_from_neural_tissue*>(tissue)->transition_function_of_synapse_inside_tissue(
-                cell_to_be_updated,
-                kind_of_cell_to_be_updated,
-                num_of_synapses_connected_to_the_cell,
-                std::bind(
-                    &get_synapse_callback_function<class_synapse>,
-                    std::cref(get_connected_synapse_at_index),
-                    std::placeholders::_1,
-                    std::placeholders::_2
-                    ),
-                shift_to_low_corner,
-                shift_to_high_corner,
-                std::bind(
-                    &get_signalling_callback_function<class_signalling>,
-                    std::cref(get_signalling),
-                    std::placeholders::_1,
-                    std::placeholders::_2
-                    )
-                );
-    cell_to_be_updated >> bits_of_cell_to_be_updated;
-}
-
+    ASSUMPTION(m_dynamic_state_of_tissue.operator bool());
 }
 
 
@@ -329,105 +337,33 @@ neural_tissue::neural_tissue(
         )
     : m_dynamic_state_of_tissue(dynamic_state_of_tissue)
     , m_transition_function_of_packed_synapse_to_muscle(
-        auto_binding.use_bits_references ?
-                std::bind(
-                    &class_derived_from_neural_tissue::transition_function_of_synapse_to_muscle,
-                    this,
-                    std::placeholders::_1,
-                    std::placeholders::_2,
-                    std::placeholders::_3
-                    )
-            :
-                std::bind(
-                    &private_internal_implementation_details::transition_function_of_synapse_to_muscle<
-                        class_derived_from_neural_tissue,class_cell,class_synapse
-                        >,
-                    this,
-                    std::placeholders::_1,
-                    std::placeholders::_2,
-                    std::placeholders::_3
-                    )
-        )
+            private_internal_implementation_details::bind_transition_function_of_synapse_to_muscle<
+                class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
+                typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
+                >::get_function(this)
+            //private_internal_implementation_details::bind_transition_function_of_synapse_to_muscle(this,auto_binding)
+            )
     , m_transition_function_of_packed_synapse_inside_tissue(
-        auto_binding.use_bits_references ?
-                std::bind(
-                    &class_derived_from_neural_tissue::transition_function_of_synapse_inside_tissue,
-                    this,
-                    std::placeholders::_1,
-                    std::placeholders::_2,
-                    std::placeholders::_3,
-                    std::placeholders::_4,
-                    std::placeholders::_5,
-                    std::placeholders::_6,
-                    std::placeholders::_7,
-                    std::placeholders::_8,
-                    std::placeholders::_9
-                    )
-            :
-                std::bind(
-                    &private_internal_implementation_details::transition_function_of_synapse_inside_tissue<
-                          class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling
-                          >,
-                    this,
-                    std::placeholders::_1,
-                    std::placeholders::_2,
-                    std::placeholders::_3,
-                    std::placeholders::_4,
-                    std::placeholders::_5,
-                    std::placeholders::_6,
-                    std::placeholders::_7,
-                    std::placeholders::_8,
-                    std::placeholders::_9
-                    )
-        )
+            private_internal_implementation_details::bind_transition_function_of_synapse_inside_tissue<
+                class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
+                typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
+                >::get_function(this)
+            //private_internal_implementation_details::bind_transition_function_of_synapse_inside_tissue(this,auto_binding)
+            )
     , m_transition_function_of_packed_signalling(
-        auto_binding.use_bits_references ?
-                std::bind(
-                    &class_derived_from_neural_tissue::transition_function_of_signalling,
-                    this,
-                    std::placeholders::_1,
-                    std::placeholders::_2,
-                    std::placeholders::_3,
-                    std::placeholders::_4,
-                    std::placeholders::_5
-                    )
-            :
-                std::bind(
-                    &private_internal_implementation_details::transition_function_of_signalling<
-                        class_derived_from_neural_tissue,class_cell,class_signalling
-                        >,
-                    this,
-                    std::placeholders::_1,
-                    std::placeholders::_2,
-                    std::placeholders::_3,
-                    std::placeholders::_4,
-                    std::placeholders::_5
-                    )
-        )
+            private_internal_implementation_details::bind_transition_function_of_signalling<
+                class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
+                typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
+                >::get_function(this)
+            //private_internal_implementation_details::bind_transition_function_of_signalling(this,auto_binding)
+            )
     , m_transition_function_of_packed_cell(
-        auto_binding.use_bits_references ?
-                std::bind(
-                    &class_derived_from_neural_tissue::transition_function_of_cell,
-                    this,
-                    std::placeholders::_1,
-                    std::placeholders::_2,
-                    std::placeholders::_3,
-                    std::placeholders::_4,
-                    std::placeholders::_5
-                    )
-            :
-                std::bind(
-                    &private_internal_implementation_details::transition_function_of_cell<
-                        class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling
-                        >,
-                    this,
-                    std::placeholders::_1,
-                    std::placeholders::_2,
-                    std::placeholders::_3,
-                    std::placeholders::_4,
-                    std::placeholders::_5
-                    )
-        )
+            private_internal_implementation_details::bind_transition_function_of_cell<
+                class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
+                typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
+                >::get_function(this)
+            //private_internal_implementation_details::transition_function_of_cell(this,auto_binding)
+            )
     , m_hash_code_of_class_for_cells(typeid(class_cell).hash_code())
     , m_hash_code_of_class_for_synapses(typeid(class_synapse).hash_code())
     , m_hash_code_of_class_for_signalling(typeid(class_signalling).hash_code())

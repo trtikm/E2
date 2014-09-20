@@ -125,6 +125,8 @@ if(E2_TEMPORARY_VARIBLE STREQUAL "yes")
     message("Including the following E2 tests to the build:")
     add_subdirectory(./tests/tissue_allocation_and_memory_accesses)
         message("-- tissue_allocation_and_memory_accesses")
+    add_subdirectory(./tests/efloop_construction_and_simulation)
+        message("-- efloop_construction_and_simulation")
 endif()
 
 # here follow benchmarks, if they should be included.

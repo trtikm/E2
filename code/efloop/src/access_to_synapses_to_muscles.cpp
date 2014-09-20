@@ -4,6 +4,8 @@
 namespace efloop {
 
 
+std::mutex  access_to_synapses_to_muscles::void_mutex;
+
 access_to_synapses_to_muscles::access_to_synapses_to_muscles(
         std::shared_ptr<cellab::neural_tissue> const  neural_tissue,
         std::mutex* const  mutex_to_synapses_to_muscles

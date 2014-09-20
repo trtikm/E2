@@ -29,6 +29,8 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/cellab/neural_tissue.hpp
     ./src/neural_tissue.cpp
+
+    ./include/cellab/utilities_for_construction_of_neural_tissue.hpp
     )
 
 #set_target_properties(${THIS_TARGET_NAME} PROPERTIES

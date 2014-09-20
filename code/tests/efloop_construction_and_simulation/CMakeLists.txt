@@ -1,4 +1,4 @@
-set(THIS_TARGET_NAME tissue_allocation_and_memory_accesses)
+set(THIS_TARGET_NAME efloop_construction_and_simulation)
 
 add_executable(${THIS_TARGET_NAME}
     program_info.hpp
@@ -8,12 +8,28 @@ add_executable(${THIS_TARGET_NAME}
     program_options.cpp
 
     main.cpp
-
     run.cpp
+
+    my_cell.cpp
+    my_cell.hpp
+
+    my_synapse.cpp
+    my_synapse.hpp
+
+    my_signalling.cpp
+    my_signalling.hpp
+
+    my_neural_tissue.cpp
+    my_neural_tissue.hpp
+
+    my_environment.cpp
+    my_environment.hpp
     )
 
 target_link_libraries(${THIS_TARGET_NAME}
+    efloop
     cellab
+    envlab
     utility
     ${BOOST_LIST_OF_LIBRARIES_TO_LINK_WITH}
     )
