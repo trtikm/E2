@@ -37,6 +37,8 @@ add_library(utility
 
     ./include/utility/instance_wrapper.hpp
 
+    ./include/utility/test.hpp
+    ./src/test.cpp
     )
 
 #install(TARGETS brod_utils DESTINATION lib/utils)

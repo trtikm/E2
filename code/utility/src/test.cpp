@@ -1,0 +1,73 @@
+#include <utility/test.hpp>
+
+namespace test_statistics {
+
+
+natural_32_bit&  num_tests_which_succeeded_without_exception()
+{
+    static natural_32_bit  value = 0;
+    return value;
+}
+
+natural_32_bit&  num_tests_which_succeeded_by_exception()
+{
+    static natural_32_bit  value = 0;
+    return value;
+}
+
+natural_32_bit&  num_tests_which_failed_without_exception()
+{
+    static natural_32_bit  value = 0;
+    return value;
+}
+
+natural_32_bit&  num_tests_which_failed_by_exception()
+{
+    static natural_32_bit  value = 0;
+    return value;
+}
+
+void print_test_statistical_data_to_log_and_standard_output()
+{
+    natural_32_bit const  total_num_tests =
+            num_tests_which_succeeded_without_exception() +
+            num_tests_which_succeeded_by_exception() +
+            num_tests_which_failed_without_exception() +
+            num_tests_which_failed_by_exception()
+            ;
+    natural_32_bit const  total_num_succeeded_tests =
+            num_tests_which_succeeded_without_exception() +
+            num_tests_which_succeeded_by_exception()
+            ;
+    natural_32_bit const  total_num_failed_tests =
+            num_tests_which_failed_without_exception() +
+            num_tests_which_failed_by_exception()
+            ;
+
+    std::cout << "RESULTS FROM TESTING:\n";
+    std::cout << "Total number of tests: " << total_num_tests << "\n";
+    std::cout << "Total number of successfull tests: " << total_num_succeeded_tests << "\n";
+    std::cout << "Total number of failed tests: " << total_num_failed_tests << "\n";
+
+    if (total_num_failed_tests == 0)
+    {
+        LOG(info,"The testing was SUCCESSFUL. [Total/Succeeded/Failed = "
+                  << total_num_tests << "/"
+                  << total_num_succeeded_tests << "/"
+                  << total_num_failed_tests
+                  << "]");
+        std::cout << "The testing was SUCCESSFUL.\n";
+    }
+    else
+    {
+        LOG(info,"The testing has FAILED. [Total/Succeeded/Failed = "
+                  << total_num_tests << "/"
+                  << total_num_succeeded_tests << "/"
+                  << total_num_failed_tests
+                  << "]");
+        std::cout << "The testing has FAILED.\n";
+    }
+}
+
+
+}

@@ -56,7 +56,6 @@ endif()
 
 # find and add Boost
 if(NOT BOOST_ROOT)
-    message("****************************************")
     set(BOOST_ROOT "/home/marek/Software/boost_1_55_0/dist" CACHE STRING "A path to Boost library." FORCE)
 endif()
 message("Searching for Boost library ...")
@@ -127,6 +126,10 @@ if(E2_TEMPORARY_VARIBLE STREQUAL "yes")
         message("-- tissue_allocation_and_memory_accesses")
     add_subdirectory(./tests/efloop_construction_and_simulation)
         message("-- efloop_construction_and_simulation")
+    add_subdirectory(./tests/unsigned_integer_wrap_operations)
+        message("-- unsigned_integer_wrap_operations")
+    add_subdirectory(./tests/bits_reference_operations)
+        message("-- bits_reference_operations")
 endif()
 
 # here follow benchmarks, if they should be included.
@@ -142,3 +145,4 @@ if(E2_TEMPORARY_VARIBLE STREQUAL "yes")
 endif()
 
 message("Generating build files ...")
+
