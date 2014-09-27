@@ -5,21 +5,21 @@
 #   include <utility/log.hpp>
 #   include <iostream>
 
-#   define TEST_EVALUATION(COND,RESULT,TOLOG,TOCOUT) \
+#   define TEST_EVALUATION(COND,RESULT,LOGSUCCESS) \
     {\
         try\
         {\
             if ((COND) == (RESULT))\
             {\
                 ++test_statistics::num_tests_which_succeeded_without_exception();\
-                if (TOLOG) { LOG(info,"TEST SUCCEEDED: " #COND); }\
-                if (TOCOUT) { std::cout << "TEST SUCCEEDED: " #COND << "\n"; }\
+                if (LOGSUCCESS) { LOG(info,"TEST SUCCEEDED: " #COND); }\
+                if (LOGSUCCESS) { std::cout << "TEST SUCCEEDED: " #COND << "\n"; }\
             }\
             else\
             {\
                 ++test_statistics::num_tests_which_failed_without_exception();\
-                if (TOLOG) { LOG(error,"TEST FAILED: " #COND); }\
-                if (TOCOUT) { std::cout << "TEST FAILED: " #COND << "\n"; }\
+                if (true) { LOG(error,"TEST FAILED: " #COND); }\
+                if (true) { std::cout << "TEST FAILED: " #COND << "\n"; }\
             }\
         }\
         catch (...)\
@@ -27,25 +27,30 @@
             if (RESULT)\
             {\
                 ++test_statistics::num_tests_which_failed_by_exception();\
-                if (TOLOG) { LOG(error,"TEST FAILED (by throwing exception): " #COND); }\
-                if (TOCOUT) { std::cout << "TEST FAILED (by throwing exception): " #COND << "\n"; }\
+                if (true) { LOG(error,"TEST FAILED (by throwing exception): " #COND); }\
+                if (true) { std::cout << "TEST FAILED (by throwing exception): " #COND << "\n"; }\
             }\
             else\
             {\
                 ++test_statistics::num_tests_which_succeeded_by_exception();\
-                if (TOLOG) { LOG(info,"TEST SUCCEEDED (by throwing exception): " #COND); }\
-                if (TOCOUT) { std::cout << "TEST SUCCEEDED (by throwing exception): " #COND << "\n"; }\
+                if (LOGSUCCESS) { LOG(info,"TEST SUCCEEDED (by throwing exception): " #COND); }\
+                if (LOGSUCCESS) { std::cout << "TEST SUCCEEDED (by throwing exception): " #COND << "\n"; }\
             }\
         }\
     }
 
-#   define TEST_SUCCESS(COND) TEST_EVALUATION(COND,true,true,true)
-#   define TEST_FAILURE(COND) TEST_EVALUATION(COND,false,true,true)
+#   define TEST_SUCCESS(COND) TEST_EVALUATION(COND,true,false)
+#   define TEST_FAILURE(COND) TEST_EVALUATION(COND,false,false)
 
-#   define TEST_SUCCESS_EX(COND,TOLOG,TOCOUT) TEST_EVALUATION(COND,true,TOLOG,TOCOUT)
-#   define TEST_FAILURE_EX(COND,TOLOG,TOCOUT) TEST_EVALUATION(COND,false,TOLOG,TOCOUT)
+#   define TEST_SUCCESS_EX(COND,LOGSUCCESS) TEST_EVALUATION(COND,true,LOGSUCCESS)
+#   define TEST_FAILURE_EX(COND,LOGSUCCESS) TEST_EVALUATION(COND,false,LOGSUCCESS)
 
 #   define TEST_PRINT_STATISTICS() test_statistics::print_test_statistical_data_to_log_and_standard_output()
+
+#   define TEST_PROGRESS_SHOW() ::private_test_internal_implementation_details::print_next_test_progress_character()
+#   define TEST_PROGRESS_HIDE() ::private_test_internal_implementation_details::hide_test_progress_character()
+#   define TEST_PROGRESS_UPDATE() { TEST_PROGRESS_HIDE(); TEST_PROGRESS_SHOW(); }
+
 
 namespace test_statistics {
 
@@ -58,5 +63,9 @@ void print_test_statistical_data_to_log_and_standard_output();
 
 }
 
+namespace private_test_internal_implementation_details {
+void  print_next_test_progress_character();
+void  hide_test_progress_character();
+}
 
 #endif

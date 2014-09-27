@@ -1,4 +1,6 @@
 #include <utility/test.hpp>
+#include <array>
+#include <algorithm>
 
 namespace test_statistics {
 
@@ -69,5 +71,24 @@ void print_test_statistical_data_to_log_and_standard_output()
     }
 }
 
+
+}
+
+
+namespace private_test_internal_implementation_details {
+
+void  print_next_test_progress_character()
+{
+    static std::array<natural_8_bit,4> char_set = { '|', '/', '-', '\\' };
+    std::rotate(char_set.begin(),char_set.begin()+1,char_set.end());
+    std::cout << char_set.at(0);
+    std::cout.flush();
+}
+
+void  hide_test_progress_character()
+{
+    std::cout << '\b';
+    std::cout.flush();
+}
 
 }

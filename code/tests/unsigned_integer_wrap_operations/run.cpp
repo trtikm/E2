@@ -35,47 +35,50 @@ void run()
     TEST_SUCCESS(to_checked_number<natural_32_bit>(0xCDU) == 0xCDFFFFFFU);
     TEST_SUCCESS(to_checked_number<natural_64_bit>(0xCDU) == 0xCDFFFFFFFFFFFFFFU);
 
-    std::cout << "Testing detection of 8,16,and 32-bit unsigned wrap errors ... "; std::cout.flush();
+    TEST_PROGRESS_SHOW();
     for (natural_64_bit i = 0; i <= natural_64_bit(0xFFU); ++i)
+    {
         for (natural_64_bit j = 0; j <= natural_64_bit(0xFFU); ++j)
         {
             natural_8_bit const i8 = natural_8_bit(i);
             natural_8_bit const j8 = natural_8_bit(j);
 
             if (i + j <= std::numeric_limits<natural_8_bit>::max())
-                TEST_SUCCESS_EX(checked_add_8_bit(i8,j8) == i8 + j8,false,false)
+                TEST_SUCCESS(checked_add_8_bit(i8,j8) == i8 + j8)
             else
-                TEST_FAILURE_EX(checked_add_8_bit(i8,j8) == i8 + j8,false,false)
+                TEST_FAILURE(checked_add_8_bit(i8,j8) == i8 + j8)
             if (i * j <= std::numeric_limits<natural_8_bit>::max())
-                TEST_SUCCESS_EX(checked_mul_8_bit(i8,j8) == i8 * j8,false,false)
+                TEST_SUCCESS(checked_mul_8_bit(i8,j8) == i8 * j8)
             else
-                TEST_FAILURE_EX(checked_mul_8_bit(i8,j8) == i8 * j8,false,false)
+                TEST_FAILURE(checked_mul_8_bit(i8,j8) == i8 * j8)
 
             natural_16_bit const i16 = to_checked_number<natural_16_bit>(i);
             natural_16_bit const j16 = to_checked_number<natural_16_bit>(j);
 
             if (natural_64_bit(i16) + natural_64_bit(j16) <= std::numeric_limits<natural_16_bit>::max())
-                TEST_SUCCESS_EX(checked_add_16_bit(i16,j16) == i16 + j16,false,false)
+                TEST_SUCCESS(checked_add_16_bit(i16,j16) == i16 + j16)
             else
-                TEST_FAILURE_EX(checked_add_16_bit(i16,j16) == i16 + j16,false,false)
+                TEST_FAILURE(checked_add_16_bit(i16,j16) == i16 + j16)
             if (natural_64_bit(i16) * natural_64_bit(j16) <= std::numeric_limits<natural_16_bit>::max())
-                TEST_SUCCESS_EX(checked_mul_16_bit(i16,j16) == i16 * j16,false,false)
+                TEST_SUCCESS(checked_mul_16_bit(i16,j16) == i16 * j16)
             else
-                TEST_FAILURE_EX(checked_mul_16_bit(i16,j16) == i16 * j16,false,false)
+                TEST_FAILURE(checked_mul_16_bit(i16,j16) == i16 * j16)
 
             natural_32_bit const i32 = to_checked_number<natural_32_bit>(i);
             natural_32_bit const j32 = to_checked_number<natural_32_bit>(j);
 
             if (natural_64_bit(i32) + natural_64_bit(j32) <= std::numeric_limits<natural_32_bit>::max())
-                TEST_SUCCESS_EX(checked_add_32_bit(i32,j32) == i32 + j32,false,false)
+                TEST_SUCCESS(checked_add_32_bit(i32,j32) == i32 + j32)
             else
-                TEST_FAILURE_EX(checked_add_32_bit(i32,j32) == i32 + j32,false,false)
+                TEST_FAILURE(checked_add_32_bit(i32,j32) == i32 + j32)
             if (natural_64_bit(i32) * natural_64_bit(j32) <= std::numeric_limits<natural_32_bit>::max())
-                TEST_SUCCESS_EX(checked_mul_32_bit(i32,j32) == i32 * j32,false,false)
+                TEST_SUCCESS(checked_mul_32_bit(i32,j32) == i32 * j32)
             else
-                TEST_FAILURE_EX(checked_mul_32_bit(i32,j32) == i32 * j32,false,false)
+                TEST_FAILURE(checked_mul_32_bit(i32,j32) == i32 * j32)
         }
-    std::cout << "Done.\n";
+        TEST_PROGRESS_UPDATE();
+    }
+    TEST_PROGRESS_HIDE();
 
     TEST_PRINT_STATISTICS();
 }
