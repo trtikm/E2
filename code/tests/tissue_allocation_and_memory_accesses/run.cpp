@@ -2,6 +2,7 @@
 #include "./program_options.hpp"
 #include <cellab/static_state_of_neural_tissue.hpp>
 #include <cellab/dynamic_state_of_neural_tissue.hpp>
+#include <utility/test.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <vector>
@@ -54,4 +55,6 @@ void run()
                         );
 
     }
+
+    TEST_PRINT_STATISTICS();
 }

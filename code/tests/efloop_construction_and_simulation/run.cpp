@@ -3,6 +3,7 @@
 #include "./my_neural_tissue.hpp"
 #include "./my_environment.hpp"
 #include <efloop/external_feedback_loop.hpp>
+#include <utility/test.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 
@@ -16,4 +17,6 @@ void run()
                     std::shared_ptr<cellab::neural_tissue>(new my_neural_tissue()),
                     std::shared_ptr<envlab::rules_and_logic_of_environment>(new my_environment())
                     ));
+
+    TEST_PRINT_STATISTICS();
 }

@@ -130,6 +130,8 @@ if(E2_TEMPORARY_VARIBLE STREQUAL "yes")
         message("-- unsigned_integer_wrap_operations")
     add_subdirectory(./tests/bits_reference_operations)
         message("-- bits_reference_operations")
+    add_subdirectory(./tests)
+        message("-- run_tests.py")
 endif()
 
 # here follow benchmarks, if they should be included.
