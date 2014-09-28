@@ -133,6 +133,7 @@ T  bits_to_value( bits_reference_type const& bits_ref )
 void value_to_bits(
     natural_32_bit const variable_where_the_value_is_stored,
     bits_reference& target_bits,
+    natural_8_bit const index_of_the_first_target_bit,
     natural_8_bit const how_many_bits_to_transfer
     );
 

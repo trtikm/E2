@@ -9,8 +9,6 @@ add_library(utility
     ./src/bits_reference.cpp
     ./include/utility/bits_reference.hpp
 
-    ./include/utility/array_of_references_to_bits.hpp
-
     ./include/utility/config.hpp
 
     ./include/utility/development.hpp

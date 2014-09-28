@@ -99,7 +99,7 @@ static void bits_to_value(
     natural_32_bit& variable_where_the_value_will_be_stored
     )
 {
-    ASSUMPTION( index_of_start_bit +  how_many_bits < source_bits.num_bits() );
+    ASSUMPTION( natural_16_bit(index_of_start_bit) +  how_many_bits < source_bits.num_bits() );
     ASSUMPTION( how_many_bits <= sizeof(variable_where_the_value_will_be_stored) * 8U );
 
     variable_where_the_value_will_be_stored = 0U;
@@ -114,7 +114,7 @@ static void bits_to_value(
         sizeof(variable_where_the_value_will_be_stored) * 8U
         );
 
-    for (natural_8_bit i = 0; i < how_many_bits; ++i)
+    for (natural_16_bit i = 0; i < how_many_bits; ++i)
         set_bit(
             target_bits,
             target_bits.num_bits() - 1U - i,
@@ -131,14 +131,15 @@ static void bits_to_value(
             );
 }
 
-void value_to_bits(
+static void value_to_bits(
     natural_32_bit variable_where_the_value_is_stored,
     bits_reference_impl& target_bits,
+    natural_8_bit const index_of_the_first_target_bit,
     natural_8_bit const how_many_bits_to_transfer
     )
 {
-    ASSUMPTION(how_many_bits_to_transfer < sizeof(variable_where_the_value_is_stored) * 8U);
-    ASSUMPTION(how_many_bits_to_transfer < target_bits.num_bits());
+    ASSUMPTION(how_many_bits_to_transfer <= sizeof(variable_where_the_value_is_stored) * 8U);
+    ASSUMPTION(natural_16_bit(index_of_the_first_target_bit) + how_many_bits_to_transfer <= target_bits.num_bits());
 
     natural_8_bit* const source_memory = reinterpret_cast<natural_8_bit*>(
         &variable_where_the_value_is_stored
@@ -156,10 +157,10 @@ void value_to_bits(
         sizeof(variable_where_the_value_is_stored) * 8U
         );
 
-    for (natural_8_bit i = 0; i < how_many_bits_to_transfer; ++i)
+    for (natural_16_bit i = 0; i < how_many_bits_to_transfer; ++i)
         set_bit(
             target_bits,
-            i,
+            index_of_the_first_target_bit + i,
             get_bit(
                 source_bits,
                 source_bits.num_bits() - 1U - i
@@ -241,12 +242,14 @@ void bits_to_value(
 void value_to_bits(
     natural_32_bit const variable_where_the_value_is_stored,
     bits_reference& target_bits,
+    natural_8_bit const index_of_the_first_target_bit,
     natural_8_bit const how_many_bits_to_transfer
     )
 {
     details::value_to_bits(
                 variable_where_the_value_is_stored,
                 details::get_impl(target_bits),
+                index_of_the_first_target_bit,
                 how_many_bits_to_transfer
                 );
 }
@@ -256,5 +259,5 @@ void value_to_bits(
     bits_reference& target_bits
     )
 {
-    value_to_bits( variable_where_the_value_is_stored, target_bits, target_bits.num_bits() );
+    value_to_bits( variable_where_the_value_is_stored, target_bits, 0U, target_bits.num_bits() );
 }

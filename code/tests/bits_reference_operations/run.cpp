@@ -98,7 +98,27 @@ static void test_conversions_bits_and_32_bit_values()
 {
     TMPROF_BLOCK();
 
-    // TODO!!
+    std::array<natural_32_bit,4U>  versions = { 0xCDEDCDED, 0xABCDEFED, 0xBEADCDEB, 0xEDACDEBB, };
+    natural_8_bit const  num_bytes = 16U;
+    natural_8_bit const  num_bits = num_bytes * 8U;
+    std::array<natural_8_bit,num_bytes+1U>  bits_field;
+
+    for (natural_8_bit version = 0U; version < versions.size(); ++version)
+        for (natural_8_bit num_transferred_bits = 1U; num_transferred_bits <= sizeof(natural_32_bit) * 8U; ++num_transferred_bits)
+            for (natural_8_bit  shift = 0U; shift < 8U; ++shift)
+            {
+                for (natural_16_bit  nbits = num_transferred_bits; nbits <= num_bits; ++nbits)
+                    for (natural_8_bit  bit_index = 0U; bit_index + num_transferred_bits < nbits; ++bit_index)
+                    {
+                        natural_32_bit  value = versions.at(version);
+                        natural_32_bit const  correct_final_value = value & ((1ULL << num_transferred_bits) - 1U);
+                        bits_reference  bits(&bits_field.at(0),shift,nbits);
+                        value_to_bits(value,bits,bit_index,num_transferred_bits);
+                        bits_to_value(bits,bit_index,num_transferred_bits,value);
+                        TEST_SUCCESS(value == correct_final_value);
+                    }
+                TEST_PROGRESS_UPDATE();
+            }
 }
 
 void run()
