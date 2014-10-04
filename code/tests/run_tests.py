@@ -11,6 +11,10 @@ def parse_cmd_line():
     parser.add_argument("-R","--remove_logs", action="store_true",
                         help="Removes all log files (i.e. all *.html, and *.txt) in the tests directory. "
                              "Then the script terminates.")
+    parser.add_argument("-I","--include", nargs='+', type=str, default="",
+                        help="A list of tests (names of executable files) which should be included to "
+                             "the testing. When the argument is ommmited, then all executables in the "
+                             "dirrectory specified by '--root_dir' will be automatically included.")
     parser.add_argument("-E","--exclude", nargs='+', type=str, default="",
                         help="A list of tests (names of executable files) which should be excluded from "
                              "the testing.")
@@ -64,7 +68,11 @@ def scriptMain():
                 print "ERROR: path does not refer to a file: " + fname
         return
 
-    executables = removeExcludedTests(collectExecutavblesOfTests(tests_root_dir),args.exclude)
+    if len(args.include) > 0:
+        executables = args.include
+    else:
+        executables = collectExecutavblesOfTests(tests_root_dir)
+    executables = removeExcludedTests(executables,args.exclude)
 
     print "Configuration:"
     print "test root directory: " + tests_root_dir

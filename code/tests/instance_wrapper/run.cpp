@@ -1,5 +1,6 @@
 #include "./program_info.hpp"
 #include "./program_options.hpp"
+#include <utility/basic_numeric_types.hpp>
 #include <utility/instance_wrapper.hpp>
 #include <utility/test.hpp>
 #include <utility/timeprof.hpp>

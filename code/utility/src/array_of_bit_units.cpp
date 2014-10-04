@@ -4,7 +4,7 @@
 
 natural_64_bit num_bytes_to_store_bits(natural_64_bit const num_bits_to_store)
 {
-    return (num_bits_to_store >> 3U) + ((num_bits_to_store & 7U) == 0U) ? 0U : 1U;
+    return (num_bits_to_store >> 3U) + (((num_bits_to_store & 7U) == 0U) ? 0U : 1U);
 }
 
 natural_64_bit compute_num_bits_of_all_array_units_with_checked_operations(natural_16_bit const num_bits_per_unit,
@@ -37,4 +37,14 @@ bits_reference array_of_bit_units::find_bits_of_unit(natural_64_bit const index_
     return bits_reference(&m_bits_of_all_units[first_bit_index >> 3U],
                           first_bit_index & 7U,
                           m_num_bits_per_unit);
+}
+
+natural_16_bit  array_of_bit_units::num_bits_per_unit() const
+{
+    return m_num_bits_per_unit;
+}
+
+natural_64_bit  array_of_bit_units::num_units() const
+{
+    return m_num_units;
 }

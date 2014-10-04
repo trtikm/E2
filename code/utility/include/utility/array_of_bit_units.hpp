@@ -11,6 +11,8 @@ struct array_of_bit_units : private boost::noncopyable
 {
     array_of_bit_units(natural_16_bit const num_bits_per_unit, natural_64_bit const num_units);
     bits_reference find_bits_of_unit(natural_64_bit const index_of_unit);
+    natural_16_bit num_bits_per_unit() const;
+    natural_64_bit num_units() const;
 private:
     natural_64_bit m_num_bits_per_unit;
     natural_64_bit m_num_units;
