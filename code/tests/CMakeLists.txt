@@ -1,3 +1,21 @@
+message("Including the following E2 tests to the build:")
+
+add_subdirectory(./tissue_allocation_and_memory_accesses)
+    message("-- tissue_allocation_and_memory_accesses")
+
+add_subdirectory(./efloop_construction_and_simulation)
+    message("-- efloop_construction_and_simulation")
+
+add_subdirectory(./unsigned_integer_wrap_operations)
+    message("-- unsigned_integer_wrap_operations")
+
+add_subdirectory(./bits_reference_operations)
+    message("-- bits_reference_operations")
+
+add_subdirectory(./instance_wrapper)
+    message("-- instance_wrapper")
+
+message("-- run_tests.py")
 install(
     FILES
     "./run_tests.py"

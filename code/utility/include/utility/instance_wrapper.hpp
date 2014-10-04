@@ -18,6 +18,43 @@ struct instance_wrapper
         destruct_instance();
     }
 
+    instance_wrapper(instance_wrapper const& other)
+        : m_constructed(false)
+    {
+        if (other.m_constructed)
+            construct_instance(other.reference_to_instance());
+    }
+
+    instance_wrapper(instance_type const& instance)
+        : m_constructed(false)
+    {
+        construct_instance(instance);
+    }
+
+    instance_wrapper& operator=(instance_wrapper const& other)
+    {
+        if (m_constructed)
+            if (other.m_constructed)
+                this->reference_to_instance() = other.reference_to_instance();
+            else
+                destruct_instance();
+        else
+            if (other.m_constructed)
+                construct_instance(other.reference_to_instance());
+            else
+                { /* there is nothing to do */ }
+        return *this;
+    }
+
+    instance_wrapper& operator=(instance_type const& instance)
+    {
+        if (m_constructed)
+            this->reference_to_instance() = instance;
+        else
+            construct_instance(instance);
+        return *this;
+    }
+
     template<typename argument_type>
     void construct_instance(argument_type const& argument)
     {
@@ -48,7 +85,7 @@ struct instance_wrapper
         return *this->operator->();
     }
 
-    operator instance_type() const
+    operator instance_type const&() const
     {
         return reference_to_instance();
     }

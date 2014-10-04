@@ -1,4 +1,4 @@
-set(THIS_TARGET_NAME bits_reference_operations)
+set(THIS_TARGET_NAME instance_wrapper)
 
 add_executable(${THIS_TARGET_NAME}
     program_info.hpp
