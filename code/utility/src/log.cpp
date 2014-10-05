@@ -10,7 +10,14 @@
 #include <sstream>
 #include <ctime>
 
-static bool LOG_SETUP(std::string const& log_file_name)
+static logging_severity_level global_minimal_severity_level = debug;
+
+logging_severity_level get_minimal_severity_level()
+{
+    return global_minimal_severity_level;
+}
+
+static bool LOG_SETUP(std::string const& log_file_name, logging_severity_level const minimal_severity_level)
 {
     static bool first_call = true;
     if (!first_call)
@@ -39,12 +46,14 @@ static bool LOG_SETUP(std::string const& log_file_name)
             "    </tr>\n"
     );
 
+    global_minimal_severity_level = minimal_severity_level;
+
     return true;
 }
 
 std::string const& logging_severity_level_name(logging_severity_level const level)
 {
-    static std::vector<std::string> level_names{ "debug", "info", "warning", "error" };
+    static std::vector<std::string> level_names{ "debug", "info", "warning", "error", "testing" };
     ASSUMPTION(static_cast<unsigned int>(level) < level_names.size());
     return level_names.at(static_cast<unsigned int>(level));
 }
@@ -75,7 +84,8 @@ static std::string filename_with_timestamp(boost::filesystem::path const& log_fi
 
 logging_setup_caller::logging_setup_caller(std::string const& log_file_name,
                                            bool const add_creation_timestamp_to_filename,
-                                           bool const add_default_file_extension)
+                                           bool const add_default_file_extension,
+                                           logging_severity_level const minimal_severity_level)
     : m_log_file_name(
         [](std::string const& log_file_name, bool const add_creation_timestamp_to_filename,
                                              bool const add_default_file_extension)
@@ -124,7 +134,7 @@ logging_setup_caller::logging_setup_caller(std::string const& log_file_name,
          "        <th>Message</th>\n"
          "    </tr>\n"
          ;
-    LOG_SETUP(m_log_file_name);
+    LOG_SETUP(m_log_file_name,minimal_severity_level);
 }
 
 logging_setup_caller::~logging_setup_caller()

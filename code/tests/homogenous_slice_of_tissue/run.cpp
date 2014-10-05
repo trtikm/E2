@@ -106,11 +106,11 @@ static void test_accesses(cellab::homogenous_slice_of_tissue&  slice, natural_32
 
 static void test_accesses(cellab::homogenous_slice_of_tissue&  slice)
 {
-//    LOG(debug,"num_bits_per_unit = " << slice.num_bits_per_unit() << ",   " <<
-//              "num_units_along_x_axis = " << slice.num_units_along_x_axis() << ",   " <<
-//              "num_units_along_y_axis = " << slice.num_units_along_y_axis() << ",   " <<
-//              "num_units_along_columnar_axis = " << slice.num_units_along_columnar_axis()
-//              );
+//    LOG(testing,"num_bits_per_unit = " << slice.num_bits_per_unit() << ",   " <<
+//                "num_units_along_x_axis = " << slice.num_units_along_x_axis() << ",   " <<
+//                "num_units_along_y_axis = " << slice.num_units_along_y_axis() << ",   " <<
+//                "num_units_along_columnar_axis = " << slice.num_units_along_columnar_axis()
+//                );
 
     test_accesses(slice,0U,0U,0ULL);
     test_accesses(slice,0U,
@@ -170,12 +170,12 @@ static void test_3Darray_of_units(natural_16_bit const num_bits_per_unit,
                          num_units_along_y_axis,
                          num_units_along_columnar_axis
                          ));
-        LOG(debug,e.what() << " (but it is coverred by the test) : " <<
-                  "num_bits_per_unit = " << num_bits_per_unit << ",   " <<
-                  "num_units_along_x_axis = " << num_units_along_x_axis << ",   " <<
-                  "num_units_along_y_axis = " << num_units_along_y_axis << ",   " <<
-                  "num_units_along_columnar_axis = " << num_units_along_columnar_axis
-                  );
+        LOG(testing,e.what() << " (but it is coverred by the test) : " <<
+                    "num_bits_per_unit = " << num_bits_per_unit << ",   " <<
+                    "num_units_along_x_axis = " << num_units_along_x_axis << ",   " <<
+                    "num_units_along_y_axis = " << num_units_along_y_axis << ",   " <<
+                    "num_units_along_columnar_axis = " << num_units_along_columnar_axis
+                    );
     }
 }
 

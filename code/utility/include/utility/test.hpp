@@ -12,13 +12,13 @@
             if ((COND) == (RESULT))\
             {\
                 ++test_statistics::num_tests_which_succeeded_without_exception();\
-                if (LOGSUCCESS) { LOG(info,"TEST SUCCEEDED: " #COND); }\
+                if (LOGSUCCESS) { LOG(testing,"TEST SUCCEEDED: " #COND); }\
                 if (LOGSUCCESS) { std::cout << "TEST SUCCEEDED: " #COND << "\n"; }\
             }\
             else\
             {\
                 ++test_statistics::num_tests_which_failed_without_exception();\
-                if (true) { LOG(error,"TEST FAILED: " #COND); }\
+                if (true) { LOG(testing,"TEST FAILED: " #COND); }\
                 if (true) { std::cout << "TEST FAILED: " #COND << "\n"; }\
             }\
         }\
@@ -27,13 +27,13 @@
             if (RESULT)\
             {\
                 ++test_statistics::num_tests_which_failed_by_exception();\
-                if (true) { LOG(error,"TEST FAILED (by throwing exception): " #COND); }\
+                if (true) { LOG(testing,"TEST FAILED (by throwing exception): " #COND); }\
                 if (true) { std::cout << "TEST FAILED (by throwing exception): " #COND << "\n"; }\
             }\
             else\
             {\
                 ++test_statistics::num_tests_which_succeeded_by_exception();\
-                if (LOGSUCCESS) { LOG(info,"TEST SUCCEEDED (by throwing exception): " #COND); }\
+                if (LOGSUCCESS) { LOG(testing,"TEST SUCCEEDED (by throwing exception): " #COND); }\
                 if (LOGSUCCESS) { std::cout << "TEST SUCCEEDED (by throwing exception): " #COND << "\n"; }\
             }\
         }\

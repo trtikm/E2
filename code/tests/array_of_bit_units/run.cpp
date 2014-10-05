@@ -84,7 +84,7 @@ static void test_accesses(array_of_bit_units& units, natural_64_bit const  index
 
 static void test_accesses(array_of_bit_units& units)
 {
-    LOG(debug,"num_bits_per_unit = " << units.num_bits_per_unit() << ",   num_units = " << units.num_units() << "\n");
+    LOG(testing,"num_bits_per_unit = " << units.num_bits_per_unit() << ",   num_units = " << units.num_units() << "\n");
 
     test_accesses(units,0ULL);
     test_accesses(units,units.num_units() - 1ULL);
@@ -114,7 +114,7 @@ static void test_array_of_units(natural_64_bit const  num_bits_per_unit, natural
     catch(std::bad_alloc e)
     {
         TEST_FAILURE(can_be_allocated(num_bits_per_unit,num_units));
-        LOG(debug,e.what() << " (but it is coverred by the test) : " << "num_bits_per_unit = " << num_bits_per_unit << ",   num_units = " << num_units);
+        LOG(testing,e.what() << " (but it is coverred by the test) : " << "num_bits_per_unit = " << num_bits_per_unit << ",   num_units = " << num_units);
     }
 }
 

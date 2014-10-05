@@ -8,7 +8,7 @@
 #include <iostream>
 
 
-LOG_INITIALISE(get_program_name() + "_LOG",true,true)
+LOG_INITIALISE(get_program_name() + "_LOG",true,true,testing)
 
 extern void run();
 
