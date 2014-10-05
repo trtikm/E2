@@ -12,7 +12,7 @@ std::string  get_program_version()
 
 std::string  get_program_description()
 {
-    return "This program tests correctness of memory allocation of a neural tissues.\n"
+    return "This program tests correctness of memory allocation of a neural tissue.\n"
            "Moreover, it also tests correctness of read/write accesses into the allocated\n"
            "memory.";
 }

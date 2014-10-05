@@ -16,9 +16,13 @@ struct homogenous_slice_of_tissue
                                natural_32_bit const num_units_along_y_axis,
                                natural_64_bit const num_units_along_columnar_axis);
 
-    bits_reference find_bits_of_unit(natural_32_bit const seek_along_x_axis,
-                                     natural_32_bit const seek_along_y_axis,
-                                     natural_64_bit const seek_along_columnar_axis);
+    bits_reference find_bits_of_unit(natural_32_bit const shift_along_x_axis,
+                                     natural_32_bit const shift_along_y_axis,
+                                     natural_64_bit const shift_along_columnar_axis);
+    natural_16_bit num_bits_per_unit() const;
+    natural_32_bit num_units_along_x_axis() const;
+    natural_32_bit num_units_along_y_axis() const;
+    natural_64_bit num_units_along_columnar_axis() const;
 private:
     natural_64_bit m_num_units_along_x_axis;
     natural_64_bit m_num_units_along_y_axis;

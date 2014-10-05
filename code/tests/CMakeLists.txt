@@ -12,6 +12,9 @@ add_subdirectory(./instance_wrapper)
 add_subdirectory(./array_of_bit_units)
     message("-- array_of_bit_units")
 
+add_subdirectory(./homogenous_slice_of_tissue)
+    message("-- homogenous_slice_of_tissue")
+
 add_subdirectory(./tissue_allocation_and_memory_accesses)
     message("-- tissue_allocation_and_memory_accesses")
 

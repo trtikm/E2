@@ -38,25 +38,45 @@ homogenous_slice_of_tissue::homogenous_slice_of_tissue(natural_16_bit const num_
 }
 
 bits_reference homogenous_slice_of_tissue::find_bits_of_unit(
-    natural_32_bit const seek_along_x_axis,
-    natural_32_bit const seek_along_y_axis,
-    natural_64_bit const seek_along_columnar_axis
+    natural_32_bit const shift_along_x_axis,
+    natural_32_bit const shift_along_y_axis,
+    natural_64_bit const shift_along_columnar_axis
     )
 {
-    natural_64_bit const x = seek_along_x_axis;
-    natural_64_bit const y = seek_along_y_axis;
+    natural_64_bit const x = shift_along_x_axis;
+    natural_64_bit const y = shift_along_y_axis;
 
     ASSUMPTION(x < m_num_units_along_x_axis);
     ASSUMPTION(y < m_num_units_along_y_axis);
-    ASSUMPTION(seek_along_columnar_axis < m_num_units_along_columnar_axis);
+    ASSUMPTION(shift_along_columnar_axis < m_num_units_along_columnar_axis);
 
     natural_64_bit const index_of_unit =
             y * (m_num_units_along_x_axis * m_num_units_along_columnar_axis) +
             x * m_num_units_along_columnar_axis +
-            seek_along_columnar_axis
+            shift_along_columnar_axis
             ;
 
     return m_array_of_units.find_bits_of_unit(index_of_unit);
+}
+
+natural_16_bit homogenous_slice_of_tissue::num_bits_per_unit() const
+{
+    return m_array_of_units.num_bits_per_unit();
+}
+
+natural_32_bit homogenous_slice_of_tissue::num_units_along_x_axis() const
+{
+    return m_num_units_along_x_axis;
+}
+
+natural_32_bit homogenous_slice_of_tissue::num_units_along_y_axis() const
+{
+    return m_num_units_along_y_axis;
+}
+
+natural_64_bit homogenous_slice_of_tissue::num_units_along_columnar_axis() const
+{
+    return m_num_units_along_columnar_axis;
 }
 
 

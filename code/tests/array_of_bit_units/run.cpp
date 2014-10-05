@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <limits>
 #include <memory>
+#include <stdexcept>
 
 static natural_64_bit  compute_total_num_bytes(natural_16_bit const num_bits_per_unit, natural_64_bit const num_units)
 {
