@@ -2,16 +2,18 @@
 #include "./program_options.hpp"
 #include <cellab/static_state_of_neural_tissue.hpp>
 #include <cellab/dynamic_state_of_neural_tissue.hpp>
+#include <cellab/utilities_for_transition_algorithms.hpp>
 #include <utility/basic_numeric_types.hpp>
 #include <utility/test.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <vector>
+#include <array>
 #include <memory>
 #include <stdexcept>
 
 static void test_compute_kind_of_cell_from_its_position_along_columnar_axis(
-        std::shared_ptr<cellab::static_state_of_neural_tissue> const static_tissue)
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue)
 {
     cellab::kind_of_cell right_kind = 0U;
     natural_32_bit c_break = static_tissue->num_tissue_cells_of_cell_kind(right_kind);
@@ -47,7 +49,7 @@ static void test_compute_kind_of_cell_from_its_position_along_columnar_axis(
 }
 
 static void test_compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(
-        std::shared_ptr<cellab::static_state_of_neural_tissue> const static_tissue)
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue)
 {
     TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() == static_tissue->num_kinds_of_tissue_cells() );
     TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() <= static_tissue->num_kinds_of_cells());
@@ -79,7 +81,7 @@ static void test_compute_kind_of_cell_and_relative_columnar_index_from_coordinat
 }
 
 static void test_compute_kind_of_sensory_cell_from_its_index(
-        std::shared_ptr<cellab::static_state_of_neural_tissue> const static_tissue)
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue)
 {
     TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() == static_tissue->num_kinds_of_tissue_cells() );
     TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() <= static_tissue->num_kinds_of_cells());
@@ -100,7 +102,7 @@ static void test_compute_kind_of_sensory_cell_from_its_index(
 }
 
 static void test_compute_kind_of_sensory_cell_and_relative_index_from_its_index(
-        std::shared_ptr<cellab::static_state_of_neural_tissue> const static_tissue)
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue)
 {
     TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() == static_tissue->num_kinds_of_tissue_cells() );
     TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() <= static_tissue->num_kinds_of_cells());
@@ -126,7 +128,7 @@ static void test_compute_kind_of_sensory_cell_and_relative_index_from_its_index(
 }
 
 static void test_compute_index_of_first_sensory_cell_of_kind(
-        std::shared_ptr<cellab::static_state_of_neural_tissue> const static_tissue)
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue)
 {
     TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() == static_tissue->num_kinds_of_tissue_cells() );
     TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() <= static_tissue->num_kinds_of_cells());
@@ -136,24 +138,114 @@ static void test_compute_index_of_first_sensory_cell_of_kind(
          correct_index += static_tissue->num_sensory_cells_of_cell_kind(kind),
          ++kind)
     {
-if (correct_index != static_tissue->compute_index_of_first_sensory_cell_of_kind(kind))
-{
-    natural_32_bit xx = static_tissue->compute_index_of_first_sensory_cell_of_kind(kind);
-}
         TEST_SUCCESS( correct_index == static_tissue->compute_index_of_first_sensory_cell_of_kind(kind) );
     }
+}
+
+static void test_shift_in_coordinates(
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue)
+{
+    typedef cellab::tissue_coordinates coords;
+    typedef cellab::shift_in_coordinates shift;
+
+    struct local {
+        static cellab::tissue_coordinates  shift_coords(
+                coords const& c,
+                shift const& s,
+                std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue)
+        {
+            return cellab::shift_coordinates(c,s,static_tissue->num_cells_along_x_axis(),
+                                                 static_tissue->num_cells_along_y_axis(),
+                                                 static_tissue->num_cells_along_columnar_axis() );
+        }
+    };
+
+    natural_32_bit const xL = 0U;
+    natural_32_bit const xM = static_tissue->num_cells_along_x_axis() / 2U;
+    natural_32_bit const xH = static_tissue->num_cells_along_x_axis() - 1U;
+    natural_32_bit const yL = 0U;
+    natural_32_bit const yM = static_tissue->num_cells_along_y_axis() / 2U;
+    natural_32_bit const yH = static_tissue->num_cells_along_y_axis() - 1U;
+    natural_32_bit const cL = 0U;
+    natural_32_bit const cM = static_tissue->num_cells_along_columnar_axis() / 2U;
+    natural_32_bit const cH = static_tissue->num_cells_along_columnar_axis() - 1U;
+
+    if (static_tissue->is_x_axis_torus_axis())
+    {
+        TEST_SUCCESS(coords(xH,yL,cL) == local::shift_coords(coords(xL,yL,cL),shift(-1, 0, 0),static_tissue));
+    }
+    // TODO!
 }
 
 static void test_find_bits_of_cell(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const dynamic_tissue)
 {
-    // TODO!
+    std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue =
+            dynamic_tissue->get_static_state_of_neural_tissue();
+    natural_16_bit const num_bits_per_cell = static_tissue->num_bits_per_cell();
+    for (natural_16_bit kind = 0U; kind < static_tissue->num_kinds_of_cells(); ++kind)
+    {
+        natural_32_bit const num_cells_of_kind =
+                kind < static_tissue->lowest_kind_of_sensory_cells() ?
+                        static_tissue->num_tissue_cells_of_cell_kind(kind) :
+                        static_tissue->num_sensory_cells_of_cell_kind(kind);
+        TEST_SUCCESS( num_cells_of_kind > 0U );
+        std::array<natural_32_bit,3> const relative_indices = {
+                0U, num_cells_of_kind / 2U, num_cells_of_kind - 1U
+                };
+        for (natural_32_bit i = 0U; i < relative_indices.size(); ++i)
+        {
+            natural_32_bit const index = relative_indices.at(i);
+            natural_32_bit const xL = 0U;
+            natural_32_bit const xM = static_tissue->num_cells_along_x_axis() / 2U;
+            natural_32_bit const xH = static_tissue->num_cells_along_x_axis() - 1U;
+            natural_32_bit const yL = 0U;
+            natural_32_bit const yM = static_tissue->num_cells_along_y_axis() / 2U;
+            natural_32_bit const yH = static_tissue->num_cells_along_y_axis() - 1U;
+            TEST_SUCCESS(dynamic_tissue->find_bits_of_cell(xL,yL,kind,index).num_bits() == num_bits_per_cell);
+            TEST_SUCCESS(dynamic_tissue->find_bits_of_cell(xL,yM,kind,index).num_bits() == num_bits_per_cell);
+            TEST_SUCCESS(dynamic_tissue->find_bits_of_cell(xL,yH,kind,index).num_bits() == num_bits_per_cell);
+            TEST_SUCCESS(dynamic_tissue->find_bits_of_cell(xM,yL,kind,index).num_bits() == num_bits_per_cell);
+            TEST_SUCCESS(dynamic_tissue->find_bits_of_cell(xM,yM,kind,index).num_bits() == num_bits_per_cell);
+            TEST_SUCCESS(dynamic_tissue->find_bits_of_cell(xM,yH,kind,index).num_bits() == num_bits_per_cell);
+            TEST_SUCCESS(dynamic_tissue->find_bits_of_cell(xH,yL,kind,index).num_bits() == num_bits_per_cell);
+            TEST_SUCCESS(dynamic_tissue->find_bits_of_cell(xH,yM,kind,index).num_bits() == num_bits_per_cell);
+            TEST_SUCCESS(dynamic_tissue->find_bits_of_cell(xH,yH,kind,index).num_bits() == num_bits_per_cell);
+        }
+    }
 }
 
 static void test_find_bits_of_cell_in_tissue(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const dynamic_tissue)
 {
-    // TODO!
+    std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue =
+            dynamic_tissue->get_static_state_of_neural_tissue();
+    natural_16_bit const num_bits_per_cell = static_tissue->num_bits_per_cell();
+    std::array<natural_32_bit,3> const coords_x = {
+            0U,
+            static_tissue->num_cells_along_x_axis() / 2U,
+            static_tissue->num_cells_along_x_axis() - 1U
+            };
+    std::array<natural_32_bit,3> const coords_y = {
+            0U,
+            static_tissue->num_cells_along_y_axis() / 2U,
+            static_tissue->num_cells_along_y_axis() - 1U
+            };
+
+    std::array<natural_32_bit,3> const coords_z = {
+            0U,
+            static_tissue->num_cells_along_columnar_axis() / 2U,
+            static_tissue->num_cells_along_columnar_axis() - 1U
+            };
+    for (natural_32_bit i = 0U; i < coords_x.size(); ++i)
+        for (natural_32_bit j = 0U; j < coords_y.size(); ++j)
+            for (natural_32_bit k = 0U; k < coords_z.size(); ++k)
+                TEST_SUCCESS(
+                    dynamic_tissue->find_bits_of_cell_in_tissue(
+                            coords_x.at(i),coords_y.at(j),coords_z.at(k)
+                            ).num_bits()
+                    == num_bits_per_cell
+                    );
 }
 
 static void test_find_bits_of_synapse_in_tissue(
@@ -198,7 +290,7 @@ static void test_find_bits_of_synapse_to_muscle(
     // TODO!
 }
 
-static void test_static_state(std::shared_ptr<cellab::static_state_of_neural_tissue> const static_tissue)
+static void test_static_state(std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue)
 {
     test_compute_kind_of_cell_from_its_position_along_columnar_axis(static_tissue);
     test_compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(static_tissue);
@@ -284,10 +376,10 @@ void run()
                                         columnar_radius_of_cellular_neighbourhood_of_signalling.push_back(radius);
                                     }
 
-                                    std::shared_ptr<cellab::static_state_of_neural_tissue> static_tissue;
+                                    std::shared_ptr<cellab::static_state_of_neural_tissue const> static_tissue;
                                     try
                                     {
-                                        static_tissue = std::shared_ptr<cellab::static_state_of_neural_tissue>(
+                                        static_tissue = std::shared_ptr<cellab::static_state_of_neural_tissue const>(
                                                     new cellab::static_state_of_neural_tissue(
                                                         tissue_cell_kinds,
                                                         sensory_cell_kinds,
@@ -326,6 +418,7 @@ void run()
                                         continue;
                                     }
                                     test_static_state(static_tissue);
+                                    test_shift_in_coordinates(static_tissue);
 
                                     std::shared_ptr<cellab::dynamic_state_of_neural_tissue> dynamic_tissue;
                                     try

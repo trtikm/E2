@@ -67,10 +67,17 @@ static natural_32_bit  shift_coordinate_in_torus_axis(
         )
 {
     ASSUMPTION(coordinate >= 0 && natural_64_bit(coordinate) < length_of_axis);
-    ASSUMPTION(natural_64_bit(shift < 0 ? -shift : shift) < length_of_axis);
+    ASSUMPTION(natural_64_bit(shift < 0 ? -shift : shift) <= length_of_axis);
     ASSUMPTION(length_of_axis > 0U);
     integer_64_bit const result_coord = (length_of_axis + coordinate + shift) % length_of_axis;
     return static_cast<natural_32_bit>(result_coord);
+}
+
+bool operator==(tissue_coordinates const& left, tissue_coordinates const& right)
+{
+    return left.get_coord_along_x_axis() == right.get_coord_along_x_axis() &&
+           left.get_coord_along_y_axis() == right.get_coord_along_y_axis() &&
+           left.get_coord_along_columnar_axis() == right.get_coord_along_columnar_axis() ;
 }
 
 tissue_coordinates  shift_coordinates(

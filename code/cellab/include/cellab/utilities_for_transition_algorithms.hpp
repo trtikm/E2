@@ -44,6 +44,9 @@ private:
     shift_in_coordinates m_shift_to_high_corner;
 };
 
+
+bool operator==(tissue_coordinates const& left, tissue_coordinates const& right);
+
 tissue_coordinates  shift_coordinates(
         tissue_coordinates const& coords,
         shift_in_coordinates const& shift,

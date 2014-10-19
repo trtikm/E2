@@ -57,6 +57,13 @@ natural_16_bit bits_reference_impl::num_bits() const
     return m_num_bits;
 }
 
+bool operator==(bits_reference_impl const& left, bits_reference_impl const& right)
+{
+    return left.first_byte_ptr() == right.first_byte_ptr() &&
+           left.shift_in_the_first_byte() == right.shift_in_the_first_byte() &&
+           left.num_bits() == right.num_bits();
+}
+
 bits_reference_impl& get_impl(bits_reference const& bits_ref)
 {
     return const_cast<bits_reference_impl&>(bits_ref.m_data);
@@ -186,6 +193,27 @@ bits_const_reference&  bits_const_reference::operator=(bits_reference const& bit
                     bits.num_bits()
                     );
     return *this;
+}
+
+
+bool operator==(bits_reference const& left, bits_reference const& right)
+{
+    return details::operator ==( details::get_impl(left), details::get_impl(right) );
+}
+
+bool operator==(bits_reference const& left, bits_const_reference const& right)
+{
+    return details::operator ==( details::get_impl(left), details::get_impl(right) );
+}
+
+bool operator==(bits_const_reference const& left, bits_reference const& right)
+{
+    return details::operator ==( details::get_impl(left), details::get_impl(right) );
+}
+
+bool operator==(bits_const_reference const& left, bits_const_reference const& right)
+{
+    return details::operator ==( details::get_impl(left), details::get_impl(right) );
 }
 
 

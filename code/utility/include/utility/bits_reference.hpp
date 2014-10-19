@@ -29,6 +29,8 @@ private:
     natural_8_bit m_shift_in_the_first_byte;
 };
 
+bool operator==(bits_reference_impl const& left, bits_reference_impl const& right);
+
 bits_reference_impl& get_impl(bits_reference const& bits_ref);
 bits_reference_impl& get_impl(bits_const_reference const& bits_ref);
 
@@ -86,6 +88,10 @@ private:
     private_internal_implementation_details::bits_reference_impl  m_data;
 };
 
+bool operator==(bits_reference const& left, bits_reference const& right);
+bool operator==(bits_reference const& left, bits_const_reference const& right);
+bool operator==(bits_const_reference const& left, bits_reference const& right);
+bool operator==(bits_const_reference const& left, bits_const_reference const& right);
 
 bool  get_bit(bits_reference const& bits_ref, natural_16_bit const bit_index);
 bool  get_bit(bits_const_reference const& bits_ref, natural_16_bit const bit_index);
