@@ -345,7 +345,7 @@ natural_32_bit  static_state_of_neural_tissue::compute_index_of_first_sensory_ce
 {
     ASSUMPTION(sensory_cell_kind >= lowest_kind_of_sensory_cells() && sensory_cell_kind < num_kinds_of_cells());
     return sensory_cell_kind == lowest_kind_of_sensory_cells() ? 0U :
-                m_end_index_along_columnar_axis_of_cell_kind.at(sensory_cell_kind - 1U) +
+                m_end_index_along_columnar_axis_of_cell_kind.at(sensory_cell_kind - 1U) -
                 m_end_index_along_columnar_axis_of_cell_kind.at(lowest_kind_of_sensory_cells() - 1U)
                 ;
 }

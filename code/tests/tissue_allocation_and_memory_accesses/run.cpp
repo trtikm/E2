@@ -49,25 +49,99 @@ static void test_compute_kind_of_cell_from_its_position_along_columnar_axis(
 static void test_compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(
         std::shared_ptr<cellab::static_state_of_neural_tissue> const static_tissue)
 {
-    // TODO!
+    TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() == static_tissue->num_kinds_of_tissue_cells() );
+    TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() <= static_tissue->num_kinds_of_cells());
+    natural_32_bit  num_passed_cells_of_current_kind = 0U;
+    cellab::kind_of_cell  correct_kind = 0U;
+    natural_32_bit  correct_relative_index = 0U;
+    for (natural_32_bit  index = 0U;
+         index < static_tissue->num_cells_along_columnar_axis() + static_tissue->num_sensory_cells();
+         ++index)
+    {
+        std::pair<cellab::kind_of_cell,natural_32_bit> const pair =
+            static_tissue->compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(index);
+        TEST_SUCCESS(pair.first == correct_kind);
+        TEST_SUCCESS(pair.second == correct_relative_index);
+
+        ++correct_relative_index;
+        ++num_passed_cells_of_current_kind;
+        natural_32_bit break_count =
+                correct_kind < static_tissue->lowest_kind_of_sensory_cells() ?
+                        static_tissue->num_tissue_cells_of_cell_kind(correct_kind) :
+                        static_tissue->num_sensory_cells_of_cell_kind(correct_kind);
+        if (num_passed_cells_of_current_kind == break_count)
+        {
+            num_passed_cells_of_current_kind = 0U;
+            ++correct_kind;
+            correct_relative_index = 0U;
+        }
+    }
 }
 
 static void test_compute_kind_of_sensory_cell_from_its_index(
         std::shared_ptr<cellab::static_state_of_neural_tissue> const static_tissue)
 {
-    // TODO!
+    TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() == static_tissue->num_kinds_of_tissue_cells() );
+    TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() <= static_tissue->num_kinds_of_cells());
+    natural_32_bit  num_passed_cells_of_current_kind = 0U;
+    cellab::kind_of_cell  correct_kind = static_tissue->lowest_kind_of_sensory_cells();
+    for (natural_32_bit  index = 0U; index < static_tissue->num_kinds_of_sensory_cells(); ++index)
+    {
+        cellab::kind_of_cell const  kind = static_tissue->compute_kind_of_sensory_cell_from_its_index(index);
+        TEST_SUCCESS(kind == correct_kind);
+
+        ++num_passed_cells_of_current_kind;
+        if (num_passed_cells_of_current_kind == static_tissue->num_sensory_cells_of_cell_kind(correct_kind))
+        {
+            num_passed_cells_of_current_kind = 0U;
+            ++correct_kind;
+        }
+    }
 }
 
 static void test_compute_kind_of_sensory_cell_and_relative_index_from_its_index(
         std::shared_ptr<cellab::static_state_of_neural_tissue> const static_tissue)
 {
-    // TODO!
+    TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() == static_tissue->num_kinds_of_tissue_cells() );
+    TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() <= static_tissue->num_kinds_of_cells());
+    natural_32_bit  num_passed_cells_of_current_kind = 0U;
+    cellab::kind_of_cell  correct_kind = static_tissue->lowest_kind_of_sensory_cells();
+    natural_32_bit  correct_relative_index = 0U;
+    for (natural_32_bit  index = 0U; index < static_tissue->num_kinds_of_sensory_cells(); ++index)
+    {
+        std::pair<cellab::kind_of_cell,natural_32_bit> const pair =
+            static_tissue->compute_kind_of_sensory_cell_and_relative_index_from_its_index(index);
+        TEST_SUCCESS(pair.first == correct_kind);
+        TEST_SUCCESS(pair.second == correct_relative_index);
+
+        ++correct_relative_index;
+        ++num_passed_cells_of_current_kind;
+        if (num_passed_cells_of_current_kind == static_tissue->num_sensory_cells_of_cell_kind(correct_kind))
+        {
+            num_passed_cells_of_current_kind = 0U;
+            ++correct_kind;
+            correct_relative_index = 0U;
+        }
+    }
 }
 
 static void test_compute_index_of_first_sensory_cell_of_kind(
         std::shared_ptr<cellab::static_state_of_neural_tissue> const static_tissue)
 {
-    // TODO!
+    TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() == static_tissue->num_kinds_of_tissue_cells() );
+    TEST_SUCCESS(static_tissue->lowest_kind_of_sensory_cells() <= static_tissue->num_kinds_of_cells());
+    natural_32_bit correct_index = 0U;
+    for (natural_16_bit kind = static_tissue->lowest_kind_of_sensory_cells();
+         kind < static_tissue->num_kinds_of_cells();
+         correct_index += static_tissue->num_sensory_cells_of_cell_kind(kind),
+         ++kind)
+    {
+if (correct_index != static_tissue->compute_index_of_first_sensory_cell_of_kind(kind))
+{
+    natural_32_bit xx = static_tissue->compute_index_of_first_sensory_cell_of_kind(kind);
+}
+        TEST_SUCCESS( correct_index == static_tissue->compute_index_of_first_sensory_cell_of_kind(kind) );
+    }
 }
 
 static void test_find_bits_of_cell(
@@ -152,7 +226,7 @@ void run()
 
     TEST_PROGRESS_SHOW();
 
-    for (natural_16_bit tissue_cell_kinds = 1U; tissue_cell_kinds < 11U; ++tissue_cell_kinds)
+    for (natural_16_bit tissue_cell_kinds = 1U; tissue_cell_kinds < 6U; ++tissue_cell_kinds)
     {
         for (natural_16_bit sensory_cell_kinds = 1U; sensory_cell_kinds < 3U; ++sensory_cell_kinds)
         {
@@ -174,9 +248,9 @@ void run()
 
                     std::vector<natural_32_bit> num_sensory_cells_of_cell_kind;
                     for (natural_16_bit i = 0U; i < sensory_cell_kinds; ++i)
-                        num_sensory_cells_of_cell_kind.push_back((i%2 == 0) ? 1U : 2U);
+                        num_sensory_cells_of_cell_kind.push_back((i%2 == 0) ? 1U : 5000U);
 
-                    natural_32_bit const num_synapses_to_muscles = 5U;
+                    natural_32_bit const num_synapses_to_muscles = 6000U;
 
                     for (natural_8_bit torus_x = 0U; torus_x < 2U; ++torus_x)
                         for (natural_8_bit torus_y = 0U; torus_y < 2U; ++torus_y)
