@@ -73,6 +73,9 @@ struct dynamic_state_of_neural_tissue
     bits_reference  find_bits_of_sensory_cell(natural_32_bit const index_of_sensory_cell);
     bits_reference  find_bits_of_synapse_to_muscle(natural_32_bit const index_of_synapse_to_muscle);
 
+    natural_8_bit  num_bits_per_source_cell_coordinate() const;
+    natural_8_bit num_bits_per_delimiter_number(kind_of_cell const  kind_of_tissue_cell);
+
 private:
     typedef std::shared_ptr<homogenous_slice_of_tissue> pointer_to_homogenous_slice_of_tissue;
 
@@ -90,11 +93,15 @@ private:
 };
 
 
-boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(
+natural_16_bit  num_of_bits_to_store_territorial_state_of_synapse();
+
+natural_8_bit  num_delimiters();
+
+boost::multiprecision::int128_t  compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(
         static_state_of_neural_tissue const& static_state_of_tissue
         );
 
-boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(
+boost::multiprecision::int128_t  compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(
         std::shared_ptr<static_state_of_neural_tissue const> const static_state_ptr
         );
 

@@ -16,16 +16,6 @@ static natural_8_bit compute_num_of_bits_to_store_natural_32_bit_number(natural_
     return num_bits;
 }
 
-static natural_8_bit num_delimiters()
-{
-    return 6U;
-}
-
-static natural_16_bit num_of_bits_to_store_territorial_state_of_synapse()
-{
-    return 3U; //compute_num_of_bits_to_store_natural_32_bit_number(6U);
-}
-
 static natural_64_bit compute_columnar_index_of_synapse_in_territorial_of_cell(
         natural_64_bit const columnar_index_of_cell_in_slice_of_cell_kind,
         natural_64_bit const num_synapses_in_territory_of_cell_kind,
@@ -354,6 +344,27 @@ bits_reference  dynamic_state_of_neural_tissue::find_bits_of_synapse_to_muscle(
     return m_bits_of_synapses_to_muscles.find_bits_of_unit(index_of_synapse_to_muscle);
 }
 
+natural_8_bit  dynamic_state_of_neural_tissue::num_bits_per_source_cell_coordinate() const
+{
+    return m_num_bits_per_source_cell_coordinate;
+}
+
+natural_8_bit  dynamic_state_of_neural_tissue::num_bits_per_delimiter_number(kind_of_cell const  kind_of_tissue_cell)
+{
+    ASSUMPTION(kind_of_tissue_cell < get_static_state_of_neural_tissue()->num_kinds_of_tissue_cells());
+    return m_num_bits_per_delimiter_number.at(kind_of_tissue_cell);
+}
+
+
+natural_16_bit num_of_bits_to_store_territorial_state_of_synapse()
+{
+    return 3U; //compute_num_of_bits_to_store_natural_32_bit_number(6U);
+}
+
+natural_8_bit num_delimiters()
+{
+    return 6U;
+}
 
 boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(
         static_state_of_neural_tissue const& static_state_of_tissue
