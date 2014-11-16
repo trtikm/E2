@@ -269,7 +269,7 @@ void bits_to_value(
 
 void value_to_bits(
     natural_32_bit const variable_where_the_value_is_stored,
-    bits_reference& target_bits,
+    bits_reference const& target_bits,
     natural_8_bit const index_of_the_first_target_bit,
     natural_8_bit const how_many_bits_to_transfer
     )
@@ -284,7 +284,7 @@ void value_to_bits(
 
 void value_to_bits(
     natural_32_bit const variable_where_the_value_is_stored,
-    bits_reference& target_bits
+    bits_reference const& target_bits
     )
 {
     value_to_bits( variable_where_the_value_is_stored, target_bits, 0U, target_bits.num_bits() );

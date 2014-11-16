@@ -18,8 +18,12 @@ add_subdirectory(./homogenous_slice_of_tissue)
 add_subdirectory(./tissue_allocation_and_memory_accesses)
     message("-- tissue_allocation_and_memory_accesses")
 
+add_subdirectory(./synchronisation_of_tissue_algorithms)
+    message("-- synchronisation_of_tissue_algorithms")
+
 add_subdirectory(./efloop_construction_and_simulation)
     message("-- efloop_construction_and_simulation")
+
 
 message("-- run_tests.py")
 install(
