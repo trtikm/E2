@@ -106,7 +106,7 @@ static void bits_to_value(
     natural_32_bit& variable_where_the_value_will_be_stored
     )
 {
-    ASSUMPTION( natural_16_bit(index_of_start_bit) +  how_many_bits < source_bits.num_bits() );
+    ASSUMPTION( natural_16_bit(index_of_start_bit) +  how_many_bits <= source_bits.num_bits() );
     ASSUMPTION( how_many_bits <= sizeof(variable_where_the_value_will_be_stored) * 8U );
 
     variable_where_the_value_will_be_stored = 0U;

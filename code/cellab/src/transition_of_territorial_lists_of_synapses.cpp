@@ -140,10 +140,10 @@ static void move_synapses_into_proper_lists_in_territory_of_one_cell(
             }
         }
 
-    for (natural_32_bit list_index = 0U; list_index < 7U; ++list_index)
+    for (natural_32_bit delimiter_index = 0U; delimiter_index < bits_of_delimiters.size(); ++delimiter_index)
     {
-        INVARIANT( boundaries_of_lists.at(list_index) <= boundaries_of_lists.at(list_index + 1U) );
-        value_to_bits( boundaries_of_lists.at(list_index + 1U), bits_of_delimiters.at(list_index) );
+        INVARIANT( boundaries_of_lists.at(delimiter_index) <= boundaries_of_lists.at(delimiter_index + 1U) );
+        value_to_bits( boundaries_of_lists.at(delimiter_index + 1U), bits_of_delimiters.at(delimiter_index) );
     }
 }
 

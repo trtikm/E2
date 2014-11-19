@@ -207,7 +207,9 @@ tissue_coordinates  get_coordinates_of_source_cell_of_synapse_to_muscle(
         )
 {
     return convert_bits_of_coordinates_to_tissue_coordinates(
-                dynamic_state_of_tissue->find_bits_of_synapse_to_muscle(index_of_synapse_to_muscle)
+                dynamic_state_of_tissue->find_bits_of_coords_of_source_cell_of_synapse_to_muscle(
+                        index_of_synapse_to_muscle
+                        )
                 );
 }
 

@@ -52,12 +52,14 @@ dynamic_state_of_neural_tissue::dynamic_state_of_neural_tissue(
                               m_static_state_of_neural_tissue->num_sensory_cells())
     , m_bits_of_synapses_to_muscles(m_static_state_of_neural_tissue->num_bits_per_synapse(),
                                     m_static_state_of_neural_tissue->num_synapses_to_muscles())
+    , m_bits_of_source_cell_coords_of_synapses_to_muscles(checked_mul_16_bit(3U,m_num_bits_per_source_cell_coordinate),
+                                                          m_static_state_of_neural_tissue->num_synapses_to_muscles())
 {
     for (kind_of_cell kind = 0U; kind < m_static_state_of_neural_tissue->num_kinds_of_tissue_cells(); ++kind)
     {
         m_num_bits_per_delimiter_number.at(kind) =
                 compute_num_of_bits_to_store_natural_32_bit_number(
-                        m_static_state_of_neural_tissue->num_tissue_cells_of_cell_kind(kind)
+                        m_static_state_of_neural_tissue->num_synapses_in_territory_of_cell_kind(kind)
                         );
         checked_add_8_bit(checked_mul_8_bit(num_delimiters()-1U,m_num_bits_per_delimiter_number.at(kind)),7U);
 
@@ -344,6 +346,16 @@ bits_reference  dynamic_state_of_neural_tissue::find_bits_of_synapse_to_muscle(
     return m_bits_of_synapses_to_muscles.find_bits_of_unit(index_of_synapse_to_muscle);
 }
 
+
+bits_reference  dynamic_state_of_neural_tissue::find_bits_of_coords_of_source_cell_of_synapse_to_muscle(
+        natural_32_bit const index_of_synapse_to_muscle
+        )
+{
+    ASSUMPTION(index_of_synapse_to_muscle < get_static_state_of_neural_tissue()->num_synapses_to_muscles());
+    return m_bits_of_source_cell_coords_of_synapses_to_muscles.find_bits_of_unit(index_of_synapse_to_muscle);
+}
+
+
 natural_8_bit  dynamic_state_of_neural_tissue::num_bits_per_source_cell_coordinate() const
 {
     return m_num_bits_per_source_cell_coordinate;
@@ -445,7 +457,7 @@ boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tiss
         // slices of delimiters between teritorial lists
         natural_8_bit const num_bits_per_delimiter_number =
                 compute_num_of_bits_to_store_natural_32_bit_number(
-                        static_state_of_tissue.num_tissue_cells_of_cell_kind(kind)
+                        static_state_of_tissue.num_synapses_in_territory_of_cell_kind(kind)
                         );
         checked_add_8_bit(checked_mul_8_bit(num_delimiters()-1U,num_bits_per_delimiter_number),7U);
         num_bits += compute_num_bits_of_slice_of_tissue_with_checked_operations(
@@ -465,6 +477,11 @@ boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tiss
                         static_state_of_tissue.num_bits_per_synapse(),
                         static_state_of_tissue.num_synapses_to_muscles()
                         );
+    // coords of source cell of synapses to muscles
+    num_bits += compute_num_bits_of_all_array_units_with_checked_operations(
+                        checked_mul_16_bit(3U,num_bits_per_source_cell_coordinate),
+                        static_state_of_tissue.num_synapses_to_muscles());
+
     return num_bits;
 }
 

@@ -150,41 +150,41 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
 
     struct local
     {
-        static bool check_radii(std::vector<integer_8_bit> const& v)
+        static bool check_radii(std::vector<integer_8_bit> const& v, natural_32_bit const length_of_axis)
         {
             for (integer_8_bit value : v)
-                if (value < 0 || value == std::numeric_limits<integer_8_bit>::max())
+                if (value < 0 || (natural_32_bit)value > length_of_axis)
                     return false;
             return true;
         }
     };
 
     ASSUMPTION(m_num_kinds_of_tissue_cells == m_x_radius_of_signalling_neighbourhood_of_cell.size());
-    ASSUMPTION( local::check_radii(m_x_radius_of_signalling_neighbourhood_of_cell) );
+    ASSUMPTION( local::check_radii(m_x_radius_of_signalling_neighbourhood_of_cell,m_num_cells_along_x_axis) );
 
     ASSUMPTION(m_num_kinds_of_tissue_cells == m_y_radius_of_signalling_neighbourhood_of_cell.size());
-    ASSUMPTION( local::check_radii(m_y_radius_of_signalling_neighbourhood_of_cell) );
+    ASSUMPTION( local::check_radii(m_y_radius_of_signalling_neighbourhood_of_cell,m_num_cells_along_y_axis) );
 
     ASSUMPTION(m_num_kinds_of_tissue_cells == m_columnar_radius_of_signalling_neighbourhood_of_cell.size());
-    ASSUMPTION( local::check_radii(m_columnar_radius_of_signalling_neighbourhood_of_cell) );
+    ASSUMPTION( local::check_radii(m_columnar_radius_of_signalling_neighbourhood_of_cell,m_num_cells_along_columnar_axis) );
 
     ASSUMPTION(m_num_kinds_of_tissue_cells == m_x_radius_of_signalling_neighbourhood_of_synapse.size());
-    ASSUMPTION( local::check_radii(m_x_radius_of_signalling_neighbourhood_of_synapse) );
+    ASSUMPTION( local::check_radii(m_x_radius_of_signalling_neighbourhood_of_synapse,m_num_cells_along_x_axis) );
 
     ASSUMPTION(m_num_kinds_of_tissue_cells == m_y_radius_of_signalling_neighbourhood_of_synapse.size());
-    ASSUMPTION( local::check_radii(m_y_radius_of_signalling_neighbourhood_of_synapse) );
+    ASSUMPTION( local::check_radii(m_y_radius_of_signalling_neighbourhood_of_synapse,m_num_cells_along_y_axis) );
 
     ASSUMPTION(m_num_kinds_of_tissue_cells == m_columnar_radius_of_signalling_neighbourhood_of_synapse.size());
-    ASSUMPTION( local::check_radii(m_columnar_radius_of_signalling_neighbourhood_of_synapse) );
+    ASSUMPTION( local::check_radii(m_columnar_radius_of_signalling_neighbourhood_of_synapse,m_num_cells_along_columnar_axis) );
 
     ASSUMPTION(m_num_kinds_of_tissue_cells == m_x_radius_of_cellular_neighbourhood_of_signalling.size());
-    ASSUMPTION( local::check_radii(m_x_radius_of_cellular_neighbourhood_of_signalling) );
+    ASSUMPTION( local::check_radii(m_x_radius_of_cellular_neighbourhood_of_signalling,m_num_cells_along_x_axis) );
 
     ASSUMPTION(m_num_kinds_of_tissue_cells == m_y_radius_of_cellular_neighbourhood_of_signalling.size());
-    ASSUMPTION( local::check_radii(m_y_radius_of_cellular_neighbourhood_of_signalling) );
+    ASSUMPTION( local::check_radii(m_y_radius_of_cellular_neighbourhood_of_signalling,m_num_cells_along_y_axis) );
 
     ASSUMPTION(m_num_kinds_of_tissue_cells == m_columnar_radius_of_cellular_neighbourhood_of_signalling.size());
-    ASSUMPTION( local::check_radii(m_columnar_radius_of_cellular_neighbourhood_of_signalling) );
+    ASSUMPTION( local::check_radii(m_columnar_radius_of_cellular_neighbourhood_of_signalling,m_num_cells_along_columnar_axis) );
 
     // The following code computes not only a number of bits which will be taken to store dynamic state of
     // the neural tissue, but is also check for wrap error for unsigned integers which could

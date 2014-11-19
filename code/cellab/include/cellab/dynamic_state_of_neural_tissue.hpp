@@ -73,6 +73,10 @@ struct dynamic_state_of_neural_tissue
     bits_reference  find_bits_of_sensory_cell(natural_32_bit const index_of_sensory_cell);
     bits_reference  find_bits_of_synapse_to_muscle(natural_32_bit const index_of_synapse_to_muscle);
 
+    bits_reference  find_bits_of_coords_of_source_cell_of_synapse_to_muscle(
+            natural_32_bit const index_of_synapse_to_muscle
+            );
+
     natural_8_bit  num_bits_per_source_cell_coordinate() const;
     natural_8_bit num_bits_per_delimiter_number(kind_of_cell const  kind_of_tissue_cell);
 
@@ -90,6 +94,7 @@ private:
     std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_delimiters_between_teritorial_lists;
     array_of_bit_units m_bits_of_sensory_cells;
     array_of_bit_units m_bits_of_synapses_to_muscles;
+    array_of_bit_units m_bits_of_source_cell_coords_of_synapses_to_muscles;
 };
 
 
