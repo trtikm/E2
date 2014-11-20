@@ -6,7 +6,7 @@ UNDER CONSTRUCTION!
 The source code is not functional yet. The first stable release is planed to
 August 2015.
 
-The project attempts to create of a *parametrised model* of a neural tissue
+The project attempts to create a *parametrised model* of a neural tissue
 (with the main focus on the cerebral cortex of the human brain) such that there
 are concrete values for parameters for which the corresponding instance of
 the model has the property that intelligent behaviour emerges during its
