@@ -18,7 +18,7 @@ std::string  get_program_description()
            "by one each time its update is issued from a tissue algorithm. Whenever\n"
            "a tissue algorithm finishes its job the test checks for correct values\n"
            "in the unsigned numbers in all tissue elements. The test is applied to\n"
-           "several tissues differing in properties like number of cells, synapses,\n"
-           "kinds of cells, etc."
+           "a single neural tissue and it is repeated for 2,4,8, and 16 threads.\n"
+           "Each algorithm is exected five times for each thread count.\n"
            ;
 }

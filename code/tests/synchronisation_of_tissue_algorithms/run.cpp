@@ -267,15 +267,15 @@ static void test_algorithms(std::shared_ptr<cellab::dynamic_state_of_neural_tiss
                     num_avalilable_threads);
         TEST_PROGRESS_UPDATE();
 
-//        test_tissue(dynamic_tissue,
-//                    cell_counter,
-//                    synapse_counter,
-//                    territorial_state,
-//                    signalling_counter,
-//                    sensory_cell_counter,
-//                    ++synapse_to_muscle_counter);
-//        TEST_PROGRESS_UPDATE();
-        ++synapse_to_muscle_counter;
+        test_tissue(dynamic_tissue,
+                    cell_counter,
+                    synapse_counter,
+                    territorial_state,
+                    signalling_counter,
+                    sensory_cell_counter,
+                    ++synapse_to_muscle_counter);
+        TEST_PROGRESS_UPDATE();
+//        ++synapse_to_muscle_counter;
 
         cellab::apply_transition_of_synapses_of_tissue(
                     dynamic_tissue,
@@ -283,33 +283,34 @@ static void test_algorithms(std::shared_ptr<cellab::dynamic_state_of_neural_tiss
                     num_avalilable_threads);
         TEST_PROGRESS_UPDATE();
 
-//        test_tissue(dynamic_tissue,
-//                    cell_counter,
-//                    ++synapse_counter,
-//                    territorial_state,
-//                    signalling_counter,
-//                    sensory_cell_counter,
-//                    synapse_to_muscle_counter);
-//        TEST_PROGRESS_UPDATE();
-        ++synapse_counter;
+        test_tissue(dynamic_tissue,
+                    cell_counter,
+                    ++synapse_counter,
+                    territorial_state,
+                    signalling_counter,
+                    sensory_cell_counter,
+                    synapse_to_muscle_counter);
+        TEST_PROGRESS_UPDATE();
+//        ++synapse_counter;
 
         cellab::apply_transition_of_territorial_lists_of_synapses(
                     dynamic_tissue,
                     num_avalilable_threads);
         TEST_PROGRESS_UPDATE();
+
+        test_tissue(dynamic_tissue,
+                    cell_counter,
+                    synapse_counter,
+                    territorial_state,
+                    signalling_counter,
+                    sensory_cell_counter,
+                    synapse_to_muscle_counter);
+        TEST_PROGRESS_UPDATE();
+
         cellab::apply_transition_of_synaptic_migration_in_tissue(
                     dynamic_tissue,
                     num_avalilable_threads);
         TEST_PROGRESS_UPDATE();
-
-//        test_tissue(dynamic_tissue,
-//                    cell_counter,
-//                    synapse_counter,
-//                    territorial_state,
-//                    signalling_counter,
-//                    sensory_cell_counter,
-//                    synapse_to_muscle_counter);
-//        TEST_PROGRESS_UPDATE();
 
         cellab::apply_transition_of_signalling_in_tissue(
                     dynamic_tissue,
@@ -317,15 +318,15 @@ static void test_algorithms(std::shared_ptr<cellab::dynamic_state_of_neural_tiss
                     num_avalilable_threads);
         TEST_PROGRESS_UPDATE();
 
-//        test_tissue(dynamic_tissue,
-//                    cell_counter,
-//                    synapse_counter,
-//                    territorial_state,
-//                    ++signalling_counter,
-//                    sensory_cell_counter,
-//                    synapse_to_muscle_counter);
-//        TEST_PROGRESS_UPDATE();
-        ++signalling_counter;
+        test_tissue(dynamic_tissue,
+                    cell_counter,
+                    synapse_counter,
+                    territorial_state,
+                    ++signalling_counter,
+                    sensory_cell_counter,
+                    synapse_to_muscle_counter);
+        TEST_PROGRESS_UPDATE();
+//        ++signalling_counter;
 
         cellab::apply_transition_of_cells_of_tissue(
                     dynamic_tissue,
@@ -354,9 +355,9 @@ static void test_algorithms(std::shared_ptr<cellab::dynamic_state_of_neural_tiss
     test_algorithms(dynamic_tissue,2U,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter);
     test_algorithms(dynamic_tissue,4U,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter);
     test_algorithms(dynamic_tissue,8U,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter);
-//    test_algorithms(dynamic_tissue,16U,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter);
-//    test_algorithms(dynamic_tissue,32U,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter);
-//    test_algorithms(dynamic_tissue,64U,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter);
+    test_algorithms(dynamic_tissue,16U,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter);
+    test_algorithms(dynamic_tissue,32U,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter);
+    test_algorithms(dynamic_tissue,64U,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter);
 }
 
 
@@ -366,18 +367,26 @@ void run()
 
     TEST_PROGRESS_SHOW();
 
-    for (natural_16_bit tissue_cell_kinds = 1U; tissue_cell_kinds < 4U; ++tissue_cell_kinds)
+    while (true)
+//    for (natural_16_bit tissue_cell_kinds = 1U; tissue_cell_kinds < 4U; ++tissue_cell_kinds)
     {
-        for (natural_16_bit sensory_cell_kinds = 1U; sensory_cell_kinds < 3U; ++sensory_cell_kinds)
+        natural_16_bit tissue_cell_kinds = 3U;
+//        for (natural_16_bit sensory_cell_kinds = 1U; sensory_cell_kinds < 3U; ++sensory_cell_kinds)
         {
+            natural_16_bit sensory_cell_kinds = 2U;
+
             natural_16_bit const num_bits_per_cell = tissue_element::num_bits();
             natural_16_bit const num_bits_per_synapse = tissue_element::num_bits();
             natural_16_bit const num_bits_per_signalling = tissue_element::num_bits();
 
-            for (natural_32_bit cells_x = 1U; cells_x < 102U; cells_x += 100U)
+//            for (natural_32_bit cells_x = 1U; cells_x < 102U; cells_x += 100U)
             {
-                for (natural_32_bit cells_y = 1U; cells_y < 102U; cells_y += 100U)
+                natural_32_bit cells_x = 25U;
+
+//                for (natural_32_bit cells_y = 1U; cells_y < 102U; cells_y += 100U)
                 {
+                    natural_32_bit cells_y = 100U;
+
                     natural_32_bit cells_c = 0U;
                     std::vector<natural_32_bit> num_tissue_cells_of_cell_kind;
                     std::vector<natural_32_bit> num_synapses_in_territory_of_cell_kind;
@@ -394,16 +403,21 @@ void run()
 
                     natural_32_bit const num_synapses_to_muscles = 50U;
 
-                    for (natural_8_bit torus_x = 0U; torus_x < 2U; ++torus_x)
-                        for (natural_8_bit torus_y = 0U; torus_y < 2U; ++torus_y)
-                            for (natural_8_bit torus_c = 0U; torus_c < 2U; ++torus_c)
+//                    for (natural_8_bit torus_x = 0U; torus_x < 2U; ++torus_x)
+//                        for (natural_8_bit torus_y = 0U; torus_y < 2U; ++torus_y)
+//                            for (natural_8_bit torus_c = 0U; torus_c < 2U; ++torus_c)
                             {
-                                bool const is_x_axis_torus_axis = torus_x == 1;
-                                bool const is_y_axis_torus_axis = torus_y == 1;
-                                bool const is_c_axis_torus_axis = torus_c == 1;
+//                                bool const is_x_axis_torus_axis = torus_x == 1;
+//                                bool const is_y_axis_torus_axis = torus_y == 1;
+//                                bool const is_c_axis_torus_axis = torus_c == 1;
+                                    bool const is_x_axis_torus_axis = true;
+                                    bool const is_y_axis_torus_axis = true;
+                                    bool const is_c_axis_torus_axis = true;
 
-                                for (natural_8_bit radius = 1U; radius < 3U; ++radius)
+//                                for (natural_8_bit radius = 1U; radius < 3U; ++radius)
                                 {
+                                    natural_8_bit radius = 1U;
+
                                     natural_8_bit radius_x = std::min((natural_32_bit)radius,cells_x);
                                     natural_8_bit radius_y = std::min((natural_32_bit)radius,cells_y);
                                     natural_8_bit radius_c = std::min((natural_32_bit)radius,cells_c);
@@ -468,7 +482,8 @@ void run()
 //                                                    "num_cells_along_y_axis = " << cells_y << ",   " <<
 //                                                    "radius = " << (natural_32_bit)radius
 //                                                    );
-                                        continue;
+//                                        continue;
+                                        break;
                                     }
                                     std::shared_ptr<cellab::dynamic_state_of_neural_tissue> dynamic_tissue;
                                     try
@@ -486,7 +501,8 @@ void run()
 //                                                    "num_cells_along_y_axis = " << cells_y << ",   " <<
 //                                                    "radius = " << (natural_32_bit)radius
 //                                                    );
-                                        continue;
+//                                        continue;
+                                        break;
                                     }
 
                                     initialse_tissue(dynamic_tissue);
@@ -496,6 +512,7 @@ void run()
                 }
             }
         }
+        break;
     }
 
     TEST_PROGRESS_HIDE();
