@@ -15,11 +15,20 @@
 struct my_neural_tissue : public cellab::neural_tissue
 {
     my_neural_tissue();
+    my_neural_tissue(std::shared_ptr<cellab::static_state_of_neural_tissue const> static_state_of_tissue);
+    my_neural_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tissue> dynamic_state_of_tissue);
+    my_neural_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tissue> dynamic_state_of_tissue,bool);
 
     void  transition_function_of_synapse_to_muscle(
             my_synapse& synapse_to_be_updated,
             cellab::kind_of_cell const kind_of_source_cell,
             my_cell const& source_cell
+            );
+
+    static void  transition_function_of_packed_synapse_to_muscle(
+            bits_reference& bits_of_synapse_to_be_updated,
+            cellab::kind_of_cell kind_of_source_cell,
+            bits_const_reference const& bits_of_source_cell
             );
 
     cellab::territorial_state_of_synapse  transition_function_of_synapse_inside_tissue(
@@ -36,7 +45,21 @@ struct my_neural_tissue : public cellab::neural_tissue
                 get_signalling
             );
 
-    void transition_function_of_signalling(
+    static cellab::territorial_state_of_synapse  transition_function_of_packed_synapse_inside_tissue(
+            bits_reference& bits_of_synapse_to_be_updated,
+            cellab::kind_of_cell kind_of_source_cell,
+            bits_const_reference const& bits_of_source_cell,
+            cellab::kind_of_cell kind_of_territory_cell,
+            bits_const_reference const& bits_of_territory_cell,
+            cellab::territorial_state_of_synapse current_territorial_state_of_synapse,
+            cellab::shift_in_coordinates const& shift_to_low_corner,
+            cellab::shift_in_coordinates const& shift_to_high_corner,
+            std::function<std::pair<bits_const_reference,cellab::kind_of_cell>(
+                                            cellab::shift_in_coordinates const&)> const&
+                get_signalling
+            );
+
+    void  transition_function_of_signalling(
             my_signalling& signalling_to_be_updated,
             cellab::kind_of_cell kind_of_territory_cell,
             cellab::shift_in_coordinates const& shift_to_low_corner,
@@ -46,7 +69,17 @@ struct my_neural_tissue : public cellab::neural_tissue
                 get_cell
             );
 
-    void transition_function_of_cell(
+    static void  transition_function_of_packed_signalling(
+            bits_reference& bits_of_signalling_data_to_be_updated,
+            cellab::kind_of_cell kind_of_territory_cell,
+            cellab::shift_in_coordinates const& shift_to_low_corner,
+            cellab::shift_in_coordinates const& shift_to_high_corner,
+            std::function<std::pair<bits_const_reference,cellab::kind_of_cell>(
+                                            cellab::shift_in_coordinates const&)> const&
+                get_cell
+            );
+
+    void  transition_function_of_cell(
             my_cell& cell_to_be_updated,
             cellab::kind_of_cell kind_of_cell_to_be_updated,
             natural_32_bit num_of_synapses_connected_to_the_cell,
@@ -60,6 +93,21 @@ struct my_neural_tissue : public cellab::neural_tissue
                                                instance_wrapper<my_signalling const>&)> const&
                 get_signalling
             );
+
+    static void  transition_function_of_packed_cell(
+            bits_reference& bits_of_cell_to_be_updated,
+            cellab::kind_of_cell kind_of_cell_to_be_updated,
+            natural_32_bit num_of_synapses_connected_to_the_cell,
+            std::function<std::tuple<bits_const_reference,cellab::kind_of_cell,cellab::kind_of_cell>(
+                                    natural_32_bit)> const&
+                get_connected_synapse_at_index,
+            cellab::shift_in_coordinates const& shift_to_low_corner,
+            cellab::shift_in_coordinates const& shift_to_high_corner,
+            std::function<std::pair<bits_const_reference,cellab::kind_of_cell>(
+                                    cellab::shift_in_coordinates const&)> const&
+                get_signalling
+            );
+
 };
 
 

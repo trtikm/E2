@@ -12,11 +12,15 @@ void run()
 {
     TMPROF_BLOCK();
 
+    TEST_PROGRESS_SHOW();
+
     std::shared_ptr<efloop::external_feedback_loop>  loop =
             std::shared_ptr<efloop::external_feedback_loop>(new efloop::external_feedback_loop(
                     std::shared_ptr<cellab::neural_tissue>(new my_neural_tissue()),
                     std::shared_ptr<envlab::rules_and_logic_of_environment>(new my_environment())
                     ));
+
+    TEST_PROGRESS_HIDE();
 
     TEST_PRINT_STATISTICS();
 }

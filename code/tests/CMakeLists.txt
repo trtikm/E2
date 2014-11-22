@@ -21,6 +21,9 @@ add_subdirectory(./tissue_allocation_and_memory_accesses)
 add_subdirectory(./synchronisation_of_tissue_algorithms)
     message("-- synchronisation_of_tissue_algorithms")
 
+add_subdirectory(./neural_tissue_construction_and_simulation)
+    message("-- neural_tissue_construction_and_simulation")
+
 add_subdirectory(./efloop_construction_and_simulation)
     message("-- efloop_construction_and_simulation")
 
@@ -32,4 +35,3 @@ install(
     DESTINATION
     "./tests"
     )
-

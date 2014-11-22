@@ -191,7 +191,7 @@ cellab::territorial_state_of_synapse callback_transition_of_synapses_of_tissue(
     tissue_element src_cell_elemement(bits_of_source_cell);
     TEST_SUCCESS(elemement.count() == src_cell_elemement.count() + 1U);
 
-    tissue_element territory_cell_element(bits_of_source_cell);
+    tissue_element territory_cell_element(bits_of_territory_cell);
     TEST_SUCCESS(elemement.count() == territory_cell_element.count() + 1U);
 
     tissue_element territory_low_corner_elemement(get_signalling(shift_to_low_corner).first);

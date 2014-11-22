@@ -1,33 +1,108 @@
 #include "./my_neural_tissue.hpp"
 #include <utility/development.hpp>
+#include <vector>
+
+
+natural_16_bit  num_kinds_of_tissue_cells() noexcept { return 3U; }
+natural_16_bit  num_kinds_of_sensory_cells() noexcept { return 2U; }
+
+natural_16_bit  num_bits_per_cell() noexcept { return sizeof(my_cell); }
+natural_16_bit  num_bits_per_synapse() noexcept { return sizeof(my_synapse); }
+natural_16_bit  num_bits_per_signalling() noexcept { return sizeof(my_signalling); }
+
+natural_32_bit  num_cells_along_x_axis() noexcept { return 100U; }
+natural_32_bit  num_cells_along_y_axis() noexcept { return 50U; }
+
+std::vector<natural_32_bit> const&  num_tissue_cells_of_cell_kind() noexcept {
+    static std::vector<natural_32_bit> v = {7U,5U,3U};
+    return v;
+    }
+std::vector<natural_32_bit> const&  num_synapses_in_territory_of_cell_kind() noexcept {
+    static std::vector<natural_32_bit> v = {20U,10U,5U};
+    return v;
+    }
+std::vector<natural_32_bit> const&  num_sensory_cells_of_cell_kind() noexcept {
+    static std::vector<natural_32_bit> v = {50U,30U};
+    return v;
+    }
+
+natural_32_bit  num_synapses_to_muscles() noexcept { return 100U; }
+
+bool  is_x_axis_torus_axis() noexcept { return true; }
+bool  is_y_axis_torus_axis() noexcept { return false; }
+bool  is_columnar_axis_torus_axis() noexcept { return true; }
+
+std::vector<integer_8_bit> const&  x_radius_of_signalling_neighbourhood_of_cell() noexcept {
+    static std::vector<integer_8_bit> v = {2,1,1};
+    return v;
+    }
+std::vector<integer_8_bit> const&  y_radius_of_signalling_neighbourhood_of_cell() noexcept {
+    static std::vector<integer_8_bit> v = {1,2,1};
+    return v;
+    }
+std::vector<integer_8_bit> const&  columnar_radius_of_signalling_neighbourhood_of_cell() noexcept {
+    static std::vector<integer_8_bit> v = {1,1,2};
+    return v;
+    }
+
+std::vector<integer_8_bit> const&  x_radius_of_signalling_neighbourhood_of_synapse() noexcept {
+    static std::vector<integer_8_bit> v = {2,1,1};
+    return v;
+    }
+std::vector<integer_8_bit> const&  y_radius_of_signalling_neighbourhood_of_synapse() noexcept {
+    static std::vector<integer_8_bit> v = {1,2,1};
+    return v;
+    }
+std::vector<integer_8_bit> const&  columnar_radius_of_signalling_neighbourhood_of_synapse() noexcept {
+    static std::vector<integer_8_bit> v = {1,1,2};
+    return v;
+    }
+
+std::vector<integer_8_bit> const&  x_radius_of_cellular_neighbourhood_of_signalling() noexcept {
+    static std::vector<integer_8_bit> v = {2,1,1};
+    return v;
+    }
+std::vector<integer_8_bit> const&  y_radius_of_cellular_neighbourhood_of_signalling() noexcept {
+    static std::vector<integer_8_bit> v = {1,2,1};
+    return v;
+    }
+std::vector<integer_8_bit> const&  columnar_radius_of_cellular_neighbourhood_of_signalling() noexcept {
+    static std::vector<integer_8_bit> v = {1,1,2};
+    return v;
+    }
+
+cellab::automated_binding_of_transition_functions<my_neural_tissue,my_cell,my_synapse,my_signalling>
+get_automated_binding_of_transition_functions() noexcept {
+    return cellab::automated_binding_of_transition_functions<my_neural_tissue,my_cell,my_synapse,my_signalling>();
+    }
 
 
 my_neural_tissue::my_neural_tissue()
     : cellab::neural_tissue(
-          2, //natural_16_bit const num_kinds_of_tissue_cells
-          1, //natural_16_bit const num_kinds_of_sensory_cells
-          10, //natural_16_bit const num_bits_per_cell,
-          15, //natural_16_bit const num_bits_per_synapse,
-          5, //natural_16_bit const num_bits_per_signalling,
-          10, //natural_32_bit const num_cells_along_x_axis,
-          10, //natural_32_bit const num_cells_along_y_axis,
-          std::vector<natural_32_bit>({3,2}), //std::vector<natural_32_bit> const& num_tissue_cells_of_cell_kind,
-          std::vector<natural_32_bit>({10,6}), //std::vector<natural_32_bit> const& num_synapses_in_territory_of_cell_kind,
-          std::vector<natural_32_bit>({2}), //std::vector<natural_32_bit> const& num_sensory_cells_of_cell_kind,
-          3, //natural_32_bit const num_synapses_to_muscles,
-          true, //bool const is_x_axis_torus_axis,
-          true, //bool const is_y_axis_torus_axis,
-          true, //bool const is_columnar_axis_torus_axis,
-          std::vector<integer_8_bit>({1,1}), //std::vector<integer_8_bit> const& x_radius_of_signalling_neighbourhood_of_cell,
-          std::vector<integer_8_bit>({1,1}), //std::vector<integer_8_bit> const& y_radius_of_signalling_neighbourhood_of_cell,
-          std::vector<integer_8_bit>({1,1}), //std::vector<integer_8_bit> const& columnar_radius_of_signalling_neighbourhood_of_cell,
-          std::vector<integer_8_bit>({1,1}), //std::vector<integer_8_bit> const& x_radius_of_signalling_neighbourhood_of_synapse,
-          std::vector<integer_8_bit>({1,1}), //std::vector<integer_8_bit> const& y_radius_of_signalling_neighbourhood_of_synapse,
-          std::vector<integer_8_bit>({1,1}), //std::vector<integer_8_bit> const& columnar_radius_of_signalling_neighbourhood_of_synapse,
-          std::vector<integer_8_bit>({1,1}), //std::vector<integer_8_bit> const& x_radius_of_cellular_neighbourhood_of_signalling,
-          std::vector<integer_8_bit>({1,1}), //std::vector<integer_8_bit> const& y_radius_of_cellular_neighbourhood_of_signalling,
-          std::vector<integer_8_bit>({1,1}), //std::vector<integer_8_bit> const& columnar_radius_of_cellular_neighbourhood_of_signalling,
-          cellab::automated_binding_of_transition_functions<my_neural_tissue,my_cell,my_synapse,my_signalling>()
+          num_kinds_of_tissue_cells(),
+          num_kinds_of_sensory_cells(),
+          num_bits_per_cell(),
+          num_bits_per_synapse(),
+          num_bits_per_signalling(),
+          num_cells_along_x_axis(),
+          num_cells_along_y_axis(),
+          num_tissue_cells_of_cell_kind(),
+          num_synapses_in_territory_of_cell_kind(),
+          num_sensory_cells_of_cell_kind(),
+          num_synapses_to_muscles(),
+          is_x_axis_torus_axis(),
+          is_y_axis_torus_axis(),
+          is_columnar_axis_torus_axis(),
+          x_radius_of_signalling_neighbourhood_of_cell(),
+          y_radius_of_signalling_neighbourhood_of_cell(),
+          columnar_radius_of_signalling_neighbourhood_of_cell(),
+          x_radius_of_signalling_neighbourhood_of_synapse(),
+          y_radius_of_signalling_neighbourhood_of_synapse(),
+          columnar_radius_of_signalling_neighbourhood_of_synapse(),
+          x_radius_of_cellular_neighbourhood_of_signalling(),
+          y_radius_of_cellular_neighbourhood_of_signalling(),
+          columnar_radius_of_cellular_neighbourhood_of_signalling(),
+          get_automated_binding_of_transition_functions()
           )
 {}
 

@@ -76,7 +76,7 @@ def scriptMain():
 
     print "Configuration:"
     print "test root directory: " + tests_root_dir
-    print "tests to be executes: "
+    print "tests to be executed: "
     for test in executables:
         print "    " + test
     print "Executing the tests..."

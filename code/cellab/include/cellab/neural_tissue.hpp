@@ -92,7 +92,7 @@ struct neural_tissue : private boost::noncopyable
              typename class_synapse,
              typename class_signalling>
     neural_tissue(
-            std::shared_ptr<cellab::static_state_of_neural_tissue>
+            std::shared_ptr<cellab::static_state_of_neural_tissue const>
                 static_state_of_tissue,
             automated_binding_of_transition_functions<class_derived_from_neural_tissue,
                                                       class_cell,class_synapse,class_signalling>
@@ -112,17 +112,17 @@ struct neural_tissue : private boost::noncopyable
             );
 
     neural_tissue(
-        std::shared_ptr<cellab::dynamic_state_of_neural_tissue>
-            dynamic_state_of_tissue,
-        single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_to_muscle
-            transition_function_of_packed_synapse_to_muscle,
-        single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_inside_tissue
-            transition_function_of_packed_synapse_inside_tissue,
-        single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_signalling
-            transition_function_of_packed_signalling,
-        single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_cell
-            transition_function_of_packed_cell
-        );
+            std::shared_ptr<cellab::dynamic_state_of_neural_tissue>
+                dynamic_state_of_tissue,
+            single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_to_muscle
+                transition_function_of_packed_synapse_to_muscle,
+            single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_inside_tissue
+                transition_function_of_packed_synapse_inside_tissue,
+            single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_signalling
+                transition_function_of_packed_signalling,
+            single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_cell
+                transition_function_of_packed_cell
+            );
 
     virtual ~neural_tissue() {}
 
@@ -153,27 +153,27 @@ struct neural_tissue : private boost::noncopyable
             natural_32_bit const  num_threads_avalilable_for_computation
             );
 
-    std::size_t get_hash_code_of_class_for_cells() const;
-    std::size_t get_hash_code_of_class_for_synapses() const;
-    std::size_t get_hash_code_of_class_for_signalling() const;
+    std::size_t  get_hash_code_of_class_for_cells() const;
+    std::size_t  get_hash_code_of_class_for_synapses() const;
+    std::size_t  get_hash_code_of_class_for_signalling() const;
 
 private:
 
     std::shared_ptr<cellab::dynamic_state_of_neural_tissue>
-        m_dynamic_state_of_tissue;
+            m_dynamic_state_of_tissue;
 
     single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_to_muscle
-        m_transition_function_of_packed_synapse_to_muscle;
+            m_transition_function_of_packed_synapse_to_muscle;
     single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_inside_tissue
-        m_transition_function_of_packed_synapse_inside_tissue;
+            m_transition_function_of_packed_synapse_inside_tissue;
     single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_signalling
-        m_transition_function_of_packed_signalling;
+            m_transition_function_of_packed_signalling;
     single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_cell
-        m_transition_function_of_packed_cell;
+            m_transition_function_of_packed_cell;
 
-    std::size_t m_hash_code_of_class_for_cells;
-    std::size_t m_hash_code_of_class_for_synapses;
-    std::size_t m_hash_code_of_class_for_signalling;
+    std::size_t  m_hash_code_of_class_for_cells;
+    std::size_t  m_hash_code_of_class_for_synapses;
+    std::size_t  m_hash_code_of_class_for_signalling;
 };
 
 
@@ -279,7 +279,7 @@ template<typename class_derived_from_neural_tissue,
          typename class_synapse,
          typename class_signalling>
 neural_tissue::neural_tissue(
-        std::shared_ptr<cellab::static_state_of_neural_tissue>
+        std::shared_ptr<cellab::static_state_of_neural_tissue const>
             static_state_of_tissue,
         automated_binding_of_transition_functions<class_derived_from_neural_tissue,
                                                   class_cell,class_synapse,class_signalling>

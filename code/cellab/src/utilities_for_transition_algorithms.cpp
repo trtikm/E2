@@ -130,6 +130,9 @@ bool  go_to_next_coordinates(
     c_coord = go_to_next_value_modulo_range(c_coord,num_cells_along_columnar_axis,extent_64_bit);
     x_coord = go_to_next_value_modulo_range(x_coord,num_cells_along_x_axis,extent_64_bit);
     y_coord = go_to_next_value_modulo_range(y_coord,num_cells_along_y_axis,extent_64_bit);
+    INVARIANT(extent_64_bit != 0ULL || (x_coord < num_cells_along_x_axis &&
+                                        y_coord < num_cells_along_y_axis &&
+                                        c_coord < num_cells_along_columnar_axis));
     return extent_64_bit == 0ULL;
 }
 
@@ -141,6 +144,7 @@ bool  go_to_next_index(
 {
     natural_64_bit extent_64_bit = extent;
     index = go_to_next_value_modulo_range(index,size,extent_64_bit);
+    INVARIANT(extent_64_bit != 0ULL || index < size);
     return extent_64_bit == 0ULL;
 }
 
