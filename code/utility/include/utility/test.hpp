@@ -7,8 +7,11 @@
 
 #   define TEST_EVALUATION(COND,RESULT,LOGSUCCESS) \
     {\
+        logging_severity_level const  original_severity_level = get_minimal_severity_level();\
         try\
         {\
+            if (!(RESULT))\
+                set_minimal_severity_level(logging_severity_level::testing);\
             if ((COND) == (RESULT))\
             {\
                 ++test_statistics::num_tests_which_succeeded_without_exception();\
@@ -21,9 +24,11 @@
                 if (true) { LOG(testing,"TEST FAILED: " #COND); }\
                 if (true) { std::cout << "TEST FAILED: " #COND << "\n"; }\
             }\
+            set_minimal_severity_level(original_severity_level);\
         }\
         catch (...)\
         {\
+            set_minimal_severity_level(original_severity_level);\
             if (RESULT)\
             {\
                 ++test_statistics::num_tests_which_failed_by_exception();\

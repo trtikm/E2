@@ -24,13 +24,17 @@ static natural_64_bit  compute_total_num_bytes(natural_16_bit const num_bits_per
 
 static bool can_be_allocated(natural_16_bit const num_bits_per_unit, natural_64_bit const num_units)
 {
+    logging_severity_level const  original_severity_level = get_minimal_severity_level();
     try
     {
+        set_minimal_severity_level(logging_severity_level::testing);
         std::shared_ptr<natural_8_bit> const ptr(new natural_8_bit[compute_total_num_bytes(num_bits_per_unit,num_units)]);
+        set_minimal_severity_level(original_severity_level);
         return ptr.operator bool();
     }
     catch(...)
     {
+        set_minimal_severity_level(original_severity_level);
         return false;
     }
 }
@@ -84,7 +88,7 @@ static void test_accesses(array_of_bit_units& units, natural_64_bit const  index
 
 static void test_accesses(array_of_bit_units& units)
 {
-    LOG(testing,"num_bits_per_unit = " << units.num_bits_per_unit() << ",   num_units = " << units.num_units() << "\n");
+    //LOG(testing,"num_bits_per_unit = " << units.num_bits_per_unit() << ",   num_units = " << units.num_units() << "\n");
 
     test_accesses(units,0ULL);
     test_accesses(units,units.num_units() - 1ULL);

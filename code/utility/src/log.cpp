@@ -17,6 +17,12 @@ logging_severity_level get_minimal_severity_level()
     return global_minimal_severity_level;
 }
 
+void  set_minimal_severity_level(logging_severity_level const level)
+{
+    ASSUMPTION(level >= logging_severity_level::debug && level <= logging_severity_level::testing);
+    global_minimal_severity_level = level;
+}
+
 static bool LOG_SETUP(std::string const& log_file_name, logging_severity_level const minimal_severity_level)
 {
     static bool first_call = true;

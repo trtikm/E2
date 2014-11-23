@@ -35,8 +35,10 @@ static bool can_be_allocated(natural_16_bit const num_bits_per_unit,
                              natural_32_bit const num_units_along_y_axis,
                              natural_64_bit const num_units_along_columnar_axis)
 {
+    logging_severity_level const  original_severity_level = get_minimal_severity_level();
     try
     {
+        set_minimal_severity_level(logging_severity_level::testing);
         std::shared_ptr<natural_8_bit> const ptr(
                 new natural_8_bit[
                     compute_total_num_bytes(num_bits_per_unit,
@@ -44,10 +46,12 @@ static bool can_be_allocated(natural_16_bit const num_bits_per_unit,
                                             num_units_along_y_axis,
                                             num_units_along_columnar_axis)
                     ]);
+        set_minimal_severity_level(original_severity_level);
         return ptr.operator bool();
     }
     catch(...)
     {
+        set_minimal_severity_level(original_severity_level);
         return false;
     }
 }

@@ -585,9 +585,12 @@ void run()
                                         columnar_radius_of_cellular_neighbourhood_of_signalling.push_back(radius);
                                     }
 
+                                    logging_severity_level const  original_severity_level = get_minimal_severity_level();
+
                                     std::shared_ptr<cellab::static_state_of_neural_tissue const> static_tissue;
                                     try
                                     {
+                                        set_minimal_severity_level(logging_severity_level::testing);
                                         static_tissue = std::shared_ptr<cellab::static_state_of_neural_tissue const>(
                                                     new cellab::static_state_of_neural_tissue(
                                                         tissue_cell_kinds,
@@ -614,9 +617,11 @@ void run()
                                                         y_radius_of_cellular_neighbourhood_of_signalling,
                                                         columnar_radius_of_cellular_neighbourhood_of_signalling
                                                         ));
+                                        set_minimal_severity_level(original_severity_level);
                                     }
                                     catch(...)
                                     {
+                                        set_minimal_severity_level(original_severity_level);
 //                                        LOG(testing,"Cannot create static state of tissue : "
 //                                                    "num_kinds_of_tissue_cells = " << tissue_cell_kinds << ",   " <<
 //                                                    "num_kinds_of_sensory_cells = " << sensory_cell_kinds << ",   " <<
@@ -632,12 +637,15 @@ void run()
                                     std::shared_ptr<cellab::dynamic_state_of_neural_tissue> dynamic_tissue;
                                     try
                                     {
+                                        set_minimal_severity_level(logging_severity_level::testing);
                                         dynamic_tissue = std::shared_ptr<cellab::dynamic_state_of_neural_tissue>(
                                                     new cellab::dynamic_state_of_neural_tissue(static_tissue)
                                                     );
+                                        set_minimal_severity_level(original_severity_level);
                                     }
                                     catch(...)
                                     {
+                                        set_minimal_severity_level(original_severity_level);
 //                                        LOG(testing,"Cannot create dynamic state of tissue : "
 //                                                    "num_kinds_of_tissue_cells = " << tissue_cell_kinds << ",   " <<
 //                                                    "num_kinds_of_sensory_cells = " << sensory_cell_kinds << ",   " <<

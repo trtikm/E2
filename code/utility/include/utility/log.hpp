@@ -35,8 +35,9 @@ enum logging_severity_level
     error = 3,
     testing = 4,
 };
-std::string const& logging_severity_level_name(logging_severity_level const level);
-logging_severity_level get_minimal_severity_level();
+std::string const&  logging_severity_level_name(logging_severity_level const level);
+logging_severity_level  get_minimal_severity_level();
+void  set_minimal_severity_level(logging_severity_level const level);
 
 struct logging_setup_caller
 {
