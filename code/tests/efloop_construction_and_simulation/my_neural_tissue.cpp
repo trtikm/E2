@@ -6,9 +6,9 @@
 natural_16_bit  num_kinds_of_tissue_cells() noexcept { return 3U; }
 natural_16_bit  num_kinds_of_sensory_cells() noexcept { return 2U; }
 
-natural_16_bit  num_bits_per_cell() noexcept { return sizeof(my_cell); }
-natural_16_bit  num_bits_per_synapse() noexcept { return sizeof(my_synapse); }
-natural_16_bit  num_bits_per_signalling() noexcept { return sizeof(my_signalling); }
+natural_16_bit  num_bits_per_cell() noexcept { return 8U * sizeof(my_cell); }
+natural_16_bit  num_bits_per_synapse() noexcept { return 8U * sizeof(my_synapse); }
+natural_16_bit  num_bits_per_signalling() noexcept { return 8U * sizeof(my_signalling); }
 
 natural_32_bit  num_cells_along_x_axis() noexcept { return 100U; }
 natural_32_bit  num_cells_along_y_axis() noexcept { return 50U; }

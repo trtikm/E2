@@ -23,6 +23,7 @@
                 ++test_statistics::num_tests_which_failed_without_exception();\
                 if (true) { LOG(testing,"TEST FAILED: " #COND); }\
                 if (true) { std::cout << "TEST FAILED: " #COND << "\n"; }\
+                if (true) { ::private_test_internal_implementation_details::on_test_fail(); }\
             }\
             set_minimal_severity_level(original_severity_level);\
         }\
@@ -34,6 +35,7 @@
                 ++test_statistics::num_tests_which_failed_by_exception();\
                 if (true) { LOG(testing,"TEST FAILED (by throwing exception): " #COND); }\
                 if (true) { std::cout << "TEST FAILED (by throwing exception): " #COND << "\n"; }\
+                if (true) { ::private_test_internal_implementation_details::on_test_fail(); }\
             }\
             else\
             {\
@@ -71,6 +73,7 @@ void print_test_statistical_data_to_log_and_standard_output();
 namespace private_test_internal_implementation_details {
 void  print_next_test_progress_character();
 void  hide_test_progress_character();
+void  on_test_fail();
 }
 
 #endif

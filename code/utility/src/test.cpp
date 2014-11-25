@@ -91,4 +91,10 @@ void  hide_test_progress_character()
     std::cout.flush();
 }
 
+void  on_test_fail()
+{
+    int iii = 0;
+    (void)iii;
+}
+
 }
