@@ -109,12 +109,15 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
 
     ASSUMPTION(m_num_bits_per_cell > 0U);
     ASSUMPTION(m_num_bits_per_cell < std::numeric_limits<natural_16_bit>::max());
+    ASSUMPTION(m_num_bits_per_cell % 8U == 0U);
 
     ASSUMPTION(m_num_bits_per_synapse > 0U);
     ASSUMPTION(m_num_bits_per_synapse < std::numeric_limits<natural_16_bit>::max());
+    ASSUMPTION(m_num_bits_per_synapse % 8U == 0U);
 
     ASSUMPTION(m_num_bits_per_signalling > 0U);
     ASSUMPTION(m_num_bits_per_signalling < std::numeric_limits<natural_16_bit>::max());
+    ASSUMPTION(m_num_bits_per_signalling % 8U == 0U);
 
     ASSUMPTION(m_num_cells_along_x_axis > 0U);
     ASSUMPTION(m_num_cells_along_x_axis < std::numeric_limits<natural_32_bit>::max());

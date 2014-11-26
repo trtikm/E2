@@ -1,20 +1,10 @@
 #include <cellab/dynamic_state_of_neural_tissue.hpp>
 #include <utility/checked_number_operations.hpp>
+#include <utility/bit_count.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/log.hpp>
 #include <algorithm>
 
-static natural_8_bit compute_num_of_bits_to_store_natural_32_bit_number(natural_32_bit number)
-{
-    natural_8_bit num_bits = 0U;
-    do
-    {
-        number >>= 1U;
-        ++num_bits;
-    }
-    while (number != 0U);
-    return num_bits;
-}
 
 static natural_64_bit compute_columnar_index_of_synapse_in_territorial_of_cell(
         natural_64_bit const columnar_index_of_cell_in_slice_of_cell_kind,
@@ -35,7 +25,7 @@ dynamic_state_of_neural_tissue::dynamic_state_of_neural_tissue(
         )
     : m_static_state_of_neural_tissue(pointer_to_static_state_of_neural_tissue)
     , m_num_bits_per_source_cell_coordinate(
-          compute_num_of_bits_to_store_natural_32_bit_number(
+          compute_byte_aligned_num_of_bits_to_store_number(
               std::max(m_static_state_of_neural_tissue->num_cells_along_x_axis(),
                        std::max(m_static_state_of_neural_tissue->num_cells_along_y_axis(),
                                 m_static_state_of_neural_tissue->num_cells_along_columnar_axis()))
@@ -58,7 +48,7 @@ dynamic_state_of_neural_tissue::dynamic_state_of_neural_tissue(
     for (kind_of_cell kind = 0U; kind < m_static_state_of_neural_tissue->num_kinds_of_tissue_cells(); ++kind)
     {
         m_num_bits_per_delimiter_number.at(kind) =
-                compute_num_of_bits_to_store_natural_32_bit_number(
+                compute_byte_aligned_num_of_bits_to_store_number(
                         m_static_state_of_neural_tissue->num_synapses_in_territory_of_cell_kind(kind)
                         );
         checked_add_8_bit(checked_mul_8_bit(num_delimiters()-1U,m_num_bits_per_delimiter_number.at(kind)),7U);
@@ -370,7 +360,7 @@ natural_8_bit  dynamic_state_of_neural_tissue::num_bits_per_delimiter_number(kin
 
 natural_16_bit num_of_bits_to_store_territorial_state_of_synapse()
 {
-    return 3U; //compute_num_of_bits_to_store_natural_32_bit_number(6U);
+    return compute_byte_aligned_num_of_bits_to_store_number(6U);
 }
 
 natural_8_bit num_delimiters()
@@ -386,7 +376,7 @@ boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tiss
     ASSUMPTION(num_of_bits_to_store_territorial_state_of_synapse() > 0U);
 
     natural_8_bit const num_bits_per_source_cell_coordinate =
-          compute_num_of_bits_to_store_natural_32_bit_number(
+          compute_byte_aligned_num_of_bits_to_store_number(
               std::max(static_state_of_tissue.num_cells_along_x_axis(),
                        std::max(static_state_of_tissue.num_cells_along_y_axis(),
                                 static_state_of_tissue.num_cells_along_columnar_axis()))
@@ -456,7 +446,7 @@ boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tiss
                         );
         // slices of delimiters between teritorial lists
         natural_8_bit const num_bits_per_delimiter_number =
-                compute_num_of_bits_to_store_natural_32_bit_number(
+                compute_byte_aligned_num_of_bits_to_store_number(
                         static_state_of_tissue.num_synapses_in_territory_of_cell_kind(kind)
                         );
         checked_add_8_bit(checked_mul_8_bit(num_delimiters()-1U,num_bits_per_delimiter_number),7U);

@@ -531,9 +531,9 @@ void run()
     {
         for (natural_16_bit sensory_cell_kinds = 1U; sensory_cell_kinds < 3U; ++sensory_cell_kinds)
         {
-            natural_16_bit const num_bits_per_cell = 1U;
-            natural_16_bit const num_bits_per_synapse = 1U;
-            natural_16_bit const num_bits_per_signalling = 1U;
+            natural_16_bit const num_bits_per_cell = 8U;
+            natural_16_bit const num_bits_per_synapse = 8U;
+            natural_16_bit const num_bits_per_signalling = 8U;
 
             for (natural_32_bit cells_x = 1U; cells_x < 10000U; cells_x += 500U)
             {
