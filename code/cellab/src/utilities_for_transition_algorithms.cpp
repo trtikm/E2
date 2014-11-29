@@ -195,7 +195,8 @@ tissue_coordinates  get_coordinates_of_source_cell_of_synapse_in_tissue(
         natural_32_bit const index_of_synapse_in_territory
         )
 {
-    return convert_bits_of_coordinates_to_tissue_coordinates(
+    tissue_coordinates const  source_cell_coordinates =
+        convert_bits_of_coordinates_to_tissue_coordinates(
                 dynamic_state_of_tissue->find_bits_of_coords_of_source_cell_of_synapse_in_tissue(
                             coords_of_territorial_cell_of_synapse.get_coord_along_x_axis(),
                             coords_of_territorial_cell_of_synapse.get_coord_along_y_axis(),
@@ -203,6 +204,15 @@ tissue_coordinates  get_coordinates_of_source_cell_of_synapse_in_tissue(
                             index_of_synapse_in_territory
                             )
                 );
+    INVARIANT(source_cell_coordinates.get_coord_along_x_axis() <
+              dynamic_state_of_tissue->get_static_state_of_neural_tissue()->num_cells_along_x_axis());
+    INVARIANT(source_cell_coordinates.get_coord_along_y_axis() <
+              dynamic_state_of_tissue->get_static_state_of_neural_tissue()->num_cells_along_y_axis());
+    INVARIANT(source_cell_coordinates.get_coord_along_columnar_axis() <
+              dynamic_state_of_tissue->get_static_state_of_neural_tissue()->num_cells_along_columnar_axis() +
+              dynamic_state_of_tissue->get_static_state_of_neural_tissue()->num_sensory_cells());
+
+    return source_cell_coordinates;
 }
 
 tissue_coordinates  get_coordinates_of_source_cell_of_synapse_to_muscle(
@@ -210,11 +220,21 @@ tissue_coordinates  get_coordinates_of_source_cell_of_synapse_to_muscle(
         natural_32_bit const index_of_synapse_to_muscle
         )
 {
-    return convert_bits_of_coordinates_to_tissue_coordinates(
+    tissue_coordinates const  source_cell_coordinates =
+        convert_bits_of_coordinates_to_tissue_coordinates(
                 dynamic_state_of_tissue->find_bits_of_coords_of_source_cell_of_synapse_to_muscle(
                         index_of_synapse_to_muscle
                         )
                 );
+    INVARIANT(source_cell_coordinates.get_coord_along_x_axis() <
+              dynamic_state_of_tissue->get_static_state_of_neural_tissue()->num_cells_along_x_axis());
+    INVARIANT(source_cell_coordinates.get_coord_along_y_axis() <
+              dynamic_state_of_tissue->get_static_state_of_neural_tissue()->num_cells_along_y_axis());
+    INVARIANT(source_cell_coordinates.get_coord_along_columnar_axis() <
+              dynamic_state_of_tissue->get_static_state_of_neural_tissue()->num_cells_along_columnar_axis() +
+              dynamic_state_of_tissue->get_static_state_of_neural_tissue()->num_sensory_cells());
+
+    return source_cell_coordinates;
 }
 
 natural_32_bit  get_begin_index_of_territorial_list_of_cell(

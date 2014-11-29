@@ -11,8 +11,10 @@ natural_16_bit  num_bits_per_cell() noexcept { return 8U * sizeof(my_cell); }
 natural_16_bit  num_bits_per_synapse() noexcept { return 8U * sizeof(my_synapse); }
 natural_16_bit  num_bits_per_signalling() noexcept { return 8U * sizeof(my_signalling); }
 
-natural_32_bit  num_cells_along_x_axis() noexcept { return 101U; }
-natural_32_bit  num_cells_along_y_axis() noexcept { return 51U; }
+//natural_32_bit  num_cells_along_x_axis() noexcept { return 101U; }
+//natural_32_bit  num_cells_along_y_axis() noexcept { return 51U; }
+natural_32_bit  num_cells_along_x_axis() noexcept { return 21U; }
+natural_32_bit  num_cells_along_y_axis() noexcept { return 31U; }
 
 std::vector<natural_32_bit> const&  num_tissue_cells_of_cell_kind() noexcept {
     static std::vector<natural_32_bit> v = {8U,6U,4U};

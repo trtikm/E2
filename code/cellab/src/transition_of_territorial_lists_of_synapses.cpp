@@ -32,26 +32,28 @@ static void move_all_synapse_data_from_source_list_to_target_list(
     {
         natural_32_bit const next_list = source_list_index + 1U;
         natural_32_bit const target_index = boundaries_of_lists.at(next_list) - 1U;
-        swap_all_data_of_two_synapses(
-                dynamic_state_of_tissue,
-                cell_coordinates,
-                index_into_source_list,
-                cell_coordinates,
-                target_index
-                );
+        if (index_into_source_list != target_index)
+            swap_all_data_of_two_synapses(
+                    dynamic_state_of_tissue,
+                    cell_coordinates,
+                    index_into_source_list,
+                    cell_coordinates,
+                    target_index
+                    );
         index_into_source_list = target_index;
         boundaries_of_lists.at(next_list) = target_index;
     }
     for ( ; target_list_index < source_list_index; --source_list_index)
     {
         natural_32_bit const target_index = boundaries_of_lists.at(source_list_index);
-        swap_all_data_of_two_synapses(
-                dynamic_state_of_tissue,
-                cell_coordinates,
-                index_into_source_list,
-                cell_coordinates,
-                target_index
-                );
+        if (index_into_source_list != target_index)
+            swap_all_data_of_two_synapses(
+                    dynamic_state_of_tissue,
+                    cell_coordinates,
+                    index_into_source_list,
+                    cell_coordinates,
+                    target_index
+                    );
         index_into_source_list = target_index;
         boundaries_of_lists.at(source_list_index) = target_index + 1U;
     }

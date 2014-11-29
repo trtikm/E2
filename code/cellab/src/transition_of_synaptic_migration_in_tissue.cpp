@@ -59,6 +59,9 @@ static void  exchange_synapses_between_territorial_lists_of_cells_at_given_coord
         natural_8_bit const list_index_in_second_cell
         )
 {
+    if (coordinates_of_first_cell == coordinates_of_second_cell)
+        return;
+
     natural_32_bit const begin_index_of_first_list =
             get_begin_index_of_territorial_list_of_cell(
                     dynamic_state_of_tissue,
