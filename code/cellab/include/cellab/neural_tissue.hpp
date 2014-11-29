@@ -243,28 +243,24 @@ neural_tissue::neural_tissue(
                 class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
                 typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
                 >::get_function(this)
-            //private_internal_implementation_details::bind_transition_function_of_synapse_to_muscle(this,auto_binding)
             )
     , m_transition_function_of_packed_synapse_inside_tissue(
             private_internal_implementation_details::bind_transition_function_of_synapse_inside_tissue<
                 class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
                 typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
                 >::get_function(this)
-            //private_internal_implementation_details::bind_transition_function_of_synapse_inside_tissue(this,auto_binding)
             )
     , m_transition_function_of_packed_signalling(
             private_internal_implementation_details::bind_transition_function_of_signalling<
                 class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
                 typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
                 >::get_function(this)
-            //private_internal_implementation_details::bind_transition_function_of_signalling(this,auto_binding)
             )
     , m_transition_function_of_packed_cell(
             private_internal_implementation_details::bind_transition_function_of_cell<
                 class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
                 typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
                 >::get_function(this)
-            //private_internal_implementation_details::transition_function_of_cell(this,auto_binding)
             )
     , m_hash_code_of_class_for_cells(typeid(class_cell).hash_code())
     , m_hash_code_of_class_for_synapses(typeid(class_synapse).hash_code())
@@ -293,28 +289,24 @@ neural_tissue::neural_tissue(
                 class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
                 typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
                 >::get_function(this)
-            //private_internal_implementation_details::bind_transition_function_of_synapse_to_muscle(this,auto_binding)
             )
     , m_transition_function_of_packed_synapse_inside_tissue(
             private_internal_implementation_details::bind_transition_function_of_synapse_inside_tissue<
                 class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
                 typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
                 >::get_function(this)
-            //private_internal_implementation_details::bind_transition_function_of_synapse_inside_tissue(this,auto_binding)
             )
     , m_transition_function_of_packed_signalling(
             private_internal_implementation_details::bind_transition_function_of_signalling<
                 class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
                 typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
                 >::get_function(this)
-            //private_internal_implementation_details::bind_transition_function_of_signalling(this,auto_binding)
             )
     , m_transition_function_of_packed_cell(
             private_internal_implementation_details::bind_transition_function_of_cell<
                 class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
                 typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
                 >::get_function(this)
-            //private_internal_implementation_details::transition_function_of_cell(this,auto_binding)
             )
     , m_hash_code_of_class_for_cells(typeid(class_cell).hash_code())
     , m_hash_code_of_class_for_synapses(typeid(class_synapse).hash_code())
@@ -341,28 +333,24 @@ neural_tissue::neural_tissue(
                 class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
                 typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
                 >::get_function(this)
-            //private_internal_implementation_details::bind_transition_function_of_synapse_to_muscle(this,auto_binding)
             )
     , m_transition_function_of_packed_synapse_inside_tissue(
             private_internal_implementation_details::bind_transition_function_of_synapse_inside_tissue<
                 class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
                 typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
                 >::get_function(this)
-            //private_internal_implementation_details::bind_transition_function_of_synapse_inside_tissue(this,auto_binding)
             )
     , m_transition_function_of_packed_signalling(
             private_internal_implementation_details::bind_transition_function_of_signalling<
                 class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
                 typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
                 >::get_function(this)
-            //private_internal_implementation_details::bind_transition_function_of_signalling(this,auto_binding)
             )
     , m_transition_function_of_packed_cell(
             private_internal_implementation_details::bind_transition_function_of_cell<
                 class_derived_from_neural_tissue,class_cell,class_synapse,class_signalling,
                 typename std::conditional<auto_binding.use_bits_references,std::true_type,std::false_type>::type
                 >::get_function(this)
-            //private_internal_implementation_details::transition_function_of_cell(this,auto_binding)
             )
     , m_hash_code_of_class_for_cells(typeid(class_cell).hash_code())
     , m_hash_code_of_class_for_synapses(typeid(class_synapse).hash_code())

@@ -65,11 +65,19 @@ static void test_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tissue> 
         TEST_SUCCESS(sensory_cell_counter == my_cell(dynamic_tissue->find_bits_of_sensory_cell(i)).count());
     for (natural_32_bit i = 0U; i < static_tissue->num_synapses_to_muscles(); ++i)
         TEST_SUCCESS(synapse_to_muscle_counter == my_synapse(dynamic_tissue->find_bits_of_synapse_to_muscle(i)).count());
+
+    for (natural_32_bit s = 0U; s < static_tissue->num_sensory_cells(); ++s)
+    {
+        my_cell const  sensory_cell(dynamic_tissue->find_bits_of_sensory_cell(s));
+        TEST_SUCCESS(sensory_cell_counter == sensory_cell.count());
+    }
 }
 
 
 
-static void initialse_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tissue> dynamic_tissue)
+static void initialse_tissue_and_sensory_cells(
+        std::shared_ptr<cellab::dynamic_state_of_neural_tissue> dynamic_tissue
+        )
 {
     std::shared_ptr<cellab::static_state_of_neural_tissue const>  static_tissue =
             dynamic_tissue->get_static_state_of_neural_tissue();
@@ -101,7 +109,8 @@ static void initialse_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tis
                             get_random_natural_32_bit_in_range(0U,static_tissue->num_cells_along_y_axis()-1U),
                             bits_of_coords,num_bits,num_bits);
                     value_to_bits(
-                            get_random_natural_32_bit_in_range(0U,static_tissue->num_cells_along_columnar_axis()/*+static_tissue->num_sensory_cells()*/-1U),
+                            get_random_natural_32_bit_in_range(0U,static_tissue->num_cells_along_columnar_axis()+
+                                                                  static_tissue->num_sensory_cells()-1U),
                             bits_of_coords,num_bits+num_bits,num_bits);
 
                     natural_8_bit const d0 =
@@ -135,6 +144,10 @@ static void initialse_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tis
                 bits_of_coords,num_bits+num_bits,num_bits);
     }
 
+    for (natural_32_bit s = 0U; s < static_tissue->num_sensory_cells(); ++s)
+        value_to_bits(0U,dynamic_tissue->find_bits_of_sensory_cell(s));
+
+
     test_tissue(dynamic_tissue,0U,0U,0U,0U,0U,false);
 }
 
@@ -149,48 +162,62 @@ static void test_algorithms(std::shared_ptr<cellab::neural_tissue> const neural_
 {
     std::shared_ptr<cellab::dynamic_state_of_neural_tissue>  dynamic_tissue =
             neural_tissue_ptr->get_dynamic_state_of_neural_tissue();
-    for (natural_32_bit i = 0U; i < 50U; ++i)
+    for (natural_32_bit i = 0U; i < 5U; ++i)
     {
-std::cout << "-1-\n";
         neural_tissue_ptr->apply_transition_of_synapses_to_muscles(num_avalilable_threads);
         TEST_PROGRESS_UPDATE();
 
         test_tissue(dynamic_tissue,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,++synapse_to_muscle_counter,false);
         TEST_PROGRESS_UPDATE();
 
-std::cout << "-2-\n";
+
         neural_tissue_ptr->apply_transition_of_synapses_of_tissue(num_avalilable_threads);
         TEST_PROGRESS_UPDATE();
 
         test_tissue(dynamic_tissue,cell_counter,++synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter,false);
         TEST_PROGRESS_UPDATE();
 
-std::cout << "-3-\n";
+
         neural_tissue_ptr->apply_transition_of_territorial_lists_of_synapses(num_avalilable_threads);
         TEST_PROGRESS_UPDATE();
 
         test_tissue(dynamic_tissue,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter,true);
         TEST_PROGRESS_UPDATE();
 
-std::cout << "-4-\n";
+
         neural_tissue_ptr->apply_transition_of_synaptic_migration_in_tissue(num_avalilable_threads);
         TEST_PROGRESS_UPDATE();
 
         test_tissue(dynamic_tissue,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter,false);
         TEST_PROGRESS_UPDATE();
 
-std::cout << "-5-\n";
+
         neural_tissue_ptr->apply_transition_of_signalling_in_tissue(num_avalilable_threads);
         TEST_PROGRESS_UPDATE();
 
         test_tissue(dynamic_tissue,cell_counter,synapse_counter,++signalling_counter,sensory_cell_counter,synapse_to_muscle_counter,false);
         TEST_PROGRESS_UPDATE();
 
-std::cout << "-6-\n";
+
         neural_tissue_ptr->apply_transition_of_cells_of_tissue(num_avalilable_threads);
         TEST_PROGRESS_UPDATE();
 
         test_tissue(dynamic_tissue,++cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter,false);
+        TEST_PROGRESS_UPDATE();
+
+
+        for (natural_32_bit s = 0U;
+             s < dynamic_tissue->get_static_state_of_neural_tissue()->num_sensory_cells();
+             ++s)
+        {
+            bits_reference  bits_of_sensory_cell = dynamic_tissue->find_bits_of_sensory_cell(s);
+            my_cell  sensory_cell(bits_of_sensory_cell);
+            sensory_cell.increment();
+            sensory_cell >> bits_of_sensory_cell;
+        }
+        TEST_PROGRESS_UPDATE();
+
+        test_tissue(dynamic_tissue,cell_counter,synapse_counter,signalling_counter,++sensory_cell_counter,synapse_to_muscle_counter,false);
         TEST_PROGRESS_UPDATE();
     }
 }
@@ -198,14 +225,14 @@ std::cout << "-6-\n";
 
 static void  test_tissue(std::shared_ptr<cellab::neural_tissue> const neural_tissue_ptr)
 {
-    initialse_tissue(neural_tissue_ptr->get_dynamic_state_of_neural_tissue() );
+    initialse_tissue_and_sensory_cells(neural_tissue_ptr->get_dynamic_state_of_neural_tissue() );
     natural_32_bit cell_counter = 0U;
     natural_32_bit synapse_counter = 0U;
     natural_32_bit signalling_counter = 0U;
     natural_32_bit sensory_cell_counter = 0U;
     natural_32_bit synapse_to_muscle_counter = 0U;
-    //test_algorithms(neural_tissue_ptr,32U,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter);
     test_algorithms(neural_tissue_ptr,64U,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter);
+    test_algorithms(neural_tissue_ptr,128U,cell_counter,synapse_counter,signalling_counter,sensory_cell_counter,synapse_to_muscle_counter);
 }
 
 
@@ -215,7 +242,7 @@ void run()
 
     TEST_PROGRESS_SHOW();
 
-    //test_tissue( std::shared_ptr<cellab::neural_tissue>(new my_neural_tissue()) );
+    test_tissue( std::shared_ptr<cellab::neural_tissue>(new my_neural_tissue()) );
 
     {
         std::shared_ptr<cellab::static_state_of_neural_tissue const> static_tissue =
@@ -247,7 +274,7 @@ void run()
                           )
                     );
 
-        //test_tissue( std::shared_ptr<cellab::neural_tissue>(new my_neural_tissue(static_tissue)) );
+        test_tissue( std::shared_ptr<cellab::neural_tissue>(new my_neural_tissue(static_tissue)) );
 
         {
             std::shared_ptr<cellab::dynamic_state_of_neural_tissue> dynamic_tissue =
@@ -255,7 +282,7 @@ void run()
                         new cellab::dynamic_state_of_neural_tissue(static_tissue)
                         );
 
-            //test_tissue( std::shared_ptr<cellab::neural_tissue>(new my_neural_tissue(dynamic_tissue)) );
+            test_tissue( std::shared_ptr<cellab::neural_tissue>(new my_neural_tissue(dynamic_tissue)) );
             test_tissue( std::shared_ptr<cellab::neural_tissue>(new my_neural_tissue(dynamic_tissue,true)) );
         }
     }
