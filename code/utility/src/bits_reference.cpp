@@ -131,7 +131,7 @@ static void bits_to_value(
                 )
             );
 
-    if (is_this_big_endian_machine())
+    if (is_this_little_endian_machine())
         std::reverse(
             target_memory,
             target_memory + sizeof(variable_where_the_value_will_be_stored)
@@ -152,7 +152,7 @@ static void value_to_bits(
         &variable_where_the_value_is_stored
         );
 
-    if (is_this_big_endian_machine())
+    if (is_this_little_endian_machine())
         std::reverse(
             source_memory,
             source_memory + sizeof(variable_where_the_value_is_stored)

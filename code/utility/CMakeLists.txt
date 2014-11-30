@@ -16,7 +16,6 @@ add_library(utility
 
     ./include/utility/development.hpp
 
-    ./src/endian.cpp
     ./include/utility/endian.hpp
 
     ./src/fail_message.cpp
