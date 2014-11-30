@@ -61,16 +61,10 @@ static void test_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tissue> 
                     }
                 }
             }
-    for (natural_32_bit i = 0U; i < static_tissue->num_sensory_cells(); ++i)
-        TEST_SUCCESS(sensory_cell_counter == my_cell(dynamic_tissue->find_bits_of_sensory_cell(i)).count());
     for (natural_32_bit i = 0U; i < static_tissue->num_synapses_to_muscles(); ++i)
         TEST_SUCCESS(synapse_to_muscle_counter == my_synapse(dynamic_tissue->find_bits_of_synapse_to_muscle(i)).count());
-
-    for (natural_32_bit s = 0U; s < static_tissue->num_sensory_cells(); ++s)
-    {
-        my_cell const  sensory_cell(dynamic_tissue->find_bits_of_sensory_cell(s));
-        TEST_SUCCESS(sensory_cell_counter == sensory_cell.count());
-    }
+    for (natural_32_bit i = 0U; i < static_tissue->num_sensory_cells(); ++i)
+        TEST_SUCCESS(sensory_cell_counter == my_cell(dynamic_tissue->find_bits_of_sensory_cell(i)).count());
 }
 
 
@@ -123,9 +117,6 @@ static void initialse_tissue_and_sensory_cells(
                 }
             }
 
-    for (natural_32_bit i = 0U; i < static_tissue->num_sensory_cells(); ++i)
-        value_to_bits(0U,dynamic_tissue->find_bits_of_sensory_cell(i));
-
     for (natural_32_bit i = 0U; i < static_tissue->num_synapses_to_muscles(); ++i)
     {
         value_to_bits(0U,dynamic_tissue->find_bits_of_synapse_to_muscle(i));
@@ -144,9 +135,8 @@ static void initialse_tissue_and_sensory_cells(
                 bits_of_coords,num_bits+num_bits,num_bits);
     }
 
-    for (natural_32_bit s = 0U; s < static_tissue->num_sensory_cells(); ++s)
-        value_to_bits(0U,dynamic_tissue->find_bits_of_sensory_cell(s));
-
+    for (natural_32_bit i = 0U; i < static_tissue->num_sensory_cells(); ++i)
+        value_to_bits(0U,dynamic_tissue->find_bits_of_sensory_cell(i));
 
     test_tissue(dynamic_tissue,0U,0U,0U,0U,0U,false);
 }

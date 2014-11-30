@@ -2,6 +2,7 @@
 #include <utility/development.hpp>
 #include <utility/test.hpp>
 #include <utility/random.hpp>
+#include <vector>
 
 
 natural_16_bit  num_kinds_of_tissue_cells() noexcept { return 3U; }
