@@ -3,6 +3,9 @@ message("Including the following E2 tests to the build:")
 add_subdirectory(./unsigned_integer_wrap_operations)
     message("-- unsigned_integer_wrap_operations")
 
+add_subdirectory(./tmprof_thread_safety)
+    message("-- tmprof_thread_safety")
+
 add_subdirectory(./bits_reference_operations)
     message("-- bits_reference_operations")
 
