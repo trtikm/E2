@@ -4,6 +4,7 @@
 #   include <utility/config.hpp>
 #   include <iosfwd>
 #   include <string>
+#   include <vector>
 
 #   if !((BUILD_DEBUG() == 1 && defined(DEBUG_DISABLE_TIME_PROFILING)) ||      \
          (BUILD_RELEASE() == 1 && defined(RELEASE_DISABLE_TIME_PROFILING)))
@@ -38,6 +39,25 @@ namespace tmprof {
 
     void write(std::string const& filePathName);
     std::ostream& write(std::ostream& os);
+
+    struct RecordReader
+    {
+        explicit RecordReader(Record const* const rec);
+        unsigned int totalExecutions() const;
+        double totalDuration() const;
+        double maxDuration() const;
+        std::string fileName() const;
+        int line() const;
+        std::string functionName() const;
+    private:
+        Record const* mRecord;
+    };
+
+    typedef std::vector<RecordReader> RecordReaders;
+
+    void write(RecordReaders& v);
+
+    double getTotalProfilingTime();
 
 }
 

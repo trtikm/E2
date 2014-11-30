@@ -378,4 +378,51 @@ namespace tmprof {
         write(file);
     }
 
+    RecordReader::RecordReader(Record const* const rec)
+        : mRecord(rec)
+    {}
+
+    unsigned int RecordReader::totalExecutions() const
+    {
+        return mRecord->totalExecutions();
+    }
+
+    double RecordReader::totalDuration() const
+    {
+        return boost::chrono::duration<double>(mRecord->totalDuration()).count();
+    }
+
+    double RecordReader::maxDuration() const
+    {
+        return boost::chrono::duration<double>(mRecord->maxDuration()).count();
+    }
+
+    std::string RecordReader::fileName() const
+    {
+        return mRecord->fileName();
+    }
+
+    int RecordReader::line() const
+    {
+        return mRecord->line();
+    }
+
+    std::string RecordReader::functionName() const
+    {
+        return mRecord->functionName();
+    }
+
+    void write(RecordReaders& v)
+    {
+        for (auto it = records().begin(); it != records().end(); ++it)
+            v.push_back(RecordReader(&*it));
+    }
+
+    double getTotalProfilingTime()
+    {
+        return boost::chrono::duration<double>(
+                    Record::Duration(boost::chrono::system_clock::now() - startTimePoint())
+                    ).count();
+    }
+
 }
