@@ -65,8 +65,8 @@ void run()
     natural_32_bit counter = 0U;
     for (natural_32_bit i = 0U; i < 5U; ++i)
     {
-        test_round(loop,12U,20U,counter);
-        test_round(loop,23U,41U,counter);
+        test_round(loop,20U,12U,counter);
+        test_round(loop,41U,23U,counter);
         test_round(loop,64U,64U,counter);
     }
 

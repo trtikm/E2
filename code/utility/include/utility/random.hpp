@@ -1,5 +1,5 @@
-#ifndef UTILITY_ENDIAN_HPP_INCLUDED
-#   define UTILITY_ENDIAN_HPP_INCLUDED
+#ifndef UTILITY_RANDOM_HPP_INCLUDED
+#   define UTILITY_RANDOM_HPP_INCLUDED
 
 #   include <utility/basic_numeric_types.hpp>
 

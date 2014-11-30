@@ -9,6 +9,7 @@
 #include <vector>
 #include <thread>
 
+
 static void wait_milliseconds(natural_32_bit const num_millisecond)
 {
     double const  max_duration = num_millisecond / 1000.0;
@@ -18,21 +19,22 @@ static void wait_milliseconds(natural_32_bit const num_millisecond)
     {}
 }
 
-
 static void  thread_update_sensory_cells(
-        efloop::access_to_sensory_cells const&  access_to_sensory_cells,
+        efloop::access_to_sensory_cells&  access_to_sensory_cells,
         efloop::access_to_synapses_to_muscles const&  access_to_synapses_to_muscles,
         natural_32_bit  cell_index,
         natural_32_bit const  shift_to_next_cell
         )
 {
-    wait_milliseconds(get_random_natural_32_bit_in_range(0U,1000U));
+    if (get_random_natural_32_bit_in_range(0U,10U) < 3U)
+        wait_milliseconds(get_random_natural_32_bit_in_range(0U,1000U));
 
     for ( ; cell_index < access_to_sensory_cells.num_sensory_cells(); cell_index += shift_to_next_cell)
     {
         instance_wrapper<my_cell> cell;
         access_to_sensory_cells.read_sensory_cell(cell_index,cell);
         cell->increment();
+        access_to_sensory_cells.write_sensory_cell(cell_index,cell);
 
         for (natural_32_bit i = 0, n = get_random_natural_32_bit_in_range(0U,10U); i < n; ++i)
         {
@@ -45,9 +47,8 @@ static void  thread_update_sensory_cells(
     }
 }
 
-
 void my_environment::compute_next_state(
-        efloop::access_to_sensory_cells const&  access_to_sensory_cells,
+        efloop::access_to_sensory_cells&  access_to_sensory_cells,
         efloop::access_to_synapses_to_muscles const&  access_to_synapses_to_muscles,
         natural_32_bit const  num_threads_avalilable_for_computation
         )
@@ -57,7 +58,7 @@ void my_environment::compute_next_state(
         threads.push_back(
                     std::thread(
                         &thread_update_sensory_cells,
-                        std::cref(access_to_sensory_cells),
+                        std::ref(access_to_sensory_cells),
                         std::cref(access_to_synapses_to_muscles),
                         i,
                         num_threads_avalilable_for_computation
