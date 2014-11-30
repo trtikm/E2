@@ -10,13 +10,8 @@ add_executable(${THIS_TARGET_NAME}
     main.cpp
     run.cpp
 
-    my_cell.cpp
     my_cell.hpp
-
-    my_synapse.cpp
     my_synapse.hpp
-
-    my_signalling.cpp
     my_signalling.hpp
 
     my_neural_tissue.cpp
