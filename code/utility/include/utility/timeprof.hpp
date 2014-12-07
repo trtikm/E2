@@ -1,64 +1,102 @@
 #ifndef UTILITY_TIMEPROF_HPP_INCLUDED
 #   define UTILITY_TIMEPROF_HPP_INCLUDED
 
+#   include <utility/basic_numeric_types.hpp>
 #   include <utility/config.hpp>
+#   include <boost/chrono.hpp>
 #   include <iosfwd>
 #   include <string>
 #   include <vector>
 
-#   if !((BUILD_DEBUG() == 1 && defined(DEBUG_DISABLE_TIME_PROFILING)) ||      \
+#   if !((BUILD_DEBUG() == 1 && defined(DEBUG_DISABLE_TIME_PROFILING)) ||           \
          (BUILD_RELEASE() == 1 && defined(RELEASE_DISABLE_TIME_PROFILING)))
-#       define TMPROF_BLOCK()                                                  \
-            static tmprof::Record* const ___tmprof__Record__pointer__ =        \
-                tmprof::getNewRecordPtr(__FILE__,__LINE__,__FUNCTION__);       \
-            tmprof::MeasurementSignalsGenerator const                          \
-                ___tmprof__MeasurementSignalsGenerator__(                      \
-                    ___tmprof__Record__pointer__);
-#       define TMPROF_WRITE_TO_FILE(fname) tmprof::write(fname);
-#       define TMPROF_WRITE_TO_STREAM(stream) tmprof::write(stream);
+#       define TMPROF_BLOCK()                                                       \
+            static ::tmprof_internal_private_implementation_details::Record* const  \
+                ___tmprof__Record__pointer__ =                                      \
+                ::tmprof_internal_private_implementation_details::                  \
+                    create_new_record_for_block(__FILE__,__LINE__,__FUNCTION__);    \
+            ::tmprof_internal_private_implementation_details::block_stop_watches    \
+                const  ___tmprof__stop_watches__ ( ___tmprof__Record__pointer__ );
+#       define TMPROF_PRINT_TO_STREAM(stream) print_time_profile_to_stream(stream);
+#       define TMPROF_PRINT_TO_FILE(fname) print_time_profile_to_file(fname);
 #   else
 #       define TMPROF_BLOCK()
-#       define TMPROF_WRITE_TO_FILE(stream)
-#       define TMPROF_WRITE_TO_STREAM(stream)
+#       define TMPROF_PRINT_TO_STREAM(stream)
+#       define TMPROF_PRINT_TO_FILE(stream)
 #   endif
 
-namespace tmprof {
 
-    struct Record;
+namespace tmprof_internal_private_implementation_details {
 
-    struct MeasurementSignalsGenerator
-    {
-        explicit MeasurementSignalsGenerator(Record* const r);
-        ~MeasurementSignalsGenerator();
-    private:
-        Record* mRecord;
-    };
 
-    Record* getNewRecordPtr(char const* const file, int const line,
-                            char const* const func);
+struct Record;
 
-    void write(std::string const& filePathName);
-    std::ostream& write(std::ostream& os);
+Record*  create_new_record_for_block(char const* const file, int const line,
+                                     char const* const func);
 
-    struct RecordReader
-    {
-        explicit RecordReader(Record const* const rec);
-        unsigned int totalExecutions() const;
-        double totalDuration() const;
-        double maxDuration() const;
-        std::string fileName() const;
-        int line() const;
-        std::string functionName() const;
-    private:
-        Record const* mRecord;
-    };
 
-    typedef std::vector<RecordReader> RecordReaders;
+struct block_stop_watches
+{
+    explicit block_stop_watches(Record* const  storage_for_results);
+    ~block_stop_watches();
+private:
+    Record*  m_storage_for_results;
+    boost::chrono::system_clock::time_point  m_start_time;
+};
 
-    void write(RecordReaders& v);
-
-    double getTotalProfilingTime();
 
 }
+
+
+struct time_profile_data_of_block
+{
+    explicit time_profile_data_of_block(
+            natural_64_bit  num_executions,
+            float_64_bit  summary_duration,
+            float_64_bit  longest_duration,
+            std::string  file_name,
+            natural_32_bit  line,
+            std::string  function_name
+            );
+
+    natural_64_bit  number_of_executions() const;
+    float_64_bit  summary_duration_of_all_executions_in_seconds() const;
+    float_64_bit  duration_of_longest_execution_in_seconds() const;
+
+    std::string const&  file_name() const;
+    natural_32_bit  line() const;
+    std::string const&  function_name() const;
+
+private:
+    natural_64_bit  m_num_executions;
+    float_64_bit  m_summary_duration;
+    float_64_bit  m_longest_duration;
+    std::string  m_file_name;
+    natural_32_bit  m_line;
+    std::string  m_function_name;
+};
+
+
+void copy_time_profile_data_of_all_measured_blocks_into_vector(
+        std::vector<time_profile_data_of_block>& storage_for_the_copy_of_data
+        );
+
+float_64_bit  compute_summary_duration_of_all_executions_of_all_blocks_in_seconds(
+        std::vector<time_profile_data_of_block> const& collected_profile_data
+        );
+
+boost::chrono::system_clock::time_point  get_time_profiling_start_time_point();
+
+float_64_bit  get_total_time_profiling_time_in_seconds();
+
+std::ostream& print_time_profile_data_to_stream(
+        std::ostream& os,
+        std::vector<time_profile_data_of_block> const& data
+        );
+
+std::ostream& print_time_profile_to_stream(std::ostream& os);
+
+void print_time_profile_to_file(std::string const& file_path_name);
+
 
 #endif

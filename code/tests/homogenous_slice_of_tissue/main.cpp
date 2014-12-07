@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
         else
         {
             run();
-            TMPROF_WRITE_TO_FILE(get_program_name() + "_TMPROF.txt");
+            TMPROF_PRINT_TO_FILE(get_program_name() + "_TMPROF.txt");
         }
 
     }
