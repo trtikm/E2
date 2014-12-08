@@ -1,4 +1,5 @@
 #include <utility/log.hpp>
+#include <utility/timestamp.hpp>
 #include <utility/assumptions.hpp>
 #include <boost/log/utility/setup/file.hpp>
 #include <boost/log/attributes/clock.hpp>
@@ -64,30 +65,6 @@ std::string const& logging_severity_level_name(logging_severity_level const leve
     return level_names.at(static_cast<unsigned int>(level));
 }
 
-static std::string get_timestamp()
-{
-    std::time_t t = boost::chrono::system_clock::to_time_t(boost::chrono::system_clock::now());
-    std::tm* const ptm = std::localtime(&t);
-    std::stringstream sstr;
-    sstr << "--"
-         << ptm->tm_year + 1900 << "-"
-         << ptm->tm_mon << "-"
-         << ptm->tm_mday << "--"
-         << ptm->tm_hour << "-"
-         << ptm->tm_min << "-"
-         << ptm->tm_sec
-         ;
-    return sstr.str();
-}
-
-static std::string filename_with_timestamp(boost::filesystem::path const& log_file_name)
-{
-    boost::filesystem::path path = log_file_name.branch_path();
-    boost::filesystem::path name = log_file_name.filename().replace_extension("");
-    boost::filesystem::path ext = log_file_name.extension();
-    return (path / (name.string() + get_timestamp() + ext.string())).string();
-}
-
 logging_setup_caller::logging_setup_caller(std::string const& log_file_name,
                                            bool const add_creation_timestamp_to_filename,
                                            bool const add_default_file_extension,
@@ -97,7 +74,7 @@ logging_setup_caller::logging_setup_caller(std::string const& log_file_name,
                                              bool const add_default_file_extension)
         {
             std::string const file_name = log_file_name + (add_default_file_extension ? ".html" : "");
-            return add_creation_timestamp_to_filename ? filename_with_timestamp(file_name) : file_name;
+            return add_creation_timestamp_to_filename ? extend_file_path_name_by_timestamp(file_name) : file_name;
         }(log_file_name,add_creation_timestamp_to_filename,add_default_file_extension)
         )
 {

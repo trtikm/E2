@@ -26,6 +26,9 @@ add_library(utility
     ./src/log.cpp
     ./include/utility/log.hpp
 
+    ./src/timestamp.cpp
+    ./include/utility/timestamp.hpp
+
     ./src/timeprof.cpp
     ./include/utility/timeprof.hpp
 

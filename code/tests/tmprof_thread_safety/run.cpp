@@ -13,7 +13,7 @@ natural_64_bit  sum_number_non_recursive(natural_64_bit const number)
 {
     TMPROF_BLOCK();
 
-    std::this_thread::sleep_for( std::chrono::milliseconds(25));
+//    std::this_thread::sleep_for( std::chrono::milliseconds(25));
 
     natural_64_bit  result = 0ULL;
     for (natural_64_bit  value = 1ULL; value < number; ++value)
