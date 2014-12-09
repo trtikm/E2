@@ -53,16 +53,20 @@ struct time_profile_data_of_block
 {
     explicit time_profile_data_of_block(
             natural_64_bit  num_executions,
+            float_64_bit  genuine_duration,
             float_64_bit  summary_duration,
             float_64_bit  longest_duration,
+            natural_32_bit  num_running_executions,
             std::string  file_name,
             natural_32_bit  line,
             std::string  function_name
             );
 
     natural_64_bit  number_of_executions() const;
+    float_64_bit  genuine_duration_of_all_executions_in_seconds() const;
     float_64_bit  summary_duration_of_all_executions_in_seconds() const;
     float_64_bit  duration_of_longest_execution_in_seconds() const;
+    natural_32_bit  num_running_executions() const;
 
     std::string const&  file_name() const;
     natural_32_bit  line() const;
@@ -70,8 +74,10 @@ struct time_profile_data_of_block
 
 private:
     natural_64_bit  m_num_executions;
+    float_64_bit  m_genuine_duration;
     float_64_bit  m_summary_duration;
     float_64_bit  m_longest_duration;
+    natural_32_bit  m_num_running_executions;
     std::string  m_file_name;
     natural_32_bit  m_line;
     std::string  m_function_name;
@@ -79,7 +85,12 @@ private:
 
 
 void copy_time_profile_data_of_all_measured_blocks_into_vector(
-        std::vector<time_profile_data_of_block>& storage_for_the_copy_of_data
+        std::vector<time_profile_data_of_block>& storage_for_the_copy_of_data,
+        bool const  sort_data = true
+        );
+
+float_64_bit  compute_genuine_duration_of_all_executions_of_all_blocks_in_seconds(
+        std::vector<time_profile_data_of_block> const& collected_profile_data
         );
 
 float_64_bit  compute_summary_duration_of_all_executions_of_all_blocks_in_seconds(
@@ -87,8 +98,6 @@ float_64_bit  compute_summary_duration_of_all_executions_of_all_blocks_in_second
         );
 
 boost::chrono::system_clock::time_point  get_time_profiling_start_time_point();
-
-float_64_bit  get_total_time_profiling_time_in_seconds();
 
 std::ostream& print_time_profile_data_to_stream(
         std::ostream& os,

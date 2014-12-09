@@ -13,7 +13,7 @@ natural_64_bit  sum_number_non_recursive(natural_64_bit const number)
 {
     TMPROF_BLOCK();
 
-//    std::this_thread::sleep_for( std::chrono::milliseconds(25));
+    std::this_thread::sleep_for( std::chrono::milliseconds(5));
 
     natural_64_bit  result = 0ULL;
     for (natural_64_bit  value = 1ULL; value < number; ++value)
@@ -25,7 +25,7 @@ natural_64_bit  some_computation_non_recursive(natural_64_bit const number)
 {
     TMPROF_BLOCK();
 
-    std::this_thread::sleep_for( std::chrono::milliseconds(25));
+    std::this_thread::sleep_for( std::chrono::milliseconds(5));
 
     natural_64_bit  result = 0ULL;
     for (natural_64_bit  value = 1ULL; value < number; ++value)
@@ -39,6 +39,8 @@ natural_64_bit  sum_number(natural_64_bit const number)
 {
     TMPROF_BLOCK();
 
+    std::this_thread::sleep_for( std::chrono::milliseconds(2));
+
     if (number == 0ULL)
         return number;
     natural_64_bit  const value = number + sum_number(number - 1ULL);
@@ -48,6 +50,8 @@ natural_64_bit  sum_number(natural_64_bit const number)
 natural_64_bit  some_computation(natural_64_bit const number)
 {
     TMPROF_BLOCK();
+
+    std::this_thread::sleep_for( std::chrono::milliseconds(2));
 
     if (number == 0ULL)
         return number;
@@ -63,21 +67,21 @@ void thread_computation(natural_64_bit const number)
     natural_64_bit volatile result = 0ULL;
 
     {
-//        TMPROF_BLOCK();
+        TMPROF_BLOCK();
         result += sum_number_non_recursive(number);
     }
     {
-//        TMPROF_BLOCK();
+        TMPROF_BLOCK();
         result += some_computation_non_recursive(number);
     }
 
     {
-//        TMPROF_BLOCK();
-        //result += sum_number(number);
+        TMPROF_BLOCK();
+        result += sum_number(number);
     }
     {
-//        TMPROF_BLOCK();
-        //result += some_computation(number);
+        TMPROF_BLOCK();
+        result += some_computation(number);
     }
 
     TEST_PROGRESS_UPDATE();

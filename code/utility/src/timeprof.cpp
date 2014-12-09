@@ -189,8 +189,10 @@ void time_profile_statistics::copy_time_profile_data(std::vector<time_profile_da
         storage.push_back(
                     time_profile_data_of_block(
                             it->number_of_executions(),
+                            it->genuine_duration(),
                             it->summary_duration(),
                             it->duration_of_longest_execution(),
+                            it->num_running_executions(),
                             it->file_name(),
                             it->line(),
                             it->function_name()
@@ -213,15 +215,19 @@ Record* create_new_record_for_block(char const* const file, int const line, char
 
 time_profile_data_of_block::time_profile_data_of_block(
         natural_64_bit  num_executions,
+        float_64_bit  genuine_duration,
         float_64_bit  summary_duration,
         float_64_bit  longest_duration,
+        natural_32_bit  num_running_executions,
         std::string  file_name,
         natural_32_bit  line,
         std::string  function_name
         )
     : m_num_executions(num_executions)
+    , m_genuine_duration(genuine_duration)
     , m_summary_duration(summary_duration)
     , m_longest_duration(longest_duration)
+    , m_num_running_executions(num_running_executions)
     , m_file_name(file_name)
     , m_line(line)
     , m_function_name(function_name)
@@ -232,6 +238,11 @@ natural_64_bit  time_profile_data_of_block::number_of_executions() const
     return m_num_executions;
 }
 
+float_64_bit  time_profile_data_of_block::genuine_duration_of_all_executions_in_seconds() const
+{
+    return m_genuine_duration;
+}
+
 float_64_bit  time_profile_data_of_block::summary_duration_of_all_executions_in_seconds() const
 {
     return m_summary_duration;
@@ -240,6 +251,11 @@ float_64_bit  time_profile_data_of_block::summary_duration_of_all_executions_in_
 float_64_bit  time_profile_data_of_block::duration_of_longest_execution_in_seconds() const
 {
     return m_longest_duration;
+}
+
+natural_32_bit  time_profile_data_of_block::num_running_executions() const
+{
+    return m_num_running_executions;
 }
 
 std::string const&  time_profile_data_of_block::file_name() const
@@ -264,10 +280,31 @@ using ::tmprof_internal_private_implementation_details::statistics;
 
 
 void copy_time_profile_data_of_all_measured_blocks_into_vector(
-        std::vector<time_profile_data_of_block>& storage_for_the_copy_of_data
+        std::vector<time_profile_data_of_block>& storage_for_the_copy_of_data,
+        bool const  sort_data
         )
 {
+    struct local {
+        static bool first_is_slower(time_profile_data_of_block const& first,
+                                    time_profile_data_of_block const& second)
+        {
+            return first.genuine_duration_of_all_executions_in_seconds() >
+                   second.genuine_duration_of_all_executions_in_seconds() ;
+        }
+    };
     statistics.copy_time_profile_data(storage_for_the_copy_of_data);
+    if (sort_data)
+        std::sort(storage_for_the_copy_of_data.begin(),storage_for_the_copy_of_data.end(),
+                  &local::first_is_slower);
+}
+
+float_64_bit  compute_genuine_duration_of_all_executions_of_all_blocks_in_seconds(
+        std::vector<time_profile_data_of_block> const& collected_profile_data)
+{
+    float_64_bit  result = 0.0;
+    for (auto it = collected_profile_data.begin(); it != collected_profile_data.end(); ++it)
+        result += it->genuine_duration_of_all_executions_in_seconds();
+    return result;
 }
 
 float_64_bit  compute_summary_duration_of_all_executions_of_all_blocks_in_seconds(
@@ -284,13 +321,6 @@ boost::chrono::system_clock::time_point  get_time_profiling_start_time_point()
     return statistics.start_time();
 }
 
-float_64_bit  get_total_time_profiling_time_in_seconds()
-{
-    return boost::chrono::duration<float_64_bit>(
-                boost::chrono::system_clock::now() - get_time_profiling_start_time_point()
-                ).count();
-}
-
 
 namespace tmprof_internal_private_implementation_details {
 
@@ -304,14 +334,6 @@ static std::string normalise_duration(float_64_bit const d, natural_32_bit const
     std::stringstream sstr;
     sstr << std::setprecision(prec) << std::fixed << dur;
     return sstr.str();
-}
-
-static std::string normalise_divided_duration(float_64_bit const d,
-                                              float_64_bit const divider = 1.0,
-                                              natural_32_bit const prec = 3)
-{
-    float_64_bit const dur = d / (divider < 0.0001 ? 0.0001 : divider);
-    return normalise_duration(dur,prec);
 }
 
 static boost::filesystem::path get_common_prefix(boost::filesystem::path const& p,
@@ -341,11 +363,33 @@ static boost::filesystem::path get_relative_path(boost::filesystem::path const& 
 
 }
 
+
 std::ostream& print_time_profile_data_to_stream(
         std::ostream& os,
         std::vector<time_profile_data_of_block> const& data
         )
 {
+    using namespace tmprof_internal_private_implementation_details;
+
+    float_64_bit  genuine_duration =
+            compute_genuine_duration_of_all_executions_of_all_blocks_in_seconds(data);
+    if (genuine_duration < 0.00001)
+        genuine_duration = 0.00001;
+
+    float_64_bit  summary_duration =
+            compute_summary_duration_of_all_executions_of_all_blocks_in_seconds(data);
+    if (summary_duration < 0.00001)
+        summary_duration = 0.00001;
+
+    boost::filesystem::path common_path_prefix(
+        data.empty() ?
+            boost::filesystem::path("") :
+            boost::filesystem::path(data.front().file_name()).branch_path()
+        );
+    for (auto it = data.begin(); it != data.end(); ++it)
+        if (it->number_of_executions() > 0ULL)
+            common_path_prefix = get_common_prefix(common_path_prefix,it->file_name());
+
     os <<   "<!DOCTYPE html>\n"
             "<html>\n"
             "<head>\n"
@@ -355,10 +399,11 @@ std::ostream& print_time_profile_data_to_stream(
             "        body\n"
             "        {\n"
             "            font-family:arial;\n"
-            "            font-size:10px;\n"
+            "            font-size:12px;\n"
             "        }\n"
             "        table,th,td\n"
             "        {\n"
+            "            text-align:left;\n"
             "            border:1px solid black;\n"
             "            border-collapse:collapse;\n"
             "        }\n"
@@ -366,30 +411,100 @@ std::ostream& print_time_profile_data_to_stream(
             "</head>\n"
             "<body>\n"
             "    <h1>Time Profile Log</h1>\n"
-            "    <p>\n"
-            "        TODO: write info here!\n"
+            ;
+
+    os <<   "    <p>\n"
+            "        There was measured " << data.size() << " blocks.<br/>\n"
+            "        Total genuine profiling time was " << normalise_duration(genuine_duration) << " seconds.<br/>\n"
+            "        Total summary profiling time was " << normalise_duration(summary_duration) << " seconds.<br/>\n"
+            "        Therefore, a parallel execution was "
+                            << normalise_duration(summary_duration / genuine_duration)
+                            << " times faster then equivalent purely sequential execution.\n"
             "    </p>\n"
-            "    <table>\n"
+            ;
+
+    os <<   "    <table>\n"
             "    <caption>\n"
-            "        TODO: put table caption text here!\n"
+            "        <b>Time-Profile Data Per Block.</b>\n"
+            "        Genuine duration is a real time spent in a measured block.\n"
+            "        Summary duration is such a time spent in a measured block as if\n"
+            "               all its executions never overlap (i.e. no concurrency).\n"
+            "        Common path preffix for all files in the table is: '" << common_path_prefix.string() << "/'\n"
             "    </caption>\n"
             "    <tr>\n"
 //            "        <th rowspan=\"2\">NameX</th>\n"
 //            "        <th colspan=\"3\">NameY</th>\n"
             "        <th>Percentage</th>\n"
             "        <th>Function</th>\n"
+            "        <th>Number of<br/>Executions</th>\n"
             "        <th>Genuine<br/>Duration</th>\n"
             "        <th>Longest<br/>Execution</th>\n"
-            "        <th>Accumulated<br/>Duration</th>\n"
+            "        <th>Summary<br/>Duration</th>\n"
+            "        <th>Still<br/>Running</th>\n"
             "        <th>Line</th>\n"
             "        <th>File</th>\n"
             "    </tr>\n"
             ;
-//    os <<
-//            "    <tr>\n"
-//            "        <td></td>\n"
-//            "    </tr>\n"
-//            ;
+
+    for (auto const& record : data)
+    {
+        os <<   "    <tr>\n";
+
+        os <<   "        <td>";
+        os <<   normalise_duration(100.0 * record.genuine_duration_of_all_executions_in_seconds() / genuine_duration);
+        os <<   "        </td>\n";
+
+        os <<   "        <td>";
+        os <<   record.function_name();
+        os <<   "        </td>\n";
+
+        os <<   "        <td>";
+        os <<   record.number_of_executions();
+        os <<   "        </td>\n";
+
+        os <<   "        <td>";
+        os <<   normalise_duration(record.genuine_duration_of_all_executions_in_seconds());
+        os <<   "        </td>\n";
+
+        os <<   "        <td>";
+        os <<   normalise_duration(record.duration_of_longest_execution_in_seconds());
+        os <<   "        </td>\n";
+
+        os <<   "        <td>";
+        os <<   normalise_duration(record.summary_duration_of_all_executions_in_seconds());
+        os <<   "        </td>\n";
+
+        os <<   "        <td>";
+        os <<   record.num_running_executions();
+        os <<   "        </td>\n";
+
+        os <<   "        <td>";
+        os <<   record.line();
+        os <<   "        </td>\n";
+
+        os <<   "        <td>";
+        os <<   get_relative_path(common_path_prefix,record.file_name()).string();
+        os <<   "        </td>\n";
+
+        os <<   "    </tr>\n";
+    }
+
+    os <<   "    <tr></tr>\n"
+            ;
+
+    os <<   "    <tr>\n"
+            "        <th>Summary</th>\n"
+            "        <td></td>\n"
+            "        <td></td>\n"
+            "        <th>" << normalise_duration(genuine_duration) << "</th>\n"
+            "        <td></td>\n"
+            "        <th>" << normalise_duration(summary_duration) << "</th>\n"
+            "        <td></td>\n"
+            "        <td></td>\n"
+            "        <td></td>\n"
+            "    </tr>\n"
+            ;
+
     os <<   "    </table>\n"
             "</body>\n"
             "</html>\n"
@@ -397,205 +512,10 @@ std::ostream& print_time_profile_data_to_stream(
     return os;
 }
 
-
-//std::ostream& print_time_profile_data_to_stream(
-//        std::ostream& os,
-//        std::vector<time_profile_data_of_block> const& data
-//        )
-//{
-//    using namespace tmprof_internal_private_implementation_details;
-
-//    struct print_record
-//    {
-//        print_record(time_profile_data_of_block const& r, float_64_bit const total_duration)
-//            : mFunction(r.function_name())
-//            , mFile(r.file_name())
-//            , mLine(boost::lexical_cast<std::string>(r.line()))
-//            , mDuration(normalise_duration(r.summary_duration_of_all_executions_in_seconds()))
-//            , mCount(boost::lexical_cast<std::string>(r.number_of_executions()))
-//            , mMaximal(normalise_duration(r.duration_of_longest_execution_in_seconds()))
-//            , mAverage(normalise_divided_duration(r.summary_duration_of_all_executions_in_seconds(),
-//                                                  r.number_of_executions()))
-//            , mPercentage(normalise_divided_duration(r.summary_duration_of_all_executions_in_seconds(),
-//                                                     total_duration * 0.01))
-//        {}
-//        std::string mFunction;
-//        std::string mFile;
-//        std::string mLine;
-//        std::string mDuration;
-//        std::string mCount;
-//        std::string mMaximal;
-//        std::string mAverage;
-//        std::string mPercentage;
-//    };
-
-//    float_64_bit const  total_duration =
-//            //compute_summary_duration_of_all_executions_of_all_blocks_in_seconds(data);
-//            get_total_time_profiling_time_in_seconds();
-//    std::string const total_duration_name =
-//            normalise_duration(total_duration);
-
-//    boost::filesystem::path common_path_prefix(
-//        data.empty() ?
-//            boost::filesystem::path("") :
-//            boost::filesystem::path(data.front().file_name()).branch_path()
-//        );
-//    for (auto it = data.begin(); it != data.end(); ++it)
-//        if (it->number_of_executions() > 0ULL)
-//            common_path_prefix = get_common_prefix(common_path_prefix,it->file_name());
-
-//    typedef std::multimap<std::tuple<float_64_bit,float_64_bit,natural_64_bit,float_64_bit>,print_record>
-//            map_of_print_record;
-//    map_of_print_record print_records;
-//    natural_32_bit  capOrderLen = std::string("Order").size();
-//    natural_32_bit  capFunctionLen = std::string("Function").size();
-//    natural_32_bit  capDurationLen = std::string("Duration").size();
-//    natural_32_bit  capAverageLen = std::string("Average").size();
-//    natural_32_bit  capCountLen = std::string("Count").size();
-//    natural_32_bit  capMaximalLen = std::string("Peak").size();
-//    natural_32_bit  capPercentageLen = std::string("%").size();
-//    natural_32_bit  capDelta = 4U;
-//    natural_32_bit  maxOrderLen = capOrderLen;
-//    natural_32_bit  maxFunctionLen = capFunctionLen;
-//    natural_32_bit  maxDurationLen = capDurationLen;
-//    natural_32_bit  maxAverageLen = capAverageLen;
-//    natural_32_bit  maxCountLen = capCountLen;
-//    natural_32_bit  maxMaximalLen = capMaximalLen;
-//    natural_32_bit  maxPercentageLen = capPercentageLen;
-//    for (auto it = data.begin(); it != data.end(); ++it)
-//    {
-//        if (it->number_of_executions() == 0ULL)
-//            continue;
-
-//        print_record const r(*it,total_duration);
-//        auto const key =
-//            std::make_tuple(
-//                boost::chrono::duration<float_64_bit>(
-//                        it->summary_duration_of_all_executions_in_seconds()
-//                        ).count(),
-//                boost::chrono::duration<float_64_bit>(
-//                        it->summary_duration_of_all_executions_in_seconds()
-//                        ).count() / it->number_of_executions(),
-//                it->number_of_executions(),
-//                boost::chrono::duration<float_64_bit>(
-//                        it->duration_of_longest_execution_in_seconds()
-//                        ).count()
-//                );
-//        map_of_print_record::value_type const value(key,r);
-//        print_records.insert(value);
-//        if (maxFunctionLen < r.mFunction.size())
-//            maxFunctionLen = r.mFunction.size();
-//        if (maxDurationLen < r.mDuration.size())
-//            maxDurationLen = r.mDuration.size();
-//        if (maxAverageLen < r.mAverage.size())
-//            maxAverageLen = r.mAverage.size();
-//        if (maxCountLen < r.mCount.size())
-//            maxCountLen = r.mCount.size();
-//        if (maxMaximalLen < r.mMaximal.size())
-//            maxMaximalLen = r.mMaximal.size();
-//        if (maxPercentageLen < r.mPercentage.size())
-//            maxPercentageLen = r.mPercentage.size();
-//    }
-//    if (maxOrderLen < boost::lexical_cast<std::string>(print_records.size()).size())
-//        maxOrderLen = boost::lexical_cast<std::string>(print_records.size()).size();
-//    if (maxDurationLen < total_duration_name.size())
-//        maxDurationLen = total_duration_name.size();
-
-//    os << std::string(maxOrderLen - capOrderLen,' ')
-//       << "Order"
-//       << std::string(maxFunctionLen - capFunctionLen + capDelta,' ')
-//       << "Function"
-//       << std::string(maxDurationLen - capDurationLen + capDelta,' ')
-//       << "Duration"
-//       << std::string(maxAverageLen - capAverageLen + capDelta,' ')
-//       << "Average"
-//       << std::string(maxCountLen - capCountLen + capDelta,' ')
-//       << "Count"
-//       << std::string(maxMaximalLen - capMaximalLen + capDelta,' ')
-//       << "Peak"
-//       << std::string(maxPercentageLen - capPercentageLen + capDelta,' ')
-//       << "%"
-//       << std::string(capDelta,' ')
-//       << "File[line]\n"
-//       << std::string(
-//            maxOrderLen     +
-//            maxFunctionLen  +
-//            maxDurationLen  +
-//            maxAverageLen   +
-//            maxCountLen     +
-//            maxMaximalLen   +
-//            maxPercentageLen+
-//            7 * capDelta    +
-//            std::string("File[line]").size()
-//            ,'-')
-//       << '\n'
-//       ;
-//    natural_32_bit i = 1U;
-//    for (auto it = print_records.rbegin(); it != print_records.rend(); ++it, ++i)
-//    {
-//        std::string const ord = boost::lexical_cast<std::string>(i);
-//        os << std::string(maxOrderLen - ord.size(),' ')
-//           << ord
-//           << std::string(capDelta,' ')
-//           ;
-
-//        print_record const& r = it->second;
-//        os << std::string(maxFunctionLen - r.mFunction.size(),' ')
-//           << r.mFunction
-//           << std::string(capDelta,' ')
-//           ;
-//        os << std::string(maxDurationLen - r.mDuration.size(),' ')
-//           << r.mDuration
-//           << std::string(capDelta,' ')
-//           ;
-//        os << std::string(maxAverageLen - r.mAverage.size(),' ')
-//           << r.mAverage
-//           << std::string(capDelta,' ')
-//           ;
-//        os << std::string(maxCountLen - r.mCount.size(),' ')
-//           << r.mCount
-//           << std::string(capDelta,' ')
-//           ;
-//        os << std::string(maxMaximalLen - r.mMaximal.size(),' ')
-//           << r.mMaximal
-//           << std::string(capDelta,' ')
-//           ;
-//        os << std::string(maxPercentageLen - r.mPercentage.size(),' ')
-//           << r.mPercentage
-//           << std::string(capDelta,' ')
-//           ;
-//        os << get_relative_path(common_path_prefix,r.mFile).string()
-//           << '[' << r.mLine << "]\n"
-//           ;
-//    }
-//    os << std::string(
-//            maxOrderLen     +
-//            maxFunctionLen  +
-//            maxDurationLen  +
-//            maxAverageLen   +
-//            maxCountLen     +
-//            maxMaximalLen   +
-//            maxPercentageLen+
-//            7U * capDelta   +
-//            std::string("File[line]").size()
-//            ,'-')
-//       << '\n'
-//       ;
-//    os << std::string(maxOrderLen + maxFunctionLen + 2 * capDelta +
-//                      maxDurationLen - total_duration_name.size(),' ')
-//       << total_duration_name
-//       << std::string(maxAverageLen + maxCountLen + maxMaximalLen +
-//                      maxPercentageLen + 5 * capDelta,' ')
-//       << common_path_prefix.string() << "/*\n"
-//       ;
-
-//    return os;
-//}
-
 std::ostream& print_time_profile_to_stream(std::ostream& os)
 {
     std::vector<time_profile_data_of_block> data;
-    copy_time_profile_data_of_all_measured_blocks_into_vector(data);
+    copy_time_profile_data_of_all_measured_blocks_into_vector(data,true);
     print_time_profile_data_to_stream(os,data);
     return os;
 }
