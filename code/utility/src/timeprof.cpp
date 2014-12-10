@@ -327,12 +327,39 @@ namespace tmprof_internal_private_implementation_details {
 
 static std::string normalise_duration(float_64_bit const d, natural_32_bit const prec = 3)
 {
-    auto const dur =
-        std::floor((float_32_bit)d * 1000.0f + 0.5f) / 1000.0f
-        //d
-        ;
+//    auto const dur =
+//        std::floor((float_32_bit)d * 1000.0f + 0.5f) / 1000.0f
+//        //d
+//        ;
+//{
+//    std::stringstream sstr;
+//    sstr << std::setprecision(prec) << std::fixed << dur;
+//std::string sss = sstr.str();
+//sss=sss;
+//}
+//{
+//    std::stringstream sstr;
+//    sstr << std::setprecision(prec) << std::fixed << d;
+//std::string sss = sstr.str();
+//sss=sss;
+//}
+//{
+//    std::stringstream sstr;
+//    sstr << std::fixed << d;
+//std::string sss = sstr.str();
+//sss=sss;
+//}
+//{
+//    std::stringstream sstr;
+//    sstr << std::setprecision(prec) << d;
+//std::string sss = sstr.str();
+//sss=sss;
+//}
+//    std::stringstream sstr;
+//    sstr << std::setprecision(prec) << std::fixed << dur;
+//    return sstr.str();
     std::stringstream sstr;
-    sstr << std::setprecision(prec) << std::fixed << dur;
+    sstr << std::setprecision(prec) << std::fixed << d;
     return sstr.str();
 }
 
@@ -403,7 +430,7 @@ std::ostream& print_time_profile_data_to_stream(
             "        }\n"
             "        table,th,td\n"
             "        {\n"
-            "            text-align:left;\n"
+            "            text-align:right;\n"
             "            border:1px solid black;\n"
             "            border-collapse:collapse;\n"
             "        }\n"
@@ -414,12 +441,6 @@ std::ostream& print_time_profile_data_to_stream(
             ;
 
     os <<   "    <p>\n"
-            "        There was measured " << data.size() << " blocks.<br/>\n"
-            "        Total genuine profiling time was " << normalise_duration(genuine_duration) << " seconds.<br/>\n"
-            "        Total summary profiling time was " << normalise_duration(summary_duration) << " seconds.<br/>\n"
-            "        Therefore, a parallel execution was "
-                            << normalise_duration(summary_duration / genuine_duration)
-                            << " times faster then equivalent purely sequential execution.\n"
             "    </p>\n"
             ;
 
@@ -427,9 +448,18 @@ std::ostream& print_time_profile_data_to_stream(
             "    <caption>\n"
             "        <b>Time-Profile Data Per Block.</b>\n"
             "        Genuine duration is a real time spent in a measured block.\n"
+            "        Genuine average duration is a genuine duration divided by a number of executions.\n"
             "        Summary duration is such a time spent in a measured block as if\n"
             "               all its executions never overlap (i.e. no concurrency).\n"
-            "        Common path preffix for all files in the table is: '" << common_path_prefix.string() << "/'\n"
+            "        Summary average duration is a summary duration divided by a number of executions.\n"
+            "        Numbers in the speed-up column represent ratios between numbers in respective columns\n"
+            "               summary duration and genuine duration.\n"
+            "        If a function name is preffixed by '*', then it means that the measured block\n"
+            "               inside the function was being executed while the presented data was read.\n"
+            "        The integer in the leftmost data-cell in the summary line identifies a number of blocks\n"
+            "               that were executed at least once during the time profiling.\n"
+            "        Common path preffix for all files in the table is:<br/><b>'"
+                            << common_path_prefix.string() << "/'</b>\n"
             "    </caption>\n"
             "    <tr>\n"
 //            "        <th rowspan=\"2\">NameX</th>\n"
@@ -438,9 +468,11 @@ std::ostream& print_time_profile_data_to_stream(
             "        <th>Function</th>\n"
             "        <th>Number of<br/>Executions</th>\n"
             "        <th>Genuine<br/>Duration</th>\n"
-            "        <th>Longest<br/>Execution</th>\n"
+            "        <th>Gen.Ave.<br/>Duration</th>\n"
+            "        <th>Longest<br/>Duration</th>\n"
             "        <th>Summary<br/>Duration</th>\n"
-            "        <th>Still<br/>Running</th>\n"
+            "        <th>Sum.Ave.<br/>Duration</th>\n"
+            "        <th>Speed-up</th>\n"
             "        <th>Line</th>\n"
             "        <th>File</th>\n"
             "    </tr>\n"
@@ -448,43 +480,58 @@ std::ostream& print_time_profile_data_to_stream(
 
     for (auto const& record : data)
     {
+        if (record.number_of_executions() == 0ULL)
+            continue;
+
         os <<   "    <tr>\n";
 
         os <<   "        <td>";
         os <<   normalise_duration(100.0 * record.genuine_duration_of_all_executions_in_seconds() / genuine_duration);
-        os <<   "        </td>\n";
+        os <<   "</td>\n";
 
         os <<   "        <td>";
+        os <<   (record.num_running_executions() > 0U ? " * " : "");
         os <<   record.function_name();
-        os <<   "        </td>\n";
+        os <<   "</td>\n";
 
         os <<   "        <td>";
         os <<   record.number_of_executions();
-        os <<   "        </td>\n";
+        os <<   "</td>\n";
 
         os <<   "        <td>";
         os <<   normalise_duration(record.genuine_duration_of_all_executions_in_seconds());
-        os <<   "        </td>\n";
+        os <<   "</td>\n";
+
+        os <<   "        <td>";
+        os <<   normalise_duration(record.genuine_duration_of_all_executions_in_seconds() / record.number_of_executions());
+        os <<   "</td>\n";
 
         os <<   "        <td>";
         os <<   normalise_duration(record.duration_of_longest_execution_in_seconds());
-        os <<   "        </td>\n";
+        os <<   "</td>\n";
 
         os <<   "        <td>";
         os <<   normalise_duration(record.summary_duration_of_all_executions_in_seconds());
-        os <<   "        </td>\n";
+        os <<   "</td>\n";
 
         os <<   "        <td>";
-        os <<   record.num_running_executions();
-        os <<   "        </td>\n";
+        os <<   normalise_duration(record.summary_duration_of_all_executions_in_seconds() / record.number_of_executions());
+        os <<   "</td>\n";
+
+        os <<   "        <td>";
+        os <<   normalise_duration(record.summary_duration_of_all_executions_in_seconds() /
+                                        (record.genuine_duration_of_all_executions_in_seconds() < 0.00001 ?
+                                            0.00001 : record.genuine_duration_of_all_executions_in_seconds())
+                                   );
+        os <<   "</td>\n";
 
         os <<   "        <td>";
         os <<   record.line();
-        os <<   "        </td>\n";
+        os <<   "</td>\n";
 
         os <<   "        <td>";
         os <<   get_relative_path(common_path_prefix,record.file_name()).string();
-        os <<   "        </td>\n";
+        os <<   "</td>\n";
 
         os <<   "    </tr>\n";
     }
@@ -494,12 +541,13 @@ std::ostream& print_time_profile_data_to_stream(
 
     os <<   "    <tr>\n"
             "        <th>Summary</th>\n"
-            "        <td></td>\n"
+            "        <th>" << data.size() << "</th>\n"
             "        <td></td>\n"
             "        <th>" << normalise_duration(genuine_duration) << "</th>\n"
             "        <td></td>\n"
-            "        <th>" << normalise_duration(summary_duration) << "</th>\n"
             "        <td></td>\n"
+            "        <th>" << normalise_duration(summary_duration) << "</th>\n"
+            "        <th>" << normalise_duration(summary_duration / genuine_duration) << "</th>\n"
             "        <td></td>\n"
             "        <td></td>\n"
             "    </tr>\n"
