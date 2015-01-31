@@ -1,12 +1,5 @@
-#ifndef CELLCONNECT_INCREMENTAL_LINK_ADDITION_HPP_INCLUDED
-#   define CELLCONNECT_INCREMENTAL_LINK_ADDITION_HPP_INCLUDED
-
-//#   include <cellconnect/compute_link_terminal_coordinates.hpp>
-#   include <cellab/dynamic_state_of_neural_tissue.hpp>
-#   include <utility/basic_numeric_types.hpp>
-#   include <memory>
-#   include <vector>
-#   include <functional>
+#include <cellconnect/incremental_addition_of_tissue_links.hpp>
+#include <utility/development.hpp>
 
 namespace cellconnect {
 
@@ -17,7 +10,11 @@ void  initialisation_of_incremental_addition_of_tissue_links(
             random_generators_of_polar_angles_to_centers_of_far_link_target_areas,
         std::vector< std::function<float_32_bit()> > const&
             random_generators_of_polar_radii_to_centers_of_far_link_target_areas
-        );
+        )
+{
+    NOT_IMPLEMENTED_YET();
+}
+
 
 void  apply_step_of_incremental_addition_of_tissue_links(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
@@ -36,10 +33,11 @@ void  apply_step_of_incremental_addition_of_tissue_links(
         std::vector< std::function<float_32_bit()> > const&
             random_generators_of_polar_radii_from_centers_of_far_link_target_areas,
         std::function<natural_16_bit()> const&
-            random_generator_of_link_target_cell_kinds_in_far_link_target_areas,
-        );
+            random_generator_of_link_target_cell_kinds_in_far_link_target_areas
+        )
+{
+    NOT_IMPLEMENTED_YET();
+}
 
 
 }
-
-#endif
