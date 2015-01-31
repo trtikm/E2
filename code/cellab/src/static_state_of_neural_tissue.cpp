@@ -353,6 +353,13 @@ natural_32_bit  static_state_of_neural_tissue::compute_index_of_first_sensory_ce
                 ;
 }
 
+natural_32_bit  static_state_of_neural_tissue::compute_columnar_coord_of_first_tissue_cell_of_kind(
+        kind_of_cell const tissue_cell_kind) const
+{
+    ASSUMPTION(tissue_cell_kind < num_kinds_of_tissue_cells());
+    return tissue_cell_kind == 0U ? 0U : m_end_index_along_columnar_axis_of_cell_kind.at(tissue_cell_kind - 1U);
+}
+
 bool  static_state_of_neural_tissue::is_x_axis_torus_axis() const
 {
     return m_is_x_axis_torus_axis;

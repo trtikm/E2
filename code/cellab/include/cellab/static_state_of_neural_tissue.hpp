@@ -75,6 +75,7 @@ struct static_state_of_neural_tissue : private boost::noncopyable
     compute_kind_of_sensory_cell_and_relative_index_from_its_index(natural_32_bit index_of_sensory_cell) const;
 
     natural_32_bit  compute_index_of_first_sensory_cell_of_kind(kind_of_cell const sensory_cell_kind) const;
+    natural_32_bit  compute_columnar_coord_of_first_tissue_cell_of_kind(kind_of_cell const tissue_cell_kind) const;
 
     bool  is_x_axis_torus_axis() const;
     bool  is_y_axis_torus_axis() const;

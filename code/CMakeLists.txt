@@ -96,6 +96,7 @@ message("Python libraries was found in directory: " ${PYTHON_LIBRARIES})
 # here follow all libraries of E2
 include_directories(
     "${PROJECT_SOURCE_DIR}/cellab/include"
+    "${PROJECT_SOURCE_DIR}/cellconnect/include"
     "${PROJECT_SOURCE_DIR}/efloop/include"
     "${PROJECT_SOURCE_DIR}/envlab/include"
     "${PROJECT_SOURCE_DIR}/utility/include"
@@ -103,6 +104,8 @@ include_directories(
 message("Including the following E2 libraries to the build:")
 add_subdirectory(./cellab)
     message("-- cellab")
+add_subdirectory(./cellconnect)
+    message("-- cellconnect")
 add_subdirectory(./efloop)
     message("-- efloop")
 add_subdirectory(./envlab)
