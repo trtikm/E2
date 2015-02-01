@@ -39,10 +39,11 @@ natural_32_bit  choose_tissue_columnar_coordinate(
         cellab::kind_of_cell const  kind_of_target_cell
         )
 {
-    return get_random_natural_32_bit_in_range(
-                    static_state_ptr->compute_columnar_coord_of_first_tissue_cell_of_kind(kind_of_target_cell),
-                    static_state_ptr->num_cells_along_columnar_axis() - 1U
-                    );
+    natural_32_bit const  min_columnar_coord =
+            static_state_ptr->compute_columnar_coord_of_first_tissue_cell_of_kind(kind_of_target_cell);
+    natural_32_bit const  max_columnar_coord =
+            min_columnar_coord + static_state_ptr->num_tissue_cells_of_cell_kind(kind_of_target_cell) - 1U;
+    return get_random_natural_32_bit_in_range(min_columnar_coord,max_columnar_coord);
 }
 
 

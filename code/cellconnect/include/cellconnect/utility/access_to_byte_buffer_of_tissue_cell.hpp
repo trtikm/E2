@@ -14,7 +14,7 @@ natural_32_bit  compute_size_of_byte_buffer_of_tissue_cell(
         );
 
 
-natural_32_bit  read_in_byte_buffer_of_tissue_cell(
+natural_32_bit  read_from_byte_buffer_of_tissue_cell(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue const> const  dynamic_state_ptr,
         natural_32_bit const  x_coord_of_tissue_cell,
         natural_32_bit const  y_coord_of_tissue_cell,
