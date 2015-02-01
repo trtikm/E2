@@ -10,14 +10,17 @@ add_library(${THIS_TARGET_NAME}
     ./include/cellconnect/incremental_addition_of_tissue_links.hpp
     ./src/incremental_addition_of_tissue_links.cpp
 
-    ./include/cellconnect/utility/choose_tissue_coordinates_in_area.hpp
-    ./src/utility/choose_tissue_coordinates_in_area.cpp
+    ./include/cellconnect/utility/choose_tissue_coordinates.hpp
+    ./src/utility/choose_tissue_coordinates.cpp
 
     ./include/cellconnect/utility/clip_tissue_coordinate.hpp
     ./src/utility/clip_tissue_coordinate.cpp
 
     ./include/cellconnect/utility/from_polar_to_tissue_coordinates.hpp
     ./src/utility/from_polar_to_tissue_coordinates.cpp
+
+    ./include/cellconnect/utility/access_to_byte_buffer_of_tissue_cell.hpp
+    ./src/utility/access_to_byte_buffer_of_tissue_cell.cpp
     )
 
 #set_target_properties(${THIS_TARGET_NAME} PROPERTIES

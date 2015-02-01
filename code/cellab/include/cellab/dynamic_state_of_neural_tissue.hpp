@@ -78,7 +78,7 @@ struct dynamic_state_of_neural_tissue
             );
 
     natural_8_bit  num_bits_per_source_cell_coordinate() const;
-    natural_8_bit num_bits_per_delimiter_number(kind_of_cell const  kind_of_tissue_cell);
+    natural_8_bit  num_bits_per_delimiter_number(kind_of_cell const  kind_of_tissue_cell) const;
 
 private:
     typedef std::shared_ptr<homogenous_slice_of_tissue> pointer_to_homogenous_slice_of_tissue;

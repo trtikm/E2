@@ -351,7 +351,7 @@ natural_8_bit  dynamic_state_of_neural_tissue::num_bits_per_source_cell_coordina
     return m_num_bits_per_source_cell_coordinate;
 }
 
-natural_8_bit  dynamic_state_of_neural_tissue::num_bits_per_delimiter_number(kind_of_cell const  kind_of_tissue_cell)
+natural_8_bit  dynamic_state_of_neural_tissue::num_bits_per_delimiter_number(kind_of_cell const  kind_of_tissue_cell) const
 {
     ASSUMPTION(kind_of_tissue_cell < get_static_state_of_neural_tissue()->num_kinds_of_tissue_cells());
     return m_num_bits_per_delimiter_number.at(kind_of_tissue_cell);

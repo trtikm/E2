@@ -5,6 +5,7 @@
 #include <utility/array_of_bit_units.hpp>
 #include <utility/basic_numeric_types.hpp>
 #include <utility/bits_reference.hpp>
+#include <utility/bit_count.hpp>
 #include <utility/random.hpp>
 #include <utility/test.hpp>
 #include <utility/timeprof.hpp>

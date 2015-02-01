@@ -20,8 +20,6 @@ private:
 };
 
 
-natural_64_bit num_bytes_to_store_bits(natural_64_bit const num_bits_to_store);
-
 natural_64_bit compute_num_bits_of_all_array_units_with_checked_operations(natural_16_bit const num_bits_per_unit,
                                                                            natural_64_bit const num_units);
 
