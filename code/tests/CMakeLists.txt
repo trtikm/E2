@@ -30,6 +30,9 @@ add_subdirectory(./neural_tissue_construction_and_simulation)
 add_subdirectory(./efloop_construction_and_simulation)
     message("-- efloop_construction_and_simulation")
 
+add_subdirectory(./random)
+    message("-- random")
+
 
 message("-- run_tests.py")
 install(
