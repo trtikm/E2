@@ -28,14 +28,14 @@ void  apply_step_of_incremental_addition_of_tissue_links(
             random_generators_of_polar_angles_from_centers_of_local_link_target_areas,
         std::vector< std::function<float_32_bit()> > const&
             random_generators_of_polar_radii_from_centers_of_local_link_target_areas,
-        std::function<cellab::kind_of_cell()> const&
-            random_generator_of_link_target_cell_kinds_in_local_link_target_areas,
+        std::vector< std::function<cellab::kind_of_cell()> > const&
+            random_generators_of_link_target_cell_kinds_in_local_link_target_areas,
         std::vector< std::function<float_32_bit()> > const&
             random_generators_of_polar_angles_from_centers_of_far_link_target_areas,
         std::vector< std::function<float_32_bit()> > const&
             random_generators_of_polar_radii_from_centers_of_far_link_target_areas,
-        std::function<cellab::kind_of_cell()> const&
-            random_generator_of_link_target_cell_kinds_in_far_link_target_areas
+        std::vector< std::function<cellab::kind_of_cell()> > const&
+            random_generators_of_link_target_cell_kinds_in_far_link_target_areas
         );
 
 
