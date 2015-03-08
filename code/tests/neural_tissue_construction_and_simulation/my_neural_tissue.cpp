@@ -7,6 +7,7 @@
 
 natural_16_bit  num_kinds_of_tissue_cells() noexcept { return 3U; }
 natural_16_bit  num_kinds_of_sensory_cells() noexcept { return 2U; }
+natural_16_bit  num_kinds_of_synapses_to_muscles() noexcept { return 3U; }
 
 natural_16_bit  num_bits_per_cell() noexcept { return 8U * sizeof(my_cell); }
 natural_16_bit  num_bits_per_synapse() noexcept { return 8U * sizeof(my_synapse); }
@@ -29,8 +30,10 @@ std::vector<natural_32_bit> const&  num_sensory_cells_of_cell_kind() noexcept {
     static std::vector<natural_32_bit> v = {51U,31U};
     return v;
     }
-
-natural_32_bit  num_synapses_to_muscles() noexcept { return 111U; }
+std::vector<natural_32_bit> const&  num_synapses_to_muscles_of_kind() noexcept {
+    static std::vector<natural_32_bit> v = {31U,51U,21U};
+    return v;
+    }
 
 bool  is_x_axis_torus_axis() noexcept { return true; }
 bool  is_y_axis_torus_axis() noexcept { return false; }
@@ -85,6 +88,7 @@ my_neural_tissue::my_neural_tissue()
     : cellab::neural_tissue(
           num_kinds_of_tissue_cells(),
           num_kinds_of_sensory_cells(),
+          num_kinds_of_synapses_to_muscles(),
           num_bits_per_cell(),
           num_bits_per_synapse(),
           num_bits_per_signalling(),
@@ -93,7 +97,7 @@ my_neural_tissue::my_neural_tissue()
           num_tissue_cells_of_cell_kind(),
           num_synapses_in_territory_of_cell_kind(),
           num_sensory_cells_of_cell_kind(),
-          num_synapses_to_muscles(),
+          num_synapses_to_muscles_of_kind(),
           is_x_axis_torus_axis(),
           is_y_axis_torus_axis(),
           is_columnar_axis_torus_axis(),

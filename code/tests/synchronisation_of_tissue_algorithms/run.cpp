@@ -374,6 +374,7 @@ void run()
 //        for (natural_16_bit sensory_cell_kinds = 1U; sensory_cell_kinds < 3U; ++sensory_cell_kinds)
         {
             natural_16_bit sensory_cell_kinds = 2U;
+            natural_16_bit const synapses_to_muscles_kinds = 2U;
 
             natural_16_bit const num_bits_per_cell = tissue_element::num_bits();
             natural_16_bit const num_bits_per_synapse = tissue_element::num_bits();
@@ -401,7 +402,9 @@ void run()
                     for (natural_16_bit i = 0U; i < sensory_cell_kinds; ++i)
                         num_sensory_cells_of_cell_kind.push_back((i%2 == 0) ? 1U : 50U);
 
-                    natural_32_bit const num_synapses_to_muscles = 50U;
+                    std::vector<natural_32_bit> num_synapses_to_muscles_of_synapse_kind;
+                    for (natural_16_bit i = 0U; i < synapses_to_muscles_kinds; ++i)
+                        num_synapses_to_muscles_of_synapse_kind.push_back((i%2 == 0) ? 1U : 50U);
 
 //                    for (natural_8_bit torus_x = 0U; torus_x < 2U; ++torus_x)
 //                        for (natural_8_bit torus_y = 0U; torus_y < 2U; ++torus_y)
@@ -450,6 +453,7 @@ void run()
                                                     new cellab::static_state_of_neural_tissue(
                                                         tissue_cell_kinds,
                                                         sensory_cell_kinds,
+                                                        synapses_to_muscles_kinds,
                                                         num_bits_per_cell,
                                                         num_bits_per_synapse,
                                                         num_bits_per_signalling,
@@ -458,7 +462,7 @@ void run()
                                                         num_tissue_cells_of_cell_kind,
                                                         num_synapses_in_territory_of_cell_kind,
                                                         num_sensory_cells_of_cell_kind,
-                                                        num_synapses_to_muscles,
+                                                        num_synapses_to_muscles_of_synapse_kind,
                                                         is_x_axis_torus_axis,
                                                         is_y_axis_torus_axis,
                                                         is_c_axis_torus_axis,

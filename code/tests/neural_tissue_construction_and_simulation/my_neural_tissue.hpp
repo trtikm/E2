@@ -113,6 +113,7 @@ struct my_neural_tissue : public cellab::neural_tissue
 
 natural_16_bit  num_kinds_of_tissue_cells() noexcept;
 natural_16_bit  num_kinds_of_sensory_cells() noexcept;
+natural_16_bit  num_kinds_of_synapses_to_muscles() noexcept;
 
 natural_16_bit  num_bits_per_cell() noexcept;
 natural_16_bit  num_bits_per_synapse() noexcept;
@@ -124,8 +125,7 @@ natural_32_bit  num_cells_along_y_axis() noexcept;
 std::vector<natural_32_bit> const&  num_tissue_cells_of_cell_kind() noexcept;
 std::vector<natural_32_bit> const&  num_synapses_in_territory_of_cell_kind() noexcept;
 std::vector<natural_32_bit> const&  num_sensory_cells_of_cell_kind() noexcept;
-
-natural_32_bit  num_synapses_to_muscles() noexcept;
+std::vector<natural_32_bit> const&  num_synapses_to_muscles_of_kind() noexcept;
 
 bool  is_x_axis_torus_axis() noexcept;
 bool  is_y_axis_torus_axis() noexcept;

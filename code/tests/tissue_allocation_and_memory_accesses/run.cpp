@@ -142,6 +142,62 @@ static void test_compute_index_of_first_sensory_cell_of_kind(
     }
 }
 
+static void test_compute_kind_of_synapse_to_muscle_from_its_index(
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue)
+{
+    natural_32_bit  num_passed_synapses_to_muscles_of_current_kind = 0U;
+    cellab::kind_of_synapse_to_muscle  correct_kind = 0U;
+    for (natural_32_bit  index = 0U; index < static_tissue->num_kinds_of_synapses_to_muscles(); ++index)
+    {
+        cellab::kind_of_synapse_to_muscle const  kind = static_tissue->compute_kind_of_synapse_to_muscle_from_its_index(index);
+        TEST_SUCCESS(kind == correct_kind);
+
+        ++num_passed_synapses_to_muscles_of_current_kind;
+        if (num_passed_synapses_to_muscles_of_current_kind == static_tissue->num_synapses_to_muscles_of_kind(correct_kind))
+        {
+            num_passed_synapses_to_muscles_of_current_kind = 0U;
+            ++correct_kind;
+        }
+    }
+}
+
+static void test_compute_kind_of_synapse_to_muscle_and_relative_index_from_its_index(
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue)
+{
+    natural_32_bit  num_passed_synapses_to_muscles_of_current_kind = 0U;
+    cellab::kind_of_cell  correct_kind = 0U;
+    natural_32_bit  correct_relative_index = 0U;
+    for (natural_32_bit  index = 0U; index < static_tissue->num_kinds_of_synapses_to_muscles(); ++index)
+    {
+        std::pair<cellab::kind_of_cell,natural_32_bit> const pair =
+            static_tissue->compute_kind_of_synapse_to_muscle_and_relative_index_from_its_index(index);
+        TEST_SUCCESS(pair.first == correct_kind);
+        TEST_SUCCESS(pair.second == correct_relative_index);
+
+        ++correct_relative_index;
+        ++num_passed_synapses_to_muscles_of_current_kind;
+        if (num_passed_synapses_to_muscles_of_current_kind == static_tissue->num_synapses_to_muscles_of_kind(correct_kind))
+        {
+            num_passed_synapses_to_muscles_of_current_kind = 0U;
+            ++correct_kind;
+            correct_relative_index = 0U;
+        }
+    }
+}
+
+static void test_compute_index_of_first_synapse_to_muscle_of_kind(
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue)
+{
+    natural_32_bit correct_index = 0U;
+    for (natural_16_bit kind = 0U;
+         kind < static_tissue->num_kinds_of_synapses_to_muscles();
+         correct_index += static_tissue->num_synapses_to_muscles_of_kind(kind),
+         ++kind)
+    {
+        TEST_SUCCESS( correct_index == static_tissue->compute_index_of_first_synapse_to_muscle_of_kind(kind) );
+    }
+}
+
 static void test_shift_in_coordinates(
         std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue)
 {
@@ -506,6 +562,9 @@ static void test_static_state(std::shared_ptr<cellab::static_state_of_neural_tis
     test_compute_kind_of_sensory_cell_from_its_index(static_tissue);
     test_compute_kind_of_sensory_cell_and_relative_index_from_its_index(static_tissue);
     test_compute_index_of_first_sensory_cell_of_kind(static_tissue);
+    test_compute_kind_of_synapse_to_muscle_from_its_index(static_tissue);
+    test_compute_kind_of_synapse_to_muscle_and_relative_index_from_its_index(static_tissue);
+    test_compute_index_of_first_synapse_to_muscle_of_kind(static_tissue);
 }
 
 static void test_dynamic_state(std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const dynamic_tissue)
@@ -531,6 +590,8 @@ void run()
     {
         for (natural_16_bit sensory_cell_kinds = 1U; sensory_cell_kinds < 3U; ++sensory_cell_kinds)
         {
+            natural_16_bit const synapses_to_muscles_kinds = sensory_cell_kinds;
+
             natural_16_bit const num_bits_per_cell = 8U;
             natural_16_bit const num_bits_per_synapse = 8U;
             natural_16_bit const num_bits_per_signalling = 8U;
@@ -551,7 +612,9 @@ void run()
                     for (natural_16_bit i = 0U; i < sensory_cell_kinds; ++i)
                         num_sensory_cells_of_cell_kind.push_back((i%2 == 0) ? 1U : 5000U);
 
-                    natural_32_bit const num_synapses_to_muscles = 6000U;
+                    std::vector<natural_32_bit> num_synapses_to_muscles_of_synapse_kind;
+                    for (natural_16_bit i = 0U; i < synapses_to_muscles_kinds; ++i)
+                        num_synapses_to_muscles_of_synapse_kind.push_back((i%2 == 0) ? 1U : 5000U);
 
                     for (natural_8_bit torus_x = 0U; torus_x < 2U; ++torus_x)
                         for (natural_8_bit torus_y = 0U; torus_y < 2U; ++torus_y)
@@ -595,6 +658,7 @@ void run()
                                                     new cellab::static_state_of_neural_tissue(
                                                         tissue_cell_kinds,
                                                         sensory_cell_kinds,
+                                                        synapses_to_muscles_kinds,
                                                         num_bits_per_cell,
                                                         num_bits_per_synapse,
                                                         num_bits_per_signalling,
@@ -603,7 +667,7 @@ void run()
                                                         num_tissue_cells_of_cell_kind,
                                                         num_synapses_in_territory_of_cell_kind,
                                                         num_sensory_cells_of_cell_kind,
-                                                        num_synapses_to_muscles,
+                                                        num_synapses_to_muscles_of_synapse_kind,
                                                         is_x_axis_torus_axis,
                                                         is_y_axis_torus_axis,
                                                         is_c_axis_torus_axis,

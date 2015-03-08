@@ -19,6 +19,7 @@ compute_num_bits_of_dynamic_state_of_neural_tissue_with_checked_operations(
 static_state_of_neural_tissue::static_state_of_neural_tissue(
         natural_16_bit const num_kinds_of_tissue_cells,
         natural_16_bit const num_kinds_of_sensory_cells,
+        natural_16_bit const num_kinds_of_synapses_to_muscles,
         natural_16_bit const num_bits_per_cell,
         natural_16_bit const num_bits_per_synapse,
         natural_16_bit const num_bits_per_signalling,
@@ -27,7 +28,7 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
         std::vector<natural_32_bit> const& num_tissue_cells_of_cell_kind,
         std::vector<natural_32_bit> const& num_synapses_in_territory_of_cell_kind,
         std::vector<natural_32_bit> const& num_sensory_cells_of_cell_kind,
-        natural_32_bit const num_synapses_to_muscles,
+        std::vector<natural_32_bit> const& num_synapses_to_muscles_of_kind,
         bool const is_x_axis_torus_axis,
         bool const is_y_axis_torus_axis,
         bool const is_columnar_axis_torus_axis,
@@ -43,6 +44,7 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
         )
     : m_num_kinds_of_cells(num_kinds_of_tissue_cells + num_kinds_of_sensory_cells)
     , m_num_kinds_of_tissue_cells(num_kinds_of_tissue_cells)
+    , m_num_kinds_of_synapses_to_muscles(num_kinds_of_synapses_to_muscles)
     , m_num_bits_per_cell(num_bits_per_cell)
     , m_num_bits_per_synapse(num_bits_per_synapse)
     , m_num_bits_per_signalling(num_bits_per_signalling)
@@ -64,6 +66,7 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
     , m_num_tissue_cells_of_cell_kind(num_tissue_cells_of_cell_kind)
     , m_num_synapses_in_territory_of_cell_kind(num_synapses_in_territory_of_cell_kind)
     , m_num_sensory_cells_of_cell_kind(num_sensory_cells_of_cell_kind)
+    , m_num_synapses_to_muscles_of_kind(num_synapses_to_muscles_of_kind)
     , m_num_sensory_cells(
             [](std::vector<natural_32_bit> const& v)
             {
@@ -77,7 +80,19 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
                 return sum;
             }(num_sensory_cells_of_cell_kind)
         )
-    , m_num_synapses_to_muscles(num_synapses_to_muscles)
+    , m_num_synapses_to_muscles(
+            [](std::vector<natural_32_bit> const& v)
+            {
+                ASSUMPTION(!v.empty());
+                natural_32_bit sum = 0U;
+                for (natural_32_bit i : v)
+                {
+                    ASSUMPTION(i > 0U);
+                    sum = checked_add_32_bit(sum,i);
+                }
+                return sum;
+            }(num_synapses_to_muscles_of_kind)
+        )
     , m_end_index_along_columnar_axis_of_cell_kind(
             [](std::vector<natural_32_bit> const& t, std::vector<natural_32_bit> const& s)
             {
@@ -90,6 +105,17 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
                     v.at(t.size() + i) = checked_add_32_bit(s.at(i),v.at(t.size() + i - 1U));
                 return v;
             }(num_tissue_cells_of_cell_kind, num_sensory_cells_of_cell_kind)
+        )
+    , m_end_index_of_synapse_to_muscle_kind(
+            [](std::vector<natural_32_bit> const& s)
+            {
+                ASSUMPTION(!s.empty());
+                std::vector<natural_32_bit> v(s.size());
+                v.at(0) = s.at(0);
+                for (natural_32_bit i = 1U; i < s.size(); ++i)
+                    v.at(i) = checked_add_32_bit(s.at(i),v.at(i - 1U));
+                return v;
+            }(num_synapses_to_muscles_of_kind)
         )
     , m_is_x_axis_torus_axis(is_x_axis_torus_axis)
     , m_is_y_axis_torus_axis(is_y_axis_torus_axis)
@@ -106,6 +132,7 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
 {
     ASSUMPTION(m_num_kinds_of_tissue_cells > 0U);
     ASSUMPTION(m_num_kinds_of_cells < std::numeric_limits<natural_16_bit>::max());
+    ASSUMPTION(m_num_kinds_of_synapses_to_muscles < std::numeric_limits<natural_16_bit>::max());
 
     ASSUMPTION(m_num_bits_per_cell > 0U);
     ASSUMPTION(m_num_bits_per_cell < std::numeric_limits<natural_16_bit>::max());
@@ -142,6 +169,8 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
                 return true;
             }(m_num_synapses_in_territory_of_cell_kind)
         );
+
+    ASSUMPTION(m_num_kinds_of_synapses_to_muscles == m_num_synapses_to_muscles_of_kind.size());
 
     ASSUMPTION(m_num_sensory_cells < std::numeric_limits<natural_32_bit>::max());
     ASSUMPTION(m_num_synapses_to_muscles < std::numeric_limits<natural_32_bit>::max());
@@ -226,6 +255,11 @@ kind_of_cell  static_state_of_neural_tissue::lowest_kind_of_sensory_cells() cons
     return num_kinds_of_tissue_cells();
 }
 
+natural_32_bit  static_state_of_neural_tissue::num_kinds_of_synapses_to_muscles() const
+{
+    return m_num_kinds_of_synapses_to_muscles;
+}
+
 natural_16_bit  static_state_of_neural_tissue::num_bits_per_cell() const
 {
     return m_num_bits_per_cell;
@@ -275,6 +309,12 @@ natural_32_bit  static_state_of_neural_tissue::num_sensory_cells_of_cell_kind(
 {
     ASSUMPTION(cell_kind >= lowest_kind_of_sensory_cells() && cell_kind < num_kinds_of_cells());
     return m_num_sensory_cells_of_cell_kind.at(cell_kind - lowest_kind_of_sensory_cells());
+}
+
+natural_32_bit  static_state_of_neural_tissue::num_synapses_to_muscles_of_kind(kind_of_synapse_to_muscle const synapse_kind) const
+{
+    ASSUMPTION(synapse_kind < num_kinds_of_synapses_to_muscles());
+    return m_num_synapses_to_muscles_of_kind.at(synapse_kind);
 }
 
 natural_32_bit  static_state_of_neural_tissue::num_sensory_cells() const
@@ -333,6 +373,13 @@ kind_of_cell  static_state_of_neural_tissue::compute_kind_of_sensory_cell_from_i
                 );
 }
 
+kind_of_synapse_to_muscle  static_state_of_neural_tissue::compute_kind_of_synapse_to_muscle_from_its_index(
+        natural_32_bit index_of_synapse_to_muscle) const
+{
+    ASSUMPTION(index_of_synapse_to_muscle < num_synapses_to_muscles());
+    return compute_kind_of_synapse_to_muscle_and_relative_index_from_its_index(index_of_synapse_to_muscle).first;
+}
+
 std::pair<kind_of_cell,natural_32_bit>
 static_state_of_neural_tissue::compute_kind_of_sensory_cell_and_relative_index_from_its_index(
             natural_32_bit index_of_sensory_cell) const
@@ -341,6 +388,29 @@ static_state_of_neural_tissue::compute_kind_of_sensory_cell_and_relative_index_f
     return compute_kind_of_cell_and_relative_columnar_index_from_coordinate_along_columnar_axis(
                 num_cells_along_columnar_axis() + index_of_sensory_cell
                 );
+}
+
+std::pair<kind_of_synapse_to_muscle,natural_32_bit>
+static_state_of_neural_tissue::compute_kind_of_synapse_to_muscle_and_relative_index_from_its_index(
+        natural_32_bit index_of_synapse_to_muscle) const
+{
+    ASSUMPTION(index_of_synapse_to_muscle < num_synapses_to_muscles());
+    std::vector<natural_32_bit>::const_iterator const it =
+            std::upper_bound(
+                    m_end_index_of_synapse_to_muscle_kind.begin(),
+                    m_end_index_of_synapse_to_muscle_kind.end(),
+                    index_of_synapse_to_muscle
+                    );
+    INVARIANT(it != m_end_index_of_synapse_to_muscle_kind.end());
+    kind_of_synapse_to_muscle const synapse_kind =
+            static_cast<kind_of_synapse_to_muscle>(it - m_end_index_of_synapse_to_muscle_kind.begin());
+    INVARIANT(synapse_kind < num_kinds_of_synapses_to_muscles());
+    natural_32_bit const relative_index =
+            it == m_end_index_of_synapse_to_muscle_kind.begin() ?
+                  index_of_synapse_to_muscle :
+                  index_of_synapse_to_muscle - *(it - 1U);
+    INVARIANT(relative_index < num_synapses_to_muscles_of_kind(synapse_kind));
+    return std::make_pair(synapse_kind,relative_index);
 }
 
 natural_32_bit  static_state_of_neural_tissue::compute_index_of_first_sensory_cell_of_kind(
@@ -352,6 +422,14 @@ natural_32_bit  static_state_of_neural_tissue::compute_index_of_first_sensory_ce
                 m_end_index_along_columnar_axis_of_cell_kind.at(lowest_kind_of_sensory_cells() - 1U)
                 ;
 }
+
+natural_32_bit  static_state_of_neural_tissue::compute_index_of_first_synapse_to_muscle_of_kind(
+        kind_of_synapse_to_muscle const synapse_to_muscle_kind) const
+{
+    ASSUMPTION(synapse_to_muscle_kind < num_kinds_of_synapses_to_muscles());
+    return synapse_to_muscle_kind == 0U ? 0U : m_end_index_of_synapse_to_muscle_kind.at(synapse_to_muscle_kind - 1U);
+}
+
 
 natural_32_bit  static_state_of_neural_tissue::compute_columnar_coord_of_first_tissue_cell_of_kind(
         kind_of_cell const tissue_cell_kind) const

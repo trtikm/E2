@@ -29,7 +29,10 @@ static void  thread_update_sensory_cells(
     if (get_random_natural_32_bit_in_range(0U,10U) < 3U)
         wait_milliseconds(get_random_natural_32_bit_in_range(0U,1000U));
 
-    for ( ; cell_index < access_to_sensory_cells.num_sensory_cells(); cell_index += shift_to_next_cell)
+    std::shared_ptr<cellab::static_state_of_neural_tissue const> const  static_tissue =
+            access_to_sensory_cells.get_static_state_of_tissue();
+
+    for ( ; cell_index < static_tissue->num_sensory_cells(); cell_index += shift_to_next_cell)
     {
         instance_wrapper<my_cell> cell;
         access_to_sensory_cells.read_sensory_cell(cell_index,cell);
@@ -40,7 +43,7 @@ static void  thread_update_sensory_cells(
         {
             instance_wrapper<my_synapse> synapse;
             access_to_synapses_to_muscles.read_synapse_to_muscle(
-                        get_random_natural_32_bit_in_range(0U,access_to_synapses_to_muscles.num_synapses_to_muscles()-1U),
+                        get_random_natural_32_bit_in_range(0U,static_tissue->num_synapses_to_muscles()-1U),
                         synapse);
             TEST_SUCCESS(synapse->count() == cell->count());
         }
