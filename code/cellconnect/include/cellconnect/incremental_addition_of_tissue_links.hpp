@@ -15,7 +15,8 @@ void  initialisation_of_incremental_addition_of_tissue_links(
         std::vector< std::function<float_32_bit()> > const&
             random_generators_of_polar_angles_to_centers_of_far_link_target_areas,
         std::vector< std::function<float_32_bit()> > const&
-            random_generators_of_polar_radii_to_centers_of_far_link_target_areas
+            random_generators_of_polar_radii_to_centers_of_far_link_target_areas,
+        natural_32_bit const  num_threads_avalilable_for_computation
         );
 
 void  apply_step_of_incremental_addition_of_tissue_links(
