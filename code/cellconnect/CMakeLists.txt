@@ -10,6 +10,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/cellconnect/incremental_addition_of_tissue_links.hpp
     ./src/incremental_addition_of_tissue_links.cpp
 
+    ./include/cellconnect/basic_addition_of_synapses_to_territories_of_cells.hpp
+    ./src/basic_addition_of_synapses_to_territories_of_cells.cpp
+
     ./include/cellconnect/utility/choose_tissue_coordinates.hpp
     ./src/utility/choose_tissue_coordinates.cpp
 

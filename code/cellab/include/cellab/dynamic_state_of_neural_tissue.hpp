@@ -7,13 +7,14 @@
 #   include <utility/array_of_bit_units.hpp>
 #   include <utility/bits_reference.hpp>
 #   include <boost/multiprecision/cpp_int.hpp>
+#   include <boost/noncopyable.hpp>
 #   include <vector>
 #   include <memory>
 
 namespace cellab {
 
 
-struct dynamic_state_of_neural_tissue
+struct dynamic_state_of_neural_tissue : private boost::noncopyable
 {
     dynamic_state_of_neural_tissue(
             std::shared_ptr<static_state_of_neural_tissue const> const pointer_to_static_state_of_neural_tissue

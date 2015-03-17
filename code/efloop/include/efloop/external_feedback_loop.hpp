@@ -1,15 +1,16 @@
 #ifndef EFLOOP_EXTERNAL_FEEDBACK_LOOP_HPP_INCLUDED
 #   define EFLOOP_EXTERNAL_FEEDBACK_LOOP_HPP_INCLUDED
 
-#include <cellab/neural_tissue.hpp>
-#include <envlab/rules_and_logic_of_environment.hpp>
-#include <utility/basic_numeric_types.hpp>
-#include <memory>
+#   include <cellab/neural_tissue.hpp>
+#   include <envlab/rules_and_logic_of_environment.hpp>
+#   include <utility/basic_numeric_types.hpp>
+#   include <boost/noncopyable.hpp>
+#   include <memory>
 
 namespace efloop {
 
 
-struct external_feedback_loop
+struct external_feedback_loop : private boost::noncopyable
 {
     external_feedback_loop(
             std::shared_ptr<cellab::neural_tissue> neural_tissue,
