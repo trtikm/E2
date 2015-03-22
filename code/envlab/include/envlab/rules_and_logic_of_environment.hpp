@@ -4,6 +4,7 @@
 #   include <efloop/access_to_sensory_cells.hpp>
 #   include <efloop/access_to_synapses_to_muscles.hpp>
 #   include <utility/basic_numeric_types.hpp>
+#   include <vector>
 
 namespace envlab {
 
@@ -12,8 +13,8 @@ struct rules_and_logic_of_environment
 {
     virtual ~rules_and_logic_of_environment() {}
     virtual void compute_next_state(
-            efloop::access_to_sensory_cells&  access_to_sensory_cells,
-            efloop::access_to_synapses_to_muscles const&  access_to_synapses_to_muscles,
+            std::vector<efloop::access_to_sensory_cells>&  accesses_to_sensory_cells,
+            std::vector<efloop::access_to_synapses_to_muscles>&  accesses_to_synapses_to_muscles,
             natural_32_bit const  num_threads_avalilable_for_computation
             ) = 0;
 };

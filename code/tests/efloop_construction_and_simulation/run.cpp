@@ -30,6 +30,8 @@ static void test_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tissue> 
                 }
             }
 
+    TEST_PROGRESS_UPDATE();
+
     for (natural_32_bit i = 0U; i < static_tissue->num_synapses_to_muscles(); ++i)
         TEST_SUCCESS(round_counter == my_synapse(dynamic_tissue->find_bits_of_synapse_to_muscle(i)).count());
     for (natural_32_bit i = 0U; i < static_tissue->num_sensory_cells(); ++i)
@@ -37,17 +39,23 @@ static void test_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tissue> 
 }
 
 static void test_round(std::shared_ptr<efloop::external_feedback_loop> const  loop,
-                       natural_32_bit const  num_avalilable_tissue_threads,
+                       std::vector<natural_32_bit> const&  num_avalilable_tissue_threads,
                        natural_32_bit const  num_avalilable_envirinment_threads,
                        natural_32_bit&  round_counter
                        )
 {
-    loop->compute_next_state_of_both_neural_tissue_and_environment(num_avalilable_tissue_threads,
-                                                                   num_avalilable_envirinment_threads);
+    ASSUMPTION(num_avalilable_tissue_threads.size() == loop->num_neural_tissues());
+
+    loop->compute_next_state_of_neural_tissues_and_environment(num_avalilable_tissue_threads,
+                                                               num_avalilable_envirinment_threads);
     TEST_PROGRESS_UPDATE();
 
-    test_tissue(loop->get_neural_tissue()->get_dynamic_state_of_neural_tissue(),++round_counter);
-    TEST_PROGRESS_UPDATE();
+    ++round_counter;
+    for (natural_32_bit i = 0U; i < loop->num_neural_tissues(); ++i)
+    {
+        test_tissue(loop->get_neural_tissue(i)->get_dynamic_state_of_neural_tissue(),round_counter);
+        TEST_PROGRESS_UPDATE();
+    }
 }
 
 void run()
@@ -57,17 +65,27 @@ void run()
     TEST_PROGRESS_SHOW();
 
     std::shared_ptr<efloop::external_feedback_loop>  loop =
-            std::shared_ptr<efloop::external_feedback_loop>(new efloop::external_feedback_loop(
-                    std::shared_ptr<cellab::neural_tissue>(new my_neural_tissue()),
-                    std::shared_ptr<envlab::rules_and_logic_of_environment>(new my_environment())
-                    ));
+            std::shared_ptr<efloop::external_feedback_loop>(
+                    new efloop::external_feedback_loop(
+                            std::vector< std::shared_ptr<cellab::neural_tissue> >{
+                                    std::shared_ptr<cellab::neural_tissue>(new my_neural_tissue()),
+                                    std::shared_ptr<cellab::neural_tissue>(new my_neural_tissue())
+                                    },
+                            std::shared_ptr<envlab::rules_and_logic_of_environment>(new my_environment())
+                            )
+                    );
 
     natural_32_bit counter = 0U;
     for (natural_32_bit i = 0U; i < 5U; ++i)
     {
-        test_round(loop,20U,12U,counter);
-        test_round(loop,41U,23U,counter);
-        test_round(loop,64U,64U,counter);
+        test_round(loop,std::vector<natural_32_bit>{0U,0U},1U,counter);
+        test_round(loop,std::vector<natural_32_bit>{0U,0U},2U,counter);
+        test_round(loop,std::vector<natural_32_bit>{1U,2U},2U,counter);
+        test_round(loop,std::vector<natural_32_bit>{0U,1U},1U,counter);
+        test_round(loop,std::vector<natural_32_bit>{2U,1U},2U,counter);
+        test_round(loop,std::vector<natural_32_bit>{11U,20U},12U,counter);
+        test_round(loop,std::vector<natural_32_bit>{22U,41U},23U,counter);
+        test_round(loop,std::vector<natural_32_bit>{33U,64U},64U,counter);
     }
 
     TEST_PROGRESS_HIDE();

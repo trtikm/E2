@@ -42,6 +42,9 @@ add_library(utility
 
     ./include/utility/test.hpp
     ./src/test.cpp
+
+    ./include/utility/thread_synchronisarion_barrier.hpp
+    ./src/thread_synchronisarion_barrier.cpp
     )
 
 #install(TARGETS brod_utils DESTINATION lib/utils)

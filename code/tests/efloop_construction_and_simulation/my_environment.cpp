@@ -5,6 +5,8 @@
 #include <cellab/utilities_for_transition_algorithms.hpp>
 #include <utility/random.hpp>
 #include <utility/test.hpp>
+#include <utility/assumptions.hpp>
+#include <utility/invariants.hpp>
 #include <boost/chrono.hpp>
 #include <vector>
 #include <thread>
@@ -51,28 +53,39 @@ static void  thread_update_sensory_cells(
 }
 
 void my_environment::compute_next_state(
-        efloop::access_to_sensory_cells&  access_to_sensory_cells,
-        efloop::access_to_synapses_to_muscles const&  access_to_synapses_to_muscles,
+        std::vector<efloop::access_to_sensory_cells>&  accesses_to_sensory_cells,
+        std::vector<efloop::access_to_synapses_to_muscles>&  accesses_to_synapses_to_muscles,
         natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
-    std::vector<std::thread> threads;
-    for (natural_32_bit i = 1U; i < num_threads_avalilable_for_computation; ++i)
-        threads.push_back(
-                    std::thread(
-                        &thread_update_sensory_cells,
-                        std::ref(access_to_sensory_cells),
-                        std::cref(access_to_synapses_to_muscles),
-                        i,
-                        num_threads_avalilable_for_computation
-                        )
+    ASSUMPTION(accesses_to_sensory_cells.size() == accesses_to_synapses_to_muscles.size());
+    ASSUMPTION(accesses_to_sensory_cells.size() > 0U);
+
+    for (natural_32_bit i = 0U; i < accesses_to_sensory_cells.size(); ++i)
+    {
+        efloop::access_to_sensory_cells& access_to_sensory_cells = accesses_to_sensory_cells.at(i);
+        efloop::access_to_synapses_to_muscles& access_to_synapses_to_muscles = accesses_to_synapses_to_muscles.at(i);
+
+        std::vector<std::thread> threads;
+        for (natural_32_bit i = 1U; i < num_threads_avalilable_for_computation; ++i)
+            threads.push_back(
+                        std::thread(
+                            &thread_update_sensory_cells,
+                            std::ref(access_to_sensory_cells),
+                            std::ref(access_to_synapses_to_muscles),
+                            i,
+                            num_threads_avalilable_for_computation
+                            )
+                        );
+        thread_update_sensory_cells(
+                    access_to_sensory_cells,
+                    access_to_synapses_to_muscles,
+                    0U,
+                    num_threads_avalilable_for_computation
                     );
-    thread_update_sensory_cells(
-                access_to_sensory_cells,
-                access_to_synapses_to_muscles,
-                0U,
-                num_threads_avalilable_for_computation
-                );
-    for(std::thread& thread : threads)
-        thread.join();
+        for(std::thread& thread : threads)
+            thread.join();
+
+        TEST_PROGRESS_UPDATE();
+    }
 }
