@@ -93,6 +93,35 @@ set(PYTHON_LIST_OF_LIBRARIES_TO_LINK_WITH
 message("Python includes was found in directory: " ${PYTHON_INCLUDE_DIRS})
 message("Python libraries was found in directory: " ${PYTHON_LIBRARIES})
 
+# find and add Eigen math library
+message("Searching for Eigen ...")
+if(NOT EIGEN_ROOT)
+    set(EIGEN_ROOT "/home/marek/Software/Eigen_3_2_5" CACHE STRING "A path to Eigen math library." FORCE)
+    message("ERROR: Eigen root directory was NOT found!")
+else()
+    set(EIGEN_INCLUDE_DIRS ${EIGEN_ROOT})
+    if(EXISTS "${EIGEN_INCLUDE_DIRS}" AND IS_DIRECTORY "${EIGEN_INCLUDE_DIRS}")
+        include_directories(${EIGEN_INCLUDE_DIRS})
+        message("Eigen includes was found in directory: " ${EIGEN_INCLUDE_DIRS})
+    else()
+        message("ERROR: Eigen includes was NOT found!")
+        message("EIGEN_ROOT = " ${EIGEN_ROOT})
+        message("EIGEN_INCLUDE_DIRS = " ${EIGEN_INCLUDE_DIRS})
+    endif()
+endif()
+
+# find and add OpenGL
+message("Searching for OpenGL ...")
+find_package(OpenGL REQUIRED)
+# include_directories(${OPENGL_INCLUDE_DIRS})
+link_directories(${OPENGL_LIBRARY_DIRS})
+add_definitions(${OPENGL_DEFINITIONS})
+set(OPENGL_LIST_OF_LIBRARIES_TO_LINK_WITH
+        ${OPENGL_LIBRARIES}
+    )
+# message("OpenGL includes was found in directory: " ${OPENGL_INCLUDE_DIRS})
+message("OpenGL libraries was found in directory: " ${OPENGL_LIBRARIES})
+
 # here follow all libraries of E2
 include_directories(
     "${PROJECT_SOURCE_DIR}/cellab/include"

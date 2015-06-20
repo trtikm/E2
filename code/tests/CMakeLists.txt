@@ -33,6 +33,9 @@ add_subdirectory(./efloop_construction_and_simulation)
 add_subdirectory(./random)
     message("-- random")
 
+add_subdirectory(./tensor_math)
+    message("-- tensor_math")
+
 
 message("-- run_tests.py")
 install(

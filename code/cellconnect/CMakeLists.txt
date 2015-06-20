@@ -24,6 +24,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/cellconnect/utility/access_to_byte_buffer_of_tissue_cell.hpp
     ./src/utility/access_to_byte_buffer_of_tissue_cell.cpp
+
+    ./include/cellconnect/fill_territories.hpp
+    ./src/fill_territories.cpp
     )
 
 #set_target_properties(${THIS_TARGET_NAME} PROPERTIES

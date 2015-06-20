@@ -40,6 +40,8 @@ add_library(utility
 
     ./include/utility/instance_wrapper.hpp
 
+    ./include/utility/tensor_math.hpp
+
     ./include/utility/test.hpp
     ./src/test.cpp
 
