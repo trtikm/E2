@@ -63,6 +63,13 @@ bool  go_to_next_coordinates(
         natural_32_bit const num_cells_along_columnar_axis
         );
 
+bool  go_to_next_column(
+        natural_32_bit& x_coord, natural_32_bit& y_coord,
+        natural_32_bit const extent,
+        natural_32_bit const num_cells_along_x_axis,
+        natural_32_bit const num_cells_along_y_axis
+        );
+
 bool  go_to_next_index(
         natural_32_bit& index,
         natural_32_bit const extent,

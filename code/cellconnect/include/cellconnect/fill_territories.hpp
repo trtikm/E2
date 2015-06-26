@@ -12,7 +12,7 @@ namespace cellconnect {
 
 void  fill_territories(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
-        std::vector<natural_32_bit> matrix_num_tissue_cell_kinds_x_num_tissue_plus_sensory_cell_kinds,
+        std::vector<natural_32_bit> const&  matrix_num_tissue_cell_kinds_x_num_tissue_plus_sensory_cell_kinds,
         natural_32_bit const  num_threads_avalilable_for_computation
         );
 

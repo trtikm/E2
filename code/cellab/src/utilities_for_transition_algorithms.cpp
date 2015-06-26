@@ -136,6 +136,21 @@ bool  go_to_next_coordinates(
     return extent_64_bit == 0ULL;
 }
 
+bool  go_to_next_column(
+        natural_32_bit& x_coord, natural_32_bit& y_coord,
+        natural_32_bit const extent,
+        natural_32_bit const num_cells_along_x_axis,
+        natural_32_bit const num_cells_along_y_axis
+        )
+{
+    natural_64_bit extent_64_bit = extent;
+    x_coord = go_to_next_value_modulo_range(x_coord,num_cells_along_x_axis,extent_64_bit);
+    y_coord = go_to_next_value_modulo_range(y_coord,num_cells_along_y_axis,extent_64_bit);
+    INVARIANT(extent_64_bit != 0ULL || (x_coord < num_cells_along_x_axis &&
+                                        y_coord < num_cells_along_y_axis));
+    return extent_64_bit == 0ULL;
+}
+
 bool  go_to_next_index(
         natural_32_bit& index,
         natural_32_bit const extent,
