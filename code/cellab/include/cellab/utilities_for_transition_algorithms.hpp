@@ -83,6 +83,7 @@ integer_8_bit  clip_shift(
         bool const is_it_torus_axis
         );
 
+void  write_tissue_coordinates_to_bits_of_coordinates(tissue_coordinates const& coords, bits_reference& bits_ref);
 tissue_coordinates  convert_bits_of_coordinates_to_tissue_coordinates(bits_reference const& bits_ref);
 
 tissue_coordinates  get_coordinates_of_source_cell_of_synapse_in_tissue(

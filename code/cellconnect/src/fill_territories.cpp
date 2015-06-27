@@ -1,5 +1,7 @@
 #include <cellconnect/fill_territories.hpp>
 #include <cellab/utilities_for_transition_algorithms.hpp>
+#include <utility/assumptions.hpp>
+#include <utility/invariants.hpp>
 #include <thread>
 
 namespace cellconnect { namespace {
@@ -16,6 +18,77 @@ void  thread_fill_territories_in_columns(
 {
     do
     {
+        cellab::kind_of_cell  i = 0U;
+        natural_32_bit k = 0U;
+        natural_32_bit t = 0U;
+
+        for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_tissue_cells(); ++j)
+            for (natural_32_bit l = 0U; l < static_state_ptr->num_tissue_cells_of_cell_kind(j); ++l)
+                for (natural_32_bit r = 0U; r < matrix.at(i * static_state_ptr->num_kinds_of_tissue_cells() + j); ++r)
+                {
+                    bits_reference  coords_bits =
+                        dynamic_state_ptr->find_bits_of_coords_of_source_cell_of_synapse_in_tissue(
+                                    x_coord,
+                                    y_coord,
+                                    static_state_ptr->compute_columnar_coord_of_first_tissue_cell_of_kind(i) + k,
+                                    t
+                                    );
+                    cellab::tissue_coordinates const coords(
+                                x_coord,
+                                y_coord,
+                                static_state_ptr->compute_columnar_coord_of_first_tissue_cell_of_kind(j) + l
+                                );
+                    cellab::write_tissue_coordinates_to_bits_of_coordinates(coords,coords_bits);
+
+                    ++t;
+                    if (t == static_state_ptr->num_synapses_in_territory_of_cell_kind(i))
+                    {
+                        t = 0U;
+                        ++k;
+                        if (k == static_state_ptr->num_tissue_cells_of_cell_kind(i))
+                        {
+                            k = 0U;
+                            INVARIANT(i < static_state_ptr->num_kinds_of_tissue_cells());
+                            ++i;
+                        }
+                    }
+                }
+
+        for (cellab::kind_of_cell j = static_state_ptr->lowest_kind_of_sensory_cells(); j < static_state_ptr->num_kinds_of_cells(); ++j)
+            for (natural_32_bit l = 0U; l < static_state_ptr->num_sensory_cells_of_cell_kind(j); ++l)
+                for (natural_32_bit r = 0U; r < matrix.at(i * static_state_ptr->num_kinds_of_tissue_cells() + j); ++r)
+                {
+                    bits_reference  coords_bits =
+                        dynamic_state_ptr->find_bits_of_coords_of_source_cell_of_synapse_in_tissue(
+                                    x_coord,
+                                    y_coord,
+                                    static_state_ptr->compute_columnar_coord_of_first_tissue_cell_of_kind(i) + k,
+                                    t
+                                    );
+                    cellab::tissue_coordinates const coords(
+                                x_coord,
+                                y_coord,
+                                static_state_ptr->num_cells_along_columnar_axis() +
+                                    static_state_ptr->compute_index_of_first_sensory_cell_of_kind(j) +
+                                    l
+                                );
+                    cellab::write_tissue_coordinates_to_bits_of_coordinates(coords,coords_bits);
+
+                    ++t;
+                    if (t == static_state_ptr->num_synapses_in_territory_of_cell_kind(i))
+                    {
+                        t = 0U;
+                        ++k;
+                        if (k == static_state_ptr->num_tissue_cells_of_cell_kind(i))
+                        {
+                            k = 0U;
+                            INVARIANT(i < static_state_ptr->num_kinds_of_tissue_cells());
+                            ++i;
+                        }
+                    }
+                }
+
+        INVARIANT(i == static_state_ptr->num_kinds_of_tissue_cells() && k == 0U && t == 0U);
     }
     while (cellab::go_to_next_column(
                     x_coord,y_coord,
@@ -39,6 +112,10 @@ void  fill_territories(
 {
     std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr =
             dynamic_state_ptr->get_static_state_of_neural_tissue();
+
+    ASSUMPTION(matrix_num_tissue_cell_kinds_x_num_tissue_plus_sensory_cell_kinds.size() ==
+               (std::size_t)(static_state_ptr->num_kinds_of_tissue_cells() * static_state_ptr->num_kinds_of_cells()));
+    ASSUMPTION(num_threads_avalilable_for_computation > 0U);
 
     std::vector<std::thread> threads;
     for (natural_32_bit i = 1U; i < num_threads_avalilable_for_computation; ++i)

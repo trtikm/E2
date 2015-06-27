@@ -187,6 +187,18 @@ integer_8_bit  clip_shift(
     return shift;
 }
 
+void  write_tissue_coordinates_to_bits_of_coordinates(
+        tissue_coordinates const& coords,
+        bits_reference& bits_ref)
+{
+    natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
+    INVARIANT(num_bits * natural_16_bit(3U) == bits_ref.num_bits());
+
+    value_to_bits(coords.get_coord_along_x_axis(),bits_ref,0U,num_bits);
+    value_to_bits(coords.get_coord_along_y_axis(),bits_ref,num_bits,num_bits);
+    value_to_bits(coords.get_coord_along_columnar_axis(),bits_ref,num_bits + num_bits,num_bits);
+}
+
 tissue_coordinates  convert_bits_of_coordinates_to_tissue_coordinates(bits_reference const& bits_ref)
 {
     natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
