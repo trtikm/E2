@@ -151,9 +151,9 @@ my_neural_tissue::my_neural_tissue()
                         cellab::convert_territorial_state_of_synapse_to_territorial_list_index(territorial_state);
                     for (natural_8_bit d = 0U; d < cellab::num_delimiters(); ++d)
                         if (d < d0)
-                            value_to_bits(0U,get_dynamic_state_of_neural_tissue()->find_bits_of_delimiter_between_teritorial_lists(x,y,c,d));
+                            value_to_bits(0U,get_dynamic_state_of_neural_tissue()->find_bits_of_delimiter_between_territorial_lists(x,y,c,d));
                         else
-                            value_to_bits(num_synapses,get_dynamic_state_of_neural_tissue()->find_bits_of_delimiter_between_teritorial_lists(x,y,c,d));
+                            value_to_bits(num_synapses,get_dynamic_state_of_neural_tissue()->find_bits_of_delimiter_between_territorial_lists(x,y,c,d));
                 }
             }
 

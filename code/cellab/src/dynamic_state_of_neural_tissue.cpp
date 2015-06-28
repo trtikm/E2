@@ -37,7 +37,7 @@ dynamic_state_of_neural_tissue::dynamic_state_of_neural_tissue(
     , m_slices_of_territorial_states_of_synapses(m_static_state_of_neural_tissue->num_kinds_of_tissue_cells())
     , m_slices_of_source_cell_coords_of_synapses(m_static_state_of_neural_tissue->num_kinds_of_tissue_cells())
     , m_slices_of_signalling_data(m_static_state_of_neural_tissue->num_kinds_of_tissue_cells())
-    , m_slices_of_delimiters_between_teritorial_lists(m_static_state_of_neural_tissue->num_kinds_of_tissue_cells())
+    , m_slices_of_delimiters_between_territorial_lists(m_static_state_of_neural_tissue->num_kinds_of_tissue_cells())
     , m_bits_of_sensory_cells(m_static_state_of_neural_tissue->num_bits_per_cell(),
                               m_static_state_of_neural_tissue->num_sensory_cells())
     , m_bits_of_synapses_to_muscles(m_static_state_of_neural_tissue->num_bits_per_synapse(),
@@ -107,7 +107,7 @@ dynamic_state_of_neural_tissue::dynamic_state_of_neural_tissue(
                         m_static_state_of_neural_tissue->num_tissue_cells_of_cell_kind(kind)
                         )
                     );
-        m_slices_of_delimiters_between_teritorial_lists.at(kind) =
+        m_slices_of_delimiters_between_territorial_lists.at(kind) =
                 pointer_to_homogenous_slice_of_tissue(
                     new homogenous_slice_of_tissue(
                         checked_mul_16_bit(num_delimiters(),m_num_bits_per_delimiter_number.at(kind)),
@@ -287,7 +287,7 @@ bits_reference  dynamic_state_of_neural_tissue::find_bits_of_signalling(
                 );
 }
 
-bits_reference  dynamic_state_of_neural_tissue::find_bits_of_delimiter_between_teritorial_lists(
+bits_reference  dynamic_state_of_neural_tissue::find_bits_of_delimiter_between_territorial_lists(
         natural_32_bit const coord_to_cell_along_x_axis,
         natural_32_bit const coord_to_cell_along_y_axis,
         natural_32_bit const coord_to_cell_along_columnar_axis,
@@ -304,7 +304,7 @@ bits_reference  dynamic_state_of_neural_tissue::find_bits_of_delimiter_between_t
                 coord_to_cell_along_columnar_axis
                 );
     bits_reference bits_of_all_delimiters =
-            m_slices_of_delimiters_between_teritorial_lists.at(kind_and_index.first)->find_bits_of_unit(
+            m_slices_of_delimiters_between_territorial_lists.at(kind_and_index.first)->find_bits_of_unit(
                 coord_to_cell_along_x_axis,
                 coord_to_cell_along_y_axis,
                 kind_and_index.second
@@ -444,7 +444,7 @@ boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tiss
                         static_state_of_tissue.num_cells_along_y_axis(),
                         static_state_of_tissue.num_tissue_cells_of_cell_kind(kind)
                         );
-        // slices of delimiters between teritorial lists
+        // slices of delimiters between territorial lists
         natural_8_bit const num_bits_per_delimiter_number =
                 compute_byte_aligned_num_of_bits_to_store_number(
                         static_state_of_tissue.num_synapses_in_territory_of_cell_kind(kind)

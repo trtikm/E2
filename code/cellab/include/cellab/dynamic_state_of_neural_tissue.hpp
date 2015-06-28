@@ -64,7 +64,7 @@ struct dynamic_state_of_neural_tissue : private boost::noncopyable
             natural_32_bit const coord_to_cell_along_columnar_axis
             );
 
-    bits_reference  find_bits_of_delimiter_between_teritorial_lists(
+    bits_reference  find_bits_of_delimiter_between_territorial_lists(
             natural_32_bit const coord_to_cell_along_x_axis,
             natural_32_bit const coord_to_cell_along_y_axis,
             natural_32_bit const coord_to_cell_along_columnar_axis,
@@ -92,7 +92,7 @@ private:
     std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_territorial_states_of_synapses;
     std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_source_cell_coords_of_synapses;
     std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_signalling_data;
-    std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_delimiters_between_teritorial_lists;
+    std::vector<pointer_to_homogenous_slice_of_tissue> m_slices_of_delimiters_between_territorial_lists;
     array_of_bit_units m_bits_of_sensory_cells;
     array_of_bit_units m_bits_of_synapses_to_muscles;
     array_of_bit_units m_bits_of_source_cell_coords_of_synapses_to_muscles;

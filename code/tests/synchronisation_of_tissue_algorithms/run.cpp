@@ -64,11 +64,11 @@ static void test_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tissue> 
                     TEST_SUCCESS(territorial_state == bits_to_value<natural_32_bit>(dynamic_tissue->find_bits_of_territorial_state_of_synapse_in_tissue(x,y,c,s)));
                     natural_8_bit const d0 =
                         cellab::convert_territorial_state_of_synapse_to_territorial_list_index(territorial_state);
-                    TEST_SUCCESS(num_synapses == bits_to_value<natural_32_bit>(dynamic_tissue->find_bits_of_delimiter_between_teritorial_lists(x,y,c,d0)));
+                    TEST_SUCCESS(num_synapses == bits_to_value<natural_32_bit>(dynamic_tissue->find_bits_of_delimiter_between_territorial_lists(x,y,c,d0)));
                     for (natural_8_bit d = 0U; d < cellab::num_delimiters(); ++d)
                     {
                         natural_32_bit const  index =
-                                bits_to_value<natural_32_bit>(dynamic_tissue->find_bits_of_delimiter_between_teritorial_lists(x,y,c,d));
+                                bits_to_value<natural_32_bit>(dynamic_tissue->find_bits_of_delimiter_between_territorial_lists(x,y,c,d));
                         TEST_SUCCESS(d >= d0 || index == 0U);
                         TEST_SUCCESS(d < d0 || index == num_synapses);
                     }
@@ -122,9 +122,9 @@ static void initialse_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tis
                         cellab::convert_territorial_state_of_synapse_to_territorial_list_index(territorial_state);
                     for (natural_8_bit d = 0U; d < cellab::num_delimiters(); ++d)
                         if (d < d0)
-                            value_to_bits(0U,dynamic_tissue->find_bits_of_delimiter_between_teritorial_lists(x,y,c,d));
+                            value_to_bits(0U,dynamic_tissue->find_bits_of_delimiter_between_territorial_lists(x,y,c,d));
                         else
-                            value_to_bits(num_synapses,dynamic_tissue->find_bits_of_delimiter_between_teritorial_lists(x,y,c,d));
+                            value_to_bits(num_synapses,dynamic_tissue->find_bits_of_delimiter_between_territorial_lists(x,y,c,d));
                 }
             }
 

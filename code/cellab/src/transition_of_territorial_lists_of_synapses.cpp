@@ -70,22 +70,22 @@ static void move_synapses_into_proper_lists_in_territory_of_one_cell(
     ASSUMPTION(c_coord < static_state_of_tissue->num_cells_along_columnar_axis());
 
     std::array<bits_reference,6U> bits_of_delimiters = {
-            dynamic_state_of_tissue->find_bits_of_delimiter_between_teritorial_lists(
+            dynamic_state_of_tissue->find_bits_of_delimiter_between_territorial_lists(
                     x_coord, y_coord, c_coord, 0U
                     ),
-            dynamic_state_of_tissue->find_bits_of_delimiter_between_teritorial_lists(
+            dynamic_state_of_tissue->find_bits_of_delimiter_between_territorial_lists(
                     x_coord, y_coord, c_coord, 1U
                     ),
-            dynamic_state_of_tissue->find_bits_of_delimiter_between_teritorial_lists(
+            dynamic_state_of_tissue->find_bits_of_delimiter_between_territorial_lists(
                     x_coord, y_coord, c_coord, 2U
                     ),
-            dynamic_state_of_tissue->find_bits_of_delimiter_between_teritorial_lists(
+            dynamic_state_of_tissue->find_bits_of_delimiter_between_territorial_lists(
                     x_coord, y_coord, c_coord, 3U
                     ),
-            dynamic_state_of_tissue->find_bits_of_delimiter_between_teritorial_lists(
+            dynamic_state_of_tissue->find_bits_of_delimiter_between_territorial_lists(
                     x_coord, y_coord, c_coord, 4U
                     ),
-            dynamic_state_of_tissue->find_bits_of_delimiter_between_teritorial_lists(
+            dynamic_state_of_tissue->find_bits_of_delimiter_between_territorial_lists(
                     x_coord, y_coord, c_coord, 5U
                     ),
             };

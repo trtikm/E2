@@ -495,7 +495,7 @@ static void test_find_bits_of_signalling(
                     );
 }
 
-static void test_find_bits_of_delimiter_between_teritorial_lists(
+static void test_find_bits_of_delimiter_between_territorial_lists(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const dynamic_tissue)
 {
     std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue =
@@ -519,7 +519,7 @@ static void test_find_bits_of_delimiter_between_teritorial_lists(
                 for (natural_8_bit delim_index = 0U; delim_index < cellab::num_delimiters(); ++delim_index)
                 {
                     TEST_SUCCESS(
-                        dynamic_tissue->find_bits_of_delimiter_between_teritorial_lists(
+                        dynamic_tissue->find_bits_of_delimiter_between_territorial_lists(
                                 coords_x.at(i),coords_y.at(j),coord_c,delim_index
                                 ).num_bits()
                         == dynamic_tissue->num_bits_per_delimiter_number(kind)
@@ -575,7 +575,7 @@ static void test_dynamic_state(std::shared_ptr<cellab::dynamic_state_of_neural_t
     test_find_bits_of_territorial_state_of_synapse_in_tissue(dynamic_tissue);
     test_find_bits_of_coords_of_source_cell_of_synapse_in_tissue(dynamic_tissue);
     test_find_bits_of_signalling(dynamic_tissue);
-    test_find_bits_of_delimiter_between_teritorial_lists(dynamic_tissue);
+    test_find_bits_of_delimiter_between_territorial_lists(dynamic_tissue);
     test_find_bits_of_sensory_cell(dynamic_tissue);
     test_find_bits_of_synapse_to_muscle(dynamic_tissue);
 }

@@ -62,7 +62,7 @@ natural_8_bit*  compute_pointer_to_byte_in_buffer_of_tissue_cell(
                         dynamic_state_ptr->num_bits_per_delimiter_number(kind_of_tissue_cell) / 8U
                         );
         natural_8_bit*  byte_ptr =
-                dynamic_state_ptr->find_bits_of_delimiter_between_teritorial_lists(
+                dynamic_state_ptr->find_bits_of_delimiter_between_territorial_lists(
                         x_coord_of_tissue_cell,
                         y_coord_of_tissue_cell,
                         columnar_coord_of_tissue_cell,

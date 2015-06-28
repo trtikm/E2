@@ -25,8 +25,11 @@ add_library(${THIS_TARGET_NAME}
     ./include/cellconnect/utility/access_to_byte_buffer_of_tissue_cell.hpp
     ./src/utility/access_to_byte_buffer_of_tissue_cell.cpp
 
-    ./include/cellconnect/fill_territories.hpp
-    ./src/fill_territories.cpp
+    ./include/cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp
+    ./src/fill_coords_of_source_cells_of_synapses_in_tissue.cpp
+
+    ./include/cellconnect/fill_delimeters_between_territorial_lists.hpp
+    ./src/fill_delimeters_between_territorial_lists.cpp
     )
 
 #set_target_properties(${THIS_TARGET_NAME} PROPERTIES

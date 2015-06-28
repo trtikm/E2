@@ -36,7 +36,7 @@ static void test_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tissue> 
                     {
                         boundaries_of_lists.at(w) =
                                 bits_to_value<natural_32_bit>(
-                                        dynamic_tissue->find_bits_of_delimiter_between_teritorial_lists(x,y,c,w - 1U)
+                                        dynamic_tissue->find_bits_of_delimiter_between_territorial_lists(x,y,c,w - 1U)
                                         );
                         TEST_SUCCESS(boundaries_of_lists.at(w) >= boundaries_of_lists.at(w - 1U));
                     }
@@ -111,9 +111,9 @@ static void initialse_tissue_and_sensory_cells(
                         cellab::convert_territorial_state_of_synapse_to_territorial_list_index(territorial_state);
                     for (natural_8_bit d = 0U; d < cellab::num_delimiters(); ++d)
                         if (d < d0)
-                            value_to_bits(0U,dynamic_tissue->find_bits_of_delimiter_between_teritorial_lists(x,y,c,d));
+                            value_to_bits(0U,dynamic_tissue->find_bits_of_delimiter_between_territorial_lists(x,y,c,d));
                         else
-                            value_to_bits(num_synapses,dynamic_tissue->find_bits_of_delimiter_between_teritorial_lists(x,y,c,d));
+                            value_to_bits(num_synapses,dynamic_tissue->find_bits_of_delimiter_between_territorial_lists(x,y,c,d));
                 }
             }
 

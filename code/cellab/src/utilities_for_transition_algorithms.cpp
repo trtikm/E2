@@ -275,7 +275,7 @@ natural_32_bit  get_begin_index_of_territorial_list_of_cell(
     if (index_of_territorial_list == 0U)
         return 0U;
     return bits_to_value<natural_32_bit>(
-                dynamic_state_of_tissue->find_bits_of_delimiter_between_teritorial_lists(
+                dynamic_state_of_tissue->find_bits_of_delimiter_between_territorial_lists(
                         coordinates_of_cell.get_coord_along_x_axis(),
                         coordinates_of_cell.get_coord_along_y_axis(),
                         coordinates_of_cell.get_coord_along_columnar_axis(),
@@ -301,7 +301,7 @@ natural_32_bit  get_end_index_of_territorial_list_of_cell(
                             )
                     );
     return bits_to_value<natural_32_bit>(
-                dynamic_state_of_tissue->find_bits_of_delimiter_between_teritorial_lists(
+                dynamic_state_of_tissue->find_bits_of_delimiter_between_territorial_lists(
                         coordinates_of_cell.get_coord_along_x_axis(),
                         coordinates_of_cell.get_coord_along_y_axis(),
                         coordinates_of_cell.get_coord_along_columnar_axis(),

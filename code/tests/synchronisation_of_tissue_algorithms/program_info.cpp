@@ -13,7 +13,7 @@ std::string  get_program_version()
 std::string  get_program_description()
 {
     return "This program tests correctness of synchronisation of tissue algorithms.\n"
-           "It is done such that each neuron, synapse, and teritorie contains just\n"
+           "It is done such that each neuron, synapse, and territorie contains just\n"
            "one unsigned number which is initialised to zero and it is incremented\n"
            "by one each time its update is issued from a tissue algorithm. Whenever\n"
            "a tissue algorithm finishes its job the test checks for correct values\n"
