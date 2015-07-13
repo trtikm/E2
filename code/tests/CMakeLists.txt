@@ -36,6 +36,9 @@ add_subdirectory(./random)
 add_subdirectory(./tensor_math)
     message("-- tensor_math")
 
+add_subdirectory(./fill_src_coords_of_synapses)
+    message("-- fill_src_coords_of_synapses")
+
 
 message("-- run_tests.py")
 install(
