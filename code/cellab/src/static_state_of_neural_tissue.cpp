@@ -304,6 +304,14 @@ natural_32_bit  static_state_of_neural_tissue::num_synapses_in_territory_of_cell
     return m_num_synapses_in_territory_of_cell_kind.at(cell_kind);
 }
 
+natural_32_bit  static_state_of_neural_tissue::num_synapses_in_territory_of_cell_with_columnar_coord(
+        natural_32_bit const coordinate_in_column) const
+{
+    return num_synapses_in_territory_of_cell_kind(
+                compute_kind_of_cell_from_its_position_along_columnar_axis(coordinate_in_column)
+                );
+}
+
 natural_32_bit  static_state_of_neural_tissue::num_sensory_cells_of_cell_kind(
         kind_of_cell const cell_kind) const
 {

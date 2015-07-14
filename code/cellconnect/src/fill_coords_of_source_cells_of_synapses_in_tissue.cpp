@@ -2,6 +2,7 @@
 #include <cellab/utilities_for_transition_algorithms.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
+#include <utility/timeprof.hpp>
 #include <thread>
 
 namespace cellconnect { namespace {
@@ -16,6 +17,8 @@ void  thread_fill_coords_of_source_cells_of_synapses_in_tissue_in_columns(
         natural_32_bit const  extent_in_coordinates
         )
 {
+    TMPROF_BLOCK();
+
     do
     {
         cellab::kind_of_cell  i = 0U;
@@ -130,6 +133,8 @@ void  fill_coords_of_source_cells_of_synapses_in_tissue(
         natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
+    TMPROF_BLOCK();
+
     std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr =
             dynamic_state_ptr->get_static_state_of_neural_tissue();
 
