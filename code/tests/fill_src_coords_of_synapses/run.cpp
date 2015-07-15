@@ -4,6 +4,8 @@
 #include <cellab/utilities_for_transition_algorithms.hpp>
 #include <cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp>
 #include <utility/test.hpp>
+#include <utility/assumptions.hpp>
+#include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <vector>
@@ -11,26 +13,111 @@
 
 
 static void build_matrix(
-        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue,
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
         std::vector<natural_32_bit>& matrix
         )
 {
+    TMPROF_BLOCK();
 
+    static std::vector<natural_32_bit> multipliers = {
+            1, 8, 5, 3, 2, 4, 0, 9, 6, 1, 7, 3, 4, 2, 6, 5, 8, 0, 9, 7
+            };
+
+    matrix.resize(
+            (natural_32_bit)static_state_ptr->num_kinds_of_tissue_cells() *
+            (natural_32_bit)static_state_ptr->num_kinds_of_cells()
+            );
+    INVARIANT(matrix.size() > 0U);
+    std::fill(matrix.begin(),matrix.end(),0U);
+
+    for (cellab::kind_of_cell i = 0U; i < static_state_ptr->num_kinds_of_tissue_cells(); ++i)
+    {
+        natural_64_bit const TiNi =
+                (natural_64_bit)static_state_ptr->num_synapses_in_territory_of_cell_kind(i) *
+                (natural_64_bit)static_state_ptr->num_tissue_cells_of_cell_kind(i);
+        INVARIANT(TiNi > 0ULL);
+
+        natural_32_bit const row_shift = i * (natural_32_bit)static_state_ptr->num_kinds_of_cells();
+
+        natural_64_bit SUM = 0ULL;
+        for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
+        {
+            matrix.at(row_shift + j) =  1U + (natural_32_bit)(multipliers.at((i + j) % multipliers.size()) * TiNi) /
+                                             ( (natural_64_bit)static_state_ptr->num_kinds_of_cells() *
+                                               (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j) );
+            SUM += matrix.at(row_shift + j);
+        }
+        INVARIANT(SUM >= static_state_ptr->num_kinds_of_cells());
+        for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
+            matrix.at(row_shift + j) = matrix.at(row_shift + j) * (float_64_bit)TiNi / (float_64_bit)SUM;
+        SUM = 0ULL;
+        for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
+            SUM += matrix.at(row_shift + j);
+        for (cellab::kind_of_cell j = 0U; SUM < TiNi && j < static_state_ptr->num_kinds_of_cells(); j = (j+1) % static_state_ptr->num_kinds_of_cells())
+            if (multipliers.at((i + j) % multipliers.size()) != 0U)
+            {
+                ++matrix.at(row_shift + j);
+                ++SUM;
+            }
+        for (cellab::kind_of_cell j = 0U; SUM > TiNi && j < static_state_ptr->num_kinds_of_cells(); j = (j+1) % static_state_ptr->num_kinds_of_cells())
+            if (matrix.at(row_shift + j) > 0U)
+            {
+                --matrix.at(row_shift + j);
+                --SUM;
+            }
+        SUM = 0ULL;
+        for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
+            SUM += matrix[row_shift + j];
+        INVARIANT(SUM == TiNi);
+
+        std::rotate(multipliers.begin(), multipliers.begin() + 1, multipliers.end());
+    }
 }
 
 
 static void test_column(
         natural_32_bit const x,
         natural_32_bit const y,
-        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue,
-        std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const dynamic_tissue,
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
+        std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const dynamic_state_ptr,
         std::vector<natural_32_bit> const& matrix
         )
 {
-    for (natural_32_bit c = 0U; c < static_tissue->num_cells_along_columnar_axis(); ++c)
-        for (natural_32_bit s = 0U; s < static_tissue->num_synapses_in_territory_of_cell_with_columnar_coord(c); ++s)
+    TMPROF_BLOCK();
+
+    std::vector<natural_64_bit> inferred_matrix(
+                (natural_32_bit)static_state_ptr->num_kinds_of_tissue_cells() *
+                (natural_32_bit)static_state_ptr->num_kinds_of_cells(),
+                0ULL
+                );
+    INVARIANT(inferred_matrix.size() == matrix.size());
+
+    for (natural_32_bit c = 0U; c < static_state_ptr->num_cells_along_columnar_axis(); ++c)
+        for (natural_32_bit s = 0U; s < static_state_ptr->num_synapses_in_territory_of_cell_with_columnar_coord(c); ++s)
         {
+            cellab::tissue_coordinates const coords =
+                    cellab::get_coordinates_of_source_cell_of_synapse_in_tissue(
+                            dynamic_state_ptr,
+                            cellab::tissue_coordinates(x,y,c),
+                            s
+                            );
+            TEST_SUCCESS(coords.get_coord_along_x_axis() == x &&
+                         coords.get_coord_along_y_axis() == y &&
+                         coords.get_coord_along_columnar_axis() < static_state_ptr->num_cells_along_columnar_axis() + static_state_ptr->num_sensory_cells());
+
+            ++inferred_matrix.at(
+                    (natural_32_bit)static_state_ptr->compute_kind_of_cell_from_its_position_along_columnar_axis(c) *
+                    (natural_32_bit)static_state_ptr->num_kinds_of_cells() +
+                    (natural_32_bit)static_state_ptr->compute_kind_of_cell_from_its_position_along_columnar_axis(coords.get_coord_along_columnar_axis())
+                    );
         }
+
+    for (cellab::kind_of_cell i = 0U; i < static_state_ptr->num_kinds_of_tissue_cells(); ++i)
+        for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_tissue_cells(); ++j)
+            TEST_SUCCESS(
+                    (natural_64_bit)matrix.at(i * static_state_ptr->num_kinds_of_tissue_cells() + j) * (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j)
+                        == inferred_matrix.at(i * static_state_ptr->num_kinds_of_tissue_cells() + j)
+                    );
 }
 
 
@@ -125,10 +212,9 @@ void run()
                     for (natural_32_bit num_threads = 0U; num_threads <= 16; num_threads += 4)
                     {
                         cellab::tissue_coordinates const error_coords(
-                                    static_tissue->num_cells_along_x_axis() + 1U,
-                                    static_tissue->num_cells_along_y_axis() + 1U,
-                                    static_tissue->num_cells_along_columnar_axis() +
-                                            static_tissue->num_sensory_cells() + 1U
+                                    static_tissue->num_cells_along_x_axis(),
+                                    static_tissue->num_cells_along_y_axis(),
+                                    static_tissue->num_cells_along_columnar_axis() + static_tissue->num_sensory_cells()
                                     );
                         for (natural_32_bit x = 0U; x < static_tissue->num_cells_along_x_axis(); ++x)
                             for (natural_32_bit y = 0U; y < static_tissue->num_cells_along_y_axis(); ++y)
@@ -140,7 +226,6 @@ void run()
                                         cellab::write_tissue_coordinates_to_bits_of_coordinates(error_coords,bits_of_coords);
                                     }
 
-                        if (false)
                         cellconnect::fill_coords_of_source_cells_of_synapses_in_tissue(
                                     dynamic_tissue,
                                     matrix,

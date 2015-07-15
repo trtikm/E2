@@ -290,11 +290,26 @@ natural_32_bit  static_state_of_neural_tissue::num_cells_along_columnar_axis() c
     return m_num_cells_along_columnar_axis;
 }
 
+natural_32_bit  static_state_of_neural_tissue::num_cells_of_cell_kind(
+        kind_of_cell const cell_kind) const
+{
+    ASSUMPTION(cell_kind < num_kinds_of_cells());
+    return cell_kind < num_kinds_of_tissue_cells() ? num_tissue_cells_of_cell_kind(cell_kind) :
+                                                     num_sensory_cells_of_cell_kind(cell_kind);
+}
+
 natural_32_bit  static_state_of_neural_tissue::num_tissue_cells_of_cell_kind(
         kind_of_cell const cell_kind) const
 {
     ASSUMPTION(cell_kind < num_kinds_of_tissue_cells());
     return m_num_tissue_cells_of_cell_kind.at(cell_kind);
+}
+
+natural_32_bit  static_state_of_neural_tissue::num_sensory_cells_of_cell_kind(
+        kind_of_cell const cell_kind) const
+{
+    ASSUMPTION(cell_kind >= lowest_kind_of_sensory_cells() && cell_kind < num_kinds_of_cells());
+    return m_num_sensory_cells_of_cell_kind.at(cell_kind - lowest_kind_of_sensory_cells());
 }
 
 natural_32_bit  static_state_of_neural_tissue::num_synapses_in_territory_of_cell_kind(
@@ -310,13 +325,6 @@ natural_32_bit  static_state_of_neural_tissue::num_synapses_in_territory_of_cell
     return num_synapses_in_territory_of_cell_kind(
                 compute_kind_of_cell_from_its_position_along_columnar_axis(coordinate_in_column)
                 );
-}
-
-natural_32_bit  static_state_of_neural_tissue::num_sensory_cells_of_cell_kind(
-        kind_of_cell const cell_kind) const
-{
-    ASSUMPTION(cell_kind >= lowest_kind_of_sensory_cells() && cell_kind < num_kinds_of_cells());
-    return m_num_sensory_cells_of_cell_kind.at(cell_kind - lowest_kind_of_sensory_cells());
 }
 
 natural_32_bit  static_state_of_neural_tissue::num_synapses_to_muscles_of_kind(kind_of_synapse_to_muscle const synapse_kind) const

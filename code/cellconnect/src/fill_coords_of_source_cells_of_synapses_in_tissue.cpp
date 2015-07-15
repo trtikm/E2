@@ -28,7 +28,7 @@ void  thread_fill_coords_of_source_cells_of_synapses_in_tissue_in_columns(
         {
             for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_tissue_cells(); ++j)
                 for (natural_32_bit l = 0U; l < static_state_ptr->num_tissue_cells_of_cell_kind(j); ++l)
-                    for (natural_32_bit r = 0U; r < matrix.at(i * static_state_ptr->num_kinds_of_tissue_cells() + j); ++r)
+                    for (natural_32_bit r = 0U; r < matrix.at(i * static_state_ptr->num_kinds_of_cells() + j); ++r)
                     {
                         INVARIANT(i < static_state_ptr->num_kinds_of_tissue_cells());
 
@@ -67,7 +67,7 @@ void  thread_fill_coords_of_source_cells_of_synapses_in_tissue_in_columns(
                                             return true;
                                         }(static_state_ptr->lowest_kind_of_sensory_cells(),
                                           static_state_ptr->num_kinds_of_cells(),
-                                          i * static_state_ptr->num_kinds_of_tissue_cells(),
+                                          i * static_state_ptr->num_kinds_of_cells(),
                                           matrix)
                                     );
                             }
@@ -76,7 +76,7 @@ void  thread_fill_coords_of_source_cells_of_synapses_in_tissue_in_columns(
 
             for (cellab::kind_of_cell j = static_state_ptr->lowest_kind_of_sensory_cells(); j < static_state_ptr->num_kinds_of_cells(); ++j)
                 for (natural_32_bit l = 0U; l < static_state_ptr->num_sensory_cells_of_cell_kind(j); ++l)
-                    for (natural_32_bit r = 0U; r < matrix.at(i * static_state_ptr->num_kinds_of_tissue_cells() + j); ++r)
+                    for (natural_32_bit r = 0U; r < matrix.at(i * static_state_ptr->num_kinds_of_cells() + j); ++r)
                     {
                         INVARIANT(i < static_state_ptr->num_kinds_of_tissue_cells());
 
@@ -105,13 +105,19 @@ void  thread_fill_coords_of_source_cells_of_synapses_in_tissue_in_columns(
                             {
                                 k = 0U;
                                 ++i;
+                                if (i == static_state_ptr->num_kinds_of_tissue_cells())
+                                {
+                                    INVARIANT(l + 1U == static_state_ptr->num_sensory_cells_of_cell_kind(j));
+                                    INVARIANT(j + 1U == static_state_ptr->num_kinds_of_cells());
+                                    break;
+                                }
                             }
                         }
                     }
 
             INVARIANT(k == 0U && t == 0U);
         }
-        while (i == static_state_ptr->num_kinds_of_tissue_cells());
+        while (i < static_state_ptr->num_kinds_of_tissue_cells());
     }
     while (cellab::go_to_next_column(
                     x_coord,y_coord,

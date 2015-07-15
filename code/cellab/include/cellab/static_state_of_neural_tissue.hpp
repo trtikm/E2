@@ -58,10 +58,12 @@ struct static_state_of_neural_tissue : private boost::noncopyable
     natural_32_bit  num_cells_along_y_axis() const;
     natural_32_bit  num_cells_along_columnar_axis() const;
 
+    natural_32_bit  num_cells_of_cell_kind(kind_of_cell const cell_kind) const;
     natural_32_bit  num_tissue_cells_of_cell_kind(kind_of_cell const cell_kind) const;
+    natural_32_bit  num_sensory_cells_of_cell_kind(kind_of_cell const cell_kind) const;
+
     natural_32_bit  num_synapses_in_territory_of_cell_kind(kind_of_cell const cell_kind) const;
     natural_32_bit  num_synapses_in_territory_of_cell_with_columnar_coord(natural_32_bit const coordinate_in_column) const;
-    natural_32_bit  num_sensory_cells_of_cell_kind(kind_of_cell const cell_kind) const;
     natural_32_bit  num_synapses_to_muscles_of_kind(kind_of_synapse_to_muscle const synapse_kind) const;
 
     natural_32_bit  num_sensory_cells() const;
