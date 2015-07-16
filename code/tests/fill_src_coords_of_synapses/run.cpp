@@ -19,6 +19,8 @@ static void build_matrix(
 {
     TMPROF_BLOCK();
 
+    ASSUMPTION(static_state_ptr->num_cells_of_cell_kind(static_state_ptr->num_kinds_of_cells() - 1U) == 1U);
+
     static std::vector<natural_32_bit> multipliers = {
             1, 8, 5, 3, 2, 4, 0, 9, 6, 1, 7, 3, 4, 2, 6, 5, 8, 0, 9, 7
             };
@@ -45,29 +47,25 @@ static void build_matrix(
             matrix.at(row_shift + j) =  1U + (natural_32_bit)(multipliers.at((i + j) % multipliers.size()) * TiNi) /
                                              ( (natural_64_bit)static_state_ptr->num_kinds_of_cells() *
                                                (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j) );
-            SUM += matrix.at(row_shift + j);
+            SUM += (natural_64_bit)matrix.at(row_shift + j) * (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j);
         }
         INVARIANT(SUM >= static_state_ptr->num_kinds_of_cells());
         for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
-            matrix.at(row_shift + j) = matrix.at(row_shift + j) * (float_64_bit)TiNi / (float_64_bit)SUM;
+            matrix.at(row_shift + j) = (float_64_bit)matrix.at(row_shift + j) * (float_64_bit)TiNi / (float_64_bit)SUM;
         SUM = 0ULL;
         for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
-            SUM += matrix.at(row_shift + j);
-        for (cellab::kind_of_cell j = 0U; SUM < TiNi && j < static_state_ptr->num_kinds_of_cells(); j = (j+1) % static_state_ptr->num_kinds_of_cells())
-            if (multipliers.at((i + j) % multipliers.size()) != 0U)
-            {
-                ++matrix.at(row_shift + j);
-                ++SUM;
-            }
+            SUM += (natural_64_bit)matrix.at(row_shift + j) * (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j);
         for (cellab::kind_of_cell j = 0U; SUM > TiNi && j < static_state_ptr->num_kinds_of_cells(); j = (j+1) % static_state_ptr->num_kinds_of_cells())
             if (matrix.at(row_shift + j) > 0U)
             {
                 --matrix.at(row_shift + j);
-                --SUM;
+                SUM -= (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j);
             }
+        INVARIANT(SUM <= TiNi);
+        matrix.at(row_shift + static_state_ptr->num_kinds_of_cells() - 1U) += (natural_32_bit)(TiNi - SUM);
         SUM = 0ULL;
         for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
-            SUM += matrix[row_shift + j];
+            SUM += (natural_64_bit)matrix.at(row_shift + j) * (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j);
         INVARIANT(SUM == TiNi);
 
         std::rotate(multipliers.begin(), multipliers.begin() + 1, multipliers.end());
@@ -149,16 +147,19 @@ void run()
                         natural_32_bit mult = multipliers.at(i % multipliers.size());
                         num_tissue_cells_of_cell_kind.push_back(mult * tissue_cell_kinds);
 
-                        mult = multipliers.at((i + 5) % multipliers.size());
+                        mult = multipliers.at((i + 5U) % multipliers.size());
                         num_synapses_in_territory_of_cell_kind.push_back(mult * tissue_cell_kinds);
                     }
 
                     std::vector<natural_32_bit> num_sensory_cells_of_cell_kind;
                     for (natural_16_bit i = 0U; i < sensory_cell_kinds; ++i)
-                    {
-                        natural_32_bit const mult = multipliers.at(i % multipliers.size());
-                        num_sensory_cells_of_cell_kind.push_back(mult * sensory_cell_kinds);
-                    }
+                        if (i + 1U == sensory_cell_kinds)
+                            num_sensory_cells_of_cell_kind.push_back(1U);
+                        else
+                        {
+                            natural_32_bit const mult = multipliers.at(i % multipliers.size());
+                            num_sensory_cells_of_cell_kind.push_back(mult * sensory_cell_kinds);
+                        }
 
                     std::vector<natural_32_bit> const num_synapses_to_muscles_of_synapse_kind(synapses_to_muscles_kinds,10U);
 

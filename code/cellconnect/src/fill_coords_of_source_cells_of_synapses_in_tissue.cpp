@@ -19,6 +19,11 @@ void  thread_fill_coords_of_source_cells_of_synapses_in_tissue_in_columns(
 {
     TMPROF_BLOCK();
 
+if (matrix.size() == 42U)
+{
+    int iii = 0;
+}
+
     do
     {
         cellab::kind_of_cell  i = 0U;
@@ -53,8 +58,6 @@ void  thread_fill_coords_of_source_cells_of_synapses_in_tissue_in_columns(
                             ++k;
                             if (k == static_state_ptr->num_tissue_cells_of_cell_kind(i))
                             {
-                                k = 0U;
-                                ++i;
                                 INVARIANT(
                                         [](cellab::kind_of_cell const  min_sensory_kind,
                                            natural_16_bit const  num_cell_kinds,
@@ -69,7 +72,9 @@ void  thread_fill_coords_of_source_cells_of_synapses_in_tissue_in_columns(
                                           static_state_ptr->num_kinds_of_cells(),
                                           i * static_state_ptr->num_kinds_of_cells(),
                                           matrix)
-                                    );
+                                        );
+                                k = 0U;
+                                ++i;
                             }
                         }
                     }
@@ -146,6 +151,25 @@ void  fill_coords_of_source_cells_of_synapses_in_tissue(
 
     ASSUMPTION(matrix_num_tissue_cell_kinds_x_num_tissue_plus_sensory_cell_kinds.size() ==
                (std::size_t)(static_state_ptr->num_kinds_of_tissue_cells() * static_state_ptr->num_kinds_of_cells()));
+    ASSUMPTION(
+            [](std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
+               std::vector<natural_32_bit> const&  matrix)
+            {
+                for (cellab::kind_of_cell i = 0U; i < static_state_ptr->num_kinds_of_tissue_cells(); ++i)
+                {
+                    natural_64_bit sum = 0ULL;
+                    for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
+                        sum += (natural_64_bit)matrix.at(i * static_state_ptr->num_kinds_of_cells() + j) *
+                               (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j);
+                    natural_64_bit correct_sum =
+                            (natural_64_bit)static_state_ptr->num_synapses_in_territory_of_cell_kind(i) *
+                            (natural_64_bit)static_state_ptr->num_tissue_cells_of_cell_kind(i);
+                    if (sum != correct_sum)
+                        return false;
+                }
+                return true;
+            }(static_state_ptr,matrix_num_tissue_cell_kinds_x_num_tissue_plus_sensory_cell_kinds)
+            );
     ASSUMPTION(num_threads_avalilable_for_computation > 0U);
 
     std::vector<std::thread> threads;
