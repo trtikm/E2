@@ -19,11 +19,6 @@ void  thread_fill_coords_of_source_cells_of_synapses_in_tissue_in_columns(
 {
     TMPROF_BLOCK();
 
-if (matrix.size() == 42U)
-{
-    int iii = 0;
-}
-
     do
     {
         cellab::kind_of_cell  i = 0U;
@@ -33,7 +28,7 @@ if (matrix.size() == 42U)
         {
             for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_tissue_cells(); ++j)
                 for (natural_32_bit l = 0U; l < static_state_ptr->num_tissue_cells_of_cell_kind(j); ++l)
-                    for (natural_32_bit r = 0U; r < matrix.at(i * static_state_ptr->num_kinds_of_cells() + j); ++r)
+                    for (natural_32_bit r = 0U, R = matrix.at(i * static_state_ptr->num_kinds_of_cells() + j); r < R; ++r)
                     {
                         INVARIANT(i < static_state_ptr->num_kinds_of_tissue_cells());
 
@@ -58,6 +53,9 @@ if (matrix.size() == 42U)
                             ++k;
                             if (k == static_state_ptr->num_tissue_cells_of_cell_kind(i))
                             {
+                                INVARIANT(l + 1U == static_state_ptr->num_sensory_cells_of_cell_kind(j));
+                                INVARIANT(j + 1U == static_state_ptr->num_kinds_of_cells());
+                                INVARIANT(r + 1U == R);
                                 INVARIANT(
                                         [](cellab::kind_of_cell const  min_sensory_kind,
                                            natural_16_bit const  num_cell_kinds,
@@ -81,7 +79,7 @@ if (matrix.size() == 42U)
 
             for (cellab::kind_of_cell j = static_state_ptr->lowest_kind_of_sensory_cells(); j < static_state_ptr->num_kinds_of_cells(); ++j)
                 for (natural_32_bit l = 0U; l < static_state_ptr->num_sensory_cells_of_cell_kind(j); ++l)
-                    for (natural_32_bit r = 0U; r < matrix.at(i * static_state_ptr->num_kinds_of_cells() + j); ++r)
+                    for (natural_32_bit r = 0U, R = matrix.at(i * static_state_ptr->num_kinds_of_cells() + j); r < R; ++r)
                     {
                         INVARIANT(i < static_state_ptr->num_kinds_of_tissue_cells());
 
@@ -108,14 +106,11 @@ if (matrix.size() == 42U)
                             ++k;
                             if (k == static_state_ptr->num_tissue_cells_of_cell_kind(i))
                             {
+                                INVARIANT(l + 1U == static_state_ptr->num_sensory_cells_of_cell_kind(j));
+                                INVARIANT(j + 1U == static_state_ptr->num_kinds_of_cells());
+                                INVARIANT(r + 1U == R);
                                 k = 0U;
                                 ++i;
-                                if (i == static_state_ptr->num_kinds_of_tissue_cells())
-                                {
-                                    INVARIANT(l + 1U == static_state_ptr->num_sensory_cells_of_cell_kind(j));
-                                    INVARIANT(j + 1U == static_state_ptr->num_kinds_of_cells());
-                                    break;
-                                }
                             }
                         }
                     }

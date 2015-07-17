@@ -28,7 +28,9 @@ dynamic_state_of_neural_tissue::dynamic_state_of_neural_tissue(
           compute_byte_aligned_num_of_bits_to_store_number(
               std::max(m_static_state_of_neural_tissue->num_cells_along_x_axis(),
                        std::max(m_static_state_of_neural_tissue->num_cells_along_y_axis(),
-                                m_static_state_of_neural_tissue->num_cells_along_columnar_axis()))
+                                checked_add_32_bit(m_static_state_of_neural_tissue->num_cells_along_columnar_axis(),
+                                                   m_static_state_of_neural_tissue->num_sensory_cells())
+                                ))
               )
           )
     , m_num_bits_per_delimiter_number(m_static_state_of_neural_tissue->num_kinds_of_tissue_cells())
@@ -379,7 +381,8 @@ boost::multiprecision::int128_t compute_num_bits_of_dynamic_state_of_neural_tiss
           compute_byte_aligned_num_of_bits_to_store_number(
               std::max(static_state_of_tissue.num_cells_along_x_axis(),
                        std::max(static_state_of_tissue.num_cells_along_y_axis(),
-                                static_state_of_tissue.num_cells_along_columnar_axis()))
+                                checked_add_32_bit(static_state_of_tissue.num_cells_along_columnar_axis(),
+                                                   static_state_of_tissue.num_sensory_cells())))
               );
     ASSUMPTION(num_bits_per_source_cell_coordinate > 0U);
     ASSUMPTION(num_bits_per_source_cell_coordinate < 32U);

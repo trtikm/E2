@@ -111,10 +111,10 @@ static void test_column(
         }
 
     for (cellab::kind_of_cell i = 0U; i < static_state_ptr->num_kinds_of_tissue_cells(); ++i)
-        for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_tissue_cells(); ++j)
+        for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
             TEST_SUCCESS(
-                    (natural_64_bit)matrix.at(i * static_state_ptr->num_kinds_of_tissue_cells() + j) * (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j)
-                        == inferred_matrix.at(i * static_state_ptr->num_kinds_of_tissue_cells() + j)
+                    (natural_64_bit)matrix.at(i * static_state_ptr->num_kinds_of_cells() + j) * (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j)
+                        == inferred_matrix.at(i * static_state_ptr->num_kinds_of_cells() + j)
                     );
 }
 
@@ -125,13 +125,13 @@ void run()
 
     TEST_PROGRESS_SHOW();
 
-    std::vector<natural_32_bit> multipliers = {
+    std::vector<natural_32_bit> coefs = {
             1, 4, 3, 8, 1, 9, 2, 5, 4, 2, 7, 6, 6, 5, 8, 9, 3
             };
 
     for (natural_32_bit cells_x = 1U; cells_x <= 11U; cells_x += 5U)
         for (natural_32_bit cells_y = 1U; cells_y <= 11U; cells_y += 5U)
-            for (natural_16_bit tissue_cell_kinds = 1U; tissue_cell_kinds <= 16U; tissue_cell_kinds += 5)
+            for (natural_16_bit tissue_cell_kinds = 1U; tissue_cell_kinds <= 11U; tissue_cell_kinds += 5)
                 for (natural_16_bit sensory_cell_kinds = 1U; sensory_cell_kinds <= 11U; sensory_cell_kinds += 5)
                 {
                     natural_16_bit const synapses_to_muscles_kinds = sensory_cell_kinds;
@@ -144,11 +144,11 @@ void run()
                     std::vector<natural_32_bit> num_synapses_in_territory_of_cell_kind;
                     for (natural_16_bit i = 0U; i < tissue_cell_kinds; ++i)
                     {
-                        natural_32_bit mult = multipliers.at(i % multipliers.size());
-                        num_tissue_cells_of_cell_kind.push_back(mult * tissue_cell_kinds);
+                        natural_32_bit coef = coefs.at(i % coefs.size());
+                        num_tissue_cells_of_cell_kind.push_back(coef + (1U + tissue_cell_kinds / 3U));
 
-                        mult = multipliers.at((i + 5U) % multipliers.size());
-                        num_synapses_in_territory_of_cell_kind.push_back(mult * tissue_cell_kinds);
+                        coef = coefs.at((i + 5U) % coefs.size());
+                        num_synapses_in_territory_of_cell_kind.push_back(coef + (1U + tissue_cell_kinds / 2U));
                     }
 
                     std::vector<natural_32_bit> num_sensory_cells_of_cell_kind;
@@ -157,8 +157,8 @@ void run()
                             num_sensory_cells_of_cell_kind.push_back(1U);
                         else
                         {
-                            natural_32_bit const mult = multipliers.at(i % multipliers.size());
-                            num_sensory_cells_of_cell_kind.push_back(mult * sensory_cell_kinds);
+                            natural_32_bit const coef = coefs.at(i % coefs.size());
+                            num_sensory_cells_of_cell_kind.push_back(coef + (1U + sensory_cell_kinds / 4U));
                         }
 
                     std::vector<natural_32_bit> const num_synapses_to_muscles_of_synapse_kind(synapses_to_muscles_kinds,10U);
@@ -210,7 +210,7 @@ void run()
                     std::vector<natural_32_bit> matrix;
                     build_matrix(static_tissue,matrix);
 
-                    for (natural_32_bit num_threads = 0U; num_threads <= 16; num_threads += 4)
+                    for (natural_32_bit num_threads = 0U; num_threads <= 16; num_threads += 8)
                     {
                         cellab::tissue_coordinates const error_coords(
                                     static_tissue->num_cells_along_x_axis(),
@@ -219,6 +219,7 @@ void run()
                                     );
                         for (natural_32_bit x = 0U; x < static_tissue->num_cells_along_x_axis(); ++x)
                             for (natural_32_bit y = 0U; y < static_tissue->num_cells_along_y_axis(); ++y)
+                            {
                                 for (natural_32_bit c = 0U; c < static_tissue->num_cells_along_columnar_axis(); ++c)
                                     for (natural_32_bit s = 0U; s < static_tissue->num_synapses_in_territory_of_cell_with_columnar_coord(c); ++s)
                                     {
@@ -226,6 +227,8 @@ void run()
                                                 dynamic_tissue->find_bits_of_coords_of_source_cell_of_synapse_in_tissue(x,y,c,s);
                                         cellab::write_tissue_coordinates_to_bits_of_coordinates(error_coords,bits_of_coords);
                                     }
+                                TEST_PROGRESS_UPDATE();
+                            }
 
                         cellconnect::fill_coords_of_source_cells_of_synapses_in_tissue(
                                     dynamic_tissue,
@@ -235,12 +238,13 @@ void run()
 
                         for (natural_32_bit x = 0U; x < static_tissue->num_cells_along_x_axis(); ++x)
                             for (natural_32_bit y = 0U; y < static_tissue->num_cells_along_y_axis(); ++y)
+                            {
                                 test_column(x,y,static_tissue,dynamic_tissue,matrix);
-
-                        TEST_PROGRESS_UPDATE();
+                                TEST_PROGRESS_UPDATE();
+                            }
                     }
 
-                    std::rotate(multipliers.begin(), multipliers.begin() + 1, multipliers.end());
+                    std::rotate(coefs.begin(), coefs.begin() + 1, coefs.end());
                 }
 
     TEST_PROGRESS_HIDE();
