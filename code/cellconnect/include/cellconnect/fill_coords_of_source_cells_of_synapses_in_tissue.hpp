@@ -5,7 +5,6 @@
 #   include <utility/basic_numeric_types.hpp>
 #   include <memory>
 #   include <vector>
-#   include <functional>
 
 namespace cellconnect {
 

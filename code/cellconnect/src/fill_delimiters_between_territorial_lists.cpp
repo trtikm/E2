@@ -1,14 +1,15 @@
-#include <cellconnect/fill_delimeters_between_territorial_lists.hpp>
+#include <cellconnect/fill_delimiters_between_territorial_lists.hpp>
 #include <cellab/utilities_for_transition_algorithms.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
+#include <utility/timeprof.hpp>
 #include <array>
 #include <thread>
 
 namespace cellconnect { namespace {
 
 
-void  thread_fill_delimeters_between_territorial_lists_in_columns(
+void  thread_fill_delimiters_between_territorial_lists_in_columns(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         std::shared_ptr<cellab::static_state_of_neural_tissue const> const  static_state_ptr,
         natural_32_bit  x_coord,
@@ -16,6 +17,8 @@ void  thread_fill_delimeters_between_territorial_lists_in_columns(
         natural_32_bit const  extent_in_coordinates
         )
 {
+    TMPROF_BLOCK();
+
     do
     {
         for (cellab::kind_of_cell i = 0U; i < static_state_ptr->num_kinds_of_tissue_cells(); ++i)
@@ -68,11 +71,13 @@ void  thread_fill_delimeters_between_territorial_lists_in_columns(
 namespace cellconnect {
 
 
-void  fill_delimeters_between_territorial_lists(
+void  fill_delimiters_between_territorial_lists(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
+    TMPROF_BLOCK();
+
     ASSUMPTION(num_threads_avalilable_for_computation > 0U);
 
     std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr =
@@ -93,7 +98,7 @@ void  fill_delimeters_between_territorial_lists(
 
         threads.push_back(
                     std::thread(
-                        &cellconnect::thread_fill_delimeters_between_territorial_lists_in_columns,
+                        &cellconnect::thread_fill_delimiters_between_territorial_lists_in_columns,
                         dynamic_state_ptr,
                         static_state_ptr,
                         x_coord,y_coord,
@@ -102,7 +107,7 @@ void  fill_delimeters_between_territorial_lists(
                     );
     }
 
-    thread_fill_delimeters_between_territorial_lists_in_columns(
+    cellconnect::thread_fill_delimiters_between_territorial_lists_in_columns(
             dynamic_state_ptr,
             static_state_ptr,
             0U,0U,

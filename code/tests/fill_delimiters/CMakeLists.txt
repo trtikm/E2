@@ -1,4 +1,4 @@
-set(THIS_TARGET_NAME fill_src_coords_of_synapses)
+set(THIS_TARGET_NAME fill_delimiters)
 
 add_executable(${THIS_TARGET_NAME}
     program_info.hpp
