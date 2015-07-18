@@ -46,12 +46,12 @@ void  thread_fill_coords_of_source_cells_of_synapses_in_tissue_in_columns(
                                     );
                         cellab::write_tissue_coordinates_to_bits_of_coordinates(coords,coords_bits);
 
-                        ++t;
-                        if (t == static_state_ptr->num_synapses_in_territory_of_cell_kind(i))
+                        ++k;
+                        if (k == static_state_ptr->num_tissue_cells_of_cell_kind(i))
                         {
-                            t = 0U;
-                            ++k;
-                            if (k == static_state_ptr->num_tissue_cells_of_cell_kind(i))
+                            k = 0U;
+                            ++t;
+                            if (t == static_state_ptr->num_synapses_in_territory_of_cell_kind(i))
                             {
                                 INVARIANT(l + 1U == static_state_ptr->num_sensory_cells_of_cell_kind(j));
                                 INVARIANT(j + 1U == static_state_ptr->num_kinds_of_cells());
@@ -71,7 +71,7 @@ void  thread_fill_coords_of_source_cells_of_synapses_in_tissue_in_columns(
                                           i * static_state_ptr->num_kinds_of_cells(),
                                           matrix)
                                         );
-                                k = 0U;
+                                t = 0U;
                                 ++i;
                             }
                         }
@@ -99,17 +99,17 @@ void  thread_fill_coords_of_source_cells_of_synapses_in_tissue_in_columns(
                                     );
                         cellab::write_tissue_coordinates_to_bits_of_coordinates(coords,coords_bits);
 
-                        ++t;
-                        if (t == static_state_ptr->num_synapses_in_territory_of_cell_kind(i))
+                        ++k;
+                        if (k == static_state_ptr->num_tissue_cells_of_cell_kind(i))
                         {
-                            t = 0U;
-                            ++k;
-                            if (k == static_state_ptr->num_tissue_cells_of_cell_kind(i))
+                            k = 0U;
+                            ++t;
+                            if (t == static_state_ptr->num_synapses_in_territory_of_cell_kind(i))
                             {
                                 INVARIANT(l + 1U == static_state_ptr->num_sensory_cells_of_cell_kind(j));
                                 INVARIANT(j + 1U == static_state_ptr->num_kinds_of_cells());
                                 INVARIANT(r + 1U == R);
-                                k = 0U;
+                                t = 0U;
                                 ++i;
                             }
                         }
