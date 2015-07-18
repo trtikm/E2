@@ -6,6 +6,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/cellconnect/fill_delimiters_between_territorial_lists.hpp
     ./src/fill_delimiters_between_territorial_lists.cpp
+
+    ./include/cellconnect/spread_synapses_into_local_neighbourhoods.hpp
+    ./src/spread_synapses_into_local_neighbourhoods.cpp
     )
 
 #set_target_properties(${THIS_TARGET_NAME} PROPERTIES
