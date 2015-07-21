@@ -122,6 +122,57 @@ bool  check_consistency_of_matrix_and_tissue(
 
 }}
 
+namespace cellconnect { namespace {
+
+
+
+void  thread_spread_synapses(
+        std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
+        cellab::kind_of_cell const  target_kind,
+        cellab::kind_of_cell const  source_kind
+        )
+{
+}
+
+
+bool go_to_next_task(
+        natural_32_bit&  row,
+        natural_32_bit&  column,
+        natural_32_bit&  index,
+        natural_64_bit&  shift,
+        natural_32_bit const  diameter_x,
+        natural_32_bit const  diameter_y,
+        std::vector<natural_32_bit> const&  matrix
+        )
+{
+    ++shift;
+    ++index;
+    if (index >= matrix.at(row * diameter_x + column))
+    {
+        index = 0U;
+        ++column;
+        if (column >= diameter_x)
+        {
+            column = 0U;
+            ++row;
+            if (row >= diameter_y)
+            {
+                return false;
+            }
+        }
+        else if (column == diameter_x / 2U && row == diameter_y / 2U)
+        {
+            shift += matrix.at(row * diameter_x + column);
+            ++column;
+        }
+    }
+    return true;
+}
+
+
+}}
+
 namespace cellconnect {
 
 
@@ -141,6 +192,7 @@ void  spread_synapses_into_local_neighbourhoods(
     ASSUMPTION(num_threads_avalilable_for_computation > 0U);
     ASSUMPTION(diameter_x > 0U && (diameter_x % 2U) == 1U);
     ASSUMPTION(diameter_y > 0U && (diameter_y % 2U) == 1U);
+    ASSUMPTION(diameter_x > 2U || diameter_y > 2U);
 
     std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr =
             dynamic_state_ptr->get_static_state_of_neural_tissue();
@@ -161,10 +213,51 @@ void  spread_synapses_into_local_neighbourhoods(
                     )
             );
 
-//    std::vector<std::thread> threads;
-//    for (natural_32_bit i = 1U; i < num_threads_avalilable_for_computation; ++i)
-//    {
-//    }
+    natural_32_bit row = 0U;
+    natural_32_bit column = 0U;
+    natural_32_bit index = 0U;
+    natural_64_bit shift = 0ULL;
+    bool done = false;
+    do
+    {
+        std::vector<std::thread> threads;
+        for (natural_32_bit i = 1U; i < num_threads_avalilable_for_computation && !done; ++i)
+        {
+            threads.push_back(
+                        std::thread(
+                            &cellconnect::thread_spread_synapses,
+                            dynamic_state_ptr,
+                            static_state_ptr,
+                            kind_of_target_cells_of_synapses,
+                            kind_of_source_cells_of_synapses
+                            )
+                        );
+
+            done = !cellconnect::go_to_next_task(
+                            row,column,index,shift,
+                            diameter_x,diameter_y,
+                            matrix_of_counts_of_synapses_to_be_spread_into_columns_in_neighbourhood
+                            );
+        }
+        if (!done)
+        {
+            cellconnect::thread_spread_synapses(
+                    dynamic_state_ptr,
+                    static_state_ptr,
+                    kind_of_target_cells_of_synapses,
+                    kind_of_source_cells_of_synapses
+                    );
+            done = !cellconnect::go_to_next_task(
+                            row,column,index,shift,
+                            diameter_x,diameter_y,
+                            matrix_of_counts_of_synapses_to_be_spread_into_columns_in_neighbourhood
+                            );
+        }
+        for(std::thread& thread : threads)
+            thread.join();
+    }
+    while(!done);
+    INVARIANT(index == 0U && column == 0U && row == diameter_y);
 }
 
 
