@@ -47,6 +47,12 @@ private:
 
 bool operator==(tissue_coordinates const& left, tissue_coordinates const& right);
 
+natural_32_bit  shift_coordinate_in_torus_axis(
+        integer_64_bit coordinate,
+        integer_64_bit const shift,
+        natural_64_bit const length_of_axis
+        );
+
 tissue_coordinates  shift_coordinates(
         tissue_coordinates const& coords,
         shift_in_coordinates const& shift,
@@ -74,6 +80,12 @@ bool  go_to_next_index(
         natural_32_bit& index,
         natural_32_bit const extent,
         natural_32_bit const size
+        );
+
+integer_64_bit  clip_shift(
+        integer_64_bit const shift,
+        natural_32_bit const origin,
+        natural_32_bit const length_of_axis
         );
 
 integer_8_bit  clip_shift(

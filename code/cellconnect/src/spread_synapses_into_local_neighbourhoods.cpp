@@ -126,13 +126,189 @@ namespace cellconnect { namespace {
 
 
 
+natural_32_bit  shift_coordinate(
+        natural_32_bit const coord,
+        integer_64_bit const shift,
+        natural_32_bit const length_of_axis,
+        bool is_totus_axis
+        )
+{
+    if (is_totus_axis)
+        return cellab::shift_coordinate_in_torus_axis(coord,shift,length_of_axis);
+    integer_64_bit const  result = (integer_64_bit)coord + shift;
+    if (result < 0LL || result >= (integer_64_bit)length_of_axis)
+        return length_of_axis;
+    return result;
+}
+
+
+natural_32_bit  read_x_coord_from_bits_of_coordinates(bits_reference const& bits_ref)
+{
+    natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
+    INVARIANT(num_bits * natural_16_bit(3U) == bits_ref.num_bits());
+
+    natural_32_bit coord_along_x_axis;
+    bits_to_value(bits_ref,0U,num_bits,coord_along_x_axis);
+
+    return coord_along_x_axis;
+}
+
+
+natural_32_bit  read_y_coord_from_bits_of_coordinates(bits_reference const& bits_ref)
+{
+    natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
+    INVARIANT(num_bits * natural_16_bit(3U) == bits_ref.num_bits());
+
+    natural_32_bit coord_along_y_axis;
+    bits_to_value(bits_ref,num_bits,num_bits,coord_along_y_axis);
+
+    return coord_along_y_axis;
+}
+
+
+natural_32_bit  read_columnar_coord_from_bits_of_coordinates(bits_reference const& bits_ref)
+{
+    natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
+    INVARIANT(num_bits * natural_16_bit(3U) == bits_ref.num_bits());
+
+    natural_32_bit coord_along_columnar_axis;
+    bits_to_value(bits_ref,num_bits + num_bits,num_bits,coord_along_columnar_axis);
+
+    return coord_along_columnar_axis;
+}
+
+
+void  write_x_coord_to_bits_of_coordinates(natural_32_bit const  x_coord, bits_reference& bits_ref)
+{
+    natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
+    INVARIANT(num_bits * natural_16_bit(3U) == bits_ref.num_bits());
+
+    value_to_bits(x_coord,bits_ref,0U,num_bits);
+}
+
+
+void  write_y_coord_to_bits_of_coordinates(natural_32_bit const  y_coord, bits_reference& bits_ref)
+{
+    natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
+    INVARIANT(num_bits * natural_16_bit(3U) == bits_ref.num_bits());
+
+    value_to_bits(y_coord,bits_ref,num_bits,num_bits);
+}
+
+
+bits_reference  find_bits_source_coords_of_synapse(
+        std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
+        natural_32_bit const  x,
+        natural_32_bit const  y,
+        cellab::kind_of_cell const  target_kind,
+        cellab::kind_of_cell const  source_kind,
+        natural_64_bit const  shift_to_synapse
+        )
+{
+    natural_32_bit const  c0 = static_state_ptr->compute_columnar_coord_of_first_tissue_cell_of_kind(target_kind);
+    natural_64_bit synapse_index = 0U;
+    natural_32_bit cell_index = 0U;
+    natural_32_bit territory_index = 0U;
+    while (true)
+    {
+        INVARIANT(territory_index < static_state_ptr->num_synapses_in_territory_of_cell_kind(target_kind));
+
+        bits_reference const  bits_of_coords =
+                dynamic_state_ptr->find_bits_of_coords_of_source_cell_of_synapse_in_tissue(
+                        x, y, c0 + cell_index, territory_index
+                        );
+        natural_32_bit const  c = read_columnar_coord_from_bits_of_coordinates(bits_of_coords);
+        if (static_state_ptr->compute_kind_of_cell_from_its_position_along_columnar_axis(c) == source_kind)
+        {
+            if (synapse_index == shift_to_synapse)
+                return bits_of_coords;
+            ++synapse_index;
+        }
+
+        ++cell_index;
+        if (cell_index == static_state_ptr->num_cells_of_cell_kind(target_kind))
+        {
+            cell_index = 0U;
+            ++territory_index;
+        }
+    }
+}
+
+
 void  thread_spread_synapses(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
         cellab::kind_of_cell const  target_kind,
-        cellab::kind_of_cell const  source_kind
+        cellab::kind_of_cell const  source_kind,
+        integer_64_bit const  shift_x,
+        integer_64_bit const  shift_y,
+        natural_64_bit const  shift_to_synapse
         )
 {
+    for (natural_32_bit  x = 0U; x < static_state_ptr->num_cells_along_x_axis(); ++x)
+        for (natural_32_bit  y = 0U; y < static_state_ptr->num_cells_along_y_axis(); ++y)
+        {
+            bits_reference  bits_of_coords =
+                    cellconnect::find_bits_source_coords_of_synapse(
+                            dynamic_state_ptr,
+                            static_state_ptr,
+                            x,
+                            y,
+                            target_kind,
+                            source_kind,
+                            shift_to_synapse
+                            );
+
+            natural_32_bit  current_x = cellconnect::read_x_coord_from_bits_of_coordinates(bits_of_coords);
+            if (current_x != x)
+                continue;
+            natural_32_bit  current_y = cellconnect::read_y_coord_from_bits_of_coordinates(bits_of_coords);
+            if (current_y != y)
+                continue;
+
+            do
+            {
+                natural_32_bit const  shifted_x = cellconnect::shift_coordinate(
+                                                        current_x,
+                                                        shift_x,
+                                                        static_state_ptr->num_cells_along_x_axis(),
+                                                        static_state_ptr->is_x_axis_torus_axis()
+                                                        );
+                if (shifted_x == static_state_ptr->num_cells_along_x_axis())
+                    break;
+
+                natural_32_bit const  shifted_y = cellconnect::shift_coordinate(
+                                                        current_y,
+                                                        shift_y,
+                                                        static_state_ptr->num_cells_along_y_axis(),
+                                                        static_state_ptr->is_y_axis_torus_axis()
+                                                        );
+                if (shifted_y == static_state_ptr->num_cells_along_y_axis())
+                    break;
+
+                bits_of_coords = cellconnect::find_bits_source_coords_of_synapse(
+                                        dynamic_state_ptr,
+                                        static_state_ptr,
+                                        shifted_x,
+                                        shifted_y,
+                                        target_kind,
+                                        source_kind,
+                                        shift_to_synapse
+                                        );
+                INVARIANT(
+                        cellconnect::read_x_coord_from_bits_of_coordinates(bits_of_coords) == shifted_x &&
+                        cellconnect::read_y_coord_from_bits_of_coordinates(bits_of_coords) == shifted_y
+                        );
+
+                cellconnect::write_x_coord_to_bits_of_coordinates(current_x, bits_of_coords);
+                cellconnect::write_y_coord_to_bits_of_coordinates(current_y, bits_of_coords);
+
+                current_x = shifted_x;
+                current_y = shifted_y;
+            }
+            while (current_x != x || current_y != y);
+        }
 }
 
 
@@ -217,11 +393,11 @@ void  spread_synapses_into_local_neighbourhoods(
     natural_32_bit column = 0U;
     natural_32_bit index = 0U;
     natural_64_bit shift = 0ULL;
-    bool done = false;
+    bool not_done = true;
     do
     {
         std::vector<std::thread> threads;
-        for (natural_32_bit i = 1U; i < num_threads_avalilable_for_computation && !done; ++i)
+        for (natural_32_bit i = 1U; i < num_threads_avalilable_for_computation && not_done; ++i)
         {
             threads.push_back(
                         std::thread(
@@ -229,25 +405,31 @@ void  spread_synapses_into_local_neighbourhoods(
                             dynamic_state_ptr,
                             static_state_ptr,
                             kind_of_target_cells_of_synapses,
-                            kind_of_source_cells_of_synapses
+                            kind_of_source_cells_of_synapses,
+                            (integer_64_bit)(diameter_x / 2U) - column,
+                            (integer_64_bit)(diameter_y / 2U) - row,
+                            shift
                             )
                         );
 
-            done = !cellconnect::go_to_next_task(
+            not_done = cellconnect::go_to_next_task(
                             row,column,index,shift,
                             diameter_x,diameter_y,
                             matrix_of_counts_of_synapses_to_be_spread_into_columns_in_neighbourhood
                             );
         }
-        if (!done)
+        if (not_done)
         {
             cellconnect::thread_spread_synapses(
                     dynamic_state_ptr,
                     static_state_ptr,
                     kind_of_target_cells_of_synapses,
-                    kind_of_source_cells_of_synapses
+                    kind_of_source_cells_of_synapses,
+                    (integer_64_bit)(diameter_x / 2U) - column,
+                    (integer_64_bit)(diameter_y / 2U) - row,
+                    shift
                     );
-            done = !cellconnect::go_to_next_task(
+            not_done = cellconnect::go_to_next_task(
                             row,column,index,shift,
                             diameter_x,diameter_y,
                             matrix_of_counts_of_synapses_to_be_spread_into_columns_in_neighbourhood
@@ -256,7 +438,7 @@ void  spread_synapses_into_local_neighbourhoods(
         for(std::thread& thread : threads)
             thread.join();
     }
-    while(!done);
+    while(not_done);
     INVARIANT(index == 0U && column == 0U && row == diameter_y);
 }
 

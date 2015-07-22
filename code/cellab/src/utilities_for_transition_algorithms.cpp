@@ -60,7 +60,7 @@ shift_in_coordinates const& spatial_neighbourhood::get_shift_to_high_corner() co
     return m_shift_to_high_corner;
 }
 
-static natural_32_bit  shift_coordinate_in_torus_axis(
+natural_32_bit  shift_coordinate_in_torus_axis(
         integer_64_bit coordinate,
         integer_64_bit const shift,
         natural_64_bit const length_of_axis
@@ -163,19 +163,14 @@ bool  go_to_next_index(
     return extent_64_bit == 0ULL;
 }
 
-integer_8_bit  clip_shift(
-        integer_8_bit const shift,
+integer_64_bit  clip_shift(
+        integer_64_bit const shift,
         natural_32_bit const origin,
-        natural_32_bit const length_of_axis,
-        bool const is_it_torus_axis
+        natural_32_bit const length_of_axis
         )
 {
-    if (is_it_torus_axis)
-        return shift;
-
-    integer_64_bit const shift64 = shift;
     integer_64_bit const origin64 = origin;
-    integer_64_bit const destination = origin64 + shift64;
+    integer_64_bit const destination = origin64 + shift;
     integer_64_bit const length64 = length_of_axis;
 
     if (destination < 0ULL)
@@ -185,6 +180,18 @@ integer_8_bit  clip_shift(
         return (length64 - 1LL) - origin64;
 
     return shift;
+}
+
+integer_8_bit  clip_shift(
+        integer_8_bit const shift,
+        natural_32_bit const origin,
+        natural_32_bit const length_of_axis,
+        bool const is_it_torus_axis
+        )
+{
+    if (is_it_torus_axis)
+        return shift;
+    return clip_shift((integer_64_bit)shift,origin,length_of_axis);
 }
 
 void  write_tissue_coordinates_to_bits_of_coordinates(
