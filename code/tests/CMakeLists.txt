@@ -36,11 +36,14 @@ add_subdirectory(./random)
 add_subdirectory(./tensor_math)
     message("-- tensor_math")
 
+add_subdirectory(./fill_delimiters)
+    message("-- fill_delimiters")
+
 add_subdirectory(./fill_src_coords_of_synapses)
     message("-- fill_src_coords_of_synapses")
 
-add_subdirectory(./fill_delimiters)
-    message("-- fill_delimiters")
+add_subdirectory(./spread_synapses_into_local_neighbourhoods)
+    message("-- spread_synapses_into_local_neighbourhoods")
 
 
 message("-- run_tests.py")

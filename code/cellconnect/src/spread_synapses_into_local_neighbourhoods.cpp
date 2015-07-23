@@ -196,7 +196,7 @@ void  write_y_coord_to_bits_of_coordinates(natural_32_bit const  y_coord, bits_r
 }
 
 
-bits_reference  find_bits_source_coords_of_synapse(
+bits_reference  find_bits_of_source_coords_of_synapse(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
         natural_32_bit const  x,
@@ -250,7 +250,7 @@ void  thread_spread_synapses(
         for (natural_32_bit  y = 0U; y < static_state_ptr->num_cells_along_y_axis(); ++y)
         {
             bits_reference  bits_of_coords =
-                    cellconnect::find_bits_source_coords_of_synapse(
+                    cellconnect::find_bits_of_source_coords_of_synapse(
                             dynamic_state_ptr,
                             static_state_ptr,
                             x,
@@ -287,7 +287,7 @@ void  thread_spread_synapses(
                 if (shifted_y == static_state_ptr->num_cells_along_y_axis())
                     break;
 
-                bits_of_coords = cellconnect::find_bits_source_coords_of_synapse(
+                bits_of_coords = cellconnect::find_bits_of_source_coords_of_synapse(
                                         dynamic_state_ptr,
                                         static_state_ptr,
                                         shifted_x,
@@ -322,27 +322,34 @@ bool go_to_next_task(
         std::vector<natural_32_bit> const&  matrix
         )
 {
-    ++shift;
-    ++index;
-    if (index >= matrix.at(row * diameter_x + column))
+    do
     {
-        index = 0U;
-        ++column;
-        if (column >= diameter_x)
+        ++index;
+        if (index >= matrix.at(row * diameter_x + column))
         {
-            column = 0U;
-            ++row;
-            if (row >= diameter_y)
+            index = 0U;
+            ++column;
+            if (column >= diameter_x)
             {
-                return false;
+                column = 0U;
+                ++row;
+                if (row >= diameter_y)
+                    return false;
             }
         }
-        else if (column == diameter_x / 2U && row == diameter_y / 2U)
-        {
-            shift += matrix.at(row * diameter_x + column);
-            ++column;
-        }
     }
+    while (matrix.at(row * diameter_x + column) == 0U);
+
+    ++shift;
+
+    if (column == diameter_x / 2U && row == diameter_y / 2U)
+    {
+        INVARIANT(index == 0U);
+        index = matrix.at(row * diameter_x + column) - 1U;
+        shift += index;
+        return go_to_next_task(row,column,index,shift,diameter_x,diameter_y,matrix);
+    }
+
     return true;
 }
 
@@ -394,6 +401,12 @@ void  spread_synapses_into_local_neighbourhoods(
     natural_32_bit index = 0U;
     natural_64_bit shift = 0ULL;
     bool not_done = true;
+    if (matrix_of_counts_of_synapses_to_be_spread_into_columns_in_neighbourhood.at(row * diameter_x + column) == 0U)
+        not_done = go_to_next_task(row,column,index,shift,
+                                   diameter_x,diameter_y,
+                                   matrix_of_counts_of_synapses_to_be_spread_into_columns_in_neighbourhood
+                                   );
+
     do
     {
         std::vector<std::thread> threads;
@@ -406,8 +419,8 @@ void  spread_synapses_into_local_neighbourhoods(
                             static_state_ptr,
                             kind_of_target_cells_of_synapses,
                             kind_of_source_cells_of_synapses,
-                            (integer_64_bit)(diameter_x / 2U) - column,
-                            (integer_64_bit)(diameter_y / 2U) - row,
+                            (integer_64_bit)(diameter_x / 2U) - (integer_64_bit)column,
+                            (integer_64_bit)(diameter_y / 2U) - (integer_64_bit)row,
                             shift
                             )
                         );
@@ -425,8 +438,8 @@ void  spread_synapses_into_local_neighbourhoods(
                     static_state_ptr,
                     kind_of_target_cells_of_synapses,
                     kind_of_source_cells_of_synapses,
-                    (integer_64_bit)(diameter_x / 2U) - column,
-                    (integer_64_bit)(diameter_y / 2U) - row,
+                    (integer_64_bit)(diameter_x / 2U) - (integer_64_bit)column,
+                    (integer_64_bit)(diameter_y / 2U) - (integer_64_bit)row,
                     shift
                     );
             not_done = cellconnect::go_to_next_task(
@@ -435,10 +448,10 @@ void  spread_synapses_into_local_neighbourhoods(
                             matrix_of_counts_of_synapses_to_be_spread_into_columns_in_neighbourhood
                             );
         }
-        for(std::thread& thread : threads)
+        for (std::thread& thread : threads)
             thread.join();
     }
-    while(not_done);
+    while (not_done);
     INVARIANT(index == 0U && column == 0U && row == diameter_y);
 }
 
