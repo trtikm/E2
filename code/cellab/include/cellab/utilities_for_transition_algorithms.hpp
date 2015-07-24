@@ -53,6 +53,13 @@ natural_32_bit  shift_coordinate_in_torus_axis(
         natural_64_bit const length_of_axis
         );
 
+natural_32_bit  shift_coordinate(
+        natural_32_bit const coord,
+        integer_64_bit const shift,
+        natural_32_bit const length_of_axis,
+        bool is_totus_axis
+        );
+
 tissue_coordinates  shift_coordinates(
         tissue_coordinates const& coords,
         shift_in_coordinates const& shift,

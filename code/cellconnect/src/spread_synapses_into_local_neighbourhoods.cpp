@@ -126,22 +126,6 @@ namespace cellconnect { namespace {
 
 
 
-natural_32_bit  shift_coordinate(
-        natural_32_bit const coord,
-        integer_64_bit const shift,
-        natural_32_bit const length_of_axis,
-        bool is_totus_axis
-        )
-{
-    if (is_totus_axis)
-        return cellab::shift_coordinate_in_torus_axis(coord,shift,length_of_axis);
-    integer_64_bit const  result = (integer_64_bit)coord + shift;
-    if (result < 0LL || result >= (integer_64_bit)length_of_axis)
-        return length_of_axis;
-    return result;
-}
-
-
 natural_32_bit  read_x_coord_from_bits_of_coordinates(bits_reference const& bits_ref)
 {
     natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
@@ -269,7 +253,7 @@ void  thread_spread_synapses(
 
             do
             {
-                natural_32_bit const  shifted_x = cellconnect::shift_coordinate(
+                natural_32_bit const  shifted_x = cellab::shift_coordinate(
                                                         current_x,
                                                         shift_x,
                                                         static_state_ptr->num_cells_along_x_axis(),
@@ -278,7 +262,7 @@ void  thread_spread_synapses(
                 if (shifted_x == static_state_ptr->num_cells_along_x_axis())
                     break;
 
-                natural_32_bit const  shifted_y = cellconnect::shift_coordinate(
+                natural_32_bit const  shifted_y = cellab::shift_coordinate(
                                                         current_y,
                                                         shift_y,
                                                         static_state_ptr->num_cells_along_y_axis(),

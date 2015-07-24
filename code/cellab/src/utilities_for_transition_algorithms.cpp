@@ -73,6 +73,21 @@ natural_32_bit  shift_coordinate_in_torus_axis(
     return static_cast<natural_32_bit>(result_coord);
 }
 
+natural_32_bit  shift_coordinate(
+        natural_32_bit const coord,
+        integer_64_bit const shift,
+        natural_32_bit const length_of_axis,
+        bool is_totus_axis
+        )
+{
+    if (is_totus_axis)
+        return shift_coordinate_in_torus_axis(coord,shift,length_of_axis);
+    integer_64_bit const  result = (integer_64_bit)coord + shift;
+    if (result < 0LL || result >= (integer_64_bit)length_of_axis)
+        return length_of_axis;
+    return result;
+}
+
 bool operator==(tissue_coordinates const& left, tissue_coordinates const& right)
 {
     return left.get_coord_along_x_axis() == right.get_coord_along_x_axis() &&
