@@ -280,6 +280,11 @@ void  thread_spread_synapses(
                                         source_kind,
                                         shift_to_synapse
                                         );
+
+                if (cellconnect::read_x_coord_from_bits_of_coordinates(bits_of_coords) == current_x &&
+                    cellconnect::read_y_coord_from_bits_of_coordinates(bits_of_coords) == current_y )
+                    break;
+
                 INVARIANT(
                         cellconnect::read_x_coord_from_bits_of_coordinates(bits_of_coords) == shifted_x &&
                         cellconnect::read_y_coord_from_bits_of_coordinates(bits_of_coords) == shifted_y
@@ -386,10 +391,14 @@ void  spread_synapses_into_local_neighbourhoods(
     natural_64_bit shift = 0ULL;
     bool not_done = true;
     if (matrix_of_counts_of_synapses_to_be_spread_into_columns_in_neighbourhood.at(row * diameter_x + column) == 0U)
+    {
         not_done = go_to_next_task(row,column,index,shift,
                                    diameter_x,diameter_y,
                                    matrix_of_counts_of_synapses_to_be_spread_into_columns_in_neighbourhood
                                    );
+        INVARIANT(shift > 0ULL);
+        --shift;
+    }
 
     do
     {
@@ -403,8 +412,8 @@ void  spread_synapses_into_local_neighbourhoods(
                             static_state_ptr,
                             kind_of_target_cells_of_synapses,
                             kind_of_source_cells_of_synapses,
-                            (integer_64_bit)(diameter_x / 2U) - (integer_64_bit)column,
-                            (integer_64_bit)(diameter_y / 2U) - (integer_64_bit)row,
+                            (integer_64_bit)column - (integer_64_bit)(diameter_x / 2U),
+                            (integer_64_bit)row - (integer_64_bit)(diameter_y / 2U),
                             shift
                             )
                         );
@@ -422,8 +431,8 @@ void  spread_synapses_into_local_neighbourhoods(
                     static_state_ptr,
                     kind_of_target_cells_of_synapses,
                     kind_of_source_cells_of_synapses,
-                    (integer_64_bit)(diameter_x / 2U) - (integer_64_bit)column,
-                    (integer_64_bit)(diameter_y / 2U) - (integer_64_bit)row,
+                    (integer_64_bit)column - (integer_64_bit)(diameter_x / 2U),
+                    (integer_64_bit)row - (integer_64_bit)(diameter_y / 2U),
                     shift
                     );
             not_done = cellconnect::go_to_next_task(

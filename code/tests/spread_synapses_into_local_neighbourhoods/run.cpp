@@ -176,7 +176,9 @@ static void test_column(
             if (shifted_x == static_state_ptr->num_cells_along_x_axis() ||
                 shifted_y == static_state_ptr->num_cells_along_y_axis())
             {
-                num_skipped_synapses += matrix.at(j * diameter_x + i);
+                natural_32_bit const  oposite_i = (2ULL * (integer_64_bit)center_x - (integer_64_bit)i) % diameter_x;
+                natural_32_bit const  oposite_j = (2ULL * (integer_64_bit)center_y - (integer_64_bit)j) % diameter_y;
+                num_skipped_synapses += matrix.at(oposite_j * diameter_x + oposite_i);
                 continue;
             }
 
@@ -216,8 +218,8 @@ void run()
     std::vector<natural_32_bit> coefs = { 1, 4, 3, 8, 1, 9, 2, 5, 4, 2, 7, 6, 6, 5, 8, 9, 3 };
 
     for (natural_32_bit cells_x = 1U; cells_x <= 11U; cells_x += 5U)
-        for (natural_32_bit cells_y = 1U; cells_y <= 11U; cells_y += 5U)
-            for (natural_16_bit tissue_cell_kinds = 1U; tissue_cell_kinds <= 11U; tissue_cell_kinds += 5)
+        for (natural_32_bit cells_y = 2U; cells_y <= 12U; cells_y += 5U)
+            for (natural_16_bit tissue_cell_kinds = 2U; tissue_cell_kinds <= 12U; tissue_cell_kinds += 5)
                 for (natural_16_bit sensory_cell_kinds = 1U; sensory_cell_kinds <= 11U; sensory_cell_kinds += 5)
                     for (bool is_torus_axis_x : std::vector<bool>{ true, false })
                         for (bool is_torus_axis_y : std::vector<bool>{ true, false })
@@ -301,7 +303,15 @@ void run()
                             build_fill_src_coords_matrix(static_tissue,matrix_fill_src_coords);
 
                             for (natural_32_bit  diameter_x : std::vector<natural_32_bit>{1, 5})
+                            {
+                                if (diameter_x >= static_tissue->num_cells_along_x_axis())
+                                    continue;
+
                                 for (natural_32_bit  diameter_y : std::vector<natural_32_bit>{3, 7})
+                                {
+                                    if (diameter_y >= static_tissue->num_cells_along_y_axis())
+                                        continue;
+
                                     for (natural_32_bit num_threads : std::vector<natural_32_bit>{1, 64})
                                     {
                                         cellconnect::fill_coords_of_source_cells_of_synapses_in_tissue(
@@ -314,6 +324,13 @@ void run()
                                         for (cellab::kind_of_cell  source_kind = 0U; source_kind < static_tissue->num_kinds_of_cells(); ++source_kind)
                                             for (cellab::kind_of_cell  target_kind = 0U; target_kind < static_tissue->num_kinds_of_tissue_cells(); ++target_kind)
                                             {
+                                                natural_64_bit const  total_synapses_count =
+                                                        (natural_64_bit)matrix_fill_src_coords.at(target_kind * static_tissue->num_kinds_of_cells() + source_kind) *
+                                                        (natural_64_bit)static_tissue->num_cells_of_cell_kind(source_kind)
+                                                        ;
+                                                if (total_synapses_count == 0ULL)
+                                                    continue;
+
                                                 std::vector<natural_32_bit> matrix_spread_synapses;
                                                 build_spread_synapses_matrix(
                                                             static_tissue,
@@ -321,8 +338,7 @@ void run()
                                                             source_kind,
                                                             diameter_x,
                                                             diameter_y,
-                                                            (natural_64_bit)matrix_fill_src_coords.at(target_kind * static_tissue->num_kinds_of_cells() + source_kind) *
-                                                                    (natural_64_bit)static_tissue->num_cells_of_cell_kind(source_kind),
+                                                            total_synapses_count,
                                                             matrix_spread_synapses
                                                             );
 
@@ -341,6 +357,13 @@ void run()
                                         for (cellab::kind_of_cell  source_kind = 0U; source_kind < static_tissue->num_kinds_of_cells(); ++source_kind)
                                             for (cellab::kind_of_cell  target_kind = 0U; target_kind < static_tissue->num_kinds_of_tissue_cells(); ++target_kind)
                                             {
+                                                natural_64_bit const  total_synapses_count =
+                                                        (natural_64_bit)matrix_fill_src_coords.at(target_kind * static_tissue->num_kinds_of_cells() + source_kind) *
+                                                        (natural_64_bit)static_tissue->num_cells_of_cell_kind(source_kind)
+                                                        ;
+                                                if (total_synapses_count == 0ULL)
+                                                    continue;
+
                                                 std::vector<natural_32_bit> matrix_spread_synapses;
                                                 build_spread_synapses_matrix(
                                                             static_tissue,
@@ -348,8 +371,7 @@ void run()
                                                             source_kind,
                                                             diameter_x,
                                                             diameter_y,
-                                                            (natural_64_bit)matrix_fill_src_coords.at(target_kind * static_tissue->num_kinds_of_cells() + source_kind) *
-                                                                    (natural_64_bit)static_tissue->num_cells_of_cell_kind(source_kind),
+                                                            total_synapses_count,
                                                             matrix_spread_synapses
                                                             );
 
@@ -370,6 +392,8 @@ void run()
                                                     }
                                             }
                                     }
+                                }
+                            }
                 }
 
     TEST_PROGRESS_HIDE();
