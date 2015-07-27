@@ -11,6 +11,7 @@
 #include <utility/log.hpp>
 #include <vector>
 #include <algorithm>
+#include <tuple>
 #include <limits>
 
 
@@ -217,184 +218,201 @@ void run()
 
     std::vector<natural_32_bit> coefs = { 1, 4, 3, 8, 1, 9, 2, 5, 4, 2, 7, 6, 6, 5, 8, 9, 3 };
 
-    for (natural_32_bit cells_x = 1U; cells_x <= 11U; cells_x += 5U)
-        for (natural_32_bit cells_y = 2U; cells_y <= 12U; cells_y += 5U)
-            for (natural_16_bit tissue_cell_kinds = 2U; tissue_cell_kinds <= 12U; tissue_cell_kinds += 5)
-                for (natural_16_bit sensory_cell_kinds = 1U; sensory_cell_kinds <= 11U; sensory_cell_kinds += 5)
-                    for (bool is_torus_axis_x : std::vector<bool>{ true, false })
-                        for (bool is_torus_axis_y : std::vector<bool>{ true, false })
-                        {
-                            natural_16_bit const synapses_to_muscles_kinds = sensory_cell_kinds;
+    typedef std::tuple<natural_32_bit,  // num cells x
+                       natural_32_bit,  // num cells y
+                       natural_16_bit,  // num tissue cell kinds
+                       natural_16_bit,  // num sensory cell kinds
+                       bool,            // is torus axis x
+                       bool>            // is torus axis y
+            tissue_props;
+    for (tissue_props props :
+         std::vector<tissue_props>{
+                tissue_props{ 3U, 3U, 2U, 1U, true, true },
+                tissue_props{ 10U, 15U, 4U, 3U, false, true },
+                tissue_props{ 13U, 8U, 5U, 6U, true, false },
+                tissue_props{ 12U, 12U, 6U, 7U, true, true },
+                })
+    {
+        natural_32_bit const  cells_x = std::get<0>(props);
+        natural_32_bit const  cells_y = std::get<1>(props);
+        natural_16_bit const  tissue_cell_kinds = std::get<2>(props);
+        natural_16_bit const  sensory_cell_kinds = std::get<3>(props);
+        bool const  is_torus_axis_x = std::get<4>(props);
+        bool const  is_torus_axis_y = std::get<5>(props);
 
-                            natural_16_bit const num_bits_per_cell = 8U;
-                            natural_16_bit const num_bits_per_synapse = 8U;
-                            natural_16_bit const num_bits_per_signalling = 8U;
+        natural_16_bit const synapses_to_muscles_kinds = sensory_cell_kinds;
 
-                            std::vector<natural_32_bit> num_tissue_cells_of_cell_kind;
-                            std::vector<natural_32_bit> num_synapses_in_territory_of_cell_kind;
-                            for (natural_16_bit i = 0U; i < tissue_cell_kinds; ++i)
+        natural_16_bit const num_bits_per_cell = 8U;
+        natural_16_bit const num_bits_per_synapse = 8U;
+        natural_16_bit const num_bits_per_signalling = 8U;
+
+        std::vector<natural_32_bit> num_tissue_cells_of_cell_kind;
+        std::vector<natural_32_bit> num_synapses_in_territory_of_cell_kind;
+        for (natural_16_bit i = 0U; i < tissue_cell_kinds; ++i)
+        {
+            natural_32_bit coef = coefs.at(i % coefs.size());
+            num_tissue_cells_of_cell_kind.push_back(coef + (1U + tissue_cell_kinds / 3U));
+
+            coef = coefs.at((i + 5U) % coefs.size());
+            num_synapses_in_territory_of_cell_kind.push_back(coef + (1U + tissue_cell_kinds / 2U));
+        }
+
+        std::vector<natural_32_bit> num_sensory_cells_of_cell_kind;
+        for (natural_16_bit i = 0U; i < sensory_cell_kinds; ++i)
+            if (i + 1U == sensory_cell_kinds)
+                num_sensory_cells_of_cell_kind.push_back(1U);
+            else
+            {
+                natural_32_bit const coef = coefs.at(i % coefs.size());
+                num_sensory_cells_of_cell_kind.push_back(coef + (1U + sensory_cell_kinds / 4U));
+            }
+
+        std::rotate(coefs.begin(), coefs.begin() + 1, coefs.end());
+
+        std::vector<natural_32_bit> const num_synapses_to_muscles_of_synapse_kind(synapses_to_muscles_kinds,10U);
+
+        std::vector<integer_8_bit> const x_radius_of_signalling_neighbourhood_of_cell(tissue_cell_kinds,1U);
+        std::vector<integer_8_bit> const y_radius_of_signalling_neighbourhood_of_cell(tissue_cell_kinds,1U);
+        std::vector<integer_8_bit> const columnar_radius_of_signalling_neighbourhood_of_cell(tissue_cell_kinds,1U);
+        std::vector<integer_8_bit> const x_radius_of_signalling_neighbourhood_of_synapse(tissue_cell_kinds,1U);
+        std::vector<integer_8_bit> const y_radius_of_signalling_neighbourhood_of_synapse(tissue_cell_kinds,1U);
+        std::vector<integer_8_bit> const columnar_radius_of_signalling_neighbourhood_of_synapse(tissue_cell_kinds,1U);
+        std::vector<integer_8_bit> const x_radius_of_cellular_neighbourhood_of_signalling(tissue_cell_kinds,1U);
+        std::vector<integer_8_bit> const y_radius_of_cellular_neighbourhood_of_signalling(tissue_cell_kinds,1U);
+        std::vector<integer_8_bit> const columnar_radius_of_cellular_neighbourhood_of_signalling(tissue_cell_kinds,1U);
+
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue =
+                std::shared_ptr<cellab::static_state_of_neural_tissue const>(
+                        new cellab::static_state_of_neural_tissue(
+                            tissue_cell_kinds,
+                            sensory_cell_kinds,
+                            synapses_to_muscles_kinds,
+                            num_bits_per_cell,
+                            num_bits_per_synapse,
+                            num_bits_per_signalling,
+                            cells_x,
+                            cells_y,
+                            num_tissue_cells_of_cell_kind,
+                            num_synapses_in_territory_of_cell_kind,
+                            num_sensory_cells_of_cell_kind,
+                            num_synapses_to_muscles_of_synapse_kind,
+                            is_torus_axis_x,
+                            is_torus_axis_y,
+                            true,
+                            x_radius_of_signalling_neighbourhood_of_cell,
+                            y_radius_of_signalling_neighbourhood_of_cell,
+                            columnar_radius_of_signalling_neighbourhood_of_cell,
+                            x_radius_of_signalling_neighbourhood_of_synapse,
+                            y_radius_of_signalling_neighbourhood_of_synapse,
+                            columnar_radius_of_signalling_neighbourhood_of_synapse,
+                            x_radius_of_cellular_neighbourhood_of_signalling,
+                            y_radius_of_cellular_neighbourhood_of_signalling,
+                            columnar_radius_of_cellular_neighbourhood_of_signalling
+                            ));
+
+        std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const dynamic_tissue =
+                std::shared_ptr<cellab::dynamic_state_of_neural_tissue>(
+                        new cellab::dynamic_state_of_neural_tissue(static_tissue)
+                        );
+
+        std::vector<natural_32_bit> matrix_fill_src_coords;
+        build_fill_src_coords_matrix(static_tissue,matrix_fill_src_coords);
+
+
+        typedef std::tuple<natural_32_bit,natural_32_bit> diameters_type;
+        for (diameters_type diameters :
+             std::vector<diameters_type>{diameters_type{1, 3},diameters_type{7, 5}})
+        {
+            natural_32_bit const  diameter_x = std::get<0>(diameters);
+            if (diameter_x >= static_tissue->num_cells_along_x_axis())
+                continue;
+
+            natural_32_bit const  diameter_y = std::get<1>(diameters);
+            if (diameter_y >= static_tissue->num_cells_along_y_axis())
+                continue;
+
+            for (natural_32_bit num_threads : std::vector<natural_32_bit>{1, 16})
+            {
+                cellconnect::fill_coords_of_source_cells_of_synapses_in_tissue(
+                            dynamic_tissue,
+                            matrix_fill_src_coords,
+                            num_threads
+                            );
+                TEST_PROGRESS_UPDATE();
+
+                for (cellab::kind_of_cell  source_kind = 0U; source_kind < static_tissue->num_kinds_of_cells(); ++source_kind)
+                    for (cellab::kind_of_cell  target_kind = 0U; target_kind < static_tissue->num_kinds_of_tissue_cells(); ++target_kind)
+                    {
+                        natural_64_bit const  total_synapses_count =
+                                (natural_64_bit)matrix_fill_src_coords.at(target_kind * static_tissue->num_kinds_of_cells() + source_kind) *
+                                (natural_64_bit)static_tissue->num_cells_of_cell_kind(source_kind)
+                                ;
+                        if (total_synapses_count == 0ULL)
+                            continue;
+
+                        std::vector<natural_32_bit> matrix_spread_synapses;
+                        build_spread_synapses_matrix(
+                                    static_tissue,
+                                    target_kind,
+                                    source_kind,
+                                    diameter_x,
+                                    diameter_y,
+                                    total_synapses_count,
+                                    matrix_spread_synapses
+                                    );
+
+                        cellconnect::spread_synapses_into_local_neighbourhoods(
+                                    dynamic_tissue,
+                                    target_kind,
+                                    source_kind,
+                                    diameter_x,
+                                    diameter_y,
+                                    matrix_spread_synapses,
+                                    num_threads
+                                    );
+                        TEST_PROGRESS_UPDATE();
+                    }
+
+                for (cellab::kind_of_cell  source_kind = 0U; source_kind < static_tissue->num_kinds_of_cells(); ++source_kind)
+                    for (cellab::kind_of_cell  target_kind = 0U; target_kind < static_tissue->num_kinds_of_tissue_cells(); ++target_kind)
+                    {
+                        natural_64_bit const  total_synapses_count =
+                                (natural_64_bit)matrix_fill_src_coords.at(target_kind * static_tissue->num_kinds_of_cells() + source_kind) *
+                                (natural_64_bit)static_tissue->num_cells_of_cell_kind(source_kind)
+                                ;
+                        if (total_synapses_count == 0ULL)
+                            continue;
+
+                        std::vector<natural_32_bit> matrix_spread_synapses;
+                        build_spread_synapses_matrix(
+                                    static_tissue,
+                                    target_kind,
+                                    source_kind,
+                                    diameter_x,
+                                    diameter_y,
+                                    total_synapses_count,
+                                    matrix_spread_synapses
+                                    );
+
+                        for (natural_32_bit x = 0U; x < static_tissue->num_cells_along_x_axis(); ++x)
+                            for (natural_32_bit y = 0U; y < static_tissue->num_cells_along_y_axis(); ++y)
                             {
-                                natural_32_bit coef = coefs.at(i % coefs.size());
-                                num_tissue_cells_of_cell_kind.push_back(coef + (1U + tissue_cell_kinds / 3U));
-
-                                coef = coefs.at((i + 5U) % coefs.size());
-                                num_synapses_in_territory_of_cell_kind.push_back(coef + (1U + tissue_cell_kinds / 2U));
+                                test_column(
+                                        static_tissue,
+                                        dynamic_tissue,
+                                        x,y,
+                                        target_kind,
+                                        source_kind,
+                                        diameter_x,
+                                        diameter_y,
+                                        matrix_spread_synapses
+                                        );
+                                TEST_PROGRESS_UPDATE();
                             }
-
-                            std::vector<natural_32_bit> num_sensory_cells_of_cell_kind;
-                            for (natural_16_bit i = 0U; i < sensory_cell_kinds; ++i)
-                                if (i + 1U == sensory_cell_kinds)
-                                    num_sensory_cells_of_cell_kind.push_back(1U);
-                                else
-                                {
-                                    natural_32_bit const coef = coefs.at(i % coefs.size());
-                                    num_sensory_cells_of_cell_kind.push_back(coef + (1U + sensory_cell_kinds / 4U));
-                                }
-
-                            std::rotate(coefs.begin(), coefs.begin() + 1, coefs.end());
-
-                            std::vector<natural_32_bit> const num_synapses_to_muscles_of_synapse_kind(synapses_to_muscles_kinds,10U);
-
-                            std::vector<integer_8_bit> const x_radius_of_signalling_neighbourhood_of_cell(tissue_cell_kinds,1U);
-                            std::vector<integer_8_bit> const y_radius_of_signalling_neighbourhood_of_cell(tissue_cell_kinds,1U);
-                            std::vector<integer_8_bit> const columnar_radius_of_signalling_neighbourhood_of_cell(tissue_cell_kinds,1U);
-                            std::vector<integer_8_bit> const x_radius_of_signalling_neighbourhood_of_synapse(tissue_cell_kinds,1U);
-                            std::vector<integer_8_bit> const y_radius_of_signalling_neighbourhood_of_synapse(tissue_cell_kinds,1U);
-                            std::vector<integer_8_bit> const columnar_radius_of_signalling_neighbourhood_of_synapse(tissue_cell_kinds,1U);
-                            std::vector<integer_8_bit> const x_radius_of_cellular_neighbourhood_of_signalling(tissue_cell_kinds,1U);
-                            std::vector<integer_8_bit> const y_radius_of_cellular_neighbourhood_of_signalling(tissue_cell_kinds,1U);
-                            std::vector<integer_8_bit> const columnar_radius_of_cellular_neighbourhood_of_signalling(tissue_cell_kinds,1U);
-
-                            std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue =
-                                    std::shared_ptr<cellab::static_state_of_neural_tissue const>(
-                                            new cellab::static_state_of_neural_tissue(
-                                                tissue_cell_kinds,
-                                                sensory_cell_kinds,
-                                                synapses_to_muscles_kinds,
-                                                num_bits_per_cell,
-                                                num_bits_per_synapse,
-                                                num_bits_per_signalling,
-                                                cells_x,
-                                                cells_y,
-                                                num_tissue_cells_of_cell_kind,
-                                                num_synapses_in_territory_of_cell_kind,
-                                                num_sensory_cells_of_cell_kind,
-                                                num_synapses_to_muscles_of_synapse_kind,
-                                                is_torus_axis_x,
-                                                is_torus_axis_y,
-                                                true,
-                                                x_radius_of_signalling_neighbourhood_of_cell,
-                                                y_radius_of_signalling_neighbourhood_of_cell,
-                                                columnar_radius_of_signalling_neighbourhood_of_cell,
-                                                x_radius_of_signalling_neighbourhood_of_synapse,
-                                                y_radius_of_signalling_neighbourhood_of_synapse,
-                                                columnar_radius_of_signalling_neighbourhood_of_synapse,
-                                                x_radius_of_cellular_neighbourhood_of_signalling,
-                                                y_radius_of_cellular_neighbourhood_of_signalling,
-                                                columnar_radius_of_cellular_neighbourhood_of_signalling
-                                                ));
-
-                            std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const dynamic_tissue =
-                                    std::shared_ptr<cellab::dynamic_state_of_neural_tissue>(
-                                            new cellab::dynamic_state_of_neural_tissue(static_tissue)
-                                            );
-
-                            std::vector<natural_32_bit> matrix_fill_src_coords;
-                            build_fill_src_coords_matrix(static_tissue,matrix_fill_src_coords);
-
-                            for (natural_32_bit  diameter_x : std::vector<natural_32_bit>{1, 5})
-                            {
-                                if (diameter_x >= static_tissue->num_cells_along_x_axis())
-                                    continue;
-
-                                for (natural_32_bit  diameter_y : std::vector<natural_32_bit>{3, 7})
-                                {
-                                    if (diameter_y >= static_tissue->num_cells_along_y_axis())
-                                        continue;
-
-                                    for (natural_32_bit num_threads : std::vector<natural_32_bit>{1, 64})
-                                    {
-                                        cellconnect::fill_coords_of_source_cells_of_synapses_in_tissue(
-                                                    dynamic_tissue,
-                                                    matrix_fill_src_coords,
-                                                    num_threads
-                                                    );
-                                        TEST_PROGRESS_UPDATE();
-
-                                        for (cellab::kind_of_cell  source_kind = 0U; source_kind < static_tissue->num_kinds_of_cells(); ++source_kind)
-                                            for (cellab::kind_of_cell  target_kind = 0U; target_kind < static_tissue->num_kinds_of_tissue_cells(); ++target_kind)
-                                            {
-                                                natural_64_bit const  total_synapses_count =
-                                                        (natural_64_bit)matrix_fill_src_coords.at(target_kind * static_tissue->num_kinds_of_cells() + source_kind) *
-                                                        (natural_64_bit)static_tissue->num_cells_of_cell_kind(source_kind)
-                                                        ;
-                                                if (total_synapses_count == 0ULL)
-                                                    continue;
-
-                                                std::vector<natural_32_bit> matrix_spread_synapses;
-                                                build_spread_synapses_matrix(
-                                                            static_tissue,
-                                                            target_kind,
-                                                            source_kind,
-                                                            diameter_x,
-                                                            diameter_y,
-                                                            total_synapses_count,
-                                                            matrix_spread_synapses
-                                                            );
-
-                                                cellconnect::spread_synapses_into_local_neighbourhoods(
-                                                            dynamic_tissue,
-                                                            target_kind,
-                                                            source_kind,
-                                                            diameter_x,
-                                                            diameter_y,
-                                                            matrix_spread_synapses,
-                                                            num_threads
-                                                            );
-                                                TEST_PROGRESS_UPDATE();
-                                            }
-
-                                        for (cellab::kind_of_cell  source_kind = 0U; source_kind < static_tissue->num_kinds_of_cells(); ++source_kind)
-                                            for (cellab::kind_of_cell  target_kind = 0U; target_kind < static_tissue->num_kinds_of_tissue_cells(); ++target_kind)
-                                            {
-                                                natural_64_bit const  total_synapses_count =
-                                                        (natural_64_bit)matrix_fill_src_coords.at(target_kind * static_tissue->num_kinds_of_cells() + source_kind) *
-                                                        (natural_64_bit)static_tissue->num_cells_of_cell_kind(source_kind)
-                                                        ;
-                                                if (total_synapses_count == 0ULL)
-                                                    continue;
-
-                                                std::vector<natural_32_bit> matrix_spread_synapses;
-                                                build_spread_synapses_matrix(
-                                                            static_tissue,
-                                                            target_kind,
-                                                            source_kind,
-                                                            diameter_x,
-                                                            diameter_y,
-                                                            total_synapses_count,
-                                                            matrix_spread_synapses
-                                                            );
-
-                                                for (natural_32_bit x = 0U; x < static_tissue->num_cells_along_x_axis(); ++x)
-                                                    for (natural_32_bit y = 0U; y < static_tissue->num_cells_along_y_axis(); ++y)
-                                                    {
-                                                        test_column(
-                                                                static_tissue,
-                                                                dynamic_tissue,
-                                                                x,y,
-                                                                target_kind,
-                                                                source_kind,
-                                                                diameter_x,
-                                                                diameter_y,
-                                                                matrix_spread_synapses
-                                                                );
-                                                        TEST_PROGRESS_UPDATE();
-                                                    }
-                                            }
-                                    }
-                                }
-                            }
-                }
+                    }
+            }
+        }
+    }
 
     TEST_PROGRESS_HIDE();
 

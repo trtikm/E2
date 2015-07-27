@@ -190,6 +190,8 @@ bits_reference  find_bits_of_source_coords_of_synapse(
         natural_64_bit const  shift_to_synapse
         )
 {
+    TMPROF_BLOCK();
+
     natural_32_bit const  c0 = static_state_ptr->compute_columnar_coord_of_first_tissue_cell_of_kind(target_kind);
     natural_64_bit synapse_index = 0U;
     natural_32_bit cell_index = 0U;
@@ -230,6 +232,8 @@ void  thread_spread_synapses(
         natural_64_bit const  shift_to_synapse
         )
 {
+    TMPROF_BLOCK();
+
     for (natural_32_bit  x = 0U; x < static_state_ptr->num_cells_along_x_axis(); ++x)
         for (natural_32_bit  y = 0U; y < static_state_ptr->num_cells_along_y_axis(); ++y)
         {
