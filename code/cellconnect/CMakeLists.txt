@@ -9,6 +9,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/cellconnect/spread_synapses_into_local_neighbourhoods.hpp
     ./src/spread_synapses_into_local_neighbourhoods.cpp
+
+    ./include/cellconnect/spread_synapses_into_distant_neighbourhoods.hpp
+    ./src/spread_synapses_into_distant_neighbourhoods.cpp
     )
 
 #set_target_properties(${THIS_TARGET_NAME} PROPERTIES
