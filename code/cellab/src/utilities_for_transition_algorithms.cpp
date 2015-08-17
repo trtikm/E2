@@ -85,7 +85,7 @@ natural_32_bit  shift_coordinate(
     integer_64_bit const  result = (integer_64_bit)coord + shift;
     if (result < 0LL || result >= (integer_64_bit)length_of_axis)
         return length_of_axis;
-    return result;
+    return (natural_32_bit)result;
 }
 
 bool operator==(tissue_coordinates const& left, tissue_coordinates const& right)
@@ -142,9 +142,9 @@ bool  go_to_next_coordinates(
         )
 {
     natural_64_bit extent_64_bit = extent;
-    c_coord = go_to_next_value_modulo_range(c_coord,num_cells_along_columnar_axis,extent_64_bit);
-    x_coord = go_to_next_value_modulo_range(x_coord,num_cells_along_x_axis,extent_64_bit);
-    y_coord = go_to_next_value_modulo_range(y_coord,num_cells_along_y_axis,extent_64_bit);
+    c_coord = (natural_32_bit)go_to_next_value_modulo_range(c_coord,num_cells_along_columnar_axis,extent_64_bit);
+    x_coord = (natural_32_bit)go_to_next_value_modulo_range(x_coord,num_cells_along_x_axis,extent_64_bit);
+    y_coord = (natural_32_bit)go_to_next_value_modulo_range(y_coord,num_cells_along_y_axis,extent_64_bit);
     INVARIANT(extent_64_bit != 0ULL || (x_coord < num_cells_along_x_axis &&
                                         y_coord < num_cells_along_y_axis &&
                                         c_coord < num_cells_along_columnar_axis));
@@ -159,8 +159,8 @@ bool  go_to_next_column(
         )
 {
     natural_64_bit extent_64_bit = extent;
-    x_coord = go_to_next_value_modulo_range(x_coord,num_cells_along_x_axis,extent_64_bit);
-    y_coord = go_to_next_value_modulo_range(y_coord,num_cells_along_y_axis,extent_64_bit);
+    x_coord = (natural_32_bit)go_to_next_value_modulo_range(x_coord,num_cells_along_x_axis,extent_64_bit);
+    y_coord = (natural_32_bit)go_to_next_value_modulo_range(y_coord,num_cells_along_y_axis,extent_64_bit);
     INVARIANT(extent_64_bit != 0ULL || (x_coord < num_cells_along_x_axis &&
                                         y_coord < num_cells_along_y_axis));
     return extent_64_bit == 0ULL;
@@ -173,7 +173,7 @@ bool  go_to_next_index(
         )
 {
     natural_64_bit extent_64_bit = extent;
-    index = go_to_next_value_modulo_range(index,size,extent_64_bit);
+    index = (natural_32_bit)go_to_next_value_modulo_range(index,size,extent_64_bit);
     INVARIANT(extent_64_bit != 0ULL || index < size);
     return extent_64_bit == 0ULL;
 }
@@ -206,7 +206,7 @@ integer_8_bit  clip_shift(
 {
     if (is_it_torus_axis)
         return shift;
-    return clip_shift((integer_64_bit)shift,origin,length_of_axis);
+    return (natural_8_bit)clip_shift((integer_64_bit)shift,origin,length_of_axis);
 }
 
 void  write_tissue_coordinates_to_bits_of_coordinates(
@@ -216,9 +216,9 @@ void  write_tissue_coordinates_to_bits_of_coordinates(
     natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
     INVARIANT(num_bits * natural_16_bit(3U) == bits_ref.num_bits());
 
-    value_to_bits(coords.get_coord_along_x_axis(),bits_ref,0U,num_bits);
-    value_to_bits(coords.get_coord_along_y_axis(),bits_ref,num_bits,num_bits);
-    value_to_bits(coords.get_coord_along_columnar_axis(),bits_ref,num_bits + num_bits,num_bits);
+    value_to_bits(coords.get_coord_along_x_axis(),bits_ref,0U,(natural_8_bit)num_bits);
+    value_to_bits(coords.get_coord_along_y_axis(),bits_ref,(natural_8_bit)num_bits,(natural_8_bit)num_bits);
+    value_to_bits(coords.get_coord_along_columnar_axis(),bits_ref,(natural_8_bit)(num_bits + num_bits),(natural_8_bit)num_bits);
 }
 
 tissue_coordinates  convert_bits_of_coordinates_to_tissue_coordinates(bits_reference const& bits_ref)
@@ -227,13 +227,13 @@ tissue_coordinates  convert_bits_of_coordinates_to_tissue_coordinates(bits_refer
     INVARIANT(num_bits * natural_16_bit(3U) == bits_ref.num_bits());
 
     natural_32_bit coord_along_x_axis;
-    bits_to_value(bits_ref,0U,num_bits,coord_along_x_axis);
+    bits_to_value(bits_ref,0U,(natural_8_bit)num_bits,coord_along_x_axis);
 
     natural_32_bit coord_along_y_axis;
-    bits_to_value(bits_ref,num_bits,num_bits,coord_along_y_axis);
+    bits_to_value(bits_ref,(natural_8_bit)num_bits,(natural_8_bit)num_bits,coord_along_y_axis);
 
     natural_32_bit coord_along_columnar_axis;
-    bits_to_value(bits_ref,num_bits + num_bits,num_bits,coord_along_columnar_axis);
+    bits_to_value(bits_ref,(natural_8_bit)(num_bits + num_bits),(natural_8_bit)num_bits,coord_along_columnar_axis);
 
     return tissue_coordinates(coord_along_x_axis,coord_along_y_axis,coord_along_columnar_axis);
 }

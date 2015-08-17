@@ -94,14 +94,14 @@ static void test_accesses(array_of_bit_units& units)
     test_accesses(units,0ULL);
     test_accesses(units,units.num_units() - 1ULL);
 
-    natural_32_bit const  max_num_accesses = std::min(1024ULL,units.num_units());
+    natural_32_bit const  max_num_accesses = (natural_32_bit)std::min(1024ULL,units.num_units());
     natural_64_bit const  step = units.num_units() / max_num_accesses;
     natural_64_bit index = 0ULL;
     for (natural_32_bit  i = 0U; i < max_num_accesses; ++i, index += step)
         test_accesses(units,index % units.num_units());
 
     natural_32_bit const  max_index =
-            std::min((natural_64_bit)std::numeric_limits<natural_32_bit>::max(),units.num_units()-1ULL);
+            (natural_32_bit)std::min((natural_64_bit)std::numeric_limits<natural_32_bit>::max(),units.num_units()-1ULL);
     for (natural_8_bit i = 0U; i < 100U; ++i)
     {
         natural_64_bit const  index = get_random_natural_32_bit_in_range(0U,max_index);
@@ -109,7 +109,7 @@ static void test_accesses(array_of_bit_units& units)
     }
 }
 
-static void test_array_of_units(natural_64_bit const  num_bits_per_unit, natural_64_bit const  num_units)
+static void test_array_of_units(natural_16_bit const  num_bits_per_unit, natural_64_bit const  num_units)
 {
     try
     {
@@ -136,7 +136,7 @@ void run()
         natural_64_bit const  num_units = 1ULL << bit_shift_for_num_units;
         for (natural_8_bit bit_shift_for_unit = 1U; bit_shift_for_unit < 16U; ++bit_shift_for_unit)
         {
-            natural_64_bit const  num_bits_per_unit = 1U << bit_shift_for_unit;
+            natural_16_bit const  num_bits_per_unit = (natural_16_bit)(1U << bit_shift_for_unit);
 
             if (can_be_allocated(num_bits_per_unit, num_units))
                 test_array_of_units(num_bits_per_unit, num_units);

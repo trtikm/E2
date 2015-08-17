@@ -51,7 +51,7 @@ static void build_matrix(
         }
         INVARIANT(SUM >= static_state_ptr->num_kinds_of_cells());
         for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
-            matrix.at(row_shift + j) = (float_64_bit)matrix.at(row_shift + j) * (float_64_bit)TiNi / (float_64_bit)SUM;
+            matrix.at(row_shift + j) = (natural_32_bit)((float_64_bit)matrix.at(row_shift + j) * (float_64_bit)TiNi / (float_64_bit)SUM);
         SUM = 0ULL;
         for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
             SUM += (natural_64_bit)matrix.at(row_shift + j) * (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j);

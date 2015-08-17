@@ -66,12 +66,12 @@ natural_16_bit homogenous_slice_of_tissue::num_bits_per_unit() const
 
 natural_32_bit homogenous_slice_of_tissue::num_units_along_x_axis() const
 {
-    return m_num_units_along_x_axis;
+    return (natural_32_bit)m_num_units_along_x_axis;
 }
 
 natural_32_bit homogenous_slice_of_tissue::num_units_along_y_axis() const
 {
-    return m_num_units_along_y_axis;
+    return (natural_32_bit)m_num_units_along_y_axis;
 }
 
 natural_64_bit homogenous_slice_of_tissue::num_units_along_columnar_axis() const

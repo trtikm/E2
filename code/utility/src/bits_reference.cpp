@@ -287,5 +287,5 @@ void value_to_bits(
     bits_reference const& target_bits
     )
 {
-    value_to_bits( variable_where_the_value_is_stored, target_bits, 0U, target_bits.num_bits() );
+    value_to_bits( variable_where_the_value_is_stored, target_bits, 0U, (natural_8_bit)target_bits.num_bits() );
 }

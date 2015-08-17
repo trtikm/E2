@@ -27,9 +27,9 @@ def collectExecutavblesOfTests(tests_root_dir):
     for name in os.listdir(tests_root_dir):
         pathname = os.path.join(tests_root_dir,name)
         if os.path.isfile(pathname) and os.access(pathname,os.X_OK):
-            if name.endswith("_Release"):
+            if name.endswith("_Release") or name.endswith("_Release.exe"):
                 tests.append(name)
-            elif name.endswith("_Debug"):
+            elif name.endswith("_Debug") or name.endswith("_Debug.exe"):
                 tests_dbg.append(name)
     for name in tests_dbg:
         releaseName = name[:-6]+"_Release"
@@ -46,7 +46,7 @@ def removeExcludedTests(tests,excluded):
     return tests
 
 def run(test, tests_root_dir):
-    print "*** Starting: " + test
+    print("*** Starting: " + test)
     return subprocess.call([tests_root_dir + test]) == 0
 
 def scriptMain():
@@ -56,16 +56,16 @@ def scriptMain():
     if args.remove_logs:
         for fname in glob.glob(tests_root_dir + "*.html"):
             if os.path.isfile(fname):
-                print "Deleting: " + fname
+                print("Deleting: " + fname)
                 os.remove(fname)
             else:
-                print "ERROR: path does not refer to a file: " + fname
+                print("ERROR: path does not refer to a file: " + fname)
         for fname in glob.glob(tests_root_dir + "*.txt"):
             if os.path.isfile(fname):
-                print "Deleting: " + fname
+                print("Deleting: " + fname)
                 os.remove(fname)
             else:
-                print "ERROR: path does not refer to a file: " + fname
+                print("ERROR: path does not refer to a file: " + fname)
         return
 
     if len(args.include) > 0:
@@ -74,12 +74,12 @@ def scriptMain():
         executables = collectExecutavblesOfTests(tests_root_dir)
     executables = removeExcludedTests(executables,args.exclude)
 
-    print "Configuration:"
-    print "test root directory: " + tests_root_dir
-    print "tests to be executed: "
+    print("Configuration:")
+    print("test root directory: " + tests_root_dir)
+    print("tests to be executed: ")
     for test in executables:
-        print "    " + test
-    print "Executing the tests..."
+        print("    " + test)
+    print("Executing the tests...")
 
     successfull = []
     failed = []
@@ -89,12 +89,12 @@ def scriptMain():
         else:
             failed.append(test)
     if len(failed) == 0:
-        print "*** The testing was SUCCESSFULL."
+        print("*** The testing was SUCCESSFULL.")
     else:
-        print "*** The testing has FAILED. These tests have failed:"
+        print("*** The testing has FAILED. These tests have failed:")
         for name in failed:
-            print "  " + name
-        print "*** See log files of these test to get closer details about the failures."
+            print("  " + name)
+        print("*** See log files of these test to get closer details about the failures.")
 
 if __name__ == "__main__":
     scriptMain()

@@ -162,12 +162,12 @@ void run()
 
     natural_64_bit const  num_hits_of_sum_number_single_thread = get_num_hits_of("sum_number");
     TEST_SUCCESS(num_hits_of_sum_number_single_thread > 0ULL);
-    float_64_bit const  time_of_sum_number_single_thread = get_num_hits_of("sum_number");
+    float_64_bit const  time_of_sum_number_single_thread = (float_64_bit)get_num_hits_of("sum_number");
     TEST_SUCCESS(time_of_sum_number_single_thread > 0.0);
 
     natural_64_bit const  num_hits_of_some_computation_single_thread = get_num_hits_of("some_computation");
     TEST_SUCCESS(num_hits_of_some_computation_single_thread > 0ULL);
-    float_64_bit const  time_of_some_computation_single_thread = get_num_hits_of("some_computation");
+    float_64_bit const  time_of_some_computation_single_thread = (float_64_bit)get_num_hits_of("some_computation");
     TEST_SUCCESS(time_of_some_computation_single_thread > 0.0);
 
     std::vector<std::thread> threads;
@@ -184,12 +184,12 @@ void run()
 
     natural_64_bit const  num_hits_of_sum_number_multi_thread = get_num_hits_of("sum_number");
     TEST_SUCCESS(num_hits_of_sum_number_multi_thread == 2ULL * num_hits_of_sum_number_single_thread);
-    float_64_bit const  time_of_sum_number_multi_thread = get_num_hits_of("sum_number");
+    float_64_bit const  time_of_sum_number_multi_thread = (float_64_bit)get_num_hits_of("sum_number");
     TEST_SUCCESS(time_of_sum_number_multi_thread > time_of_sum_number_single_thread);
 
     natural_64_bit const  num_hits_of_some_computation_multi_thread = get_num_hits_of("some_computation");
     TEST_SUCCESS(num_hits_of_some_computation_multi_thread == 2ULL * num_hits_of_some_computation_single_thread);
-    float_64_bit const  time_of_some_computation_multi_thread = get_num_hits_of("some_computation");
+    float_64_bit const  time_of_some_computation_multi_thread = (float_64_bit)get_num_hits_of("some_computation");
     TEST_SUCCESS(time_of_some_computation_multi_thread > time_of_some_computation_single_thread);
 
     TEST_PROGRESS_HIDE();

@@ -105,7 +105,7 @@ external_feedback_loop::external_feedback_loop(
 
 natural_32_bit external_feedback_loop::num_neural_tissues() const
 {
-    return m_neural_tissues.size();
+    return (natural_32_bit)m_neural_tissues.size();
 }
 
 std::shared_ptr<cellab::neural_tissue> external_feedback_loop::get_neural_tissue(natural_32_bit const index)
@@ -144,12 +144,12 @@ void external_feedback_loop::compute_next_state_of_neural_tissues_and_environmen
     std::unique_ptr< std::mutex[] >  mutexes_to_synapses_to_muscles(new std::mutex[num_neural_tissues()]);
     {
         natural_32_bit const  num_neural_tissues_to_be_updated_in_this_thread =
-                std::count(num_threads_avalilable_for_computation_of_neural_tissues.cbegin(),
-                           num_threads_avalilable_for_computation_of_neural_tissues.cend(),
-                           0U);
+                (natural_32_bit)std::count(num_threads_avalilable_for_computation_of_neural_tissues.cbegin(),
+                                           num_threads_avalilable_for_computation_of_neural_tissues.cend(),
+                                           0U);
 
         natural_32_bit const  num_neural_tissues_to_be_updated_in_separate_threads =
-                num_threads_avalilable_for_computation_of_neural_tissues.size() -
+                (natural_32_bit)num_threads_avalilable_for_computation_of_neural_tissues.size() -
                 num_neural_tissues_to_be_updated_in_this_thread;
 
         thread_synchronisarion_barrier  synchronisation_after_initialisations_of_locks {

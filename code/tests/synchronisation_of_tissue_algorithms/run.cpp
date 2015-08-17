@@ -107,7 +107,7 @@ static void initialse_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tis
 
                     bits_reference bits_of_coords =
                             dynamic_tissue->find_bits_of_coords_of_source_cell_of_synapse_in_tissue(x,y,c,s);
-                    natural_16_bit const num_bits = dynamic_tissue->num_bits_per_source_cell_coordinate();
+                    natural_8_bit const num_bits = dynamic_tissue->num_bits_per_source_cell_coordinate();
                     value_to_bits(
                             get_random_natural_32_bit_in_range(0U,static_tissue->num_cells_along_x_axis()-1U),
                             bits_of_coords,0U,num_bits);
@@ -137,7 +137,7 @@ static void initialse_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tis
 
         bits_reference bits_of_coords =
                 dynamic_tissue->find_bits_of_coords_of_source_cell_of_synapse_to_muscle(i);
-        natural_16_bit const num_bits = dynamic_tissue->num_bits_per_source_cell_coordinate();
+        natural_8_bit const num_bits = dynamic_tissue->num_bits_per_source_cell_coordinate();
         value_to_bits(
                 get_random_natural_32_bit_in_range(0U,static_tissue->num_cells_along_x_axis()-1U),
                 bits_of_coords,0U,num_bits);

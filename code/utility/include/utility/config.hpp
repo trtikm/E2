@@ -45,10 +45,13 @@ Configuration is available through pre-defined macros:
 
 #   if defined(_MSC_VER) // MSVC
 #       define COMPILER()         COMPILER_VC()
+#       define COMPILER_VERSION() _MSC_VER
 #   elif defined(__GNUC__) // gcc
 #       define COMPILER()         COMPILER_GCC()
+#       define COMPILER_VERSION() __GNUC__.__GNUC_MINOR__.__GNUC_PATCHLEVEL__
 #   else // unknown
 #       define COMPILER()         COMPILER_UNKNOWN()
+#       define COMPILER_VERSION() 0
 #   endif
 
 ////////////////////////////////////////////////////////////////////////////////

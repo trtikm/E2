@@ -97,7 +97,7 @@ static_state_of_neural_tissue::static_state_of_neural_tissue(
             [](std::vector<natural_32_bit> const& t, std::vector<natural_32_bit> const& s)
             {
                 ASSUMPTION(!t.empty());
-                std::vector<natural_32_bit> v(checked_add_32_bit(t.size(),s.size()));
+                std::vector<natural_32_bit> v(checked_add_32_bit((natural_32_bit)t.size(),(natural_32_bit)s.size()));
                 v.at(0) = t.at(0);
                 for (natural_32_bit i = 1U; i < t.size(); ++i)
                     v.at(i) = checked_add_32_bit(t.at(i),v.at(i - 1U));

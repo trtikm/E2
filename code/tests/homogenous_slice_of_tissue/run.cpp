@@ -70,7 +70,7 @@ static bool are_adjacent(bits_const_reference const& first, bits_const_reference
 }
 
 static void test_accesses(cellab::homogenous_slice_of_tissue&  slice, natural_32_bit const shift_X,
-                          natural_32_bit const  shift_Y, natural_64_bit const  shift_C)
+                          natural_32_bit const  shift_Y, natural_32_bit const  shift_C)
 {
     bits_const_reference const bits0 = slice.find_bits_of_unit(0U,0U,0ULL);
     bits_const_reference const bits = slice.find_bits_of_unit(shift_X,shift_Y,shift_C);
@@ -98,12 +98,12 @@ static void test_accesses(cellab::homogenous_slice_of_tissue&  slice, natural_32
                     1U,
                     slice.num_units_along_x_axis(),
                     slice.num_units_along_y_axis(),
-                    slice.num_units_along_columnar_axis()
+                    (natural_32_bit)slice.num_units_along_columnar_axis()
                     );
 
         TEST_SUCCESS(shift_X_next < slice.num_units_along_x_axis());
         TEST_SUCCESS(shift_Y_next < slice.num_units_along_y_axis());
-        TEST_SUCCESS(shift_C_next < slice.num_units_along_columnar_axis());
+        TEST_SUCCESS(shift_C_next < (natural_32_bit)slice.num_units_along_columnar_axis());
 
         TEST_SUCCESS(are_adjacent(bits,slice.find_bits_of_unit(shift_X_next,shift_Y_next,shift_C_next)));
     }
@@ -117,28 +117,28 @@ static void test_accesses(cellab::homogenous_slice_of_tissue&  slice)
 //                "num_units_along_columnar_axis = " << slice.num_units_along_columnar_axis()
 //                );
 
-    test_accesses(slice,0U,0U,0ULL);
+    test_accesses(slice,0U,0U,0U);
     test_accesses(slice,0U,
                         0U,
-                        slice.num_units_along_columnar_axis() - 1ULL);
+                        (natural_32_bit)(slice.num_units_along_columnar_axis() - 1U));
     test_accesses(slice,0U,
                         slice.num_units_along_y_axis() - 1U,
                         0U);
     test_accesses(slice,0U,
                         slice.num_units_along_y_axis() - 1U,
-                        slice.num_units_along_columnar_axis() - 1ULL);
+                        (natural_32_bit)(slice.num_units_along_columnar_axis() - 1ULL));
     test_accesses(slice,slice.num_units_along_x_axis() - 1U,
                         0U,
                         0U);
     test_accesses(slice,slice.num_units_along_x_axis() - 1U,
                         0U,
-                        slice.num_units_along_columnar_axis() - 1ULL);
+                        (natural_32_bit)(slice.num_units_along_columnar_axis() - 1ULL));
     test_accesses(slice,slice.num_units_along_x_axis() - 1U,
                         slice.num_units_along_y_axis() - 1U,
                         0U);
     test_accesses(slice,slice.num_units_along_x_axis() - 1U,
                         slice.num_units_along_y_axis() - 1U,
-                        slice.num_units_along_columnar_axis() - 1ULL);
+                        (natural_32_bit)(slice.num_units_along_columnar_axis() - 1ULL));
 
     for (natural_8_bit i = 0U; i < 10U; ++i)
     {
@@ -146,8 +146,8 @@ static void test_accesses(cellab::homogenous_slice_of_tissue&  slice)
                 get_random_natural_32_bit_in_range(0U,slice.num_units_along_x_axis()-1U);
         natural_32_bit const  shift_Y =
                 get_random_natural_32_bit_in_range(0U,slice.num_units_along_y_axis()-1U);
-        natural_64_bit const  shift_C =
-                get_random_natural_32_bit_in_range(0ULL,slice.num_units_along_columnar_axis()-1ULL);
+        natural_32_bit const  shift_C =
+                get_random_natural_32_bit_in_range(0U,(natural_32_bit)(slice.num_units_along_columnar_axis()-1ULL));
         test_accesses(slice,shift_X,shift_Y,shift_C);
     }
 }
@@ -155,7 +155,7 @@ static void test_accesses(cellab::homogenous_slice_of_tissue&  slice)
 static void test_3Darray_of_units(natural_16_bit const num_bits_per_unit,
                                   natural_32_bit const num_units_along_x_axis,
                                   natural_32_bit const num_units_along_y_axis,
-                                  natural_64_bit const num_units_along_columnar_axis)
+                                  natural_32_bit const num_units_along_columnar_axis)
 {
     try
     {
@@ -198,7 +198,7 @@ void run()
             natural_32_bit const  num_units_along_y_axis = 1U << shift_for_Y_units;
             for (natural_8_bit shift_for_C_units = 1U; shift_for_C_units < 32U; ++shift_for_C_units)
             {
-                natural_64_bit const  num_units_along_columnar_axis = 1U << shift_for_C_units;
+                natural_32_bit const  num_units_along_columnar_axis = 1U << shift_for_C_units;
                 for (natural_8_bit shift_for_unit = 1U; shift_for_unit < 16U; ++shift_for_unit)
                 {
                     natural_16_bit const  num_bits_per_unit = 1U << shift_for_unit;
@@ -226,7 +226,7 @@ void run()
         natural_16_bit const  num_bits_per_unit = get_random_natural_32_bit_in_range(1U,1U << 8U);
         natural_32_bit const  num_units_along_x_axis = get_random_natural_32_bit_in_range(1U,100000U);
         natural_32_bit const  num_units_along_y_axis = get_random_natural_32_bit_in_range(1U,100000U);
-        natural_64_bit const  num_units_along_columnar_axis = get_random_natural_32_bit_in_range(1U,100U);
+        natural_32_bit const  num_units_along_columnar_axis = get_random_natural_32_bit_in_range(1U,100U);
         if (can_be_allocated(num_bits_per_unit,
                              num_units_along_x_axis,
                              num_units_along_y_axis,

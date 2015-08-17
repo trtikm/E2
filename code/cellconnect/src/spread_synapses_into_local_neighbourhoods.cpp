@@ -7,10 +7,10 @@
 #include <algorithm>
 #include <functional>
 
-namespace cellconnect { namespace {
+namespace cellconnect {
 
 
-void  thread_check_consistency_of_matrix_and_column(
+static void  thread_check_consistency_of_matrix_and_column(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
         natural_32_bit  x,
@@ -57,7 +57,7 @@ void  thread_check_consistency_of_matrix_and_column(
 }
 
 
-bool  check_consistency_of_matrix_and_tissue(
+static bool  check_consistency_of_matrix_and_tissue(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
         cellab::kind_of_cell const  target_kind,
@@ -120,67 +120,61 @@ bool  check_consistency_of_matrix_and_tissue(
 }
 
 
-}}
-
-namespace cellconnect { namespace {
-
-
-
-natural_32_bit  read_x_coord_from_bits_of_coordinates(bits_reference const& bits_ref)
+static natural_32_bit  read_x_coord_from_bits_of_coordinates(bits_reference const& bits_ref)
 {
     natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
     INVARIANT(num_bits * natural_16_bit(3U) == bits_ref.num_bits());
 
     natural_32_bit coord_along_x_axis;
-    bits_to_value(bits_ref,0U,num_bits,coord_along_x_axis);
+    bits_to_value(bits_ref,0U,(natural_8_bit)num_bits,coord_along_x_axis);
 
     return coord_along_x_axis;
 }
 
 
-natural_32_bit  read_y_coord_from_bits_of_coordinates(bits_reference const& bits_ref)
+static natural_32_bit  read_y_coord_from_bits_of_coordinates(bits_reference const& bits_ref)
 {
     natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
     INVARIANT(num_bits * natural_16_bit(3U) == bits_ref.num_bits());
 
     natural_32_bit coord_along_y_axis;
-    bits_to_value(bits_ref,num_bits,num_bits,coord_along_y_axis);
+    bits_to_value(bits_ref,(natural_8_bit)num_bits,(natural_8_bit)num_bits,coord_along_y_axis);
 
     return coord_along_y_axis;
 }
 
 
-natural_32_bit  read_columnar_coord_from_bits_of_coordinates(bits_reference const& bits_ref)
+static natural_32_bit  read_columnar_coord_from_bits_of_coordinates(bits_reference const& bits_ref)
 {
     natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
     INVARIANT(num_bits * natural_16_bit(3U) == bits_ref.num_bits());
 
     natural_32_bit coord_along_columnar_axis;
-    bits_to_value(bits_ref,num_bits + num_bits,num_bits,coord_along_columnar_axis);
+    bits_to_value(bits_ref,(natural_8_bit)(num_bits + num_bits),(natural_8_bit)num_bits,coord_along_columnar_axis);
 
     return coord_along_columnar_axis;
 }
 
 
-void  write_x_coord_to_bits_of_coordinates(natural_32_bit const  x_coord, bits_reference& bits_ref)
+static void  write_x_coord_to_bits_of_coordinates(natural_32_bit const  x_coord, bits_reference& bits_ref)
 {
     natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
     INVARIANT(num_bits * natural_16_bit(3U) == bits_ref.num_bits());
 
-    value_to_bits(x_coord,bits_ref,0U,num_bits);
+    value_to_bits(x_coord,bits_ref,0U,(natural_8_bit)num_bits);
 }
 
 
-void  write_y_coord_to_bits_of_coordinates(natural_32_bit const  y_coord, bits_reference& bits_ref)
+static void  write_y_coord_to_bits_of_coordinates(natural_32_bit const  y_coord, bits_reference& bits_ref)
 {
     natural_16_bit const num_bits = bits_ref.num_bits() / natural_16_bit(3U);
     INVARIANT(num_bits * natural_16_bit(3U) == bits_ref.num_bits());
 
-    value_to_bits(y_coord,bits_ref,num_bits,num_bits);
+    value_to_bits(y_coord,bits_ref,(natural_8_bit)num_bits,(natural_8_bit)num_bits);
 }
 
 
-bits_reference  find_bits_of_source_coords_of_synapse(
+static bits_reference  find_bits_of_source_coords_of_synapse(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
         natural_32_bit const  x,
@@ -222,7 +216,7 @@ bits_reference  find_bits_of_source_coords_of_synapse(
 }
 
 
-void  thread_spread_synapses(
+static void  thread_spread_synapses(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
         cellab::kind_of_cell const  target_kind,
@@ -305,7 +299,7 @@ void  thread_spread_synapses(
 }
 
 
-bool go_to_next_task(
+static bool go_to_next_task(
         natural_32_bit&  row,
         natural_32_bit&  column,
         natural_32_bit&  index,
@@ -347,7 +341,7 @@ bool go_to_next_task(
 }
 
 
-}}
+}
 
 namespace cellconnect {
 

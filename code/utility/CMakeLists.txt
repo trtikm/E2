@@ -47,6 +47,8 @@ add_library(utility
 
     ./include/utility/thread_synchronisarion_barrier.hpp
     ./src/thread_synchronisarion_barrier.cpp
+
+    ./include/utility/typefn_if_then_else.hpp
     )
 
 #install(TARGETS brod_utils DESTINATION lib/utils)

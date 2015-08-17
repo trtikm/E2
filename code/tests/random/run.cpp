@@ -44,7 +44,7 @@ void prepare_statistics_vector(
 {
     ASSUMPTION(num_classes > 1U);
     statistics.clear();
-    statistics.resize(num_classes,0.0D);
+    statistics.resize(num_classes,0.0L);
 }
 
 void compute_content_of_data_vectors(
@@ -119,7 +119,7 @@ float_64_bit  compute_average(
 {
     ASSUMPTION(max_number > min_number);
     ASSUMPTION(data.size() == max_number - min_number + 1);
-    float_64_bit  average = 0.0D;
+    float_64_bit  average = 0.0L;
     for (natural_32_bit j = min_number; j <= max_number; ++j)
         average += static_cast<float_64_bit>(data.at(j - min_number));
     average /= (max_number - min_number + 1);
