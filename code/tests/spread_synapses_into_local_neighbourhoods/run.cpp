@@ -3,7 +3,8 @@
 #include <cellab/dynamic_state_of_neural_tissue.hpp>
 #include <cellab/utilities_for_transition_algorithms.hpp>
 #include <cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp>
-#include <cellconnect/spread_synapses_into_local_neighbourhoods.hpp>
+#include <cellconnect/spread_synapses_into_neighbourhoods.hpp>
+#include <cellconnect/column_shift_function.hpp>
 #include <utility/test.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -361,13 +362,14 @@ void run()
                                     matrix_spread_synapses
                                     );
 
-                        cellconnect::spread_synapses_into_local_neighbourhoods(
+                        cellconnect::spread_synapses_into_neighbourhoods(
                                     dynamic_tissue,
                                     target_kind,
                                     source_kind,
                                     diameter_x,
                                     diameter_y,
                                     matrix_spread_synapses,
+                                    cellconnect::column_shift_function(),
                                     num_threads
                                     );
                         TEST_PROGRESS_UPDATE();

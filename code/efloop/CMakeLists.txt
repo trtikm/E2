@@ -1,4 +1,6 @@
-add_library(efloop
+set(THIS_TARGET_NAME efloop)
+
+add_library(${THIS_TARGET_NAME}
     ./include/efloop/external_feedback_loop.hpp
     ./src/external_feedback_loop.cpp
 
@@ -9,3 +11,8 @@ add_library(efloop
     ./src/access_to_synapses_to_muscles.cpp
     )
 
+set_target_properties(${THIS_TARGET_NAME} PROPERTIES
+    OUTPUT_NAME "${THIS_TARGET_NAME}_${CMAKE_SYSTEM_NAME}_${CMAKE_BUILD_TYPE}"
+    )
+
+install(TARGETS ${THIS_TARGET_NAME} DESTINATION "lib")

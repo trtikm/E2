@@ -33,7 +33,8 @@ add_library(${THIS_TARGET_NAME}
     ./include/cellab/utilities_for_construction_of_neural_tissue.hpp
     )
 
-#set_target_properties(${THIS_TARGET_NAME} PROPERTIES
-#    OUTPUT_NAME "${THIS_TARGET_NAME}_${CMAKE_SYSTEM_NAME}_${CMAKE_BUILD_TYPE}"
-#    )
-#install(TARGETS ${THIS_TARGET_NAME} DESTINATION "lib/${THIS_TARGET_NAME}")
+set_target_properties(${THIS_TARGET_NAME} PROPERTIES
+    OUTPUT_NAME "${THIS_TARGET_NAME}_${CMAKE_SYSTEM_NAME}_${CMAKE_BUILD_TYPE}"
+    )
+
+install(TARGETS ${THIS_TARGET_NAME} DESTINATION "lib")

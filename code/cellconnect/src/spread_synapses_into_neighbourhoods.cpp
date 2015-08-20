@@ -1,4 +1,4 @@
-#include <cellconnect/spread_synapses_into_local_neighbourhoods.hpp>
+#include <cellconnect/spread_synapses_into_neighbourhoods.hpp>
 #include <cellab/utilities_for_transition_algorithms.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -6,6 +6,7 @@
 #include <thread>
 #include <algorithm>
 #include <functional>
+#include <tuple>
 
 namespace cellconnect {
 
@@ -223,7 +224,8 @@ static void  thread_spread_synapses(
         cellab::kind_of_cell const  source_kind,
         integer_64_bit const  shift_x,
         integer_64_bit const  shift_y,
-        natural_64_bit const  shift_to_synapse
+        natural_64_bit const  shift_to_synapse,
+        cellconnect::column_shift_function const&  move_to_target_column
         )
 {
     TMPROF_BLOCK();
@@ -251,7 +253,7 @@ static void  thread_spread_synapses(
 
             do
             {
-                natural_32_bit const  shifted_x = cellab::shift_coordinate(
+                natural_32_bit  shifted_x = cellab::shift_coordinate(
                                                         current_x,
                                                         shift_x,
                                                         static_state_ptr->num_cells_along_x_axis(),
@@ -260,7 +262,7 @@ static void  thread_spread_synapses(
                 if (shifted_x == static_state_ptr->num_cells_along_x_axis())
                     break;
 
-                natural_32_bit const  shifted_y = cellab::shift_coordinate(
+                natural_32_bit  shifted_y = cellab::shift_coordinate(
                                                         current_y,
                                                         shift_y,
                                                         static_state_ptr->num_cells_along_y_axis(),
@@ -268,6 +270,8 @@ static void  thread_spread_synapses(
                                                         );
                 if (shifted_y == static_state_ptr->num_cells_along_y_axis())
                     break;
+
+                std::tie(shifted_x,shifted_y) = move_to_target_column(shifted_x,shifted_y);
 
                 bits_of_coords = cellconnect::find_bits_of_source_coords_of_synapse(
                                         dynamic_state_ptr,
@@ -346,13 +350,14 @@ static bool go_to_next_task(
 namespace cellconnect {
 
 
-void  spread_synapses_into_local_neighbourhoods(
+void  spread_synapses_into_neighbourhoods(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         cellab::kind_of_cell const  kind_of_target_cells_of_synapses,
         cellab::kind_of_cell const  kind_of_source_cells_of_synapses,
         natural_32_bit const  diameter_x,
         natural_32_bit const  diameter_y,
         std::vector<natural_32_bit> const&  matrix_of_counts_of_synapses_to_be_spread_into_columns_in_neighbourhood,
+        cellconnect::column_shift_function const&  move_to_target_column,
         natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
@@ -412,7 +417,8 @@ void  spread_synapses_into_local_neighbourhoods(
                             kind_of_source_cells_of_synapses,
                             (integer_64_bit)column - (integer_64_bit)(diameter_x / 2U),
                             (integer_64_bit)row - (integer_64_bit)(diameter_y / 2U),
-                            shift
+                            shift,
+                            std::cref(move_to_target_column)
                             )
                         );
 
@@ -431,7 +437,8 @@ void  spread_synapses_into_local_neighbourhoods(
                     kind_of_source_cells_of_synapses,
                     (integer_64_bit)column - (integer_64_bit)(diameter_x / 2U),
                     (integer_64_bit)row - (integer_64_bit)(diameter_y / 2U),
-                    shift
+                    shift,
+                    move_to_target_column
                     );
             not_done = cellconnect::go_to_next_task(
                             row,column,index,shift,

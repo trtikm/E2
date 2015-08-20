@@ -1,4 +1,6 @@
-add_library(utility
+set(THIS_TARGET_NAME utility)
+
+add_library(${THIS_TARGET_NAME}
     ./include/utility/assumptions.hpp
 
     ./include/utility/basic_numeric_types.hpp
@@ -51,5 +53,8 @@ add_library(utility
     ./include/utility/typefn_if_then_else.hpp
     )
 
-#install(TARGETS brod_utils DESTINATION lib/utils)
+set_target_properties(${THIS_TARGET_NAME} PROPERTIES
+    OUTPUT_NAME "${THIS_TARGET_NAME}_${CMAKE_SYSTEM_NAME}_${CMAKE_BUILD_TYPE}"
+    )
 
+install(TARGETS ${THIS_TARGET_NAME} DESTINATION "lib")
