@@ -45,6 +45,9 @@ add_subdirectory(./fill_src_coords_of_synapses)
 add_subdirectory(./spread_synapses_into_local_neighbourhoods)
     message("-- spread_synapses_into_local_neighbourhoods")
 
+add_subdirectory(./column_shift_function)
+    message("-- column_shift_function")
+
 
 message("-- run_tests.py")
 install(
