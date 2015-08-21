@@ -253,8 +253,11 @@ static void  thread_spread_synapses(
 
             do
             {
-                natural_32_bit  shifted_x = cellab::shift_coordinate(
-                                                        current_x,
+                natural_32_bit  target_column_x, target_column_y;
+                std::tie(target_column_x,target_column_y) = move_to_target_column(current_x,current_y);
+
+                natural_32_bit const  shifted_x = cellab::shift_coordinate(
+                                                        target_column_x,
                                                         shift_x,
                                                         static_state_ptr->num_cells_along_x_axis(),
                                                         static_state_ptr->is_x_axis_torus_axis()
@@ -262,16 +265,14 @@ static void  thread_spread_synapses(
                 if (shifted_x == static_state_ptr->num_cells_along_x_axis())
                     break;
 
-                natural_32_bit  shifted_y = cellab::shift_coordinate(
-                                                        current_y,
+                natural_32_bit const  shifted_y = cellab::shift_coordinate(
+                                                        target_column_y,
                                                         shift_y,
                                                         static_state_ptr->num_cells_along_y_axis(),
                                                         static_state_ptr->is_y_axis_torus_axis()
                                                         );
                 if (shifted_y == static_state_ptr->num_cells_along_y_axis())
                     break;
-
-                std::tie(shifted_x,shifted_y) = move_to_target_column(shifted_x,shifted_y);
 
                 bits_of_coords = cellconnect::find_bits_of_source_coords_of_synapse(
                                         dynamic_state_ptr,
