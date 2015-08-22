@@ -43,6 +43,18 @@ natural_16_bit  gofrom_right_up(natural_16_bit const ID);
 natural_16_bit  gofrom_up(natural_16_bit const ID);
 
 
+bool  compute_dimestions_repetitions_and_scales_for_templates_along_one_axis_of_tissue(
+        natural_32_bit const  num_tissue_cells_along_the_axis,
+        natural_16_bit const  dimension_of_the_central_template,
+        natural_8_bit const  num_repetitions_of_the_central_template,
+        natural_32_bit&  scale_of_all_templates,
+        natural_16_bit&  dimension_of_the_front_template,
+        natural_8_bit&  num_repetitions_of_the_front_template,
+        natural_16_bit&  dimension_of_the_tail_template,
+        natural_8_bit&  num_repetitions_of_the_tail_template
+        );
+
+
 struct column_shift_function
 {
     /**

@@ -2,7 +2,7 @@
 #include <utility/invariants.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/checked_number_operations.hpp>
-//#include <limits>
+#include <algorithm>
 
 #include <utility/development.hpp>
 
@@ -52,6 +52,62 @@ natural_16_bit  gofrom_right_down(natural_16_bit const ID) { return mk_shift(ID,
 natural_16_bit  gofrom_right(natural_16_bit const ID) { return mk_shift(ID,5U + 8U); }
 natural_16_bit  gofrom_right_up(natural_16_bit const ID) { return mk_shift(ID,6U + 8U); }
 natural_16_bit  gofrom_up(natural_16_bit const ID) { return mk_shift(ID,7U + 8U); }
+
+
+bool  compute_dimestions_repetitions_and_scales_for_templates_along_one_axis_of_tissue(
+        natural_32_bit const  num_tissue_cells_along_the_axis,
+        natural_16_bit const  dimension_of_the_central_template,
+        natural_8_bit const  num_repetitions_of_the_central_template,
+        natural_32_bit&  scale_of_all_templates,
+        natural_16_bit&  dimension_of_the_front_template,
+        natural_8_bit&  num_repetitions_of_the_front_template,
+        natural_16_bit&  dimension_of_the_tail_template,
+        natural_8_bit&  num_repetitions_of_the_tail_template
+        )
+{
+    ASSUMPTION(num_tissue_cells_along_the_axis > 2U);
+    ASSUMPTION(dimension_of_the_central_template > 1U);
+    ASSUMPTION((natural_32_bit)dimension_of_the_central_template <= num_tissue_cells_along_the_axis - 2U);
+    ASSUMPTION(num_repetitions_of_the_central_template > 0U);
+    ASSUMPTION((natural_32_bit)num_repetitions_of_the_central_template * (natural_32_bit)dimension_of_the_central_template
+               <= num_tissue_cells_along_the_axis - 2U);
+
+    natural_32_bit const  central_coef =
+            (natural_32_bit)num_repetitions_of_the_central_template * (natural_32_bit)dimension_of_the_central_template;
+    for (natural_32_bit addon = 2U; addon <= 2U * central_coef; ++addon)
+        if (num_tissue_cells_along_the_axis % (central_coef + addon) == 0U)
+        {
+            scale_of_all_templates = num_tissue_cells_along_the_axis / (central_coef + addon);
+            for (dimension_of_the_front_template = dimension_of_the_central_template;
+                 dimension_of_the_front_template >= 1U;
+                 --dimension_of_the_front_template)
+                for (num_repetitions_of_the_front_template = 1U;
+                     num_repetitions_of_the_front_template <= num_repetitions_of_the_central_template;
+                     ++num_repetitions_of_the_front_template)
+                {
+                    natural_32_bit const  front_coef = (natural_32_bit)num_repetitions_of_the_front_template *
+                                                       (natural_32_bit)dimension_of_the_front_template;
+                    if (front_coef + (natural_32_bit)dimension_of_the_front_template <= addon)
+                        for (dimension_of_the_tail_template = dimension_of_the_central_template;
+                             dimension_of_the_tail_template >= dimension_of_the_front_template;
+                             --dimension_of_the_tail_template)
+                            if ((addon - front_coef) % dimension_of_the_tail_template == 0U)
+                            {
+                                num_repetitions_of_the_tail_template = (addon - front_coef) / dimension_of_the_tail_template;
+                                return true;
+                            }
+                }
+            UNREACHABLE();
+        }
+
+    scale_of_all_templates = 0U;
+    dimension_of_the_front_template = 0U;
+    num_repetitions_of_the_front_template = 0U;
+    dimension_of_the_tail_template = 0U;
+    num_repetitions_of_the_tail_template = 0U;
+
+    return false;
+}
 
 
 column_shift_function::column_shift_function()
