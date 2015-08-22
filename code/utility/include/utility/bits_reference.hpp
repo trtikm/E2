@@ -125,7 +125,7 @@ T  bits_to_value(
     bits_to_value(
             bits_ref,
             index_of_the_first_bit,
-            (smallest_natural_type_storing_bit_count_of<T>::result)how_many_bits,
+            (typename smallest_natural_type_storing_bit_count_of<T>::result)how_many_bits,
             variable_where_the_value_will_be_stored
             );
     return variable_where_the_value_will_be_stored;

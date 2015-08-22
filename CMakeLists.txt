@@ -1,21 +1,23 @@
 #- Installation notes:
-#        - use a desktop computer with at least eight hardware threads and 16GB RAM.
-#        - install MS Windows 8.1 or later, or Ubuntu 15.04 or later, or Linux MINT 17.2 or later.
-#        - install GIT version 1.9.5 or later
-#        - use GIT to clone E2 repository (https://github.com/trtikm/E2.git) into some your <E2-install-dir>:
+#        - Use a desktop computer with at least eight hardware threads and 16GB RAM.
+#        - Install MS Windows 8.1 or later, or Ubuntu 15.04 or later, or Linux MINT 17.2 or later.
+#        - Install GIT (https://git-scm.com/) version 1.9.5 or later
+#        - Use GIT to clone E2 repository (https://github.com/trtikm/E2.git) into some your <E2-install-dir>:
 #               Create the directory <E2-install-dir>
 #               cd <E2-install-dir>
 #               git clone https://github.com/trtikm/E2.git .
-#           Note that the ending dot '.' (at the line above) is a necessary part of the comand.
-#           Also note that you can get E2 sources by downloading a ZIP package from (https://github.com/trtikm/E2)
-#           by clicking to the 'Dowload ZIP' button. Then simply unpack the package into the <E2-install-dir>.
-#        - install a C++ compiler supporting C++11 standard and a debugger. Namely, on Windows install Visual Studion 2015
+#          Note that the ending dot '.' (at the line above) is a necessary part of the comand.
+#          Also note that you can get E2 sources by downloading a ZIP package from (https://github.com/trtikm/E2)
+#          by clicking to the 'Dowload ZIP' button. Then simply unpack the package into the <E2-install-dir>.
+#        - Install a C++ compiler supporting C++11 standard and a debugger. Namely, on Windows install Visual Studion 2015
 #          and Windows Development Tools (i.e. Windows Kit) 64 bit in order to get 'cdb.exe' debugger which will later be
-#          auto-detected and used in Qt Creator. On Linux install GCC including G++ version 4.9 or later and GBD version ??
+#          auto-detected and used in Qt Creator. On Linux install GCC including G++ version 4.9 or later and GBD version 7.9
 #          or later.
-#        - install CMake (http://www.cmake.org) version 3.3 or later
-#        - install Python 64 bit (https://www.python.org) version 3.4 or later into some your <python-install-dir>
-#        - install Boost C++ libraries (http://www.boost.org) version 1.59.0 or later into some your <boost-install-dir>
+#        - Install CMake (http://www.cmake.org) version 3.0 or later.
+#        - Install Python 64 bit (https://www.python.org) version 3.4 or later into some your <python-install-dir>.
+#          On Linux install also the development version:
+#               sudo apt-get install python3-dev
+#        - Install Boost C++ libraries (http://www.boost.org) version 1.59.0 or later into some your <boost-install-dir>.
 #          How to build Boost libraries on Windows 8.1 or later using Visual Studio 2015:
 #               unpack the downloaded Boost ZIP package into <boost-install-dir>
 #               cd <boost-install-dir>
@@ -24,12 +26,12 @@
 #          How to build Boost libraries on Linux using GCC:
 #               unpack Boost ZIP package into some your <boost-install-dir>
 #               cd <boost-install-dir>
-#               ./bootstrap.bat
-#               ./b2 --build-dir="<boost-install-dir>\build\gcc" address-model=64 toolset=gcc stage
-#        - install Eigen linear algebra library (http://eigen.tuxfamily.org) version 3.2.5 or later into
+#               ./bootstrap.sh --with-python=python3.4
+#               ./b2 --build-dir="<boost-install-dir>/build/gcc" address-model=64 toolset=gcc stage
+#        - Install Eigen linear algebra library (http://eigen.tuxfamily.org) version 3.2.5 or later into
 #          some your <eigen-install-dir> directory. The Eigen library is header only, no building is necessary.
 #          So, just unpack the downloaded package into the <eigen-install-dir> directory.
-#        - install Qt 64 bit (including Qt Creator) version 3.4.2 or later
+#        - Install Qt5 64 bit version 5.4.1 or later, including Qt Creator version 3.4.2 or later.
 #- Configuration of the E2 project in the Qt Creator:
 #        - start the Qt Creator
 #        - First configure "Kits":
@@ -39,8 +41,8 @@
 #                           - Microsoft Visual C++ Compiler 14.0 (amd64)
 #                           - Auto-detected CDB at ...\Debuggers\x64\cdb.exe
 #                 On Linux  select compiler and debugger respectively:
-#                           - GCC
-#                           - GDB
+#                           - GCC (x86 64bit in /usr/bin)
+#                           - System GDB at /usr/bin/gdb
 #        - Go to 'File>Open File or Project' (the shortcut is Ctrl+O) and open the file:
 #               <E2-install-dir>/CMakeLists.txt
 #        - Then specify the following build direcroy (according to build type you prefere):
@@ -67,7 +69,7 @@
 
 project(E2)
 
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 
 if(NOT CMAKE_BUILD_TYPE)
     message("Build type not set => setting 'Release' as default.")
