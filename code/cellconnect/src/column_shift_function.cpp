@@ -2,111 +2,226 @@
 #include <utility/invariants.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/checked_number_operations.hpp>
+#include <utility/random.hpp>
+#include <utility/timeprof.hpp>
 #include <algorithm>
+#include <set>
 
 #include <utility/development.hpp>
 
 namespace cellconnect {
 
 
-static natural_16_bit  mk_shift(natural_16_bit const ID, natural_16_bit const dir)
+static natural_16_bit const  ES_NUM_KINDS = 8U;
+static natural_16_bit const  ES_MASK = 0x8000U;
+static natural_16_bit const  ES_KIND_MASK = 7U;
+static natural_16_bit const  ES_KIND_SHIFT = 12U;
+static natural_16_bit const  ES_MAX_ID = 0xfffU;
+
+
+shift_to_target::shift_to_target(natural_16_bit const target_row, natural_16_bit  target_column)
+    : m_is_external(false)
+    , m_target_row(target_row)
+    , m_target_column(target_column)
+    , m_exit_shift_kind((exit_shift_kind)0U)
+    , m_external_shift_ID(0U)
+{}
+
+shift_to_target::shift_to_target(exit_shift_kind const  shift_kind, natural_16_bit const  shift_ID)
+    : m_is_external(true)
+    , m_target_row(0U)
+    , m_target_column(0U)
+    , m_exit_shift_kind(shift_kind)
+    , m_external_shift_ID(shift_ID)
 {
-    ASSUMPTION(ID < 0x800U);
-    ASSUMPTION(dir < 16U);
-    return (1U << 15U) | (dir << 11U) | ID;
-
+    ASSUMPTION((natural_16_bit)m_exit_shift_kind <= ES_NUM_KINDS);
+    ASSUMPTION(m_external_shift_ID <= ES_MAX_ID);
 }
 
-static natural_16_bit  num_rows(shift_template const&  tpt) { return std::get<0>(tpt); }
-
-static natural_16_bit  num_columns(shift_template const&  tpt) { return std::get<1>(tpt); }
-
-static std::vector<natural_16_bit> const&  get_data(shift_template const&  tpt) { return std::get<2>(tpt); }
-
-static natural_16_bit  get_elem(shift_template const&  tpt, natural_16_bit const  index)
+natural_16_bit  shift_to_target::get_target_row() const
 {
-    ASSUMPTION(index < get_data(tpt).size());
-    return get_data(tpt).at(index);
+    ASSUMPTION(!is_external());
+    return m_target_row;
+}
+
+natural_16_bit  shift_to_target::get_target_column() const
+{
+    ASSUMPTION(!is_external());
+    return m_target_column;
+}
+
+exit_shift_kind  shift_to_target::get_exit_shift_kind() const
+{
+    ASSUMPTION(is_external());
+    return m_exit_shift_kind;
+}
+
+natural_16_bit  shift_to_target::get_external_shift_ID() const
+{
+    ASSUMPTION(is_external());
+    return m_external_shift_ID;
 }
 
 
+shift_template::shift_template(natural_16_bit const num_rows, natural_16_bit const num_columns,
+                               std::vector< std::pair<exit_shift_kind,natural_16_bit> > const& exit_counts)
+    : m_num_rows(num_rows)
+    , m_num_columns(num_columns)
+    , m_data()
+{
+    TMPROF_BLOCK();
+
+    std::vector<shift_to_target>  shifts;
+    {
+        natural_16_bit ID = 0U;
+        for (auto const& pair : exit_counts)
+            for (natural_16_bit  i = 0U; i < pair.second; ++i, ++ID)
+                shifts.push_back({pair.first,ID});
+    }
+    setup_data(shifts);
 }
 
-namespace cellconnect {
-
-
-natural_16_bit  goto_left_up(natural_16_bit const ID) { return mk_shift(ID,0U); }
-natural_16_bit  goto_left(natural_16_bit const ID) { return mk_shift(ID,1U); }
-natural_16_bit  goto_left_down(natural_16_bit const ID) { return mk_shift(ID,2U); }
-natural_16_bit  goto_down(natural_16_bit const ID) { return mk_shift(ID,3U); }
-natural_16_bit  goto_right_down(natural_16_bit const ID) { return mk_shift(ID,4U); }
-natural_16_bit  goto_right(natural_16_bit const ID) { return mk_shift(ID,5U); }
-natural_16_bit  goto_right_up(natural_16_bit const ID) { return mk_shift(ID,6U); }
-natural_16_bit  goto_up(natural_16_bit const ID) { return mk_shift(ID,7U); }
-
-natural_16_bit  gofrom_left_up(natural_16_bit const ID) { return mk_shift(ID,0U + 8U); }
-natural_16_bit  gofrom_left(natural_16_bit const ID) { return mk_shift(ID,1U + 8U); }
-natural_16_bit  gofrom_left_down(natural_16_bit const ID) { return mk_shift(ID,2U + 8U); }
-natural_16_bit  gofrom_down(natural_16_bit const ID) { return mk_shift(ID,3U + 8U); }
-natural_16_bit  gofrom_right_down(natural_16_bit const ID) { return mk_shift(ID,4U + 8U); }
-natural_16_bit  gofrom_right(natural_16_bit const ID) { return mk_shift(ID,5U + 8U); }
-natural_16_bit  gofrom_right_up(natural_16_bit const ID) { return mk_shift(ID,6U + 8U); }
-natural_16_bit  gofrom_up(natural_16_bit const ID) { return mk_shift(ID,7U + 8U); }
-
-
-bool  compute_dimestions_repetitions_and_scales_for_templates_along_one_axis_of_tissue(
-        natural_32_bit const  num_tissue_cells_along_the_axis,
-        natural_16_bit const  dimension_of_the_central_template,
-        natural_8_bit const  num_repetitions_of_the_central_template,
-        natural_32_bit&  scale_of_all_templates,
-        natural_16_bit&  dimension_of_the_front_template,
-        natural_8_bit&  num_repetitions_of_the_front_template,
-        natural_16_bit&  dimension_of_the_tail_template,
-        natural_8_bit&  num_repetitions_of_the_tail_template
+shift_template::shift_template(
+        std::vector<shift_to_target> const& shifts,
+        natural_16_bit const num_rows,
+        natural_16_bit const num_columns
         )
+    : m_num_rows(num_rows)
+    , m_num_columns(num_columns)
+    , m_data()
 {
-    ASSUMPTION(num_tissue_cells_along_the_axis > 2U);
-    ASSUMPTION(dimension_of_the_central_template > 1U);
-    ASSUMPTION((natural_32_bit)dimension_of_the_central_template <= num_tissue_cells_along_the_axis - 2U);
-    ASSUMPTION(num_repetitions_of_the_central_template > 0U);
-    ASSUMPTION((natural_32_bit)num_repetitions_of_the_central_template * (natural_32_bit)dimension_of_the_central_template
-               <= num_tissue_cells_along_the_axis - 2U);
+    TMPROF_BLOCK();
 
-    natural_32_bit const  central_coef =
-            (natural_32_bit)num_repetitions_of_the_central_template * (natural_32_bit)dimension_of_the_central_template;
-    for (natural_32_bit addon = 2U; addon <= 2U * central_coef; ++addon)
-        if (num_tissue_cells_along_the_axis % (central_coef + addon) == 0U)
-        {
-            scale_of_all_templates = num_tissue_cells_along_the_axis / (central_coef + addon);
-            for (dimension_of_the_front_template = dimension_of_the_central_template;
-                 dimension_of_the_front_template >= 1U;
-                 --dimension_of_the_front_template)
-                for (num_repetitions_of_the_front_template = 1U;
-                     num_repetitions_of_the_front_template <= num_repetitions_of_the_central_template;
-                     ++num_repetitions_of_the_front_template)
+    setup_data(shifts);
+}
+
+void shift_template::setup_data(std::vector<shift_to_target> const& shifts)
+{
+    TMPROF_BLOCK();
+
+    natural_16_bit const  length = checked_mul_16_bit(num_rows(),num_columns());
+    ASSUMPTION((natural_32_bit)length > 1U && length < ES_MASK);
+    ASSUMPTION(shifts.size() <= (natural_32_bit)length)
+    typedef std::pair<exit_shift_kind,natural_16_bit>  kind_and_count;
+    ASSUMPTION(
+        [](std::vector<shift_to_target> const& shifts) {
+            std::set<kind_and_count> exits;
+            for (shift_to_target const& shift : shifts)
+                if (shift.is_external())
                 {
-                    natural_32_bit const  front_coef = (natural_32_bit)num_repetitions_of_the_front_template *
-                                                       (natural_32_bit)dimension_of_the_front_template;
-                    if (front_coef + (natural_32_bit)dimension_of_the_front_template <= addon)
-                        for (dimension_of_the_tail_template = dimension_of_the_central_template;
-                             dimension_of_the_tail_template >= dimension_of_the_front_template;
-                             --dimension_of_the_tail_template)
-                            if ((addon - front_coef) % dimension_of_the_tail_template == 0U)
-                            {
-                                num_repetitions_of_the_tail_template = (addon - front_coef) / dimension_of_the_tail_template;
-                                return true;
-                            }
+                    kind_and_count const  pair(shift.get_exit_shift_kind(),shift.get_external_shift_ID());
+                    if (exits.count(pair) > 0U)
+                        return false;
+                    exits.insert(pair);
                 }
-            UNREACHABLE();
+            return true;
+        }(shifts)
+        );
+
+    m_data.resize(length);
+    if (shifts.size() == m_data.size())
+    {
+        natural_16_bit  index = 0U;
+        for (natural_16_bit  r = 0U; r < num_rows(); ++r)
+            for (natural_16_bit  c = 0U; c < num_columns(); ++c)
+            {
+                INVARIANT(index < length);
+                set_shift(r,c,shifts.at(index));
+                ++index;
+            }
+        INVARIANT(index == length);
+        ASSUMPTION(check_consistency());
+    }
+    else
+    {
+        for (natural_16_bit  i = 0U; i < length; ++i)
+            m_data.at(i) = i;
+        for (natural_32_bit k = 0U; k < 2U; ++k)
+            for (natural_32_bit p = 0U; p < (natural_32_bit)length; ++p)
+            {
+                natural_32_bit const  q = get_random_natural_32_bit_in_range(0U,length - 1U);
+                std::swap(m_data.at(p),m_data.at(q));
+            }
+
+        ASSUMPTION(
+            [](std::vector<shift_to_target> const& shifts) {
+                for (shift_to_target const& shift : shifts)
+                    if (!shift.is_external())
+                        false;
+                return true;
+            }(shifts)
+            );
+
+        std::vector<shift_to_target>  selection;
+        for (natural_16_bit  r = 0U; r < num_rows(); ++r)
+            for (natural_16_bit  c = 0U; c < num_columns(); ++c)
+                selection.push_back({r,c});
+        INVARIANT(selection.size() == (natural_32_bit)length)
+        for (natural_32_bit k = 0U; k < 2U; ++k)
+            for (natural_32_bit p = 0U; p < (natural_32_bit)length; ++p)
+            {
+                natural_32_bit const  q = get_random_natural_32_bit_in_range(0U,length - 1U);
+                std::swap(selection.at(p),selection.at(q));
+            }
+
+        natural_16_bit  index = 0U;
+        for (shift_to_target const& shift : shifts)
+        {
+            shift_to_target const&  selected = selection.at(index);
+            set_shift(selected.get_target_row(),selected.get_target_column(),shift);
+            ++index;
         }
+        INVARIANT(check_consistency());
+    }
+}
 
-    scale_of_all_templates = 0U;
-    dimension_of_the_front_template = 0U;
-    num_repetitions_of_the_front_template = 0U;
-    dimension_of_the_tail_template = 0U;
-    num_repetitions_of_the_tail_template = 0U;
+bool  shift_template::check_consistency() const
+{
+    TMPROF_BLOCK();
 
-    return false;
+    std::set< std::pair<exit_shift_kind,natural_16_bit> > exits;
+    std::set< std::pair<natural_16_bit,natural_16_bit> > targeted;
+    for (natural_16_bit  r = 0U; r < num_rows(); ++r)
+        for (natural_16_bit  c = 0U; c < num_columns(); ++c)
+        {
+            shift_to_target const  shift = get_shift(r,c);
+            if (shift.is_external())
+            {
+                std::pair<exit_shift_kind,natural_16_bit> const  pair{shift.get_exit_shift_kind(),shift.get_external_shift_ID()};
+                if (exits.count(pair) > 0U)
+                    return false;
+                exits.insert(pair);
+            }
+            else
+            {
+                std::pair<natural_16_bit,natural_16_bit> const  record{ shift.get_target_row(), shift.get_target_column() };
+                if (targeted.count(record) > 0U)
+                    return false;
+                targeted.insert(record);
+            }
+        }
+    return m_data.size() - targeted.size() == exits.size();
+}
+
+
+shift_to_target  shift_template::get_shift(natural_16_bit const  row_index, natural_16_bit const  column_index) const
+{
+    ASSUMPTION(row_index < num_rows() && column_index < num_columns());
+    natural_16_bit const  index = get_index(row_index,column_index);
+    natural_16_bit const  raw_shift_value = m_data.at(index);
+    if (((natural_32_bit)raw_shift_value & ES_MASK) == 0U)
+        return get_coords(raw_shift_value);
+    return { (exit_shift_kind)((raw_shift_value & ES_KIND_MASK) >> ES_KIND_SHIFT), (natural_16_bit)(raw_shift_value & ES_MAX_ID) };
+}
+
+void  shift_template::set_shift(natural_16_bit const  row_index, natural_16_bit const  column_index, shift_to_target const& shift)
+{
+    ASSUMPTION(row_index < num_rows() && column_index < num_columns());
+    natural_16_bit const  index = get_index(row_index,column_index);
+    if (!shift.is_external())
+        m_data.at(index) = get_index(shift.get_target_row(),shift.get_target_column());
+    else
+        m_data.at(index) = ES_MASK | ((natural_16_bit)shift.get_exit_shift_kind() << ES_KIND_SHIFT) | shift.get_external_shift_ID();
 }
 
 
@@ -118,8 +233,8 @@ column_shift_function::column_shift_function()
     , m_num_rows_in_layouts(0U)
     , m_num_columns_in_layouts(0U)
     , m_layout_of_templates()
-    , m_layout_of_scales_along_x_axis_of_tissue()
-    , m_layout_of_scales_along_y_axis_of_tissue()
+    , m_layout_of_scales_along_row_axis()
+    , m_layout_of_scales_along_column_axis()
     , m_layout_of_row_repetitions()
     , m_layout_of_column_repetitions()
 {}
@@ -131,8 +246,8 @@ column_shift_function::column_shift_function(
         natural_16_bit const  num_rows_in_layouts,
         natural_16_bit const  num_columns_in_layouts,
         std::vector<natural_16_bit> const&  layout_of_templates,
-        std::vector<natural_32_bit> const&  layout_of_scales_along_x_axis_of_tissue,
-        std::vector<natural_32_bit> const&  layout_of_scales_along_y_axis_of_tissue,
+        std::vector<natural_32_bit> const&  layout_of_scales_along_row_axis,
+        std::vector<natural_32_bit> const&  layout_of_scales_along_column_axis,
         std::vector< std::pair<natural_16_bit,natural_32_bit> > const&  layout_of_row_repetitions,
         std::vector< std::pair<natural_16_bit,natural_32_bit> > const&  layout_of_column_repetitions
         )
@@ -143,29 +258,16 @@ column_shift_function::column_shift_function(
     , m_num_rows_in_layouts(num_rows_in_layouts)
     , m_num_columns_in_layouts(num_columns_in_layouts)
     , m_layout_of_templates(layout_of_templates)
-    , m_layout_of_scales_along_x_axis_of_tissue(layout_of_scales_along_x_axis_of_tissue)
-    , m_layout_of_scales_along_y_axis_of_tissue(layout_of_scales_along_y_axis_of_tissue)
+    , m_layout_of_scales_along_row_axis(layout_of_scales_along_row_axis)
+    , m_layout_of_scales_along_column_axis(layout_of_scales_along_column_axis)
     , m_layout_of_row_repetitions(layout_of_row_repetitions)
     , m_layout_of_column_repetitions(layout_of_column_repetitions)
 {
+    TMPROF_BLOCK();
+
     ASSUMPTION(m_num_cells_along_x_axis > 0U);
     ASSUMPTION(m_num_cells_along_y_axis > 0U);
-
     ASSUMPTION(!shift_templates.empty() && shift_templates.size() < (1U << 15U));
-    ASSUMPTION(
-        [](std::vector<shift_template> const&  shift_templates){
-            for (shift_template const& tpt : shift_templates)
-            {
-                if (num_rows(tpt) < 2U && num_columns(tpt) < 2U)
-                    return false;
-                if (checked_mul_16_bit(num_rows(tpt),num_columns(tpt)) != get_data(tpt).size())
-                    return false;
-                if (get_data(tpt).empty())
-                    return false;
-            }
-            return true;
-        }(shift_templates)
-        );
 
     NOT_IMPLEMENTED_YET();
 }
@@ -180,6 +282,29 @@ std::pair<natural_32_bit,natural_32_bit>  column_shift_function::operator()(natu
     ASSUMPTION(y_coord < m_num_cells_along_y_axis);
 
     NOT_IMPLEMENTED_YET();
+}
+
+
+void  compute_tissue_axis_length_and_template_scale(
+        natural_32_bit const  desired_number_of_cells_along_one_axis_of_tissue,
+        natural_16_bit const  dimension_of_template,
+        natural_8_bit const  num_repetitions_of_template,
+        natural_32_bit&  num_tissue_cells_along_the_axis,
+        natural_32_bit&  scale_of_template
+        )
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(desired_number_of_cells_along_one_axis_of_tissue > 0U);
+    ASSUMPTION(dimension_of_template > 0U);
+    ASSUMPTION(num_repetitions_of_template > 0U);
+
+    natural_32_bit const  coef = (natural_32_bit)num_repetitions_of_template * (natural_32_bit)dimension_of_template;
+    scale_of_template = desired_number_of_cells_along_one_axis_of_tissue / coef;
+    if (scale_of_template == 0U || coef < 2U * (desired_number_of_cells_along_one_axis_of_tissue % coef))
+        ++scale_of_template;
+    INVARIANT(scale_of_template > 0U);
+    num_tissue_cells_along_the_axis = coef * scale_of_template;
 }
 
 

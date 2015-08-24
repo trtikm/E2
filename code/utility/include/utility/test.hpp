@@ -58,6 +58,14 @@
 #   define TEST_PROGRESS_HIDE() ::private_test_internal_implementation_details::hide_test_progress_character()
 #   define TEST_PROGRESS_UPDATE() { TEST_PROGRESS_HIDE(); TEST_PROGRESS_SHOW(); }
 
+#   define TEST_LOG(LVL,MSG) \
+            {\
+                logging_severity_level const  old_level = get_minimal_severity_level();\
+                set_minimal_severity_level(LVL);\
+                LOG(LVL,MSG);\
+                set_minimal_severity_level(old_level);\
+            }
+
 
 namespace test_statistics {
 
