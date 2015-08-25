@@ -62,6 +62,8 @@ struct shift_template
     shift_to_target  get_shift(natural_16_bit const  row_index, natural_16_bit const  column_index) const;
     void  set_shift(natural_16_bit const  row_index, natural_16_bit const  column_index, shift_to_target const& shift);
 
+    std::pair<natural_16_bit,natural_16_bit>  get_entry_shift(natural_16_bit const  shift_ID) const;
+
 private:
     natural_16_bit  get_index(natural_16_bit const  row_index, natural_16_bit const  column_index) const
     { return row_index * num_columns() + column_index; }
@@ -73,53 +75,132 @@ private:
 
     natural_16_bit  m_num_rows;
     natural_16_bit  m_num_columns;
-    std::vector<natural_16_bit>  m_data; //!< The matrix stored here in the row-major order.
+    std::vector<natural_16_bit>  m_data; //!< The matrix is stored here in the row-major order.
 };
 
 
+/**
+ * It defines a matrix of indices into some std::vector<shift_template> of shift templates.
+ * Each index into the vector must appear at least once in the matrix.
+ * We assume the row-axis of the matrix is aligned with the x-axis of a tissue.
+ */
+struct layout_of_shift_templates
+{
+    layout_of_shift_templates(natural_16_bit const  num_rows, natural_16_bit const  num_columns,
+                              std::vector<natural_16_bit> const&  matrix_of_indices_of_shift_templates);
+
+    natural_16_bit num_rows() const { return m_num_rows; }
+    natural_16_bit num_columns() const { return m_num_columns; }
+    natural_16_bit  num_templates() const { return m_num_templates; }
+    natural_16_bit  get_template_index(natural_16_bit const  row_index, natural_16_bit const  column_index) const;
+
+private:
+    natural_16_bit  get_index(natural_16_bit const  row_index, natural_16_bit const  column_index) const
+    { return row_index * num_columns() + column_index; }
+
+    natural_16_bit  m_num_rows;
+    natural_16_bit  m_num_columns;
+    std::vector<natural_16_bit>  m_layout; //!< The matrix is stored here in the row-major order.
+    natural_16_bit  m_num_templates; //!< The maximal index in m_layout inreased by 1
+};
+
+
+/**
+ * It defines number of repetitions of a block of adjacent rows or columns in an instance of struct layout_of_shift_templates.
+ * The block is defined as a pair of indices [begin_index,end_index) of adjacent rows or columns.
+ */
+struct repetition_block
+{
+    repetition_block(natural_16_bit const  block_begin_index, natural_16_bit const  block_end_index,
+                     natural_32_bit const  block_num_repetitions);
+
+    natural_16_bit block_begin_index() const { return m_block_begin_index; }
+    natural_16_bit block_end_index() const { return m_block_end_index; }
+    natural_32_bit block_num_repetitions() const { return m_block_num_repetitions; }
+
+private:
+    natural_16_bit  m_block_begin_index;
+    natural_16_bit  m_block_end_index;
+    natural_32_bit  m_block_num_repetitions;
+};
+
+
+/**
+ * It defines a bijective function, say F, from xy-coordinates of all cells in a tissue to xy-coordinates of all cells in the tissue.
+ * If [x,y] are valid coordinates of a cell in a tissue, then F([x,y]) are also valid coordinates of a cell in the tissue.
+ * There are implemented two kinds of F: (1) Identity function, and (2) Tempate based one. The second kind can be seen as filling
+ * a floor (tissue) with a simple mosaic of standardised bricks (templates). The floor (tissue) is always a rectangle. A blick
+ * (template) is a small version of F, i.e. a bijective funtion on xy-coordinates of cells captured by the template. We support only
+ * simple mosaics for floors: Each template can only be rectangular and they are arranged in a rectangular matrix s.t. all
+ * templates in a row/column have exactly the same row/columnar dimension. Note though that sizes in different rows/columns may be
+ * different. TODO!
+ */
 struct column_shift_function
 {
     /**
      * The default constructor initialises the identity shift function.
+     * It is used for speading synapses into territories in local neghbourhoods.
      */
     column_shift_function();
 
+    /**
+     * It creates a permutation of coordinates of cells.
+     * It is used for speading synapses into territories in distant neghbourhoods.
+     */
     column_shift_function(
             natural_32_bit const  num_cells_along_x_axis,
             natural_32_bit const  num_cells_along_y_axis,
             std::vector<shift_template> const&  shift_templates,
-            natural_16_bit const  num_rows_in_layouts,
-            natural_16_bit const  num_columns_in_layouts,
-            std::vector<natural_16_bit> const&  layout_of_templates,
-            std::vector<natural_32_bit> const&  layout_of_scales_along_row_axis,
-            std::vector<natural_32_bit> const&  layout_of_scales_along_column_axis,
-            std::vector< std::pair<natural_16_bit,natural_32_bit> > const&  layout_of_row_repetitions,
-            std::vector< std::pair<natural_16_bit,natural_32_bit> > const&  layout_of_column_repetitions
+            natural_32_bit const  scale_of_shift_templates_along_row_axis,
+            natural_32_bit const  scale_of_shift_templates_along_column_axis,
+            layout_of_shift_templates const&  layout_of_shift_templates,
+            std::vector<repetition_block> const&  repetition_blocks_of_rows_in_layout_of_shift_templates,
+            std::vector<repetition_block> const&  repetition_blocks_of_columns_in_layout_of_shift_templates
             );
 
     std::pair<natural_32_bit,natural_32_bit>  operator()(natural_32_bit const  x_coord, natural_32_bit const  y_coord) const;
 
+    bool is_identity_function() const { return m_use_identity_function; }
+
+    natural_32_bit num_cells_along_x_axis() const { return m_num_cells_along_x_axis; }
+    natural_32_bit num_cells_along_y_axis() const { return m_num_cells_along_y_axis; }
+
+    natural_32_bit scale_along_row_axis() const { return m_scale_of_shift_templates_along_row_axis; }
+    natural_32_bit scale_along_column_axis() const { return m_scale_of_shift_templates_along_column_axis; }
+
+    natural_16_bit num_layout_rows() const { return m_layout_of_shift_templates.num_rows(); }
+    natural_16_bit num_layout_columns() const { return m_layout_of_shift_templates.num_columns(); }
+    shift_template const&  get_shift_template(natural_16_bit const  layout_row_index, natural_16_bit const  layout_column_index) const;
+
+    natural_16_bit  num_row_repetition_blocks() const { return (natural_16_bit)m_repetition_blocks_of_rows_in_layout_of_shift_templates.size(); }
+    natural_16_bit  num_column_repetition_blocks() const { return (natural_16_bit)m_repetition_blocks_of_columns_in_layout_of_shift_templates.size(); }
+    repetition_block const& get_row_repetition_block(natural_16_bit const  row_block_index) const;
+    repetition_block const& get_column_repetition_block(natural_16_bit const  column_block_index) const;
+
+    natural_32_bit  num_repetition_block_cells_along_x_axis(natural_16_bit const  row_block_index) const;
+    natural_32_bit  num_repetition_block_cells_along_y_axis(natural_16_bit const  column_block_index) const;
+    natural_32_bit  num_shift_template_cells_along_x_axis(natural_16_bit const  layout_row_index) const;
+    natural_32_bit  num_shift_template_cells_along_y_axis(natural_16_bit const  layout_column_index) const;
+
 private:
     bool  m_use_identity_function;
-    natural_32_bit const  m_num_cells_along_x_axis;
-    natural_32_bit const  m_num_cells_along_y_axis;
+    natural_32_bit  m_num_cells_along_x_axis;
+    natural_32_bit  m_num_cells_along_y_axis;
     std::vector<shift_template>  m_shift_templates;
-    natural_16_bit const  m_num_rows_in_layouts;
-    natural_16_bit const  m_num_columns_in_layouts;
-    std::vector<natural_16_bit>  m_layout_of_templates;
-    std::vector<natural_32_bit>  m_layout_of_scales_along_row_axis;
-    std::vector<natural_32_bit>  m_layout_of_scales_along_column_axis;
-    std::vector< std::pair<natural_16_bit,natural_32_bit> >  m_layout_of_row_repetitions;
-    std::vector< std::pair<natural_16_bit,natural_32_bit> >  m_layout_of_column_repetitions;
+    natural_32_bit  m_scale_of_shift_templates_along_row_axis;
+    natural_32_bit  m_scale_of_shift_templates_along_column_axis;
+    layout_of_shift_templates  m_layout_of_shift_templates;
+    std::vector<repetition_block>  m_repetition_blocks_of_rows_in_layout_of_shift_templates;
+    std::vector<repetition_block>  m_repetition_blocks_of_columns_in_layout_of_shift_templates;
 };
 
 
 void  compute_tissue_axis_length_and_template_scale(
         natural_32_bit const  desired_number_of_cells_along_one_axis_of_tissue,
-        natural_16_bit const  dimension_of_template,
-        natural_8_bit const  num_repetitions_of_template,
+        natural_16_bit const  largest_template_dimension,
+        natural_8_bit const  num_repetitions_of_largest_template_dimension,
         natural_32_bit&  num_tissue_cells_along_the_axis,
-        natural_32_bit&  scale_of_template
+        natural_32_bit&  scale_of_all_template_dimensions
         );
 
 
