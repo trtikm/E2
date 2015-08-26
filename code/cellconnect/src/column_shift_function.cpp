@@ -19,6 +19,23 @@ static natural_16_bit const  ES_KIND_SHIFT = 12U;
 static natural_16_bit const  ES_MAX_ID = 0xfffU;
 
 
+exit_shift_kind  get_opposite_exit_shift_kind(exit_shift_kind const  kind)
+{
+    switch (kind)
+    {
+    case DIR_LEFT_UP: return DIR_RIGHT_DOWN;
+    case DIR_LEFT: return DIR_RIGHT;
+    case DIR_LEFT_DOWN: return DIR_RIGHT_UP;
+    case DIR_DOWN: return DIR_UP;
+    case DIR_RIGHT_DOWN: return DIR_LEFT_UP;
+    case DIR_RIGHT: return DIR_LEFT;
+    case DIR_RIGHT_UP: return DIR_LEFT_DOWN;
+    case DIR_UP: return DIR_DOWN;
+    default: UNREACHABLE(); return DIR_RIGHT_UP;
+    }
+}
+
+
 shift_to_target::shift_to_target(natural_16_bit const target_row, natural_16_bit  target_column)
     : m_is_external(false)
     , m_target_row(target_row)
@@ -56,7 +73,7 @@ exit_shift_kind  shift_to_target::get_exit_shift_kind() const
     return m_exit_shift_kind;
 }
 
-natural_16_bit  shift_to_target::get_external_shift_ID() const
+natural_16_bit  shift_to_target::get_exit_shift_ID() const
 {
     ASSUMPTION(is_external());
     return m_external_shift_ID;
@@ -68,6 +85,7 @@ shift_template::shift_template(natural_16_bit const num_rows, natural_16_bit con
     : m_num_rows(num_rows)
     , m_num_columns(num_columns)
     , m_data()
+    , m_from_entry_specification_to_entry_coords()
 {
     TMPROF_BLOCK();
 
@@ -82,13 +100,16 @@ shift_template::shift_template(natural_16_bit const num_rows, natural_16_bit con
 }
 
 shift_template::shift_template(
-        std::vector<shift_to_target> const& shifts,
         natural_16_bit const num_rows,
-        natural_16_bit const num_columns
+        natural_16_bit const num_columns,
+        std::vector<shift_to_target> const& shifts,
+        std::map< std::pair<exit_shift_kind,natural_16_bit>,std::pair<natural_16_bit,natural_16_bit>  > const&
+            from_entry_specification_to_entry_coords
         )
     : m_num_rows(num_rows)
     , m_num_columns(num_columns)
     , m_data()
+    , m_from_entry_specification_to_entry_coords(from_entry_specification_to_entry_coords)
 {
     TMPROF_BLOCK();
 
@@ -109,7 +130,7 @@ void shift_template::setup_data(std::vector<shift_to_target> const& shifts)
             for (shift_to_target const& shift : shifts)
                 if (shift.is_external())
                 {
-                    kind_and_count const  pair(shift.get_exit_shift_kind(),shift.get_external_shift_ID());
+                    kind_and_count const  pair(shift.get_exit_shift_kind(),shift.get_exit_shift_ID());
                     if (exits.count(pair) > 0U)
                         return false;
                     exits.insert(pair);
@@ -153,22 +174,31 @@ void shift_template::setup_data(std::vector<shift_to_target> const& shifts)
             );
 
         std::vector<shift_to_target>  selection;
-        for (natural_16_bit  r = 0U; r < num_rows(); ++r)
-            for (natural_16_bit  c = 0U; c < num_columns(); ++c)
-                selection.push_back({r,c});
-        INVARIANT(selection.size() == (natural_32_bit)length)
-        for (natural_32_bit k = 0U; k < 2U; ++k)
-            for (natural_32_bit p = 0U; p < (natural_32_bit)length; ++p)
-            {
-                natural_32_bit const  q = get_random_natural_32_bit_in_range(0U,length - 1U);
-                std::swap(selection.at(p),selection.at(q));
-            }
+        {
+            for (natural_16_bit  r = 0U; r < num_rows(); ++r)
+                for (natural_16_bit  c = 0U; c < num_columns(); ++c)
+                    selection.push_back({r,c});
+            INVARIANT(selection.size() == (natural_32_bit)length)
+            for (natural_32_bit k = 0U; k < 2U; ++k)
+                for (natural_32_bit p = 0U; p < (natural_32_bit)length; ++p)
+                {
+                    natural_32_bit const  q = get_random_natural_32_bit_in_range(0U,length - 1U);
+                    std::swap(selection.at(p),selection.at(q));
+                }
+        }
 
         natural_16_bit  index = 0U;
         for (shift_to_target const& shift : shifts)
         {
             shift_to_target const&  selected = selection.at(index);
+            INVARIANT(!selected.is_external());
+            shift_to_target const  targeted = get_shift(selected.get_target_row(),selected.get_target_column());
             set_shift(selected.get_target_row(),selected.get_target_column(),shift);
+            m_from_entry_specification_to_entry_coords.insert(
+                    {
+                        {get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),shift.get_exit_shift_ID()},
+                        {targeted.get_target_row(),targeted.get_target_column()}
+                    });
             ++index;
         }
         INVARIANT(check_consistency());
@@ -187,7 +217,7 @@ bool  shift_template::check_consistency() const
             shift_to_target const  shift = get_shift(r,c);
             if (shift.is_external())
             {
-                std::pair<exit_shift_kind,natural_16_bit> const  pair{shift.get_exit_shift_kind(),shift.get_external_shift_ID()};
+                std::pair<exit_shift_kind,natural_16_bit> const  pair{shift.get_exit_shift_kind(),shift.get_exit_shift_ID()};
                 if (exits.count(pair) > 0U)
                     return false;
                 exits.insert(pair);
@@ -200,6 +230,21 @@ bool  shift_template::check_consistency() const
                 targeted.insert(record);
             }
         }
+    if (exits.size() != m_from_entry_specification_to_entry_coords.size())
+        return false;
+    std::set< std::pair<natural_16_bit,natural_16_bit> > entries;
+    for (auto const& value : m_from_entry_specification_to_entry_coords)
+    {
+        if (entries.count(value.second) > 0U)
+            return false;
+        entries.insert(value.second);
+    }
+    for (auto const& value : entries)
+        if (targeted.count(value) > 0U)
+            return false;
+    for (auto const& value : targeted)
+        if (entries.count(value) > 0U)
+            return false;
     return m_data.size() - targeted.size() == exits.size();
 }
 
@@ -221,12 +266,15 @@ void  shift_template::set_shift(natural_16_bit const  row_index, natural_16_bit 
     if (!shift.is_external())
         m_data.at(index) = get_index(shift.get_target_row(),shift.get_target_column());
     else
-        m_data.at(index) = ES_MASK | ((natural_16_bit)shift.get_exit_shift_kind() << ES_KIND_SHIFT) | shift.get_external_shift_ID();
+        m_data.at(index) = ES_MASK | ((natural_16_bit)shift.get_exit_shift_kind() << ES_KIND_SHIFT) | shift.get_exit_shift_ID();
 }
 
-std::pair<natural_16_bit,natural_16_bit>  shift_template::get_entry_shift(natural_16_bit const  shift_ID) const
+std::pair<natural_16_bit,natural_16_bit> const&  shift_template::get_entry_shift(exit_shift_kind const direction_from_adjacent_matrix,
+                                                                                 natural_16_bit const  shift_ID) const
 {
-    NOT_IMPLEMENTED_YET();
+    auto const  iter = m_from_entry_specification_to_entry_coords.find({direction_from_adjacent_matrix,shift_ID});
+    ASSUMPTION(iter != m_from_entry_specification_to_entry_coords.end());
+    return iter->second;
 }
 
 
@@ -299,8 +347,8 @@ column_shift_function::column_shift_function(
     , m_scale_of_shift_templates_along_row_axis(scale_of_shift_templates_along_row_axis)
     , m_scale_of_shift_templates_along_column_axis(scale_of_shift_templates_along_column_axis)
     , m_layout_of_shift_templates(layout_of_shift_templates)
-    , m_repetition_blocks_of_rows_in_layout_of_shift_templates(repetition_blocks_of_rows_in_layout_of_shift_templates)
-    , m_repetition_blocks_of_columns_in_layout_of_shift_templates(repetition_blocks_of_columns_in_layout_of_shift_templates)
+    , m_repetition_blocks_of_rows_in_layout_of_shift_templates()
+    , m_repetition_blocks_of_columns_in_layout_of_shift_templates()
 {
     TMPROF_BLOCK();
 
@@ -309,8 +357,154 @@ column_shift_function::column_shift_function(
     ASSUMPTION(m_shift_templates.size() == (natural_32_bit)m_layout_of_shift_templates.num_templates());
     ASSUMPTION(m_scale_of_shift_templates_along_row_axis > 0U);
     ASSUMPTION(m_scale_of_shift_templates_along_column_axis > 0U);
+    ASSUMPTION(check_layout_consistency());
 
-    NOT_IMPLEMENTED_YET();
+    build_repetitions(repetition_blocks_of_rows_in_layout_of_shift_templates,m_layout_of_shift_templates.num_rows(),
+                      m_repetition_blocks_of_rows_in_layout_of_shift_templates);
+    build_repetitions(repetition_blocks_of_columns_in_layout_of_shift_templates,m_layout_of_shift_templates.num_columns(),
+                      m_repetition_blocks_of_columns_in_layout_of_shift_templates);
+
+    NOT_IMPLEMENTED_YET(); // TODO: It remains to check the consistency of the size of the layout of templates and the size of the tissue!
+}
+
+void  column_shift_function::build_repetitions(std::vector<repetition_block> const&  reps, natural_16_bit const  size,
+                                               std::vector<repetition_block>&  output)
+{
+    ASSUMPTION(reps.size() <= (natural_32_bit)size);
+    ASSUMPTION(
+            [](std::vector<repetition_block> const&  reps, natural_16_bit size) {
+                for (natural_32_bit  i = 1U; i < reps.size(); ++i)
+                    if (reps.at(i - 1U).block_end_index() > reps.at(i).block_begin_index())
+                        return false;
+                if (!reps.empty() && reps.back().block_end_index() > size)
+                    return false;
+                return true;
+            }(reps,size)
+            );
+    ASSUMPTION(output.empty());
+
+    natural_16_bit  index = 0U;
+    natural_16_bit  reps_index = 0U;
+    while (index < size)
+        if ((natural_32_bit)reps_index < reps.size() && index == reps.at(reps_index).block_begin_index())
+        {
+            output.push_back(reps.at(reps_index));
+            index = reps.at(reps_index).block_end_index();
+            ++reps_index;
+        }
+        else
+        {
+            output.push_back({index,index + 1U,1U});
+            ++index;
+        }
+    INVARIANT(index == size);
+    INVARIANT((natural_32_bit)reps_index == reps.size());
+    INVARIANT(!output.empty());
+    INVARIANT(
+            [](std::vector<repetition_block> const&  reps, natural_16_bit size) {
+                if (reps.at(0U).block_begin_index() != 0U)
+                    return false;
+                for (natural_32_bit  i = 1U; i < reps.size(); ++i)
+                    if (reps.at(i - 1U).block_end_index() != reps.at(i).block_begin_index())
+                        return false;
+                if (reps.back().block_end_index() != size)
+                    return false;
+                return true;
+            }(reps,size)
+            );
+}
+
+
+bool  column_shift_function::check_layout_consistency() const
+{
+    for (natural_16_bit r = 0U; r < m_layout_of_shift_templates.num_rows(); ++r)
+    {
+        natural_16_bit const  dim = get_shift_template(r,0U).num_rows();
+        for (natural_16_bit c = 1U; c < m_layout_of_shift_templates.num_columns(); ++c)
+            if (get_shift_template(r,c).num_rows() != dim)
+                return false;
+    }
+    for (natural_16_bit c = 0U; c < m_layout_of_shift_templates.num_columns(); ++c)
+    {
+        natural_16_bit const  dim = get_shift_template(0U,c).num_columns();
+        for (natural_16_bit r = 1U; r < m_layout_of_shift_templates.num_rows(); ++r)
+            if (get_shift_template(r,c).num_columns() != dim)
+                return false;
+    }
+    for (natural_16_bit r = 0U; r < m_layout_of_shift_templates.num_rows(); ++r)
+        for (natural_16_bit c = 0U; c < m_layout_of_shift_templates.num_columns(); ++c)
+        {
+            shift_template const&  tpt = get_shift_template(r,c);
+            for (natural_16_bit  tr = 0U; tr < tpt.num_rows(); ++tr)
+                for (natural_16_bit  tc = 0U; tc <tpt. num_columns(); ++tc)
+                {
+                    shift_to_target const  shift = tpt.get_shift(tr,tc);
+                    if (shift.is_external())
+                        switch (shift.get_exit_shift_kind())
+                        {
+                        case DIR_LEFT_UP:
+                            if (r == 0U)
+                                return false;
+                            if (c == 0U)
+                                return false;
+                            get_shift_template(r - 1U, c - 1U).get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                                               shift.get_exit_shift_ID());
+                            break;
+                        case DIR_LEFT:
+                            if (c == 0U)
+                                return false;
+                            get_shift_template(r + 0U, c - 1U).get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                                               shift.get_exit_shift_ID());
+                            break;
+                        case DIR_LEFT_DOWN:
+                            if (r == m_layout_of_shift_templates.num_rows() - 1U)
+                                return false;
+                            if (c == 0U)
+                                return false;
+                            get_shift_template(r + 1U, c - 1U).get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                                               shift.get_exit_shift_ID());
+                            break;
+                        case DIR_DOWN:
+                            if (r == m_layout_of_shift_templates.num_rows() - 1U)
+                                return false;
+                            get_shift_template(r + 1U, c + 0U).get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                                               shift.get_exit_shift_ID());
+                            break;
+                        case DIR_RIGHT_DOWN:
+                            if (r == m_layout_of_shift_templates.num_rows() - 1U)
+                                return false;
+                            if (c == m_layout_of_shift_templates.num_columns() - 1U)
+                                return false;
+                            get_shift_template(r + 1U, c + 1U).get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                                               shift.get_exit_shift_ID());
+                            break;
+                        case DIR_RIGHT:
+                            if (c == m_layout_of_shift_templates.num_columns() - 1U)
+                                return false;
+                            get_shift_template(r + 0U, c + 1U).get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                                               shift.get_exit_shift_ID());
+                            break;
+                        case DIR_RIGHT_UP:
+                            if (r == 0U)
+                                return false;
+                            if (c == m_layout_of_shift_templates.num_columns() - 1U)
+                                return false;
+                            get_shift_template(r - 1U, c + 1U).get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                                               shift.get_exit_shift_ID());
+                            break;
+                        case DIR_UP:
+                            if (r == 0U)
+                                return false;
+                            get_shift_template(r - 1U, c + 0U).get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                                               shift.get_exit_shift_ID());
+                            break;
+                        default:
+                            return false;
+                        }
+                }
+        }
+
+    return true;
 }
 
 std::pair<natural_32_bit,natural_32_bit>  column_shift_function::operator()(natural_32_bit const  x_coord,
@@ -382,77 +576,93 @@ std::pair<natural_32_bit,natural_32_bit>  column_shift_function::operator()(natu
             {
                 switch (shift.get_exit_shift_kind())
                 {
-                case GOTO_LEFT_UP:
+                case DIR_LEFT_UP:
                 {
                     shift_template const&  entry_template = get_shift_template(layout_row_index - 1U,layout_column_index - 1U);
-                    std::pair<natural_16_bit,natural_16_bit> const  entry_coords = entry_template.get_entry_shift(shift.get_external_shift_ID());
+                    std::pair<natural_16_bit,natural_16_bit> const&  entry_coords =
+                            entry_template.get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                           shift.get_exit_shift_ID());
                     row_shift = (integer_64_bit)entry_coords.first - (integer_64_bit)template_row_index
                                     - (integer_64_bit)entry_template.num_rows();
                     column_shift = (integer_64_bit)entry_coords.second - (integer_64_bit)template_column_index
                                         - (integer_64_bit)entry_template.num_columns();
                     break;
                 }
-                case GOTO_LEFT:
+                case DIR_LEFT:
                 {
                     shift_template const&  entry_template = get_shift_template(layout_row_index + 0U,layout_column_index - 1U);
-                    std::pair<natural_16_bit,natural_16_bit> const  entry_coords = entry_template.get_entry_shift(shift.get_external_shift_ID());
+                    std::pair<natural_16_bit,natural_16_bit> const&  entry_coords =
+                            entry_template.get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                           shift.get_exit_shift_ID());
                     row_shift = (integer_64_bit)entry_coords.first - (integer_64_bit)template_row_index;
                     column_shift = (integer_64_bit)entry_coords.second - (integer_64_bit)template_column_index
                                         - (integer_64_bit)entry_template.num_columns();
                     break;
                 }
-                case GOTO_LEFT_DOWN:
+                case DIR_LEFT_DOWN:
                 {
                     shift_template const&  entry_template = get_shift_template(layout_row_index + 1U,layout_column_index - 1U);
-                    std::pair<natural_16_bit,natural_16_bit> const  entry_coords = entry_template.get_entry_shift(shift.get_external_shift_ID());
+                    std::pair<natural_16_bit,natural_16_bit> const&  entry_coords =
+                            entry_template.get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                           shift.get_exit_shift_ID());
                     row_shift = (integer_64_bit)entry_coords.first - (integer_64_bit)template_row_index
                                     + (integer_64_bit)source_template.num_rows();
                     column_shift = (integer_64_bit)entry_coords.second - (integer_64_bit)template_column_index
                                         - (integer_64_bit)entry_template.num_columns();
                     break;
                 }
-                case GOTO_DOWN:
+                case DIR_DOWN:
                 {
                     shift_template const&  entry_template = get_shift_template(layout_row_index + 1U,layout_column_index + 0U);
-                    std::pair<natural_16_bit,natural_16_bit> const  entry_coords = entry_template.get_entry_shift(shift.get_external_shift_ID());
+                    std::pair<natural_16_bit,natural_16_bit> const&  entry_coords =
+                            entry_template.get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                           shift.get_exit_shift_ID());
                     row_shift = (integer_64_bit)entry_coords.first - (integer_64_bit)template_row_index
                                     + (integer_64_bit)source_template.num_rows();
                     column_shift = (integer_64_bit)entry_coords.second - (integer_64_bit)template_column_index;
                     break;
                 }
-                case GOTO_RIGHT_DOWN:
+                case DIR_RIGHT_DOWN:
                 {
                     shift_template const&  entry_template = get_shift_template(layout_row_index + 1U,layout_column_index + 1U);
-                    std::pair<natural_16_bit,natural_16_bit> const  entry_coords = entry_template.get_entry_shift(shift.get_external_shift_ID());
+                    std::pair<natural_16_bit,natural_16_bit> const&  entry_coords =
+                            entry_template.get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                           shift.get_exit_shift_ID());
                     row_shift = (integer_64_bit)entry_coords.first - (integer_64_bit)template_row_index
                                     + (integer_64_bit)source_template.num_rows();
                     column_shift = (integer_64_bit)entry_coords.second - (integer_64_bit)template_column_index
                                         + (integer_64_bit)source_template.num_columns();
                     break;
                 }
-                case GOTO_RIGHT:
+                case DIR_RIGHT:
                 {
                     shift_template const&  entry_template = get_shift_template(layout_row_index + 0U,layout_column_index + 1U);
-                    std::pair<natural_16_bit,natural_16_bit> const  entry_coords = entry_template.get_entry_shift(shift.get_external_shift_ID());
+                    std::pair<natural_16_bit,natural_16_bit> const&  entry_coords =
+                            entry_template.get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                           shift.get_exit_shift_ID());
                     row_shift = (integer_64_bit)entry_coords.first - (integer_64_bit)template_row_index;
                     column_shift = (integer_64_bit)entry_coords.second - (integer_64_bit)template_column_index
                                         + (integer_64_bit)source_template.num_columns();
                     break;
                 }
-                case GOTO_RIGHT_UP:
+                case DIR_RIGHT_UP:
                 {
                     shift_template const&  entry_template = get_shift_template(layout_row_index - 1U,layout_column_index + 1U);
-                    std::pair<natural_16_bit,natural_16_bit> const  entry_coords = entry_template.get_entry_shift(shift.get_external_shift_ID());
+                    std::pair<natural_16_bit,natural_16_bit> const&  entry_coords =
+                            entry_template.get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                           shift.get_exit_shift_ID());
                     row_shift = (integer_64_bit)entry_coords.first - (integer_64_bit)template_row_index
                                     - (integer_64_bit)entry_template.num_rows();
                     column_shift = (integer_64_bit)entry_coords.second - (integer_64_bit)template_column_index
                                         + (integer_64_bit)source_template.num_columns();
                     break;
                 }
-                case GOTO_UP:
+                case DIR_UP:
                 {
                     shift_template const&  entry_template = get_shift_template(layout_row_index - 1U,layout_column_index + 0U);
-                    std::pair<natural_16_bit,natural_16_bit> const  entry_coords = entry_template.get_entry_shift(shift.get_external_shift_ID());
+                    std::pair<natural_16_bit,natural_16_bit> const&  entry_coords =
+                            entry_template.get_entry_shift(get_opposite_exit_shift_kind(shift.get_exit_shift_kind()),
+                                                           shift.get_exit_shift_ID());
                     row_shift = (integer_64_bit)entry_coords.first - (integer_64_bit)template_row_index
                                     - (integer_64_bit)entry_template.num_rows();
                     column_shift = (integer_64_bit)entry_coords.second - (integer_64_bit)template_column_index;

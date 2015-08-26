@@ -69,94 +69,94 @@ void run()
                             // left-top
                             { template_dim_x, template_dim_y,
                               {
-                                  { cellconnect::GOTO_DOWN, num_exists },
-                                  { cellconnect::GOTO_RIGHT_DOWN, num_exists },
-                                  { cellconnect::GOTO_RIGHT, num_exists },
+                                  { cellconnect::DIR_DOWN, num_exists },
+                                  { cellconnect::DIR_RIGHT_DOWN, num_exists },
+                                  { cellconnect::DIR_RIGHT, num_exists },
                               }
                             },
 
                             // left-middle
                             { template_dim_x, template_dim_y,
                               {
-                                  { cellconnect::GOTO_DOWN, num_exists },
-                                  { cellconnect::GOTO_RIGHT_DOWN, num_exists },
-                                  { cellconnect::GOTO_RIGHT, num_exists },
-                                  { cellconnect::GOTO_RIGHT_UP, num_exists },
-                                  { cellconnect::GOTO_UP, num_exists },
+                                  { cellconnect::DIR_DOWN, num_exists },
+                                  { cellconnect::DIR_RIGHT_DOWN, num_exists },
+                                  { cellconnect::DIR_RIGHT, num_exists },
+                                  { cellconnect::DIR_RIGHT_UP, num_exists },
+                                  { cellconnect::DIR_UP, num_exists },
                               }
                             },
 
                             // left-bottom
                             { template_dim_x, template_dim_y,
                               {
-                                  { cellconnect::GOTO_RIGHT, num_exists },
-                                  { cellconnect::GOTO_RIGHT_UP, num_exists },
-                                  { cellconnect::GOTO_UP, num_exists },
+                                  { cellconnect::DIR_RIGHT, num_exists },
+                                  { cellconnect::DIR_RIGHT_UP, num_exists },
+                                  { cellconnect::DIR_UP, num_exists },
                               }
                             },
 
                             // middle-top
                             { template_dim_x, template_dim_y,
                               {
-                                  { cellconnect::GOTO_LEFT, num_exists },
-                                  { cellconnect::GOTO_LEFT_DOWN, num_exists },
-                                  { cellconnect::GOTO_DOWN, num_exists },
-                                  { cellconnect::GOTO_RIGHT_DOWN, num_exists },
-                                  { cellconnect::GOTO_RIGHT, num_exists },
+                                  { cellconnect::DIR_LEFT, num_exists },
+                                  { cellconnect::DIR_LEFT_DOWN, num_exists },
+                                  { cellconnect::DIR_DOWN, num_exists },
+                                  { cellconnect::DIR_RIGHT_DOWN, num_exists },
+                                  { cellconnect::DIR_RIGHT, num_exists },
                               }
                             },
 
                             // middle-middle
                             { template_dim_x, template_dim_y,
                               {
-                                  { cellconnect::GOTO_LEFT_UP, num_exists },
-                                  { cellconnect::GOTO_LEFT, num_exists },
-                                  { cellconnect::GOTO_LEFT_DOWN, num_exists },
-                                  { cellconnect::GOTO_DOWN, num_exists },
-                                  { cellconnect::GOTO_RIGHT_DOWN, num_exists },
-                                  { cellconnect::GOTO_RIGHT, num_exists },
-                                  { cellconnect::GOTO_RIGHT_UP, num_exists },
-                                  { cellconnect::GOTO_UP, num_exists },
+                                  { cellconnect::DIR_LEFT_UP, num_exists },
+                                  { cellconnect::DIR_LEFT, num_exists },
+                                  { cellconnect::DIR_LEFT_DOWN, num_exists },
+                                  { cellconnect::DIR_DOWN, num_exists },
+                                  { cellconnect::DIR_RIGHT_DOWN, num_exists },
+                                  { cellconnect::DIR_RIGHT, num_exists },
+                                  { cellconnect::DIR_RIGHT_UP, num_exists },
+                                  { cellconnect::DIR_UP, num_exists },
                               }
                             },
 
                             // middle-bottom
                             { template_dim_x, template_dim_y,
                               {
-                                  { cellconnect::GOTO_RIGHT, num_exists },
-                                  { cellconnect::GOTO_RIGHT_UP, num_exists },
-                                  { cellconnect::GOTO_UP, num_exists },
-                                  { cellconnect::GOTO_LEFT_UP, num_exists },
-                                  { cellconnect::GOTO_LEFT, num_exists },
+                                  { cellconnect::DIR_RIGHT, num_exists },
+                                  { cellconnect::DIR_RIGHT_UP, num_exists },
+                                  { cellconnect::DIR_UP, num_exists },
+                                  { cellconnect::DIR_LEFT_UP, num_exists },
+                                  { cellconnect::DIR_LEFT, num_exists },
                               }
                             },
 
                             // right-top
                             { template_dim_x, template_dim_y,
                               {
-                                  { cellconnect::GOTO_LEFT, num_exists },
-                                  { cellconnect::GOTO_LEFT_DOWN, num_exists },
-                                  { cellconnect::GOTO_DOWN, num_exists },
+                                  { cellconnect::DIR_LEFT, num_exists },
+                                  { cellconnect::DIR_LEFT_DOWN, num_exists },
+                                  { cellconnect::DIR_DOWN, num_exists },
                               }
                             },
 
                             // right-middle
                             { template_dim_x, template_dim_y,
                               {
-                                  { cellconnect::GOTO_LEFT_UP, num_exists },
-                                  { cellconnect::GOTO_LEFT, num_exists },
-                                  { cellconnect::GOTO_LEFT_DOWN, num_exists },
-                                  { cellconnect::GOTO_DOWN, num_exists },
-                                  { cellconnect::GOTO_UP, num_exists },
+                                  { cellconnect::DIR_LEFT_UP, num_exists },
+                                  { cellconnect::DIR_LEFT, num_exists },
+                                  { cellconnect::DIR_LEFT_DOWN, num_exists },
+                                  { cellconnect::DIR_DOWN, num_exists },
+                                  { cellconnect::DIR_UP, num_exists },
                               }
                             },
 
                             // right-bottom
                             { template_dim_x, template_dim_y,
                               {
-                                  { cellconnect::GOTO_LEFT_UP, num_exists },
-                                  { cellconnect::GOTO_LEFT, num_exists },
-                                  { cellconnect::GOTO_UP, num_exists },
+                                  { cellconnect::DIR_LEFT_UP, num_exists },
+                                  { cellconnect::DIR_LEFT, num_exists },
+                                  { cellconnect::DIR_UP, num_exists },
                               }
                             }
                         };

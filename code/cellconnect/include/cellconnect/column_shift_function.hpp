@@ -4,21 +4,24 @@
 #   include <utility/basic_numeric_types.hpp>
 #   include <vector>
 #   include <tuple>
+#   include <map>
 
 namespace cellconnect {
 
 
 enum exit_shift_kind
 {
-    GOTO_LEFT_UP = 0U,
-    GOTO_LEFT = 1U,
-    GOTO_LEFT_DOWN = 2U,
-    GOTO_DOWN = 3U,
-    GOTO_RIGHT_DOWN = 4U,
-    GOTO_RIGHT = 5U,
-    GOTO_RIGHT_UP = 6U,
-    GOTO_UP = 7U,
+    DIR_LEFT_UP = 0U,
+    DIR_LEFT = 1U,
+    DIR_LEFT_DOWN = 2U,
+    DIR_DOWN = 3U,
+    DIR_RIGHT_DOWN = 4U,
+    DIR_RIGHT = 5U,
+    DIR_RIGHT_UP = 6U,
+    DIR_UP = 7U,
 };
+
+exit_shift_kind  get_opposite_exit_shift_kind(exit_shift_kind const  kind);
 
 
 struct shift_to_target
@@ -32,7 +35,7 @@ struct shift_to_target
     natural_16_bit  get_target_column() const;
 
     exit_shift_kind  get_exit_shift_kind() const;
-    natural_16_bit  get_external_shift_ID() const;
+    natural_16_bit  get_exit_shift_ID() const;
 
 private:
     bool  m_is_external;
@@ -50,11 +53,32 @@ private:
  */
 struct shift_template
 {
+    /**
+     * This constructor initialises a shift template of size num_rows*num_columns automatically.
+     */
     shift_template(natural_16_bit const num_rows, natural_16_bit const num_columns,
+                   //! Use this vector if you want your template to have exits (and entries) to adjacent shift
+                   //! templates. Each pair std::pair<exit_shift_kind,natural_16_bit> specifies a direction
+                   //! to an adjacent template and a count of exits to that template.
                    std::vector< std::pair<exit_shift_kind,natural_16_bit> > const& exit_counts
                         = std::vector<  std::pair<exit_shift_kind,natural_16_bit>>());
-    shift_template(std::vector<shift_to_target> const& shifts,
-                   natural_16_bit const num_rows, natural_16_bit const num_columns);
+
+    /**
+     * Use this constructor, if you want to define each element of the shift template by yourself.
+     */
+    shift_template(natural_16_bit const num_rows, natural_16_bit const num_columns,
+                   //! Vector of num_rows*num_columns elements of the shift matrix in row-major order.
+                   std::vector<shift_to_target> const& shifts,
+                   //! Each element of the matrix which is not a target of any element of the matrix
+                   //! is called entry element. It is supposed to be a target from some adjacent
+                   //! template. An entry is referenced from an adjacent matrix using a pair
+                   //! std::pair<exit_shift_kind,natural_16_bit>, where exit_shift_kind specifies
+                   //! direction to the adjacent template and natural_16_bit is a unique ID (to
+                   //! distinguish entries from that direction). This template is supposed to return
+                   //! coordinates for a specified entry.
+                   std::map< std::pair<exit_shift_kind,natural_16_bit>,std::pair<natural_16_bit,natural_16_bit>  > const&
+                       from_entry_specification_to_entry_coords
+                   );
 
     natural_16_bit  num_rows() const { return m_num_rows; }
     natural_16_bit  num_columns() const { return m_num_columns; }
@@ -62,7 +86,8 @@ struct shift_template
     shift_to_target  get_shift(natural_16_bit const  row_index, natural_16_bit const  column_index) const;
     void  set_shift(natural_16_bit const  row_index, natural_16_bit const  column_index, shift_to_target const& shift);
 
-    std::pair<natural_16_bit,natural_16_bit>  get_entry_shift(natural_16_bit const  shift_ID) const;
+    std::pair<natural_16_bit,natural_16_bit> const&  get_entry_shift(exit_shift_kind const direction_from_adjacent_matrix,
+                                                                     natural_16_bit const  shift_ID) const;
 
 private:
     natural_16_bit  get_index(natural_16_bit const  row_index, natural_16_bit const  column_index) const
@@ -76,6 +101,8 @@ private:
     natural_16_bit  m_num_rows;
     natural_16_bit  m_num_columns;
     std::vector<natural_16_bit>  m_data; //!< The matrix is stored here in the row-major order.
+    std::map< std::pair<exit_shift_kind,natural_16_bit>,std::pair<natural_16_bit,natural_16_bit>  >
+        m_from_entry_specification_to_entry_coords;
 };
 
 
@@ -183,6 +210,11 @@ struct column_shift_function
     natural_32_bit  num_shift_template_cells_along_y_axis(natural_16_bit const  layout_column_index) const;
 
 private:
+    void  build_repetitions(std::vector<repetition_block> const&  reps, natural_16_bit const  size,
+                            std::vector<repetition_block>&  output);
+
+    bool  check_layout_consistency() const;
+
     bool  m_use_identity_function;
     natural_32_bit  m_num_cells_along_x_axis;
     natural_32_bit  m_num_cells_along_y_axis;
