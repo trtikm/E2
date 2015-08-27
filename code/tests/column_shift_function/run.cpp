@@ -25,6 +25,8 @@ static std::shared_ptr<cellconnect::column_shift_function const>  build_small_sh
         natural_16_bit const  template_rep_y
         )
 {
+    TMPROF_BLOCK();
+
     natural_16_bit const  num_exists = (largest_template_dim_x * largest_template_dim_y / 2U) / 8U;
 
     std::vector<cellconnect::shift_template>  shift_templates = {
@@ -157,7 +159,7 @@ static std::shared_ptr<cellconnect::column_shift_function const>  build_big_shif
         natural_16_bit const  template_rep_y
         )
 {
-    natural_16_bit const  num_exists = (largest_template_dim_x * largest_template_dim_y / 2U) / 8U;\
+    TMPROF_BLOCK();
 
     natural_16_bit const  middle1_dim_x = largest_template_dim_x / 2U;
     ASSUMPTION(middle1_dim_x > 0U);
@@ -169,184 +171,187 @@ static std::shared_ptr<cellconnect::column_shift_function const>  build_big_shif
     natural_16_bit const  middle2_dim_y = largest_template_dim_y - middle1_dim_y;
     ASSUMPTION(middle2_dim_y > 0U);
 
+    natural_16_bit const  large_num_exists = (largest_template_dim_x * largest_template_dim_y / 2U) / 8U;
+    natural_16_bit const  small_num_exists = (middle1_dim_x * middle1_dim_y / 2U) / 8U;
+
     std::vector<cellconnect::shift_template>  shift_templates = {
         // left-top
         { largest_template_dim_x, largest_template_dim_y,
           {
-              { cellconnect::DIR_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT, num_exists },
+              { cellconnect::DIR_DOWN, large_num_exists },
+              { cellconnect::DIR_RIGHT_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT, large_num_exists },
           }
         },
 
         // left-middle1
         { middle1_dim_x, largest_template_dim_y,
           {
-              { cellconnect::DIR_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT, num_exists },
-              { cellconnect::DIR_RIGHT_UP, num_exists },
-              { cellconnect::DIR_UP, num_exists },
+              { cellconnect::DIR_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT, small_num_exists },
+              { cellconnect::DIR_RIGHT_UP, small_num_exists },
+              { cellconnect::DIR_UP, large_num_exists },
           }
         },
 
         // left-middle2
         { middle2_dim_x, largest_template_dim_y,
           {
-              { cellconnect::DIR_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT, num_exists },
-              { cellconnect::DIR_RIGHT_UP, num_exists },
-              { cellconnect::DIR_UP, num_exists },
+              { cellconnect::DIR_DOWN, large_num_exists },
+              { cellconnect::DIR_RIGHT_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT, small_num_exists },
+              { cellconnect::DIR_RIGHT_UP, small_num_exists },
+              { cellconnect::DIR_UP, small_num_exists },
           }
         },
 
         // left-bottom
         { largest_template_dim_x, largest_template_dim_y,
           {
-              { cellconnect::DIR_RIGHT, num_exists },
-              { cellconnect::DIR_RIGHT_UP, num_exists },
-              { cellconnect::DIR_UP, num_exists },
+              { cellconnect::DIR_RIGHT, large_num_exists },
+              { cellconnect::DIR_RIGHT_UP, small_num_exists },
+              { cellconnect::DIR_UP, large_num_exists },
           }
         },
 
         // middle1-top
         { largest_template_dim_x, middle1_dim_y,
           {
-              { cellconnect::DIR_LEFT, num_exists },
-              { cellconnect::DIR_LEFT_DOWN, num_exists },
-              { cellconnect::DIR_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT, num_exists },
+              { cellconnect::DIR_LEFT, large_num_exists },
+              { cellconnect::DIR_LEFT_DOWN, small_num_exists },
+              { cellconnect::DIR_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT, small_num_exists },
           }
         },
 
         // middle1-middle1
         { middle1_dim_x, middle1_dim_y,
           {
-              { cellconnect::DIR_LEFT_UP, num_exists },
-              { cellconnect::DIR_LEFT, num_exists },
-              { cellconnect::DIR_LEFT_DOWN, num_exists },
-              { cellconnect::DIR_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT, num_exists },
-              { cellconnect::DIR_RIGHT_UP, num_exists },
-              { cellconnect::DIR_UP, num_exists },
+              { cellconnect::DIR_LEFT_UP, small_num_exists },
+              { cellconnect::DIR_LEFT, small_num_exists },
+              { cellconnect::DIR_LEFT_DOWN, small_num_exists },
+              { cellconnect::DIR_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT, small_num_exists },
+              { cellconnect::DIR_RIGHT_UP, small_num_exists },
+              { cellconnect::DIR_UP, small_num_exists },
           }
         },
 
         // middle1-middle2
         { middle2_dim_x, middle1_dim_y,
           {
-              { cellconnect::DIR_LEFT_UP, num_exists },
-              { cellconnect::DIR_LEFT, num_exists },
-              { cellconnect::DIR_LEFT_DOWN, num_exists },
-              { cellconnect::DIR_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT, num_exists },
-              { cellconnect::DIR_RIGHT_UP, num_exists },
-              { cellconnect::DIR_UP, num_exists },
+              { cellconnect::DIR_LEFT_UP, small_num_exists },
+              { cellconnect::DIR_LEFT, small_num_exists },
+              { cellconnect::DIR_LEFT_DOWN, small_num_exists },
+              { cellconnect::DIR_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT, small_num_exists },
+              { cellconnect::DIR_RIGHT_UP, small_num_exists },
+              { cellconnect::DIR_UP, small_num_exists },
           }
         },
 
         // middle1-bottom
         { largest_template_dim_x, middle1_dim_y,
           {
-              { cellconnect::DIR_RIGHT, num_exists },
-              { cellconnect::DIR_RIGHT_UP, num_exists },
-              { cellconnect::DIR_UP, num_exists },
-              { cellconnect::DIR_LEFT_UP, num_exists },
-              { cellconnect::DIR_LEFT, num_exists },
+              { cellconnect::DIR_RIGHT, small_num_exists },
+              { cellconnect::DIR_RIGHT_UP, small_num_exists },
+              { cellconnect::DIR_UP, small_num_exists },
+              { cellconnect::DIR_LEFT_UP, small_num_exists },
+              { cellconnect::DIR_LEFT, large_num_exists },
           }
         },
 
         // middle2-top
         { largest_template_dim_x, middle2_dim_y,
           {
-              { cellconnect::DIR_LEFT, num_exists },
-              { cellconnect::DIR_LEFT_DOWN, num_exists },
-              { cellconnect::DIR_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT, num_exists },
+              { cellconnect::DIR_LEFT, small_num_exists },
+              { cellconnect::DIR_LEFT_DOWN, small_num_exists },
+              { cellconnect::DIR_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT, large_num_exists },
           }
         },
 
         // middle2-middle1
         { middle1_dim_x, middle2_dim_y,
           {
-              { cellconnect::DIR_LEFT_UP, num_exists },
-              { cellconnect::DIR_LEFT, num_exists },
-              { cellconnect::DIR_LEFT_DOWN, num_exists },
-              { cellconnect::DIR_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT, num_exists },
-              { cellconnect::DIR_RIGHT_UP, num_exists },
-              { cellconnect::DIR_UP, num_exists },
+              { cellconnect::DIR_LEFT_UP, small_num_exists },
+              { cellconnect::DIR_LEFT, small_num_exists },
+              { cellconnect::DIR_LEFT_DOWN, small_num_exists },
+              { cellconnect::DIR_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT, small_num_exists },
+              { cellconnect::DIR_RIGHT_UP, small_num_exists },
+              { cellconnect::DIR_UP, small_num_exists },
           }
         },
 
         // middle2-middle2
         { middle2_dim_x, middle2_dim_y,
           {
-              { cellconnect::DIR_LEFT_UP, num_exists },
-              { cellconnect::DIR_LEFT, num_exists },
-              { cellconnect::DIR_LEFT_DOWN, num_exists },
-              { cellconnect::DIR_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT_DOWN, num_exists },
-              { cellconnect::DIR_RIGHT, num_exists },
-              { cellconnect::DIR_RIGHT_UP, num_exists },
-              { cellconnect::DIR_UP, num_exists },
+              { cellconnect::DIR_LEFT_UP, small_num_exists },
+              { cellconnect::DIR_LEFT, small_num_exists },
+              { cellconnect::DIR_LEFT_DOWN, small_num_exists },
+              { cellconnect::DIR_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT_DOWN, small_num_exists },
+              { cellconnect::DIR_RIGHT, small_num_exists },
+              { cellconnect::DIR_RIGHT_UP, small_num_exists },
+              { cellconnect::DIR_UP, small_num_exists },
           }
         },
 
         // middle2-bottom
         { largest_template_dim_x, middle2_dim_y,
           {
-              { cellconnect::DIR_RIGHT, num_exists },
-              { cellconnect::DIR_RIGHT_UP, num_exists },
-              { cellconnect::DIR_UP, num_exists },
-              { cellconnect::DIR_LEFT_UP, num_exists },
-              { cellconnect::DIR_LEFT, num_exists },
+              { cellconnect::DIR_RIGHT, large_num_exists },
+              { cellconnect::DIR_RIGHT_UP, small_num_exists },
+              { cellconnect::DIR_UP, small_num_exists },
+              { cellconnect::DIR_LEFT_UP, small_num_exists },
+              { cellconnect::DIR_LEFT, small_num_exists },
           }
         },
 
         // right-top
         { largest_template_dim_x, largest_template_dim_y,
           {
-              { cellconnect::DIR_LEFT, num_exists },
-              { cellconnect::DIR_LEFT_DOWN, num_exists },
-              { cellconnect::DIR_DOWN, num_exists },
+              { cellconnect::DIR_LEFT, large_num_exists },
+              { cellconnect::DIR_LEFT_DOWN, small_num_exists },
+              { cellconnect::DIR_DOWN, large_num_exists },
           }
         },
 
         // right-middle1
         { middle1_dim_x, largest_template_dim_y,
           {
-              { cellconnect::DIR_LEFT_UP, num_exists },
-              { cellconnect::DIR_LEFT, num_exists },
-              { cellconnect::DIR_LEFT_DOWN, num_exists },
-              { cellconnect::DIR_DOWN, num_exists },
-              { cellconnect::DIR_UP, num_exists },
+              { cellconnect::DIR_LEFT_UP, small_num_exists },
+              { cellconnect::DIR_LEFT, small_num_exists },
+              { cellconnect::DIR_LEFT_DOWN, small_num_exists },
+              { cellconnect::DIR_DOWN, small_num_exists },
+              { cellconnect::DIR_UP, large_num_exists },
           }
         },
 
         // right-middle2
         { middle2_dim_x, largest_template_dim_y,
           {
-              { cellconnect::DIR_LEFT_UP, num_exists },
-              { cellconnect::DIR_LEFT, num_exists },
-              { cellconnect::DIR_LEFT_DOWN, num_exists },
-              { cellconnect::DIR_DOWN, num_exists },
-              { cellconnect::DIR_UP, num_exists },
+              { cellconnect::DIR_LEFT_UP, small_num_exists },
+              { cellconnect::DIR_LEFT, small_num_exists },
+              { cellconnect::DIR_LEFT_DOWN, small_num_exists },
+              { cellconnect::DIR_DOWN, large_num_exists },
+              { cellconnect::DIR_UP, small_num_exists },
           }
         },
 
         // right-bottom
         { largest_template_dim_x, largest_template_dim_y,
           {
-              { cellconnect::DIR_LEFT_UP, num_exists },
-              { cellconnect::DIR_LEFT, num_exists },
-              { cellconnect::DIR_UP, num_exists },
+              { cellconnect::DIR_LEFT_UP, small_num_exists },
+              { cellconnect::DIR_LEFT, large_num_exists },
+              { cellconnect::DIR_UP, large_num_exists },
           }
         }
     };
@@ -359,7 +364,7 @@ static std::shared_ptr<cellconnect::column_shift_function const>  build_big_shif
                     scale_of_templates_x,
                     scale_of_templates_y,
                     {
-                        3U, 3U,
+                        4U, 4U,
                         {
                             0, 4, 8,  12,
                             1, 5, 9,  13,
@@ -377,6 +382,9 @@ static std::shared_ptr<cellconnect::column_shift_function const>  build_big_shif
 
 static void  test_shift_function(std::shared_ptr<cellconnect::column_shift_function const>  const  shift_fn)
 {
+    TMPROF_BLOCK();
+
+    natural_32_bit  progress_counter = 0U;
     std::unordered_set< std::pair<natural_32_bit,natural_32_bit>, boost::hash< std::pair<natural_32_bit,natural_32_bit> > >  shifts;
     for (natural_32_bit  x = 0U; x < shift_fn->num_cells_along_x_axis(); ++x)
         for (natural_32_bit  y = 0U; y < shift_fn->num_cells_along_y_axis(); ++y)
@@ -386,6 +394,12 @@ static void  test_shift_function(std::shared_ptr<cellconnect::column_shift_funct
             TEST_SUCCESS(coords.second < shift_fn->num_cells_along_y_axis());
             TEST_SUCCESS(shifts.count(coords) == 0U);
             shifts.insert(coords);
+
+            if (progress_counter % 100U == 0U)
+            {
+                TEST_PROGRESS_UPDATE();
+                progress_counter = 0U;
+            }
         }
     TEST_SUCCESS(shifts.size() == (natural_64_bit)shift_fn->num_cells_along_x_axis() * (natural_64_bit)shift_fn->num_cells_along_y_axis());
 }

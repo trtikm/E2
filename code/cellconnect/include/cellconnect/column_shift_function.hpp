@@ -73,8 +73,8 @@ struct shift_template
                    //! is called entry element. It is supposed to be a target from some adjacent
                    //! template. An entry is referenced from an adjacent matrix using a pair
                    //! std::pair<exit_shift_kind,natural_16_bit>, where exit_shift_kind specifies
-                   //! direction to the adjacent template and natural_16_bit is a unique ID (to
-                   //! distinguish entries from that direction). This template is supposed to return
+                   //! a direction FROM the adjacent template to this one and natural_16_bit is a unique ID
+                   //! (to distinguish entries from that direction). This template is supposed to return
                    //! coordinates for a specified entry.
                    std::map< std::pair<exit_shift_kind,natural_16_bit>,std::pair<natural_16_bit,natural_16_bit>  > const&
                        from_entry_specification_to_entry_coords
