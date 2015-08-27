@@ -308,7 +308,7 @@ natural_16_bit layout_of_shift_templates::get_template_index(const natural_16_bi
 
 
 repetition_block::repetition_block(natural_16_bit const  block_begin_index, natural_16_bit const  block_end_index,
-                                   natural_32_bit const  block_num_repetitions)
+                                   natural_16_bit const  block_num_repetitions)
     : m_block_begin_index(block_begin_index)
     , m_block_end_index(block_end_index)
     , m_block_num_repetitions(block_num_repetitions)
@@ -364,7 +364,7 @@ column_shift_function::column_shift_function(
     build_repetitions(repetition_blocks_of_columns_in_layout_of_shift_templates,m_layout_of_shift_templates.num_columns(),
                       m_repetition_blocks_of_columns_in_layout_of_shift_templates);
 
-    NOT_IMPLEMENTED_YET(); // TODO: It remains to check the consistency of the size of the layout of templates and the size of the tissue!
+    ASSUMPTION(check_consistency_between_layout_and_tissue());
 }
 
 void  column_shift_function::build_repetitions(std::vector<repetition_block> const&  reps, natural_16_bit const  size,
@@ -507,6 +507,24 @@ bool  column_shift_function::check_layout_consistency() const
     return true;
 }
 
+bool  column_shift_function::check_consistency_between_layout_and_tissue() const
+{
+    natural_32_bit  num_cells_x = 0U;
+    for (natural_16_bit  block_index = 0U; block_index < num_row_repetition_blocks(); ++block_index)
+        num_cells_x += num_repetition_block_cells_along_x_axis(block_index);
+    if (num_cells_x != num_cells_along_x_axis())
+        return false;
+
+    natural_32_bit  num_cells_y = 0U;
+    for (natural_16_bit  block_index = 0U; block_index < num_column_repetition_blocks(); ++block_index)
+        num_cells_y += num_repetition_block_cells_along_y_axis(block_index);
+    if (num_cells_y != num_cells_along_y_axis())
+        return false;
+
+    return true;
+}
+
+
 std::pair<natural_32_bit,natural_32_bit>  column_shift_function::operator()(natural_32_bit const  x_coord,
                                                                             natural_32_bit const  y_coord) const
 {
@@ -521,9 +539,9 @@ std::pair<natural_32_bit,natural_32_bit>  column_shift_function::operator()(natu
         natural_32_bit  current_x_coord = 0U;
         natural_16_bit  current_row_block_index = 0U;
         while ((x_coord - current_x_coord) / num_repetition_block_cells_along_x_axis(current_row_block_index) >=
-               get_row_repetition_block(current_row_block_index).block_num_repetitions())
+               (natural_32_bit)get_row_repetition_block(current_row_block_index).block_num_repetitions())
         {
-            current_x_coord += get_row_repetition_block(current_row_block_index).block_num_repetitions() *
+            current_x_coord += (natural_32_bit)get_row_repetition_block(current_row_block_index).block_num_repetitions() *
                                num_repetition_block_cells_along_x_axis(current_row_block_index);
             INVARIANT(current_x_coord <= x_coord);
             ++current_row_block_index;
@@ -546,9 +564,9 @@ std::pair<natural_32_bit,natural_32_bit>  column_shift_function::operator()(natu
         natural_32_bit  current_y_coord = 0U;
         natural_16_bit  current_column_block_index = 0U;
         while ((y_coord - current_y_coord) / num_repetition_block_cells_along_y_axis(current_column_block_index) >=
-               get_column_repetition_block(current_column_block_index).block_num_repetitions())
+               (natural_32_bit)get_column_repetition_block(current_column_block_index).block_num_repetitions())
         {
-            current_y_coord += get_column_repetition_block(current_column_block_index).block_num_repetitions() *
+            current_y_coord += (natural_32_bit)get_column_repetition_block(current_column_block_index).block_num_repetitions() *
                                num_repetition_block_cells_along_y_axis(current_column_block_index);
             INVARIANT(current_y_coord <= y_coord);
             ++current_column_block_index;
@@ -742,7 +760,7 @@ natural_32_bit  column_shift_function::num_shift_template_cells_along_y_axis(nat
 void  compute_tissue_axis_length_and_template_scale(
         natural_32_bit const  desired_number_of_cells_along_one_axis_of_tissue,
         natural_16_bit const  largest_template_dimension,
-        natural_8_bit const  num_repetitions_of_largest_template_dimension,
+        natural_16_bit const  num_repetitions_of_largest_template_dimension,
         natural_32_bit&  num_tissue_cells_along_the_axis,
         natural_32_bit&  scale_of_all_template_dimensions
         )

@@ -107,13 +107,14 @@ private:
 
 
 /**
- * It defines a matrix of indices into some std::vector<shift_template> of shift templates.
+ * It defines a layout matrix of indices into some std::vector<shift_template> of shift templates.
  * Each index into the vector must appear at least once in the matrix.
  * We assume the row-axis of the matrix is aligned with the x-axis of a tissue.
  */
 struct layout_of_shift_templates
 {
     layout_of_shift_templates(natural_16_bit const  num_rows, natural_16_bit const  num_columns,
+                              //! The layout matrix is stored in this vector in the row-major order.
                               std::vector<natural_16_bit> const&  matrix_of_indices_of_shift_templates);
 
     natural_16_bit num_rows() const { return m_num_rows; }
@@ -139,16 +140,16 @@ private:
 struct repetition_block
 {
     repetition_block(natural_16_bit const  block_begin_index, natural_16_bit const  block_end_index,
-                     natural_32_bit const  block_num_repetitions);
+                     natural_16_bit const  block_num_repetitions);
 
     natural_16_bit block_begin_index() const { return m_block_begin_index; }
     natural_16_bit block_end_index() const { return m_block_end_index; }
-    natural_32_bit block_num_repetitions() const { return m_block_num_repetitions; }
+    natural_16_bit block_num_repetitions() const { return m_block_num_repetitions; }
 
 private:
     natural_16_bit  m_block_begin_index;
     natural_16_bit  m_block_end_index;
-    natural_32_bit  m_block_num_repetitions;
+    natural_16_bit  m_block_num_repetitions;
 };
 
 
@@ -214,6 +215,7 @@ private:
                             std::vector<repetition_block>&  output);
 
     bool  check_layout_consistency() const;
+    bool  check_consistency_between_layout_and_tissue() const;
 
     bool  m_use_identity_function;
     natural_32_bit  m_num_cells_along_x_axis;
@@ -230,7 +232,7 @@ private:
 void  compute_tissue_axis_length_and_template_scale(
         natural_32_bit const  desired_number_of_cells_along_one_axis_of_tissue,
         natural_16_bit const  largest_template_dimension,
-        natural_8_bit const  num_repetitions_of_largest_template_dimension,
+        natural_16_bit const  num_repetitions_of_largest_template_dimension,
         natural_32_bit&  num_tissue_cells_along_the_axis,
         natural_32_bit&  scale_of_all_template_dimensions
         );
