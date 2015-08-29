@@ -171,6 +171,9 @@ static std::shared_ptr<cellconnect::column_shift_function const>  build_big_shif
     natural_16_bit const  middle2_dim_y = largest_template_dim_y - middle1_dim_y;
     ASSUMPTION(middle2_dim_y > 0U);
 
+    if (middle1_dim_x * middle1_dim_y < 2U)
+        return {};
+
     natural_16_bit const  large_num_exists = (largest_template_dim_x * largest_template_dim_y / 2U) / 8U;
     natural_16_bit const  small_num_exists = (middle1_dim_x * middle1_dim_y / 2U) / 8U;
 
@@ -382,6 +385,9 @@ static std::shared_ptr<cellconnect::column_shift_function const>  build_big_shif
 
 static void  test_shift_function(std::shared_ptr<cellconnect::column_shift_function const>  const  shift_fn)
 {
+    if (!shift_fn.operator bool())
+        return;
+
     TMPROF_BLOCK();
 
     natural_32_bit  progress_counter = 0U;
@@ -413,78 +419,80 @@ void run()
 
     std::vector< std::pair<natural_32_bit,natural_32_bit> > const  desired_tissue_dimensions = {
         { 100U, 100U },
-        { 500U, 500U },
-        { 100U, 500U },
         { 50U, 200U },
         { 225U, 210U },
         { 75U, 25U },
         { 150U, 125U },
     };
 
-    std::vector<natural_16_bit> const  template_dimensions = {
-        20U, 10U, 9U, 8U, 7U, 6U, 5U, 4U, 3U, 2U
+    std::vector< std::pair<natural_16_bit,natural_16_bit> > const  template_dimensions = {
+        { 20U, 10U },
+        { 10U, 10U },
+        { 5U, 10U },
+        { 3U, 4U }
     };
 
-    std::vector<natural_16_bit> const  template_repetitions = {
-        10U, 9U, 8U, 7U, 6U, 5U
+    std::vector< std::pair<natural_16_bit,natural_16_bit> > const  template_repetitions = {
+        { 20U, 5U },
+        { 10U, 10U },
+        { 7U, 15U },
+        { 5U, 3U }
     };
 
-    for (auto const&  desired_tissue_dim : desired_tissue_dimensions)
-        for (auto const  largest_template_dim_x : template_dimensions)
-            for (auto const  largest_template_dim_y : template_dimensions)
-                for (auto const  template_rep_x : template_repetitions)
-                    for (auto const  template_rep_y : template_repetitions)
-                    {
-                        natural_32_bit  num_tissue_cells_along_axis_x;
-                        natural_32_bit  scale_of_templates_x;
-                        cellconnect::compute_tissue_axis_length_and_template_scale(
-                                    desired_tissue_dim.first,
-                                    largest_template_dim_x,
-                                    template_rep_x,
+    for (std::pair<natural_32_bit,natural_32_bit> const&  desired_tissue_dim : desired_tissue_dimensions)
+        for (std::pair<natural_16_bit,natural_16_bit> const&  largest_template_dim : template_dimensions)
+            for (std::pair<natural_16_bit,natural_16_bit> const&  template_rep : template_repetitions)
+            {
+                natural_32_bit  num_tissue_cells_along_axis_x;
+                natural_32_bit  scale_of_templates_x;
+                cellconnect::compute_tissue_axis_length_and_template_scale(
+                            desired_tissue_dim.first,
+                            largest_template_dim.first,
+                            template_rep.first,
+                            num_tissue_cells_along_axis_x,
+                            scale_of_templates_x
+                            );
+
+                natural_32_bit  num_tissue_cells_along_axis_y;
+                natural_32_bit  scale_of_templates_y;
+                cellconnect::compute_tissue_axis_length_and_template_scale(
+                            desired_tissue_dim.second,
+                            largest_template_dim.second,
+                            template_rep.second,
+                            num_tissue_cells_along_axis_y,
+                            scale_of_templates_y
+                            );
+
+                test_shift_function(
+                            build_small_shift_function(
                                     num_tissue_cells_along_axis_x,
-                                    scale_of_templates_x
-                                    );
-
-                        natural_32_bit  num_tissue_cells_along_axis_y;
-                        natural_32_bit  scale_of_templates_y;
-                        cellconnect::compute_tissue_axis_length_and_template_scale(
-                                    desired_tissue_dim.second,
-                                    largest_template_dim_y,
-                                    template_rep_y,
                                     num_tissue_cells_along_axis_y,
-                                    scale_of_templates_y
-                                    );
+                                    largest_template_dim.first,
+                                    largest_template_dim.second,
+                                    scale_of_templates_x,
+                                    scale_of_templates_y,
+                                    template_rep.first,
+                                    template_rep.second
+                                    )
+                            );
 
-                        test_shift_function(
-                                    build_small_shift_function(
-                                            num_tissue_cells_along_axis_x,
-                                            num_tissue_cells_along_axis_y,
-                                            largest_template_dim_x,
-                                            largest_template_dim_y,
-                                            scale_of_templates_x,
-                                            scale_of_templates_y,
-                                            template_rep_x,
-                                            template_rep_y
-                                            )
-                                    );
+                TEST_PROGRESS_UPDATE();
 
-                        TEST_PROGRESS_UPDATE();
+                test_shift_function(
+                            build_big_shift_function(
+                                    num_tissue_cells_along_axis_x,
+                                    num_tissue_cells_along_axis_y,
+                                    largest_template_dim.first,
+                                    largest_template_dim.second,
+                                    scale_of_templates_x,
+                                    scale_of_templates_y,
+                                    template_rep.first,
+                                    template_rep.second
+                                    )
+                            );
 
-                        test_shift_function(
-                                    build_big_shift_function(
-                                            num_tissue_cells_along_axis_x,
-                                            num_tissue_cells_along_axis_y,
-                                            largest_template_dim_x,
-                                            largest_template_dim_y,
-                                            scale_of_templates_x,
-                                            scale_of_templates_y,
-                                            template_rep_x,
-                                            template_rep_y
-                                            )
-                                    );
-
-                        TEST_PROGRESS_UPDATE();
-                    }
+                TEST_PROGRESS_UPDATE();
+            }
 
     TEST_PROGRESS_HIDE();
 
