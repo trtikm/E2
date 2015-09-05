@@ -1,4 +1,4 @@
-set(THIS_TARGET_NAME spread_synapses_into_local_neighbourhoods)
+set(THIS_TARGET_NAME spread_synapses_into_neighbourhoods)
 
 add_executable(${THIS_TARGET_NAME}
     program_info.hpp
