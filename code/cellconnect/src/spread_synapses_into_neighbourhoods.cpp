@@ -24,6 +24,8 @@ static void  thread_check_consistency_of_matrix_and_column(
         natural_32_bit const  my_result_index
         )
 {
+    TMPROF_BLOCK();
+
     do
     {
         natural_64_bit num_synapses = 0ULL;
@@ -67,6 +69,8 @@ static bool  check_consistency_of_matrix_and_tissue(
         natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
+    TMPROF_BLOCK();
+
     natural_64_bit SUM = 0ULL;
     for (natural_32_bit const count : matrix)
         SUM += count;
@@ -274,6 +278,9 @@ static void  thread_spread_synapses(
                 if (shifted_y == static_state_ptr->num_cells_along_y_axis())
                     break;
 
+                if (shifted_x == current_x && shifted_y == current_y)
+                    break;
+
                 bits_of_coords = cellconnect::find_bits_of_source_coords_of_synapse(
                                         dynamic_state_ptr,
                                         static_state_ptr,
@@ -284,14 +291,12 @@ static void  thread_spread_synapses(
                                         shift_to_synapse
                                         );
 
-                if (cellconnect::read_x_coord_from_bits_of_coordinates(bits_of_coords) == current_x &&
-                    cellconnect::read_y_coord_from_bits_of_coordinates(bits_of_coords) == current_y )
+                natural_32_bit const  old_synapse_x = cellconnect::read_x_coord_from_bits_of_coordinates(bits_of_coords);
+                natural_32_bit const  old_synapse_y = cellconnect::read_y_coord_from_bits_of_coordinates(bits_of_coords);
+                if (old_synapse_x == current_x && old_synapse_y == current_y)
                     break;
 
-                INVARIANT(
-                        cellconnect::read_x_coord_from_bits_of_coordinates(bits_of_coords) == shifted_x &&
-                        cellconnect::read_y_coord_from_bits_of_coordinates(bits_of_coords) == shifted_y
-                        );
+                INVARIANT(old_synapse_x == shifted_x && old_synapse_y == shifted_y);
 
                 cellconnect::write_x_coord_to_bits_of_coordinates(current_x, bits_of_coords);
                 cellconnect::write_y_coord_to_bits_of_coordinates(current_y, bits_of_coords);
@@ -333,14 +338,6 @@ static bool go_to_next_task(
     while (matrix.at(row * diameter_x + column) == 0U);
 
     ++shift;
-
-    if (column == diameter_x / 2U && row == diameter_y / 2U)
-    {
-        INVARIANT(index == 0U);
-        index = matrix.at(row * diameter_x + column) - 1U;
-        shift += index;
-        return go_to_next_task(row,column,index,shift,diameter_x,diameter_y,matrix);
-    }
 
     return true;
 }

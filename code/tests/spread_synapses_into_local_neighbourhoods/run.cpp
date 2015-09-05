@@ -14,9 +14,7 @@
 #include <algorithm>
 #include <tuple>
 #include <limits>
-
-
-#include <utility/development.hpp>
+#include <memory>
 
 
 static void build_fill_src_coords_matrix(
@@ -130,6 +128,141 @@ static void  build_spread_synapses_matrix(
 }
 
 
+static std::shared_ptr<cellconnect::column_shift_function const>  build_shift_function(
+        natural_32_bit const  num_tissue_cells_along_axis_x,
+        natural_32_bit const  num_tissue_cells_along_axis_y,
+        natural_16_bit const  largest_template_dim_x,
+        natural_16_bit const  largest_template_dim_y,
+        natural_32_bit const  scale_of_templates_x,
+        natural_32_bit const  scale_of_templates_y,
+        natural_16_bit const  template_rep_x,
+        natural_16_bit const  template_rep_y
+        )
+{
+    TMPROF_BLOCK();
+
+    natural_16_bit const  num_exists = (largest_template_dim_x * largest_template_dim_y / 2U) / 8U;
+
+    std::vector<cellconnect::shift_template>  shift_templates = {
+        // left-top
+        { largest_template_dim_x, largest_template_dim_y,
+          {
+              { cellconnect::DIR_DOWN, num_exists },
+              { cellconnect::DIR_RIGHT_DOWN, num_exists },
+              { cellconnect::DIR_RIGHT, num_exists },
+          }
+        },
+
+        // left-middle
+        { largest_template_dim_x, largest_template_dim_y,
+          {
+              { cellconnect::DIR_DOWN, num_exists },
+              { cellconnect::DIR_RIGHT_DOWN, num_exists },
+              { cellconnect::DIR_RIGHT, num_exists },
+              { cellconnect::DIR_RIGHT_UP, num_exists },
+              { cellconnect::DIR_UP, num_exists },
+          }
+        },
+
+        // left-bottom
+        { largest_template_dim_x, largest_template_dim_y,
+          {
+              { cellconnect::DIR_RIGHT, num_exists },
+              { cellconnect::DIR_RIGHT_UP, num_exists },
+              { cellconnect::DIR_UP, num_exists },
+          }
+        },
+
+        // middle-top
+        { largest_template_dim_x, largest_template_dim_y,
+          {
+              { cellconnect::DIR_LEFT, num_exists },
+              { cellconnect::DIR_LEFT_DOWN, num_exists },
+              { cellconnect::DIR_DOWN, num_exists },
+              { cellconnect::DIR_RIGHT_DOWN, num_exists },
+              { cellconnect::DIR_RIGHT, num_exists },
+          }
+        },
+
+        // middle-middle
+        { largest_template_dim_x, largest_template_dim_y,
+          {
+              { cellconnect::DIR_LEFT_UP, num_exists },
+              { cellconnect::DIR_LEFT, num_exists },
+              { cellconnect::DIR_LEFT_DOWN, num_exists },
+              { cellconnect::DIR_DOWN, num_exists },
+              { cellconnect::DIR_RIGHT_DOWN, num_exists },
+              { cellconnect::DIR_RIGHT, num_exists },
+              { cellconnect::DIR_RIGHT_UP, num_exists },
+              { cellconnect::DIR_UP, num_exists },
+          }
+        },
+
+        // middle-bottom
+        { largest_template_dim_x, largest_template_dim_y,
+          {
+              { cellconnect::DIR_RIGHT, num_exists },
+              { cellconnect::DIR_RIGHT_UP, num_exists },
+              { cellconnect::DIR_UP, num_exists },
+              { cellconnect::DIR_LEFT_UP, num_exists },
+              { cellconnect::DIR_LEFT, num_exists },
+          }
+        },
+
+        // right-top
+        { largest_template_dim_x, largest_template_dim_y,
+          {
+              { cellconnect::DIR_LEFT, num_exists },
+              { cellconnect::DIR_LEFT_DOWN, num_exists },
+              { cellconnect::DIR_DOWN, num_exists },
+          }
+        },
+
+        // right-middle
+        { largest_template_dim_x, largest_template_dim_y,
+          {
+              { cellconnect::DIR_LEFT_UP, num_exists },
+              { cellconnect::DIR_LEFT, num_exists },
+              { cellconnect::DIR_LEFT_DOWN, num_exists },
+              { cellconnect::DIR_DOWN, num_exists },
+              { cellconnect::DIR_UP, num_exists },
+          }
+        },
+
+        // right-bottom
+        { largest_template_dim_x, largest_template_dim_y,
+          {
+              { cellconnect::DIR_LEFT_UP, num_exists },
+              { cellconnect::DIR_LEFT, num_exists },
+              { cellconnect::DIR_UP, num_exists },
+          }
+        }
+    };
+
+    std::shared_ptr<cellconnect::column_shift_function const>  shift_fn {
+            new cellconnect::column_shift_function {
+                    num_tissue_cells_along_axis_x,
+                    num_tissue_cells_along_axis_y,
+                    shift_templates,
+                    scale_of_templates_x,
+                    scale_of_templates_y,
+                    {
+                        3U, 3U,
+                        {
+                            0, 3, 6,
+                            1, 4, 7,
+                            2, 5, 8
+                        }
+                    },
+                    { {1U,2U,template_rep_x - 2U}, },
+                    { {1U,2U,template_rep_y - 2U}, }
+            }
+    };
+
+    return shift_fn;
+}
+
+
 static void test_column(
         std::shared_ptr<cellab::static_state_of_neural_tissue const> const  static_state_ptr,
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
@@ -139,7 +272,8 @@ static void test_column(
         cellab::kind_of_cell const  source_kind,
         natural_32_bit const  diameter_x,
         natural_32_bit const  diameter_y,
-        std::vector<natural_32_bit> const&  matrix
+        std::vector<natural_32_bit> const&  matrix,
+        std::shared_ptr<cellconnect::column_shift_function const> const  shift_fn
         )
 {
     TMPROF_BLOCK();
@@ -155,26 +289,34 @@ static void test_column(
     natural_32_bit const  center_y = diameter_y / 2U;
     natural_32_bit const  c0 = static_state_ptr->compute_columnar_coord_of_first_tissue_cell_of_kind(target_kind);
 
-    natural_32_bit  num_center_synapses = 0U;
+    natural_32_bit  num_self_synapses = 0U;
+    natural_32_bit  num_self_in_matrix = 0U;
     natural_32_bit  num_skipped_synapses = 0U;
 
+    natural_32_bit  target_x, target_y;
+    std::tie(target_x,target_y) = shift_fn->operator()(x,y);
+    TEST_SUCCESS(target_x < static_state_ptr->num_cells_along_x_axis());
+    TEST_SUCCESS(target_y < static_state_ptr->num_cells_along_y_axis());
+
+    natural_32_bit  progress_counter = 0U;
     for (natural_32_bit  i = 0U; i < diameter_x; ++i)
         for (natural_32_bit  j = 0U; j < diameter_y; ++j)
         {
             natural_32_bit const  shifted_x =
                     cellab::shift_coordinate(
-                            x,
+                            target_x,
                             (integer_64_bit)i - (integer_64_bit)center_x,
                             static_state_ptr->num_cells_along_x_axis(),
                             static_state_ptr->is_x_axis_torus_axis()
                             );
             natural_32_bit const  shifted_y =
                     cellab::shift_coordinate(
-                            y,
+                            target_y,
                             (integer_64_bit)j - (integer_64_bit)center_y,
                             static_state_ptr->num_cells_along_y_axis(),
                             static_state_ptr->is_y_axis_torus_axis()
                             );
+
             if (shifted_x == static_state_ptr->num_cells_along_x_axis() ||
                 shifted_y == static_state_ptr->num_cells_along_y_axis())
             {
@@ -185,7 +327,6 @@ static void test_column(
             }
 
             natural_32_bit num_synapses = 0U;
-
             for (natural_32_bit k = 0U; k < static_state_ptr->num_cells_of_cell_kind(target_kind); ++k)
                 for (natural_32_bit l = 0U; l < static_state_ptr->num_synapses_in_territory_of_cell_kind(target_kind); ++l)
                 {
@@ -201,13 +342,26 @@ static void test_column(
                         ++num_synapses;
                 }
 
-            if (i == center_x && j == center_y)
-                num_center_synapses = num_synapses;
+            if (x == shifted_x && y == shifted_y)
+            {
+                TEST_SUCCESS(!shift_fn->is_identity_function() || (i == center_x && j == center_y));
+                num_self_synapses = num_synapses;
+                num_self_in_matrix = matrix.at(j * diameter_x + i);
+            }
             else
+            {
+                TEST_SUCCESS(!shift_fn->is_identity_function() || !(i == center_x && j == center_y));
                 TEST_SUCCESS(matrix.at(j * diameter_x + i) == num_synapses);
+            }
+
+            if (progress_counter % 100U == 0U)
+            {
+                TEST_PROGRESS_UPDATE();
+                progress_counter = 0U;
+            }
         }
 
-    TEST_SUCCESS(matrix.at(center_y * diameter_x + center_x) + num_skipped_synapses == num_center_synapses);
+    TEST_SUCCESS(!shift_fn->is_identity_function() || num_self_in_matrix + num_skipped_synapses == num_self_synapses);
 }
 
 
@@ -219,25 +373,52 @@ void run()
 
     std::vector<natural_32_bit> coefs = { 1, 4, 3, 8, 1, 9, 2, 5, 4, 2, 7, 6, 6, 5, 8, 9, 3 };
 
+    natural_16_bit const  largest_template_dim_x = 3U;
+    natural_16_bit const  largest_template_dim_y = 3U;
+
     typedef std::tuple<natural_32_bit,  // num cells x
                        natural_32_bit,  // num cells y
                        natural_16_bit,  // num tissue cell kinds
                        natural_16_bit,  // num sensory cell kinds
                        bool,            // is torus axis x
-                       bool>            // is torus axis y
+                       bool,            // is torus axis y
+                       natural_32_bit,  // num template repetitions x
+                       natural_32_bit>  // num template repetitions y
             tissue_props;
     for (tissue_props props :
          std::vector<tissue_props>{
-                tissue_props{ 3U, 3U, 2U, 1U, true, true },
-                tissue_props{ 10U, 15U, 4U, 3U, false, true },
-                tissue_props{ 13U, 8U, 5U, 6U, true, false },
-                tissue_props{ 12U, 12U, 6U, 7U, true, true },
+                tissue_props{ 3U, 3U, 2U, 1U, true, true, 1U, 1U },
+                tissue_props{ 10U, 15U, 4U, 3U, false, true, 3U, 5U },
+                tissue_props{ 13U, 8U, 5U, 6U, true, false, 4U, 3U },
+                tissue_props{ 12U, 12U, 6U, 7U, true, true, 4U, 3U },
                 })
     {
-        natural_32_bit const  cells_x = std::get<0>(props);
-        natural_32_bit const  cells_y = std::get<1>(props);
+        natural_16_bit const  template_rep_x = std::get<6>(props);
+        natural_16_bit const  template_rep_y = std::get<7>(props);
+
+        natural_32_bit  cells_x;
+        natural_32_bit  scale_of_templates_x;
+        cellconnect::compute_tissue_axis_length_and_template_scale(
+                    std::get<0>(props),
+                    largest_template_dim_x,
+                    template_rep_x,
+                    cells_x,
+                    scale_of_templates_x
+                    );
+
+        natural_32_bit  cells_y;
+        natural_32_bit  scale_of_templates_y;
+        cellconnect::compute_tissue_axis_length_and_template_scale(
+                    std::get<1>(props),
+                    largest_template_dim_y,
+                    template_rep_y,
+                    cells_y,
+                    scale_of_templates_y
+                    );
+
         natural_16_bit const  tissue_cell_kinds = std::get<2>(props);
         natural_16_bit const  sensory_cell_kinds = std::get<3>(props);
+
         bool const  is_torus_axis_x = std::get<4>(props);
         bool const  is_torus_axis_y = std::get<5>(props);
 
@@ -341,6 +522,9 @@ void run()
                             );
                 TEST_PROGRESS_UPDATE();
 
+                std::vector< std::shared_ptr<cellconnect::column_shift_function const> >  shift_fns;
+
+                natural_32_bit  shift_fn_kind = 0U;
                 for (cellab::kind_of_cell  source_kind = 0U; source_kind < static_tissue->num_kinds_of_cells(); ++source_kind)
                     for (cellab::kind_of_cell  target_kind = 0U; target_kind < static_tissue->num_kinds_of_tissue_cells(); ++target_kind)
                     {
@@ -362,6 +546,22 @@ void run()
                                     matrix_spread_synapses
                                     );
 
+                        shift_fns.push_back(
+                                    shift_fn_kind == 0 ?
+                                            std::shared_ptr<cellconnect::column_shift_function const>(new cellconnect::column_shift_function()) :
+                                            build_shift_function(
+                                                    cells_x,
+                                                    cells_y,
+                                                    largest_template_dim_x,
+                                                    largest_template_dim_y,
+                                                    scale_of_templates_x,
+                                                    scale_of_templates_y,
+                                                    template_rep_x,
+                                                    template_rep_y
+                                                    )
+                                    );
+                        shift_fn_kind = (shift_fn_kind + 1U) % 2U;
+
                         cellconnect::spread_synapses_into_neighbourhoods(
                                     dynamic_tissue,
                                     target_kind,
@@ -369,12 +569,14 @@ void run()
                                     diameter_x,
                                     diameter_y,
                                     matrix_spread_synapses,
-                                    cellconnect::column_shift_function(),
+                                    *shift_fns.back(),
                                     num_threads
                                     );
+
                         TEST_PROGRESS_UPDATE();
                     }
 
+                natural_32_bit  shift_fn_index = 0U;
                 for (cellab::kind_of_cell  source_kind = 0U; source_kind < static_tissue->num_kinds_of_cells(); ++source_kind)
                     for (cellab::kind_of_cell  target_kind = 0U; target_kind < static_tissue->num_kinds_of_tissue_cells(); ++target_kind)
                     {
@@ -407,10 +609,13 @@ void run()
                                         source_kind,
                                         diameter_x,
                                         diameter_y,
-                                        matrix_spread_synapses
+                                        matrix_spread_synapses,
+                                        shift_fns.at(shift_fn_index)
                                         );
                                 TEST_PROGRESS_UPDATE();
                             }
+
+                        ++shift_fn_index;
                     }
             }
         }
