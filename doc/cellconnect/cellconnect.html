@@ -32,7 +32,13 @@ specification with the following properties:
     We can construct algorithms which can efficiently interconnect cells
     in the tissue according to the specification.
 </li></ul>
-<h2>Set-up of synapses per column</h2>
+<p>
+Our solution splits the whole problem into a sequence of two sub-problems.
+First, we interconnect only cells appearing in the same column. And then
+we spread synapses from original cells to cells in other columns.
+These two steps are described in details in the following two sections.
+</p>
+<h2>Set-up of synapses in column</h2>
 <h2>Spreading synapses amongst columns</h2>
 <p>
 We provide and approach which is inspired in the <em>tiling plane</em> [1].
