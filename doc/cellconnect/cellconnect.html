@@ -7,7 +7,48 @@
 <body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
 <h1>E2: cellconnect</h1>
 <p>
-TODO
+This module provides algorithms which are able to <em>set-up</em> synapses between cells in
+a neural tissue s.t. the resulting tissue has some desired <em>network properties</em>.
+It means that here we consider a neural tissue to be a network (graph) with cells
+representing nodes and synapses representing links (edges). A network property is
+then any property we can tell about a network from the point of view of the graph/network
+theory. Here we primarily focus on the following very important
+network properties: small-world property, power-law distribution of in/out-degrees
+of cells (i.e. is the network scale-free), and clustering coefficients of cells.
 </p>
+<h2>Motivation</h2>
+<p>
+Number of cells in a neural tissue can be quite large. An exact specification of
+connections between cells requires a space comparable with the size of the tissue
+itself (remember that number of synapses is dominant in any realistic tissue).
+And that is not acceptable. Our goal thus is to provide an alternative
+specification with the following properties:
+</p>
+<ul><li>
+    It has negligible memory requirements compared to the size of the tissue.
+</li><li>
+    It still allow us to specify desired network properties of the tissue.
+</li><li>
+    We can construct algorithms which can efficiently interconnect cells
+    in the tissue according to the specification.
+</li></ul>
+<h2>Set-up of synapses per column</h2>
+<h2>Spreading synapses amongst columns</h2>
+<p>
+We provide and approach which is inspired in the <em>tiling plane</em> [1].
+</p>
+<h2>References</h2>
+<table>
+    <tr><td>[1]</td><td>
+        Wikipedia: List of convex uniform tilings.
+        <a href="https://en.wikipedia.org/wiki/List_of_convex_uniform_tilings">
+            https://en.wikipedia.org/wiki/List_of_convex_uniform_tilings</a>.
+    </td></tr>
+    <tr><td>[2]</td><td>
+        Wikipedia: Tiling with rectangles.
+        <a href="https://en.wikipedia.org/wiki/Tiling_with_rectangles">
+            https://en.wikipedia.org/wiki/Tiling_with_rectangles</a>.
+    </td></tr>
+</table>
 </body>
 </html>

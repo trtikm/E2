@@ -15,9 +15,9 @@ comments which clarify concrete implementation details of the ideas.
 </p>
 <h2>Motivation and Aims</h2>
 <p>
-An interesting and important ability of neural tissue (especially of the
-cerebral cortex) is its adaptation to conditions in the environment in order to
-maximise (long term) options for its organism.
+An interesting and important ability of a neural tissue (especially of the
+cerebral cortex) is its <em>adaptation</em> to conditions in the environment
+in order to maximise (long term) options for its organism.
 </p><p>
 Although we have models for many important components and properties of neural tissue
 [3,2,1], e.g. models of neurons (in many different levels of details), synapses and
@@ -65,7 +65,7 @@ First two outputs give us a good estimate how accurate the current models of
 neural tissue can be w.r.t. the adaptability to conditions of an environment.
 Moreover, this knowledge can be very useful for a researcher designing a new
 model: when it is known what properties are essential and which are not, the
-researcher may save o lot of time in construction of a desired model. Finally, a
+researcher may save o lot of time in construction of a desired model. Futher, a
 subsequent deep analysis of our outputs (e.g. why some properties are so
 important) may lead to more accurate and simultaneously efficient models.
 </p><p>
@@ -75,6 +75,10 @@ framework, since it suffices to only implement a new model and/or an environment
 and plug it into the framework. Finally, the framework can be reused for study
 of different properties of neural tissue. We simply plug in different kinds of
 models and environments.
+</p><p>
+Although we now focus only on smaller models (due to limited available computational
+power), all three outputs can naturally be updated over time (by us and/or other
+researchers) for larger and larger models.
 </p>
 <h2>Methods and techniques</h2>
 <p>
