@@ -33,16 +33,25 @@ specification with the following properties:
     in the tissue according to the specification.
 </li></ul>
 <p>
-Our solution splits the whole problem into a sequence of two sub-problems.
-First, we interconnect only cells appearing in the same column. And then
-we spread synapses from original cells to cells in other columns.
-These two steps are described in details in the following two sections.
+Our solution splits the whole problem into a sequence of three sub-problems.
+First, we interconnect only cells appearing in the same column. Then
+we spread synapses from original cells to cells in other columns. And we
+finish by setting up delimiters of migration lists for each cells in the tissue.
+These three parts are described in details in the following three sections.
 </p>
 <h2>Set-up of synapses in column</h2>
+<img src="./column_and_sensory_cells.svg" alt="[column_and_sensory_cells.svg]">
+<img src="./column_fill_matrix.svg" alt="[column_fill_matrix.svg]">
+<p>
+For each 0 &le; <i>i</i> &lt; <i>K</i> the matrix <i>A</i> must satisfy
+<i>T<sub>i</sub>N<sub>i</sub></i> =
+&sum;<sub>j=0..(<i>K+S</i>-1)</sub> <i>a<sub>i,j</sub>N<sub>j</sub></i>.
+</p>
 <h2>Spreading synapses amongst columns</h2>
 <p>
 We provide and approach which is inspired in the <em>tiling plane</em> [1].
 </p>
+<h2>Initialising delimiters of migration lists</h2>
 <h2>References</h2>
 <table>
     <tr><td>[1]</td><td>
