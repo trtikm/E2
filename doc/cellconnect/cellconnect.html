@@ -40,13 +40,56 @@ finish by setting up delimiters of migration lists for each cells in the tissue.
 These three parts are described in details in the following three sections.
 </p>
 <h2>Set-up of synapses in column</h2>
+<p>
+Each column in a neural tissue has exactly the same structure. We can thus apply
+the same set-up procedure for each column. In the following we describe the procedure
+for a column at given tissue coordinates (<i>x,y</i>). Let us see a structure of the
+column along the columnar axis.
+</p>
 <img src="./column_and_sensory_cells.svg" alt="[column_and_sensory_cells.svg]">
+<p>
+We see <i>K</i> kinds of tissue cells. <i>i</i>-th kind has exactly
+<i>N<sub>i</sub></i> cells. Each cell of <i>i</i>-th kind has a territory for exactly
+<i>T<sub>i</sub></i> synapses. We further see in the picture the mapping of sensory cells
+to their coordinates along the columnar axis. There are <i>S</i> kinds of sensory cells
+and <i>i</i>-th kind has exactly <i>N<sub>i</sub></i> sensory cells.
+</p><p>
+Each synapse is associated with tissue coordinates of its source cell (projecting the axon).
+Our goal is to set-up coordinates to source cells of each synapse in the territory of each cell
+in the column. Note that all these coordinates may differ only in the third coordinate (i.e.
+along the columnar axis).
+<!--</p><p>-->
+<!--We need to specify for each tissue or sensory cell of a kind-->
+<!--0 &le; <i>j</i> &lt; <i>K+S</i>-->
+<!--how many synapses it projects into a tissue cell of a kind-->
+<!--0 &le; <i>i</i> &lt; <i>K</i>.-->
+</p><p>
+Ideally we should specify for each tissue and sensory cell how many synapses it
+projects into what tissue cell. Nevertheless, the size of this specification depends
+on the length of the columnar axis of the tissue, i.e. it can be large
+(<i>C&times;C<sub>S</sub></i> records). We thus propose a different specification,
+where we focus on <em>kinds</em> of cell instead of individual cells.
+Namely, for each kind of tissue cells
+0 &le; <i>i</i> &lt; <i>K</i>
+and for each kind of tissue or sensory cells
+0 &le; <i>j</i> &lt; <i>K+S</i>
+we specify a number
+<i>a<sub>i,j</sub></i>
+of synapses which are projected from <em>each</em> cell of the kind <i>j</i> to
+<em>each</em> cell of the kind <i>i</i>. We can put all the numbers
+<i>a<sub>i,j</sub></i>
+into a matrix <i>A</i> of dimensions <i>K&times;(K+S)</i>:
+</p>
 <img src="./column_fill_matrix.svg" alt="[column_fill_matrix.svg]">
 <p>
-For each 0 &le; <i>i</i> &lt; <i>K</i> the matrix <i>A</i> must satisfy
+For each
+0 &le; <i>i</i> &lt; <i>K</i>
+the matrix <i>A</i> must satisfy
 <i>T<sub>i</sub>N<sub>i</sub></i> =
 &sum;<sub>j=0..(<i>K+S</i>-1)</sub> <i>a<sub>i,j</sub>N<sub>j</sub></i>.
 </p>
+<a href="../../code/cellconnect/include/cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp">
+    &lt;E2-root-dir&gt;/code/cellconnect/include/cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp</a>
 <h2>Spreading synapses amongst columns</h2>
 <p>
 We provide and approach which is inspired in the <em>tiling plane</em> [1].
