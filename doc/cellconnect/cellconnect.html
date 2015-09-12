@@ -39,7 +39,7 @@ we spread synapses from original cells to cells in other columns. And we
 finish by setting up delimiters of migration lists for each cells in the tissue.
 These three parts are described in details in the following three sections.
 </p>
-<h2>Set-up of synapses in column</h2>
+<h2 id="column_setup">Set-up of synapses in column</h2>
 <p>
 Each column in a neural tissue has exactly the same structure. We can thus apply
 the same set-up procedure for each column. In the following we describe the procedure
@@ -58,11 +58,6 @@ Each synapse is associated with tissue coordinates of its source cell (projectin
 Our goal is to set-up coordinates to source cells of each synapse in the territory of each cell
 in the column. Note that all these coordinates may differ only in the third coordinate (i.e.
 along the columnar axis).
-<!--</p><p>-->
-<!--We need to specify for each tissue or sensory cell of a kind-->
-<!--0 &le; <i>j</i> &lt; <i>K+S</i>-->
-<!--how many synapses it projects into a tissue cell of a kind-->
-<!--0 &le; <i>i</i> &lt; <i>K</i>.-->
 </p><p>
 Ideally we should specify for each tissue and sensory cell how many synapses it
 projects into what tissue cell. Nevertheless, the size of this specification depends
@@ -87,6 +82,23 @@ For each
 the matrix <i>A</i> must satisfy
 <i>T<sub>i</sub>N<sub>i</sub></i> =
 &sum;<sub>j=0..(<i>K+S</i>-1)</sub> <i>a<sub>i,j</sub>N<sub>j</sub></i>.
+</p><p>
+For each kind <i>i</i> of tissue cells we set coordinates of synapses in their
+territories in a specific order. First we set coordinates of all synapses at the
+index 0 in territories of all <i>N<sub>i</sub></i> cells, then coordinates of synapses
+at the index 1 in territories of all <i>N<sub>i</sub></i> cells, and so forth.
+</p><p>
+In that order we write the following sequence of coordinates. First we generate
+<i>a<sub>i,0</sub></i> times the coordinates of the first
+cell of the kind 0, then <i>a<sub>i,0</sub></i> times the coordinates of the second
+cell of the kind 0, and so forth. Then we continue similarly with coordinates of cells
+of all remaining kinds, i.e. up to kind <i>K+S-</i>1.
+</p><p>
+This algorithm is implemented as a function
+<tt>fill_coords_of_source_cells_of_synapses_in_single_column</tt>
+in a file
+<a href="../../code/cellconnect/src/fill_coords_of_source_cells_of_synapses_in_tissue.cpp">
+    fill_coords_of_source_cells_of_synapses_in_tissue.cpp</a>
 </p>
 <a href="../../code/cellconnect/include/cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp">
     &lt;E2-root-dir&gt;/code/cellconnect/include/cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp</a>
