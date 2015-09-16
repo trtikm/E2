@@ -2,9 +2,10 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="stylesheet" type="text/css" href="../text_style.css">
 <title>E2: cellconnect </title>
 </head>
-<body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF">
+<body>
 <h1>E2: cellconnect</h1>
 <p>
 This module provides algorithms which are able to <em>set-up</em> synapses between cells in
@@ -81,7 +82,11 @@ For each
 0 &le; <i>i</i> &lt; <i>K</i>
 the matrix <i>A</i> must satisfy
 <i>T<sub>i</sub>N<sub>i</sub></i> =
-&sum;<sub>j=0..(<i>K+S</i>-1)</sub> <i>a<sub>i,j</sub>N<sub>j</sub></i>.
+<i>a</i><sub><i>i</i>,0</sub><i>N</i><sub>0</sub> + ... +
+<!--<i>a</i><sub><i>i,i</i></sub><i>N</i><sub><i>i</i></sub> + ... +-->
+<!--<i>a</i><sub><i>i,K</i>&minus;1</sub><i>N</i><sub><i>K</i>&minus;1</sub> +-->
+<!--<i>a</i><sub><i>i,K</i></sub><i>N</i><sub><i>K</i></sub> + ... +-->
+<i>a</i><sub><i>i</i>,<i>K+S</i>&minus;1</sub><i>N</i><sub><i>K+S</i>&minus;1</sub>.
 </p><p>
 For each kind <i>i</i> of tissue cells we set coordinates of synapses in their
 territories in a specific order. First we set coordinates of all synapses at the
@@ -92,7 +97,7 @@ In that order we write the following sequence of coordinates. First we generate
 <i>a<sub>i,0</sub></i> times the coordinates of the first
 cell of the kind 0, then <i>a<sub>i,0</sub></i> times the coordinates of the second
 cell of the kind 0, and so forth. Then we continue similarly with coordinates of cells
-of all remaining kinds, i.e. up to kind <i>K+S-</i>1.
+of all remaining kinds, i.e. up to kind <i>K+S</i>&minus;1.
 </p><p>
 This algorithm is implemented as a function
 <tt>fill_coords_of_source_cells_of_synapses_in_single_column</tt>
