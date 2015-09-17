@@ -83,9 +83,9 @@ For each
 the matrix <i>A</i> must satisfy
 <i>T<sub>i</sub>N<sub>i</sub></i> =
 <i>a</i><sub><i>i</i>,0</sub><i>N</i><sub>0</sub> + ... +
-<!--<i>a</i><sub><i>i,i</i></sub><i>N</i><sub><i>i</i></sub> + ... +-->
-<!--<i>a</i><sub><i>i,K</i>&minus;1</sub><i>N</i><sub><i>K</i>&minus;1</sub> +-->
-<!--<i>a</i><sub><i>i,K</i></sub><i>N</i><sub><i>K</i></sub> + ... +-->
+<i>a</i><sub><i>i,i</i></sub><i>N</i><sub><i>i</i></sub> + ... +
+<i>a</i><sub><i>i,K</i>&minus;1</sub><i>N</i><sub><i>K</i>&minus;1</sub> +
+<i>a</i><sub><i>i,K</i></sub><i>N</i><sub><i>K</i></sub> + ... +
 <i>a</i><sub><i>i</i>,<i>K+S</i>&minus;1</sub><i>N</i><sub><i>K+S</i>&minus;1</sub>.
 </p><p>
 For each kind <i>i</i> of tissue cells we set coordinates of synapses in their
@@ -103,10 +103,17 @@ This algorithm is implemented as a function
 <tt>fill_coords_of_source_cells_of_synapses_in_single_column</tt>
 in a file
 <a href="../../code/cellconnect/src/fill_coords_of_source_cells_of_synapses_in_tissue.cpp">
-    fill_coords_of_source_cells_of_synapses_in_tissue.cpp</a>
-</p>
+    fill_coords_of_source_cells_of_synapses_in_tissue.cpp</a>.
+</p><p>
+Since all columns are set-up exactly the same way (using the same algorithm and
+the matrix <i>A</i>), we thus also provide an algorithm
+<tt>fill_coords_of_source_cells_of_synapses_in_tissue</tt> declared in
 <a href="../../code/cellconnect/include/cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp">
-    &lt;E2-root-dir&gt;/code/cellconnect/include/cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp</a>
+    fill_coords_of_source_cells_of_synapses_in_tissue.hpp</a>,
+which call the algorithm for each column in the tissue. The algorithm accepts (besides
+the matrix <i>A</i>) a number of threads available for the computation. This
+number determines how many columns will be set-up in simultaneously.
+</p>
 <h2>Spreading synapses amongst columns</h2>
 <p>
 We provide and approach which is inspired in the <em>tiling plane</em> [1].

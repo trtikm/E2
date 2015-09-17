@@ -12,7 +12,7 @@ namespace cellconnect { namespace {
  * in the column identified by the passed tissue coordinates 'x_coord' and 'y_coord'
  * according to the matrix 'matrix'.
  *
- * Details can be find in the documentation:
+ * Details can be found in the documentation:
  *      file:///<E2-root-dir>/doc/cellconnect/cellconnect.html#column_setup
  */
 void  fill_coords_of_source_cells_of_synapses_in_single_column(
