@@ -40,6 +40,13 @@ we spread synapses from original cells to cells in other columns. And we
 finish by setting up delimiters of migration lists for each cells in the tissue.
 These three parts are described in details in the following three sections.
 </p>
+<p>
+Remember that to interconnect a source and a target cell by a synapse equals
+to setting coordinates of the source cell to the synapse in the territory of
+the target cells. Therefore, the first two sub-problems only set coordinates
+of source cells to synapses. No other properties of synapses are neither read
+nor written.
+</p>
 <h2 id="column_setup">Set-up of synapses in column</h2>
 <p>
 Each column in a neural tissue has exactly the same structure. We can thus apply
@@ -82,11 +89,11 @@ For each
 0 &le; <i>i</i> &lt; <i>K</i>
 the matrix <i>A</i> must satisfy
 <i>T<sub>i</sub>N<sub>i</sub></i> =
-<i>a</i><sub><i>i</i>,0</sub><i>N</i><sub>0</sub> + &hellip; +
+(<i>a</i><sub><i>i</i>,0</sub><i>N</i><sub>0</sub> + &hellip; +
 <i>a</i><sub><i>i,i</i></sub><i>N</i><sub><i>i</i></sub> + &hellip; +
-<i>a</i><sub><i>i,K</i>&minus;1</sub><i>N</i><sub><i>K</i>&minus;1</sub> +
-<i>a</i><sub><i>i,K</i></sub><i>N</i><sub><i>K</i></sub> + &hellip; +
-<i>a</i><sub><i>i</i>,<i>K+S</i>&minus;1</sub><i>N</i><sub><i>K+S</i>&minus;1</sub>.
+<i>a</i><sub><i>i,K</i>&minus;1</sub><i>N</i><sub><i>K</i>&minus;1</sub>) +
+(<i>a</i><sub><i>i,K</i></sub><i>N</i><sub><i>K</i></sub> + &hellip; +
+<i>a</i><sub><i>i</i>,<i>K+S</i>&minus;1</sub><i>N</i><sub><i>K+S</i>&minus;1</sub>).
 </p><p>
 For each kind <i>i</i> of tissue cells we set coordinates of synapses in their
 territories in a specific order. First we set coordinates of all synapses at the
@@ -118,6 +125,14 @@ number determines how many columns will be set-up simultaneously.
 <p>
 </p>
 <img src="./spread_synapses_top_view.svg" alt="[spread_synapses_top_view.svg]">
+<p>
+<i>a<sub>t,s</sub>N<sub>s</sub></i> =
+(<i>h</i><sub>0,0</sub> + &hellip; + <i>h</i><sub>0,<i>n</i>&minus;1</sub>) +
+(<i>h</i><sub>1,0</sub> + &hellip; + <i>h</i><sub>1,<i>n</i>&minus;1</sub>) +
+&hellip; +
+(<i>h</i><sub><i>m</i>&minus;1,0</sub> + &hellip; + <i>h</i><sub><i>m</i>&minus;1,<i>n</i>&minus;1</sub>).
+</p>
+<img src="./spread_synapses_exchange_scheme.svg" alt="[spread_synapses_exchange_scheme.svg]">
 <h3 id="column_shift_function">Column-shift function</h3>
 <p>
 We provide and approach which is inspired in the <em>tiling plane</em> [1].
