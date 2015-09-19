@@ -17,7 +17,7 @@ theory. Here we primarily focus on the following very important
 network properties: small-world property, power-law distribution of in/out-degrees
 of cells (i.e. is the network scale-free), and clustering coefficients of cells.
 </p>
-<h2>Motivation</h2>
+<h2 id="motivation">Motivation</h2>
 <p>
 Number of cells in a neural tissue can be quite large. An exact specification of
 connections between cells requires a space comparable with the size of the tissue
@@ -26,7 +26,7 @@ And that is not acceptable. Our goal thus is to provide an alternative
 specification with the following properties:
 </p>
 <ul><li>
-    It has negligible memory requirements compared to the size of the tissue.
+    It has negligible memory requirements compared to size of the tissue.
 </li><li>
     It still allow us to specify desired network properties of the tissue.
 </li><li>
@@ -82,10 +82,10 @@ For each
 0 &le; <i>i</i> &lt; <i>K</i>
 the matrix <i>A</i> must satisfy
 <i>T<sub>i</sub>N<sub>i</sub></i> =
-<i>a</i><sub><i>i</i>,0</sub><i>N</i><sub>0</sub> + ... +
-<i>a</i><sub><i>i,i</i></sub><i>N</i><sub><i>i</i></sub> + ... +
+<i>a</i><sub><i>i</i>,0</sub><i>N</i><sub>0</sub> + &hellip; +
+<i>a</i><sub><i>i,i</i></sub><i>N</i><sub><i>i</i></sub> + &hellip; +
 <i>a</i><sub><i>i,K</i>&minus;1</sub><i>N</i><sub><i>K</i>&minus;1</sub> +
-<i>a</i><sub><i>i,K</i></sub><i>N</i><sub><i>K</i></sub> + ... +
+<i>a</i><sub><i>i,K</i></sub><i>N</i><sub><i>K</i></sub> + &hellip; +
 <i>a</i><sub><i>i</i>,<i>K+S</i>&minus;1</sub><i>N</i><sub><i>K+S</i>&minus;1</sub>.
 </p><p>
 For each kind <i>i</i> of tissue cells we set coordinates of synapses in their
@@ -110,16 +110,20 @@ the matrix <i>A</i>), we thus also provide an algorithm
 <tt>fill_coords_of_source_cells_of_synapses_in_tissue</tt> declared in
 <a href="../../code/cellconnect/include/cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp">
     fill_coords_of_source_cells_of_synapses_in_tissue.hpp</a>,
-which call the algorithm for each column in the tissue. The algorithm accepts (besides
-the matrix <i>A</i>) a number of threads available for the computation. This
-number determines how many columns will be set-up in simultaneously.
+which calls the algorithm above for each column in the tissue. The algorithm accepts
+(besides the matrix <i>A</i>) a number of threads available for the computation. This
+number determines how many columns will be set-up simultaneously.
 </p>
-<h2>Spreading synapses amongst columns</h2>
+<h2 id="spreading_synapses">Spreading synapses amongst columns</h2>
+<p>
+</p>
+<img src="./spread_synapses_top_view.svg" alt="[spread_synapses_top_view.svg]">
+<h3 id="column_shift_function">Column-shift function</h3>
 <p>
 We provide and approach which is inspired in the <em>tiling plane</em> [1].
 </p>
-<h2>Initialising delimiters of migration lists</h2>
-<h2>References</h2>
+<h2 id="delimiters">Initialising delimiters of migration lists</h2>
+<h2 id="references">References</h2>
 <table>
     <tr><td>[1]</td><td>
         Wikipedia: List of convex uniform tilings.

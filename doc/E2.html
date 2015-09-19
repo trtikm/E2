@@ -6,6 +6,11 @@
 <title>E2: Project documentation </title>
 </head>
 <body>
+<!--&Delta; &hellip; &prime; &Prime; &sum; &prod; &radic; &ne; &equiv; &le; &ge; &lt;-->
+<!--&gt; &minus; &sdot; &frasl; &larr; &darr; &harr; &forall; &exist; &and; &or; &sim;-->
+<!--&prop; &asymp; &empty; &isin; &notin; &cap; &cup; &sube; &supe; &lfloor; &rfloor;-->
+<!--&lceil; &rceil; &lang; &rang; &alpha; &beta; &gamma; &Gamma; &lambda; &pi;-->
+<!--&omega; &Omega;-->
 <h1>E2: Project documentation</h1>
 <p>
 The purpose of this documentation is to aid in the comprehension of the source code of the
@@ -13,7 +18,7 @@ E2 project. It provides a description of ideas behind implemented algorithms
 and data structures. The source code itself (especially header files) then contains important
 Doxygen [9] comments which clarify concrete implementation details of the ideas.
 </p>
-<h2>Motivation and aims</h2>
+<h2 id="motivation">Motivation and aims</h2>
 <p>
 An interesting and important ability of a neural tissue (especially of the
 cerebral cortex) is its <em>adaptation</em> to conditions in the environment
@@ -80,7 +85,7 @@ Although we now focus only on smaller models (due to limited available computati
 power), all three outputs can naturally be updated over time (by us and/or other
 researchers) for larger and larger models.
 </p>
-<h2>Methods and techniques</h2>
+<h2 id="methods">Methods and techniques</h2>
 <p>
 First of all we need a set of models of neural tissue to be examined. We shall
 design and implement these models for wide ranges of properties mentioned above.
@@ -139,7 +144,7 @@ power low distribution of in/out-degrees of cells, etc. Finally, the framework
 will further allow us to plug in different environments and interconnect agents
 with their models of neural tissue.
 </p>
-<h2>Structure of the project</h2>
+<h2 id="project_structure">Structure of the project</h2>
 <p>
 <b>Modules:</b>
 </p>
@@ -169,7 +174,7 @@ with their models of neural tissue.
         A test suite for all modules above.
     </td></tr>
 </table>
-<h2>References</h2>
+<h2 id="references">References</h2>
 <table>
     <tr><td>[1]</td><td>
         Sterratt D., Graham B., Gillies A., and Willshaw D.
