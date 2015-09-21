@@ -109,13 +109,13 @@ of all remaining kinds, i.e. up to kind <i>K+S</i>&minus;1.
 This algorithm is implemented as a function
 <tt>fill_coords_of_source_cells_of_synapses_in_single_column</tt>
 in a file
-<a href="../../code/cellconnect/src/fill_coords_of_source_cells_of_synapses_in_tissue.cpp">
+<a href="../../../code/cellconnect/src/fill_coords_of_source_cells_of_synapses_in_tissue.cpp">
     fill_coords_of_source_cells_of_synapses_in_tissue.cpp</a>.
 </p><p>
 Since all columns are set-up exactly the same way (using the same algorithm and
 the matrix <i>A</i>), we thus also provide an algorithm
 <tt>fill_coords_of_source_cells_of_synapses_in_tissue</tt> declared in
-<a href="../../code/cellconnect/include/cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp">
+<a href="../../../code/cellconnect/include/cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp">
     fill_coords_of_source_cells_of_synapses_in_tissue.hpp</a>,
 which calls the algorithm above for each column in the tissue. The algorithm accepts
 (besides the matrix <i>A</i>) a number of threads available for the computation. This
