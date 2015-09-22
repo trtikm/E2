@@ -60,22 +60,24 @@ static void  thread_check_consistency_of_matrix_and_column(
 }
 
 
-static bool  check_consistency_of_matrix_and_tissue(
+bool  check_consistency_of_matrix_and_tissue(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
-        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
-        cellab::kind_of_cell const  target_kind,
-        cellab::kind_of_cell const  source_kind,
-        std::vector<natural_32_bit> const&  matrix,
+        cellab::kind_of_cell const  kind_of_target_cells_of_synapses,
+        cellab::kind_of_cell const  kind_of_source_cells_of_synapses,
+        std::vector<natural_32_bit> const&  matrix_of_counts_of_synapses_to_be_spread_into_columns_in_neighbourhood,
         natural_32_bit const  num_threads_avalilable_for_computation
         )
 {
     TMPROF_BLOCK();
 
     natural_64_bit SUM = 0ULL;
-    for (natural_32_bit const count : matrix)
+    for (natural_32_bit const count : matrix_of_counts_of_synapses_to_be_spread_into_columns_in_neighbourhood)
         SUM += count;
 
     std::vector<bool> results(num_threads_avalilable_for_computation,true);
+
+    std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr =
+            dynamic_state_ptr->get_static_state_of_neural_tissue();
 
     std::vector<std::thread> threads;
     for (natural_32_bit i = 1U; i < num_threads_avalilable_for_computation; ++i)
@@ -97,8 +99,8 @@ static bool  check_consistency_of_matrix_and_tissue(
                         static_state_ptr,
                         x_coord,y_coord,
                         num_threads_avalilable_for_computation,
-                        target_kind,
-                        source_kind,
+                        kind_of_target_cells_of_synapses,
+                        kind_of_source_cells_of_synapses,
                         SUM,
                         std::ref(results),
                         i
@@ -111,8 +113,8 @@ static bool  check_consistency_of_matrix_and_tissue(
             static_state_ptr,
             0U,0U,
             num_threads_avalilable_for_computation,
-            target_kind,
-            source_kind,
+            kind_of_target_cells_of_synapses,
+            kind_of_source_cells_of_synapses,
             SUM,
             std::ref(results),
             0
@@ -123,6 +125,11 @@ static bool  check_consistency_of_matrix_and_tissue(
 
     return std::find(results.begin(),results.end(),false) == results.end();
 }
+
+
+}
+
+namespace cellconnect {
 
 
 static natural_32_bit  read_x_coord_from_bits_of_coordinates(bits_reference const& bits_ref)
@@ -179,35 +186,35 @@ static void  write_y_coord_to_bits_of_coordinates(natural_32_bit const  y_coord,
 }
 
 
-static bits_reference  find_bits_of_source_coords_of_synapse(
+static void  decompose_shift_to_synapse(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
-        natural_32_bit const  x,
-        natural_32_bit const  y,
         cellab::kind_of_cell const  target_kind,
         cellab::kind_of_cell const  source_kind,
-        natural_64_bit const  shift_to_synapse
+        natural_64_bit const  shift_to_synapse,
+        natural_32_bit const  c0,
+        natural_32_bit&  cell_index,
+        natural_32_bit&  territory_index
         )
 {
     TMPROF_BLOCK();
 
-    natural_32_bit const  c0 = static_state_ptr->compute_columnar_coord_of_first_tissue_cell_of_kind(target_kind);
     natural_64_bit synapse_index = 0U;
-    natural_32_bit cell_index = 0U;
-    natural_32_bit territory_index = 0U;
+    cell_index = 0U;
+    territory_index = 0U;
     while (true)
     {
         INVARIANT(territory_index < static_state_ptr->num_synapses_in_territory_of_cell_kind(target_kind));
 
         bits_reference const  bits_of_coords =
                 dynamic_state_ptr->find_bits_of_coords_of_source_cell_of_synapse_in_tissue(
-                        x, y, c0 + cell_index, territory_index
+                        0U, 0U, c0 + cell_index, territory_index
                         );
         natural_32_bit const  c = read_columnar_coord_from_bits_of_coordinates(bits_of_coords);
         if (static_state_ptr->compute_kind_of_cell_from_its_position_along_columnar_axis(c) == source_kind)
         {
             if (synapse_index == shift_to_synapse)
-                return bits_of_coords;
+                return;
             ++synapse_index;
         }
 
@@ -221,6 +228,9 @@ static bits_reference  find_bits_of_source_coords_of_synapse(
 }
 
 
+/**
+ * It performs the move of synapses at a given position 'shift_to_synapse' in all columns in the tissue.
+ */
 static void  thread_spread_synapses(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
@@ -234,19 +244,31 @@ static void  thread_spread_synapses(
 {
     TMPROF_BLOCK();
 
+    natural_32_bit const  c0 = static_state_ptr->compute_columnar_coord_of_first_tissue_cell_of_kind(target_kind);
+    natural_32_bit  cell_index;
+    natural_32_bit  territory_index;
+    decompose_shift_to_synapse(
+            dynamic_state_ptr,
+            static_state_ptr,
+            target_kind,
+            source_kind,
+            shift_to_synapse,
+            c0,
+            cell_index,
+            territory_index
+            );
+
     for (natural_32_bit  x = 0U; x < static_state_ptr->num_cells_along_x_axis(); ++x)
         for (natural_32_bit  y = 0U; y < static_state_ptr->num_cells_along_y_axis(); ++y)
         {
             bits_reference  bits_of_coords =
-                    cellconnect::find_bits_of_source_coords_of_synapse(
-                            dynamic_state_ptr,
-                            static_state_ptr,
-                            x,
-                            y,
-                            target_kind,
-                            source_kind,
-                            shift_to_synapse
+                    dynamic_state_ptr->find_bits_of_coords_of_source_cell_of_synapse_in_tissue(
+                            x, y, c0 + cell_index, territory_index
                             );
+            INVARIANT(
+                    source_kind == static_state_ptr->compute_kind_of_cell_from_its_position_along_columnar_axis(
+                                            cellconnect::read_columnar_coord_from_bits_of_coordinates(bits_of_coords))
+                    );
 
             natural_32_bit  current_x = cellconnect::read_x_coord_from_bits_of_coordinates(bits_of_coords);
             if (current_x != x)
@@ -281,15 +303,13 @@ static void  thread_spread_synapses(
                 if (shifted_x == current_x && shifted_y == current_y)
                     break;
 
-                bits_of_coords = cellconnect::find_bits_of_source_coords_of_synapse(
-                                        dynamic_state_ptr,
-                                        static_state_ptr,
-                                        shifted_x,
-                                        shifted_y,
-                                        target_kind,
-                                        source_kind,
-                                        shift_to_synapse
+                bits_of_coords = dynamic_state_ptr->find_bits_of_coords_of_source_cell_of_synapse_in_tissue(
+                                        shifted_x, shifted_y, c0 + cell_index, territory_index
                                         );
+                INVARIANT(
+                        source_kind == static_state_ptr->compute_kind_of_cell_from_its_position_along_columnar_axis(
+                                                cellconnect::read_columnar_coord_from_bits_of_coordinates(bits_of_coords))
+                        );
 
                 natural_32_bit const  old_synapse_x = cellconnect::read_x_coord_from_bits_of_coordinates(bits_of_coords);
                 natural_32_bit const  old_synapse_y = cellconnect::read_y_coord_from_bits_of_coordinates(bits_of_coords);
@@ -309,6 +329,10 @@ static void  thread_spread_synapses(
 }
 
 
+/**
+ * It provides simultaneous computation of positions 'index' of a moved synapse in columns and
+ * indices 'row' and 'column' into the specification matrix 'matrix'.
+ */
 static bool go_to_next_task(
         natural_32_bit&  row,
         natural_32_bit&  column,
@@ -375,16 +399,6 @@ void  spread_synapses_into_neighbourhoods(
     ASSUMPTION(matrix_of_counts_of_synapses_to_be_spread_into_columns_in_neighbourhood.size() == diameter_x * diameter_y);
     ASSUMPTION(kind_of_target_cells_of_synapses < static_state_ptr->num_kinds_of_tissue_cells());
     ASSUMPTION(kind_of_source_cells_of_synapses < static_state_ptr->num_kinds_of_cells());
-    ASSUMPTION(
-            check_consistency_of_matrix_and_tissue(
-                    dynamic_state_ptr,
-                    static_state_ptr,
-                    kind_of_target_cells_of_synapses,
-                    kind_of_source_cells_of_synapses,
-                    matrix_of_counts_of_synapses_to_be_spread_into_columns_in_neighbourhood,
-                    num_threads_avalilable_for_computation
-                    )
-            );
 
     natural_32_bit row = 0U;
     natural_32_bit column = 0U;

@@ -562,6 +562,16 @@ void run()
                                     );
                         shift_fn_kind = (shift_fn_kind + 1U) % 2U;
 
+                        TEST_SUCCESS(
+                                cellconnect::check_consistency_of_matrix_and_tissue(
+                                        dynamic_tissue,
+                                        target_kind,
+                                        source_kind,
+                                        matrix_spread_synapses,
+                                        num_threads
+                                        )
+                                );
+
                         cellconnect::spread_synapses_into_neighbourhoods(
                                     dynamic_tissue,
                                     target_kind,
