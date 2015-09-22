@@ -183,7 +183,7 @@ are fully occupied (this was the output from the algorithm presented in the
 <a href="./cellconnect.html#column_setup">previous section</a>).
 Nevertheless, we also know from the previous section that all columns were
 set-up exactly the same way. Synapses we have to spread amongst columns thus
-lie on exactly the same positions amongst different columns. We can therefore
+lie on exactly the same positions within all columns. We can therefore
 uniquely identify each of these <i>a<sub>t,s</sub>N<sub>s</sub></i> positions
 by numbers between zero and <i>a<sub>t,s</sub>N<sub>s</sub></i>&minus;1.
 Let <i>p</i> be any such unique identifier of a position in a column.
@@ -234,12 +234,46 @@ synapses only amongst territories of these cells. Also observe that all synapses
 we move along the dashed arrows lie at the same position <i>p</i> in these columns.
 Each dashed arrow represent the composition of two shifts from the position of a moved
 synapse. First there is a shift from a source column
-at coordinates (<i>x</i><sub><i>j</i></sub>,<i>y</i><sub><i>j</i></sub>) to a target
+at some coordinates (<i>x</i>,<i>y</i>) to a target
 column at coordinates
-<i>F</i>(<i>x</i><sub><i>j</i></sub>,<i>y</i><sub><i>j</i></sub>) + <b>w</b><sub><i>p</i></sub>.
+<i>F</i>(<i>x</i>,<i>y</i>) + <b>w</b><sub><i>p</i></sub>.
 And second there is the shift to the position <i>p</i> in the target column.
 </p><p>
-Note that as we call the presented algorithm for different source and target kinds
+We have to ensure that synapses at the position <i>p</i> at each column in the
+tissue are moved. Therefore, we start the described process (with the same position
+<i>p</i>) for each column in the tissue. We, of course, skip all columns whose
+synapses at the position <i>p</i> were already moved. Indeed, the process started from
+some column <i>c</i><sub>0</sub> moves synapses of several columns
+<i>c</i><sub>0</sub>, <i>c</i><sub>1</sub>, &hellip; <i>c</i><sub>k</sub>.
+We can thus safely skip all columns
+<i>c</i><sub>1</sub>, &hellip; <i>c</i><sub>k</sub>.
+It is easy to check whether to skip a given column: We start the process from this
+column only if <i>x</i> and <i>y</i> coordinates to source cell of a synapse at the
+position <i>p</i> in the column are equal to the tissue coordinates of that column.
+</p><p>
+Now we know how to move synapses at any given position <i>p</i> in all columns in the
+tissue. There are <i>a<sub>t,s</sub>N<sub>s</sub></i> positions (namely
+<i>a<sub>t,s</sub>N<sub>s</sub></i>&minus;1). We have to apply the process for each
+of them.
+</p><p>
+The presented algorithm is implemented in files
+<ul><li>
+<a href="../../../code/cellconnect/include/cellconnect/spread_synapses_into_neighbourhoods.hpp">
+    spread_synapses_into_neighbourhoods.hpp</a> and
+</li><li>
+<a href="../../../code/cellconnect/src/spread_synapses_into_neighbourhoods.cpp">
+    spread_synapses_into_neighbourhoods.cpp</a>
+</li></ul>
+as a function <tt>spread_synapses_into_neighbourhoods</tt>. A module-private
+function <tt>go_to_next_task</tt> provides simultaneous computation of positions
+<i>p</i> in columns and indices <i>i</i> and <i>j</i> into the matrix <i>H</i>.
+A function <tt>decompose_shift_to_synapse</tt> then decomposes <i>p</i> into
+an index of a cell in a column and an index into the territory of that cell.
+The decomposition is necessary for physical access to synapses in the tissue.
+And a function <tt>thread_spread_synapses</tt> performs the move of synapses
+at a given position <i>p</i> in all columns in the tissue.
+</p><p>
+Note that as we call the whole algorithm for different source and target kinds
 <i>s</i> and <i>t</i>, we can always pass a different matrix <i>H</i> of different
 dimensions <i>m</i>&times;<i>n</i>, and with a different column-shift function <i>F</i>.
 This strategy is actually desired.
