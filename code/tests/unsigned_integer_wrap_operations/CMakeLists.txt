@@ -13,7 +13,6 @@ add_executable(${THIS_TARGET_NAME}
     )
 
 target_link_libraries(${THIS_TARGET_NAME}
-    cellab
     utility
     ${BOOST_LIST_OF_LIBRARIES_TO_LINK_WITH}
     )

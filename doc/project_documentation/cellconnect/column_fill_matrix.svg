@@ -9,9 +9,9 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="98.780296mm"
-   height="23.389133mm"
-   viewBox="0 0 350.00892 82.874883"
+   width="107.6349mm"
+   height="23.298391mm"
+   viewBox="0 0 381.38349 82.553355"
    id="svg2"
    version="1.1"
    inkscape:version="0.91 r13725"
@@ -57,8 +57,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="2"
-     inkscape:cx="261.3044"
-     inkscape:cy="-55.731824"
+     inkscape:cx="212.14706"
+     inkscape:cy="-65.035801"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -80,7 +80,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title />
+        <dc:title></dc:title>
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -88,7 +88,7 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-406.58873,-665.81054)">
+     transform="translate(-381.28854,-666.68601)">
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:28.34645653px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -113,30 +113,17 @@
            style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, '" /></flowRegion><flowPara
          id="flowPara4312" /></flowRoot>    <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:45.29037476px;line-height:125%;font-family:SimSun-ExtB;-inkscape-font-specification:SimSun-ExtB;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       x="810.4245"
-       y="365.35687"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:60.77242279px;line-height:125%;font-family:SimSun-ExtB;-inkscape-font-specification:SimSun-ExtB;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="595.83807"
+       y="490.25037"
        id="text5851"
        sodipodi:linespacing="125%"
-       transform="scale(0.50088386,1.9964708)"><tspan
+       transform="scale(0.67210586,1.4878609)"><tspan
          sodipodi:role="line"
          id="tspan5853"
-         x="810.4245"
-         y="365.35687"
+         x="595.83807"
+         y="490.25037"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">(</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-weight:normal;font-size:45.29037476px;line-height:125%;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
-       x="1496.4667"
-       y="365.34122"
-       id="text5855"
-       sodipodi:linespacing="125%"
-       transform="scale(0.50088386,1.9964708)"><tspan
-         sodipodi:role="line"
-         id="tspan5857"
-         x="1496.4667"
-         y="365.34122"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">)</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:141.99999571%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -148,7 +135,7 @@
          id="tspan5861-86-6"
          x="414.76385"
          y="741.62109"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -160,7 +147,7 @@
          id="tspan5861-8-2-1"
          x="455.13898"
          y="741.62634"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -172,7 +159,7 @@
          id="tspan5861-8-5-76-4"
          x="572.48486"
          y="741.50134"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -184,7 +171,7 @@
          id="tspan5861-8-5-7-9-9"
          x="614.72028"
          y="741.64771"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -196,7 +183,7 @@
          id="tspan5861-8-5-7-0-1-8"
          x="697.76746"
          y="741.36121"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -208,7 +195,7 @@
          id="tspan5861-8-5-7-6-5-8"
          x="516.52808"
          y="741.57574"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:1, 4;stroke-dashoffset:0;stroke-opacity:1"
        d="m 414.84523,720.78354 336.2624,-0.125"
@@ -250,7 +237,7 @@
          id="tspan5861-86-6-1"
          x="415.04025"
          y="701.2829"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -262,7 +249,7 @@
          id="tspan5861-8-2-1-0"
          x="455.41537"
          y="701.28815"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -274,7 +261,7 @@
          id="tspan5861-8-5-76-4-8"
          x="572.76129"
          y="701.16315"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -286,7 +273,7 @@
          id="tspan5861-8-5-7-9-9-6"
          x="614.9967"
          y="701.30951"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -298,7 +285,7 @@
          id="tspan5861-8-5-7-0-1-8-2"
          x="698.04388"
          y="701.02301"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -310,7 +297,7 @@
          id="tspan5861-8-5-7-6-5-8-9"
          x="516.8045"
          y="701.23755"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:1, 4;stroke-dashoffset:0;stroke-opacity:1"
        d="m 484.21394,696.11674 26.19454,0"
@@ -346,7 +333,7 @@
          id="tspan5861-8-2-1-0-9"
          x="455.4277"
          y="680.78912"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -358,7 +345,7 @@
          id="tspan5861-8-5-76-4-8-5"
          x="572.77362"
          y="680.66412"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -370,7 +357,7 @@
          id="tspan5861-8-5-7-9-9-6-8"
          x="615.00903"
          y="680.81049"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -382,7 +369,7 @@
          id="tspan5861-8-5-7-0-1-8-2-4"
          x="698.05621"
          y="680.52399"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -394,7 +381,7 @@
          id="tspan5861-8-5-7-6-5-8-9-8"
          x="516.81683"
          y="680.73853"
-         style="font-style:italic;-inkscape-font-specification:'Liberation Serif Italic';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal">a</tspan></text>
+         style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif Italic'">a</tspan></text>
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:1, 4;stroke-dashoffset:0;stroke-opacity:1"
        d="m 484.22628,675.61772 26.90165,0.17678"
@@ -435,7 +422,7 @@
          id="tspan7019-1"
          x="423.45892"
          y="745.05426"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"><tspan
    style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan7043">K</tspan>-1,0</tspan></text>
     <text
@@ -449,7 +436,7 @@
          id="tspan7019-1-1"
          x="463.57138"
          y="745.15784"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"><tspan
    style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan7043-2">K</tspan>-1,1</tspan></text>
     <text
@@ -465,11 +452,11 @@
          y="744.78284"><tspan
            style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
            id="tspan7043-3">K</tspan><tspan
-           style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
            id="tspan4533">-1,</tspan><tspan
-           style="font-style:italic;font-size:10px;-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal"
+           style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
            id="tspan4315">K</tspan><tspan
-           style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
            id="tspan4537">-1</tspan></tspan></text>
     <text
        xml:space="preserve"
@@ -482,10 +469,10 @@
          id="tspan7019-1-2-2"
          x="580.60986"
          y="745.4834"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"><tspan
    style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan7043-3-5">K</tspan>-1,<tspan
-   style="font-style:italic;font-size:10px;-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal"
+   style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan4327">K</tspan></tspan></text>
     <text
        xml:space="preserve"
@@ -498,10 +485,10 @@
          id="tspan7019-1-2-4"
          x="623.35986"
          y="744.7334"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"><tspan
    style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan7043-3-4">K</tspan>-1,<tspan
-   style="font-style:italic;font-size:10px;-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal"
+   style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan4331">K</tspan>+1</tspan></text>
     <text
        xml:space="preserve"
@@ -514,16 +501,16 @@
          id="tspan7019-1-2-3"
          x="706.35986"
          y="744.9834"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"><tspan
    style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan7043-3-2">K</tspan>-1,<tspan
-   style="font-style:italic;font-size:10px;-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal"
+   style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan4335">K</tspan>+<tspan
-   style="font-style:italic;font-size:10px;-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal"
+   style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan4337">S</tspan>-1</tspan></text>
     <text
        xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;line-height:125%;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;line-height:125%;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        x="424.0119"
        y="704.17926"
        id="text7017-3-9"
@@ -533,7 +520,7 @@
          x="424.0119"
          y="704.17926"><tspan
    id="tspan7082-7"
-   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif';">1</tspan>,0</tspan></text>
+   style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">1</tspan>,0</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -545,7 +532,7 @@
          id="tspan7019-1-1-9"
          x="464.12436"
          y="704.28284"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">1,1</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">1,1</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -557,7 +544,7 @@
          id="tspan7019-1-2-1"
          x="525.87439"
          y="703.90784"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">1,<tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">1,<tspan
    style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan7076-4">K</tspan>-1</tspan></text>
     <text
@@ -571,7 +558,7 @@
          id="tspan7019-1-2-2-8"
          x="581.16284"
          y="704.6084"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">1,<tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">1,<tspan
    style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan7076-6-2">K</tspan></tspan></text>
     <text
@@ -585,7 +572,7 @@
          id="tspan7019-1-2-4-9"
          x="623.91284"
          y="703.8584"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">1,<tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">1,<tspan
    style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan7076-1-4"><tspan
    style="font-style:italic"
@@ -601,10 +588,10 @@
          id="tspan7019-1-2-3-8"
          x="706.91284"
          y="704.1084"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">1,<tspan
-   style="font-style:italic;font-size:10px;-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">1,<tspan
+   style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan4339">K</tspan>+<tspan
-   style="font-style:italic;font-size:10px;-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal"
+   style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan4341">S</tspan>-1</tspan></text>
     <text
        xml:space="preserve"
@@ -617,7 +604,7 @@
          id="tspan7019-1-21-7"
          x="423.84714"
          y="684.49512"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">0,0</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">0,0</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -629,7 +616,7 @@
          id="tspan7019-1-1-9-3"
          x="463.95959"
          y="684.59869"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">0,1</tspan></text>
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">0,1</tspan></text>
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;line-height:125%;font-family:'Times New Roman';-inkscape-font-specification:'Times New Roman, ';letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
@@ -641,7 +628,7 @@
          id="tspan7019-1-2-1-8"
          x="525.70959"
          y="684.22369"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">0,<tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">0,<tspan
    style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan7076-4-0">K</tspan>-1</tspan></text>
     <text
@@ -655,7 +642,7 @@
          id="tspan7019-1-2-2-8-0"
          x="580.99805"
          y="684.92426"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">0,<tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">0,<tspan
    style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan7076-6-2-7">K</tspan></tspan></text>
     <text
@@ -669,7 +656,7 @@
          id="tspan7019-1-2-4-9-2"
          x="623.74805"
          y="684.17426"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">0,<tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">0,<tspan
    style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan7076-1-4-5"><tspan
    style="font-style:italic"
@@ -685,10 +672,10 @@
          id="tspan7019-1-2-3-8-5"
          x="706.74805"
          y="684.42426"
-         style="-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-style:normal;font-stretch:normal;font-variant:normal">0,<tspan
-   style="font-style:italic;font-size:10px;-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">0,<tspan
+   style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan4352">K</tspan>+<tspan
-   style="font-style:italic;font-size:10px;-inkscape-font-specification:'Liberation Serif';font-family:'Liberation Serif';font-weight:normal;font-stretch:normal;font-variant:normal"
+   style="font-style:italic;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:10px;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'"
    id="tspan4347">S</tspan>-1</tspan></text>
     <flowRoot
        xml:space="preserve"
@@ -701,5 +688,29 @@
            height="16"
            x="42"
            y="124.37489" /></flowRegion><flowPara
-         id="flowPara4277">La</flowPara></flowRoot>  </g>
+         id="flowPara4277">La</flowPara></flowRoot>    <text
+       xml:space="preserve"
+       style="color:#000000;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif, Normal';text-indent:0;text-align:start;text-decoration:none;text-decoration-line:none;text-decoration-style:solid;text-decoration-color:#000000;letter-spacing:0px;word-spacing:0px;text-transform:none;direction:ltr;block-progression:tb;writing-mode:lr-tb;baseline-shift:baseline;text-anchor:start;white-space:normal;clip-rule:nonzero;display:inline;overflow:visible;visibility:visible;opacity:1;isolation:auto;mix-blend-mode:normal;color-interpolation:sRGB;color-interpolation-filters:linearRGB;solid-color:#000000;solid-opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;color-rendering:auto;image-rendering:auto;shape-rendering:auto;text-rendering:auto;enable-background:accumulate"
+       x="381.14206"
+       y="715.0849"
+       id="text4277"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan4279"
+         x="381.14206"
+         y="715.0849">A=</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:60.77242279px;line-height:125%;font-family:SimSun-ExtB;-inkscape-font-specification:SimSun-ExtB;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       x="-1137.4205"
+       y="490.63028"
+       id="text5851-0"
+       sodipodi:linespacing="125%"
+       transform="scale(-0.67210585,1.4878609)"><tspan
+         sodipodi:role="line"
+         id="tspan5853-1"
+         x="-1137.4205"
+         y="490.63028"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif'">(</tspan></text>
+  </g>
 </svg>

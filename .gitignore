@@ -1,6 +1,7 @@
-.gitignore
-*.user
 /build
 /dist
 /temp
+/.idea
+.gitignore
+*.user
 

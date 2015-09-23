@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<link rel="icon" href="../../E2_icon.svg" sizes="any" type="image/svg">
 <link rel="stylesheet" type="text/css" href="../../text_style.css">
 <title>E2: cellconnect </title>
 </head>
@@ -67,7 +68,7 @@ Our goal is to set-up coordinates to source cells of each synapse in the territo
 in the column. Note that all these coordinates may differ only in the third coordinate (i.e.
 along the columnar axis).
 </p><p>
-Ideally we should specify for each tissue and sensory cell how many synapses it
+Ideally we should specify for each tissue cell and each sensory cell how many synapses it
 projects into what tissue cell. Nevertheless, the size of this specification depends
 on the length of the columnar axis of the tissue, i.e. it can be large
 (<i>C&times;C<sub>S</sub></i> records). We thus propose a different specification,
@@ -75,13 +76,13 @@ where we focus on <em>kinds</em> of cell instead of individual cells.
 Namely, for each kind of tissue cells
 0 &le; <i>i</i> &lt; <i>K</i>
 and for each kind of tissue or sensory cells
-0 &le; <i>j</i> &lt; <i>K+S</i>
-we specify a number
+0 &le; <i>j</i> &lt; <i>K</i>+<i>S</i>
+we specify a number of synapses
 <i>a<sub>i,j</sub></i>
-of synapses which are projected from <em>each</em> cell of the kind <i>j</i> to
+which are projected from <em>each</em> cell of the kind <i>j</i> to
 <em>each</em> cell of the kind <i>i</i>. We can put all the numbers
 <i>a<sub>i,j</sub></i>
-into a matrix <i>A</i> of dimensions <i>K&times;(K+S)</i>:
+into a matrix <i>A</i> of dimensions <i>K</i>&times;(<i>K</i>+<i>S</i>):
 </p>
 <img src="./column_fill_matrix.svg" alt="[column_fill_matrix.svg]">
 <p>
@@ -95,10 +96,43 @@ the matrix <i>A</i> must satisfy
 (<i>a</i><sub><i>i,K</i></sub><i>N</i><sub><i>K</i></sub> + &hellip; +
 <i>a</i><sub><i>i</i>,<i>K+S</i>&minus;1</sub><i>N</i><sub><i>K+S</i>&minus;1</sub>).
 </p><p>
-For each kind <i>i</i> of tissue cells we set coordinates of synapses in their
-territories in a specific order. First we set coordinates of all synapses at the
-index 0 in territories of all <i>N<sub>i</sub></i> cells, then coordinates of synapses
-at the index 1 in territories of all <i>N<sub>i</sub></i> cells, and so forth.
+Let <i>i</i> be a kind of tissue cells (i.e. 0 &le; <i>i</i> &lt; <i>K</i>),
+<i>j</i> be an index of some tissue cell of the kind <i>i</i> (i.e.
+0 &le; <i>j</i> &lt; <i>N<sub>i</sub></i>), and <i>k</i> be an index of a synapse
+in the territory of the <i>j</i>-th cell of the kind <i>i</i> (i.e.
+0 &le; <i>k</i> &lt; <i>T<sub>i</sub></i>). Then the number
+<i>k</i><i>N</i><sub><i>i</i></sub> + <i>j</i>
+is a <i>columnar identifier</i> of the synapse at <i>k</i>-th index in
+the territory of the <i>j</i>-th cell of the kind <i>i</i>.
+In the following picture we can see a graphical representation of columnar identifiers
+of synapses.
+</p>
+<img src="./columnar_identifiers_of_synapses.svg" alt="[columnar_identifiers_of_synapses.svg]">
+<p>
+Let us denote a columnar coordinate of a the <i>j</i>-th cell of either tissue or sensory
+cell kind <i>i</i> (i.e.
+0 &le; <i>j</i> &lt; <i>N<sub>i</sub></i>, 0 &le; <i>i</i> &lt; <i>K</i>+<i>S</i>)
+as <i>c</i><sub><i>i</i>:<i>j</i></sub>. Clearly,
+<i>c</i><sub><i>i</i>:<i>j</i></sub> =
+    <i>T</i><sub>0</sub><i>N</i><sub>0</sub> +
+    &hellip; +
+    <i>T</i><sub><i>i</i>&minus;1</sub><i>N</i><sub><i>i</i>&minus;1</sub> + <i>j</i>.
+</p><p>
+Let us consider a synapse with a columnar identifier <i>k</i> in the territory of
+a tissue cell of a kind <i>i</i>. Let the cell appears in a column at tissue coordinates
+(<i>x</i>,<i>y</i>). The algorithm sets-up coordinates to the source cell of that
+synapse as (<i>x</i>,<i>y</i>,<i>c</i><sub><i>j</i>:<i>l</i></sub>), where <i>j</i>
+and <i>l</i> mean the following. The cell kind <i>j</i> is a unique index of
+a column in the matrix <i>A</i> satisfying
+0 &le; <i>T</i><sub>0</sub><i>a</i><sub><i>i</i>,0</sub> +
+    &hellip; +
+    <i>T</i><sub><i>j</i></sub><i>a</i><sub><i>i</i>,<i>j</i></sub> &minus; <i>k</i>
+    &lt; <i>a</i><sub><i>i</i>,<i>j</i></sub>.
+The cell index <i>l</i> is then a unique value
+&lfloor;(<i>k</i> &minus; (<i>T</i><sub>0</sub><i>a</i><sub><i>i</i>,0</sub> +
+    &hellip; +
+    <i>T</i><sub><i>j</i>&minus;1</sub><i>a</i><sub><i>i</i>,<i>j</i>&minus;1</sub>))
+    / <i>T</i><sub><i>j</i></sub>&rfloor;.
 </p><p>
 In that order we write the following sequence of coordinates. First we generate
 <i>a<sub>i,0</sub></i> times the coordinates of the first
