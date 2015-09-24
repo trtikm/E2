@@ -167,7 +167,7 @@ void shift_template::setup_data(std::vector<shift_to_target> const& shifts)
             [](std::vector<shift_to_target> const& shifts) {
                 for (shift_to_target const& shift : shifts)
                     if (!shift.is_external())
-                        false;
+                        return false;
                 return true;
             }(shifts)
             );
@@ -405,7 +405,7 @@ void  column_shift_function::build_repetitions(std::vector<repetition_block> con
         }
         else
         {
-            output.push_back({index,index + 1U,1U});
+            output.push_back({index,(natural_16_bit)(index + 1U),1U});
             ++index;
         }
     INVARIANT(index == size);

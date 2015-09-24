@@ -140,8 +140,8 @@ static std::shared_ptr<cellconnect::column_shift_function const>  build_small_sh
                             2, 5, 8
                         }
                     },
-                    { {1U,2U,template_rep_x - 2U}, },
-                    { {1U,2U,template_rep_y - 2U}, }
+                    { {1U,2U,(natural_16_bit)(template_rep_x - 2U)}, },
+                    { {1U,2U,(natural_16_bit)(template_rep_y - 2U)}, }
             }
     };
 
@@ -171,7 +171,7 @@ static std::shared_ptr<cellconnect::column_shift_function const>  build_big_shif
     natural_16_bit const  middle2_dim_y = largest_template_dim_y - middle1_dim_y;
     ASSUMPTION(middle2_dim_y > 0U);
 
-    if (middle1_dim_x * middle1_dim_y < 2U)
+    if ((natural_16_bit)(middle1_dim_x * middle1_dim_y) < 2U)
         return {};
 
     natural_16_bit const  large_num_exists = (largest_template_dim_x * largest_template_dim_y / 2U) / 8U;
@@ -375,8 +375,8 @@ static std::shared_ptr<cellconnect::column_shift_function const>  build_big_shif
                             3, 7, 11, 15
                         }
                     },
-                    { {1U,3U,template_rep_x - 2U}, },
-                    { {1U,3U,template_rep_y - 2U}, }
+                    { {1U,3U,(natural_16_bit)(template_rep_x - 2U)}, },
+                    { {1U,3U,(natural_16_bit)(template_rep_y - 2U)}, }
             }
     };
 

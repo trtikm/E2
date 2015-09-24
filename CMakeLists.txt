@@ -53,6 +53,7 @@
 #               -DEIGEN_ROOT=<eigen-install-dir>
 #               -DPYTHON_LIBRARY=<python-install-dir>
 #          e.g. on MS Windows: -DCMAKE_BUILD_TYPE=Debug -DBOOST_ROOT=c:\3rd\boost_1_59_0 -DEIGEN_ROOT=c:\3rd\eigen_3_2_5 -DPYTHON_LIBRARY=c:\Python34
+#          e.g. on Ubuntu: -DCMAKE_BUILD_TYPE=Debug -DBOOST_INSTALL_DIR=/home/marek/Software/boost_1_59_0 -DEIGEN_ROOT=/home/marek/Software/eigen_3_2_5 -DPYTHON_LIBRARY=/usr/lib/python3.4
 #        - Then click the 'Run CMake' buttom. If no problem occurred (which is supposed to be the case), you can click
 #          the button 'Finish'. Otherwise, you have to fix all issues reported by the CMake.
 #        - Click to the button 'Projects' in the horizontal menu on the very left of the Qt Creator's window.

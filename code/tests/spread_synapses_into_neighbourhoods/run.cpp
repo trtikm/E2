@@ -254,8 +254,8 @@ static std::shared_ptr<cellconnect::column_shift_function const>  build_shift_fu
                             2, 5, 8
                         }
                     },
-                    { {1U,2U,template_rep_x - 2U}, },
-                    { {1U,2U,template_rep_y - 2U}, }
+                    { {1U,2U,(natural_16_bit)(template_rep_x - 2U)}, },
+                    { {1U,2U,(natural_16_bit)(template_rep_y - 2U)}, }
             }
     };
 
