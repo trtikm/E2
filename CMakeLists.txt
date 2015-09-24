@@ -73,7 +73,7 @@ cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
 
 if(NOT CMAKE_BUILD_TYPE)
     message("Build type not set => setting 'Release' as default.")
-    set(CMAKE_BUILD_TYPE "Release")
+    set(CMAKE_BUILD_TYPE "Release"  CACHE STRING "Release" FORCE)
 endif()
 message("Build type = " ${CMAKE_BUILD_TYPE})
 if(CMAKE_BUILD_TYPE MATCHES "Debug")
@@ -83,29 +83,23 @@ elseif(CMAKE_BUILD_TYPE MATCHES "Release")
 elseif(CMAKE_BUILD_TYPE MATCHES "RelWithDebInfo")
     add_definitions(-DRELEASE)
 else()
-    message(FATAL_ERROR "Unknown build type. Use either Debug, Release, or RelWithDebInfo. E.g.: -DCMAKE_BUILD_TYPE=Release")
+    message(SEND_ERROR "Unknown build type. Use either Debug, Release, or RelWithDebInfo. E.g.: -DCMAKE_BUILD_TYPE=Release")
 endif()
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(CMAKE_COMPILER_IS_GNUCXX)
-    add_definitions("-std=c++11 -Wall -Wno-unused-local-typedefs -fPIC")
+    add_definitions("-std=c++11 -Wall -Wno-unused-local-typedefs")
     if ((CMAKE_BUILD_TYPE STREQUAL Debug) OR
         (CMAKE_BUILD_TYPE STREQUAL RelWithDebInfo))
         add_definitions("-ggdb3")
     endif()
-#    set(DEFAULT_STATIC_LIB_PREFIX "lib")
-#    set(DEFAULT_STATIC_LIB_SUFFIX ".a")
-#    set(DEFAULT_DYNAMIC_LIB_SUFFIX ".so")
     message("Compiler = GCC")
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     #add_definitions("/Wall")
-#    set(DEFAULT_STATIC_LIB_PREFIX "")
-#    set(DEFAULT_STATIC_LIB_SUFFIX ".lib")
-#    set(DEFAULT_DYNAMIC_LIB_SUFFIX ".dll")
     message("Compiler = MSVC")
 else()
-    message(FATAL_ERROR "Unknown (unsupported) compiler detected. Supported is only GCC (on Linux) and MSVC (on Windows).")
+    message(SEND_ERROR "Unknown (unsupported) compiler detected. Supported is only GCC (on Linux) and MSVC (on Windows).")
 endif()
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
@@ -118,10 +112,13 @@ message("Install directory = ${CMAKE_INSTALL_PREFIX}")
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/code")
 
 # find and add Boost
-if(NOT BOOST_ROOT)
-    set(BOOST_ROOT "path-to-boost_1_59_0" CACHE STRING "A path to Boost library." FORCE)
-endif()
 message("Searching for Boost library ...")
+if(NOT DEFINED BOOST_INSTALL_DIR)
+    set(BOOST_INSTALL_DIR "Specify boost's installation directory." CACHE STRING "Specify boost's installation directory." FORCE)
+endif()
+if(EXISTS "${BOOST_INSTALL_DIR}" AND IS_DIRECTORY "${BOOST_INSTALL_DIR}")
+    set(BOOST_ROOT ${BOOST_INSTALL_DIR})
+endif()
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_USE_MULTITHREADED ON)
 find_package(Boost REQUIRED)
@@ -129,23 +126,25 @@ find_package(Boost COMPONENTS
                 system
                 thread
                 chrono
-                filesystem
-                log
                 log_setup
+                log
+                filesystem
                 program_options
                 python
              REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
-#set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_RPATH}" "${Boost_LIBRARY_DIRS}")
-#add_definitions("-DBOOST_LOG_DYN_LINK -DBOOST_LOG_SETUP")
 add_definitions("-DBOOST_LOG_SETUP")
 set(BOOST_LIST_OF_LIBRARIES_TO_LINK_WITH
         ${Boost_LIBRARIES}
     )
-message("Boost was found in directory: " ${BOOST_ROOT})
-message("Boost includes were found in directory: " ${Boost_INCLUDE_DIRS})
-message("Boost libraries were found in directory: " ${Boost_LIBRARY_DIRS})
+if(DEFINED BOOST_ROOT)
+    message("Boost was found in directory: " ${BOOST_ROOT})
+    message("Boost includes were found in directory: " ${Boost_INCLUDE_DIRS})
+    message("Boost libraries were found in directory: " ${Boost_LIBRARY_DIRS})
+else()
+    message(SEND_ERROR "The installation directory of Boost was not FOUND!")
+endif()
 
 # find and add Python
 message("Searching for Python ...")
@@ -161,9 +160,9 @@ message("Python libraries were found in directory: " ${PYTHON_LIBRARIES})
 
 # find and add Eigen math library
 message("Searching for Eigen ...")
-if(NOT EIGEN_ROOT)
-    set(EIGEN_ROOT "path-to-eigen_3_2_5" CACHE STRING "A path to Eigen math library." FORCE)
-    message(FATAL_ERROR "ERROR: Eigen root directory was NOT found!")
+if(NOT DEFINED EIGEN_ROOT)
+    set(EIGEN_ROOT "Specify Eigen's installation directory." CACHE STRING "Specify Eigen's installation directory." FORCE)
+    message(SEND_ERROR "Eigen root directory was not found!")
 else()
     set(EIGEN_INCLUDE_DIRS ${EIGEN_ROOT})
     if(EXISTS "${EIGEN_INCLUDE_DIRS}" AND IS_DIRECTORY "${EIGEN_INCLUDE_DIRS}")

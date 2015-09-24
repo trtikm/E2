@@ -19,7 +19,7 @@ add_subdirectory(./utility)
     message("-- utility")
 
 # Here follow tests, if they should be included.
-if(NOT E2_BUILD_ALSO_TESTS)
+if(NOT DEFINED E2_BUILD_ALSO_TESTS)
     set(E2_BUILD_ALSO_TESTS "Yes" CACHE STRING "Build also tests? (Yes/No)" FORCE)
 endif()
 message("Build also tests: " ${E2_BUILD_ALSO_TESTS})
@@ -29,7 +29,7 @@ if(E2_TEMPORARY_VARIBLE STREQUAL "yes")
 endif()
 
 # Here follow benchmarks, if they should be included.
-if(NOT E2_BUILD_ALSO_BENCHMARKS)
+if(NOT DEFINED E2_BUILD_ALSO_BENCHMARKS)
     set(E2_BUILD_ALSO_BENCHMARKS "Yes" CACHE STRING "Build also benchmarks? (Yes/No)" FORCE)
 endif()
 message("Build also benchmarks: " ${E2_BUILD_ALSO_BENCHMARKS})
