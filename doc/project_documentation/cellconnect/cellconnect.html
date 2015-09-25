@@ -51,9 +51,9 @@ nor written.
 <h2 id="column_setup">Set-up of synapses in column</h2>
 <p>
 Each column in a neural tissue has exactly the same structure. We can thus apply
-the same set-up procedure for each column. In the following we describe the procedure
-for a column at given tissue coordinates (<i>x,y</i>). Let us see a structure of the
-column along the columnar axis.
+the same set-up procedure for each column independently. Clearly, it suffices
+if we describe in this section only the set-up procedure for any given column.
+The structure of the column (along the columnar axis) is the following.
 </p>
 <img src="./column_and_sensory_cells.svg" alt="[column_and_sensory_cells.svg]">
 <p>
@@ -102,7 +102,7 @@ Let <i>i</i> be a kind of tissue cells (i.e. 0 &le; <i>i</i> &lt; <i>K</i>),
 in the territory of the <i>j</i>-th cell of the kind <i>i</i> (i.e.
 0 &le; <i>k</i> &lt; <i>T<sub>i</sub></i>). Then the number
 <i>k</i><i>N</i><sub><i>i</i></sub> + <i>j</i>
-is a <i>columnar identifier</i> of the synapse at <i>k</i>-th index in
+is a <i>columnar identifier</i> of the synapse at the <i>k</i>-th index in
 the territory of the <i>j</i>-th cell of the kind <i>i</i>.
 In the following picture we can see a graphical representation of columnar identifiers
 of synapses.
@@ -119,41 +119,49 @@ as <i>c</i><sub><i>i</i>:<i>j</i></sub>. Clearly,
     <i>T</i><sub><i>i</i>&minus;1</sub><i>N</i><sub><i>i</i>&minus;1</sub> + <i>j</i>.
 </p><p>
 Let us consider a synapse with a columnar identifier <i>k</i> in the territory of
-a tissue cell of a kind <i>i</i>. Let the cell appears in a column at tissue coordinates
-(<i>x</i>,<i>y</i>). The algorithm sets-up coordinates to the source cell of that
+a tissue cell of a kind <i>i</i>. If (<i>x</i>,<i>y</i>) are tissue coordinates
+of the considered column, then the procedure sets-up coordinates to the source cell of that
 synapse as (<i>x</i>,<i>y</i>,<i>c</i><sub><i>j</i>:<i>l</i></sub>), where <i>j</i>
 and <i>l</i> mean the following. The cell kind <i>j</i> is a unique index of
 a column in the matrix <i>A</i> satisfying
-0 &le; <i>T</i><sub>0</sub><i>a</i><sub><i>i</i>,0</sub> +
-    &hellip; +
-    <i>T</i><sub><i>j</i></sub><i>a</i><sub><i>i</i>,<i>j</i></sub> &minus; <i>k</i>
-    &lt; <i>a</i><sub><i>i</i>,<i>j</i></sub>.
+0 &le; <i>k</i> &minus; (<i>a</i><sub><i>i</i>,0</sub><i>N</i><sub>0</sub> + &hellip; +
+    <i>a</i><sub><i>i</i>,<i>j</i>&minus;1</sub><i>N</i><sub><i>j</i>&minus;1</sub>)
+    &lt; <i>a</i><sub><i>i</i>,<i>j</i></sub><i>N</i><sub><i>j</i></sub>.
 The cell index <i>l</i> is then a unique value
-&lfloor;(<i>k</i> &minus; (<i>T</i><sub>0</sub><i>a</i><sub><i>i</i>,0</sub> +
-    &hellip; +
-    <i>T</i><sub><i>j</i>&minus;1</sub><i>a</i><sub><i>i</i>,<i>j</i>&minus;1</sub>))
-    / <i>T</i><sub><i>j</i></sub>&rfloor;.
+&lfloor;(<i>k</i> &minus; (<i>a</i><sub><i>i</i>,0</sub><i>N</i><sub>0</sub> + &hellip; +
+    <i>a</i><sub><i>i</i>,<i>j</i>&minus;1</sub><i>N</i><sub><i>j</i>&minus;1</sub>))
+    / <i>a</i><sub><i>i</i>,<i>j</i></sub>&rfloor;.
 </p><p>
-In that order we write the following sequence of coordinates. First we generate
-<i>a<sub>i,0</sub></i> times the coordinates of the first
-cell of the kind 0, then <i>a<sub>i,0</sub></i> times the coordinates of the second
-cell of the kind 0, and so forth. Then we continue similarly with coordinates of cells
-of all remaining kinds, i.e. up to kind <i>K+S</i>&minus;1.
+We are ready to describe whole the procedure. It iterates over tissue kinds
+<i>i</i>=0,&hellip;,<i>K</i>&minus;1. For each kind <i>i</i> it performs two
+iterations simultaneously. First, it iterates over synapse identifiers
+<i>k</i>=0,&hellip;,<i>T</i><sub><i>r</i></sub><i>N</i><sub><i>r</i></sub>&minus;1
+for each tissue and sensory kind
+<i>r</i>=0,&hellip;,<i>K+S</i>&minus;1.
+And second, it iterates over the sequence
+<i>a</i><sub><i>i</i>,0</sub><i>N</i><sub>0</sub> + &hellip; +
+    <i>a</i><sub><i>i</i>,<i>K+S</i>&minus;1</sub><i>N</i><sub><i>K+S</i>&minus;1</sub>
+in order to directly obtain the columnar coordinate <i>c</i><sub><i>j</i>:<i>l</i></sub>
+for the corresponding synapse identifier <i>k</i>.
 </p><p>
-This algorithm is implemented as a function
-<tt>fill_coords_of_source_cells_of_synapses_in_single_column</tt>
-in a file
-<a href="../../../code/cellconnect/src/fill_coords_of_source_cells_of_synapses_in_tissue.cpp">
-    fill_coords_of_source_cells_of_synapses_in_tissue.cpp</a>.
-</p><p>
-Since all columns are set-up exactly the same way (using the same algorithm and
-the matrix <i>A</i>), we thus also provide an algorithm
-<tt>fill_coords_of_source_cells_of_synapses_in_tissue</tt> declared in
-<a href="../../../code/cellconnect/include/cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp">
-    fill_coords_of_source_cells_of_synapses_in_tissue.hpp</a>,
-which calls the algorithm above for each column in the tissue. The algorithm accepts
-(besides the matrix <i>A</i>) a number of threads available for the computation. This
-number determines how many columns will be set-up simultaneously.
+The algorithm which sets-up all columns in the tissue (each column
+exactly the same way) according to the matrix <i>A</i> is implemented
+as a function <tt>fill_coords_of_source_cells_of_synapses_in_tissue</tt>
+in files
+</p>
+<ul><li>
+    <a href="../../../code/cellconnect/include/cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp">
+        fill_coords_of_source_cells_of_synapses_in_tissue.hpp</a>,
+</li><li>
+    <a href="../../../code/cellconnect/src/fill_coords_of_source_cells_of_synapses_in_tissue.cpp">
+        fill_coords_of_source_cells_of_synapses_in_tissue.cpp</a>.
+</li></ul>
+<p>
+The algorithm accepts (besides the matrix <i>A</i>) a number of threads available
+for the computation. This number determines how many columns will be set-up simultaneously.
+The described procedure for the set-up of a single given column is implemented in that
+<tt>cpp</tt> file as a function
+<tt>fill_coords_of_source_cells_of_synapses_in_single_column</tt>.
 </p>
 <h2 id="spreading_synapses">Spreading synapses amongst columns</h2>
 <p>
@@ -225,11 +233,12 @@ Then <i>p</i> also uniquely identifies the target column in the neighbourhood
 of the column. First of all, there must exist unique indices
 <i>i</i> and <i>j</i> into the matrix <i>H</i> such that
 0 &le;
-    (<i>h</i><sub>0,0</sub> + &hellip; + <i>h</i><sub>0,<i>n</i>&minus;1</sub>) +
+    <i>p</i> &minus;
+        ((<i>h</i><sub>0,0</sub> + &hellip; +
+            <i>h</i><sub>0,<i>n</i>&minus;1</sub>) +
         &hellip; +
-        (<i>h</i><sub>i,0</sub> + &hellip; + <i>h</i><sub><i>i</i>,<i>j</i></sub>)
-    &minus;
-    <i>p</i>
+        (<i>h</i><sub>i,0</sub> + &hellip; +
+            <i>h</i><sub><i>i</i>&minus;1,<i>j</i>&minus;1</sub>))
     &lt;
     <i>h</i><sub>i,j</sub>.
 From these indices we can directly compute a shift vector
