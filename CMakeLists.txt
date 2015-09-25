@@ -70,7 +70,7 @@
 
 project(E2)
 
-cmake_minimum_required(VERSION 3.0 FATAL_ERROR)
+cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 if(NOT CMAKE_BUILD_TYPE)
     message("Build type not set => setting 'Release' as default.")
@@ -149,8 +149,8 @@ endif()
 
 # find and add Python
 message("Searching for Python ...")
-set(Python_ADDITIONAL_VERSIONS 3.4.3)
-find_package(PythonLibs 3.4.3 REQUIRED)
+set(Python_ADDITIONAL_VERSIONS 3.4)
+find_package(PythonLibs 3.4 REQUIRED)
 include_directories(${PYTHON_INCLUDE_DIRS})
 link_directories(${PYTHON_LIBRARIES})
 set(PYTHON_LIST_OF_LIBRARIES_TO_LINK_WITH
