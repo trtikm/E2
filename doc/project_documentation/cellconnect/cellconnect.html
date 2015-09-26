@@ -10,7 +10,8 @@
 <h1>E2: cellconnect</h1>
 <p>
 This module provides algorithms which are able to <em>set-up</em> synapses between cells in
-a neural tissue s.t. the resulting tissue has some desired <em>network properties</em>.
+a neural tissue s.t. the resulting tissue has some desired <em>network properties</em>
+[TODO].
 It means that here we consider a neural tissue to be a network (graph) with cells
 representing nodes and synapses representing links (edges). A network property is
 then any property we can tell about a network from the point of view of the graph/network
@@ -43,9 +44,9 @@ These three parts are described in details in the following three sections.
 </p>
 <p>
 Remember that to interconnect a source and a target cell by a synapse equals
-to setting coordinates of the source cell to the synapse in the territory of
+to setting synapse's coordinates of its source cell stored inside the territory of
 the target cells. Therefore, the first two sub-problems only set coordinates
-of source cells to synapses. No other properties of synapses are neither read
+of source cells of all synapses. No other properties of synapses are neither read
 nor written.
 </p>
 <h2 id="column_setup">Set-up of synapses in column</h2>
@@ -53,7 +54,7 @@ nor written.
 Each column in a neural tissue has exactly the same structure. We can thus apply
 the same set-up procedure for each column independently. Clearly, it suffices
 if we describe in this section only the set-up procedure for any given column.
-The structure of the column (along the columnar axis) is the following.
+The structure of a column (along the columnar axis) is the following.
 </p>
 <img src="./column_and_sensory_cells.svg" alt="[column_and_sensory_cells.svg]">
 <p>
@@ -120,7 +121,7 @@ as <i>c</i><sub><i>i</i>:<i>j</i></sub>. Clearly,
 </p><p>
 Let us consider a synapse with a columnar identifier <i>k</i> in the territory of
 a tissue cell of a kind <i>i</i>. If (<i>x</i>,<i>y</i>) are tissue coordinates
-of the considered column, then the procedure sets-up coordinates to the source cell of that
+of the considered column, then the procedure sets-up coordinates of the source cell of that
 synapse as (<i>x</i>,<i>y</i>,<i>c</i><sub><i>j</i>:<i>l</i></sub>), where <i>j</i>
 and <i>l</i> mean the following. The cell kind <i>j</i> is a unique index of
 a column in the matrix <i>A</i> satisfying
@@ -134,15 +135,18 @@ The cell index <i>l</i> is then a unique value
 </p><p>
 We are ready to describe whole the procedure. It iterates over tissue kinds
 <i>i</i>=0,&hellip;,<i>K</i>&minus;1. For each kind <i>i</i> it performs two
-iterations simultaneously. First, it iterates over synapse identifiers
-<i>k</i>=0,&hellip;,<i>T</i><sub><i>r</i></sub><i>N</i><sub><i>r</i></sub>&minus;1
-for each tissue and sensory kind
-<i>r</i>=0,&hellip;,<i>K+S</i>&minus;1.
-And second, it iterates over the sequence
+iterations simultaneously. First, it iterates over all synapse identifiers
+<i>k</i>=0,&hellip;,<i>T</i><sub><i>i</i></sub><i>N</i><sub><i>i</i></sub>&minus;1
+referencing to territories of tissue cells of the kind <i>i</i>.
+And second, it iterates the <i>i</i>-th row in the matrix <i>A</i> such that
+it incrementally approaches to the sum
 <i>a</i><sub><i>i</i>,0</sub><i>N</i><sub>0</sub> + &hellip; +
-    <i>a</i><sub><i>i</i>,<i>K+S</i>&minus;1</sub><i>N</i><sub><i>K+S</i>&minus;1</sub>
-in order to directly obtain the columnar coordinate <i>c</i><sub><i>j</i>:<i>l</i></sub>
-for the corresponding synapse identifier <i>k</i>.
+    <i>a</i><sub><i>i</i>,<i>K+S</i>&minus;1</sub><i>N</i><sub><i>K+S</i>&minus;1</sub>.
+This iteration allows the procedure to directly obtain the columnar coordinate
+<i>c</i><sub><i>j</i>:<i>l</i></sub> for the corresponding synapse identifier <i>k</i>
+(c.f. the sum with the expressions used in the computation of numbers <i>j</i>
+and <i>l</i>). We iterate in both sequences synchronously. Observe that both
+sequences have exacty the same size.
 </p><p>
 The algorithm which sets-up all columns in the tissue (each column
 exactly the same way) according to the matrix <i>A</i> is implemented
@@ -195,12 +199,12 @@ target columns.
 </p><p>
 The algorithm is supposed to spread synapses from the source column into target columns.
 We know exactly what synapses to move. It is each synapse in the territory
-of any cell of the kind <i>t</i> whose coordinates of the source cells identify
+of any cell of the kind <i>t</i> whose coordinates of the source cell identify
 a tissue cell of the kind <i>s</i>. Each of these synapses is uniquely identified by
 its synapse identifier (see the
 <a href="./cellconnect.html#column_setup">previous section</a>).
 Let us denote a set of these synapse identifiers as <em>spreading identifiers</em>
-<i>D</i><sub><i>s,t</i></sub>. We further know the exact count of the spread synapses
+<i>D</i><sub><i>s,t</i></sub>. We further know the exact count of those synapses
 (i.e. the size of the set <i>D</i><sub><i>s,t</i></sub>). We remember from the
 <a href="./cellconnect.html#column_setup">previous section</a>
 (namely from the matrix <i>A</i>) that tissue cells of the target kind <i>t</i> have
@@ -209,8 +213,8 @@ cell of the source kind <i>s</i>. Since there is exactly <i>N<sub>s</sub></i> ti
 cells of the source kind <i>s</i>, we thus have to spread exactly
 <i>a<sub>t,s</sub>N<sub>s</sub></i> synapses. Now appears a question
 how we distribute all those <i>a<sub>t,s</sub>N<sub>s</sub></i> synapses (whose
-positions in the source column are defined by the spreading identifiers) into
-<i>m</i>&times;<i>n</i>
+positions in the source column are defined by the spreading identifiers
+<i>D</i><sub><i>s,t</i></sub>) into <i>m</i>&times;<i>n</i>
 columns in the neighbourhood. We specify this distribution using a matrix <i>H</i>
 depicted on the right part of the picture. Observe the direct correspondence between
 elements of the matrix and columns in the neighbourhood. Clearly, the matrix <i>H</i>
@@ -224,8 +228,8 @@ must satisfy
         <i>h</i><sub><i>m</i>&minus;1,<i>n</i>&minus;1</sub>).
 </p><p>
 Note that during execution of the algorithm each column in the tissue will be
-considered as a source column once. Therefore, we use the same
-matrix <i>H</i> and the same set of spreading identifiers <i>D</i><sub>t,s</sub>
+considered as a source column. Therefore, we use the same matrix <i>H</i>
+and the same set of spreading identifiers <i>D</i><sub>t,s</sub>
 for each column in the tissue.
 We can safely recycle these data for each column, because we know from the
 <a href="./cellconnect.html#column_setup">previous section</a>
@@ -241,32 +245,6 @@ in <i>D</i><sub>t,s</sub> counting from zero (there is a natural total order
 on <i>D</i><sub>t,s</sub>). There must exist unique indices <i>i</i> and <i>j</i>
 into the matrix <i>H</i> such that
 </p><p>
-<!--We know from the-->
-<!--<a href="./cellconnect.html#column_setup">previous section</a>-->
-<!--that all columns were set-up exactly the same way. Synapses we have to spread-->
-<!--amongst columns thus have exactly the same synapse identifiers (in each-->
-<!--column).-->
-<!--</p><p>-->
-<!--It remains to say <em>how</em> we actually move synapses into target columns.-->
-<!--Clearly, there is no room for them, because territories of all cells in the tissue-->
-<!--are fully occupied (this was the output from the algorithm presented in the-->
-<!--<a href="./cellconnect.html#column_setup">previous section</a>).-->
-<!--Nevertheless, we also know from the previous section that all columns were-->
-<!--set-up exactly the same way. Synapses we have to spread amongst columns thus-->
-<!--have exactly the same <em>synapse identifiers</em> (see the-->
-<!--<a href="./cellconnect.html#column_setup">previous section</a>).-->
-<!--Synapses we have to spread amongst columns thus-->
-<!--lie on exactly the same synapse identifiers (i.e. positions) within all columns.-->
-<!--</p><p>-->
-    <!--We can easily and-->
-<!--uniquely identify each of these <i>a<sub>t,s</sub>N<sub>s</sub></i> positions-->
-<!--by <em>synapse identtifiers</em> introduced in the-->
-<!--<a href="./cellconnect.html#column_setup">previous section</a>-->
-<!--(note that <i>a<sub>t,s</sub> &le; T<sub>s</sub></i>).-->
-<!--Let <i>p</i> be a synapse identifier of any such position in the source column.-->
-<!--We show that <i>p</i> also uniquely identifies the target column in the neighbourhood-->
-<!--of the source column. First of all, there must exist unique indices  <i>i</i> and-->
-<!--<i>j</i> into the matrix <i>H</i> such that-->
 0 &le;
     <i>ord</i><sub><i>t,s</i></sub>(<i>p</i>) &minus;
         ((<i>h</i><sub>0,0</sub> + &hellip; +
@@ -282,28 +260,24 @@ From these indices we can directly compute the shift vector
 <b>w</b><sub><i>p</i></sub> =
     (<i>i</i>&minus;&lfloor;<i>m</i>/2&rfloor;, <i>j</i>&minus;&lfloor;<i>n</i>/2&rfloor;).
 </p><p>
-<!--from the central column of the neighbourhood to the target column inside it.-->
-Note that the position of the synapse in the target column (where we have to store
-it) is <i>p</i> again.
-</p><p>
 We are now ready to describe the process by which we move a synapse
-at a given position <i>p</i> &isin; <i>D</i><sub>t,s</sub> inside some column
-<i>c</i><sub>0</sub> located at certain tissue coordinates
-(<i>x</i><sub>0</sub>,<i>y</i><sub>0</sub>) into the same position <i>p</i> in
-a computed target column. First we compute coordinates
+at a given spreading identifier <i>p</i> &isin; <i>D</i><sub>t,s</sub> inside
+some column <i>c</i><sub>0</sub> located at certain tissue coordinates
+(<i>x</i><sub>0</sub>,<i>y</i><sub>0</sub>) into the same spreading
+identifier <i>p</i> in a computed target column. First we compute coordinates
 (<i>x</i><sub>1</sub>,<i>y</i><sub>1</sub>) =
     <i>F</i>(<i>x</i><sub>0</sub>,<i>y</i><sub>0</sub>) + <b>w</b><sub><i>p</i></sub>
 of the target column <i>c</i><sub>1</sub> for the synapse. Next we save a
-synapse at the position <i>p</i> in <i>c</i><sub>1</sub> and then we write at that
-position the synapse we move from <i>c</i><sub>0</sub>. Then we repeat the process
-with the saved synapse. It means that we compute coordinates
+synapse at the spreading identifier <i>p</i> in <i>c</i><sub>1</sub> and then
+we write at that spreading identifier the synapse we move from <i>c</i><sub>0</sub>.
+Then we repeat the process with the saved synapse. It means that we compute coordinates
 (<i>x</i><sub>2</sub>,<i>y</i><sub>2</sub>) =
     <i>F</i>(<i>x</i><sub>1</sub>,<i>y</i><sub>1</sub>) + <b>w</b><sub><i>p</i></sub>
 of the target column <i>c</i><sub>2</sub>. And again we save a
-synapse at the position <i>p</i> in <i>c</i><sub>2</sub> and we write at that
-position the synapse we saved from <i>c</i><sub>1</sub>.
+synapse at the spreading identifier <i>p</i> in <i>c</i><sub>2</sub> and we write at that
+spreading identifier the synapse we saved from <i>c</i><sub>1</sub>.
 We continue in this process until we either get back to the column
-<i>c</i><sub>0</sub>, or we compute coordinates which lie
+<i>c</i><sub>0</sub>, or we compute tissue coordinates which lie
 outside the tissue (this may only happen when at least one tissue axis
 is <em>not</em> the torus axis). The described procedure is depicted in the
 following picture (for the first type of termination):
@@ -313,30 +287,33 @@ following picture (for the first type of termination):
 We see the tissue, orientation of its axes, and selected columns. In each of these
 columns we see only cells of the target kind <i>t</i>. That is because we move
 synapses only amongst territories of these cells. Also observe that all synapses which
-we move along the dashed arrows lie at the same position
+we move along the dashed arrows lie at the same spreading identifier
 <i>p</i> &isin; <i>D</i><sub>t,s</sub> in these columns. Each dashed arrow represent
-the composition of two shifts from the position of a moved
+the composition of two shifts from the spreading identifier of a moved
 synapse. First there is a shift from a source column
 at some coordinates (<i>x</i>,<i>y</i>) to a target
 column at coordinates
 <i>F</i>(<i>x</i>,<i>y</i>) + <b>w</b><sub><i>p</i></sub>.
-And second there is the shift to the position <i>p</i> in the target column.
+And second there is the shift to the same spreading identifier <i>p</i> in the
+target column.
 </p><p>
-We have to ensure that synapses in all columns in the
-tissue at that position <i>p</i> &isin; <i>D</i><sub>t,s</sub>
-are moved. Therefore, we start the described process (with the same position
+We have to ensure that synapses in all columns in the tissue at that spreading
+identifier <i>p</i> &isin; <i>D</i><sub>t,s</sub> are moved. Therefore, we start
+the described process (with the same spreading identifier
 <i>p</i>) for each column in the tissue (i.e. for all coordinates
-(<i>x</i>,<i>y</i>)). We, of course, skip all columns whose
-synapses at the position <i>p</i> were already moved. Indeed, the process started from
+(<i>x</i>,<i>y</i>)). We, of course, skip all columns whose synapses at the
+spreading identifier <i>p</i> were already moved. Indeed, the process started from
 some column <i>c</i><sub>0</sub> actually moves synapses of several columns
 <i>c</i><sub>0</sub>, <i>c</i><sub>1</sub>, &hellip; <i>c</i><sub>k</sub>.
 We can thus safely skip all columns
 <i>c</i><sub>1</sub>, &hellip; <i>c</i><sub>k</sub>.
 It is easy to check whether to skip a given column: We start the process from that
-column only if <i>x</i> and <i>y</i> coordinates to source cell of a synapse at the
-position <i>p</i> in the column are equal to the tissue coordinates of that column.
+column only if <i>x</i> and <i>y</i> coordinates of a source cell of the synapse at the
+spreading identifier <i>p</i> in the column are equal to the tissue coordinates of
+that column.
 </p><p>
-Now we know how to move synapses at any given position <i>p</i> &isin; <i>D</i><sub>t,s</sub>
+Now we know how to move synapses at any given spreading identifier
+<i>p</i> &isin; <i>D</i><sub>t,s</sub>
 in all columns in the tissue. There are <i>a<sub>t,s</sub>N<sub>s</sub></i> spreading
 identifiers in <i>D</i><sub>t,s</sub>. So, we have to apply the process independently
 for each of them.
@@ -352,13 +329,13 @@ The presented algorithm is implemented in files
 </li></ul>
 <p>
 as a function <tt>spread_synapses_into_neighbourhoods</tt>. A module-private
-function <tt>go_to_next_task</tt> provides simultaneous computation of positions
-<i>p</i> in columns and indices <i>i</i> and <i>j</i> into the matrix <i>H</i>.
-A function <tt>decompose_shift_to_synapse</tt> then decomposes <i>p</i> into
-an index of a cell in a column and an index into the territory of that cell.
-The decomposition is necessary for physical access to synapses in the tissue.
-And a function <tt>thread_spread_synapses</tt> performs the move of synapses
-at a given position <i>p</i> in all columns in the tissue.
+function <tt>go_to_next_task</tt> provides simultaneous computation of spreading
+identifiers <i>p</i> in columns and indices <i>i</i> and <i>j</i> into the matrix
+<i>H</i>. A function <tt>decompose_shift_to_synapse</tt> then decomposes <i>p</i>
+into an index of a cell in a column and an index of the synapse in the territory of
+that cell. The decomposition is necessary for physical access to synapses in the tissue.
+And a function <tt>thread_spread_synapses</tt> performs spreading of synapses
+for a given fixed spreading identifier <i>p</i> in all columns in the tissue.
 </p><p>
 Note that as we call the whole algorithm for different source and target kinds
 <i>s</i> and <i>t</i>, we can always pass a different matrix <i>H</i> of different
