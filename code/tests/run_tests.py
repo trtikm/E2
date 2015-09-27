@@ -13,8 +13,8 @@ def parse_cmd_line():
                              "Then the script terminates.")
     parser.add_argument("-I","--include", nargs='+', type=str, default="",
                         help="A list of tests (names of executable files) which should be included to "
-                             "the testing. When the argument is ommmited, then all executables in the "
-                             "dirrectory specified by '--root_dir' will be automatically included.")
+                             "the testing. When the argument is omitted, then all executables in the "
+                             "directory specified by '--root_dir' will be automatically included.")
     parser.add_argument("-E","--exclude", nargs='+', type=str, default="",
                         help="A list of tests (names of executable files) which should be excluded from "
                              "the testing.")
@@ -89,7 +89,7 @@ def scriptMain():
         else:
             failed.append(test)
     if len(failed) == 0:
-        print("*** The testing was SUCCESSFULL.")
+        print("*** The testing was SUCCESSFUL.")
     else:
         print("*** The testing has FAILED. These tests have failed:")
         for name in failed:
