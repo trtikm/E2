@@ -344,8 +344,38 @@ This strategy is actually desired.
 </p>
 <h3 id="column_shift_function">Column-shift function</h3>
 <p>
+Let us consider a neural tissue with <i>X</i> columns along the <i>X</i> axis
+and <i>Y</i> columns along the <i>Y</i> axis. Then a <em>column shift function</em>
+<i>F</i> is any bijection on the set
+{0,&hellip;,<i>X</i>&minus;1}&times;{0,&hellip;,<i>Y</i>&minus;1}.
+We first clarify the notion of a column shift function on the following four
+examples:
+</p>
+<img src="./column_shift_function_examples.svg" alt="[column_shift_function_examples.svg]">
+<p>
+In each of the examples we see the same tiny neural tissue. It has four columns
+along <i>X</i> axis and three columns along <i>Y</i> axis. We see the same
+orientation of the axes in all examples (the same top view to the tissue).
+Each of these examples shows one possible column shift function for the tissue.
+The functions are depicted by arrows (mappings of coordinates of individual columns).
+In the example (a) the column shift function is obviously identity (i.e. coordinates
+of each column are mapped to itself). In the example (b) arrows form two cyclic
+paths. In the example (c) arrows form four cyclic paths. And arrows in the example
+(d) form a single cyclic paths spanning over all columns. In general, a column
+shift function <i>F</i> is always formed by one or more cyclic paths. The minimal
+count is 1 and the maximal is <i>X</i>&middot;<i>Y</i>.
+</p><p>
+The primary goal of this section is to provide a specification of a column
+shift function for a large neural tissue. On one hand, the specification
+must be considerably smaller than the tissue (i.e. size of the specification
+should not depend on tissue dimensions). On the other hand,
+it has to be flexible enough to allow us initialisation of the tissue
+with desired network properties (small-world property, power-law distribution
+of degrees, clustering coefficients).
+</p>
+<p>
 We provide and approach which is inspired in the <em>tiling plane</em>
-<a href="./cellconnect.html#references">[1]</a>.
+<a href="./cellconnect.html#references">[1,2]</a>.
 </p>
 <h2 id="delimiters">Initialising delimiters of migration lists</h2>
 <h2 id="references">References</h2>
