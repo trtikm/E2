@@ -5438,7 +5438,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -8109,7 +8109,7 @@
          x="-25.185806"
          y="69.401367">common orientation of <tspan
    style="font-style:italic"
-   id="tspan111235">X</tspan> axes</tspan></text>
+   id="tspan111235">Y</tspan> axes</tspan></text>
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker104930-1)"
        d="m -209.39926,89.425446 0,213.578014"
@@ -8129,7 +8129,7 @@
          x="-286.61981"
          y="-217.44287">common orientation of <tspan
    style="font-style:italic"
-   id="tspan111233">Y</tspan> axes</tspan></text>
+   id="tspan111233">X</tspan> axes</tspan></text>
     <g
        id="g4463"
        transform="matrix(0,1,-1,0,663.22383,29.490884)">
