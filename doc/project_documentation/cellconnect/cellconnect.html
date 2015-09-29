@@ -372,12 +372,32 @@ should not depend on tissue dimensions). On the other hand,
 it has to be flexible enough to allow us initialisation of the tissue
 with desired network properties (small-world property, power-law distribution
 of degrees, clustering coefficients).
+</p><p>
+We can use the explicit specification of a column shift function (i.e. by a list
+of all its arrows) whenever counts of columns along <i>X</i> and <i>Y</i>
+axes are quite small (usually not exceeding 100 columns). Therefore, we express
+a column shift function <i>F</i> for a given large neural tissue in terms of
+several considerably smaller column shift functions
+<i>F</i><sub>0</sub>,&hellip;<i>F</i><sub><i>N</i>&minus;1</sub>
+called <em>templates</em>. We can, for example, use all four column shift
+functions defined in the picture above as templates. These templates are defined
+on the same area of 4&times;3 columns. It is not necessary. Templates may
+differ (besides definitions of their arrows) also in counts of columns along
+<i>X</i> and <i>Y</i> axes (i.e. in the area on which they are defined).
+Once we have all <i>N</i> templates prepared, we define the column
+shift function <i>F</i> such that we map each template into several concrete areas
+in the large tissue. We are supposed to cover whole the tissue by templates
+without any gaps or overlaps. This process is inspired by the problem of
+<em>tiling plane</em>
+<a href="./cellconnect.html#references">[1,2]</a>.
+We explain key features and principles of the proposed specification in the
+following example.
+</p>
+<img src="./tempates_tiling_intuition_example.svg" alt="[tempates_tiling_intuition_example.svg]">
+<p>
+
 </p>
 <img src="./shift_tempate_scaling_and_repeating.svg" alt="[shift_tempate_scaling_and_repeating.svg]">
-<p>
-We provide and approach which is inspired in the <em>tiling plane</em>
-<a href="./cellconnect.html#references">[1,2]</a>.
-</p>
 <h2 id="delimiters">Initialising delimiters of migration lists</h2>
 <h2 id="references">References</h2>
 <table>
