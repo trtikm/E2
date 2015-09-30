@@ -395,6 +395,53 @@ following example.
 </p>
 <img src="./tempates_tiling_intuition_example.svg" alt="[tempates_tiling_intuition_example.svg]">
 <p>
+We see the specification consists of four templates
+<i>F</i><sub>0</sub>, <i>F</i><sub>1</sub>, <i>F</i><sub>2</sub>, <i>F</i><sub>3</sub>,
+and three tensors <i>L</i>, <i>R</i><sub><i>X</i></sub>, <i>R</i><sub><i>Y</i></sub>
+providing a complete information for mapping the templates to concrete areas of the
+tissue. The mapping is mostly given by the <em>layout</em> matrix <i>L</i>. Its elements
+are indices of individual templates and coordinates of elements in the matrix directly
+correspond to particular areas in the tissue. Unfortunately, we cannot see the
+correspondence without the <em>repetition</em> vectors <i>R</i><sub><i>X</i></sub> and
+<i>R</i><sub><i>Y</i></sub>, because the layout matrix <i>L</i> is compressed.
+The repetition vectors allows us to decompress it into the following matrix:
+</p>
+<img src="./tempates_tiling_intuition_example_decompressed_L.svg" alt="[tempates_tiling_intuition_example_decompressed_L.svg]">
+<p>
+Now we can see the direct correspondence between elements of this matrix and
+regions in the column shift function <i>F</i> depicted in the right part
+of the picture. The regions are separated by dotted lines. For example,
+the leftmost column in the matrix maps templates
+<i>F</i><sub>0</sub>, <i>F</i><sub>1</sub>, <i>F</i><sub>1</sub>, <i>F</i><sub>0</sub>
+into the leftmost column of regions in <i>F</i>.
+</p><p>
+Each triple <i>b</i>:<i>e</i>:<i>n</i> in <i>R</i><sub><i>X</i></sub> specifies
+that block of rows <i>b</i>,<i>b</i>+1,&hellip;,<i>e</i>&minus;1 in <i>L</i>
+is repeated exactly <i>n</i> times in the uncompressed <i>L</i>.
+Triples in <i>R</i><sub><i>Y</i></sub> have similar meaning: they specify
+repetitions of blocks of columns. For example, the first triple 0:1:1 of
+<i>R</i><sub><i>X</i></sub> says that the first row of <i>L</i> is repeated once.
+The second triple 1:2:2 says that the second row is repeated twice. And the
+last triple defines a single repetion of the third row of <i>L</i>.
+</p><p>
+The compression of <i>L</i> is necessary, because dimensions of the uncompressed
+version grow with dimensions of the tissue. In the compressed specification we can
+expand to larger tissues simply by increasing the third components of triples
+in vectors <i>R</i><sub><i>X</i></sub> and <i>R</i><sub><i>Y</i></sub>.
+It is important to mention that we never uncompress <i>L</i>. It means that
+the column shift function <i>F</i> operates only on the compressed specification.
+We show the computation on a the following concrete example.
+</p><p>
+Let us consider a column depicted with gray colour in the picture above. Its
+tissue coordinates are (3,2). According to the outgoing arrow,
+<i>F</i>((2,3)) should evaluate to tissue coordinates (2,4).
+The key part of the evaluation is the conversion of the input coordinates
+(3,2) into indices <i>u,v</i> into the layout matrix <i>L</i> and indices
+<i>p,q</i> into the template <i>F</i><sub><i>l</i><sub><i>u,v</i></sub></sub>.
+We only show show the computation for indices <i>u</i> and <i>p</i>, since
+the computation of the remaining is analogous. We first find a repetition block
+in <i>R</i><sub><i>X</i></sub> corresponding to the tissue coordinate 3.
+The first triple 0:1:1
 
 </p>
 <img src="./shift_tempate_scaling_and_repeating.svg" alt="[shift_tempate_scaling_and_repeating.svg]">
