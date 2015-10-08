@@ -258,7 +258,7 @@ def parse_cmd_line():
     parser.add_argument("-V","--version", type=str, default="0.01",
                         help="An initial version of the test. The version can be later updated "
                              "in a function 'get_program_version()' in a generated file 'program_info.cpp'")
-    parser.add_argument("-L","--link_libs", nargs='+', type=str, default="utility",
+    parser.add_argument("-L","--link_libs", nargs='+', type=str, default=["utility"],
                         help="A list of E2 libraries with which the test should be"
                              "linked with. The library 'utility' is always included automatically.")
     args = parser.parse_args()

@@ -401,8 +401,8 @@ We first explain basic features of the proposed specification on an example. The
 we add a description of two more features necessary for sufficient expressivity
 of the specification.
 </p>
-<img src="./tempates_tiling_intuition_example.svg"
-     alt="[tempates_tiling_intuition_example.svg]">
+<img src="./templates_tiling_intuition_example.svg"
+     alt="[templates_tiling_intuition_example.svg]">
 <p>
 We see in the picture that the specification (on the left) of the column
 shift function <i>F</i> (on the right) consists of six templates
@@ -428,8 +428,8 @@ The second triple 1:3:2 says that the second and third row are repeated twice
 of the fourth row. If we apply this process also for elements of
 <i>R</i><sub><i>Y</i></sub>, then we receive the following uncompressed matrix:
 </p>
-<img src="./tempates_tiling_intuition_example_decompressed_L.svg"
-     alt="[tempates_tiling_intuition_example_decompressed_L.svg]">
+<img src="./templates_tiling_intuition_example_decompressed_L.svg"
+     alt="[templates_tiling_intuition_example_decompressed_L.svg]">
 <p>
 Now we can see the direct correspondence between elements of this matrix and
 regions in <i>F</i> (the regions are separated by dotted lines). For example,
@@ -496,13 +496,18 @@ computation later.
 </p><p>
 Now we focus on improvements of the expressivity of the proposed specification.
 The specification currently maps templates to completely isolated regions of
-<i>F</i>. We remove this limitation such that we allow interconnection of templates
-by <em>external</em> arrows.
+<i>F</i>. We remove this limitation such that we extend the specification of
+templates by <em>external</em> arrows. Once a template is mapped to a certain
+region in the tissue its external arrows define interconnection of its tissue
+columns with tissue columns inside regions in the region's direct neighbourhood.
+The idea is depicted in the following picture.
 </p>
-<img src="./tempates_interconnection.svg"
-     alt="[tempates_interconnection.svg]">
-<img src="./shift_tempate_scaling_and_repeating.svg"
-     alt="[shift_tempate_scaling_and_repeating.svg]">
+<img src="./templates_interconnection_intuition.svg"
+     alt="[templates_interconnection_intuition.svg]">
+<img src="./templates_interconnection.svg"
+     alt="[templates_interconnection.svg]">
+<img src="./shift_template_scaling_and_repeating.svg"
+     alt="[shift_template_scaling_and_repeating.svg]">
 <h2 id="delimiters">Initialising delimiters of migration lists</h2>
 <h2 id="references">References</h2>
 <table>
