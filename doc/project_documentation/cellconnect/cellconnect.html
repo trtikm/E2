@@ -497,17 +497,63 @@ computation later.
 Now we focus on improvements of the expressivity of the proposed specification.
 The specification currently maps templates to completely isolated regions of
 <i>F</i>. We remove this limitation such that we extend the specification of
-templates by <em>external</em> arrows. Once a template is mapped to a certain
+templates by <em>external arrows</em>. Once a template is mapped to a certain
 region in the tissue its external arrows define interconnection of its tissue
-columns with tissue columns inside regions in the region's direct neighbourhood.
-The idea is depicted in the following picture.
+columns with tissue columns inside regions in the direct neighbourhood (of the
+region where the template was mapped to). The idea is depicted in the following
+picture.
 </p>
 <img src="./templates_interconnection_intuition.svg"
      alt="[templates_interconnection_intuition.svg]">
-<img src="./templates_interconnection.svg"
-     alt="[templates_interconnection.svg]">
+<p>
+On the left we see a template with external arrows. The arrows are depicted as
+black triangles annotated by numbers. An orientation of an external arrow determines
+its kind. If it points to the interior of its tissue column, then the column is the target
+of a regular arrow coming from a region in its neighbourhood. If it points from the
+interior of its tissue column, then the column is the source of a regular arrow coming
+from this region to its neighbourhood. In both cases an orientation of an external
+arrow determines a concrete region in the neighbourhood and its annotation number
+determined a concrete tissue column in that region. For example, a tissue column
+in the middle has two external arrows. One points into the tissue column from the
+left and it is annotated by the number 1. The second external arrow points from the
+the column's interior downwards and it is annotated by the number 0. So, the tissue
+column is a target of a regular arrow coming from the region on the left (at lower
+<i>Y</i> coordinates), and it is also a source column of a regular arrow going into
+the region bellow (at higher <i>X</i> coordinates).
+</p><p>
+The right part of the picture shows how external arrows are replaced by regular ones
+at region where templates are mapped onto. We see that our template (from the left
+part of the picture) is mapped onto the region in the middle. Let us discuss how
+regular arrows are set for the tissue column in the middle of this region. The
+external arrow number 1 specifies a regular arrow coming from the region on the
+left in the neighbourhood and from the tissue column with the same number 1.
+Moreover, that column must have an external arrow pointing outside that column
+and it must point to the right. Similarly, the second external arrow number 0
+specifies a regular arrow going to the region down in the neighbourhood and
+to the tissue column with the same number 0. Moreover, that column must have
+an external arrow pointing to inside of that column and it must point from the top.
+Remaining regular arrows in the picture are set in the same way.
+</p><p>
+External arrows in the example above used only four orientations (left, right,
+top, and down). In fact, we also allow the remaining four diagonal orientations.
+A tissue column in a region thus can be interconnected with any of eight
+regions in its direct neighbourhood.
+</p><p>
+The second improvement of the specification allows for establishing the small
+world property. We assume in the specification that dimensions of all templates
+are incomparably smaller than dimensions of a resulting column shift function.
+Therefore, the function is divided into large number of regions (where individual
+templates are mapped onto). Since the specification only allows for interconnection
+of tissue columns in directly adjacent regions, the small world property (i.e. the
+longest of all shortest paths in the network between any two cells) can be quite
+long. The goal of this improvement is to allow scaling of templates. When templates
+are mapped into larger regions (due to their scaling), the column shift function
+can be divided into lower count of these regions. The following
+</p>
 <img src="./shift_template_scaling_and_repeating.svg"
      alt="[shift_template_scaling_and_repeating.svg]">
+<img src="./templates_interconnection.svg"
+     alt="[templates_interconnection.svg]">
 <h2 id="delimiters">Initialising delimiters of migration lists</h2>
 <h2 id="references">References</h2>
 <table>
