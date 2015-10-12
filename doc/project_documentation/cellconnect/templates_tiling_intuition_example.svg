@@ -15,7 +15,7 @@
    id="svg2"
    version="1.1"
    inkscape:version="0.91 r13725"
-   sodipodi:docname="tempates_tiling_intuition_example.svg">
+   sodipodi:docname="templates_tiling_intuition_example.svg">
   <defs
      id="defs4">
     <marker
@@ -5771,8 +5771,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.2103172"
-     inkscape:cx="366.65202"
-     inkscape:cy="19.955311"
+     inkscape:cx="380.57053"
+     inkscape:cy="12.13334"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -8100,7 +8100,7 @@
        cy="223.80621"
        cx="107.84891"
        id="circle31140"
-       style="fill:#b4b4b4;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
+       style="fill:none;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:1;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1" />
     <circle
        r="6.7857141"
        cy="223.78549"

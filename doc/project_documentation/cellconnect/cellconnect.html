@@ -242,7 +242,7 @@ thus reside at exactly the same positions <i>D</i><sub>t,s</sub> in all columns.
 </p><p>
 Let <i>p</i> &isin; <i>D</i><sub>t,s</sub>  be a spreading identifier of a synapse in some
 source column. We show that <i>p</i> also uniquely identifies a <em>shift vector</em>
-<b>w</b><sub><i>p</i></sub> from the central column of the neighbourhood
+<b><i>w</i></b><sub><i>p</i></sub> from the central column of the neighbourhood
 of the source column to a particular target column inside the neighbourhood.
 Let <i>ord</i><sub><i>t,s</i></sub>(<i>p</i>) be the ordinal number of <i>p</i>
 in <i>D</i><sub>t,s</sub> counting from zero (there is a natural total order
@@ -261,7 +261,7 @@ into the matrix <i>H</i> such that
 </p><p>
 From these indices we can directly compute the shift vector
 </p><p>
-<b>w</b><sub><i>p</i></sub> =
+<b><i>w</i></b><sub><i>p</i></sub> =
     (<i>i</i>&minus;&lfloor;<i>m</i>/2&rfloor;, <i>j</i>&minus;&lfloor;<i>n</i>/2&rfloor;).
 </p><p>
 We are now ready to describe the process by which we move a synapse
@@ -270,13 +270,13 @@ some column <i>c</i><sub>0</sub> located at certain tissue coordinates
 (<i>x</i><sub>0</sub>,<i>y</i><sub>0</sub>) into the same spreading
 identifier <i>p</i> in a computed target column. First we compute coordinates
 (<i>x</i><sub>1</sub>,<i>y</i><sub>1</sub>) =
-    <i>F</i>(<i>x</i><sub>0</sub>,<i>y</i><sub>0</sub>) + <b>w</b><sub><i>p</i></sub>
+    <i>F</i>(<i>x</i><sub>0</sub>,<i>y</i><sub>0</sub>) + <b><i>w</i></b><sub><i>p</i></sub>
 of the target column <i>c</i><sub>1</sub> for the synapse. Next we save a
 synapse at the spreading identifier <i>p</i> in <i>c</i><sub>1</sub> and then
 we write at that spreading identifier the synapse we move from <i>c</i><sub>0</sub>.
 Then we repeat the process with the saved synapse. It means that we compute coordinates
 (<i>x</i><sub>2</sub>,<i>y</i><sub>2</sub>) =
-    <i>F</i>(<i>x</i><sub>1</sub>,<i>y</i><sub>1</sub>) + <b>w</b><sub><i>p</i></sub>
+    <i>F</i>(<i>x</i><sub>1</sub>,<i>y</i><sub>1</sub>) + <b><i>w</i></b><sub><i>p</i></sub>
 of the target column <i>c</i><sub>2</sub>. And again we save a
 synapse at the spreading identifier <i>p</i> in <i>c</i><sub>2</sub> and we write at that
 spreading identifier the synapse we saved from <i>c</i><sub>1</sub>.
@@ -298,7 +298,7 @@ the composition of two shifts from the spreading identifier of a moved
 synapse. First there is a shift from a source column
 at some coordinates (<i>x</i>,<i>y</i>) to a target
 column at coordinates
-<i>F</i>(<i>x</i>,<i>y</i>) + <b>w</b><sub><i>p</i></sub>.
+<i>F</i>(<i>x</i>,<i>y</i>) + <b><i>w</i></b><sub><i>p</i></sub>.
 And second there is the shift to the same spreading identifier <i>p</i> in the
 target column.
 </p><p>
@@ -548,10 +548,40 @@ of tissue columns in directly adjacent regions, the small world property (i.e. t
 longest of all shortest paths in the network between any two cells) can be quite
 long. The goal of this improvement is to allow scaling of templates. When templates
 are mapped into larger regions (due to their scaling), the column shift function
-can be divided into lower count of these regions. The following
+can be divided into lower count of these regions. We explain the scaling in two
+steps. First we explain the basics, where we ignore external arrows. Then we
+complete the description by including external arrows.
 </p>
-<img src="./shift_template_scaling_and_repeating.svg"
-     alt="[shift_template_scaling_and_repeating.svg]">
+<img src="./templates_scaling.svg"
+     alt="[templates_scaling.svg]">
+<p>
+On the left we see a template (it is the same template as in the previous picture)
+and on the right there is depicted a region of a column shift function, where the
+template is mapped onto. Observe that each tissue column in the template is mapped
+into a block of 2&times;2 columns inside the region. Regions are highlighted by
+dashed rectangles. The mapping is straightforward. For example, the left-top tissue
+column in the template is mapped to the left-top block in the region. The common dimensions
+of all blocks determine the scale of the template. Namely, a scale <i>S</i><sub><i>X</i></sub>
+of the template along the <i>X</i> axis is 2. And a scale <i>S</i><sub><i>Y</i></sub>
+of the template along the <i>Y</i> axis is also 2. Of course, scales
+<i>S</i><sub><i>X</i></sub> and <i>S</i><sub><i>Y</i></sub> may differ in general.
+We can identify columns in any block by block-local coordinates: The block's origin
+is in the tissue column with minimal coordinates along both <i>X</i> and <i>Y</i> axes,
+and block-local axes are parallel with axes of the tissue. In our example each block
+has four tissue columns uniquely identified by block-local coordinates (0,0), (0,1),
+(1,0), and (1,1). We use block-local coordinates to map arrows in the template to the
+corresponding arrows inside the region. Arrows in the column shift function
+exist only between tissue columns of exactly the same block-local coordinates.
+
+
+    of the template are
+
+    If ()<b><i>o</i></b>
+
+
+</p>
+<img src="./templates_interconnection_scaled.svg"
+     alt="[templates_interconnection_scaled.svg]">
 <img src="./templates_interconnection.svg"
      alt="[templates_interconnection.svg]">
 <h2 id="delimiters">Initialising delimiters of migration lists</h2>
