@@ -19,7 +19,7 @@ You need
 <a href="http://windows.microsoft.com/">MS Windows</a>
 8.1 or later running on your computer.
 </p>
-<p>TODO</p>
+<p><kbd style="color:red">TODO</kbd></p>
 <!--#- Installation notes:-->
 <!--#        - Use a desktop computer with at least eight hardware threads and 16GB RAM.-->
 <!--#        - Install MS Windows 8.1 or later, or Ubuntu 15.04 or later, or Linux MINT 17.2 or later.-->
@@ -107,28 +107,28 @@ Required packages for all users:
     <a href="https://gcc.gnu.org/">GCC</a>
     collection of compilers. Note that E2 project requires a support of
     C++11 standard.
-    TODO: specify a terminal command to install the package!!!
+    <kbd style="color:red">TODO: specify a terminal command to install the package!!!</kbd>
 </li><li>
     <a href="http://www.cmake.org/">CMake</a>
     version 2.8 or later. It is a build system for C++ program. We recommend to install
-    also Qt GUI application <tt>cmake-gui</tt>. You can install both CMake and its GUI
-    either in Ubuntu Software Center by searching for a string <tt>cmake gui</tt> or in the
+    also Qt GUI application <kbd>cmake-gui</kbd>. You can install both CMake and its GUI
+    either in Ubuntu Software Center by searching for a string <kbd>cmake gui</kbd> or in the
     terminal using a command:
     <ul><li>
-        <tt>sudo apt-get install cmake cmake-gui</tt>
+        <kbd>sudo apt-get install cmake cmake-gui</kbd>
     </li></ul>
 </li><li>
     <a href="https://www.python.org/">Python</a>
     development 64 bit version 3.4 or later. We emphasise that the development
     version is required.
-    TODO: specify a concrete package name for <tt>apt-get</tt> as an example!!!
+    <kbd style="color:red">TODO: specify a concrete package name for <kbd>apt-get</kbd> as an example!!!</kbd>
     Let &lt;<i>python-install-dir</i>&gt; represents
     a complete path to the directory where you installed the Python. If you use
-    <tt>Ubuntu Software Center</tt> or <tt>apt-get</tt> for the installation, then
+    <kbd>Ubuntu Software Center</kbd> or <kbd>apt-get</kbd> for the installation, then
     the installation directory should normally be
-    <tt>/usr/lib/python</tt>&lt;<i>python-version</i>&gt;,
+    <kbd>/usr/lib/python</kbd>&lt;<i>python-version</i>&gt;,
     where &lt;<i>python-version</i>&gt; is a concrete version of Python
-    (two numbers connected by the dot) you installed (e.g. <tt>3.4</tt>).
+    (two numbers connected by the dot) you installed (e.g. <kbd>3.4</kbd>).
     E2 uses several Python scripts to manage simulations and testing.
 </li><li>
     <a href="http://www.Boost.org">Boost</a>
@@ -137,11 +137,11 @@ Required packages for all users:
     with the unpacked content. Now open the terminal (e.g. by pressing Ctrl+Alt+T)
     and type there the following three commands:
     <ul><li>
-        <tt>cd</tt> &lt;<i>boost-install-dir</i>&gt;
+        <kbd>cd</kbd> &lt;<i>boost-install-dir</i>&gt;
     </li><li>
-        <tt>./bootstrap.sh --with-python=python</tt>&lt;<i>python-version</i>&gt;
+        <kbd>./bootstrap.sh --with-python=python</kbd>&lt;<i>python-version</i>&gt;
     </li><li>
-        <tt>./b2 --build-dir="</tt>&lt;<i>boost-install-dir</i>&gt;<tt>/build/gcc" address-model=64 toolset=gcc stage</tt>
+        <kbd>./b2 --build-dir="</kbd>&lt;<i>boost-install-dir</i>&gt;<kbd>/build/gcc" address-model=64 toolset=gcc stage</kbd>
     </li></ul>
 </li><li>
     <a href="http://eigen.tuxfamily.org">Eigen</a>
@@ -154,8 +154,8 @@ Required packages for all users:
     framework 64 bit version 5.4.1 or later. Make sure you install also
     <a href="http://www.qt.io/ide/">Qt Creator</a>
     IDE version 3.4.2 or later (it is a common part of the framework's package).
-    TODO: specify what components of the Qt framework are needed!!!
-    TODO: describe the installation of the CMake plug-in for Qt Creator!!!
+    <kbd style="color:red">TODO: specify what components of the Qt framework are needed!!!</kbd>
+    <kbd style="color:red">TODO: describe the installation of the CMake plug-in for Qt Creator!!!</kbd>
     Qt Creator is the main development IDE for C++ code of the project. We discuss
     configuration and building of the project's source code in Qt Creator later in
     <a href="./installation_guide.html#ubuntu_building_in_qtcreator">this section</a>.
@@ -213,7 +213,7 @@ and second in the terminal.
 </p>
 <h4 id="ubuntu_getting_e2_via_smartgit">Cloning project's repository via SmartGit</h4>
 <p>
-TODO
+<kbd style="color:red">TODO</kbd>
 </p>
 <h4 id="ubuntu_getting_e2_in_terminal">Cloning project's repository in terminal</h4>
 <p>
@@ -223,9 +223,9 @@ directory &lt;<i>E2-install-dir</i>&gt;. Next, open the terminal
 (e.g. by pressing Ctrl+Alt+T) and type there the following two commands:
 </p>
 <ul><li>
-    <tt>cd</tt> &lt;<i>E2-install-dir</i>&gt;
+    <kbd>cd</kbd> &lt;<i>E2-install-dir</i>&gt;
 </li><li>
-    <tt>git clone https://github.com/trtikm/E2.git .</tt>
+    <kbd>git clone https://github.com/trtikm/E2.git .</kbd>
 </li></ul>
 <p>
 Note that the ending dot '.' in the second command is its necessary part.
@@ -233,103 +233,103 @@ So, do not forget it!
 </p>
 <h3 id="ubuntu_building_in_qtcreator">Building E2 in Qt Creator</h3>
 <p>
-Start the Qt Creator. First we configure <tt>Kits</tt>. In the menu navigate to
-<tt>Tools&gt;Options&gt;Kits</tt> and select <tt>Desktop (Default)</tt> kit
-under <tt>Manual</tt> kits. Now select the following compiler and debugger
+Start the Qt Creator. First we configure <kbd>Kits</kbd>. In the menu navigate to
+<kbd>Tools&gt;Options&gt;Kits</kbd> and select <kbd>Desktop (Default)</kbd> kit
+under <kbd>Manual</kbd> kits. Now select the following compiler and debugger
 (it is very likely, that they are already selected):
 </p>
 <ul><li>
-    <tt>GCC (x86 64bit in /usr/bin)</tt>
+    <kbd>GCC (x86 64bit in /usr/bin)</kbd>
 </li><li>
-    <tt>System GDB at /usr/bin/gdb</tt>
+    <kbd>System GDB at /usr/bin/gdb</kbd>
 </li></ul>
 <p>
-Then confirm your choice by clicking on the button <tt>OK</tt>.
+Then confirm your choice by clicking on the button <kbd>OK</kbd>.
 </p>
 <p>
-Next in the menu navigate to <tt>File>Open File or Project</tt> and open there the file
+Next in the menu navigate to <kbd>File>Open File or Project</kbd> and open there the file
 </p>
 <ul><li>
-    &lt;<i>E2-install-dir</i>&gt;<tt>/CMakeLists.txt</tt>
+    &lt;<i>E2-install-dir</i>&gt;<kbd>/CMakeLists.txt</kbd>
 </li></ul>
 <p>
 In the subsequent dialog specify the following build directory:
 </p>
 <ul><li>
-    &lt;<i>E2-install-dir</i>&gt;<tt>/build/</tt>&lt;<i>build-type</i>&gt;
+    &lt;<i>E2-install-dir</i>&gt;<kbd>/build/</kbd>&lt;<i>build-type</i>&gt;
 </li></ul>
 <p>
-where &lt;<i>build-type</i>&gt; can be either <tt>Debug</tt> or <tt>Release</tt>.
+where &lt;<i>build-type</i>&gt; can be either <kbd>Debug</kbd> or <kbd>Release</kbd>.
 Choose one according to your preferences. (You may later create another configuration
 for the other choice. You will be then able to switch between the configurations
-any time). Finally, confirm your chice by clickin on the button <tt>Configure project</tt>.
+any time). Finally, confirm your chice by clickin on the button <kbd>Configure project</kbd>.
 </p><p>
-Now switch to <tt>Projects</tt> tab (shortcut Ctrl+5, or click to the 5th icon from the top in
+Now switch to <kbd>Projects</kbd> tab (shortcut Ctrl+5, or click to the 5th icon from the top in
 the vertical bar appearing at the very left of the application window). Into the edit
-box titled <tt>CMake arguments</tt> write the following line of variable definitions:
+box titled <kbd>CMake arguments</kbd> write the following line of variable definitions:
 </p>
 <ul><li>
-    <tt>-DCMAKE_BUILD_TYPE=</tt>&lt;<i>build-type</i>&gt;
-    <tt>-DE2_BUILD_ALSO_TESTS=</tt>&lt;<i>yes-no</i>&gt;
-    <tt>-DBOOST_INSTALL_DIR=</tt>&lt;<i>boost-install-dir</i>&gt;
-    <tt>-DEIGEN_INSTALL_DIR=</tt>&lt;<i>eigen-install-dir</i>&gt;
-    <tt>-DPYTHON_LIBRARY=</tt>&lt;<i>python-install-dir</i>&gt;
+    <kbd>-DCMAKE_BUILD_TYPE=</kbd>&lt;<i>build-type</i>&gt;
+    <kbd>-DE2_BUILD_ALSO_TESTS=</kbd>&lt;<i>yes-no</i>&gt;
+    <kbd>-DBOOST_INSTALL_DIR=</kbd>&lt;<i>boost-install-dir</i>&gt;
+    <kbd>-DEIGEN_INSTALL_DIR=</kbd>&lt;<i>eigen-install-dir</i>&gt;
+    <kbd>-DPYTHON_LIBRARY=</kbd>&lt;<i>python-install-dir</i>&gt;
 </li></ul>
 <p>
-where possible values for &lt;<i>yes-no</i>&gt; are <tt>Yes</tt> or <tt>No</tt>.
-Then click on the button <tt>Details</tt> inside the section <tt>Build Steps</tt> and amongst
-available targets choose <tt>install</tt>.
+where possible values for &lt;<i>yes-no</i>&gt; are <kbd>Yes</kbd> or <kbd>No</kbd>.
+Then click on the button <kbd>Details</kbd> inside the section <kbd>Build Steps</kbd> and amongst
+available targets choose <kbd>install</kbd>.
 </p><p>
-Finally, go to the menu and select there <tt>Build&gt;Run CMake</tt>. This completes the configuration.
-Check the output produced by the CMake in the <tt>General Messages</tt> window (shortcut Alt+6)
+Finally, go to the menu and select there <kbd>Build&gt;Run CMake</kbd>. This completes the configuration.
+Check the output produced by the CMake in the <kbd>General Messages</kbd> window (shortcut Alt+6)
 that no error occurred in the process. Normally, the output should be without any errors. But if
 there are some then use the output to resolve them.
 </p>
 <p>
 You can build the project by pressing Ctrl+B or my selecting a menu item under
-the <tt>Build</tt> menu (there are several possibilities for your choice).
+the <kbd>Build</kbd> menu (there are several possibilities for your choice).
 All resulting binaries can then be found in the directory:
 </p>
 <ul><li>
-    &lt;<i>E2-install-dir</i>&gt;<tt>/dist</tt>
+    &lt;<i>E2-install-dir</i>&gt;<kbd>/dist</kbd>
 </li></ul>
 <h3 id="ubuntu_building_in_terminal">Building E2 in terminal</h3>
 <p>
-First we have to use <tt>cmake-gui</tt> application to generate build scripts of the
-native <tt>Makefiles</tt> build system. So, open the terminal (e.g. by pressing
+First we have to use <kbd>cmake-gui</kbd> application to generate build scripts of the
+native <kbd>Makefiles</kbd> build system. So, open the terminal (e.g. by pressing
 Ctrl+Alt+T) and type there a command:
 </p>
 <ul><li>
-    <tt>cmake-gui</tt>
+    <kbd>cmake-gui</kbd>
 </li></ul>
 <p>
-Into the edit-box <tt>Where is the source code</tt> insert the path:
+Into the edit-box <kbd>Where is the source code</kbd> insert the path:
 </p>
 <ul><li>
     &lt;<i>E2-install-dir</i>&gt;
 </li></ul>
 <p>
-Then into the edit-box <tt>Where to build the binaries</tt> insert the path:
+Then into the edit-box <kbd>Where to build the binaries</kbd> insert the path:
 </p>
 <ul><li>
-    &lt;<i>E2-install-dir</i>&gt;<tt>/build/</tt>&lt;<i>build-type</i>&gt;
+    &lt;<i>E2-install-dir</i>&gt;<kbd>/build/</kbd>&lt;<i>build-type</i>&gt;
 </li></ul>
 <p>
-where &lt;<i>build-type</i>&gt; can be either <tt>Debug</tt> or <tt>Release</tt>.
+where &lt;<i>build-type</i>&gt; can be either <kbd>Debug</kbd> or <kbd>Release</kbd>.
 </p><p>
-Then press the button <tt>Configure</tt>. If the build directory does not exist yet
+Then press the button <kbd>Configure</kbd>. If the build directory does not exist yet
 (which is very likely to be the case), then let CMake to create it for you. In the subsequent
 dialog select the following:
 </p>
 <ul><li>
-    In the drop-down box called <tt>Specify the generator for this project</tt>
-    choose the option <tt>Unix Makefiles</tt>.
+    In the drop-down box called <kbd>Specify the generator for this project</kbd>
+    choose the option <kbd>Unix Makefiles</kbd>.
 </li><li>
-    And select the radio-button <tt>Use default native compilers</tt>.
+    And select the radio-button <kbd>Use default native compilers</kbd>.
 </li></ul>
 <p>
 It is very likely that both options are already selected in the dialog. Confirm
-your selection by clicking on the button <tt>Finish</tt>.
+your selection by clicking on the button <kbd>Finish</kbd>.
 </p><p>
 The process should terminate with errors. That is expected, because we have not
 specified all necessary information yet. Namely, we have to specify the following
@@ -337,56 +337,56 @@ variables shown in the application with the red background (the red background o
 a variable indicates a necessity to specify or verify its value):
 </p>
 <ul><li>
-    <tt>CMAKE_BUILD_TYPE</tt> &nbsp;&nbsp;&nbsp; Specify your preferred
-    &lt;<i>build-type</i>&gt; (i.e. either <tt>Debug</tt> or <tt>Release</tt>).
+    <kbd>CMAKE_BUILD_TYPE</kbd> &nbsp;&nbsp;&nbsp; Specify your preferred
+    &lt;<i>build-type</i>&gt; (i.e. either <kbd>Debug</kbd> or <kbd>Release</kbd>).
 </li><li>
-    <tt>E2_BUILD_ALSO_TESTS</tt> &nbsp;&nbsp;&nbsp; Write there <tt>Yes</tt>,
-    if you want to build also tests, and <tt>No</tt> otherwise.
+    <kbd>E2_BUILD_ALSO_TESTS</kbd> &nbsp;&nbsp;&nbsp; Write there <kbd>Yes</kbd>,
+    if you want to build also tests, and <kbd>No</kbd> otherwise.
 </li><li>
-    <tt>BOOST_INSTALL_DIR</tt> &nbsp;&nbsp;&nbsp; Specify the complete path
+    <kbd>BOOST_INSTALL_DIR</kbd> &nbsp;&nbsp;&nbsp; Specify the complete path
     &lt;<i>boost-install-dir</i>&gt;.
 </li><li>
-    <tt>EIGEN_INSTALL_DIR</tt> &nbsp;&nbsp;&nbsp; Insert the complete path
+    <kbd>EIGEN_INSTALL_DIR</kbd> &nbsp;&nbsp;&nbsp; Insert the complete path
     &lt;<i>eigen-install-dir</i>&gt;.
 </li><li>
-    <tt>PYTHON_LIBRARY</tt> &nbsp;&nbsp;&nbsp; Write there the complete path
+    <kbd>PYTHON_LIBRARY</kbd> &nbsp;&nbsp;&nbsp; Write there the complete path
     &lt;<i>python-install-dir</i>&gt;.
 </li></ul>
 <p>
 You can ignore all other variables, if there are any (and even if they are with the red
 background).
 </p><p>
-Now repeat the configuration process (i.e. clicking on the button <tt>Configure</tt>)
+Now repeat the configuration process (i.e. clicking on the button <kbd>Configure</kbd>)
 several time (typically up to 4 times), until all red backgrounds disappears. Then also
 check the output in the edit-box bellow the list of variables, that the configuration
 was successful. In case of errors (it is unlikely to happen) use the output messages
 to resolve them.
 </p><p>
-Now click on the button <tt>Generate</tt> to generate the native build scripts.
-Then you can terminate the <tt>cmake-gui</tt> application.
+Now click on the button <kbd>Generate</kbd> to generate the native build scripts.
+Then you can terminate the <kbd>cmake-gui</kbd> application.
 </p><p>
 We are back in the terminal and we can finally build the project using
 the following two commands:
 </p>
 <ul><li>
-    <tt>cd</tt> &lt;<i>E2-install-dir</i>&gt;<tt>/build/</tt>&lt;<i>build-type</i>&gt;
+    <kbd>cd</kbd> &lt;<i>E2-install-dir</i>&gt;<kbd>/build/</kbd>&lt;<i>build-type</i>&gt;
 </li><li>
-    <tt>make install</tt>
+    <kbd>make install</kbd>
 </li></ul>
 <p>
 All resulting binaries can then be found in the directory:
 </p>
 <ul><li>
-    &lt;<i>E2-install-dir</i>&gt;<tt>/dist</tt>
+    &lt;<i>E2-install-dir</i>&gt;<kbd>/dist</kbd>
 </li></ul>
 <h3 id="ubuntu_building_in_pycharm">Configuring E2 in PyCharm</h3>
 <p>
 The configuration is extremely simple, because both Python scripts and
 HTML pages are used as they are, i.e. no compilation is needed.
-So, start PyCharm and in the menu navigate to <tt>File&gt;Open...</tt>
+So, start PyCharm and in the menu navigate to <kbd>File&gt;Open...</kbd>
 item. Then put the path &lt;<i>E2-install-dir</i>&gt; into the edit-box in
 the opened dialog and confirm your choice by clicking on the button
-<tt>OK</tt>. That is all.
+<kbd>OK</kbd>. That is all.
 </p>
 <h2 id="ubuntu_getting_e2_structure_of_directories">Structure of installed E2 on hard drive</h2>
 <p>

@@ -7,8 +7,8 @@ h4 { font-size: 12pt; }
 h3 { font-size: 14pt; }
 h2 { font-size: 18pt; }
 h1 { font-size: 24pt; }
-tt { font-family: "Liberation Mono", monospace; }
-tt { font-size: 10pt; }
+kbd { font-family: "Liberation Mono", monospace; }
+kbd { font-size: 10pt; }
 body {
     background-color: white;
     color: black;

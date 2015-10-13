@@ -11,7 +11,7 @@
 <p>
 This module provides algorithms which are able to <em>set-up</em> synapses between cells in
 a neural tissue s.t. the resulting tissue has some desired <em>network properties</em>
-[TODO].
+[<kbd style="color:red">TODO</kbd>].
 It means that here we consider a neural tissue to be a network (graph) with cells
 representing nodes and synapses representing links (edges). A network property is
 then any property we can tell about a network from the point of view of the graph/network
@@ -153,7 +153,7 @@ sequences have exacty the same size.
 </p><p>
 The algorithm which sets-up all columns in the tissue (each column
 exactly the same way) according to the matrix <i>A</i> is implemented
-as a function <tt>fill_coords_of_source_cells_of_synapses_in_tissue</tt>
+as a function <kbd>fill_coords_of_source_cells_of_synapses_in_tissue</kbd>
 in files
 </p>
 <ul><li>
@@ -167,8 +167,8 @@ in files
 The algorithm accepts (besides the matrix <i>A</i>) a number of threads available
 for the computation. This number determines how many columns will be set-up simultaneously.
 The described procedure for the set-up of a single given column is implemented in that
-<tt>cpp</tt> file as a function
-<tt>fill_coords_of_source_cells_of_synapses_in_single_column</tt>.
+<kbd>cpp</kbd> file as a function
+<kbd>fill_coords_of_source_cells_of_synapses_in_single_column</kbd>.
 </p>
 <h2 id="spreading_synapses">Spreading synapses amongst columns</h2>
 <p>
@@ -333,13 +333,13 @@ The presented algorithm is implemented in files
     spread_synapses_into_neighbourhoods.cpp</a>
 </li></ul>
 <p>
-as a function <tt>spread_synapses_into_neighbourhoods</tt>. A module-private
-function <tt>go_to_next_task</tt> provides simultaneous computation of spreading
+as a function <kbd>spread_synapses_into_neighbourhoods</kbd>. A module-private
+function <kbd>go_to_next_task</kbd> provides simultaneous computation of spreading
 identifiers <i>p</i> in columns and indices <i>i</i> and <i>j</i> into the matrix
-<i>H</i>. A function <tt>decompose_shift_to_synapse</tt> then decomposes <i>p</i>
+<i>H</i>. A function <kbd>decompose_shift_to_synapse</kbd> then decomposes <i>p</i>
 into an index of a cell in a column and an index of the synapse in the territory of
 that cell. The decomposition is necessary for physical access to synapses in the tissue.
-And a function <tt>thread_spread_synapses</tt> performs spreading of synapses
+And a function <kbd>thread_spread_synapses</kbd> performs spreading of synapses
 for a given fixed spreading identifier <i>p</i> in all columns in the tissue.
 </p><p>
 Note that as we call the whole algorithm for different source and target kinds
@@ -523,8 +523,11 @@ the region bellow (at higher <i>X</i> coordinates).
 </p><p>
 The right part of the picture shows how external arrows are replaced by regular ones
 at region where templates are mapped onto. We see that our template (from the left
-part of the picture) is mapped onto the region in the middle. Let us discuss how
-regular arrows are set for the tissue column in the middle of this region. The
+part of the picture) is mapped onto the region in the middle. This region is
+surrounded by eight other regions forming its direct neighbourhood. Note that
+we show only those tissue columns of regions in the neighbourhood which are important
+in the discussed topic (i.e. the representation of external arrows). Let us describe how
+we compute arrows for the tissue column in the middle of the central region. The
 external arrow number 1 specifies a regular arrow coming from the region on the
 left in the neighbourhood and from the tissue column with the same number 1.
 Moreover, that column must have an external arrow pointing outside that column
@@ -556,29 +559,53 @@ complete the description by including external arrows.
      alt="[templates_scaling.svg]">
 <p>
 On the left we see a template (it is the same template as in the previous picture)
-and on the right there is depicted a region of a column shift function, where the
-template is mapped onto. Observe that each tissue column in the template is mapped
-into a block of 2&times;2 columns inside the region. Regions are highlighted by
+and on the right there is depicted a region in a column shift function, where the
+template is mapped to. Observe that each tissue column in the template is mapped
+into a block of 2&times;2 columns inside the region. Blocks are highlighted by
 dashed rectangles. The mapping is straightforward. For example, the left-top tissue
 column in the template is mapped to the left-top block in the region. The common dimensions
 of all blocks determine the scale of the template. Namely, a scale <i>S</i><sub><i>X</i></sub>
 of the template along the <i>X</i> axis is 2. And a scale <i>S</i><sub><i>Y</i></sub>
 of the template along the <i>Y</i> axis is also 2. Of course, scales
 <i>S</i><sub><i>X</i></sub> and <i>S</i><sub><i>Y</i></sub> may differ in general.
-We can identify columns in any block by block-local coordinates: The block's origin
-is in the tissue column with minimal coordinates along both <i>X</i> and <i>Y</i> axes,
-and block-local axes are parallel with axes of the tissue. In our example each block
-has four tissue columns uniquely identified by block-local coordinates (0,0), (0,1),
-(1,0), and (1,1). We use block-local coordinates to map arrows in the template to the
-corresponding arrows inside the region. Arrows in the column shift function
-exist only between tissue columns of exactly the same block-local coordinates.
-
-
-    of the template are
-
-    If ()<b><i>o</i></b>
-
-
+A regular arrow between any two tissue columns in the template represents
+exactly <i>S</i><sub><i>X</i></sub>&middot;<i>S</i><sub><i>Y</i></sub> regular arrows
+between tissue columns inside two blocks (of dimensions
+<i>S</i><sub><i>X</i></sub>&times;<i>S</i><sub><i>Y</i></sub>) corresponding to the
+two tissue columns of the arrow in the template. Arrows between tissue columns of the
+blocks always connect tissue columns appearing at exactly the same positions
+in the blocks. For example, the regular arrow in the template going from the left-bottom
+tissue column to the right-bottom column represents four regular arrows in the region
+going from tissue columns of the left-bottom block to the right-bottom block. Observe
+that arrows indeed always connect tissue columns at exactly the same positions in both
+blocks (from the left-top column to the left-top column, from the right-top to the right-top,
+from the left-bottom to the left-bottom, and from the right-bottom to the right-bottom).
+You can check that all remaining regular arrows in the template are represented the same
+way in the region.
+<!--We can identify columns in any block by block-local coordinates: The block's origin-->
+<!--is in the tissue column with minimal coordinates along both <i>X</i> and <i>Y</i> axes,-->
+<!--and block-local axes are parallel with axes of the tissue. In our example each block-->
+<!--has four tissue columns uniquely identified by block-local coordinates (0,0), (0,1),-->
+<!--(1,0), and (1,1). We use block-local coordinates to map arrows in the template to the-->
+<!--corresponding arrows inside the region. Arrows in the column shift function-->
+<!--exist only between tissue columns of exactly the same block-local coordinates.-->
+<!--<b><i>o</i></b>-->
+</p><p>
+It remains to discuss how we represent external arrows of the template in the column
+shift function. Our intention is to use the same representation as for regular arrows.
+Since each external arrow always references a region in the neighbourhood (of the region
+where the template is mapped), we have to ensure that dimensions of blocks in all regions
+in the neighbourhood are exactly the same. The simples way how to ensure this is to define
+common scales <i>S</i><sub><i>X</i></sub> and <i>S</i><sub><i>Y</i></sub> for all
+templates. In the following picture we show representation of both regular and external arrows
+of the template above in the corresponding region and its neighbourhood. The common scales
+for all templates are <i>S</i><sub><i>X</i></sub>=2 and <i>S</i><sub><i>Y</i></sub>=2.
+Due to clarity of the picture we show only arrows between tissue columns appearing at the
+left-top positions in blocks. Arrows at any of the remaining three positions can be done by
+copy-paste of all presented arrows and by a proper shift to the desired position in block.
+The region to which our template is mapped is depicted in the middle of the picture. Observe
+that this picture is a scaled version of the example we used for explanation of external
+arrows.
 </p>
 <img src="./templates_interconnection_scaled.svg"
      alt="[templates_interconnection_scaled.svg]">
