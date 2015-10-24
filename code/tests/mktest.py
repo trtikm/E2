@@ -23,7 +23,8 @@ target_link_libraries(${THIS_TARGET_NAME}
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
-    OUTPUT_NAME "${THIS_TARGET_NAME}_${CMAKE_SYSTEM_NAME}_${CMAKE_BUILD_TYPE}"
+    DEBUG_OUTPUT_NAME "${THIS_TARGET_NAME}_${CMAKE_SYSTEM_NAME}_Debug"
+    RELEASE_OUTPUT_NAME "${THIS_TARGET_NAME}_${CMAKE_SYSTEM_NAME}_Release"
     )
 
 install(TARGETS ${THIS_TARGET_NAME} DESTINATION "tests")
@@ -248,7 +249,7 @@ def parse_cmd_line():
                     "the following three things manually: 1. Add the created sub-directory to the build "
                     "script <E2-install-dir>/src/tests/CMakeLists.txt, 2. Implement the unit test "
                     "in the function run() appearing inside a generated file 'run.cpp', and 3. Write "
-                    "a textual description of the test inti a function 'get_program_description()' inside "
+                    "a textual description of the test into a function 'get_program_description()' inside "
                     "a generated file 'program_info.cpp."
     )
     parser.add_argument("-T", "--target_name", type=str,
