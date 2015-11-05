@@ -362,7 +362,7 @@ examples:
 In each of the examples we see the same tiny neural tissue. It has four columns
 along <i>X</i> axis and three columns along <i>Y</i> axis. We see the same
 orientation of the axes in all examples (the same top view to the tissue).
-Each of these examples shows one possible column shift function for the tissue.
+Each of these examples shows a possible column shift function for the tissue.
 The functions are depicted by arrows (mappings of coordinates of individual columns).
 In the example (a) the column shift function is obviously identity (i.e. coordinates
 of each column are mapped to itself). In the example (b) arrows form two cyclic
@@ -375,7 +375,7 @@ The primary goal of this section is to provide a specification of a column
 shift function for a large neural tissue. On one hand, the specification
 must be considerably smaller than the tissue (i.e. size of the specification
 should not depend on tissue dimensions). On the other hand,
-it has to be flexible enough to allow us initialisation of the tissue
+it has to be flexible enough to allow us a construction of neural tissues
 with desired network properties (small-world property, power-law distribution
 of degrees, clustering coefficients).
 </p><p>
@@ -385,11 +385,8 @@ axes are quite small (usually not exceeding 100 columns). Therefore, we express
 a column shift function <i>F</i> for a given large neural tissue in terms of
 several considerably smaller column shift functions
 <i>F</i><sub>0</sub>,&hellip;<i>F</i><sub><i>N</i>&minus;1</sub>
-called <em>templates</em>. We can, for example, use all four column shift
-functions defined in the picture above as templates. These templates are defined
-on the same area of 4&times;3 columns. It is not necessary. Templates may
-differ (besides definitions of their arrows) also in counts of columns along
-<i>X</i> and <i>Y</i> axes (i.e. in the area on which they are defined).
+called <em>templates</em>. Templates may differ in definitions of their arrows
+and also in counts of columns their along <i>X</i> and <i>Y</i> axes.
 Once we have all <i>N</i> templates prepared, we define the column
 shift function <i>F</i> such that we map each template into several concrete areas
 in the large tissue. We are supposed to cover whole the tissue by templates
@@ -412,7 +409,7 @@ a <em>layout matrix</em> <i>L</i>, and two <em>repetition lists</em>
 <i>R</i><sub><i>X</i></sub> and <i>R</i><sub><i>Y</i></sub>.
 Elements of the layout matrix are indices of individual templates. A position of
 an index in the matrix correspond to a concrete region in <i>F</i> where the
-template (with that index) is mapped onto. We cannot see the correspondence directly,
+template (with that index) is mapped onto. But, we cannot see the correspondence directly,
 because the layout matrix <i>L</i> is actually compressed. We thus also need the
 repetition lists <i>R</i><sub><i>X</i></sub> and <i>R</i><sub><i>Y</i></sub>.
 Their elements specify what rows and columns of <i>L</i> have to be repeated
@@ -420,8 +417,8 @@ how many time in order to get the uncompressed version of <i>L</i>. Namely,
 each triple <i>b</i>:<i>e</i>:<i>n</i> in <i>R</i><sub><i>X</i></sub> specifies
 that a block of rows <i>b</i>,<i>b</i>+1,&hellip;,<i>e</i>&minus;1 in <i>L</i>
 is repeated exactly <i>n</i> times in the uncompressed <i>L</i>.
-Triples in <i>R</i><sub><i>Y</i></sub> have similar meaning (they specify
-repetitions of blocks of columns). For example, the first triple 0:1:1 of
+Triples in <i>R</i><sub><i>Y</i></sub> have similar meaning; they specify
+repetitions of blocks of columns. For example, the first triple 0:1:1 of
 <i>R</i><sub><i>X</i></sub> says that the first row of <i>L</i> is repeated once.
 The second triple 1:3:2 says that the second and third row are repeated twice
 (as a single block of two rows). And the last triple defines a single repetition
@@ -432,7 +429,7 @@ of the fourth row. If we apply this process also for elements of
      alt="[templates_tiling_intuition_example_decompressed_L.svg]">
 <p>
 Now we can see the direct correspondence between elements of this matrix and
-regions in <i>F</i> (the regions are separated by dotted lines). For example,
+regions in <i>F</i>; the regions are separated by dotted lines. For example,
 the leftmost column in the matrix maps templates
 <i>F</i><sub>0</sub>, <i>F</i><sub>1</sub>, <i>F</i><sub>4</sub>,
     <i>F</i><sub>1</sub>, <i>F</i><sub>4</sub>, <i>F</i><sub>0</sub>
@@ -448,65 +445,22 @@ The compression of <i>L</i> is necessary, because dimensions of the uncompressed
 version grow with dimensions of the tissue. The compression allows for expansion
 to larger tissues simply by increasing the third components of triples
 in the lists <i>R</i><sub><i>X</i></sub> and <i>R</i><sub><i>Y</i></sub>.
-So, we never uncompress <i>L</i>: Given some coordinates
-(<i>x</i>,<i>y</i>) the computation of <i>F</i>((<i>x</i>,<i>y</i>)) always
-operates only on the compressed specification. We give an example of the
-computation later.
-<!--The key part of the computation is the conversion of the input coordinates-->
-<!--(<i>x</i>,<i>y</i>) to indices <i>u,v</i> into the layout matrix <i>L</i> and indices-->
-<!--<i>p,q</i> into the template of the index <i>l</i><sub><i>u,v</i></sub>.-->
-<!--Indeed, if the arrow going from indices <i>p,q</i> in the template-->
-<!--<i>F</i><sub><i>l</i><sub><i>u,v</i></sub></sub>-->
-<!--goes to indices <i>p',q'</i> (also in that template), then the resulting coordinates are-->
-<!--(<i>x</i> + <i>p'</i>&minus;<i>p</i>, <i>y</i> + <i>q'</i>&minus;<i>q</i>).-->
-<!--. The constructed-->
-<!--column shift function <i>F</i> operates only on the compressed specification.-->
-<!--We show the computation on a the following concrete example.-->
-<!--</p><p>-->
-<!--Let us consider a column depicted with gray colour in the picture above. Its-->
-<!--tissue coordinates are clearly (7,2). According to the outgoing arrow,-->
-<!--<i>F</i>((7,2)) should evaluate to tissue coordinates (6,4).-->
-<!--The key part of the evaluation is the conversion of the input coordinates-->
-<!--(7,2) to indices <i>u,v</i> into the layout matrix <i>L</i> and indices-->
-<!--<i>p,q</i> into the template of the index <i>l</i><sub><i>u,v</i></sub>.-->
-<!--&lt;!&ndash;<i>F</i><sub><i>l</i><sub><i>u,v</i></sub></sub>.&ndash;&gt;-->
-<!--&lt;!&ndash;Indeed, once we have then, we compute the resulting tissue coordinates as&ndash;&gt;-->
-<!--&lt;!&ndash;(3,2) + (0<i>p</i>,<i>q</i>) &minus; <i>f</i><sub><i>u,v</i></sub>), where&ndash;&gt;-->
-<!--&lt;!&ndash;We only show show the computation for indices <i>u</i> and <i>p</i>, since the&ndash;&gt;-->
-<!--&lt;!&ndash;computation of the remaining two is analogous.&ndash;&gt;-->
-<!--We first go through triples in the list <i>R</i><sub><i>X</i></sub> until the coordinate-->
-<!--7 belongs to the block of rows defined by a current triple. The first triple 0:1:1-->
-<!--identifies 1 repetition of the first row. Templates in this row all have 2 rows.-->
-<!--The triple thus corresponds to rows 0 and 1 of the tissue. Since 7&gt;1, we continue-->
-<!--with the second triple 1:3:2. There we have 2 repetitions of the second and third-->
-<!--row of <i>L</i>. Templates in the second row all have 3 rows and templates in the-->
-<!--third row all have only 1 row. So, the triple corresponds to 2&middot;(3+1) = 8 rows-->
-<!--at tissue coordinated 2,&hellip;,9. We terminate the iteration in-->
-<!--<i>R</i><sub><i>X</i></sub> at this triple, because 7&le;9. Now we transform the-->
-<!--coordinate 7 into an index of a row inside the block of rows specified by the triple.-->
-<!--So, we compute the index (7&minus;2) mod (3+1), which evaluates to 1. Since the block-->
-<!--starts with rows of templates having three rows each and our index 1 is withing the-->
-<!--range of their rows, the index of the template within the block is 0. Because the-->
-<!--minimal index in the triple is 1 we compute <i>u</i>=1+0 and <i>p</i>=1. Similarly-->
-<!--we compute <i>v</i>=1 and <i>q</i>=0 from iteration in <i>R</i><sub><i>Y</i></sub>-->
-<!--for the tissue coordinate 2. Using the computed indices we know that we have to look-->
-<!--into the template <i>F</i><sub>3</sub> (since <i>l</i><sub>1,1</sub>=3) where the-->
-<!--arrow at indices (1,0) points to indices (0,2). Therefore,-->
-<!--<i>F</i>((7,2)) = (7,2) + ((0,2) &minus; (1,0)) = (6,4).-->
+It should be clear at this point that a computation of <i>F</i>((<i>x</i>,<i>y</i>))
+for any given coordinates (<i>x</i>,<i>y</i>) must always be performed
+on a compressed specification.
 </p><p>
 Now we focus on improvements of the expressivity of the proposed specification.
 The specification currently maps templates to completely isolated regions of
 <i>F</i>. We remove this limitation such that we extend the specification of
 templates by <em>external arrows</em>. Once a template is mapped to a certain
 region in the tissue its external arrows define interconnection of its tissue
-columns with tissue columns inside regions in the direct neighbourhood (of the
-region where the template was mapped to). The idea is depicted in the following
-picture.
+columns with tissue columns inside regions in its direct neighbourhood.
+The idea is depicted in the following picture.
 </p>
 <img src="./templates_interconnection_intuition.svg"
      alt="[templates_interconnection_intuition.svg]">
 <p>
-On the left we see a template with external arrows. The arrows are depicted as
+On the left we see a template with external arrows. These arrows are depicted as
 black triangles annotated by numbers. An orientation of an external arrow determines
 its kind. If it points to the interior of its tissue column, then the column is the target
 of a regular arrow coming from a region in its neighbourhood. If it points from the
@@ -514,28 +468,27 @@ interior of its tissue column, then the column is the source of a regular arrow 
 from this region to its neighbourhood. In both cases an orientation of an external
 arrow determines a concrete region in the neighbourhood and its annotation number
 determined a concrete tissue column in that region. For example, a tissue column
-in the middle has two external arrows. One points into the tissue column from the
-left and it is annotated by the number 1. The second external arrow points from the
-the column's interior downwards and it is annotated by the number 0. So, the tissue
+in the centre of the template has two external arrows. One points into the tissue column
+from the left and it is annotated by the number 1. The second external arrow points from
+the the column's interior downwards and it is annotated by the number 0. So, the tissue
 column is a target of a regular arrow coming from the region on the left (at lower
 <i>Y</i> coordinates), and it is also a source column of a regular arrow going into
 the region bellow (at higher <i>X</i> coordinates).
 </p><p>
 The right part of the picture shows how external arrows are replaced by regular ones
-at region where templates are mapped onto. We see that our template (from the left
-part of the picture) is mapped onto the region in the middle. This region is
+when the template is are mapped onto a region. We see that our template (left) is mapped
+onto the region in the middle of the depicted tissue (right). This region is
 surrounded by eight other regions forming its direct neighbourhood. Note that
 we show only those tissue columns of regions in the neighbourhood which are important
 in the discussed topic (i.e. the representation of external arrows). Let us describe how
 we compute arrows for the tissue column in the middle of the central region. The
 external arrow number 1 specifies a regular arrow coming from the region on the
-left in the neighbourhood and from the tissue column with the same number 1.
-Moreover, that column must have an external arrow pointing outside that column
-and it must point to the right. Similarly, the second external arrow number 0
-specifies a regular arrow going to the region down in the neighbourhood and
-to the tissue column with the same number 0. Moreover, that column must have
-an external arrow pointing to inside of that column and it must point from the top.
-Remaining regular arrows in the picture are set in the same way.
+left in the neighbourhood, namely from a tissue column with an external arrow
+labelled by the same number 1 pointing from the column's interior to the right.
+Similarly, the second external arrow with the number 0 specifies a regular arrow going
+to the region bellow in the neighbourhood, namely to a tissue column with the same
+number 0 pointing to the column's interior from the top. Remaining regular
+arrows in the picture are set in the same way.
 </p><p>
 External arrows in the example above used only four orientations (left, right,
 top, and down). In fact, we also allow the remaining four diagonal orientations.
@@ -545,10 +498,10 @@ regions in its direct neighbourhood.
 The second improvement of the specification allows for establishing the small
 world property. We assume in the specification that dimensions of all templates
 are incomparably smaller than dimensions of a resulting column shift function.
-Therefore, the function is divided into large number of regions (where individual
-templates are mapped onto). Since the specification only allows for interconnection
-of tissue columns in directly adjacent regions, the small world property (i.e. the
-longest of all shortest paths in the network between any two cells) can be quite
+Therefore, the column shift function <i>F</i> is divided into large number of regions
+(where individual templates are mapped onto). Since the specification only allows for
+interconnection of tissue columns in directly adjacent regions, the small world property
+(i.e. the longest of all shortest paths in the network between any two cells) can be quite
 long. The goal of this improvement is to allow scaling of templates. When templates
 are mapped into larger regions (due to their scaling), the column shift function
 can be divided into lower count of these regions. We explain the scaling in two
@@ -582,14 +535,6 @@ blocks (from the left-top column to the left-top column, from the right-top to t
 from the left-bottom to the left-bottom, and from the right-bottom to the right-bottom).
 You can check that all remaining regular arrows in the template are represented the same
 way in the region.
-<!--We can identify columns in any block by block-local coordinates: The block's origin-->
-<!--is in the tissue column with minimal coordinates along both <i>X</i> and <i>Y</i> axes,-->
-<!--and block-local axes are parallel with axes of the tissue. In our example each block-->
-<!--has four tissue columns uniquely identified by block-local coordinates (0,0), (0,1),-->
-<!--(1,0), and (1,1). We use block-local coordinates to map arrows in the template to the-->
-<!--corresponding arrows inside the region. Arrows in the column shift function-->
-<!--exist only between tissue columns of exactly the same block-local coordinates.-->
-<!--<b><i>o</i></b>-->
 </p><p>
 It remains to discuss how we represent external arrows of the template in the column
 shift function. Our intention is to use the same representation as for regular arrows.
@@ -601,17 +546,63 @@ templates. In the following picture we show representation of both regular and e
 of the template above in the corresponding region and its neighbourhood. The common scales
 for all templates are <i>S</i><sub><i>X</i></sub>=2 and <i>S</i><sub><i>Y</i></sub>=2.
 Due to clarity of the picture we show only arrows between tissue columns appearing at the
-left-top positions in blocks. Arrows at any of the remaining three positions can be done by
-copy-paste of all presented arrows and by a proper shift to the desired position in block.
-The region to which our template is mapped is depicted in the middle of the picture. Observe
-that this picture is a scaled version of the example we used for explanation of external
-arrows.
+left-top positions in blocks. Arrows at the remaining three positions in blocks can be obtained
+by simultaneous shift of all depicted arrows one column right or down, or in both directions.
+Observe that this picture is a scaled version of the example we used for the explanation of
+external arrows.
 </p>
 <img src="./templates_interconnection_scaled.svg"
      alt="[templates_interconnection_scaled.svg]">
+<p>
+Now we are ready to give a complete specification of a column shift function. It consists
+of <i>N</i> templates with external arrows, a layout matrix <i>L</i>, repetition lists
+<i>R</i><sub><i>X</i></sub> and <i>R</i><sub><i>Y</i></sub>, and a common scales for all
+templates <i>S</i><sub><i>X</i></sub> and <i>S</i><sub><i>Y</i></sub>. It is required that
+regions onto which scaled templates are mapped cover all columns of the tissue without any
+gaps or overlaps. Moreover, external arrows of templates must be established in such a way
+that they all can be transformed to regular arrows (according to the process described
+above) when the templates are mapped to proper regions in the tissue. A complete version
+of the specification we presented at the beginning of this section may look as follows.
+</p>
 <img src="./templates_interconnection.svg"
      alt="[templates_interconnection.svg]">
+<p>
+The presented specification of a column sift function is implemented in files
+</p>
+<ul><li>
+<a href="../../../code/cellconnect/include/cellconnect/column_shift_function.hpp">
+    column_shift_function.hpp</a> and
+</li><li>
+<a href="../../../code/cellconnect/src/column_shift_function.cpp">
+    column_shift_function.cpp</a>.
+</li></ul>
+<p>
+A template is defined as <kbd>struct shift_template</kbd>, a layout matrix as
+<kbd>struct layout_of_shift_templates</kbd>, a triple in a repetition list as
+<kbd>struct repetition_block</kbd>, and the algorithm for a computation of
+<i>F</i>((<i>x</i>,<i>y</i>)) for any given coordinates (<i>x</i>,<i>y</i>)
+using a compressed specification is implemented as
+<kbd>column_shift_function::operator()</kbd>. Note that we intentionally omitted
+a description of the computation <i>F</i>((<i>x</i>,<i>y</i>)) here, because the
+code of the operator is self-explanatory with the knowledge we received here.
+</p>
 <h2 id="delimiters">Initialising delimiters of migration lists</h2>
+<p>
+If the territory of a tissue cell of a kind <i>i</i> has the capacity for
+<i>T</i><sub><i>i</i></sub> synapses, then this algorithm sets a
+<i>j</i>-th delimiter (<i>j</i> &isin; {0,&hellip;5}) to the value
+&lfloor;<i>T</i><sub><i>i</i></sub> / 6&rfloor;.
+</p><p>
+The algorithm is implemented in files
+</p>
+<ul><li>
+<a href="../../../code/cellconnect/include/cellconnect/fill_delimiters_between_territorial_lists.hpp">
+    fill_delimiters_between_territorial_lists.hpp</a> and
+</li><li>
+<a href="../../../code/cellconnect/src/fill_delimiters_between_territorial_lists.cpp">
+    fill_delimiters_between_territorial_lists.cpp</a>.
+</li></ul>
+<p>
 <h2 id="references">References</h2>
 <table>
     <tr><td id="r01">[1]</td><td>
