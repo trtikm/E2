@@ -9,11 +9,49 @@
 <body>
 <h1>E2: cellab</h1>
 <p>
-<kbd style="color:red">TODO</kbd>
+<!--<kbd style="color:red">TODO</kbd>-->
+This library defines a parametrised model of mammalian cerebral cortex
+[<a href="./cellab.html#r01">1</a>] called <em>neural tissue</em> in whole E2 project.
+Instances of the model (for given parameters) are primary subjects of study in this project.
+A <em>parameter</em> of the neural tissue is any datum passed to any library
+function constructing the model in the memory or or any algorithm passed to any library
+function performing a simulation step.
+</p>
+<h2 id="neural_tissue">Structure of neural tissue</h2>
+<p>
+Here we specify what components the neural tissue is made of, what is their internal
+structure and purpose, and how they are organised in 3D space. The basic structure
+of the neural tissue is depicted in this picture.
 </p>
 <img src="./tissue_layout.svg"
      alt="[tissue_layout.svg]">
-
+<p>
+We see three main components of the model: <em>tissue</em>, <em>sensory cells</em>,
+and <em>synapses to muscles</em>. The tissue is a 2D array of <em>columns</em>.
+There is <i>X</i> columns along the X axis and <i>Y</i> columns along the Y axis.
+Valid indices to the array represent the set
+{0,&hellip;,<i>X</i>&minus;1}&times;{0,&hellip;,<i>Y</i>&minus;1}.
+All columns in the tissue have identical structure. Each column thus contains exactly
+the same count <i>C</i> of <i>tissue cells</i>. Due to clarity of the picture these
+cells are not depicted in the picture. Nevertheless, they are aligned along the
+<i>columnar</i> axis C. A tissue cell is uniquely identified in its column by its
+columnar coordinate which from the set {0,&hellip;,<i>C</i>&minus;1}. A tissue cell
+is uniquely identified in the issue by three coordinates along the axes X,Y, and C.
+In other words, tissue cells are regularly distributed in the <em>left-handed</em>
+3D Cartesian space
+[<a href="./cellab.html#r02">2</a>].
+The model allows to split tissue cells in a column into <i>K</i> different
+<i>kinds</i> {0,&hellip;,<i>K</i>&minus;1}. We can see in the picture that
+first <i>N</i><sub>0</sub> tissue cells in each column are of the kind 0, next
+<i>N</i><sub>1</sub> tissue cells are of the kind 1, and so on.
+Observe that
+<i>C</i> = <i>N</i><sub>0</sub> + &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub>.
+The model does <em>not</em> define interpretations of kinds of tissue cells.
+This is left for a user of the model. For example, a user may interpret a kind
+as an identifier of an algorithm simulating certain behavioral property of a cell.
+The structure of a column is actually more complex than described so far. We provide
+a detailed description later.
+</p>
 <ul><li>
 <a href="../../../code/cellab/include/cellab/static_state_of_neural_tissue.hpp">
     static_state_of_neural_tissue.hpp</a> and
@@ -22,6 +60,19 @@
     static_state_of_neural_tissue.cpp</a>.
 </li></ul>
 
+<h2 id="references">References</h2>
+<table>
+    <tr><td id="r01">[1]</td><td>
+        Wikipedia: Cerebral cortex.
+        <a href="https://en.wikipedia.org/wiki/Cerebral_cortex">
+            https://en.wikipedia.org/wiki/Cerebral_cortex</a>.
+    </td></tr>
+    <tr><td id="r02">[2]</td><td>
+        Wikipedia: Cartesian space.
+        <a href="https://en.wikipedia.org/wiki/Cartesian_coordinate_system">
+            https://en.wikipedia.org/wiki/Cartesian_coordinate_system</a>.
+    </td></tr>
+</table>
 
 </body>
 </html>
