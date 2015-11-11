@@ -3,6 +3,7 @@ sup { bottom: 1ex; }
 sub { top: 0.65ex; }
 h1, h2, h3, h4, p, a, table, ul { font-family: "Liberation serif", serif; }
 p, a, table, ul { font-size: 12pt; }
+p { text-align: justify }
 h4 { font-size: 12pt; }
 h3 { font-size: 14pt; }
 h2 { font-size: 18pt; }
@@ -12,6 +13,10 @@ kbd { font-size: 10pt; }
 body {
     background-color: white;
     color: black;
+    width: 480pt;
+    height: 720pt;
+    margin-left: auto;
+    margin-right: auto;
 }
 a:link { color: blue; }
 a:visited { color: #840084; }

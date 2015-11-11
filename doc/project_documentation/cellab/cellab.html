@@ -10,12 +10,12 @@
 <h1>E2: cellab</h1>
 <p>
 <!--<kbd style="color:red">TODO</kbd>-->
-This library defines a parametrised model of mammalian cerebral cortex
-[<a href="./cellab.html#r01">1</a>] called <em>neural tissue</em> in whole E2 project.
-Instances of the model (for given parameters) are primary subjects of study in this project.
-A <em>parameter</em> of the neural tissue is any datum passed to any library
-function constructing the model in the memory or or any algorithm passed to any library
-function performing a simulation step.
+This library defines a parametrised model of a mammalian cerebral cortex
+[<a href="./cellab.html#r01">1</a>] called <em>neural tissue</em> in the whole E2
+project. Instances of the model (for given parameters) are primary subjects of the
+study in this project. A <em>parameter</em> of the neural tissue is any datum passed
+to any library function constructing the model in the memory or any algorithm
+passed to any library function performing a simulation step.
 </p>
 <h2 id="neural_tissue">Structure of neural tissue</h2>
 <p>
@@ -27,7 +27,17 @@ of the neural tissue is depicted in this picture.
      alt="[tissue_layout.svg]">
 <p>
 We see three main components of the model: <em>tissue</em>, <em>sensory cells</em>,
-and <em>synapses to muscles</em>. The tissue is a 2D array of <em>columns</em>.
+and <em>synapses to muscles</em>. The tissue is the component of the model where
+the main computation is performed. Sensory cells and synapses to muscles
+allow for information exchange between the tissue and an external environment
+(surrounding the whole model). Namely, sensory cells allows for receiving information
+from the environment, while synapses to muscles allows for sending information from
+the tissue to the environment. We describe all tree components of the model in
+more details in the following three subsections.
+</p>
+<h3 id="tissue">Tissue</h3>
+<p>
+The tissue is a 2D array of <em>columns</em>.
 There is <i>X</i> columns along the X axis and <i>Y</i> columns along the Y axis.
 Valid indices to the array represent the set
 {0,&hellip;,<i>X</i>&minus;1}&times;{0,&hellip;,<i>Y</i>&minus;1}.
@@ -35,8 +45,8 @@ All columns in the tissue have identical structure. Each column thus contains ex
 the same count <i>C</i> of <i>tissue cells</i>. Due to clarity of the picture these
 cells are not depicted in the picture. Nevertheless, they are aligned along the
 <i>columnar</i> axis C. A tissue cell is uniquely identified in its column by its
-columnar coordinate which from the set {0,&hellip;,<i>C</i>&minus;1}. A tissue cell
-is uniquely identified in the issue by three coordinates along the axes X,Y, and C.
+columnar coordinate taken from the set {0,&hellip;,<i>C</i>&minus;1}. A tissue cell
+is uniquely identified in the issue by three coordinates along the axes X, Y, and C.
 In other words, tissue cells are regularly distributed in the <em>left-handed</em>
 3D Cartesian space
 [<a href="./cellab.html#r02">2</a>].
@@ -46,19 +56,75 @@ first <i>N</i><sub>0</sub> tissue cells in each column are of the kind 0, next
 <i>N</i><sub>1</sub> tissue cells are of the kind 1, and so on.
 Observe that
 <i>C</i> = <i>N</i><sub>0</sub> + &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub>.
-The model does <em>not</em> define interpretations of kinds of tissue cells.
-This is left for a user of the model. For example, a user may interpret a kind
+The model does <em>not</em> define interpretations of kinds.
+This is left for a user of the model. For example, the user may interpret a kind
 as an identifier of an algorithm simulating certain behavioral property of a cell.
-The structure of a column is actually more complex than described so far. We provide
-a detailed description later.
+<!--The structure of a column is actually more complex than described so far. We provide-->
+<!--a detailed description later.-->
 </p>
-<ul><li>
-<a href="../../../code/cellab/include/cellab/static_state_of_neural_tissue.hpp">
-    static_state_of_neural_tissue.hpp</a> and
-</li><li>
-<a href="../../../code/cellab/src/static_state_of_neural_tissue.cpp">
-    static_state_of_neural_tissue.cpp</a>.
-</li></ul>
+<h3 id="sensory_cells">Sensory cells</h3>
+<p>
+Sensory cells allows for delivery of information form the external environment
+to the tissue. They are split into <i>S</i> different
+<i>sensory kinds</i> {0,&hellip;,<i>S</i>&minus;1}. The model does <em>not</em> define
+interpretations of these kinds. This is left for a user of the model. For example,
+the user may interpret them as an assignment of sensory cells to particular sense organs
+like eye, ear, nose, etc. The user is responsible for encoding of information captured
+by the organs in the corresponding sensory cells.
+</p><p>
+Due to purely technical reasons (which will be presented later
+<kbd style="color:red">here</kbd>)
+we align sensory cells
+with the columnar axis C of the tissue. It means that each sensory cell has a unique
+coordinate along the axis. We can see in the picture that the first sensory cell
+(depicted at the top) is associated with the first free coordinate <i>C</i> along
+the axis (the columnar axis is depicted on the left of the list of the sensory cells).
+Note though that sensory cells do <em>not</em> have coordinates along X and Y axes
+of the tissue.
+</p><p>
+Observe further that the number of sensory cell of a sensory kind
+<i>i</i> is represented by a number <i>N</i><sub><i>K</i>+<i>i</i></sub>. This
+notation follows from the technicals reasons mentioned above.  It allows us to
+encapsulate both kinds of cells (tissue and sensory) and their counts under one
+representation accessed using a single mechanism. The last sensory cell (depicted
+at the bottom) is assigned the highest valid coordinate <i>C</i><sub><i>S</i></sub>
+along the columnar axis C. Clearly,
+<i>C</i><sub><i>S</i></sub>
+    = <i>C</i> + <i>N</i><sub><i>K</i>+0</sub> + &hellip;
+        + <i>N</i><sub><i>K</i>+<i>S</i>&minus;1</sub>
+    = <i>N</i><sub>0</sub> + &hellip; + <i>N</i><sub><i>K</i>+<i>S</i>&minus;1</sub>.
+</p>
+<h3 id="synapses_to_muscles">Synapses to muscles</h3>
+<p>
+Synapses to muscles allows for delivery of information form the tissue to the external
+environment. They are split into <i>U</i> different
+<i>muscle kinds</i> {0,&hellip;,<i>U</i>&minus;1}. The model does <em>not</em> define
+interpretations of these kinds. This is left for a user of the model. For example,
+the user may interpret them as an assignment of synapses to particular muscles.
+The user is responsible for decoding of information stored in the synapses and
+updating the environment according to an effect of the received information
+on corresponding muscles. Note that the update of the environment may have an effect
+on sense organs which it turn implies a request for an update of sensory cells.
+</p><p>
+We can see in the picture above the number of synapses to muscles of a muscle
+kind <i>i</i> is represented by a number <i>M</i><sub><i>i</i></sub>. The total
+number of synapses to muscles in the model is thus
+<i>M</i><sub>0</sub> + &hellip; + <i>M</i><sub><i>U</i>&minus;1</sub>.
+</p>
+
+
+
+<!--<h3 id="tissue_column_in_details">Tissue column in details</h3>-->
+
+
+<!--<ul><li>-->
+<!--<a href="../../../code/cellab/include/cellab/static_state_of_neural_tissue.hpp">-->
+    <!--static_state_of_neural_tissue.hpp</a> and-->
+<!--</li><li>-->
+<!--<a href="../../../code/cellab/src/static_state_of_neural_tissue.cpp">-->
+    <!--static_state_of_neural_tissue.cpp</a>.-->
+<!--</li></ul>-->
+
 
 <h2 id="references">References</h2>
 <table>

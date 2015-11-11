@@ -151,19 +151,19 @@ This iteration allows the procedure to directly obtain the columnar coordinate
 and <i>l</i>). We iterate in both sequences synchronously. Observe that both
 sequences have exacty the same size.
 </p><p>
-The algorithm which sets-up all columns in the tissue (each column
-exactly the same way) according to the matrix <i>A</i> is implemented
-as a function <kbd>fill_coords_of_source_cells_of_synapses_in_tissue</kbd>
-in files
+The algorithm which sets-up all columns in the tissue (each column exactly the
+same way) according to the matrix <i>A</i> is implemented in files
 </p>
 <ul><li>
     <a href="../../../code/cellconnect/include/cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp">
-        fill_coords_of_source_cells_of_synapses_in_tissue.hpp</a>,
+        fill_coords_of_source_cells_of_synapses_in_tissue.hpp</a> and
 </li><li>
     <a href="../../../code/cellconnect/src/fill_coords_of_source_cells_of_synapses_in_tissue.cpp">
-        fill_coords_of_source_cells_of_synapses_in_tissue.cpp</a>.
+        fill_coords_of_source_cells_of_synapses_in_tissue.cpp</a>
 </li></ul>
 <p>
+as a function <kbd>fill_coords_of_source_cells_of_synapses_in_tissue</kbd>.
+</p><p>
 The algorithm accepts (besides the matrix <i>A</i>) a number of threads available
 for the computation. This number determines how many columns will be set-up simultaneously.
 The described procedure for the set-up of a single given column is implemented in that
