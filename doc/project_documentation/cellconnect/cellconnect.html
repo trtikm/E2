@@ -56,7 +56,8 @@ the same set-up procedure for each column independently. Clearly, it suffices
 if we describe in this section only the set-up procedure for any given column.
 The structure of a column (along the columnar axis) is the following.
 </p>
-<img src="./column_and_sensory_cells.svg"
+<img class="figure"
+     src="./column_and_sensory_cells.svg"
      alt="[column_and_sensory_cells.svg]">
 <p>
 We see <i>K</i> kinds of tissue cells. <i>i</i>-th kind has exactly
@@ -86,7 +87,8 @@ which are projected from <em>each</em> cell of the kind <i>j</i> to
 <i>a<sub>i,j</sub></i>
 into a matrix <i>A</i> of dimensions <i>K</i>&times;(<i>K</i>+<i>S</i>):
 </p>
-<img src="./column_fill_matrix.svg"
+<img class="figure"
+     src="./column_fill_matrix.svg"
      alt="[column_fill_matrix.svg]">
 <p>
 For each
@@ -110,7 +112,8 @@ the territory of the <i>j</i>-th cell of the kind <i>i</i>.
 In the following picture we can see a graphical representation of columnar identifiers
 of synapses.
 </p>
-<img src="./columnar_identifiers_of_synapses.svg"
+<img class="figure"
+     src="./columnar_identifiers_of_synapses.svg"
      alt="[columnar_identifiers_of_synapses.svg]">
 <p>
 Let us denote a columnar coordinate of a the <i>j</i>-th cell of either tissue or sensory
@@ -193,7 +196,8 @@ We postpone a detailed description of <i>F</i> to a
 below. The left part of the following picture provides a graphical representation
 of the described notion of columns' neighbourhoods.
 </p>
-<img src="./spread_synapses_top_view.svg"
+<img class="figure"
+     src="./spread_synapses_top_view.svg"
      alt="[spread_synapses_top_view.svg]">
 <p>
 We see the source column at tissue coordinates (<i>x,y</i>). The column-shift
@@ -286,7 +290,8 @@ outside the tissue (this may only happen when at least one tissue axis
 is <em>not</em> the torus axis). The described procedure is depicted in the
 following picture (for the first type of termination):
 </p>
-<img src="./spread_synapses_exchange_scheme.svg"
+<img class="figure"
+     src="./spread_synapses_exchange_scheme.svg"
      alt="[spread_synapses_exchange_scheme.svg]">
 <p>
 We see the tissue, orientation of its axes, and selected columns. In each of these
@@ -356,7 +361,8 @@ and <i>Y</i> columns along the <i>Y</i> axis. Then a <em>column shift function</
 We first clarify the notion of a column shift function on the following four
 examples:
 </p>
-<img src="./column_shift_function_examples.svg"
+<img class="figure"
+     src="./column_shift_function_examples.svg"
      alt="[column_shift_function_examples.svg]">
 <p>
 In each of the examples we see the same tiny neural tissue. It has four columns
@@ -398,7 +404,8 @@ We first explain basic features of the proposed specification on an example. The
 we add a description of two more features necessary for sufficient expressivity
 of the specification.
 </p>
-<img src="./templates_tiling_intuition_example.svg"
+<img class="figure"
+     src="./templates_tiling_intuition_example.svg"
      alt="[templates_tiling_intuition_example.svg]">
 <p>
 We see in the picture that the specification (on the left) of the column
@@ -425,7 +432,8 @@ The second triple 1:3:2 says that the second and third row are repeated twice
 of the fourth row. If we apply this process also for elements of
 <i>R</i><sub><i>Y</i></sub>, then we receive the following uncompressed matrix:
 </p>
-<img src="./templates_tiling_intuition_example_decompressed_L.svg"
+<img class="figure"
+     src="./templates_tiling_intuition_example_decompressed_L.svg"
      alt="[templates_tiling_intuition_example_decompressed_L.svg]">
 <p>
 Now we can see the direct correspondence between elements of this matrix and
@@ -457,7 +465,8 @@ region in the tissue its external arrows define interconnection of its tissue
 columns with tissue columns inside regions in its direct neighbourhood.
 The idea is depicted in the following picture.
 </p>
-<img src="./templates_interconnection_intuition.svg"
+<img class="figure"
+     src="./templates_interconnection_intuition.svg"
      alt="[templates_interconnection_intuition.svg]">
 <p>
 On the left we see a template with external arrows. These arrows are depicted as
@@ -508,7 +517,8 @@ can be divided into lower count of these regions. We explain the scaling in two
 steps. First we explain the basics, where we ignore external arrows. Then we
 complete the description by including external arrows.
 </p>
-<img src="./templates_scaling.svg"
+<img class="figure"
+     src="./templates_scaling.svg"
      alt="[templates_scaling.svg]">
 <p>
 On the left we see a template (it is the same template as in the previous picture)
@@ -551,7 +561,8 @@ by simultaneous shift of all depicted arrows one column right or down, or in bot
 Observe that this picture is a scaled version of the example we used for the explanation of
 external arrows.
 </p>
-<img src="./templates_interconnection_scaled.svg"
+<img class="figure"
+     src="./templates_interconnection_scaled.svg"
      alt="[templates_interconnection_scaled.svg]">
 <p>
 Now we are ready to give a complete specification of a column shift function. It consists
@@ -564,7 +575,8 @@ that they all can be transformed to regular arrows (according to the process des
 above) when the templates are mapped to proper regions in the tissue. A complete version
 of the specification we presented at the beginning of this section may look as follows.
 </p>
-<img src="./templates_interconnection.svg"
+<img class="figure"
+     src="./templates_interconnection.svg"
      alt="[templates_interconnection.svg]">
 <p>
 The presented specification of a column sift function is implemented in files

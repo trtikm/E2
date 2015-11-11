@@ -18,6 +18,16 @@ body {
     margin-left: auto;
     margin-right: auto;
 }
+img.figure {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    horizontal-align: middle;
+}
+table.figure {
+    margin-left: auto;
+    margin-right: auto;
+}
 a:link { color: blue; }
 a:visited { color: #840084; }
 a:active { color: blue; }
