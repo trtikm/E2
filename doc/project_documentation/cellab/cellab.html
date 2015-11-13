@@ -30,51 +30,51 @@ of the neural tissue is depicted in this picture.
 We see three main components of the model: <em>tissue</em>, <em>sensory cells</em>,
 and <em>synapses to muscles</em>. The tissue is the component of the model where
 the main computation is performed. Sensory cells and synapses to muscles
-allow for information exchange between the tissue and an external environment
-(surrounding the whole model). Namely, sensory cells allows for receiving information
-from the environment, while synapses to muscles allows for sending information from
-the tissue to the environment. We describe all tree components of the model in
-more details in the following three subsections.
+allow for information exchange between the tissue and an external <i>environment</i>
+which is <i>not</i> a part of the model (see the library
+<a href="../envlab/envlab.html">envlab</a>
+for more information). We describe all tree components of the model in more details
+in the following subsections.
 </p>
 <h3 id="tissue">Tissue</h3>
 <p>
 The tissue is a 2D array of <em>columns</em>.
 There is <i>X</i> columns along the X axis and <i>Y</i> columns along the Y axis.
-Valid indices to the array represent the set
+Valid indices to the array belong to the set
 {0,&hellip;,<i>X</i>&minus;1}&times;{0,&hellip;,<i>Y</i>&minus;1}.
-All columns in the tissue have the identical structure. Each column contains
-<i>C</i> <i>tissue cells</i>. Due to clarity of the picture these
-cells are not depicted in the picture. Nevertheless, they are aligned along the
-<i>columnar</i> axis C. A tissue cell is uniquely identified in its column by its
-columnar coordinate taken from the set {0,&hellip;,<i>C</i>&minus;1}. A tissue cell
-is uniquely identified in the issue by three coordinates along the axes X, Y, and C.
-In other words, tissue cells are regularly distributed in the <em>left-handed</em>
-3D Cartesian space
+All columns in the tissue have the identical structure. Each column consists of
+<i>C</i> <i>territories</i> aligned along the <i>columnar</i> axis C.
+Each territory is uniquely identified in its column by a columnar
+coordinate taken from the set {0,&hellip;,<i>C</i>&minus;1}. Moreover,
+a territory  is uniquely identified in the whole issue by three coordinates
+along the axes X, Y, and C. Territories are thus regularly distributed in the
+<em>left-handed</em> 3D Cartesian space
 [<a href="./cellab.html#r02">2</a>].
-The model allows to split tissue cells in a column into <i>K</i> different
-<i>kinds</i> {0,&hellip;,<i>K</i>&minus;1}. We can see in the picture that
-first <i>N</i><sub>0</sub> tissue cells in each column are of the kind 0, next
-<i>N</i><sub>1</sub> tissue cells are of the kind 1, and so on.
+We discuss the structure of a column and a territory in a
+<a href="./cellab.html#structure_of_column">separate section</a>
+later. For now
+it is sufficient to say that the model allows to split territories in a column
+into <i>K</i> different <i>kinds</i> {0,&hellip;,<i>K</i>&minus;1}. We can see
+in the picture that first <i>N</i><sub>0</sub> territories in each column are
+of the kind 0, next <i>N</i><sub>1</sub> territories are of the kind 1, and so on.
 Observe that
 <i>C</i> = <i>N</i><sub>0</sub> + &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub>.
 The model does <em>not</em> define interpretations of kinds.
-This is left for a user of the model. For example, the user may interpret a kind
-as an identifier of an algorithm simulating certain behavioral property of a cell.
-<!--The structure of a column is actually more complex than described so far. We provide-->
-<!--a detailed description later.-->
+This is left for parametrisations of the model. For example, a parametrisation
+may interpret a kind as an identifier of an algorithm simulating certain behavior
+of a component inside a territory of that kind.
 </p>
-<img class="figure"
-     src="./column_and_cell_territory_structure.svg"
-     alt="[column_and_cell_territory_structure.svg]">
 <h3 id="sensory_cells">Sensory cells</h3>
 <p>
-Sensory cells allows for delivery of information form the external environment
+Sensory cells allows for delivery of information form an external environment
 to the tissue. They are split into <i>S</i> different
 <i>sensory kinds</i> {0,&hellip;,<i>S</i>&minus;1}. The model does <em>not</em> define
-interpretations of these kinds. This is left for a user of the model. For example,
-the user may interpret them as an assignment of sensory cells to particular sense organs
-like eye, ear, nose, etc. The user is responsible for encoding of information captured
-by the organs in the corresponding sensory cells.
+interpretations of these kinds. This is left for parametrisations of the model.
+For example, a parametrisation may interpret a kind as an assignment of sensory cells
+(of that kind) to particular sense organs like eye, ear, nose, etc. Both sense
+organs and even the process of encoding of information captured by senses into
+the corresponding sensory cells are <i>not</i> parts of the model. They all belong
+to the environment.
 </p><p>
 Due to purely technical reasons (which will be presented later
 <kbd style="color:red">here</kbd>)
@@ -97,25 +97,43 @@ along the columnar axis C. Clearly,
     = <i>C</i> + <i>N</i><sub><i>K</i>+0</sub> + &hellip;
         + <i>N</i><sub><i>K</i>+<i>S</i>&minus;1</sub>
     = <i>N</i><sub>0</sub> + &hellip; + <i>N</i><sub><i>K</i>+<i>S</i>&minus;1</sub>.
+</p><p>
+Despite of division of sensory cells according to kinds, they are still
+organised in one (long) list of cells as depicted in the picture from the top down.
+Therefore, we can also identify individual sensory cells by their index (ordinal number)
+in the list. The cell at the top has the index 0 and the cell at the bottom has the
+index <i>C</i><sub><i>S</i></sub>&minus;<i>C</i>&minus;1.
 </p>
 <h3 id="synapses_to_muscles">Synapses to muscles</h3>
 <p>
-Synapses to muscles allows for delivery of information form the tissue to the external
-environment. They are split into <i>U</i> different
-<i>muscle kinds</i> {0,&hellip;,<i>U</i>&minus;1}. The model does <em>not</em> define
-interpretations of these kinds. This is left for a user of the model. For example,
-the user may interpret them as an assignment of synapses to particular muscles.
-The user is responsible for decoding of information stored in the synapses and
-updating the environment according to an effect of the received information
-on corresponding muscles. Note that the update of the environment may have an effect
-on sense organs which it turn implies a request for an update of sensory cells.
+Synapses to muscles allows for delivery of information form the tissue to an external
+environment. They are split into <i>U</i> different <i>kinds</i>
+{0,&hellip;,<i>U</i>&minus;1}. The model does <em>not</em> define interpretations
+of these kinds. This is left for parametrisations of the model. For example,
+a parametrisation may interpret a kind as an assignment of synapses (of that kind)
+to a particular muscle like biceps, triceps, etc. Neither muscles, the process of
+decoding of information stored in the synapses, nor updating the environment
+according to an effect of the decoded information on corresponding muscles
+are <i>not</i> parts of the model. They all belong to the environment.
 </p><p>
 We can see in the picture above the number of synapses to muscles of a muscle
 kind <i>i</i> is represented by a number <i>M</i><sub><i>i</i></sub>. The total
 number of synapses to muscles in the model is thus
 <i>M</i><sub>0</sub> + &hellip; + <i>M</i><sub><i>U</i>&minus;1</sub>.
-</p>
+</p><p>
+Despite of division of synapses to muscles according to kinds, they are still
+organised in one (long) list as depicted in the picture from the top down.
+We thus identify them by indices (ordinals) in the list. The synapse
+at the top has the index 0 and the synapse at the bottom has the
+index <i>M</i><sub>0</sub> + &hellip; + <i>M</i><sub><i>U</i>&minus;1</sub> &minus; 1.
 
+</p>
+<h3 id="structure_of_column">Structure of column in tissue</h3>
+<img class="figure"
+     src="./column_and_cell_territory_structure.svg"
+     alt="[column_and_cell_territory_structure.svg]">
+
+<h2 id="">Memory representation of the neural tissue</h2>
 
 
 <!--<h3 id="tissue_column_in_details">Tissue column in details</h3>-->
