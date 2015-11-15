@@ -163,11 +163,33 @@ traversing the region, glia cells
 [<a href="./cellab.html#r07">7</a>],
 inter-cellular liquid, and so on.
 A territory (as a model of a region) is thus supposed to model all desired behaviour
-occurring in the region. Of course, this is done via components of the territory. We
+occurring in the region. This is actually done via components of the territory. We
 describe individual types of components in subsections bellow.
 </p>
 <h4 id="tissue_cell">Tissue cell</h4>
 <p>
+It is an array of bytes storing a compressed state of a modelled neuron (whose
+body lies in the center of the region associated with the territory). We do <em>not</em>
+define interpretation of individual bytes (i.e. what information is stored) nor
+a compression method. This is left for parametrisations. For example, a parametrisation
+may choose (according to the kind of the territory) to store a state of the leaky
+integrate-and-fire neuron
+[<a href="./cellab.html#r09">9</a>,
+ <a href="./cellab.html#r08">8</a>],
+the Izhikevich neuron
+[<a href="./cellab.html#r10">10</a>,
+ <a href="./cellab.html#r08">8</a>],
+the McCulloch-Pitts
+[<a href="./cellab.html#r11">11</a>,
+ <a href="./cellab.html#r08">8</a>],
+Hodgkin-Huxley neuron
+[<a href="./cellab.html#r12">12</a>,
+ <a href="./cellab.html#r08">8</a>],
+or any other available model of a neuron. A compression method can be, for example,
+just a state serialisation
+[<a href="./cellab.html#r13">13</a>].
+
+
 
 </p>
 <h4 id="signalling">Signalling</h4>
@@ -240,6 +262,36 @@ describe individual types of components in subsections bellow.
         <a href="https://en.wikipedia.org/wiki/Neuroglia">
             https://en.wikipedia.org/wiki/Neuroglia</a>.
     </td></tr>
+    <tr><td id="r08">[8]</td><td>
+        Thomas Trappenberg. Fundamentals of Computational Neuroscience.
+        OXFORD University Press, 2010.
+    </td></tr>
+    <tr><td id="r09">[9]</td><td>
+        Wikipedia: Leaky integrate-and-fire neuron.
+        <a href="https://en.wikipedia.org/wiki/Biological_neuron_model#Leaky_integrate-and-fire">
+            https://en.wikipedia.org/wiki/Biological_neuron_model#Leaky_integrate-and-fire</a>.
+    </td></tr>
+    <tr><td id="r10">[10]</td><td>
+        <a href="http://www.izhikevich.org/publications/spikes.htm">
+            http://www.izhikevich.org/publications/spikes.htm</a>.
+    </td></tr>
+    <tr><td id="r11">[11]</td><td>
+        Martin Anthony.
+        <a href="https://books.google.fr/books?id=qOy4yLBqhFcC&pg=PA3&redir_esc=y#v=onepage&q&f=false">
+            Discrete Mathematics of Neural Networks: Selected Topics</a>.
+        SIAM, 2001.
+    </td></tr>
+    <tr><td id="r12">[12]</td><td>
+        Wikipedia: Hodgkin-Huxley neuron.
+        <a href="https://en.wikipedia.org/wiki/Hodgkin%E2%80%93Huxley_model">
+            https://en.wikipedia.org/wiki/Hodgkin%E2%80%93Huxley_model</a>.
+    </td></tr>
+    <tr><td id="r13">[13]</td><td>
+        Wikipedia: Serialisation.
+        <a href="https://en.wikipedia.org/wiki/Serialization">
+            https://en.wikipedia.org/wiki/Serialization</a>.
+    </td></tr>
+
 </table>
 
 </body>
