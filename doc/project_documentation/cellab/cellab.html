@@ -126,12 +126,67 @@ organised in one (long) list as depicted in the picture from the top down.
 We thus identify them by indices (ordinals) in the list. The synapse
 at the top has the index 0 and the synapse at the bottom has the
 index <i>M</i><sub>0</sub> + &hellip; + <i>M</i><sub><i>U</i>&minus;1</sub> &minus; 1.
-
 </p>
 <h3 id="structure_of_column">Structure of column in tissue</h3>
+<p>
+We already know that a tissue column is a list of territories aligned along the
+columnar axis and that territories are logically grouped according to kinds.
+In this section we considerably extend this description. We start with a picture
+where we show a column and its territories with all their components.
+</p>
 <img class="figure"
      src="./column_and_cell_territory_structure.svg"
      alt="[column_and_cell_territory_structure.svg]">
+<p>
+We see that all territories (across all kinds) consist of six types of
+components: a tissue <em>cell</em>, a <em>signalling</em>, a <em>delimiters list</em>,
+and three lists of <em>synapses</em>, <em>territorial states</em> of synapses, and
+<em>coordinates of source cells</em> of synapses. These three lists have the same length
+in each territory (of any kind). Moreover, lengths of the lists in all territories of
+the kind 0 is <i>T</i><sub>0</sub>, lengths of the lists in all territories of the kind 1
+is <i>T</i><sub>1</sub>, and so on.
+</p><p>
+Each territory in the neural tissue is a <em>behavioral model</em> of a corresponding
+spatial region in a modelled mammalian cerebral cortex
+[<a href="./cellab.html#r01">1</a>].
+If the mammalian cerebral cortex consists of <i>n</i> neurons
+[<a href="./cellab.html#r03">3</a>],
+then we can always spatially partition the whole
+matter of the cortex into <i>n</i> non-overlapping regions with bodies of the neurons
+in their centers. Besides the body of a neuron a region typically also contains synapses
+[<a href="./cellab.html#r04">4</a>]
+connected to the neuron, axons
+[<a href="./cellab.html#r05">5</a>]
+and dendrites
+[<a href="./cellab.html#r06">6</a>]
+traversing the region, glia cells
+[<a href="./cellab.html#r07">7</a>],
+inter-cellular liquid, and so on.
+A territory (as a model of a region) is thus supposed to model all desired behaviour
+occurring in the region. Of course, this is done via components of the territory. We
+describe individual types of components in subsections bellow.
+</p>
+<h4 id="tissue_cell">Tissue cell</h4>
+<p>
+
+</p>
+<h4 id="signalling">Signalling</h4>
+<p>
+
+</p>
+<h4 id="delimiters_list">Delimiters list</h4>
+<p>
+
+</p>
+<h4 id="synapse">Synapse, territorial state, coordinates to source cell</h4>
+<p>
+
+</p>
+<!--<h4 id=""></h4>-->
+<!--<p>-->
+
+<!--</p>-->
+
 
 <h2 id="">Memory representation of the neural tissue</h2>
 
@@ -159,6 +214,31 @@ index <i>M</i><sub>0</sub> + &hellip; + <i>M</i><sub><i>U</i>&minus;1</sub> &min
         Wikipedia: Cartesian space.
         <a href="https://en.wikipedia.org/wiki/Cartesian_coordinate_system">
             https://en.wikipedia.org/wiki/Cartesian_coordinate_system</a>.
+    </td></tr>
+    <tr><td id="r03">[3]</td><td>
+        Wikipedia: Neuron.
+        <a href="https://en.wikipedia.org/wiki/Neuron">
+            https://en.wikipedia.org/wiki/Neuron</a>.
+    </td></tr>
+    <tr><td id="r04">[4]</td><td>
+        Wikipedia: Synapse.
+        <a href="https://en.wikipedia.org/wiki/Synapse">
+            https://en.wikipedia.org/wiki/Synapse</a>.
+    </td></tr>
+    <tr><td id="r05">[5]</td><td>
+        Wikipedia: Axon.
+        <a href="https://en.wikipedia.org/wiki/Axon">
+            https://en.wikipedia.org/wiki/Axon</a>.
+    </td></tr>
+    <tr><td id="r06">[6]</td><td>
+        Wikipedia: Dendrite.
+        <a href="https://en.wikipedia.org/wiki/Dendrite">
+            https://en.wikipedia.org/wiki/Dendrite</a>.
+    </td></tr>
+    <tr><td id="r07">[7]</td><td>
+        Wikipedia: Glia cell.
+        <a href="https://en.wikipedia.org/wiki/Neuroglia">
+            https://en.wikipedia.org/wiki/Neuroglia</a>.
     </td></tr>
 </table>
 
