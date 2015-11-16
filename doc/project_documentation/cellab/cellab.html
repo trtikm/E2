@@ -16,22 +16,30 @@ project. Instances of the model (for given parameters) are primary subjects of t
 study in this project. A <em>parameter</em> of the neural tissue is any datum passed
 to any library function constructing the model in the memory or any algorithm
 passed to any library function performing a simulation step.
+</p><p>
+The neural tissue consists of two parts: <em>data structures</em> defining how
+model's state is stored in the memory, and <em>transition algorithms</em> allowing
+a computation of a next state from the current one. We describe these two parts
+in the following three sections. Namely, in the first section we present what data
+the model uses. Next we describe how the data are physically stored in the memory.
+And in the third section we describe transition algorithms.
 </p>
 <h2 id="neural_tissue">Structure of neural tissue</h2>
 <p>
-Here we specify what components the neural tissue is made of, what is their internal
-structure and purpose, and how they are organised in 3D space. The basic structure
-of the neural tissue is depicted in this picture.
+Here we specify what data components the neural tissue is made of, what is their internal
+structure and purpose, and how they are logically organised (the physical organisation of
+the data in the memory is discussed in the next section). The basic structure
+of the neural tissue is depicted here.
 </p>
 <img class="figure"
      src="./tissue_layout.svg"
      alt="[tissue_layout.svg]">
 <p>
-We see three main components of the model: <em>tissue</em>, <em>sensory cells</em>,
-and <em>synapses to muscles</em>. The tissue is the component of the model where
-the main computation is performed. Sensory cells and synapses to muscles
-allow for information exchange between the tissue and an external <i>environment</i>
-which is <i>not</i> a part of the model (see the library
+We see three main components of the model: a <em>tissue</em>, <em>sensory cells</em>,
+and <em>synapses to muscles</em>. The tissue stores the main and major part of model's
+state. Sensory cells and synapses to muscles allow for information exchange between
+the tissue and an external <i>environment</i> which is <i>not</i> a part of the model
+(see the library
 <a href="../envlab/envlab.html">envlab</a>
 for more information). We describe all tree components of the model in more details
 in the following subsections.
@@ -169,29 +177,35 @@ describe individual types of components in subsections bellow.
 <h4 id="tissue_cell">Tissue cell</h4>
 <p>
 It is an array of bytes storing a compressed state of a modelled neuron (whose
-body lies in the center of the region associated with the territory). We do <em>not</em>
-define interpretation of individual bytes (i.e. what information is stored) nor
-a compression method. This is left for parametrisations. For example, a parametrisation
-may choose (according to the kind of the territory) to store a state of the leaky
-integrate-and-fire neuron
+body lies in the center of a region in the mammalian cerebral cortex associated
+with the territory). We do <em>not</em> define interpretation of individual bytes
+(i.e. what information is stored) nor a compression method. This is left for
+parametrisations. For example, a parametrisation may choose (according to the
+kind of the territory) to store a state of the leaky integrate-and-fire neuron
 [<a href="./cellab.html#r09">9</a>,
  <a href="./cellab.html#r08">8</a>],
 the Izhikevich neuron
 [<a href="./cellab.html#r10">10</a>,
  <a href="./cellab.html#r08">8</a>],
-the McCulloch-Pitts
+the McCulloch-Pitts neuron
 [<a href="./cellab.html#r11">11</a>,
  <a href="./cellab.html#r08">8</a>],
 Hodgkin-Huxley neuron
 [<a href="./cellab.html#r12">12</a>,
  <a href="./cellab.html#r08">8</a>],
 or any other available model of a neuron. A compression method can be, for example,
-just a state serialisation
+serialisation
 [<a href="./cellab.html#r13">13</a>].
-
-
-
 </p>
+<!--<p>-->
+<!--Observe that a territory is actually determined be its cell. Indeed,-->
+<!--a cell is a model of a neuron, the neuron determines a region in the-->
+<!--cortex, and the region is modelled by the territory containing the cell.-->
+<!--We thus consider terms <em>a kind of a territory</em> and <em>a kind of tissue-->
+<!--cell</em> as synonyms. In the C++ implementation of the library we use only the-->
+<!--later term. In this documentation we use both terms: according to a context-->
+<!--we choose a more suitable one.-->
+<!--</p>-->
 <h4 id="signalling">Signalling</h4>
 <p>
 
@@ -210,9 +224,17 @@ just a state serialisation
 <!--</p>-->
 
 
-<h2 id="">Memory representation of the neural tissue</h2>
+<h2 id="memory_representation">Memory representation of the neural tissue</h2>
 
-
+<h2 id="transition_algorithms">Transition algorithms</h2>
+<!--<p>-->
+<!--An update of a cell proceeds in three steps: a decompression of the array of bytes-->
+<!--into a separate memory outside the model, update of this memory by calling a given-->
+<!--algorithm, and a compression of the updated memory back to the cell (to its array-->
+<!--of bytes). The algorithm is <em>not</em> a part of the model. It is a part of a-->
+<!--parametrisation. The model is only responsible for calling these steps in the right-->
+<!--time and in the right order.-->
+<!--</p>-->
 <!--<h3 id="tissue_column_in_details">Tissue column in details</h3>-->
 
 
