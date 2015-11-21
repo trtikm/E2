@@ -234,9 +234,9 @@ for example, serialisation
 </p><p>
 
 </p>
-<h4 id="delimiters_list">Delimiters list</h4>
+<h4 id="delimiters_list">Delimiters list and triple of lists</h4>
 <p>
-It is a list of six indices, called <em>delimiters</em>, logically splitting
+Delimiters list consists of six indices, called <em>delimiters</em>, logically splitting
 the three lists in the territory (i.e. the list of synapses, territorial states,
 and coordinates of source cells) into seven sub-lists. Let us see this in the picture
 bellow.
@@ -245,12 +245,12 @@ bellow.
      src="./delimiters_list.svg"
      alt="[delimiters_list.svg]">
 <p>
-We see several components of a territory of a kind <i>i</i>. The delimiters list
-<i>D</i><sub><i>i</i></sub> is depicted on the left and the three
+We see a territory of a kind <i>i</i>, without the cell and signalling. The delimiters
+list <i>D</i><sub><i>i</i></sub> is depicted on the left and the three
 lists are depicted on the right, from the top down. The
 symbols <i>LS</i><sub><i>i</i></sub>, <i>LT</i><sub><i>i</i></sub>, and
-<i>LC</i><sub><i>i</i></sub> denote list of synapses, territorial states,
-and coordinates of source cells respectively.
+<i>LC</i><sub><i>i</i></sub> denote lists of synapses, territorial states,
+and coordinates of source cells, respectively.
 Let <i>d</i><sub><i>i</i></sub> be an array
 [0, <i>D</i><sub><i>i</i></sub>[0], &hellip;, <i>D</i><sub><i>i</i></sub>[5],
 <i>T</i><sub><i>i</i></sub>]
@@ -263,6 +263,25 @@ Note that the lists are not split into sub-lists physically. The division is
 purely logical. Also observe that the division is applied to all three lists
 exactly the same way, so the corresponding sub-lists have the same lengths.
 </p><p>
+For each an index <i>j</i> (0&le;<i>j</i>&lt;<i>T</i><sub><i>i</i></sub>) a triple
+(<i>LS</i><sub><i>i</i></sub>[<i>j</i>],
+<i>LT</i><sub><i>i</i></sub>[<i>j</i>],
+<i>LC</i><sub><i>i</i></sub>[<i>j</i>])
+represents a model of an axon
+[<a href="./cellab.html#r05">5</a>]
+projected from a certain tissue cell to this territory. It is assumed in the neural
+tissue that the triple models the whole axon, including all its important parts like
+growth cone (when the axon is searching for a target tissue cell),
+synapse (when the axon is connected to a tissue cell),
+and the (myelined) fibre itself. Nevertheless, we do <em>not</em> specify
+in what details what parts of an axon are modelled. It is left for a parametrisation.
+Therefore, a parametrisation may, in fact, abstract any part of an axon in a way
+that it actually has no representation in the triple. We discuss properties of
+all element of the triple in the following three subsections.
+</p><p>
+The neural tissue ensures that all three lists are sorted according
+
+
 <kbd style="color:red">Explain why we use the three lists aligned together.</kbd>
 <kbd style="color:red">Say according to what information the lists are divided.</kbd>
 </p>
