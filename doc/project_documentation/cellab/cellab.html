@@ -36,8 +36,8 @@ of the neural tissue is depicted here.
      alt="[tissue_layout.svg]">
 <p>
 We see three main components of the model: a <em>tissue</em>, <em>sensory cells</em>,
-and <em>synapses to muscles</em>. The tissue stores the main and major part of model's
-state. Sensory cells and synapses to muscles allow for information exchange between
+and <em>synapses to muscles</em>. The tissue stores a state of the model.
+Sensory cells and synapses to muscles allow for information exchange between
 the tissue and an external <i>environment</i> which is <i>not</i> a part of the model
 (see the library
 <a href="../envlab/envlab.html">envlab</a>
@@ -54,7 +54,7 @@ All columns in the tissue have the identical structure. Each column consists of
 <i>C</i> <i>territories</i> aligned along the <i>columnar</i> axis C.
 Each territory is uniquely identified in its column by a columnar
 coordinate taken from the set {0,&hellip;,<i>C</i>&minus;1}. Moreover,
-a territory  is uniquely identified in the whole issue by three coordinates
+a territory  is uniquely identified in the whole tissue by three coordinates
 along the axes X, Y, and C. Territories are thus regularly distributed in the
 <em>left-handed</em> 3D Cartesian space
 [<a href="./cellab.html#r02">2</a>].
@@ -173,6 +173,12 @@ inter-cellular liquid, and so on.
 A territory (as a model of a region) is thus supposed to model all desired behaviour
 occurring in the region. This is actually done via components of the territory. We
 describe individual types of components in subsections bellow.
+</p><p>
+A territory is, in fact, an abstract term in the neural tissue. Indeed, it is
+associated with no data. It is only a term allowing us to collectively name
+certain components (with physical data) sharing some spatial and logical
+properties.
+
 </p>
 <h4 id="tissue_cell">Tissue cell</h4>
 <p>
@@ -196,32 +202,81 @@ Hodgkin-Huxley neuron
 or any other available model of a neuron. A compression method can be, for example,
 serialisation
 [<a href="./cellab.html#r13">13</a>].
+</p><p>
+We define a term <em>a kind of tissue cell</em> as a synonym for <em>a kind of a
+territory</em>. Although the later is more accurate from the theoretical point of
+view, in the C++ implementation of the library it is more convenient to use the
+former term due to the abstract nature of a territory (it has no data) and since a
+tissue cell is the central component from the point of view of the computational
+complexity.
 </p>
-<!--<p>-->
-<!--Observe that a territory is actually determined be its cell. Indeed,-->
-<!--a cell is a model of a neuron, the neuron determines a region in the-->
-<!--cortex, and the region is modelled by the territory containing the cell.-->
-<!--We thus consider terms <em>a kind of a territory</em> and <em>a kind of tissue-->
-<!--cell</em> as synonyms. In the C++ implementation of the library we use only the-->
-<!--later term. In this documentation we use both terms: according to a context-->
-<!--we choose a more suitable one.-->
-<!--</p>-->
 <h4 id="signalling">Signalling</h4>
 <p>
+It is an array of bytes storing that part of a state of a territory which is not
+modelled by any other component of that territory. A compression is used to store
+the information.  We do <em>not</em> define interpretation of individual bytes
+(i.e. what information is stored) nor a compression method. This is left for
+parametrisations. For example, a parametrisation may store an information
+necessary for guidance of axons
+[<a href="./cellab.html#r14">14</a>,
+ <a href="./cellab.html#r15">15</a>,
+ <a href="./cellab.html#r16">16</a>]
+passing through the territory to reach target cells. The information may be
+expressed, for example, in a form of a distribution of concentrations of
+guidance cues
+[<a href="./cellab.html#r17">17</a>,
+ <a href="./cellab.html#r18">18</a>,
+ <a href="./cellab.html#r19">19</a>,
+ <a href="./cellab.html#r20">20</a>]
+in the 3D space associated with the territory. A compression method can be,
+for example, serialisation
+[<a href="./cellab.html#r13">13</a>].
+</p><p>
 
 </p>
 <h4 id="delimiters_list">Delimiters list</h4>
 <p>
-
+It is a list of six indices, called <em>delimiters</em>, logically splitting
+the three lists in the territory (i.e. the list of synapses, territorial states,
+and coordinates of source cells) into seven sub-lists. Let us see this in the picture
+bellow.
 </p>
-<h4 id="synapse">Synapse, territorial state, coordinates to source cell</h4>
+<img class="figure"
+     src="./delimiters_list.svg"
+     alt="[delimiters_list.svg]">
+<p>
+We see several components of a territory of a kind <i>i</i>. The delimiters list
+<i>D</i><sub><i>i</i></sub> is depicted on the left and the three
+lists are depicted on the right, from the top down. The
+symbols <i>LS</i><sub><i>i</i></sub>, <i>LT</i><sub><i>i</i></sub>, and
+<i>LC</i><sub><i>i</i></sub> denote list of synapses, territorial states,
+and coordinates of source cells respectively.
+Let <i>d</i><sub><i>i</i></sub> be an array
+[0, <i>D</i><sub><i>i</i></sub>[0], &hellip;, <i>D</i><sub><i>i</i></sub>[5],
+<i>T</i><sub><i>i</i></sub>]
+of the length eight. Then a sub-list <i>j</i> (0&le;<i>j</i>&le;6)
+of a list <i>LS</i><sub><i>i</i></sub>, <i>LT</i><sub><i>i</i></sub>,
+or <i>LC</i><sub><i>i</i></sub> consists of elements at indices
+<i>d</i><sub><i>i</i></sub>[<i>j</i>], &hellip;,
+<i>d</i><sub><i>i</i></sub>[<i>j</i>+1]&minus;1.
+Note that the lists are not split into sub-lists physically. The division is
+purely logical. Also observe that the division is applied to all three lists
+exactly the same way, so the corresponding sub-lists have the same lengths.
+</p><p>
+<kbd style="color:red">Explain why we use the three lists aligned together.</kbd>
+<kbd style="color:red">Say according to what information the lists are divided.</kbd>
+</p>
+<h4 id="synapse">Synapse</h4>
+<p>
+</p>
+<h4 id="territorial_state">Territorial state</h4>
 <p>
 
 </p>
-<!--<h4 id=""></h4>-->
-<!--<p>-->
+<h4 id="coordinates_to_source_cell">Coordinates to source cell</h4>
+<p>
 
-<!--</p>-->
+</p>
 
 
 <h2 id="memory_representation">Memory representation of the neural tissue</h2>
@@ -313,7 +368,41 @@ serialisation
         <a href="https://en.wikipedia.org/wiki/Serialization">
             https://en.wikipedia.org/wiki/Serialization</a>.
     </td></tr>
-
+    <tr><td id="r14">[14]</td><td>
+        Wikipedia: Axon guidance.
+        <a href="https://en.wikipedia.org/wiki/Axon_guidance">
+            https://en.wikipedia.org/wiki/Axon_guidance</a>.
+    </td></tr>
+    <tr><td id="r15">[15]</td><td>
+        MBInfo: Axon guidance and growth cone.
+        <a href="http://www.mechanobio.info/modules/go-0007411">
+            http://www.mechanobio.info/modules/go-0007411</a>.
+    </td></tr>
+    <tr><td id="r16">[16]</td><td>
+        MBInfo: Axon guidance and growth cone.
+        <a href="http://www.mechanobio.info/modules/go-0007411/1_go-0007411">
+            http://www.mechanobio.info/modules/go-0007411/1_go-0007411</a>.
+    </td></tr>
+    <tr><td id="r17">[17]</td><td>
+        Wikipedia: Slit-Robo.
+        <a href="https://en.wikipedia.org/wiki/Slit-Robo">
+            https://en.wikipedia.org/wiki/Slit-Robo</a>.
+    </td></tr>
+    <tr><td id="r18">[18]</td><td>
+        Wikipedia: Ephrin.
+        <a href="https://en.wikipedia.org/wiki/Ephrin">
+            https://en.wikipedia.org/wiki/Ephrin</a>.
+    </td></tr>
+    <tr><td id="r19">[19]</td><td>
+        Wikipedia: Netrin.
+        <a href="https://en.wikipedia.org/wiki/Netrin">
+            https://en.wikipedia.org/wiki/Netrin</a>.
+    </td></tr>
+    <tr><td id="r20">[20]</td><td>
+        Wikipedia: Semaphorin.
+        <a href="https://en.wikipedia.org/wiki/Semaphorin">
+            https://en.wikipedia.org/wiki/Semaphorin</a>.
+    </td></tr>
 </table>
 
 </body>
