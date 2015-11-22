@@ -246,9 +246,14 @@ bellow.
      alt="[delimiters_list.svg]">
 <p>
 We see a territory of a kind <i>i</i>, without the cell and signalling. The delimiters
-list <i>D</i><sub><i>i</i></sub> is depicted on the left and the three
-lists are depicted on the right, from the top down. The
-symbols <i>LS</i><sub><i>i</i></sub>, <i>LT</i><sub><i>i</i></sub>, and
+list <i>D</i><sub><i>i</i></sub> is depicted on the left.
+For each <i>j</i> and <i>k</i> such that 0 &le; <i>j</i> &le; <i>k</i> &le; 5 we always
+have
+0 &le; <i>D</i><sub><i>i</i></sub>[<i>j</i>] &le;
+<i>D</i><sub><i>i</i></sub>[<i>k</i>] &le;
+<i>T</i><sub><i>i</i></sub>.
+The three lists are depicted on the right part of the picture, from the top down.
+The symbols <i>LS</i><sub><i>i</i></sub>, <i>LT</i><sub><i>i</i></sub>, and
 <i>LC</i><sub><i>i</i></sub> denote lists of synapses, territorial states,
 and coordinates of source cells, respectively.
 Let <i>d</i><sub><i>i</i></sub> be an array
@@ -262,6 +267,35 @@ or <i>LC</i><sub><i>i</i></sub> consists of elements at indices
 Note that the lists are not split into sub-lists physically. The division is
 purely logical. Also observe that the division is applied to all three lists
 exactly the same way, so the corresponding sub-lists have the same lengths.
+The length of any sub-list <i>j</i> can be zero (i.e. the empty sub-list). It
+happens when
+<i>d</i><sub><i>i</i></sub>[<i>j</i>] = <i>d</i><sub><i>i</i></sub>[<i>j</i>+1].
+Note though that at least one sub-list have to always be non-empty, since
+<i>T</i><sub><i>i</i></sub> is always positive.
+</p><p>
+Delimiters list <i>D</i><sub><i>i</i></sub> is a property of the neural
+tissue which is used internally. It serves as a look-up table into the
+three lists. Delimiters in <i>D</i><sub><i>i</i></sub> are computed by algorithms
+of the neural tissue. First, lists
+<i>LS</i><sub><i>i</i></sub>, <i>LT</i><sub><i>i</i></sub>, and
+<i>LC</i><sub><i>i</i></sub> are synchronously sorted according information stored
+in <i>LT</i><sub><i>i</i></sub>.
+Each element of <i>LT</i><sub><i>i</i></sub> is
+an integer from a set {0,&hellip;,6} (see a
+<a href="./cellab.html#territorial_state">sub-section bellow</a>
+for details). Whenever for some indices <i>j</i> and <i>k</i> the elements
+<i>LT</i><sub><i>i</i></sub>[<i>j</i>] and <i>LT</i><sub><i>i</i></sub>[<i>k</i>]
+are in the wrong order, then there is swapped
+<i>LS</i><sub><i>i</i></sub>[<i>j</i>] with  <i>LS</i><sub><i>i</i></sub>[<i>k</i>],
+<i>LT</i><sub><i>i</i></sub>[<i>j</i>] with  <i>LT</i><sub><i>i</i></sub>[<i>k</i>],
+and
+<i>LC</i><sub><i>i</i></sub>[<i>j</i>] with  <i>LC</i><sub><i>i</i></sub>[<i>k</i>].
+Once the lists are sorted, delimiters in <i>D</i><sub><i>i</i></sub> are set such
+that for each sub-list <i>j</i>&isin;{0,&hellip;,6} all elements of
+<i>LT</i><sub><i>i</i></sub> at indices
+<i>k</i>&isin;{<i>d</i><sub><i>i</i></sub>[<i>j</i>], &hellip;,
+<i>d</i><sub><i>i</i></sub>[<i>j</i>+1]&minus;1} satisfy
+<i>LT</i><sub><i>i</i></sub>[<i>k</i>]=<i>j</i>.
 </p><p>
 For each an index <i>j</i> (0&le;<i>j</i>&lt;<i>T</i><sub><i>i</i></sub>) a triple
 (<i>LS</i><sub><i>i</i></sub>[<i>j</i>],
@@ -278,12 +312,6 @@ in what details what parts of an axon are modelled. It is left for a parametrisa
 Therefore, a parametrisation may, in fact, abstract any part of an axon in a way
 that it actually has no representation in the triple. We discuss properties of
 all element of the triple in the following three subsections.
-</p><p>
-The neural tissue ensures that all three lists are sorted according
-
-
-<kbd style="color:red">Explain why we use the three lists aligned together.</kbd>
-<kbd style="color:red">Say according to what information the lists are divided.</kbd>
 </p>
 <h4 id="synapse">Synapse</h4>
 <p>
