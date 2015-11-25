@@ -172,7 +172,7 @@ traversing the region, glia cells
 inter-cellular liquid, and so on.
 A territory (as a model of a region) is thus supposed to model all desired behaviour
 occurring in the region. This is actually done via components of the territory. We
-describe individual types of components in subsections bellow.
+describe individual types of components in subsections below.
 </p><p>
 A territory is, in fact, an abstract term in the neural tissue. Indeed, it is
 associated with no data. It is only a term allowing us to collectively name
@@ -234,68 +234,25 @@ for example, serialisation
 </p><p>
 
 </p>
-<h4 id="delimiters_list">Delimiters list and triple of lists</h4>
+<h4 id="territorial_lists">Territorial lists</h4>
 <p>
-Delimiters list consists of six indices, called <em>delimiters</em>, logically splitting
-the three lists in the territory (i.e. the list of synapses, territorial states,
-and coordinates of source cells) into seven sub-lists. Let us see this in the picture
-bellow.
+There are four lists in a territory. Namely, the list of synapses, the list of territorial
+states, the list of coordinates of source cells, and the delimiters list. The first three
+lists are tightly related, namely their elements on the same indices. The delimiters
+list is an increasing sequence of exactly six indices into the other three lists
+simultaneously. The relations between all lists are depicted in the picture below
+for a territory of a kind <i>i</i> (the cell and the signalling are omitted).
 </p>
 <img class="figure"
-     src="./delimiters_list.svg"
-     alt="[delimiters_list.svg]">
+     src="./territorial_lists.svg"
+     alt="[territorial_lists.svg]">
 <p>
-We see a territory of a kind <i>i</i>, without the cell and signalling. The delimiters
-list <i>D</i><sub><i>i</i></sub> is depicted on the left.
-For each <i>j</i> and <i>k</i> such that 0 &le; <i>j</i> &le; <i>k</i> &le; 5 we always
-have
-0 &le; <i>D</i><sub><i>i</i></sub>[<i>j</i>] &le;
-<i>D</i><sub><i>i</i></sub>[<i>k</i>] &le;
-<i>T</i><sub><i>i</i></sub>.
-The three lists are depicted on the right part of the picture, from the top down.
-The symbols <i>LS</i><sub><i>i</i></sub>, <i>LT</i><sub><i>i</i></sub>, and
-<i>LC</i><sub><i>i</i></sub> denote lists of synapses, territorial states,
-and coordinates of source cells, respectively.
-Let <i>d</i><sub><i>i</i></sub> be an array
-[0, <i>D</i><sub><i>i</i></sub>[0], &hellip;, <i>D</i><sub><i>i</i></sub>[5],
-<i>T</i><sub><i>i</i></sub>]
-of the length eight. Then a sub-list <i>j</i> (0&le;<i>j</i>&le;6)
-of a list <i>LS</i><sub><i>i</i></sub>, <i>LT</i><sub><i>i</i></sub>,
-or <i>LC</i><sub><i>i</i></sub> consists of elements at indices
-<i>d</i><sub><i>i</i></sub>[<i>j</i>], &hellip;,
-<i>d</i><sub><i>i</i></sub>[<i>j</i>+1]&minus;1.
-Note that the lists are not split into sub-lists physically. The division is
-purely logical. Also observe that the division is applied to all three lists
-exactly the same way, so the corresponding sub-lists have the same lengths.
-The length of any sub-list <i>j</i> can be zero (i.e. the empty sub-list). It
-happens when
-<i>d</i><sub><i>i</i></sub>[<i>j</i>] = <i>d</i><sub><i>i</i></sub>[<i>j</i>+1].
-Note though that at least one sub-list have to always be non-empty, since
-<i>T</i><sub><i>i</i></sub> is always positive.
-</p><p>
-Delimiters list <i>D</i><sub><i>i</i></sub> is a property of the neural
-tissue which is used internally. It serves as a look-up table into the
-three lists. Delimiters in <i>D</i><sub><i>i</i></sub> are computed by algorithms
-of the neural tissue. First, lists
-<i>LS</i><sub><i>i</i></sub>, <i>LT</i><sub><i>i</i></sub>, and
-<i>LC</i><sub><i>i</i></sub> are synchronously sorted according information stored
-in <i>LT</i><sub><i>i</i></sub>.
-Each element of <i>LT</i><sub><i>i</i></sub> is
-an integer from a set {0,&hellip;,6} (see a
-<a href="./cellab.html#territorial_state">sub-section bellow</a>
-for details). Whenever for some indices <i>j</i> and <i>k</i> the elements
-<i>LT</i><sub><i>i</i></sub>[<i>j</i>] and <i>LT</i><sub><i>i</i></sub>[<i>k</i>]
-are in the wrong order, then there is swapped
-<i>LS</i><sub><i>i</i></sub>[<i>j</i>] with  <i>LS</i><sub><i>i</i></sub>[<i>k</i>],
-<i>LT</i><sub><i>i</i></sub>[<i>j</i>] with  <i>LT</i><sub><i>i</i></sub>[<i>k</i>],
-and
-<i>LC</i><sub><i>i</i></sub>[<i>j</i>] with  <i>LC</i><sub><i>i</i></sub>[<i>k</i>].
-Once the lists are sorted, delimiters in <i>D</i><sub><i>i</i></sub> are set such
-that for each sub-list <i>j</i>&isin;{0,&hellip;,6} all elements of
-<i>LT</i><sub><i>i</i></sub> at indices
-<i>k</i>&isin;{<i>d</i><sub><i>i</i></sub>[<i>j</i>], &hellip;,
-<i>d</i><sub><i>i</i></sub>[<i>j</i>+1]&minus;1} satisfy
-<i>LT</i><sub><i>i</i></sub>[<i>k</i>]=<i>j</i>.
+The delimiters list <i>D</i><sub><i>i</i></sub> is depicted on the left and the three other
+lists are depicted on the right, from the top down. The symbols <i>LS</i><sub><i>i</i></sub>,
+<i>LT</i><sub><i>i</i></sub>, and <i>LC</i><sub><i>i</i></sub> denote the lists of synapses,
+territorial states, and coordinates of source cells, respectively. Observe that these three
+lists have the same lenght and elements on the same indices are aligned, i.e. they form
+triples across the lists.
 </p><p>
 For each an index <i>j</i> (0&le;<i>j</i>&lt;<i>T</i><sub><i>i</i></sub>) a triple
 (<i>LS</i><sub><i>i</i></sub>[<i>j</i>],
@@ -312,6 +269,44 @@ in what details what parts of an axon are modelled. It is left for a parametrisa
 Therefore, a parametrisation may, in fact, abstract any part of an axon in a way
 that it actually has no representation in the triple. We discuss properties of
 all element of the triple in the following three subsections.
+</p><p>
+Delimiters list <i>D</i><sub><i>i</i></sub> has no interpretation in the modelled
+mammalian cerebral cortex. It is a technicality boosting algorithms of the neural
+tissue operating on the other lists. Here we discuss only a necessary minimum about
+the algorithms to understand the meaning of <i>D</i><sub><i>i</i></sub> (details are
+<kbd style="color:red">HERE</kbd> and <kbd style="color:red">HERE</kbd>).
+The lists <i>LS</i><sub><i>i</i></sub>, <i>LT</i><sub><i>i</i></sub>, and
+<i>LC</i><sub><i>i</i></sub> are synchronously sorted according to information stored
+in <i>LT</i><sub><i>i</i></sub>. Each element of <i>LT</i><sub><i>i</i></sub> is
+an integer from a set {0,&hellip;,6}, see a
+<a href="./cellab.html#territorial_state">sub-section below</a>
+for details. By synchronous sorting we mean that if for some indices <i>j</i> and
+<i>k</i> the elements <i>LT</i><sub><i>i</i></sub>[<i>j</i>] and
+<i>LT</i><sub><i>i</i></sub>[<i>k</i>]
+are in a wrong order, then there is swapped
+<i>LS</i><sub><i>i</i></sub>[<i>j</i>] with  <i>LS</i><sub><i>i</i></sub>[<i>k</i>],
+<i>LT</i><sub><i>i</i></sub>[<i>j</i>] with  <i>LT</i><sub><i>i</i></sub>[<i>k</i>],
+and
+<i>LC</i><sub><i>i</i></sub>[<i>j</i>] with  <i>LC</i><sub><i>i</i></sub>[<i>k</i>].
+In other words, the sorting respects the triples constructed across the lists.
+Once the lists are sorted, we construct a look-up table
+<i>d</i><sub><i>i</i></sub> =
+[0, <i>n</i><sub>0</sub>, <i>n</i><sub>1</sub>, <i>n</i><sub>2</sub>,
+    <i>n</i><sub>3</sub>, <i>n</i><sub>4</sub>, <i>n</i><sub>5</sub>,
+    <i>T</i><sub><i>i</i></sub>],
+where <i>n</i><sub><i>j</i></sub> is a number of elements in
+<i>LT</i><sub><i>i</i></sub> less than or equal to <i>j</i>. For each
+<i>k</i>&isin;{0,&hellip;,6} the look-up table identifies a range of indices of triples,
+namely <i>d</i><sub><i>i</i></sub>[<i>k</i>], &hellip;,
+<i>d</i><sub><i>i</i></sub>[<i>k</i>+1]&minus;1, which all have the same value
+<i>k</i> in the list <i>LT</i><sub><i>i</i></sub>. The delimiters list
+<i>D</i><sub><i>i</i></sub> is then defined as
+[<i>n</i><sub>0</sub>, <i>n</i><sub>1</sub>, <i>n</i><sub>2</sub>,
+    <i>n</i><sub>3</sub>, <i>n</i><sub>4</sub>, <i>n</i><sub>5</sub>].
+We store <i>D</i><sub><i>i</i></sub> in the territory instead of
+<i>d</i><sub><i>i</i></sub> in order to save memory. The reconstruction
+of <i>d</i><sub><i>i</i></sub> from <i>D</i><sub><i>i</i></sub> is trivial.
+Note that we call the numbers <i>n</i><sub><i>j</i></sub> as <em>delimiters</em>.
 </p>
 <h4 id="synapse">Synapse</h4>
 <p>
