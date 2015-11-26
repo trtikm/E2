@@ -28,6 +28,12 @@ table.figure {
     margin-left: auto;
     margin-right: auto;
 }
+table.enumerate {
+    margin-left: auto;
+    margin-right: auto;
+    width: 80%;
+    text-align: justify
+}
 a:link { color: blue; }
 a:visited { color: #840084; }
 a:active { color: blue; }

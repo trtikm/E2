@@ -262,28 +262,123 @@ represents a model of an axon
 [<a href="./cellab.html#r05">5</a>]
 projected from a certain tissue cell to this territory. It is assumed in the neural
 tissue that the triple models the whole axon, including all its important parts like
-growth cone (when the axon is searching for a target tissue cell),
-synapse (when the axon is connected to a tissue cell),
-and the (myelined) fibre itself. Nevertheless, we do <em>not</em> specify
+the growth cone
+[<a href="./cellab.html#r21">21</a>]
+(when the axon is searching for a target tissue cell),
+the synapse
+[<a href="./cellab.html#r04">4</a>]
+(when the axon is connected to a tissue cell),
+and the (myelinated
+[<a href="./cellab.html#r22">22</a>])
+fibre itself. Nevertheless, we do <em>not</em> specify
 in what details what parts of an axon are modelled. It is left for a parametrisation.
 Therefore, a parametrisation may, in fact, abstract any part of an axon in a way
-that it actually has no representation in the triple. We discuss properties of
-all element of the triple in the following three subsections.
+that it actually has no representation in the triple.
+    <!--We discuss properties of-->
+<!--all element of the triple in the following three subsections.-->
+</p><p>
+Now we focus on individual components of
+(<i>LS</i><sub><i>i</i></sub>[<i>j</i>],
+<i>LT</i><sub><i>i</i></sub>[<i>j</i>],
+<i>LC</i><sub><i>i</i></sub>[<i>j</i>]).
+The third component <i>LC</i><sub><i>i</i></sub>[<i>j</i>] stores tissue coordinates
+<i>x</i>, <i>y</i>, and <i>c</i> of the tissue cell from which the modelled axon is
+projected. We call the cell as <em>source cell</em>. A single tissue cell may be the
+source cell for more than one triple from any territories in the tissue. The second
+component <i>LT</i><sub><i>i</i></sub>[<i>j</i>] holds one of seven possible integer
+values 0,&hellip;,6. Their interpretations are given in the table below. There we
+assume tissue coordinates of this territory are <i>x</i><sub>0</sub>,
+<i>y</i><sub>0</sub>, and <i>c</i><sub>0</sub>.
+</p>
+<table class="enumerate">
+<tr>
+<th>Value&nbsp;&nbsp;&nbsp;</th>
+<th>Interpretation</th>
+</tr>
+<tr>
+<td align="center" valign="top">0</td>
+<td>
+The axon is connected to the cell of this territory via a synapse
+[<a href="./cellab.html#r04">4</a>]. The cell can thus accept information
+(typically as action potentials
+[<a href="./cellab.html#r23">23</a>])
+from the tissue cell inside the territory at coordinates
+<i>LC</i><sub><i>i</i></sub>[<i>j</i>].
+<!--We do not specify any properties of the synapse. This is left for a para-->
+</td>
+</tr>
+<tr>
+<td align="center" valign="top">1</td>
+<td>
+The axon is not connected. Its growth cone is passing through this territory
+into the neighbourhood territory at coordinates
+<i>x</i><sub>0</sub>+1, <i>y</i><sub>0</sub>, <i>c</i><sub>0</sub>.
+</td>
+</tr>
+<tr>
+<td align="center" valign="top">2</td>
+<td>
+The axon is not connected. Its growth cone is passing through this territory
+into the neighbourhood territory at coordinates
+<i>x</i><sub>0</sub>&minus;1, <i>y</i><sub>0</sub>, <i>c</i><sub>0</sub>.
+</td>
+</tr>
+<tr>
+<td align="center" valign="top">3</td>
+<td>
+The axon is not connected. Its growth cone is passing through this territory
+into the neighbourhood territory at coordinates
+<i>x</i><sub>0</sub>, <i>y</i><sub>0</sub>+1, <i>c</i><sub>0</sub>.
+</td>
+</tr>
+<tr>
+<td align="center" valign="top">4</td>
+<td>
+The axon is not connected. Its growth cone is passing through this territory
+into the neighbourhood territory at coordinates
+<i>x</i><sub>0</sub>, <i>y</i><sub>0</sub>&minus;1, <i>c</i><sub>0</sub>.
+</td>
+</tr>
+<tr>
+<td align="center" valign="top">5</td>
+<td>
+The axon is not connected. Its growth cone is passing through this territory
+into the neighbourhood territory at coordinates
+<i>x</i><sub>0</sub>, <i>y</i><sub>0</sub>, <i>c</i><sub>0</sub>+1.
+</td>
+</tr>
+<tr>
+<td align="center" valign="top">6</td>
+<td>
+The axon is not connected. Its growth cone is passing through this territory
+into the neighbourhood territory at coordinates
+<i>x</i><sub>0</sub>, <i>y</i><sub>0</sub>, <i>c</i><sub>0</sub>&minus;1.
+</td>
+</tr>
+</table>
+<p>
+Algorithms of the neural tissue ensure that no axon escapes from the neural
+tissue. Simply said, the axon stays in the current territory, if there is no
+neighbour territory at given coordinates. We discuss neighbourhoods
+of territories in details
+<kbd style="color:red">HERE</kbd>.
+Finally, the first component <i>LS</i><sub><i>i</i></sub>[<i>j</i>] is an
+array of bytes where all remaining information about the modelled axon is
+stored in an compressed form. We do <em>not</em> define interpretation of
+individual bytes (i.e. what information is stored) nor a compression method.
+This is left for parametrisations.
 </p><p>
 Delimiters list <i>D</i><sub><i>i</i></sub> has no interpretation in the modelled
 mammalian cerebral cortex. It is a technicality boosting algorithms of the neural
-tissue operating on the other lists. Here we discuss only a necessary minimum about
-the algorithms to understand the meaning of <i>D</i><sub><i>i</i></sub> (details are
-<kbd style="color:red">HERE</kbd> and <kbd style="color:red">HERE</kbd>).
+tissue operating on the other three lists. Here we discuss only a necessary minimum
+about the algorithms to understand the meaning of <i>D</i><sub><i>i</i></sub> (details
+are <kbd style="color:red">HERE</kbd> and <kbd style="color:red">HERE</kbd>).
 The lists <i>LS</i><sub><i>i</i></sub>, <i>LT</i><sub><i>i</i></sub>, and
 <i>LC</i><sub><i>i</i></sub> are synchronously sorted according to information stored
-in <i>LT</i><sub><i>i</i></sub>. Each element of <i>LT</i><sub><i>i</i></sub> is
-an integer from a set {0,&hellip;,6}, see a
-<a href="./cellab.html#territorial_state">sub-section below</a>
-for details. By synchronous sorting we mean that if for some indices <i>j</i> and
-<i>k</i> the elements <i>LT</i><sub><i>i</i></sub>[<i>j</i>] and
-<i>LT</i><sub><i>i</i></sub>[<i>k</i>]
-are in a wrong order, then there is swapped
+in <i>LT</i><sub><i>i</i></sub> (remember that elements of <i>LT</i><sub><i>i</i></sub>
+are integers from the set {0,&hellip;,6}). By synchronous sorting we mean that if for
+some indices <i>j</i> and <i>k</i> the elements <i>LT</i><sub><i>i</i></sub>[<i>j</i>]
+and <i>LT</i><sub><i>i</i></sub>[<i>k</i>] are in the wrong order, then there is swapped
 <i>LS</i><sub><i>i</i></sub>[<i>j</i>] with  <i>LS</i><sub><i>i</i></sub>[<i>k</i>],
 <i>LT</i><sub><i>i</i></sub>[<i>j</i>] with  <i>LT</i><sub><i>i</i></sub>[<i>k</i>],
 and
@@ -308,18 +403,6 @@ We store <i>D</i><sub><i>i</i></sub> in the territory instead of
 of <i>d</i><sub><i>i</i></sub> from <i>D</i><sub><i>i</i></sub> is trivial.
 Note that we call the numbers <i>n</i><sub><i>j</i></sub> as <em>delimiters</em>.
 </p>
-<h4 id="synapse">Synapse</h4>
-<p>
-</p>
-<h4 id="territorial_state">Territorial state</h4>
-<p>
-
-</p>
-<h4 id="coordinates_to_source_cell">Coordinates to source cell</h4>
-<p>
-
-</p>
-
 
 <h2 id="memory_representation">Memory representation of the neural tissue</h2>
 
@@ -445,6 +528,23 @@ Note that we call the numbers <i>n</i><sub><i>j</i></sub> as <em>delimiters</em>
         <a href="https://en.wikipedia.org/wiki/Semaphorin">
             https://en.wikipedia.org/wiki/Semaphorin</a>.
     </td></tr>
+    <tr><td id="r21">[21]</td><td>
+        Wikipedia: Growth cone.
+        <a href="https://en.wikipedia.org/wiki/Growth_cone">
+            https://en.wikipedia.org/wiki/Growth_cone</a>.
+    </td></tr>
+    <tr><td id="r22">[22]</td><td>
+        Wikipedia: Myelin.
+        <a href="https://en.wikipedia.org/wiki/Myelin">
+            https://en.wikipedia.org/wiki/Myelin</a>.
+    </td></tr>
+    <tr><td id="r23">[23]</td><td>
+        Wikipedia: Action potential.
+        <a href="https://en.wikipedia.org/wiki/Action_potential">
+            https://en.wikipedia.org/wiki/Action_potential</a>.
+    </td></tr>
+
+
 </table>
 
 </body>
