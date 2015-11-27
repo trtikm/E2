@@ -11,7 +11,7 @@
 <p>
 <!--<kbd style="color:red">TODO</kbd>-->
 This library defines a parametrised model of a mammalian cerebral cortex
-[<a href="./cellab.html#r01">1</a>] called <em>neural tissue</em> in the whole E2
+[<a href="./cellab.html#r01">1</a>] called a <em>neural tissue</em> in the whole E2
 project. Instances of the model (for given parameters) are primary subjects of the
 study in this project. A <em>parameter</em> of the neural tissue is any datum passed
 to any library function constructing the model in the memory or any algorithm
@@ -35,18 +35,17 @@ of the neural tissue is depicted here.
      src="./tissue_layout.svg"
      alt="[tissue_layout.svg]">
 <p>
-We see three main components of the model: a <em>tissue</em>, <em>sensory cells</em>,
-and <em>synapses to muscles</em>. The tissue stores a state of the model.
+We see three main components: a <em>tissue</em>, <em>sensory cells</em>,
+and <em>synapses to muscles</em>. The tissue stores a state of the neural tissue.
 Sensory cells and synapses to muscles allow for information exchange between
 the tissue and an external <i>environment</i> which is <i>not</i> a part of the model
 (see the library
 <a href="../envlab/envlab.html">envlab</a>
-for more information). We describe all tree components of the model in more details
-in the following subsections.
+for more information).
 </p>
 <h3 id="tissue">Tissue</h3>
 <p>
-The tissue is a 2D array of <em>columns</em>.
+It is a 2D array of <em>columns</em>.
 There is <i>X</i> columns along the X axis and <i>Y</i> columns along the Y axis.
 Valid indices to the array belong to the set
 {0,&hellip;,<i>X</i>&minus;1}&times;{0,&hellip;,<i>Y</i>&minus;1}.
@@ -304,14 +303,13 @@ The axon is connected to the cell of this territory via a synapse
 [<a href="./cellab.html#r23">23</a>])
 from the tissue cell inside the territory at coordinates
 <i>LC</i><sub><i>i</i></sub>[<i>j</i>].
-<!--We do not specify any properties of the synapse. This is left for a para-->
 </td>
 </tr>
 <tr>
 <td align="center" valign="top">1</td>
 <td>
 The axon is not connected. Its growth cone is passing through this territory
-into the neighbourhood territory at coordinates
+into a territory at coordinates
 <i>x</i><sub>0</sub>+1, <i>y</i><sub>0</sub>, <i>c</i><sub>0</sub>.
 </td>
 </tr>
@@ -319,7 +317,7 @@ into the neighbourhood territory at coordinates
 <td align="center" valign="top">2</td>
 <td>
 The axon is not connected. Its growth cone is passing through this territory
-into the neighbourhood territory at coordinates
+into a territory at coordinates
 <i>x</i><sub>0</sub>&minus;1, <i>y</i><sub>0</sub>, <i>c</i><sub>0</sub>.
 </td>
 </tr>
@@ -327,7 +325,7 @@ into the neighbourhood territory at coordinates
 <td align="center" valign="top">3</td>
 <td>
 The axon is not connected. Its growth cone is passing through this territory
-into the neighbourhood territory at coordinates
+into a territory at coordinates
 <i>x</i><sub>0</sub>, <i>y</i><sub>0</sub>+1, <i>c</i><sub>0</sub>.
 </td>
 </tr>
@@ -335,7 +333,7 @@ into the neighbourhood territory at coordinates
 <td align="center" valign="top">4</td>
 <td>
 The axon is not connected. Its growth cone is passing through this territory
-into the neighbourhood territory at coordinates
+into a territory at coordinates
 <i>x</i><sub>0</sub>, <i>y</i><sub>0</sub>&minus;1, <i>c</i><sub>0</sub>.
 </td>
 </tr>
@@ -343,7 +341,7 @@ into the neighbourhood territory at coordinates
 <td align="center" valign="top">5</td>
 <td>
 The axon is not connected. Its growth cone is passing through this territory
-into the neighbourhood territory at coordinates
+into a territory at coordinates
 <i>x</i><sub>0</sub>, <i>y</i><sub>0</sub>, <i>c</i><sub>0</sub>+1.
 </td>
 </tr>
@@ -351,19 +349,18 @@ into the neighbourhood territory at coordinates
 <td align="center" valign="top">6</td>
 <td>
 The axon is not connected. Its growth cone is passing through this territory
-into the neighbourhood territory at coordinates
+into a territory at coordinates
 <i>x</i><sub>0</sub>, <i>y</i><sub>0</sub>, <i>c</i><sub>0</sub>&minus;1.
 </td>
 </tr>
 </table>
 <p>
 Algorithms of the neural tissue ensure that no axon escapes from the neural
-tissue. Simply said, the axon stays in the current territory, if there is no
-neighbour territory at given coordinates. We discuss neighbourhoods
-of territories in details
-<kbd style="color:red">HERE</kbd>.
-Finally, the first component <i>LS</i><sub><i>i</i></sub>[<i>j</i>] is an
-array of bytes where all remaining information about the modelled axon is
+tissue. The raw coordinates above are mapped to valid ranges along all three
+coordinate axes (see the
+<a href="./cellab.html#axis_mode">next subsection</a>
+for details). Finally, the first component <i>LS</i><sub><i>i</i></sub>[<i>j</i>]
+is an array of bytes where all remaining information about the modelled axon is
 stored in an compressed form. We do <em>not</em> define interpretation of
 individual bytes (i.e. what information is stored) nor a compression method.
 This is left for parametrisations.
@@ -403,8 +400,34 @@ We store <i>D</i><sub><i>i</i></sub> in the territory instead of
 of <i>d</i><sub><i>i</i></sub> from <i>D</i><sub><i>i</i></sub> is trivial.
 Note that we call the numbers <i>n</i><sub><i>j</i></sub> as <em>delimiters</em>.
 </p>
-
-<h2 id="memory_representation">Memory representation of the neural tissue</h2>
+<h3 id="axis_mode">Modes of tissue coordinate axes</h3>
+<p>
+Each of the three coordinate axes X, Y, and C of the tissue is used in
+one of two possible modes: <em>clipping</em> or <em>torus</em>.
+Once a mode is chosen for an axis, it is fixed and cannot be further changed.
+A mode specifies a mapping from all possible coordinates (i.e. integers)
+to the valid range of the axis.
+</p><p>
+The clipping mode maps each negative coordinate to 0, each coordinate
+in the valid range to itself, and each coordinate greater than the
+greatest valid coordinate to the greatest valid coordinate.
+</p><p>
+The torus mode maps each coordinate to its residue class modulo <i>g</i>+1
+[<a href="./cellab.html#r24">24</a>,<a
+    href="./cellab.html#r25">25</a>],
+where <i>g</i> is the greatest valid coordinate. Available residue
+classes are those of the least residue system modulo <i>g</i>+1, i.e.
+0,&hellip;,<i>g</i>. For example, <i>g</i>+1 is mapped to 0, &minus;1 to
+<i>g</i>&minus;1, <i>g</i>+2 to 1, &minus;2 to
+<i>g</i>&minus;2, and so on.
+</p>
+<h3 id="neighbourhood">Neighbourhood of territory and its components</h3>
+<p>
+Let us consider a territory of a kind <i>i</i> located at coordinates
+<i>x</i>, <i>y</i>, <i>c</i> in the tissue and a shifts &Delta;x.
+</p><p>
+</p>
+<h2 id="memory_representation">Memory representation of neural tissue</h2>
 
 <h2 id="transition_algorithms">Transition algorithms</h2>
 <!--<p>-->
@@ -429,122 +452,130 @@ Note that we call the numbers <i>n</i><sub><i>j</i></sub> as <em>delimiters</em>
 
 <h2 id="references">References</h2>
 <table>
-    <tr><td id="r01">[1]</td><td>
+    <tr><td align="right" valign="top" id="r01">[1]</td><td>
         Wikipedia: Cerebral cortex.
         <a href="https://en.wikipedia.org/wiki/Cerebral_cortex">
             https://en.wikipedia.org/wiki/Cerebral_cortex</a>.
     </td></tr>
-    <tr><td id="r02">[2]</td><td>
+    <tr><td align="right" valign="top" id="r02">[2]</td><td>
         Wikipedia: Cartesian space.
         <a href="https://en.wikipedia.org/wiki/Cartesian_coordinate_system">
             https://en.wikipedia.org/wiki/Cartesian_coordinate_system</a>.
     </td></tr>
-    <tr><td id="r03">[3]</td><td>
+    <tr><td align="right" valign="top" id="r03">[3]</td><td>
         Wikipedia: Neuron.
         <a href="https://en.wikipedia.org/wiki/Neuron">
             https://en.wikipedia.org/wiki/Neuron</a>.
     </td></tr>
-    <tr><td id="r04">[4]</td><td>
+    <tr><td align="right" valign="top" id="r04">[4]</td><td>
         Wikipedia: Synapse.
         <a href="https://en.wikipedia.org/wiki/Synapse">
             https://en.wikipedia.org/wiki/Synapse</a>.
     </td></tr>
-    <tr><td id="r05">[5]</td><td>
+    <tr><td align="right" valign="top" id="r05">[5]</td><td>
         Wikipedia: Axon.
         <a href="https://en.wikipedia.org/wiki/Axon">
             https://en.wikipedia.org/wiki/Axon</a>.
     </td></tr>
-    <tr><td id="r06">[6]</td><td>
+    <tr><td align="right" valign="top" id="r06">[6]</td><td>
         Wikipedia: Dendrite.
         <a href="https://en.wikipedia.org/wiki/Dendrite">
             https://en.wikipedia.org/wiki/Dendrite</a>.
     </td></tr>
-    <tr><td id="r07">[7]</td><td>
+    <tr><td align="right" valign="top" id="r07">[7]</td><td>
         Wikipedia: Glia cell.
         <a href="https://en.wikipedia.org/wiki/Neuroglia">
             https://en.wikipedia.org/wiki/Neuroglia</a>.
     </td></tr>
-    <tr><td id="r08">[8]</td><td>
+    <tr><td align="right" valign="top" id="r08">[8]</td><td>
         Thomas Trappenberg. Fundamentals of Computational Neuroscience.
         OXFORD University Press, 2010.
     </td></tr>
-    <tr><td id="r09">[9]</td><td>
+    <tr><td align="right" valign="top" id="r09">[9]</td><td>
         Wikipedia: Leaky integrate-and-fire neuron.
         <a href="https://en.wikipedia.org/wiki/Biological_neuron_model#Leaky_integrate-and-fire">
             https://en.wikipedia.org/wiki/Biological_neuron_model#Leaky_integrate-and-fire</a>.
     </td></tr>
-    <tr><td id="r10">[10]</td><td>
+    <tr><td align="right" valign="top" id="r10">[10]</td><td>
         <a href="http://www.izhikevich.org/publications/spikes.htm">
             http://www.izhikevich.org/publications/spikes.htm</a>.
     </td></tr>
-    <tr><td id="r11">[11]</td><td>
+    <tr><td align="right" valign="top" id="r11">[11]</td><td>
         Martin Anthony.
         <a href="https://books.google.fr/books?id=qOy4yLBqhFcC&pg=PA3&redir_esc=y#v=onepage&q&f=false">
             Discrete Mathematics of Neural Networks: Selected Topics</a>.
         SIAM, 2001.
     </td></tr>
-    <tr><td id="r12">[12]</td><td>
+    <tr><td align="right" valign="top" id="r12">[12]</td><td>
         Wikipedia: Hodgkin-Huxley neuron.
         <a href="https://en.wikipedia.org/wiki/Hodgkin%E2%80%93Huxley_model">
             https://en.wikipedia.org/wiki/Hodgkin%E2%80%93Huxley_model</a>.
     </td></tr>
-    <tr><td id="r13">[13]</td><td>
+    <tr><td align="right" valign="top" id="r13">[13]</td><td>
         Wikipedia: Serialisation.
         <a href="https://en.wikipedia.org/wiki/Serialization">
             https://en.wikipedia.org/wiki/Serialization</a>.
     </td></tr>
-    <tr><td id="r14">[14]</td><td>
+    <tr><td align="right" valign="top" id="r14">[14]</td><td>
         Wikipedia: Axon guidance.
         <a href="https://en.wikipedia.org/wiki/Axon_guidance">
             https://en.wikipedia.org/wiki/Axon_guidance</a>.
     </td></tr>
-    <tr><td id="r15">[15]</td><td>
+    <tr><td align="right" valign="top" id="r15">[15]</td><td>
         MBInfo: Axon guidance and growth cone.
         <a href="http://www.mechanobio.info/modules/go-0007411">
             http://www.mechanobio.info/modules/go-0007411</a>.
     </td></tr>
-    <tr><td id="r16">[16]</td><td>
+    <tr><td align="right" valign="top" id="r16">[16]</td><td>
         MBInfo: Axon guidance and growth cone.
         <a href="http://www.mechanobio.info/modules/go-0007411/1_go-0007411">
             http://www.mechanobio.info/modules/go-0007411/1_go-0007411</a>.
     </td></tr>
-    <tr><td id="r17">[17]</td><td>
+    <tr><td align="right" valign="top" id="r17">[17]</td><td>
         Wikipedia: Slit-Robo.
         <a href="https://en.wikipedia.org/wiki/Slit-Robo">
             https://en.wikipedia.org/wiki/Slit-Robo</a>.
     </td></tr>
-    <tr><td id="r18">[18]</td><td>
+    <tr><td align="right" valign="top" id="r18">[18]</td><td>
         Wikipedia: Ephrin.
         <a href="https://en.wikipedia.org/wiki/Ephrin">
             https://en.wikipedia.org/wiki/Ephrin</a>.
     </td></tr>
-    <tr><td id="r19">[19]</td><td>
+    <tr><td align="right" valign="top" id="r19">[19]</td><td>
         Wikipedia: Netrin.
         <a href="https://en.wikipedia.org/wiki/Netrin">
             https://en.wikipedia.org/wiki/Netrin</a>.
     </td></tr>
-    <tr><td id="r20">[20]</td><td>
+    <tr><td align="right" valign="top" id="r20">[20]</td><td>
         Wikipedia: Semaphorin.
         <a href="https://en.wikipedia.org/wiki/Semaphorin">
             https://en.wikipedia.org/wiki/Semaphorin</a>.
     </td></tr>
-    <tr><td id="r21">[21]</td><td>
+    <tr><td align="right" valign="top" id="r21">[21]</td><td>
         Wikipedia: Growth cone.
         <a href="https://en.wikipedia.org/wiki/Growth_cone">
             https://en.wikipedia.org/wiki/Growth_cone</a>.
     </td></tr>
-    <tr><td id="r22">[22]</td><td>
+    <tr><td align="right" valign="top" id="r22">[22]</td><td>
         Wikipedia: Myelin.
         <a href="https://en.wikipedia.org/wiki/Myelin">
             https://en.wikipedia.org/wiki/Myelin</a>.
     </td></tr>
-    <tr><td id="r23">[23]</td><td>
+    <tr><td align="right" valign="top" id="r23">[23]</td><td>
         Wikipedia: Action potential.
         <a href="https://en.wikipedia.org/wiki/Action_potential">
             https://en.wikipedia.org/wiki/Action_potential</a>.
     </td></tr>
-
-
+    <tr><td align="right" valign="top" id="r24">[24]</td><td>
+        Wikipedia: Modular arithmetic.
+        <a href="https://en.wikipedia.org/wiki/Modular_arithmetic">
+            https://en.wikipedia.org/wiki/Modular_arithmetic</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r25">[25]</td><td>
+        Wikipedia: Congruence relation.
+        <a href="https://en.wikipedia.org/wiki/Congruence_relation">
+            https://en.wikipedia.org/wiki/Congruence_relation</a>.
+    </td></tr>
 </table>
 
 </body>
