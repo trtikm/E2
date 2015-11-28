@@ -406,7 +406,9 @@ Each of the three coordinate axes X, Y, and C of the tissue is used in
 one of two possible modes: <em>clipping</em> or <em>torus</em>.
 Once a mode is chosen for an axis, it is fixed and cannot be further changed.
 A mode specifies a mapping from all possible coordinates (i.e. integers)
-to the valid range of the axis.
+to the valid range of the axis. We use symbols <i>M</i><sub>X</sub>,
+<i>M</i><sub>Y</sub>, and <i>M</i><sub>C</sub> to denote the mode maps of
+the axes X, Y, and C respectively.
 </p><p>
 The clipping mode maps each negative coordinate to 0, each coordinate
 in the valid range to itself, and each coordinate greater than the
@@ -421,11 +423,64 @@ classes are those of the least residue system modulo <i>g</i>+1, i.e.
 <i>g</i>&minus;1, <i>g</i>+2 to 1, &minus;2 to
 <i>g</i>&minus;2, and so on.
 </p>
-<h3 id="neighbourhood">Neighbourhood of territory and its components</h3>
+<h3 id="neighbourhood">Neighbourhoods of components of territories</h3>
 <p>
-Let us consider a territory of a kind <i>i</i> located at coordinates
-<i>x</i>, <i>y</i>, <i>c</i> in the tissue and a shifts &Delta;x.
+Let (<i>x</i>,<i>y</i>,<i>c</i>) be tissue coordinates and <i>r</i><sub><i>x</i></sub>,
+<i>r</i><sub><i>y</i></sub>, and <i>r</i><sub><i>c</i></sub> be non-negative integers.
+A <em>neighbourhood</em> at coordinates (<i>x</i>,<i>y</i>,<i>c</i>) with <em>radii</em>
+<i>r</i><sub><i>x</i></sub>, <i>r</i><sub><i>y</i></sub>, <i>r</i><sub><i>c</i></sub>
+is a set of all tissue coordinates
+(<i>M</i><sub>X</sub>(<i>x</i>+&Delta;<i>x</i>),
+<i>M</i><sub>Y</sub>(<i>y</i>+&Delta;<i>y</i>),
+<i>M</i><sub>C</sub>(<i>c</i>+&Delta;<i>c</i>)), where
+&minus;<i>r</i><sub><i>x</i></sub> &le; &Delta;<i>x</i> &le; <i>r</i><sub><i>x</i></sub>,
+&minus;<i>r</i><sub><i>y</i></sub> &le; &Delta;<i>y</i> &le; <i>r</i><sub><i>y</i></sub>,
+and
+&minus;<i>r</i><sub><i>c</i></sub> &le; &Delta;<i>c</i> &le; <i>r</i><sub><i>c</i></sub>.
 </p><p>
+<!--Let us consider a territory of a kind <i>i</i>.-->
+A parametrisation of the neural tissue have to specify radii, in all three axes X, Y,
+and C, for certain components of territories. The radii are then used by algorithms of the
+neural tissue to build neighbourhoods associated with those components. For each kind
+of territory there is defined one set of radii, i.e. components of territories
+of some kind share radii defined for that kind. Namely, a parametrisation have to
+specify for each territory kind <i>i</i> radii <i>RC</i><sub>X</sub>[<i>i</i>],
+<i>RC</i><sub>Y</sub>[<i>i</i>], and <i>RC</i><sub>C</sub>[<i>i</i>] for
+tissue cells, radii <i>RS</i><sub>X</sub>[<i>i</i>], <i>RS</i><sub>Y</sub>[<i>i</i>],
+and <i>RS</i><sub>C</sub>[<i>i</i>] for signallings, and radii
+<i>RT</i><sub>X</sub>[<i>i</i>], <i>RT</i><sub>Y</sub>[<i>i</i>], and
+<i>RT</i><sub>C</sub>[<i>i</i>] for all triples over territorial lists <i>LS</i>,
+<i>LT</i>, and <i>LC</i>. All these radii (for all kinds) are set once during
+construction of the neural tissue and they cannot be further changed.
+
+
+
+
+<!--For each kind of territory <i>i</i> a parametrisation may choose radii-->
+<!--<i>RC</i><sub>X</sub>[<i>i</i>],-->
+<!--<i>RC</i><sub>Y</sub>[<i>i</i>], and-->
+<!--<i>RC</i><sub>C</sub>[<i>i</i>]-->
+<!--for neighbourhoods of tissue cells in territories-->
+<!--<i>RS</i><sub>X</sub>[<i>i</i>]-->
+<!--<i>RS</i><sub>Y</sub>[<i>i</i>]-->
+<!--<i>RS</i><sub>C</sub>[<i>i</i>]-->
+
+<!--<i>RA</i><sub>X</sub>[<i>i</i>]-->
+<!--<i>RA</i><sub>Y</sub>[<i>i</i>]-->
+<!--<i>RA</i><sub>C</sub>[<i>i</i>]-->
+
+
+<!--<i>RC</i><sub>X</sub>[<i>i</i>]-->
+<!--A radius in the axis X of neighbourhoods of tissue cells in territories of the kind <i>i</i>-->
+
+<!--Let us consider a territory of a kind <i>i</i> located at coordinates-->
+<!--<i>x</i>, <i>y</i>, <i>c</i> in the tissue. A <em>neighbourhood</em> is-->
+
+
+
+
+
+
 </p>
 <h2 id="memory_representation">Memory representation of neural tissue</h2>
 
