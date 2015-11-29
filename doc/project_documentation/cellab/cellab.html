@@ -20,17 +20,49 @@ passed to any library function performing a simulation step.
 The neural tissue consists of two parts: <em>data structures</em> defining how
 model's state is stored in the memory, and <em>transition algorithms</em> allowing
 a computation of a next state from the current one. We describe these two parts
-in the following three sections. Namely, in the first section we present what data
-the model uses. Next we describe how the data are physically stored in the memory.
-And in the third section we describe transition algorithms.
+in the following three sections. Namely, in the
+<a href="./cellab.html#neural_tissue">first section</a>
+we present what data the model uses. In the
+<a href="./cellab.html#memory_representation">next section</a>
+we describe how the data are physically stored in the memory.
+And in the
+<a href="./cellab.html#transition_algorithms">third section</a>
+we describe transition algorithms.
+</p><p>
+The library further provides a data type for aggregation of the neural tissue
+with its parametrisation. We discuss it in the
+<a href="./cellab.html#aggregation_with_parametrisation">fourth section</a>.
 </p>
 <h2 id="neural_tissue">Structure of neural tissue</h2>
+<!--<p>-->
+<!--Here we specify what data components the neural tissue is made of, what is their internal-->
+<!--structure and purpose, and how they are logically organised (the physical organisation of-->
+<!--data in the memory is discussed in the-->
+<!--<a href="./cellab.html#memory_representation">next section</a>).-->
+<!--&lt;!&ndash;The basic structure&ndash;&gt;-->
+<!--&lt;!&ndash;of the neural tissue is depicted here.&ndash;&gt;-->
+<!--</p>-->
 <p>
-Here we specify what data components the neural tissue is made of, what is their internal
-structure and purpose, and how they are logically organised (the physical organisation of
-the data in the memory is discussed in the next section). The basic structure
-of the neural tissue is depicted here.
+Data structures of the neural tissue hold model's state in the memory in a form of a
+pair: <em>static state</em> and <em>dynamic state</em>. While the static state holds
+all data which remain constant during the whole simulation, the dynamic state holds all
+data which can be modified during the simulation.
+</p><p>
+The construction of the neural tissue in the memory start by the construction of
+the static state. It is a parametrisation who provides data required for the
+construction. The passed data are parameters defining global immutable
+properties of the constructed neural tissue.
+Once the static state is created, the dynamic state is constructed
+according to data already stored in the static state. The constructed dynamic
+state has all its components initialised except parameters. Their initialisation
+is a task of the parametrisation. The dynamic state only provides access to the
+memory reserved for them. The library
+<a href="../cellconnect/cellconnect.html"><kbd>cellconnect</kbd></a>
+can be useful in that task.
 </p>
+<h3 id="static_state">Structure of static state</h3>
+
+<h3 id="dynamic_state">Structure of dynamic state</h3>
 <img class="figure"
      src="./tissue_layout.svg"
      alt="[tissue_layout.svg]">
@@ -504,6 +536,7 @@ construction of the neural tissue and they cannot be further changed.
     <!--static_state_of_neural_tissue.cpp</a>.-->
 <!--</li></ul>-->
 
+<h2 id="aggregation_with_parametrisation">Aggregation with parametrisation</h2>
 
 <h2 id="references">References</h2>
 <table>
