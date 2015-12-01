@@ -34,38 +34,20 @@ with its parametrisation. We discuss it in the
 <a href="./cellab.html#aggregation_with_parametrisation">fourth section</a>.
 </p>
 <h2 id="neural_tissue">1.&nbsp;&nbsp;&nbsp;Structure of neural tissue</h2>
-<!--<p>-->
-<!--Here we specify what data components the neural tissue is made of, what is their internal-->
-<!--structure and purpose, and how they are logically organised (the physical organisation of-->
-<!--data in the memory is discussed in the-->
-<!--<a href="./cellab.html#memory_representation">next section</a>).-->
-<!--&lt;!&ndash;The basic structure&ndash;&gt;-->
-<!--&lt;!&ndash;of the neural tissue is depicted here.&ndash;&gt;-->
-<!--</p>-->
 <p>
 Data structures of the neural tissue hold model's state in the memory in a form of a
 pair: <em>static state</em> and <em>dynamic state</em>. While the static state holds
 all data which remain constant during the whole simulation, the dynamic state holds all
 data which can be modified during the simulation.
-<!--</p><p>-->
-<!--The construction of the neural tissue in the memory start by the construction of-->
-<!--the static state. It is a parametrisation who provides data required for the-->
-<!--construction. The passed data are parameters defining global immutable-->
-<!--properties of the constructed neural tissue.-->
-<!--Once the static state is created, the dynamic state is constructed-->
-<!--according to data already stored in the static state. The constructed dynamic-->
-<!--state has all its components initialised except parameters. Their initialisation-->
-<!--is a task of the parametrisation. The dynamic state only provides access to the-->
-<!--memory reserved for them. The library-->
-<!--<a href="../cellconnect/cellconnect.html"><kbd>cellconnect</kbd></a>-->
-<!--can be useful in that task.-->
 </p>
 <h3 id="static_state">1.1&nbsp;&nbsp;&nbsp;Static state</h3>
 <p>
 It is a storage of global immutable properties of the neural tissue. The properties
 are specified by a parametrisation (so they are actually parameters). In a table
 below we list the properties with brief descriptions. We complete the descriptions
-in the next section where we discuss their purpose in the context of a dynamic state.
+in the
+<a href="./cellab.html#dynamic_state">next section</a>
+where we discuss their purpose in the context of a dynamic state.
 </p>
 <table class="enumerate">
 <tr>
@@ -226,17 +208,20 @@ in the columnar C axis of the tissue.
 <tr><td align="right" valign="top">
 <i>NB</i><sub>C</sub>
 </td><td></td><td align="left" valign="top">
-A number of bits reserved for a tissue cell.
+A number of bits reserved for a tissue cell. The number must be aligned to 8 bits
+(i.e. a multiple of 8).
 </td></tr>
 <tr><td align="right" valign="top">
 <i>NB</i><sub>S</sub>
 </td><td></td><td align="left" valign="top">
-A number of bits reserved for a synapse.
+A number of bits reserved for a synapse. The number must be aligned to 8 bits
+(i.e. a multiple of 8).
 </td></tr>
 <tr><td align="right" valign="top">
 <i>NB</i><sub>G</sub>
 </td><td></td><td align="left" valign="top">
-A number of bits reserved for a signalling.
+A number of bits reserved for a signalling. The number must be aligned to 8 bits
+(i.e. a multiple of 8).
 </td></tr>
 </table>
 <h3 id="dynamic_state">1.2&nbsp;&nbsp;&nbsp;Dynamic state</h3>
@@ -249,8 +234,8 @@ and it always has the following general stucture.
      alt="[tissue_layout.svg]">
 <p>
 We see three main components: a <em>tissue</em>, <em>sensory cells</em>,
-and <em>synapses to muscles</em>. The tissue stores a state of the neural tissue.
-Sensory cells and synapses to muscles allow for information exchange between
+and <em>synapses to muscles</em>. The tissue stores a major part of the neural tissue's
+state. Sensory cells and synapses to muscles allow for information exchange between
 the tissue and an external <i>environment</i> which is <i>not</i> a part of the model
 (see the library
 <a href="../envlab/envlab.html">envlab</a>
@@ -317,12 +302,14 @@ along the columnar axis C. Clearly,
     = <i>C</i> + <i>N</i><sub><i>K</i>+0</sub> + &hellip;
         + <i>N</i><sub><i>K</i>+<i>S</i>&minus;1</sub>
     = <i>N</i><sub>0</sub> + &hellip; + <i>N</i><sub><i>K</i>+<i>S</i>&minus;1</sub>.
+We denote a total count of sensory cell as
+<i>N</i><sub><i>S</i></sub> = <i>C</i><sub><i>S</i></sub> &minus; <i>C</i>.
 </p><p>
 Despite of division of sensory cells according to kinds, they are still
 organised in one (long) list of cells as depicted in the picture from the top down.
 Therefore, we can also identify individual sensory cells by their index (ordinal number)
 in the list. The cell at the top has the index 0 and the cell at the bottom has the
-index <i>C</i><sub><i>S</i></sub>&minus;<i>C</i>&minus;1.
+index <i>N</i><sub><i>S</i></sub>&minus;1.
 </p>
 <h4 id="synapses_to_muscles">1.2.3&nbsp;&nbsp;&nbsp;Synapses to muscles</h4>
 <p>
@@ -338,14 +325,15 @@ are <i>not</i> parts of the model. They all belong to the environment.
 </p><p>
 We can see in the picture above the number of synapses to muscles of a muscle
 kind <i>i</i> is represented by a number <i>M</i><sub><i>i</i></sub>. The total
-number of synapses to muscles in the model is thus
-<i>M</i><sub>0</sub> + &hellip; + <i>M</i><sub><i>U</i>&minus;1</sub>.
+number of synapses to muscles is thus
+<i>N</i><sub><i>M</i></sub> =
+    <i>M</i><sub>0</sub> + &hellip; + <i>M</i><sub><i>U</i>&minus;1</sub>.
 </p><p>
 Despite of division of synapses to muscles according to kinds, they are still
 organised in one (long) list as depicted in the picture from the top down.
 We thus identify them by indices (ordinals) in the list. The synapse
 at the top has the index 0 and the synapse at the bottom has the
-index <i>M</i><sub>0</sub> + &hellip; + <i>M</i><sub><i>U</i>&minus;1</sub> &minus; 1.
+index <i>N</i><sub><i>M</i></sub>&minus;1.
 </p>
 <h4 id="structure_of_column">1.2.4&nbsp;&nbsp;&nbsp;Structure of column in tissue</h4>
 <p>
@@ -359,7 +347,7 @@ where we show a column and its territories with all their components.
      alt="[column_and_cell_territory_structure.svg]">
 <p>
 We see that all territories (across all kinds) consist of six types of
-components: a tissue <em>cell</em>, a <em>signalling</em>, a <em>delimiters list</em>,
+components: a tissue <em>cell</em>, <em>signalling</em>, <em>delimiters list</em>,
 and three lists of <em>synapses</em>, <em>territorial states</em> of synapses, and
 <em>coordinates of source cells</em> of synapses. These three lists have the same length
 in each territory (of any kind). Moreover, lengths of the lists in all territories of
@@ -382,20 +370,20 @@ and dendrites
 traversing the region, glia cells
 [<a href="./cellab.html#r07">7</a>],
 inter-cellular liquid, and so on.
-A territory (as a model of a region) is thus supposed to model all desired behaviour
-occurring in the region. This is actually done via components of the territory. We
-describe individual types of components in subsections below.
+A territory, as a model of a region, is thus supposed to model all desired behaviour
+occurring in the region.
 </p><p>
 A territory is, in fact, an abstract term in the neural tissue. Indeed, it is
 associated with no data. It is only a term allowing us to collectively name
-certain components (with physical data) sharing some spatial and logical
-properties.
+components mentioned above with physical data. The components together are thus
+supposed to model the corresponding region. We describe them in subsections below.
 </p>
 <h5 id="tissue_cell">Tissue cell</h5>
 <p>
-It is an array of bytes storing a compressed state of a modelled neuron (whose
-body lies in the center of a region in the mammalian cerebral cortex associated
-with the territory). We do <em>not</em> define interpretation of individual bytes
+It is an array of <i>NB</i><sub><i>C</i></sub> bits storing a compressed
+state of a modelled neuron (whose body lies in the center of a region
+in the mammalian cerebral cortex associated with the territory).
+We do <em>not</em> define interpretation of individual bits
 (i.e. what information is stored) nor a compression method. This is left for
 parametrisations. For example, a parametrisation may choose (according to the
 kind of the territory) to store a state of the leaky integrate-and-fire neuron
@@ -421,54 +409,34 @@ former term due to the abstract nature of a territory (it has no data) and since
 tissue cell is the central component from the point of view of the computational
 complexity.
 </p>
-<h5 id="signalling">Signalling</h5>
-<p>
-It is an array of bytes storing that part of a state of a territory which is not
-modelled by any other component of that territory. A compression is used to store
-the information.  We do <em>not</em> define interpretation of individual bytes
-(i.e. what information is stored) nor a compression method. This is left for
-parametrisations. For example, a parametrisation may store an information
-necessary for guidance of axons
-[<a href="./cellab.html#r14">14</a>,
- <a href="./cellab.html#r15">15</a>,
- <a href="./cellab.html#r16">16</a>]
-passing through the territory to reach target cells. The information may be
-expressed, for example, in a form of a distribution of concentrations of
-guidance cues
-[<a href="./cellab.html#r17">17</a>,
- <a href="./cellab.html#r18">18</a>,
- <a href="./cellab.html#r19">19</a>,
- <a href="./cellab.html#r20">20</a>]
-in the 3D space associated with the territory. A compression method can be,
-for example, serialisation
-[<a href="./cellab.html#r13">13</a>].
-</p><p>
-
-</p>
 <h5 id="territorial_lists">Territorial lists</h5>
 <p>
-There are four lists in a territory. Namely, the list of synapses, the list of territorial
-states, the list of coordinates of source cells, and the delimiters list. The first three
-lists are tightly related, namely their elements on the same indices. The delimiters
-list is an increasing sequence of exactly six indices into the other three lists
-simultaneously. The relations between all lists are depicted in the picture below
-for a territory of a kind <i>i</i> (the cell and the signalling are omitted).
+There are four lists in a territory. Namely, the list of <em>synapses</em>, the list
+of <em>territorial states</em>, the list of <em>coordinates of source cells</em>,
+and the <em>delimiters list</em>. The first three lists are tightly related.
+Namely their elements on the same indices form triples; each triple models an
+axon
+[<a href="./cellab.html#r05">5</a>]
+terminated in or traversing the territory. The delimiters list is an increasing
+sequence of exactly six indices into the other three lists simultaneously.
+The relations between all lists are depicted in the picture below for a territory
+of a kind <i>i</i> (the cell and the signalling are omitted).
 </p>
 <img class="figure"
      src="./territorial_lists.svg"
      alt="[territorial_lists.svg]">
 <p>
-The delimiters list <i>D</i><sub><i>i</i></sub> is depicted on the left and the three other
-lists are depicted on the right, from the top down. The symbols <i>LS</i><sub><i>i</i></sub>,
-<i>LT</i><sub><i>i</i></sub>, and <i>LC</i><sub><i>i</i></sub> denote the lists of synapses,
+The delimiters list <i>D</i> is depicted on the left and the three other
+lists are depicted on the right, from the top down. The symbols <i>LS</i>,
+<i>LT</i>, and <i>LC</i> denote the lists of synapses,
 territorial states, and coordinates of source cells, respectively. Observe that these three
-lists have the same lenght and elements on the same indices are aligned, i.e. they form
+lists have the same length and elements on the same indices are aligned, i.e. they form
 triples across the lists.
 </p><p>
 For each an index <i>j</i> (0&le;<i>j</i>&lt;<i>T</i><sub><i>i</i></sub>) a triple
-(<i>LS</i><sub><i>i</i></sub>[<i>j</i>],
-<i>LT</i><sub><i>i</i></sub>[<i>j</i>],
-<i>LC</i><sub><i>i</i></sub>[<i>j</i>])
+(<i>LS</i>[<i>j</i>],
+<i>LT</i>[<i>j</i>],
+<i>LC</i>[<i>j</i>])
 represents a model of an axon
 [<a href="./cellab.html#r05">5</a>]
 projected from a certain tissue cell to this territory. It is assumed in the neural
@@ -489,16 +457,21 @@ that it actually has no representation in the triple.
 <!--all element of the triple in the following three subsections.-->
 </p><p>
 Now we focus on individual components of
-(<i>LS</i><sub><i>i</i></sub>[<i>j</i>],
-<i>LT</i><sub><i>i</i></sub>[<i>j</i>],
-<i>LC</i><sub><i>i</i></sub>[<i>j</i>]).
-The third component <i>LC</i><sub><i>i</i></sub>[<i>j</i>] stores tissue coordinates
+(<i>LS</i>[<i>j</i>],
+<i>LT</i>[<i>j</i>],
+<i>LC</i>[<i>j</i>]).
+The third component <i>LC</i>[<i>j</i>] stores tissue coordinates
 <i>x</i>, <i>y</i>, and <i>c</i> of the tissue cell from which the modelled axon is
 projected. We call the cell as <em>source cell</em>. A single tissue cell may be the
-source cell for more than one triple from any territories in the tissue. The second
-component <i>LT</i><sub><i>i</i></sub>[<i>j</i>] holds one of seven possible integer
-values 0,&hellip;,6. Their interpretations are given in the table below. There we
-assume tissue coordinates of this territory are <i>x</i><sub>0</sub>,
+source cell for more than one triple from any territories in the tissue.
+A parametrisation is responsible for setting coordinates in lists <i>LC</i>
+of all territories in the neural tissue. The library
+<a href="../cellconnect/cellconnect.html"><kbd>cellconnect</kbd></a>
+provides algorithms for this task.
+</p><p>
+The second component <i>LT</i>[<i>j</i>] has one of seven
+possible integer values 0,&hellip;,6. Their interpretations are given in the table
+below. There we assume tissue coordinates of this territory are <i>x</i><sub>0</sub>,
 <i>y</i><sub>0</sub>, and <i>c</i><sub>0</sub>.
 </p>
 <table class="enumerate">
@@ -514,7 +487,7 @@ The axon is connected to the cell of this territory via a synapse
 (typically as action potentials
 [<a href="./cellab.html#r23">23</a>])
 from the tissue cell inside the territory at coordinates
-<i>LC</i><sub><i>i</i></sub>[<i>j</i>].
+<i>LC</i>[<i>j</i>].
 </td>
 </tr>
 <tr>
@@ -571,46 +544,79 @@ Algorithms of the neural tissue ensure that no axon escapes from the neural
 tissue. The raw coordinates above are mapped to valid ranges along all three
 coordinate axes (see the
 <a href="./cellab.html#axis_mode">next subsection</a>
-for details). Finally, the first component <i>LS</i><sub><i>i</i></sub>[<i>j</i>]
-is an array of bytes where all remaining information about the modelled axon is
-stored in an compressed form. We do <em>not</em> define interpretation of
-individual bytes (i.e. what information is stored) nor a compression method.
-This is left for parametrisations.
+for details).
 </p><p>
-Delimiters list <i>D</i><sub><i>i</i></sub> has no interpretation in the modelled
+Finally, the first component <i>LS</i>[<i>j</i>] is an array of
+<i>NB</i><sub><i>S</i></sub> bits where all remaining information about the
+modelled axon is stored in an compressed form. We do <em>not</em> define
+interpretation of individual bits (i.e. what information is stored) nor a
+compression method. This is left for parametrisations.
+</p><p>
+Observe that <i>LS</i>[<i>j</i>] is called a synapse (since <i>LS</i> is the list
+of synapses), although it may hold data representing any part (or even several
+parts) of the modelled axon, like a growth cone, fibre, and so on.
+There is thus a significant difference between a synapse defined here (an element
+of <i>LS</i>) and a synapse
+[<a href="./cellab.html#r04">4</a>]
+representing a chemical or electrical connection between an axon and a neuron
+in a mammalian cerebral cortex.
+</p><p>
+Delimiters list <i>D</i> has no interpretation in the modelled
 mammalian cerebral cortex. It is a technicality boosting algorithms of the neural
 tissue operating on the other three lists. Here we discuss only a necessary minimum
-about the algorithms to understand the meaning of <i>D</i><sub><i>i</i></sub> (details
-are <kbd style="color:red">HERE</kbd> and <kbd style="color:red">HERE</kbd>).
-The lists <i>LS</i><sub><i>i</i></sub>, <i>LT</i><sub><i>i</i></sub>, and
-<i>LC</i><sub><i>i</i></sub> are synchronously sorted according to information stored
-in <i>LT</i><sub><i>i</i></sub> (remember that elements of <i>LT</i><sub><i>i</i></sub>
+about the algorithms to understand the meaning of <i>D</i> (details are
+<kbd style="color:red">HERE</kbd> and <kbd style="color:red">HERE</kbd>).
+The lists <i>LS</i>, <i>LT</i>, and <i>LC</i> are synchronously sorted according
+to information stored in <i>LT</i> (remember that elements of <i>LT</i>
 are integers from the set {0,&hellip;,6}). By synchronous sorting we mean that if for
-some indices <i>j</i> and <i>k</i> the elements <i>LT</i><sub><i>i</i></sub>[<i>j</i>]
-and <i>LT</i><sub><i>i</i></sub>[<i>k</i>] are in the wrong order, then there is swapped
-<i>LS</i><sub><i>i</i></sub>[<i>j</i>] with  <i>LS</i><sub><i>i</i></sub>[<i>k</i>],
-<i>LT</i><sub><i>i</i></sub>[<i>j</i>] with  <i>LT</i><sub><i>i</i></sub>[<i>k</i>],
+some indices <i>j</i> and <i>k</i> the elements <i>LT</i>[<i>j</i>]
+and <i>LT</i>[<i>k</i>] are in the wrong order, then there is swapped
+<i>LS</i>[<i>j</i>] with  <i>LS</i>[<i>k</i>],
+<i>LT</i>[<i>j</i>] with  <i>LT</i>[<i>k</i>],
 and
-<i>LC</i><sub><i>i</i></sub>[<i>j</i>] with  <i>LC</i><sub><i>i</i></sub>[<i>k</i>].
+<i>LC</i>[<i>j</i>] with  <i>LC</i>[<i>k</i>].
 In other words, the sorting respects the triples constructed across the lists.
 Once the lists are sorted, we construct a look-up table
-<i>d</i><sub><i>i</i></sub> =
+<i>D'</i></sub> =
 [0, <i>n</i><sub>0</sub>, <i>n</i><sub>1</sub>, <i>n</i><sub>2</sub>,
     <i>n</i><sub>3</sub>, <i>n</i><sub>4</sub>, <i>n</i><sub>5</sub>,
     <i>T</i><sub><i>i</i></sub>],
 where <i>n</i><sub><i>j</i></sub> is a number of elements in
-<i>LT</i><sub><i>i</i></sub> less than or equal to <i>j</i>. For each
-<i>k</i>&isin;{0,&hellip;,6} the look-up table identifies a range of indices of triples,
-namely <i>d</i><sub><i>i</i></sub>[<i>k</i>], &hellip;,
-<i>d</i><sub><i>i</i></sub>[<i>k</i>+1]&minus;1, which all have the same value
-<i>k</i> in the list <i>LT</i><sub><i>i</i></sub>. The delimiters list
+<i>LT</i> less than or equal to <i>j</i>. For each
+<i>k</i>&isin;{0,&hellip;,6} the look-up table identifies a range of indices
+of triples, namely <i>D'</i>[<i>k</i>],&hellip;,<i>D'</i>[<i>k</i>+1]&minus;1,
+which all have the same value <i>k</i> in the list <i>LT</i>. The delimiters list
 <i>D</i><sub><i>i</i></sub> is then defined as
 [<i>n</i><sub>0</sub>, <i>n</i><sub>1</sub>, <i>n</i><sub>2</sub>,
     <i>n</i><sub>3</sub>, <i>n</i><sub>4</sub>, <i>n</i><sub>5</sub>].
-We store <i>D</i><sub><i>i</i></sub> in the territory instead of
-<i>d</i><sub><i>i</i></sub> in order to save memory. The reconstruction
-of <i>d</i><sub><i>i</i></sub> from <i>D</i><sub><i>i</i></sub> is trivial.
-Note that we call the numbers <i>n</i><sub><i>j</i></sub> as <em>delimiters</em>.
+We store <i>D</i> in the territory instead of <i>D'</i> in order to save memory.
+The reconstruction of <i>D'</i> from <i>D</i> is trivial. Note that we call
+the numbers <i>n</i><sub><i>j</i></sub> as <em>delimiters</em>.
+</p>
+<h5 id="signalling">Signalling</h5>
+<p>
+It is an array of <i>NB</i><sub><i>G</i></sub> bits storing that part
+of a state of a territory which is not modelled by any other component
+of that territory. A compression is used to store the information.
+We do <em>not</em> define interpretation of individual bits
+(i.e. what information is stored) nor a compression method. This is left for
+parametrisations. For example, a parametrisation may store an information
+necessary for guidance of axons
+[<a href="./cellab.html#r14">14</a>,
+ <a href="./cellab.html#r15">15</a>,
+ <a href="./cellab.html#r16">16</a>]
+passing through the territory to reach target cells. The information may be
+expressed, for example, in a form of a distribution of concentrations of
+guidance cues
+[<a href="./cellab.html#r17">17</a>,
+ <a href="./cellab.html#r18">18</a>,
+ <a href="./cellab.html#r19">19</a>,
+ <a href="./cellab.html#r20">20</a>]
+in the 3D space associated with the territory. A compression method can be,
+for example, serialisation
+[<a href="./cellab.html#r13">13</a>].
+</p><p>
+
 </p>
 <h4 id="axis_mode">1.2.5&nbsp;&nbsp;&nbsp;Modes of tissue coordinate axes</h4>
 <p>
@@ -650,49 +656,18 @@ is a set of all tissue coordinates
 and
 &minus;<i>r</i><sub><i>c</i></sub> &le; &Delta;<i>c</i> &le; <i>r</i><sub><i>c</i></sub>.
 </p><p>
-<!--Let us consider a territory of a kind <i>i</i>.-->
 A parametrisation of the neural tissue have to specify radii, in all three axes X, Y,
 and C, for certain components of territories. The radii are then used by algorithms of the
 neural tissue to build neighbourhoods associated with those components. For each kind
-of territory there is defined one set of radii, i.e. components of territories
-of some kind share radii defined for that kind. Namely, a parametrisation have to
+of territory there is defined one set of radii. It means that components of territories
+of the same kind share radii defined for that kind. Namely, a parametrisation have to
 specify for each territory kind <i>i</i> radii <i>RC</i><sub>X</sub>[<i>i</i>],
 <i>RC</i><sub>Y</sub>[<i>i</i>], and <i>RC</i><sub>C</sub>[<i>i</i>] for
 tissue cells, radii <i>RS</i><sub>X</sub>[<i>i</i>], <i>RS</i><sub>Y</sub>[<i>i</i>],
 and <i>RS</i><sub>C</sub>[<i>i</i>] for signallings, and radii
 <i>RT</i><sub>X</sub>[<i>i</i>], <i>RT</i><sub>Y</sub>[<i>i</i>], and
 <i>RT</i><sub>C</sub>[<i>i</i>] for all triples over territorial lists <i>LS</i>,
-<i>LT</i>, and <i>LC</i>. All these radii (for all kinds) are set once during
-construction of the neural tissue and they cannot be further changed.
-
-
-
-
-<!--For each kind of territory <i>i</i> a parametrisation may choose radii-->
-<!--<i>RC</i><sub>X</sub>[<i>i</i>],-->
-<!--<i>RC</i><sub>Y</sub>[<i>i</i>], and-->
-<!--<i>RC</i><sub>C</sub>[<i>i</i>]-->
-<!--for neighbourhoods of tissue cells in territories-->
-<!--<i>RS</i><sub>X</sub>[<i>i</i>]-->
-<!--<i>RS</i><sub>Y</sub>[<i>i</i>]-->
-<!--<i>RS</i><sub>C</sub>[<i>i</i>]-->
-
-<!--<i>RA</i><sub>X</sub>[<i>i</i>]-->
-<!--<i>RA</i><sub>Y</sub>[<i>i</i>]-->
-<!--<i>RA</i><sub>C</sub>[<i>i</i>]-->
-
-
-<!--<i>RC</i><sub>X</sub>[<i>i</i>]-->
-<!--A radius in the axis X of neighbourhoods of tissue cells in territories of the kind <i>i</i>-->
-
-<!--Let us consider a territory of a kind <i>i</i> located at coordinates-->
-<!--<i>x</i>, <i>y</i>, <i>c</i> in the tissue. A <em>neighbourhood</em> is-->
-
-
-
-
-
-
+<i>LT</i>, and <i>LC</i>.
 </p>
 <h2 id="memory_representation">2.&nbsp;&nbsp;&nbsp;Memory representation of neural tissue</h2>
 
@@ -715,6 +690,18 @@ construction of the neural tissue and they cannot be further changed.
 <!--<a href="../../../code/cellab/src/static_state_of_neural_tissue.cpp">-->
     <!--static_state_of_neural_tissue.cpp</a>.-->
 <!--</li></ul>-->
+
+<!--The construction of the neural tissue in the memory start by the construction of-->
+<!--the static state. It is a parametrisation who provides data required for the-->
+<!--construction. The passed data are parameters defining global immutable-->
+<!--properties of the constructed neural tissue.-->
+<!--Once the static state is created, the dynamic state is constructed-->
+<!--according to data already stored in the static state. The constructed dynamic-->
+<!--state has all its components initialised except parameters. Their initialisation-->
+<!--is a task of the parametrisation. The dynamic state only provides access to the-->
+<!--memory reserved for them. The library-->
+<!--<a href="../cellconnect/cellconnect.html"><kbd>cellconnect</kbd></a>-->
+<!--can be useful in that task.-->
 
 <h2 id="aggregation_with_parametrisation">4.&nbsp;&nbsp;&nbsp;Aggregation with parametrisation</h2>
 
