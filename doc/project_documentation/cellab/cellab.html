@@ -35,19 +35,19 @@ with its parametrisation. We discuss it in the
 </p>
 <h2 id="neural_tissue">1.&nbsp;&nbsp;&nbsp;Structure of neural tissue</h2>
 <p>
-Data structures of the neural tissue hold model's state in the memory in a form of a
-pair: <em>static state</em> and <em>dynamic state</em>. While the static state holds
-all data which remain constant during the whole simulation, the dynamic state holds all
-data which can be modified during the simulation.
+A state of the neural tissue is stored in two data structures: <em>static state</em>
+and <em>dynamic state</em>. While the static state holds all data which remain constant
+during the whole simulation, the dynamic state holds all data which can be modified
+during the simulation.
 </p>
 <h3 id="static_state">1.1&nbsp;&nbsp;&nbsp;Static state</h3>
 <p>
 It is a storage of global immutable properties of the neural tissue. The properties
-are specified by a parametrisation (so they are actually parameters). In a table
-below we list the properties with brief descriptions. We complete the descriptions
+are specified by a parametrisation (so they are actually parameters). In the table
+below we list the properties with their brief descriptions. We complete the descriptions
 in the
 <a href="./cellab.html#dynamic_state">next section</a>
-where we discuss their purpose in the context of a dynamic state.
+where we will see the properties in the context of the dynamic state.
 </p>
 <table class="enumerate">
 <tr>
@@ -226,8 +226,8 @@ A number of bits reserved for a signalling. The number must be aligned to 8 bits
 </table>
 <h3 id="dynamic_state">1.2&nbsp;&nbsp;&nbsp;Dynamic state</h3>
 <p>
-A dynamic state is constructed according to data already stored in a static state
-and it always has the following general stucture.
+A dynamic state has the following general structure which is fully determined
+by data stored in the corresponding static state.
 </p>
 <img class="figure"
      src="./tissue_logical_layout.svg"
