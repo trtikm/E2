@@ -671,23 +671,50 @@ and <i>RS</i><sub>C</sub>[<i>i</i>] for signallings, and radii
 </p>
 <h2 id="memory_representation">2.&nbsp;&nbsp;&nbsp;Memory representation of neural tissue</h2>
 <p>
-
+Here we show how a state of the neural tissue (whose logical structure was presented
+in the previous section) is physically stored in the memory. The chosen memory layout
+is a compromise between these two incompatible properties:
 </p>
+<ul><li>
+A ratio of bits in which a state of the neural tissue is encoded and all bits physically
+allocated for the state is as close to 1 as possible.
+</li><li>
+Transition algorithms of the neural tissue (discussed in the next section) can
+operate as efficiently as possible on the stored state.
+</li></ul>
 <h3 id="static_state_memory_rep">Static state</h3>
 <p>
-It is basically a collection of read-only properties listed in the table of the
+It does not require any special treatment. Its memory footprint is typically negligible,
+compared to the corresponding dynamic state. Indeed, its size is a function
+(a linear combination) of the parameters <i>K</i>, <i>S</i>, and <i>U</i>,
+i.e. counts of kinds of territories, sensory cell, and synapses to muscles,
+respectively. Therefore, a static state is basically represented as a tuple
+of read-only properties as they are listed in the
 <a href="./cellab.html#static_state">section 1.1</a>.
-
+Nevertheless, the following three deviations are worth mentioning:
 </p>
+<ul><li>
+The mode maps <i>M</i><sub>X</sub>, <i>M</i><sub>Y</sub>, and <i>M</i><sub>C</sub>
+are represented only as three boolean values instead
+of the maps themselves: <i>true</i> identifies the torus map and <i>false</i>
+the clip map. Transition algorithms then behave according to these boolean values.
+</li><li>
+There is built a look-up table of <i>K</i>+<i>S</i> coordinates along the columnar
+axis of the tissue. At an index <i>i</i> there is stored the number
+<i>N</i><sub>0</sub>+&hellip;+<i>N</i><sub><i>i</i></sub>.
+</li><li>
+There is built a look-up table of <i>U</i> indices of synapses to muscles. At an index
+<i>i</i> there is stored the number
+<i>M</i><sub>0</sub>+&hellip;+<i>M</i><sub><i>i</i></sub>.
+</li></ul>
 <h3 id="dynamic_state_memory_rep">Dynamic state</h3>
-<h4 id="tissue_memory_rep">Tissue</h4>
 <p>
-
 </p>
 <img class="figure"
      src="./tissue_physical_layout.svg"
      alt="[tissue_physical_layout.svg]">
 <h2 id="transition_algorithms">3.&nbsp;&nbsp;&nbsp;Transition algorithms</h2>
+<!--<h4 id="tissue_memory_rep">Tissue</h4>-->
 <!--<p>-->
 <!--An update of a cell proceeds in three steps: a decompression of the array of bytes-->
 <!--into a separate memory outside the model, update of this memory by calling a given-->

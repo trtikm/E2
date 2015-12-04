@@ -11,6 +11,11 @@ h2 { font-size: 18pt; }
 h1 { font-size: 24pt; }
 kbd { font-family: "Liberation Mono", monospace; }
 kbd { font-size: 10pt; }
+ul {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: justify
+}
 body {
     background-color: white;
     color: black;
