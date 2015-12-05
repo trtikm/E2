@@ -697,7 +697,8 @@ Nevertheless, the following three deviations are worth mentioning:
 The mode maps <i>M</i><sub>X</sub>, <i>M</i><sub>Y</sub>, and <i>M</i><sub>C</sub>
 are represented only as three boolean values instead
 of the maps themselves: <i>true</i> identifies the torus map and <i>false</i>
-the clip map. Transition algorithms then behave according to these boolean values.
+the clip map. Transition algorithms then behave according to these boolean values,
+i.e. they use the maps accordingly.
 </li><li>
 There is built a look-up table of <i>K</i>+<i>S</i> coordinates along the columnar
 axis of the tissue. At an index <i>i</i> there is stored the number
@@ -707,12 +708,121 @@ There is built a look-up table of <i>U</i> indices of synapses to muscles. At an
 <i>i</i> there is stored the number
 <i>M</i><sub>0</sub>+&hellip;+<i>M</i><sub><i>i</i></sub>.
 </li></ul>
+<p>
+A static state is implemented as <kbd>struct static_state_of_neural_tissue</kbd> in
+source files
+</p>
+<ul><li>
+<a href="../../../code/cellab/include/cellab/static_state_of_neural_tissue.hpp">
+    static_state_of_neural_tissue.hpp</a> and
+</li><li>
+<a href="../../../code/cellab/src/static_state_of_neural_tissue.cpp">
+    static_state_of_neural_tissue.cpp</a>.
+</li></ul>
 <h3 id="dynamic_state_memory_rep">Dynamic state</h3>
 <p>
+It is stored in 6<i>K</i>+3 separately allocated memory blocks. The tissue is
+stored in 6<i>K</i> memory blocks, called <em>slices</em>. The sensory cells
+are store in one memory block, and synapses to muscles are stored in the
+remaining two memory blocks. The whole memory layout is depicted in this picture.
 </p>
 <img class="figure"
      src="./tissue_physical_layout.svg"
      alt="[tissue_physical_layout.svg]">
+<p>
+The tissue is depicted in the top part of the picture. We see that components
+of all territories are grouped according to their type: for each of 6 component
+types (cell, signalling, delimiters list, synapse, territorial state, and coordinates
+to source cell) we have an array of <i>K</i> slices (for each kind of territory one
+slice). Each slice stores all those components of the same type which lie inside
+territories of the same kind.
+</p><p>
+Slices are internally organised as 3D arrays. For each slice a number of bits per
+its element is shown in the picture as a number (or an expression) in the front face
+of the slice. There we use an "angle bracket" operator: for any non-negative
+integer <i>n</i> the value &lt;<i>n</i>&gt; is the smallest integer multiple of 8
+such that <i>n</i> &lt; 2<sup>&lt;<i>n</i>&gt;</sup>. In other words, &lt;<i>n</i>&gt;
+is a count of bits in the 1-byte aligned value <i>n</i>. For example, &lt;6&gt; is 8,
+because the value 6 can be stored in a single byte, which gives us 8 bits. Ranges
+of all three indices into a slice are depicted for each slice in the picture. First
+two indices to any slice are nothing but tissue coordinates along the axes X and Y.
+An interpretation of the third index differs among types of components.
+In the following table we show a direct correspondence between elements
+of individual slices and tissue components as they were presented in the
+<a href="./cellab.html#neural_tissue">previous section</a>. We assume in the
+table that <i>i</i> is a kind of a territory (i.e. it is an index of a slice)
+and <i>r</i>, <i>s</i>, <i>t</i> are three indices to the reference slice.
+</p>
+<table class="enumerate">
+<tr>
+<th align="right" valign="bottom">Element (<i>r</i>,<i>s</i>,<i>t</i>)
+    in slice at index <i>i</i> of</th>
+<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<th align="left" valign="bottom">Corresponding tissue component, where
+    <i>p</i>=<i>N</i><sub>0</sub>+&hellip;+<i>N</i><sub><i>i</i>&minus;1</sub></th>
+</tr>
+<tr>
+<td align="right" valign="top">cells</td><td>&nbsp;&nbsp;</td>
+<td>
+The tissue cell at tissue coordinates (<i>r</i>, <i>s</i>, <i>t</i>+<i>p</i>).
+</td>
+</tr>
+<tr>
+<td align="right" valign="top">signallings</td><td>&nbsp;&nbsp;</td>
+<td>
+The signalling at tissue coordinates (<i>r</i>, <i>s</i>, <i>t</i>+<i>p</i>).
+</td>
+</tr>
+<tr>
+<td align="right" valign="top">delimiters lists</td><td>&nbsp;&nbsp;</td>
+<td>
+The delimiters list at tissue coordinates (<i>r</i>, <i>s</i>, <i>t</i>+<i>p</i>).
+</td>
+</tr>
+<tr>
+<td align="right" valign="top">synapses</td><td>&nbsp;&nbsp;</td>
+<td>
+The synapse <i>LS</i>[<i>t</i> <i>mod</i> <i>T</i><sub><i>i</i></sub>]
+inside the territory at tissue coordinates (<i>r</i>, <i>s</i>,
+&lfloor;<i>t</i> / <i>T</i><sub><i>i</i></sub>&rfloor; + <i>p</i>).
+</td>
+</tr>
+<tr>
+<td align="right" valign="top">territorial states</td><td>&nbsp;&nbsp;</td>
+<td>
+The territorial state <i>LT</i>[<i>t</i> <i>mod</i> <i>T</i><sub><i>i</i></sub>]
+inside the territory at tissue coordinates (<i>r</i>, <i>s</i>,
+&lfloor;<i>t</i> / <i>T</i><sub><i>i</i></sub>&rfloor; + <i>p</i>).
+</td>
+</tr>
+<tr>
+<td align="right" valign="top">coordinates of source cells</td><td>&nbsp;&nbsp;</td>
+<td>
+The tissue coordinates of source cell <i>LC</i>[<i>t</i> <i>mod</i>
+<i>T</i><sub><i>i</i></sub>] inside the territory at tissue coordinates (<i>r</i>, <i>s</i>,
+&lfloor;<i>t</i> / <i>T</i><sub><i>i</i></sub>&rfloor; + <i>p</i>).
+</td>
+</tr>
+</table>
+<p>
+The memory layout of the sensory cells is depicted in the bottom left part of
+the picture above. The sensory cells are stored in an array. Each sensory cell
+occupies <i>NB</i><sub>C</sub> bits in the array. We see that first
+<i>N</i><sub><i>K</i></sub> sensory cells are of the kind 0, then follows
+<i>N</i><sub><i>K</i>+1</sub> sensory cells are of the kind 1, and so on.
+</p><p>
+The memory layout of the synapses to muscles is depicted in the bottom right part of
+the picture above. We see that they are stored in two arrays with exactly the same
+structure. The synapses themselves are stored in the left array, where
+each synapse occupies <i>NB</i><sub>S</sub> bits. The right array stores coordinates
+of sources tissue cells of the corresponding synapses (in the left array at the same
+indices). Each triple of coordinates occupies
+3&lt;<i>max</i>(<i>X</i>,<i>Y</i>,<i>C</i><sub><i>S</i></sub>)&gt;
+bits in the array. We further see that first
+<i>M</i><sub>0</sub> elements in both arrays correspond to synapses of the kind 0,
+then follows <i>M</i><sub>1</sub> elements corresponding to synapses of the kind 1,
+and so on.
+</p>
 <h2 id="transition_algorithms">3.&nbsp;&nbsp;&nbsp;Transition algorithms</h2>
 <!--<h4 id="tissue_memory_rep">Tissue</h4>-->
 <!--<p>-->

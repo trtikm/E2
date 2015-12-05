@@ -583,9 +583,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1"
-     inkscape:cx="289.54687"
-     inkscape:cy="520.18045"
+     inkscape:zoom="0.70710678"
+     inkscape:cx="595.82147"
+     inkscape:cy="315.1478"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -607,7 +607,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -831,15 +831,15 @@
        sodipodi:linespacing="125%"
        id="text12728"
        y="1023.1389"
-       x="179.8692"
+       x="269.8692"
        style="color:#000000;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif, Normal';text-indent:0;text-align:start;text-decoration:none;text-decoration-line:none;text-decoration-style:solid;text-decoration-color:#000000;letter-spacing:0px;word-spacing:0px;text-transform:none;direction:ltr;block-progression:tb;writing-mode:lr-tb;baseline-shift:baseline;text-anchor:start;white-space:normal;clip-rule:nonzero;display:inline;overflow:visible;visibility:visible;opacity:1;isolation:auto;mix-blend-mode:normal;color-interpolation:sRGB;color-interpolation-filters:linearRGB;solid-color:#000000;solid-opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;color-rendering:auto;image-rendering:auto;shape-rendering:auto;text-rendering:auto;enable-background:accumulate"
        xml:space="preserve"><tspan
          y="1023.1389"
-         x="179.8692"
+         x="269.8692"
          id="tspan12730"
-         sodipodi:role="line">six 1D arrays consisting of <tspan
+         sodipodi:role="line">arrays of <tspan
    id="tspan12732"
-   style="font-style:italic">K</tspan> slices (one per territory kind)</tspan></text>
+   style="font-style:italic">K</tspan> pointers to slices</tspan></text>
     <path
        style="color:#000000;clip-rule:nonzero;display:inline;overflow:visible;visibility:visible;opacity:1;isolation:auto;mix-blend-mode:normal;color-interpolation:sRGB;color-interpolation-filters:linearRGB;solid-color:#000000;solid-opacity:1;fill:none;fill-opacity:1;fill-rule:nonzero;stroke:#000000;stroke-width:0.99999994;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:0.99999994, 1.99999988;stroke-dashoffset:0;stroke-opacity:1;color-rendering:auto;image-rendering:auto;shape-rendering:auto;text-rendering:auto;enable-background:accumulate"
        d="m 163.91369,1195.6417 -23.42292,0"
@@ -1924,7 +1924,7 @@
          y="1209.3304"
          style="font-style:italic">NB<tspan
    dy="3.1767771"
-   style="font-size:65.00000954%;baseline-shift:sub"
+   style="font-size:65.00000954%;baseline-shift:sub;font-style:normal"
    id="tspan14651">G</tspan></tspan></text>
     <text
        sodipodi:linespacing="125%"
@@ -1939,7 +1939,7 @@
          id="tspan14655"
          sodipodi:role="line">NB<tspan
    id="tspan14657"
-   style="font-size:65.00000954%;baseline-shift:sub"
+   style="font-size:65.00000954%;baseline-shift:sub;font-style:normal"
    dy="3.1767771">G</tspan></tspan></text>
     <text
        xml:space="preserve"
@@ -1954,7 +1954,7 @@
          y="1383.3854"
          style="font-style:italic">NB<tspan
    dy="3.1213207"
-   style="font-size:65.00000954%;baseline-shift:sub"
+   style="font-size:65.00000954%;baseline-shift:sub;font-style:normal"
    id="tspan14665">S</tspan></tspan></text>
     <text
        sodipodi:linespacing="125%"
@@ -1969,7 +1969,7 @@
          id="tspan14669"
          sodipodi:role="line">NB<tspan
    id="tspan14671"
-   style="font-size:65.00000954%;baseline-shift:sub"
+   style="font-size:65.00000954%;baseline-shift:sub;font-style:normal"
    dy="3.1213207">S</tspan></tspan></text>
     <text
        sodipodi:linespacing="125%"
@@ -1985,7 +1985,7 @@
          sodipodi:role="line">NB<tspan
    dy="2.7677674"
    id="tspan14679"
-   style="font-size:65.00000954%;baseline-shift:sub">C</tspan></tspan></text>
+   style="font-size:65.00000954%;baseline-shift:sub;font-style:normal">C</tspan></tspan></text>
     <text
        xml:space="preserve"
        style="color:#000000;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif, Normal';text-indent:0;text-align:start;text-decoration:none;text-decoration-line:none;text-decoration-style:solid;text-decoration-color:#000000;letter-spacing:0px;word-spacing:0px;text-transform:none;direction:ltr;block-progression:tb;writing-mode:lr-tb;baseline-shift:baseline;text-anchor:start;white-space:normal;clip-rule:nonzero;display:inline;overflow:visible;visibility:visible;opacity:1;isolation:auto;mix-blend-mode:normal;color-interpolation:sRGB;color-interpolation-filters:linearRGB;solid-color:#000000;solid-opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;color-rendering:auto;image-rendering:auto;shape-rendering:auto;text-rendering:auto;enable-background:accumulate"
@@ -1998,7 +1998,7 @@
          x="465.80585"
          y="1123.8044"
          style="font-style:italic">NB<tspan
-   style="font-size:65.00000954%;baseline-shift:sub"
+   style="font-size:65.00000954%;baseline-shift:sub;font-style:normal"
    id="tspan14685"
    dy="2.7677674">C</tspan></tspan></text>
     <text
@@ -3785,7 +3785,7 @@
            y="1703.3292"
            style="font-style:italic">NB<tspan
    dy="3.1213207"
-   style="font-size:65.00000954%;baseline-shift:sub"
+   style="font-size:65.00000954%;baseline-shift:sub;font-style:normal"
    id="tspan6473">S</tspan></tspan></text>
       <text
          xml:space="preserve"
@@ -3827,7 +3827,7 @@
            sodipodi:role="line">NB<tspan
    dy="2.7677674"
    id="tspan6371"
-   style="font-size:65.00000954%;baseline-shift:sub">C</tspan></tspan></text>
+   style="font-size:65.00000954%;baseline-shift:sub;font-style:normal">C</tspan></tspan></text>
       <text
          sodipodi:linespacing="125%"
          id="text6647"
@@ -3854,14 +3854,14 @@
     <text
        xml:space="preserve"
        style="color:#000000;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif, Normal';text-indent:0;text-align:start;text-decoration:none;text-decoration-line:none;text-decoration-style:solid;text-decoration-color:#000000;letter-spacing:0px;word-spacing:0px;text-transform:none;direction:ltr;block-progression:tb;writing-mode:lr-tb;baseline-shift:baseline;text-anchor:start;white-space:normal;clip-rule:nonzero;display:inline;overflow:visible;visibility:visible;opacity:1;isolation:auto;mix-blend-mode:normal;color-interpolation:sRGB;color-interpolation-filters:linearRGB;solid-color:#000000;solid-opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;color-rendering:auto;image-rendering:auto;shape-rendering:auto;text-rendering:auto;enable-background:accumulate"
-       x="204.55669"
+       x="300.5567"
        y="1615.8925"
        id="text6704"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan6706"
-         x="204.55669"
-         y="1615.8925">tissue - components of all territories</tspan></text>
+         x="300.5567"
+         y="1615.8925">tissue</tspan></text>
     <text
        xml:space="preserve"
        style="color:#000000;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:15px;line-height:125%;font-family:'Liberation Serif';-inkscape-font-specification:'Liberation Serif, Normal';text-indent:0;text-align:start;text-decoration:none;text-decoration-line:none;text-decoration-style:solid;text-decoration-color:#000000;letter-spacing:0px;word-spacing:0px;text-transform:none;direction:ltr;block-progression:tb;writing-mode:lr-tb;baseline-shift:baseline;text-anchor:start;white-space:normal;clip-rule:nonzero;display:inline;overflow:visible;visibility:visible;opacity:1;isolation:auto;mix-blend-mode:normal;color-interpolation:sRGB;color-interpolation-filters:linearRGB;solid-color:#000000;solid-opacity:1;fill:#000000;fill-opacity:1;fill-rule:nonzero;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;color-rendering:auto;image-rendering:auto;shape-rendering:auto;text-rendering:auto;enable-background:accumulate"
