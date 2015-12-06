@@ -13,25 +13,25 @@
 This library defines a parametrised model of a mammalian cerebral cortex
 [<a href="./cellab.html#r01">1</a>] called a <em>neural tissue</em> in the whole E2
 project. Instances of the model (for given parameters) are primary subjects of the
-study in this project. A <em>parameter</em> of the neural tissue is any datum passed
+study. A <em>parameter</em> of the neural tissue is any datum passed
 to any library function constructing the model in the memory or any algorithm
 passed to any library function performing a simulation step.
 </p><p>
 The neural tissue consists of two parts: <em>data structures</em> defining how
-model's state is stored in the memory, and <em>transition algorithms</em> allowing
+state is stored in the memory, and <em>transition algorithms</em> allowing
 a computation of a next state from the current one. We describe these two parts
-in the following three sections. Namely, in the
-<a href="./cellab.html#neural_tissue">first section</a>
-we present what data the model uses. In the
-<a href="./cellab.html#memory_representation">next section</a>
-we describe how the data are physically stored in the memory.
-And in the
-<a href="./cellab.html#transition_algorithms">third section</a>
+in the following three sections. Namely, in
+<a href="./cellab.html#neural_tissue">section 1</a>
+we discuss the data structure of the neural tissue. In
+<a href="./cellab.html#memory_representation">section 2</a>
+we describe how data are physically stored in the memory.
+And in
+<a href="./cellab.html#transition_algorithms">section 3</a>
 we describe transition algorithms.
 </p><p>
 The library further provides a data type for aggregation of the neural tissue
-with its parametrisation. We discuss it in the
-<a href="./cellab.html#aggregation_with_parametrisation">fourth section</a>.
+with its parametrisation. We discuss it in
+<a href="./cellab.html#aggregation_with_parametrisation">section 4</a>.
 </p>
 <h2 id="neural_tissue">1.&nbsp;&nbsp;&nbsp;Structure of neural tissue</h2>
 <p>
@@ -264,76 +264,62 @@ in the picture that first <i>N</i><sub>0</sub> territories in each column are
 of the kind 0, next <i>N</i><sub>1</sub> territories are of the kind 1, and so on.
 Observe that
 <i>C</i> = <i>N</i><sub>0</sub> + &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub>.
-The model does <em>not</em> define interpretations of kinds.
-This is left for parametrisations of the model. For example, a parametrisation
+The neural tissue does <em>not</em> define interpretations of kinds.
+This is left for parametrisations. For example, a parametrisation
 may interpret a kind as an identifier of an algorithm simulating certain behavior
 of a component inside a territory of that kind.
 </p>
 <h4 id="sensory_cells">1.2.2&nbsp;&nbsp;&nbsp;Sensory cells</h4>
 <p>
-Sensory cells allows for delivery of information form an external environment
-to the tissue. They are split into <i>S</i> different
-<i>sensory kinds</i> {0,&hellip;,<i>S</i>&minus;1}. The model does <em>not</em> define
-interpretations of these kinds. This is left for parametrisations of the model.
-For example, a parametrisation may interpret a kind as an assignment of sensory cells
-(of that kind) to particular sense organs like eye, ear, nose, etc. Both sense
-organs and even the process of encoding of information captured by senses into
-the corresponding sensory cells are <i>not</i> parts of the model. They all belong
-to the environment.
+Sensory cells store information coming form the external environment. We hold the
+cells in a single array of the length <i>N</i><sub><i>S</i></sub>. The array is
+depicted from the top down in the picture. We split sensory cell into <i>S</i>
+different <i>sensory kinds</i> {0,&hellip;,<i>S</i>&minus;1}. We see in the picture
+that first <i>N</i><sub><i>K</i></sub> sensory cells are of the sensory kind 0, next
+<i>N</i><sub><i>K</i>+1</sub> sensory cells are of the sensory kind 1, and so on.
+The neural tissue does <em>not</em> define interpretations of these sensory kinds.
+This is left for parametrisations. For example, a parametrisation may interpret
+a sensory kind as an assignment of sensory cells (of that kind) to particular
+sense organs like eye, ear, nose, etc. The sense organs and also the process
+of encoding of information captured by senses into the corresponding sensory
+cells are <i>not</i> parts of the neural tissue. They belong to the
+environment.
 </p><p>
-Due to purely technical reasons (which will be presented later
-<kbd style="color:red">here</kbd>)
-we align sensory cells
-with the columnar axis C of the tissue. It means that each sensory cell has a unique
+We align sensory cells with the columnar axis C of the tissue (the axis is depicted
+on the left of the array). It means that each sensory cell has a unique
 coordinate along the axis. We can see in the picture that the first sensory cell
-(depicted at the top) is associated with the first free coordinate <i>C</i> along
-the axis (the columnar axis is depicted on the left of the list of the sensory cells).
+(depicted at the top) is associated with the columnar coordinate <i>C</i> and
+the last sensory cell has the coordinate <i>C</i><sub><i>S</i></sub>. Clearly,
+<i>C</i><sub><i>S</i></sub>
+    = <i>C</i> + <i>N</i><sub><i>S</i></sub> &minus; 1
+    = <i>N</i><sub>0</sub> + &hellip; + <i>N</i><sub><i>K</i>+<i>S</i>&minus;1</sub> &minus; 1.
 Note though that sensory cells do <em>not</em> have coordinates along X and Y axes
 of the tissue.
-</p><p>
-Observe further that the number of sensory cell of a sensory kind
-<i>i</i> is represented by a number <i>N</i><sub><i>K</i>+<i>i</i></sub>. This
-notation follows from the technicals reasons mentioned above.  It allows us to
-encapsulate both kinds of cells (tissue and sensory) and their counts under one
-representation accessed using a single mechanism. The last sensory cell (depicted
-at the bottom) is assigned the highest valid coordinate <i>C</i><sub><i>S</i></sub>
-along the columnar axis C. Clearly,
-<i>C</i><sub><i>S</i></sub>
-    = <i>C</i> + <i>N</i><sub><i>K</i>+0</sub> + &hellip;
-        + <i>N</i><sub><i>K</i>+<i>S</i>&minus;1</sub>
-    = <i>N</i><sub>0</sub> + &hellip; + <i>N</i><sub><i>K</i>+<i>S</i>&minus;1</sub>.
-We denote a total count of sensory cell as
-<i>N</i><sub><i>S</i></sub> = <i>C</i><sub><i>S</i></sub> &minus; <i>C</i>.
-</p><p>
-Despite of division of sensory cells according to kinds, they are still
-organised in one (long) list of cells as depicted in the picture from the top down.
-Therefore, we can also identify individual sensory cells by their index (ordinal number)
-in the list. The cell at the top has the index 0 and the cell at the bottom has the
-index <i>N</i><sub><i>S</i></sub>&minus;1.
 </p>
 <h4 id="synapses_to_muscles">1.2.3&nbsp;&nbsp;&nbsp;Synapses to muscles</h4>
 <p>
-Synapses to muscles allows for delivery of information form the tissue to an external
-environment. They are split into <i>U</i> different <i>kinds</i>
-{0,&hellip;,<i>U</i>&minus;1}. The model does <em>not</em> define interpretations
-of these kinds. This is left for parametrisations of the model. For example,
-a parametrisation may interpret a kind as an assignment of synapses (of that kind)
-to a particular muscle like biceps, triceps, etc. Neither muscles, the process of
-decoding of information stored in the synapses, nor updating the environment
-according to an effect of the decoded information on corresponding muscles
-are <i>not</i> parts of the model. They all belong to the environment.
-</p><p>
-We can see in the picture above the number of synapses to muscles of a muscle
-kind <i>i</i> is represented by a number <i>M</i><sub><i>i</i></sub>. The total
-number of synapses to muscles is thus
-<i>N</i><sub><i>M</i></sub> =
+Synapses to muscles store information computed for the external environment.
+We hold synapses to muscles in two arrays of the same length
+<i>N</i><sub><i>M</i></sub>. A synapse to muscle is a pair of elements
+appearing at the same index in both arrays. We can see in the picture how
+elements of both arrays are aligned. Both arrays are depicted from the top
+down. The information for the external environment is stored only in elements
+of the list on the left. Elements of the list on the right hold tissue coordinates
+of territories from which the information for the environment
+is actually computed. Each synapse to muscle is linked to exactly one
+territory in the tissue. We split synapses to muscles into <i>U</i> different
+<i>muscle kinds</i> {0,&hellip;,<i>U</i>&minus;1}.  We see in the picture
+that first <i>M</i><sub>0</sub> synapses to muscles are of the muscle kind 0,
+next <i>M</i><sub>1</sub> synapses to muscles are of the muscle kind 1, and so on.
+Clearly, <i>N</i><sub><i>M</i></sub> =
     <i>M</i><sub>0</sub> + &hellip; + <i>M</i><sub><i>U</i>&minus;1</sub>.
-</p><p>
-Despite of division of synapses to muscles according to kinds, they are still
-organised in one (long) list as depicted in the picture from the top down.
-We thus identify them by indices (ordinals) in the list. The synapse
-at the top has the index 0 and the synapse at the bottom has the
-index <i>N</i><sub><i>M</i></sub>&minus;1.
+The neural tissue does <em>not</em> define interpretations
+of muscle kinds. This is left for parametrisations. For example,
+a parametrisation may interpret a kind as an assignment of synapses (of that kind)
+to a particular muscle like biceps, triceps, etc. Muscles, a process of decoding
+information stored in synapses, and an update of the environment
+according to the decoded information are <i>not</i> parts of the neural tissue.
+They all belong to the environment.
 </p>
 <h4 id="structure_of_column">1.2.4&nbsp;&nbsp;&nbsp;Structure of column in tissue</h4>
 <p>
@@ -461,9 +447,11 @@ Now we focus on individual components of
 <i>LT</i>[<i>j</i>],
 <i>LC</i>[<i>j</i>]).
 The third component <i>LC</i>[<i>j</i>] stores tissue coordinates
-<i>x</i>, <i>y</i>, and <i>c</i> of the tissue cell from which the modelled axon is
-projected. We call the cell as <em>source cell</em>. A single tissue cell may be the
-source cell for more than one triple from any territories in the tissue.
+<i>x</i>, <i>y</i>, and <i>c</i> of either tissue or sensory cell from which
+the modelled axon is projected. We call that cell as <em>source cell</em>.
+If <i>c</i> &lt; <i>C</i>, then the source cell is a tissue cell. Otherwise,
+it is a sensory cell. A single tissue or sensory cell may be referenced
+by arbitrary many triples in lists <i>LC</i> of any territories.
 A parametrisation is responsible for setting coordinates in lists <i>LC</i>
 of all territories in the neural tissue. The library
 <a href="../cellconnect/cellconnect.html"><kbd>cellconnect</kbd></a>
@@ -669,7 +657,7 @@ and <i>RS</i><sub>C</sub>[<i>i</i>] for signallings, and radii
 <i>RT</i><sub>C</sub>[<i>i</i>] for all triples over territorial lists <i>LS</i>,
 <i>LT</i>, and <i>LC</i>.
 </p>
-<h2 id="memory_representation">2.&nbsp;&nbsp;&nbsp;Memory representation of neural tissue</h2>
+<h2 id="memory_representation">2.&nbsp;&nbsp;&nbsp;Representation of neural tissue in memory</h2>
 <p>
 Here we show how a state of the neural tissue (whose logical structure was presented
 in the previous section) is physically stored in the memory. The chosen memory layout
