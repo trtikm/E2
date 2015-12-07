@@ -102,8 +102,9 @@ cortex we always simulate it in a direct interaction with an <em>external
 environment</em>. A computer model controls one unique <em>agent</em>
 within the environment. In that context we address the computer model as a
 <em>controller</em> of the agent. There can be more than one agent in an environment.
-In that case there is also more than one controllers interacting with the environment
-during the simulation. Here are three examples of archetypal external environments:
+In that case there is the same number of controllers (for each agent one)
+interacting with the environment during the simulation. Here are three examples
+of archetypal external environments:
 </p>
 <table class="figure">
     <tr>
@@ -125,14 +126,6 @@ right is competitive, where agents
 compete for resources
 <img src="./doc/flowerMPadv.svg" alt="[flowerMPadv.svg]">
 (flowers). Agents are supposed to establish and guard their territories of flowers.
-</p><p>
-All external environments we build and use in this project are implemented
-in the E2 library
-<a href="./doc/project_documentation/envlab/envlab.html"><kbd>envlab</kbd></a>.
-And the E2 library
-<a href="./doc/project_documentation/efloop/efloop.html"><kbd>efloop</kbd></a>
-mediates the interaction between an external environments and controllers of
-agents.
 </p><p>
 During a simulation of an external environment with controllers of agents
 we record states of individual agents (like positions,
@@ -158,26 +151,49 @@ position.
 </p><p>
 Fortunately, it is not necessary for us to have an accurate measure
 capturing all scenarios which may possibly happen a given environment.
-It is sufficient if we have a measure which is accurate only over data
-recorded during simulations of that environment. So, we first perform
+It is sufficient if we have a measure which is accurate only over all
+recorded data we have for that environment. So, we first perform
 all simulations of the environment (at least one simulation for each
 combination of controllers we want to evaluate in that environment).
 Next we analyse all recorded data (from all simulations). This may involve
 building visualisations of data, like replays of simulations,
-graphs of positions of agents in time, etc. An outcome from the analysis
-is a measure of adaptability for agents, which is accurate only over
+application of statistical methods, and so on. The outcome from the analysis
+is a measure of adaptability, which is accurate only over
 all recorded data (from all simulations). Finally, we apply the measure
 to all recorded data to get degrees of adaptability for all controllers
 used in simulations.
 </p><p>
-We perform simulations and analyses of recorded data incrementally.
-It means that we start with simplest environments and models
-of the cerebral cortex with small numbers of neurons. Once we perform
-all their simulations and once we receive outcomes from analysis of
-all recorded data, we use the outcomes to decide what environments (of
-what properties) to build next and we also decide what components
-and network properties to primarily use for larger models of the cerebral
-cortex.
+We can build tens or hundreds of computer models of the mammalian cerebral
+cortex for different network properties and biological details
+of components. Each model can further be simulated in interaction
+with different external environments. So, the number of simulations
+we may possibly perform is high. Yet, at the beginning, each simulation
+can potentially give us an important piece of missing information.
+In any case, to perform all simulations will either cost us extremely
+high computational resources or very long time.
+For example, if an average speed of a simulation is one tenth of the
+speed of a modelled (real) mammalian cerebral cortex, then 250 simulations
+of one week of life, performed in a sequence, will take almost 48 years.
+<!--Note that our estimate of the ten times slower speed is actually quite-->
+<!--optimistic. The simulation of cat's brain on the Blue Gene super computer-->
+<!--in 20?? ran 100 times slower that real cat's brain. -->
+</p><p>
+Therefore, rather than performing all possible simulations we incrementally
+build our knowledge (from already performed simulations and analyses of
+recorded data) about what network properties and what biological details
+of what components are more important (with the respect to adaptability)
+than others. The knowledge allows us to avoid construction and simulation
+of less promising models for obtaining an important information. This
+strategy is supposed to give us (at the end) a maximum of valuable information
+with the respect to the limited computational and time resources.
+</p><p>
+All external environments we build and use in this project are implemented
+in the E2 library
+<a href="./doc/project_documentation/envlab/envlab.html"><kbd>envlab</kbd></a>.
+And the E2 library
+<a href="./doc/project_documentation/efloop/efloop.html"><kbd>efloop</kbd></a>
+mediates the interaction between an external environments and controllers of
+agents.
 </p>
 <h2 id="structure">3.&nbsp;&nbsp;Structure of the documentation</h2>
 <p>
