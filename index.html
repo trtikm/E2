@@ -8,91 +8,102 @@
 </head>
 <body>
 <h1>E2 project</h1>
-<h2 id="motivation">Motivation and aims</h2>
+<h2 id="motivation">1.&nbsp;&nbsp;Motivation and aims</h2>
 <p>
-An interesting and important ability of a neural tissue (especially of the
-cerebral cortex) is its <em>adaptation</em> to conditions in the environment
-in order to maximise (long term) options for its organism.
+An interesting and important ability of the mammalian cerebral cortex
+[<a href="./index.html#r09">9</a>]
+is its fast <em>adaptation</em> to conditions in the external environment
+in order to maximise a number of short and long term options for
+the whole organism.
 </p><p>
-Although we have models for many important components and properties of neural tissue
+We already have a lot of information about individual <em>components</em> of
+the mammalian cerebral cortex, like neurons
+[<a href="./index.html#r10">10</a>],
+excitatory and inhibitory synapses with their plasticity
+[<a href="./index.html#r11">11</a>,<a
+    href="./index.html#r13">13</a>],
+axons and their growth
+[<a href="./index.html#r12">12</a>,<a
+    href="./index.html#r13">13</a>,<a
+    href="./index.html#r14">14</a>,<a
+    href="./index.html#r15">15</a>]
+according to strengths of attraction and repulsion cues
+[<a href="./index.html#r23">23</a>,
+ <a href="./index.html#r24">24</a>,
+ <a href="./index.html#r25">25</a>,
+ <a href="./index.html#r26">26</a>],
+micro columns and their layered structure
+[<a href="./index.html#r17">17</a>,<a
+    href="./index.html#r09">9</a>],
+glia cells
+[<a href="./index.html#r18">18</a>],
+etc.
+We also have models of many of these components
 [<a href="./index.html#r03">3</a>,<a
     href="./index.html#r02">2</a>,<a
-    href="./index.html#r01">1</a>],
-e.g. models of neurons (in many different levels of details), synapses and
-synaptic plasticity, axon growth, layered structure of a micro column, etc., it
-is unknown what models of neural tissue model the adaptability with what
-accuracy. It is in particular unknown how the adaptability depends on model's
-properties like number of neurons in a micro column, number of neurons in whole
-model, in/out-degrees of neurons, distributions of excitatory and inhibitory
-synapses, lengths of axons, strength of attraction and repulsion cues for axon
-growth, numbers of sensory cells, number of output fibres (to models of
-muscles), small-world phenomenon, power low distribution of in/out-degrees of
-cells, and many others.
+    href="./index.html#r01">1</a>]
+with different degrees of biological accuracy
+[<a href="./index.html#r19">19</a>,<a
+    href="./index.html#r20">20</a>,<a
+    href="./index.html#r21">21</a>].
+The mammalian cerebral cortex is basically a <em>network</em>
+[<a href="./index.html#r22">22</a>]
+of mutually interconnected neurons. An important role
+thus also play <em>network properties</em>, like a number of neurons in a
+micro column, a number of neurons in the whole cerebral cortex,
+distribution of in/out-degrees of neurons, distributions of excitatory and
+inhibitory synapses, a number of input and output fibres to and from the cortex,
+the small-world phenomenon
+[<a href="./index.html#r27">27</a>],
+clustering coefficients of neurons
+[<a href="./index.html#r28">28</a>],
+and others.
 </p><p>
-In this project we aim to fill this gap. Namely, we shall design, implement, and
-experimentally evaluate (simulate) many models of neural tissue constructed for
-different properties mentioned above in order to classify models according to
-their adaptability and to uncover influence of mentioned properties to the
-adaptability.
-</p><p>
-Of course, we cannot simulate models comparable in counts of neurons with the
-cerebral cortex of mammals or birds due to lack of computational power.
-Nevertheless, we may expect
-that the adaptability can be observed also in substantially smaller neural
-tissues (hundreds of thousands of neurons), when it has to adapt itself to
-conditions of substantially simpler environments.
-</p><p>
-We shall thus also design and implement several simple environments, in which
-individual agents, controlled by different models of neural tissue, harvest
-available resources. A key part of the design of an environment is a correlation
-between the adaptability to conditions of the environment and strategies for
-harvesting resources.
-</p><p>
-In summary, our endeavour is supposed to give us the following three important
-outputs (two theoretical and one practical):
+Despite of all knowledge we already have, several key questions are still open.
+Here we list three of them which are of the top importance for the E2 project:
 </p>
 <ul><li>
-    <em>Classification</em> of models of neural tissue according to their
-    adaptability to different environments.
+Do we have enough information to build a model of the mammalian cerebral
+cortex such that the adaptation emerges during its simulation?
 </li><li>
-    <em>Influence of properties</em> of models of neural tissue to the adaptability.
+What are the key properties and components every model of the mammalian
+cerebral cortex must necessarily have to achieve any observable degree
+of adaptation during a simulation?
 </li><li>
-    <em>Evaluation framework</em> in which we shall perform all simulations.
+What components and properties we have to model in what biological details
+in order to achieve what degree of adaptation?
 </li></ul>
 <p>
-First two outputs give us a good estimate how accurate the current models of
-neural tissue can be w.r.t. the adaptability to conditions of an environment.
-Moreover, this knowledge can be very useful for a researcher designing a new
-model: when it is known what properties are essential and which are not, the
-researcher may save o lot of time in construction of a desired model. Futher, a
-subsequent deep analysis of our outputs (e.g. why some properties are so
-important) may lead to more accurate and simultaneously efficient models.
-</p><p>
-The evaluation framework allows other researches to verify our results.
-Moreover, the previous two output can be easily extended in future using the
-framework, since it suffices to only implement a new model and/or an environment
-and plug it into the framework. Finally, the framework can be reused for study
-of different properties of neural tissue. We simply plug in different kinds of
-models and environments.
-</p><p>
-Although we now focus only on smaller models (due to limited available computational
-power), all three outputs can naturally be updated over time (by us and/or other
-researchers) for larger and larger models.
+The purpose of this project is to contribute in the endeavour of answering
+these questions.
 </p>
-<h2 id="methods">Methods and techniques</h2>
+<h2 id="methods">2.&nbsp;&nbsp;Methods and techniques</h2>
 <p>
-First of all we need a set of models of neural tissue to be examined. We shall
-design and implement these models for wide ranges of properties mentioned above.
-We shall also use different known models of components of neural tissue, like
-different models of neurons, synapses, axon growth, etc. Although we shall
-attempt to use models of different biological accuracy, our priority is
-simulation of larger models (up to hundreds of thousands of neurons). So,
-simpler models will be more preferable.
+Simply said, our method is brute force: we build and simulate as many
+computer models of the mammalian cerebral cortex as possible (for many
+different network properties and different biological details of individual
+components) in order to find an evidence for answers to the questions
+in the
+<a href="./index.html#motivation">sections 1</a>
+by a detailed analysis of data obtained from the simulations.
 </p><p>
-Besides models of neural tissue we further need models of environments. A model
-of an environment is a simple game with a single goal for agents: to collect
-resources. Agents are controlled by unique and independent models of neural tissue.
-Here are examples of possible environments (games):
+For that purpose we build a <em>parametrised</em> model of the mammalian
+cerebral context. Its purpose is to save time needed for building individual models.
+Instead of building each model from scratch, we just substitute parameters of
+the parametrised model with concrete components and desired network properties.
+We implemented the parametrised model in the E2 library
+<a href="./doc/project_documentation/cellab/cellab.html"><kbd>cellab</kbd></a>,
+and the E2 library
+<a href="./doc/project_documentation/cellconnect/cellconnect.html"><kbd>cellconnect</kbd></a>
+simplifies substitution of network properties into the parametrised model.
+</p><p>
+In order to measure a degree of adaptation of a computer model of the cerebral
+cortex we always simulate it in a direct interaction with an <em>external
+environment</em>. A computer model controls one unique <em>agent</em>
+within the environment. In that context we address the computer model as a
+<em>controller</em> of the agent. There can be more than one agent in an environment.
+In that case there is also more than one controllers interacting with the environment
+during the simulation. Here are three examples of archetypal external environments:
 </p>
 <table class="figure">
     <tr>
@@ -104,48 +115,71 @@ Here are examples of possible environments (games):
     </tr>
 </table>
 <p>
-The game on the left is for one agent controlling the horisontal bar. Each time
-the bar hits the ball the agent receives a bit of energy (resource). The other
-two games are for more agents. The game in the middle requires cooperation of
-both agent in order to maximise resources' consumption. And the game on the
+The environment on the left is for one agent (the horisontal bar).
+Its horisontal motion can prevent the moving black point (the ball) to
+escape from the field. Other two environments are for more agents.
+The environment in the middle requires a cooperation of agents (vertical
+bars) to keep the ball inside the field. And the environment on the
 right is competitive, where agents
 <img src="./doc/agentMPadv.svg" alt="[agentMPadv.svg]">
 compete for resources
 <img src="./doc/flowerMPadv.svg" alt="[flowerMPadv.svg]">
-(flowers).
+(flowers). Agents are supposed to establish and guard their territories of flowers.
 </p><p>
-A model of neural tissue receives information about the environment and all
-agents in it via sensory cells. Information about resources collected by its
-agent is delivered indirectly, by observation of capabilities of its agent
-(e.g. the agent can move faster when he has more energy).
+All external environments we build and use in this project are implemented
+in the E2 library
+<a href="./doc/project_documentation/envlab/envlab.html"><kbd>envlab</kbd></a>.
+And the E2 library
+<a href="./doc/project_documentation/efloop/efloop.html"><kbd>efloop</kbd></a>
+mediates the interaction between an external environments and controllers of
+agents.
 </p><p>
-All games are intentionally very similar in design and the goal. Models of
-neural tissue are supposed to show how they can adapt to their (slightly)
-different rules. We measure the adaptability of models in terms of collected
-resources by their agents.
+During a simulation of an external environment with controllers of agents
+we record states of individual agents (like positions,
+velocities, etc.) and later we analyse the recorded data
+in order to infer degrees of adaptability of individual controllers.
+We do not consider internal states of controllers in computation
+of their adaptability. We treat controllers, in this context,
+as black boxes.
 </p><p>
-The project has special requirements for the evaluation. We shall simulate
-models of many different sizes (from few hundreds of neurons up to hundreds of
-thousands of neurons per agent). Moreover, agent's model of neural tissue is
-actually just one component in a bigger model of whole the environment (game).
-We further require features like dynamical changes in connectivity between
-neurons, simulation of axon growth, or keeping of network properties like power
-law distribution of degrees of cells, etc. Therefore, although there are
-available software packages providing simulation of models of a neural tissue,
-e.g.
-[<a href="./index.html#r08">8</a>,<a
-    href="./index.html#r07">7</a>,<a
-    href="./index.html#r04">4</a>,<a
-    href="./index.html#r05">5</a>,<a
-    href="./index.html#r06">6</a>],
-they are not suitable for our purposes. We thus implement a new <em>evaluation
-framework</em> which allows as to plug in many different models of neural tissue and
-also allowing as to set and maintain network properties like small-world phenomenon,
-power low distribution of in/out-degrees of cells, etc. Finally, the framework
-will further allow us to plug in different environments and interconnect agents
-with their models of neural tissue.
+It is not easy, in general, to specify an accurate measure
+of adaptability for an agent in an external environment. Even for
+extremely simple environments like the leftmost environment above the
+task is not easy. The agent in this environment has the highest number
+of options for what to do, whenever the agent is at a position from
+which it is possible to reach and hit the ball before it gets to the
+bottom side of the field. We may thus consider as an accurate
+measure an increasing occurrence of the agent at such positions as
+the simulation progresses. Nevertheless, this measure does not take
+into account a situation when agent's strategy is to stay forever at
+one randomly chosen position, which may accidentally be a position which
+"locks" the ball in the field, i.e. the ball always returns back to that
+position.
+</p><p>
+Fortunately, it is not necessary for us to have an accurate measure
+capturing all scenarios which may possibly happen a given environment.
+It is sufficient if we have a measure which is accurate only over data
+recorded during simulations of that environment. So, we first perform
+all simulations of the environment (at least one simulation for each
+combination of controllers we want to evaluate in that environment).
+Next we analyse all recorded data (from all simulations). This may involve
+building visualisations of data, like replays of simulations,
+graphs of positions of agents in time, etc. An outcome from the analysis
+is a measure of adaptability for agents, which is accurate only over
+all recorded data (from all simulations). Finally, we apply the measure
+to all recorded data to get degrees of adaptability for all controllers
+used in simulations.
+</p><p>
+We perform simulations and analyses of recorded data incrementally.
+It means that we start with simplest environments and models
+of the cerebral cortex with small numbers of neurons. Once we perform
+all their simulations and once we receive outcomes from analysis of
+all recorded data, we use the outcomes to decide what environments (of
+what properties) to build next and we also decide what components
+and network properties to primarily use for larger models of the cerebral
+cortex.
 </p>
-<h2 id="structure">Structure of the documentation</h2>
+<h2 id="structure">3.&nbsp;&nbsp;Structure of the documentation</h2>
 <p>
 </p>
 <ul><li>
@@ -162,6 +196,17 @@ with their models of neural tissue.
     Here you can find description of ideas behind algorithms and data structures
     implemented in the project's source code.
 </li></ul>
+<h2 id="related_work">4.&nbsp;&nbsp;Related work</h2>
+<p>
+There are
+available software packages providing simulation of models of a neural tissue,
+e.g.
+[<a href="./index.html#r08">8</a>,<a
+    href="./index.html#r07">7</a>,<a
+    href="./index.html#r04">4</a>,<a
+    href="./index.html#r05">5</a>,<a
+    href="./index.html#r06">6</a>].
+</p>
 <h2 id="references">References</h2>
 <table>
     <tr><td align="right" valign="top" id="r01">[1]</td><td>
@@ -199,6 +244,105 @@ with their models of neural tissue.
     <tr><td align="right" valign="top" id="r08">[8]</td><td>
         NEURON.
         <a href="http://www.neuron.yale.edu/neuron/">http://www.neuron.yale.edu/neuron/</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r09">[9]</td><td>
+        Wikipedia: Cerebral cortex.
+        <a href="https://en.wikipedia.org/wiki/Cerebral_cortex">
+            https://en.wikipedia.org/wiki/Cerebral_cortex</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r10">[10]</td><td>
+        Wikipedia: Neuron.
+        <a href="https://en.wikipedia.org/wiki/Neuron">
+            https://en.wikipedia.org/wiki/Neuron</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r11">[11]</td><td>
+        Wikipedia: Synapse.
+        <a href="https://en.wikipedia.org/wiki/Synapse">
+            https://en.wikipedia.org/wiki/Synapse</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r12">[12]</td><td>
+        Wikipedia: Axon.
+        <a href="https://en.wikipedia.org/wiki/Axon">
+            https://en.wikipedia.org/wiki/Axon</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r13">[13]</td><td>
+        Wikipedia: Synaptic plasticity.
+        <a href="https://en.wikipedia.org/wiki/Synaptic_plasticity">
+            https://en.wikipedia.org/wiki/Synaptic_plasticity</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r14">[14]</td><td>
+        Wikipedia: Axon guidance.
+        <a href="https://en.wikipedia.org/wiki/Axon_guidance">
+            https://en.wikipedia.org/wiki/Axon_guidance</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r15">[15]</td><td>
+        MBInfo: Axon guidance and growth cone.
+        <a href="http://www.mechanobio.info/modules/go-0007411">
+            http://www.mechanobio.info/modules/go-0007411</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r16">[16]</td><td>
+        MBInfo: Axon guidance and growth cone.
+        <a href="http://www.mechanobio.info/modules/go-0007411/1_go-0007411">
+            http://www.mechanobio.info/modules/go-0007411/1_go-0007411</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r17">[17]</td><td>
+        MBInfo: Cortical micro column.
+        <a href="https://en.wikipedia.org/wiki/Cortical_minicolumn">
+            https://en.wikipedia.org/wiki/Cortical_minicolumn</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r18">[18]</td><td>
+        Wikipedia: Glia cell.
+        <a href="https://en.wikipedia.org/wiki/Neuroglia">
+            https://en.wikipedia.org/wiki/Neuroglia</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r19">[19]</td><td>
+        Wikipedia: Hodgkin-Huxley neuron.
+        <a href="https://en.wikipedia.org/wiki/Hodgkin%E2%80%93Huxley_model">
+            https://en.wikipedia.org/wiki/Hodgkin%E2%80%93Huxley_model</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r20">[20]</td><td>
+        <a href="http://www.izhikevich.org/publications/spikes.htm">
+            http://www.izhikevich.org/publications/spikes.htm</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r21">[21]</td><td>
+        Wikipedia: Leaky integrate-and-fire neuron.
+        <a href="https://en.wikipedia.org/wiki/Biological_neuron_model#Leaky_integrate-and-fire">
+            https://en.wikipedia.org/wiki/Biological_neuron_model#Leaky_integrate-and-fire</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r22">[22]</td><td>
+        Wikipedia: Complex network.
+        <a href="https://en.wikipedia.org/wiki/Complex_network">
+            https://en.wikipedia.org/wiki/Complex_network</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r23">[23]</td><td>
+        Wikipedia: Slit-Robo.
+        <a href="https://en.wikipedia.org/wiki/Slit-Robo">
+            https://en.wikipedia.org/wiki/Slit-Robo</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r24">[24]</td><td>
+        Wikipedia: Ephrin.
+        <a href="https://en.wikipedia.org/wiki/Ephrin">
+            https://en.wikipedia.org/wiki/Ephrin</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r25">[25]</td><td>
+        Wikipedia: Netrin.
+        <a href="https://en.wikipedia.org/wiki/Netrin">
+            https://en.wikipedia.org/wiki/Netrin</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r26">[26]</td><td>
+        Wikipedia: Semaphorin.
+        <a href="https://en.wikipedia.org/wiki/Semaphorin">
+            https://en.wikipedia.org/wiki/Semaphorin</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r27">[27]</td><td>
+        Wikipedia: Small-world network.
+        <a href="https://en.wikipedia.org/wiki/Small-world_network">
+            https://en.wikipedia.org/wiki/Small-world_network</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r28">[28]</td><td>
+        Wikipedia: Clustering coefficient.
+        <a href="https://en.wikipedia.org/wiki/Clustering_coefficient">
+            https://en.wikipedia.org/wiki/Clustering_coefficient</a>.
     </td></tr>
 </table>
 </body>
