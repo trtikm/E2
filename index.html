@@ -214,14 +214,52 @@ agents.
 </li></ul>
 <h2 id="related_work">4.&nbsp;&nbsp;Related work</h2>
 <p>
-There are
-available software packages providing simulation of models of a neural tissue,
-e.g.
-[<a href="./index.html#r08">8</a>,<a
-    href="./index.html#r07">7</a>,<a
+In [<a href="./index.html#r29">29</a>] authors present a detailed large-scale
+thalamocortical model based on experimental measures in several mammalian species.
+The model simulates one million multicompartmental spiking Izhikevich neurons
+(in 22 configurations, with roughly 10 compartments per neuron) and almost half
+a billion synapses (with short- and long-term plasticity). The simulation was
+performed on a Beowulf cluster consisting of 60 computers (3GHz processors with
+1.5 GB of RAM each). Initialisation of the model in the cluster took 10 minutes.
+One second in the model's time took one minute in real time, where a chosen
+time step was smaller than a millisecond.
+<!--Results of simulations: "To jump-start the network, we introduced a few seed-->
+<!--(random) spikes at time <i>t</i> = 0. Regardless of the number of seed spikes,-->
+<!--the initial strength of synaptic connections, or the size of the network (we-->
+<!--tested up to 10 million neurons), the network activity died out during the first-->
+<!--second. One way to avoid the silent state of a spiking network is to-->
+<!--introduce spontaneous synaptic release, called miniature postsynaptic potentials,-->
+<!--mPSPs or 'minis'. During the period of the first 30 min of model time we-->
+<!--simulated one spontaneous (Poissonian) synaptic release per synapse per second-->
+<!--and let synaptic plasticity modify the ongoing connectivity. If the minis are turned off-->
+<!--during this time, the activity would subside, but the longer they are made to persist,-->
+<!--the longer the activity lingers subsequently. Turning off minis at <i>t</i> = 1800s-->
+<!--did not silence the network. The network required &gt;10000 neurons to exhibit this-->
+<!--property. We ran the model for the next 30 min with "minis" off (i.e., in a noiseless-->
+<!--regime) and then used the final state at the end of this 1-h transient-->
+<!--period as the initial state for most of the subsequent simulations."-->
+</p><p>
+NEURON [<a href="./index.html#r08">8</a>] is a simulation environment
+for empirically-based simulations of neurons and networks of neurons.
+A single network may consist of neurons with different biological accuracy.
+Links between neurons (of any kind) can be edited in a GUI tool or specified in
+a programming language. NEURON uses an event delivery system for transmission
+of information (spikes) between neurons. A computations is performed only when
+an event occurs. The total computation time is thus proportional to the number of
+delivered events.
+</p><p>
+<kbd style="color:red">TODO</kbd>
+</p><p>
+
+<!--There are-->
+<!--available software packages providing simulation of models of a neural tissue,-->
+<!--e.g.-->
+[<a href="./index.html#r07">7</a>,<a
     href="./index.html#r04">4</a>,<a
     href="./index.html#r05">5</a>,<a
-    href="./index.html#r06">6</a>].
+    href="./index.html#r06">6</a>,<a
+    href="./index.html#r30">30</a>,<a
+    href="./index.html#r31">31</a>].
 </p>
 <h2 id="references">References</h2>
 <table>
@@ -246,8 +284,9 @@ e.g.
         <a href="http://briansimulator.org/">http://briansimulator.org/</a>.
     </td></tr>
     <tr><td align="right" valign="top" id="r05">[5]</td><td>
-        GENESISsim.
-        <a href="http://www.genesissim.org/">http://www.genesissim.org/</a>.
+        GENESIS.
+        <a href="http://genesis-sim.org/GENESIS/whatisit.html">
+            http://genesis-sim.org/GENESIS/whatisit.html</a>.
     </td></tr>
     <tr><td align="right" valign="top" id="r06">[6]</td><td>
         MOOSE.
@@ -359,6 +398,22 @@ e.g.
         Wikipedia: Clustering coefficient.
         <a href="https://en.wikipedia.org/wiki/Clustering_coefficient">
             https://en.wikipedia.org/wiki/Clustering_coefficient</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r29">[29]</td><td>
+        E. M. Izhikevich, G. M. Edelman. Large-Scale Model of Mammalian Thalamocortical Systems.
+        PNAS (2008) 105:3593-3598.
+        <a href="http://www.izhikevich.org/publications/large-scale_model_of_human_brain.htm">
+            http://www.izhikevich.org/publications/large-scale_model_of_human_brain.htm</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r30">[30]</td><td>
+        Digicortex.
+        <a href="http://www.digicortex.net/node/1">
+            http://www.digicortex.net/node/1</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r31">[31]</td><td>
+        Digicortex.
+        <a href="http://www.artificialbrains.com/">
+            http://www.artificialbrains.com/</a>.
     </td></tr>
 </table>
 </body>
