@@ -218,26 +218,30 @@ In [<a href="./index.html#r29">29</a>] authors present a detailed large-scale
 thalamocortical model based on experimental measures in several mammalian species.
 The model simulates one million multicompartmental spiking Izhikevich neurons
 (in 22 configurations, with roughly 10 compartments per neuron) and almost half
-a billion synapses (with short- and long-term plasticity). The simulation was
+a billion synapses (with short- and long-term plasticity). All simulations were
 performed on a Beowulf cluster consisting of 60 computers (3GHz processors with
 1.5 GB of RAM each). Initialisation of the model in the cluster took 10 minutes.
 One second in the model's time took one minute in real time, where a chosen
-time step was smaller than a millisecond.
-<!--Results of simulations: "To jump-start the network, we introduced a few seed-->
-<!--(random) spikes at time <i>t</i> = 0. Regardless of the number of seed spikes,-->
-<!--the initial strength of synaptic connections, or the size of the network (we-->
-<!--tested up to 10 million neurons), the network activity died out during the first-->
-<!--second. One way to avoid the silent state of a spiking network is to-->
-<!--introduce spontaneous synaptic release, called miniature postsynaptic potentials,-->
-<!--mPSPs or 'minis'. During the period of the first 30 min of model time we-->
-<!--simulated one spontaneous (Poissonian) synaptic release per synapse per second-->
-<!--and let synaptic plasticity modify the ongoing connectivity. If the minis are turned off-->
-<!--during this time, the activity would subside, but the longer they are made to persist,-->
-<!--the longer the activity lingers subsequently. Turning off minis at <i>t</i> = 1800s-->
-<!--did not silence the network. The network required &gt;10000 neurons to exhibit this-->
-<!--property. We ran the model for the next 30 min with "minis" off (i.e., in a noiseless-->
-<!--regime) and then used the final state at the end of this 1-h transient-->
-<!--period as the initial state for most of the subsequent simulations."-->
+time step was smaller than a millisecond. The first outcome from simulations
+is a discovery of conditions under which spiking activity persists in the model
+without miniature postsynaptic potentials (MPP)
+[<a href="./index.html#r32">32</a>,<a
+    href="./index.html#r33">33</a>].
+In the model with MPP turned on the spiking activity persists.
+But, a simulation of the model with MPP turned off started with arbitrary
+large number of initial artificially introduced random spikes at time <i>t</i> = 0
+always leads to fast decrease of the overall spiking activity in the model which
+ends up in zero spiking activity within one second. When the MPP is initially
+turned on and it is turned off during the period of the first 30 minutes of model's
+time (i.e. within 30 hours real time) the spiking activity decreases slower (the longer
+simulation with MPP on, the slower decrease of spiking activity). This effect is
+cause by synaptic plasticity. Turning MPP off after 30 minutes of model's
+time does not lead to a disappearance of the spiking activity (at least within
+next 30 minutes of model's time simulation). Nevertheless, the model requires more
+than 10,000 neurons to exhibit this property.
+<!--The second experiment tackled-->
+<!--the question whether one spike can affect the overall spiking pattern in the-->
+<!--simulated model (i.e. the butterfly effect). Two They compared A single extra initial spike-->
 </p><p>
 NEURON [<a href="./index.html#r08">8</a>] is a simulation environment
 for empirically-based simulations of neurons and networks of neurons.
@@ -411,9 +415,18 @@ delivered events.
             http://www.digicortex.net/node/1</a>.
     </td></tr>
     <tr><td align="right" valign="top" id="r31">[31]</td><td>
-        Digicortex.
+        Artificial brains.
         <a href="http://www.artificialbrains.com/">
             http://www.artificialbrains.com/</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r32">[32]</td><td>
+        I. Timofeev, F. Grenier, M. Bazhenov, T. J. Seijowski, M. Steriade M. Origin and
+        slow cortical oscillations in deafferented cortical slabs. Cereb Cortex
+        10:1185–1199, 2000.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r33">[33]</td><td>
+        R. C. Muresan, C. Savin. Resonance or Integration? Self-sustained dynamics and
+        excitability of neural microcircuits. J Neurophysiol 97:1911–1930, 2007.
     </td></tr>
 </table>
 </body>
