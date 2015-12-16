@@ -738,8 +738,9 @@ An interpretation of the third index differs among types of components.
 In the following table we show a direct correspondence between elements
 of individual slices and tissue components as they were presented in the
 <a href="./cellab.html#neural_tissue">previous section</a>. We assume in the
-table that <i>i</i> is a kind of a territory (i.e. it is an index of a slice)
-and <i>r</i>, <i>s</i>, <i>t</i> are three indices to the reference slice.
+table that <i>i</i> is a kind of a territory (i.e. it is an index of a slice in
+an array of slices) and <i>r</i>, <i>s</i>, <i>t</i> are three indices into the
+referenced slice.
 </p>
 <table class="enumerate">
 <tr>
@@ -807,22 +808,65 @@ of sources tissue cells of the corresponding synapses (in the left array at the 
 indices). Each triple of coordinates occupies
 3&lt;<i>max</i>(<i>X</i>,<i>Y</i>,<i>C</i><sub><i>S</i></sub>)&gt;
 bits in the array. We further see that first
-<i>M</i><sub>0</sub> elements in both arrays correspond to synapses of the kind 0,
-then follows <i>M</i><sub>1</sub> elements corresponding to synapses of the kind 1,
+<i>M</i><sub>0</sub> elements in both arrays correspond to synapses to muscles of the kind 0,
+then follows <i>M</i><sub>1</sub> elements corresponding to synapses to muscles of the kind 1,
 and so on.
+</p><p>
+A dynamic state is implemented as <kbd>struct dynamic_state_of_neural_tissue</kbd> in
+source files
 </p>
+<ul><li>
+<a href="../../../code/cellab/include/cellab/dynamic_state_of_neural_tissue.hpp">
+    static_state_of_neural_tissue.hpp</a> and
+</li><li>
+<a href="../../../code/cellab/src/dynamic_state_of_neural_tissue.cpp">
+    static_state_of_neural_tissue.cpp</a>.
+</li></ul>
 <h2 id="transition_algorithms">3.&nbsp;&nbsp;&nbsp;Transition algorithms</h2>
-<!--<h4 id="tissue_memory_rep">Tissue</h4>-->
-<!--<p>-->
-<!--An update of a cell proceeds in three steps: a decompression of the array of bytes-->
-<!--into a separate memory outside the model, update of this memory by calling a given-->
-<!--algorithm, and a compression of the updated memory back to the cell (to its array-->
-<!--of bytes). The algorithm is <em>not</em> a part of the model. It is a part of a-->
-<!--parametrisation. The model is only responsible for calling these steps in the right-->
-<!--time and in the right order.-->
-<!--</p>-->
-<!--<h3 id="tissue_column_in_details">Tissue column in details</h3>-->
+<p>
+A computation of a next state of the neural tissue from the current one
+(the structure of a state is described in
+<a href="./cellab.html#neural_tissue">section 1</a>)
+proceeds in six steps. The first step applies some modifications to the current
+state of the neural tissue and each subsequent step adds other modifications
+to a state received from the preceding step. Once the sixth step is done
+the received state represents the next state of the neural tissue. Those
+five intermediate states (between individual steps) do not represent valid
+states of the neural tissue. It is absolutely necessary to apply the steps
+sequentially in exact order. Otherwise the result is undefined.
+Each of the six steps applies its modifications into the same allocated memory.
+It means, that the memory is allocated only once for the initial state of the
+neural tissue (from which the simulation begins) and then all computation steps
+(during whole simulation) only modify a content of that memory. Despite of that
+all six steps together implement a function (in the exact mathematical sense) from
+a valid state to another valid state of the neural tissue. We discuss individual
+transition steps in the following six subsections in the order as they have to be
+applied to a state of the neural tissue.
+</p>
+<h3 id="algorithm_synapses_to_muscles">3.1.&nbsp;&nbsp;&nbsp;Transition of synapses to muscles</h3>
+<p>
 
+</p>
+<h3 id="algorithm_synapses_in_tissue">3.2.&nbsp;&nbsp;&nbsp;Transition of synapses in tissue</h3>
+<p>
+
+</p>
+<h3 id="algorithm_territorial_lists_of_synapses">3.3.&nbsp;&nbsp;&nbsp;Transition of territorial lists of synapses</h3>
+<p>
+
+</p>
+<h3 id="algorithm_synaptic_migration_in_tissue">3.4.&nbsp;&nbsp;&nbsp;Transition of synaptic migration in tissue</h3>
+<p>
+
+</p>
+<h3 id="algorithm_signalling">3.5.&nbsp;&nbsp;&nbsp;Transition of signalling</h3>
+<p>
+
+</p>
+<h3 id="algorithm_cells_in_tissue">3.6.&nbsp;&nbsp;&nbsp;Transition of cells in tissue</h3>
+<p>
+
+</p>
 
 <!--<ul><li>-->
 <!--<a href="../../../code/cellab/include/cellab/static_state_of_neural_tissue.hpp">-->
@@ -832,6 +876,8 @@ and so on.
     <!--static_state_of_neural_tissue.cpp</a>.-->
 <!--</li></ul>-->
 
+
+<h2 id="aggregation_with_parametrisation">4.&nbsp;&nbsp;&nbsp;Aggregation with parametrisation</h2>
 <!--The construction of the neural tissue in the memory start by the construction of-->
 <!--the static state. It is a parametrisation who provides data required for the-->
 <!--construction. The passed data are parameters defining global immutable-->
@@ -843,8 +889,6 @@ and so on.
 <!--memory reserved for them. The library-->
 <!--<a href="../cellconnect/cellconnect.html"><kbd>cellconnect</kbd></a>-->
 <!--can be useful in that task.-->
-
-<h2 id="aggregation_with_parametrisation">4.&nbsp;&nbsp;&nbsp;Aggregation with parametrisation</h2>
 
 <h2 id="references">References</h2>
 <table>
