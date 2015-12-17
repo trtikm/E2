@@ -40,7 +40,7 @@ bool  check_consistency_of_matrix_and_tissue(
  * the column-shift function 'move_to_target_column'.
  *
  * Details can be found in the documentation:
- *      file:///<E2-root-dir>/doc/cellconnect/cellconnect.html#spreading_synapses
+ *      file:///<E2-root-dir>/doc/project_documentation/cellconnect/cellconnect.html#spreading_synapses
  */
 void  spread_synapses_into_neighbourhoods(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,

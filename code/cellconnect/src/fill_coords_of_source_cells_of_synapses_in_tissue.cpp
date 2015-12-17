@@ -13,7 +13,7 @@ namespace cellconnect { namespace {
  * according to the matrix 'matrix'.
  *
  * Details can be found in the documentation:
- *      file:///<E2-root-dir>/doc/cellconnect/cellconnect.html#column_setup
+ *      file:///<E2-root-dir>/doc/project_documentation/cellconnect/cellconnect.html#column_setup
  */
 void  fill_coords_of_source_cells_of_synapses_in_single_column(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
