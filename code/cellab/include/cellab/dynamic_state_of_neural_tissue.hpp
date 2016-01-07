@@ -30,29 +30,10 @@ namespace cellab {
  *     // First we get an access to the memory allocated for the cell.
  *     bits_reference  bref = dyn_state->find_bits_of_cell(x,y,c);
  *     // Next we construct an instance of cell whose data should be stored into the memory.
- *     my_cell_type  my_cell; // The default construction means an initial state of the cell
+ *     my_cell_type  my_cell; // The default construction means an initial state of the cell.
  *     // Finally, we write the data in 'my_cell' into the memory in a compressed form.
  *     my_cell >> bref; // This is the common way: the write is implemented as an user defined
  *                      // operator>>. The typical compression method is the serialisation.
- *
- * All components in the tissue are supposed to be initialised similar way. The similar way alse
- * proceeds update of components in individual simulation steps. For example:
- *
- *     // Let 'dyn_state' be a pointer to an instance of 'struct dynamic_state_of_neural_tissue'.
- *     // Let 'my_cell_type' be our (user defined) type representing a tissue cell of a desired kind.
- *
- *     // First we get an access to the memory allocated for the cell at some coordinates (x,y,c).
- *     bits_reference  bref = dyn_state->find_bits_of_cell(x,y,c);
- *     // Next we construct an instance of cell according data stored into the memory.
- *     my_cell_type  my_cell{bref}; // The constructor reads the memory referenced by the bit_reference,
- *                                  // decompresses the information stored there, and initialises
- *                                  // members of the constructed instance according to the information
- *                                  // received.
- *     // Next we compute the next state of the cell.
- *     my_cell.update(dyn_state,...); // It is a user who specifies parameters. Typically dyn_state is
- *                                    // necessary for that task.
- *     // Finally, we write the data in 'my_cell' into the memory in a compressed form.
- *     my_cell >> bref;
  *
  * Details about structure of a state of the neural tissue can be found in the documentation:
  *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html

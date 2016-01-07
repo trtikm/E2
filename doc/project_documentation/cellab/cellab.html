@@ -644,11 +644,11 @@ is a set of all tissue coordinates
 and
 &minus;<i>r</i><sub><i>c</i></sub> &le; &Delta;<i>c</i> &le; <i>r</i><sub><i>c</i></sub>.
 </p><p>
-A parametrisation of the neural tissue have to specify radii, in all three axes X, Y,
+A parametrisation of the neural tissue has to specify radii, in all three axes X, Y,
 and C, for certain components of territories. The radii are then used by algorithms of the
 neural tissue to build neighbourhoods associated with those components. For each kind
 of territory there is defined one set of radii. It means that components of territories
-of the same kind share radii defined for that kind. Namely, a parametrisation have to
+of the same kind share radii defined for that kind. Namely, a parametrisation has to
 specify for each territory kind <i>i</i> radii <i>RC</i><sub>X</sub>[<i>i</i>],
 <i>RC</i><sub>Y</sub>[<i>i</i>], and <i>RC</i><sub>C</sub>[<i>i</i>] for
 tissue cells, radii <i>RS</i><sub>X</sub>[<i>i</i>], <i>RS</i><sub>Y</sub>[<i>i</i>],
@@ -833,10 +833,10 @@ to a state received from the preceding step. Once the sixth step is done
 the received state represents the next state of the neural tissue. Those
 five intermediate states (between individual steps) do not represent valid
 states of the neural tissue. It is absolutely necessary to apply the steps
-sequentially in exact order. Otherwise the result is undefined.
+sequentially in an exact order. Otherwise the result is undefined.
 Each of the six steps applies its modifications into the same allocated memory.
-It means, that the memory is allocated only once for the initial state of the
-neural tissue (from which the simulation begins) and then all computation steps
+It means, that the memory is allocated only once for an initial state of the
+neural tissue (with which the simulation begins) and then all computation steps
 (during whole simulation) only modify a content of that memory. Despite of that
 all six steps together implement a function (in the exact mathematical sense) from
 a valid state to another valid state of the neural tissue. We discuss individual
@@ -845,29 +845,172 @@ applied to a state of the neural tissue.
 </p>
 <h3 id="algorithm_synapses_to_muscles">3.1.&nbsp;&nbsp;&nbsp;Transition of synapses to muscles</h3>
 <p>
-
+<kbd>go_to_next_index</kbd>
 </p>
 <h3 id="algorithm_synapses_in_tissue">3.2.&nbsp;&nbsp;&nbsp;Transition of synapses in tissue</h3>
 <p>
-
+<kbd>go_to_next_coordinates</kbd>
 </p>
 <h3 id="algorithm_territorial_lists_of_synapses">3.3.&nbsp;&nbsp;&nbsp;Transition of territorial lists of synapses</h3>
 <p>
-
+<kbd>go_to_next_coordinates</kbd>
 </p>
 <h3 id="algorithm_synaptic_migration_in_tissue">3.4.&nbsp;&nbsp;&nbsp;Transition of synaptic migration in tissue</h3>
 <p>
-
+<kbd>go_to_next_coordinates</kbd>
 </p>
 <h3 id="algorithm_signalling">3.5.&nbsp;&nbsp;&nbsp;Transition of signalling</h3>
 <p>
-
+<kbd>go_to_next_coordinates</kbd>
 </p>
 <h3 id="algorithm_cells_in_tissue">3.6.&nbsp;&nbsp;&nbsp;Transition of cells in tissue</h3>
 <p>
-
+<kbd>go_to_next_coordinates</kbd>
 </p>
-
+<h3 id="parallel_enumeration">3.7.&nbsp;&nbsp;&nbsp;Parallel enumeration of components</h3>
+<p>
+Let us consider an <i>m</i>-dimensional array of the size
+<i>n<sub>0</sub></i>&times;&hellip;&times;<i>n<sub><i>m</i>&minus;1</sub></i>.
+We want to enumerate all elements in the array in parallel using <i>k</i> independent
+threads. Different threads are supposed to enumerate different elements of the array
+and counts of elements enumerated by any two threads may differ at most by 1.
+Our goal is thus to specify a recipe for each thread how to generate a sequence of
+indices into the array. An index into the array is a tuple
+(<i>x</i><sub>0</sub>,&hellip;,<i>x</i><sub><i>m</i>&minus;1</sub>), where
+0&le;<i>x</i><sub><i>i</i></sub>&lt;<i>n</i><sub><i>i</i></sub> for each
+<i>i</i>=0,&hellip;,<i>m</i>&minus;1.
+</p><p>
+Let us consider the following recurrent recipe: given an index
+(<i>x</i><sub>0</sub>,&hellip;,<i>x</i><sub><i>m</i>&minus;1</sub>)
+into the array and a number <i>e</i><sub>0</sub>&isin;{0,&hellip;,<i>k</i>},
+called <em>extent</em>, we compute numbers
+<i>e</i><sub><i>i</i>+1</sub>=&lfloor;(<i>x</i><sub><i>i</i></sub>+<i>e</i><sub><i>i</i></sub>)
+    / <i>n</i><sub><i>i</i></sub>&rfloor;
+for all <i>i</i>=0,&hellip;,<i>m</i>&minus;1, and if <i>e</i><sub><i>m</i></sub>=0,
+then we compute a successor index into the array such that its <i>i</i>-th component
+(where <i>i</i>=0,&hellip;,<i>m</i>&minus;1) is
+(<i>x</i><sub><i>i</i></sub>+<i>e</i><sub><i>i</i></sub>) mod <i>n</i><sub><i>i</i></sub>.
+If <i>e</i><sub><i>m</i></sub>&ne;0, then the index
+(<i>x</i><sub>0</sub>,&hellip;,<i>x</i><sub><i>m</i>&minus;1</sub>)
+is the last one, i.e. it has no successor.
+</p><p>
+Note that C++ standard says that operators <kbd>/</kbd> and <kbd>%</kbd> satisfy
+<kbd>(x/y)*y+x%y==x</kbd>, for any non-negative integers <kbd>x</kbd> and positive integers
+<kbd>y</kbd>. It means that <kbd>x%y==x-(x/y)*y</kbd>. Therefore, components
+(<i>x</i><sub><i>i</i></sub>+<i>e</i><sub><i>i</i></sub>) mod <i>n</i><sub><i>i</i></sub>
+of an index computed above can equally be expressed as
+(<i>x</i><sub><i>i</i></sub>+<i>e</i><sub><i>i</i></sub>) &minus;
+    &lfloor;(<i>x</i><sub><i>i</i></sub>+<i>e</i><sub><i>i</i></sub>)
+    / <i>n</i><sub><i>i</i></sub>&rfloor;&middot;<i>n</i><sub><i>i</i></sub>
+= <i>x</i><sub><i>i</i></sub>+<i>e</i><sub><i>i</i></sub> &minus;
+    <i>e</i><sub><i>i</i>+1</sub><i>n</i><sub><i>i</i></sub>.
+</p><p>
+It is further known that any <i>m</i>-dimensional array of a fixed size
+<i>n<sub>0</sub></i>&times;&hellip;&times;<i>n<sub><i>m</i>&minus;1</sub></i>
+can always be stored in 1-dimensional array with the address function
+<i>f</i>(<i>x</i><sub>0</sub>,&hellip;,<i>x</i><sub><i>m</i>&minus;1</sub>) =
+    <i>x</i><sub>0</sub> +
+    <i>x</i><sub>1</sub><i>n</i><sub>0</sub> +
+    <i>x</i><sub>2</sub><i>n</i><sub>0</sub><i>n</i><sub>1</sub> +
+    &hellip; +
+    <i>x</i><sub><i>m</i>&minus;1</sub><i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;2</sub>,
+see
+[<a href="./cellab.html#r26">26</a>].
+The function <i>f</i> is a bijection between indices into these two arrays.
+</p><p>
+Observe that
+<i>f</i>(<i>x</i><sub>0</sub>+<i>e</i><sub>0</sub>&minus;<i>e</i><sub>1</sub><i>n</i><sub>0</sub>,
+    &hellip;,
+    <i>x</i><sub><i>m</i>&minus;1</sub>+<i>e</i><sub><i>m</i>&minus;1</sub>&minus;<i>e</i><sub><i>m</i></sub><i>n</i><sub><i>m</i>&minus;1</sub>)
+=
+<i>x</i><sub>0</sub>+<i>e</i><sub>0</sub>&minus;<i>e</i><sub>1</sub><i>n</i><sub>0</sub> +
+(<i>x</i><sub>1</sub>+<i>e</i><sub>1</sub>&minus;<i>e</i><sub>2</sub><i>n</i><sub>1</sub>)<i>n</i><sub>0</sub> +
+(<i>x</i><sub>2</sub>+<i>e</i><sub>2</sub>&minus;<i>e</i><sub>3</sub><i>n</i><sub>2</sub>) <i>n</i><sub>0</sub><i>n</i><sub>1</sub> +
+&hellip; +
+(<i>x</i><sub><i>m</i>&minus;1</sub>+<i>e</i><sub><i>m</i>&minus;1</sub>&minus;<i>e</i><sub><i>m</i></sub><i>n</i><sub><i>m</i>&minus;1</sub>)<i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;2</sub>
+=
+<i>f</i>(<i>x</i><sub>0</sub>,&hellip;,<i>x</i><sub><i>m</i>&minus;1</sub>) +
+<i>e</i><sub>0</sub> &minus; <i>e</i><sub><i>m</i></sub><i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub>.
+Further, according to equalities of expressions with the floor function &lfloor;&rfloor;, see
+[<a href="./cellab.html#r27">27</a>],
+we have
+<i>e</i><sub><i>m</i></sub> =
+&lfloor;
+(<i>x</i><sub><i>m</i>&minus;1</sub> +
+    (<i>x</i><sub><i>m</i>&minus;2</sub> +
+        &hellip;
+        (<i>x</i><sub>1</sub> +
+            (<i>x</i><sub>0</sub> +
+                <i>e</i><sub>0</sub>
+                ) / <i>n</i><sub>0</sub>
+            ) / <i>n</i><sub>1</sub>
+        &hellip;)
+        / <i>n</i><sub><i>m</i>&minus;2</sub>
+    ) / <i>n</i><sub><i>m</i>&minus;1</sub>
+&rfloor;
+=
+&lfloor;
+(<i>e</i><sub>0</sub> + <i>x</i><sub>0</sub> + <i>x</i><sub>1</sub><i>n</i><sub>0</sub> +
+    <i>x</i><sub>2</sub><i>n</i><sub>0</sub><i>n</i><sub>1</sub> +
+    &hellip; +
+    <i>x</i><sub><i>m</i>&minus;1</sub><i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;2</sub>)
+    / (<i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub>)
+&rfloor;
+=
+&lfloor;(<i>f</i>(<i>x</i><sub>0</sub>,&hellip;,<i>x</i><sub><i>m</i>&minus;1</sub>) +
+<i>e</i><sub>0</sub>) / (<i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub>)&rfloor;.
+It means that <i>e</i><sub><i>m</i></sub>=0, if and only if
+(<i>x</i><sub>0</sub>+<i>e</i><sub>0</sub>&minus;<i>e</i><sub>1</sub><i>n</i><sub>0</sub>,
+    &hellip;,
+    <i>x</i><sub><i>m</i>&minus;1</sub>+<i>e</i><sub><i>m</i>&minus;1</sub>&minus;<i>e</i><sub><i>m</i></sub><i>n</i><sub><i>m</i>&minus;1</sub>)
+is a valid index into our <i>m</i>-dimensional array (because valid indices are all those
+satisfying
+0 &le; <i>f</i>(<i>x</i><sub>0</sub>,&hellip;,<i>x</i><sub><i>m</i>&minus;1</sub>) +
+<i>e</i><sub>0</sub> &lt; <i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub>).
+Moreover, for <i>e</i><sub><i>m</i></sub>=0 our recurrent recipe computes from a given index
+and an extent <i>e</i><sub>0</sub> such successor index which is shifted exactly by
+<i>e</i><sub>0</sub> positions from the given index in the address mode
+defined by the function <i>f</i>.
+</p><p>
+We are now ready to specify how individual threads use the presented recurrent recipe.
+A thread <i>j</i>, where 0&le;<i>j</i>&lt;<i>k</i>, computes the first index from the
+tuple (0,&hellip;,0) and the extent <i>j</i>, and any subsequent index is compiuted
+from the previous one and the extent <i>k</i>. The computation stops when
+<i>e</i><sub><i>m</i></sub>=0 is detected.
+</p><p>
+Clearly, a thread <i>j</i> enumerates indices
+{<i>f</i><sup>&minus;1</sup>(<i>j</i>+<i>i</i><i>k</i>) ;
+    &exist;<i>i</i> . 0 &le; <i>j</i>+<i>i</i><i>k</i> &lt;
+    <i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub>}.
+There cannot be an index which is enumerated by two different threads <i>j</i> and <i>j</i>',
+because existence of natural numbers <i>i</i> and <i>i</i>' such that
+<i>j</i>+<i>i</i><i>k</i> = <i>j</i>'+<i>i</i>'<i>k</i>
+implies that <i>j</i>-<i>j</i>' is an integer multiple of <i>k</i> (which cannot happen, since
+<i>j</i>,<i>j</i>'&isin;{0,&hellip;,<i>k</i>&minus;1} and <i>j</i>&ne;<i>j</i>').
+Further, all <i>k</i> threads together enumerate all indices into the array, because
+{<i>f</i><sup>&minus;1</sup>(<i>j</i>+<i>i</i><i>k</i>) ;
+    &exist;<i>j</i>,<i>i</i> . 0 &le; <i>j</i> &lt; <i>k</i> &and;
+    0 &le; <i>j</i>+<i>i</i><i>k</i> &lt;
+    <i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub>}
+=
+{<i>f</i><sup>&minus;1</sup>(<i>i</i>) ;
+    &exist;<i>i</i> . 0 &le; <i>i</i> &lt;
+    <i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub>}.
+Finally, we compute the size of the set
+{<i>f</i><sup>&minus;1</sup>(<i>j</i>+<i>i</i><i>k</i>) ;
+    &exist;<i>i</i> . 0 &le; <i>j</i>+<i>i</i><i>k</i> &lt;
+    <i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub>}
+of enumerated indices by a thread <i>j</i> from the inequality
+<i>j</i>+<i>i</i><i>k</i> &lt; <i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub>
+as the number
+&lfloor;(<i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub> &minus; <i>j</i>)
+    / <i>k</i>&rfloor;
+=
+&lfloor;(<i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub>) / <i>k</i>
+    &minus; <i>j</i> / <i>k</i>&rfloor;.
+Sizes of sets of enumerated indices by any two threads may differ at most by 1, because
+<i>j</i> / <i>k</i> &lt; 1 for each <i>j</i>&isin;{0,&hellip;,<i>k</i>&minus;1}.
+</p>
 <!--<ul><li>-->
 <!--<a href="../../../code/cellab/include/cellab/static_state_of_neural_tissue.hpp">-->
     <!--static_state_of_neural_tissue.hpp</a> and-->
@@ -1015,6 +1158,16 @@ applied to a state of the neural tissue.
         Wikipedia: Congruence relation.
         <a href="https://en.wikipedia.org/wiki/Congruence_relation">
             https://en.wikipedia.org/wiki/Congruence_relation</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r26">[26]</td><td>
+        Wikipedia: Array address calculation.
+        <a href="https://en.wikipedia.org/wiki/Row-major_order">
+            https://en.wikipedia.org/wiki/Row-major_order</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r27">[27]</td><td>
+        Wikipedia: Floor and ceiling functions.
+        <a href="https://en.wikipedia.org/wiki/Floor_and_ceiling_functions">
+            https://en.wikipedia.org/wiki/Floor_and_ceiling_functions</a>.
     </td></tr>
 </table>
 
