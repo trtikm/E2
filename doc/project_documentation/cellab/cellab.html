@@ -974,9 +974,9 @@ defined by the function <i>f</i>.
 </p><p>
 We are now ready to specify how individual threads use the presented recurrent recipe.
 A thread <i>j</i>, where 0&le;<i>j</i>&lt;<i>k</i>, computes the first index from the
-tuple (0,&hellip;,0) and the extent <i>j</i>, and any subsequent index is compiuted
-from the previous one and the extent <i>k</i>. The computation stops when
-<i>e</i><sub><i>m</i></sub>=0 is detected.
+tuple (0,&hellip;,0) and the extent <i>j</i>, and any subsequent index
+from the previous one and the extent <i>k</i>. The computation stops, when
+<i>e</i><sub><i>m</i></sub> becomes non-zero.
 </p><p>
 Clearly, a thread <i>j</i> enumerates indices
 {<i>f</i><sup>&minus;1</sup>(<i>j</i>+<i>i</i><i>k</i>) ;
@@ -996,28 +996,48 @@ Further, all <i>k</i> threads together enumerate all indices into the array, bec
 {<i>f</i><sup>&minus;1</sup>(<i>i</i>) ;
     &exist;<i>i</i> . 0 &le; <i>i</i> &lt;
     <i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub>}.
-Finally, we compute the size of the set
+Finally, the size of the set
 {<i>f</i><sup>&minus;1</sup>(<i>j</i>+<i>i</i><i>k</i>) ;
     &exist;<i>i</i> . 0 &le; <i>j</i>+<i>i</i><i>k</i> &lt;
     <i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub>}
-of enumerated indices by a thread <i>j</i> from the inequality
-<i>j</i>+<i>i</i><i>k</i> &lt; <i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub>
-as the number
-&lfloor;(<i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub> &minus; <i>j</i>)
-    / <i>k</i>&rfloor;
-=
-&lfloor;(<i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub>) / <i>k</i>
-    &minus; <i>j</i> / <i>k</i>&rfloor;.
-Sizes of sets of enumerated indices by any two threads may differ at most by 1, because
-<i>j</i> / <i>k</i> &lt; 1 for each <i>j</i>&isin;{0,&hellip;,<i>k</i>&minus;1}.
+of enumerated indices by a thread <i>j</i> is equal to the number of valid values for
+<i>i</i> (satisfying the inequality), i.e. they are all integers in the interval
+[0, (<i>n</i><sub>0</sub>&hellip;<i>n</i><sub><i>m</i>&minus;1</sub> &minus; <i>j</i>) / <i>k</i>).
+Since <i>j</i> is always less than <i>k</i>, the number of integers in intervals for any two threads
+may differ at most by 1.
+</p><p>
+The recipe is implemented in the source files
 </p>
-<!--<ul><li>-->
-<!--<a href="../../../code/cellab/include/cellab/static_state_of_neural_tissue.hpp">-->
-    <!--static_state_of_neural_tissue.hpp</a> and-->
-<!--</li><li>-->
-<!--<a href="../../../code/cellab/src/static_state_of_neural_tissue.cpp">-->
-    <!--static_state_of_neural_tissue.cpp</a>.-->
-<!--</li></ul>-->
+<ul><li>
+<a href="../../../code/cellab/include/cellab/utilities_for_transition_algorithms.hpp">
+    utilities_for_transition_algorithms.hpp</a> and
+</li><li>
+<a href="../../../code/cellab/src/utilities_for_transition_algorithms.cpp">
+    utilities_for_transition_algorithms.cpp</a>
+</li></ul>
+<p>
+as functions <kbd>go_to_next_index</kbd>, <kbd>go_to_next_column</kbd>, and
+<kbd>go_to_next_coordinates</kbd>. Each function is dedicated for a concrete
+dimensions of the array. Namely, the first functions is designed for <i>m</i>=1,
+the second for <i>m</i>=2, and the last one for <i>m</i>=3. All these functions
+internally use a function <kbd>go_to_next_value_modulo_range</kbd> which
+provides a computation of values <i>e</i><sub><i>i</i></sub> and
+(<i>x</i><sub><i>i</i></sub>+<i>e</i><sub><i>i</i></sub>) mod <i>n</i><sub><i>i</i></sub>.
+</p><p>
+The first transition algorithm discussed above
+(<a href="./cellab.html#algorithm_synapses_to_muscles">section 3.1</a>)
+uses the function <kbd>go_to_next_index</kbd> and all remaining transition
+algorithms use the function <kbd>go_to_next_coordinates</kbd>. The function
+<kbd>go_to_next_column</kbd> is used in the library
+<a href="../cellconnect/cellconnect.html">cellconnect</a>
+for enumeration of tissue columns (i.e. only of x and y coordinates).
+</p><p>
+We chose this kind of enumeration strategy due to simplicity of the implementation.
+Indeed, the recipe is very simple and transition algorithms of the neural tissue do not
+have to compute nor store any addition information (the initial extent is a loop counter
+in a loop creating threads and the other extent is nothing but the passed number
+of threads).
+</p>
 
 
 <h2 id="aggregation_with_parametrisation">4.&nbsp;&nbsp;&nbsp;Aggregation with parametrisation</h2>
