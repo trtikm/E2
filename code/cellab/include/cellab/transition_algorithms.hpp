@@ -15,6 +15,7 @@ namespace cellab {
 typedef std::function<
             void(
                 bits_reference& bits_of_synapse_to_be_updated,
+                kind_of_synapse_to_muscle kind_of_synapse_to_muscle_to_be_updated,
                 kind_of_cell kind_of_source_cell,
                 bits_const_reference const& bits_of_source_cell
                 ) >

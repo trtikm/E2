@@ -141,6 +141,7 @@ my_neural_tissue::my_neural_tissue(
 
 void  my_neural_tissue::transition_function_of_synapse_to_muscle(
         my_synapse& synapse_to_be_updated,
+        cellab::kind_of_synapse_to_muscle const,
         cellab::kind_of_cell const,
         my_cell const& source_cell
         )
@@ -151,6 +152,7 @@ void  my_neural_tissue::transition_function_of_synapse_to_muscle(
 
 void  my_neural_tissue::transition_function_of_packed_synapse_to_muscle(
         bits_reference& bits_of_synapse_to_be_updated,
+        cellab::kind_of_synapse_to_muscle,
         cellab::kind_of_cell,
         bits_const_reference const& bits_of_source_cell
         )

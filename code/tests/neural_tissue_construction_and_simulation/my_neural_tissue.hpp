@@ -21,13 +21,15 @@ struct my_neural_tissue : public cellab::neural_tissue
 
     void  transition_function_of_synapse_to_muscle(
             my_synapse& synapse_to_be_updated,
+            cellab::kind_of_synapse_to_muscle const kind_of_synapse_to_muscle_to_be_updated,
             cellab::kind_of_cell const kind_of_source_cell,
             my_cell const& source_cell
             );
 
     static void  transition_function_of_packed_synapse_to_muscle(
             bits_reference& bits_of_synapse_to_be_updated,
-            cellab::kind_of_cell kind_of_source_cell,
+            cellab::kind_of_synapse_to_muscle const kind_of_synapse_to_muscle_to_be_updated,
+            cellab::kind_of_cell const kind_of_source_cell,
             bits_const_reference const& bits_of_source_cell
             );
 

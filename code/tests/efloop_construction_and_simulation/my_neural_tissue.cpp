@@ -181,7 +181,8 @@ my_neural_tissue::my_neural_tissue()
 
 void  my_neural_tissue::transition_function_of_synapse_to_muscle(
         my_synapse& synapse_to_be_updated,
-        cellab::kind_of_cell,
+        cellab::kind_of_synapse_to_muscle const,
+        cellab::kind_of_cell const,
         my_cell const& source_cell
         )
 {

@@ -833,7 +833,7 @@ to a state received from the preceding step. Once the sixth step is done
 the received state represents the next state of the neural tissue. Those
 five intermediate states (between individual steps) do not represent valid
 states of the neural tissue. It is absolutely necessary to apply the steps
-sequentially in an exact order. Otherwise the result is undefined.
+sequentially in an exact order (which we specify later). Otherwise the result is undefined.
 Each of the six steps applies its modifications into the same allocated memory.
 It means, that the memory is allocated only once for an initial state of the
 neural tissue (with which the simulation begins) and then all computation steps
@@ -845,7 +845,42 @@ applied to a state of the neural tissue.
 </p>
 <h3 id="algorithm_synapses_to_muscles">3.1.&nbsp;&nbsp;&nbsp;Transition of synapses to muscles</h3>
 <p>
-<kbd>go_to_next_index</kbd>
+The algorithm accepts an external function <i>F</i><sub>SM</sub> and a number of threads
+<i>k</i> which can be used for the computation. The function <i>F</i><sub>SM</sub> is
+a part of the parametrisation of the neural tissue, i.e. it is an external user-defined
+function. The algorithm calls it for individual synapses to muscles to compute their
+next states.
+</p><p>
+The computation starts in the function <kbd>apply_transition_of_synapses_to_muscles</kbd>.
+There the algorithm first creates (from the current thread) <i>k</i>&minus;1 new threads
+and then execution of all <i>k</i> threads proceeds to the function
+<kbd>thread_apply_transition_of_synapses_to_muscles</kbd>. There each threaded processes
+a different sub-set of all synapses to muscles. The enumeration of right sub-set of
+synapses in each thread is provided by the utility function
+<kbd>go_to_next_index</kbd>, see
+<a href="./cellab.html#parallel_enumeration">section 3.7.</a>
+for details. Each thread calls for each enumerated synapse to muscle the function
+<i>F</i><sub>SM</sub> with the following information:
+</p>
+<table class="enumerate">
+<tr>
+<th align="right" valign="bottom">Name</th>
+<td>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+<th align="left" valign="bottom">Description</th>
+</tr>
+<tr>
+<td align="right" valign="top"><kbd>PSM</kbd></td><td>&nbsp;&nbsp;</td>
+<td>
+A reference to a memory, where is stored a packed information about the current
+state of the synapse to muscle. It is the first element of the pair forming
+complete data of the synapse to muscle in the neural tissue, see
+<a href="./cellab.html#synapses_to_muscles">section 1.2.3</a>.
+</td>
+</tr>
+</table>
+<p>
+This function must implement a single-threaded, thread-safe, in-situ
+procedure.
 </p>
 <h3 id="algorithm_synapses_in_tissue">3.2.&nbsp;&nbsp;&nbsp;Transition of synapses in tissue</h3>
 <p>

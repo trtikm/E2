@@ -18,6 +18,7 @@ struct my_neural_tissue : public cellab::neural_tissue
 
     void  transition_function_of_synapse_to_muscle(
             my_synapse& synapse_to_be_updated,
+            cellab::kind_of_synapse_to_muscle const kind_of_synapse_to_muscle_to_be_updated,
             cellab::kind_of_cell const kind_of_source_cell,
             my_cell const& source_cell
             );

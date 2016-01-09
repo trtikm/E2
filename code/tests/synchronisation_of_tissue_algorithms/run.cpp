@@ -160,6 +160,7 @@ static void initialse_tissue(std::shared_ptr<cellab::dynamic_state_of_neural_tis
 
 void callback_transition_of_synapses_to_muscles(
             bits_reference& bits_of_synapse_to_be_updated,
+            cellab::kind_of_synapse_to_muscle,
             cellab::kind_of_cell,
             bits_const_reference const& bits_of_source_cell)
 {

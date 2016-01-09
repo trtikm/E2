@@ -50,6 +50,7 @@ static void thread_apply_transition_of_synapses_to_muscles(
 
         transition_function_of_packed_synapse_to_muscle(
                     bits_of_synapse,
+                    static_state_of_tissue->compute_kind_of_sensory_cell_from_its_index(index),
                     kind_and_index_of_source_cell.first,
                     bits_of_source_cell
                     );

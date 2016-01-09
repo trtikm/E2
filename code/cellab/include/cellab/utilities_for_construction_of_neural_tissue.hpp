@@ -74,6 +74,7 @@ template<typename class_derived_from_neural_tissue,
 void transition_function_of_synapse_to_muscle(
         neural_tissue* const tissue,
         bits_reference& bits_of_synapse_to_be_updated,
+        kind_of_synapse_to_muscle const kind_of_synapse_to_muscle_to_be_updated,
         kind_of_cell const kind_of_source_cell,
         bits_const_reference const& bits_of_source_cell
         )
@@ -83,6 +84,7 @@ void transition_function_of_synapse_to_muscle(
     INVARIANT(dynamic_cast<class_derived_from_neural_tissue*>(tissue) != nullptr);
     static_cast<class_derived_from_neural_tissue*>(tissue)->transition_function_of_synapse_to_muscle(
                 synapse_to_be_updated,
+                kind_of_synapse_to_muscle_to_be_updated,
                 kind_of_source_cell,
                 source_cell
                 );
@@ -218,7 +220,8 @@ struct bind_transition_function_of_synapse_to_muscle
                     static_cast<class_derived_from_neural_tissue*>(tissue),
                     std::placeholders::_1,
                     std::placeholders::_2,
-                    std::placeholders::_3
+                    std::placeholders::_3,
+                    std::placeholders::_4
                     );
     }
 };
@@ -241,7 +244,8 @@ struct bind_transition_function_of_synapse_to_muscle<
                     tissue,
                     std::placeholders::_1,
                     std::placeholders::_2,
-                    std::placeholders::_3
+                    std::placeholders::_3,
+                    std::placeholders::_4
                     );
     }
 };
