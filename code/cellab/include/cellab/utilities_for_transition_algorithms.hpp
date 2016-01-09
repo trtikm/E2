@@ -68,6 +68,17 @@ tissue_coordinates  shift_coordinates(
         natural_32_bit const num_cells_along_columnar_axis
         );
 
+
+
+/**
+ * The following three functions allows for enumeration of indices into an m-dimensional
+ * array such that from a given coordinates (an m-tuple) they compute a successor coordinates
+ * (another m-tuple) acoording to a given extent. For details see the documentation:
+ *
+ *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#parallel_enumeration
+ */
+
+/** Enumeration of indices into a 3-dimension array. */
 bool  go_to_next_coordinates(
         natural_32_bit& x_coord, natural_32_bit& y_coord, natural_32_bit& c_coord,
         natural_32_bit const extent,
@@ -76,6 +87,7 @@ bool  go_to_next_coordinates(
         natural_32_bit const num_cells_along_columnar_axis
         );
 
+/** Enumeration of indices into a 2-dimension array. */
 bool  go_to_next_column(
         natural_32_bit& x_coord, natural_32_bit& y_coord,
         natural_32_bit const extent,
@@ -83,11 +95,14 @@ bool  go_to_next_column(
         natural_32_bit const num_cells_along_y_axis
         );
 
+/** Enumeration of indices into a 1-dimension array. */
 bool  go_to_next_index(
         natural_32_bit& index,
         natural_32_bit const extent,
         natural_32_bit const size
         );
+
+
 
 integer_64_bit  clip_shift(
         integer_64_bit const shift,

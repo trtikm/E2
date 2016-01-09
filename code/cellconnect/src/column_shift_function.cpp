@@ -121,7 +121,7 @@ void shift_template::setup_data(std::vector<shift_to_target> const& shifts)
 
     natural_16_bit const  length = checked_mul_16_bit(num_rows(),num_columns());
     ASSUMPTION((natural_32_bit)length > 1U && length < ES_MASK);
-    ASSUMPTION(shifts.size() <= (natural_32_bit)length)
+    ASSUMPTION(shifts.size() <= (natural_32_bit)length);
     typedef std::pair<exit_shift_kind,natural_16_bit>  kind_and_count;
     ASSUMPTION(
         [](std::vector<shift_to_target> const& shifts) {
@@ -177,7 +177,7 @@ void shift_template::setup_data(std::vector<shift_to_target> const& shifts)
             for (natural_16_bit  r = 0U; r < num_rows(); ++r)
                 for (natural_16_bit  c = 0U; c < num_columns(); ++c)
                     selection.push_back({r,c});
-            INVARIANT(selection.size() == (natural_32_bit)length)
+            INVARIANT(selection.size() == (natural_32_bit)length);
             for (natural_32_bit k = 0U; k < 2U; ++k)
                 for (natural_32_bit p = 0U; p < (natural_32_bit)length; ++p)
                 {
@@ -294,7 +294,7 @@ layout_of_shift_templates::layout_of_shift_templates(natural_16_bit const  num_r
     , m_layout(matrix_of_indices_of_shift_templates)
     , m_num_templates(*std::max_element(matrix_of_indices_of_shift_templates.begin(),matrix_of_indices_of_shift_templates.end()) + 1U)
 {
-    ASSUMPTION(m_layout.size() > 0U && m_layout.size() == (natural_32_bit)checked_mul_16_bit(m_num_rows,m_num_columns))
+    ASSUMPTION(m_layout.size() > 0U && m_layout.size() == (natural_32_bit)checked_mul_16_bit(m_num_rows,m_num_columns));
     ASSUMPTION(
         [](std::vector<natural_16_bit> const& indices_vector, natural_16_bit const  num_templates) {
             std::set<natural_16_bit> const  indices(indices_vector.begin(),indices_vector.end());

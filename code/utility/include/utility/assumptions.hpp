@@ -12,8 +12,9 @@
         struct assumption_failure : public std::logic_error {
             explicit assumption_failure(std::string const& msg) : std::logic_error(msg) {}
         };
-#       define ASSUMPTION(C) { if (!(C)) { LOG(error,"Assumption failure.");\
-                                           throw assumption_failure(FAIL_MSG("Assumption failure.")); } }
+#       define ASSUMPTION(C) do { if (!(C)) { LOG(error,"Assumption failure.");\
+                                              throw assumption_failure(FAIL_MSG("Assumption failure.")); }\
+                                } while (false)
 #   else
 #       define ASSUMPTION(C)
 #   endif
