@@ -670,7 +670,7 @@ allocated for the state is as close to 1 as possible.
 Transition algorithms of the neural tissue (discussed in the next section) can
 operate as efficiently as possible on the stored state.
 </li></ul>
-<h3 id="static_state_memory_rep">Static state</h3>
+<h3 id="static_state_memory_rep">2.1&nbsp;&nbsp;&nbsp;Static state</h3>
 <p>
 It does not require any special treatment. Its memory footprint is typically negligible,
 compared to the corresponding dynamic state. Indeed, its size is a function
@@ -707,7 +707,7 @@ source files
 <a href="../../../code/cellab/src/static_state_of_neural_tissue.cpp">
     static_state_of_neural_tissue.cpp</a>.
 </li></ul>
-<h3 id="dynamic_state_memory_rep">Dynamic state</h3>
+<h3 id="dynamic_state_memory_rep">2.2&nbsp;&nbsp;&nbsp;Dynamic state</h3>
 <p>
 It is stored in 6<i>K</i>+3 separately allocated memory blocks. The tissue is
 stored in 6<i>K</i> memory blocks, called <em>slices</em>. The sensory cells
@@ -843,13 +843,12 @@ a valid state to another valid state of the neural tissue. We discuss individual
 transition steps in the following six subsections in the order as they have to be
 applied to a state of the neural tissue.
 </p>
-<h3 id="algorithm_synapses_to_muscles">3.1.&nbsp;&nbsp;&nbsp;Transition of synapses to muscles</h3>
+<h3 id="algorithm_synapses_to_muscles">3.1&nbsp;&nbsp;&nbsp;Transition of synapses to muscles</h3>
 <p>
 The algorithm accepts an external function <i>F</i><sub>SM</sub> and a number of threads
 <i>k</i> which can be used for the computation. The function <i>F</i><sub>SM</sub> is
 a part of the parametrisation of the neural tissue, i.e. it is an external user-defined
-function. The algorithm calls it for individual synapses to muscles to compute their
-next states.
+function. It is called for individual synapses to muscles to compute their next states.
 </p><p>
 The computation starts in the function <kbd>apply_transition_of_synapses_to_muscles</kbd>.
 There the algorithm first creates (from the current thread) <i>k</i>&minus;1 new threads
@@ -858,7 +857,7 @@ and then execution of all <i>k</i> threads proceeds to the function
 a different sub-set of all synapses to muscles. The enumeration of right sub-set of
 synapses in each thread is provided by the utility function
 <kbd>go_to_next_index</kbd>, see
-<a href="./cellab.html#parallel_enumeration">section 3.7.</a>
+<a href="./cellab.html#parallel_enumeration">section 3.7</a>
 for details. Each thread calls for each enumerated synapse to muscle the function
 <i>F</i><sub>SM</sub> with the following information:
 </p>
@@ -869,40 +868,101 @@ for details. Each thread calls for each enumerated synapse to muscle the functio
 <th align="left" valign="bottom">Description</th>
 </tr>
 <tr>
-<td align="right" valign="top"><kbd>PSM</kbd></td><td>&nbsp;&nbsp;</td>
+<td align="right" valign="top"><kbd>bits_of_synapse</kbd></td><td>&nbsp;&nbsp;</td>
 <td>
-A reference to a memory, where is stored a packed information about the current
+A reference to the memory, where is stored a packed information about the current
 state of the synapse to muscle. It is the first element of the pair forming
 complete data of the synapse to muscle in the neural tissue, see
-<a href="./cellab.html#synapses_to_muscles">section 1.2.3</a>.
+<a href="./cellab.html#synapses_to_muscles">section 1.2.3</a>. Note that it is
+the parametrisation who defines size, content, and compression method of the
+referenced memory. <i>F</i><sub>SM</sub> thus receives all information
+about the current state of an enumerated synapse to muscle.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><kbd>kind_of_synapse</kbd></td><td>&nbsp;&nbsp;</td>
+<td >
+The kind is computed directly from the index of an enumerated synapse using the
+look-up table held in the static state of the neural tissue, see
+<a href="./cellab.html#static_state_memory_rep">section 2.1</a>. <i>F</i><sub>SM</sub>
+may use this kind, for example, to recognise right interpretation of data encoded
+in <kbd>bits_of_synapse</kbd>, or to choose right procedure for computation of the
+next state of the enumerated synapse to muscle.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><kbd>kind_of_src_cell</kbd></td><td>&nbsp;&nbsp;</td>
+<td>
+The kind of tissue cell located in the territory of the neural tissue identified by tissue
+coordinates stored in an enumerated synapse to muscle. The coordinates represent the second
+element of the pair forming complete data of the synapse to muscle in the neural tissue, see
+<a href="./cellab.html#synapses_to_muscles">section 1.2.3</a>. The kind of the cell
+is computed directly from the tissue coordinates using the
+look-up table held in the static state of the neural tissue, see
+<a href="./cellab.html#static_state_memory_rep">section 2.1</a>.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><kbd>bits_of_src_cell</kbd></td><td>&nbsp;&nbsp;</td>
+<td>
+A reference to the memory where is stored a tissue cell of the territory identified by tissue
+coordinates stored in the enumerated synapse to muscle. The coordinates represent the second
+element of the pair forming complete data of the synapse to muscle in the neural tissue, see
+<a href="./cellab.html#synapses_to_muscles">section 1.2.3</a>. Note that it is
+the parametrisation who defines size, content, and compression method of that memory.
+<i>F</i><sub>SM</sub> thus receives all information about the cell. Moreover,
+<kbd>kind_of_src_cell</kbd> can be useful, for example, for correct or fast interpretation
+of the data. The passed current that of the source cell is supposed to serve as a source
+of information for computation of the next state of the enumerated synapse to muscle.
 </td>
 </tr>
 </table>
 <p>
-This function must implement a single-threaded, thread-safe, in-situ
+Although the function <i>F</i><sub>SM</sub> is a part of a parametrisation of the
+neural tissue (i.e. a user may implement it arbitrarily), there is a general
+scheme of what steps the function should perform:
+</p>
+<ol>
+<li>Unpack and parse data referenced by <kbd>bits_of_synapse</kbd>. This is often
+implemented as construction of an instance of an user-defined type representing a
+synapse to muscle (the reference <kbd>bits_of_synapse</kbd> (and possibly other
+data) is passed to the constructor).</li>
+<li>Unpack and parse data referenced by <kbd>bits_of_src_cell</kbd>. This is often
+implemented as construction of an instance of an user-defined type representing a
+tissue cell (the reference <kbd>bits_of_src_cell</kbd> (and possibly other
+data) is passed to the constructor).</li>
+<li>Invoke a procedure on the unpacked synapse to muscle transforming
+its current state to the next one. The unpacked tissue cell is typically also
+needed in this computation.</li>
+<li>Pack and write the updated state of the synapse to muscle to the memory
+referenced by <kbd>bits_of_synapse</kbd> (i.e. overwrite the old content).</li>
+</ol>
+<p>
+We always assume <i>F</i><sub>SM</sub> is a single-threaded, thread-safe, and in-place
+<a href="./cellab.html#r28">[28]</a>
 procedure.
 </p>
-<h3 id="algorithm_synapses_in_tissue">3.2.&nbsp;&nbsp;&nbsp;Transition of synapses in tissue</h3>
+<h3 id="algorithm_synapses_in_tissue">3.2&nbsp;&nbsp;&nbsp;Transition of synapses in tissue</h3>
 <p>
 <kbd>go_to_next_coordinates</kbd>
 </p>
-<h3 id="algorithm_territorial_lists_of_synapses">3.3.&nbsp;&nbsp;&nbsp;Transition of territorial lists of synapses</h3>
+<h3 id="algorithm_territorial_lists_of_synapses">3.3&nbsp;&nbsp;&nbsp;Transition of territorial lists of synapses</h3>
 <p>
 <kbd>go_to_next_coordinates</kbd>
 </p>
-<h3 id="algorithm_synaptic_migration_in_tissue">3.4.&nbsp;&nbsp;&nbsp;Transition of synaptic migration in tissue</h3>
+<h3 id="algorithm_synaptic_migration_in_tissue">3.4&nbsp;&nbsp;&nbsp;Transition of synaptic migration in tissue</h3>
 <p>
 <kbd>go_to_next_coordinates</kbd>
 </p>
-<h3 id="algorithm_signalling">3.5.&nbsp;&nbsp;&nbsp;Transition of signalling</h3>
+<h3 id="algorithm_signalling">3.5&nbsp;&nbsp;&nbsp;Transition of signalling</h3>
 <p>
 <kbd>go_to_next_coordinates</kbd>
 </p>
-<h3 id="algorithm_cells_in_tissue">3.6.&nbsp;&nbsp;&nbsp;Transition of cells in tissue</h3>
+<h3 id="algorithm_cells_in_tissue">3.6&nbsp;&nbsp;&nbsp;Transition of cells in tissue</h3>
 <p>
 <kbd>go_to_next_coordinates</kbd>
 </p>
-<h3 id="parallel_enumeration">3.7.&nbsp;&nbsp;&nbsp;Parallel enumeration of components</h3>
+<h3 id="parallel_enumeration">3.7&nbsp;&nbsp;&nbsp;Parallel enumeration of components</h3>
 <p>
 Let us consider an <i>m</i>-dimensional array of the size
 <i>n<sub>0</sub></i>&times;&hellip;&times;<i>n<sub><i>m</i>&minus;1</sub></i>.
@@ -1223,6 +1283,11 @@ of threads).
         Wikipedia: Floor and ceiling functions.
         <a href="https://en.wikipedia.org/wiki/Floor_and_ceiling_functions">
             https://en.wikipedia.org/wiki/Floor_and_ceiling_functions</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r28">[28]</td><td>
+        Wikipedia: In-place algorithm.
+        <a href="https://en.wikipedia.org/wiki/In-place_algorithm">
+            https://en.wikipedia.org/wiki/In-place_algorithm</a>.
     </td></tr>
 </table>
 

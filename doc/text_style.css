@@ -1,7 +1,7 @@
 sup, sub { vertical-align: 0; position: relative; }
 sup { bottom: 1ex; }
 sub { top: 0.65ex; }
-h1, h2, h3, h4, h5, p, a, table, ul { font-family: "Liberation serif", serif; }
+h1, h2, h3, h4, h5, p, a, table, ul, ol { font-family: "Liberation serif", serif; }
 p, a, table, ul { font-size: 12pt; }
 p { text-align: justify }
 h5 { font-size: 12pt; }
@@ -12,6 +12,11 @@ h1 { font-size: 24pt; }
 kbd { font-family: "Liberation Mono", monospace; }
 kbd { font-size: 10pt; }
 ul {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: justify
+}
+ol {
     margin-left: auto;
     margin-right: auto;
     text-align: justify
