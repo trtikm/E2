@@ -13,6 +13,13 @@ namespace cellab {
 typedef natural_16_bit kind_of_cell;
 typedef natural_16_bit kind_of_synapse_to_muscle;
 
+
+/**
+ *
+ * Details about structure of a state of the neural tissue can be found in the documentation:
+ *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#static_state
+ *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#static_state_memory_rep
+ */
 struct static_state_of_neural_tissue : private boost::noncopyable
 {
     static_state_of_neural_tissue(

@@ -32,11 +32,12 @@ namespace cellab {
  *     // Next we construct an instance of cell whose data should be stored into the memory.
  *     my_cell_type  my_cell; // The default construction means an initial state of the cell.
  *     // Finally, we write the data in 'my_cell' into the memory in a compressed form.
- *     my_cell >> bref; // This is the common way: the write is implemented as an user defined
+ *     my_cell >> bref; // This is the common way: the write is implemented as a user defined
  *                      // operator>>. The typical compression method is the serialisation.
  *
  * Details about structure of a state of the neural tissue can be found in the documentation:
- *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html
+ *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#dynamic_state
+ *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#dynamic_state_memory_rep
  *
  */
 struct dynamic_state_of_neural_tissue : private boost::noncopyable
