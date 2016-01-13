@@ -15,8 +15,14 @@ typedef natural_16_bit kind_of_synapse_to_muscle;
 
 
 /**
+ * It defines that part of a state of the neural tissue which cannot be modified (updated)
+ * during its simulation. It means that it remains the same from the beginning the the end
+ * of the simuation. It stores all data which define topology and basic structure of the
+ * neural tissue. It holds data according to which the second part of the neural tissue,
+ * called a dynamic state (see 'dynamic_state_of_neural_tissue'), is acctually constructed
+ * in the memory.
  *
- * Details about structure of a state of the neural tissue can be found in the documentation:
+ * Details about the structure of a state of the neural tissue can be found in the documentation:
  *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#static_state
  *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#static_state_memory_rep
  */
@@ -24,11 +30,40 @@ struct static_state_of_neural_tissue : private boost::noncopyable
 {
     static_state_of_neural_tissue(
         natural_16_bit const num_kinds_of_tissue_cells,
+                //!< Individual kinds of tissue cells are then just integers
+                //!< 0,...,num_kinds_of_tissue_cells-1.
+                //!< Kinds of cells allow to use different models (or different configurations) of tissue cells
+                //!< in the neural tissue.
         natural_16_bit const num_kinds_of_sensory_cells,
+                //!< Individual kinds of sensory cells are then just integers
+                //!< num_kinds_of_tissue_cells,...,num_kinds_of_tissue_cells+num_kinds_of_sensory_cells-1.
+                //!< Kinds of cells allow to use different models (or different configurations) of synapses
+                //!< in the neural tissue.
         natural_16_bit const num_kinds_of_synapses_to_muscles,
+                //!< Individual kinds of synapses to muscles are then just integers
+                //!< 0,...,num_kinds_of_synapses_to_muscles-1.
+                //!< Kinds of cells allow to use different models (or different configurations) of synapses
+                //!< to muscles in the neural tissue.
         natural_16_bit const num_bits_per_cell,
+                //!< This number applies for all kinds of tissue cells and also
+                //!< to all kinds of sensory cells. Since it is a user of the neural tissue
+                //!< who defined data and angorithms for cells of all kinds, this parameter
+                //!< allows the user to reserve sufficient memory for them in the dynamic state
+                //!< of the neural tissue.
         natural_16_bit const num_bits_per_synapse,
+                //!< This number applies for all kinds of synapses in tissue and also
+                //!< to all kinds of synapses to muscles. Since it is a user of the neural tissue
+                //!< who defined data and angorithms for synapses of all kinds, this parameter
+                //!< allows the user to reserve sufficient memory for them in the dynamic state
+                //!< of the neural tissue.
         natural_16_bit const num_bits_per_signalling,
+                //!< Signalling is a term we use for a mechanism providing information delivery
+                //!< between components of the neural tissue in a local neighbourhoods of tissue cells.
+                //!< For instance, it can model guidance of axons passing close to individual tissue cells.
+                //!< For each tissue cell there is a signalling modeling a behaviour in its neighbourhood.
+                //!< Since it is a user of the neural tissue who defined data and angorithms for signalling,
+                //!< this parameter allows the user to reserve sufficient memory for them in the dynamic state
+                //!< of the neural tissue.
         natural_32_bit const num_cells_along_x_axis,
         natural_32_bit const num_cells_along_y_axis,
         std::vector<natural_32_bit> const& num_tissue_cells_of_cell_kind,
