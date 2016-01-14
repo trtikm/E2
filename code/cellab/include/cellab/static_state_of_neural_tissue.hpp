@@ -65,15 +65,46 @@ struct static_state_of_neural_tissue : private boost::noncopyable
                 //!< this parameter allows the user to reserve sufficient memory for them in the dynamic state
                 //!< of the neural tissue.
         natural_32_bit const num_cells_along_x_axis,
+                //!< When you look at the neural tissue from above, than you see a 2D grid of so called 'cortical columns'.
+                //!< This numbers defines a number of cortical columns along the x axis of the grid. Note that each cortical
+                //!< column contains (among others) tissue cells stacked one above another forming a 'column'. So, when you
+                //!< look from above you actually see only one cell (hiding all others bellow it). All cortical columns have
+                //!< the same count of tissue cells and the axis parallel with the columns is called 'columnar axis'.
         natural_32_bit const num_cells_along_y_axis,
+                //!< When you look at the neural tissue from above, than you see a 2D grid of so called 'cortical columns'.
+                //!< This numbers defines a number of cortical columns along the y axis of the grid. Note that each cortical
+                //!< column contains (among others) tissue cells stacked one above another forming a 'column'. So, when you
+                //!< look from above you actually see only one cell (hiding all others bellow it). All cortical columns have
+                //!< the same count of tissue cells and the axis parallel with them is called 'columnar axis'.
         std::vector<natural_32_bit> const& num_tissue_cells_of_cell_kind,
+                //!< Each valid coordinates (x,y) identify a 'cortical column' in the tissue, which consists of
+                //!< tissue cells of all 'num_kinds_of_tissue_cells' cell kinds. This vector defines for each kind
+                //!< of cell how many tissue cells of that kind apper in each cortical column. So, the vector must
+                //!< contain exacly 'num_kinds_of_tissue_cells' numbers: for each kind there is a count of its cells
+                //!< in any cortical column.
         std::vector<natural_32_bit> const& num_synapses_in_territory_of_cell_kind,
+                //!< Sizes of territories of tissue cells of different kinds can be different. This vector defines for
+                //!< each kind of tissue cell a maximum number of synapses that can be stored in a territory of any cell
+                //!< of that kind. So, the vector must contain exacly 'num_kinds_of_tissue_cells' numbers: for each kind
+                //!< of cell there is a maximal count of synapses in the territory of any cell of that kind.
         std::vector<natural_32_bit> const& num_sensory_cells_of_cell_kind,
+                //!< There are 'num_kinds_of_sensory_cells' kinds of sensory cells. This vector defines for each kind
+                //!< of sensory cell a number of sensory cells of that kind in the neural tissue. So, the vector must
+                //!< contain exacly 'num_kinds_of_sensory_cells' numbers: for each kind of sensory cell there is a count
+                //!< of sensory cells of that kind.
         std::vector<natural_32_bit> const& num_synapses_to_muscles_of_kind,
+                //!< There are 'num_kinds_of_synapses_to_muscles' kinds of synapses to muscles. This vector defines for each
+                //!< kind of synapse to muscle a number of synapses to muscle of that kind in the neural tissue. So, the vector
+                //!< must contain exacly 'num_kinds_of_synapses_to_muscles' numbers: for each kind of synapses to muscle there
+                //!< is a count of synapses to muscles of that kind.
         bool const is_x_axis_torus_axis,
+                //!<
         bool const is_y_axis_torus_axis,
+                //!<
         bool const is_columnar_axis_torus_axis,
+                //!<
         std::vector<integer_8_bit> const& x_radius_of_signalling_neighbourhood_of_cell,
+                //!<
         std::vector<integer_8_bit> const& y_radius_of_signalling_neighbourhood_of_cell,
         std::vector<integer_8_bit> const& columnar_radius_of_signalling_neighbourhood_of_cell,
         std::vector<integer_8_bit> const& x_radius_of_signalling_neighbourhood_of_synapse,
