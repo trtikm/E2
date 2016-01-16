@@ -109,10 +109,39 @@ typedef std::function<
                         //!< cell of the updated synapse is stored. The size, and content of the referenced memory is defined
                         //!< by a user. We thus assume that the function already has (or is build on) that information.
                 territorial_state_of_synapse current_territorial_state_of_synapse,
+                        //!< This numeric constant specifies the current behaviour of the synapse in the territory:
+                        //!< whether it delivers signals to the target cell (appearing in the same territory as the
+                        //!< synapse), or whether the synapse only passes through the territory. See the header
+                        //!< 'territorial_state_of_synapse.hpp' for more info.
                 shift_in_coordinates const& shift_to_low_corner,
+                        //!< This is a 3D vector pointing from the tissue coordinates of the current territory (i.e.
+                        //!< the territory where the synapse currently appears) to a territory with lowest possible
+                        //!< tissue coordinates which can be accessed from the user's callback function by calling
+                        //!< the function 'get_signalling' discussed bellow.
                 shift_in_coordinates const& shift_to_high_corner,
+                        //!< This is a 3D vector pointing from the tissue coordinates of the current territory (i.e.
+                        //!< the territory where the synapse currently appears) to a territory with highest possible
+                        //!< tissue coordinates which can be accessed from the user's callback function by calling
+                        //!< the function 'get_signalling' discussed bellow.
                 std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)> const&
                     get_signalling
+                        //!< It is a function accepting a 3D vector pointing from the current territory
+                        //!< (i.e. the territory where the synapse currently appears) to any territory
+                        //!< within a region (box) given by the corner vectors 'shift_to_low_corner' and
+                        //!< 'shift_to_high_corner' discussed above. The current territory lies
+                        //!< in the center of that box. Said it differently, each coordinate of a vector passed
+                        //!< to this function must be within the range of coordinates given by the
+                        //!< corresponding coordinates of both mentioned corner vectors. The function returns
+                        //!< a pair whose the first element is a reference to the memory where is stored
+                        //!< the signalling (see the documentation, namely the paragraph:
+                        //!<    file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#signalling
+                        //!< of the section:
+                        //!<    file:///<E2-root-dir>/doc/project_documentation/cellab.html#structure_of_column
+                        //!< ) of the territory referenced by the passed vector, and the second argument is
+                        //!< the kind of that territory.
+                        //!< Note that it is the parametrisation who defines size, content, and a compression method
+                        //!< of the memory reserved for any sigannling. We thus assume that the user's callback function
+                        //!< already has (or is build on) that information.
                 ) >
         single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_inside_tissue;
 
@@ -146,7 +175,7 @@ typedef std::function<
 /**
  * This algorithm represent the first of the six steps in computation of a next state of the neural
  * tissue from the current one. The algorithm enumerates all synapses to muscles in the neural tissue
- * and for each of them it calls the passed user-defined callback function. This function actualy
+ * and for each of them it calls the passed user-defined callback function. This function is actualy
  * responsible to compute a next state of the update synapse from the current one, see the definition
  * of the type 'single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_to_muscle'
  * above.
@@ -166,6 +195,18 @@ void apply_transition_of_synapses_to_muscles(
         natural_32_bit const  num_threads_avalilable_for_computation
         );
 
+
+/**
+ * This algorithm represent the second of the six steps in computation of a next state of the neural
+ * tissue from the current one. The algorithm enumerates all synapses in the neural tissue
+ * and for each of them it calls the passed user-defined callback function. This function is actualy
+ * responsible to compute a next state of the update synapse from the current one, see the definition
+ * of the type 'single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_inside_tissue'
+ * above.
+ *
+ * For more info read the documentation:
+ *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#algorithm_synapses_in_tissue
+ */
 void apply_transition_of_synapses_of_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_inside_tissue const&

@@ -702,10 +702,10 @@ source files
 </p>
 <ul><li>
 <a href="../../../code/cellab/include/cellab/static_state_of_neural_tissue.hpp">
-    static_state_of_neural_tissue.hpp</a> and
+    <kbd>static_state_of_neural_tissue.hpp</kbd></a> and
 </li><li>
 <a href="../../../code/cellab/src/static_state_of_neural_tissue.cpp">
-    static_state_of_neural_tissue.cpp</a>.
+    <kbd>static_state_of_neural_tissue.cpp</kbd></a>.
 </li></ul>
 <h3 id="dynamic_state_memory_rep">2.2&nbsp;&nbsp;&nbsp;Dynamic state</h3>
 <p>
@@ -817,10 +817,10 @@ source files
 </p>
 <ul><li>
 <a href="../../../code/cellab/include/cellab/dynamic_state_of_neural_tissue.hpp">
-    static_state_of_neural_tissue.hpp</a> and
+    <kbd>static_state_of_neural_tissue.hpp</kbd></a> and
 </li><li>
 <a href="../../../code/cellab/src/dynamic_state_of_neural_tissue.cpp">
-    static_state_of_neural_tissue.cpp</a>.
+    <kbd>static_state_of_neural_tissue.cpp</kbd></a>.
 </li></ul>
 <h2 id="transition_algorithms">3.&nbsp;&nbsp;&nbsp;Transition algorithms</h2>
 <p>
@@ -924,19 +924,27 @@ neural tissue (i.e. a user may implement it arbitrarily), there is a general
 scheme of what steps the function should perform:
 </p>
 <ol>
-<li>Unpack and parse data referenced by <kbd>bits_of_synapse</kbd>. This is often
+<li>
+Unpack and parse data referenced by <kbd>bits_of_synapse</kbd>. This is often
 implemented as construction of an instance of an user-defined type representing a
 synapse to muscle (the reference <kbd>bits_of_synapse</kbd> (and possibly other
-data) is passed to the constructor).</li>
-<li>Unpack and parse data referenced by <kbd>bits_of_src_cell</kbd>. This is often
+data) is passed to the constructor).
+</li>
+<li>
+Unpack and parse data referenced by <kbd>bits_of_src_cell</kbd>. This is often
 implemented as construction of an instance of an user-defined type representing a
 tissue cell (the reference <kbd>bits_of_src_cell</kbd> (and possibly other
-data) is passed to the constructor).</li>
-<li>Invoke a procedure on the unpacked synapse to muscle transforming
+data) is passed to the constructor).
+</li>
+<li>
+Invoke a procedure on the unpacked synapse to muscle transforming
 its current state to the next one. The unpacked tissue cell is typically also
-needed in this computation.</li>
-<li>Pack and write the updated state of the synapse to muscle to the memory
-referenced by <kbd>bits_of_synapse</kbd> (i.e. overwrite the old content).</li>
+needed in this computation.
+</li>
+<li>
+Pack and write the updated state of the synapse to muscle to the memory
+referenced by <kbd>bits_of_synapse</kbd> (i.e. overwrite the old content).
+</li>
 </ol>
 <p>
 We always assume <i>F</i><sub>SM</sub> is a single-threaded, thread-safe, and in-place
@@ -947,10 +955,10 @@ The algorithm is implemented in source files:
 </p>
 <ul><li>
 <a href="../../../code/cellab/include/cellab/transition_algorithms.hpp">
-    transition_algorithms.hpp</a> and
+    <kbd>transition_algorithms.hpp</kbd></a> and
 </li><li>
 <a href="../../../code/cellab/src/transition_of_synapses_to_muscles.cpp">
-    transition_of_synapses_to_muscles.cpp</a>
+    <kbd>transition_of_synapses_to_muscles.cpp</kbd></a>
 </li></ul>
 <h3 id="algorithm_synapses_in_tissue">3.2&nbsp;&nbsp;&nbsp;Transition of synapses in tissue</h3>
 <p>
@@ -1041,41 +1049,106 @@ already has (or is build on) that information. The passed target cell serves as 
 of information for computation of the next state of the updated synapse in the tissue.
 </td>
 </tr>
+<tr>
+<td align="right" valign="top"><kbd>territorial_state</kbd></td><td>&nbsp;&nbsp;</td>
+<td>
+This numeric constant specifies the current behaviour of the synapse in the territory.
+There are only 7 possible values (territorial states) 0,&hellip;,6 for any synapse. The
+value 0 means that the synapse is connected to the target cell appearing in the same
+territory as the synapse, and the remaining 6 values say that the synapse only passes
+through this territory to another territory in the neighbourhood. The synapse can move along
+one of three coordinate axes (x, y, or columnar) in either positive or negative direction,
+which gives us 6 possible moves.
+See the header file
+<a href="../../../code/cellab/include/cellab/territorial_state_of_synapse.hpp">
+    <kbd>territorial_state_of_synapse.hpp</kbd></a>
+for more info.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><kbd>shift_to_low_corner</kbd></td><td>&nbsp;&nbsp;</td>
+<td>
+This is a 3D vector pointing from the tissue coordinates of the current territory (i.e.
+the territory where the synapse currently appears) to a territory with lowest possible
+tissue coordinates which can be accessed from the user's callback function by calling
+the function <kbd>get_signalling</kbd> discussed bellow.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><kbd>shift_to_high_corner</kbd></td><td>&nbsp;&nbsp;</td>
+<td>
+This is a 3D vector pointing from the tissue coordinates of the current territory (i.e.
+the territory where the synapse currently appears) to a territory with highest possible
+tissue coordinates which can be accessed from the user's callback function by calling
+the function <kbd>get_signalling</kbd> discussed bellow.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><kbd>get_signalling</kbd></td><td>&nbsp;&nbsp;</td>
+<td>
+It is a function accepting a 3D vector pointing from the current territory
+(i.e. the territory where the synapse currently appears) to any territory
+within a region (box) given by the corner vectors <kbd>shift_to_low_corner</kbd>,
+<kbd>shift_to_high_corner</kbd> discussed above. The current territory lies
+in the center of that box. Said it differently, each coordinate of a vector passed
+to this function must be within the range of coordinates given by the
+corresponding coordinates of both mentioned corner vectors. The function returns
+a pair whose the first element is a reference to the memory where is stored
+the signalling (see the paragraph
+<a href="./cellab.html#signalling">Signalling</a>
+in the
+<a href="./cellab.html#structure_of_column">section 1.2.4</a>)
+of the territory referenced by the passed vector, and the second argument is
+the kind of that territory.
+Note that it is the parametrisation who defines size, content, and a compression method
+of the memory reserved for any sigannling. We thus assume that <i>F</i><sub>TS</sub>
+already has (or is build on) that information.
+</td>
+</tr>
 </table>
-<!--<p>-->
-<!--Although the function <i>F</i><sub>SM</sub> is a part of a parametrisation of the-->
-<!--neural tissue (i.e. a user may implement it arbitrarily), there is a general-->
-<!--scheme of what steps the function should perform:-->
-<!--</p>-->
-<!--<ol>-->
-<!--<li>Unpack and parse data referenced by <kbd>bits_of_synapse</kbd>. This is often-->
-<!--implemented as construction of an instance of an user-defined type representing a-->
-<!--synapse to muscle (the reference <kbd>bits_of_synapse</kbd> (and possibly other-->
-<!--data) is passed to the constructor).</li>-->
-<!--<li>Unpack and parse data referenced by <kbd>bits_of_src_cell</kbd>. This is often-->
-<!--implemented as construction of an instance of an user-defined type representing a-->
-<!--tissue cell (the reference <kbd>bits_of_src_cell</kbd> (and possibly other-->
-<!--data) is passed to the constructor).</li>-->
-<!--<li>Invoke a procedure on the unpacked synapse to muscle transforming-->
-<!--its current state to the next one. The unpacked tissue cell is typically also-->
-<!--needed in this computation.</li>-->
-<!--<li>Pack and write the updated state of the synapse to muscle to the memory-->
-<!--referenced by <kbd>bits_of_synapse</kbd> (i.e. overwrite the old content).</li>-->
-<!--</ol>-->
-<!--<p>-->
-<!--We always assume <i>F</i><sub>SM</sub> is a single-threaded, thread-safe, and in-place-->
-<!--<a href="./cellab.html#r28">[28]</a>-->
-<!--procedure.-->
-<!--</p><p>-->
-<!--The algorithm is implemented in source files:-->
-<!--</p>-->
-<!--<ul><li>-->
-<!--<a href="../../../code/cellab/include/cellab/transition_algorithms.hpp">-->
-    <!--transition_algorithms.hpp</a> and-->
-<!--</li><li>-->
-<!--<a href="../../../code/cellab/src/transition_of_synapses_to_muscles.cpp">-->
-    <!--transition_of_synapses_to_muscles.cpp</a>-->
-<!--</li></ul>-->
+<p>
+Although the function <i>F</i><sub>TS</sub> is a part of a parametrisation of the
+neural tissue (i.e. a user may implement it arbitrarily), there is a general
+scheme of what steps the function should perform:
+</p>
+<ol>
+<li>
+Unpack and parse data referenced by <kbd>bits_of_src_cell</kbd>,
+<kbd>bits_of_src_cell</kbd>, and <kbd>bits_of_tgt_cell</kbd>. This is often
+implemented as construction of instances of user-defined types (namely, one for
+a tissue synapse and one for a tissue cell). The memory
+references are passed to constructors of these data types.
+</li><li>
+Invoke a procedure on the unpacked synapse transforming
+its current state to the next one. Both unpacked tissue cells are typically also
+needed in this computation. The procedure is further required to compute a new
+territorial state of the synapse. Since signallings in the neighbourhood may
+be necessary in this computation, the procedure may use the function
+<kbd>get_signalling</kbd> to receive access to their memory. Note that the procedure
+typically unpacks and parses this memory in a similar way as we explained for the memories
+of the synapse and the source and the target cell.
+</li><li>
+Pack and write the updated state of the tissue synapse to the memory
+referenced by <kbd>bits_of_synapse</kbd> (i.e. overwrite the old content).
+</li><li>
+Return the new territorial state of the synapse, i.e. a number from the range
+0,&hellip;,6.
+</li>
+</ol>
+<p>
+We always assume <i>F</i><sub>TS</sub> is a single-threaded, thread-safe, and in-place
+<a href="./cellab.html#r28">[28]</a>
+procedure.
+</p><p>
+The algorithm is implemented in source files:
+</p>
+<ul><li>
+<a href="../../../code/cellab/include/cellab/transition_algorithms.hpp">
+    <kbd>transition_algorithms.hpp</kbd></a> and
+</li><li>
+<a href="../../../code/cellab/src/transition_of_synapses_of_tissue.cpp">
+    <kbd>transition_of_synapses_of_tissue.cpp</kbd></a>
+</li></ul>
 <h3 id="algorithm_territorial_lists_of_synapses">3.3&nbsp;&nbsp;&nbsp;Transition of territorial lists of synapses</h3>
 <p>
 <kbd>go_to_next_coordinates</kbd>
@@ -1235,10 +1308,10 @@ The recipe is implemented in the source files
 </p>
 <ul><li>
 <a href="../../../code/cellab/include/cellab/utilities_for_transition_algorithms.hpp">
-    utilities_for_transition_algorithms.hpp</a> and
+    <kbd>utilities_for_transition_algorithms.hpp</kbd></a> and
 </li><li>
 <a href="../../../code/cellab/src/utilities_for_transition_algorithms.cpp">
-    utilities_for_transition_algorithms.cpp</a>
+    <kbd>utilities_for_transition_algorithms.cpp</kbd></a>
 </li></ul>
 <p>
 as functions <kbd>go_to_next_index</kbd>, <kbd>go_to_next_column</kbd>, and
