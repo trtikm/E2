@@ -12,6 +12,9 @@
 namespace cellab {
 
 
+/**
+ * It is just 3D vector.
+ */
 struct tissue_coordinates
 {
     tissue_coordinates(
@@ -28,10 +31,20 @@ private:
     natural_32_bit  m_coord_along_columnar_axis;
 };
 
+
+/**
+ * A spatial neighbourhood of some reference (central) point in the neural tissue is a set of tissue
+ * coordinates defined relative to that point. The neighbourhood always has a shape of a box. So, it is
+ * sufficient to specify it by two shift vectors from the central points to two extreme points of the
+ * box (lying on the main diagonal of the box).
+ */
 struct spatial_neighbourhood
 {
     spatial_neighbourhood(
             tissue_coordinates const& center,
+                    //!< It is a reference point inside the defined neighbourhood. It does NOT have to necessarily
+                    //!< lie in a geometrical center of the box (defined by the following two shifts to its extreme
+                    //!< corners).
             shift_in_coordinates const& shift_to_low_corner,
             shift_in_coordinates const& shift_to_high_corner
             );
@@ -152,6 +165,19 @@ void  swap_all_data_of_two_synapses(
         );
 
 
+/**
+ * It is passed to user's callback function (from inside of either 'apply_transition_of_cells_of_tissue' or
+ * 'apply_transition_of_synapses_of_tissue') in order to allow easy access all signalling within a local
+ * neighbourhood of the territory inside which the updated cell or synapse appears. First three parameters
+ * of this function are bound to fixed values (using std::bind inside both functions mentioned aboce), so
+ * user's callback function provides only one (the last) argument, which is a shift vector from the current
+ * territory into a desired one (within the neughbourhood). The shift vector is relative from the coordinates
+ * of the current territory. So, the shift to the current territory is a sift vector (0,0,0). Note that the
+ * neighbourhood is also passed to the user's callback function through two parameters 'shift_to_low_corner'
+ * and 'shift_to_high_corner' identifying extreme corners of the neighbourhood. See the definition of
+ * 'single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_cell' in the header file
+ * 'thransition_algorithms.hpp' to see the prototype of the user's callback function.
+ */
 std::pair<bits_const_reference,kind_of_cell>  get_signalling_callback_function(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue,
@@ -159,6 +185,17 @@ std::pair<bits_const_reference,kind_of_cell>  get_signalling_callback_function(
         shift_in_coordinates const& shift
         );
 
+
+/**
+ * It is passed to user's callback function (from inside of the function 'apply_transition_of_cells_of_tissue')
+ * in order to allow easy access to synapses connected to an updated tissue cell. First six parameters of
+ * this function are bound to fixed values (using std::bind inside 'apply_transition_of_cells_of_tissue'),
+ * so user's callback function provides only one (the last) argument, which is an index of an enumerated
+ * synapse. It is supposed to be in the range 0,...,'number_of_synapses_in_range'-1. Note that the value
+ * 'number_of_synapses_in_range' is also passed to the user's callback function through another parameter.
+ * See definition of 'single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_cell' in the
+ * header file 'thransition_algorithms.hpp' to see the prototype of the user's callback function.
+ */
 std::tuple<bits_const_reference,kind_of_cell,kind_of_cell>  get_synapse_callback_function(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue,
