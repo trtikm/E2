@@ -10,18 +10,31 @@
 <h1>E2: cellconnect</h1>
 <p>
 This module provides algorithms which are able to <em>set-up</em> synapses between cells in
-a neural tissue s.t. the resulting tissue has some desired <em>network properties</em>
-[<kbd style="color:red">TODO</kbd>].
-It means that here we consider a neural tissue to be a network (graph) with cells
+the neural tissue (see
+<a href="../cellab/cellab.html#neural_tissue">section 1</a>
+of the library
+<a href="../cellab/cellab.html">cellab</a>
+for more details about the terminology)
+s.t. the resulting tissue has some desired <em>network properties</em>.
+It means that we consider the neural tissue to be a <em>network</em>
+[<a href="./cellconnect.html#r04">4</a>]
+with cells
 representing nodes and synapses representing links (edges). A network property is
-then any property we can tell about a network from the point of view of the graph/network
-theory. Here we primarily focus on the following very important
-network properties: small-world property, power-law distribution of in/out-degrees
-of cells (i.e. is the network scale-free), and clustering coefficients of cells.
+then any property we can tell about the network from the point of view of the network
+and graph theory. Here we primarily focus on the following very important
+network properties: small-world property
+[<a href="./cellconnect.html#r05">5</a>]
+, power-law distribution of in/out-degrees
+of cells (i.e. is the network scale-free)
+[<a href="./cellconnect.html#r07">7</a>
+ <a href="./cellconnect.html#r08">8</a>
+ <a href="./cellconnect.html#r09">9</a>],
+and clustering coefficients of cells
+[<a href="./cellconnect.html#r06">6</a>].
 </p>
 <h2 id="motivation">Motivation</h2>
 <p>
-Number of cells in a neural tissue can be quite large. An exact specification of
+A number of cells in the neural tissue can be quite large. An exact specification of
 connections between cells requires a space comparable with the size of the tissue
 itself (remember that number of synapses is dominant in any realistic tissue).
 And that is not acceptable. Our goal thus is to provide an alternative
@@ -38,23 +51,38 @@ specification with the following properties:
 <p>
 Our solution splits the whole problem into a sequence of three sub-problems.
 First, we interconnect only cells appearing in the same column. Then
-we spread synapses from original cells to cells in other columns. And we
-finish by setting up delimiters of migration lists for each cells in the tissue.
+we spread synapses (links between cells) over different columns in the tissue. And we
+finish by setting up delimiters of migration lists
+(see <a href="../cellab/cellab.html#structure_of_column">section 1.2.4</a>
+of the library
+<a href="../cellab/cellab.html">cellab</a>)
+for each cells in the tissue.
 These three parts are described in details in the following three sections.
 </p>
 <p>
 Remember that to interconnect a source and a target cell by a synapse equals
 to setting synapse's coordinates of its source cell stored inside the territory of
-the target cells. Therefore, the first two sub-problems only set coordinates
+the target cells
+(see the paragraph
+<a href="../cellab/cellab.html#territorial_lists">Territorial lists</a>
+of the
+<a href="../cellab/cellab.html#structure_of_column">section 1.2.4</a>
+of the library
+<a href="../cellab/cellab.html">cellab</a>).
+Therefore, the first two sub-problems only set coordinates
 of source cells of all synapses. No other properties of synapses are neither read
 nor written.
 </p>
 <h2 id="column_setup">Set-up of synapses in column</h2>
 <p>
-Each column in a neural tissue has exactly the same structure. We can thus apply
+Each column in the neural tissue has exactly the same structure. We can thus apply
 the same set-up procedure for each column independently. Clearly, it suffices
 if we describe in this section only the set-up procedure for any given column.
-The structure of a column (along the columnar axis) is the following.
+The structure of a column (along the columnar axis) is the following (see
+<a href="../cellab/cellab.html#dynamic_state">section 1.2</a>
+of the library
+<a href="../cellab/cellab.html">cellab</a>
+to see the structure in all details).
 </p>
 <img class="figure"
      src="./column_and_sensory_cells.svg"
@@ -227,7 +255,7 @@ columns in the neighbourhood. We specify this distribution using a matrix <i>H</
 depicted on the right part of the picture. Observe the direct correspondence between
 elements of the matrix and columns in the neighbourhood. Clearly, the matrix <i>H</i>
 must satisfy
-</p><p>
+</p><p style="text-align:center">
 <i>a<sub>t,s</sub>N<sub>s</sub></i> =
     (<i>h</i><sub>0,0</sub> + &hellip; + <i>h</i><sub>0,<i>n</i>&minus;1</sub>) +
     (<i>h</i><sub>1,0</sub> + &hellip; + <i>h</i><sub>1,<i>n</i>&minus;1</sub>) +
@@ -252,7 +280,7 @@ Let <i>ord</i><sub><i>t,s</i></sub>(<i>p</i>) be the ordinal number of <i>p</i>
 in <i>D</i><sub>t,s</sub> counting from zero (there is a natural total order
 on <i>D</i><sub>t,s</sub>). There must exist unique indices <i>i</i> and <i>j</i>
 into the matrix <i>H</i> such that
-</p><p>
+</p><p style="text-align:center">
 0 &le;
     <i>ord</i><sub><i>t,s</i></sub>(<i>p</i>) &minus;
         ((<i>h</i><sub>0,0</sub> + &hellip; +
@@ -264,7 +292,7 @@ into the matrix <i>H</i> such that
     <i>h</i><sub>i,j</sub>.
 </p><p>
 From these indices we can directly compute the shift vector
-</p><p>
+</p><p style="text-align:center">
 <b><i>w</i></b><sub><i>p</i></sub> =
     (<i>i</i>&minus;&lfloor;<i>m</i>/2&rfloor;, <i>j</i>&minus;&lfloor;<i>n</i>/2&rfloor;).
 </p><p>
@@ -354,7 +382,7 @@ This strategy is actually desired.
 </p>
 <h3 id="column_shift_function">Column-shift function</h3>
 <p>
-Let us consider a neural tissue with <i>X</i> columns along the <i>X</i> axis
+Let us consider the neural tissue with <i>X</i> columns along the <i>X</i> axis
 and <i>Y</i> columns along the <i>Y</i> axis. Then a <em>column shift function</em>
 <i>F</i> is any bijection on the set
 {0,&hellip;,<i>X</i>&minus;1}&times;{0,&hellip;,<i>Y</i>&minus;1}.
@@ -605,6 +633,13 @@ If the territory of a tissue cell of a kind <i>i</i> has the capacity for
 <i>T</i><sub><i>i</i></sub> synapses, then this algorithm sets a
 <i>j</i>-th delimiter (<i>j</i> &isin; {0,&hellip;5}) to the value
 &lfloor;<i>T</i><sub><i>i</i></sub> / 6&rfloor;.
+See the paragraph
+<a href="../cellab/cellab.html#territorial_lists">Territorial lists</a>
+of the
+<a href="../cellab/cellab.html#structure_of_column">section 1.2.4</a>
+of the library
+<a href="../cellab/cellab.html">cellab</a>
+for details about meaning of delimiters.
 </p><p>
 The algorithm is implemented in files
 </p>
@@ -632,6 +667,36 @@ The algorithm is implemented in files
         Wikipedia: Tessellation.
         <a href="https://en.wikipedia.org/wiki/Tessellation">
             https://en.wikipedia.org/wiki/Tessellation</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r04">[4]</td><td>
+        Wikipedia: Complex network.
+        <a href="https://en.wikipedia.org/wiki/Complex_network">
+            https://en.wikipedia.org/wiki/Complex_network</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r05">[5]</td><td>
+        Wikipedia: Small-world network.
+        <a href="https://en.wikipedia.org/wiki/Small-world_network">
+            https://en.wikipedia.org/wiki/Small-world_network</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r06">[6]</td><td>
+        Wikipedia: Clustering coefficient.
+        <a href="https://en.wikipedia.org/wiki/Clustering_coefficient">
+            https://en.wikipedia.org/wiki/Clustering_coefficient</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r07">[7]</td><td>
+        Wikipedia: Degree distribution.
+        <a href="https://en.wikipedia.org/wiki/Degree_distribution">
+            https://en.wikipedia.org/wiki/Degree_distribution</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r08">[8]</td><td>
+        Wikipedia: Scale-free network.
+        <a href="https://en.wikipedia.org/wiki/Scale-free_network">
+            https://en.wikipedia.org/wiki/Scale-free_network</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r09">[9]</td><td>
+        Wikipedia: Power law.
+        <a href="https://en.wikipedia.org/wiki/Power_law">
+            https://en.wikipedia.org/wiki/Power_law</a>.
     </td></tr>
 </table>
 </body>
