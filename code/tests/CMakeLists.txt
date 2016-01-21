@@ -48,6 +48,9 @@ add_subdirectory(./spread_synapses_into_neighbourhoods)
 add_subdirectory(./column_shift_function)
     message("-- column_shift_function")
 
+add_subdirectory(./compute_in_out_degrees)
+    message("-- compute_in_out_degrees")
+
 
 message("-- run_tests.py")
 install(

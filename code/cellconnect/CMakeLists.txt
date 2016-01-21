@@ -12,6 +12,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/cellconnect/column_shift_function.hpp
     ./src/column_shift_function.cpp
+
+    ./include/cellconnect/check_for_network_properties.hpp
+    ./src/check_for_network_properties.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
