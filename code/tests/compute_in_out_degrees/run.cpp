@@ -529,9 +529,9 @@ void run()
     for (tissue_props props :
          std::vector<tissue_props>{
                 tissue_props{ 50U, 50U, 6U, 6U, false, false, 5U, 5U, 10U, 10U, 5U, 5U, true, 1U },
-//                tissue_props{ 75U, 50U, 6U, 7U, false, true, 7U, 5U, 10U, 10U, 7U, 5U, false, 8U },
-//                tissue_props{ 50U, 100U, 8U, 10U, true, false, 5U, 10U, 10U, 10U, 5U, 10U, true, 16U },
-//                tissue_props{ 100U, 75U, 10U, 15U, true, true, 10U, 70U, 10U, 10U, 10U, 7U, false, 32U },
+                tissue_props{ 75U, 50U, 6U, 7U, false, true, 7U, 5U, 10U, 10U, 7U, 5U, false, 8U },
+                tissue_props{ 50U, 100U, 8U, 10U, true, false, 5U, 10U, 10U, 10U, 5U, 9U, true, 16U },
+                tissue_props{ 100U, 75U, 10U, 15U, true, true, 10U, 7U, 10U, 10U, 9U, 7U, false, 32U },
                 })
     {
         natural_16_bit const  largest_template_dim_x = std::get<6>(props);

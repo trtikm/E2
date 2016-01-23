@@ -15,6 +15,7 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/cellconnect/check_for_network_properties.hpp
     ./src/check_for_network_properties.cpp
+    ./src/compute_in_degrees.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

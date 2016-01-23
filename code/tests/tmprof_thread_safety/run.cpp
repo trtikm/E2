@@ -171,7 +171,7 @@ void run()
     TEST_SUCCESS(time_of_some_computation_single_thread > 0.0);
 
     std::vector<std::thread> threads;
-    for (natural_64_bit i = 1LLU; i < num_numbers; ++i)
+    for (natural_64_bit i = 1ULL; i < num_numbers; ++i)
         threads.push_back( std::thread(&thread_computation,i) );
     thread_computation(0ULL);
 

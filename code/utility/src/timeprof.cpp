@@ -417,23 +417,34 @@ std::ostream& print_time_profile_data_to_stream(
         if (it->number_of_executions() > 0ULL)
             common_path_prefix = get_common_prefix(common_path_prefix,it->file_name());
 
-    os <<   "<!DOCTYPE html>\n"
+    os <<   "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">\n"
             "<html>\n"
             "<head>\n"
-            "    <meta charset=\"UTF-8\">\n"
+            "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"
             "    <title>Time Profile Log</title>\n"
             "    <style type=\"text/css\">\n"
-            "        body\n"
-            "        {\n"
-            "            font-family:arial;\n"
-            "            font-size:12px;\n"
+            "        body {\n"
+            "            background-color: white;\n"
+            "            color: black;\n"
+//            "            width: 480pt;\n"
+//            "            height: 720pt;\n"
+            "            margin-left: auto;\n"
+            "            margin-right: auto;\n"
             "        }\n"
-            "        table,th,td\n"
-            "        {\n"
+            "        h1, h2, h3, h4, h5, h6, table { font-family:\"Liberation serif\"; }\n"
+            "        p, table {\n"
+            "            font-size:12pt;\n"
+            "            margin-left: auto;\n"
+            "            margin-right: auto;\n"
+            "            text-align: justify\n"
+            "        }\n"
+            "        th, td {\n"
+            "            font-family:\"Liberation mono\", monospace;\n"
+            "            font-size:10pt;\n"
             "            text-align:right;\n"
-            "            border:1px solid black;\n"
-            "            border-collapse:collapse;\n"
+            "            padding: 3pt;\n"
             "        }\n"
+            "        tr:nth-child(even){background-color: #f2f2f2}\n"
             "   </style>\n"
             "</head>\n"
             "<body>\n"
@@ -441,12 +452,8 @@ std::ostream& print_time_profile_data_to_stream(
             ;
 
     os <<   "    <p>\n"
-            "    </p>\n"
-            ;
-
-    os <<   "    <table>\n"
-            "    <caption>\n"
             "        <b>Time-Profile Data Per Block.</b>\n"
+            "        All times (durations) in the table below are in seconds.\n"
             "        Genuine duration is a real time spent in a measured block.\n"
             "        Genuine average duration is a genuine duration divided by a number of executions.\n"
             "        Summary duration is such a time spent in a measured block as if\n"
@@ -460,6 +467,11 @@ std::ostream& print_time_profile_data_to_stream(
             "               that were executed at least once during the time profiling.\n"
             "        Common path preffix for all files in the table is:<br/><b>'"
                             << common_path_prefix.string() << "/'</b>\n"
+            "    </p>\n"
+            ;
+
+    os <<   "    <table>\n"
+            "    <caption>\n"
             "    </caption>\n"
             "    <tr>\n"
 //            "        <th rowspan=\"2\">NameX</th>\n"
@@ -474,7 +486,7 @@ std::ostream& print_time_profile_data_to_stream(
             "        <th>Sum.Ave.<br/>Duration</th>\n"
             "        <th>Speed-up</th>\n"
             "        <th>Line</th>\n"
-            "        <th>File</th>\n"
+            "        <th style=\"text-align:left\">File</th>\n"
             "    </tr>\n"
             ;
 
@@ -529,7 +541,7 @@ std::ostream& print_time_profile_data_to_stream(
         os <<   record.line();
         os <<   "</td>\n";
 
-        os <<   "        <td>";
+        os <<   "        <td style=\"text-align:left\">";
         os <<   get_relative_path(common_path_prefix,record.file_name()).string();
         os <<   "</td>\n";
 
@@ -539,17 +551,17 @@ std::ostream& print_time_profile_data_to_stream(
     os <<   "    <tr></tr>\n"
             ;
 
-    os <<   "    <tr>\n"
+    os <<   "    <tr style=\"background-color: white\">\n"
             "        <th>Summary</th>\n"
             "        <th>" << data.size() << "</th>\n"
-            "        <td></td>\n"
+            "        <th></th>\n"
             "        <th>" << normalise_duration(genuine_duration) << "</th>\n"
-            "        <td></td>\n"
-            "        <td></td>\n"
+            "        <th></th>\n"
+            "        <th></th>\n"
             "        <th>" << normalise_duration(summary_duration) << "</th>\n"
             "        <th>" << normalise_duration(summary_duration / genuine_duration) << "</th>\n"
-            "        <td></td>\n"
-            "        <td></td>\n"
+            "        <th></th>\n"
+            "        <th></th>\n"
             "    </tr>\n"
             ;
 
