@@ -14,6 +14,15 @@ void  fill_delimiters_between_territorial_lists(
         );
 
 
+void  fill_delimiters_between_territorial_lists_for_cell_kind(
+        std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
+        cellab::kind_of_cell const  kind_of_cells_to_be_considered,
+                //!< Only delimiters in territories of tissue cells of this kind will be filled.
+                //!< I.e. all other delimiters will be skipped (not modified).
+        natural_32_bit const  num_threads_avalilable_for_computation
+        );
+
+
 }
 
 #endif
