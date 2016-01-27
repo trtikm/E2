@@ -419,6 +419,7 @@ void  compute_out_degrees_of_tissue_cells_of_given_kind(
 
     fill_delimiters_between_territorial_lists_for_cell_kind(
                 dynamic_state_ptr,
+                delimiters_fill_kind::SYNAPSES_DISTRIBUTED_REGULARLY,
                 kind_of_cells_to_be_considered,
                 num_threads_avalilable_for_computation
                 );

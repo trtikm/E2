@@ -42,6 +42,14 @@ void  compute_out_degrees_of_tissue_cells_of_given_kind(
         );
 
 
+void  add_degree_distributions(std::unordered_map<natural_32_bit,natural_64_bit> const&  addon,
+                               std::unordered_map<natural_32_bit,natural_64_bit>& ditribution_where_addon_will_be_added
+                               );
+
+void  add_degree_distributions(std::vector< std::unordered_map<natural_32_bit,natural_64_bit> > const&  addons,
+                               std::unordered_map<natural_32_bit,natural_64_bit>& ditribution_where_all_addons_will_be_added
+                               );
+
 }
 
 #endif

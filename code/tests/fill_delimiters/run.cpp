@@ -124,6 +124,7 @@ void run()
 
                         cellconnect::fill_delimiters_between_territorial_lists(
                                     dynamic_tissue,
+                                    cellconnect::delimiters_fill_kind::SYNAPSES_DISTRIBUTED_REGULARLY,
                                     std::max(1U,num_threads)
                                     );
 

@@ -1,13 +1,15 @@
 #include "./program_info.hpp"
 #include "./program_options.hpp"
+#include <cellconnect/check_for_network_properties.hpp>
 #include <cellconnect/column_shift_function.hpp>
 #include <cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp>
+#include <cellconnect/fill_delimiters_between_territorial_lists.hpp>
 #include <cellconnect/spread_synapses_into_neighbourhoods.hpp>
-#include <cellconnect/column_shift_function.hpp>
 #include <cellab/dynamic_state_of_neural_tissue.hpp>
 #include <cellab/utilities_for_transition_algorithms.hpp>
 #include <utility/basic_numeric_types.hpp>
 #include <utility/test.hpp>
+#include <utility/random.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
@@ -524,14 +526,17 @@ void run()
                        natural_32_bit,  // 10: diameter x for column shift function
                        natural_32_bit,  // 11: diameter y for column shift function
                        bool,            // 12: build small shift function?
-                       natural_32_bit>  // 13: num thread to be used for computation
+                       natural_32_bit,  // 13: num rows in in/out-degrees distribution matrix
+                       natural_32_bit,  // 14: num columns in in/out-degrees distribution matrix
+                       natural_32_bit   // 15: num thread to be used for computation
+                       >
             tissue_props;
     for (tissue_props props :
          std::vector<tissue_props>{
-                tissue_props{ 50U, 50U, 6U, 6U, false, false, 5U, 5U, 10U, 10U, 5U, 5U, true, 1U },
-                tissue_props{ 75U, 50U, 6U, 7U, false, true, 7U, 5U, 10U, 10U, 7U, 5U, false, 8U },
-                tissue_props{ 50U, 100U, 8U, 10U, true, false, 5U, 10U, 10U, 10U, 5U, 9U, true, 16U },
-                tissue_props{ 100U, 75U, 10U, 15U, true, true, 10U, 7U, 10U, 10U, 9U, 7U, false, 32U },
+                tissue_props{ 50U, 50U, 6U, 6U, false, false, 5U, 5U, 10U, 10U, 5U, 5U, true, 1U, 1U, 1U },
+                tissue_props{ 75U, 50U, 6U, 7U, false, true, 7U, 5U, 10U, 10U, 7U, 5U, false, 5U, 3U, 8U },
+                tissue_props{ 50U, 100U, 8U, 10U, true, false, 5U, 10U, 10U, 10U, 5U, 9U, true, 5U, 10U, 16U },
+                tissue_props{ 100U, 75U, 10U, 15U, true, true, 10U, 7U, 10U, 10U, 9U, 7U, false, 20U, 8U, 32U },
                 })
     {
         natural_16_bit const  largest_template_dim_x = std::get<6>(props);
@@ -657,7 +662,7 @@ void run()
 
         bool const  use_small_shift_function = std::get<12>(props);
 
-        natural_32_bit const  num_threads = std::get<13>(props);
+        natural_32_bit const  num_threads = std::get<15>(props);
 
         cellconnect::fill_coords_of_source_cells_of_synapses_in_tissue(
                     dynamic_tissue,
@@ -714,6 +719,91 @@ void run()
 
                 TEST_PROGRESS_UPDATE();
             }
+
+        for (natural_32_bit x = 0U; x < static_tissue->num_cells_along_x_axis(); ++x)
+            for (natural_32_bit y = 0U; y < static_tissue->num_cells_along_y_axis(); ++y)
+                for (natural_32_bit c = 0U; c < static_tissue->num_cells_along_columnar_axis(); ++c)
+                {
+                    natural_32_bit const num_synapses =
+                            static_tissue->num_synapses_in_territory_of_cell_kind(
+                                    static_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(c)
+                                    );
+                    for (natural_32_bit s = 0U; s < num_synapses; ++s)
+                    {
+                        cellab::territorial_state_of_synapse  territorial_state;
+                        switch (get_random_natural_32_bit_in_range(0U,6U))
+                        {
+                        case 0U: territorial_state = cellab::SIGNAL_DELIVERY_TO_CELL_OF_TERRITORY; break;
+                        case 1U: territorial_state = cellab::MIGRATION_ALONG_POSITIVE_X_AXIS; break;
+                        case 2U: territorial_state = cellab::MIGRATION_ALONG_NEGATIVE_X_AXIS; break;
+                        case 3U: territorial_state = cellab::MIGRATION_ALONG_POSITIVE_Y_AXIS; break;
+                        case 4U: territorial_state = cellab::MIGRATION_ALONG_NEGATIVE_Y_AXIS; break;
+                        case 5U: territorial_state = cellab::MIGRATION_ALONG_POSITIVE_COLUMNAR_AXIS; break;
+                        case 6U: territorial_state = cellab::MIGRATION_ALONG_NEGATIVE_COLUMNAR_AXIS; break;
+                        default:
+                            UNREACHABLE();
+                        }
+
+                        bits_reference const  ref_to_territorial_state =
+                                dynamic_tissue->find_bits_of_territorial_state_of_synapse_in_tissue(x,y,c,s);
+
+                        value_to_bits(territorial_state,ref_to_territorial_state);
+                    }
+
+                    TEST_PROGRESS_UPDATE();
+                }
+
+        // We currently do not use delimiters lists in this test. It thus means
+        // that we always call 'compute_in_degrees_of_tissue_cells_of_given_kind'
+        // with 'ignore_delimiters_lists_and_check_territorial_states_of_all_synapses == true'.
+        // That is the reason, why next 5 lines are commented.
+//        cellconnect::fill_delimiters_between_territorial_lists(
+//                    dynamic_tissue,
+//                    cellconnect::delimiters_fill_kind::SYNAPSES_DISTRIBUTED_REGULARLY,
+//                    num_threads);
+//        TEST_PROGRESS_UPDATE();
+
+        natural_32_bit const  num_rows_in_distribution_matrix = std::get<13>(props);
+        natural_32_bit const  num_columns_in_distribution_matrix = std::get<14>(props);
+
+        std::unordered_map<natural_32_bit,natural_64_bit> summary_distribution_of_in_degrees;
+        for (cellab::kind_of_cell  i = 0U; i < static_tissue->num_kinds_of_tissue_cells(); ++i)
+        {
+            std::vector< std::unordered_map<natural_32_bit,natural_64_bit> >  distribution_of_in_degrees;
+            cellconnect::compute_in_degrees_of_tissue_cells_of_given_kind(
+                        dynamic_tissue,
+                        i,
+                        true,
+                        num_rows_in_distribution_matrix,
+                        num_columns_in_distribution_matrix,
+                        num_threads,
+                        distribution_of_in_degrees,
+                        cellab::SIGNAL_DELIVERY_TO_CELL_OF_TERRITORY
+                        );
+
+            cellconnect::add_degree_distributions(distribution_of_in_degrees,summary_distribution_of_in_degrees);
+
+            TEST_PROGRESS_UPDATE();
+        }
+
+        summary_distribution_of_in_degrees.clear();
+        for (cellab::kind_of_cell  i = 0U; i < static_tissue->num_kinds_of_tissue_cells(); ++i)
+        {
+            std::vector< std::unordered_map<natural_32_bit,natural_64_bit> >  distribution_of_out_degrees;
+            cellconnect::compute_out_degrees_of_tissue_cells_of_given_kind(
+                        dynamic_tissue,
+                        i,
+                        num_rows_in_distribution_matrix,
+                        num_columns_in_distribution_matrix,
+                        num_threads,
+                        distribution_of_out_degrees,
+                        cellab::SIGNAL_DELIVERY_TO_CELL_OF_TERRITORY
+                        );
+
+            cellconnect::add_degree_distributions(distribution_of_out_degrees,summary_distribution_of_in_degrees);
+
+            TEST_PROGRESS_UPDATE();
+        }
     }
 
     TEST_PROGRESS_HIDE();
