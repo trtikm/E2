@@ -19,7 +19,10 @@
 #include <tuple>
 #include <limits>
 #include <memory>
+#include <cstdlib>
 
+
+#include <fstream>
 
 static void build_fill_src_coords_matrix(
         std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
@@ -513,6 +516,8 @@ void run()
 
     std::vector<natural_32_bit> coefs = { 1, 4, 3, 8, 1, 9, 2, 5, 4, 2, 7, 6, 6, 5, 8, 9, 3 };
 
+    natural_32_bit  test_counter = 0U;
+
     typedef std::tuple<natural_32_bit,  // 00: num cells x
                        natural_32_bit,  // 01: num cells y
                        natural_16_bit,  // 02: num tissue cell kinds
@@ -534,9 +539,9 @@ void run()
     for (tissue_props props :
          std::vector<tissue_props>{
                 tissue_props{ 50U, 50U, 6U, 6U, false, false, 5U, 5U, 10U, 10U, 5U, 5U, true, 1U, 1U, 1U },
-                tissue_props{ 75U, 50U, 6U, 7U, false, true, 7U, 5U, 10U, 10U, 7U, 5U, false, 5U, 3U, 8U },
-                tissue_props{ 50U, 100U, 8U, 10U, true, false, 5U, 10U, 10U, 10U, 5U, 9U, true, 5U, 10U, 16U },
-                tissue_props{ 100U, 75U, 10U, 15U, true, true, 10U, 7U, 10U, 10U, 9U, 7U, false, 20U, 8U, 32U },
+//                tissue_props{ 75U, 50U, 6U, 7U, false, true, 7U, 5U, 10U, 10U, 7U, 5U, false, 5U, 3U, 8U },
+//                tissue_props{ 50U, 100U, 8U, 10U, true, false, 5U, 10U, 10U, 10U, 5U, 9U, true, 5U, 10U, 16U },
+//                tissue_props{ 100U, 75U, 10U, 15U, true, true, 10U, 7U, 10U, 10U, 9U, 7U, false, 20U, 8U, 32U },
                 })
     {
         natural_16_bit const  largest_template_dim_x = std::get<6>(props);
@@ -766,7 +771,8 @@ void run()
         natural_32_bit const  num_rows_in_distribution_matrix = std::get<13>(props);
         natural_32_bit const  num_columns_in_distribution_matrix = std::get<14>(props);
 
-        std::unordered_map<natural_32_bit,natural_64_bit> summary_distribution_of_in_degrees;
+        std::unordered_map<natural_32_bit,natural_64_bit> summary_distribution;
+        std::vector< std::unordered_map<natural_32_bit,natural_64_bit> >  summary_distribution_matrix;
         for (cellab::kind_of_cell  i = 0U; i < static_tissue->num_kinds_of_tissue_cells(); ++i)
         {
             std::vector< std::unordered_map<natural_32_bit,natural_64_bit> >  distribution_of_in_degrees;
@@ -781,12 +787,48 @@ void run()
                         cellab::SIGNAL_DELIVERY_TO_CELL_OF_TERRITORY
                         );
 
-            cellconnect::add_degree_distributions(distribution_of_in_degrees,summary_distribution_of_in_degrees);
+            cellconnect::add_degree_distributions(distribution_of_in_degrees,summary_distribution_matrix);
 
             TEST_PROGRESS_UPDATE();
         }
+        cellconnect::add_degree_distributions(summary_distribution_matrix,summary_distribution);
 
-        summary_distribution_of_in_degrees.clear();
+        std::string  file_name_prefix;
+        {
+            std::ostringstream  ostr;
+            ostr << "./" << get_program_name() << "_TEST_" << test_counter << "_";
+            file_name_prefix = ostr.str();
+        }
+
+        {
+            std::string const  summary_plt_file_name = file_name_prefix + "in_degrees_summary.plt";
+            std::string const  summary_svg_file_name = file_name_prefix + "in_degrees_summary.svg";
+            std::string const  summary_html_file_name = file_name_prefix + "in_degrees_summary.html";
+
+            {
+                std::ofstream  ofs(summary_plt_file_name,std::ostream::out);
+                cellconnect::degrees_distribution_to_gnuplot_plot(
+                            ofs,
+                            summary_distribution,
+                            "Distribution of in-degrees of cells of all kinds.",
+                            summary_svg_file_name
+                            );
+            }
+            std::system((std::string("gnuplot ") + summary_plt_file_name).c_str());
+            {
+                std::ofstream  ofs(summary_html_file_name,std::ostream::out);
+                ofs << "<!DOCTYPE html>\n"
+                    << "<html>\n"
+                    << "<body>\n"
+                    << "<img src=\"" << summary_svg_file_name << "\" alt=\"[" << summary_svg_file_name << "]\">\n"
+                    << "</body>\n"
+                    << "</html>\n"
+                    ;
+            }
+        }
+
+        summary_distribution.clear();
+        summary_distribution_matrix.clear();
         for (cellab::kind_of_cell  i = 0U; i < static_tissue->num_kinds_of_tissue_cells(); ++i)
         {
             std::vector< std::unordered_map<natural_32_bit,natural_64_bit> >  distribution_of_out_degrees;
@@ -800,10 +842,40 @@ void run()
                         cellab::SIGNAL_DELIVERY_TO_CELL_OF_TERRITORY
                         );
 
-            cellconnect::add_degree_distributions(distribution_of_out_degrees,summary_distribution_of_in_degrees);
+            cellconnect::add_degree_distributions(distribution_of_out_degrees,summary_distribution_matrix);
 
             TEST_PROGRESS_UPDATE();
         }
+        cellconnect::add_degree_distributions(summary_distribution_matrix,summary_distribution);
+
+        {
+            std::string const  summary_plt_file_name = file_name_prefix + "out_degrees_summary.plt";
+            std::string const  summary_svg_file_name = file_name_prefix + "out_degrees_summary.svg";
+            std::string const  summary_html_file_name = file_name_prefix + "out_degrees_summary.html";
+
+            {
+                std::ofstream  ofs(summary_plt_file_name,std::ostream::out);
+                cellconnect::degrees_distribution_to_gnuplot_plot(
+                            ofs,
+                            summary_distribution,
+                            "Distribution of out-degrees of cells of all kinds.",
+                            summary_svg_file_name
+                            );
+            }
+            std::system((std::string("gnuplot ") + summary_plt_file_name).c_str());
+            {
+                std::ofstream  ofs(summary_html_file_name,std::ostream::out);
+                ofs << "<!DOCTYPE html>\n"
+                    << "<html>\n"
+                    << "<body>\n"
+                    << "<img src=\"" << summary_svg_file_name << "\" alt=\"[" << summary_svg_file_name << "]\">\n"
+                    << "</body>\n"
+                    << "</html>\n"
+                    ;
+            }
+        }
+
+        ++test_counter;
     }
 
     TEST_PROGRESS_HIDE();

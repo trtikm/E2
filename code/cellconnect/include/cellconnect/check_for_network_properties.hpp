@@ -7,6 +7,8 @@
 #   include <vector>
 #   include <unordered_map>
 #   include <memory>
+#   include <string>
+#   include <iosfwd>
 
 namespace cellconnect {
 
@@ -42,13 +44,39 @@ void  compute_out_degrees_of_tissue_cells_of_given_kind(
         );
 
 
-void  add_degree_distributions(std::unordered_map<natural_32_bit,natural_64_bit> const&  addon,
-                               std::unordered_map<natural_32_bit,natural_64_bit>& ditribution_where_addon_will_be_added
-                               );
+void  add_degree_distributions(
+        std::unordered_map<natural_32_bit,natural_64_bit> const&  addon,
+        std::unordered_map<natural_32_bit,natural_64_bit>& distribution_where_addon_will_be_added
+        );
 
-void  add_degree_distributions(std::vector< std::unordered_map<natural_32_bit,natural_64_bit> > const&  addons,
-                               std::unordered_map<natural_32_bit,natural_64_bit>& ditribution_where_all_addons_will_be_added
-                               );
+void  add_degree_distributions(
+        std::vector< std::unordered_map<natural_32_bit,natural_64_bit> > const&  addons,
+        std::unordered_map<natural_32_bit,natural_64_bit>& distribution_where_all_addons_will_be_added
+        );
+
+void  add_degree_distributions(
+        std::vector< std::unordered_map<natural_32_bit,natural_64_bit> > const&  addons,
+        std::vector< std::unordered_map<natural_32_bit,natural_64_bit> >&  distribution_where_all_addons_will_be_added
+        );
+
+
+std::ostream&  degrees_distribution_to_gnuplot_plot(
+        std::ostream&  output_stream,
+        std::unordered_map<natural_32_bit,natural_64_bit> const&  distribution_of_degrees,
+        std::string const&  title = "",
+        std::string const&  output_file_path_name_inside_the_script = "",
+        natural_16_bit const  plot_width_in_pixels = 800U,
+        natural_16_bit const  plot_height_in_pixels = 600U,
+        bool const  show_grid = true,
+        float_32_bit const  boxwidth_scale = 0.9f,
+        natural_8_bit const  fill_pattern_type = 5,
+        std::string const&  fill_colour_name = "black",
+        std::string const&  label_for_x_axis = "In-degrees of cells",
+        std::string const&  label_for_y_axis = "Counts of cells",
+        std::string const&  font_name = "Liberation serif",
+        natural_8_bit const  font_size_in_points = 16U
+        );
+
 
 }
 
