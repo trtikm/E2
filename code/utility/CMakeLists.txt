@@ -51,6 +51,8 @@ add_library(${THIS_TARGET_NAME}
     ./src/thread_synchronisarion_barrier.cpp
 
     ./include/utility/typefn_if_then_else.hpp
+
+    ./include/utility/msgstream.hpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
