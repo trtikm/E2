@@ -13,7 +13,6 @@
 namespace cellconnect {
 
 
-
 void  compute_in_degrees_of_tissue_cells_of_given_kind(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         cellab::kind_of_cell const  kind_of_cells_to_be_considered,

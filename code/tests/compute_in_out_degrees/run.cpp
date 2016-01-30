@@ -7,6 +7,7 @@
 #include <cellconnect/spread_synapses_into_neighbourhoods.hpp>
 #include <cellab/dynamic_state_of_neural_tissue.hpp>
 #include <cellab/utilities_for_transition_algorithms.hpp>
+#include <boost/filesystem.hpp>
 #include <utility/basic_numeric_types.hpp>
 #include <utility/test.hpp>
 #include <utility/random.hpp>
@@ -20,6 +21,17 @@
 #include <limits>
 #include <memory>
 #include <cstdlib>
+
+
+struct  msgstream
+{
+    template<typename T>
+    msgstream&  operator<<(T const& value) { m_stream << value; return *this; }
+    std::string  get() const { return m_stream.str(); }
+    operator std::string() const { return get(); }
+private:
+    std::ostringstream  m_stream;
+};
 
 
 #include <fstream>
@@ -518,6 +530,14 @@ void run()
 
     natural_32_bit  test_counter = 0U;
 
+    boost::filesystem::path const  output_root_dir = (msgstream() << "./output/" << get_program_name()).get();
+    std::string const  file_prefix_in_degrees_of_kind = "in_degrees_of_kind_";
+    std::string const  file_prefix_out_degrees_of_kind = "out_degrees_of_kind_";
+    std::string const  file_prefix_in_degrees_summary = "in_degrees_summary";
+    std::string const  file_prefix_out_degrees_summary = "out_degrees_summary";
+    std::string const  file_prefix_in_degrees_summary_matrix = "in_degrees_summary_matrix_";
+    std::string const  file_prefix_out_degrees_summary_matrix = "out_degrees_summary_matrix_";
+
     typedef std::tuple<natural_32_bit,  // 00: num cells x
                        natural_32_bit,  // 01: num cells y
                        natural_16_bit,  // 02: num tissue cell kinds
@@ -538,7 +558,8 @@ void run()
             tissue_props;
     for (tissue_props props :
          std::vector<tissue_props>{
-                tissue_props{ 50U, 50U, 6U, 6U, false, false, 5U, 5U, 10U, 10U, 5U, 5U, true, 1U, 1U, 1U },
+                tissue_props{ 10U, 10U, 3U, 3U, false, false, 3U, 3U, 4U, 4U, 3U, 3U, true, 3U, 3U, 8U },
+//                tissue_props{ 50U, 50U, 6U, 6U, false, false, 5U, 5U, 10U, 10U, 5U, 5U, true, 1U, 1U, 1U },
 //                tissue_props{ 75U, 50U, 6U, 7U, false, true, 7U, 5U, 10U, 10U, 7U, 5U, false, 5U, 3U, 8U },
 //                tissue_props{ 50U, 100U, 8U, 10U, true, false, 5U, 10U, 10U, 10U, 5U, 9U, true, 5U, 10U, 16U },
 //                tissue_props{ 100U, 75U, 10U, 15U, true, true, 10U, 7U, 10U, 10U, 9U, 7U, false, 20U, 8U, 32U },
@@ -771,6 +792,10 @@ void run()
         natural_32_bit const  num_rows_in_distribution_matrix = std::get<13>(props);
         natural_32_bit const  num_columns_in_distribution_matrix = std::get<14>(props);
 
+        boost::filesystem::path const  test_root_dir =
+                output_root_dir / (msgstream() << "tissue_" << test_counter).get();
+        boost::filesystem::create_directories(test_root_dir);
+
         std::unordered_map<natural_32_bit,natural_64_bit> summary_distribution;
         std::vector< std::unordered_map<natural_32_bit,natural_64_bit> >  summary_distribution_matrix;
         for (cellab::kind_of_cell  i = 0U; i < static_tissue->num_kinds_of_tissue_cells(); ++i)
@@ -789,38 +814,114 @@ void run()
 
             cellconnect::add_degree_distributions(distribution_of_in_degrees,summary_distribution_matrix);
 
+            for (natural_64_bit  j = 0ULL; j < distribution_of_in_degrees.size(); ++j)
+            {
+                boost::filesystem::path const  plt_pathname =
+                        test_root_dir / (msgstream() << file_prefix_in_degrees_of_kind
+                                                     << i << "_" << j << ".plt").get();
+                {
+                    std::ofstream  ofs(plt_pathname.string(),std::ostream::out);
+                    cellconnect::degrees_distribution_to_gnuplot_plot(
+                                ofs,
+                                distribution_of_in_degrees.at(j),
+                                msgstream() << "Distribution of in-degrees of cells of kind "
+                                            << i << " at region ("
+                                            << (j / num_columns_in_distribution_matrix) << ","
+                                            << (j % num_columns_in_distribution_matrix) << ").",
+                                (test_root_dir / (msgstream() << file_prefix_in_degrees_of_kind
+                                                              << i << "_" << j << ".svg").get()).string()
+                                );
+                }
+                std::system((msgstream() << "gnuplot " << plt_pathname).get().c_str());
+                {
+                    std::ofstream  ofs(
+                            (test_root_dir / (msgstream() << file_prefix_in_degrees_of_kind
+                                                          << i << "_" << j << ".html").get()).string(),
+                            std::ostream::out
+                            );
+                    ofs << "<!DOCTYPE html>\n"
+                        << "<html>\n"
+                        << "<body>\n"
+                        << "<img src=\"./" << file_prefix_in_degrees_of_kind << i << "_" << j << ".svg\" alt=\"[./"
+                                           << file_prefix_in_degrees_of_kind << i << "_" << j << ".svg]\">\n"
+                        << "</body>\n"
+                        << "</html>\n"
+                        ;
+                }
+            }
+
             TEST_PROGRESS_UPDATE();
         }
         cellconnect::add_degree_distributions(summary_distribution_matrix,summary_distribution);
 
-        std::string  file_name_prefix;
+        for (natural_64_bit  j = 0ULL; j < summary_distribution_matrix.size(); ++j)
         {
-            std::ostringstream  ostr;
-            ostr << "./" << get_program_name() << "_TEST_" << test_counter << "_";
-            file_name_prefix = ostr.str();
-        }
-
-        {
-            std::string const  summary_plt_file_name = file_name_prefix + "in_degrees_summary.plt";
-            std::string const  summary_svg_file_name = file_name_prefix + "in_degrees_summary.svg";
-            std::string const  summary_html_file_name = file_name_prefix + "in_degrees_summary.html";
-
+            boost::filesystem::path const  plt_pathname =
+                    test_root_dir / (msgstream() << file_prefix_in_degrees_summary_matrix
+                                                 << j << ".plt").get();
             {
-                std::ofstream  ofs(summary_plt_file_name,std::ostream::out);
+                std::ofstream  ofs(plt_pathname.string(),std::ostream::out);
+                cellconnect::degrees_distribution_to_gnuplot_plot(
+                            ofs,
+                            summary_distribution_matrix.at(j),
+                            msgstream() << "Distribution of in-degrees of cells of all kinds at region ("
+                                        << (j / num_columns_in_distribution_matrix) << ","
+                                        << (j % num_columns_in_distribution_matrix) << ").",
+                            (test_root_dir / (msgstream() << file_prefix_in_degrees_summary_matrix
+                                                          << j << ".svg").get()).string()
+                            );
+            }
+            std::system((msgstream() << "gnuplot " << plt_pathname).get().c_str());
+            {
+                std::ofstream  ofs(
+                        (test_root_dir / (msgstream() << file_prefix_in_degrees_summary_matrix
+                                                      << j << ".html").get()).string(),
+                        std::ostream::out
+                        );
+                ofs << "<!DOCTYPE html>\n"
+                    << "<html>\n"
+                    << "<body>\n"
+                    << "<img src=\"./" << file_prefix_in_degrees_summary_matrix << j << ".svg\" alt=\"[./"
+                                       << file_prefix_in_degrees_summary_matrix << j << ".svg]\">\n"
+                    << "</body>\n"
+                    << "</html>\n"
+                    ;
+            }
+        }
+        {
+            std::ofstream  ofs((test_root_dir / "in_degrees_matrix.html").string(),std::ostream::out);
+            ofs << "<!DOCTYPE html>\n"
+                << "<html>\n"
+                << "<body>\n"
+                << "<h3>In-degree distributions of cells of all kinds in regions of tissue.</h3>\n"
+                << "</body>\n"
+                << "</html>\n"
+                ;
+        }
+        {
+            boost::filesystem::path const  plt_pathname =
+                    test_root_dir / (msgstream() << file_prefix_in_degrees_summary << ".plt").get();
+            {
+                std::ofstream  ofs(plt_pathname.string(),std::ostream::out);
                 cellconnect::degrees_distribution_to_gnuplot_plot(
                             ofs,
                             summary_distribution,
                             "Distribution of in-degrees of cells of all kinds.",
-                            summary_svg_file_name
+                            (test_root_dir / (msgstream() << file_prefix_in_degrees_summary
+                                                          << ".svg").get()).string()
                             );
             }
-            std::system((std::string("gnuplot ") + summary_plt_file_name).c_str());
+            std::system((msgstream() << "gnuplot " << plt_pathname).get().c_str());
             {
-                std::ofstream  ofs(summary_html_file_name,std::ostream::out);
+                std::ofstream  ofs(
+                        (test_root_dir / (msgstream() << file_prefix_in_degrees_summary << ".html").get()).string(),
+                        std::ostream::out
+                        );
                 ofs << "<!DOCTYPE html>\n"
                     << "<html>\n"
                     << "<body>\n"
-                    << "<img src=\"" << summary_svg_file_name << "\" alt=\"[" << summary_svg_file_name << "]\">\n"
+                    << "<img src=\"./" << file_prefix_in_degrees_summary << ".svg\" alt=\"[./"
+                                       << file_prefix_in_degrees_summary << ".svg]\">\n"
                     << "</body>\n"
                     << "</html>\n"
                     ;
@@ -844,38 +945,175 @@ void run()
 
             cellconnect::add_degree_distributions(distribution_of_out_degrees,summary_distribution_matrix);
 
+            for (natural_64_bit  j = 0ULL; j < distribution_of_out_degrees.size(); ++j)
+            {
+                boost::filesystem::path const  plt_pathname =
+                        test_root_dir / (msgstream() << file_prefix_out_degrees_of_kind
+                                                     << i << "_" << j << ".plt").get();
+                {
+                    std::ofstream  ofs(plt_pathname.string(),std::ostream::out);
+                    cellconnect::degrees_distribution_to_gnuplot_plot(
+                                ofs,
+                                distribution_of_out_degrees.at(j),
+                                msgstream() << "Distribution of in-degrees of cells of kind "
+                                            << i << " at region ("
+                                            << (j / num_columns_in_distribution_matrix) << ","
+                                            << (j % num_columns_in_distribution_matrix) << ").",
+                                (test_root_dir / (msgstream() << file_prefix_out_degrees_of_kind
+                                                              << i << "_" << j << ".svg").get()).string()
+                                );
+                }
+                std::system((msgstream() << "gnuplot " << plt_pathname).get().c_str());
+                {
+                    std::ofstream  ofs(
+                            (test_root_dir / (msgstream() << file_prefix_out_degrees_of_kind
+                                                          << i << "_" << j << ".html").get()).string(),
+                            std::ostream::out
+                            );
+                    ofs << "<!DOCTYPE html>\n"
+                        << "<html>\n"
+                        << "<body>\n"
+                        << "<img src=\"./" << file_prefix_out_degrees_of_kind << i << "_" << j << ".svg\" alt=\"[./"
+                                           << file_prefix_out_degrees_of_kind << i << "_" << j << ".svg]\">\n"
+                        << "</body>\n"
+                        << "</html>\n"
+                        ;
+                }
+            }
+
             TEST_PROGRESS_UPDATE();
         }
         cellconnect::add_degree_distributions(summary_distribution_matrix,summary_distribution);
 
+        for (natural_64_bit  j = 0ULL; j < summary_distribution_matrix.size(); ++j)
         {
-            std::string const  summary_plt_file_name = file_name_prefix + "out_degrees_summary.plt";
-            std::string const  summary_svg_file_name = file_name_prefix + "out_degrees_summary.svg";
-            std::string const  summary_html_file_name = file_name_prefix + "out_degrees_summary.html";
-
+            boost::filesystem::path const  plt_pathname =
+                    test_root_dir / (msgstream() << file_prefix_out_degrees_summary_matrix
+                                                 << j << ".plt").get();
             {
-                std::ofstream  ofs(summary_plt_file_name,std::ostream::out);
+                std::ofstream  ofs(plt_pathname.string(),std::ostream::out);
                 cellconnect::degrees_distribution_to_gnuplot_plot(
                             ofs,
-                            summary_distribution,
-                            "Distribution of out-degrees of cells of all kinds.",
-                            summary_svg_file_name
+                            summary_distribution_matrix.at(j),
+                            msgstream() << "Distribution of in-degrees of cells of all kinds at region ("
+                                        << (j / num_columns_in_distribution_matrix) << ","
+                                        << (j % num_columns_in_distribution_matrix) << ").",
+                            (test_root_dir / (msgstream() << file_prefix_out_degrees_summary_matrix
+                                                          << j << ".svg").get()).string()
                             );
             }
-            std::system((std::string("gnuplot ") + summary_plt_file_name).c_str());
+            std::system((msgstream() << "gnuplot " << plt_pathname).get().c_str());
             {
-                std::ofstream  ofs(summary_html_file_name,std::ostream::out);
+                std::ofstream  ofs(
+                        (test_root_dir / (msgstream() << file_prefix_out_degrees_summary_matrix
+                                                      << j << ".html").get()).string(),
+                        std::ostream::out
+                        );
                 ofs << "<!DOCTYPE html>\n"
                     << "<html>\n"
                     << "<body>\n"
-                    << "<img src=\"" << summary_svg_file_name << "\" alt=\"[" << summary_svg_file_name << "]\">\n"
+                    << "<img src=\"./" << file_prefix_out_degrees_summary_matrix << j << ".svg\" alt=\"[./"
+                                       << file_prefix_out_degrees_summary_matrix << j << ".svg]\">\n"
+                    << "</body>\n"
+                    << "</html>\n"
+                    ;
+            }
+        }
+        {
+            std::ofstream  ofs((test_root_dir / "out_degrees_matrix.html").string(),std::ostream::out);
+            ofs << "<!DOCTYPE html>\n"
+                << "<html>\n"
+                << "<body>\n"
+                << "<h3>Out-degree distributions of cells of all kinds in regions of tissue.</h3>\n"
+                << "</body>\n"
+                << "</html>\n"
+                ;
+        }
+        {
+            boost::filesystem::path const  plt_pathname =
+                    test_root_dir / (msgstream() << file_prefix_out_degrees_summary << ".plt").get();
+            {
+                std::ofstream  ofs(plt_pathname.string(),std::ostream::out);
+                cellconnect::degrees_distribution_to_gnuplot_plot(
+                            ofs,
+                            summary_distribution,
+                            "Distribution of in-degrees of cells of all kinds.",
+                            (test_root_dir / (msgstream() << file_prefix_out_degrees_summary
+                                                          << ".svg").get()).string()
+                            );
+            }
+            std::system((msgstream() << "gnuplot " << plt_pathname).get().c_str());
+            {
+                std::ofstream  ofs(
+                        (test_root_dir / (msgstream() << file_prefix_out_degrees_summary << ".html").get()).string(),
+                        std::ostream::out
+                        );
+                ofs << "<!DOCTYPE html>\n"
+                    << "<html>\n"
+                    << "<body>\n"
+                    << "<img src=\"./" << file_prefix_out_degrees_summary << ".svg\" alt=\"[./"
+                                       << file_prefix_out_degrees_summary << ".svg]\">\n"
                     << "</body>\n"
                     << "</html>\n"
                     ;
             }
         }
 
+        {
+            std::ofstream  ofs((test_root_dir / "index.html").string(),std::ostream::out);
+            ofs << "<!DOCTYPE html>\n"
+                << "<html>\n"
+                << "<body>\n"
+                << "<h3>TISSUE " << test_counter << ": Plots of in/out-degree distributions of tissue cells</h3>\n"
+                << "<ul>\n"
+                << "<li><a href=\"./" << file_prefix_in_degrees_summary << ".html\">"
+                                      << "In-degrees of cells of all kinds.</a></li>\n"
+                << "<li><a href=\"./" << file_prefix_out_degrees_summary << ".html\">"
+                                      << "Out-degrees of cells of all kinds.</a></li>\n"
+                << "</ul>\n"
+                << "<ul>\n"
+                << "<li><a href=\"./in_degrees_matrix.html\">"
+                                      << "In-degrees of cells of all kinds in regions of tissue.</a></li>\n"
+                << "<li><a href=\"./out_degrees_matrix.html\">"
+                                      << "Out-degrees of cells of all kinds in regions of tissue.</a></li>\n"
+                << "</ul>\n"
+                ;
+
+            for (cellab::kind_of_cell  i = 0U; i < static_tissue->num_kinds_of_tissue_cells(); ++i)
+            {
+                ofs << "<p></p>\n<ul>\n"
+                    << "<li><a href=\"./in_degrees_matrix_" << i << ".html\">"
+                            << "In-degrees of cells of kind " << i << "</a></li>\n"
+                    << "<li><a href=\"./out_degrees_matrix_" << i << ".html\">"
+                            << "Out-degrees of cells of kind " << i << "</a></li>\n"
+                    << "</ul>\n"
+                    ;
+            }
+
+            ofs << "</body>\n"
+                << "</html>\n"
+                ;
+        }
+
         ++test_counter;
+    }
+
+    {
+        std::ofstream  ofs((output_root_dir / "index.html").string(),std::ostream::out);
+        ofs << "<!DOCTYPE html>\n"
+            << "<html>\n"
+            << "<body>\n"
+            << "<h2>Plots of in/out-degree distributions of tissue cells</h2>\n"
+            << "<ul>\n"
+            ;
+
+        for (natural_32_bit  i = 0U; i < test_counter; ++i)
+            ofs << "<li><a href=\"./tissue_" << i << "/index.html\">tissue " << i << "</a></li>\n";
+
+        ofs << "</ul>\n"
+            << "</body>\n"
+            << "</html>\n"
+            ;
     }
 
     TEST_PROGRESS_HIDE();

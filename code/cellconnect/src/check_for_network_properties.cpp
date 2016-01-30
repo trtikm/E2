@@ -106,13 +106,5 @@ std::ostream&  degrees_distribution_to_gnuplot_plot(
     return output_stream;
 }
 
-void  degrees_distribution_matrix_to_gnuplot_plot(
-        std::vector< std::unordered_map<natural_32_bit,natural_64_bit> > const& degrees_distribution_matrix,
-        std::ostream&  output_stream
-        )
-{
-    TMPROF_BLOCK();
-}
-
 
 }
