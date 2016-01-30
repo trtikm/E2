@@ -7,6 +7,7 @@
 #include <cellconnect/spread_synapses_into_neighbourhoods.hpp>
 #include <cellab/dynamic_state_of_neural_tissue.hpp>
 #include <cellab/utilities_for_transition_algorithms.hpp>
+#include <cellab/dump.hpp>
 #include <utility/msgstream.hpp>
 #include <boost/filesystem.hpp>
 #include <utility/basic_numeric_types.hpp>
@@ -514,12 +515,12 @@ void  generate_svg_html(std::string const&  outdir, std::string const&  filename
     std::system((msgstream() << "gnuplot " << outdir << filename_base << ".plt").get().c_str());
     std::ofstream  ofs(msgstream() << outdir << filename_base << ".html",std::ostream::out);
     ofs << "<!DOCTYPE html>\n"
-        << "<html>\n"
-        << "<body>\n"
-        << "<img src=\"./" << filename_base << ".svg\" alt=\"[./" << filename_base << ".svg]\">\n"
-        << "</body>\n"
-        << "</html>\n"
-        ;
+           "<html>\n"
+           "<body>\n"
+           "<img src=\"./" << filename_base << ".svg\" alt=\"[./" << filename_base << ".svg]\">\n"
+           "</body>\n"
+           "</html>\n"
+           ;
 }
 
 void  generate_table_of_regions_of_distributions(
@@ -533,7 +534,7 @@ void  generate_table_of_regions_of_distributions(
 {
     std::ofstream  ofs(msgstream() << outdir << filename_base << ".html",std::ostream::out);
     ofs << "<!DOCTYPE html>\n"
-        << "<html>\n"
+           "<html>\n"
            "<head>\n"
            "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"
            "    <title>Table of regions of distribution of degrees</title>\n"
@@ -554,15 +555,13 @@ void  generate_table_of_regions_of_distributions(
            "        th, td {\n"
            "            font-family:\"Liberation mono\", monospace;\n"
            "            font-size:10pt;\n"
-           //"            text-align:right;\n"
            "            padding: 3pt;\n"
            "        }\n"
-           //"        tr:nth-child(even){background-color: #f2f2f2}\n"
            "   </style>\n"
            "</head>\n"
-        << "<body>\n"
-        << "<h3>" << title_base << " in regions of tissue.</h3>\n"
-        << "<table>\n"
+           "<body>\n"
+           "<h3>" << title_base << " in regions of tissue.</h3>\n"
+           "<table>\n"
            "<caption>\n"
            "</caption>\n"
            ;
@@ -602,6 +601,8 @@ void dump_distribution_matrix(
         )
 {
     std::string const  outdir = msgstream() << "./output/" << get_program_name() << "/tissue_" << test_counter << "/";
+    boost::filesystem::create_directories(outdir);
+
     for (natural_64_bit  j = 0ULL; j < distribution.size(); ++j)
     {
         std::string const  plt_pathname = msgstream() << outdir << filename_base << j << ".plt";
@@ -672,6 +673,8 @@ void dump_distribution(
         )
 {
     std::string const  outdir = msgstream() << "./output/" << get_program_name() << "/tissue_" << test_counter << "/";
+    boost::filesystem::create_directories(outdir);
+
     std::string const  outtype = as_in_degrees ? "in" : "out";
     std::string const  filename_base = msgstream() << outtype << "_degrees_of_all_kinds";
     {
@@ -688,54 +691,89 @@ void dump_distribution(
 
 void  generate_root_html_file_for_tissue(
         natural_32_bit const  tissue_index,
-        natural_16_bit const  num_kinds)
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_tissue_ptr)
 {
-    std::ofstream  ofs(
-                msgstream() << "./output/" << get_program_name() << "/tissue_" << tissue_index << "/index.html",
-                std::ostream::out
-                );
+    std::string const  outdir = msgstream() << "./output/" << get_program_name() << "/tissue_" << tissue_index << "/";
+    boost::filesystem::create_directories(outdir);
+
+    {
+        std::ofstream  ofs(msgstream() << outdir << "/static_tissue_props.html",std::ostream::out);
+        cellab::dump_in_html(ofs,static_tissue_ptr);
+    }
+    std::ofstream  ofs(msgstream() << outdir << "/index.html",std::ostream::out);
     ofs << "<!DOCTYPE html>\n"
-        << "<html>\n"
-        << "<body>\n"
-        << "<h3>TISSUE " << tissue_index << ": Plots of in/out-degree distributions of tissue cells</h3>\n"
-        << "<ul>\n"
-        << "<li><a href=\"./in_degrees_of_all_kinds.html\">In-degrees of cells of all kinds.</a></li>\n"
-        << "<li><a href=\"./out_degrees_of_all_kinds.html\">Out-degrees of cells of all kinds.</a></li>\n"
-        << "</ul>\n"
-        << "<ul>\n"
-        << "<li><a href=\"./in_degrees_of_all_kinds_table_of_regions.html\">In-degrees of cells of all kinds in regions.</a></li>\n"
-        << "<li><a href=\"./out_degrees_of_all_kinds_table_of_regions.html\">Out-degrees of cells of all kinds in regions.</a></li>\n"
-        << "</ul>\n"
-        ;
-    for (cellab::kind_of_cell  i = 0U; i < num_kinds; ++i)
+           "<html>\n"
+           "<head>\n"
+           "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"
+           "    <title>Table of regions of distribution of degrees</title>\n"
+           "    <style type=\"text/css\">\n"
+           "        body {\n"
+           "            background-color: white;\n"
+           "            color: black;\n"
+           "            margin-left: auto;\n"
+           "            margin-right: auto;\n"
+           "        }\n"
+           "        h1, h2, h3, h4, h5, h6, table { font-family:\"Liberation serif\"; }\n"
+           "        p, table {\n"
+           "            font-size:12pt;\n"
+           "            margin-left: auto;\n"
+           "            margin-right: auto;\n"
+           "            text-align: justify\n"
+           "        }\n"
+           "        th, td {\n"
+           "            font-family:\"Liberation mono\", monospace;\n"
+           "            font-size:10pt;\n"
+           "            padding: 3pt;\n"
+           "        }\n"
+           "   </style>\n"
+           "</head>\n"
+           "<body>\n"
+           "<h2>TISSUE " << tissue_index << ": Plots of in/out-degree distributions of tissue cells</h2>\n"
+           "<ul>\n"
+           "<li><a href=\"./static_tissue_props.html\">Properties of the static state of the tissue.</a></li>\n"
+           "</ul>\n"
+           "<ul>\n"
+           "<li><a href=\"./in_degrees_of_all_kinds.html\">In-degrees of cells of all kinds.</a></li>\n"
+           "<li><a href=\"./out_degrees_of_all_kinds.html\">Out-degrees of cells of all kinds.</a></li>\n"
+           "</ul>\n"
+           "<ul>\n"
+           "<li><a href=\"./in_degrees_of_all_kinds_table_of_regions.html\">"
+                        "In-degrees of cells of all kinds in regions.</a></li>\n"
+           "<li><a href=\"./out_degrees_of_all_kinds_table_of_regions.html\">"
+                        "Out-degrees of cells of all kinds in regions.</a></li>\n"
+           "</ul>\n"
+           ;
+    for (cellab::kind_of_cell  i = 0U; i < static_tissue_ptr->num_kinds_of_tissue_cells(); ++i)
         ofs << "<p></p>\n<ul>\n"
-            << "<li><a href=\"./in_degrees_of_kind_" << i << "_table_of_regions.html\">In-degrees of cells of kind " << i << " in regions</a></li>\n"
-            << "<li><a href=\"./out_degrees_of_kind_" << i << "_table_of_regions.html\">Out-degrees of cells of kind " << i << " in regions</a></li>\n"
-            << "</ul>\n"
-            ;
+               "<li><a href=\"./in_degrees_of_kind_" << i << "_table_of_regions.html\">"
+                            "In-degrees of cells of kind " << i << " in regions</a></li>\n"
+               "<li><a href=\"./out_degrees_of_kind_" << i << "_table_of_regions.html\">"
+                            "Out-degrees of cells of kind " << i << " in regions</a></li>\n"
+               "</ul>\n"
+               ;
     ofs << "</body>\n"
-        << "</html>\n"
-        ;
+           "</html>\n"
+           ;
 }
 
 void  generate_root_html_file(natural_32_bit const  num_tissues)
 {
-    std::ofstream  ofs(
-                msgstream() << "./output/" << get_program_name() << "/index.html",
-                std::ostream::out
-                );
+    std::string const  outdir = msgstream() << "./output/" << get_program_name() << "/";
+    boost::filesystem::create_directories(outdir);
+
+    std::ofstream  ofs(msgstream() << outdir << "/index.html",std::ostream::out);
     ofs << "<!DOCTYPE html>\n"
-        << "<html>\n"
-        << "<body>\n"
-        << "<h2>Plots of in/out-degree distributions of tissue cells</h2>\n"
-        << "<ul>\n"
-        ;
+           "<html>\n"
+           "<body>\n"
+           "<h2>Plots of in/out-degree distributions of tissue cells</h2>\n"
+           "<ul>\n"
+           ;
     for (natural_32_bit  i = 0U; i < num_tissues; ++i)
         ofs << "<li><a href=\"./tissue_" << i << "/index.html\">tissue " << i << "</a></li>\n";
     ofs << "</ul>\n"
-        << "</body>\n"
-        << "</html>\n"
-        ;
+           "</body>\n"
+           "</html>\n"
+           ;
 }
 
 
@@ -748,14 +786,6 @@ void run()
     std::vector<natural_32_bit> coefs = { 1, 4, 3, 8, 1, 9, 2, 5, 4, 2, 7, 6, 6, 5, 8, 9, 3 };
 
     natural_32_bit  test_counter = 0U;
-
-    boost::filesystem::path const  output_root_dir = (msgstream() << "./output/" << get_program_name()).get();
-    std::string const  file_prefix_in_degrees_of_kind = "in_degrees_of_kind_";
-    std::string const  file_prefix_out_degrees_of_kind = "out_degrees_of_kind_";
-    std::string const  file_prefix_in_degrees_summary = "in_degrees_summary";
-    std::string const  file_prefix_out_degrees_summary = "out_degrees_summary";
-    std::string const  file_prefix_in_degrees_summary_matrix = "in_degrees_summary_matrix_";
-    std::string const  file_prefix_out_degrees_summary_matrix = "out_degrees_summary_matrix_";
 
     typedef std::tuple<natural_32_bit,  // 00: num cells x
                        natural_32_bit,  // 01: num cells y
@@ -816,8 +846,6 @@ void run()
         bool const  is_torus_axis_x = std::get<4>(props);
         bool const  is_torus_axis_y = std::get<5>(props);
 
-        natural_16_bit const synapses_to_muscles_kinds = sensory_cell_kinds;
-
         natural_16_bit const num_bits_per_cell = 8U;
         natural_16_bit const num_bits_per_synapse = 8U;
         natural_16_bit const num_bits_per_signalling = 8U;
@@ -848,6 +876,7 @@ void run()
 
         std::rotate(coefs.begin(), coefs.begin() + 1, coefs.end());
 
+        natural_16_bit const synapses_to_muscles_kinds = sensory_cell_kinds;
         std::vector<natural_32_bit> const num_synapses_to_muscles_of_synapse_kind(synapses_to_muscles_kinds,10U);
 
         std::vector<integer_8_bit> const x_radius_of_signalling_neighbourhood_of_cell(tissue_cell_kinds,1U);
@@ -1011,10 +1040,6 @@ void run()
         natural_32_bit const  num_rows_in_distribution_matrix = std::get<13>(props);
         natural_32_bit const  num_columns_in_distribution_matrix = std::get<14>(props);
 
-        boost::filesystem::path const  test_root_dir =
-                output_root_dir / (msgstream() << "tissue_" << test_counter).get();
-        boost::filesystem::create_directories(test_root_dir);
-
         std::unordered_map<natural_32_bit,natural_64_bit> summary_distribution;
         std::vector< std::unordered_map<natural_32_bit,natural_64_bit> >  summary_distribution_matrix;
         for (cellab::kind_of_cell  i = 0U; i < static_tissue->num_kinds_of_tissue_cells(); ++i)
@@ -1102,7 +1127,7 @@ void run()
                     false
                     );
 
-        generate_root_html_file_for_tissue(test_counter,static_tissue->num_kinds_of_tissue_cells());
+        generate_root_html_file_for_tissue(test_counter,static_tissue);
 
         ++test_counter;
     }
