@@ -5,6 +5,7 @@
 #include <cellconnect/fill_coords_of_source_cells_of_synapses_in_tissue.hpp>
 #include <cellconnect/fill_delimiters_between_territorial_lists.hpp>
 #include <cellconnect/spread_synapses_into_neighbourhoods.hpp>
+#include <cellconnect/dump.hpp>
 #include <cellab/dynamic_state_of_neural_tissue.hpp>
 #include <cellab/utilities_for_transition_algorithms.hpp>
 #include <cellab/dump.hpp>
@@ -512,15 +513,9 @@ static std::shared_ptr<cellconnect::column_shift_function const>  build_big_shif
 
 void  generate_svg_html(std::string const&  outdir, std::string const&  filename_base)
 {
-    std::system((msgstream() << "gnuplot " << outdir << filename_base << ".plt").get().c_str());
+    cellconnect::generate_svg_file_from_plt_file_using_gnuplot(msgstream() << outdir << filename_base << ".plt");
     std::ofstream  ofs(msgstream() << outdir << filename_base << ".html",std::ostream::out);
-    ofs << "<!DOCTYPE html>\n"
-           "<html>\n"
-           "<body>\n"
-           "<img src=\"./" << filename_base << ".svg\" alt=\"[./" << filename_base << ".svg]\">\n"
-           "</body>\n"
-           "</html>\n"
-           ;
+    cellconnect::dump_html_file_with_embedded_svg(ofs,msgstream() << "./" << filename_base << ".svg");
 }
 
 void  generate_table_of_regions_of_distributions(
@@ -533,62 +528,15 @@ void  generate_table_of_regions_of_distributions(
         )
 {
     std::ofstream  ofs(msgstream() << outdir << filename_base << ".html",std::ostream::out);
-    ofs << "<!DOCTYPE html>\n"
-           "<html>\n"
-           "<head>\n"
-           "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"
-           "    <title>Table of regions of distribution of degrees</title>\n"
-           "    <style type=\"text/css\">\n"
-           "        body {\n"
-           "            background-color: white;\n"
-           "            color: black;\n"
-           "            margin-left: auto;\n"
-           "            margin-right: auto;\n"
-           "        }\n"
-           "        h1, h2, h3, h4, h5, h6, table { font-family:\"Liberation serif\"; }\n"
-           "        p, table {\n"
-           "            font-size:12pt;\n"
-           "            margin-left: auto;\n"
-           "            margin-right: auto;\n"
-           "            text-align: justify\n"
-           "        }\n"
-           "        th, td {\n"
-           "            font-family:\"Liberation mono\", monospace;\n"
-           "            font-size:10pt;\n"
-           "            padding: 3pt;\n"
-           "        }\n"
-           "   </style>\n"
-           "</head>\n"
-           "<body>\n"
-           "<h3>" << title_base << " in regions of tissue.</h3>\n"
-           "<table>\n"
-           "<caption>\n"
-           "</caption>\n"
-           ;
-
-    ofs << "<tr>\n"
-           "<th></th>\n"
-           ;
-    for (natural_32_bit  i = 0U; i < num_columns; ++i)
-        ofs << "<th>" << i << "</th>\n";
-    ofs << "</tr>\n";
-
-    for (natural_32_bit  i = 0U; i < num_rows; ++i)
-    {
-        ofs << "<tr>\n"
-            << "<th>" << i << "</th>\n"
-            ;
-        for (natural_32_bit  j = 0U; j < num_columns; ++j)
-            ofs << "<td>"
-                << "<a href=\"./" << filename_base_of_links << i * num_columns + j << ".html" << "\">*</a>"
-                << "</td>\n";
-        ofs << "</tr>\n";
-    }
-
-    ofs << "</table>\n"
-           "</body>\n"
-           "</html>\n"
-           ;
+    cellconnect::dump_html_table_with_links_to_distributions_of_individual_regions(
+                ofs,
+                num_rows,
+                num_columns,
+                msgstream() << "./" << filename_base_of_links,
+                msgstream() << title_base << " in regions of tissue",
+                "",
+                "Table of regions of distribution of degrees"
+                );
 }
 
 void dump_distribution_matrix(
@@ -608,7 +556,7 @@ void dump_distribution_matrix(
         std::string const  plt_pathname = msgstream() << outdir << filename_base << j << ".plt";
         {
             std::ofstream  ofs(plt_pathname,std::ostream::out);
-            cellconnect::degrees_distribution_to_gnuplot_plot(
+            cellconnect::dump_degrees_distribution_to_gnuplot_plot(
                         ofs,
                         distribution.at(j),
                         msgstream() << title_base << " ("
@@ -661,7 +609,7 @@ void dump_distribution_matrix(
                 test_counter,
                 num_columns_in_distribution_matrix,
                 msgstream() << outtype << "_degrees_of_all_kinds_in_region_",
-                msgstream() << "Distribution of " << outtype << "-degrees of cells of all kinds in region",
+                msgstream() << "Distribution of " << outtype << "-degrees of tissue cells of all kinds in region",
                 msgstream() << outtype << "_degrees_of_all_kinds_table_of_regions"
                 );
 }
@@ -679,10 +627,10 @@ void dump_distribution(
     std::string const  filename_base = msgstream() << outtype << "_degrees_of_all_kinds";
     {
         std::ofstream  ofs(msgstream() << outdir << filename_base << ".plt",std::ostream::out);
-        cellconnect::degrees_distribution_to_gnuplot_plot(
+        cellconnect::dump_degrees_distribution_to_gnuplot_plot(
                     ofs,
                     distribution,
-                    msgstream() << "Distribution of " << outtype << "-degrees of cells of all kinds.",
+                    msgstream() << "Distribution of " << outtype << "-degrees of tissue cells of all kinds.",
                     msgstream() << outdir << filename_base << ".svg"
                     );
     }
@@ -733,14 +681,14 @@ void  generate_root_html_file_for_tissue(
            "<li><a href=\"./static_tissue_props.html\">Properties of the static state of the tissue.</a></li>\n"
            "</ul>\n"
            "<ul>\n"
-           "<li><a href=\"./in_degrees_of_all_kinds.html\">In-degrees of cells of all kinds.</a></li>\n"
-           "<li><a href=\"./out_degrees_of_all_kinds.html\">Out-degrees of cells of all kinds.</a></li>\n"
+           "<li><a href=\"./in_degrees_of_all_kinds.html\">In-degrees of tissue cells of all kinds.</a></li>\n"
+           "<li><a href=\"./out_degrees_of_all_kinds.html\">Out-degrees of tissue cells of all kinds.</a></li>\n"
            "</ul>\n"
            "<ul>\n"
            "<li><a href=\"./in_degrees_of_all_kinds_table_of_regions.html\">"
-                        "In-degrees of cells of all kinds in regions.</a></li>\n"
+                        "In-degrees of tissue cells of all kinds in regions.</a></li>\n"
            "<li><a href=\"./out_degrees_of_all_kinds_table_of_regions.html\">"
-                        "Out-degrees of cells of all kinds in regions.</a></li>\n"
+                        "Out-degrees of tissue cells of all kinds in regions.</a></li>\n"
            "</ul>\n"
            ;
     for (cellab::kind_of_cell  i = 0U; i < static_tissue_ptr->num_kinds_of_tissue_cells(); ++i)

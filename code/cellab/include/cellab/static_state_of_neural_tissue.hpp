@@ -6,6 +6,7 @@
 #   include <boost/scoped_array.hpp>
 #   include <vector>
 #   include <tuple>
+#   include <memory>
 
 namespace cellab {
 
@@ -216,6 +217,19 @@ private:
     std::vector<integer_8_bit> m_y_radius_of_cellular_neighbourhood_of_signalling;
     std::vector<integer_8_bit> m_columnar_radius_of_cellular_neighbourhood_of_signalling;
 };
+
+
+natural_64_bit  num_tissue_cells_in_tissue(
+        std::shared_ptr<static_state_of_neural_tissue const> const  static_tissue_ptr
+        );
+
+natural_64_bit  num_synapses_in_any_column(
+        std::shared_ptr<static_state_of_neural_tissue const> const  static_tissue_ptr
+        );
+
+natural_64_bit  num_synapses_in_all_columns(
+        std::shared_ptr<static_state_of_neural_tissue const> const  static_tissue_ptr
+        );
 
 
 }

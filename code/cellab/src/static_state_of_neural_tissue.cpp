@@ -533,4 +533,34 @@ integer_8_bit  static_state_of_neural_tissue::get_columnar_radius_of_cellular_ne
 }
 
 
+natural_64_bit  num_tissue_cells_in_tissue(
+        std::shared_ptr<static_state_of_neural_tissue const> const  static_tissue_ptr
+        )
+{
+    return (natural_64_bit)static_tissue_ptr->num_cells_along_x_axis() *
+           (natural_64_bit)static_tissue_ptr->num_cells_along_y_axis() *
+           (natural_64_bit)static_tissue_ptr->num_cells_along_columnar_axis() ;
+}
+
+natural_64_bit  num_synapses_in_any_column(
+        std::shared_ptr<static_state_of_neural_tissue const> const  static_tissue_ptr
+        )
+{
+    natural_64_bit  result = 0ULL;
+    for (kind_of_cell  i = 0U; i < static_tissue_ptr->num_kinds_of_tissue_cells(); ++i)
+        result += (natural_64_bit)static_tissue_ptr->num_tissue_cells_of_cell_kind(i) *
+                  (natural_64_bit)static_tissue_ptr->num_synapses_in_territory_of_cell_kind(i) ;
+    return result;
+}
+
+natural_64_bit  num_synapses_in_all_columns(
+        std::shared_ptr<static_state_of_neural_tissue const> const  static_tissue_ptr
+        )
+{
+    return (natural_64_bit)static_tissue_ptr->num_cells_along_x_axis() *
+           (natural_64_bit)static_tissue_ptr->num_cells_along_y_axis() *
+           num_synapses_in_any_column(static_tissue_ptr) ;
+}
+
+
 }

@@ -55,56 +55,5 @@ void  add_degree_distributions(std::vector< std::unordered_map<natural_32_bit,na
         add_degree_distributions(addons.at(i),distribution_where_all_addons_will_be_added.at(i));
 }
 
-std::ostream&  degrees_distribution_to_gnuplot_plot(
-        std::ostream&  output_stream,
-        std::unordered_map<natural_32_bit,natural_64_bit> const&  distribution_of_degrees,
-        std::string const&  title,
-        std::string const&  output_file_path_name_inside_the_script,
-        natural_16_bit const  plot_width_in_pixels,
-        natural_16_bit const  plot_height_in_pixels,
-        bool const  show_grid,
-        float_32_bit const  boxwidth_scale,
-        natural_8_bit const  fill_pattern_type,
-        std::string const&  fill_colour_name,
-        std::string const&  label_for_x_axis,
-        std::string const&  label_for_y_axis,
-        std::string const&  font_name,
-        natural_8_bit const  font_size_in_points
-        )
-{
-    TMPROF_BLOCK();
-
-    if (!title.empty())
-        output_stream << "set title \"" << title << "\"\n";
-
-    output_stream << "set terminal svg font '" << font_name << "," << (natural_32_bit)font_size_in_points << "'";
-    if (plot_width_in_pixels != 0U && plot_height_in_pixels != 0U)
-        output_stream << " size " << plot_width_in_pixels << "," << plot_height_in_pixels;
-    output_stream << "\n";
-
-    if (!output_file_path_name_inside_the_script.empty())
-        output_stream << "set output '" << output_file_path_name_inside_the_script << "'\n";
-
-    output_stream << "set style fill pattern " << (natural_32_bit)fill_pattern_type << " border\n"
-                  << "set boxwidth " << boxwidth_scale << " absolute\n";
-
-    if (show_grid)
-        output_stream << "set grid\n";
-
-    if (!label_for_x_axis.empty())
-        output_stream << "set xlabel \"" << label_for_x_axis << "\"\n";
-    if (!label_for_y_axis.empty())
-        output_stream << "set ylabel \"" << label_for_y_axis << "\"\n";
-
-    output_stream << "plot '-' using 1:2 with boxes notitle lt rgb \"" << fill_colour_name << "\"\n";
-
-    for (auto const& elem : distribution_of_degrees)
-        output_stream << "    " << elem.first << "  " << elem.second << "\n";
-
-    output_stream << "    e\n";
-
-    return output_stream;
-}
-
 
 }

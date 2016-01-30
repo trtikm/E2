@@ -31,7 +31,6 @@ std::ostream&  dump_in_html(
             "        th, td {\n"
             "            font-family:\"Liberation serif\";\n"
             "            font-size:12pt;\n"
-            //"            padding: 3pt;\n"
             "        }\n"
             "   </style>\n"
             "</head>\n"
@@ -122,181 +121,200 @@ std::ostream&  dump_in_html(
                     "</td>\n"
             "   <td align=\"left\" valign=\"top\">A number of columns along X axis of the tissue.</td>\n"
             "</tr>\n"
-            "<tr></tr>\n"
-            ;
-    ostr << "<tr>\n"
+            "<tr>\n"
             "   <td align=\"right\" valign=\"top\"><i>Y</i></td>\n"
             "   <td align=\"center\" valign=\"top\">"
                     << static_tissue_ptr->num_cells_along_y_axis() <<
                     "</td>\n"
             "   <td align=\"left\" valign=\"top\">A number of columns along Y axis of the tissue.</td>\n"
             "</tr>\n"
-            "<tr></tr>\n"
-            ;
-    ostr << "<tr>\n"
+            "<tr>\n"
             "   <td align=\"right\" valign=\"top\"><i>C</i></td>\n"
             "   <td align=\"center\" valign=\"top\">"
                     << static_tissue_ptr->num_cells_along_columnar_axis() <<
                     "</td>\n"
             "   <td align=\"left\" valign=\"top\">A number of territories along columnar axis C of the tissue.</td>\n"
             "</tr>\n"
-            "<tr></tr>\n"
-            ;
-    ostr << "<tr><td></td><td></td><td></td></tr>   <tr><td></td><td></td><td></td></tr>\n"
+            "<tr><td></td><td></td><td></td></tr>   <tr><td></td><td></td><td></td></tr>\n"
             "<tr>\n"
             "   <td align=\"right\" valign=\"top\"></td>\n"
-            "   <td align=\"center\" valign=\"top\">"
-                    << (natural_64_bit)static_tissue_ptr->num_cells_along_x_axis() *
-                       (natural_64_bit)static_tissue_ptr->num_cells_along_y_axis() *
-                       (natural_64_bit)static_tissue_ptr->num_cells_along_columnar_axis() <<
-                    "</td>\n"
-            "   <td align=\"left\" valign=\"top\">A total number of territories in the tissue.</td>\n"
+            "   <td align=\"center\" valign=\"top\">" << num_tissue_cells_in_tissue(static_tissue_ptr) << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">A total number of tissue cells in the tissue.</td>\n"
             "</tr>\n"
-            "<tr></tr>\n"
-            ;
-    ostr << "<tr>\n"
+            "<tr>\n"
             "   <td align=\"right\" valign=\"top\"></td>\n"
-            "   <td align=\"center\" valign=\"top\">"
-                    << [](std::shared_ptr<static_state_of_neural_tissue const> const  static_tissue_ptr) {
-                            natural_64_bit  num_synapses_in_column = 0ULL;
-                            for (kind_of_cell  i = 0U; i < static_tissue_ptr->num_kinds_of_tissue_cells(); ++i)
-                                num_synapses_in_column +=
-                                    (natural_64_bit)static_tissue_ptr->num_tissue_cells_of_cell_kind(i) *
-                                    (natural_64_bit)static_tissue_ptr->num_synapses_in_territory_of_cell_kind(i);
-                            return num_synapses_in_column;
-                        }(static_tissue_ptr) <<
-                    "</td>\n"
+            "   <td align=\"center\" valign=\"top\">" << num_synapses_in_any_column(static_tissue_ptr) << "</td>\n"
             "   <td align=\"left\" valign=\"top\">A total number of synapses in any column in the tissue.</td>\n"
             "</tr>\n"
-            "<tr></tr>\n"
-            ;
-    ostr << "<tr>\n"
+            "<tr>\n"
             "   <td align=\"right\" valign=\"top\"></td>\n"
-            "   <td align=\"center\" valign=\"top\">"
-                    << [](std::shared_ptr<static_state_of_neural_tissue const> const  static_tissue_ptr) {
-                            natural_64_bit  num_synapses_in_column = 0ULL;
-                            for (kind_of_cell  i = 0U; i < static_tissue_ptr->num_kinds_of_tissue_cells(); ++i)
-                                num_synapses_in_column +=
-                                    (natural_64_bit)static_tissue_ptr->num_tissue_cells_of_cell_kind(i) *
-                                    (natural_64_bit)static_tissue_ptr->num_synapses_in_territory_of_cell_kind(i);
-                            return (natural_64_bit)static_tissue_ptr->num_cells_along_x_axis() *
-                                   (natural_64_bit)static_tissue_ptr->num_cells_along_y_axis() *
-                                   num_synapses_in_column;
-                        }(static_tissue_ptr) <<
-                    "</td>\n"
+            "   <td align=\"center\" valign=\"top\">" << num_synapses_in_all_columns(static_tissue_ptr) << "</td>\n"
             "   <td align=\"left\" valign=\"top\">A total number of synapses in all territories in the tissue.</td>\n"
             "</tr>\n"
-            "<tr></tr>\n"
-            ;
-    ostr << "<tr>\n"
+            "<tr>\n"
             "   <td align=\"right\" valign=\"top\"><i>N</i><sub>S</sub></td>\n"
-            "   <td align=\"center\" valign=\"top\">"
-                    << static_tissue_ptr->num_sensory_cells() <<
-                    "</td>\n"
+            "   <td align=\"center\" valign=\"top\">" << static_tissue_ptr->num_sensory_cells() << "</td>\n"
             "   <td align=\"left\" valign=\"top\">A total number of sensory cells.</td>\n"
             "</tr>\n"
-            "<tr></tr>\n"
-            ;
-    ostr << "<tr>\n"
+            "<tr>\n"
             "   <td align=\"right\" valign=\"top\"><i>N</i><sub>M</sub></td>\n"
-            "   <td align=\"center\" valign=\"top\">"
-                    << static_tissue_ptr->num_synapses_to_muscles() <<
-                    "</td>\n"
+            "   <td align=\"center\" valign=\"top\">" << static_tissue_ptr->num_synapses_to_muscles() << "</td>\n"
             "   <td align=\"left\" valign=\"top\">A total number of synapses to muscles.</td>\n"
             "</tr>\n"
-            "<tr></tr>\n"
+            "<tr><td></td><td></td><td></td></tr>   <tr><td></td><td></td><td></td></tr>\n"
+            "<tr>\n"
+            "   <td align=\"right\" valign=\"top\"><i>M</i><sub>X</sub></td>\n"
+            "   <td align=\"center\" valign=\"top\">" << std::boolalpha <<
+                    static_tissue_ptr->is_x_axis_torus_axis() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">Is X axis of the tissue in torus mode?</td>\n"
+            "</tr>\n"
+            "<tr>\n"
+            "   <td align=\"right\" valign=\"top\"><i>M</i><sub>Y</sub></td>\n"
+            "   <td align=\"center\" valign=\"top\">" << std::boolalpha <<
+                    static_tissue_ptr->is_y_axis_torus_axis() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">Is Y axis of the tissue in torus mode?</td>\n"
+            "</tr>\n"
+            "<tr>\n"
+            "   <td align=\"right\" valign=\"top\"><i>M</i><sub>C</sub></td>\n"
+            "   <td align=\"center\" valign=\"top\">" << std::boolalpha <<
+                    static_tissue_ptr->is_columnar_axis_torus_axis() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">Is columnar axis C of the tissue in torus mode?</td>\n"
+            "</tr>\n"
             ;
-//    <tr><td align="right" valign="top">
-//    <i>M</i><sub>X</sub>
-//    </td><td></td><td align="left" valign="top">
-//    A mode map (either clip or torus) for X axis of the tissue.
-//    </td></tr>
-//    <tr><td align="right" valign="top">
-//    <i>M</i><sub>Y</sub>
-//    </td><td></td><td align="left" valign="top">
-//    A mode map (either clip or torus) for Y axis of the tissue.
-//    </td></tr>
-//    <tr><td align="right" valign="top">
-//    <i>M</i><sub>C</sub>
-//    </td><td></td><td align="left" valign="top">
-//    A mode map (either clip or torus) for the columnar axis C of the tissue.
-//    </td></tr>
-//    <tr><td align="right" valign="top">
-//    <i>RC</i><sub>X</sub>
-//    </td><td></td><td align="left" valign="top">
-//    Arrays of <i>K</i> radii for tissue cells in X axis of the tissue.
-//    </td></tr>
-//    <tr><td align="right" valign="top">
-//    <i>RC</i><sub>Y</sub>
-//    </td><td></td><td align="left" valign="top">
-//    Arrays of <i>K</i> radii for tissue cells in Y axis of the tissue.
-//    </td></tr>
-//    <tr><td align="right" valign="top">
-//    <i>RC</i><sub>C</sub>
-//    </td><td></td><td align="left" valign="top">
-//    Arrays of <i>K</i> radii for tissue cells in the columnar C axis of the tissue.
-//    </td></tr>
-//    <tr><td align="right" valign="top">
-//    <i>RS</i><sub>X</sub>
-//    </td><td></td><td align="left" valign="top">
-//    Arrays of <i>K</i> radii for signallings in X axis of the tissue.
-//    </td></tr>
-//    <tr><td align="right" valign="top">
-//    <i>RS</i><sub>Y</sub>
-//    </td><td></td><td align="left" valign="top">
-//    Arrays of <i>K</i> radii for signallings in Y axis of the tissue.
-//    </td></tr>
-//    <tr><td align="right" valign="top">
-//    <i>RS</i><sub>C</sub>
-//    </td><td></td><td align="left" valign="top">
-//    Arrays of <i>K</i> radii for signallings in the columnar C axis of the tissue.
-//    </td></tr>
-//    <tr><td align="right" valign="top">
-//    <i>RT</i><sub>X</sub>
-//    </td><td></td><td align="left" valign="top">
-//    Arrays of <i>K</i> radii for triples over territorial lists <i>LS</i>, <i>LT</i>,
-//    and <i>LC</i> (see the lists
-//    <a href="./cellab.html#territorial_lists">here</a>)
-//    in X axis of the tissue.
-//    </td></tr>
-//    <tr><td align="right" valign="top">
-//    <i>RT</i><sub>Y</sub>
-//    </td><td></td><td align="left" valign="top">
-//    Arrays of <i>K</i> radii for triples over territorial lists <i>LS</i>, <i>LT</i>,
-//    and <i>LC</i> (see the lists
-//    <a href="./cellab.html#territorial_lists">here</a>)
-//    in Y axis of the tissue.
-//    </td></tr>
-//    <tr><td align="right" valign="top">
-//    <i>RT</i><sub>C</sub>
-//    </td><td></td><td align="left" valign="top">
-//    Arrays of <i>K</i> radii for triples over territorial lists <i>LS</i>, <i>LT</i>,
-//    and <i>LC</i> (see the lists
-//    <a href="./cellab.html#territorial_lists">here</a>)
-//    in the columnar C axis of the tissue.
-//    </td></tr>
-//    <tr><td align="right" valign="top">
-//    <i>NB</i><sub>C</sub>
-//    </td><td></td><td align="left" valign="top">
-//    A number of bits reserved for a tissue cell. The number must be aligned to 8 bits
-//    (i.e. a multiple of 8).
-//    </td></tr>
-//    <tr><td align="right" valign="top">
-//    <i>NB</i><sub>S</sub>
-//    </td><td></td><td align="left" valign="top">
-//    A number of bits reserved for a synapse. The number must be aligned to 8 bits
-//    (i.e. a multiple of 8).
-//    </td></tr>
-//    <tr><td align="right" valign="top">
-//    <i>NB</i><sub>G</sub>
-//    </td><td></td><td align="left" valign="top">
-//    A number of bits reserved for a signalling. The number must be aligned to 8 bits
-//    (i.e. a multiple of 8).
-//    </td></tr>
-
-
-
-    ostr << "</table>\n"
+    ostr << "<tr><td></td><td></td><td></td></tr>   <tr><td></td><td></td><td></td></tr>\n";
+    for (kind_of_cell  i = 0U; i < static_tissue_ptr->num_kinds_of_tissue_cells(); ++i)
+    {
+        ostr << "<tr>\n"
+                "   <td align=\"right\" valign=\"top\"><i>RC</i><sub>X</sub>[" << i << "]</td>\n"
+                "   <td align=\"center\" valign=\"top\">"
+                        << (natural_32_bit)static_tissue_ptr->get_x_radius_of_signalling_neighbourhood_of_cell(i) <<
+                        "</td>\n"
+                "   <td align=\"left\" valign=\"top\">Radius in X-axis of signalling neighbourhood "
+                        "of a tissue cell of kind " << i << ".</td>\n"
+                "</tr>\n"
+                ;
+    }
+    ostr << "<tr><td></td><td></td><td></td></tr>   <tr><td></td><td></td><td></td></tr>\n";
+    for (kind_of_cell  i = 0U; i < static_tissue_ptr->num_kinds_of_tissue_cells(); ++i)
+    {
+        ostr << "<tr>\n"
+                "   <td align=\"right\" valign=\"top\"><i>RC</i><sub>Y</sub>[" << i << "]</td>\n"
+                "   <td align=\"center\" valign=\"top\">"
+                        << (natural_32_bit)static_tissue_ptr->get_y_radius_of_signalling_neighbourhood_of_cell(i) <<
+                        "</td>\n"
+                "   <td align=\"left\" valign=\"top\">Radius in Y-axis of signalling neighbourhood "
+                        "of a tissue cell of kind " << i << ".</td>\n"
+                "</tr>\n"
+                ;
+    }
+    ostr << "<tr><td></td><td></td><td></td></tr>   <tr><td></td><td></td><td></td></tr>\n";
+    for (kind_of_cell  i = 0U; i < static_tissue_ptr->num_kinds_of_tissue_cells(); ++i)
+    {
+        ostr << "<tr>\n"
+                "   <td align=\"right\" valign=\"top\"><i>RC</i><sub>C</sub>[" << i << "]</td>\n"
+                "   <td align=\"center\" valign=\"top\">"
+                        << (natural_32_bit)static_tissue_ptr->get_columnar_radius_of_signalling_neighbourhood_of_cell(i) <<
+                        "</td>\n"
+                "   <td align=\"left\" valign=\"top\">Radius in C-axis of signalling neighbourhood "
+                        "of a tissue cell of kind " << i << ".</td>\n"
+                "</tr>\n"
+                ;
+    }
+    ostr << "<tr><td></td><td></td><td></td></tr>   <tr><td></td><td></td><td></td></tr>\n";
+    for (kind_of_cell  i = 0U; i < static_tissue_ptr->num_kinds_of_tissue_cells(); ++i)
+    {
+        ostr << "<tr>\n"
+                "   <td align=\"right\" valign=\"top\"><i>RS</i><sub>X</sub>[" << i << "]</td>\n"
+                "   <td align=\"center\" valign=\"top\">"
+                        << (natural_32_bit)static_tissue_ptr->get_x_radius_of_signalling_neighbourhood_of_synapse(i) <<
+                        "</td>\n"
+                "   <td align=\"left\" valign=\"top\">Radius in X-axis of signalling neighbourhood "
+                        "of a synapse in territory of kind " << i << ".</td>\n"
+                "</tr>\n"
+                ;
+    }
+    ostr << "<tr><td></td><td></td><td></td></tr>   <tr><td></td><td></td><td></td></tr>\n";
+    for (kind_of_cell  i = 0U; i < static_tissue_ptr->num_kinds_of_tissue_cells(); ++i)
+    {
+        ostr << "<tr>\n"
+                "   <td align=\"right\" valign=\"top\"><i>RS</i><sub>Y</sub>[" << i << "]</td>\n"
+                "   <td align=\"center\" valign=\"top\">"
+                        << (natural_32_bit)static_tissue_ptr->get_y_radius_of_signalling_neighbourhood_of_synapse(i) <<
+                        "</td>\n"
+                "   <td align=\"left\" valign=\"top\">Radius in Y-axis of signalling neighbourhood "
+                        "of a synapse in territory of kind " << i << ".</td>\n"
+                "</tr>\n"
+                ;
+    }
+    ostr << "<tr><td></td><td></td><td></td></tr>   <tr><td></td><td></td><td></td></tr>\n";
+    for (kind_of_cell  i = 0U; i < static_tissue_ptr->num_kinds_of_tissue_cells(); ++i)
+    {
+        ostr << "<tr>\n"
+                "   <td align=\"right\" valign=\"top\"><i>RS</i><sub>C</sub>[" << i << "]</td>\n"
+                "   <td align=\"center\" valign=\"top\">"
+                        << (natural_32_bit)static_tissue_ptr->get_columnar_radius_of_signalling_neighbourhood_of_synapse(i)
+                        << "</td>\n"
+                "   <td align=\"left\" valign=\"top\">Radius in C-axis of signalling neighbourhood "
+                        "of a synapse in territory of kind " << i << ".</td>\n"
+                "</tr>\n"
+                ;
+    }
+    ostr << "<tr><td></td><td></td><td></td></tr>   <tr><td></td><td></td><td></td></tr>\n";
+    for (kind_of_cell  i = 0U; i < static_tissue_ptr->num_kinds_of_tissue_cells(); ++i)
+    {
+        ostr << "<tr>\n"
+                "   <td align=\"right\" valign=\"top\"><i>RT</i><sub>X</sub>[" << i << "]</td>\n"
+                "   <td align=\"center\" valign=\"top\">"
+                        << (natural_32_bit)static_tissue_ptr->get_x_radius_of_cellular_neighbourhood_of_signalling(i) <<
+                        "</td>\n"
+                "   <td align=\"left\" valign=\"top\">Radius in X-axis of cellular neighbourhood "
+                        "of a signalling in territory of kind " << i << ".</td>\n"
+                "</tr>\n"
+                ;
+    }
+    ostr << "<tr><td></td><td></td><td></td></tr>   <tr><td></td><td></td><td></td></tr>\n";
+    for (kind_of_cell  i = 0U; i < static_tissue_ptr->num_kinds_of_tissue_cells(); ++i)
+    {
+        ostr << "<tr>\n"
+                "   <td align=\"right\" valign=\"top\"><i>RT</i><sub>Y</sub>[" << i << "]</td>\n"
+                "   <td align=\"center\" valign=\"top\">"
+                        << (natural_32_bit)static_tissue_ptr->get_y_radius_of_cellular_neighbourhood_of_signalling(i) <<
+                        "</td>\n"
+                "   <td align=\"left\" valign=\"top\">Radius in Y-axis of cellular neighbourhood "
+                        "of a signalling in territory of kind " << i << ".</td>\n"
+                "</tr>\n"
+                ;
+    }
+    ostr << "<tr><td></td><td></td><td></td></tr>   <tr><td></td><td></td><td></td></tr>\n";
+    for (kind_of_cell  i = 0U; i < static_tissue_ptr->num_kinds_of_tissue_cells(); ++i)
+    {
+        ostr << "<tr>\n"
+                "   <td align=\"right\" valign=\"top\"><i>RT</i><sub>C</sub>[" << i << "]</td>\n"
+                "   <td align=\"center\" valign=\"top\">"
+                        << (natural_32_bit)static_tissue_ptr->get_columnar_radius_of_cellular_neighbourhood_of_signalling(i)
+                        << "</td>\n"
+                "   <td align=\"left\" valign=\"top\">Radius in C-axis of cellular neighbourhood "
+                        "of a signalling in territory of kind " << i << ".</td>\n"
+                "</tr>\n"
+                ;
+    }
+    ostr << "<tr><td></td><td></td><td></td></tr>   <tr><td></td><td></td><td></td></tr>\n"
+            "<tr>\n"
+            "   <td align=\"right\" valign=\"top\"><i>NB</i><sub>C</sub></td>\n"
+            "   <td align=\"center\" valign=\"top\">" << static_tissue_ptr->num_bits_per_cell() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">A number of bits reserved for a tissue cell.</td>\n"
+            "</tr>\n"
+            "<tr>\n"
+            "   <td align=\"right\" valign=\"top\"><i>NB</i><sub>S</sub></td>\n"
+            "   <td align=\"center\" valign=\"top\">" << static_tissue_ptr->num_bits_per_synapse() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">A number of bits reserved for a synapse.</td>\n"
+            "</tr>\n"
+            "<tr>\n"
+            "   <td align=\"right\" valign=\"top\"><i>NB</i><sub>G</sub></td>\n"
+            "   <td align=\"center\" valign=\"top\">" << static_tissue_ptr->num_bits_per_signalling() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">A number of bits reserved for a signalling.</td>\n"
+            "</tr>\n"
+            "</table>\n"
             "</body>\n"
             "</html>\n"
             ;

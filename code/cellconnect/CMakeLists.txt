@@ -17,6 +17,9 @@ add_library(${THIS_TARGET_NAME}
     ./src/check_for_network_properties.cpp
     ./src/compute_in_degrees.cpp
     ./src/compute_out_degrees.cpp
+
+    ./include/cellconnect/dump.hpp
+    ./src/dump.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
