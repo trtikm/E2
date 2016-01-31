@@ -132,8 +132,8 @@ void thread_compute_in_degrees_of_tissue_cells_of_given_kind(
             {
                 std::lock_guard<std::mutex>  lock(mutex_to_output);
 
-                auto const  it = target_map.find(in_degree);
-                if (it == target_map.cend())
+                std::unordered_map<natural_32_bit,natural_64_bit>::iterator const  it = target_map.find(in_degree);
+                if (it == target_map.end())
                     target_map.insert({in_degree,1ULL});
                 else
                     ++it->second;

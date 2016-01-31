@@ -755,7 +755,7 @@ void run()
             tissue_props;
     for (tissue_props props :
          std::vector<tissue_props>{
-                tissue_props{ 10U, 10U, 3U, 3U, false, false, 3U, 3U, 4U, 4U, 3U, 3U, true, 3U, 3U, 8U },
+                tissue_props{ 10U, 10U, 3U, 3U, false, false, 3U, 3U, 4U, 4U, 3U, 3U, true, 3U, 3U, 1U },
 //                tissue_props{ 50U, 50U, 6U, 6U, false, false, 5U, 5U, 10U, 10U, 5U, 5U, true, 1U, 1U, 1U },
 //                tissue_props{ 75U, 50U, 6U, 7U, false, true, 7U, 5U, 10U, 10U, 7U, 5U, false, 5U, 3U, 8U },
 //                tissue_props{ 50U, 100U, 8U, 10U, true, false, 5U, 10U, 10U, 10U, 5U, 9U, true, 5U, 10U, 16U },
@@ -942,6 +942,12 @@ void run()
                 TEST_PROGRESS_UPDATE();
             }
 
+        std::unordered_map<natural_32_bit,natural_64_bit> correct_summary_distribution;
+        natural_64_bit  num_cells_without_input = 0ULL;
+        natural_64_bit  num_connected_synapses = 0ULL;
+        natural_64_bit  num_not_connected_synapses = 0ULL;
+        natural_64_bit  num_connected_input_synapses = 0ULL;
+
         for (natural_32_bit x = 0U; x < static_tissue->num_cells_along_x_axis(); ++x)
             for (natural_32_bit y = 0U; y < static_tissue->num_cells_along_y_axis(); ++y)
                 for (natural_32_bit c = 0U; c < static_tissue->num_cells_along_columnar_axis(); ++c)
@@ -950,6 +956,8 @@ void run()
                             static_tissue->num_synapses_in_territory_of_cell_kind(
                                     static_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(c)
                                     );
+
+                    natural_32_bit  num_connected_to_current_cell = 0U;
                     for (natural_32_bit s = 0U; s < num_synapses; ++s)
                     {
                         cellab::territorial_state_of_synapse  territorial_state;
@@ -970,7 +978,36 @@ void run()
                                 dynamic_tissue->find_bits_of_territorial_state_of_synapse_in_tissue(x,y,c,s);
 
                         value_to_bits(territorial_state,ref_to_territorial_state);
+
+                        if (territorial_state == cellab::SIGNAL_DELIVERY_TO_CELL_OF_TERRITORY)
+                        {
+                            ++num_connected_to_current_cell;
+                            ++num_connected_synapses;
+
+                            cellab::tissue_coordinates const  source_coords =
+                                    cellab::get_coordinates_of_source_cell_of_synapse_in_tissue(
+                                            dynamic_tissue,
+                                            cellab::tissue_coordinates{x,y,c},
+                                            s
+                                            );
+                            if (source_coords.get_coord_along_columnar_axis() >= static_tissue->num_cells_along_columnar_axis())
+                                ++num_connected_input_synapses;
+
+                        }
+                        else
+                            ++num_not_connected_synapses;
+
                     }
+
+                    if (num_connected_to_current_cell == 0U)
+                        ++num_cells_without_input;
+
+                    std::unordered_map<natural_32_bit,natural_64_bit>::iterator const  it =
+                            correct_summary_distribution.find(num_connected_to_current_cell);
+                    if (it == correct_summary_distribution.end())
+                        correct_summary_distribution.insert({num_connected_to_current_cell,1ULL});
+                    else
+                        ++it->second;
 
                     TEST_PROGRESS_UPDATE();
                 }
@@ -1026,6 +1063,26 @@ void run()
 
         cellconnect::add_degree_distributions(summary_distribution_matrix,summary_distribution);
 
+        TEST_SUCCESS(
+            (summary_distribution.count(0U) == 0ULL && num_cells_without_input == 0ULL) ||
+            summary_distribution.find(0U)->second == num_cells_without_input
+            );
+        TEST_SUCCESS(correct_summary_distribution.size() == summary_distribution.size());
+        natural_64_bit  num_cells = 0ULL;
+        natural_64_bit  num_in_synapses = 0ULL;
+        for (auto const& elem : correct_summary_distribution)
+        {
+            auto const  it = summary_distribution.find(elem.first);
+            TEST_SUCCESS(elem == *it);
+            num_cells += it->second;
+            num_in_synapses += (natural_64_bit)it->first * it->second;
+
+        }
+        TEST_SUCCESS(num_cells == cellab::num_tissue_cells_in_tissue(static_tissue));
+        TEST_SUCCESS(num_in_synapses == num_connected_synapses);
+        TEST_SUCCESS(num_connected_synapses + num_not_connected_synapses ==
+                     cellab::num_synapses_in_all_columns(static_tissue));
+
         dump_distribution(
                     summary_distribution,
                     test_counter,
@@ -1068,6 +1125,20 @@ void run()
                     );
 
         cellconnect::add_degree_distributions(summary_distribution_matrix,summary_distribution);
+
+        num_cells = 0ULL;
+        natural_64_bit  num_out_synapses = 0ULL;
+        for (auto const& elem : summary_distribution)
+        {
+            auto const  it = summary_distribution.find(elem.first);
+            num_cells += it->second;
+            num_out_synapses += (natural_64_bit)it->first * it->second;
+
+        }
+        TEST_SUCCESS(num_cells == cellab::num_tissue_cells_in_tissue(static_tissue));
+        TEST_SUCCESS(num_out_synapses == num_connected_synapses - num_connected_input_synapses);
+        TEST_SUCCESS(num_connected_synapses + num_not_connected_synapses ==
+                     cellab::num_synapses_in_all_columns(static_tissue));
 
         dump_distribution(
                     summary_distribution,

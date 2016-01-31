@@ -113,7 +113,8 @@ void  thread_compute_counters_inside_memory_of_delimiters(
         natural_32_bit  y_coord,
         natural_32_bit const  extent_in_coordinates,
         cellab::kind_of_cell const  kind_of_cells_to_be_considered,
-        cellab::territorial_state_of_synapse const  territorial_state_to_be_considered
+        cellab::territorial_state_of_synapse const  territorial_state_to_be_considered,
+        std::mutex&  mutex_to_counters
         )
 {
     TMPROF_BLOCK();
@@ -166,7 +167,10 @@ void  thread_compute_counters_inside_memory_of_delimiters(
                                     source_coords.get_coord_along_columnar_axis()
                                     );
 
-                    ++*counter_ptr;
+                    {
+                        std::lock_guard<std::mutex>  lock(mutex_to_counters);
+                        ++*counter_ptr;
+                    }
                 }
             }
     }
@@ -188,6 +192,7 @@ void  compute_counters_inside_memory_of_delimiters(
 {
     TMPROF_BLOCK();
 
+    std::mutex  mutex_to_counters;
     std::vector<std::thread> threads;
     for (natural_32_bit i = 1U; i < num_threads_avalilable_for_computation; ++i)
     {
@@ -209,7 +214,8 @@ void  compute_counters_inside_memory_of_delimiters(
                         x_coord,y_coord,
                         num_threads_avalilable_for_computation,
                         kind_of_cells_to_be_considered,
-                        territorial_state_to_be_considered
+                        territorial_state_to_be_considered,
+                        std::ref(mutex_to_counters)
                         )
                     );
     }
@@ -220,7 +226,8 @@ void  compute_counters_inside_memory_of_delimiters(
             0U,0U,
             num_threads_avalilable_for_computation,
             kind_of_cells_to_be_considered,
-            territorial_state_to_be_considered
+            territorial_state_to_be_considered,
+            mutex_to_counters
             );
 
     for(std::thread& thread : threads)
@@ -271,8 +278,8 @@ void thread_build_output_based_on_counters_inside_memory_of_delimiters(
             {
                 std::lock_guard<std::mutex>  lock(mutex_to_output);
 
-                auto const  it = target_map.find(out_degree);
-                if (it == target_map.cend())
+                std::unordered_map<natural_32_bit,natural_64_bit>::iterator const  it = target_map.find(out_degree);
+                if (it == target_map.end())
                     target_map.insert({out_degree,1ULL});
                 else
                     ++it->second;
