@@ -755,11 +755,11 @@ void run()
             tissue_props;
     for (tissue_props props :
          std::vector<tissue_props>{
-                tissue_props{ 10U, 10U, 3U, 3U, false, false, 3U, 3U, 4U, 4U, 3U, 3U, true, 3U, 3U, 1U },
-//                tissue_props{ 50U, 50U, 6U, 6U, false, false, 5U, 5U, 10U, 10U, 5U, 5U, true, 1U, 1U, 1U },
-//                tissue_props{ 75U, 50U, 6U, 7U, false, true, 7U, 5U, 10U, 10U, 7U, 5U, false, 5U, 3U, 8U },
-//                tissue_props{ 50U, 100U, 8U, 10U, true, false, 5U, 10U, 10U, 10U, 5U, 9U, true, 5U, 10U, 16U },
-//                tissue_props{ 100U, 75U, 10U, 15U, true, true, 10U, 7U, 10U, 10U, 9U, 7U, false, 20U, 8U, 32U },
+                tissue_props{ 10U, 10U, 3U, 3U, true, true, 3U, 3U, 4U, 4U, 3U, 3U, true, 3U, 3U, 4U },
+                tissue_props{ 50U, 50U, 6U, 6U, false, false, 5U, 5U, 10U, 10U, 5U, 5U, true, 1U, 1U, 8U },
+                tissue_props{ 75U, 50U, 6U, 7U, false, true, 7U, 5U, 10U, 10U, 7U, 5U, false, 5U, 3U, 8U },
+                tissue_props{ 50U, 100U, 8U, 10U, true, false, 5U, 10U, 10U, 10U, 5U, 9U, true, 5U, 10U, 16U },
+                tissue_props{ 100U, 75U, 10U, 15U, true, true, 10U, 7U, 10U, 10U, 9U, 7U, false, 20U, 8U, 32U },
                 })
     {
         natural_16_bit const  largest_template_dim_x = std::get<6>(props);
@@ -824,8 +824,16 @@ void run()
 
         std::rotate(coefs.begin(), coefs.begin() + 1, coefs.end());
 
-        natural_16_bit const synapses_to_muscles_kinds = sensory_cell_kinds;
-        std::vector<natural_32_bit> const num_synapses_to_muscles_of_synapse_kind(synapses_to_muscles_kinds,10U);
+        natural_16_bit const synapses_to_muscles_kinds = 2U * sensory_cell_kinds;
+        std::vector<natural_32_bit>  num_synapses_to_muscles_of_synapse_kind;
+        for (natural_16_bit i = 0U; i < synapses_to_muscles_kinds; ++i)
+        {
+            natural_32_bit const coef = coefs.at((i + 2U) % coefs.size()) +
+                                        coefs.at((i + 4U) % coefs.size());
+            num_synapses_to_muscles_of_synapse_kind.push_back(2U + coef);
+        }
+
+        std::rotate(coefs.begin(), coefs.begin() + 1, coefs.end());
 
         std::vector<integer_8_bit> const x_radius_of_signalling_neighbourhood_of_cell(tissue_cell_kinds,1U);
         std::vector<integer_8_bit> const y_radius_of_signalling_neighbourhood_of_cell(tissue_cell_kinds,1U);
@@ -957,6 +965,7 @@ void run()
                                     static_tissue->compute_kind_of_cell_from_its_position_along_columnar_axis(c)
                                     );
 
+                    natural_32_bit  force_signal_delivery_counter = 0U;
                     natural_32_bit  num_connected_to_current_cell = 0U;
                     for (natural_32_bit s = 0U; s < num_synapses; ++s)
                     {
@@ -973,6 +982,10 @@ void run()
                         default:
                             UNREACHABLE();
                         }
+
+                        if (force_signal_delivery_counter == 0U)
+                            territorial_state = cellab::SIGNAL_DELIVERY_TO_CELL_OF_TERRITORY;
+                        force_signal_delivery_counter = (force_signal_delivery_counter + 1U) % 2U;
 
                         bits_reference const  ref_to_territorial_state =
                                 dynamic_tissue->find_bits_of_territorial_state_of_synapse_in_tissue(x,y,c,s);
@@ -1012,6 +1025,22 @@ void run()
                     TEST_PROGRESS_UPDATE();
                 }
 
+        for (natural_32_bit  i = 0U; i < static_tissue->num_synapses_to_muscles(); ++i)
+        {
+            bits_reference  bits_of_coords =
+                    dynamic_tissue->find_bits_of_coords_of_source_cell_of_synapse_to_muscle(i);
+            natural_8_bit const  num_bits = dynamic_tissue->num_bits_per_source_cell_coordinate();
+            value_to_bits(
+                    get_random_natural_32_bit_in_range(0U, static_tissue->num_cells_along_x_axis() - 1U),
+                    bits_of_coords, 0U, num_bits);
+            value_to_bits(
+                    get_random_natural_32_bit_in_range(0U, static_tissue->num_cells_along_y_axis() - 1U),
+                    bits_of_coords, num_bits, num_bits);
+            value_to_bits(
+                    get_random_natural_32_bit_in_range(0U, static_tissue->num_cells_along_columnar_axis() - 1U),
+                    bits_of_coords, num_bits + num_bits, num_bits);
+        }
+
         // We currently do not use delimiters lists in this test. It thus means
         // that we always call 'compute_in_degrees_of_tissue_cells_of_given_kind'
         // with 'ignore_delimiters_lists_and_check_territorial_states_of_all_synapses == true'.
@@ -1034,6 +1063,7 @@ void run()
                         dynamic_tissue,
                         i,
                         true,
+                        false,
                         num_rows_in_distribution_matrix,
                         num_columns_in_distribution_matrix,
                         num_threads,
@@ -1097,6 +1127,7 @@ void run()
             cellconnect::compute_out_degrees_of_tissue_cells_of_given_kind(
                         dynamic_tissue,
                         i,
+                        false,
                         num_rows_in_distribution_matrix,
                         num_columns_in_distribution_matrix,
                         num_threads,
@@ -1136,7 +1167,8 @@ void run()
 
         }
         TEST_SUCCESS(num_cells == cellab::num_tissue_cells_in_tissue(static_tissue));
-        TEST_SUCCESS(num_out_synapses == num_connected_synapses - num_connected_input_synapses);
+        TEST_SUCCESS(num_out_synapses == num_connected_synapses - num_connected_input_synapses +
+                                         static_tissue->num_synapses_to_muscles());
         TEST_SUCCESS(num_connected_synapses + num_not_connected_synapses ==
                      cellab::num_synapses_in_all_columns(static_tissue));
 

@@ -46,7 +46,8 @@ std::ostream&  dump_degrees_distribution_to_gnuplot_plot(
         output_stream << "set output '" << output_file_path_name_inside_the_script << "'\n";
 
     output_stream << "set style fill pattern " << (natural_32_bit)fill_pattern_type << " border\n"
-                  << "set boxwidth " << boxwidth_scale << " absolute\n";
+                     "set boxwidth " << boxwidth_scale << " absolute\n"
+                     ;
 
     if (show_grid)
         output_stream << "set grid\n";

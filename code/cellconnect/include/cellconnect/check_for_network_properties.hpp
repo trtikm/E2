@@ -16,6 +16,7 @@ void  compute_in_degrees_of_tissue_cells_of_given_kind(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         cellab::kind_of_cell const  kind_of_cells_to_be_considered,
         bool const  ignore_delimiters_lists_and_check_territorial_states_of_all_synapses,
+        bool const  ignore_inputs_from_sensory_cells,
         natural_32_bit const  num_rows_in_output_distribution_matrix,
         natural_32_bit const  num_columns_in_output_distribution_matrix,
         natural_32_bit const  num_threads_avalilable_for_computation,
@@ -30,6 +31,7 @@ void  compute_in_degrees_of_tissue_cells_of_given_kind(
 void  compute_out_degrees_of_tissue_cells_of_given_kind(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         cellab::kind_of_cell const  kind_of_cells_to_be_considered,
+        bool const  ignore_outputs_to_muscles,
         natural_32_bit const  num_rows_in_output_distribution_matrix,
         natural_32_bit const  num_columns_in_output_distribution_matrix,
         natural_32_bit const  num_threads_avalilable_for_computation,

@@ -232,8 +232,99 @@ void  compute_counters_inside_memory_of_delimiters(
 
     for(std::thread& thread : threads)
         thread.join();
-
 }
+
+
+void  thread_extend_counters_by_outputs_to_muscles(
+        std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const  static_state_ptr,
+        cellab::kind_of_cell const  kind_of_cells_to_be_considered,
+        cellab::territorial_state_of_synapse const  territorial_state_to_be_considered,
+        natural_32_bit index,
+        natural_32_bit const extent_of_index,
+        std::mutex&  mutex_to_counters
+        )
+{
+    natural_32_bit const  begin_columnar_coord =
+        static_state_ptr->compute_columnar_coord_of_first_tissue_cell_of_kind(kind_of_cells_to_be_considered);
+    natural_32_bit const  end_columnar_coord =
+        begin_columnar_coord + static_state_ptr->num_tissue_cells_of_cell_kind(kind_of_cells_to_be_considered);
+
+    do
+    {
+        cellab::tissue_coordinates const source_coords(
+                cellab::get_coordinates_of_source_cell_of_synapse_to_muscle(
+                        dynamic_state_ptr,
+                        index
+                        )
+                );
+
+        if (source_coords.get_coord_along_columnar_axis() < begin_columnar_coord ||
+            source_coords.get_coord_along_columnar_axis() >= end_columnar_coord)
+            continue;
+
+        natural_32_bit* const  counter_ptr =
+                find_counter_of_cell_at_coordinates(
+                        dynamic_state_ptr,
+                        source_coords.get_coord_along_x_axis(),
+                        source_coords.get_coord_along_y_axis(),
+                        source_coords.get_coord_along_columnar_axis()
+                        );
+
+        {
+            std::lock_guard<std::mutex>  lock(mutex_to_counters);
+            ++*counter_ptr;
+        }
+
+    } while (cellab::go_to_next_index(index, extent_of_index, static_state_ptr->num_synapses_to_muscles()));
+}
+
+void  extend_counters_by_outputs_to_muscles(
+        std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const  static_state_ptr,
+        cellab::kind_of_cell const  kind_of_cells_to_be_considered,
+        cellab::territorial_state_of_synapse const  territorial_state_to_be_considered,
+        natural_32_bit const  num_threads_avalilable_for_computation
+        )
+{
+    TMPROF_BLOCK();
+
+    std::mutex  mutex_to_counters;
+    std::vector<std::thread> threads;
+    for (natural_32_bit i = 1U; i < num_threads_avalilable_for_computation; ++i)
+    {
+        natural_32_bit index = 0U;
+        if (!cellab::go_to_next_index(index, i, static_state_ptr->num_synapses_to_muscles()))
+            break;
+
+        threads.push_back(
+            std::thread(
+                &cellconnect::thread_extend_counters_by_outputs_to_muscles,
+                dynamic_state_ptr,
+                static_state_ptr,
+                kind_of_cells_to_be_considered,
+                territorial_state_to_be_considered,
+                index,
+                num_threads_avalilable_for_computation,
+                std::ref(mutex_to_counters)
+                )
+            );
+    }
+
+    cellconnect::thread_extend_counters_by_outputs_to_muscles(
+        dynamic_state_ptr,
+        static_state_ptr,
+        kind_of_cells_to_be_considered,
+        territorial_state_to_be_considered,
+        0U,
+        num_threads_avalilable_for_computation,
+        mutex_to_counters
+        );
+
+    for (std::thread& thread : threads)
+        thread.join();
+}
+
 
 void thread_build_output_based_on_counters_inside_memory_of_delimiters(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
@@ -366,6 +457,7 @@ namespace cellconnect {
 void  compute_out_degrees_of_tissue_cells_of_given_kind(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         cellab::kind_of_cell const  kind_of_cells_to_be_considered,
+        bool const  ignore_outputs_to_muscles,
         natural_32_bit const  num_rows_in_output_distribution_matrix,
         natural_32_bit const  num_columns_in_output_distribution_matrix,
         natural_32_bit const  num_threads_avalilable_for_computation,
@@ -407,6 +499,15 @@ void  compute_out_degrees_of_tissue_cells_of_given_kind(
                 );
 
     compute_counters_inside_memory_of_delimiters(
+                dynamic_state_ptr,
+                static_state_ptr,
+                kind_of_cells_to_be_considered,
+                territorial_state_to_be_considered,
+                num_threads_avalilable_for_computation
+                );
+
+    if (!ignore_outputs_to_muscles)
+        extend_counters_by_outputs_to_muscles(
                 dynamic_state_ptr,
                 static_state_ptr,
                 kind_of_cells_to_be_considered,

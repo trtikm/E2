@@ -17,6 +17,7 @@ natural_32_bit  thread_compute_in_degree_of_tissue_cell_using_territorial_states
         natural_32_bit  x_coord,
         natural_32_bit  y_coord,
         natural_32_bit  c_coord,
+        bool const  ignore_inputs_from_sensory_cells,
         cellab::territorial_state_of_synapse const  territorial_state_to_be_considered
         )
 {
@@ -36,7 +37,22 @@ natural_32_bit  thread_compute_in_degree_of_tissue_cell_using_territorial_states
                 bits_to_value<natural_32_bit>(bits_of_territorial_state_of_synapse);
         INVARIANT( territorial_state_of_synapse < 7U );
         if (territorial_state_of_synapse == territorial_state_to_be_considered)
-            ++in_degree;
+        {
+            bool  count_it = true;
+            if (ignore_inputs_from_sensory_cells)
+            {
+                cellab::tissue_coordinates const  source_coords =
+                        cellab::get_coordinates_of_source_cell_of_synapse_in_tissue(
+                                dynamic_state_ptr,
+                                cellab::tissue_coordinates{ x_coord, y_coord, c_coord },
+                                synapse_index
+                                );
+                if (source_coords.get_coord_along_columnar_axis() >= static_state_ptr->num_cells_along_columnar_axis())
+                    count_it = false;
+            }
+            if (count_it)
+                ++in_degree;
+        }
     }
 
     return in_degree;
@@ -48,6 +64,7 @@ natural_32_bit  thread_compute_in_degree_of_tissue_cell_using_delimiters_lists(
         natural_32_bit  x_coord,
         natural_32_bit  y_coord,
         natural_32_bit  c_coord,
+        bool const  ignore_inputs_from_sensory_cells,
         cellab::territorial_state_of_synapse const  territorial_state_to_be_considered
         )
 {
@@ -81,6 +98,7 @@ void thread_compute_in_degrees_of_tissue_cells_of_given_kind(
         natural_32_bit const  extent_in_coordinates,
         cellab::kind_of_cell const  kind_of_cells_to_be_considered,
         bool const  ignore_delimiters_lists_and_check_territorial_states_of_all_synapses,
+        bool const  ignore_inputs_from_sensory_cells,
         natural_32_bit const  num_rows_in_output_distribution_matrix,
         natural_32_bit const  num_columns_in_output_distribution_matrix,
         cellab::territorial_state_of_synapse const  territorial_state_to_be_considered,
@@ -105,6 +123,7 @@ void thread_compute_in_degrees_of_tissue_cells_of_given_kind(
                             x_coord,
                             y_coord,
                             start_columnar_coord + i,
+                            ignore_inputs_from_sensory_cells,
                             territorial_state_to_be_considered
                             ) :
                     thread_compute_in_degree_of_tissue_cell_using_delimiters_lists(
@@ -113,6 +132,7 @@ void thread_compute_in_degrees_of_tissue_cells_of_given_kind(
                             x_coord,
                             y_coord,
                             start_columnar_coord + i,
+                            ignore_inputs_from_sensory_cells,
                             territorial_state_to_be_considered
                             );
 
@@ -158,6 +178,7 @@ void  compute_in_degrees_of_tissue_cells_of_given_kind(
         std::shared_ptr<cellab::dynamic_state_of_neural_tissue> const  dynamic_state_ptr,
         cellab::kind_of_cell const  kind_of_cells_to_be_considered,
         bool const  ignore_delimiters_lists_and_check_territorial_states_of_all_synapses,
+        bool const  ignore_inputs_from_sensory_cells,
         natural_32_bit const  num_rows_in_output_distribution_matrix,
         natural_32_bit const  num_columns_in_output_distribution_matrix,
         natural_32_bit const  num_threads_avalilable_for_computation,
@@ -217,6 +238,7 @@ void  compute_in_degrees_of_tissue_cells_of_given_kind(
                         num_threads_avalilable_for_computation,
                         kind_of_cells_to_be_considered,
                         ignore_delimiters_lists_and_check_territorial_states_of_all_synapses,
+                        ignore_inputs_from_sensory_cells,
                         num_rows_in_output_distribution_matrix,
                         num_columns_in_output_distribution_matrix,
                         territorial_state_to_be_considered,
@@ -233,6 +255,7 @@ void  compute_in_degrees_of_tissue_cells_of_given_kind(
             num_threads_avalilable_for_computation,
             kind_of_cells_to_be_considered,
             ignore_delimiters_lists_and_check_territorial_states_of_all_synapses,
+            ignore_inputs_from_sensory_cells,
             num_rows_in_output_distribution_matrix,
             num_columns_in_output_distribution_matrix,
             territorial_state_to_be_considered,
