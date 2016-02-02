@@ -28,62 +28,58 @@
 
 
 static void build_fill_src_coords_matrix(
-        std::shared_ptr<cellab::static_state_of_neural_tissue const> const static_state_ptr,
-        std::vector<natural_32_bit>& matrix
-        )
+    std::shared_ptr<cellab::static_state_of_neural_tissue const> const  static_state_ptr,
+    std::vector<natural_32_bit>&  matrix
+    )
 {
     TMPROF_BLOCK();
 
     ASSUMPTION(static_state_ptr->num_cells_of_cell_kind(static_state_ptr->num_kinds_of_cells() - 1U) == 1U);
 
-    static std::vector<natural_32_bit>  multipliers = {
-            1, 8, 5, 3, 2, 4, 0, 9, 6, 1, 7, 3, 4, 2, 6, 5, 8, 0, 9, 7
-            };
-
     matrix.resize(
-            (natural_32_bit)static_state_ptr->num_kinds_of_tissue_cells() *
-            (natural_32_bit)static_state_ptr->num_kinds_of_cells()
-            );
+        (natural_32_bit)static_state_ptr->num_kinds_of_tissue_cells() *
+        (natural_32_bit)static_state_ptr->num_kinds_of_cells()
+        );
     INVARIANT(matrix.size() > 0U);
-    std::fill(matrix.begin(),matrix.end(),0U);
+    std::fill(matrix.begin(), matrix.end(), 0U);
 
     for (cellab::kind_of_cell i = 0U; i < static_state_ptr->num_kinds_of_tissue_cells(); ++i)
     {
-        natural_64_bit const TiNi =
-                (natural_64_bit)static_state_ptr->num_synapses_in_territory_of_cell_kind(i) *
-                (natural_64_bit)static_state_ptr->num_tissue_cells_of_cell_kind(i);
-        INVARIANT(TiNi > 0ULL);
-
         natural_32_bit const row_shift = i * (natural_32_bit)static_state_ptr->num_kinds_of_cells();
+        natural_32_bit const last_column_index = static_state_ptr->num_kinds_of_cells() - 1U;
 
-        natural_64_bit SUM = 0ULL;
-        for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
+        matrix.at(row_shift + last_column_index) = static_state_ptr->num_synapses_in_territory_of_cell_kind(i) *
+                                                   static_state_ptr->num_tissue_cells_of_cell_kind(i) ;
+
+        natural_32_bit num_skipped = 0U;
+        cellab::kind_of_cell j = 0U;
+        do
         {
-            matrix.at(row_shift + j) =  1U + (natural_32_bit)(multipliers.at((i + j) % multipliers.size()) * TiNi) /
-                                             ( (natural_64_bit)static_state_ptr->num_kinds_of_cells() *
-                                               (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j) );
-            SUM += (natural_64_bit)matrix.at(row_shift + j) * (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j);
-        }
-        INVARIANT(SUM >= static_state_ptr->num_kinds_of_cells());
-        for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
-            matrix.at(row_shift + j) = (natural_32_bit)((float_64_bit)matrix.at(row_shift + j) * (float_64_bit)TiNi / (float_64_bit)SUM);
-        SUM = 0ULL;
-        for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
-            SUM += (natural_64_bit)matrix.at(row_shift + j) * (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j);
-        for (cellab::kind_of_cell j = 0U; SUM > TiNi && j < static_state_ptr->num_kinds_of_cells(); j = (j+1) % static_state_ptr->num_kinds_of_cells())
-            if (matrix.at(row_shift + j) > 0U)
+            if (static_state_ptr->num_cells_of_cell_kind(j) <= matrix.at(row_shift + last_column_index))
             {
-                --matrix.at(row_shift + j);
-                SUM -= (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j);
+                ++matrix.at(row_shift + j);
+                matrix.at(row_shift + last_column_index) -= static_state_ptr->num_cells_of_cell_kind(j);
+                num_skipped = 0U;
             }
-        INVARIANT(SUM <= TiNi);
-        matrix.at(row_shift + static_state_ptr->num_kinds_of_cells() - 1U) += (natural_32_bit)(TiNi - SUM);
-        SUM = 0ULL;
-        for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
-            SUM += (natural_64_bit)matrix.at(row_shift + j) * (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j);
-        INVARIANT(SUM == TiNi);
+            else
+                ++num_skipped;
 
-        std::rotate(multipliers.begin(), multipliers.begin() + 1, multipliers.end());
+            ++j;
+            if (j == last_column_index)
+                j = 0U;
+        }
+        while (matrix.at(row_shift + last_column_index) > 0U && num_skipped < static_state_ptr->num_kinds_of_cells() - 1U);
+
+        INVARIANT(
+            static_state_ptr->num_synapses_in_territory_of_cell_kind(i) * static_state_ptr->num_tissue_cells_of_cell_kind(i) ==
+            [](std::shared_ptr<cellab::static_state_of_neural_tissue const> const  static_state_ptr,
+               std::vector<natural_32_bit> const&  matrix, natural_32_bit const row_shift) {
+                    natural_64_bit  SUM = 0ULL;
+                    for (cellab::kind_of_cell j = 0U; j < static_state_ptr->num_kinds_of_cells(); ++j)
+                        SUM += (natural_64_bit)matrix.at(row_shift + j) * (natural_64_bit)static_state_ptr->num_cells_of_cell_kind(j);
+                    return SUM;
+                    }(static_state_ptr,matrix,row_shift)
+            );
     }
 }
 
@@ -755,11 +751,11 @@ void run()
             tissue_props;
     for (tissue_props props :
          std::vector<tissue_props>{
-                tissue_props{ 10U, 10U, 3U, 3U, true, true, 3U, 3U, 4U, 4U, 3U, 3U, true, 3U, 3U, 4U },
-                tissue_props{ 50U, 50U, 6U, 6U, false, false, 5U, 5U, 10U, 10U, 5U, 5U, true, 1U, 1U, 8U },
-                tissue_props{ 75U, 50U, 6U, 7U, false, true, 7U, 5U, 10U, 10U, 7U, 5U, false, 5U, 3U, 8U },
-                tissue_props{ 50U, 100U, 8U, 10U, true, false, 5U, 10U, 10U, 10U, 5U, 9U, true, 5U, 10U, 16U },
-                tissue_props{ 100U, 75U, 10U, 15U, true, true, 10U, 7U, 10U, 10U, 9U, 7U, false, 20U, 8U, 32U },
+                tissue_props{ 10U, 10U, 3U, 3U, true, true, 3U, 3U, 4U, 4U, 3U, 3U, true, 3U, 3U, 8U },
+                //tissue_props{ 50U, 50U, 6U, 6U, false, false, 5U, 5U, 10U, 10U, 5U, 5U, true, 1U, 1U, 8U },
+                //tissue_props{ 75U, 50U, 6U, 7U, false, true, 7U, 5U, 10U, 10U, 7U, 5U, false, 5U, 3U, 8U },
+                //tissue_props{ 50U, 100U, 8U, 10U, true, false, 5U, 10U, 10U, 10U, 5U, 9U, true, 5U, 10U, 16U },
+                //tissue_props{ 100U, 75U, 10U, 15U, true, true, 10U, 7U, 10U, 10U, 9U, 7U, false, 20U, 8U, 32U },
                 })
     {
         natural_16_bit const  largest_template_dim_x = std::get<6>(props);
