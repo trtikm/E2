@@ -69,6 +69,7 @@ std::ostream&  dump_degrees_distribution_to_gnuplot_plot(
 
 int  generate_svg_file_from_plt_file_using_gnuplot(std::string const&  pathname_of_plt_file)
 {
+    TMPROF_BLOCK();
     return std::system((msgstream() << "gnuplot " << pathname_of_plt_file).get().c_str());
 }
 
@@ -80,6 +81,8 @@ std::ostream&  dump_html_file_with_embedded_svg(
         std::string const& title
         )
 {
+    TMPROF_BLOCK();
+
     output_stream <<
         "<!DOCTYPE html>\n"
         "<html>\n"
@@ -122,6 +125,8 @@ std::ostream&  dump_html_table_with_links_to_distributions_of_individual_regions
         std::string const& title
         )
 {
+    TMPROF_BLOCK();
+
     output_stream <<
         "<!DOCTYPE html>\n"
         "<html>\n"
@@ -187,5 +192,162 @@ std::ostream&  dump_html_table_with_links_to_distributions_of_individual_regions
     return output_stream;
 }
 
+std::ostream&  dump_matrix_for_setup_of_source_cell_coordinates_in_tissue_columns(
+        std::ostream&  output_stream,
+        natural_16_bit const  num_tissue_cell_kinds,
+        natural_16_bit const  num_tissue_plus_sensory_cell_kinds,
+        std::vector<natural_32_bit> const&  matrix_num_tissue_cell_kinds_x_num_tissue_plus_sensory_cell_kinds,
+        std::string const& chapter_name,
+        std::string const& description,
+        std::string const&  caption,
+        std::string const& title
+        )
+{
+    TMPROF_BLOCK();
+
+    output_stream <<
+        "<!DOCTYPE html>\n"
+        "<html>\n"
+        "<head>\n"
+        "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"
+        "    <title>" << title << "</title>\n"
+        "    <style type=\"text/css\">\n"
+        "        body {\n"
+        "            background-color: white;\n"
+        "            color: black;\n"
+        "            margin-left: auto;\n"
+        "            margin-right: auto;\n"
+        "        }\n"
+        "        h1, h2, h3, h4, h5, h6, table { font-family:\"Liberation serif\"; }\n"
+        "        p, table {\n"
+        "            font-size:12pt;\n"
+        "            margin-left: auto;\n"
+        "            margin-right: auto;\n"
+        "            text-align: justify\n"
+        "        }\n"
+        "        th, td {\n"
+        "            font-family:\"Liberation mono\", monospace;\n"
+        "            font-size:10pt;\n"
+        "            padding: 3pt;\n"
+        "        }\n"
+        "   </style>\n"
+        "</head>\n"
+        "<body>\n"
+        "<h2>" << chapter_name << "</h2>\n"
+        "<p>\n" << description << "</p>\n"
+        "<table>\n"
+        "<caption>\n" << caption << "</caption>\n"
+        ;
+
+    output_stream <<
+        "<tr>\n"
+        "<th></th>\n"
+        ;
+    for (cellab::kind_of_cell  i = 0U; i < num_tissue_plus_sensory_cell_kinds; ++i)
+        output_stream << "<th>" << i << "</th>\n";
+    output_stream << "</tr>\n";
+
+    for (cellab::kind_of_cell i = 0U; i < num_tissue_cell_kinds; ++i)
+    {
+        output_stream <<
+            "<tr>\n"
+            << "<th>" << i << "</th>\n"
+            ;
+        for (cellab::kind_of_cell j = 0U; j < num_tissue_plus_sensory_cell_kinds; ++j)
+            output_stream <<
+                "<td>"
+                << matrix_num_tissue_cell_kinds_x_num_tissue_plus_sensory_cell_kinds.at(
+                            i * num_tissue_plus_sensory_cell_kinds + j
+                            )
+                << "</td>\n";
+        output_stream << "</tr>\n";
+    }
+
+    output_stream <<
+        "</table>\n"
+        "</body>\n"
+        "</html>\n"
+        ;
+
+    return output_stream;
+}
+
+std::ostream&  dump_spread_synapses_matrix(
+        std::ostream&  output_stream,
+        natural_32_bit const  num_rows,
+        natural_32_bit const  num_columns,
+        std::vector<natural_32_bit> const&  spread_synapses_matrix,
+        std::string const&  chapter_name,
+        std::string const&  description,
+        std::string const&  caption,
+        std::string const&  title
+        )
+{
+    TMPROF_BLOCK();
+
+    output_stream <<
+        "<!DOCTYPE html>\n"
+        "<html>\n"
+        "<head>\n"
+        "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"
+        "    <title>" << title << "</title>\n"
+        "    <style type=\"text/css\">\n"
+        "        body {\n"
+        "            background-color: white;\n"
+        "            color: black;\n"
+        "            margin-left: auto;\n"
+        "            margin-right: auto;\n"
+        "        }\n"
+        "        h1, h2, h3, h4, h5, h6, table { font-family:\"Liberation serif\"; }\n"
+        "        p, table {\n"
+        "            font-size:12pt;\n"
+        "            margin-left: auto;\n"
+        "            margin-right: auto;\n"
+        "            text-align: justify\n"
+        "        }\n"
+        "        th, td {\n"
+        "            font-family:\"Liberation mono\", monospace;\n"
+        "            font-size:10pt;\n"
+        "            padding: 3pt;\n"
+        "        }\n"
+        "   </style>\n"
+        "</head>\n"
+        "<body>\n"
+        "<h2>" << chapter_name << "</h2>\n"
+        "<p>\n" << description << "</p>\n"
+        "<table>\n"
+        "<caption>\n" << caption << "</caption>\n"
+        ;
+
+    output_stream <<
+        "<tr>\n"
+        "<th></th>\n"
+        ;
+    for (cellab::kind_of_cell i = 0U; i < num_columns; ++i)
+        output_stream << "<th>" << i << "</th>\n";
+    output_stream << "</tr>\n";
+
+    for (cellab::kind_of_cell i = 0U; i < num_rows; ++i)
+    {
+        output_stream <<
+            "<tr>\n"
+            << "<th>" << i << "</th>\n"
+            ;
+        for (cellab::kind_of_cell j = 0U; j < num_columns; ++j)
+            output_stream <<
+            "<td>"
+            << spread_synapses_matrix.at(j * num_rows + i)
+            << "</td>\n";
+        output_stream << "</tr>\n";
+    }
+
+    output_stream <<
+        "</table>\n"
+        "</body>\n"
+        "</html>\n"
+        ;
+
+    return output_stream;
+}
 
 }

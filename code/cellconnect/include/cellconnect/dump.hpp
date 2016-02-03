@@ -1,6 +1,7 @@
 #ifndef CELLCONNECT_DUMP_HPP_INCLUDED
 #   define CELLCONNECT_DUMP_HPP_INCLUDED
 
+#   include <cellab/static_state_of_neural_tissue.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <vector>
 #   include <unordered_map>
@@ -65,6 +66,52 @@ std::ostream&  dump_html_table_with_links_to_distributions_of_individual_regions
                 //!< Title of whole HTML file
         );
 
+/**
+ * 
+ */
+std::ostream&  dump_matrix_for_setup_of_source_cell_coordinates_in_tissue_columns(
+        std::ostream&  output_stream,
+                //!< The passed matrix (the 4th parameter) will be dumped into this stream as a HTML file.
+        natural_16_bit const  num_tissue_cell_kinds,
+                //!< The number of kinds of tissue cell also identifies of the number of rows in the matrix.
+        natural_16_bit const  num_tissue_plus_sensory_cell_kinds,
+                //!< The number of all kinds of cell (tissue and sensotry) also identifies the number of columns
+                //!< in the matrix.
+        std::vector<natural_32_bit> const&  matrix_num_tissue_cell_kinds_x_num_tissue_plus_sensory_cell_kinds,
+                //!< The matrix which will be dumped into the output stream in the form of HTML table.
+        std::string const&  chapter_name = "Matrix used in setup of source cell coordinates of synapses in the tissue.",
+                //!< Name of the only chapter in the file. It will be place into <h2></h2>.
+        std::string const&  description =
+                "The number of rows in the table is the number of kinds of tissue cells and the number of columns\n"
+                "is the number of kinds of tissue and sensory cells together. A number\n"
+                "<i>a</i><sub><i>i</i>,<i>j</i></sub> in the matrix is a count of synapses projected from <em>each</em>\n"
+                "cell of the kind <i>j</i> to territories of cells of the kind <i>j</i>.\n",
+                //!< A text to be placed into <p></p> right after the chapter name.
+        std::string const&  caption = "",
+                //!< A text to be placed into <caption></caption> of the table representing the damped matrix.
+        std::string const&  title = "Setup matrix of source coordinates in tissue columns."
+                //!< Title of whole HTML file.
+        );
+
+
+std::ostream&  dump_spread_synapses_matrix(
+        std::ostream&  output_stream,
+                //!< The passed matrix (the 4th parameter) will be dumped into this stream as a HTML file.
+        natural_32_bit const  num_rows,
+                //!< The number of rows in the spread_synapses_matrix. This dimension is aligned with X tissue axis.
+        natural_32_bit const  num_columns,
+                //!< The number of columns in the spread_synapses_matrix. This dimension is aligned with Y tissue axis.
+        std::vector<natural_32_bit> const&  spread_synapses_matrix,
+                //!< The matrix which will be dumped into the output stream in the form of a HTML table.
+        std::string const&  chapter_name = "Matrix used in initial spreading synapses in the tissue.",
+                //!< Name of the only chapter in the file. It will be place into <h2></h2>.
+        std::string const&  description = "",
+                //!< A text to be placed into <p></p> right after the chapter name.
+        std::string const&  caption = "",
+                //!< A text to be placed into <caption></caption> of the table representing the damped matrix.
+        std::string const&  title = "Setup matrix of spreading synapses in the tissue."
+                //!< Title of whole HTML file.
+        );
 
 }
 
