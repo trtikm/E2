@@ -199,6 +199,7 @@ struct column_shift_function
     natural_16_bit num_layout_rows() const { return m_layout_of_shift_templates.num_rows(); }
     natural_16_bit num_layout_columns() const { return m_layout_of_shift_templates.num_columns(); }
     shift_template const&  get_shift_template(natural_16_bit const  layout_row_index, natural_16_bit const  layout_column_index) const;
+    layout_of_shift_templates const&  get_layout_of_shift_templates() const noexcept { return m_layout_of_shift_templates; }
 
     natural_16_bit  num_row_repetition_blocks() const { return (natural_16_bit)m_repetition_blocks_of_rows_in_layout_of_shift_templates.size(); }
     natural_16_bit  num_column_repetition_blocks() const { return (natural_16_bit)m_repetition_blocks_of_columns_in_layout_of_shift_templates.size(); }

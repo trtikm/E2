@@ -350,4 +350,242 @@ std::ostream&  dump_spread_synapses_matrix(
     return output_stream;
 }
 
+std::ostream&  dump_html_table_with_links_to_matrices_for_spreading_synapses_amongst_columns(
+        std::ostream&  output_stream,
+        natural_16_bit const  num_tissue_cell_kinds,
+        natural_16_bit const  num_tissue_plus_sensory_cell_kinds,
+        std::string const&  common_pathname_prefix_of_all_spreading_matrices,
+        std::string const& chapter_name,
+        std::string const& description,
+        std::string const& title
+        )
+{
+    TMPROF_BLOCK();
+
+    output_stream <<
+        "<!DOCTYPE html>\n"
+        "<html>\n"
+        "<head>\n"
+        "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"
+        "    <title>" << title << "</title>\n"
+        "    <style type=\"text/css\">\n"
+        "        body {\n"
+        "            background-color: white;\n"
+        "            color: black;\n"
+        "            margin-left: auto;\n"
+        "            margin-right: auto;\n"
+        "        }\n"
+        "        h1, h2, h3, h4, h5, h6, table { font-family:\"Liberation serif\"; }\n"
+        "        p, table {\n"
+        "            font-size:12pt;\n"
+        "            margin-left: auto;\n"
+        "            margin-right: auto;\n"
+        "            text-align: justify\n"
+        "        }\n"
+        "        th, td {\n"
+        "            font-family:\"Liberation mono\", monospace;\n"
+        "            font-size:10pt;\n"
+        "            padding: 3pt;\n"
+        "        }\n"
+        "   </style>\n"
+        "</head>\n"
+        "<body>\n"
+        "<h2>" << chapter_name << "</h2>\n"
+        "<p>" << description << "</p>\n"
+        "<table>\n"
+        "<caption>\n"
+        "</caption>\n"
+        ;
+
+    output_stream <<
+        "<tr>\n"
+        "<th></th>\n"
+        ;
+    for (natural_32_bit i = 0U; i < num_tissue_cell_kinds; ++i)
+        output_stream << "<th>" << i << "</th>\n";
+    output_stream << "</tr>\n";
+
+    for (natural_32_bit i = 0U; i < num_tissue_plus_sensory_cell_kinds; ++i)
+    {
+        output_stream << "<tr>\n"
+            << "<th>" << i << "</th>\n"
+            ;
+        for (natural_32_bit j = 0U; j < num_tissue_cell_kinds; ++j)
+            output_stream << "<td>"
+                << "<a href=\"" << common_pathname_prefix_of_all_spreading_matrices
+                << i * num_tissue_cell_kinds + j << ".html" << "\">*</a>"
+                << "</td>\n";
+        output_stream << "</tr>\n";
+    }
+
+    output_stream <<
+        "</table>\n"
+        "</body>\n"
+        "</html>\n"
+        ;
+
+    return output_stream;
+}
+
+
+std::ostream&  dump_column_shift_function(
+        std::ostream&  output_stream,
+        column_shift_function const&  column_shift_fn,
+        std::string const&  title
+        )
+{
+    TMPROF_BLOCK();
+
+    output_stream <<
+        "<!DOCTYPE html>\n"
+        "<html>\n"
+        "<head>\n"
+        "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"
+        "    <title>" << title << "</title>\n"
+        "    <style type=\"text/css\">\n"
+        "        body {\n"
+        "            background-color: white;\n"
+        "            color: black;\n"
+        "            margin-left: auto;\n"
+        "            margin-right: auto;\n"
+        "        }\n"
+        "        h1, h2, h3, h4, h5, h6, table { font-family:\"Liberation serif\"; }\n"
+        "        p, table {\n"
+        "            font-size:12pt;\n"
+        "            margin-left: auto;\n"
+        "            margin-right: auto;\n"
+        "            text-align: justify\n"
+        "        }\n"
+        "        th, td {\n"
+        "            font-family:\"Liberation mono\", monospace;\n"
+        "            font-size:10pt;\n"
+        "            padding: 3pt;\n"
+        "        }\n"
+        "   </style>\n"
+        "</head>\n"
+        "<body>\n"
+        //"<h2>" << chapter_name << "</h2>\n"
+        //"<p>\n" << description << "</p>\n"
+        ;
+    if (column_shift_fn.is_identity_function())
+        output_stream << "<p>The column shift function is the identity.</p>\n";
+    else
+    {
+        //output_stream <<
+        //    "<table>\n"
+        //    "<caption>\n" << caption << "</caption>\n"
+        //    ;
+
+        //output_stream <<
+        //    "<tr>\n"
+        //    "<th></th>\n"
+        //    ;
+        //for (cellab::kind_of_cell i = 0U; i < num_columns; ++i)
+        //    output_stream << "<th>" << i << "</th>\n";
+        //output_stream << "</tr>\n";
+
+        //for (cellab::kind_of_cell i = 0U; i < num_rows; ++i)
+        //{
+        //    output_stream <<
+        //        "<tr>\n"
+        //        << "<th>" << i << "</th>\n"
+        //        ;
+        //    for (cellab::kind_of_cell j = 0U; j < num_columns; ++j)
+        //        output_stream <<
+        //        "<td>"
+        //        << spread_synapses_matrix.at(j * num_rows + i)
+        //        << "</td>\n";
+        //    output_stream << "</tr>\n";
+        //}
+
+        //output_stream <<
+        //    "</table>\n"
+        //    ;
+    }
+    output_stream <<
+        "</body>\n"
+        "</html>\n"
+        ;
+
+    return output_stream;
+}
+
+std::ostream&  dump_html_table_with_links_to_column_shift_functions(
+        std::ostream&  output_stream,
+        natural_16_bit const  num_tissue_cell_kinds,
+        natural_16_bit const  num_tissue_plus_sensory_cell_kinds,
+        std::string const&  common_pathname_prefix_of_all_column_shift_functions,
+        std::string const&  chapter_name,
+        std::string const&  description,
+        std::string const&  title
+        )
+{
+    TMPROF_BLOCK();
+
+    output_stream <<
+        "<!DOCTYPE html>\n"
+        "<html>\n"
+        "<head>\n"
+        "    <meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"
+        "    <title>" << title << "</title>\n"
+        "    <style type=\"text/css\">\n"
+        "        body {\n"
+        "            background-color: white;\n"
+        "            color: black;\n"
+        "            margin-left: auto;\n"
+        "            margin-right: auto;\n"
+        "        }\n"
+        "        h1, h2, h3, h4, h5, h6, table { font-family:\"Liberation serif\"; }\n"
+        "        p, table {\n"
+        "            font-size:12pt;\n"
+        "            margin-left: auto;\n"
+        "            margin-right: auto;\n"
+        "            text-align: justify\n"
+        "        }\n"
+        "        th, td {\n"
+        "            font-family:\"Liberation mono\", monospace;\n"
+        "            font-size:10pt;\n"
+        "            padding: 3pt;\n"
+        "        }\n"
+        "   </style>\n"
+        "</head>\n"
+        "<body>\n"
+        "<h2>" << chapter_name << "</h2>\n"
+        "<p>" << description << "</p>\n"
+        "<table>\n"
+        "<caption>\n"
+        "</caption>\n"
+        ;
+
+    output_stream <<
+        "<tr>\n"
+        "<th></th>\n"
+        ;
+    for (natural_32_bit i = 0U; i < num_tissue_cell_kinds; ++i)
+        output_stream << "<th>" << i << "</th>\n";
+    output_stream << "</tr>\n";
+
+    for (natural_32_bit i = 0U; i < num_tissue_plus_sensory_cell_kinds; ++i)
+    {
+        output_stream << "<tr>\n"
+            << "<th>" << i << "</th>\n"
+            ;
+        for (natural_32_bit j = 0U; j < num_tissue_cell_kinds; ++j)
+            output_stream << "<td>"
+            << "<a href=\"" << common_pathname_prefix_of_all_column_shift_functions
+            << i * num_tissue_cell_kinds + j << ".html" << "\">*</a>"
+            << "</td>\n";
+        output_stream << "</tr>\n";
+    }
+
+    output_stream <<
+        "</table>\n"
+        "</body>\n"
+        "</html>\n"
+        ;
+
+    return output_stream;
+}
+
+
 }

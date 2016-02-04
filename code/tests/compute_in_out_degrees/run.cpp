@@ -109,6 +109,7 @@ static void  build_spread_synapses_matrix(
     std::fill(matrix.begin(),matrix.end(),0U);
 
     natural_32_bit const  unit_count = (natural_32_bit)(1ULL + total_num_synapses / (10ULL * (natural_64_bit)(diameter_x * diameter_y)));
+    natural_32_bit const  reducer = unit_count == 1U ? 3U : 1U;
 
     natural_64_bit  num_synapses_to_distribute = total_num_synapses;
     for (natural_32_bit  i = (unit_count + target_kind + source_kind) % matrix.size(),
@@ -116,7 +117,7 @@ static void  build_spread_synapses_matrix(
          num_synapses_to_distribute > 0ULL;
          i = (i + 1U) % matrix.size(), j = (j + 1U) % multipliers.size())
     {
-        natural_32_bit  addon = multipliers.at(j) * unit_count;
+        natural_32_bit  addon = multipliers.at(j) / reducer + unit_count;
         if ((natural_64_bit)addon > num_synapses_to_distribute)
             addon = (natural_32_bit)num_synapses_to_distribute;
         matrix.at(i) += addon;
@@ -655,6 +656,7 @@ void  dump_src_coords_setup_matrix(
 
 void  dump_spread_synapses_matrix(
         natural_32_bit const  tissue_index,
+        natural_32_bit const  num_kinds_of_tissue_cells,
         cellab::kind_of_cell const  source_kind,
         cellab::kind_of_cell const  target_kind,
         natural_32_bit const  num_rows,
@@ -667,7 +669,9 @@ void  dump_spread_synapses_matrix(
 
     {
         std::ofstream  ofs(msgstream() << outdir << "spread_synapses_matrix_"
-                                       << source_kind << "_" << target_kind << ".html", std::ostream::out);
+                                       << (source_kind * num_kinds_of_tissue_cells + target_kind)
+                                       << ".html",
+                           std::ostream::out);
         cellconnect::dump_spread_synapses_matrix(
                 ofs,
                 num_rows,
@@ -678,21 +682,58 @@ void  dump_spread_synapses_matrix(
 }
 
 void generate_table_of_spread_synapses_matrices(
-    natural_32_bit const  tissue_index,
-    std::shared_ptr<cellab::static_state_of_neural_tissue const> const  static_tissue_ptr,
-    natural_32_bit const  diameter_x,
-    natural_32_bit const  diameter_y
-    )
+        natural_32_bit const  tissue_index,
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const  static_tissue_ptr
+        )
 {
     std::string const  outdir = msgstream() << "./output/" << get_program_name() << "/tissue_" << tissue_index << "/";
     boost::filesystem::create_directories(outdir);
 
     std::ofstream  ofs(msgstream() << outdir << "/table_of_spread_synapses_matrices.html", std::ostream::out);
+    cellconnect::dump_html_table_with_links_to_matrices_for_spreading_synapses_amongst_columns(
+            ofs,
+            static_tissue_ptr->num_kinds_of_tissue_cells(),
+            static_tissue_ptr->num_kinds_of_cells(),
+            "spread_synapses_matrix_"
+            );
+}
 
-    //for (cellab::kind_of_cell source_kind = 0U; source_kind < static_tissue->num_kinds_of_cells(); ++source_kind)
-    //    for (cellab::kind_of_cell target_kind = 0U; target_kind < static_tissue->num_kinds_of_tissue_cells(); ++target_kind)
-    //    {
-    //    }
+void dump_column_shift_function(
+        natural_32_bit const  tissue_index,
+        natural_32_bit const  num_kinds_of_tissue_cells,
+        cellab::kind_of_cell const  source_kind,
+        cellab::kind_of_cell const  target_kind,
+        cellconnect::column_shift_function const&  column_shift_fn
+        )
+{
+    std::string const  outdir = msgstream() << "./output/" << get_program_name() << "/tissue_" << tissue_index << "/";
+    boost::filesystem::create_directories(outdir);
+
+    std::ofstream  ofs(msgstream() << outdir << "column_shift_function_"
+                                             << (source_kind * num_kinds_of_tissue_cells + target_kind)
+                                             << ".html",
+                       std::ostream::out);
+    cellconnect::dump_column_shift_function(
+            ofs,
+            column_shift_fn
+            );
+}
+
+void generate_table_of_column_shift_functions(
+        natural_32_bit const  tissue_index,
+        std::shared_ptr<cellab::static_state_of_neural_tissue const> const  static_tissue_ptr
+        )
+{
+    std::string const  outdir = msgstream() << "./output/" << get_program_name() << "/tissue_" << tissue_index << "/";
+    boost::filesystem::create_directories(outdir);
+
+    std::ofstream  ofs(msgstream() << outdir << "/table_of_column_shift_functions.html", std::ostream::out);
+    cellconnect::dump_html_table_with_links_to_column_shift_functions(
+            ofs,
+            static_tissue_ptr->num_kinds_of_tissue_cells(),
+            static_tissue_ptr->num_kinds_of_cells(),
+            "column_shift_function_"
+            );
 }
 
 void  generate_root_html_file_for_tissue(
@@ -743,6 +784,8 @@ void  generate_root_html_file_for_tissue(
                         "The matrix used in setup of source cell coordinates of synapses.</a></li>\n"
            "<li><a href=\"./table_of_spread_synapses_matrices.html\">"
                         "A table of links to matrices used in initial spreading of synapses in the tissue.</a></li>\n"
+           "<li><a href=\"./table_of_column_shift_functions.html\">"
+                        "A table of links to column shift functions.</a></li>\n"
            "</ul>\n"
            "<ul>\n"
            "<li><a href=\"./in_degrees_of_all_kinds.html\">In-degrees of tissue cells of all kinds.</a></li>\n"
@@ -988,6 +1031,7 @@ void run()
                             );
                 dump_spread_synapses_matrix(
                         test_counter,
+                        static_tissue->num_kinds_of_tissue_cells(),
                         source_kind,
                         target_kind,
                         diameter_x,
@@ -1006,7 +1050,13 @@ void run()
                                 template_rep_x,
                                 template_rep_y
                                 );
-
+                dump_column_shift_function(
+                        test_counter,
+                        static_tissue->num_kinds_of_tissue_cells(),
+                        source_kind,
+                        target_kind,
+                        *shift_fn_ptr
+                        );
 
                 cellconnect::spread_synapses_into_neighbourhoods(
                             dynamic_tissue,
@@ -1024,9 +1074,11 @@ void run()
 
         generate_table_of_spread_synapses_matrices(
                 test_counter,
-                static_tissue,
-                diameter_x,
-                diameter_y
+                static_tissue
+                );
+        generate_table_of_column_shift_functions(
+                test_counter,
+                static_tissue
                 );
 
         std::unordered_map<natural_32_bit,natural_64_bit> correct_summary_distribution;

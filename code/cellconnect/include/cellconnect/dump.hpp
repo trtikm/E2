@@ -1,6 +1,7 @@
 #ifndef CELLCONNECT_DUMP_HPP_INCLUDED
 #   define CELLCONNECT_DUMP_HPP_INCLUDED
 
+#   include <cellconnect/column_shift_function.hpp>
 #   include <cellab/static_state_of_neural_tissue.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <vector>
@@ -35,11 +36,11 @@ std::ostream&  dump_html_file_with_embedded_svg(
         std::string const&  pathname_of_svg_file,
                 //!< Either full disc path or a relative path from the a desired location
                 //!< of the dumped HTML file.
-        std::string const& chapter_name = "",
+        std::string const&  chapter_name = "",
                 //!< Name of the only chapter in the file. It will be place into <h2></h2>.
-        std::string const& description = "",
+        std::string const&  description = "",
                 //!< A text to be placed into <p></p> right after the chapter name
-        std::string const& title = ""
+        std::string const&  title = ""
                 //!< Title of whole HTML file
         );
 
@@ -58,11 +59,11 @@ std::ostream&  dump_html_table_with_links_to_distributions_of_individual_regions
                 //!< disc path or a relative path from the a desired location of the dumped HTML file.
                 //!< Finally, it is assumed that distribution in the region (i,j) is given by the file:
                 //!< 'common_pathname_prefix_of_all_distribution_filesN.html', where N=i*num_columns+j.
-        std::string const& chapter_name = "",
+        std::string const&  chapter_name = "",
                 //!< Name of the only chapter in the file. It will be place into <h2></h2>.
-        std::string const& description = "",
+        std::string const&  description = "",
                 //!< A text to be placed into <p></p> right after the chapter name
-        std::string const& title = ""
+        std::string const&  title = ""
                 //!< Title of whole HTML file
         );
 
@@ -105,13 +106,80 @@ std::ostream&  dump_spread_synapses_matrix(
                 //!< The matrix which will be dumped into the output stream in the form of a HTML table.
         std::string const&  chapter_name = "Matrix used in initial spreading synapses in the tissue.",
                 //!< Name of the only chapter in the file. It will be place into <h2></h2>.
-        std::string const&  description = "",
+        std::string const&  description =
+                "The horisontal axis of the matrix is aligned with the X axis\n"
+                "of the tissue. The matrix is internally stored in the column-major order.\n",
                 //!< A text to be placed into <p></p> right after the chapter name.
         std::string const&  caption = "",
                 //!< A text to be placed into <caption></caption> of the table representing the damped matrix.
         std::string const&  title = "Setup matrix of spreading synapses in the tissue."
                 //!< Title of whole HTML file.
         );
+
+std::ostream&  dump_html_table_with_links_to_matrices_for_spreading_synapses_amongst_columns(
+        std::ostream&  output_stream,
+        natural_16_bit const  num_tissue_cell_kinds,
+                //!< The number of kinds of tissue cell also identifies of the number of columns in the table.
+        natural_16_bit const  num_tissue_plus_sensory_cell_kinds,
+                //!< The number of all kinds of cell (tissue and sensotry) also identifies the number of rows
+                //!< in the table.
+        std::string const&  common_pathname_prefix_of_all_spreading_matrices,
+                //!< It is assumed there are num_tissue_plus_sensory_cell_kinds * num_tissue_cell_kinds HTML
+                //!< files depicting spreading matrices. It is further assumed that all these files reside
+                //!< on the disc at the same directory and their names (without the HTML extension) end by a unique 
+                //!< number from the range 0,...,num_tissue_plus_sensory_cell_kinds * num_tissue_cell_kinds - 1.
+                //!< This agrument represents the longest common prefix of all those files. The common prefix must be
+                //!< either a full disc path or a relative path from the a desired location of the dumped HTML file.
+                //!< Finally, it is assumed that speading matrix for the source and rarget cell kinds (i,j) is stored
+                //!< in the file: 'common_pathname_prefix_of_all_spreading_matricesN.html',
+                //!< where N=i*num_tissue_cell_kinds+j.
+        std::string const&  chapter_name = "Table of spread matrices of synapses amongst tissue columns",
+                //!< Name of the only chapter in the file. It will be place into <h2></h2>.
+        std::string const&  description =
+                "The vertical axis of the table identifies source kinds of cells (includes both\n"
+                "tissue and sensory cell kinds) and the horisontal axis represent target kinds of\n"
+                "cells (tissue cell kinds only).\n",
+                //!< A text to be placed into <p></p> right after the chapter name.
+        std::string const&  title = "Table of spread matrices of synases."
+                //!< Title of whole HTML file.
+        );
+
+
+std::ostream&  dump_column_shift_function(
+        std::ostream&  output_stream,
+        column_shift_function const&  column_shift_fn,
+        std::string const&  title = "Table of spread matrices of synases."
+                //!< Title of whole HTML file.
+        );
+
+std::ostream&  dump_html_table_with_links_to_column_shift_functions(
+        std::ostream&  output_stream,
+        natural_16_bit const  num_tissue_cell_kinds,
+                //!< The number of kinds of tissue cell also identifies of the number of columns in the table.
+        natural_16_bit const  num_tissue_plus_sensory_cell_kinds,
+                //!< The number of all kinds of cell (tissue and sensotry) also identifies the number of rows
+                //!< in the table.
+        std::string const&  common_pathname_prefix_of_all_column_shift_functions,
+                //!< It is assumed there are num_tissue_plus_sensory_cell_kinds * num_tissue_cell_kinds HTML
+                //!< files depicting column shift functions. It is further assumed that all these files reside
+                //!< on the disc at the same directory and their names (without the HTML extension) end by a unique 
+                //!< number from the range 0,...,num_tissue_plus_sensory_cell_kinds * num_tissue_cell_kinds - 1.
+                //!< This agrument represents the longest common prefix of all those files. The common prefix must be
+                //!< either a full disc path or a relative path from the a desired location of the dumped HTML file.
+                //!< Finally, it is assumed that the column shift function for the source and rarget cell kinds (i,j)
+                //!< is stored in the file: 'common_pathname_prefix_of_all_column_shift_functionsN.html',
+                //!< where N=i*num_tissue_cell_kinds+j.
+        std::string const&  chapter_name = "Table of column shift functions.",
+                //!< Name of the only chapter in the file. It will be place into <h2></h2>.
+        std::string const&  description =
+                "The vertical axis of the table identifies source kinds of cells (includes both\n"
+                "tissue and sensory cell kinds) and the horisontal axis represent target kinds of\n"
+                "cells (tissue cell kinds only).\n",
+                //!< A text to be placed into <p></p> right after the chapter name.
+        std::string const&  title = "Table of column shift functions."
+                //!< Title of whole HTML file.
+        );
+
 
 }
 
