@@ -148,7 +148,11 @@ std::ostream&  dump_html_table_with_links_to_matrices_for_spreading_synapses_amo
 std::ostream&  dump_column_shift_function(
         std::ostream&  output_stream,
         column_shift_function const&  column_shift_fn,
-        std::string const&  title = "Table of spread matrices of synases."
+        std::string const&  chapter_name = "A column shift function.",
+                //!< Name of the only chapter in the file. It will be place into <h2></h2>.
+        std::string const&  description = "",
+                //!< A text to be placed into <p></p> right after the chapter name.
+        std::string const&  title = "A column shift function."
                 //!< Title of whole HTML file.
         );
 

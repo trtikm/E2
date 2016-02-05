@@ -287,6 +287,23 @@ std::pair<natural_16_bit,natural_16_bit> const&  shift_template::get_entry_shift
 }
 
 
+void  invert_map_from_entry_specification_to_entry_coords_of_shift_template(
+        std::map< std::pair<exit_shift_kind,natural_16_bit>,std::pair<natural_16_bit,natural_16_bit> > const& src_map,
+        std::map< std::pair<natural_16_bit,natural_16_bit>,std::vector<std::pair<exit_shift_kind,natural_16_bit> > >&
+            output_map
+        )
+{
+    for (auto const&  elem : src_map)
+    {
+        auto  it = output_map.find(elem.second);
+        if (it == output_map.cend())
+            output_map.insert({elem.second,{elem.first}});
+        else
+            it->second.push_back(elem.first);
+    }
+}
+
+
 layout_of_shift_templates::layout_of_shift_templates(natural_16_bit const  num_rows, natural_16_bit const  num_columns,
                                                      std::vector<natural_16_bit> const& matrix_of_indices_of_shift_templates)
     : m_num_rows(num_rows)
@@ -744,8 +761,13 @@ shift_template const&  column_shift_function::get_shift_template(natural_16_bit 
 {
     ASSUMPTION(layout_row_index < num_layout_rows());
     ASSUMPTION(layout_column_index < num_layout_columns());
-    natural_16_bit const  index = m_layout_of_shift_templates.get_template_index(layout_row_index,layout_column_index);
-    return m_shift_templates.at(index);
+    return get_shift_template(m_layout_of_shift_templates.get_template_index(layout_row_index,layout_column_index));
+}
+
+shift_template const&  column_shift_function::get_shift_template(natural_16_bit const  template_index) const
+{
+    ASSUMPTION(template_index < m_shift_templates.size());
+    return m_shift_templates.at(template_index);
 }
 
 repetition_block const& column_shift_function::get_row_repetition_block(natural_16_bit const  row_block_index) const

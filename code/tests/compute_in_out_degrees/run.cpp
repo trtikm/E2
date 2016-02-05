@@ -150,7 +150,7 @@ static std::shared_ptr<cellconnect::column_shift_function const>  build_small_sh
 {
     TMPROF_BLOCK();
 
-    natural_16_bit const  num_exists = (largest_template_dim_x * largest_template_dim_y / 2U) / 8U;
+    natural_16_bit const  num_exists = (largest_template_dim_x * largest_template_dim_y / 2U) / 3U;
 
     std::vector<cellconnect::shift_template>  shift_templates = {
         // left-top
@@ -298,8 +298,8 @@ static std::shared_ptr<cellconnect::column_shift_function const>  build_big_shif
     if ((natural_16_bit)(middle1_dim_x * middle1_dim_y) < 2U)
         return {};
 
-    natural_16_bit const  large_num_exists = (largest_template_dim_x * largest_template_dim_y / 2U) / 8U;
-    natural_16_bit const  small_num_exists = (middle1_dim_x * middle1_dim_y / 2U) / 8U;
+    natural_16_bit const  large_num_exists = (largest_template_dim_x * largest_template_dim_y / 2U) / 3U;
+    natural_16_bit const  small_num_exists = (middle1_dim_x * middle1_dim_y / 2U) / 3U;
 
     std::vector<cellconnect::shift_template>  shift_templates = {
         // left-top

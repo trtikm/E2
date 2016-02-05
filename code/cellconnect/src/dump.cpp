@@ -431,6 +431,8 @@ std::ostream&  dump_html_table_with_links_to_matrices_for_spreading_synapses_amo
 std::ostream&  dump_column_shift_function(
         std::ostream&  output_stream,
         column_shift_function const&  column_shift_fn,
+        std::string const& chapter_name,
+        std::string const& description,
         std::string const&  title
         )
 {
@@ -464,13 +466,208 @@ std::ostream&  dump_column_shift_function(
         "   </style>\n"
         "</head>\n"
         "<body>\n"
-        //"<h2>" << chapter_name << "</h2>\n"
-        //"<p>\n" << description << "</p>\n"
+        "<h2>" << chapter_name << "</h2>\n"
+        "<p>\n" << description << "</p>\n"
         ;
     if (column_shift_fn.is_identity_function())
         output_stream << "<p>The column shift function is the identity.</p>\n";
     else
     {
+        output_stream <<
+            "<p>Basic scalar properties are listed in the following table.</p>\n"
+            "<table>\n"
+            "<tr>\n"
+            "   <th align=\"right\">Value&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</th>\n"
+            "   <th align=\"left\">Description</th>\n"
+            "</tr>\n"
+            "<tr>\n"
+            "   <td align=\"center\" valign=\"top\">" << column_shift_fn.num_cells_along_x_axis() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">The number of tissue columns along the X axis of the tissue.</td>\n"
+            "</tr>\n"
+            "<tr>\n"
+            "   <td align=\"center\" valign=\"top\">" << column_shift_fn.num_cells_along_y_axis() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">The number of tissue columns along the Y axis of the tissue.</td>\n"
+            "</tr>\n"
+            "<tr>\n"
+            "   <td align=\"center\" valign=\"top\">" << column_shift_fn.scale_along_row_axis() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">The common scale form templates along the row axis (tissue X axis).</td>\n"
+            "</tr>\n"
+            "<tr>\n"
+            "   <td align=\"center\" valign=\"top\">" << column_shift_fn.scale_along_column_axis() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">The common scale for templates along the column axis (tissue Y axis).</td>\n"
+            "</tr>\n"
+            "<tr>\n"
+            "   <td align=\"center\" valign=\"top\">" << column_shift_fn.num_layout_rows() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">The number of rows in the layout matrix of templates.</td>\n"
+            "</tr>\n"
+            "<tr>\n"
+            "   <td align=\"center\" valign=\"top\">" << column_shift_fn.num_layout_columns() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">The number of columns in the layout matrix of templates.</td>\n"
+            "</tr>\n"
+            "<tr>\n"
+            "   <td align=\"center\" valign=\"top\">" << column_shift_fn.num_templates() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">The number of templates in the column shift function.</td>\n"
+            "</tr>\n"
+            "<tr>\n"
+            "   <td align=\"center\" valign=\"top\">" << column_shift_fn.num_row_repetition_blocks() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">The number of repetition blocks of rows in the layout matrix.</td>\n"
+            "</tr>\n"
+            "<tr>\n"
+            "   <td align=\"center\" valign=\"top\">" << column_shift_fn.num_column_repetition_blocks() << "</td>\n"
+            "   <td align=\"left\" valign=\"top\">The number of repetition blocks of columns in the layout matrix.</td>\n"
+            "</tr>\n"
+            "</table>\n"
+            ;
+
+        // Dumping the layout matrix
+
+        output_stream <<
+            "<p>\n"
+            "Here is the layout matrix <i>L</i>. Its elements are indices of individual templates\n"
+            "(shown bellow).\n"
+//            " followed by two numbers enclosed in curly brackets. These numbers tell us\n"
+//            "coordinates of how many columns in the neural tissue are shifted by the template (identified\n"
+//            "by the index) along X and Y axes respectively.\n"
+            "</p>\n"
+            "<table>\n"
+            "<tr>\n"
+            "<th></th>\n"
+            ;
+        for (natural_16_bit i = 0U; i < column_shift_fn.num_layout_columns(); ++i)
+            output_stream << "<th>" << i << "</th>\n";
+        output_stream << "</tr>\n";
+
+        for (natural_32_bit i = 0U; i < column_shift_fn.num_layout_rows(); ++i)
+        {
+            output_stream << "<tr>\n"
+                << "<th>" << i << "</th>\n"
+                ;
+            for (natural_32_bit j = 0U; j < column_shift_fn.num_layout_columns(); ++j)
+                output_stream << "<td>"
+                              << column_shift_fn.get_layout_of_shift_templates().get_template_index(i,j)
+//                              << "{" << column_shift_fn.num_shift_template_cells_along_x_axis(i)
+//                              << "," << column_shift_fn.num_shift_template_cells_along_y_axis(j)
+//                              << "}"
+                              << "</td>\n";
+            output_stream << "</tr>\n";
+        }
+
+        output_stream <<
+            "</table>\n"
+            ;
+
+        // Dumping individual templates
+
+        output_stream <<
+            "<p>\n"
+            "Now follows individual templates. An element of a template consists of\n"
+            "one or more pairs. There three kinds of a pair: (r,c), [DIR,ID], and {DIR,ID}.\n"
+            "The first kind defines a local shift from the current element to the element (r,c)\n"
+            "of the template. The kind [DIR,ID] represents a shift from this template (namely\n"
+            "from the current element) to an adjacent template. The DIR specifies a direction\n"
+            "to the adjacet template. Possible values for DIR are: L (left), R (right), U (up),\n"
+            "D (down), LU (left-up), LD (left-down), RU (right-up), and RD (right-down). The ID\n"
+            "is a unique identifier for the corresponding direction DIR. Finally, the third kind\n"
+            "{DIR,ID} is similar to [DIR,ID]. Only, it identifies a shift from an adjacent template\n"
+            "to this one. Note that values of DIR now mean directions FROM the adjacent template.\n"
+            "</p>\n"
+            ;
+        for (natural_16_bit  i = 0U; i < column_shift_fn.num_templates(); ++i)
+        {
+            shift_template const&  tpt = column_shift_fn.get_shift_template(i);
+            std::map< std::pair<natural_16_bit,natural_16_bit>,std::vector<std::pair<exit_shift_kind,natural_16_bit> > >
+                    inverted_entries_map;
+            invert_map_from_entry_specification_to_entry_coords_of_shift_template(
+                        tpt.get_map_from_entry_specification_to_entry_coords(),
+                        inverted_entries_map
+                        );
+
+            output_stream <<
+                "<table>\n"
+                "<caption>Template #" << i << "</caption>\n"
+                "<tr>\n"
+                "<th></th>\n"
+                ;
+
+            for (natural_16_bit  c = 0U; c < tpt.num_columns(); ++c)
+                output_stream << "<th>" << c << "</th>\n";
+            for (natural_16_bit  r = 0U; r < tpt.num_rows(); ++r)
+            {
+                output_stream <<
+                    "<tr>\n"
+                    << "<th>" << r << "</th>\n"
+                    ;
+                for (natural_16_bit  c = 0U; c < tpt.num_columns(); ++c)
+                {
+                    shift_to_target const& shift = tpt.get_shift(r,c);
+
+                    output_stream << "<td>";
+
+                    if (shift.is_external())
+                    {
+                        std::string  exit_type;
+                        switch (shift.get_exit_shift_kind())
+                        {
+                        case DIR_LEFT_UP: exit_type = "LU"; break;
+                        case DIR_LEFT: exit_type = "L"; break;
+                        case DIR_LEFT_DOWN: exit_type = "LD"; break;
+                        case DIR_DOWN: exit_type = "D"; break;
+                        case DIR_RIGHT_DOWN: exit_type = "RD"; break;
+                        case DIR_RIGHT: exit_type = "R"; break;
+                        case DIR_RIGHT_UP: exit_type = "RU"; break;
+                        case DIR_UP: exit_type = "U"; break;
+                        default: UNREACHABLE();
+                        }
+                        output_stream << "[" << exit_type << "," << shift.get_exit_shift_ID() << "]";
+                    }
+                    else
+                        output_stream << "(" << shift.get_target_row() << "," << shift.get_target_column() << ")";
+
+                    auto const  it = inverted_entries_map.find({r,c});
+                    if (it != inverted_entries_map.cend())
+                    {
+                        for (auto const& elem : it->second)
+                        {
+                            std::string  exit_type;
+                            switch (elem.first)
+                            {
+                            case DIR_LEFT_UP: exit_type = "LU"; break;
+                            case DIR_LEFT: exit_type = "L"; break;
+                            case DIR_LEFT_DOWN: exit_type = "LD"; break;
+                            case DIR_DOWN: exit_type = "D"; break;
+                            case DIR_RIGHT_DOWN: exit_type = "RD"; break;
+                            case DIR_RIGHT: exit_type = "R"; break;
+                            case DIR_RIGHT_UP: exit_type = "RU"; break;
+                            case DIR_UP: exit_type = "U"; break;
+                            default: UNREACHABLE();
+                            }
+                            output_stream << "{" << exit_type << "," << elem.second << "}";
+                        }
+                    }
+
+                    output_stream << "</td>\n";
+                }
+            }
+            output_stream <<
+                "</table>\n"
+                "<p></p>"
+                ;
+
+        }
+//        output_stream <<
+//            "<table>\n"
+//            "<caption></caption>\n"
+//            ;
+
+//        for (natural_16_bit i = 0U; i < column_shift_fn.num_layout_columns(); ++i)
+//            output_stream << "<th>" << i << "</th>\n";
+
+//        output_stream <<
+//            "</table>\n"
+//            ;
+
+
+
         //output_stream <<
         //    "<table>\n"
         //    "<caption>\n" << caption << "</caption>\n"
@@ -498,9 +695,9 @@ std::ostream&  dump_column_shift_function(
         //    output_stream << "</tr>\n";
         //}
 
-        //output_stream <<
-        //    "</table>\n"
-        //    ;
+//        output_stream <<
+//            "</table>\n"
+//            ;
     }
     output_stream <<
         "</body>\n"
