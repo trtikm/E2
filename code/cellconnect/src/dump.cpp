@@ -525,9 +525,6 @@ std::ostream&  dump_column_shift_function(
             "<p>\n"
             "Here is the layout matrix <i>L</i>. Its elements are indices of individual templates\n"
             "(shown bellow).\n"
-//            " followed by two numbers enclosed in curly brackets. These numbers tell us\n"
-//            "coordinates of how many columns in the neural tissue are shifted by the template (identified\n"
-//            "by the index) along X and Y axes respectively.\n"
             "</p>\n"
             "<table>\n"
             "<tr>\n"
@@ -545,9 +542,6 @@ std::ostream&  dump_column_shift_function(
             for (natural_32_bit j = 0U; j < column_shift_fn.num_layout_columns(); ++j)
                 output_stream << "<td>"
                               << column_shift_fn.get_layout_of_shift_templates().get_template_index(i,j)
-//                              << "{" << column_shift_fn.num_shift_template_cells_along_x_axis(i)
-//                              << "," << column_shift_fn.num_shift_template_cells_along_y_axis(j)
-//                              << "}"
                               << "</td>\n";
             output_stream << "</tr>\n";
         }
@@ -650,54 +644,89 @@ std::ostream&  dump_column_shift_function(
             }
             output_stream <<
                 "</table>\n"
-                "<p></p>"
+                "<p></p>\n"
+                ;
+        }
+
+        // Dumping row-repetition blocks (along the X tissue axis)
+
+        output_stream <<
+            "<p>\n"
+            "The following table shows repetition blocks of rows of the layout matrix. Each block\n"
+            "identities a range [begin,end) of rows of in the layout matrix (the second and third column)\n"
+            "which will be repeated a certain number of times (the fourth column) when mapping the column\n"
+            "shift function to the tissue. The last (fifth) columns shows numbers of tissue columns along the\n"
+            "X tissue axis the repetition bloks span over. The sum of all these numbers is equal to\n"
+            "the total number of tissue columns along the X tissue axis.\n"
+            "</p>\n"
+            "<table>\n"
+            "<caption></caption>\n"
+            "<tr>\n"
+            "   <th align=\"right\">Block</th>\n"
+            "   <th align=\"right\">Begin</th>\n"
+            "   <th align=\"right\">End</th>\n"
+            "   <th align=\"right\">Repetitions</th>\n"
+            "   <th align=\"right\">Columns</th>\n"
+            "</tr>\n"
+            ;
+
+        for (natural_16_bit  i = 0U; i < column_shift_fn.num_row_repetition_blocks(); ++i)
+            output_stream <<
+                "<tr>\n"
+                "   <td align=\"right\">" << i << "</td>\n"
+                "   <td align=\"right\">" << column_shift_fn.get_row_repetition_block(i).block_begin_index() << "</td>\n"
+                "   <td align=\"right\">" << column_shift_fn.get_row_repetition_block(i).block_end_index() << "</td>\n"
+                "   <td align=\"right\">" << column_shift_fn.get_row_repetition_block(i).block_num_repetitions() << "</td>\n"
+                "   <td align=\"right\">" << column_shift_fn.num_repetition_block_cells_along_x_axis(i) *
+                                             column_shift_fn.get_row_repetition_block(i).block_num_repetitions()
+                                          << "</td>\n"
+                "</tr>\n"
                 ;
 
-        }
-//        output_stream <<
-//            "<table>\n"
-//            "<caption></caption>\n"
-//            ;
+        output_stream <<
+            "</table>\n"
+            "<p></p>\n"
+            ;
 
-//        for (natural_16_bit i = 0U; i < column_shift_fn.num_layout_columns(); ++i)
-//            output_stream << "<th>" << i << "</th>\n";
+        // Dumping column-repetition blocks (along the Y tissue axis)
 
-//        output_stream <<
-//            "</table>\n"
-//            ;
+        output_stream <<
+            "<p>\n"
+            "The following table shows repetition blocks of columns of the layout matrix. Each block\n"
+            "identities a range [begin,end) of columns of in the layout matrix (the second and third column)\n"
+            "which will be repeated a certain number of times (the fourth column) when mapping the column\n"
+            "shift function to the tissue. The last (fifth) columns shows numbers of tissue columns along the\n"
+            "Y tissue axis the repetition bloks span over. The sum of all these numbers is equal to\n"
+            "the total number of tissue columns along the Y tissue axis.\n"
+            "</p>\n"
+            "<table>\n"
+            "<caption></caption>\n"
+            "<tr>\n"
+            "   <th align=\"right\">Block</th>\n"
+            "   <th align=\"right\">Begin</th>\n"
+            "   <th align=\"right\">End</th>\n"
+            "   <th align=\"right\">Repetitions</th>\n"
+            "   <th align=\"right\">Columns</th>\n"
+            "</tr>\n"
+            ;
 
+        for (natural_16_bit  i = 0U; i < column_shift_fn.num_row_repetition_blocks(); ++i)
+            output_stream <<
+                "<tr>\n"
+                "   <td align=\"right\">" << i << "</td>\n"
+                "   <td align=\"right\">" << column_shift_fn.get_row_repetition_block(i).block_begin_index() << "</td>\n"
+                "   <td align=\"right\">" << column_shift_fn.get_row_repetition_block(i).block_end_index() << "</td>\n"
+                "   <td align=\"right\">" << column_shift_fn.get_row_repetition_block(i).block_num_repetitions() << "</td>\n"
+                "   <td align=\"right\">" << column_shift_fn.num_repetition_block_cells_along_x_axis(i) *
+                                             column_shift_fn.get_row_repetition_block(i).block_num_repetitions()
+                                          << "</td>\n"
+                "</tr>\n"
+                ;
 
-
-        //output_stream <<
-        //    "<table>\n"
-        //    "<caption>\n" << caption << "</caption>\n"
-        //    ;
-
-        //output_stream <<
-        //    "<tr>\n"
-        //    "<th></th>\n"
-        //    ;
-        //for (cellab::kind_of_cell i = 0U; i < num_columns; ++i)
-        //    output_stream << "<th>" << i << "</th>\n";
-        //output_stream << "</tr>\n";
-
-        //for (cellab::kind_of_cell i = 0U; i < num_rows; ++i)
-        //{
-        //    output_stream <<
-        //        "<tr>\n"
-        //        << "<th>" << i << "</th>\n"
-        //        ;
-        //    for (cellab::kind_of_cell j = 0U; j < num_columns; ++j)
-        //        output_stream <<
-        //        "<td>"
-        //        << spread_synapses_matrix.at(j * num_rows + i)
-        //        << "</td>\n";
-        //    output_stream << "</tr>\n";
-        //}
-
-//        output_stream <<
-//            "</table>\n"
-//            ;
+        output_stream <<
+            "</table>\n"
+            "<p></p>\n"
+            ;
     }
     output_stream <<
         "</body>\n"

@@ -35,7 +35,7 @@ std::ostream&  dump_in_html(
             "   </style>\n"
             "</head>\n"
             "<body>\n"
-            "<h2>Static state of neural tissue.</h2>\n"
+            "<h2>Static state of the neural tissue.</h2>\n"
             "<table>\n"
             "<tr>\n"
             "   <th align=\"right\">Property</th>\n"
