@@ -146,14 +146,59 @@ typedef std::function<
         single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_synapse_inside_tissue;
 
 
+/**
+ * It defines a prototype of a user-defined callback function which is called for each signalling in the
+ * tissue from the algorithm 'apply_transition_of_signalling_in_tissue' (see its declaration bellow)
+ * in order to compute a next state of the signalling from the current one.
+ *
+ * We assume the call-back function implement some single-threaded, thread-safe, and in-place algorithm.
+ *
+ * For more info read the documentation:
+ *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#algorithm_signalling
+ */
 typedef std::function<
             void(
                 bits_reference& bits_of_signalling_data_to_be_updated,
+                        //!< It is a reference to the the memory where the current state of the updated signalling
+                        //!< in the tissue is stored. The size, and content of this memory is defined by the
+                        //!< user. We thus assume that the function already has (or is build on) that information.
+                        //!< The function is supposed to compute a next state from the state encoded here.
+                        //!< Once the next state is computed the function have to write that new state to
+                        //!< this memory, i.e. the function overwrites the old state by the computed one.
                 kind_of_cell kind_of_territory_cell,
+                        //!< This information may be helpful or even necessary for the function to correctly
+                        //!< interpret the content of the memory referenced by 'bits_of_signalling_data_to_be_updated'.
+                        //!< It can, for example, be used for a selection of a particular sub-routine, which will
+                        //!< actually compute the next state of the considered signalling.
                 shift_in_coordinates const& shift_to_low_corner,
+                        //!< This is a 3D vector pointing from the tissue coordinates of the current territory (i.e.
+                        //!< the territory where the signalling appears) to a territory with lowest possible
+                        //!< tissue coordinates which can be accessed from the user's callback function by calling
+                        //!< the function 'get_cell' discussed bellow.
                 shift_in_coordinates const& shift_to_high_corner,
+                        //!< This is a 3D vector pointing from the tissue coordinates of the current territory (i.e.
+                        //!< the territory where the signalling appears) to a territory with highest possible
+                        //!< tissue coordinates which can be accessed from the user's callback function by calling
+                        //!< the function 'get_cell' discussed bellow.
                 std::function<std::pair<bits_const_reference,kind_of_cell>(shift_in_coordinates const&)> const&
                     get_cell
+                        //!< It is a function accepting a 3D vector pointing from the current territory
+                        //!< (i.e. the territory where the signalling appears) to any territory
+                        //!< within a region (box) given by the corner vectors 'shift_to_low_corner' and
+                        //!< 'shift_to_high_corner' discussed above. The current territory lies
+                        //!< in the center of that box. Said it differently, each coordinate of a vector passed
+                        //!< to this function must be within the range of coordinates given by the
+                        //!< corresponding coordinates of both mentioned corner vectors. The function returns
+                        //!< a pair whose the first element is a reference to the memory where is stored
+                        //!< the cell (see the documentation, namely the paragraph:
+                        //!<    file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#tissue_cell
+                        //!< of the section:
+                        //!<    file:///<E2-root-dir>/doc/project_documentation/cellab.html#structure_of_column
+                        //!< ) of the territory referenced by the passed vector, and the second argument is
+                        //!< the kind of that territory (i.e. the kind of that cell).
+                        //!< Note that it is the parametrisation who defines size, content, and a compression method
+                        //!< of the memory reserved for any cell. We thus assume that the user's callback function
+                        //!< already has (or is build on) that information.
                 ) >
         single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_signalling;
 
@@ -287,6 +332,16 @@ void  apply_transition_of_synaptic_migration_in_tissue(
         natural_32_bit const  num_threads_avalilable_for_computation
         );
 
+/**
+ * This algorithm represent the fifth of the six steps in computation of a next state of the neural
+ * tissue from the current one. The algorithm enumerates all singallings in territories of tissue cells
+ * and for each of them it calls the passed user-defined callback function. This function is actualy
+ * responsible to compute a next state of the updated signalling from the current one, see the definition
+ * of the type 'single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_signalling' above.
+ *
+ * For more info read the documentation:
+ *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#algorithm_signalling
+ */
 void apply_transition_of_signalling_in_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_signalling const&
