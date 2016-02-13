@@ -961,22 +961,23 @@ The algorithm is implemented in source files:
     <kbd>transition_of_synapses_to_muscles.cpp</kbd></a>
 </li></ul>
 <p>
-We express the time complexity <i>T</i>(<i>A</i><sub>SM</sub>) of this algorithm in terms
-of the number of synapses to muscles <i>N</i><sub>M</sub>, a time complexity
+We express the worst case the time complexity <i>T</i>(<i>A</i><sub>SM</sub>) of this algorithm
+in terms of the number of synapses to muscles <i>N</i><sub>M</sub>, a time complexity
 <i>T</i>(<i>F</i><sub>SM</sub>) of the function <i>F</i><sub>SM</sub>, a time constant
 <i>T</i><sub>SM</sub> reflecting a management inside <i>A</i><sub>SM</sub> per each synapse
-to muscle, and the number of threads <i>N</i><sub>T</sub> as
+to muscle, and a number of threads <i>N</i><sub>T</sub> as
 </p><p style="text-align:center">
 <i>T</i>(<i>A</i><sub>SM</sub>) = (<i>T</i>(<i>F</i><sub>SM</sub>) + <i>T</i><sub>SM</sub>)
     &middot; <i>N</i><sub>M</sub> / <i>N</i><sub>T</sub>.
 </p><p>
-And we express the space complexity <i>S</i>(<i>A</i><sub>SM</sub>) of this algorithm in
-terms of the number of bytes <i>S</i><sub>T</sub> allocated for a thread by the operating system,
-a space complexity <i>S</i>(<i>F</i><sub>SM</sub>) of the function <i>F</i><sub>SM</sub>,
-a constant space <i>S</i><sub>SM</sub> reflecting a management inside <i>A</i><sub>SM</sub>
-per each synapse to muscle, and the number of threads <i>N</i><sub>T</sub> as
+And we express the worst case the space complexity <i>S</i>(<i>A</i><sub>SM</sub>) of this
+algorithm in terms of the number of bytes <i>S</i><sub>SYS</sub> allocated for a thread
+by the operating system, a space complexity <i>S</i>(<i>F</i><sub>SM</sub>) of the
+function <i>F</i><sub>SM</sub>, a constant space <i>S</i><sub>SM</sub> reflecting a
+management inside <i>A</i><sub>SM</sub> per each synapse to muscle, and a number of
+threads <i>N</i><sub>T</sub> as
 </p><p style="text-align:center">
-<i>S</i>(<i>A</i><sub>SM</sub>) = (<i>S</i>(<i>F</i><sub>SM</sub>) + <i>S</i><sub>T</sub> +
+<i>S</i>(<i>A</i><sub>SM</sub>) = (<i>S</i>(<i>F</i><sub>SM</sub>) + <i>S</i><sub>SYS</sub> +
     <i>S</i><sub>SM</sub>)
     &middot; <i>N</i><sub>T</sub>.
 </p>
@@ -1170,29 +1171,54 @@ The algorithm is implemented in source files:
     <kbd>transition_of_synapses_of_tissue.cpp</kbd></a>
 </li></ul>
 <p>
-<!--We express the time complexity <i>T</i>(<i>A</i><sub>TS</sub>) of this algorithm in terms-->
-<!--of the number of synapses inside the tissue <i>N</i><sub>M</sub>, a time complexity-->
-<!--<i>T</i>(<i>F</i><sub>TS</sub>) of the function <i>F</i><sub>TS</sub>, a time constant-->
-<!--<i>T</i><sub>TS</sub> reflecting a management inside <i>A</i><sub>TS</sub> per each synapse,-->
-<!--and the number of threads <i>N</i><sub>T</sub> as-->
+We express the worst case time complexity <i>T</i>(<i>A</i><sub>TS</sub>) of this algorithm
+in terms of the number of synapses inside the tissue
 <i>N</i><sub>TS</sub> = <i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub><i>T</i><sub>0</sub>
-    + &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub><i>T</i><sub><i>K</i>&minus;1</sub>).
+    + &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub><i>T</i><sub><i>K</i>&minus;1</sub>),
+a time complexity
+<i>T</i>(<i>F</i><sub>TS</sub>) of the function <i>F</i><sub>TS</sub>, a time constant
+<i>T</i><sub>TS</sub> reflecting a management inside <i>A</i><sub>TS</sub> per each synapse,
+a time constant <i>T</i><sub>SIG</sub> of the callback function
+<kbd>get_signalling</kbd>, radii <i>RT</i><sub>X</sub>, <i>RT</i><sub>Y</sub>,
+<i>RT</i><sub>C</sub> determining signalling neighbourhoods of synapses, and a number of threads
+<i>N</i><sub>T</sub> as
+</p>
+<table align="center">
+<tr>
+<td align="right" valign="top"><i>T</i>(<i>A</i><sub>TS</sub>)</td>
+<td align="center" valign="top">=</td>
+<td align="left" valign="top">
+(<i>X</i>&middot;<i>Y</i>&middot;&sum;<sub>i=0..<i>K</i>&minus;1</sub>
+    <i>N</i><sub><i>i</i></sub><i>T</i><sub><i>i</i></sub>&middot;(<i>T</i>(<i>F</i><sub>TS</sub>)
+        + <i>T</i><sub>TS</sub> +
+        (2<i>RT</i><sub>X</sub>[<i>i</i>]+1)&middot;(2<i>RT</i><sub>Y</sub>[<i>i</i>]+1)&middot;(2<i>RT</i><sub>C</sub>[<i>i</i>]+1)&middot;<i>T</i><sub>SIG</sub>)) / <i>N</i><sub>T</sub>
+</td>
+</tr><tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top">&le;</td>
+<td align="left" valign="top">
+(<i>T</i>(<i>F</i><sub>TS</sub>) + <i>T</i><sub>TS</sub> +
+    <i>H</i><sub>TS</sub>&middot;<i>T</i><sub>SIG</sub>)
+    &middot; <i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>,
+</td>
+</tr>
+</table>
+<p>
+where
+<i>H</i><sub>TS</sub> =
+    max {(2<i>RT</i><sub>X</sub>[<i>i</i>]+1)&middot;(2<i>RT</i><sub>Y</sub>[<i>i</i>]+1)&middot;(2<i>RT</i><sub>C</sub>[<i>i</i>]+1)
+    ; i = 0,&hellip;,<i>K</i>&minus;1}.
+</p><p>
+And we express the worst case space complexity <i>S</i>(<i>A</i><sub>TS</sub>) of this algorithm
+in terms of the number of bytes <i>S</i><sub>SYS</sub> allocated for a thread by the operating
+system, a space complexity <i>S</i>(<i>F</i><sub>TS</sub>) of the function <i>F</i><sub>TS</sub>,
+a constant space <i>S</i><sub>TS</sub> reflecting a management inside <i>A</i><sub>TS</sub>
+per each synapse, a constant space <i>S</i><sub>SIG</sub> of the callback function
+<kbd>get_signalling</kbd>, and a number of threads <i>N</i><sub>T</sub> as
 </p>
 <p style="text-align:center">
-<i>T</i>(<i>A</i><sub>TS</sub>) = (<i>T</i>(<i>F</i><sub>TS</sub>) + <i>T</i><sub>TS</sub> +
-    <i>R</i><sup>3</sup>&middot;<i>T</i>(<kbd>get_signalling</kbd>))
-    &middot; <i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>.
-</p>
-<!--<p>-->
-<!--And we express the space complexity <i>S</i>(<i>A</i><sub>SM</sub>) of this algorithm in-->
-<!--terms of the number of bytes <i>S</i><sub>T</sub> allocated for a thread by the operating system,-->
-<!--a space complexity <i>S</i>(<i>F</i><sub>SM</sub>) of the function <i>F</i><sub>SM</sub>,-->
-<!--a constant space <i>S</i><sub>SM</sub> reflecting a management inside <i>A</i><sub>SM</sub>-->
-<!--per each synapse to muscle, and the number of threads <i>N</i><sub>T</sub> as-->
-<!--</p>-->
-<p style="text-align:center">
-<i>S</i>(<i>A</i><sub>TS</sub>) = (<i>S</i>(<i>F</i><sub>TS</sub>) + <i>S</i><sub>T</sub> +
-    <i>S</i><sub>TS</sub>)
+<i>S</i>(<i>A</i><sub>TS</sub>) = (<i>S</i>(<i>F</i><sub>TS</sub>) + <i>S</i><sub>SYS</sub> +
+    <i>S</i><sub>TS</sub> + <i>S</i><sub>SIG</sub>)
     &middot; <i>N</i><sub>T</sub>.
 </p>
 <h3 id="algorithm_territorial_lists_of_synapses">3.3&nbsp;&nbsp;&nbsp;Transition of territorial lists of synapses</h3>
