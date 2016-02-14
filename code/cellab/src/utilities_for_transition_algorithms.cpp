@@ -43,7 +43,14 @@ spatial_neighbourhood::spatial_neighbourhood(
     : m_center_of_neighbourhood(center)
     , m_shift_to_low_corner(shift_to_low_corner)
     , m_shift_to_high_corner(shift_to_high_corner)
-{}
+{
+    ASSUMPTION(m_shift_to_low_corner.get_shift_along_x_axis() <= 0);
+    ASSUMPTION(m_shift_to_low_corner.get_shift_along_y_axis() <= 0);
+    ASSUMPTION(m_shift_to_low_corner.get_shift_along_columnar_axis() <= 0);
+    ASSUMPTION(m_shift_to_high_corner.get_shift_along_x_axis() >= 0);
+    ASSUMPTION(m_shift_to_high_corner.get_shift_along_y_axis() >= 0);
+    ASSUMPTION(m_shift_to_high_corner.get_shift_along_columnar_axis() >= 0);
+}
 
 tissue_coordinates const& spatial_neighbourhood::get_center_of_neighbourhood() const
 {

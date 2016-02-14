@@ -13,7 +13,7 @@ namespace cellab {
 
 
 /**
- * It is just 3D vector.
+ * It is a triple of tissue coordinates into the 3D array of territories in the neural tissue.
  */
 struct tissue_coordinates
 {
@@ -36,7 +36,8 @@ private:
  * A spatial neighbourhood of some reference (central) point in the neural tissue is a set of tissue
  * coordinates defined relative to that point. The neighbourhood always has a shape of a box. So, it is
  * sufficient to specify it by two shift vectors from the central points to two extreme points of the
- * box (lying on the main diagonal of the box).
+ * box (lying on the main diagonal of the box). It is assumed that the central point lies inside the
+ * neighbourhood, but it does not have to lie in the geometrical center of the neighbourhood.
  */
 struct spatial_neighbourhood
 {
@@ -60,6 +61,7 @@ private:
 
 bool operator==(tissue_coordinates const& left, tissue_coordinates const& right);
 
+
 natural_32_bit  shift_coordinate_in_torus_axis(
         integer_64_bit coordinate,
         integer_64_bit const shift,
@@ -80,7 +82,6 @@ tissue_coordinates  shift_coordinates(
         natural_32_bit const num_cells_along_y_axis,
         natural_32_bit const num_cells_along_columnar_axis
         );
-
 
 
 /**
@@ -156,6 +157,14 @@ natural_32_bit  get_end_index_of_territorial_list_of_cell(
         natural_8_bit const index_of_territorial_list
         );
 
+
+/**
+ * It swaps data of two synapses inside two territories in the neural tissue. Namely, all three
+ * components of both synapses are swapped: coordinates to source cells, territorial states, and
+ * contents of user-defined memories. So, the function thus actually performs three swaps - one
+ * swap per component. It is legal to swap synapses inside the same territory, and it is also
+ * legal (but useless) to swap a synapse with itself.
+ */
 void  swap_all_data_of_two_synapses(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         tissue_coordinates const& first_cell_coordinates,
@@ -206,6 +215,17 @@ std::tuple<bits_const_reference,kind_of_cell,kind_of_cell>  get_synapse_callback
         natural_32_bit const shift_from_start_index
         );
 
+
+/**
+ * It is passed to user's callback function (from inside of the function 'apply_transition_of_signalling_in_tissue')
+ * in order to allow easy access to tissue cells inside a neighbourhood of an updated signalling. First three
+ * parameters of this function are bound to fixed values (using std::bind inside 'apply_transition_of_signalling_in_tissue'),
+ * so user's callback function provides only one (the last) argument, which is a 3D shift vector from the territory
+ * of the updated signalling to some territory inside the spatial neighbourhood. Note that the spatial neighbourhood
+ * is also passed to the user's callback function (via a pair of two extremal shifts). See definition of
+ * 'single_threaded_in_situ_transition_function_of_packed_dynamic_state_of_signalling' in the
+ * header file 'thransition_algorithms.hpp' to see the prototype of the user's callback function.
+ */
 std::pair<bits_const_reference,kind_of_cell>  get_cell_callback_function(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         std::shared_ptr<static_state_of_neural_tissue const> const static_state_of_tissue,

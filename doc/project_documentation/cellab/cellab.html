@@ -848,13 +848,13 @@ applied to a state of the neural tissue.
 This algorithm, denoted as <i>A</i><sub>SM</sub>, represents the first of six steps
 in the computation of a next state of the neural tissue from the current one.
 The algorithm accepts an external function <i>F</i><sub>SM</sub> and a number of threads
-<i>k</i> which can be used for the computation. The function <i>F</i><sub>SM</sub> is
+<i>N</i><sub>T</sub> which can be used for the computation. The function <i>F</i><sub>SM</sub> is
 a part of the parametrisation of the neural tissue, i.e. it is an external user-defined
 function. It is called for individual synapses to muscles to compute their next states.
 </p><p>
 The computation starts in the function <kbd>apply_transition_of_synapses_to_muscles</kbd>.
-There the algorithm first creates (from the current thread) <i>k</i>&minus;1 new threads
-and then execution of all <i>k</i> threads proceeds to the function
+There the algorithm first creates (from the current thread) <i>N</i><sub>T</sub>&minus;1 new
+threads and then execution of all <i>N</i><sub>T</sub> threads proceeds to the function
 <kbd>thread_apply_transition_of_synapses_to_muscles</kbd>. There each thread processes
 a different sub-set of all synapses to muscles. The enumeration of right sub-set of
 synapses in each thread is provided by the utility function
@@ -984,13 +984,13 @@ threads <i>N</i><sub>T</sub> as
 This algorithm, denoted as <i>A</i><sub>TS</sub>, represents the second of six steps in the
 computation of a next state of the neural tissue from the current one.
 The algorithm accepts an external function <i>F</i><sub>TS</sub> and a number of threads
-<i>k</i> which can be used for the computation. The function <i>F</i><sub>TS</sub> is
+<i>N</i><sub>T</sub> which can be used for the computation. The function <i>F</i><sub>TS</sub> is
 a part of the parametrisation of the neural tissue, i.e. it is an external user-defined
 function. It is called for individual synapses in the tissue to compute their next states.
 </p><p>
 The computation starts in the function <kbd>apply_transition_of_synapses_of_tissue</kbd>.
-There the algorithm first creates (from the current thread) <i>k</i>&minus;1 new threads
-and then execution of all <i>k</i> threads proceeds to the function
+There the algorithm first creates (from the current thread) <i>N</i><sub>T</sub>&minus;1
+new threads and then execution of all <i>N</i><sub>T</sub> threads proceeds to the function
 <kbd>thread_apply_transition_of_synapses_of_tissue</kbd>. There each thread processes
 a different sub-set of all synapses in the tissue. The enumeration of right sub-set of
 synapses in each thread is provided by the utility function
@@ -1244,13 +1244,13 @@ per each synapse, a constant space <i>S</i><sub>SIG</sub> of the callback functi
 This algorithm, denoted as <i>A</i><sub>TG</sub>, represents the fifth of six steps in
 the computation of a next state of the neural tissue from the current one.
 The algorithm accepts an external function <i>F</i><sub>TG</sub> and a number of threads
-<i>k</i> which can be used for the computation. The function <i>F</i><sub>TG</sub> is
+<i>N</i><sub>T</sub> which can be used for the computation. The function <i>F</i><sub>TG</sub> is
 a part of the parametrisation of the neural tissue, i.e. it is an external user-defined
 function. It is called for individual signallings in the tissue to compute their next states.
 </p><p>
 The computation starts in the function <kbd>apply_transition_of_signalling_in_tissue</kbd>.
-There the algorithm first creates (from the current thread) <i>k</i>&minus;1 new threads
-and then execution of all <i>k</i> threads proceeds to the function
+There the algorithm first creates (from the current thread) <i>N</i><sub>T</sub>&minus;1
+new threads and then execution of all <i>N</i><sub>T</sub> threads proceeds to the function
 <kbd>thread_apply_transition_of_signalling_in_tissue</kbd>. There each thread processes
 a different sub-set of all signallings in the tissue. The enumeration of right sub-set of
 signallings in each thread is provided by the utility function
@@ -1430,13 +1430,13 @@ per each signalling, a constant space <i>S</i><sub>CEL</sub> of the callback fun
 This algorithm, denoted as <i>A</i><sub>TC</sub>, represents the last of six steps in
 the computation of a next state of the neural tissue from the current one.
 The algorithm accepts an external function <i>F</i><sub>TC</sub> and a number of threads
-<i>k</i> which can be used for the computation. The function <i>F</i><sub>TC</sub> is
+<i>N</i><sub>T</sub> which can be used for the computation. The function <i>F</i><sub>TC</sub> is
 a part of the parametrisation of the neural tissue, i.e. it is an external user-defined
 function. It is called for individual cells in the tissue to compute their next states.
 </p><p>
 The computation starts in the function <kbd>apply_transition_of_cells_of_tissue</kbd>.
-There the algorithm first creates (from the current thread) <i>k</i>&minus;1 new threads
-and then execution of all <i>k</i> threads proceeds to the function
+There the algorithm first creates (from the current thread) <i>N</i><sub>T</sub>&minus;1
+new threads and then execution of all <i>N</i><sub>T</sub> threads proceeds to the function
 <kbd>thread_apply_transition_of_cells_of_tissue</kbd>. There each thread processes
 a different sub-set of all cells in the tissue. The enumeration of right sub-set of
 cells in each thread is provided by the utility function

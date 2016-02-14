@@ -322,15 +322,38 @@ void apply_transition_of_synapses_of_tissue(
         natural_32_bit const  num_threads_avalilable_for_computation
         );
 
+
+/**
+ * This algorithm sorts lists of synapses in territories in the neural tissue according to their
+ * territorial states. Each territory has a list of synapses (actually there are three aligned lists
+ * forming one logical list of triples - each triple consists of elements of the three lists at the
+ * same indices). The list of synapses is logically split into 7 sub-lists - for each territorial
+ * state of synapse one list (see file 'territorial_state_of_synapse.hpp'). So, a territorial state
+ * of a synapse actually represent an index of a sub-list. This algorithm thus rearranges order of
+ * synapses in the list such that they appear in the proper sub-list. At the end the list of delimiters
+ * of each territory is unpdated such that they point to the first synapses in logical sub-lists
+ * number MIGRATION_ALONG_POSITIVE_X_AXIS,...,MIGRATION_ALONG_NEGATIVE_COLUMNAR_AXIS.
+ *
+ * For more info read the documentation:
+ *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#algorithm_territorial_lists_of_synapses
+ */
 void apply_transition_of_territorial_lists_of_synapses(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         natural_32_bit const  num_threads_avalilable_for_computation
         );
 
+
+/**
+ * TODO
+ *
+ * For more info read the documentation:
+ *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#algorithm_synaptic_migration_in_tissue
+ */
 void  apply_transition_of_synaptic_migration_in_tissue(
         std::shared_ptr<dynamic_state_of_neural_tissue> const dynamic_state_of_tissue,
         natural_32_bit const  num_threads_avalilable_for_computation
         );
+
 
 /**
  * This algorithm represent the fifth of the six steps in computation of a next state of the neural

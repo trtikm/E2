@@ -6,6 +6,11 @@
 namespace cellab {
 
 
+/**
+ * It is a shift in tissue coordinates defined by the type 'tissue_coordinates' (see the file
+ * 'utilities_for_transition_algorithms.hpp'). It is primarily used for description of spatial
+ * neighbourhood (see the type 'spatial_neighbourhood' in 'utilities_for_transition_algorithms.hpp').
+ */
 struct shift_in_coordinates
 {
     shift_in_coordinates(
