@@ -331,7 +331,7 @@ void apply_transition_of_synapses_of_tissue(
  * state of synapse one list (see file 'territorial_state_of_synapse.hpp'). So, a territorial state
  * of a synapse actually represent an index of a sub-list. This algorithm thus rearranges order of
  * synapses in the list such that they appear in the proper sub-list. At the end the list of delimiters
- * of each territory is unpdated such that they point to the first synapses in logical sub-lists
+ * of each territory is updated such that they point to the first synapses in logical sub-lists
  * number MIGRATION_ALONG_POSITIVE_X_AXIS,...,MIGRATION_ALONG_NEGATIVE_COLUMNAR_AXIS.
  *
  * For more info read the documentation:

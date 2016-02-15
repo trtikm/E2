@@ -419,7 +419,7 @@ territorial states, and coordinates of source cells, respectively. Observe that 
 lists have the same length and elements on the same indices are aligned, i.e. they form
 triples across the lists.
 </p><p>
-For each an index <i>j</i> (0&le;<i>j</i>&lt;<i>T</i><sub><i>i</i></sub>) a triple
+For each index <i>j</i> (0&le;<i>j</i>&lt;<i>T</i><sub><i>i</i></sub>) a triple
 (<i>LS</i>[<i>j</i>],
 <i>LT</i>[<i>j</i>],
 <i>LC</i>[<i>j</i>])
@@ -1233,7 +1233,49 @@ per each synapse, a constant space <i>S</i><sub>SIG</sub> of the callback functi
 </p>
 <h3 id="algorithm_territorial_lists_of_synapses">3.3&nbsp;&nbsp;&nbsp;Transition of territorial lists of synapses</h3>
 <p>
-<kbd>go_to_next_coordinates</kbd>
+This algorithm, denoted as <i>A</i><sub>TL</sub>, represents the third of six steps in
+the computation of a next state of the neural tissue from the current one. It accepts only
+a number of threads <i>N</i><sub>T</sub> which can be used for the computation.
+The computation starts in the function <kbd>apply_transition_of_</kbd>-
+<kbd>territorial_lists_of_synapses</kbd>.
+There the algorithm first creates (from the current thread) <i>N</i><sub>T</sub>&minus;1
+new threads and then execution of all <i>N</i><sub>T</sub> threads proceeds to the function
+<kbd>thread_apply_transition_of_territorial_lists_of_synapses</kbd>, where each thread processes
+a different sub-set of all territories in the tissue. The enumeration of right sub-set of
+territories in each thread is provided by the utility function
+<kbd>go_to_next_coordinates</kbd>, see
+<a href="./cellab.html#parallel_enumeration">section 3.7</a>
+for details. Each thread then calls for each enumerated territory in the tissue an internal function
+<kbd>move_synapses_into_proper_lists_in_territory_of_one_cell</kbd>
+which performs all actual work of the whole algorithm:
+</p>
+<ol><li>
+It synchronously sorts the lists <i>LS</i>, <i>LT</i>, <i>LC</i> according to values in <i>LT</i>
+(remember that we trait the lists as if there was a single list consisting of triples
+(<i>LS</i>[<i>j</i>],
+<i>LT</i>[<i>j</i>],
+<i>LC</i>[<i>j</i>]),
+see the paragraph
+<a href="./cellab.html#territorial_lists">Territorial lists</a>
+for details) such that the lists can be logically divided into seven sub-lists (for each possible
+value of a territorial state one sub-list).  A territorial state of a synapse then represent
+an index of a sub-list.
+</li><li>
+It updates all six delimiters in the delimiters list <i>D</i> of the territory
+such that they point to the first synapses in logical sub-lists number 1,&hellip;,6.
+</li></ol>
+<p>
+The sub-lists are not build from scratch. Instead, they are first reconstructed from the current
+delimiters in delimiters list <i>D</i> (see the paragraph
+<a href="./cellab.html#territorial_lists">Territorial lists</a>
+for details) and then each triple
+(<i>LS</i>[<i>j</i>],
+<i>LT</i>[<i>j</i>],
+<i>LC</i>[<i>j</i>])
+is moved to the sub-list number <i>LT</i>[<i>j</i>], unless it is already there. The algorithm
+first moves triples with <i>LT</i>[<i>j</i>]&ne;0 from the sub-list number 0, then triples with
+<i>LT</i>[<i>j</i>]&ne;1 from the sub-list number 1, and so on. Of course, as triples are moved
+boundaries of sub-lists are updated accordingly.
 </p>
 <h3 id="algorithm_synaptic_migration_in_tissue">3.4&nbsp;&nbsp;&nbsp;Transition of synaptic migration in tissue</h3>
 <p>
@@ -1256,7 +1298,7 @@ a different sub-set of all signallings in the tissue. The enumeration of right s
 signallings in each thread is provided by the utility function
 <kbd>go_to_next_coordinates</kbd>, see
 <a href="./cellab.html#parallel_enumeration">section 3.7</a>
-for details. Each thread calls for each enumerated cell the function
+for details. Each thread calls for each enumerated signalling the function
 <i>F</i><sub>TG</sub> with the following information:
 </p>
 <table class="enumerate">
