@@ -1322,6 +1322,45 @@ The algorithm is implemented in source files:
 <a href="../../../code/cellab/src/transition_of_territorial_lists_of_synapses.cpp">
     <kbd>transition_of_territorial_lists_of_synapses.cpp</kbd></a>
 </li></ul>
+<p>
+We express the worst case time complexity <i>T</i>(<i>A</i><sub>TL</sub>) of this algorithm
+in terms of the number of synapses inside the tissue
+<i>N</i><sub>TS</sub> = <i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub><i>T</i><sub>0</sub>
+    + &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub><i>T</i><sub><i>K</i>&minus;1</sub>),
+a time constant <i>T</i><sub>TL</sub> reflecting a management inside
+<i>A</i><sub>TL</sub> per each triple, a time constant <i>T</i><sub>SWP</sub> for the
+<kbd>swap</kbd> operation of triples, and a number of threads <i>N</i><sub>T</sub> as
+</p>
+<table align="center">
+<tr>
+<td align="right" valign="top">
+    <i>T</i>(<i>A</i><sub>TL</sub>) =
+(<i>X</i>&middot;<i>Y</i> &middot; &sum;<sub>i=0..<i>K</i>&minus;1</sub>
+    <i>N</i><sub><i>i</i></sub><i>T</i><sub><i>i</i></sub> &middot;
+        (<i>T</i><sub>TL</sub> + 6<i>T</i><sub>SWP</sub>)) / <i>N</i><sub>T</sub> =
+    (<i>T</i><sub>TL</sub> + 6<i>T</i><sub>SWP</sub>) &middot;
+        (<i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>),
+</td>
+</tr>
+</table>
+<p>
+because the algorithm processes each index into the logical list of triples exactly once
+in each territory, and the processing involves at most 6 swaps to get a triple at an index
+to the right sub-list.
+</p><p>
+And we express the worst case space complexity <i>S</i>(<i>A</i><sub>TL</sub>) of this algorithm
+in terms of a constant space <i>S</i><sub>TL</sub> reflecting a management inside
+<i>A</i><sub>TL</sub> per each triple and a number of threads <i>N</i><sub>T</sub> as
+</p>
+<p style="text-align:center">
+<i>S</i>(<i>A</i><sub>TL</sub>) = <i>S</i><sub>TL</sub> &middot; <i>N</i><sub>T</sub>.
+</p>
+
+
+
+
+
+
 
 
 <h3 id="algorithm_synaptic_migration_in_tissue">
