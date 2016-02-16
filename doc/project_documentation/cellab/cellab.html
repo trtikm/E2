@@ -1276,16 +1276,56 @@ is moved to the sub-list number <i>LT</i>[<i>j</i>], unless it is already there.
 first moves triples with <i>LT</i>[<i>j</i>]&ne;0 from the sub-list number 0, then triples with
 <i>LT</i>[<i>j</i>]&ne;1 from the sub-list number 1, and so on. Of course, as triples are moved
 boundaries of sub-lists are updated accordingly.
+</p><p>
+The process is depicted in the figure bellow. We see the lists
+<i>LS</i>, <i>LT</i>, <i>LC</i> forming one logical list of triples. This list
+is spit onto seven sub-lists. The sub-list number 0 consists of triples at indices
+0,&hellip;,<i>D</i>[0]&minus;1, the sub-list number 1 consists of triples at indices
+<i>D</i>[0],&hellip;,<i>D</i>[1]&minus;1, and so on, and the sub-list number 6 consists of
+triples at indices <i>D</i>[5],&hellip;,<i>T</i><sub><i>i</i></sub> &minus;1, where <i>D</i>
+is the delimiters list of the territory and <i>T</i><sub><i>i</i></sub> is the number of
+synapses in the territory and <i>i</i> denotes the kind of the territory. The figure shows
+a state where sub-lists number 0, 1, and 2 were already processed by the algorithm. The
+sub-list number 3 is in the middle of the processing, and the remaining lists have not been
+processed so far. The figure shows how sub-lists are changed when the triples
+with the <i>LT</i> component 1 and 5 are moved from the sub-list number 3 to
+sub-lists 1 and 5 respectively.
 </p>
 <img class="figure"
      src="./territorial_lists_sorting.svg"
      alt="[territorial_lists_sorting.svg]">
+<p>
+For the triple with the <i>LT</i> component 1 the algorithm performs the following actions.
+First it swaps the triple with the first triple in the sub-list number 3 and increments
+<i>D</i>[2] by one. Our triple appears now in the sub-list number 2. Then we swaps the triple
+with the first triple in the sub-list number 2 and we increment <i>D</i>[1]. Our triple now appears
+in the sub-list number 1.
+</p><p>
+For the triple with the <i>LT</i> component 5 the algorithm performs similar actions.
+Only difference is that we move the triple in the opposite dirrection. So, we first swaps
+the triple with the last triple in the sub-list number 3 and we decrement <i>D</i>[3] by one.
+Our triple appears now in the sub-list number 4. Then we swaps the triple
+again with the last triple in the sub-list number 4 and we decrement <i>D</i>[4]. Our triple
+now appears in the sub-list number 5.
+</p><p>
+Once all remaining triples in the sub-list 3 are moved to right sub-lists, the algorithm applies
+the same process for the remaining sub-lists 4, 5, and 6. Then all sub-lists contain righ
+triples and the delimiters list <i>D</i> holds right values (correct delimiters of sub-lists).
+Note that swaps of triples we saw are always performed per components.
+</p><p>
+The algorithm is implemented in source files:
+</p>
+<ul><li>
+<a href="../../../code/cellab/include/cellab/transition_algorithms.hpp">
+    <kbd>transition_algorithms.hpp</kbd></a> and
+</li><li>
+<a href="../../../code/cellab/src/transition_of_territorial_lists_of_synapses.cpp">
+    <kbd>transition_of_territorial_lists_of_synapses.cpp</kbd></a>
+</li></ul>
 
 
-
-
-
-<h3 id="algorithm_synaptic_migration_in_tissue">3.4&nbsp;&nbsp;&nbsp;Transition of synaptic migration in tissue</h3>
+<h3 id="algorithm_synaptic_migration_in_tissue">
+    3.4&nbsp;&nbsp;&nbsp;Transition of synaptic migration in tissue</h3>
 <p>
 <kbd>go_to_next_coordinates</kbd>
 </p>
