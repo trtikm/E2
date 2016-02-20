@@ -344,7 +344,18 @@ void apply_transition_of_territorial_lists_of_synapses(
 
 
 /**
- * TODO
+ * It exchanges synapses in adjacent territories according to territorrial states of the synapses. Let
+ * (x,y,c) be tissue coordinates of some territory in the neural tissue. The algorithm considers for it
+ * up to three adjacent territories at tissue coordinates (x+1,y,c), (x,y+1,c), and (x,y,c+1) (we take
+ * only those with valid coordinates). For the pair of territories (x,y,c) and (x+1,y,c) the algorithm
+ * swaps as many synapses with the territorial state MIGRATION_ALONG_POSITIVE_X_AXIS in (x,y,c) with
+ * synapses with the territorial state MIGRATION_ALONG_NEGATIVE_X_AXIS in (x+1,y,c) as possible. For the
+ * pair (x,y,c) and (x,y+1,c) the algorithm swaps as many synapses with the territorial state
+ * MIGRATION_ALONG_POSITIVE_Y_AXIS in (x,y,c) with synapses with the territorial state
+ * MIGRATION_ALONG_NEGATIVE_Y_AXIS in (x,y+1,c) as possible. And for the pair of territories (x,y,c) and
+ * (x,y,c+1) the algorithm swaps as many synapses with the territorial state
+ * MIGRATION_ALONG_POSITIVE_COLUMNAR_AXIS in (x,y,c) with synapses with the territorial state
+ * MIGRATION_ALONG_NEGATIVE_COLUMNAR_AXIS in (x,y,c+1) as possible.
  *
  * For more info read the documentation:
  *      file:///<E2-root-dir>/doc/project_documentation/cellab/cellab.html#algorithm_synaptic_migration_in_tissue

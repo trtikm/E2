@@ -1399,6 +1399,51 @@ in the longer list. Triples of the shorter lists are always mapped from the begi
 the end while triples of the longer list are mapped from the chosen index to the end and
 then the mapping may continue from the begin for the remaining triples in the shorter list,
 if any.
+</p><p>
+The algorithm is implemented in source files:
+</p>
+<ul><li>
+<a href="../../../code/cellab/include/cellab/transition_algorithms.hpp">
+    <kbd>transition_algorithms.hpp</kbd></a> and
+</li><li>
+<a href="../../../code/cellab/src/transition_of_synaptic_migration_in_tissue.cpp">
+    <kbd>transition_of_synaptic_migration_in_tissue.cpp</kbd></a>
+</li></ul>
+<p>
+We express the worst case time complexity <i>T</i>(<i>A</i><sub>TM</sub>) of this algorithm
+in terms of the number of synapses inside the tissue
+<i>N</i><sub>TS</sub> = <i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub><i>T</i><sub>0</sub>
+    + &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub><i>T</i><sub><i>K</i>&minus;1</sub>),
+a time constant <i>T</i><sub>TM</sub> reflecting a management inside
+<i>A</i><sub>TL</sub> per each triple over territorial lists, a time constant
+<i>T</i><sub>SWP</sub> for the <kbd>swap</kbd> operation of triples, and a number of
+threads <i>N</i><sub>T</sub> as
+</p>
+<table align="center">
+<tr>
+<td align="right" valign="top">
+    <i>T</i>(<i>A</i><sub>TM</sub>) =
+(<i>X</i>&middot;<i>Y</i> &middot; &sum;<sub>i=0..<i>K</i>&minus;1</sub>
+    3 &middot; <i>N</i><sub><i>i</i></sub> (<i>T</i><sub><i>i</i></sub> / 6) &middot;
+        (<i>T</i><sub>TM</sub> + <i>T</i><sub>SWP</sub>)) / <i>N</i><sub>T</sub> =
+    0.5 (<i>T</i><sub>TM</sub> + <i>T</i><sub>SWP</sub>) &middot;
+        (<i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>).
+</td>
+</tr>
+</table>
+<p>
+Note that in the worst case we may assume the same size of all sub-lists (even accross all
+kinds of territories) and no synapse has the territorial state 0. Exactly half of
+synapses in each territory is then swapped with those in complementary sub-lists
+inside adjacent territories (the procedure is called 3 times for each territory and
+1/6 of all triples is swapped in each call).
+</p><p>
+We express the worst case space complexity <i>S</i>(<i>A</i><sub>TM</sub>) of this algorithm
+in terms of a constant space <i>S</i><sub>TM</sub> reflecting a management inside
+<i>A</i><sub>TM</sub> per each triple and a number of threads <i>N</i><sub>T</sub> as
+</p>
+<p style="text-align:center">
+<i>S</i>(<i>A</i><sub>TM</sub>) = <i>S</i><sub>TM</sub> &middot; <i>N</i><sub>T</sub>.
 </p>
 
 
