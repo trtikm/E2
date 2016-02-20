@@ -1445,11 +1445,6 @@ in terms of a constant space <i>S</i><sub>TM</sub> reflecting a management insid
 <p style="text-align:center">
 <i>S</i>(<i>A</i><sub>TM</sub>) = <i>S</i><sub>TM</sub> &middot; <i>N</i><sub>T</sub>.
 </p>
-
-
-
-
-
 <h3 id="algorithm_signalling">3.5&nbsp;&nbsp;&nbsp;Transition of signalling</h3>
 <p>
 This algorithm, denoted as <i>A</i><sub>TG</sub>, represents the fifth of six steps in
@@ -1616,7 +1611,7 @@ respectively as
 <td align="center" valign="top"></td>
 <td align="left" valign="top">
 (<i>T</i><sub>NBH</sub>(<i>F</i><sub>TG</sub>) + <i>T</i><sub>CEL</sub>)
-    &middot; (<i>h</i><sub>TG</sub>&middot;<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>)
+    &middot; (<i>h</i><sub>TG</sub>&middot;<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>),
 </td>
 </tr>
 </table>
@@ -1805,12 +1800,12 @@ per each tissue cell, a constant time complexity <i>T</i><sub>SIG</sub> of the c
 function <kbd>get_connected_synapse</kbd>, radii <i>RC</i><sub>X</sub>, <i>RC</i><sub>Y</sub>,
 <i>RC</i><sub>C</sub> determining signalling neighbourhoods of cells, a number of threads
 <i>N</i><sub>T</sub>, and time complexities
-<i>T</i><sub>IN</sub>(<i>F</i><sub>TS</sub>),
-<i>T</i><sub>NBH</sub>(<i>F</i><sub>TS</sub>), and
-<i>T</i><sub>REM</sub>(<i>F</i><sub>TS</sub>)
-of the function <i>F</i><sub>TS</sub> measuring time of reading synapse connected
+<i>T</i><sub>IN</sub>(<i>F</i><sub>TC</sub>),
+<i>T</i><sub>NBH</sub>(<i>F</i><sub>TC</sub>), and
+<i>T</i><sub>REM</sub>(<i>F</i><sub>TC</sub>)
+of the function <i>F</i><sub>TC</sub> measuring time of reading synapse connected
 to the cell, reading a signalling in the neighbourhood of the cell,
-and time of all remaining parts of <i>F</i><sub>TS</sub> respectively as
+and time of all remaining parts of <i>F</i><sub>TC</sub> respectively as
 </p>
 <table align="center">
 <tr>
@@ -1836,7 +1831,7 @@ and time of all remaining parts of <i>F</i><sub>TS</sub> respectively as
 <td align="right" valign="top"></td>
 <td align="center" valign="top">&le;</td>
 <td align="left" valign="top">
-(<i>T</i><sub>REM</sub>(<i>F</i><sub>TC</sub>) + <i>T</i><sub>TS</sub>)
+(<i>T</i><sub>REM</sub>(<i>F</i><sub>TC</sub>) + <i>T</i><sub>TC</sub>)
     &middot; (<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>) +
 </td>
 </tr><tr>
@@ -1862,7 +1857,7 @@ where
     ; i = 0,&hellip;,<i>K</i>&minus;1}.
 </p><p>
 And we express the worst case space complexity <i>S</i>(<i>A</i><sub>TC</sub>) of this algorithm
-in terms of a space complexity <i>S</i>(<i>F</i><sub>TS</sub>) of the function <i>F</i><sub>TS</sub>,
+in terms of a space complexity <i>S</i>(<i>F</i><sub>TC</sub>) of the function <i>F</i><sub>TC</sub>,
 a constant space <i>S</i><sub>TC</sub> reflecting a management inside <i>A</i><sub>TC</sub>
 per each cell, a constant space <i>S</i><sub>SIG</sub> of the callback function
 <kbd>get_signalling</kbd>, a constant space <i>S</i><sub>SYN</sub> of the callback function
@@ -2043,6 +2038,578 @@ have to compute nor store any addition information (the initial extent is a loop
 in a loop creating threads and the other extent is nothing but the passed number
 of threads).
 </p>
+<h3 id="">3.8&nbsp;&nbsp;&nbsp;Worst case time and space complexity of next state computation</h3>
+<p>
+Here we put together worst case complexities of individual computational steps (see sections
+<a href="./cellab.html#algorithm_synapses_to_muscles">3.1</a>,
+<a href="./cellab.html#algorithm_synapses_in_tissue">3.2</a>,
+<a href="./cellab.html#algorithm_territorial_lists_of_synapses">3.3</a>,
+<a href="./cellab.html#algorithm_synaptic_migration_in_tissue">3.4</a>,
+<a href="./cellab.html#algorithm_signalling">3.5</a>, and
+<a href="./cellab.html#algorithm_cells_in_tissue">3.6</a>)
+of a next state of the neural tissue from the current one. We denote <i>A</i> the algorithm
+calling algorithms
+<i>A</i><sub>SM</sub>,
+<i>A</i><sub>TS</sub>,
+<i>A</i><sub>TL</sub>,
+<i>A</i><sub>TM</sub>,
+<i>A</i><sub>TG</sub>, and
+<i>A</i><sub>TC</sub>
+of individual steps sequentially in the presented order.
+Its worst case time complexity <i>T</i>(<i>A</i>) can be expressed as
+</p>
+<table align="center">
+<tr>
+<td align="right" valign="top"><i>T</i>(<i>A</i>)</td>
+<td align="center" valign="top">=</td>
+<td align="left" valign="top">
+    <i>T</i>(<i>A</i><sub>SM</sub>) +
+    <i>T</i>(<i>A</i><sub>TS</sub>) +
+    <i>T</i>(<i>A</i><sub>TL</sub>) +
+    <i>T</i>(<i>A</i><sub>TM</sub>) +
+    <i>T</i>(<i>A</i><sub>TG</sub>) +
+    <i>T</i>(<i>A</i><sub>TC</sub>)
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top">=</td>
+<td align="left" valign="top">
+(<i>T</i>(<i>F</i><sub>SM</sub>) + <i>T</i><sub>SM</sub>)
+    &middot; (<i>N</i><sub>M</sub> / <i>N</i><sub>T</sub>) +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+( (<i>T</i><sub>REM</sub>(<i>F</i><sub>TS</sub>) + <i>T</i><sub>TS</sub>)
+    &middot; (<i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>) +
+    (<i>T</i><sub>NBH</sub>(<i>F</i><sub>TS</sub>) + <i>T</i><sub>SIG</sub>)
+    &middot; (<i>h</i><sub>TS</sub>&middot;<i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>) ) +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+(<i>T</i><sub>TL</sub> + 6<i>T</i><sub>SWP</sub>) &middot;
+    (<i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>) +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+0.5 (<i>T</i><sub>TM</sub> + <i>T</i><sub>SWP</sub>) &middot;
+        (<i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>) +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+( (<i>T</i><sub>REM</sub>(<i>F</i><sub>TG</sub>) + <i>T</i><sub>TG</sub>)
+        &middot; (<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>) +
+    (<i>T</i><sub>NBH</sub>(<i>F</i><sub>TG</sub>) + <i>T</i><sub>CEL</sub>)
+        &middot; (<i>h</i><sub>TG</sub>&middot;<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>) ) +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+( (<i>T</i><sub>REM</sub>(<i>F</i><sub>TC</sub>) + <i>T</i><sub>TC</sub>)
+        &middot; (<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>) +
+    (<i>T</i><sub>NBH</sub>(<i>F</i><sub>TC</sub>) + <i>T</i><sub>SIG</sub>)
+        &middot; (<i>h</i><sub>TC</sub>&middot;<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>) +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+    &nbsp;&nbsp;
+    (<i>T</i><sub>IN</sub>(<i>F</i><sub>TC</sub>) + <i>T</i><sub>SYN</sub>)
+        &middot; (<i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>) )
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top">=</td>
+<td align="left" valign="top">
+(<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>) &middot;
+    (<i>T</i><sub>REM</sub>(<i>F</i><sub>TG</sub>) + <i>T</i><sub>REM</sub>(<i>F</i><sub>TC</sub>) +
+    <i>T</i><sub>TG</sub> + <i>T</i><sub>TS</sub>) +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+(<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>) &middot; <i>h</i><sub>TG</sub> &middot;
+    (<i>T</i><sub>NBH</sub>(<i>F</i><sub>TG</sub>) + <i>T</i><sub>CEL</sub>) +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+(<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>) &middot; <i>h</i><sub>TC</sub> &middot;
+    (<i>T</i><sub>NBH</sub>(<i>F</i><sub>TC</sub>) + <i>T</i><sub>SIG</sub>) +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+(<i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>) &middot;
+    (<i>T</i><sub>REM</sub>(<i>F</i><sub>TS</sub>) + <i>T</i><sub>IN</sub>(<i>F</i><sub>TC</sub>) +
+    <i>T</i><sub>TS</sub> + <i>T</i><sub>TL</sub> + 0.5<i>T</i><sub>TM</sub> + <i>T</i><sub>SYN</sub> +
+    6.5<i>T</i><sub>SWP</sub>) +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+(<i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>) &middot; <i>h</i><sub>TS</sub> &middot;
+    (<i>T</i><sub>NBH</sub>(<i>F</i><sub>TS</sub>) + <i>T</i><sub>SIG</sub>) +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+(<i>N</i><sub>M</sub> / <i>N</i><sub>T</sub>) &middot;
+    (<i>T</i>(<i>F</i><sub>SM</sub>) + <i>T</i><sub>SM</sub>)
+</td>
+</tr>
+</table>
+<p>
+and its worst case space complexity <i>S</i>(<i>A</i>) as
+</p>
+<table align="center">
+<tr>
+<td align="right" valign="top"><i>S</i>(<i>A</i>)</td>
+<td align="center" valign="top">=</td>
+<td align="left" valign="top">
+    <i>S</i>(<i>A</i><sub>SM</sub>) +
+    <i>S</i>(<i>A</i><sub>TS</sub>) +
+    <i>S</i>(<i>A</i><sub>TL</sub>) +
+    <i>S</i>(<i>A</i><sub>TM</sub>) +
+    <i>S</i>(<i>A</i><sub>TG</sub>) +
+    <i>S</i>(<i>A</i><sub>TC</sub>)
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top">=</td>
+<td align="left" valign="top">
+(<i>S</i>(<i>F</i><sub>SM</sub>) + <i>S</i><sub>SM</sub>)
+    &middot; <i>N</i><sub>T</sub> +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+(<i>S</i>(<i>F</i><sub>TS</sub>) + <i>S</i><sub>TS</sub> +
+    <i>S</i><sub>SIG</sub>) &middot; <i>N</i><sub>T</sub> +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+<i>S</i><sub>TL</sub> &middot; <i>N</i><sub>T</sub> +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+<i>S</i><sub>TM</sub> &middot; <i>N</i><sub>T</sub> +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+(<i>S</i>(<i>F</i><sub>TG</sub>) + <i>S</i><sub>TG</sub> + <i>S</i><sub>CEL</sub>)
+    &middot; <i>N</i><sub>T</sub> +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+    (<i>S</i>(<i>F</i><sub>TC</sub>) + <i>S</i><sub>TC</sub> + <i>S</i><sub>SIG</sub>
+        + <i>S</i><sub>SYN</sub>) &middot; <i>N</i><sub>T</sub>
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top">=</td>
+<td align="left" valign="top">
+<i>N</i><sub>T</sub> &middot;
+    (<i>S</i>(<i>F</i><sub>SM</sub>) +
+    <i>S</i>(<i>F</i><sub>TS</sub>) +
+    <i>S</i>(<i>F</i><sub>TG</sub>) +
+    <i>S</i>(<i>F</i><sub>TC</sub>) +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <i>S</i><sub>SM</sub> +
+    <i>S</i><sub>TS</sub> +
+    <i>S</i><sub>TL</sub> +
+    <i>S</i><sub>TM</sub> +
+    <i>S</i><sub>TG</sub> +
+    <i>S</i><sub>TC</sub> +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <i>S</i><sub>CEL</sub> +
+    2<i>S</i><sub>SIG</sub> +
+    <i>S</i><sub>SYN</sub>),
+</td>
+</tr>
+</table>
+<p>
+where the symbols represent the following properties (see also
+<a href="./cellab.html#static_state">section 1.1</a>):
+</p>
+<table class="enumerate">
+<tr>
+<th align="right" valign="top">Symbol</th>
+<th align="center" valign="top">&nbsp;&nbsp;&nbsp;</th>
+<th align="left" valign="top">Description</th>
+</tr>
+<tr>
+<td align="right" valign="top"><i>N</i><sub>T</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A number of threads available for the computation.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>N</i><sub>TC</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+The total number of cells inside the tissue, i.e. the number <br>
+<i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub>
+    + &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub>).
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>N</i><sub>TS</sub></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+The total numer of synapses inside the tissue, i.e. the number <br>
+<i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub><i>T</i><sub>0</sub>
+    + &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub><i>T</i><sub><i>K</i>&minus;1</sub>).
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>h</i><sub>TG</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+max{(2<i>RS</i><sub>X</sub>[<i>i</i>]+1)&middot;(2<i>RS</i><sub>Y</sub>[<i>i</i>]+1)&middot;(2<i>RS</i><sub>C</sub>[<i>i</i>]+1)
+    ; i = 0,&hellip;,<i>K</i>&minus;1}.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>h</i><sub>TC</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+max{(2<i>RC</i><sub>X</sub>[<i>i</i>]+1)&middot;(2<i>RC</i><sub>Y</sub>[<i>i</i>]+1)&middot;(2<i>RC</i><sub>C</sub>[<i>i</i>]+1)
+    ; i = 0,&hellip;,<i>K</i>&minus;1}.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>h</i><sub>TS</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+max {(2<i>RT</i><sub>X</sub>[<i>i</i>]+1)&middot;(2<i>RT</i><sub>Y</sub>[<i>i</i>]+1)&middot;(2<i>RT</i><sub>C</sub>[<i>i</i>]+1)
+    ; i = 0,&hellip;,<i>K</i>&minus;1}.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>F</i><sub>SM</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+TODO
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>T</i><sub>SM</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A time constant reflecting a management inside <i>A</i><sub>SM</sub> per each synapse
+to muscle.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>F</i><sub>TS</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+TODO
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>T</i><sub>TS</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A time constant reflecting a management inside <i>A</i><sub>TS</sub> per each synapse.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>T</i><sub>SIG</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A constant time complexity of the internal callback function
+<kbd>get_signalling</kbd> passed to the user-defined functions
+<i>F</i><sub>TC</sub> and <i>F</i><sub>TS</sub> by algotirhms
+<i>A</i><sub>TC</sub> and <i>A</i><sub>TS</sub> respectively.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>T</i><sub>TL</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A time constant reflecting a management inside
+<i>A</i><sub>TL</sub> per each triple.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>T</i><sub>SWP</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A time constant for the <kbd>swap</kbd> operation of triples
+over territorial lists. The swap can be called for two triples which
+may lie in different territories in the tissue.
+</td>
+</tr>
+<!--<tr>-->
+<!--<td align="right" valign="top"></td>-->
+<!--<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>-->
+<!--<td align="left" valign="top">-->
+
+<!--</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td align="right" valign="top"></td>-->
+<!--<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>-->
+<!--<td align="left" valign="top">-->
+
+<!--</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td align="right" valign="top"></td>-->
+<!--<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>-->
+<!--<td align="left" valign="top">-->
+
+<!--</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td align="right" valign="top"></td>-->
+<!--<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>-->
+<!--<td align="left" valign="top">-->
+
+<!--</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td align="right" valign="top"></td>-->
+<!--<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>-->
+<!--<td align="left" valign="top">-->
+
+<!--</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td align="right" valign="top"></td>-->
+<!--<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>-->
+<!--<td align="left" valign="top">-->
+
+<!--</td>-->
+<!--</tr>-->
+<!--<tr>-->
+<!--<td align="right" valign="top"></td>-->
+<!--<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>-->
+<!--<td align="left" valign="top">-->
+
+<!--</td>-->
+<!--</tr>-->
+</table>
+
+
+
+
+<!--&lt;!&ndash;*** TIME 3.4 *********************&ndash;&gt;<p>TIME 3.4</p>-->
+<!--<p>-->
+<!--We express the worst case time complexity <i>T</i>(<i>A</i><sub>TM</sub>) of this algorithm-->
+<!--in terms of the number of synapses inside the tissue-->
+<!--<i>N</i><sub>TS</sub> = <i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub><i>T</i><sub>0</sub>-->
+    <!--+ &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub><i>T</i><sub><i>K</i>&minus;1</sub>),-->
+<!--a time constant <i>T</i><sub>TM</sub> reflecting a management inside-->
+<!--<i>A</i><sub>TL</sub> per each triple over territorial lists, a time constant-->
+<!--<i>T</i><sub>SWP</sub> for the <kbd>swap</kbd> operation of triples, and a number of-->
+<!--threads <i>N</i><sub>T</sub> as-->
+<!--</p>-->
+<!--<p style="text-align:center">-->
+<!--<i>T</i>(<i>A</i><sub>TM</sub>) =-->
+    <!--0.5 (<i>T</i><sub>TM</sub> + <i>T</i><sub>SWP</sub>) &middot;-->
+        <!--(<i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>).-->
+<!--</p>-->
+<!--&lt;!&ndash;*** TIME 3.5 *********************&ndash;&gt;<p>TIME 3.5</p>-->
+<!--<p>-->
+<!--We express the worst case time complexity <i>T</i>(<i>A</i><sub>TG</sub>) of this algorithm-->
+<!--in terms of the number of cells inside the tissue-->
+<!--<i>N</i><sub>TC</sub> = <i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub> + &hellip; +-->
+<!--<i>N</i><sub><i>K</i>&minus;1</sub>), a time constant <i>T</i><sub>TG</sub> reflecting-->
+<!--a management inside <i>A</i><sub>TG</sub> per each tissue signalling, a constant time-->
+<!--complexity <i>T</i><sub>CEL</sub> of the callback function <kbd>get_cell</kbd>, radii-->
+<!--<i>RS</i><sub>X</sub>, <i>RS</i><sub>Y</sub>, <i>RS</i><sub>C</sub> determining neighbourhoods-->
+<!--of cells of updated signallings, a number of threads <i>N</i><sub>T</sub>, and time complexities-->
+<!--<i>T</i><sub>NBH</sub>(<i>F</i><sub>TG</sub>) and <i>T</i><sub>REM</sub>(<i>F</i><sub>TG</sub>)-->
+<!--of the function <i>F</i><sub>TG</sub> measuring time of reading a tissue cell in the-->
+<!--neighbourhood of the signalling and time of all remaining parts of <i>F</i><sub>TG</sub>-->
+<!--respectively as-->
+<!--</p>-->
+<!--<p style="text-align:center">-->
+<!--<i>T</i>(<i>A</i><sub>TG</sub>) =-->
+    <!--(<i>T</i><sub>REM</sub>(<i>F</i><sub>TG</sub>) + <i>T</i><sub>TG</sub>)-->
+        <!--&middot; (<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>) +-->
+    <!--(<i>T</i><sub>NBH</sub>(<i>F</i><sub>TG</sub>) + <i>T</i><sub>CEL</sub>)-->
+        <!--&middot; (<i>h</i><sub>TG</sub>&middot;<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>),-->
+<!--</p>-->
+<!--<p>-->
+<!--where-->
+<!--<i>h</i><sub>TG</sub> =-->
+    <!--max{(2<i>RS</i><sub>X</sub>[<i>i</i>]+1)&middot;(2<i>RS</i><sub>Y</sub>[<i>i</i>]+1)&middot;(2<i>RS</i><sub>C</sub>[<i>i</i>]+1)-->
+    <!--; i = 0,&hellip;,<i>K</i>&minus;1}.-->
+<!--</p>-->
+<!--&lt;!&ndash;*** TIME 3.6 *********************&ndash;&gt;<p>TIME 3.6</p>-->
+<!--<p>-->
+<!--We express the worst case time complexity <i>T</i>(<i>A</i><sub>TC</sub>) of this algorithm-->
+<!--in terms of the number of cells inside the tissue-->
+<!--<i>N</i><sub>TC</sub> = <i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub> + &hellip; +-->
+<!--<i>N</i><sub><i>K</i>&minus;1</sub>), the number of synapses inside the tissue-->
+<!--<i>N</i><sub>TS</sub> = <i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub><i>T</i><sub>0</sub>-->
+    <!--+ &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub><i>T</i><sub><i>K</i>&minus;1</sub>),-->
+<!--a time constant <i>T</i><sub>TC</sub> reflecting a management inside <i>A</i><sub>TC</sub>-->
+<!--per each tissue cell, a constant time complexity <i>T</i><sub>SIG</sub> of the callback function-->
+<!--<kbd>get_signalling</kbd>, a constant time complexity <i>T</i><sub>SYN</sub> of the callback-->
+<!--function <kbd>get_connected_synapse</kbd>, radii <i>RC</i><sub>X</sub>, <i>RC</i><sub>Y</sub>,-->
+<!--<i>RC</i><sub>C</sub> determining signalling neighbourhoods of cells, a number of threads-->
+<!--<i>N</i><sub>T</sub>, and time complexities-->
+<!--<i>T</i><sub>IN</sub>(<i>F</i><sub>TC</sub>),-->
+<!--<i>T</i><sub>NBH</sub>(<i>F</i><sub>TC</sub>), and-->
+<!--<i>T</i><sub>REM</sub>(<i>F</i><sub>TC</sub>)-->
+<!--of the function <i>F</i><sub>TC</sub> measuring time of reading synapse connected-->
+<!--to the cell, reading a signalling in the neighbourhood of the cell,-->
+<!--and time of all remaining parts of <i>F</i><sub>TC</sub> respectively as-->
+<!--</p><p style="text-align:center">-->
+<!--<i>T</i>(<i>A</i><sub>TC</sub>) =-->
+    <!--(<i>T</i><sub>REM</sub>(<i>F</i><sub>TC</sub>) + <i>T</i><sub>TC</sub>)-->
+        <!--&middot; (<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>) +-->
+    <!--(<i>T</i><sub>NBH</sub>(<i>F</i><sub>TC</sub>) + <i>T</i><sub>SIG</sub>)-->
+        <!--&middot; (<i>h</i><sub>TC</sub>&middot;<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>) +-->
+    <!--(<i>T</i><sub>IN</sub>(<i>F</i><sub>TC</sub>) + <i>T</i><sub>SYN</sub>)-->
+        <!--&middot; (<i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>),-->
+<!--</p>-->
+<!--<p>-->
+<!--where-->
+<!--<i>h</i><sub>TC</sub> =-->
+    <!--max{(2<i>RC</i><sub>X</sub>[<i>i</i>]+1)&middot;(2<i>RC</i><sub>Y</sub>[<i>i</i>]+1)&middot;(2<i>RC</i><sub>C</sub>[<i>i</i>]+1)-->
+    <!--; i = 0,&hellip;,<i>K</i>&minus;1}.-->
+<!--</p>-->
+
+
+
+
+
+
+<!--&lt;!&ndash;*** SPACE 3.1 *********************&ndash;&gt;<p>SPACE 3.1</p>-->
+<!--<p>-->
+<!--We express the worst case the space complexity <i>S</i>(<i>A</i><sub>SM</sub>) of this-->
+<!--algorithm in terms of a space complexity <i>S</i>(<i>F</i><sub>SM</sub>) of the-->
+<!--function <i>F</i><sub>SM</sub>, a constant space <i>S</i><sub>SM</sub> reflecting a-->
+<!--management inside <i>A</i><sub>SM</sub> per each synapse to muscle, and a number of-->
+<!--threads <i>N</i><sub>T</sub> as-->
+<!--</p><p style="text-align:center">-->
+<!--<i>S</i>(<i>A</i><sub>SM</sub>) = (<i>S</i>(<i>F</i><sub>SM</sub>) + <i>S</i><sub>SM</sub>)-->
+    <!--&middot; <i>N</i><sub>T</sub>.-->
+<!--</p>-->
+<!--&lt;!&ndash;*** SPACE 3.2 *********************&ndash;&gt;<p>SPACE 3.2</p>-->
+<!--<p>-->
+<!--We express the worst case space complexity <i>S</i>(<i>A</i><sub>TS</sub>) of this algorithm-->
+<!--in terms of a space complexity <i>S</i>(<i>F</i><sub>TS</sub>) of the function <i>F</i><sub>TS</sub>,-->
+<!--a constant space <i>S</i><sub>TS</sub> reflecting a management inside <i>A</i><sub>TS</sub>-->
+<!--per each synapse, a constant space <i>S</i><sub>SIG</sub> of the callback function-->
+<!--<kbd>get_signalling</kbd>, and a number of threads <i>N</i><sub>T</sub> as-->
+<!--</p>-->
+<!--<p style="text-align:center">-->
+<!--<i>S</i>(<i>A</i><sub>TS</sub>) = (<i>S</i>(<i>F</i><sub>TS</sub>) + <i>S</i><sub>TS</sub> +-->
+    <!--<i>S</i><sub>SIG</sub>) &middot; <i>N</i><sub>T</sub>.-->
+<!--</p>-->
+<!--&lt;!&ndash;*** SPACE 3.3 *********************&ndash;&gt;<p>SPACE 3.3</p>-->
+<!--<p>-->
+<!--We express the worst case space complexity <i>S</i>(<i>A</i><sub>TL</sub>) of this algorithm-->
+<!--in terms of a constant space <i>S</i><sub>TL</sub> reflecting a management inside-->
+<!--<i>A</i><sub>TL</sub> per each triple and a number of threads <i>N</i><sub>T</sub> as-->
+<!--</p>-->
+<!--<p style="text-align:center">-->
+<!--<i>S</i>(<i>A</i><sub>TL</sub>) = <i>S</i><sub>TL</sub> &middot; <i>N</i><sub>T</sub>.-->
+<!--</p>-->
+<!--&lt;!&ndash;*** SPACE 3.4 *********************&ndash;&gt;<p>SPACE 3.4</p>-->
+<!--<p>-->
+<!--We express the worst case space complexity <i>S</i>(<i>A</i><sub>TM</sub>) of this algorithm-->
+<!--in terms of a constant space <i>S</i><sub>TM</sub> reflecting a management inside-->
+<!--<i>A</i><sub>TM</sub> per each triple and a number of threads <i>N</i><sub>T</sub> as-->
+<!--</p>-->
+<!--<p style="text-align:center">-->
+<!--<i>S</i>(<i>A</i><sub>TM</sub>) = <i>S</i><sub>TM</sub> &middot; <i>N</i><sub>T</sub>.-->
+<!--</p>-->
+<!--&lt;!&ndash;*** SPACE 3.5 *********************&ndash;&gt;<p>SPACE 3.5</p>-->
+<!--<p>-->
+<!--We express the worst case space complexity <i>S</i>(<i>A</i><sub>TG</sub>) of this algorithm-->
+<!--in terms of a space complexity <i>S</i>(<i>F</i><sub>TG</sub>) of the function <i>F</i><sub>TG</sub>,-->
+<!--a constant space <i>S</i><sub>TG</sub> reflecting a management inside <i>A</i><sub>TG</sub>-->
+<!--per each signalling, a constant space <i>S</i><sub>CEL</sub> of the callback function-->
+<!--<kbd>get_cell</kbd>, and a number of threads <i>N</i><sub>T</sub> as-->
+<!--</p>-->
+<!--<p style="text-align:center">-->
+<!--<i>S</i>(<i>A</i><sub>TG</sub>) = (<i>S</i>(<i>F</i><sub>TG</sub>) + <i>S</i><sub>TG</sub> +-->
+    <!--<i>S</i><sub>CEL</sub>) &middot; <i>N</i><sub>T</sub>.-->
+<!--</p>-->
+<!--&lt;!&ndash;*** SPACE 3.6 *********************&ndash;&gt;<p>SPACE 3.6</p>-->
+<!--<p>-->
+<!--We express the worst case space complexity <i>S</i>(<i>A</i><sub>TC</sub>) of this algorithm-->
+<!--in terms of a space complexity <i>S</i>(<i>F</i><sub>TC</sub>) of the function <i>F</i><sub>TC</sub>,-->
+<!--a constant space <i>S</i><sub>TC</sub> reflecting a management inside <i>A</i><sub>TC</sub>-->
+<!--per each cell, a constant space <i>S</i><sub>SIG</sub> of the callback function-->
+<!--<kbd>get_signalling</kbd>, a constant space <i>S</i><sub>SYN</sub> of the callback function-->
+<!--<kbd>get_connected_synapse</kbd>, and a number of threads <i>N</i><sub>T</sub> as-->
+<!--</p>-->
+<!--<p style="text-align:center">-->
+<!--<i>S</i>(<i>A</i><sub>TC</sub>) = (<i>S</i>(<i>F</i><sub>TC</sub>) + <i>S</i><sub>TC</sub> +-->
+    <!--<i>S</i><sub>SIG</sub> + <i>S</i><sub>SYN</sub>) &middot; <i>N</i><sub>T</sub>.-->
+<!--</p>-->
+
+
+
+
+
+
+
 
 
 <h2 id="aggregation_with_parametrisation">4.&nbsp;&nbsp;&nbsp;Aggregation with parametrisation</h2>
