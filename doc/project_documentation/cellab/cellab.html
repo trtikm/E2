@@ -2398,216 +2398,169 @@ over territorial lists. The swap can be called for two triples which
 may lie in different territories in the tissue.
 </td>
 </tr>
-<!--<tr>-->
-<!--<td align="right" valign="top"></td>-->
-<!--<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>-->
-<!--<td align="left" valign="top">-->
+<tr>
+<td align="right" valign="top"><i>T</i><sub>TM</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A time constant reflecting a management inside
+<i>A</i><sub>TL</sub> per each triple over territorial lists.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>T</i><sub>TG</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A time constant reflecting
+a management inside <i>A</i><sub>TG</sub> per each tissue signalling.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>T</i><sub>CEL</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A constant time
+complexity of the callback function <kbd>get_cell</kbd>.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>F</i><sub>TG</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+TODO
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>T</i><sub>NBH</sub>(<i>F</i><sub>TG</sub>)</td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A time complexity that part of the function <i>F</i><sub>TG</sub> reading a tissue cell
+in a neighbourhood of an updated signalling.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>T</i><sub>REM</sub>(<i>F</i><sub>TG</sub>)</td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A time complexity of all remaining parts of <i>F</i><sub>TG</sub>.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>T</i><sub>TC</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A time constant reflecting a management inside <i>A</i><sub>TC</sub>
+per each tissue cell.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>T</i><sub>SYN</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A constant time complexity  of the callback
+function <kbd>get_connected_synapse</kbd>.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>F</i><sub>TC</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+TODO
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>T</i><sub>IN</sub>(<i>F</i><sub>TC</sub>)</td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A time complexity that part of the function <i>F</i><sub>TC</sub> reading synapse connected
+to the cell.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>T</i><sub>NBH</sub>(<i>F</i><sub>TC</sub>)</td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A time complexity that part of the function <i>F</i><sub>TC</sub> reading a signalling
+in the neighbourhood of the cell.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>T</i><sub>REM</sub>(<i>F</i><sub>TC</sub>)</td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A time complexity of all remaining parts of the function <i>F</i><sub>TC</sub>.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>S</i><sub>SM</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A constant space reflecting a
+management inside <i>A</i><sub>SM</sub> per each synapse to muscle.
 
-<!--</td>-->
-<!--</tr>-->
-<!--<tr>-->
-<!--<td align="right" valign="top"></td>-->
-<!--<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>-->
-<!--<td align="left" valign="top">-->
-
-<!--</td>-->
-<!--</tr>-->
-<!--<tr>-->
-<!--<td align="right" valign="top"></td>-->
-<!--<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>-->
-<!--<td align="left" valign="top">-->
-
-<!--</td>-->
-<!--</tr>-->
-<!--<tr>-->
-<!--<td align="right" valign="top"></td>-->
-<!--<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>-->
-<!--<td align="left" valign="top">-->
-
-<!--</td>-->
-<!--</tr>-->
-<!--<tr>-->
-<!--<td align="right" valign="top"></td>-->
-<!--<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>-->
-<!--<td align="left" valign="top">-->
-
-<!--</td>-->
-<!--</tr>-->
-<!--<tr>-->
-<!--<td align="right" valign="top"></td>-->
-<!--<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>-->
-<!--<td align="left" valign="top">-->
-
-<!--</td>-->
-<!--</tr>-->
-<!--<tr>-->
-<!--<td align="right" valign="top"></td>-->
-<!--<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>-->
-<!--<td align="left" valign="top">-->
-
-<!--</td>-->
-<!--</tr>-->
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>S</i><sub>TS</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A constant space reflecting a management inside <i>A</i><sub>TS</sub> per each synapse.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>S</i><sub>SIG</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A constant space of the callback function <kbd>get_signalling</kbd>.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>S</i><sub>TL</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A constant space reflecting a management inside
+<i>A</i><sub>TL</sub> per each triple.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>S</i><sub>TM</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A constant space reflecting a management inside
+<i>A</i><sub>TM</sub> per each triple.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>S</i><sub>TG</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A constant space reflecting a management inside <i>A</i><sub>TG</sub>
+per each signalling.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>S</i><sub>CEL</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A constant space of the callback function <kbd>get_cell</kbd>.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>S</i><sub>TC</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A constant space reflecting a management inside <i>A</i><sub>TC</sub>
+per each cell.
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"><i>S</i><sub>SYN</sub></td>
+<td align="center" valign="top">&nbsp;&nbsp;&nbsp;</td>
+<td align="left" valign="top">
+A constant space of the callback function
+<kbd>get_connected_synapse</kbd>.
+</td>
+</tr>
 </table>
-
-
-
-
-<!--&lt;!&ndash;*** TIME 3.4 *********************&ndash;&gt;<p>TIME 3.4</p>-->
-<!--<p>-->
-<!--We express the worst case time complexity <i>T</i>(<i>A</i><sub>TM</sub>) of this algorithm-->
-<!--in terms of the number of synapses inside the tissue-->
-<!--<i>N</i><sub>TS</sub> = <i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub><i>T</i><sub>0</sub>-->
-    <!--+ &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub><i>T</i><sub><i>K</i>&minus;1</sub>),-->
-<!--a time constant <i>T</i><sub>TM</sub> reflecting a management inside-->
-<!--<i>A</i><sub>TL</sub> per each triple over territorial lists, a time constant-->
-<!--<i>T</i><sub>SWP</sub> for the <kbd>swap</kbd> operation of triples, and a number of-->
-<!--threads <i>N</i><sub>T</sub> as-->
-<!--</p>-->
-<!--<p style="text-align:center">-->
-<!--<i>T</i>(<i>A</i><sub>TM</sub>) =-->
-    <!--0.5 (<i>T</i><sub>TM</sub> + <i>T</i><sub>SWP</sub>) &middot;-->
-        <!--(<i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>).-->
-<!--</p>-->
-<!--&lt;!&ndash;*** TIME 3.5 *********************&ndash;&gt;<p>TIME 3.5</p>-->
-<!--<p>-->
-<!--We express the worst case time complexity <i>T</i>(<i>A</i><sub>TG</sub>) of this algorithm-->
-<!--in terms of the number of cells inside the tissue-->
-<!--<i>N</i><sub>TC</sub> = <i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub> + &hellip; +-->
-<!--<i>N</i><sub><i>K</i>&minus;1</sub>), a time constant <i>T</i><sub>TG</sub> reflecting-->
-<!--a management inside <i>A</i><sub>TG</sub> per each tissue signalling, a constant time-->
-<!--complexity <i>T</i><sub>CEL</sub> of the callback function <kbd>get_cell</kbd>, radii-->
-<!--<i>RS</i><sub>X</sub>, <i>RS</i><sub>Y</sub>, <i>RS</i><sub>C</sub> determining neighbourhoods-->
-<!--of cells of updated signallings, a number of threads <i>N</i><sub>T</sub>, and time complexities-->
-<!--<i>T</i><sub>NBH</sub>(<i>F</i><sub>TG</sub>) and <i>T</i><sub>REM</sub>(<i>F</i><sub>TG</sub>)-->
-<!--of the function <i>F</i><sub>TG</sub> measuring time of reading a tissue cell in the-->
-<!--neighbourhood of the signalling and time of all remaining parts of <i>F</i><sub>TG</sub>-->
-<!--respectively as-->
-<!--</p>-->
-<!--<p style="text-align:center">-->
-<!--<i>T</i>(<i>A</i><sub>TG</sub>) =-->
-    <!--(<i>T</i><sub>REM</sub>(<i>F</i><sub>TG</sub>) + <i>T</i><sub>TG</sub>)-->
-        <!--&middot; (<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>) +-->
-    <!--(<i>T</i><sub>NBH</sub>(<i>F</i><sub>TG</sub>) + <i>T</i><sub>CEL</sub>)-->
-        <!--&middot; (<i>h</i><sub>TG</sub>&middot;<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>),-->
-<!--</p>-->
-<!--<p>-->
-<!--where-->
-<!--<i>h</i><sub>TG</sub> =-->
-    <!--max{(2<i>RS</i><sub>X</sub>[<i>i</i>]+1)&middot;(2<i>RS</i><sub>Y</sub>[<i>i</i>]+1)&middot;(2<i>RS</i><sub>C</sub>[<i>i</i>]+1)-->
-    <!--; i = 0,&hellip;,<i>K</i>&minus;1}.-->
-<!--</p>-->
-<!--&lt;!&ndash;*** TIME 3.6 *********************&ndash;&gt;<p>TIME 3.6</p>-->
-<!--<p>-->
-<!--We express the worst case time complexity <i>T</i>(<i>A</i><sub>TC</sub>) of this algorithm-->
-<!--in terms of the number of cells inside the tissue-->
-<!--<i>N</i><sub>TC</sub> = <i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub> + &hellip; +-->
-<!--<i>N</i><sub><i>K</i>&minus;1</sub>), the number of synapses inside the tissue-->
-<!--<i>N</i><sub>TS</sub> = <i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub><i>T</i><sub>0</sub>-->
-    <!--+ &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub><i>T</i><sub><i>K</i>&minus;1</sub>),-->
-<!--a time constant <i>T</i><sub>TC</sub> reflecting a management inside <i>A</i><sub>TC</sub>-->
-<!--per each tissue cell, a constant time complexity <i>T</i><sub>SIG</sub> of the callback function-->
-<!--<kbd>get_signalling</kbd>, a constant time complexity <i>T</i><sub>SYN</sub> of the callback-->
-<!--function <kbd>get_connected_synapse</kbd>, radii <i>RC</i><sub>X</sub>, <i>RC</i><sub>Y</sub>,-->
-<!--<i>RC</i><sub>C</sub> determining signalling neighbourhoods of cells, a number of threads-->
-<!--<i>N</i><sub>T</sub>, and time complexities-->
-<!--<i>T</i><sub>IN</sub>(<i>F</i><sub>TC</sub>),-->
-<!--<i>T</i><sub>NBH</sub>(<i>F</i><sub>TC</sub>), and-->
-<!--<i>T</i><sub>REM</sub>(<i>F</i><sub>TC</sub>)-->
-<!--of the function <i>F</i><sub>TC</sub> measuring time of reading synapse connected-->
-<!--to the cell, reading a signalling in the neighbourhood of the cell,-->
-<!--and time of all remaining parts of <i>F</i><sub>TC</sub> respectively as-->
-<!--</p><p style="text-align:center">-->
-<!--<i>T</i>(<i>A</i><sub>TC</sub>) =-->
-    <!--(<i>T</i><sub>REM</sub>(<i>F</i><sub>TC</sub>) + <i>T</i><sub>TC</sub>)-->
-        <!--&middot; (<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>) +-->
-    <!--(<i>T</i><sub>NBH</sub>(<i>F</i><sub>TC</sub>) + <i>T</i><sub>SIG</sub>)-->
-        <!--&middot; (<i>h</i><sub>TC</sub>&middot;<i>N</i><sub>TC</sub> / <i>N</i><sub>T</sub>) +-->
-    <!--(<i>T</i><sub>IN</sub>(<i>F</i><sub>TC</sub>) + <i>T</i><sub>SYN</sub>)-->
-        <!--&middot; (<i>N</i><sub>TS</sub> / <i>N</i><sub>T</sub>),-->
-<!--</p>-->
-<!--<p>-->
-<!--where-->
-<!--<i>h</i><sub>TC</sub> =-->
-    <!--max{(2<i>RC</i><sub>X</sub>[<i>i</i>]+1)&middot;(2<i>RC</i><sub>Y</sub>[<i>i</i>]+1)&middot;(2<i>RC</i><sub>C</sub>[<i>i</i>]+1)-->
-    <!--; i = 0,&hellip;,<i>K</i>&minus;1}.-->
-<!--</p>-->
-
-
-
-
-
-
-<!--&lt;!&ndash;*** SPACE 3.1 *********************&ndash;&gt;<p>SPACE 3.1</p>-->
-<!--<p>-->
-<!--We express the worst case the space complexity <i>S</i>(<i>A</i><sub>SM</sub>) of this-->
-<!--algorithm in terms of a space complexity <i>S</i>(<i>F</i><sub>SM</sub>) of the-->
-<!--function <i>F</i><sub>SM</sub>, a constant space <i>S</i><sub>SM</sub> reflecting a-->
-<!--management inside <i>A</i><sub>SM</sub> per each synapse to muscle, and a number of-->
-<!--threads <i>N</i><sub>T</sub> as-->
-<!--</p><p style="text-align:center">-->
-<!--<i>S</i>(<i>A</i><sub>SM</sub>) = (<i>S</i>(<i>F</i><sub>SM</sub>) + <i>S</i><sub>SM</sub>)-->
-    <!--&middot; <i>N</i><sub>T</sub>.-->
-<!--</p>-->
-<!--&lt;!&ndash;*** SPACE 3.2 *********************&ndash;&gt;<p>SPACE 3.2</p>-->
-<!--<p>-->
-<!--We express the worst case space complexity <i>S</i>(<i>A</i><sub>TS</sub>) of this algorithm-->
-<!--in terms of a space complexity <i>S</i>(<i>F</i><sub>TS</sub>) of the function <i>F</i><sub>TS</sub>,-->
-<!--a constant space <i>S</i><sub>TS</sub> reflecting a management inside <i>A</i><sub>TS</sub>-->
-<!--per each synapse, a constant space <i>S</i><sub>SIG</sub> of the callback function-->
-<!--<kbd>get_signalling</kbd>, and a number of threads <i>N</i><sub>T</sub> as-->
-<!--</p>-->
-<!--<p style="text-align:center">-->
-<!--<i>S</i>(<i>A</i><sub>TS</sub>) = (<i>S</i>(<i>F</i><sub>TS</sub>) + <i>S</i><sub>TS</sub> +-->
-    <!--<i>S</i><sub>SIG</sub>) &middot; <i>N</i><sub>T</sub>.-->
-<!--</p>-->
-<!--&lt;!&ndash;*** SPACE 3.3 *********************&ndash;&gt;<p>SPACE 3.3</p>-->
-<!--<p>-->
-<!--We express the worst case space complexity <i>S</i>(<i>A</i><sub>TL</sub>) of this algorithm-->
-<!--in terms of a constant space <i>S</i><sub>TL</sub> reflecting a management inside-->
-<!--<i>A</i><sub>TL</sub> per each triple and a number of threads <i>N</i><sub>T</sub> as-->
-<!--</p>-->
-<!--<p style="text-align:center">-->
-<!--<i>S</i>(<i>A</i><sub>TL</sub>) = <i>S</i><sub>TL</sub> &middot; <i>N</i><sub>T</sub>.-->
-<!--</p>-->
-<!--&lt;!&ndash;*** SPACE 3.4 *********************&ndash;&gt;<p>SPACE 3.4</p>-->
-<!--<p>-->
-<!--We express the worst case space complexity <i>S</i>(<i>A</i><sub>TM</sub>) of this algorithm-->
-<!--in terms of a constant space <i>S</i><sub>TM</sub> reflecting a management inside-->
-<!--<i>A</i><sub>TM</sub> per each triple and a number of threads <i>N</i><sub>T</sub> as-->
-<!--</p>-->
-<!--<p style="text-align:center">-->
-<!--<i>S</i>(<i>A</i><sub>TM</sub>) = <i>S</i><sub>TM</sub> &middot; <i>N</i><sub>T</sub>.-->
-<!--</p>-->
-<!--&lt;!&ndash;*** SPACE 3.5 *********************&ndash;&gt;<p>SPACE 3.5</p>-->
-<!--<p>-->
-<!--We express the worst case space complexity <i>S</i>(<i>A</i><sub>TG</sub>) of this algorithm-->
-<!--in terms of a space complexity <i>S</i>(<i>F</i><sub>TG</sub>) of the function <i>F</i><sub>TG</sub>,-->
-<!--a constant space <i>S</i><sub>TG</sub> reflecting a management inside <i>A</i><sub>TG</sub>-->
-<!--per each signalling, a constant space <i>S</i><sub>CEL</sub> of the callback function-->
-<!--<kbd>get_cell</kbd>, and a number of threads <i>N</i><sub>T</sub> as-->
-<!--</p>-->
-<!--<p style="text-align:center">-->
-<!--<i>S</i>(<i>A</i><sub>TG</sub>) = (<i>S</i>(<i>F</i><sub>TG</sub>) + <i>S</i><sub>TG</sub> +-->
-    <!--<i>S</i><sub>CEL</sub>) &middot; <i>N</i><sub>T</sub>.-->
-<!--</p>-->
-<!--&lt;!&ndash;*** SPACE 3.6 *********************&ndash;&gt;<p>SPACE 3.6</p>-->
-<!--<p>-->
-<!--We express the worst case space complexity <i>S</i>(<i>A</i><sub>TC</sub>) of this algorithm-->
-<!--in terms of a space complexity <i>S</i>(<i>F</i><sub>TC</sub>) of the function <i>F</i><sub>TC</sub>,-->
-<!--a constant space <i>S</i><sub>TC</sub> reflecting a management inside <i>A</i><sub>TC</sub>-->
-<!--per each cell, a constant space <i>S</i><sub>SIG</sub> of the callback function-->
-<!--<kbd>get_signalling</kbd>, a constant space <i>S</i><sub>SYN</sub> of the callback function-->
-<!--<kbd>get_connected_synapse</kbd>, and a number of threads <i>N</i><sub>T</sub> as-->
-<!--</p>-->
-<!--<p style="text-align:center">-->
-<!--<i>S</i>(<i>A</i><sub>TC</sub>) = (<i>S</i>(<i>F</i><sub>TC</sub>) + <i>S</i><sub>TC</sub> +-->
-    <!--<i>S</i><sub>SIG</sub> + <i>S</i><sub>SYN</sub>) &middot; <i>N</i><sub>T</sub>.-->
-<!--</p>-->
-
-
-
-
-
 
 
 
