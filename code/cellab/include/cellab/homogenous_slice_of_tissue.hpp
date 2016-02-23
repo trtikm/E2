@@ -9,6 +9,15 @@
 namespace cellab {
 
 
+/**
+ * It represents a 3D array stored inside a 1D array. An elements of the 3D array is defined
+ * only by a number of bits to be reserved for it in the array. The underlying 1D array is
+ * an instance of the utility 'array_of_bit_units' (see the header 'utility/array_of_bit_units.hpp'
+ * of the E2 library 'utility').
+ *
+ * This structure is used inside 'cellab::dynamic_state_of_neural_tissue' to store slices of
+ * the tissue. See the file 'cellab/dynamic_state_of_neural_tissue.hpp' for more details.
+ */
 struct homogenous_slice_of_tissue
 {
     homogenous_slice_of_tissue(natural_16_bit const num_bits_per_unit,
@@ -27,10 +36,14 @@ private:
     natural_64_bit m_num_units_along_x_axis;
     natural_64_bit m_num_units_along_y_axis;
     natural_64_bit m_num_units_along_columnar_axis;
-    array_of_bit_units m_array_of_units;
+    array_of_bit_units m_array_of_units;    //!< This is the 1D array where individual units are actually stored.
 };
 
 
+/**
+ * It computes a total number of bits an intance of 'homogenous_slice_of_tissue' would allocate for
+ * its elements for the same arguments passed to the constructor.
+ */
 natural_64_bit compute_num_bits_of_slice_of_tissue_with_checked_operations(
         natural_16_bit const num_bits_per_unit,
         natural_32_bit const num_units_along_x_axis,

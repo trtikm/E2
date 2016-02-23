@@ -824,6 +824,153 @@ source files
 <a href="../../../code/cellab/src/dynamic_state_of_neural_tissue.cpp">
     <kbd>dynamic_state_of_neural_tissue.cpp</kbd></a>.
 </li></ul>
+<p>
+Each of 6<i>K</i> slices is implemented as <kbd>struct homogenous_slice_of_tissue</kbd> in
+source files
+</p>
+<ul><li>
+<a href="../../../code/cellab/include/cellab/homogenous_slice_of_tissue.hpp">
+    <kbd>homogenous_slice_of_tissue.hpp</kbd></a> and
+</li><li>
+<a href="../../../code/cellab/src/homogenous_slice_of_tissue.cpp">
+    <kbd>homogenous_slice_of_tissue.cpp</kbd></a>.
+</li></ul>
+<p>
+This data type implements a 3D array physically stored inside a 1D array of bytes
+implemented as <kbd>struct array_of_bit_units</kbd> in source files
+</p>
+<ul><li>
+<a href="../../../code/utility/include/utility/array_of_bit_units.hpp">
+    <kbd>array_of_bit_units.hpp</kbd></a> and
+</li><li>
+<a href="../../../code/utility/src/array_of_bit_units.cpp">
+    <kbd>array_of_bit_units.cpp</kbd></a>
+</li></ul>
+<p>
+of the E2 library <kbd>utility</kbd>. We also use the array <kbd>array_of_bit_units</kbd>
+directly for implementation of the remaining 3 memory blocks, i.e. the sensory cell,
+and synapses to muscles (2 arrays).
+</p>
+<p>
+We express a memory size in bits of a dynamic state of the neural tissue, denoted as
+<i>S</i>(<i>DS</i>), in terms of in terms of the number of cells inside the tissue
+<i>N</i><sub>TC</sub> = <i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub> + &hellip; +
+<i>N</i><sub><i>K</i>&minus;1</sub>), the number of synapses inside the tissue
+<i>N</i><sub>TS</sub> = <i>X</i>&middot;<i>Y</i>&middot;(<i>N</i><sub>0</sub><i>T</i><sub>0</sub>
+    + &hellip; + <i>N</i><sub><i>K</i>&minus;1</sub><i>T</i><sub><i>K</i>&minus;1</sub>),
+the numbers of sensory cells <i>N</i><sub><i>S</i></sub>, and the numbers of synapses to muscles
+<i>N</i><sub><i>M</i></sub>  as
+</p>
+<table align="center">
+<tr>
+<td align="right" valign="top"><i>S</i>(<i>DS</i>)</td>
+<td align="center" valign="top">=</td>
+<td align="left" valign="top">
+<i>X</i>&middot;<i>Y</i>&middot;<i>N</i><sub>0</sub>&middot;<i>NB</i><sub>C</sub>
+    + &hellip; +
+    <i>X</i>&middot;<i>Y</i>&middot;<i>N</i><sub><i>K</i>&minus;1</sub>&middot;<i>NB</i><sub>C</sub>
+    +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+<i>X</i>&middot;<i>Y</i>&middot;<i>N</i><sub>0</sub>&middot;<i>NB</i><sub>G</sub>
+    + &hellip; +
+    <i>X</i>&middot;<i>Y</i>&middot;<i>N</i><sub><i>K</i>&minus;1</sub>&middot;<i>NB</i><sub>G</sub>
+    +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+<i>X</i>&middot;<i>Y</i>&middot;<i>N</i><sub>0</sub>&middot;6&lt;<i>T</i><sub>0</sub>&gt;
+    + &hellip; +
+    <i>X</i>&middot;<i>Y</i>&middot;<i>N</i><sub><i>K</i>&minus;1</sub>&middot;6&lt;<i>T</i><sub><i>K</i>&minus;1</sub>&gt;
+    +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+<i>X</i>&middot;<i>Y</i>&middot;<i>N</i><sub>0</sub><i>T</i><sub>0</sub>&middot;<i>NB</i><sub>S</sub>
+    + &hellip; +
+    <i>X</i>&middot;<i>Y</i>&middot;<i>N</i><sub><i>K</i>&minus;1</sub><i>T</i><sub><i>K</i>&minus;1</sub>&middot;<i>NB</i><sub>S</sub>
+    +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+<i>X</i>&middot;<i>Y</i>&middot;<i>N</i><sub>0</sub><i>T</i><sub>0</sub>&middot;&lt;6&gt;
+    + &hellip; +
+    <i>X</i>&middot;<i>Y</i>&middot;<i>N</i><sub><i>K</i>&minus;1</sub><i>T</i><sub><i>K</i>&minus;1</sub>&middot;&lt;6&gt;
+    +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+<i>X</i>&middot;<i>Y</i>&middot;<i>N</i><sub>0</sub><i>T</i><sub>0</sub>&middot;3&lt;max(<i>X</i>,<i>Y</i>,<i>C</i><sub><i>S</i></sub>)&gt;
+    + &hellip; +
+    <i>X</i>&middot;<i>Y</i>&middot;<i>N</i><sub><i>K</i>&minus;1</sub><i>T</i><sub><i>K</i>&minus;1</sub>&middot;3&lt;max(<i>X</i>,<i>Y</i>,<i>C</i><sub><i>S</i></sub>)&gt;
+    +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+<i>N</i><sub><i>S</i></sub>&middot;<i>NB</i><sub>C</sub> +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+<i>N</i><sub><i>M</i></sub>&middot;<i>NB</i><sub>S</sub> +
+    <i>N</i><sub><i>M</i></sub>&middot;3&lt;max(<i>X</i>,<i>Y</i>,<i>C</i><sub><i>S</i></sub>)&gt;
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top">&le;</td>
+<td align="left" valign="top">
+<i>N</i><sub>TC</sub> &middot;
+    (<i>NB</i><sub>C</sub> + <i>NB</i><sub>G</sub> +
+    6&middot;max{&lt;<i>T</i><sub>0</sub>&gt;,&hellip;,&lt;<i>T</i><sub><i>K</i>&minus;1</sub>&gt;}) +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+<i>N</i><sub>TS</sub> &middot;
+    (<i>NB</i><sub>S</sub> + &lt;6&gt; +
+    3&lt;max(<i>X</i>,<i>Y</i>,<i>C</i><sub><i>S</i></sub>)&gt;) +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+<i>N</i><sub><i>S</i></sub> &middot; <i>NB</i><sub>C</sub> +
+</td>
+</tr>
+<tr>
+<td align="right" valign="top"></td>
+<td align="center" valign="top"></td>
+<td align="left" valign="top">
+<i>N</i><sub><i>M</i></sub> &middot;
+    (<i>NB</i><sub>S</sub> + 3&lt;max(<i>X</i>,<i>Y</i>,<i>C</i><sub><i>S</i></sub>)&gt;).
+</td>
+</tr>
+</table>
 <h2 id="transition_algorithms">3.&nbsp;&nbsp;&nbsp;Transition algorithms</h2>
 <p>
 A computation of a next state of the neural tissue from the current one
