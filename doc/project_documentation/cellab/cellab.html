@@ -27,11 +27,12 @@ we discuss the data structure of the neural tissue. In
 we describe how data are physically stored in the memory.
 And in
 <a href="./cellab.html#transition_algorithms">section 3</a>
-we describe transition algorithms.
+we describe transition algorithms. In
+<a href="./cellab.html#capturing">section 4</a>.
 </p><p>
 The library further provides a data type for aggregation of the neural tissue
 with its parametrisation. We discuss it in
-<a href="./cellab.html#aggregation_with_parametrisation">section 4</a>.
+<a href="./cellab.html#aggregation_with_parametrisation">section 5</a>.
 </p>
 <h2 id="neural_tissue">1.&nbsp;&nbsp;&nbsp;Structure of neural tissue</h2>
 <p>
@@ -2847,11 +2848,125 @@ passed to the user-defined function <i>F</i><sub>TC</sub> by the algorithm
 </td>
 </tr>
 </table>
+<h2 id="time_and_space_of_real_cortex">4.&nbsp;&nbsp;&nbsp;
+    Time and space requirements of real cerebral cortices</h2>
+<p>
+cerebral cortex
+</p>
+<table align="center">
+<tr>
+<th align="right">Spices</th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Neurons</th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Synapses</th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Space</th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Time</th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Source</th>
+</tr>
+<tr>
+<td align="right">Human</td>
+<td align="right">10<sup>10</sup></td>
+<td align="right">6&times;10<sup>13</sup></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right">[<a href="./cellab.html#r30">30</a>]</td>
+</tr>
+<!--<tr>-->
+<!--<td align="right"></td>-->
+<!--<td align="right">&times;10<sup></sup></td>-->
+<!--<td align="right">&times;10<sup></sup></td>-->
+<!--<td align="right"></td>-->
+<!--<td align="right"></td>-->
+<!--<td align="right">[<a href="./cellab.html#r"></a>]</td>-->
+<!--</tr>-->
+</table>
+<p>
+whole brain (or whole body)
+</p>
+<table align="center">
+<tr>
+<th align="right">Spices</th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Neurons</th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Synapses</th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Space</th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Time</th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Source</th>
+</tr>
+<tr>
+<td align="right">C.Elegans</td>
+<td align="right">302</td>
+<td align="right">7,500</td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right">[<a href="./cellab.html#r29">29</a>]</td>
+</tr>
+<tr>
+<td align="right">Cat</td>
+<td align="right">7.6&times;10<sup>8</sup></td>
+<td align="right">10<sup>13</sup></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right">[<a href="./cellab.html#r29">29</a>]</td>
+</tr>
+<tr>
+<td align="right">Brown rat</td>
+<td align="right">2&times;10<sup>8</sup></td>
+<td align="right">4.48&times;10<sup>11</sup></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right">[<a href="./cellab.html#r29">29</a>]</td>
+</tr>
+<tr>
+<td align="right">Honey bee</td>
+<td align="right">960,000</td>
+<td align="right">10<sup>9</sup></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right">[<a href="./cellab.html#r29">29</a>]</td>
+</tr>
+<tr>
+<td align="right">House mouse</td>
+<td align="right">7.1&times;10<sup>7</sup></td>
+<td align="right">10<sup>11</sup></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right">[<a href="./cellab.html#r29">29</a>]</td>
+</tr>
+<tr>
+<td align="right">Human</td>
+<td align="right">8.6&times;10<sup>10</sup></td>
+<td align="right">5&times;10<sup>14</sup></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right">[<a href="./cellab.html#r29">29</a>]</td>
+</tr>
+<tr>
+<td align="right">Human</td>
+<td align="right">8.6&times;10<sup>10</sup></td>
+<td align="right">10<sup>14</sup></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right">[<a href="./cellab.html#r31">31</a>]</td>
+</tr>
+<tr>
+<td align="right">Human</td>
+<td align="right">10<sup>11</sup></td>
+<td align="right">10<sup>14</sup></td>
+<td align="right"></td>
+<td align="right"></td>
+<td align="right">[<a href="./cellab.html#r29">32</a>]</td>
+</tr>
+<!--<tr>-->
+<!--<td align="right"></td>-->
+<!--<td align="right">&times;10<sup></sup></td>-->
+<!--<td align="right">&times;10<sup></sup></td>-->
+<!--<td align="right"></td>-->
+<!--<td align="right"></td>-->
+<!--<td align="right">[<a href="./cellab.html#r29">29</a>]</td>-->
+<!--</tr>-->
+</table>
 
 
-
-
-<h2 id="aggregation_with_parametrisation">4.&nbsp;&nbsp;&nbsp;Aggregation with parametrisation</h2>
+<h2 id="aggregation_with_parametrisation">5.&nbsp;&nbsp;&nbsp;Aggregation with parametrisation</h2>
 <!--The construction of the neural tissue in the memory start by the construction of-->
 <!--the static state. It is a parametrisation who provides data required for the-->
 <!--construction. The passed data are parameters defining global immutable-->
@@ -3004,6 +3119,26 @@ passed to the user-defined function <i>F</i><sub>TC</sub> by the algorithm
         Wikipedia: In-place algorithm.
         <a href="https://en.wikipedia.org/wiki/In-place_algorithm">
             https://en.wikipedia.org/wiki/In-place_algorithm</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r29">[29]</td><td>
+        Wikipedia: List of animals by a number of neurons
+        <a href="https://en.wikipedia.org/wiki/List_of_animals_by_number_of_neurons">
+            https://en.wikipedia.org/wiki/List_of_animals_by_number_of_neurons</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r30">[30]</td><td>
+        Faculty web of Eric H. Chudler:
+        <a href="https://faculty.washington.edu/chudler/facts.html">
+            https://faculty.washington.edu/chudler/facts.html</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r31">[31]</td><td>
+        YouTube: The Brain In Numbers
+        <a href="https://www.youtube.com/watch?v=kucZxUpYnko">
+            https://www.youtube.com/watch?v=kucZxUpYnko</a>.
+    </td></tr>
+    <tr><td align="right" valign="top" id="r32">[32]</td><td>
+        The Human Memory: NEURONS & SYNAPSES
+        <a href="http://www.human-memory.net/brain_neurons.html">
+            http://www.human-memory.net/brain_neurons.html</a>.
     </td></tr>
 </table>
 
