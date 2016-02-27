@@ -2851,6 +2851,20 @@ passed to the user-defined function <i>F</i><sub>TC</sub> by the algorithm
 <h2 id="time_and_space_of_real_cortex">4.&nbsp;&nbsp;&nbsp;
     Time and space requirements of real cerebral cortices</h2>
 <p>
+Here we estimate how much space and time we need to simulate the neural
+tissue, when counts of cells and synapses inside the tissue correspond
+to counts observed by biologists in live organisms.
+We searched in available sources (mainly on the Internet) for known counts
+of neurons and synapses for individual species. We especially focus on data
+dedicated to cerebral cortex. We also collected data related to whole brains
+(or nervous systems) of different organisms.
+
+    <!--Since we focus on mammalian-->
+<!--cerebral cortex we split all collected data into two-->
+
+    <!--<i>N</i><sub>TC</sub>-->
+</p>
+<p>
 cerebral cortex
 </p>
 <table align="center">
@@ -2869,9 +2883,9 @@ cerebral cortex
 <td align="right">Human [<a href="./cellab.html#r30">30</a>]</td>
 <td align="right">10<sup>10</sup></td>
 <td align="right">6&times;10<sup>13</sup></td>
-<td align="right">10<sup>2</sup></td>
-<!-- K=10 ==> ( 10^10*(64+6*8) + 6*10^13*(40+3*16) )/8 -->
+<td align="right">100</td>
 <td align="right">10</td>
+<!-- ( 10^10*(64+6*8) + 6*10^13*(40+3*16) )/8 -->
 <td align="right">6.6&times;10<sup>14</sup></td>
 <td align="right"></td>
 </tr>
@@ -2905,49 +2919,49 @@ whole brain (or whole body)
 <td align="right">Cat [<a href="./cellab.html#r29">29</a>]</td>
 <td align="right">7.6&times;10<sup>8</sup></td>
 <td align="right">10<sup>13</sup></td>
-<td align="right"></td>
-<td align="right"></td>
-<!-- ( *(64+6*) + *(40+3*) )/8 -->
-<td align="right"></td>
+<td align="right">90</td>
+<td align="right">9</td>
+<!-- ( 76*10^7*(64+6*8) + 10^13*(40+3*16) )/8 -->
+<td align="right">1.1&times;10<sup>14</sup></td>
 <td align="right"></td>
 </tr>
 <tr>
 <td align="right">Brown rat [<a href="./cellab.html#r29">29</a>]</td>
 <td align="right">2&times;10<sup>8</sup></td>
 <td align="right">4.48&times;10<sup>11</sup></td>
-<td align="right"></td>
-<td align="right"></td>
-<!-- ( *(64+6*) + *(40+3*) )/8 -->
-<td align="right"></td>
+<td align="right">80</td>
+<td align="right">8</td>
+<!-- ( 2*10^8*(64+6*8) + 448*10^9*(40+3*16) )/8 -->
+<td align="right">4.9&times;10<sup>12</sup></td>
 <td align="right"></td>
 </tr>
 <tr>
 <td align="right">Honey bee [<a href="./cellab.html#r29">29</a>]</td>
 <td align="right">960,000</td>
 <td align="right">10<sup>9</sup></td>
-<td align="right"></td>
-<td align="right"></td>
-<!-- ( *(64+6*) + *(40+3*) )/8 -->
-<td align="right"></td>
+<td align="right">30</td>
+<td align="right">6</td>
+<!-- ( 960000*(64+6*8) + 10^9*(40+3*8) )/8 -->
+<td align="right">8&times;10<sup>9</sup></td>
 <td align="right"></td>
 </tr>
 <tr>
 <td align="right">House mouse [<a href="./cellab.html#r29">29</a>]</td>
 <td align="right">7.1&times;10<sup>7</sup></td>
 <td align="right">10<sup>11</sup></td>
-<td align="right"></td>
-<td align="right"></td>
-<!-- ( *(64+6*) + *(40+3*) )/8 -->
-<td align="right"></td>
+<td align="right">71</td>
+<td align="right">10</td>
+<!-- ( 71*10^6*(64+6*8) + 10^11*(40+3*16) )/8 -->
+<td align="right">1.1&times;10<sup>12</sup></td>
 <td align="right"></td>
 </tr>
 <tr>
 <td align="right">Human [<a href="./cellab.html#r29">29</a>]</td>
 <td align="right">8.6&times;10<sup>10</sup></td>
 <td align="right">5&times;10<sup>14</sup></td>
-<td align="right">10<sup>2</sup></td>
+<td align="right">100</td>
 <td align="right">10</td>
-<!-- ( 8.6*10^10*(64+6*8) + 5*10^14*(40+3*16) )/8 -->
+<!-- ( 86*10^9*(64+6*8) + 5*10^14*(40+3*16) )/8 -->
 <td align="right">5.5&times;10<sup>15</sup></td>
 <td align="right"></td>
 </tr>
@@ -2955,9 +2969,9 @@ whole brain (or whole body)
 <td align="right">Human [<a href="./cellab.html#r31">31</a>]</td>
 <td align="right">8.6&times;10<sup>10</sup></td>
 <td align="right">10<sup>14</sup></td>
-<td align="right">10<sup>2</sup></td>
+<td align="right">100</td>
 <td align="right">10</td>
-<!-- ( 8.6*10^10*(64+6*8) + 10^14*(40+3*16) )/8 -->
+<!-- ( 86*10^9*(64+6*8) + 10^14*(40+3*16) )/8 -->
 <td align="right">1.1&times;10<sup>15</sup></td>
 <td align="right"></td>
 </tr>
@@ -2965,7 +2979,7 @@ whole brain (or whole body)
 <td align="right">Human [<a href="./cellab.html#r29">32</a>]</td>
 <td align="right">10<sup>11</sup></td>
 <td align="right">10<sup>14</sup></td>
-<td align="right">10<sup>2</sup></td>
+<td align="right">100</td>
 <td align="right">10</td>
 <!-- ( 10^11*(64+6*8) + 10^14*(40+3*16) )/8 -->
 <td align="right">1.1&times;10<sup>15</sup></td>
