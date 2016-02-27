@@ -1,6 +1,7 @@
 #include <qtgl/draw.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
+#include <utility/timeprof.hpp>
 
 namespace qtgl { namespace detail {
 
@@ -13,6 +14,8 @@ void  draw_make_current(GLuint const  id,
                         natural_8_bit const num_components_per_element,
                         natural_32_bit const  num_elements)
 {
+    TMPROF_BLOCK();
+
     ASSUMPTION(num_components_per_element == 2U ||
                num_components_per_element == 3U ||
                num_components_per_element == 4U );
@@ -30,6 +33,8 @@ namespace qtgl {
 
 void  draw()
 {
+    TMPROF_BLOCK();
+
     using namespace detail;
     ASSUMPTION(s_num_components_per_element == 2U ||
                s_num_components_per_element == 3U ||

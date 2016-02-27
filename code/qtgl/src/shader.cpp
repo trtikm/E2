@@ -17,6 +17,8 @@ namespace qtgl { namespace detail {
 void  add_macro_definitions_after_version(std::vector<std::string>&  lines,
                                           std::vector<std::string> const&  macro_definitions)
 {
+    TMPROF_BLOCK();
+
     std::string const  version_keyword = "#version ";
     natural_64_bit  i = 0ULL;
     for ( ; i < lines.size(); ++i)
@@ -40,6 +42,8 @@ void  add_macro_definitions_after_version(std::vector<std::string>&  lines,
 
 bool  is_include_command(std::string const&  line, std::string&  output_include_string)
 {
+    TMPROF_BLOCK();
+
     std::string const  keyword = "#include ";
     std::string const  trimed_line = boost::trim_copy(line);
     if (boost::starts_with(trimed_line,keyword))
@@ -55,6 +59,8 @@ std::string  parse_lines(std::istream&  istr,
                          std::unordered_set<std::string>& visited_files,
                          std::vector<std::string>& output_lines)
 {
+    TMPROF_BLOCK();
+
     natural_32_bit  line_number = 1U;
     while (istr.good())
     {
@@ -98,6 +104,8 @@ std::string  parse_lines(std::istream&  istr,
                          std::unordered_set<std::string>&  visited_files,
                          std::vector<std::string>& output_lines)
 {
+    TMPROF_BLOCK();
+
     ASSUMPTION(output_lines.empty());
     ASSUMPTION(shader_type == GL_VERTEX_SHADER || shader_type == GL_FRAGMENT_SHADER);
 
@@ -273,6 +281,8 @@ namespace qtgl {
 
 vertex_program_ptr  vertex_program::create(std::istream&  source_code, std::string&  error_message)
 {
+    TMPROF_BLOCK();
+
     ASSUMPTION(error_message.empty());
     std::vector<std::string>  lines;
     error_message = detail::parse_lines(source_code,GL_VERTEX_SHADER,lines);
@@ -283,6 +293,8 @@ vertex_program_ptr  vertex_program::create(std::istream&  source_code, std::stri
 
 vertex_program_ptr  vertex_program::create(boost::filesystem::path const&  shader_source_file, std::string&  error_message)
 {
+    TMPROF_BLOCK();
+
     ASSUMPTION(error_message.empty());
     std::vector<std::string>  lines;
     error_message = detail::parse_lines(shader_source_file,GL_VERTEX_SHADER,lines);
@@ -293,6 +305,8 @@ vertex_program_ptr  vertex_program::create(boost::filesystem::path const&  shade
 
 vertex_program_ptr  vertex_program::create(GLuint const  id)
 {
+    TMPROF_BLOCK();
+
     return vertex_program_ptr{new vertex_program(id)};
 }
 
@@ -305,6 +319,8 @@ vertex_program::~vertex_program()
 
 fragment_program_ptr  fragment_program::create(std::istream&  source_code, std::string&  error_message)
 {
+    TMPROF_BLOCK();
+
     ASSUMPTION(error_message.empty());
     std::vector<std::string>  lines;
     error_message = detail::parse_lines(source_code,GL_FRAGMENT_SHADER,lines);
@@ -316,6 +332,8 @@ fragment_program_ptr  fragment_program::create(std::istream&  source_code, std::
 fragment_program_ptr  fragment_program::create(boost::filesystem::path const&  shader_source_file,
                                                std::string&  error_message)
 {
+    TMPROF_BLOCK();
+
     ASSUMPTION(error_message.empty());
     std::vector<std::string>  lines;
     error_message = detail::parse_lines(shader_source_file,GL_FRAGMENT_SHADER,lines);
@@ -326,6 +344,8 @@ fragment_program_ptr  fragment_program::create(boost::filesystem::path const&  s
 
 fragment_program_ptr  fragment_program::create(GLuint const  id)
 {
+    TMPROF_BLOCK();
+
     return fragment_program_ptr{new fragment_program(id)};
 }
 
@@ -338,6 +358,8 @@ fragment_program::~fragment_program()
 shaders_binding_ptr  shaders_binding::create(vertex_program_ptr const  vertex_program,
                                              fragment_program_ptr const  fragment_program)
 {
+    TMPROF_BLOCK();
+
     return shaders_binding_ptr( new shaders_binding(vertex_program,fragment_program) );
 }
 
@@ -360,6 +382,8 @@ shaders_binding::~shaders_binding()
 
 void make_current(shaders_binding_ptr const  shaders_binding)
 {
+    TMPROF_BLOCK();
+
     glapi().glBindProgramPipeline(shaders_binding->id());
 }
 
@@ -368,6 +392,8 @@ void  set_uniform_variable(vertex_program_ptr const  shader_program,
                            std::string const&  variable_name,
                            float_32_bit const  value_to_store)
 {
+    TMPROF_BLOCK();
+
     GLint const  layout_location = glapi().glGetUniformLocation(shader_program->id(),variable_name.c_str());
     ASSUMPTION(layout_location != -1);
     glapi().glProgramUniform1f(shader_program->id(),layout_location,value_to_store);
@@ -377,6 +403,8 @@ void  set_uniform_variable(vertex_program_ptr const  shader_program,
                            std::string const&  variable_name,
                            matrix44 const&  value_to_store)
 {
+    TMPROF_BLOCK();
+
     GLint const  layout_location = glapi().glGetUniformLocation(shader_program->id(),variable_name.c_str());
     ASSUMPTION(layout_location != -1);
     glapi().glProgramUniformMatrix4fv(shader_program->id(),layout_location,1U,GL_TRUE,value_to_store.data());

@@ -1,6 +1,7 @@
 #include <qtgl/glapi.hpp>
 #include <qtgl/detail/window.hpp>
 #include <utility/assumptions.hpp>
+#include <utility/timeprof.hpp>
 
 namespace qtgl { namespace detail { namespace {
 
@@ -61,6 +62,8 @@ opengl_api&  glapi()
 
 void  swap_buffers()
 {
+    TMPROF_BLOCK();
+
     detail::current_context()->swapBuffers(detail::current_window());
 }
 

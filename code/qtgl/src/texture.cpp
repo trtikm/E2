@@ -62,18 +62,20 @@ texture::~texture()
 }
 
 
-texture_ptr  create_texture(natural_32_bit const  image_width,
-                            natural_32_bit const  image_height,
-                            image_bytes_sequence const&  image_data,
-                            natural_32_bit const  image_pixel_components,
-                            natural_32_bit const  image_pixel_components_type,
-                            natural_32_bit const  texture_pixel_format,
-                            natural_32_bit const  texture_x_wrapping_type,
-                            natural_32_bit const  texture_y_wrapping_type,
-                            natural_32_bit const  texture_min_filtering_type,
-                            natural_32_bit const  texture_mag_filtering_type
-                            )
+texture_ptr  texture::create(natural_32_bit const  image_width,
+                             natural_32_bit const  image_height,
+                             image_bytes_sequence const&  image_data,
+                             natural_32_bit const  image_pixel_components,
+                             natural_32_bit const  image_pixel_components_type,
+                             natural_32_bit const  texture_pixel_format,
+                             natural_32_bit const  texture_x_wrapping_type,
+                             natural_32_bit const  texture_y_wrapping_type,
+                             natural_32_bit const  texture_min_filtering_type,
+                             natural_32_bit const  texture_mag_filtering_type
+                             )
 {
+    TMPROF_BLOCK();
+
     GLuint const  id =
             detail::create_texture(
                     image_width,
@@ -92,13 +94,13 @@ texture_ptr  create_texture(natural_32_bit const  image_width,
     return texture_ptr{ new texture{id} };
 }
 
-texture_ptr  create_texture(boost::filesystem::path const&  image_file,
-                            natural_32_bit const  texture_pixel_format,
-                            natural_32_bit const  texture_x_wrapping_type,
-                            natural_32_bit const  texture_y_wrapping_type,
-                            natural_32_bit const  texture_min_filtering_type,
-                            natural_32_bit const  texture_mag_filtering_type
-                            )
+texture_ptr  texture::create(boost::filesystem::path const&  image_file,
+                             natural_32_bit const  texture_pixel_format,
+                             natural_32_bit const  texture_x_wrapping_type,
+                             natural_32_bit const  texture_y_wrapping_type,
+                             natural_32_bit const  texture_min_filtering_type,
+                             natural_32_bit const  texture_mag_filtering_type
+                             )
 {
     TMPROF_BLOCK();
 
@@ -143,40 +145,17 @@ texture_ptr  create_texture(boost::filesystem::path const&  image_file,
         image_data.resize(qimage.byteCount());
         image_data = image_bytes_sequence(qimage.bits(),qimage.bits()+qimage.byteCount());
     }
-    return create_texture(image_width,
-                          image_height,
-                          image_data,
-                          GL_RGBA,
-                          GL_UNSIGNED_INT_8_8_8_8,
-                          texture_pixel_format,
-                          texture_x_wrapping_type,
-                          texture_y_wrapping_type,
-                          texture_min_filtering_type,
-                          texture_mag_filtering_type
-                          );
-}
-
-texture_ptr  create_chessboard_texture(
-                            natural_32_bit const  texture_pixel_format,
-                            natural_32_bit const  texture_x_wrapping_type,
-                            natural_32_bit const  texture_y_wrapping_type,
-                            natural_32_bit const  texture_min_filtering_type,
-                            natural_32_bit const  texture_mag_filtering_type
-                            )
-{
-    static float const  image_data[2U*2U*3U] = {
-        0.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
-        1.0f, 1.0f, 1.0f,   0.0f, 0.0f, 0.0f
-    };
-    natural_8_bit const* const  begin = (natural_8_bit const*)image_data;
-    natural_8_bit const* const  end = begin + sizeof(image_data);
-    return create_texture(2U,2U,image_bytes_sequence(begin,end),GL_RGB,GL_FLOAT,
-                          texture_pixel_format,
-                          texture_x_wrapping_type,
-                          texture_y_wrapping_type,
-                          texture_min_filtering_type,
-                          texture_mag_filtering_type
-                          );
+    return texture::create(image_width,
+                           image_height,
+                           image_data,
+                           GL_RGBA,
+                           GL_UNSIGNED_INT_8_8_8_8,
+                           texture_pixel_format,
+                           texture_x_wrapping_type,
+                           texture_y_wrapping_type,
+                           texture_min_filtering_type,
+                           texture_mag_filtering_type
+                           );
 }
 
 
@@ -185,17 +164,21 @@ texture_ptr  create_chessboard_texture(
 namespace qtgl {
 
 
-textures_binding_ptr  create_textures_binding(texture_binding_data const&  binding
-        )
+textures_binding_ptr  textures_binding::create(texture_binding_data const&  binding)
 {
+    TMPROF_BLOCK();
+
     for (auto const& elem : binding)
         if (!elem.second.operator bool())
             return textures_binding_ptr();
     return textures_binding_ptr{ new textures_binding{binding} };
 }
 
+
 void  make_current(textures_binding_ptr const  binding)
 {
+    TMPROF_BLOCK();
+
     for (auto const&  elem : binding->binding())
     {
         ASSUMPTION(elem.first < GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);

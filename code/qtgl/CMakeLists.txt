@@ -56,6 +56,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/qtgl/buffer_generators.hpp
     ./src/create_grid.cpp
 
+    ./include/qtgl/texture_generators.hpp
+    ./src/create_chessboard_texture.cpp
+
     ./include/qtgl/gui_utils.hpp
     ./src/gui_utils.cpp
     )

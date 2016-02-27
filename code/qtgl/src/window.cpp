@@ -58,6 +58,8 @@ window::window(std::function<std::shared_ptr<real_time_simulator>()> const  crea
     , m_mouse_mbutton_just_pressed(false)
     , m_mouse_mbutton_just_released(false)
 {
+    TMPROF_BLOCK();
+
     LOG(debug,"qtgl::window::window(...)");
 
     QSurfaceFormat  format;
@@ -77,6 +79,8 @@ window::window(std::function<std::shared_ptr<real_time_simulator>()> const  crea
 
 window::~window()
 {
+    TMPROF_BLOCK();
+
     LOG(debug,"qtgl::window::~window()");
 
     make_current_window_guard const  make_current_window{this};
@@ -106,6 +110,8 @@ opengl_context const&  window::glcontext() const
 
 void  window::call_listeners(std::string const& notification_type) const
 {
+    TMPROF_BLOCK();
+
     auto const  it = m_notification_listeners.find(notification_type);
     if (it != m_notification_listeners.end())
         for (auto& listener : it->second)
@@ -114,6 +120,8 @@ void  window::call_listeners(std::string const& notification_type) const
 
 void window::register_listener(std::string const&  notification_type, notification_listener const&  listener)
 {
+    TMPROF_BLOCK();
+
     auto const  it = m_notification_listeners.find(notification_type);
     if (it == m_notification_listeners.end())
         m_notification_listeners.insert({notification_type,{listener}});
@@ -123,6 +131,8 @@ void window::register_listener(std::string const&  notification_type, notificati
 
 void window::unregister_listener(std::string const&  notification_type, notification_listener const&  listener)
 {
+    TMPROF_BLOCK();
+
     auto const  it = m_notification_listeners.find(notification_type);
     if (it == m_notification_listeners.end())
         return;

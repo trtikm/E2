@@ -39,6 +39,8 @@ GLuint  create_vertex_arrays(
         std::vector< std::pair<buffer_binding_location,buffer_ptr> > const&  bindings
         )
 {
+    TMPROF_BLOCK();
+
     if (bindings.empty() || bindings.size() > (natural_64_bit)GL_MAX_VERTEX_ATTRIBS)
         return 0U;
     if (![](std::vector< std::pair<buffer_binding_location,buffer_ptr> > const&  bindings)
@@ -79,6 +81,8 @@ namespace qtgl {
 
 buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,2> > const&  data)
 {
+    TMPROF_BLOCK();
+
     GLuint const  id =
             create_glbuffer(GL_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 2ULL * sizeof(float_32_bit));
     if (id == 0U)
@@ -88,6 +92,8 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,2> > const&  dat
 
 buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,3> > const&  data)
 {
+    TMPROF_BLOCK();
+
     GLuint const  id =
             create_glbuffer(GL_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 3ULL * sizeof(float_32_bit));
     if (id == 0U)
@@ -97,6 +103,8 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,3> > const&  dat
 
 buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,4> > const&  data)
 {
+    TMPROF_BLOCK();
+
     GLuint const  id =
             create_glbuffer(GL_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 4ULL * sizeof(float_32_bit));
     if (id == 0U)
@@ -106,6 +114,8 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,4> > const&  dat
 
 buffer_ptr  buffer::create(std::vector< natural_32_bit > const&  data)
 {
+    TMPROF_BLOCK();
+
     GLuint const  id =
             create_glbuffer(GL_ELEMENT_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 1ULL * sizeof(natural_32_bit));
     if (id == 0U)
@@ -115,6 +125,8 @@ buffer_ptr  buffer::create(std::vector< natural_32_bit > const&  data)
 
 buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,2> > const&  data)
 {
+    TMPROF_BLOCK();
+
     GLuint const  id =
             create_glbuffer(GL_ELEMENT_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 2ULL * sizeof(natural_32_bit));
     if (id == 0U)
@@ -124,6 +136,8 @@ buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,2> > const&  d
 
 buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,3> > const&  data)
 {
+    TMPROF_BLOCK();
+
     GLuint const  id =
             create_glbuffer(GL_ELEMENT_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 3ULL * sizeof(natural_32_bit));
     if (id == 0U)
@@ -133,6 +147,8 @@ buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,3> > const&  d
 
 buffer_ptr  buffer::create(GLuint const  id, natural_8_bit  num_components_per_element, natural_32_bit  num_elements)
 {
+    TMPROF_BLOCK();
+
     return buffer_ptr{ new buffer{id,num_components_per_element,num_elements} };
 }
 
@@ -169,6 +185,8 @@ buffers_binding_ptr  buffers_binding::create(
         std::vector< std::pair<buffer_binding_location,buffer_ptr> > const&  bindings
         )
 {
+    TMPROF_BLOCK();
+
     GLuint const  id = create_vertex_arrays(bindings);
     if (id == 0U)
         return buffers_binding_ptr{};
@@ -180,6 +198,8 @@ buffers_binding_ptr  buffers_binding::create(
         std::vector< std::pair<buffer_binding_location,buffer_ptr> > const&  bindings
         )
 {
+    TMPROF_BLOCK();
+
     buffer_ptr  index_buffer;
     {
         for (auto const& elem : bindings)
@@ -212,6 +232,8 @@ buffers_binding::~buffers_binding()
 
 void  make_current(buffers_binding_ptr const  binding)
 {
+    TMPROF_BLOCK();
+
     glapi().glBindVertexArray(binding->id());
     detail::draw_make_current(binding->index_buffer()->id(),
                               binding->index_buffer()->num_components_per_element(),

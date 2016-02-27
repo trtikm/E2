@@ -1,5 +1,6 @@
 #include <qtgl/buffer_generators.hpp>
 #include <utility/assumptions.hpp>
+#include <utility/timeprof.hpp>
 
 namespace qtgl {
 
@@ -23,6 +24,8 @@ void  create_grid_vertex_and_colour_buffers(
             buffer_ptr&  output_colour_buffer
             )
 {
+    TMPROF_BLOCK();
+
     ASSUMPTION(max_x_coordinate > 0.0f);
     ASSUMPTION(max_y_coordinate > 0.0f);
     ASSUMPTION(max_z_coordinate > 0.0f);
