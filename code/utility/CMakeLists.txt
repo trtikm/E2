@@ -43,6 +43,7 @@ add_library(${THIS_TARGET_NAME}
     ./include/utility/instance_wrapper.hpp
 
     ./include/utility/tensor_math.hpp
+    ./src/tensor_math.cpp
 
     ./include/utility/test.hpp
     ./src/test.cpp

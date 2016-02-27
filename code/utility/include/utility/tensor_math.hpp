@@ -48,7 +48,43 @@ typedef Eigen::Matrix<scalar,4,3>  matrix43;
 typedef Eigen::Matrix<scalar,4,4>  matrix44;
 
 
+inline vector3  vector3_zero() { return vector3::Zero(); }
+inline vector3  vector3_unit_x() { return vector3::UnitX(); }
+inline vector3  vector3_unit_y() { return vector3::UnitY(); }
+inline vector3  vector3_unit_z() { return vector3::UnitZ(); }
+inline scalar  dot_product(vector3 const& u, vector3 const& v) { return u.dot(v); }
+inline scalar  lenght(vector3 const& u) { return u.norm(); }
+inline vector3  normalised(vector3 const&  u) { return u.normalized(); }
+inline void  normalise(vector3& u) { u.normalize(); }
+
+inline quaternion  quaternion_identity() { return quaternion::Identity(); }
+inline scalar  length_squared(quaternion const& q) { return q.squaredNorm(); }
+inline scalar  lenght(quaternion const& q) { return q.norm(); }
+inline quaternion  normalised(quaternion const& q) { return q.normalized(); }
+inline void  normalise(quaternion& q) { q.normalize(); }
+
+inline matrix44  inverse(matrix44 const&  M) { return M.inverse(); }
+
+inline matrix33  quaternion_to_rotation_matrix(quaternion const& q) { return q.toRotationMatrix(); }
+inline quaternion  rotation_matrix_to_quaternion(matrix33 const&  R) { return quaternion(R); }
+inline quaternion  angle_axis_to_quaternion(scalar const  angle, vector3 const&  axis) {
+    return quaternion(Eigen::AngleAxis<scalar>(angle,axis));
+}
+matrix33  yaw_pitch_roll_to_rotation(scalar const  yaw, scalar const  pitch, scalar const  roll);
+void  rotation_to_yaw_pitch_roll(matrix33 const&  R, scalar&  yaw, scalar&  pitch, scalar&  roll);
+
+
 #   endif
+
+
+inline constexpr scalar PI() noexcept { return scalar(3.14159265); }
+
+inline scalar  absolute_value(scalar const a) { return a < scalar(0) ? -a : a; }
+
+inline bool  are_equal(scalar const a, scalar const b, scalar const  error = scalar(1e-5)) {
+    return absolute_value(a - b) <= error;
+}
+
 
 
 #endif

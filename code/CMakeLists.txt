@@ -4,6 +4,7 @@ include_directories(
     "${PROJECT_SOURCE_DIR}/code/cellconnect/include"
     "${PROJECT_SOURCE_DIR}/code/efloop/include"
     "${PROJECT_SOURCE_DIR}/code/envlab/include"
+    "${PROJECT_SOURCE_DIR}/code/qtgl/include"
     "${PROJECT_SOURCE_DIR}/code/utility/include"
     )
 message("Including the following E2 libraries to the build:")
@@ -15,6 +16,8 @@ add_subdirectory(./efloop)
     message("-- efloop")
 add_subdirectory(./envlab)
     message("-- envlab")
+add_subdirectory(./qtgl)
+    message("-- qtgl")
 add_subdirectory(./utility)
     message("-- utility")
 
