@@ -27,12 +27,13 @@ we discuss the data structure of the neural tissue. In
 we describe how data are physically stored in the memory.
 And in
 <a href="./cellab.html#transition_algorithms">section 3</a>
-we describe transition algorithms. In
-<a href="./cellab.html#capturing">section 4</a>.
+we describe transition algorithms.
+<!--In-->
+<!--<a href="./cellab.html#capturing">section 4</a>.-->
 </p><p>
 The library further provides a data type for aggregation of the neural tissue
 with its parametrisation. We discuss it in
-<a href="./cellab.html#aggregation_with_parametrisation">section 5</a>.
+<a href="./cellab.html#aggregation_with_parametrisation">section 4</a>.
 </p>
 <h2 id="neural_tissue">1.&nbsp;&nbsp;&nbsp;Structure of neural tissue</h2>
 <p>
@@ -972,6 +973,142 @@ the numbers of sensory cells <i>N</i><sub><i>S</i></sub>, and the numbers of syn
 </td>
 </tr>
 </table>
+
+
+
+
+
+
+
+<p>
+Now we compute <i>S</i>(<i>DS</i>) for values <i>N</i><sub>TC</sub> and
+<i>N</i><sub>TS</sub> corresponding to counts of neurons and synapses
+in nervous systems of different live organisms (species). Due to difficulties
+to find counts of sensory cells and synapses to muscles in literature
+we assume <i>N</i><sub>S</sub>=<i>N</i><sub>M</sub>=0. We also assume
+<i>NB</i><sub>C</sub>= <i>NB</i><sub>G</sub>=<i>NB</i><sub>S</sub>=32 bits
+(there is nothing special about this assumption, we had to choose some values).
+We further assume that all numbers <i>T</i><sub><i>i</i></sub> are equal or
+very close to the value <i>C</i>/<i>K</i> (see
+<a href="./cellab.html#static_state">section 1.1</a>
+to recall meaning of these symbols) and similarly we assume the number of
+columns along X tissue axes is equal or very close to the number of
+columns along Y tissue axes. For human we took values for <i>C</i> and <i>K</i>
+to be roughly an average of what is mentioned in the literature, and for other
+spices we scaled values chosen for human with respect to the count of neurons.
+
+</p>
+<table align="center">
+<caption>Data for mammalian cerebral cortex only.</caption>
+<tr>
+<th align="right">Spices</th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    &nbsp;&nbsp;<i>N</i><sub>TC</sub></th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    &nbsp;&nbsp;<i>N</i><sub>TS</sub></th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i>C</i></th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i>K</i></th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i>S</i>(<i>DS</i>)/8</th>
+</tr>
+<tr>
+<td align="right">Human [<a href="./cellab.html#r30">30</a>]</td>
+<td align="right">10<sup>10</sup></td>
+<td align="right">6&times;10<sup>13</sup></td>
+<td align="right">100</td>
+<td align="right">10</td>
+<!-- ( 10^10*(64+6*8) + 6*10^13*(40+3*16) )/8 -->
+<td align="right">6.6&times;10<sup>14</sup></td>
+</tr>
+</table>
+<p></p>
+<table align="center">
+<caption>Data for the whole brain (organism).</caption>
+<tr>
+<th align="right">Spices</th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    &nbsp;&nbsp;<i>N</i><sub>TC</sub></th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    &nbsp;&nbsp;<i>N</i><sub>TS</sub></th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i>C</i></th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i>K</i></th>
+<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i>S</i>(<i>DS</i>)/8</th>
+</tr>
+<tr>
+<td align="right">C.Elegans [<a href="./cellab.html#r29">29</a>]</td>
+<td align="right">302</td>
+<td align="right">7 500</td>
+<td align="right">3</td>
+<td align="right">3</td>
+<!-- ( 302*(64+6*8) + 7500*(40+3*8) )/8 -->
+<td align="right">64 228</td>
+</tr>
+<tr>
+<td align="right">Cat [<a href="./cellab.html#r29">29</a>]</td>
+<td align="right">7.6&times;10<sup>8</sup></td>
+<td align="right">10<sup>13</sup></td>
+<td align="right">90</td>
+<td align="right">9</td>
+<!-- ( 76*10^7*(64+6*8) + 10^13*(40+3*16) )/8 -->
+<td align="right">1.1&times;10<sup>14</sup></td>
+</tr>
+<tr>
+<td align="right">Brown rat [<a href="./cellab.html#r29">29</a>]</td>
+<td align="right">2&times;10<sup>8</sup></td>
+<td align="right">4.48&times;10<sup>11</sup></td>
+<td align="right">80</td>
+<td align="right">8</td>
+<!-- ( 2*10^8*(64+6*8) + 448*10^9*(40+3*16) )/8 -->
+<td align="right">4.9&times;10<sup>12</sup></td>
+</tr>
+<tr>
+<td align="right">Honey bee [<a href="./cellab.html#r29">29</a>]</td>
+<td align="right">960,000</td>
+<td align="right">10<sup>9</sup></td>
+<td align="right">30</td>
+<td align="right">6</td>
+<!-- ( 960000*(64+6*8) + 10^9*(40+3*8) )/8 -->
+<td align="right">8&times;10<sup>9</sup></td>
+</tr>
+<tr>
+<td align="right">House mouse [<a href="./cellab.html#r29">29</a>]</td>
+<td align="right">7.1&times;10<sup>7</sup></td>
+<td align="right">10<sup>11</sup></td>
+<td align="right">71</td>
+<td align="right">10</td>
+<!-- ( 71*10^6*(64+6*8) + 10^11*(40+3*16) )/8 -->
+<td align="right">1.1&times;10<sup>12</sup></td>
+</tr>
+<tr>
+<td align="right">Human [<a href="./cellab.html#r29">29</a>]</td>
+<td align="right">8.6&times;10<sup>10</sup></td>
+<td align="right">5&times;10<sup>14</sup></td>
+<td align="right">100</td>
+<td align="right">10</td>
+<!-- ( 86*10^9*(64+6*8) + 5*10^14*(40+3*16) )/8 -->
+<td align="right">5.5&times;10<sup>15</sup></td>
+</tr>
+<tr>
+<td align="right">Human [<a href="./cellab.html#r31">31</a>]</td>
+<td align="right">8.6&times;10<sup>10</sup></td>
+<td align="right">10<sup>14</sup></td>
+<td align="right">100</td>
+<td align="right">10</td>
+<!-- ( 86*10^9*(64+6*8) + 10^14*(40+3*16) )/8 -->
+<td align="right">1.1&times;10<sup>15</sup></td>
+</tr>
+<tr>
+<td align="right">Human [<a href="./cellab.html#r29">32</a>]</td>
+<td align="right">10<sup>11</sup></td>
+<td align="right">10<sup>14</sup></td>
+<td align="right">100</td>
+<td align="right">10</td>
+<!-- ( 10^11*(64+6*8) + 10^14*(40+3*16) )/8 -->
+<td align="right">1.1&times;10<sup>15</sup></td>
+</tr>
+</table>
+
+
+
 <h2 id="transition_algorithms">3.&nbsp;&nbsp;&nbsp;Transition algorithms</h2>
 <p>
 A computation of a next state of the neural tissue from the current one
@@ -2844,151 +2981,10 @@ passed to the user-defined function <i>F</i><sub>TC</sub> by the algorithm
 A constant space of the callback function <kbd>get_connected_</kbd>- <kbd>synapse</kbd>
 passed to the user-defined function <i>F</i><sub>TC</sub> by the algorithm
 <i>A</i><sub>TC</sub>.
-
 </td>
 </tr>
 </table>
-<h2 id="time_and_space_of_real_cortex">4.&nbsp;&nbsp;&nbsp;
-    Time and space requirements of real cerebral cortices</h2>
-<p>
-Here we estimate how much space and time we need to simulate the neural
-tissue, when counts of cells and synapses inside the tissue correspond
-to counts observed by biologists in live organisms.
-We searched in available sources (mainly on the Internet) for known counts
-of neurons and synapses for individual species. We especially focus on data
-dedicated to cerebral cortex. We also collected data related to whole brains
-(or nervous systems) of different organisms.
-
-    <!--Since we focus on mammalian-->
-<!--cerebral cortex we split all collected data into two-->
-
-    <!--<i>N</i><sub>TC</sub>-->
-</p>
-<p>
-cerebral cortex
-</p>
-<table align="center">
-<tr>
-<th align="right">Spices</th>
-<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    &nbsp;&nbsp;<i>N</i><sub>TC</sub></th>
-<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    &nbsp;&nbsp;<i>N</i><sub>TS</sub></th>
-<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i>C</i></th>
-<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i>K</i></th>
-<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Space</th>
-<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Time</th>
-</tr>
-<tr>
-<td align="right">Human [<a href="./cellab.html#r30">30</a>]</td>
-<td align="right">10<sup>10</sup></td>
-<td align="right">6&times;10<sup>13</sup></td>
-<td align="right">100</td>
-<td align="right">10</td>
-<!-- ( 10^10*(64+6*8) + 6*10^13*(40+3*16) )/8 -->
-<td align="right">6.6&times;10<sup>14</sup></td>
-<td align="right"></td>
-</tr>
-</table>
-<p>
-whole brain (or whole body)
-</p>
-<table align="center">
-<tr>
-<th align="right">Spices</th>
-<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    &nbsp;&nbsp;<i>N</i><sub>TC</sub></th>
-<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    &nbsp;&nbsp;<i>N</i><sub>TS</sub></th>
-<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i>C</i></th>
-<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i>K</i></th>
-<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Space</th>
-<th align="right">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Time</th>
-</tr>
-<tr>
-<td align="right">C.Elegans [<a href="./cellab.html#r29">29</a>]</td>
-<td align="right">302</td>
-<td align="right">7 500</td>
-<td align="right">3</td>
-<td align="right">3</td>
-<!-- ( 302*(64+6*8) + 7500*(40+3*8) )/8 -->
-<td align="right">64 228</td>
-<td align="right"></td>
-</tr>
-<tr>
-<td align="right">Cat [<a href="./cellab.html#r29">29</a>]</td>
-<td align="right">7.6&times;10<sup>8</sup></td>
-<td align="right">10<sup>13</sup></td>
-<td align="right">90</td>
-<td align="right">9</td>
-<!-- ( 76*10^7*(64+6*8) + 10^13*(40+3*16) )/8 -->
-<td align="right">1.1&times;10<sup>14</sup></td>
-<td align="right"></td>
-</tr>
-<tr>
-<td align="right">Brown rat [<a href="./cellab.html#r29">29</a>]</td>
-<td align="right">2&times;10<sup>8</sup></td>
-<td align="right">4.48&times;10<sup>11</sup></td>
-<td align="right">80</td>
-<td align="right">8</td>
-<!-- ( 2*10^8*(64+6*8) + 448*10^9*(40+3*16) )/8 -->
-<td align="right">4.9&times;10<sup>12</sup></td>
-<td align="right"></td>
-</tr>
-<tr>
-<td align="right">Honey bee [<a href="./cellab.html#r29">29</a>]</td>
-<td align="right">960,000</td>
-<td align="right">10<sup>9</sup></td>
-<td align="right">30</td>
-<td align="right">6</td>
-<!-- ( 960000*(64+6*8) + 10^9*(40+3*8) )/8 -->
-<td align="right">8&times;10<sup>9</sup></td>
-<td align="right"></td>
-</tr>
-<tr>
-<td align="right">House mouse [<a href="./cellab.html#r29">29</a>]</td>
-<td align="right">7.1&times;10<sup>7</sup></td>
-<td align="right">10<sup>11</sup></td>
-<td align="right">71</td>
-<td align="right">10</td>
-<!-- ( 71*10^6*(64+6*8) + 10^11*(40+3*16) )/8 -->
-<td align="right">1.1&times;10<sup>12</sup></td>
-<td align="right"></td>
-</tr>
-<tr>
-<td align="right">Human [<a href="./cellab.html#r29">29</a>]</td>
-<td align="right">8.6&times;10<sup>10</sup></td>
-<td align="right">5&times;10<sup>14</sup></td>
-<td align="right">100</td>
-<td align="right">10</td>
-<!-- ( 86*10^9*(64+6*8) + 5*10^14*(40+3*16) )/8 -->
-<td align="right">5.5&times;10<sup>15</sup></td>
-<td align="right"></td>
-</tr>
-<tr>
-<td align="right">Human [<a href="./cellab.html#r31">31</a>]</td>
-<td align="right">8.6&times;10<sup>10</sup></td>
-<td align="right">10<sup>14</sup></td>
-<td align="right">100</td>
-<td align="right">10</td>
-<!-- ( 86*10^9*(64+6*8) + 10^14*(40+3*16) )/8 -->
-<td align="right">1.1&times;10<sup>15</sup></td>
-<td align="right"></td>
-</tr>
-<tr>
-<td align="right">Human [<a href="./cellab.html#r29">32</a>]</td>
-<td align="right">10<sup>11</sup></td>
-<td align="right">10<sup>14</sup></td>
-<td align="right">100</td>
-<td align="right">10</td>
-<!-- ( 10^11*(64+6*8) + 10^14*(40+3*16) )/8 -->
-<td align="right">1.1&times;10<sup>15</sup></td>
-<td align="right"></td>
-</tr>
-</table>
-
-
-<h2 id="aggregation_with_parametrisation">5.&nbsp;&nbsp;&nbsp;Aggregation with parametrisation</h2>
+<h2 id="aggregation_with_parametrisation">4.&nbsp;&nbsp;&nbsp;Aggregation with parametrisation</h2>
 <!--The construction of the neural tissue in the memory start by the construction of-->
 <!--the static state. It is a parametrisation who provides data required for the-->
 <!--construction. The passed data are parameters defining global immutable-->
