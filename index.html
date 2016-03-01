@@ -10,14 +10,17 @@
 <h1>E2 project</h1>
 <h2 id="motivation">1.&nbsp;&nbsp;Motivation and aims</h2>
 <p>
-An interesting and important ability of the mammalian cerebral cortex
+Mammals are know for their evolved ability to flexibly <em>adapt</em> to conditions
+in the environment in a short time interval (within a lifetime of an individual)
+by exploration of the environment and by discovering novel solutions in known and
+new situations. This ability is commonly associated with the cerebral cortex
 [<a href="./index.html#r09">9</a>]
-is its fast <em>adaptation</em> to conditions in the external environment
-in order to maximise a number of short and long term options for
-the whole organism.
+of the mammalian brain.
 </p><p>
-We already have a lot of information about individual <em>components</em> of
-the mammalian cerebral cortex, like neurons
+Due to an intensive study of the mammalian brain of different species by researchers
+    we have a lot of
+information about anatomy and functionality of individual components of the cerebral
+cortex, like neurons
 [<a href="./index.html#r10">10</a>],
 excitatory and inhibitory synapses with their plasticity
 [<a href="./index.html#r11">11</a>,<a
@@ -28,30 +31,34 @@ axons and their growth
     href="./index.html#r14">14</a>,<a
     href="./index.html#r15">15</a>]
 according to strengths of attraction and repulsion cues
-[<a href="./index.html#r23">23</a>,
- <a href="./index.html#r24">24</a>,
- <a href="./index.html#r25">25</a>,
- <a href="./index.html#r26">26</a>],
+[<a href="./index.html#r23">23</a>,<a
+    href="./index.html#r24">24</a>,<a
+    href="./index.html#r25">25</a>,<a
+    href="./index.html#r26">26</a>],
 micro columns and their layered structure
 [<a href="./index.html#r17">17</a>,<a
     href="./index.html#r09">9</a>],
 glia cells
 [<a href="./index.html#r18">18</a>],
 etc.
-We also have models of many of these components
+We also have mathematical models of many of these components
+with different degrees of biological accuracy
 [<a href="./index.html#r03">3</a>,<a
     href="./index.html#r02">2</a>,<a
-    href="./index.html#r01">1</a>]
-with different degrees of biological accuracy
-[<a href="./index.html#r19">19</a>,<a
+    href="./index.html#r01">1</a>,<a
+    href="./index.html#r19">19</a>,<a
     href="./index.html#r20">20</a>,<a
     href="./index.html#r21">21</a>].
-The mammalian cerebral cortex is basically a <em>network</em>
-[<a href="./index.html#r22">22</a>]
-of mutually interconnected neurons. An important role
-thus also play <em>network properties</em>, like a number of neurons in a
-micro column, a number of neurons in the whole cerebral cortex,
-distribution of in/out-degrees of neurons
+</p><p>
+From the information-processing view scientists often consider the mammalian
+cerebral cortex as a complex <em>network</em>
+[<a href="./index.html#r22">22</a>].
+In this context many principal properties of the mammalian cerebral cortex can
+be described and even predicted using the knowledge from the theory of complex
+networks and the graph theory. An important role play especially so called
+<em>network properties</em> of the cerebral cortex, like a number of neurons
+in a micro column, a number of neurons in the whole cerebral cortex, distribution
+of in/out-degrees of neurons
 [<a href="./index.html#r34">34</a>,
  <a href="./index.html#r35">35</a>,
  <a href="./index.html#r36">36</a>],
@@ -61,15 +68,13 @@ the small-world phenomenon
 [<a href="./index.html#r27">27</a>],
 clustering coefficients of neurons
 [<a href="./index.html#r28">28</a>],
-and others.
+and so on.
 </p><p>
-Despite of all knowledge we already have, several key questions are still open.
-Here we list three of them which are of the top importance for the E2 project:
+Despite of all knowledge we have about the cerebral cortex we still do
+not know what properties are necessary for emergence of the adaptability.
+In the E2 project we primarily focus on these two open questions:
 </p>
 <ul><li>
-Do we have enough information to build a model of the mammalian cerebral
-cortex such that the adaptation emerges during its simulation?
-</li><li>
 What are the key properties and components every model of the mammalian
 cerebral cortex must necessarily have to achieve any observable degree
 of adaptation during a simulation?
@@ -86,7 +91,7 @@ these questions.
 Simply said, our method is brute force: we build and simulate as many
 computer models of the mammalian cerebral cortex as possible (for many
 different network properties and different biological details of individual
-components) in order to find an evidence for answers to the questions
+components) in order to find an empirical evidence for answers to the questions
 in the
 <a href="./index.html#motivation">sections 1</a>
 by a detailed analysis of data obtained from the simulations.
@@ -104,9 +109,9 @@ simplifies substitution of network properties into the parametrised model.
 In order to measure a degree of adaptation of a computer model of the cerebral
 cortex we always simulate it in a direct interaction with an <em>external
 environment</em>. A computer model controls one unique <em>agent</em>
-within the environment. In that context we address the computer model as a
-<em>controller</em> of the agent. There can be more than one agent in an environment.
-In that case there is the same number of controllers (for each agent one)
+within the environment. In that context we address the computer model of the cerebral
+cortex as a <em>controller</em> of the agent. There can be more than one agent in an
+environment. In that case there is the same number of controllers (for each agent one)
 interacting with the environment during the simulation. Here are three examples
 of archetypal external environments:
 </p>
@@ -171,10 +176,11 @@ We can build tens or hundreds of computer models of the mammalian cerebral
 cortex for different network properties and biological details
 of components. Each model can further be simulated in interaction
 with different external environments. So, the number of simulations
-we may possibly perform is high. Yet, at the beginning, each simulation
-can potentially give us an important piece of missing information.
-In any case, to perform all simulations will either cost us extremely
-high computational resources or very long time.
+we may possibly perform is high.
+<!--Yet, at the beginning, each simulation-->
+<!--can potentially give us an important piece of missing information.-->
+<!--In any case, to perform all simulations will either cost us extremely-->
+<!--high computational resources or very long time.-->
 For example, if an average speed of a simulation is one tenth of the
 speed of a modelled (real) mammalian cerebral cortex, then 250 simulations
 of one week of life, performed in a sequence, will take almost 48 years.
