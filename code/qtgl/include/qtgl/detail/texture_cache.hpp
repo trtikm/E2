@@ -2,16 +2,7 @@
 #   define QTGL_DETAIL_TEXTURE_CACHE_HPP_INCLUDED
 
 #   include <qtgl/texture.hpp>
-#   include <utility/basic_numeric_types.hpp>
-#   include <boost/filesystem/path.hpp>
-#   include <boost/noncopyable.hpp>
 #   include <unordered_map>
-#   include <unordered_set>
-#   include <vector>
-#   include <queue>
-#   include <string>
-#   include <list>
-#   include <utility>
 #   include <memory>
 #   include <mutex>
 
@@ -26,7 +17,7 @@ struct texture_cache
 
     void  insert_load_request(texture_properties_ptr const  props);
 
-    bool  insert(texture_properties_ptr const  props, texture_ptr const  texture);
+    bool  insert(texture_ptr const  texture);
     std::weak_ptr<texture const>  find(texture_properties_ptr const  props) const;
 
     std::weak_ptr<texture const>  get_dummy_texture() const noexcept { return m_dummy_texture; }

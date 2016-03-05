@@ -1,4 +1,5 @@
 #include <qtgl/detail/window.hpp>
+#include <qtgl/detail/resource_loader.hpp>
 #include <qtgl/detail/texture_cache.hpp>
 #include <utility/tensor_math.hpp>
 #include <utility/invariants.hpp>
@@ -35,6 +36,7 @@ void  on_window_destroy()
     --s_windows_counter;
     if (s_windows_counter == 0)
     {
+        detail::resource_loader::instance().clear();
         detail::texture_cache::instance().clear(true);
     }
 }

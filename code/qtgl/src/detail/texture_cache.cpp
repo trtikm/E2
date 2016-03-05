@@ -1,10 +1,11 @@
 #include <qtgl/detail/texture_cache.hpp>
+#include <qtgl/detail/resource_loader.hpp>
 #include <qtgl/texture_generators.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 #include <boost/filesystem.hpp>
-#include <algorithm>
+#include <functional>
 
 namespace qtgl { namespace detail {
 
@@ -42,34 +43,30 @@ void texture_cache::clear(bool destroy_also_dummy_texture)
 
 void  texture_cache::insert_load_request(texture_properties_ptr const  props)
 {
+    TMPROF_BLOCK();
+
     if (!find(props).expired())
         return;
 
     if (props->image_file() == chessboard_texture_imaginary_image_path())
-        insert(props,create_chessboard_texture(props));
+        insert(create_chessboard_texture(props));
     else
-    {
-        ASSUMPTION(boost::filesystem::exists(props->image_file()));
-        ASSUMPTION(boost::filesystem::is_regular_file(props->image_file()));
-
-        // TODO: the following implementation is temporary one! Implement it properly: asynchronously on another thread.
-
-        texture_image_properties const  image_props = load_texture_image_file(props->image_file());
-        texture_ptr const  ptexture = texture::create(image_props,props);
-        insert(props,ptexture);
-    }
+        resource_loader::instance().insert(props,std::bind(&texture_cache::insert,this,std::placeholders::_1));
 }
 
-bool  texture_cache::insert(texture_properties_ptr const  props, texture_ptr const  texture)
+bool  texture_cache::insert(texture_ptr const  texture)
 {
+    TMPROF_BLOCK();
+
     std::lock_guard<std::mutex> const  lock(m_mutex);
-    return m_cached_textures.insert({props,texture}).second;
+    return m_cached_textures.insert({texture->properties(),texture}).second;
 }
 
 std::weak_ptr<texture const>  texture_cache::texture_cache::find(texture_properties_ptr const  props) const
 {
-    std::lock_guard<std::mutex> const  lock(m_mutex);
+    TMPROF_BLOCK();
 
+    std::lock_guard<std::mutex> const  lock(m_mutex);
     auto const  it = m_cached_textures.find(props);
     if (it == m_cached_textures.cend())
         return {};

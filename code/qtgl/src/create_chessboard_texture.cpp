@@ -6,11 +6,34 @@
 namespace qtgl {
 
 
-texture_ptr  create_chessboard_texture(texture_properties_ptr const  texture_props)
+boost::filesystem::path  chessboard_texture_imaginary_image_path() noexcept
+{
+    return "/gtgl/generated_tetures/chessboard_texture";
+}
+
+texture_properties  make_chessboard_texture_properties(
+                            natural_32_bit const  texture_pixel_format,
+                            natural_32_bit const  texture_x_wrapping_type,
+                            natural_32_bit const  texture_y_wrapping_type,
+                            natural_32_bit const  texture_min_filtering_type
+                            )
+{
+    return {
+        chessboard_texture_imaginary_image_path(),
+        texture_pixel_format,
+        texture_x_wrapping_type,
+        texture_y_wrapping_type,
+        texture_min_filtering_type,
+        GL_NEAREST
+        };
+}
+
+texture_ptr  create_chessboard_texture(texture_properties_ptr const  props)
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(texture_props->image_file() == chessboard_texture_imaginary_image_path());
+    ASSUMPTION(props->image_file() == chessboard_texture_imaginary_image_path());
+    ASSUMPTION(props->mag_filtering_type() == GL_NEAREST);
 
     static float const  image_data[2U*2U*3U] = {
         0.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
@@ -23,28 +46,27 @@ texture_ptr  create_chessboard_texture(texture_properties_ptr const  texture_pro
             GL_RGB,GL_FLOAT
             };
 
-    return texture::create(image_props,texture_props);
+    return texture::create(image_props,props);
 }
 
-
-texture_ptr  create_chessboard_texture(
-                            natural_32_bit const  texture_pixel_format,
-                            natural_32_bit const  texture_x_wrapping_type,
-                            natural_32_bit const  texture_y_wrapping_type,
-                            natural_32_bit const  texture_min_filtering_type,
-                            natural_32_bit const  texture_mag_filtering_type
-                            )
+texture_ptr  create_chessboard_texture(texture_properties const&  texture_props)
 {
-    texture_properties_ptr const  texture_props{ new texture_properties{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(texture_props.image_file().empty() ||
+               texture_props.image_file() == chessboard_texture_imaginary_image_path());
+    ASSUMPTION(texture_props.mag_filtering_type() == GL_NEAREST);
+
+    texture_properties_ptr const  props{ new texture_properties{
             chessboard_texture_imaginary_image_path(),
-            texture_pixel_format,
-            texture_x_wrapping_type,
-            texture_y_wrapping_type,
-            texture_min_filtering_type,
-            texture_mag_filtering_type
+            texture_props.pixel_format(),
+            texture_props.x_wrapping_type(),
+            texture_props.y_wrapping_type(),
+            texture_props.min_filtering_type(),
+            GL_NEAREST
             }};
 
-    return create_chessboard_texture(texture_props);
+    return create_chessboard_texture(props);
 }
 
 
