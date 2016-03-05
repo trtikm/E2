@@ -7,8 +7,6 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${QT5_CXX_FLAGS}")
 add_library(${THIS_TARGET_NAME}
 
     ./include/qtgl/window.hpp
-    ./include/qtgl/detail/window.hpp
-    ./src/window.cpp
 
     ./include/qtgl/notification_listener.hpp
     ./src/notification_listener.cpp
@@ -60,6 +58,8 @@ add_library(${THIS_TARGET_NAME}
     ./include/qtgl/gui_utils.hpp
     ./src/gui_utils.cpp
 
+    ./include/qtgl/detail/window.hpp
+    ./src/detail/window.cpp
     ./include/qtgl/detail/texture_cache.hpp
     ./src/detail/texture_cache.cpp
     ./include/qtgl/detail/resource_loader.hpp
