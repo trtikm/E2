@@ -3,6 +3,7 @@
 
 #   include <qtgl/texture.hpp>
 #   include <unordered_map>
+#   include <vector>
 #   include <memory>
 #   include <mutex>
 
@@ -18,7 +19,7 @@ struct texture_cache
     void  insert_load_request(texture_properties_ptr const  props);
 
     bool  insert(texture_ptr const  texture);
-    std::weak_ptr<texture const>  find(texture_properties_ptr const  props) const;
+    std::weak_ptr<texture const>  find(texture_properties_ptr const  props);
 
     std::weak_ptr<texture const>  get_dummy_texture() const noexcept { return m_dummy_texture; }
 
@@ -28,12 +29,15 @@ private:
     texture_cache(texture_cache const&) = delete;
     texture_cache& operator=(texture_cache const&) = delete;
 
+    void  receiver(texture_image_properties& image_props, texture_properties_ptr const  texture_props);
+
     std::unordered_map<
             texture_properties_ptr,
             texture_ptr,
             size_t(*)(texture_properties_ptr const),
             bool(*)(texture_properties_ptr const,texture_properties_ptr const)
             >  m_cached_textures;
+    std::vector< std::pair<texture_image_properties,texture_properties_ptr> >  m_pending_textures;
     mutable std::mutex  m_mutex;
     texture_ptr  m_dummy_texture;
 
