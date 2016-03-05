@@ -32,8 +32,6 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/qtgl/texture.hpp
     ./src/texture.cpp
-    ./include/qtgl/texture_database.hpp
-    ./src/texture_database.cpp
 
     ./include/qtgl/camera.hpp
     ./src/camera.cpp
@@ -61,6 +59,11 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/qtgl/gui_utils.hpp
     ./src/gui_utils.cpp
+
+    ./include/qtgl/detail/texture_cache.hpp
+    ./src/detail/texture_cache.cpp
+#    ./include/qtgl/detail/resource_loader.hpp
+#    ./src/detail/resource_loader.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

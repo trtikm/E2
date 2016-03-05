@@ -1,4 +1,5 @@
 #include <qtgl/detail/window.hpp>
+#include <qtgl/detail/texture_cache.hpp>
 #include <utility/tensor_math.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
@@ -11,6 +12,35 @@
 #include <QTimerEvent>
 #include <QScreen>
 #include <iostream>
+#include <mutex>
+
+namespace qtgl { namespace detail { namespace {
+
+
+natural_32_bit  s_windows_counter = 0U;
+std::mutex  s_windows_counter_mutex;
+
+
+void  on_window_create()
+{
+    std::lock_guard<std::mutex> const  lock(s_windows_counter_mutex);
+    ++s_windows_counter;
+    ASSUMPTION(s_windows_counter != 0U);
+}
+
+void  on_window_destroy()
+{
+    std::lock_guard<std::mutex> const  lock(s_windows_counter_mutex);
+    ASSUMPTION(s_windows_counter > 0U);
+    --s_windows_counter;
+    if (s_windows_counter == 0)
+    {
+        detail::texture_cache::instance().clear(true);
+    }
+}
+
+
+}}}
 
 namespace qtgl { namespace detail {
 
@@ -75,6 +105,8 @@ window::window(std::function<std::shared_ptr<real_time_simulator>()> const  crea
     setFormat(format);
 
     m_idleTimerId = startTimer(0);
+
+    on_window_create();
 }
 
 window::~window()
@@ -85,6 +117,7 @@ window::~window()
 
     make_current_window_guard const  make_current_window{this};
     m_simulator.reset();
+    on_window_destroy();
 
     std::chrono::high_resolution_clock::time_point const  current_time = std::chrono::high_resolution_clock::now();
     float_64_bit const  time_delta =

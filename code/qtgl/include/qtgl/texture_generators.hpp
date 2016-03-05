@@ -4,8 +4,16 @@
 #   include <qtgl/texture.hpp>
 #   include <qtgl/glapi.hpp>
 #   include <utility/basic_numeric_types.hpp>
+#   include <boost/filesystem/path.hpp>
 
 namespace qtgl {
+
+
+inline boost::filesystem::path  chessboard_texture_imaginary_image_path() noexcept
+{ return "./generated_tetures/chessboard_texture"; }
+
+
+texture_ptr  create_chessboard_texture(texture_properties_ptr const  texture_props);
 
 
 texture_ptr  create_chessboard_texture(
