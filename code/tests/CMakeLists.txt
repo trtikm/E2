@@ -51,6 +51,9 @@ add_subdirectory(./column_shift_function)
 add_subdirectory(./compute_in_out_degrees)
     message("-- compute_in_out_degrees")
 
+add_subdirectory(./ode_solvers)
+    message("-- ode_solvers")
+
 
 message("-- run_tests.py")
 install(
