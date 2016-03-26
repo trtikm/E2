@@ -580,6 +580,224 @@ void test_neuron_wilson_euler()
     }
 }
 
+void test_neuron_leaky_integrate_and_fire_euler()
+{
+    struct local
+    {
+        static float_64_bit dt()
+        {
+            return 1.0;
+        }
+
+        static float_64_bit dV(float_64_bit V, float_64_bit E_L, float_64_bit tau_m, float_64_bit RI)
+        {
+            return (RI - (V - E_L)) / tau_m;
+        }
+    };
+
+    float_64_bit const  h = 1.0 / 10.0;
+
+    float_64_bit const  tau_m = 10.0; // ms
+    float_64_bit const  E_L = -65.0; // mV
+    float_64_bit const  firing_treshold = -55.0; // mV
+
+    std::vector<float_64_bit>  t { 0.0 };
+    std::vector<float_64_bit>  V { E_L };
+    while (t.back() < 100.0)
+    {
+        float_64_bit const  RI = t.back() < 10.0 || t.back() > 60.0 ? 0.0 : 12.0;
+
+        float_64_bit const  t1 = ode::euler(h,t.back(),&local::dt);
+        float_64_bit const  V1 = V.back() < firing_treshold ?
+                                        ode::euler(h,V.back(),&local::dV,V.back(),E_L,tau_m,RI) :
+                                        E_L;
+
+        t.push_back(t1);
+        V.push_back(V1);
+    }
+
+    {
+        plot::functions2d<float_64_bit> plt(1U);
+        plt.title() = "neuron leaky integrate and fire euler: t -> V";
+        plt.x_axis_label() = "t";
+        plt.y_axis_label() = "V";
+        plt.x() = t;
+        plt.f(0U) = V;
+        plt.f_style(0U) = {/*plot::DRAW_STYLE_2D::POINTS_CROSS, */plot::DRAW_STYLE_2D::LINES_SOLID};
+        plt.f_legend(0U) = "V";
+
+        plot::draw(plt,
+                   "./ode_solvers/test_neuron_leaky_integrate_and_fire_euler/from_t_to_V.plt",
+                   "./ode_solvers/test_neuron_leaky_integrate_and_fire_euler/from_t_to_V.svg"
+                   );
+    }
+    TEST_PROGRESS_UPDATE();
+}
+
+//void test_neuron_izhikevich_euler()
+//{
+//    struct local
+//    {
+//        static float_64_bit dt()
+//        {
+//            return 1.0;
+//        }
+
+//        static float_64_bit dV(float_64_bit V, float_64_bit U, float_64_bit I)
+//        {
+//            return 0.04 * V * V + 5 * V + 140 - U + I;
+//        }
+
+//        static float_64_bit dU(float_64_bit U, float_64_bit V, float_64_bit a, float_64_bit b)
+//        {
+//            return a * (b * V - U);
+//        }
+//    };
+
+//    std::vector<float_64_bit> const  a = {   0.02,   0.1,   0.02,   0.02 };
+//    std::vector<float_64_bit> const  b = {   0.2,    0.2,   0.2,    0.2  };
+//    std::vector<float_64_bit> const  c = { -65.0,  -65.0, -65.0,  -50.0  };
+//    std::vector<float_64_bit> const  d = {   2.0,    2.0,   8.0,    2.0  };
+
+//    std::vector<float_64_bit> const  V0 = {-70.0,  -70.0, -70.0,  -70.0  };
+//    std::vector<float_64_bit> const  U0 = {-14.0,  -14.0, -14.0,  -14.0  };
+
+//    std::vector<std::string> const  names = { "default","fast-spiking","regular-spiking","bursting" };
+
+//    float_64_bit const  h = 1.0 / 1.0;
+
+//    for (natural_32_bit  i = 0U; i < names.size(); ++i)
+//    {
+//        std::vector<float_64_bit>  t { 0.0 };
+//        std::vector<float_64_bit>  V { V0.at(i) }; //c.at(i) };
+//        std::vector<float_64_bit>  U { U0.at(i) }; //b.at(i)*c.at(i) };
+//        while (t.back() < 200.0)
+//        {
+//            float_64_bit const  I = t.back() < 10.0 || t.back() > 150.0 ? 0.0 : 10.0;
+
+//            float_64_bit const  t1 = ode::euler(h,t.back(),&local::dt);
+//            float_64_bit const  V1 = V.back() < 30.0 ? ode::euler(h,V.back(),&local::dV,V.back(),U.back(),I) :
+//                                                       c.at(i);
+//            float_64_bit const  U1 = V.back() < 30.0 ? ode::euler(h,U.back(),&local::dU,U.back(),V.back(),a.at(i),b.at(i)) :
+//                                                       U.back() + d.at(i);
+
+//            t.push_back(t1);
+//            V.push_back(V1);
+//            U.push_back(U1);
+//        }
+
+//        {
+//            plot::functions2d<float_64_bit> plt(1U);
+//            plt.title() = msgstream() << "neuron izhikevich euler [" << names.at(i) << "]: t -> V";
+//            plt.x_axis_label() = "t";
+//            plt.y_axis_label() = "V";
+//            plt.x() = t;
+//            plt.f(0U) = V;
+//            plt.f_style(0U) = {/*plot::DRAW_STYLE_2D::POINTS_CROSS, */plot::DRAW_STYLE_2D::LINES_SOLID};
+//            plt.f_legend(0U) = "V";
+
+//            plot::draw(plt,
+//                       (msgstream() << "./ode_solvers/test_neuron_izhikevich_euler/from_t_to_V_"
+//                                    << names.at(i) << ".plt").get(),
+//                       (msgstream() << "./ode_solvers/test_neuron_izhikevich_euler/from_t_to_V_"
+//                                    << names.at(i) << ".svg").get()
+//                       );
+//        }
+
+//        TEST_PROGRESS_UPDATE();
+//    }
+//}
+
+void test_neuron_izhikevich_euler()
+{
+    enum
+    {
+        t = 0U,
+        V = 1U,
+        U = 2U
+    };
+
+    struct local
+    {
+        static float_64_bit dt(std::vector<float_64_bit> const&)
+        {
+            return 1.0;
+        }
+
+        static float_64_bit dV(std::vector<float_64_bit> const&  vars, float_64_bit const  I)
+        {
+            return 0.04 * vars[V] * vars[V] + 5 * vars[V] + 140 - vars[U] + I;
+        }
+
+        static float_64_bit dU(std::vector<float_64_bit> const&  vars, float_64_bit a, float_64_bit b)
+        {
+            return a * (b * vars[V] - vars[U]);
+        }
+    };
+
+    std::vector<float_64_bit> const  a = {   0.02,   0.1,   0.02,   0.02 };
+    std::vector<float_64_bit> const  b = {   0.2,    0.2,   0.2,    0.2  };
+    std::vector<float_64_bit> const  c = { -65.0,  -65.0, -65.0,  -50.0  };
+    std::vector<float_64_bit> const  d = {   2.0,    2.0,   8.0,    2.0  };
+
+    std::vector<float_64_bit> const  V0 = {-70.0,  -70.0, -70.0,  -70.0  };
+    std::vector<float_64_bit> const  U0 = {-14.0,  -14.0, -14.0,  -14.0  };
+
+    std::vector<std::string> const  names = { "default","fast-spiking","regular-spiking","bursting" };
+
+    float_64_bit const  h = 1.0 / 1.0;
+
+    for (natural_32_bit  i = 0U; i < names.size(); ++i)
+    {
+        std::vector<float_64_bit>  vars(3U);
+        vars[t] = 0.0;
+        vars[V] = V0.back();
+        vars[U] = U0.back();
+
+        std::vector<float_64_bit>  ts { vars[t] };
+        std::vector<float_64_bit>  Vs { vars[V] };
+        std::vector<float_64_bit>  Us { vars[U] };
+        while (vars[t] < 200.0)
+        {
+            float_64_bit const  I = vars[t] < 10.0 || vars[t] > 150.0 ? 0.0 : 10.0;
+
+            std::vector<ode::derivation_function_type> const  system {
+                    &local::dt,
+                    vars[V] < 30.0 ? std::bind(&local::dV,std::placeholders::_1,I) :
+                                     ode::constant_derivative((c.at(i) - vars[V]) / h),
+                    vars[V] < 30.0 ? std::bind(&local::dU,std::placeholders::_1,a.at(i),b.at(i)) :
+                                     ode::constant_derivative(d.at(i) / h)
+                    };
+
+            ode::euler(h,system,vars);
+
+            ts.push_back(vars[t]);
+            Vs.push_back(vars[V]);
+            Us.push_back(vars[U]);
+        }
+
+        {
+            plot::functions2d<float_64_bit> plt(1U);
+            plt.title() = msgstream() << "neuron izhikevich euler [" << names.at(i) << "]: t -> V";
+            plt.x_axis_label() = "t";
+            plt.y_axis_label() = "V";
+            plt.x() = ts;
+            plt.f(0U) = Vs;
+            plt.f_style(0U) = {/*plot::DRAW_STYLE_2D::POINTS_CROSS, */plot::DRAW_STYLE_2D::LINES_SOLID};
+            plt.f_legend(0U) = "V";
+
+            plot::draw(plt,
+                       (msgstream() << "./ode_solvers/test_neuron_izhikevich_euler/from_t_to_V_"
+                                    << names.at(i) << ".plt").get(),
+                       (msgstream() << "./ode_solvers/test_neuron_izhikevich_euler/from_t_to_V_"
+                                    << names.at(i) << ".svg").get()
+                       );
+        }
+
+        TEST_PROGRESS_UPDATE();
+    }
+}
+
 void run()
 {
     TMPROF_BLOCK();
@@ -592,6 +810,8 @@ void run()
     test_synapse_excitatory_exact();
     test_neuron_hodgkin_huxley_euler();
     test_neuron_wilson_euler();
+    test_neuron_leaky_integrate_and_fire_euler();
+    test_neuron_izhikevich_euler();
 
     TEST_PROGRESS_HIDE();
 
