@@ -743,59 +743,66 @@ void test_neuron_izhikevich_euler()
     std::vector<float_64_bit> const  V0 = {-70.0,  -70.0, -70.0,  -70.0  };
     std::vector<float_64_bit> const  U0 = {-14.0,  -14.0, -14.0,  -14.0  };
 
+    std::vector< std::pair<ode::solver_function_type1,std::string> > const  solvers = {
+        { &ode::euler, "euler" },
+        { &ode::midpoint, "midpoint" },
+        { &ode::runge_kutta_4, "runge-kutta-4" },
+    };
+
     std::vector<std::string> const  names = { "default","fast-spiking","regular-spiking","bursting" };
 
-    float_64_bit const  h = 1.0 / 1.0;
+    float_64_bit const  h = 1.0 / 10.0;
 
-    for (natural_32_bit  i = 0U; i < names.size(); ++i)
-    {
-        std::vector<float_64_bit>  vars(3U);
-        vars[t] = 0.0;
-        vars[V] = V0.back();
-        vars[U] = U0.back();
-
-        std::vector<float_64_bit>  ts { vars[t] };
-        std::vector<float_64_bit>  Vs { vars[V] };
-        std::vector<float_64_bit>  Us { vars[U] };
-        while (vars[t] < 200.0)
+    for (std::pair<ode::solver_function_type1,std::string>  solver : solvers)
+        for (natural_32_bit  i = 0U; i < names.size(); ++i)
         {
-            float_64_bit const  I = vars[t] < 10.0 || vars[t] > 150.0 ? 0.0 : 10.0;
+            std::vector<float_64_bit>  vars(3U);
+            vars[t] = 0.0;
+            vars[V] = V0.back();
+            vars[U] = U0.back();
 
-            std::vector<ode::derivation_function_type> const  system {
-                    &local::dt,
-                    vars[V] < 30.0 ? std::bind(&local::dV,std::placeholders::_1,I) :
-                                     ode::constant_derivative((c.at(i) - vars[V]) / h),
-                    vars[V] < 30.0 ? std::bind(&local::dU,std::placeholders::_1,a.at(i),b.at(i)) :
-                                     ode::constant_derivative(d.at(i) / h)
-                    };
+            std::vector<float_64_bit>  ts { vars[t] };
+            std::vector<float_64_bit>  Vs { vars[V] };
+            std::vector<float_64_bit>  Us { vars[U] };
+            while (vars[t] < 200.0)
+            {
+                float_64_bit const  I = vars[t] < 10.0 || vars[t] > 150.0 ? 0.0 : 10.0;
 
-            ode::euler(h,system,vars);
+                std::vector<ode::derivation_function_type> const  system {
+                        &local::dt,
+                        vars[V] < 30.0 ? std::bind(&local::dV,std::placeholders::_1,I) :
+                                         ode::constant_derivative((c.at(i) - vars[V]) / h),
+                        vars[V] < 30.0 ? std::bind(&local::dU,std::placeholders::_1,a.at(i),b.at(i)) :
+                                         ode::constant_derivative(d.at(i) / h)
+                        };
 
-            ts.push_back(vars[t]);
-            Vs.push_back(vars[V]);
-            Us.push_back(vars[U]);
+                solver.first(h,system,vars);
+
+                ts.push_back(vars[t]);
+                Vs.push_back(vars[V]);
+                Us.push_back(vars[U]);
+            }
+
+            {
+                plot::functions2d<float_64_bit> plt(1U);
+                plt.title() = msgstream() << "neuron izhikevich " << solver.second << " [" << names.at(i) << "]: t -> V";
+                plt.x_axis_label() = "t";
+                plt.y_axis_label() = "V";
+                plt.x() = ts;
+                plt.f(0U) = Vs;
+                plt.f_style(0U) = {/*plot::DRAW_STYLE_2D::POINTS_CROSS, */plot::DRAW_STYLE_2D::LINES_SOLID};
+                plt.f_legend(0U) = "V";
+
+                plot::draw(plt,
+                           (msgstream() << "./ode_solvers/test_neuron_izhikevich_" << solver.second << "/from_t_to_V_"
+                                        << names.at(i) << ".plt").get(),
+                           (msgstream() << "./ode_solvers/test_neuron_izhikevich_" << solver.second << "/from_t_to_V_"
+                                        << names.at(i) << ".svg").get()
+                           );
+            }
+
+            TEST_PROGRESS_UPDATE();
         }
-
-        {
-            plot::functions2d<float_64_bit> plt(1U);
-            plt.title() = msgstream() << "neuron izhikevich euler [" << names.at(i) << "]: t -> V";
-            plt.x_axis_label() = "t";
-            plt.y_axis_label() = "V";
-            plt.x() = ts;
-            plt.f(0U) = Vs;
-            plt.f_style(0U) = {/*plot::DRAW_STYLE_2D::POINTS_CROSS, */plot::DRAW_STYLE_2D::LINES_SOLID};
-            plt.f_legend(0U) = "V";
-
-            plot::draw(plt,
-                       (msgstream() << "./ode_solvers/test_neuron_izhikevich_euler/from_t_to_V_"
-                                    << names.at(i) << ".plt").get(),
-                       (msgstream() << "./ode_solvers/test_neuron_izhikevich_euler/from_t_to_V_"
-                                    << names.at(i) << ".svg").get()
-                       );
-        }
-
-        TEST_PROGRESS_UPDATE();
-    }
 }
 
 void run()
@@ -804,13 +811,13 @@ void run()
 
     TEST_PROGRESS_SHOW();
 
-    test_euler_01();
-    test_synapse_euler();
-    test_synapse_inhibitory_exact();
-    test_synapse_excitatory_exact();
-    test_neuron_hodgkin_huxley_euler();
-    test_neuron_wilson_euler();
-    test_neuron_leaky_integrate_and_fire_euler();
+//    test_euler_01();
+//    test_synapse_euler();
+//    test_synapse_inhibitory_exact();
+//    test_synapse_excitatory_exact();
+//    test_neuron_hodgkin_huxley_euler();
+//    test_neuron_wilson_euler();
+//    test_neuron_leaky_integrate_and_fire_euler();
     test_neuron_izhikevich_euler();
 
     TEST_PROGRESS_HIDE();

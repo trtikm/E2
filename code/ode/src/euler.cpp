@@ -20,19 +20,34 @@ std::vector<derivation_function_type>  constant_system(std::vector<float_64_bit>
     return std::move(S);
 }
 
-void  euler(float_64_bit const  h,
-            std::vector<derivation_function_type> const&  S,
-            std::vector<float_64_bit> const& V,
-            std::vector<float_64_bit>& output_V)
+void  evaluate(std::vector<derivation_function_type> const&  S,
+               std::vector<float_64_bit> const& V,
+               std::vector<float_64_bit>& output_V)
 {
-    ASSUMPTION(h >= 0.0);
     ASSUMPTION(!S.empty());
     ASSUMPTION(S.size() == V.size());
     ASSUMPTION(output_V.empty() || output_V.size() == S.size());
 
     output_V.resize(S.size());
     for (natural_64_bit  i = 0ULL; i < S.size(); ++i)
-        output_V[i] = V[i] + h * S[i](V);
+        output_V[i] = S[i](V);
+}
+
+void  evaluate(std::vector<derivation_function_type> const&  S,
+               std::vector<float_64_bit>& V)
+{
+    std::vector<float_64_bit> const  temp = V;
+    evaluate(S,temp,V);
+}
+
+void  euler(float_64_bit const  h,
+            std::vector<derivation_function_type> const&  S,
+            std::vector<float_64_bit> const& V,
+            std::vector<float_64_bit>& output_V)
+{
+    evaluate(S,V,output_V);
+    for (natural_64_bit  i = 0ULL; i < S.size(); ++i)
+        output_V[i] = V[i] + h * output_V[i];
 }
 
 void  euler(float_64_bit const  h,
@@ -48,14 +63,10 @@ void  midpoint(float_64_bit const  h,
                std::vector<float_64_bit> const& V,
                std::vector<float_64_bit>& output_V)
 {
-    ASSUMPTION(h >= 0.0);
-    ASSUMPTION(!S.empty());
-    ASSUMPTION(S.size() == V.size());
-    ASSUMPTION(output_V.empty() || output_V.size() == S.size());
-
-    std::vector<float_64_bit> dF;
-    euler(h * 0.5,S,V,dF);
-    euler(h,constant_system(dF),V,output_V);
+    std::vector<float_64_bit> middle;
+    euler(h * 0.5,S,V,middle);
+    evaluate(S,middle);
+    euler(h,constant_system(middle),V,output_V);
 }
 
 void  midpoint(float_64_bit const  h,
@@ -66,29 +77,36 @@ void  midpoint(float_64_bit const  h,
     midpoint(h,S,temp,V);
 }
 
+void  runge_kutta_4(float_64_bit const  h,
+                    std::vector<derivation_function_type> const&  S,
+                    std::vector<float_64_bit> const& V,
+                    std::vector<float_64_bit>& output_V)
+{
+    std::vector<float_64_bit> temp;
 
+    std::vector<float_64_bit> k1;
+    evaluate(S,V,k1);
+    std::vector<float_64_bit> k2;
+    euler(h * 0.5,constant_system(k1),V,temp);
+    evaluate(S,temp,k2);
+    std::vector<float_64_bit> k3;
+    euler(h * 0.5,constant_system(k2),V,temp);
+    evaluate(S,temp,k3);
+    std::vector<float_64_bit> k4;
+    euler(h,constant_system(k3),V,temp);
+    evaluate(S,temp,k4);
+
+    for (natural_64_bit  i = 0ULL; i < S.size(); ++i)
+        output_V[i] = V[i] + h * (k1[i] + 2.0 * (k2[i] + k3[i]) + k4[i]) / 6.0;
+}
+
+void  runge_kutta_4(float_64_bit const  h,
+                    std::vector<derivation_function_type> const&  S,
+                    std::vector<float_64_bit>& V)
+{
+    std::vector<float_64_bit> const  temp = V;
+    runge_kutta_4(h,S,temp,V);
 }
 
 
-//enum
-//{
-//    U = 0U,
-//    V = 1U,
-//};
-
-//static float_64_bit  dU(std::vector<float_64_bit> const&  values)
-//{
-//    return values[V] - 0.5*values[U];
-//}
-
-//static float_64_bit  dV(std::vector<float_64_bit> const&  values)
-//{
-//    return values[V] + values[U]/5.0;
-//}
-
-
-//static void foo()
-//{
-//    std::vector<float_64_bit>  values{ 1.0, 2.0 };
-//    ode::midpoint(0.1,{dU,dV},values);
-//}
+}
