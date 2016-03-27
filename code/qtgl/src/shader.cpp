@@ -2,14 +2,17 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
+#include <utility/msgstream.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/functional/hash.hpp>
 #include <sstream>
 #include <istream>
 #include <unordered_set>
 #include <vector>
 #include <limits>
+#include <algorithm>
 
 namespace qtgl { namespace detail {
 
@@ -244,7 +247,9 @@ GLuint  create_opengl_shader_program(GLenum shader_type,
 }
 
 vertex_program_ptr  create_vertex_program(std::vector<std::string> const&  lines,
-                                          std::string&  error_message)
+                                          std::string&  error_message,
+                                          boost::filesystem::path const&  shader_file
+                                                = "/vertex-program-file-was-not-specified")
 {
     TMPROF_BLOCK();
 
@@ -255,7 +260,10 @@ vertex_program_ptr  create_vertex_program(std::vector<std::string> const&  lines
             line_pointers.push_back((GLchar const*)&line.at(0));
     ASSUMPTION(!line_pointers.empty());
     GLuint const  id = detail::create_opengl_shader_program(GL_VERTEX_SHADER,line_pointers,error_message);
-    return id == 0 || !error_message.empty() ? vertex_program_ptr() : vertex_program::create(id);
+    if (id == 0 || !error_message.empty())
+        return vertex_program_ptr();
+    vertex_program_properties_ptr const  props = std::make_shared<vertex_program_properties>(shader_file,lines);
+    return vertex_program::create(id,props);
 }
 
 fragment_program_ptr  create_fragment_program(std::vector<std::string> const&  lines,
@@ -273,8 +281,132 @@ fragment_program_ptr  create_fragment_program(std::vector<std::string> const&  l
     return id == 0U || !error_message.empty() ? fragment_program_ptr() : fragment_program::create(id);
 }
 
+bool  shader_code_contains_word(std::vector<std::string> const&  lines, std::string const&  word)
+{
+    for (std::string const&  line : lines)
+        if (line.find_first_of(word))
+            return true;
+    return false;
+}
+
 
 }}
+
+namespace qtgl {
+
+
+vertex_program_properties::vertex_program_properties(
+        boost::filesystem::path const&  shader_file,
+        bool const  assumes_buffer_positions,
+        bool const  assumes_buffer_colours,
+        bool const  assumes_buffer_normals,
+        std::vector<natural_8_bit> const&  indices_of_assumed_buffers_of_texture_coordinates,
+        bool const  assumes_uniform_alpha_colour,
+        bool const  assumes_uniform_transform_matrix_transposed,
+        bool const  builds_buffer_positions,
+        bool const  builds_buffer_colours,
+        bool const  builds_buffer_normals,
+        std::vector<natural_8_bit> const&  indices_of_built_buffers_of_texture_coordinates
+        )
+    : m_shader_file(shader_file)
+    , m_assumes_buffer_positions(assumes_buffer_positions)
+    , m_assumes_buffer_colours(assumes_buffer_colours)
+    , m_assumes_buffer_normals(assumes_buffer_normals)
+    , m_indices_of_assumed_buffers_of_texture_coordinates(indices_of_assumed_buffers_of_texture_coordinates)
+    , m_assumes_uniform_alpha_colour(assumes_uniform_alpha_colour)
+    , m_assumes_uniform_transform_matrix_transposed(assumes_uniform_transform_matrix_transposed)
+    , m_builds_buffer_positions(builds_buffer_positions)
+    , m_builds_buffer_colours(builds_buffer_colours)
+    , m_builds_buffer_normals(builds_buffer_normals)
+    , m_indices_of_built_buffers_of_texture_coordinates(indices_of_built_buffers_of_texture_coordinates)
+{}
+
+vertex_program_properties::vertex_program_properties(
+        boost::filesystem::path const&  shader_file,
+        std::vector<std::string> const&  lines_of_shader_code
+        )
+    : m_shader_file(shader_file)
+    , m_assumes_buffer_positions(detail::shader_code_contains_word(lines_of_shader_code,"BINDING_IN_POSITION"))
+    , m_assumes_buffer_colours(detail::shader_code_contains_word(lines_of_shader_code,"BINDING_IN_COLOUR"))
+    , m_assumes_buffer_normals(detail::shader_code_contains_word(lines_of_shader_code,"BINDING_IN_NORMAL"))
+    , m_indices_of_assumed_buffers_of_texture_coordinates(
+            [](std::vector<std::string> const&  lines) {
+                std::vector<natural_8_bit>  result;
+                for (natural_8_bit  i = 0U; i < 10U; ++i)
+                    if (detail::shader_code_contains_word(lines,msgstream() << "BINDING_IN_TEXCOORD" << (natural_32_bit)i))
+                        result.push_back(i);
+                return result;
+            }(lines_of_shader_code)
+            )
+    , m_assumes_uniform_alpha_colour(detail::shader_code_contains_word(lines_of_shader_code,"COLOUR_ALPHA"))
+    , m_assumes_uniform_transform_matrix_transposed(detail::shader_code_contains_word(lines_of_shader_code,"TRANSFORM_MATRIX_TRANSPOSED"))
+    , m_builds_buffer_positions(detail::shader_code_contains_word(lines_of_shader_code,"BINDING_OUT_POSITION"))
+    , m_builds_buffer_colours(detail::shader_code_contains_word(lines_of_shader_code,"BINDING_OUT_COLOUR"))
+    , m_builds_buffer_normals(detail::shader_code_contains_word(lines_of_shader_code,"BINDING_OUT_NORMAL"))
+    , m_indices_of_built_buffers_of_texture_coordinates(
+            [](std::vector<std::string> const&  lines) {
+                std::vector<natural_8_bit>  result;
+                for (natural_8_bit  i = 0U; i < 10U; ++i)
+                    if (detail::shader_code_contains_word(lines,msgstream() << "BINDING_OUT_TEXCOORD" << (natural_32_bit)i))
+                        result.push_back(i);
+                return result;
+            }(lines_of_shader_code)
+            )
+{}
+
+bool  vertex_program_properties::assumes_buffer_texture_coordinates(natural_8_bit const  texcoords_buffer_index) const
+{
+    return std::find(indices_of_assumed_buffers_of_texture_coordinates().cbegin(),
+                     indices_of_assumed_buffers_of_texture_coordinates().cend(),
+                     texcoords_buffer_index)
+           != indices_of_assumed_buffers_of_texture_coordinates().cend();
+}
+
+bool  vertex_program_properties::builds_buffer_texture_coordinates(natural_8_bit const  texcoords_buffer_index) const
+{
+    return std::find(indices_of_built_buffers_of_texture_coordinates().cbegin(),
+                     indices_of_built_buffers_of_texture_coordinates().cend(),
+                     texcoords_buffer_index)
+           != indices_of_built_buffers_of_texture_coordinates().cend();
+}
+
+bool  operator==(vertex_program_properties const&  props0, vertex_program_properties const&  props1)
+{
+    return props0.shader_file() == props1.shader_file() &&
+           props0.assumes_buffer_positions() == props1.assumes_buffer_positions() &&
+           props0.assumes_buffer_colours() == props1.assumes_buffer_colours() &&
+           props0.assumes_buffer_normals() == props1.assumes_buffer_normals() &&
+           props0.indices_of_assumed_buffers_of_texture_coordinates() == props1.indices_of_assumed_buffers_of_texture_coordinates() &&
+           props0.assumes_uniform_alpha_colour() == props1.assumes_uniform_alpha_colour() &&
+           props0.assumes_uniform_transform_matrix_transposed() == props1.assumes_uniform_transform_matrix_transposed() &&
+           props0.builds_buffer_positions() == props1.builds_buffer_positions() &&
+           props0.builds_buffer_colours() == props1.builds_buffer_colours() &&
+           props0.builds_buffer_normals() == props1.builds_buffer_normals() &&
+           props0.indices_of_built_buffers_of_texture_coordinates() == props1.indices_of_built_buffers_of_texture_coordinates()
+           ;
+}
+
+size_t  hasher_of_vertex_program_properties(vertex_program_properties const&  props)
+{
+    std::size_t seed = 0ULL;
+    boost::hash_combine(seed,props.shader_file().string());
+    boost::hash_combine(seed,props.assumes_buffer_positions());
+    boost::hash_combine(seed,props.assumes_buffer_colours());
+    boost::hash_combine(seed,props.assumes_buffer_normals());
+    for (natural_8_bit  index : props.indices_of_assumed_buffers_of_texture_coordinates())
+        boost::hash_combine(seed,index);
+    boost::hash_combine(seed,props.assumes_uniform_alpha_colour());
+    boost::hash_combine(seed,props.assumes_uniform_transform_matrix_transposed());
+    boost::hash_combine(seed,props.builds_buffer_positions());
+    boost::hash_combine(seed,props.builds_buffer_colours());
+    boost::hash_combine(seed,props.builds_buffer_normals());
+    for (natural_8_bit  index : props.indices_of_built_buffers_of_texture_coordinates())
+        boost::hash_combine(seed,index);
+    return seed;
+}
+
+
+}
 
 namespace qtgl {
 
@@ -303,11 +435,11 @@ vertex_program_ptr  vertex_program::create(boost::filesystem::path const&  shade
     return detail::create_vertex_program(lines,error_message);
 }
 
-vertex_program_ptr  vertex_program::create(GLuint const  id)
+vertex_program_ptr  vertex_program::create(GLuint const  id, vertex_program_properties_ptr const  properties)
 {
     TMPROF_BLOCK();
 
-    return vertex_program_ptr{new vertex_program(id)};
+    return vertex_program_ptr{new vertex_program(id,properties)};
 }
 
 

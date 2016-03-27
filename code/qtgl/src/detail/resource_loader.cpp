@@ -23,6 +23,8 @@ resource_loader::resource_loader()
 
 void  resource_loader::start_worker_if_not_running()
 {
+    TMPROF_BLOCK();
+
     if (m_worker_finished)
     {
         m_worker_finished = false;
@@ -51,6 +53,8 @@ void  resource_loader::insert(texture_properties_ptr const  props, texture_recei
 
 bool  resource_loader::fetch(texture_properties_ptr&  output_props, texture_receiver_fn&  output_receiver)
 {
+    TMPROF_BLOCK();
+
     std::lock_guard<std::mutex> const  lock(m_mutex);
     if (m_texture_requests.empty())
         return false;
@@ -71,7 +75,7 @@ void  resource_loader::worker()
         {
             texture_properties_ptr  props;
             texture_receiver_fn  receiver;
-            while (fetch(props,receiver))
+            if (fetch(props,receiver))
             {
                 receiver(load_texture_image_file(props->image_file()),props);
                 done = false;
