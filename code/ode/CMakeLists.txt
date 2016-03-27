@@ -1,8 +1,8 @@
 set(THIS_TARGET_NAME ode)
 
 add_library(${THIS_TARGET_NAME}
-    ./include/ode/euler.hpp
-    ./src/euler.cpp
+    ./include/ode/solvers.hpp
+    ./src/solvers.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

@@ -1,6 +1,6 @@
 #include "./program_info.hpp"
 #include "./program_options.hpp"
-#include <ode/euler.hpp>
+#include <ode/solvers.hpp>
 #include <plot/plot.hpp>
 #include <utility/test.hpp>
 #include <utility/timeprof.hpp>
@@ -9,7 +9,6 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/msgstream.hpp>
-//#include <functional>
 #include <vector>
 
 
@@ -811,13 +810,13 @@ void run()
 
     TEST_PROGRESS_SHOW();
 
-//    test_euler_01();
-//    test_synapse_euler();
-//    test_synapse_inhibitory_exact();
-//    test_synapse_excitatory_exact();
-//    test_neuron_hodgkin_huxley_euler();
-//    test_neuron_wilson_euler();
-//    test_neuron_leaky_integrate_and_fire_euler();
+    test_euler_01();
+    test_synapse_euler();
+    test_synapse_inhibitory_exact();
+    test_synapse_excitatory_exact();
+    test_neuron_hodgkin_huxley_euler();
+    test_neuron_wilson_euler();
+    test_neuron_leaky_integrate_and_fire_euler();
     test_neuron_izhikevich_euler();
 
     TEST_PROGRESS_HIDE();
