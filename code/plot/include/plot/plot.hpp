@@ -13,6 +13,8 @@
 #   include <string>
 #   include <vector>
 #   include <type_traits>
+#   include <functional>
+#   include <utility>
 
 namespace plot {
 
@@ -314,6 +316,56 @@ void  draw(plot_type<element_type> const&  plt,
                 );
         draw(output_script_file_pathname,output_plot_pathname,gnuplot_install_dir);
     }
+}
+
+
+}
+
+namespace plot {
+
+
+template<typename T>
+std::vector<T>  regular_range(std::vector<T>&& data,  natural_64_bit const  size,  T const  step = T(1))
+{
+    ASSUMPTION(!data.empty());
+    while (data.size() < size)
+        data.push_back(data.back() + step);
+    return data;
+}
+
+
+template<typename T>
+std::vector<T>  regular_range(T  begin_value, T const  end_value, T const  step = T(1))
+{
+    ASSUMPTION(step != T(0));
+    std::vector<T>  result;
+    if (step > T(0))
+    {
+        ASSUMPTION(begin_value <= end_value);
+        for ( ; begin_value < end_value; begin_value += step)
+            result.push_back(begin_value);
+    }
+    else
+    {
+        ASSUMPTION(begin_value >= end_value);
+        for ( ; begin_value > end_value; begin_value += step)
+            result.push_back(begin_value);
+    }
+    return std::move(result);
+}
+
+
+template<typename T, typename data_type>
+std::vector<T>  convert_data(
+    data_type const&  data,
+    std::function<T(typename data_type::value_type const&)> const&  converter =
+        [](typename data_type::value_type const&  value) -> T { return value; }
+    )
+{
+    std::vector<T>  result;
+    for (auto const&  element : data)
+        result.push_back(converter(element));
+    return std::move(result);
 }
 
 

@@ -8,8 +8,170 @@
 #include <utility/basic_numeric_types.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
+#include <utility/random.hpp>
 #include <utility/msgstream.hpp>
 #include <vector>
+
+
+static void  gen_spike_counts(
+    natural_32_bit const  num_steps,
+    natural_16_bit const  min_count_per_step,
+    natural_16_bit const  max_count_per_step,
+    std::vector<natural_16_bit>&  output
+    )
+{
+    for (natural_32_bit i = 0U; i < num_steps; ++i)
+        output.push_back(get_random_natural_32_bit_in_range(min_count_per_step,max_count_per_step));
+}
+
+static void  gen_spike_counts(
+    float_64_bit const  h_ms,
+    natural_32_bit const  boundary_ms,
+    natural_32_bit const  spiking_ms,
+    float_64_bit const  spikes_per_ms,
+    std::vector<natural_16_bit>&  output
+    )
+{
+    ASSUMPTION(h_ms > 0.0);
+    natural_32_bit const  size = natural_32_bit((spiking_ms + 2U*boundary_ms) / h_ms + 0.5);
+    natural_32_bit const  begin = natural_32_bit(boundary_ms / h_ms + 0.5);
+    natural_32_bit const  end = begin + natural_32_bit(spiking_ms / h_ms + 0.5);
+    ASSUMPTION(begin < end);
+    output.clear();
+    output.resize(begin + end,0U);
+    natural_32_bit const num_spikes = natural_32_bit(spiking_ms * spikes_per_ms + 0.5);
+    for (natural_32_bit i = 0U; i < num_spikes; ++i)
+        ++output[get_random_natural_32_bit_in_range(begin,end-1U)];
+}
+
+void  test_PSP()
+{
+    enum
+    {
+        t = 0U,
+        V = 1U,
+        C = 2U,
+        NUM_VARS
+    };
+
+    struct local
+    {
+        static float_64_bit dt(std::vector<float_64_bit> const&)
+        {
+            return 1.0;
+        }
+
+        static float_64_bit  dV(std::vector<float_64_bit> const&  vars, float_64_bit const  V_rest, float_64_bit const  coef)
+        {
+            //return -(vars[V] - V_rest) / 2.0;
+            //float_64_bit const  a = -0.75 * (vars[V] - V_rest);
+            //return a*a*a;
+            return 0.5 * std::atan(-(vars[V] - V_rest) / 0.5);
+        }
+
+        static float_64_bit  dC(std::vector<float_64_bit> const&  vars, float_64_bit const  V_rest, float_64_bit const  coef)
+        {
+            return vars[C] > coef ? -0.5 : 0.0;
+            //return -(vars[C] - coef) / 50;
+        }
+    };
+
+    float_64_bit const  V_rest = 0.0;
+    float_64_bit const  coef = 1.25;
+
+    float_64_bit const  spike_dV = 1.0;
+
+    std::vector< std::pair<ode::solver_function_type1,std::string> > const  solvers = {
+        { &ode::euler, "euler" },
+        //{ &ode::midpoint, "midpoint" },
+        //{ &ode::runge_kutta_4, "runge-kutta-4" },
+    };
+
+    float_64_bit const  h = 1.0 / 4.0;
+
+    natural_32_bit const  num_spiking_ms = 200U;
+    std::vector<natural_16_bit>  excitatory_spike_counts;
+    std::vector<natural_16_bit>  inhibitory_spike_counts;
+    if (false)
+    {
+        gen_spike_counts(h, 25U, num_spiking_ms, 500 * (3.0 / 4.0) / 1000.0, excitatory_spike_counts);
+        gen_spike_counts(h, 25U, num_spiking_ms, 500 * (1.0 / 4.0) / 1000.0, inhibitory_spike_counts);
+    }
+    else
+    {
+        gen_spike_counts(h, 0U, 20U, 0.0, excitatory_spike_counts); excitatory_spike_counts[0U] = 10U;
+        gen_spike_counts(h, 0U, 20U, 0.0, inhibitory_spike_counts); inhibitory_spike_counts[0U] = 0U;
+    }
+    ASSUMPTION(excitatory_spike_counts.size() == inhibitory_spike_counts.size());
+    ASSUMPTION(!excitatory_spike_counts.empty());
+    {
+        plot::functions2d<float_64_bit> plt(2U);
+        plt.title() = msgstream() << "spike counts: t -> n";
+        plt.x_axis_label() = "t";
+        plt.y_axis_label() = "n";
+        plt.x() = plot::regular_range({0.0},excitatory_spike_counts.size(),h);
+        plt.f(0U) = plot::convert_data<float_64_bit>(excitatory_spike_counts);
+        plt.f_style(0U) = { plot::DRAW_STYLE_2D::LINES_SOLID};
+        plt.f_legend(0U) = "e";
+        plt.f(1U) = plot::convert_data<float_64_bit>(inhibitory_spike_counts);
+        plt.f_style(1U) = { plot::DRAW_STYLE_2D::LINES_LONG_DASHES };
+        plt.f_legend(1U) = "i";
+
+        plot::draw(plt,
+            (msgstream() << "./ode_solvers/spike_counts.plt").get(),
+            (msgstream() << "./ode_solvers/spike_counts.svg").get()
+            );
+    }
+
+    for (std::pair<ode::solver_function_type1,std::string>  solver : solvers)
+    {
+        std::vector<float_64_bit>  vars(NUM_VARS);
+        vars[t] = 0.0;
+        vars[V] = V_rest + (spike_dV * excitatory_spike_counts[0U] - spike_dV * inhibitory_spike_counts[0U]);
+        vars[C] = coef + coef * std::abs(spike_dV * excitatory_spike_counts[0U] - spike_dV * inhibitory_spike_counts[0U]) / (spike_dV * 1.0);
+        std::vector<float_64_bit>  ts { vars[t] };
+        std::vector<float_64_bit>  Vs { vars[V] };
+        std::vector<float_64_bit>  Cs { vars[C] };
+        for (natural_32_bit  i = 1U; i < excitatory_spike_counts.size(); ++i)
+        {
+            std::vector<ode::derivation_function_type> const  system {
+                    &local::dt,
+                    std::bind(&local::dV,std::placeholders::_1,V_rest,coef),
+                    std::bind(&local::dC,std::placeholders::_1,V_rest,coef),
+                    };
+
+            solver.first(h,system,vars);
+
+            vars[V] += (spike_dV * excitatory_spike_counts[i] - spike_dV * inhibitory_spike_counts[i]);
+            vars[C] += coef * std::abs(spike_dV * excitatory_spike_counts[i] - spike_dV * inhibitory_spike_counts[i]) / (spike_dV * 1.0);
+
+            ts.push_back(vars[t]);
+            Vs.push_back(vars[V]);
+            Cs.push_back(vars[C]);
+        }
+
+        {
+            plot::functions2d<float_64_bit> plt(2U);
+            plt.title() = msgstream() << "PSP[" << solver.second << "]: t -> V";
+            plt.x_axis_label() = "t";
+            plt.y_axis_label() = "V";
+            plt.x() = ts;
+            plt.f(0U) = Vs;
+            plt.f_style(0U) = {/*plot::DRAW_STYLE_2D::POINTS_CROSS, */plot::DRAW_STYLE_2D::LINES_SOLID};
+            plt.f_legend(0U) = "V";
+            plt.f(1U) = Cs;
+            plt.f_style(1U) = {/*plot::DRAW_STYLE_2D::POINTS_CROSS, */plot::DRAW_STYLE_2D::LINES_LONG_DASHES };
+            plt.f_legend(1U) = "C";
+
+            plot::draw(plt,
+                        (msgstream() << "./ode_solvers/test_PSP_" << solver.second << "/from_t_to_V.plt").get(),
+                        (msgstream() << "./ode_solvers/test_PSP_" << solver.second << "/from_t_to_V.svg").get()
+                        );
+        }
+
+        TEST_PROGRESS_UPDATE();
+    }
+}
 
 
 void test_euler_01()
@@ -633,81 +795,7 @@ void test_neuron_leaky_integrate_and_fire_euler()
     TEST_PROGRESS_UPDATE();
 }
 
-//void test_neuron_izhikevich_euler()
-//{
-//    struct local
-//    {
-//        static float_64_bit dt()
-//        {
-//            return 1.0;
-//        }
-
-//        static float_64_bit dV(float_64_bit V, float_64_bit U, float_64_bit I)
-//        {
-//            return 0.04 * V * V + 5 * V + 140 - U + I;
-//        }
-
-//        static float_64_bit dU(float_64_bit U, float_64_bit V, float_64_bit a, float_64_bit b)
-//        {
-//            return a * (b * V - U);
-//        }
-//    };
-
-//    std::vector<float_64_bit> const  a = {   0.02,   0.1,   0.02,   0.02 };
-//    std::vector<float_64_bit> const  b = {   0.2,    0.2,   0.2,    0.2  };
-//    std::vector<float_64_bit> const  c = { -65.0,  -65.0, -65.0,  -50.0  };
-//    std::vector<float_64_bit> const  d = {   2.0,    2.0,   8.0,    2.0  };
-
-//    std::vector<float_64_bit> const  V0 = {-70.0,  -70.0, -70.0,  -70.0  };
-//    std::vector<float_64_bit> const  U0 = {-14.0,  -14.0, -14.0,  -14.0  };
-
-//    std::vector<std::string> const  names = { "default","fast-spiking","regular-spiking","bursting" };
-
-//    float_64_bit const  h = 1.0 / 1.0;
-
-//    for (natural_32_bit  i = 0U; i < names.size(); ++i)
-//    {
-//        std::vector<float_64_bit>  t { 0.0 };
-//        std::vector<float_64_bit>  V { V0.at(i) }; //c.at(i) };
-//        std::vector<float_64_bit>  U { U0.at(i) }; //b.at(i)*c.at(i) };
-//        while (t.back() < 200.0)
-//        {
-//            float_64_bit const  I = t.back() < 10.0 || t.back() > 150.0 ? 0.0 : 10.0;
-
-//            float_64_bit const  t1 = ode::euler(h,t.back(),&local::dt);
-//            float_64_bit const  V1 = V.back() < 30.0 ? ode::euler(h,V.back(),&local::dV,V.back(),U.back(),I) :
-//                                                       c.at(i);
-//            float_64_bit const  U1 = V.back() < 30.0 ? ode::euler(h,U.back(),&local::dU,U.back(),V.back(),a.at(i),b.at(i)) :
-//                                                       U.back() + d.at(i);
-
-//            t.push_back(t1);
-//            V.push_back(V1);
-//            U.push_back(U1);
-//        }
-
-//        {
-//            plot::functions2d<float_64_bit> plt(1U);
-//            plt.title() = msgstream() << "neuron izhikevich euler [" << names.at(i) << "]: t -> V";
-//            plt.x_axis_label() = "t";
-//            plt.y_axis_label() = "V";
-//            plt.x() = t;
-//            plt.f(0U) = V;
-//            plt.f_style(0U) = {/*plot::DRAW_STYLE_2D::POINTS_CROSS, */plot::DRAW_STYLE_2D::LINES_SOLID};
-//            plt.f_legend(0U) = "V";
-
-//            plot::draw(plt,
-//                       (msgstream() << "./ode_solvers/test_neuron_izhikevich_euler/from_t_to_V_"
-//                                    << names.at(i) << ".plt").get(),
-//                       (msgstream() << "./ode_solvers/test_neuron_izhikevich_euler/from_t_to_V_"
-//                                    << names.at(i) << ".svg").get()
-//                       );
-//        }
-
-//        TEST_PROGRESS_UPDATE();
-//    }
-//}
-
-void test_neuron_izhikevich_euler()
+void test_neuron_izhikevich()
 {
     enum
     {
@@ -804,20 +892,136 @@ void test_neuron_izhikevich_euler()
         }
 }
 
+//void test_neuron_izhikevich()
+//{
+//    enum
+//    {
+//        t = 0U,
+//        V = 1U,
+//        U = 2U
+//    };
+
+//    struct local
+//    {
+//        static float_64_bit dt(std::vector<float_64_bit> const&)
+//        {
+//            return 1.0;
+//        }
+
+//        static float_64_bit dV(std::vector<float_64_bit> const&  vars, float_64_bit const  I,
+//                               float_64_bit const  X)
+//        {
+//            if (vars[V] >= 30.0)
+//                return X;
+//            return 0.04 * vars[V] * vars[V] + 5 * vars[V] + 140 - vars[U] + I;
+//        }
+
+//        static float_64_bit dU(std::vector<float_64_bit> const&  vars, float_64_bit a, float_64_bit b,
+//                               float_64_bit const  X)
+//        {
+//            if (vars[V] >= 30.0)
+//                return X;
+//            return a * (b * vars[V] - vars[U]);
+//        }
+//    };
+
+//    std::vector<float_64_bit> const  a = {   0.02,   0.1,   0.02,   0.02 };
+//    std::vector<float_64_bit> const  b = {   0.2,    0.2,   0.2,    0.2  };
+//    std::vector<float_64_bit> const  c = { -65.0,  -65.0, -65.0,  -50.0  };
+//    std::vector<float_64_bit> const  d = {   2.0,    2.0,   8.0,    2.0  };
+
+//    std::vector<float_64_bit> const  V0 = {-70.0,  -70.0, -70.0,  -70.0  };
+//    std::vector<float_64_bit> const  U0 = {-14.0,  -14.0, -14.0,  -14.0  };
+
+//    std::vector< std::pair<ode::solver_function_type1,std::string> > const  solvers = {
+//        { &ode::euler, "euler" },
+//        { &ode::midpoint, "midpoint" },
+//        { &ode::runge_kutta_4, "runge-kutta-4" },
+//    };
+
+//    std::vector<std::string> const  names = { "default","fast-spiking","regular-spiking","bursting" };
+
+//    float_64_bit const  h = 1.0 / 1.0;
+
+//    for (std::pair<ode::solver_function_type1,std::string>  solver : solvers)
+//        for (natural_32_bit  i = 0U; i < names.size(); ++i)
+//        {
+//            std::vector<float_64_bit>  vars(3U);
+//            vars[t] = 0.0;
+//            vars[V] = V0.back();
+//            vars[U] = U0.back();
+
+//            std::vector<float_64_bit>  ts { vars[t] };
+//            std::vector<float_64_bit>  Vs { vars[V] };
+//            std::vector<float_64_bit>  Us { vars[U] };
+//            while (vars[t] < 200.0)
+//            {
+//                float_64_bit const  I = vars[t] < 10.0 || vars[t] > 150.0 ? 0.0 : 10.0;
+
+//                std::vector<ode::derivation_function_type> const  system {
+//                        &local::dt,
+//                        std::bind(&local::dV,std::placeholders::_1,I,(c.at(i) - vars[V]) / h),
+//                        std::bind(&local::dU,std::placeholders::_1,a.at(i),b.at(i),d.at(i) / h)
+////                        vars[V] < 30.0 ? std::bind(&local::dV,std::placeholders::_1,I) :
+////                                         ode::constant_derivative((c.at(i) - vars[V]) / h),
+////                        vars[V] < 30.0 ? std::bind(&local::dU,std::placeholders::_1,a.at(i),b.at(i)) :
+////                                         ode::constant_derivative(d.at(i) / h)
+//                        };
+
+//                solver.first(h,system,vars);
+
+//                ts.push_back(vars[t]);
+//                Vs.push_back(vars[V]);
+//                Us.push_back(vars[U]);
+//            }
+
+//            {
+//                plot::functions2d<float_64_bit> plt(1U);
+//                plt.title() = msgstream() << "neuron izhikevich " << solver.second << " [" << names.at(i) << "]: t -> V";
+//                plt.x_axis_label() = "t";
+//                plt.y_axis_label() = "V";
+//                plt.x() = ts;
+//                plt.f(0U) = Vs;
+//                plt.f_style(0U) = {/*plot::DRAW_STYLE_2D::POINTS_CROSS, */plot::DRAW_STYLE_2D::LINES_SOLID};
+//                plt.f_legend(0U) = "V";
+
+//                plot::draw(plt,
+//                           (msgstream() << "./ode_solvers/test_neuron_izhikevich_" << solver.second << "/from_t_to_V_"
+//                                        << names.at(i) << ".plt").get(),
+//                           (msgstream() << "./ode_solvers/test_neuron_izhikevich_" << solver.second << "/from_t_to_V_"
+//                                        << names.at(i) << ".svg").get()
+//                           );
+//            }
+
+//            TEST_PROGRESS_UPDATE();
+//        }
+//}
+
 void run()
 {
     TMPROF_BLOCK();
 
     TEST_PROGRESS_SHOW();
 
-    test_euler_01();
-    test_synapse_euler();
-    test_synapse_inhibitory_exact();
-    test_synapse_excitatory_exact();
-    test_neuron_hodgkin_huxley_euler();
-    test_neuron_wilson_euler();
-    test_neuron_leaky_integrate_and_fire_euler();
-    test_neuron_izhikevich_euler();
+    //natural_32_bit const  num_cleaning_steps = 25U;
+    //natural_32_bit const  num_steps = 200U;
+    //std::vector<natural_16_bit>  excitatory_spike_counts;
+    //std::vector<natural_16_bit>  inhibitory_spike_counts;
+    //gen_spike_counts(200U, 0U, 20U, excitatory_spike_counts);
+    //gen_spike_counts(200U, 0U,  5U, inhibitory_spike_counts);
+
+    //test_PSP(excitatory_spike_counts,inhibitory_spike_counts,num_cleaning_steps);
+
+    test_PSP();
+
+    //test_euler_01();
+    //test_synapse_euler();
+    //test_synapse_inhibitory_exact();
+    //test_synapse_excitatory_exact();
+    //test_neuron_hodgkin_huxley_euler();
+    //test_neuron_wilson_euler();
+    //test_neuron_leaky_integrate_and_fire_euler();
+    //test_neuron_izhikevich();
 
     TEST_PROGRESS_HIDE();
 
