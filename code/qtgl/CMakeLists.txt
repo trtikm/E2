@@ -25,6 +25,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/qtgl/shader.hpp
     ./src/shader.cpp
 
+    ./include/qtgl/shader_data_bindings.hpp
+    ./src/shader_data_bindings.cpp
+
     ./include/qtgl/buffer.hpp
     ./src/buffer.cpp
 

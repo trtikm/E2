@@ -1,10 +1,12 @@
 #ifndef QTGL_SHADER_HPP_INCLUDED
 #   define QTGL_SHADER_HPP_INCLUDED
 
+#   include <qtgl/shader_data_bindings.hpp>
 #   include <qtgl/glapi.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/tensor_math.hpp>
 #   include <boost/filesystem/path.hpp>
+#   include <unordered_set>
 #   include <istream>
 #   include <string>
 #   include <vector>
@@ -17,16 +19,9 @@ struct vertex_program_properties
 {
     vertex_program_properties(
             boost::filesystem::path const&  shader_file,
-            bool const  assumes_buffer_positions,
-            bool const  assumes_buffer_colours,
-            bool const  assumes_buffer_normals,
-            std::vector<natural_8_bit> const&  indices_of_assumed_buffers_of_texture_coordinates,
-            bool const  assumes_uniform_alpha_colour,
-            bool const  assumes_uniform_transform_matrix_transposed,
-            bool const  builds_buffer_positions,
-            bool const  builds_buffer_colours,
-            bool const  builds_buffer_normals,
-            std::vector<natural_8_bit> const&  indices_of_built_buffers_of_texture_coordinates
+            std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings,
+            std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+            std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms
             );
 
     vertex_program_properties(
@@ -36,42 +31,25 @@ struct vertex_program_properties
 
     boost::filesystem::path const&  shader_file() const noexcept { return m_shader_file; }
 
-    bool  assumes_buffer_positions() const noexcept { return m_assumes_buffer_positions; }
-    bool  assumes_buffer_colours() const noexcept { return m_assumes_buffer_colours; }
-    bool  assumes_buffer_normals() const noexcept { return m_assumes_buffer_normals; }
+    std::unordered_set<vertex_shader_input_buffer_binding_location> const& input_buffer_bindings() const noexcept
+    { return m_input_buffer_bindings; }
+    std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings() const noexcept
+    { return m_output_buffer_bindings; }
 
-    bool  assumes_buffer_texture_coordinates(natural_8_bit const  texcoords_buffer_index) const;
-    bool  num_assumed_buffers_of_texture_coordinates() const noexcept { return m_indices_of_assumed_buffers_of_texture_coordinates.size(); }
-    std::vector<natural_8_bit> const&  indices_of_assumed_buffers_of_texture_coordinates() const noexcept { return m_indices_of_assumed_buffers_of_texture_coordinates; }
-
-    bool  assumes_uniform_alpha_colour() const noexcept { return m_assumes_uniform_alpha_colour; }
-    bool  assumes_uniform_transform_matrix_transposed() const noexcept { return m_assumes_uniform_transform_matrix_transposed; }
-
-    bool  builds_buffer_positions() const noexcept { return m_builds_buffer_positions; }
-    bool  builds_buffer_colours() const noexcept { return m_builds_buffer_colours; }
-    bool  builds_buffer_normals() const noexcept { return m_builds_buffer_normals; }
-
-    bool  builds_buffer_texture_coordinates(natural_8_bit const  texcoords_buffer_index) const;
-    bool  num_built_buffers_of_texture_coordinates() const noexcept { return m_indices_of_built_buffers_of_texture_coordinates.size(); }
-    std::vector<natural_8_bit> const&  indices_of_built_buffers_of_texture_coordinates() const noexcept { return m_indices_of_built_buffers_of_texture_coordinates; }
+    std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms() const noexcept
+    { return m_symbolic_names_of_used_uniforms; }
 
 private:
     boost::filesystem::path  m_shader_file;
-    bool  m_assumes_buffer_positions;
-    bool  m_assumes_buffer_colours;
-    bool  m_assumes_buffer_normals;
-    std::vector<natural_8_bit>  m_indices_of_assumed_buffers_of_texture_coordinates;
-    bool  m_assumes_uniform_alpha_colour;
-    bool  m_assumes_uniform_transform_matrix_transposed;
-    bool  m_builds_buffer_positions;
-    bool  m_builds_buffer_colours;
-    bool  m_builds_buffer_normals;
-    std::vector<natural_8_bit>  m_indices_of_built_buffers_of_texture_coordinates;
+    std::unordered_set<vertex_shader_input_buffer_binding_location>  m_input_buffer_bindings;
+    std::unordered_set<vertex_shader_output_buffer_binding_location>  m_output_buffer_bindings;
+    std::unordered_set<vertex_shader_uniform_symbolic_name>  m_symbolic_names_of_used_uniforms;
 };
 
 
 bool  operator==(vertex_program_properties const&  props0, vertex_program_properties const&  props1);
-inline bool  operator!=(vertex_program_properties const&  props0, vertex_program_properties const&  props1) { return !(props0 == props1); }
+inline bool  operator!=(vertex_program_properties const&  props0, vertex_program_properties const&  props1)
+{ return !(props0 == props1); }
 
 size_t  hasher_of_vertex_program_properties(vertex_program_properties const&  props);
 
@@ -112,6 +90,57 @@ private:
 };
 
 
+}
+
+namespace qtgl {
+
+
+struct fragment_program_properties
+{
+    fragment_program_properties(
+            boost::filesystem::path const&  shader_file,
+            std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
+            std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+            std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings
+            );
+
+    fragment_program_properties(
+            boost::filesystem::path const&  shader_file,
+            std::vector<std::string> const&  lines_of_shader_code
+            );
+
+    boost::filesystem::path const&  shader_file() const noexcept { return m_shader_file; }
+
+    std::unordered_set<fragment_shader_input_buffer_binding_location> const& input_buffer_bindings() const noexcept
+    { return m_input_buffer_bindings; }
+    std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings() const noexcept
+    { return m_output_buffer_bindings; }
+
+    std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings() const noexcept
+    { return m_texture_sampler_bindings; }
+
+private:
+    boost::filesystem::path  m_shader_file;
+    std::unordered_set<fragment_shader_input_buffer_binding_location>  m_input_buffer_bindings;
+    std::unordered_set<fragment_shader_output_buffer_binding_location>  m_output_buffer_bindings;
+    std::unordered_set<fragment_shader_texture_sampler_binding>  m_texture_sampler_bindings;
+};
+
+
+bool  operator==(fragment_program_properties const&  props0, fragment_program_properties const&  props1);
+inline bool  operator!=(fragment_program_properties const&  props0, fragment_program_properties const&  props1)
+{ return !(props0 == props1); }
+
+size_t  hasher_of_fragment_program_properties(fragment_program_properties const&  props);
+
+using  fragment_program_properties_ptr = std::shared_ptr<fragment_program_properties const>;
+
+
+}
+
+namespace qtgl {
+
+
 struct fragment_program;
 typedef std::shared_ptr<fragment_program const>  fragment_program_ptr;
 
@@ -120,24 +149,39 @@ struct fragment_program
 {
     static fragment_program_ptr  create(std::istream&  source_code, std::string&  error_message);
     static fragment_program_ptr  create(boost::filesystem::path const&  shader_source_file, std::string&  error_message);
-    static fragment_program_ptr  create(GLuint const  id);
+    static fragment_program_ptr  create(GLuint const  id, fragment_program_properties_ptr const  properties);
 
     ~fragment_program();
 
     GLuint  id() const { return m_id; }
+    fragment_program_properties_ptr  properties() const noexcept { return m_properties; }
 
 private:
-    fragment_program(GLuint const  id) : m_id(id) {}
+    fragment_program(GLuint const  id, fragment_program_properties_ptr const  properties)
+        : m_id(id)
+        , m_properties(properties)
+    {}
 
     fragment_program(fragment_program const&) = delete;
     fragment_program& operator=(fragment_program const&) = delete;
 
     GLuint  m_id;
+    fragment_program_properties_ptr  m_properties;
 };
 
 
-inline std::string  shader_uniform_colour_alpha() { return "UNIFORM_COLOUR_ALPHA"; }
-inline std::string  shader_uniform_transform_matrix_transposed() { return "UNIFORM_TRANSFORM_MATRIX_TRANSPOSED"; }
+}
+
+namespace qtgl {
+
+
+template<typename value_type>
+void  set_uniform_variable(vertex_program_ptr const  shader_program,
+                           vertex_shader_uniform_symbolic_name const  symbolic_name,
+                           value_type const&  value_to_store)
+{
+    set_uniform_variable(shader_program,uniform_name(symbolic_name),value_to_store);
+}
 
 void  set_uniform_variable(vertex_program_ptr const  shader_program,
                            std::string const&  variable_name,
@@ -145,6 +189,11 @@ void  set_uniform_variable(vertex_program_ptr const  shader_program,
 void  set_uniform_variable(vertex_program_ptr const  shader_program,
                            std::string const&  variable_name,
                            matrix44 const&  value_to_store);
+
+
+}
+
+namespace qtgl {
 
 
 struct shaders_binding;
