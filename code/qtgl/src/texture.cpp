@@ -13,6 +13,23 @@
 namespace qtgl {
 
 
+texture_properties_ptr  texture_properties::create(
+        boost::filesystem::path const&  image_file,
+        natural_32_bit const  pixel_format,
+        natural_32_bit const  x_wrapping_type,
+        natural_32_bit const  y_wrapping_type,
+        natural_32_bit const  min_filtering_type,
+        natural_32_bit const  mag_filtering_type
+        )
+{
+    return std::make_shared<texture_properties>(image_file,
+                                                pixel_format,
+                                                x_wrapping_type,
+                                                y_wrapping_type,
+                                                min_filtering_type,
+                                                mag_filtering_type);
+}
+
 texture_properties::texture_properties(
         boost::filesystem::path const&  image_file,
         natural_32_bit const  pixel_format,
@@ -185,51 +202,90 @@ texture_ptr  texture::create(
 namespace qtgl {
 
 
-textures_binding_ptr  textures_binding::create(
-        std::vector< std::pair<texture_binding_location,texture_properties> > const&  data
-        )
+void  insert_load_request(texture_properties_ptr const  props)
 {
-    return textures_binding_ptr{ new textures_binding{data} };
+    detail::texture_cache::instance().insert_load_request(props);
 }
 
-textures_binding::textures_binding(std::vector< std::pair<texture_binding_location,texture_properties> > const&  data)
+std::weak_ptr<texture const>  find_texture(texture_properties_ptr const  props)
+{
+    return detail::texture_cache::instance().find(props);
+}
+
+bool  make_current(fragment_shader_texture_sampler_binding const  binding,
+                   texture_properties_ptr const  props,
+                   bool const  use_dummy_texture_if_requested_one_is_not_loaded_yet)
+{
+    std::weak_ptr<texture const> const  wptr = detail::texture_cache::instance().find(props);
+    std::shared_ptr<texture const>  ptr = wptr.lock();
+    bool  result = true;
+    if (!ptr.operator bool())
+    {
+        if (!use_dummy_texture_if_requested_one_is_not_loaded_yet)
+            return false;
+        detail::texture_cache::instance().insert_load_request(props);
+        ptr = detail::texture_cache::instance().get_dummy_texture().lock();
+        INVARIANT(ptr.operator bool());
+        result = false;
+    }
+    make_current(binding,ptr);
+    return result;
+}
+
+void  make_current(fragment_shader_texture_sampler_binding const  binding, texture_ptr const  texture)
+{
+    ASSUMPTION(static_cast<natural_8_bit>(binding) < GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+    glapi().glActiveTexture(GL_TEXTURE0 + static_cast<natural_8_bit>(binding));
+    glapi().glBindTexture(GL_TEXTURE_2D,texture->id());
+}
+
+
+}
+
+namespace qtgl {
+
+
+textures_binding_ptr  textures_binding::create(
+        std::vector< std::pair<fragment_shader_texture_sampler_binding,texture_properties> > const&  data
+        )
+{
+    return std::make_shared<textures_binding const>(data);
+}
+
+textures_binding::textures_binding(data_type const&  data)
+    : m_data(data)
+{
+    TMPROF_BLOCK();
+    ASSUMPTION(!data.empty());
+}
+
+textures_binding::textures_binding(
+        std::vector< std::pair<fragment_shader_texture_sampler_binding,texture_properties> > const&  data)
     : m_data()
 {
     TMPROF_BLOCK();
 
     ASSUMPTION(!data.empty());
     for (auto const& elem : data)
-    {
-        ASSUMPTION(elem.first < GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
-        m_data.push_back({elem.first,texture_properties_ptr{new texture_properties(elem.second)}});
-        detail::texture_cache::instance().insert_load_request(m_data.back().second);
-    }
+        m_data.push_back({elem.first,std::make_shared<texture_properties const>(elem.second)});
     INVARIANT(m_data.size() == data.size());
 }
 
-
-void  make_current(textures_binding_ptr const  binding)
+void  insert_load_request(textures_binding const&  binding)
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(binding.operator bool());
-    ASSUMPTION(!binding->data().empty());
-    for (auto const&  elem : binding->data())
-    {
-        ASSUMPTION(elem.first < GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
-        glapi().glActiveTexture(GL_TEXTURE0 + elem.first);
+    for (auto const& elem : binding.data())
+        qtgl::insert_load_request(elem.second);
+}
 
-        std::weak_ptr<texture const> const  wptr = detail::texture_cache::instance().find(elem.second);
-        std::shared_ptr<texture const>  ptr = wptr.lock();
-        if (!ptr.operator bool())
-        {
-            detail::texture_cache::instance().insert_load_request(elem.second);
-            ptr = detail::texture_cache::instance().get_dummy_texture().lock();
-            INVARIANT(ptr.operator bool());
-        }
+void  make_current(textures_binding const&  binding,
+                   bool const  use_dummy_texture_if_requested_one_is_not_loaded_yet)
+{
+    TMPROF_BLOCK();
 
-        glapi().glBindTexture(GL_TEXTURE_2D,ptr->id());
-    }
+    for (auto const&  elem : binding.data())
+        qtgl::make_current(elem.first,elem.second,use_dummy_texture_if_requested_one_is_not_loaded_yet);
 }
 
 

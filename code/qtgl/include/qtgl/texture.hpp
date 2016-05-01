@@ -1,6 +1,7 @@
 #ifndef QTGL_TEXTURE_HPP_INCLUDED
 #   define QTGL_TEXTURE_HPP_INCLUDED
 
+#   include <qtgl/shader_data_bindings.hpp>
 #   include <qtgl/glapi.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <boost/filesystem/path.hpp>
@@ -11,8 +12,21 @@
 namespace qtgl {
 
 
+struct texture_properties;
+using  texture_properties_ptr = std::shared_ptr<texture_properties const>;
+
+
 struct texture_properties
 {
+    static texture_properties_ptr  create(
+            boost::filesystem::path const&  image_file,
+            natural_32_bit const  pixel_format = GL_COMPRESSED_RGBA,
+            natural_32_bit const  x_wrapping_type = GL_REPEAT,
+            natural_32_bit const  y_wrapping_type = GL_REPEAT,
+            natural_32_bit const  min_filtering_type = GL_LINEAR_MIPMAP_LINEAR,
+            natural_32_bit const  mag_filtering_type = GL_LINEAR
+            );
+
     texture_properties(
             boost::filesystem::path const&  image_file,
             natural_32_bit const  pixel_format = GL_COMPRESSED_RGBA,
@@ -43,8 +57,6 @@ bool  operator==(texture_properties const&  props0, texture_properties const&  p
 inline bool  operator!=(texture_properties const&  props0, texture_properties const&  props1) { return !(props0 == props1); }
 
 size_t  hasher_of_texture_properties(texture_properties const&  props);
-
-using  texture_properties_ptr = std::shared_ptr<texture_properties const>;
 
 
 }
@@ -127,30 +139,66 @@ private:
 namespace qtgl {
 
 
-using  texture_binding_location = natural_8_bit;
+void  insert_load_request(texture_properties_ptr const  props);
 
-inline constexpr texture_binding_location  diffuse_texture_binding_location() noexcept { return 0U; }
+inline void  insert_load_request(texture_properties const&  props)
+{ insert_load_request(std::make_shared<texture_properties>(props)); }
+
+
+std::weak_ptr<texture const>  find_texture(texture_properties_ptr const  props);
+
+inline std::weak_ptr<texture const>  find_texture(texture_properties const&  props)
+{ return find_texture(std::make_shared<texture_properties>(props)); }
+
+
+bool  make_current(fragment_shader_texture_sampler_binding const  binding,
+                   texture_properties_ptr const  props,
+                   bool const  use_dummy_texture_if_requested_one_is_not_loaded_yet = true);
+
+inline bool  make_current(fragment_shader_texture_sampler_binding const  binding,
+                          texture_properties const&  props,
+                          bool const  use_dummy_texture_if_requested_one_is_not_loaded_yet = true)
+{
+    return make_current(binding,std::make_shared<texture_properties>(props),
+                        use_dummy_texture_if_requested_one_is_not_loaded_yet);
+}
+
+
+void  make_current(fragment_shader_texture_sampler_binding const  binding, texture_ptr const  texture);
+
+
+}
+
+namespace qtgl {
+
 
 struct  textures_binding;
 using  textures_binding_ptr = std::shared_ptr<textures_binding const>;
 
+
 struct textures_binding
 {
+    using  data_type = std::vector< std::pair<fragment_shader_texture_sampler_binding,texture_properties_ptr> >;
+
     static textures_binding_ptr  create(
-            std::vector< std::pair<texture_binding_location,texture_properties> > const&  data
+            std::vector< std::pair<fragment_shader_texture_sampler_binding,texture_properties> > const&  data
             );
 
-    std::vector< std::pair<texture_binding_location,texture_properties_ptr> > const& data() const noexcept
-    { return m_data; }
+    textures_binding(data_type const&  data);
+    textures_binding(std::vector< std::pair<fragment_shader_texture_sampler_binding,texture_properties> > const&  data);
+
+    data_type const& data() const noexcept { return m_data; }
 
 private:
-    textures_binding(std::vector< std::pair<texture_binding_location,texture_properties> > const&  data);
 
-    std::vector< std::pair<texture_binding_location,texture_properties_ptr> >  m_data;
+    data_type  m_data;
 };
 
 
-void  make_current(textures_binding_ptr const  binding);
+void  insert_load_request(textures_binding const&  binding);
+
+void  make_current(textures_binding const&  binding,
+                   bool const  use_dummy_texture_if_requested_one_is_not_loaded_yet = true);
 
 
 }
