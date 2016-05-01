@@ -119,7 +119,7 @@ std::string  parse_lines(std::istream&  istr,
             "#define VERTEX_SHADER_TYPE                 0\n\0",
             "#define FRAGMENT_SHADER_TYPE               1\n\0",
             };
-    output_lines.resize(macro_definitions.size() + 1U,"");
+    output_lines.resize(macro_definitions.size() + 1U,"\n\0");
 
     std::string const  error_message = parse_lines(istr,directory,visited_files,output_lines);
     if (!error_message.empty())
@@ -284,22 +284,246 @@ fragment_program_ptr  create_fragment_program(std::vector<std::string> const&  l
     return fragment_program::create(id,props);
 }
 
-bool  shader_code_uses_word(std::vector<std::string> const&  lines, std::string const&  word)
+
+struct text_stream
 {
-    for (std::string const&  line : lines)
+    explicit text_stream(std::vector<std::string> const* const  lines);
+    bool  eof() const;
+    std::string  get_next_token();
+
+    natural_64_bit  line() const noexcept { return m_line; }
+
+private:
+
+    static bool  is_white(natural_8_bit const  value);
+    void  skip_whites();
+    natural_8_bit  current() const;
+    natural_8_bit  next();
+
+    natural_64_bit  m_line;
+    natural_64_bit  m_column;
+    std::vector<std::string> const*  m_lines;
+};
+
+text_stream::text_stream(std::vector<std::string> const* const  lines)
+    : m_line(0ULL)
+    , m_column(0ULL)
+    , m_lines(lines)
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(m_lines != nullptr);
+    ASSUMPTION(
+        [](std::vector<std::string> const&  lines) -> bool {
+            for (auto const& l : lines)
+                if (l.empty())
+                    return false;
+            return true;
+            }(*m_lines)
+        );
+    skip_whites();
+}
+
+bool  text_stream::eof() const
+{
+    return m_line >= m_lines->size();
+}
+
+std::string  text_stream::get_next_token()
+{
+    TMPROF_BLOCK();
+
+    std::string  token;
+    while (!eof())
     {
-        natural_64_bit const  word_begin = line.find(word);
-        if (word_begin != std::string::npos)
+        static  std::unordered_set<natural_8_bit> const  separators = {
+            '\0',
+            '\r',
+            '\r',
+            '\t',
+            ' ',
+            '(',
+            ')',
+            '[',
+            ']',
+            '{',
+            '}',
+            '+',
+            '-',
+            '=',
+            '<',
+            '>',
+            '!',
+            '&',
+            '|',
+            '^',
+            '~',
+            '?',
+            '\'',
+            '\"',
+            '.',
+            ':',
+            ',',
+            ';',
+            '\\',
+        };
+
+        if (separators.count(current()) != 0ULL)
         {
-            std::string  prefix;
-            for (natural_64_bit  i = 0ULL; i < word_begin; ++i)
-                if (line.at(i) != ' ' && line.at(i) != '\t')
-                    prefix.push_back(line.at(i));
-            if (prefix != "#define")
-                return true;
+            next();
+            if (!token.empty())
+                break;
         }
+        else if (current() == '\n' || current() == '#')
+        {
+            if (token.empty())
+                token.push_back(next());
+            break;
+        }
+        else if (current() == '/')
+        {
+            if (token.empty())
+            {
+                next();
+                if (!eof() && (current() == '/' || current() == '*'))
+                {
+                    token.push_back('/');
+                    token.push_back(next());
+                    break;
+                }
+            }
+            else
+            {
+                if (token == "/" || token == "*")
+                    token.push_back(next());
+                break;
+            }
+        }
+        else if (current() == '*')
+        {
+            if (token.empty())
+            {
+                next();
+                if (!eof() && current() == '/')
+                {
+                    token.push_back('*');
+                    token.push_back(next());
+                    break;
+                }
+            }
+            else
+            {
+                if (token == "/")
+                    token.push_back(next());
+                break;
+            }
+        }
+        else
+            token.push_back(next());
     }
-    return false;
+
+    skip_whites();
+
+    return token;
+}
+
+bool  text_stream::is_white(natural_8_bit const  value)
+{
+    return value == ' ' || value == '\t' || value == '\r' || value == '\0';
+}
+
+void  text_stream::skip_whites()
+{
+    while (!eof() && is_white(current()))
+        next();
+}
+
+natural_8_bit  text_stream::current() const
+{
+    INVARIANT(m_line < m_lines->size());
+    INVARIANT(m_column < m_lines->at(m_line).size());
+    return m_lines->at(m_line).at(m_column);
+}
+
+natural_8_bit  text_stream::next()
+{
+    INVARIANT(m_line < m_lines->size());
+    INVARIANT(m_column < m_lines->at(m_line).size());
+    natural_8_bit const  result = m_lines->at(m_line).at(m_column);
+    ++m_column;
+    if (m_column == m_lines->at(m_line).size())
+    {
+        m_column = 0ULL;
+        ++m_line;
+    }
+    return result;
+}
+
+void  get_tokens_in_shader_code(
+        std::vector<std::string> const&  code_lines,
+        std::unordered_set<std::string>&  output,
+        std::function<bool(std::string const&)> const&  token_filter =
+                [](std::string const&  token) -> bool {
+                    ASSUMPTION(!token.empty());
+                    if (!(token.front() == '_' || (token.front() >= 'A' && token.front() <= 'Z')))
+                        return true;
+                    for (auto c : token)
+                        if (!(c == '_' || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9')))
+                            return true;
+                    return false;
+                }
+                )
+{
+    TMPROF_BLOCK();
+
+    text_stream  text(&code_lines);
+    bool  is_in_preprocessor_line = false;
+    bool  is_in_line_comment = false;
+    bool  is_in_multiline_comment = false;
+    while (true)
+    {
+        INVARIANT(!is_in_line_comment || !is_in_multiline_comment);
+
+        if (text.line() >= 87)
+        {
+            int iii = 0;
+        }
+
+        std::string const  token = text.get_next_token();
+        if (token.empty())
+            return;
+
+        if (token == "\n")
+        {
+            if (!is_in_multiline_comment)
+            {
+                is_in_line_comment = false;
+                is_in_preprocessor_line = false;
+            }
+        }
+        else if (token == "#")
+        {
+            if (!is_in_multiline_comment && !is_in_line_comment)
+                is_in_preprocessor_line = true;
+        }
+        else if (token == "//")
+        {
+            if (!is_in_multiline_comment)
+                is_in_line_comment = true;
+        }
+        else if (token == "/*")
+        {
+            if (!is_in_line_comment)
+                is_in_multiline_comment = true;
+        }
+        else if (token == "*/")
+        {
+            if (!is_in_line_comment)
+                is_in_multiline_comment = false;
+        }
+        else if (!is_in_line_comment && !is_in_multiline_comment && !is_in_preprocessor_line && !token_filter(token))
+            output.insert(token);
+    }
 }
 
 
@@ -329,6 +553,10 @@ vertex_program_properties::vertex_program_properties(
         )
     : m_shader_file(shader_file)
 {
+    TMPROF_BLOCK();
+
+    std::unordered_set<std::string>  tokens;
+    detail::get_tokens_in_shader_code(lines_of_shader_code,tokens);
     for (auto const  location : std::vector<vertex_shader_input_buffer_binding_location>{
             vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION ,
             vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR   ,
@@ -344,7 +572,7 @@ vertex_program_properties::vertex_program_properties(
             vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD8,
             vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD9,
             })
-        if (detail::shader_code_uses_word(lines_of_shader_code,binding_location_name(location)))
+        if (tokens.count(binding_location_name(location)) != 0ULL)
             m_input_buffer_bindings.insert(location);
 
     ASSUMPTION(m_input_buffer_bindings.count(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION) != 0U);
@@ -364,7 +592,7 @@ vertex_program_properties::vertex_program_properties(
             vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD8,
             vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD9,
             })
-        if (detail::shader_code_uses_word(lines_of_shader_code,binding_location_name(location)))
+        if (tokens.count(binding_location_name(location)) != 0ULL)
             m_output_buffer_bindings.insert(location);
 
     ASSUMPTION(m_output_buffer_bindings.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION) != 0U);
@@ -373,9 +601,10 @@ vertex_program_properties::vertex_program_properties(
             vertex_shader_uniform_symbolic_name::COLOUR_ALPHA               ,
             vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED,
             })
-        if (detail::shader_code_uses_word(lines_of_shader_code,uniform_name(symbolic_name)))
+    {
+        if (tokens.count(uniform_name(symbolic_name)) != 0ULL || tokens.count(uniform_symbolic_name(symbolic_name)) != 0ULL)
             m_symbolic_names_of_used_uniforms.insert(symbolic_name);
-
+    }
 }
 
 bool  operator==(vertex_program_properties const&  props0, vertex_program_properties const&  props1)
@@ -470,6 +699,10 @@ fragment_program_properties::fragment_program_properties(
         )
     : m_shader_file(shader_file)
 {
+    TMPROF_BLOCK();
+
+    std::unordered_set<std::string>  tokens;
+    detail::get_tokens_in_shader_code(lines_of_shader_code,tokens);
     for (auto const  location : std::vector<fragment_shader_input_buffer_binding_location>{
             fragment_shader_input_buffer_binding_location::BINDING_IN_POSITION ,
             fragment_shader_input_buffer_binding_location::BINDING_IN_COLOUR   ,
@@ -485,15 +718,13 @@ fragment_program_properties::fragment_program_properties(
             fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD8,
             fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD9,
             })
-        if (detail::shader_code_uses_word(lines_of_shader_code,binding_location_name(location)))
+        if (tokens.count(binding_location_name(location)) != 0ULL)
             m_input_buffer_bindings.insert(location);
-
-    ASSUMPTION(m_input_buffer_bindings.count(fragment_shader_input_buffer_binding_location::BINDING_IN_POSITION) != 0U);
 
     for (auto const  location : std::vector<fragment_shader_output_buffer_binding_location>{
             fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR,
             })
-        if (detail::shader_code_uses_word(lines_of_shader_code,binding_location_name(location)))
+        if (tokens.count(binding_location_name(location)) != 0ULL)
             m_output_buffer_bindings.insert(location);
 
     ASSUMPTION(m_output_buffer_bindings.count(fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR) != 0U);
@@ -501,9 +732,10 @@ fragment_program_properties::fragment_program_properties(
     for (auto const  sampler_binding : std::vector<fragment_shader_texture_sampler_binding>{
             fragment_shader_texture_sampler_binding::BINDING_TEXTURE_DIFFUSE,
             })
-        if (detail::shader_code_uses_word(lines_of_shader_code,sampler_binding_name(sampler_binding)))
+    {
+        if (tokens.count(sampler_binding_name(sampler_binding)) != 0ULL)
             m_texture_sampler_bindings.insert(sampler_binding);
-
+    }
 }
 
 bool  operator==(fragment_program_properties const&  props0, fragment_program_properties const&  props1)

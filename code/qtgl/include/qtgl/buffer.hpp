@@ -1,6 +1,7 @@
 #ifndef QTGL_BUFFER_HPP_INCLUDED
 #   define QTGL_BUFFER_HPP_INCLUDED
 
+#   include <qtgl/shader_data_bindings.hpp>
 #   include <qtgl/glapi.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <array>
@@ -49,19 +50,18 @@ private:
 
 struct buffers_binding;
 using  buffers_binding_ptr = std::shared_ptr<buffers_binding const>;
-using  buffer_binding_location = natural_8_bit;
 
 
 struct buffers_binding
 {
     static buffers_binding_ptr  create(
             buffer_ptr const  index_buffer,
-            std::vector< std::pair<buffer_binding_location,buffer_ptr> > const&  bindings
+            std::vector< std::pair<vertex_shader_input_buffer_binding_location,buffer_ptr> > const&  bindings
             );
 
     static buffers_binding_ptr  create(
             natural_8_bit const  num_indices_per_primitive,  // 1 (points), 2 (lines), or 3 (triangles)
-            std::vector< std::pair<buffer_binding_location,buffer_ptr> > const&  bindings
+            std::vector< std::pair<vertex_shader_input_buffer_binding_location,buffer_ptr> > const&  bindings
             );
 
     ~buffers_binding();
@@ -81,12 +81,6 @@ private:
 
 
 void  make_current(buffers_binding_ptr const  buffers_binding);
-
-
-inline constexpr buffer_binding_location  vertices_binding_location() noexcept { return 0U; }
-inline constexpr buffer_binding_location  colours_binding_location() noexcept { return 1U; }
-inline constexpr buffer_binding_location  normals_binding_location() noexcept { return 2U; }
-inline constexpr buffer_binding_location  first_texcoords_binding_location() noexcept { return 3U; }
 
 
 }

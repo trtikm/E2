@@ -36,19 +36,19 @@ GLuint  create_glbuffer(GLenum const  target, GLvoid const* data, natural_64_bit
 }
 
 GLuint  create_vertex_arrays(
-        std::vector< std::pair<buffer_binding_location,buffer_ptr> > const&  bindings
+        std::vector< std::pair<vertex_shader_input_buffer_binding_location,buffer_ptr> > const&  bindings
         )
 {
     TMPROF_BLOCK();
 
     if (bindings.empty() || bindings.size() > (natural_64_bit)GL_MAX_VERTEX_ATTRIBS)
         return 0U;
-    if (![](std::vector< std::pair<buffer_binding_location,buffer_ptr> > const&  bindings)
+    if (![](std::vector< std::pair<vertex_shader_input_buffer_binding_location,buffer_ptr> > const&  bindings)
             {
-            std::unordered_set<buffer_binding_location>  visited;
+            std::unordered_set<vertex_shader_input_buffer_binding_location>  visited;
             for (auto const& elem : bindings)
             {
-                if (elem.first >= (natural_32_bit)GL_MAX_VERTEX_ATTRIBS ||
+                if (static_cast<natural_8_bit>(elem.first) >= (natural_32_bit)GL_MAX_VERTEX_ATTRIBS ||
                     visited.count(elem.first) != 0 ||
                     !elem.second.operator bool())
                     return false;
@@ -66,8 +66,13 @@ GLuint  create_vertex_arrays(
     for (auto const& elem : bindings)
     {
         glapi().glBindBuffer(GL_ARRAY_BUFFER,elem.second->id());
-        glapi().glEnableVertexAttribArray(elem.first);
-        glapi().glVertexAttribPointer(elem.first,elem.second->num_components_per_element(),GL_FLOAT,GL_FALSE,0U,nullptr);
+        glapi().glEnableVertexAttribArray(static_cast<natural_8_bit>(elem.first));
+        glapi().glVertexAttribPointer(static_cast<natural_8_bit>(elem.first),
+                                      elem.second->num_components_per_element(),
+                                      GL_FLOAT,
+                                      GL_FALSE,
+                                      0U,
+                                      nullptr);
     }
 
     return id;
@@ -182,7 +187,7 @@ namespace qtgl {
 
 buffers_binding_ptr  buffers_binding::create(
         buffer_ptr const  index_buffer,
-        std::vector< std::pair<buffer_binding_location,buffer_ptr> > const&  bindings
+        std::vector< std::pair<vertex_shader_input_buffer_binding_location,buffer_ptr> > const&  bindings
         )
 {
     TMPROF_BLOCK();
@@ -195,7 +200,7 @@ buffers_binding_ptr  buffers_binding::create(
 
 buffers_binding_ptr  buffers_binding::create(
         natural_8_bit const  num_indices_per_primitive,
-        std::vector< std::pair<buffer_binding_location,buffer_ptr> > const&  bindings
+        std::vector< std::pair<vertex_shader_input_buffer_binding_location,buffer_ptr> > const&  bindings
         )
 {
     TMPROF_BLOCK();
@@ -203,7 +208,7 @@ buffers_binding_ptr  buffers_binding::create(
     buffer_ptr  index_buffer;
     {
         for (auto const& elem : bindings)
-            if (elem.first == vertices_binding_location())
+            if (elem.first == vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION)
             {
                 index_buffer = buffer::create(0U,num_indices_per_primitive,elem.second->num_elements());
                 break;

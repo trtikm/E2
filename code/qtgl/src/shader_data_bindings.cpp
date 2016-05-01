@@ -46,6 +46,16 @@ std::string  binding_location_name(vertex_shader_output_buffer_binding_location 
     }
 }
 
+std::string  uniform_symbolic_name(vertex_shader_uniform_symbolic_name const  symbolic_name)
+{
+    switch (symbolic_name)
+    {
+    case vertex_shader_uniform_symbolic_name::COLOUR_ALPHA: return "COLOUR_ALPHA";
+    case vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED: return "TRANSFORM_MATRIX_TRANSPOSED";
+    default: UNREACHABLE();
+    }
+}
+
 std::string  uniform_name(vertex_shader_uniform_symbolic_name const  symbolic_name)
 {
     switch (symbolic_name)

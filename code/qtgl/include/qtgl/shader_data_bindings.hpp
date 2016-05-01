@@ -53,6 +53,7 @@ enum struct vertex_shader_uniform_symbolic_name : natural_8_bit
     TRANSFORM_MATRIX_TRANSPOSED     = 1,
 };
 
+std::string  uniform_symbolic_name(vertex_shader_uniform_symbolic_name const  symbolic_name);
 std::string  uniform_name(vertex_shader_uniform_symbolic_name const  symbolic_name);
 
 
