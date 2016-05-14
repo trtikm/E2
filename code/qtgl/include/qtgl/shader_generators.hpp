@@ -9,9 +9,19 @@
 namespace qtgl { namespace vertex_program_generators { namespace transform_3D_vertices {
 
 
-boost::filesystem::path  imaginary_image_path() noexcept;
+boost::filesystem::path  imaginary_shader_file() noexcept;
 vertex_program_properties const&  properties();
 vertex_program_ptr  create();
+
+
+}}}
+
+namespace qtgl { namespace fragment_program_generators { namespace pink_colour {
+
+
+boost::filesystem::path  imaginary_shader_file() noexcept;
+fragment_program_properties const&  properties();
+fragment_program_ptr  create();
 
 
 }}}

@@ -77,7 +77,7 @@ void  vertex_program_cache::insert_load_request(boost::filesystem::path const&  
         if (m_failed_loads.count(shader_file) != 0ULL)
             return;
     }
-    if (shader_file == vertex_program_generators::transform_3D_vertices::imaginary_image_path())
+    if (shader_file == vertex_program_generators::transform_3D_vertices::imaginary_shader_file())
         return;
     if (!boost::filesystem::is_regular_file(shader_file))
         return;

@@ -93,6 +93,22 @@ private:
 };
 
 
+template<typename value_type>
+void  set_uniform_variable(vertex_program_ptr const  shader_program,
+                           vertex_shader_uniform_symbolic_name const  symbolic_name,
+                           value_type const&  value_to_store)
+{
+    set_uniform_variable(shader_program,uniform_name(symbolic_name),value_to_store);
+}
+
+void  set_uniform_variable(vertex_program_ptr const  shader_program,
+                           std::string const&  variable_name,
+                           float_32_bit const  value_to_store);
+void  set_uniform_variable(vertex_program_ptr const  shader_program,
+                           std::string const&  variable_name,
+                           matrix44 const&  value_to_store);
+
+
 std::string  load_vertex_program_file(boost::filesystem::path const&  shader_file,
                                      std::vector<std::string>& output_lines);
 
@@ -127,24 +143,17 @@ using  fragment_program_properties_ptr = std::shared_ptr<fragment_program_proper
 struct fragment_program_properties
 {
     static fragment_program_properties_ptr  create(
-            boost::filesystem::path const&  shader_file,
             std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
             std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
             std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings
             );
     fragment_program_properties(
-            boost::filesystem::path const&  shader_file,
             std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
             std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
             std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings
             );
 
-    fragment_program_properties(
-            boost::filesystem::path const&  shader_file,
-            std::vector<std::string> const&  lines_of_shader_code
-            );
-
-    boost::filesystem::path const&  shader_file() const noexcept { return m_shader_file; }
+    fragment_program_properties(std::vector<std::string> const&  lines_of_shader_code);
 
     std::unordered_set<fragment_shader_input_buffer_binding_location> const& input_buffer_bindings() const noexcept
     { return m_input_buffer_bindings; }
@@ -155,7 +164,6 @@ struct fragment_program_properties
     { return m_texture_sampler_bindings; }
 
 private:
-    boost::filesystem::path  m_shader_file;
     std::unordered_set<fragment_shader_input_buffer_binding_location>  m_input_buffer_bindings;
     std::unordered_set<fragment_shader_output_buffer_binding_location>  m_output_buffer_bindings;
     std::unordered_set<fragment_shader_texture_sampler_binding>  m_texture_sampler_bindings;
@@ -182,6 +190,7 @@ struct fragment_program
 {
     static fragment_program_ptr  create(std::istream&  source_code, std::string&  error_message);
     static fragment_program_ptr  create(boost::filesystem::path const&  shader_source_file, std::string&  error_message);
+    static fragment_program_ptr  create(std::vector<std::string> const& source_code_lines, std::string&  error_message);
     static fragment_program_ptr  create(GLuint const  id, fragment_program_properties_ptr const  properties);
 
     ~fragment_program();
@@ -203,25 +212,8 @@ private:
 };
 
 
-}
-
-namespace qtgl {
-
-
-template<typename value_type>
-void  set_uniform_variable(vertex_program_ptr const  shader_program,
-                           vertex_shader_uniform_symbolic_name const  symbolic_name,
-                           value_type const&  value_to_store)
-{
-    set_uniform_variable(shader_program,uniform_name(symbolic_name),value_to_store);
-}
-
-void  set_uniform_variable(vertex_program_ptr const  shader_program,
-                           std::string const&  variable_name,
-                           float_32_bit const  value_to_store);
-void  set_uniform_variable(vertex_program_ptr const  shader_program,
-                           std::string const&  variable_name,
-                           matrix44 const&  value_to_store);
+std::string  load_fragment_program_file(boost::filesystem::path const&  shader_source_file,
+                                        std::vector<std::string>& output_lines);
 
 
 }

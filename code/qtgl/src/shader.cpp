@@ -266,8 +266,7 @@ vertex_program_ptr  create_vertex_program(std::vector<std::string> const&  lines
 }
 
 fragment_program_ptr  create_fragment_program(std::vector<std::string> const&  lines,
-                                              std::string&  error_message,
-                                              boost::filesystem::path const&  shader_file)
+                                              std::string&  error_message)
 {
     TMPROF_BLOCK();
 
@@ -280,7 +279,7 @@ fragment_program_ptr  create_fragment_program(std::vector<std::string> const&  l
     GLuint const  id = detail::create_opengl_shader_program(GL_FRAGMENT_SHADER,line_pointers,error_message);
     if (id == 0 || !error_message.empty())
         return fragment_program_ptr();
-    fragment_program_properties_ptr const  props = std::make_shared<fragment_program_properties>(shader_file,lines);
+    fragment_program_properties_ptr const  props = std::make_shared<fragment_program_properties>(lines);
     return fragment_program::create(id,props);
 }
 
@@ -681,6 +680,29 @@ vertex_program::~vertex_program()
 }
 
 
+void  set_uniform_variable(vertex_program_ptr const  shader_program,
+                           std::string const&  variable_name,
+                           float_32_bit const  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    GLint const  layout_location = glapi().glGetUniformLocation(shader_program->id(),variable_name.c_str());
+    ASSUMPTION(layout_location != -1);
+    glapi().glProgramUniform1f(shader_program->id(),layout_location,value_to_store);
+}
+
+void  set_uniform_variable(vertex_program_ptr const  shader_program,
+                           std::string const&  variable_name,
+                           matrix44 const&  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    GLint const  layout_location = glapi().glGetUniformLocation(shader_program->id(),variable_name.c_str());
+    ASSUMPTION(layout_location != -1);
+    glapi().glProgramUniformMatrix4fv(shader_program->id(),layout_location,1U,GL_TRUE,value_to_store.data());
+}
+
+
 std::string  load_vertex_program_file(boost::filesystem::path const&  filename,
                                       std::vector<std::string>& output_lines)
 {
@@ -726,26 +748,22 @@ namespace qtgl {
 
 
 fragment_program_properties_ptr  fragment_program_properties::create(
-        boost::filesystem::path const&  shader_file,
         std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
         std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
         std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings
         )
 {
-    return std::make_shared<fragment_program_properties>(shader_file,
-                                                         input_buffer_bindings,
+    return std::make_shared<fragment_program_properties>(input_buffer_bindings,
                                                          output_buffer_bindings,
                                                          texture_sampler_bindings);
 }
 
 fragment_program_properties::fragment_program_properties(
-        boost::filesystem::path const&  shader_file,
         std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
         std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
         std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings
         )
-    : m_shader_file(shader_file)
-    , m_input_buffer_bindings(input_buffer_bindings)
+    : m_input_buffer_bindings(input_buffer_bindings)
     , m_output_buffer_bindings(output_buffer_bindings)
     , m_texture_sampler_bindings(texture_sampler_bindings)
 {
@@ -753,11 +771,7 @@ fragment_program_properties::fragment_program_properties(
     ASSUMPTION(m_output_buffer_bindings.count(fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR) != 0U);
 }
 
-fragment_program_properties::fragment_program_properties(
-        boost::filesystem::path const&  shader_file,
-        std::vector<std::string> const&  lines_of_shader_code
-        )
-    : m_shader_file(shader_file)
+fragment_program_properties::fragment_program_properties(std::vector<std::string> const&  lines_of_shader_code)
 {
     TMPROF_BLOCK();
 
@@ -800,8 +814,7 @@ fragment_program_properties::fragment_program_properties(
 
 bool  operator==(fragment_program_properties const&  props0, fragment_program_properties const&  props1)
 {
-    return props0.shader_file() == props1.shader_file() &&
-           props0.input_buffer_bindings() == props1.input_buffer_bindings() &&
+    return props0.input_buffer_bindings() == props1.input_buffer_bindings() &&
            props0.output_buffer_bindings() == props1.output_buffer_bindings() &&
            props0.texture_sampler_bindings() == props1.texture_sampler_bindings()
            ;
@@ -810,7 +823,6 @@ bool  operator==(fragment_program_properties const&  props0, fragment_program_pr
 size_t  hasher_of_fragment_program_properties(fragment_program_properties const&  props)
 {
     std::size_t seed = 0ULL;
-    boost::hash_combine(seed,props.shader_file().string());
     for (auto const  location : props.input_buffer_bindings())
         boost::hash_combine(seed,static_cast<natural_8_bit>(location));
     for (auto const  location : props.output_buffer_bindings())
@@ -835,7 +847,7 @@ fragment_program_ptr  fragment_program::create(std::istream&  source_code, std::
     error_message = detail::parse_lines(source_code,GL_FRAGMENT_SHADER,lines);
     if (!error_message.empty())
         return fragment_program_ptr{};
-    return detail::create_fragment_program(lines,error_message,"/fragment-program-file-was-not-specified");
+    return detail::create_fragment_program(lines,error_message);
 }
 
 fragment_program_ptr  fragment_program::create(boost::filesystem::path const&  shader_source_file,
@@ -848,7 +860,13 @@ fragment_program_ptr  fragment_program::create(boost::filesystem::path const&  s
     error_message = detail::parse_lines(shader_source_file,GL_FRAGMENT_SHADER,lines);
     if (!error_message.empty())
         return fragment_program_ptr{};
-    return detail::create_fragment_program(lines,error_message,shader_source_file);
+    return detail::create_fragment_program(lines,error_message);
+}
+
+fragment_program_ptr  fragment_program::create(std::vector<std::string> const& source_code_lines,
+                                               std::string&  error_message)
+{
+    return detail::create_fragment_program(source_code_lines,error_message);
 }
 
 fragment_program_ptr  fragment_program::create(GLuint const  id, fragment_program_properties_ptr const  properties)
@@ -864,32 +882,12 @@ fragment_program::~fragment_program()
 }
 
 
-}
-
-namespace qtgl {
-
-
-void  set_uniform_variable(vertex_program_ptr const  shader_program,
-                           std::string const&  variable_name,
-                           float_32_bit const  value_to_store)
+std::string  load_fragment_program_file(boost::filesystem::path const&  shader_source_file,
+                                        std::vector<std::string>& output_lines)
 {
-    TMPROF_BLOCK();
-
-    GLint const  layout_location = glapi().glGetUniformLocation(shader_program->id(),variable_name.c_str());
-    ASSUMPTION(layout_location != -1);
-    glapi().glProgramUniform1f(shader_program->id(),layout_location,value_to_store);
+    return detail::parse_lines(shader_source_file,GL_FRAGMENT_SHADER,output_lines);
 }
 
-void  set_uniform_variable(vertex_program_ptr const  shader_program,
-                           std::string const&  variable_name,
-                           matrix44 const&  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    GLint const  layout_location = glapi().glGetUniformLocation(shader_program->id(),variable_name.c_str());
-    ASSUMPTION(layout_location != -1);
-    glapi().glProgramUniformMatrix4fv(shader_program->id(),layout_location,1U,GL_TRUE,value_to_store.data());
-}
 
 
 }
