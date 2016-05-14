@@ -1,4 +1,5 @@
 #include <qtgl/shader.hpp>
+#include <qtgl/detail/vertex_program_cache.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
@@ -680,10 +681,42 @@ vertex_program::~vertex_program()
 }
 
 
-std::string  load_vertex_shader_file(boost::filesystem::path const&  filename,
-                                     std::vector<std::string>& output_lines)
+std::string  load_vertex_program_file(boost::filesystem::path const&  filename,
+                                      std::vector<std::string>& output_lines)
 {
     return detail::parse_lines(filename,GL_VERTEX_SHADER,output_lines);
+}
+
+void  insert_vertex_program_load_request(boost::filesystem::path const&  shader_file)
+{
+    detail::vertex_program_cache::instance().insert_load_request(shader_file);
+}
+
+bool  insert_vertex_program_load_request(vertex_program_properties_ptr const  props)
+{
+    return detail::vertex_program_cache::instance().insert_load_request(props);
+}
+
+std::weak_ptr<vertex_program const>  find_vertex_program(boost::filesystem::path const&  shader_file)
+{
+    return detail::vertex_program_cache::instance().find(shader_file);
+}
+
+std::weak_ptr<vertex_program const>  find_vertex_program(vertex_program_properties_ptr const  props)
+{
+    return detail::vertex_program_cache::instance().find(props);
+}
+
+bool  associate_vertex_program_properties_with_shader_file(
+        vertex_program_properties_ptr const  props, boost::filesystem::path const&  shader_file
+        )
+{
+    return detail::vertex_program_cache::instance().associate_properties_with_pathname(props,shader_file);
+}
+
+boost::filesystem::path  find_vertex_program_file(vertex_program_properties_ptr const  props)
+{
+    return detail::vertex_program_cache::instance().find_shader_file(props);
 }
 
 

@@ -102,7 +102,7 @@ void  resource_loader::worker()
             if (!fetch(shader_file,receiver))
                 break;
             std::shared_ptr<std::vector<std::string> >  lines = std::make_shared< std::vector<std::string> >();
-            std::string const  error_message = load_vertex_shader_file(shader_file,*lines);
+            std::string const  error_message = load_vertex_program_file(shader_file,*lines);
             receiver(shader_file,lines,error_message);
             done = false;
         }

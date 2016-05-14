@@ -93,9 +93,26 @@ private:
 };
 
 
-std::string  load_vertex_shader_file(boost::filesystem::path const&  filename,
+std::string  load_vertex_program_file(boost::filesystem::path const&  shader_file,
                                      std::vector<std::string>& output_lines);
 
+void  insert_vertex_program_load_request(boost::filesystem::path const&  shader_file);
+bool  insert_vertex_program_load_request(vertex_program_properties_ptr const  props);
+inline bool  insert_vertex_program_load_request(vertex_program_properties const&  props)
+{ return insert_vertex_program_load_request(std::make_shared<vertex_program_properties>(props)); }
+
+std::weak_ptr<vertex_program const>  find_vertex_program(boost::filesystem::path const&  shader_file);
+std::weak_ptr<vertex_program const>  find_vertex_program(vertex_program_properties_ptr const  props);
+
+inline std::weak_ptr<vertex_program const>  find_vertex_program(vertex_program_properties const&  props)
+{ return find_vertex_program(std::make_shared<vertex_program_properties>(props)); }
+
+bool  associate_vertex_program_properties_with_shader_file(
+        vertex_program_properties_ptr const  props, boost::filesystem::path const&  shader_file
+        );
+boost::filesystem::path  find_vertex_program_file(vertex_program_properties_ptr const  props);
+inline boost::filesystem::path  find_vertex_program_file(vertex_program_properties const&  props)
+{ return find_vertex_program_file(std::make_shared<vertex_program_properties>(props)); }
 
 
 }

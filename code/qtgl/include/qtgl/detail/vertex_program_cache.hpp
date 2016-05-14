@@ -8,32 +8,39 @@
 #   include <memory>
 #   include <mutex>
 #   include <tuple>
-#   include <iosfwd>
 
 namespace qtgl { namespace detail {
 
 
 struct vertex_program_cache
 {
-    using shader_code_stream_ptr = std::shared_ptr<std::istream>;
+    using  source_code_lines_ptr = std::shared_ptr<std::vector<std::string> const>;
+    using  program_load_info = std::tuple<boost::filesystem::path,  //!< Shader file path-name.
+                                          source_code_lines_ptr,    //!< Lines of the shader's code.
+                                          std::string               //!< Error message. Empty string means no error.
+                                          >;
+    using  failed_loads_map = std::unordered_map<boost::filesystem::path, program_load_info,
+                                                 size_t(*)(boost::filesystem::path const&) >;
 
     static vertex_program_cache&  instance();
 
     void clear(bool const  props_to_files = false, bool const destroy_also_dummy_program = false);
 
     void  insert_load_request(boost::filesystem::path const&  shader_file);
-
+    bool  insert_load_request(vertex_program_properties_ptr const  props);
     bool  insert(boost::filesystem::path const&  shader_file, vertex_program_ptr const  program);
+
     std::weak_ptr<vertex_program const>  find(boost::filesystem::path const&  shader_file);
     std::weak_ptr<vertex_program const>  find(vertex_program_properties_ptr const  props);
-
     std::weak_ptr<vertex_program const>  get_dummy_program() const noexcept { return m_dummy_program; }
 
-    using  source_code_lines_ptr = std::shared_ptr<std::vector<std::string> const>;
-    using  program_load_info = std::tuple<boost::filesystem::path,  //!< Shader file path-name.
-                                          source_code_lines_ptr,    //!< Lines of the shader's code.
-                                          std::string               //!< Error message. Empty string means no error.
-                                          >;
+    bool  associate_properties_with_pathname(vertex_program_properties_ptr const  props,
+                                             boost::filesystem::path const&  shader_file);
+
+    boost::filesystem::path  find_shader_file(vertex_program_properties_ptr const  props) const;
+
+    failed_loads_map const&  failed_loads() const noexcept { return m_failed_loads; }
+    failed_loads_map&  failed_loads() noexcept { return m_failed_loads; }
 
 private:
     vertex_program_cache();
@@ -53,10 +60,6 @@ private:
                        size_t(*)(boost::filesystem::path const&)
                        >  m_cached_programs;
 
-    using  program_info = std::tuple<boost::filesystem::path,   //!< Shader file path-name.
-                                     source_code_lines_ptr,     //!< Lines of the shader's code.
-                                     std::string                //!< Error message. Empty string means no error.
-                                     >;
     std::vector<program_load_info>  m_pending_programs;
 
     std::unordered_map<

@@ -68,6 +68,8 @@ void  vertex_program_cache::insert_load_request(boost::filesystem::path const&  
 {
     TMPROF_BLOCK();
 
+    if (shader_file.empty())
+        return;
     if (!find(shader_file).expired())
         return;
     {
@@ -77,6 +79,9 @@ void  vertex_program_cache::insert_load_request(boost::filesystem::path const&  
     }
     if (shader_file == vertex_program_generators::transform_3D_vertices::imaginary_image_path())
         return;
+    if (!boost::filesystem::is_regular_file(shader_file))
+        return;
+
     resource_loader::instance().insert(
                 shader_file,
                 std::bind(&vertex_program_cache::receiver,
@@ -85,6 +90,15 @@ void  vertex_program_cache::insert_load_request(boost::filesystem::path const&  
                           std::placeholders::_2,
                           std::placeholders::_3)
                 );
+}
+
+bool  vertex_program_cache::insert_load_request(vertex_program_properties_ptr const  props)
+{
+    boost::filesystem::path  shader_file = find_shader_file(props);
+    if (shader_file.empty())
+        return false;
+    insert_load_request(shader_file);
+    return true;
 }
 
 bool  vertex_program_cache::insert(boost::filesystem::path const&  shader_file, vertex_program_ptr const  program)
@@ -136,15 +150,29 @@ std::weak_ptr<vertex_program const>  vertex_program_cache::find(vertex_program_p
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path  shader_file;
-    {
-        std::lock_guard<std::mutex> const  lock(m_mutex);
-        auto const  it = m_props_to_pathnames.find(props);
-        if (it == m_props_to_pathnames.end())
-            return {};
-        shader_file = it->second;
-    }
+    boost::filesystem::path  shader_file = find_shader_file(props);
+    if (shader_file.empty())
+        return {};
     return find(shader_file);
+}
+
+bool  vertex_program_cache::associate_properties_with_pathname(vertex_program_properties_ptr const  props,
+                                                               boost::filesystem::path const&  shader_file)
+{
+    std::lock_guard<std::mutex> const  lock(m_mutex);
+    auto const  it = m_props_to_pathnames.find(props);
+    if (it == m_props_to_pathnames.end())
+        return m_props_to_pathnames.insert({props,shader_file}).second;
+    return shader_file == it->second;
+}
+
+boost::filesystem::path  vertex_program_cache::find_shader_file(vertex_program_properties_ptr const  props) const
+{
+    std::lock_guard<std::mutex> const  lock(m_mutex);
+    auto const  it = m_props_to_pathnames.find(props);
+    if (it == m_props_to_pathnames.end())
+        return {};
+    return it->second;
 }
 
 
