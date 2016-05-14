@@ -1,6 +1,7 @@
 #include <qtgl/detail/window.hpp>
 #include <qtgl/detail/resource_loader.hpp>
 #include <qtgl/detail/texture_cache.hpp>
+#include <qtgl/detail/vertex_program_cache.hpp>
 #include <utility/tensor_math.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
@@ -38,6 +39,7 @@ void  on_window_destroy()
     {
         detail::resource_loader::instance().clear();
         detail::texture_cache::instance().clear(true);
+        detail::vertex_program_cache::instance().clear(true,true);
     }
 }
 

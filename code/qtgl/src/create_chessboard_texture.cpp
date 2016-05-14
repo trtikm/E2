@@ -8,7 +8,7 @@ namespace qtgl {
 
 boost::filesystem::path  chessboard_texture_imaginary_image_path() noexcept
 {
-    return "/gtgl/generated_tetures/chessboard_texture";
+    return "/gtgl/generated_textures/chessboard_texture";
 }
 
 texture_properties  make_chessboard_texture_properties(

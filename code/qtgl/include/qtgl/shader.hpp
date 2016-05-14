@@ -15,21 +15,25 @@
 namespace qtgl {
 
 
+struct vertex_program_properties;
+using  vertex_program_properties_ptr = std::shared_ptr<vertex_program_properties const>;
+
+
 struct vertex_program_properties
 {
-    vertex_program_properties(
-            boost::filesystem::path const&  shader_file,
+    static vertex_program_properties_ptr  create(
             std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings,
             std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings,
             std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms
             );
 
     vertex_program_properties(
-            boost::filesystem::path const&  shader_file,
-            std::vector<std::string> const&  lines_of_shader_code
+            std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings,
+            std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+            std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms
             );
 
-    boost::filesystem::path const&  shader_file() const noexcept { return m_shader_file; }
+    vertex_program_properties(std::vector<std::string> const&  lines_of_shader_code);
 
     std::unordered_set<vertex_shader_input_buffer_binding_location> const& input_buffer_bindings() const noexcept
     { return m_input_buffer_bindings; }
@@ -53,8 +57,6 @@ inline bool  operator!=(vertex_program_properties const&  props0, vertex_program
 
 size_t  hasher_of_vertex_program_properties(vertex_program_properties const&  props);
 
-using  vertex_program_properties_ptr = std::shared_ptr<vertex_program_properties const>;
-
 
 }
 
@@ -69,6 +71,7 @@ struct vertex_program
 {
     static vertex_program_ptr  create(std::istream&  source_code, std::string&  error_message);
     static vertex_program_ptr  create(boost::filesystem::path const&  shader_source_file, std::string&  error_message);
+    static vertex_program_ptr  create(std::vector<std::string> const& source_code_lines, std::string&  error_message);
     static vertex_program_ptr  create(GLuint const  id, vertex_program_properties_ptr const  properties);
 
     ~vertex_program();
@@ -90,13 +93,28 @@ private:
 };
 
 
+std::string  load_vertex_shader_file(boost::filesystem::path const&  filename,
+                                     std::vector<std::string>& output_lines);
+
+
+
 }
 
 namespace qtgl {
 
 
+struct fragment_program_properties;
+using  fragment_program_properties_ptr = std::shared_ptr<fragment_program_properties const>;
+
+
 struct fragment_program_properties
 {
+    static fragment_program_properties_ptr  create(
+            boost::filesystem::path const&  shader_file,
+            std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
+            std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+            std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings
+            );
     fragment_program_properties(
             boost::filesystem::path const&  shader_file,
             std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
@@ -132,8 +150,6 @@ inline bool  operator!=(fragment_program_properties const&  props0, fragment_pro
 { return !(props0 == props1); }
 
 size_t  hasher_of_fragment_program_properties(fragment_program_properties const&  props);
-
-using  fragment_program_properties_ptr = std::shared_ptr<fragment_program_properties const>;
 
 
 }

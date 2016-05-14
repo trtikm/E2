@@ -247,8 +247,7 @@ GLuint  create_opengl_shader_program(GLenum shader_type,
 }
 
 vertex_program_ptr  create_vertex_program(std::vector<std::string> const&  lines,
-                                          std::string&  error_message,
-                                          boost::filesystem::path const&  shader_file)
+                                          std::string&  error_message)
 {
     TMPROF_BLOCK();
 
@@ -261,7 +260,7 @@ vertex_program_ptr  create_vertex_program(std::vector<std::string> const&  lines
     GLuint const  id = detail::create_opengl_shader_program(GL_VERTEX_SHADER,line_pointers,error_message);
     if (id == 0 || !error_message.empty())
         return vertex_program_ptr();
-    vertex_program_properties_ptr const  props = std::make_shared<vertex_program_properties>(shader_file,lines);
+    vertex_program_properties_ptr const  props = std::make_shared<vertex_program_properties>(lines);
     return vertex_program::create(id,props);
 }
 
@@ -532,14 +531,23 @@ void  get_tokens_in_shader_code(
 namespace qtgl {
 
 
-vertex_program_properties::vertex_program_properties(
-        boost::filesystem::path const&  shader_file,
+vertex_program_properties_ptr  vertex_program_properties::create(
         std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings,
         std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings,
         std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms
         )
-    : m_shader_file(shader_file)
-    , m_input_buffer_bindings(input_buffer_bindings)
+{
+    return std::make_shared<vertex_program_properties>(input_buffer_bindings,
+                                                       output_buffer_bindings,
+                                                       symbolic_names_of_used_uniforms);
+}
+
+vertex_program_properties::vertex_program_properties(
+        std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings,
+        std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+        std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms
+        )
+    : m_input_buffer_bindings(input_buffer_bindings)
     , m_output_buffer_bindings(output_buffer_bindings)
     , m_symbolic_names_of_used_uniforms(symbolic_names_of_used_uniforms)
 {
@@ -547,11 +555,7 @@ vertex_program_properties::vertex_program_properties(
     ASSUMPTION(m_output_buffer_bindings.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION) != 0U);
 }
 
-vertex_program_properties::vertex_program_properties(
-        boost::filesystem::path const&  shader_file,
-        std::vector<std::string> const&  lines_of_shader_code
-        )
-    : m_shader_file(shader_file)
+vertex_program_properties::vertex_program_properties(std::vector<std::string> const&  lines_of_shader_code)
 {
     TMPROF_BLOCK();
 
@@ -609,8 +613,7 @@ vertex_program_properties::vertex_program_properties(
 
 bool  operator==(vertex_program_properties const&  props0, vertex_program_properties const&  props1)
 {
-    return props0.shader_file() == props1.shader_file() &&
-           props0.input_buffer_bindings() == props1.input_buffer_bindings() &&
+    return props0.input_buffer_bindings() == props1.input_buffer_bindings() &&
            props0.output_buffer_bindings() == props1.output_buffer_bindings() &&
            props0.symbolic_names_of_used_uniforms() == props1.symbolic_names_of_used_uniforms()
            ;
@@ -619,7 +622,6 @@ bool  operator==(vertex_program_properties const&  props0, vertex_program_proper
 size_t  hasher_of_vertex_program_properties(vertex_program_properties const&  props)
 {
     std::size_t seed = 0ULL;
-    boost::hash_combine(seed,props.shader_file().string());
     for (auto const  location : props.input_buffer_bindings())
         boost::hash_combine(seed,static_cast<natural_8_bit>(location));
     for (auto const  location : props.output_buffer_bindings())
@@ -644,7 +646,7 @@ vertex_program_ptr  vertex_program::create(std::istream&  source_code, std::stri
     error_message = detail::parse_lines(source_code,GL_VERTEX_SHADER,lines);
     if (!error_message.empty())
         return vertex_program_ptr{};
-    return detail::create_vertex_program(lines,error_message,"/vertex-program-file-was-not-specified");
+    return detail::create_vertex_program(lines,error_message);
 }
 
 vertex_program_ptr  vertex_program::create(boost::filesystem::path const&  shader_source_file, std::string&  error_message)
@@ -656,7 +658,12 @@ vertex_program_ptr  vertex_program::create(boost::filesystem::path const&  shade
     error_message = detail::parse_lines(shader_source_file,GL_VERTEX_SHADER,lines);
     if (!error_message.empty())
         return vertex_program_ptr{};
-    return detail::create_vertex_program(lines,error_message,shader_source_file);
+    return detail::create_vertex_program(lines,error_message);
+}
+
+vertex_program_ptr  vertex_program::create(std::vector<std::string> const& source_code_lines, std::string&  error_message)
+{
+    return detail::create_vertex_program(source_code_lines,error_message);
 }
 
 vertex_program_ptr  vertex_program::create(GLuint const  id, vertex_program_properties_ptr const  properties)
@@ -673,10 +680,30 @@ vertex_program::~vertex_program()
 }
 
 
+std::string  load_vertex_shader_file(boost::filesystem::path const&  filename,
+                                     std::vector<std::string>& output_lines)
+{
+    return detail::parse_lines(filename,GL_VERTEX_SHADER,output_lines);
+}
+
+
 }
 
 namespace qtgl {
 
+
+fragment_program_properties_ptr  fragment_program_properties::create(
+        boost::filesystem::path const&  shader_file,
+        std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
+        std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+        std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings
+        )
+{
+    return std::make_shared<fragment_program_properties>(shader_file,
+                                                         input_buffer_bindings,
+                                                         output_buffer_bindings,
+                                                         texture_sampler_bindings);
+}
 
 fragment_program_properties::fragment_program_properties(
         boost::filesystem::path const&  shader_file,

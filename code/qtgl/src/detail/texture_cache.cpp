@@ -29,6 +29,7 @@ texture_cache&  texture_cache::instance()
 
 texture_cache::texture_cache()
     : m_cached_textures(10ULL,&qtgl::detail::textures_props_hasher,&qtgl::detail::textures_props_equal)
+    , m_pending_textures()
     , m_mutex()
     , m_dummy_texture(create_chessboard_texture())
 {}
@@ -74,7 +75,7 @@ bool  texture_cache::insert(texture_ptr const  texture)
     return m_cached_textures.insert({texture->properties(),texture}).second;
 }
 
-std::weak_ptr<texture const>  texture_cache::texture_cache::find(texture_properties_ptr const  props)
+std::weak_ptr<texture const>  texture_cache::find(texture_properties_ptr const  props)
 {
     TMPROF_BLOCK();
 
