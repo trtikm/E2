@@ -21,14 +21,23 @@ struct resource_loader
     void clear();
 
     using  texture_receiver_fn = std::function<void(texture_image_properties&,texture_properties_ptr)>;
-    void  insert(texture_properties_ptr const  props, texture_receiver_fn const&  receiver);
+    void  insert_texture_request(texture_properties_ptr const  props, texture_receiver_fn const&  receiver);
 
     using  vertex_program_receiver_fn =
             std::function<void(boost::filesystem::path const&,  //!< Shader file path-name.
                                std::shared_ptr<std::vector<std::string> const>, //!< Lines of the shader's code.
                                std::string const&               //!< Error message. Empty string means no error.
                                )>;
-    void  insert(boost::filesystem::path const&  shader_file, vertex_program_receiver_fn const&  receiver);
+    void  insert_vertex_program_request(boost::filesystem::path const&  shader_file,
+                                          vertex_program_receiver_fn const&  receiver);
+
+    using  fragment_program_receiver_fn =
+            std::function<void(boost::filesystem::path const&,  //!< Shader file path-name.
+                               std::shared_ptr<std::vector<std::string> const>, //!< Lines of the shader's code.
+                               std::string const&               //!< Error message. Empty string means no error.
+                               )>;
+    void  insert_fragment_program_request(boost::filesystem::path const&  shader_file,
+                                          fragment_program_receiver_fn const&  receiver);
 
 private:
     resource_loader();
@@ -36,8 +45,11 @@ private:
     resource_loader(resource_loader const&) = delete;
     resource_loader& operator=(resource_loader const&) = delete;
 
-    bool  fetch(texture_properties_ptr&  output_props, texture_receiver_fn&  output_receiver);
-    bool  fetch(boost::filesystem::path&  shader_file, vertex_program_receiver_fn&  output_receiver);
+    bool  fetch_texture_request(texture_properties_ptr&  output_props, texture_receiver_fn&  output_receiver);
+    bool  fetch_vertex_program_request(boost::filesystem::path&  shader_file,
+                                       vertex_program_receiver_fn&  output_receiver);
+    bool  fetch_fragment_program_request(boost::filesystem::path&  shader_file,
+                                         fragment_program_receiver_fn&  output_receiver);
 
     void  start_worker_if_not_running();
     void  worker();
@@ -48,6 +60,7 @@ private:
 
     std::deque< std::pair<texture_properties_ptr,texture_receiver_fn> >  m_texture_requests;
     std::deque< std::pair<boost::filesystem::path,vertex_program_receiver_fn> >  m_vertex_program_requests;
+    std::deque< std::pair<boost::filesystem::path,fragment_program_receiver_fn> >  m_fragment_program_requests;
 };
 
 

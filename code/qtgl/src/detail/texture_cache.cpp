@@ -10,12 +10,12 @@
 namespace qtgl { namespace detail {
 
 
-bool  textures_props_equal(texture_properties_ptr const  props0, texture_properties_ptr const  props1)
+static bool  textures_props_equal(texture_properties_ptr const  props0, texture_properties_ptr const  props1)
 {
     return *props0 == *props1;
 }
 
-size_t  textures_props_hasher(texture_properties_ptr const  props)
+static size_t  textures_props_hasher(texture_properties_ptr const  props)
 {
     return hasher_of_texture_properties(*props);
 }
@@ -61,7 +61,7 @@ void  texture_cache::insert_load_request(texture_properties_ptr const  props)
     if (props->image_file() == chessboard_texture_imaginary_image_path())
         insert(create_chessboard_texture(props));
     else
-        resource_loader::instance().insert(
+        resource_loader::instance().insert_texture_request(
                     props,
                     std::bind(&texture_cache::receiver,this,std::placeholders::_1,std::placeholders::_2)
                     );

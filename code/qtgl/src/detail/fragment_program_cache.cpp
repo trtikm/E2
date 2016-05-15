@@ -1,4 +1,4 @@
-#include <qtgl/detail/vertex_program_cache.hpp>
+#include <qtgl/detail/fragment_program_cache.hpp>
 #include <qtgl/detail/resource_loader.hpp>
 #include <qtgl/shader_generators.hpp>
 #include <utility/assumptions.hpp>
@@ -10,14 +10,14 @@
 namespace qtgl { namespace detail {
 
 
-static bool  program_props_equal(vertex_program_properties_ptr const  props0, vertex_program_properties_ptr const  props1)
+static bool  program_props_equal(fragment_program_properties_ptr const  props0, fragment_program_properties_ptr const  props1)
 {
     return *props0 == *props1;
 }
 
-static size_t  program_props_hasher(vertex_program_properties_ptr const  props)
+static size_t  program_props_hasher(fragment_program_properties_ptr const  props)
 {
-    return hasher_of_vertex_program_properties(*props);
+    return hasher_of_fragment_program_properties(*props);
 }
 
 static size_t  boost_path_hasher(boost::filesystem::path const&  path)
@@ -28,24 +28,24 @@ static size_t  boost_path_hasher(boost::filesystem::path const&  path)
 }
 
 
-vertex_program_cache&  vertex_program_cache::instance()
+fragment_program_cache&  fragment_program_cache::instance()
 {
-    static vertex_program_cache  tc;
+    static fragment_program_cache  tc;
     return tc;
 }
 
-vertex_program_cache::vertex_program_cache()
+fragment_program_cache::fragment_program_cache()
     : m_cached_programs(10ULL,&qtgl::detail::boost_path_hasher)
     , m_pending_programs()
     , m_props_to_pathnames(10ULL,&qtgl::detail::program_props_hasher,&qtgl::detail::program_props_equal)
     , m_failed_loads(10ULL,&qtgl::detail::boost_path_hasher)
     , m_mutex()
-    , m_dummy_program(vertex_program_generators::transform_3D_vertices::create())
+    , m_dummy_program(fragment_program_generators::pink_colour::create())
 {}
 
-void  vertex_program_cache::receiver(boost::filesystem::path const&  shader_file,
-                                     source_code_lines_ptr const  source_code_lines,
-                                     std::string const&  error_message)
+void  fragment_program_cache::receiver(boost::filesystem::path const&  shader_file,
+                                       source_code_lines_ptr const  source_code_lines,
+                                       std::string const&  error_message)
 {
     TMPROF_BLOCK();
 
@@ -53,7 +53,7 @@ void  vertex_program_cache::receiver(boost::filesystem::path const&  shader_file
     m_pending_programs.push_back(std::make_tuple(shader_file,source_code_lines,error_message));
 }
 
-void vertex_program_cache::clear(bool const  props_to_files, bool const destroy_also_dummy_program)
+void fragment_program_cache::clear(bool const  props_to_files, bool const destroy_also_dummy_program)
 {
     std::lock_guard<std::mutex> const  lock(m_mutex);
     m_pending_programs.clear();
@@ -64,7 +64,7 @@ void vertex_program_cache::clear(bool const  props_to_files, bool const destroy_
         m_dummy_program.reset();
 }
 
-void  vertex_program_cache::insert_load_request(boost::filesystem::path const&  shader_file)
+void  fragment_program_cache::insert_load_request(boost::filesystem::path const&  shader_file)
 {
     TMPROF_BLOCK();
 
@@ -77,14 +77,14 @@ void  vertex_program_cache::insert_load_request(boost::filesystem::path const&  
         if (m_failed_loads.count(shader_file) != 0ULL)
             return;
     }
-    if (shader_file == vertex_program_generators::transform_3D_vertices::imaginary_shader_file())
+    if (shader_file == fragment_program_generators::pink_colour::imaginary_shader_file())
         return;
     if (!boost::filesystem::is_regular_file(shader_file))
         return;
 
-    resource_loader::instance().insert_vertex_program_request(
+    resource_loader::instance().insert_fragment_program_request(
                 shader_file,
-                std::bind(&vertex_program_cache::receiver,
+                std::bind(&fragment_program_cache::receiver,
                           this,
                           std::placeholders::_1,
                           std::placeholders::_2,
@@ -92,7 +92,7 @@ void  vertex_program_cache::insert_load_request(boost::filesystem::path const&  
                 );
 }
 
-bool  vertex_program_cache::insert_load_request(vertex_program_properties_ptr const  props)
+bool  fragment_program_cache::insert_load_request(fragment_program_properties_ptr const  props)
 {
     boost::filesystem::path  shader_file = find_shader_file(props);
     if (shader_file.empty())
@@ -101,7 +101,7 @@ bool  vertex_program_cache::insert_load_request(vertex_program_properties_ptr co
     return true;
 }
 
-bool  vertex_program_cache::insert(boost::filesystem::path const&  shader_file, vertex_program_ptr const  program)
+bool  fragment_program_cache::insert(boost::filesystem::path const&  shader_file, fragment_program_ptr const  program)
 {
     TMPROF_BLOCK();
 
@@ -109,7 +109,7 @@ bool  vertex_program_cache::insert(boost::filesystem::path const&  shader_file, 
     return m_cached_programs.insert({shader_file,program}).second;
 }
 
-void  vertex_program_cache::process_pending_programs()
+void  fragment_program_cache::process_pending_programs()
 {
     TMPROF_BLOCK();
 
@@ -119,9 +119,9 @@ void  vertex_program_cache::process_pending_programs()
         source_code_lines_ptr const source_code_lines = std::get<1>(m_pending_programs.back());
         std::string&  error_message = std::get<2>(m_pending_programs.back());
 
-        vertex_program_ptr const  program =
-                error_message.empty() ? vertex_program::create(*source_code_lines,error_message) :
-                                        vertex_program_ptr();
+        fragment_program_ptr const  program =
+                error_message.empty() ? fragment_program::create(*source_code_lines,error_message) :
+                                        fragment_program_ptr();
         if (error_message.empty())
         {
             m_cached_programs.insert({shader_file,program});
@@ -134,7 +134,7 @@ void  vertex_program_cache::process_pending_programs()
     }
 }
 
-std::weak_ptr<vertex_program const>  vertex_program_cache::find(boost::filesystem::path const&  shader_file)
+std::weak_ptr<fragment_program const>  fragment_program_cache::find(boost::filesystem::path const&  shader_file)
 {
     TMPROF_BLOCK();
 
@@ -146,7 +146,7 @@ std::weak_ptr<vertex_program const>  vertex_program_cache::find(boost::filesyste
     return it->second;
 }
 
-std::weak_ptr<vertex_program const>  vertex_program_cache::find(vertex_program_properties_ptr const  props)
+std::weak_ptr<fragment_program const>  fragment_program_cache::find(fragment_program_properties_ptr const  props)
 {
     TMPROF_BLOCK();
 
@@ -156,7 +156,7 @@ std::weak_ptr<vertex_program const>  vertex_program_cache::find(vertex_program_p
     return find(shader_file);
 }
 
-bool  vertex_program_cache::associate_properties_with_pathname(vertex_program_properties_ptr const  props,
+bool  fragment_program_cache::associate_properties_with_pathname(fragment_program_properties_ptr const  props,
                                                                boost::filesystem::path const&  shader_file)
 {
     std::lock_guard<std::mutex> const  lock(m_mutex);
@@ -166,7 +166,7 @@ bool  vertex_program_cache::associate_properties_with_pathname(vertex_program_pr
     return shader_file == it->second;
 }
 
-boost::filesystem::path  vertex_program_cache::find_shader_file(vertex_program_properties_ptr const  props) const
+boost::filesystem::path  fragment_program_cache::find_shader_file(fragment_program_properties_ptr const  props) const
 {
     std::lock_guard<std::mutex> const  lock(m_mutex);
     auto const  it = m_props_to_pathnames.find(props);
