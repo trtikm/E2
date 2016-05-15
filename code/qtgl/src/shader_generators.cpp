@@ -16,14 +16,15 @@ boost::filesystem::path  imaginary_shader_file() noexcept
 
 static std::vector<std::string> const&  shader_lines()
 {
-    static std::string const  IN_POSITION =
-            binding_location_name(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION);
-    static std::string const  OUT_POSITION =
-            binding_location_name(vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION);
+    static natural_32_bit const  IN_POSITION =
+            value(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION);
+    static natural_32_bit const  OUT_POSITION =
+            value(vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION);
     static std::string const  MATRIX =
             uniform_name(vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED);
 
     static std::vector<std::string> const  lines{
+        msgstream() << "#version 420\n" << msgstream::end(),
         msgstream() << "layout(location=" << IN_POSITION << ") in vec3  in_position;\n" << msgstream::end(),
         msgstream() << "layout(location=" << OUT_POSITION << ") out vec4  out_position;\n" << msgstream::end(),
         msgstream() << "uniform mat4 " << MATRIX << ";\n" << msgstream::end(),
@@ -37,14 +38,18 @@ static std::vector<std::string> const&  shader_lines()
 
 vertex_program_properties const&  properties()
 {
-    static vertex_program_properties const  props(shader_lines());
+    static vertex_program_properties const  props{
+            { vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION },
+            { vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION },
+            { vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED },
+            };
     return props;
 }
 
 vertex_program_ptr  create()
 {
     std::string  error_message;
-    vertex_program_ptr const  program = vertex_program::create(shader_lines(),error_message);
+    vertex_program_ptr const  program = vertex_program::create(shader_lines(),properties(),error_message);
     INVARIANT(error_message.empty());
     return program;
 }
@@ -62,10 +67,11 @@ boost::filesystem::path  imaginary_shader_file() noexcept
 
 static std::vector<std::string> const&  shader_lines()
 {
-    static std::string const  OUT_COLOUR =
-            binding_location_name(fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR);
+    static natural_32_bit const  OUT_COLOUR =
+            value(fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR);
 
     static std::vector<std::string> const  lines{
+        msgstream() << "#version 420\n" << msgstream::end(),
         msgstream() << "layout(location=" << OUT_COLOUR << ") out vec4  out_colour;\n" << msgstream::end(),
         msgstream() << "void main() {\n" << msgstream::end(),
         msgstream() << "    out_colour = vec4(1.0, 0.0784, 0.5764, 1.0);\n" << msgstream::end(),
@@ -77,14 +83,18 @@ static std::vector<std::string> const&  shader_lines()
 
 fragment_program_properties const&  properties()
 {
-    static fragment_program_properties const  props(shader_lines());
+    static fragment_program_properties const  props{
+            {  },
+            { fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR },
+            {  },
+            };
     return props;
 }
 
 fragment_program_ptr  create()
 {
     std::string  error_message;
-    fragment_program_ptr const  program = fragment_program::create(shader_lines(),error_message);
+    fragment_program_ptr const  program = fragment_program::create(shader_lines(),properties(),error_message);
     INVARIANT(error_message.empty());
     return program;
 }

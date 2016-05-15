@@ -4,6 +4,28 @@
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 #include <tuple>
+#include <algorithm>
+#include <functional>
+
+namespace qtgl { namespace detail { namespace {
+
+
+template <typename T>
+struct identity { typedef T type; };
+
+template<typename container_type, typename key_type>
+bool  contains(container_type const&  C, key_type const&  K,
+               typename identity<std::function<bool(key_type const&, key_type const&)> >::type const&  equal_to
+                        = std::equal_to<key_type>())
+{
+    for (auto  it = C.cbegin(); it != C.cend(); ++it)
+        if (equal_to(it->first,K))
+            return true;
+    return false;
+}
+
+
+}}}
 
 namespace qtgl { namespace detail {
 
@@ -30,6 +52,8 @@ void  resource_loader::start_worker_if_not_running()
     if (m_worker_finished)
     {
         m_worker_finished = false;
+        if (m_worker_thread.joinable())
+            m_worker_thread.join();
         m_worker_thread = std::thread(&resource_loader::worker,this);
     }
 }
@@ -51,6 +75,11 @@ void  resource_loader::insert_texture_request(texture_properties_ptr const  prop
     TMPROF_BLOCK();
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
+    if (qtgl::detail::contains(m_texture_requests, props,
+                               [](texture_properties_ptr const  a, texture_properties_ptr const  b) {
+                                    return *a == *b;
+                                    }))
+        return;
     m_texture_requests.push_back({props,receiver});
     start_worker_if_not_running();
 }
@@ -61,6 +90,8 @@ void  resource_loader::insert_vertex_program_request(boost::filesystem::path con
     TMPROF_BLOCK();
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
+    if (qtgl::detail::contains(m_vertex_program_requests,shader_file))
+        return;
     m_vertex_program_requests.push_back({shader_file,receiver});
     start_worker_if_not_running();
 }
@@ -71,6 +102,8 @@ void  resource_loader::insert_fragment_program_request(boost::filesystem::path c
     TMPROF_BLOCK();
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
+    if (qtgl::detail::contains(m_fragment_program_requests, shader_file))
+        return;
     m_fragment_program_requests.push_back({shader_file,receiver});
     start_worker_if_not_running();
 }

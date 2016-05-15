@@ -116,20 +116,22 @@ void  fragment_program_cache::process_pending_programs()
     while (!m_pending_programs.empty())
     {
         boost::filesystem::path const& shader_file = std::get<0>(m_pending_programs.back());
-        source_code_lines_ptr const source_code_lines = std::get<1>(m_pending_programs.back());
-        std::string&  error_message = std::get<2>(m_pending_programs.back());
-
-        fragment_program_ptr const  program =
-                error_message.empty() ? fragment_program::create(*source_code_lines,error_message) :
-                                        fragment_program_ptr();
-        if (error_message.empty())
+        if (m_cached_programs.count(shader_file) == 0ULL)
         {
-            m_cached_programs.insert({shader_file,program});
-            m_props_to_pathnames.insert({program->properties(),shader_file});
-        }
-        else
-            m_failed_loads.insert({shader_file,m_pending_programs.back()});
+            source_code_lines_ptr const source_code_lines = std::get<1>(m_pending_programs.back());
+            std::string&  error_message = std::get<2>(m_pending_programs.back());
 
+            fragment_program_ptr const  program =
+                    error_message.empty() ? fragment_program::create(*source_code_lines,error_message) :
+                                            fragment_program_ptr();
+            if (error_message.empty())
+            {
+                m_cached_programs.insert({shader_file,program});
+                m_props_to_pathnames.insert({program->properties(),shader_file});
+            }
+            else
+                m_failed_loads.insert({shader_file,m_pending_programs.back()});
+        }
         m_pending_programs.pop_back();
     }
 }

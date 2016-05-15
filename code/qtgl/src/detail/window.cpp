@@ -23,6 +23,21 @@ namespace qtgl { namespace detail { namespace {
 natural_32_bit  s_windows_counter = 0U;
 std::mutex  s_windows_counter_mutex;
 
+void  initialise_caches()
+{
+    detail::resource_loader::instance();
+    detail::texture_cache::instance();
+    detail::vertex_program_cache::instance();
+    detail::fragment_program_cache::instance();
+}
+
+void  clear_caches()
+{
+    detail::resource_loader::instance().clear();
+    detail::texture_cache::instance().clear(true);
+    detail::vertex_program_cache::instance().clear(true,true);
+    detail::fragment_program_cache::instance().clear(true,true);
+}
 
 void  on_window_create()
 {
@@ -36,13 +51,8 @@ void  on_window_destroy()
     std::lock_guard<std::mutex> const  lock(s_windows_counter_mutex);
     ASSUMPTION(s_windows_counter > 0U);
     --s_windows_counter;
-    if (s_windows_counter == 0)
-    {
-        detail::resource_loader::instance().clear();
-        detail::texture_cache::instance().clear(true);
-        detail::vertex_program_cache::instance().clear(true,true);
-        detail::fragment_program_cache::instance().clear(true,true);
-    }
+    if (s_windows_counter == 0U)
+        clear_caches();
 }
 
 
@@ -245,9 +255,10 @@ void window::render_now(bool const  is_this_pure_redraw_request)
         glapi().glEnable(GL_BLEND);
         glapi().glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
         glapi().glDepthRangef(0.0f,1.0f);
+        initialise_caches();
         INVARIANT(!m_simulator.operator bool());
         m_simulator = m_create_simulator_fn();
-        INVARIANT(m_simulator.operator bool());
+        INVARIANT(m_simulator.operator bool());        
     }
 
     ++m_round_id;

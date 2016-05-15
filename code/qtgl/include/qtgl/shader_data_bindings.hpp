@@ -24,6 +24,8 @@ enum struct vertex_shader_input_buffer_binding_location : natural_8_bit
     BINDING_IN_TEXCOORD9            = 12,
 };
 
+inline natural_8_bit  value(vertex_shader_input_buffer_binding_location const  location)
+{ return static_cast<natural_8_bit>(location); }
 std::string  binding_location_name(vertex_shader_input_buffer_binding_location const  location);
 
 
@@ -44,6 +46,8 @@ enum struct vertex_shader_output_buffer_binding_location : natural_8_bit
     BINDING_OUT_TEXCOORD9           = 12,
 };
 
+inline natural_8_bit  value(vertex_shader_output_buffer_binding_location const  location)
+{ return static_cast<natural_8_bit>(location); }
 std::string  binding_location_name(vertex_shader_output_buffer_binding_location const  location);
 
 
@@ -53,6 +57,8 @@ enum struct vertex_shader_uniform_symbolic_name : natural_8_bit
     TRANSFORM_MATRIX_TRANSPOSED     = 1,
 };
 
+inline natural_8_bit  value(vertex_shader_uniform_symbolic_name const  name)
+{ return static_cast<natural_8_bit>(name); }
 std::string  uniform_symbolic_name(vertex_shader_uniform_symbolic_name const  symbolic_name);
 std::string  uniform_name(vertex_shader_uniform_symbolic_name const  symbolic_name);
 
@@ -74,6 +80,8 @@ enum struct fragment_shader_input_buffer_binding_location : natural_8_bit
     BINDING_IN_TEXCOORD9            = 12,
 };
 
+inline natural_8_bit  value(fragment_shader_input_buffer_binding_location const  location)
+{ return static_cast<natural_8_bit>(location); }
 std::string  binding_location_name(fragment_shader_input_buffer_binding_location const  location);
 
 
@@ -82,6 +90,8 @@ enum struct fragment_shader_output_buffer_binding_location : natural_8_bit
     BINDING_OUT_COLOUR              = 0,
 };
 
+inline natural_8_bit  value(fragment_shader_output_buffer_binding_location const  location)
+{ return static_cast<natural_8_bit>(location); }
 std::string  binding_location_name(fragment_shader_output_buffer_binding_location const  location);
 
 
@@ -90,6 +100,8 @@ enum struct fragment_shader_texture_sampler_binding : natural_8_bit
     BINDING_TEXTURE_DIFFUSE         = 0,
 };
 
+inline natural_8_bit  value(fragment_shader_texture_sampler_binding const  binding)
+{ return static_cast<natural_8_bit>(binding); }
 std::string  sampler_binding_name(fragment_shader_texture_sampler_binding const  texture_binding);
 
 
