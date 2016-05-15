@@ -215,6 +215,23 @@ private:
 std::string  load_fragment_program_file(boost::filesystem::path const&  shader_source_file,
                                         std::vector<std::string>& output_lines);
 
+void  insert_fragment_program_load_request(boost::filesystem::path const&  shader_file);
+bool  insert_fragment_program_load_request(fragment_program_properties_ptr const  props);
+inline bool  insert_fragment_program_load_request(fragment_program_properties const&  props)
+{ return insert_fragment_program_load_request(std::make_shared<fragment_program_properties>(props)); }
+
+std::weak_ptr<fragment_program const>  find_fragment_program(boost::filesystem::path const&  shader_file);
+std::weak_ptr<fragment_program const>  find_fragment_program(fragment_program_properties_ptr const  props);
+
+inline std::weak_ptr<fragment_program const>  find_fragment_program(fragment_program_properties const&  props)
+{ return find_fragment_program(std::make_shared<fragment_program_properties>(props)); }
+
+bool  associate_fragment_program_properties_with_shader_file(
+        fragment_program_properties_ptr const  props, boost::filesystem::path const&  shader_file
+        );
+boost::filesystem::path  find_fragment_program_file(fragment_program_properties_ptr const  props);
+inline boost::filesystem::path  find_fragment_program_file(fragment_program_properties const&  props)
+{ return find_fragment_program_file(std::make_shared<fragment_program_properties>(props)); }
 
 }
 
