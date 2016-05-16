@@ -234,8 +234,8 @@ bool  make_current(fragment_shader_texture_sampler_binding const  binding,
 
 void  make_current(fragment_shader_texture_sampler_binding const  binding, texture_ptr const  texture)
 {
-    ASSUMPTION(static_cast<natural_8_bit>(binding) < GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
-    glapi().glActiveTexture(GL_TEXTURE0 + static_cast<natural_8_bit>(binding));
+    ASSUMPTION(value(binding) < GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+    glapi().glActiveTexture(GL_TEXTURE0 + value(binding));
     glapi().glBindTexture(GL_TEXTURE_2D,texture->id());
 }
 

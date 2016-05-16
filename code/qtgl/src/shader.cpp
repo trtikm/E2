@@ -630,11 +630,11 @@ size_t  hasher_of_vertex_program_properties(vertex_program_properties const&  pr
 {
     std::size_t seed = 0ULL;
     for (auto const  location : props.input_buffer_bindings())
-        boost::hash_combine(seed,static_cast<natural_8_bit>(location));
+        boost::hash_combine(seed,value(location));
     for (auto const  location : props.output_buffer_bindings())
-        boost::hash_combine(seed,static_cast<natural_8_bit>(location));
+        boost::hash_combine(seed,value(location));
     for (auto const  name : props.symbolic_names_of_used_uniforms())
-        boost::hash_combine(seed,static_cast<natural_8_bit>(name));
+        boost::hash_combine(seed,value(name));
     return seed;
 }
 
@@ -880,11 +880,11 @@ size_t  hasher_of_fragment_program_properties(fragment_program_properties const&
 {
     std::size_t seed = 0ULL;
     for (auto const  location : props.input_buffer_bindings())
-        boost::hash_combine(seed,static_cast<natural_8_bit>(location));
+        boost::hash_combine(seed,value(location));
     for (auto const  location : props.output_buffer_bindings())
-        boost::hash_combine(seed,static_cast<natural_8_bit>(location));
+        boost::hash_combine(seed,value(location));
     for (auto const  sampler_binding : props.texture_sampler_bindings())
-        boost::hash_combine(seed,static_cast<natural_8_bit>(sampler_binding));
+        boost::hash_combine(seed,value(sampler_binding));
     return seed;
 }
 

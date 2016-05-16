@@ -48,7 +48,7 @@ GLuint  create_vertex_arrays(
             std::unordered_set<vertex_shader_input_buffer_binding_location>  visited;
             for (auto const& elem : bindings)
             {
-                if (static_cast<natural_8_bit>(elem.first) >= (natural_32_bit)GL_MAX_VERTEX_ATTRIBS ||
+                if (value(elem.first) >= (natural_32_bit)GL_MAX_VERTEX_ATTRIBS ||
                     visited.count(elem.first) != 0 ||
                     !elem.second.operator bool())
                     return false;
@@ -66,8 +66,8 @@ GLuint  create_vertex_arrays(
     for (auto const& elem : bindings)
     {
         glapi().glBindBuffer(GL_ARRAY_BUFFER,elem.second->id());
-        glapi().glEnableVertexAttribArray(static_cast<natural_8_bit>(elem.first));
-        glapi().glVertexAttribPointer(static_cast<natural_8_bit>(elem.first),
+        glapi().glEnableVertexAttribArray(value(elem.first));
+        glapi().glVertexAttribPointer(value(elem.first),
                                       elem.second->num_components_per_element(),
                                       GL_FLOAT,
                                       GL_FALSE,
