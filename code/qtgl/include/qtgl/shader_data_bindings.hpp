@@ -2,6 +2,7 @@
 #   define QTGL_SHADER_DATA_BINDINGS_HPP_INCLUDED
 
 #   include <utility/basic_numeric_types.hpp>
+#   include <unordered_set>
 #   include <string>
 
 namespace qtgl {
@@ -103,6 +104,10 @@ enum struct fragment_shader_texture_sampler_binding : natural_8_bit
 inline natural_8_bit  value(fragment_shader_texture_sampler_binding const  binding)
 { return static_cast<natural_8_bit>(binding); }
 std::string  sampler_binding_name(fragment_shader_texture_sampler_binding const  texture_binding);
+
+
+bool  compatible(std::unordered_set<vertex_shader_output_buffer_binding_location> const& vertex_program_output,
+                 std::unordered_set<fragment_shader_input_buffer_binding_location> const& fragment_program_input);
 
 
 }

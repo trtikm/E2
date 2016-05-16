@@ -1124,7 +1124,7 @@ void  shaders_binding::try_to_drop_dummy_programs() const
             fragment_shader_file().empty() ?
                     detail::fragment_program_cache::instance().insert_load_request(fragment_program_props()) :
                     detail::fragment_program_cache::instance().insert_load_request(fragment_shader_file()) ;
-        else
+        else if (!uses_dummmy_vertex_program())
         {
             fp = ptr;
             m_uses_dummmy_fragment_program = false;
@@ -1135,7 +1135,6 @@ void  shaders_binding::try_to_drop_dummy_programs() const
     if (change)
         m_binding_data->update(vp,fp);
 }
-
 
 shaders_binding::binding_data_type::binding_data_type(
         vertex_program_ptr const  vertex_program,
@@ -1149,6 +1148,8 @@ shaders_binding::binding_data_type::binding_data_type(
     TMPROF_BLOCK();
 
     ASSUMPTION(m_vertex_program.operator bool() && m_fragment_program.operator bool());
+    ASSUMPTION(compatible(m_vertex_program->properties()->output_buffer_bindings(),
+                          m_fragment_program->properties()->input_buffer_bindings()));
     if (do_create_ID)
         create_ID();
 }
@@ -1164,6 +1165,8 @@ void  shaders_binding::binding_data_type::update(vertex_program_ptr  vertex_prog
     TMPROF_BLOCK();
 
     ASSUMPTION(vertex_program.operator bool() && fragment_program.operator bool());
+    ASSUMPTION(compatible(vertex_program->properties()->output_buffer_bindings(),
+                          fragment_program->properties()->input_buffer_bindings()));
     destroy_ID();
     m_vertex_program = vertex_program;
     m_fragment_program = fragment_program;

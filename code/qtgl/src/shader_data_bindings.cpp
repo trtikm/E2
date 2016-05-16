@@ -105,5 +105,67 @@ std::string  sampler_binding_name(fragment_shader_texture_sampler_binding const 
     }
 }
 
+bool  compatible(std::unordered_set<vertex_shader_output_buffer_binding_location> const& vertex_program_output,
+                 std::unordered_set<fragment_shader_input_buffer_binding_location> const& fragment_program_input)
+{
+    for (auto const  input : fragment_program_input)
+        switch (input)
+        {
+        case fragment_shader_input_buffer_binding_location::BINDING_IN_POSITION :
+            if (vertex_program_output.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION) == 0ULL)
+                return false;
+            break;
+        case fragment_shader_input_buffer_binding_location::BINDING_IN_COLOUR   :
+            if (vertex_program_output.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_COLOUR) == 0ULL)
+                return false;
+            break;
+        case fragment_shader_input_buffer_binding_location::BINDING_IN_NORMAL   :
+            if (vertex_program_output.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_NORMAL) == 0ULL)
+                return false;
+            break;
+        case fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD0:
+            if (vertex_program_output.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD0) == 0ULL)
+                return false;
+            break;
+        case fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD1:
+            if (vertex_program_output.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD1) == 0ULL)
+                return false;
+            break;
+        case fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD2:
+            if (vertex_program_output.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD2) == 0ULL)
+                return false;;
+        case fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD3:
+            if (vertex_program_output.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD3) == 0ULL)
+                return false;
+            break;
+        case fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD4:
+            if (vertex_program_output.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD4) == 0ULL)
+                return false;
+            break;
+        case fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD5:
+            if (vertex_program_output.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD5) == 0ULL)
+                return false;;
+        case fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD6:
+            if (vertex_program_output.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD6) == 0ULL)
+                return false;
+            break;
+        case fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD7:
+            if (vertex_program_output.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD7) == 0ULL)
+                return false;
+            break;
+        case fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD8:
+            if (vertex_program_output.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD8) == 0ULL)
+                return false;
+            break;
+        case fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD9:
+            if (vertex_program_output.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD9) == 0ULL)
+                return false;
+            break;
+        default:
+            UNREACHABLE();
+        }
+    return true;
+}
+
 
 }
