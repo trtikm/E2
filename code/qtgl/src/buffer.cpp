@@ -35,28 +35,9 @@ GLuint  create_glbuffer(GLenum const  target, GLvoid const* data, natural_64_bit
     return id;
 }
 
-GLuint  create_vertex_arrays(
-        std::vector< std::pair<vertex_shader_input_buffer_binding_location,buffer_ptr> > const&  bindings
-        )
+GLuint  create_vertex_arrays(std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings)
 {
     TMPROF_BLOCK();
-
-    if (bindings.empty() || bindings.size() > (natural_64_bit)GL_MAX_VERTEX_ATTRIBS)
-        return 0U;
-    if (![](std::vector< std::pair<vertex_shader_input_buffer_binding_location,buffer_ptr> > const&  bindings)
-            {
-            std::unordered_set<vertex_shader_input_buffer_binding_location>  visited;
-            for (auto const& elem : bindings)
-            {
-                if (value(elem.first) >= (natural_32_bit)GL_MAX_VERTEX_ATTRIBS ||
-                    visited.count(elem.first) != 0 ||
-                    !elem.second.operator bool())
-                    return false;
-                visited.insert(elem.first);
-            }
-            return true;
-            }(bindings) )
-        return 0U;
 
     GLuint  id;
     glapi().glGenVertexArrays(1U,&id);
@@ -251,7 +232,6 @@ buffer::~buffer()
 }
 
 
-
 }
 
 namespace qtgl {
@@ -259,66 +239,94 @@ namespace qtgl {
 
 buffers_binding_ptr  buffers_binding::create(
         buffer_ptr const  index_buffer,
-        std::vector< std::pair<vertex_shader_input_buffer_binding_location,buffer_ptr> > const&  bindings
+        std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings
         )
 {
     TMPROF_BLOCK();
 
+    ASSUMPTION(!bindings.empty() && bindings.size() <= (natural_64_bit)GL_MAX_VERTEX_ATTRIBS);
+    ASSUMPTION(bindings.count(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION) != 0ULL);
+    ASSUMPTION(index_buffer.operator bool() && index_buffer->properties()->has_integral_components());
+    ASSUMPTION(
+        [](std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings) {
+                for (auto const&  elem : bindings)
+                    if (elem.second->properties()->num_primitives() != bindings.cbegin()->second->properties()->num_primitives())
+                        return false;
+                return true;
+                }(bindings)
+        );
+
     GLuint const  id = create_vertex_arrays(bindings);
     if (id == 0U)
         return buffers_binding_ptr{};
-    return buffers_binding_ptr( new buffers_binding(id,index_buffer) );
+    return buffers_binding_ptr(new buffers_binding(id,index_buffer,index_buffer->properties()->num_components_per_primitive(),bindings));
 }
 
 buffers_binding_ptr  buffers_binding::create(
         natural_8_bit const  num_indices_per_primitive,
-        std::vector< std::pair<vertex_shader_input_buffer_binding_location,buffer_ptr> > const&  bindings
+        std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings
         )
 {
     TMPROF_BLOCK();
 
-    buffer_ptr  index_buffer;
-    {
-        for (auto const& elem : bindings)
-            if (elem.first == vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION)
-            {
-                index_buffer = buffer::create(0U,{ "",
-                                                   num_indices_per_primitive,
-                                                   elem.second->properties()->num_primitives(),
-                                                   (natural_8_bit)sizeof(natural_32_bit),
-                                                   true });
-                break;
-            }
-        if (!index_buffer.operator bool())
-            return buffers_binding_ptr{};
-    }
+    ASSUMPTION(!bindings.empty() && bindings.size() <= (natural_64_bit)GL_MAX_VERTEX_ATTRIBS);
+    ASSUMPTION(bindings.count(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION) != 0ULL);
+    ASSUMPTION(num_indices_per_primitive == 1U || num_indices_per_primitive == 2U || num_indices_per_primitive == 3U);
+    ASSUMPTION(
+        [](std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings) {
+                for (auto const&  elem : bindings)
+                    if (elem.second->properties()->num_primitives() != bindings.cbegin()->second->properties()->num_primitives())
+                        return false;
+                return true;
+                }(bindings)
+        );
 
     GLuint const  id = create_vertex_arrays(bindings);
     if (id == 0U)
         return buffers_binding_ptr{};
-
-    return buffers_binding_ptr( new buffers_binding(id,index_buffer) );
+    return buffers_binding_ptr(new buffers_binding(id,buffer_ptr(),num_indices_per_primitive,bindings));
 }
 
-buffers_binding::buffers_binding(GLuint const  id, buffer_ptr const  index_buffer)
+buffers_binding::buffers_binding(GLuint const  id, buffer_ptr const  index_buffer, natural_8_bit const  num_indices_per_primitive,
+                                 std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings)
     : m_id(id)
     , m_index_buffer(index_buffer)
-{}
+    , m_num_indices_per_primitive(num_indices_per_primitive)
+    , m_bindings(bindings)
+{
+    ASSUMPTION(m_id != 0U);
+    ASSUMPTION(!m_index_buffer.operator bool() ||
+               m_index_buffer->properties()->num_components_per_primitive() == num_indices_per_primitive);
+    ASSUMPTION(!m_bindings.empty() && m_bindings.size() <= (natural_64_bit)GL_MAX_VERTEX_ATTRIBS);
+    ASSUMPTION(m_bindings.count(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION) != 0ULL);
+    ASSUMPTION(
+        [](std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings) {
+                for (auto const&  elem : bindings)
+                    if (elem.second->properties()->num_primitives() != bindings.cbegin()->second->properties()->num_primitives())
+                        return false;
+                return true;
+                }(m_bindings)
+        );
+}
 
 buffers_binding::~buffers_binding()
 {
     glapi().glDeleteVertexArrays(1U,&m_id);
 }
 
+natural_32_bit  buffers_binding::num_primitives() const
+{
+    return m_bindings.at(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION)->properties()->num_primitives();
+}
 
-void  make_current(buffers_binding_ptr const  binding)
+void  make_current(buffers_binding const&  binding)
 {
     TMPROF_BLOCK();
 
-    glapi().glBindVertexArray(binding->id());
-    detail::draw_make_current(binding->index_buffer()->id(),
-                              binding->index_buffer()->properties()->num_components_per_primitive(),
-                              binding->index_buffer()->properties()->num_primitives());
+    glapi().glBindVertexArray(binding.id());
+    detail::draw_make_current(binding.uses_index_buffer() ? binding.index_buffer()->id() : 0U,
+                              binding.num_indices_per_primitive(),
+                              binding.num_primitives());
 }
 
 

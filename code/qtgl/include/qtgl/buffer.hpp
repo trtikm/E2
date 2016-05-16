@@ -7,6 +7,7 @@
 #   include <boost/filesystem/path.hpp>
 #   include <array>
 #   include <vector>
+#   include <unordered_map>
 #   include <memory>
 #   include <utility>
 
@@ -107,31 +108,38 @@ struct buffers_binding
 {
     static buffers_binding_ptr  create(
             buffer_ptr const  index_buffer,
-            std::vector< std::pair<vertex_shader_input_buffer_binding_location,buffer_ptr> > const&  bindings
+            std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings
             );
 
     static buffers_binding_ptr  create(
             natural_8_bit const  num_indices_per_primitive,  // 1 (points), 2 (lines), or 3 (triangles)
-            std::vector< std::pair<vertex_shader_input_buffer_binding_location,buffer_ptr> > const&  bindings
+            std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings
             );
 
     ~buffers_binding();
 
-    GLuint  id() const { return m_id; }
-    buffer_ptr  index_buffer() const { return m_index_buffer; }
+    GLuint  id() const noexcept { return m_id; }
+
+    bool  uses_index_buffer() const noexcept { return index_buffer().operator bool(); }
+    buffer_ptr  index_buffer() const noexcept { return m_index_buffer; }
+    natural_32_bit  num_primitives() const;
+    natural_8_bit  num_indices_per_primitive() const noexcept { return m_num_indices_per_primitive; }
 
 private:
-    buffers_binding(GLuint const  id, buffer_ptr const  index_buffer);
+    buffers_binding(GLuint const  id, buffer_ptr const  index_buffer, natural_8_bit const  num_indices_per_primitive,
+                    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings);
 
     buffers_binding(buffers_binding const&) = delete;
     buffers_binding& operator=(buffers_binding const&) = delete;
 
-    GLuint  m_id;
     buffer_ptr  m_index_buffer;
+    GLuint  m_id;
+    natural_8_bit  m_num_indices_per_primitive;
+    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr>  m_bindings;
 };
 
 
-void  make_current(buffers_binding_ptr const  buffers_binding);
+void  make_current(buffers_binding const&  binding);
 
 
 }

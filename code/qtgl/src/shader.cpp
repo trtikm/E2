@@ -559,6 +559,14 @@ vertex_program_properties::vertex_program_properties(
     , m_symbolic_names_of_used_uniforms(symbolic_names_of_used_uniforms)
 {
     ASSUMPTION(m_input_buffer_bindings.count(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION) != 0U);
+    ASSUMPTION(
+        [](std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings) {
+                for (auto const  location : input_buffer_bindings)
+                    if (value(location) > (natural_32_bit)GL_MAX_VERTEX_ATTRIBS)
+                        return false;
+                return true;
+                }(m_input_buffer_bindings)
+        );
     ASSUMPTION(m_output_buffer_bindings.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION) != 0U);
 }
 
@@ -584,7 +592,10 @@ vertex_program_properties::vertex_program_properties(std::vector<std::string> co
             vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD9,
             })
         if (tokens.count(binding_location_name(location)) != 0ULL)
+        {
+            ASSUMPTION(value(location) <= (natural_32_bit)GL_MAX_VERTEX_ATTRIBS);
             m_input_buffer_bindings.insert(location);
+        }
 
     ASSUMPTION(m_input_buffer_bindings.count(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION) != 0U);
 
