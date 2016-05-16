@@ -107,39 +107,96 @@ using  buffers_binding_ptr = std::shared_ptr<buffers_binding const>;
 struct buffers_binding
 {
     static buffers_binding_ptr  create(
+            boost::filesystem::path const&  index_buffer_path,
+            std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const&  buffer_paths,
+            std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings = {}
+            );
+
+    static buffers_binding_ptr  create(
             buffer_ptr const  index_buffer,
-            std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings
+            std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const&  buffer_paths,
+            std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings = {}
             );
 
     static buffers_binding_ptr  create(
             natural_8_bit const  num_indices_per_primitive,  // 1 (points), 2 (lines), or 3 (triangles)
-            std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings
+            std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const&  buffer_paths,
+            std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings = {}
             );
 
-    ~buffers_binding();
+    boost::filesystem::path const&  index_buffer_path() const noexcept { return m_index_buffer_path; }
+    std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const& buffer_paths() const noexcept
+    { return m_buffer_paths; }
 
-    GLuint  id() const noexcept { return m_id; }
+    buffer_ptr  direct_index_buffer() const noexcept { return m_direct_index_buffer; }
+    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings() const noexcept
+    { return m_direct_bindings; }
 
-    bool  uses_index_buffer() const noexcept { return index_buffer().operator bool(); }
-    buffer_ptr  index_buffer() const noexcept { return m_index_buffer; }
-    natural_32_bit  num_primitives() const;
     natural_8_bit  num_indices_per_primitive() const noexcept { return m_num_indices_per_primitive; }
 
+    GLuint  id() const noexcept { return m_binding_data->id(); }
+    GLuint  index_buffer_id() const noexcept { return m_binding_data->index_buffer_id(); }
+    std::unordered_map<vertex_shader_input_buffer_binding_location,GLuint> const&  bindings() const noexcept
+    { return m_binding_data->bindings(); }
+
+    bool  make_current() const;
+
 private:
-    buffers_binding(GLuint const  id, buffer_ptr const  index_buffer, natural_8_bit const  num_indices_per_primitive,
-                    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings);
+
+    buffers_binding(boost::filesystem::path const&  index_buffer_path,
+                    buffer_ptr const  direct_index_buffer,
+                    natural_8_bit const  num_indices_per_primitive,
+                    std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const&  buffer_paths,
+                    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings);
 
     buffers_binding(buffers_binding const&) = delete;
     buffers_binding& operator=(buffers_binding const&) = delete;
 
-    buffer_ptr  m_index_buffer;
-    GLuint  m_id;
+    struct  binding_data_type
+    {
+        binding_data_type()
+            : m_id(0U)
+            , m_index_buffer_id(0U)
+            , m_bindings()
+        {}
+
+        ~binding_data_type()
+        {
+            destroy_ID();
+        }
+
+        GLuint  id() const noexcept { return m_id; }
+        GLuint  index_buffer_id() const noexcept { return m_index_buffer_id; }
+        std::unordered_map<vertex_shader_input_buffer_binding_location,GLuint> const&  bindings() const noexcept
+        { return m_bindings; }
+
+        bool  reset(GLuint const  index_buffer_id,
+                    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings,
+                    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings);
+
+    private:
+        void  destroy_ID();
+
+        GLuint  m_id;
+        GLuint  m_index_buffer_id;
+        std::unordered_map<vertex_shader_input_buffer_binding_location,GLuint>  m_bindings;
+    };
+
+    using  binding_data_ptr = std::unique_ptr<binding_data_type>;
+
+    boost::filesystem::path  m_index_buffer_path;
+    std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path>  m_buffer_paths;
+
+    buffer_ptr  m_direct_index_buffer;
+    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr>  m_direct_bindings;
+
     natural_8_bit  m_num_indices_per_primitive;
-    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr>  m_bindings;
+
+    binding_data_ptr  m_binding_data;
 };
 
 
-void  make_current(buffers_binding const&  binding);
+inline bool  make_current(buffers_binding const&  binding) { return binding.make_current(); }
 
 
 }

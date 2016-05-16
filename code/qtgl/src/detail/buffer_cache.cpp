@@ -1,0 +1,134 @@
+#include <qtgl/detail/buffer_cache.hpp>
+#include <qtgl/detail/resource_loader.hpp>
+#include <qtgl/buffer_generators.hpp>
+#include <utility/assumptions.hpp>
+#include <utility/invariants.hpp>
+#include <utility/timeprof.hpp>
+#include <boost/filesystem.hpp>
+#include <functional>
+
+namespace qtgl { namespace detail {
+
+
+static bool  buffers_props_equal(buffer_properties_ptr const  props0, buffer_properties_ptr const  props1)
+{
+    return *props0 == *props1;
+}
+
+static size_t  buffers_props_hasher(buffer_properties_ptr const  props)
+{
+    return hasher_of_buffer_properties(*props);
+}
+
+static size_t  boost_path_hasher(boost::filesystem::path const&  path)
+{
+    std::size_t seed = 0ULL;
+    boost::hash_combine(seed,path.string());
+    return seed;
+}
+
+
+buffer_cache&  buffer_cache::instance()
+{
+    static buffer_cache  bc;
+    return bc;
+}
+
+buffer_cache::buffer_cache()
+    : m_cached_buffers(10ULL,&qtgl::detail::boost_path_hasher)
+    , m_pending_buffers()
+    , m_failed_loads(10ULL,&qtgl::detail::boost_path_hasher)
+    , m_mutex()
+{}
+
+void  buffer_cache::receiver(boost::filesystem::path const&  buffer_file,
+                             buffer_properties_ptr const  props,
+                             buffer_data_ptr const  data,
+                             std::string const&  error_message
+                             )
+{
+    TMPROF_BLOCK();
+
+    std::lock_guard<std::mutex> const  lock(m_mutex);
+    m_pending_buffers.push_back(std::make_tuple(buffer_file,props,data,error_message));
+}
+
+void buffer_cache::clear()
+{
+    std::lock_guard<std::mutex> const  lock(m_mutex);
+    m_pending_buffers.clear();
+    m_cached_buffers.clear();
+//    if (props_to_files)
+//        m_props_to_pathnames.clear();
+    m_failed_loads.clear();
+}
+
+void  buffer_cache::insert_load_request(boost::filesystem::path const&  buffer_file)
+{
+    TMPROF_BLOCK();
+
+    if (buffer_file.empty())
+        return;
+    if (!find(buffer_file).expired())
+        return;
+    {
+        std::lock_guard<std::mutex> const  lock(m_mutex);
+        if (m_failed_loads.count(buffer_file) != 0ULL)
+            return;
+    }
+    if (!boost::filesystem::is_regular_file(buffer_file))
+        return;
+
+//    resource_loader::instance().insert_buffer_request(
+//                buffer_file,
+//                std::bind(&buffer_cache::receiver,
+//                          this,
+//                          std::placeholders::_1,
+//                          std::placeholders::_2,
+//                          std::placeholders::_3,
+//                          std::placeholders::_4)
+//                );
+}
+
+void  buffer_cache::process_pending_buffers()
+{
+    TMPROF_BLOCK();
+
+    while (!m_pending_buffers.empty())
+    {
+        boost::filesystem::path const& buffer_file = std::get<0>(m_pending_buffers.back());
+        if (m_cached_buffers.count(buffer_file) == 0ULL)
+        {
+//            source_code_lines_ptr const source_code_lines = std::get<1>(m_pending_buffers.back());
+//            std::string&  error_message = std::get<2>(m_pending_buffers.back());
+
+//            buffer_ptr const  buffer =
+//                    error_message.empty() ? buffer::create(*source_code_lines,error_message) :
+//                                            buffer_ptr();
+//            if (error_message.empty())
+//            {
+//                m_cached_buffers.insert({buffer_file,buffer});
+//                m_props_to_pathnames.insert({buffer->properties(),buffer_file});
+//            }
+//            else
+//                m_failed_loads.insert({buffer_file,m_pending_buffers.back()});
+        }
+        m_pending_buffers.pop_back();
+    }
+}
+
+std::weak_ptr<buffer const>  buffer_cache::find(boost::filesystem::path const&  shader_file)
+{
+    TMPROF_BLOCK();
+
+    std::lock_guard<std::mutex> const  lock(m_mutex);
+    process_pending_buffers();
+    auto const  it = m_cached_buffers.find(shader_file);
+    if (it == m_cached_buffers.cend())
+        return {};
+    return it->second;
+}
+
+
+
+}}

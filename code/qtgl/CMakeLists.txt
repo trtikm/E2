@@ -66,6 +66,8 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/qtgl/detail/window.hpp
     ./src/detail/window.cpp
+    ./include/qtgl/detail/buffer_cache.hpp
+    ./src/detail/buffer_cache.cpp
     ./include/qtgl/detail/texture_cache.hpp
     ./src/detail/texture_cache.cpp
     ./include/qtgl/detail/vertex_program_cache.hpp

@@ -1,5 +1,6 @@
 #include <qtgl/detail/resource_loader.hpp>
 #include <qtgl/detail/texture_cache.hpp>
+#include <qtgl/detail/buffer_cache.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>

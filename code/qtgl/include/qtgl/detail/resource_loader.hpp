@@ -3,6 +3,7 @@
 
 #   include <qtgl/texture.hpp>
 #   include <qtgl/shader.hpp>
+#   include <qtgl/buffer.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <functional>
 #   include <deque>

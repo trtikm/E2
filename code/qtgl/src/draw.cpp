@@ -3,30 +3,40 @@
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 
-namespace qtgl { namespace detail {
+namespace qtgl { namespace detail { namespace current_draw {
 
 
+static bool  s_are_buffers_ready = false;
 static GLuint  s_id = 0U;
 static natural_8_bit  s_num_components_per_primitive = 0U;
 static natural_32_bit  s_num_primitives = 0U;
 
-void  draw_make_current(GLuint const  id,
-                        natural_8_bit const num_components_per_primitive,
-                        natural_32_bit const  num_primitives)
+void  set_are_buffers_ready(bool const  are_buffers_ready)
 {
-    TMPROF_BLOCK();
+    s_are_buffers_ready = are_buffers_ready;
+}
 
+void  set_index_buffer_id(GLuint const id)
+{
+    s_id = id;
+}
+
+void  set_num_components_per_primitive(natural_8_bit const  num_components_per_primitive)
+{
     ASSUMPTION(num_components_per_primitive == 2U ||
                num_components_per_primitive == 3U ||
                num_components_per_primitive == 4U );
-    ASSUMPTION(num_primitives > 0U);
-    s_id = id;
     s_num_components_per_primitive = num_components_per_primitive;
+}
+
+void  set_num_primitives(natural_32_bit const  num_primitives)
+{
+    ASSUMPTION(num_primitives > 0U);
     s_num_primitives = num_primitives;
 }
 
 
-}}
+}}}
 
 namespace qtgl {
 
@@ -35,7 +45,11 @@ void  draw()
 {
     TMPROF_BLOCK();
 
-    using namespace detail;
+    using namespace detail::current_draw;
+
+    if (!s_are_buffers_ready)
+        return;
+
     ASSUMPTION(s_num_components_per_primitive == 2U ||
                s_num_components_per_primitive == 3U ||
                s_num_components_per_primitive == 4U );

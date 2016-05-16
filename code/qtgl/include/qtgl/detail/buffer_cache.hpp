@@ -1,0 +1,87 @@
+#ifndef QTGL_DETAIL_BUFFER_CACHE_HPP_INCLUDED
+#   define QTGL_DETAIL_BUFFER_CACHE_HPP_INCLUDED
+
+#   include <qtgl/buffer.hpp>
+#   include <boost/filesystem/path.hpp>
+#   include <unordered_map>
+#   include <vector>
+#   include <memory>
+#   include <mutex>
+
+namespace qtgl { namespace detail {
+
+
+struct buffer_cache
+{
+    using  buffer_data_ptr = std::shared_ptr<std::vector<natural_8_bit> const>;
+    using  buffer_load_info = std::tuple<boost::filesystem::path,   //!< Buffer file path-name.
+                                         buffer_properties_ptr,     //!< Properties of the loaded buffer's data
+                                         buffer_data_ptr,           //!< Raw data of the buffer.
+                                         std::string                //!< Error message. Empty string means no error.
+                                         >;
+    using  failed_loads_map = std::unordered_map<boost::filesystem::path, buffer_load_info,
+                                                 size_t(*)(boost::filesystem::path const&) >;
+
+    static buffer_cache&  instance();
+
+    void clear();
+
+    void  insert_load_request(boost::filesystem::path const&  buffer_file);
+    //void  insert_load_request(buffer_properties_ptr const  props);
+
+    //bool  insert(buffer_ptr const  buffer);
+    std::weak_ptr<buffer const>  find(boost::filesystem::path const&  buffer_file);
+    //std::weak_ptr<buffer const>  find(buffer_properties_ptr const  props);
+
+private:
+    buffer_cache();
+
+    buffer_cache(buffer_cache const&) = delete;
+    buffer_cache& operator=(buffer_cache const&) = delete;
+
+    void  receiver(boost::filesystem::path const&  buffer_file,
+                   buffer_properties_ptr const  props,
+                   buffer_data_ptr const  data,
+                   std::string const&  error_message //!< Empty string means no error.
+                   );
+
+    void  process_pending_buffers();
+
+    std::unordered_map<boost::filesystem::path,   //!< Shader file path-name.
+                       buffer_ptr,
+                       size_t(*)(boost::filesystem::path const&)
+                       >  m_cached_buffers;
+
+    std::vector<buffer_load_info>  m_pending_buffers;
+
+//    std::unordered_map<
+//            buffer_properties_ptr,
+//            boost::filesystem::path,
+//            size_t(*)(buffer_properties_ptr const),
+//            bool(*)(buffer_properties_ptr const,buffer_properties_ptr const)
+//            >  m_props_to_pathnames;
+
+    std::unordered_map<boost::filesystem::path,
+                       buffer_load_info,
+                       size_t(*)(boost::filesystem::path const&)
+                       >  m_failed_loads;
+
+    mutable std::mutex  m_mutex;
+
+
+//    buffer_cache(natural_32_bit const  max_num_buffers,
+//                  natural_32_bit const  max_summary_size_of_all_buffers);
+//    struct priority
+//    {
+//    };
+//    std::vector< std::pair<priority,buffer_pathname> >  m_heap_of_priorities;
+//    natural_32_bit  m_summary_size_of_all_buffers;
+//    natural_32_bit  m_max_num_buffers;
+//    natural_32_bit  m_max_summary_size_of_all_buffers;
+
+};
+
+
+}}
+
+#endif
