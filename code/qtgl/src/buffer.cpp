@@ -355,8 +355,12 @@ buffers_binding::buffers_binding(
     , m_binding_data(new binding_data_type)
 {
     ASSUMPTION(check_consistency(buffer_paths,direct_bindings));
-}
 
+    if (!m_index_buffer_path.empty())
+        detail::buffer_cache::instance().insert_load_request(m_index_buffer_path);
+    for (auto const&  location_path : buffer_paths)
+        detail::buffer_cache::instance().insert_load_request(location_path.second);
+}
 
 bool  buffers_binding::make_current() const
 {

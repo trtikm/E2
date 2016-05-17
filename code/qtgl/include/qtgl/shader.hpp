@@ -64,6 +64,13 @@ size_t  hasher_of_vertex_program_properties(vertex_program_properties const&  pr
 namespace qtgl {
 
 
+using  uniform_variable_accessor_type = std::pair<GLuint,vertex_program_properties_ptr>;
+
+
+}
+
+namespace qtgl {
+
 struct vertex_program;
 typedef std::shared_ptr<vertex_program const>  vertex_program_ptr;
 
@@ -86,6 +93,8 @@ struct vertex_program
     GLuint  id() const noexcept { return m_id; }
     vertex_program_properties_ptr  properties() const noexcept { return m_properties; }
 
+    uniform_variable_accessor_type  uniform_variable_accessor() const noexcept { return std::make_pair(id(),properties()); }
+
 private:
     vertex_program(GLuint const  id, vertex_program_properties_ptr const  properties)
         : m_id(id)
@@ -101,17 +110,17 @@ private:
 
 
 template<typename value_type>
-bool  set_uniform_variable(vertex_program_ptr const  shader_program,
+bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
                            vertex_shader_uniform_symbolic_name const  symbolic_name,
                            value_type const&  value_to_store)
 {
-    return set_uniform_variable(shader_program,uniform_name(symbolic_name),value_to_store);
+    return set_uniform_variable(accessor,uniform_name(symbolic_name),value_to_store);
 }
 
-bool  set_uniform_variable(vertex_program_ptr const  shader_program,
+bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
                            std::string const&  variable_name,
                            float_32_bit const  value_to_store);
-bool  set_uniform_variable(vertex_program_ptr const  shader_program,
+bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
                            std::string const&  variable_name,
                            matrix44 const&  value_to_store);
 
@@ -275,19 +284,21 @@ struct shaders_binding
     static shaders_binding_ptr  create(vertex_program_ptr const  vertex_program,
                                        fragment_program_ptr const  fragment_program);
 
-    ~shaders_binding();
-
     boost::filesystem::path const&  vertex_shader_file() const noexcept { return m_vertex_shader_file; }
     boost::filesystem::path const&  fragment_shader_file() const noexcept { return m_fragment_shader_file; }
     vertex_program_properties_ptr  vertex_program_props() const noexcept { return m_vertex_program_props; }
     fragment_program_properties_ptr  fragment_program_props() const noexcept { return m_fragment_program_props; }
-    bool  uses_dummmy_vertex_program() const noexcept { return m_uses_dummmy_vertex_program; }
-    bool  uses_dummmy_fragment_program() const noexcept { return m_uses_dummmy_fragment_program; }
-    vertex_program_ptr  vertex_program() const noexcept { return m_binding_data->vertex_program(); }
-    fragment_program_ptr  fragment_program() const noexcept { return m_binding_data->fragment_program(); }
-    GLuint  id() const noexcept { return m_binding_data->id(); }
+    vertex_program_ptr  vertex_program() const noexcept { return m_vertex_program; }
+    fragment_program_ptr  fragment_program() const noexcept { return m_fragment_program; }
 
-    void  try_to_drop_dummy_programs() const;
+    GLuint  id() const noexcept { return m_binding_data->id(); }
+    GLuint  vertex_program_id() const noexcept { return m_binding_data->vertex_program_id(); }
+    GLuint  fragment_program_id() const noexcept { return m_binding_data->fragment_program_id(); }
+
+    uniform_variable_accessor_type  uniform_variable_accessor() const noexcept
+    { return std::make_pair(vertex_program_id(), m_binding_data->vertex_program_props()); }
+
+    bool  make_current(bool const  use_dummy_shaders_if_requested_ones_are_not_loaded_yet) const;
 
 private:
     shaders_binding(boost::filesystem::path const&  vertex_shader_file,
@@ -302,26 +313,36 @@ private:
 
     struct  binding_data_type
     {
-        binding_data_type(
-                vertex_program_ptr const  vertex_program,
-                fragment_program_ptr const  fragment_program,
-                bool const  do_create_ID = true
-                );
-        ~binding_data_type();
+        binding_data_type()
+            : m_id(0U)
+            , m_vertex_program_id(0U)
+            , m_fragment_program_id(0U)
+            , m_vertex_program_props()
+            , m_fragment_program_props()
+        {}
 
-        vertex_program_ptr  vertex_program() const noexcept { return m_vertex_program; }
-        fragment_program_ptr  fragment_program() const noexcept { return m_fragment_program; }
+        ~binding_data_type()
+        {
+            destroy_ID();
+        }
+
         GLuint  id() const noexcept { return m_id; }
+        GLuint  vertex_program_id() const noexcept { return m_vertex_program_id; }
+        GLuint  fragment_program_id() const noexcept { return m_fragment_program_id; }
 
-        void  update(vertex_program_ptr  vertex_program, fragment_program_ptr  fragment_program);
+        vertex_program_properties_ptr  vertex_program_props() const noexcept { return m_vertex_program_props; }
+        fragment_program_properties_ptr  fragment_program_props() const noexcept { return m_fragment_program_props; }
+
+        bool  reset(vertex_program_ptr const  vertex_program, fragment_program_ptr const  fragment_program);
 
     private:
-        void  create_ID();
         void  destroy_ID();
 
-        vertex_program_ptr  m_vertex_program;
-        fragment_program_ptr  m_fragment_program;
         GLuint  m_id;
+        GLuint  m_vertex_program_id;
+        GLuint  m_fragment_program_id;
+        vertex_program_properties_ptr  m_vertex_program_props;
+        fragment_program_properties_ptr  m_fragment_program_props;
     };
 
     using  binding_data_ptr = std::unique_ptr<binding_data_type>;
@@ -330,16 +351,16 @@ private:
     boost::filesystem::path  m_fragment_shader_file;
     vertex_program_properties_ptr  m_vertex_program_props;
     fragment_program_properties_ptr  m_fragment_program_props;
-    mutable bool  m_uses_dummmy_vertex_program;
-    mutable bool  m_uses_dummmy_fragment_program;
+    vertex_program_ptr  m_vertex_program;
+    fragment_program_ptr  m_fragment_program;
     binding_data_ptr  m_binding_data;
 };
 
 
 void  insert_load_request(shaders_binding const&  binding);
 
-bool make_current(shaders_binding const&  binding,
-                  bool const  use_dummy_shaders_if_requested_ones_are_not_loaded_yet = true);
+inline bool make_current(shaders_binding const&  binding, bool const  use_dummy_shaders_if_requested_ones_are_not_loaded_yet = true)
+{ return binding.make_current(use_dummy_shaders_if_requested_ones_are_not_loaded_yet); }
 
 
 }

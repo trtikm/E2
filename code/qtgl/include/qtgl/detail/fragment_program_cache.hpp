@@ -39,9 +39,6 @@ struct fragment_program_cache
 
     boost::filesystem::path  find_shader_file(fragment_program_properties_ptr const  props) const;
 
-    failed_loads_map const&  failed_loads() const noexcept { return m_failed_loads; }
-    failed_loads_map&  failed_loads() noexcept { return m_failed_loads; }
-
 private:
     fragment_program_cache();
 

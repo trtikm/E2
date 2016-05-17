@@ -725,43 +725,43 @@ vertex_program::~vertex_program()
 }
 
 
-bool  set_uniform_variable(vertex_program_ptr const  shader_program,
+bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
                            std::string const&  variable_name,
                            float_32_bit const  value_to_store)
 {
     TMPROF_BLOCK();
 
-    GLint const  layout_location = glapi().glGetUniformLocation(shader_program->id(),variable_name.c_str());
+    GLint const  layout_location = glapi().glGetUniformLocation(accessor.first,variable_name.c_str());
     if (layout_location == -1)
     {
-        for (auto sname : shader_program->properties()->symbolic_names_of_used_uniforms())
+        for (auto sname : accessor.second->symbolic_names_of_used_uniforms())
             if (variable_name == uniform_name(sname))
             {
                 UNREACHABLE();
             }
         return false;
     }
-    glapi().glProgramUniform1f(shader_program->id(),layout_location,value_to_store);
+    glapi().glProgramUniform1f(accessor.first,layout_location,value_to_store);
     return true;
 }
 
-bool  set_uniform_variable(vertex_program_ptr const  shader_program,
+bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
                            std::string const&  variable_name,
                            matrix44 const&  value_to_store)
 {
     TMPROF_BLOCK();
 
-    GLint const  layout_location = glapi().glGetUniformLocation(shader_program->id(),variable_name.c_str());
+    GLint const  layout_location = glapi().glGetUniformLocation(accessor.first,variable_name.c_str());
     if (layout_location == -1)
     {
-        for (auto sname : shader_program->properties()->symbolic_names_of_used_uniforms())
+        for (auto sname : accessor.second->symbolic_names_of_used_uniforms())
             if (variable_name == uniform_name(sname))
             {
                 UNREACHABLE();
             }
         return false;
     }
-    glapi().glProgramUniformMatrix4fv(shader_program->id(),layout_location,1U,GL_TRUE,value_to_store.data());
+    glapi().glProgramUniformMatrix4fv(accessor.first,layout_location,1U,GL_TRUE,value_to_store.data());
     return true;
 }
 
@@ -1064,11 +1064,9 @@ shaders_binding::shaders_binding(boost::filesystem::path const&  vertex_shader_f
     , m_fragment_shader_file(fragment_shader_file)
     , m_vertex_program_props(vertex_program_props)
     , m_fragment_program_props(fragment_program_props)
-    , m_uses_dummmy_vertex_program(true)
-    , m_uses_dummmy_fragment_program(true)
-    , m_binding_data(new binding_data_type(detail::vertex_program_cache::instance().get_dummy_program().lock(),
-                                           detail::fragment_program_cache::instance().get_dummy_program().lock(),
-                                           false))
+    , m_vertex_program()
+    , m_fragment_program()
+    , m_binding_data(new binding_data_type)
 {
     TMPROF_BLOCK();
 
@@ -1076,9 +1074,15 @@ shaders_binding::shaders_binding(boost::filesystem::path const&  vertex_shader_f
     ASSUMPTION(!m_fragment_shader_file.empty() || m_fragment_program_props.operator bool());
     ASSUMPTION(m_binding_data.operator bool());
 
-    try_to_drop_dummy_programs();
-    if (id() == 0U)
-        m_binding_data->update(vertex_program(),fragment_program());
+    if (!m_vertex_shader_file.empty())
+        detail::vertex_program_cache::instance().insert_load_request(m_vertex_shader_file);
+    else
+        detail::vertex_program_cache::instance().insert_load_request(m_vertex_program_props);
+
+    if (!m_fragment_shader_file.empty())
+        detail::fragment_program_cache::instance().insert_load_request(m_fragment_shader_file);
+    else
+        detail::fragment_program_cache::instance().insert_load_request(m_fragment_program_props);
 }
 
 shaders_binding::shaders_binding(vertex_program_ptr const  vertex_program,
@@ -1087,112 +1091,122 @@ shaders_binding::shaders_binding(vertex_program_ptr const  vertex_program,
     , m_fragment_shader_file()
     , m_vertex_program_props()
     , m_fragment_program_props()
-    , m_uses_dummmy_vertex_program(false)
-    , m_uses_dummmy_fragment_program(false)
-    , m_binding_data(new binding_data_type(vertex_program,fragment_program,true))
+    , m_vertex_program(vertex_program)
+    , m_fragment_program(fragment_program)
+    , m_binding_data(new binding_data_type)
 {
     TMPROF_BLOCK();
+
+    ASSUMPTION(m_vertex_program.operator bool());
+    ASSUMPTION(m_fragment_program.operator bool());
+    ASSUMPTION(m_binding_data.operator bool());
 }
 
-shaders_binding::~shaders_binding()
+bool  shaders_binding::make_current(bool const  use_dummy_shaders_if_requested_ones_are_not_loaded_yet) const
 {
     TMPROF_BLOCK();
-}
 
-void  shaders_binding::try_to_drop_dummy_programs() const
-{
-    bool  change = false;
-
-    std::shared_ptr<qtgl::vertex_program const>  vp = vertex_program();
-    if (uses_dummmy_vertex_program())
+    vertex_program_ptr  vertex_program;
+    if (!m_vertex_shader_file.empty())
     {
         std::weak_ptr<qtgl::vertex_program const> const  wptr =
-                vertex_shader_file().empty() ?
-                        detail::vertex_program_cache::instance().find(vertex_program_props()) :
-                        detail::vertex_program_cache::instance().find(vertex_shader_file()) ;
-        std::shared_ptr<qtgl::vertex_program const> const  ptr = wptr.lock();
-        if (!ptr.operator bool())
-            vertex_shader_file().empty() ?
-                    detail::vertex_program_cache::instance().insert_load_request(vertex_program_props()) :
-                    detail::vertex_program_cache::instance().insert_load_request(vertex_shader_file()) ;
+                detail::vertex_program_cache::instance().find(m_vertex_shader_file);
+        vertex_program_ptr const  ptr = wptr.lock();
+        if (ptr.operator bool())
+            vertex_program = ptr;
         else
         {
-            vp = ptr;
-            m_uses_dummmy_vertex_program = false;
-            change = true;
+            detail::vertex_program_cache::instance().insert_load_request(m_vertex_shader_file);
+            if (!use_dummy_shaders_if_requested_ones_are_not_loaded_yet)
+                return false;
+            vertex_program = detail::vertex_program_cache::instance().get_dummy_program().lock();
         }
     }
+    else if (m_vertex_program_props.operator bool())
+    {
+        std::weak_ptr<qtgl::vertex_program const> const  wptr =
+                detail::vertex_program_cache::instance().find(m_vertex_program_props);
+        vertex_program_ptr const  ptr = wptr.lock();
+        if (ptr.operator bool())
+            vertex_program = ptr;
+        else
+        {
+            detail::vertex_program_cache::instance().insert_load_request(m_vertex_program_props);
+            if (!use_dummy_shaders_if_requested_ones_are_not_loaded_yet)
+                return false;
+            vertex_program = detail::vertex_program_cache::instance().get_dummy_program().lock();
+        }
+    }
+    else
+        vertex_program = m_vertex_program;
 
-    std::shared_ptr<qtgl::fragment_program const>  fp = fragment_program();
-    if (uses_dummmy_fragment_program())
+    fragment_program_ptr  fragment_program;
+    if (!m_fragment_shader_file.empty())
     {
         std::weak_ptr<qtgl::fragment_program const> const  wptr =
-                fragment_shader_file().empty() ?
-                        detail::fragment_program_cache::instance().find(fragment_program_props()) :
-                        detail::fragment_program_cache::instance().find(fragment_shader_file()) ;
-        std::shared_ptr<qtgl::fragment_program const> const  ptr = wptr.lock();
-        if (!ptr.operator bool())
-            fragment_shader_file().empty() ?
-                    detail::fragment_program_cache::instance().insert_load_request(fragment_program_props()) :
-                    detail::fragment_program_cache::instance().insert_load_request(fragment_shader_file()) ;
-        else if (!uses_dummmy_vertex_program())
+                detail::fragment_program_cache::instance().find(m_fragment_shader_file);
+        fragment_program_ptr const  ptr = wptr.lock();
+        if (ptr.operator bool())
+            fragment_program = ptr;
+        else
         {
-            fp = ptr;
-            m_uses_dummmy_fragment_program = false;
-            change = true;
+            detail::fragment_program_cache::instance().insert_load_request(m_fragment_shader_file);
+            if (!use_dummy_shaders_if_requested_ones_are_not_loaded_yet)
+                return false;
+            fragment_program = detail::fragment_program_cache::instance().get_dummy_program().lock();
         }
     }
+    else if (m_fragment_program_props.operator bool())
+    {
+        std::weak_ptr<qtgl::fragment_program const> const  wptr =
+                detail::fragment_program_cache::instance().find(m_fragment_program_props);
+        fragment_program_ptr const  ptr = wptr.lock();
+        if (ptr.operator bool())
+            fragment_program = ptr;
+        else
+        {
+            detail::fragment_program_cache::instance().insert_load_request(m_fragment_program_props);
+            if (!use_dummy_shaders_if_requested_ones_are_not_loaded_yet)
+                return false;
+            fragment_program = detail::fragment_program_cache::instance().get_dummy_program().lock();
+        }
+    }
+    else
+        fragment_program = m_fragment_program;
 
-    if (change)
-        m_binding_data->update(vp,fp);
+    INVARIANT(vertex_program.operator bool() && fragment_program.operator bool());
+
+    if (id() == 0U || vertex_program_id() != vertex_program->id() || fragment_program_id() != fragment_program->id())
+        if (!m_binding_data->reset(vertex_program,fragment_program))
+            return false;
+
+    INVARIANT(id() != 0U);
+
+    glapi().glBindProgramPipeline(id());
+
+    return true;
 }
 
-shaders_binding::binding_data_type::binding_data_type(
-        vertex_program_ptr const  vertex_program,
-        fragment_program_ptr const  fragment_program,
-        bool const  do_create_ID
-        )
-    : m_vertex_program(vertex_program)
-    , m_fragment_program(fragment_program)
-    , m_id(0U)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(m_vertex_program.operator bool() && m_fragment_program.operator bool());
-    ASSUMPTION(compatible(m_vertex_program->properties()->output_buffer_bindings(),
-                          m_fragment_program->properties()->input_buffer_bindings()));
-    if (do_create_ID)
-        create_ID();
-}
-
-shaders_binding::binding_data_type::~binding_data_type()
-{
-    TMPROF_BLOCK();
-    destroy_ID();
-}
-
-void  shaders_binding::binding_data_type::update(vertex_program_ptr  vertex_program, fragment_program_ptr  fragment_program)
+bool  shaders_binding::binding_data_type::reset(vertex_program_ptr const  vertex_program,
+                                                fragment_program_ptr const  fragment_program)
 {
     TMPROF_BLOCK();
 
     ASSUMPTION(vertex_program.operator bool() && fragment_program.operator bool());
     ASSUMPTION(compatible(vertex_program->properties()->output_buffer_bindings(),
                           fragment_program->properties()->input_buffer_bindings()));
+
     destroy_ID();
-    m_vertex_program = vertex_program;
-    m_fragment_program = fragment_program;
-    create_ID();
-}
-
-void  shaders_binding::binding_data_type::create_ID()
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(m_id == 0U && m_vertex_program.operator bool() && m_fragment_program.operator bool());
     glapi().glGenProgramPipelines(1U,&m_id);
-    ASSUMPTION(id() != 0U);
-    glapi().glUseProgramStages(id(),GL_VERTEX_SHADER_BIT,vertex_program()->id());
-    glapi().glUseProgramStages(id(),GL_FRAGMENT_SHADER_BIT,fragment_program()->id());
+    if (id() == 0U)
+        return false;
+    m_vertex_program_id = vertex_program->id();
+    m_fragment_program_id = fragment_program->id();
+    m_vertex_program_props = vertex_program->properties();
+    m_fragment_program_props = fragment_program->properties();
+    glapi().glUseProgramStages(m_id,GL_VERTEX_SHADER_BIT,m_vertex_program_id);
+    glapi().glUseProgramStages(m_id,GL_FRAGMENT_SHADER_BIT,m_fragment_program_id);
+    return true;
 }
 
 void  shaders_binding::binding_data_type::destroy_ID()
@@ -1203,42 +1217,11 @@ void  shaders_binding::binding_data_type::destroy_ID()
     {
         qtgl::glapi().glDeleteProgramPipelines(1,&m_id);
         m_id = 0U;
+        m_vertex_program_id = 0U;
+        m_fragment_program_id = 0U;
+        m_vertex_program_props.reset();
+        m_fragment_program_props.reset();
     }
-}
-
-
-void  insert_load_request(shaders_binding const&  binding)
-{
-    TMPROF_BLOCK();
-
-    if (binding.uses_dummmy_vertex_program())
-    {
-        if (!binding.vertex_shader_file().empty())
-            detail::vertex_program_cache::instance().insert_load_request(binding.vertex_shader_file());
-        else
-            detail::vertex_program_cache::instance().insert_load_request(binding.vertex_program_props());
-    }
-    if (binding.uses_dummmy_fragment_program())
-    {
-        if (!binding.fragment_shader_file().empty())
-            detail::fragment_program_cache::instance().insert_load_request(binding.fragment_shader_file());
-        else
-            detail::fragment_program_cache::instance().insert_load_request(binding.fragment_program_props());
-    }
-}
-
-bool  make_current(shaders_binding const&  binding,
-                   bool const  use_dummy_shaders_if_requested_ones_are_not_loaded_yet)
-{
-    TMPROF_BLOCK();
-
-    binding.try_to_drop_dummy_programs();
-    if (!use_dummy_shaders_if_requested_ones_are_not_loaded_yet &&
-        (binding.uses_dummmy_vertex_program() || binding.uses_dummmy_fragment_program()) )
-        return false;
-    ASSUMPTION(binding.id() != 0U);
-    glapi().glBindProgramPipeline(binding.id());
-    return true;
 }
 
 
