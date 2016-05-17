@@ -266,6 +266,29 @@ buffer::buffer(GLuint const  id, buffer_properties_ptr const  buffer_props)
     ASSUMPTION(m_buffer_props.operator bool());
 }
 
+buffer_ptr  buffer::create(std::vector<natural_8_bit> const&  data,
+                           buffer_properties_ptr const  buffer_props,
+                           std::string& error_message)
+{
+    ASSUMPTION(buffer_props.operator bool());
+    ASSUMPTION(error_message.empty());
+    ASSUMPTION(data.size() <= (natural_64_bit)std::numeric_limits<natural_32_bit>::max());
+    ASSUMPTION(data.size() == buffer_props->num_bytes_per_component() * buffer_props->num_components_per_primitive()
+                                                                      * buffer_props->num_primitives());
+
+    GLuint const  id =
+            create_glbuffer(buffer_props->has_integral_components() ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
+                            (GLvoid const*)data.data(),data.size());
+    if (id == 0U)
+    {
+        error_message = "Construction of the buffer in function 'qtgl::create_glbuffer' has failed.";
+        return buffer_ptr{};
+    }
+    return create(id,buffer_props);
+
+
+}
+
 buffer::~buffer()
 {
     TMPROF_BLOCK();

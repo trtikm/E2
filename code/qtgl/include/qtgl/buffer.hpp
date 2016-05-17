@@ -79,6 +79,10 @@ struct buffer
     static buffer_ptr  create(GLuint const  id, buffer_properties const&  buffer_props);
     static buffer_ptr  create(GLuint const  id, buffer_properties_ptr const  buffer_props);
 
+    static buffer_ptr  create(std::vector<natural_8_bit> const&  data,
+                              buffer_properties_ptr const  buffer_props,
+                              std::string& error_message);
+
     ~buffer();
 
     GLuint  id() const { return m_id; }

@@ -27,11 +27,7 @@ struct buffer_cache
     void clear();
 
     void  insert_load_request(boost::filesystem::path const&  buffer_file);
-    //void  insert_load_request(buffer_properties_ptr const  props);
-
-    //bool  insert(buffer_ptr const  buffer);
     std::weak_ptr<buffer const>  find(boost::filesystem::path const&  buffer_file);
-    //std::weak_ptr<buffer const>  find(buffer_properties_ptr const  props);
 
 private:
     buffer_cache();
@@ -54,31 +50,12 @@ private:
 
     std::vector<buffer_load_info>  m_pending_buffers;
 
-//    std::unordered_map<
-//            buffer_properties_ptr,
-//            boost::filesystem::path,
-//            size_t(*)(buffer_properties_ptr const),
-//            bool(*)(buffer_properties_ptr const,buffer_properties_ptr const)
-//            >  m_props_to_pathnames;
-
     std::unordered_map<boost::filesystem::path,
                        buffer_load_info,
                        size_t(*)(boost::filesystem::path const&)
                        >  m_failed_loads;
 
     mutable std::mutex  m_mutex;
-
-
-//    buffer_cache(natural_32_bit const  max_num_buffers,
-//                  natural_32_bit const  max_summary_size_of_all_buffers);
-//    struct priority
-//    {
-//    };
-//    std::vector< std::pair<priority,buffer_pathname> >  m_heap_of_priorities;
-//    natural_32_bit  m_summary_size_of_all_buffers;
-//    natural_32_bit  m_max_num_buffers;
-//    natural_32_bit  m_max_summary_size_of_all_buffers;
-
 };
 
 

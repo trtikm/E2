@@ -58,8 +58,6 @@ void buffer_cache::clear()
     std::lock_guard<std::mutex> const  lock(m_mutex);
     m_pending_buffers.clear();
     m_cached_buffers.clear();
-//    if (props_to_files)
-//        m_props_to_pathnames.clear();
     m_failed_loads.clear();
 }
 
@@ -99,19 +97,17 @@ void  buffer_cache::process_pending_buffers()
         boost::filesystem::path const& buffer_file = std::get<0>(m_pending_buffers.back());
         if (m_cached_buffers.count(buffer_file) == 0ULL)
         {
-//            source_code_lines_ptr const source_code_lines = std::get<1>(m_pending_buffers.back());
-//            std::string&  error_message = std::get<2>(m_pending_buffers.back());
+            buffer_properties_ptr const buffer_props = std::get<1>(m_pending_buffers.back());
+            buffer_data_ptr const buffer_data = std::get<2>(m_pending_buffers.back());
+            std::string&  error_message = std::get<3>(m_pending_buffers.back());
 
-//            buffer_ptr const  buffer =
-//                    error_message.empty() ? buffer::create(*source_code_lines,error_message) :
-//                                            buffer_ptr();
-//            if (error_message.empty())
-//            {
-//                m_cached_buffers.insert({buffer_file,buffer});
-//                m_props_to_pathnames.insert({buffer->properties(),buffer_file});
-//            }
-//            else
-//                m_failed_loads.insert({buffer_file,m_pending_buffers.back()});
+            buffer_ptr const  buffer =
+                    error_message.empty() ? buffer::create(*buffer_data,buffer_props,error_message) :
+                                            buffer_ptr();
+            if (error_message.empty())
+                m_cached_buffers.insert({buffer_file,buffer});
+            else
+                m_failed_loads.insert({buffer_file,m_pending_buffers.back()});
         }
         m_pending_buffers.pop_back();
     }
