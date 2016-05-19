@@ -99,6 +99,11 @@ private:
 };
 
 
+buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_file,
+                                        std::vector<natural_8_bit>&  buffer_data,
+                                        std::string&  error_message);
+
+
 }
 
 namespace qtgl {

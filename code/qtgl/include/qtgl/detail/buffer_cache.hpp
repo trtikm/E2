@@ -14,8 +14,7 @@ namespace qtgl { namespace detail {
 struct buffer_cache
 {
     using  buffer_data_ptr = std::shared_ptr<std::vector<natural_8_bit> const>;
-    using  buffer_load_info = std::tuple<boost::filesystem::path,   //!< Buffer file path-name.
-                                         buffer_properties_ptr,     //!< Properties of the loaded buffer's data
+    using  buffer_load_info = std::tuple<buffer_properties_ptr,     //!< Properties of the loaded buffer's data
                                          buffer_data_ptr,           //!< Raw data of the buffer.
                                          std::string                //!< Error message. Empty string means no error.
                                          >;
@@ -35,8 +34,7 @@ private:
     buffer_cache(buffer_cache const&) = delete;
     buffer_cache& operator=(buffer_cache const&) = delete;
 
-    void  receiver(boost::filesystem::path const&  buffer_file,
-                   buffer_properties_ptr const  props,
+    void  receiver(buffer_properties_ptr const  props,
                    buffer_data_ptr const  data,
                    std::string const&  error_message //!< Empty string means no error.
                    );

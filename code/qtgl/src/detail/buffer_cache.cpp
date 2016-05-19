@@ -1,6 +1,5 @@
 #include <qtgl/detail/buffer_cache.hpp>
 #include <qtgl/detail/resource_loader.hpp>
-#include <qtgl/buffer_generators.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
@@ -41,8 +40,7 @@ buffer_cache::buffer_cache()
     , m_mutex()
 {}
 
-void  buffer_cache::receiver(boost::filesystem::path const&  buffer_file,
-                             buffer_properties_ptr const  props,
+void  buffer_cache::receiver(buffer_properties_ptr const  props,
                              buffer_data_ptr const  data,
                              std::string const&  error_message
                              )
@@ -50,7 +48,7 @@ void  buffer_cache::receiver(boost::filesystem::path const&  buffer_file,
     TMPROF_BLOCK();
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
-    m_pending_buffers.push_back(std::make_tuple(buffer_file,props,data,error_message));
+    m_pending_buffers.push_back(std::make_tuple(props,data,error_message));
 }
 
 void buffer_cache::clear()
@@ -77,15 +75,14 @@ void  buffer_cache::insert_load_request(boost::filesystem::path const&  buffer_f
     if (!boost::filesystem::is_regular_file(buffer_file))
         return;
 
-//    resource_loader::instance().insert_buffer_request(
-//                buffer_file,
-//                std::bind(&buffer_cache::receiver,
-//                          this,
-//                          std::placeholders::_1,
-//                          std::placeholders::_2,
-//                          std::placeholders::_3,
-//                          std::placeholders::_4)
-//                );
+    resource_loader::instance().insert_buffer_request(
+                buffer_file,
+                std::bind(&buffer_cache::receiver,
+                          this,
+                          std::placeholders::_1,
+                          std::placeholders::_2,
+                          std::placeholders::_3)
+                );
 }
 
 void  buffer_cache::process_pending_buffers()
@@ -94,20 +91,19 @@ void  buffer_cache::process_pending_buffers()
 
     while (!m_pending_buffers.empty())
     {
-        boost::filesystem::path const& buffer_file = std::get<0>(m_pending_buffers.back());
-        if (m_cached_buffers.count(buffer_file) == 0ULL)
+        buffer_properties_ptr const  buffer_props = std::get<0>(m_pending_buffers.back());
+        if (m_cached_buffers.count(buffer_props->buffer_file()) == 0ULL)
         {
-            buffer_properties_ptr const buffer_props = std::get<1>(m_pending_buffers.back());
-            buffer_data_ptr const buffer_data = std::get<2>(m_pending_buffers.back());
-            std::string&  error_message = std::get<3>(m_pending_buffers.back());
+            buffer_data_ptr const buffer_data = std::get<1>(m_pending_buffers.back());
+            std::string&  error_message = std::get<2>(m_pending_buffers.back());
 
             buffer_ptr const  buffer =
                     error_message.empty() ? buffer::create(*buffer_data,buffer_props,error_message) :
                                             buffer_ptr();
             if (error_message.empty())
-                m_cached_buffers.insert({buffer_file,buffer});
+                m_cached_buffers.insert({buffer_props->buffer_file(),buffer});
             else
-                m_failed_loads.insert({buffer_file,m_pending_buffers.back()});
+                m_failed_loads.insert({buffer_props->buffer_file(),m_pending_buffers.back()});
         }
         m_pending_buffers.pop_back();
     }

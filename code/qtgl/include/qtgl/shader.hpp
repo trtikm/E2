@@ -126,7 +126,7 @@ bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
 
 
 std::string  load_vertex_program_file(boost::filesystem::path const&  shader_file,
-                                     std::vector<std::string>& output_lines);
+                                      std::vector<std::string>& output_lines);
 
 void  insert_vertex_program_load_request(boost::filesystem::path const&  shader_file);
 bool  insert_vertex_program_load_request(vertex_program_properties_ptr const  props);

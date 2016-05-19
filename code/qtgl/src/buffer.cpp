@@ -2,8 +2,14 @@
 #include <qtgl/detail/buffer_cache.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
+#include <utility/development.hpp>
 #include <utility/timeprof.hpp>
+#include <utility/msgstream.hpp>
+#include <boost/filesystem.hpp>
 #include <limits>
+#include <iostream>
+#include <fstream>
+#include <iomanip>
 #include <unordered_set>
 
 namespace qtgl { namespace detail { namespace current_draw {
@@ -295,6 +301,36 @@ buffer::~buffer()
 
     if (id() != 0U)
         glapi().glDeleteBuffers(1U,&m_id);
+}
+
+
+buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_file,
+                                        std::vector<natural_8_bit>&  buffer_data,
+                                        std::string&  error_message)
+{
+    ASSUMPTION(buffer_data.empty());
+    ASSUMPTION(error_message.empty());
+
+    if (!boost::filesystem::exists(buffer_file))
+    {
+        error_message = msgstream() << "The buffer file '" << buffer_file << "' does not exists.";
+        return buffer_properties_ptr();
+    }
+    if (!boost::filesystem::is_regular_file(buffer_file))
+    {
+        error_message = msgstream() << "The buffer path '" << buffer_file << "' does not reference a regular file.";
+        return buffer_properties_ptr();
+    }
+
+    std::ifstream  istr(buffer_file.string(),std::ios_base::binary);
+    if (!istr.good())
+    {
+        error_message = msgstream() << "Cannot open the buffer file '" << buffer_file << "'.";
+        return buffer_properties_ptr();
+    }
+
+
+    NOT_IMPLEMENTED_YET();
 }
 
 
