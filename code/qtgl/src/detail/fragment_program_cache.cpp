@@ -5,6 +5,7 @@
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/functional/hash.hpp>
 #include <functional>
 
 namespace qtgl { namespace detail {

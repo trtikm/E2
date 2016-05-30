@@ -68,13 +68,19 @@ using  buffer_ptr = std::shared_ptr<buffer const>;
 
 struct buffer
 {
-    static buffer_ptr  create(std::vector< std::array<float_32_bit,2> > const&  data);
-    static buffer_ptr  create(std::vector< std::array<float_32_bit,3> > const&  data);
-    static buffer_ptr  create(std::vector< std::array<float_32_bit,4> > const&  data);
+    static buffer_ptr  create(std::vector< std::array<float_32_bit,2> > const&  data,
+                              std::string const&  buffer_name);
+    static buffer_ptr  create(std::vector< std::array<float_32_bit,3> > const&  data,
+                              std::string const&  buffer_name);
+    static buffer_ptr  create(std::vector< std::array<float_32_bit,4> > const&  data,
+                              std::string const&  buffer_name);
 
-    static buffer_ptr  create(std::vector< natural_32_bit > const&  data);
-    static buffer_ptr  create(std::vector< std::array<natural_32_bit,2> > const&  data);
-    static buffer_ptr  create(std::vector< std::array<natural_32_bit,3> > const&  data);
+    static buffer_ptr  create(std::vector< natural_32_bit > const&  data,
+                              std::string const&  buffer_name);
+    static buffer_ptr  create(std::vector< std::array<natural_32_bit,2> > const&  data,
+                              std::string const&  buffer_name);
+    static buffer_ptr  create(std::vector< std::array<natural_32_bit,3> > const&  data,
+                              std::string const&  buffer_name);
 
     static buffer_ptr  create(GLuint const  id, buffer_properties const&  buffer_props);
     static buffer_ptr  create(GLuint const  id, buffer_properties_ptr const  buffer_props);
@@ -102,6 +108,11 @@ private:
 buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_file,
                                         std::vector<natural_8_bit>&  buffer_data,
                                         std::string&  error_message);
+
+void  send_buffer_load_request(boost::filesystem::path const&  buffer_file);
+void  get_properties_of_cached_buffers(std::vector<buffer_properties_ptr>&  output, bool const  process_pending = true);
+void  get_properties_of_failed_buffers(std::vector< std::pair<buffer_properties_ptr,std::string> >&  output,
+                                       bool const  process_pending = true);
 
 
 }

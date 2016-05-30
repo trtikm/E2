@@ -6,6 +6,7 @@
 #include <utility/timeprof.hpp>
 #include <utility/msgstream.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/functional/hash.hpp>
 #include <limits>
 #include <iostream>
 #include <fstream>
@@ -174,7 +175,7 @@ size_t  hasher_of_buffer_properties(buffer_properties const&  props)
 namespace qtgl {
 
 
-buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,2> > const&  data)
+buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,2> > const&  data, std::string const&  buffer_name)
 {
     TMPROF_BLOCK();
 
@@ -184,10 +185,21 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,2> > const&  dat
             create_glbuffer(GL_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 2ULL * sizeof(float_32_bit));
     if (id == 0U)
         return buffer_ptr{};
-    return create(id,std::make_shared<buffer_properties>("",2U,(natural_32_bit)data.size(),(natural_8_bit)sizeof(float_32_bit),false));
+
+    std::size_t  seed = 0ULL;
+    for (auto const&  elem : data)
+    {
+        boost::hash_combine(seed,elem.at(0ULL));
+        boost::hash_combine(seed,elem.at(1ULL));
+    }
+    boost::filesystem::path  buffer_path =
+            msgstream() << "/generated_buffer/id_" << seed << "/" << buffer_name << "/" << msgstream::end();
+
+    return create(id,std::make_shared<buffer_properties>(buffer_path,2U,(natural_32_bit)data.size(),
+                                                         (natural_8_bit)sizeof(float_32_bit),false));
 }
 
-buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,3> > const&  data)
+buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,3> > const&  data, std::string const&  buffer_name)
 {
     TMPROF_BLOCK();
 
@@ -197,10 +209,22 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,3> > const&  dat
             create_glbuffer(GL_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 3ULL * sizeof(float_32_bit));
     if (id == 0U)
         return buffer_ptr{};
-    return create(id,std::make_shared<buffer_properties>("",3U,(natural_32_bit)data.size(),(natural_8_bit)sizeof(float_32_bit),false));
+
+    std::size_t  seed = 0ULL;
+    for (auto const&  elem : data)
+    {
+        boost::hash_combine(seed,elem.at(0ULL));
+        boost::hash_combine(seed,elem.at(1ULL));
+        boost::hash_combine(seed,elem.at(2ULL));
+    }
+    boost::filesystem::path  buffer_path =
+            msgstream() << "/generated_buffer/id_" << seed << "/" << buffer_name << "/" << msgstream::end();
+
+    return create(id,std::make_shared<buffer_properties>(buffer_path,3U,(natural_32_bit)data.size(),
+                                                         (natural_8_bit)sizeof(float_32_bit),false));
 }
 
-buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,4> > const&  data)
+buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,4> > const&  data, std::string const&  buffer_name)
 {
     TMPROF_BLOCK();
 
@@ -210,10 +234,23 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,4> > const&  dat
             create_glbuffer(GL_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 4ULL * sizeof(float_32_bit));
     if (id == 0U)
         return buffer_ptr{};
-    return create(id,std::make_shared<buffer_properties>("",4U,(natural_32_bit)data.size(),(natural_8_bit)sizeof(float_32_bit),false));
+
+    std::size_t  seed = 0ULL;
+    for (auto const&  elem : data)
+    {
+        boost::hash_combine(seed,elem.at(0ULL));
+        boost::hash_combine(seed,elem.at(1ULL));
+        boost::hash_combine(seed,elem.at(2ULL));
+        boost::hash_combine(seed,elem.at(3ULL));
+    }
+    boost::filesystem::path  buffer_path =
+            msgstream() << "/generated_buffer/id_" << seed << "/" << buffer_name << "/" << msgstream::end();
+
+    return create(id,std::make_shared<buffer_properties>(buffer_path,4U,(natural_32_bit)data.size(),
+                                                         (natural_8_bit)sizeof(float_32_bit),false));
 }
 
-buffer_ptr  buffer::create(std::vector< natural_32_bit > const&  data)
+buffer_ptr  buffer::create(std::vector< natural_32_bit > const&  data, std::string const&  buffer_name)
 {
     TMPROF_BLOCK();
 
@@ -223,10 +260,18 @@ buffer_ptr  buffer::create(std::vector< natural_32_bit > const&  data)
             create_glbuffer(GL_ELEMENT_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 1ULL * sizeof(natural_32_bit));
     if (id == 0U)
         return buffer_ptr{};
-    return create(id,std::make_shared<buffer_properties>("",1U,(natural_32_bit)data.size(),(natural_8_bit)sizeof(natural_32_bit),true));
+
+    std::size_t  seed = 0ULL;
+    for (auto const  elem : data)
+        boost::hash_combine(seed,elem);
+    boost::filesystem::path  buffer_path =
+            msgstream() << "/generated_buffer/id_" << seed << "/" << buffer_name << "/" << msgstream::end();
+
+    return create(id,std::make_shared<buffer_properties>(buffer_path,1U,(natural_32_bit)data.size(),
+                                                         (natural_8_bit)sizeof(natural_32_bit),true));
 }
 
-buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,2> > const&  data)
+buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,2> > const&  data, std::string const&  buffer_name)
 {
     TMPROF_BLOCK();
 
@@ -236,10 +281,22 @@ buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,2> > const&  d
             create_glbuffer(GL_ELEMENT_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 2ULL * sizeof(natural_32_bit));
     if (id == 0U)
         return buffer_ptr{};
-    return create(id,std::make_shared<buffer_properties>("",2U,(natural_32_bit)data.size(),(natural_8_bit)sizeof(natural_32_bit),true));
+
+    std::size_t  seed = 0ULL;
+    for (auto const&  elem : data)
+    {
+        boost::hash_combine(seed,elem.at(0ULL));
+        boost::hash_combine(seed,elem.at(1ULL));
+    }
+    boost::filesystem::path  buffer_path =
+            msgstream() << "/generated_buffer/id_" << seed << "/" << buffer_name << "/" << msgstream::end();
+
+
+    return create(id,std::make_shared<buffer_properties>(buffer_path,2U,(natural_32_bit)data.size(),
+                                                         (natural_8_bit)sizeof(natural_32_bit),true));
 }
 
-buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,3> > const&  data)
+buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,3> > const&  data, std::string const&  buffer_name)
 {
     TMPROF_BLOCK();
 
@@ -249,7 +306,19 @@ buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,3> > const&  d
             create_glbuffer(GL_ELEMENT_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 3ULL * sizeof(natural_32_bit));
     if (id == 0U)
         return buffer_ptr{};
-    return create(id,std::make_shared<buffer_properties>("",3U,(natural_32_bit)data.size(),(natural_8_bit)sizeof(natural_32_bit),true));
+
+    std::size_t  seed = 0ULL;
+    for (auto const&  elem : data)
+    {
+        boost::hash_combine(seed,elem.at(0ULL));
+        boost::hash_combine(seed,elem.at(1ULL));
+        boost::hash_combine(seed,elem.at(2ULL));
+    }
+    boost::filesystem::path  buffer_path =
+            msgstream() << "/generated_buffer/id_" << seed << "/" << buffer_name << "/" << msgstream::end();
+
+    return create(id,std::make_shared<buffer_properties>(buffer_path,3U,(natural_32_bit)data.size(),
+                                                         (natural_8_bit)sizeof(natural_32_bit),true));
 }
 
 buffer_ptr  buffer::create(GLuint const  id, buffer_properties const&  buffer_props)
@@ -331,6 +400,22 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
 
 
     NOT_IMPLEMENTED_YET();
+}
+
+void  send_buffer_load_request(boost::filesystem::path const&  buffer_file)
+{
+    detail::buffer_cache::instance().insert_load_request(buffer_file);
+}
+
+void  get_properties_of_cached_buffers(std::vector<buffer_properties_ptr>&  output, bool const  process_pending)
+{
+    detail::buffer_cache::instance().cached(output,process_pending);
+}
+
+void  get_properties_of_failed_buffers(std::vector< std::pair<buffer_properties_ptr,std::string> >&  output,
+                                       bool const  process_pending)
+{
+    detail::buffer_cache::instance().failed(output,process_pending);
 }
 
 

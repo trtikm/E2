@@ -28,6 +28,9 @@ struct buffer_cache
     void  insert_load_request(boost::filesystem::path const&  buffer_file);
     std::weak_ptr<buffer const>  find(boost::filesystem::path const&  buffer_file);
 
+    void  cached(std::vector<buffer_properties_ptr>&  output, bool const  process_pending = true);
+    void  failed(std::vector< std::pair<buffer_properties_ptr,std::string> >&  output, bool const  process_pending = true);
+
 private:
     buffer_cache();
 
