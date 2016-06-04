@@ -14,6 +14,9 @@
 namespace qtgl {
 
 
+using  make_current_window_guard = std::shared_ptr<detail::make_current_window_guard>;
+
+
 /**
  * Represents an OpenGL window/widget inside the Qt5 GUI system.
  * Implement your own simulator (i.e. derive from qtgl::real_time_simulator).
@@ -76,6 +79,9 @@ struct window
     {
         m_window->unregister_listener(notification_type,listener);
     }
+
+    std::shared_ptr<detail::make_current_window_guard>   make_me_current() { return m_window->make_me_current(); }
+
 
 private:
 

@@ -28,4 +28,13 @@ float_32_bit  get_splitter_sizes_ratio(QSplitter const&  splitter)
 }
 
 
+std::string  to_string(QString const& s)
+{
+    std::string  result;
+    for (int  i = 0; i < s.size(); ++i)
+        result.push_back(s.at(i).toLatin1());
+    return result;
+}
+
+
 }

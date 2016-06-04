@@ -62,6 +62,11 @@ struct window : public QWindow
 
     void  call_listeners(std::string const&  notification_type) const;
 
+    std::shared_ptr<make_current_window_guard>  make_me_current()
+    {
+        return std::make_shared<make_current_window_guard>(this,current_window());
+    }
+
     opengl_context&  glcontext();
     opengl_context const&  glcontext() const;
 
