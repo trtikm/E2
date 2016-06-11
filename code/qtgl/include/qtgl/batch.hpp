@@ -8,6 +8,7 @@
 #   include <boost/filesystem/path.hpp>
 #   include <unordered_set>
 #   include <functional>
+#   include <memory>
 
 namespace qtgl {
 
@@ -18,6 +19,11 @@ struct batch
                                                     vertex_shader_uniform_symbolic_name)>;
 
     batch(boost::filesystem::path const&  path);
+    batch(boost::filesystem::path const&  path,
+          buffers_binding_ptr const  buffers_binding,
+          shaders_binding_ptr const  shaders_binding,
+          textures_binding_ptr const  textures_binding
+          );
 
     boost::filesystem::path const&  path() const noexcept { return m_path; }
 
@@ -36,6 +42,9 @@ private:
 
     static std::unordered_set<vertex_shader_uniform_symbolic_name>  s_empty_uniforms;
 };
+
+
+std::shared_ptr<batch const>  load_batch_file(boost::filesystem::path const&  batch_file, std::string&  error_message);
 
 
 bool  make_current(batch const&  binding,

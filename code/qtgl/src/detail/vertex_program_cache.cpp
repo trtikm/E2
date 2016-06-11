@@ -80,8 +80,6 @@ void  vertex_program_cache::insert_load_request(boost::filesystem::path const&  
     }
     if (shader_file == vertex_program_generators::transform_3D_vertices::imaginary_shader_file())
         return;
-    if (!boost::filesystem::is_regular_file(shader_file))
-        return;
 
     resource_loader::instance().insert_vertex_program_request(
                 shader_file,
@@ -117,7 +115,8 @@ void  vertex_program_cache::process_pending_programs()
     while (!m_pending_programs.empty())
     {
         boost::filesystem::path const& shader_file = std::get<0>(m_pending_programs.back());
-        if (m_cached_programs.count(shader_file) == 0ULL)
+        if (m_cached_programs.count(shader_file) == 0ULL &&
+            m_failed_loads.count(shader_file) == 0ULL)
         {
             source_code_lines_ptr const source_code_lines = std::get<1>(m_pending_programs.back());
             std::string&  error_message = std::get<2>(m_pending_programs.back());

@@ -4,6 +4,7 @@
 #   include <qtgl/texture.hpp>
 #   include <qtgl/shader.hpp>
 #   include <qtgl/buffer.hpp>
+#   include <qtgl/batch.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <functional>
 #   include <deque>
@@ -48,6 +49,13 @@ struct resource_loader
                                )>;
     void  insert_buffer_request(boost::filesystem::path const&  buffer_file, buffer_receiver_fn const&  receiver);
 
+    using  batch_receiver_fn =
+            std::function<void(boost::filesystem::path const&,  //!< Batch file path-name.
+                               std::shared_ptr<batch const>,    //!< The loaded data of the batch
+                               std::string const&               //!< Error message. Empty string means no error.
+                               )>;
+    void  insert_batch_request(boost::filesystem::path const&  batch_file, batch_receiver_fn const&  receiver);
+
 private:
     resource_loader();
 
@@ -60,6 +68,7 @@ private:
     bool  fetch_fragment_program_request(boost::filesystem::path&  shader_file,
                                          fragment_program_receiver_fn&  output_receiver);
     bool  fetch_buffer_request(boost::filesystem::path&  shader_file, buffer_receiver_fn&  output_receiver);
+    bool  fetch_batch_request(boost::filesystem::path&  batch_file, batch_receiver_fn&  output_receiver);
 
     void  start_worker_if_not_running();
     void  worker();
@@ -72,6 +81,7 @@ private:
     std::deque< std::pair<boost::filesystem::path,vertex_program_receiver_fn> >  m_vertex_program_requests;
     std::deque< std::pair<boost::filesystem::path,fragment_program_receiver_fn> >  m_fragment_program_requests;
     std::deque< std::pair<boost::filesystem::path,buffer_receiver_fn> >  m_buffer_requests;
+    std::deque< std::pair<boost::filesystem::path,batch_receiver_fn> >  m_batch_requests;
 };
 
 

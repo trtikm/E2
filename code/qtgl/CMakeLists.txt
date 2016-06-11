@@ -77,6 +77,8 @@ add_library(${THIS_TARGET_NAME}
     ./src/detail/vertex_program_cache.cpp
     ./include/qtgl/detail/fragment_program_cache.hpp
     ./src/detail/fragment_program_cache.cpp
+    ./include/qtgl/detail/batch_cache.hpp
+    ./src/detail/batch_cache.cpp
     ./include/qtgl/detail/resource_loader.hpp
     ./src/detail/resource_loader.cpp
     )

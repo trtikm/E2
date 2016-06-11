@@ -73,8 +73,6 @@ void  buffer_cache::insert_load_request(boost::filesystem::path const&  buffer_f
         if (m_failed_loads.count(buffer_file) != 0ULL)
             return;
     }
-    if (!boost::filesystem::is_regular_file(buffer_file))
-        return;
 
     resource_loader::instance().insert_buffer_request(
                 buffer_file,
@@ -93,7 +91,8 @@ void  buffer_cache::process_pending_buffers()
     while (!m_pending_buffers.empty())
     {
         buffer_properties_ptr const  buffer_props = std::get<0>(m_pending_buffers.back());
-        if (m_cached_buffers.count(buffer_props->buffer_file()) == 0ULL)
+        if (m_cached_buffers.count(buffer_props->buffer_file()) == 0ULL &&
+            m_failed_loads.count(buffer_props->buffer_file()) == 0ULL)
         {
             buffer_data_ptr const buffer_data = std::get<1>(m_pending_buffers.back());
             std::string&  error_message = std::get<2>(m_pending_buffers.back());

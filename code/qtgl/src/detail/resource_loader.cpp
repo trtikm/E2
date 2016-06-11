@@ -45,6 +45,7 @@ resource_loader::resource_loader()
     , m_vertex_program_requests()
     , m_fragment_program_requests()
     , m_buffer_requests()
+    , m_batch_requests()
 {}
 
 void  resource_loader::start_worker_if_not_running()
@@ -69,6 +70,7 @@ void  resource_loader::clear()
     m_vertex_program_requests.clear();
     m_fragment_program_requests.clear();
     m_buffer_requests.clear();
+    m_batch_requests.clear();
     if (m_worker_thread.joinable())
         m_worker_thread.join();
 }
@@ -122,6 +124,17 @@ void  resource_loader::insert_buffer_request(boost::filesystem::path const&  buf
     start_worker_if_not_running();
 }
 
+void  resource_loader::insert_batch_request(boost::filesystem::path const&  batch_file, batch_receiver_fn const&  receiver)
+{
+    TMPROF_BLOCK();
+
+    std::lock_guard<std::mutex> const  lock(m_mutex);
+    if (qtgl::detail::contains(m_batch_requests, batch_file))
+        return;
+    m_batch_requests.push_back({batch_file,receiver});
+    start_worker_if_not_running();
+}
+
 bool  resource_loader::fetch_texture_request(texture_properties_ptr&  output_props, texture_receiver_fn&  output_receiver)
 {
     TMPROF_BLOCK();
@@ -172,6 +185,18 @@ bool  resource_loader::fetch_buffer_request(boost::filesystem::path&  buffer_fil
     return true;
 }
 
+bool  resource_loader::fetch_batch_request(boost::filesystem::path&  batch_file, batch_receiver_fn&  output_receiver)
+{
+    TMPROF_BLOCK();
+
+    std::lock_guard<std::mutex> const  lock(m_mutex);
+    if (m_batch_requests.empty())
+        return false;
+    std::tie(batch_file,output_receiver) = m_batch_requests.front();
+    m_batch_requests.pop_front();
+    return true;
+}
+
 void  resource_loader::worker()
 {
     TMPROF_BLOCK();
@@ -179,6 +204,20 @@ void  resource_loader::worker()
     while (true)
     {
         bool  done = true;
+
+        // Loading batches
+        for (int i = 0; i < 1; ++i)
+        {
+            boost::filesystem::path  batch_file;
+            batch_receiver_fn  receiver;
+            if (fetch_batch_request(batch_file,receiver))
+            {
+                std::string  error_message;
+                std::shared_ptr<batch const> const  props = load_batch_file(batch_file,error_message);
+                receiver(batch_file,props,error_message);
+                done = false;
+            }
+        }
 
         // Loading buffers
         for (int i = 0; i < 1; ++i)

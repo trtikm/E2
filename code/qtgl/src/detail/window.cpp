@@ -4,6 +4,7 @@
 #include <qtgl/detail/vertex_program_cache.hpp>
 #include <qtgl/detail/fragment_program_cache.hpp>
 #include <qtgl/detail/buffer_cache.hpp>
+#include <qtgl/detail/batch_cache.hpp>
 #include <utility/tensor_math.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
@@ -31,6 +32,7 @@ void  initialise_caches()
     detail::vertex_program_cache::instance();
     detail::fragment_program_cache::instance();
     detail::buffer_cache::instance();
+    detail::batch_cache::instance();
 }
 
 void  clear_caches()
@@ -40,6 +42,7 @@ void  clear_caches()
     detail::vertex_program_cache::instance().clear(true,true);
     detail::fragment_program_cache::instance().clear(true,true);
     detail::buffer_cache::instance().clear();
+    detail::batch_cache::instance().clear();
 }
 
 void  on_window_create()
