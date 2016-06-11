@@ -34,6 +34,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/qtgl/texture.hpp
     ./src/texture.cpp
 
+    ./include/qtgl/batch.hpp
+    ./src/batch.cpp
+
     ./include/qtgl/camera.hpp
     ./src/camera.cpp
 
