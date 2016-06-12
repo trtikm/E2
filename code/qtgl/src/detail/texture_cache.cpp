@@ -131,17 +131,24 @@ texture_properties_ptr  texture_cache::find(boost::filesystem::path const&  text
     return it->second;
 }
 
-std::weak_ptr<texture const>  texture_cache::find(texture_properties_ptr const  props)
+void  texture_cache::process_pending_textures()
 {
     TMPROF_BLOCK();
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
     while (!m_pending_textures.empty())
     {
-        texture_ptr const  ptexture = texture::create(m_pending_textures.back().first,m_pending_textures.back().second);
-        m_cached_textures.insert({ptexture->properties(),ptexture});
+        texture_ptr const  ptexture = texture::create(m_pending_textures.back().first, m_pending_textures.back().second);
+        m_cached_textures.insert({ ptexture->properties(),ptexture });
         m_pending_textures.pop_back();
     }
+}
+
+std::weak_ptr<texture const>  texture_cache::find(texture_properties_ptr const  props)
+{
+    TMPROF_BLOCK();
+
+    std::lock_guard<std::mutex> const  lock(m_mutex);
     auto const  it = m_cached_textures.find(props);
     if (it == m_cached_textures.cend())
         return {};

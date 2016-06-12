@@ -88,6 +88,7 @@ void  buffer_cache::process_pending_buffers()
 {
     TMPROF_BLOCK();
 
+    std::lock_guard<std::mutex> const  lock(m_mutex);
     while (!m_pending_buffers.empty())
     {
         buffer_properties_ptr const  buffer_props = std::get<0>(m_pending_buffers.back());
@@ -114,33 +115,26 @@ std::weak_ptr<buffer const>  buffer_cache::find(boost::filesystem::path const&  
     TMPROF_BLOCK();
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
-    process_pending_buffers();
     auto const  it = m_cached_buffers.find(shader_file);
     if (it == m_cached_buffers.cend())
         return {};
     return it->second;
 }
 
-void  buffer_cache::cached(std::vector<buffer_properties_ptr>&  output, bool const  process_pending)
+void  buffer_cache::cached(std::vector<buffer_properties_ptr>&  output)
 {
     TMPROF_BLOCK();
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
-    if (process_pending)
-        process_pending_buffers();
-
     for (auto const&  path_buffer : m_cached_buffers)
         output.push_back(path_buffer.second->properties());
 }
 
-void  buffer_cache::failed(std::vector< std::pair<buffer_properties_ptr,std::string> >&  output, bool const  process_pending)
+void  buffer_cache::failed(std::vector< std::pair<buffer_properties_ptr,std::string> >&  output)
 {
     TMPROF_BLOCK();
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
-    if (process_pending)
-        process_pending_buffers();
-
     for (auto const&  path_info : m_failed_loads)
         output.push_back({std::get<0>(path_info.second),std::get<2>(path_info.second)});
 }

@@ -32,6 +32,8 @@ struct texture_cache
 
     std::weak_ptr<texture const>  get_dummy_texture() const noexcept { return m_dummy_texture; }
 
+    void  process_pending_textures();
+
 private:
     texture_cache();
 

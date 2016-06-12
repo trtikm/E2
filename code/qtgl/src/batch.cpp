@@ -1,5 +1,6 @@
 #include <qtgl/batch.hpp>
 #include <qtgl/shader_data_bindings.hpp>
+#include <qtgl/detail/batch_cache.hpp>
 #include <qtgl/detail/read_line.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -22,6 +23,21 @@ namespace qtgl {
 
 std::unordered_set<vertex_shader_uniform_symbolic_name>  batch::s_empty_uniforms;
 
+std::shared_ptr<batch const>  batch::create(boost::filesystem::path const&  path)
+{
+    return std::make_shared<batch const>(path);
+}
+
+batch::batch(boost::filesystem::path const&  path)
+    : m_path(path)
+    , m_buffers_binding()
+    , m_shaders_binding()
+    , m_textures_binding()
+{
+    ASSUMPTION(!m_path.empty());
+    insert_load_request(*this);
+}
+
 batch::batch(boost::filesystem::path const&  path,
              buffers_binding_ptr const  buffers_binding,
              shaders_binding_ptr const  shaders_binding,
@@ -37,14 +53,47 @@ batch::batch(boost::filesystem::path const&  path,
     ASSUMPTION(m_textures_binding.operator bool());
 }
 
+buffers_binding_ptr  batch::buffers_binding() const
+{
+    if (!m_buffers_binding.operator bool())
+    {
+        batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
+        if (pbatch.operator bool())
+            m_buffers_binding = pbatch->m_buffers_binding;
+    }
+    return m_buffers_binding;
+}
+
+shaders_binding_ptr  batch::shaders_binding() const
+{
+    if (!m_shaders_binding.operator bool())
+    {
+        batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
+        if (pbatch.operator bool())
+            m_shaders_binding =  pbatch->m_shaders_binding;
+    }
+    return m_shaders_binding;
+}
+
+textures_binding_ptr  batch::textures_binding() const
+{
+    if (!m_textures_binding.operator bool())
+    {
+        batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
+        if (pbatch.operator bool())
+            m_textures_binding = pbatch->m_textures_binding;
+    }
+    return m_textures_binding;
+}
+
 std::unordered_set<vertex_shader_uniform_symbolic_name> const&  batch::symbolic_names_of_used_uniforms() const
 {
-    return shaders_binding().operator bool() && shaders_binding()->vertex_program_props().operator bool() ?
-                shaders_binding()->vertex_program_props()->symbolic_names_of_used_uniforms() :
+    return shaders_binding().operator bool() && shaders_binding()->binding_vertex_program_props().operator bool() ?
+                shaders_binding()->binding_vertex_program_props()->symbolic_names_of_used_uniforms() :
                 s_empty_uniforms ;
 }
 
-std::shared_ptr<batch const>  load_batch_file(boost::filesystem::path const&  batch_file, std::string&  error_message)
+batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::string&  error_message)
 {
     ASSUMPTION(error_message.empty());
 
@@ -245,16 +294,37 @@ std::shared_ptr<batch const>  load_batch_file(boost::filesystem::path const&  ba
     }
 }
 
+void  insert_load_request(batch const&  batch_ref)
+{
+    if (!detail::batch_cache::instance().find(batch_ref.path()).operator bool())
+        detail::batch_cache::instance().insert_load_request(batch_ref.path());
+    else
+    {
+//        if (batch_ref.buffers_binding().operator bool())
+//            insert_load_request(*batch_ref.buffers_binding());
+        if (batch_ref.shaders_binding().operator bool())
+            insert_load_request(*batch_ref.shaders_binding());
+        if (batch_ref.textures_binding().operator bool())
+            insert_load_request(*batch_ref.textures_binding());
+    }
+}
 
 bool  make_current(batch const&  binding)
 {
-    if (!make_current(*binding.shaders_binding()))
-        return false;
-    if (!make_current(*binding.buffers_binding()))
-        return false;
-    if (!make_current(*binding.textures_binding()))
-        return false;
-    return true;
+    detail::batch_cache::instance().process_pending_batches();
+
+    bool result = true;
+    if (!binding.shaders_binding().operator bool() || !make_current(*binding.shaders_binding()))
+        result = false;
+    if (!binding.buffers_binding().operator bool() || !make_current(*binding.buffers_binding()))
+        result = false;
+    if (!binding.textures_binding().operator bool() || !make_current(*binding.textures_binding()))
+        result = false;
+
+    if (!result)
+        insert_load_request(binding);
+
+    return result;
 }
 
 

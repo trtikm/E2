@@ -56,7 +56,7 @@ void  batch_cache::insert_load_request(boost::filesystem::path const&  batch_fil
 
     if (batch_file.empty())
         return;
-    if (!find(batch_file).expired())
+    if (find(batch_file).operator bool())
         return;
     {
         std::lock_guard<std::mutex> const  lock(m_mutex);
@@ -78,6 +78,7 @@ void  batch_cache::process_pending_batches()
 {
     TMPROF_BLOCK();
 
+    std::lock_guard<std::mutex> const  lock(m_mutex);
     while (!m_pending_batches.empty())
     {
         std::string const&  error_message = std::get<2>(m_pending_batches.back());
@@ -101,38 +102,31 @@ void  batch_cache::process_pending_batches()
     }
 }
 
-std::weak_ptr<batch const>  batch_cache::find(boost::filesystem::path const&  shader_file)
+batch_ptr  batch_cache::find(boost::filesystem::path const&  shader_file)
 {
     TMPROF_BLOCK();
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
-    process_pending_batches();
     auto const  it = m_cached_batches.find(shader_file);
     if (it == m_cached_batches.cend())
         return {};
     return it->second;
 }
 
-void  batch_cache::cached(std::vector<boost::filesystem::path>&  output, bool const  process_pending)
+void  batch_cache::cached(std::vector<boost::filesystem::path>&  output)
 {
     TMPROF_BLOCK();
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
-    if (process_pending)
-        process_pending_batches();
-
     for (auto const&  path_batch : m_cached_batches)
         output.push_back(path_batch.first);
 }
 
-void  batch_cache::failed(std::vector< std::pair<boost::filesystem::path,std::string> >&  output, bool const  process_pending)
+void  batch_cache::failed(std::vector< std::pair<boost::filesystem::path,std::string> >&  output)
 {
     TMPROF_BLOCK();
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
-    if (process_pending)
-        process_pending_batches();
-
     for (auto const&  path_error : m_failed_loads)
         output.push_back(path_error);
 }

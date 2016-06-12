@@ -294,6 +294,8 @@ struct shaders_binding
     GLuint  id() const noexcept { return m_binding_data->id(); }
     GLuint  vertex_program_id() const noexcept { return m_binding_data->vertex_program_id(); }
     GLuint  fragment_program_id() const noexcept { return m_binding_data->fragment_program_id(); }
+    vertex_program_properties_ptr  binding_vertex_program_props() const noexcept { return m_binding_data->vertex_program_props(); }
+    fragment_program_properties_ptr  binding_fragment_program_props() const noexcept { return m_binding_data->fragment_program_props(); }
 
     uniform_variable_accessor_type  uniform_variable_accessor() const noexcept
     { return std::make_pair(vertex_program_id(), m_binding_data->vertex_program_props()); }

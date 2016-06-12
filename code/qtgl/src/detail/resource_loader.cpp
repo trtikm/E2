@@ -226,6 +226,8 @@ void  resource_loader::worker()
 {
     TMPROF_BLOCK();
 
+//std::cout << "resource_loader::worker() -> START\n"; std::cout.flush();
+
     while (true)
     {
         bool  done = true;
@@ -238,7 +240,9 @@ void  resource_loader::worker()
             if (fetch_batch_request(batch_file,receiver))
             {
                 std::string  error_message;
+//std::cout << "resource_loader::worker() -> load_batch_file(" << batch_file.string() << ")\n"; std::cout.flush();
                 std::shared_ptr<batch const> const  props = load_batch_file(batch_file,error_message);
+//std::cout << "   done.\n"; std::cout.flush();
                 receiver(batch_file,props,error_message);
                 done = false;
             }
@@ -253,7 +257,9 @@ void  resource_loader::worker()
             {
                 std::shared_ptr< std::vector<natural_8_bit> > const  data = std::make_shared< std::vector<natural_8_bit> >();
                 std::string  error_message;
+//std::cout << "resource_loader::worker() -> load_buffer_file(" << buffer_file.string() << ")\n"; std::cout.flush();
                 buffer_properties_ptr const  props = load_buffer_file(buffer_file,*data,error_message);
+//std::cout << "   done.\n"; std::cout.flush();
                 receiver(props,data,error_message);
                 done = false;
             }
@@ -267,7 +273,9 @@ void  resource_loader::worker()
             if (!fetch_vertex_program_request(shader_file,receiver))
                 break;
             std::shared_ptr<std::vector<std::string> >  lines = std::make_shared< std::vector<std::string> >();
+//std::cout << "resource_loader::worker() -> load_vertex_program_file(" << shader_file.string() << ")\n"; std::cout.flush();
             std::string const  error_message = load_vertex_program_file(shader_file,*lines);
+//std::cout << "   done.\n"; std::cout.flush();
             receiver(shader_file,lines,error_message);
             done = false;
         }
@@ -280,7 +288,9 @@ void  resource_loader::worker()
             if (!fetch_fragment_program_request(shader_file,receiver))
                 break;
             std::shared_ptr<std::vector<std::string> >  lines = std::make_shared< std::vector<std::string> >();
+//std::cout << "resource_loader::worker() -> load_fragment_program_file(" << shader_file.string() << ")\n"; std::cout.flush();
             std::string const  error_message = load_fragment_program_file(shader_file,*lines);
+//std::cout << "   done.\n"; std::cout.flush();
             receiver(shader_file,lines,error_message);
             done = false;
         }
@@ -293,7 +303,9 @@ void  resource_loader::worker()
             if (fetch_texture_request(texture_file,receiver))
             {
                 std::string  error_message;
+//std::cout << "resource_loader::worker() -> load_texture_file(" << texture_file.string() << ")\n"; std::cout.flush();
                 texture_properties_ptr const  props = load_texture_file(texture_file,error_message);
+//std::cout << "   done.\n"; std::cout.flush();
                 receiver(texture_file,props,error_message);
                 done = false;
             }
@@ -306,7 +318,9 @@ void  resource_loader::worker()
             texture_receiver_fn  receiver;
             if (fetch_texture_request(props,receiver))
             {
+//std::cout << "resource_loader::worker() -> load_texture_image_file(" << props->image_file().string() << ")\n"; std::cout.flush();
                 receiver(load_texture_image_file(props->image_file()),props);
+//std::cout << "   done.\n"; std::cout.flush();
                 done = false;
             }
         }
@@ -316,6 +330,8 @@ void  resource_loader::worker()
     }
 
     m_worker_finished = true;
+
+//std::cout << "resource_loader::worker() -> END\n"; std::cout.flush();
 }
 
 

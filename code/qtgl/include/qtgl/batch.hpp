@@ -13,6 +13,10 @@ namespace qtgl {
 
 struct batch
 {
+    static std::shared_ptr<batch const>  create(boost::filesystem::path const&  path);
+
+    batch(boost::filesystem::path const&  path);
+
     batch(boost::filesystem::path const&  path,
           buffers_binding_ptr const  buffers_binding,
           shaders_binding_ptr const  shaders_binding,
@@ -21,24 +25,28 @@ struct batch
 
     boost::filesystem::path const&  path() const noexcept { return m_path; }
 
-    buffers_binding_ptr  buffers_binding() const noexcept { return m_buffers_binding; }
-    shaders_binding_ptr  shaders_binding() const noexcept { return m_shaders_binding; }
-    textures_binding_ptr  textures_binding() const noexcept { return m_textures_binding; }
+    buffers_binding_ptr  buffers_binding() const;
+    shaders_binding_ptr  shaders_binding() const;
+    textures_binding_ptr  textures_binding() const;
 
     std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms() const;
 
 private:
 
     boost::filesystem::path  m_path;
-    buffers_binding_ptr  m_buffers_binding;
-    shaders_binding_ptr  m_shaders_binding;
-    textures_binding_ptr  m_textures_binding;
+    mutable buffers_binding_ptr  m_buffers_binding;
+    mutable shaders_binding_ptr  m_shaders_binding;
+    mutable textures_binding_ptr  m_textures_binding;
 
     static std::unordered_set<vertex_shader_uniform_symbolic_name>  s_empty_uniforms;
 };
 
 
-std::shared_ptr<batch const>  load_batch_file(boost::filesystem::path const&  batch_file, std::string&  error_message);
+using  batch_ptr = std::shared_ptr<batch const>;
+
+void  insert_load_request(batch const&  batch_ref);
+
+batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::string&  error_message);
 
 
 bool  make_current(batch const&  binding);

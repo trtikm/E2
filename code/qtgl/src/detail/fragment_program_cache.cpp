@@ -112,6 +112,7 @@ void  fragment_program_cache::process_pending_programs()
 {
     TMPROF_BLOCK();
 
+    std::lock_guard<std::mutex> const  lock(m_mutex);
     while (!m_pending_programs.empty())
     {
         boost::filesystem::path const& shader_file = std::get<0>(m_pending_programs.back());
@@ -141,7 +142,6 @@ std::weak_ptr<fragment_program const>  fragment_program_cache::find(boost::files
     TMPROF_BLOCK();
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
-    process_pending_programs();
     auto const  it = m_cached_programs.find(shader_file);
     if (it == m_cached_programs.cend())
         return {};
@@ -159,7 +159,7 @@ std::weak_ptr<fragment_program const>  fragment_program_cache::find(fragment_pro
 }
 
 bool  fragment_program_cache::associate_properties_with_pathname(fragment_program_properties_ptr const  props,
-                                                               boost::filesystem::path const&  shader_file)
+                                                                 boost::filesystem::path const&  shader_file)
 {
     std::lock_guard<std::mutex> const  lock(m_mutex);
     auto const  it = m_props_to_pathnames.find(props);

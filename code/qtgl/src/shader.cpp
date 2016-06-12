@@ -1106,6 +1106,9 @@ bool  shaders_binding::make_current(bool const  use_dummy_shaders_if_requested_o
 {
     TMPROF_BLOCK();
 
+    detail::vertex_program_cache::instance().process_pending_programs();
+    detail::fragment_program_cache::instance().process_pending_programs();
+
     vertex_program_ptr  vertex_program;
     if (!m_vertex_shader_file.empty())
     {
@@ -1222,6 +1225,12 @@ void  shaders_binding::binding_data_type::destroy_ID()
         m_vertex_program_props.reset();
         m_fragment_program_props.reset();
     }
+}
+
+void  insert_load_request(shaders_binding const&  binding)
+{
+    detail::vertex_program_cache::instance().insert_load_request(binding.vertex_shader_file());
+    detail::fragment_program_cache::instance().insert_load_request(binding.fragment_shader_file());
 }
 
 

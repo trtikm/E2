@@ -110,9 +110,8 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
                                         std::string&  error_message);
 
 void  send_buffer_load_request(boost::filesystem::path const&  buffer_file);
-void  get_properties_of_cached_buffers(std::vector<buffer_properties_ptr>&  output, bool const  process_pending = true);
-void  get_properties_of_failed_buffers(std::vector< std::pair<buffer_properties_ptr,std::string> >&  output,
-                                       bool const  process_pending = true);
+void  get_properties_of_cached_buffers(std::vector<buffer_properties_ptr>&  output);
+void  get_properties_of_failed_buffers(std::vector< std::pair<buffer_properties_ptr,std::string> >&  output);
 
 
 }

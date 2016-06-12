@@ -448,11 +448,43 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
                                         << 3U * num_triangles <<" indices.";
             return buffer_properties_ptr();
         }
-        return std::make_shared<buffer_properties>(buffer_file,3U,num_triangles,(natural_8_bit)sizeof(natural_32_bit),true);
+        return buffer_properties::create(buffer_file,3U,num_triangles,sizeof(natural_32_bit),true);
     }
     else if (file_type == "E2::qtgl/buffer/vertices/3d/text")
     {
-        NOT_IMPLEMENTED_YET();
+        std::string  line;
+        if (!detail::read_line(istr,line))
+        {
+            error_message = msgstream() << "Cannot read number of vertices in the file '" << buffer_file << "'.";
+            return buffer_properties_ptr();
+        }
+        natural_32_bit const  num_vertices = std::stoul(line);
+        if (num_vertices == 0U)
+        {
+            error_message = msgstream() << "The vertex buffer file '" << buffer_file << "' contains zero vertices.";
+            return buffer_properties_ptr();
+        }
+        for (natural_32_bit i = 0U; i < num_vertices; ++i)
+            for (natural_32_bit j = 0U; j < 3U; ++j)
+            {
+                if (!detail::read_line(istr,line))
+                {
+                    error_message = msgstream() << "Cannot read the coordinate no." << j << " of the vertex no." << i
+                                                << " in the file '" << buffer_file << "'.";
+                    return buffer_properties_ptr();
+                }
+                float_32_bit const coord = std::stof(line);
+                std::copy(reinterpret_cast<natural_8_bit const*>(&coord),
+                          reinterpret_cast<natural_8_bit const*>(&coord) + sizeof(coord),
+                          std::back_inserter(buffer_data));
+            }
+        if (detail::read_line(istr,line))
+        {
+            error_message = msgstream() << "The file '" << buffer_file << "' contains more than "
+                << 3U * num_vertices << " coordinates.";
+            return buffer_properties_ptr();
+        }
+        return buffer_properties::create(buffer_file,3U,num_vertices,sizeof(float_32_bit),false);
     }
     else if (file_type == "E2::qtgl/buffer/diffuse_colours/text")
     {
@@ -466,9 +498,55 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
     {
         NOT_IMPLEMENTED_YET();
     }
-    else if (file_type == "E2::qtgl/buffer/texcoords/2d/0/text")
+    else if (file_type.find("E2::qtgl/buffer/texcoords/2d/") == 0ULL)
     {
-        NOT_IMPLEMENTED_YET();
+        natural_8_bit  location = 0U;
+        bool  found = true;
+        for ( ; location < 10U; ++location)
+            if (file_type == (msgstream() << "E2::qtgl/buffer/texcoords/2d/" << (int)location << "/text").get())
+            {
+                found = true;
+                break;
+            }
+        if (!found)
+        {
+            error_message = msgstream() << "Unknown bind location in the file type string of the file '" << buffer_file << "'.";
+            return buffer_properties_ptr();
+        }
+
+        std::string  line;
+        if (!detail::read_line(istr,line))
+        {
+            error_message = msgstream() << "Cannot read number of texture coordinatres in the file '" << buffer_file << "'.";
+            return buffer_properties_ptr();
+        }
+        natural_32_bit const  num_vertices = std::stoul(line);
+        if (num_vertices == 0U)
+        {
+            error_message = msgstream() << "The texture coordinates buffer file '" << buffer_file << "' is empty.";
+            return buffer_properties_ptr();
+        }
+        for (natural_32_bit i = 0U; i < num_vertices; ++i)
+            for (natural_32_bit j = 0U; j < 2U; ++j)
+            {
+                if (!detail::read_line(istr,line))
+                {
+                    error_message = msgstream() << "Cannot read the coordinate no." << j << " of the texture vertex no." << i
+                                                << " in the file '" << buffer_file << "'.";
+                    return buffer_properties_ptr();
+                }
+                float_32_bit const coord = std::stof(line);
+                std::copy(reinterpret_cast<natural_8_bit const*>(&coord),
+                          reinterpret_cast<natural_8_bit const*>(&coord) + sizeof(coord),
+                          std::back_inserter(buffer_data));
+            }
+        if (detail::read_line(istr,line))
+        {
+            error_message = msgstream() << "The file '" << buffer_file << "' contains more than "
+                << 2U * num_vertices << " coordinates.";
+            return buffer_properties_ptr();
+        }
+        return buffer_properties::create(buffer_file,2U,num_vertices,sizeof(float_32_bit),false);
     }
     else if (file_type == "E2::qtgl/buffer/texcoords/2d/1/text")
     {
@@ -519,15 +597,14 @@ void  send_buffer_load_request(boost::filesystem::path const&  buffer_file)
     detail::buffer_cache::instance().insert_load_request(buffer_file);
 }
 
-void  get_properties_of_cached_buffers(std::vector<buffer_properties_ptr>&  output, bool const  process_pending)
+void  get_properties_of_cached_buffers(std::vector<buffer_properties_ptr>&  output)
 {
-    detail::buffer_cache::instance().cached(output,process_pending);
+    detail::buffer_cache::instance().cached(output);
 }
 
-void  get_properties_of_failed_buffers(std::vector< std::pair<buffer_properties_ptr,std::string> >&  output,
-                                       bool const  process_pending)
+void  get_properties_of_failed_buffers(std::vector< std::pair<buffer_properties_ptr,std::string> >&  output)
 {
-    detail::buffer_cache::instance().failed(output,process_pending);
+    detail::buffer_cache::instance().failed(output);
 }
 
 
@@ -598,6 +675,8 @@ buffers_binding::buffers_binding(
 bool  buffers_binding::make_current() const
 {
     TMPROF_BLOCK();
+
+    detail::buffer_cache::instance().process_pending_buffers();
 
     bool  is_ready = true;
     bool  need_num_primitives = false;

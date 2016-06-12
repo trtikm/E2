@@ -146,7 +146,7 @@ texture_image_properties  load_texture_image_file(boost::filesystem::path const&
                 qimage.bits(),
                 qimage.bits()+qimage.byteCount(),
                 GL_RGBA,
-                GL_UNSIGNED_INT_8_8_8_8
+                GL_UNSIGNED_BYTE
                 );
 }
 
@@ -469,6 +469,8 @@ bool  make_current(textures_binding const&  binding,
                    bool const  use_dummy_texture_if_requested_one_is_not_loaded_yet)
 {
     TMPROF_BLOCK();
+
+    detail::texture_cache::instance().process_pending_textures();
 
     bool result = true;
     for (auto const&  elem : binding.texture_files())

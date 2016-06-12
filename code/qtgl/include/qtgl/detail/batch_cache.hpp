@@ -19,10 +19,12 @@ struct batch_cache
     void clear();
 
     void  insert_load_request(boost::filesystem::path const&  batch_file);
-    std::weak_ptr<batch const>  find(boost::filesystem::path const&  batch_file);
+    batch_ptr  find(boost::filesystem::path const&  batch_file);
 
-    void  cached(std::vector<boost::filesystem::path>&  output, bool const  process_pending = true);
-    void  failed(std::vector< std::pair<boost::filesystem::path,std::string> >&  output, bool const  process_pending = true);
+    void  cached(std::vector<boost::filesystem::path>&  output);
+    void  failed(std::vector< std::pair<boost::filesystem::path,std::string> >&  output);
+
+    void  process_pending_batches();
 
 private:
     batch_cache();
@@ -34,8 +36,6 @@ private:
                    std::shared_ptr<batch const> const  data,
                    std::string const&  error_message //!< Empty string means no error.
                    );
-
-    void  process_pending_batches();
 
     std::unordered_map<boost::filesystem::path,   //!< Batch file path-name.
                        std::shared_ptr<batch const>,

@@ -112,6 +112,7 @@ void  vertex_program_cache::process_pending_programs()
 {
     TMPROF_BLOCK();
 
+    std::lock_guard<std::mutex> const  lock(m_mutex);
     while (!m_pending_programs.empty())
     {
         boost::filesystem::path const& shader_file = std::get<0>(m_pending_programs.back());
@@ -141,7 +142,6 @@ std::weak_ptr<vertex_program const>  vertex_program_cache::find(boost::filesyste
     TMPROF_BLOCK();
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
-    process_pending_programs();
     auto const  it = m_cached_programs.find(shader_file);
     if (it == m_cached_programs.cend())
         return {};

@@ -39,6 +39,8 @@ struct vertex_program_cache
 
     boost::filesystem::path  find_shader_file(vertex_program_properties_ptr const  props) const;
 
+    void  process_pending_programs();
+
 private:
     vertex_program_cache();
 
@@ -49,8 +51,6 @@ private:
                    source_code_lines_ptr const  source_code_lines,
                    std::string const&  error_message //!< Empty string means no error.
                    );
-
-    void  process_pending_programs();
 
     std::unordered_map<boost::filesystem::path,   //!< Shader file path-name.
                        vertex_program_ptr,
