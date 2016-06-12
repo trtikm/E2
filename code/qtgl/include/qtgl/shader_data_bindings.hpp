@@ -29,6 +29,14 @@ inline natural_8_bit  value(vertex_shader_input_buffer_binding_location const  l
 { return static_cast<natural_8_bit>(location); }
 std::string  binding_location_name(vertex_shader_input_buffer_binding_location const  location);
 
+inline constexpr vertex_shader_input_buffer_binding_location  min_vertex_shader_input_buffer_binding_location() noexcept
+{ return vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION; }
+inline constexpr vertex_shader_input_buffer_binding_location  max_vertex_shader_input_buffer_binding_location() noexcept
+{ return vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD9; }
+inline constexpr natural_8_bit  num_vertex_shader_input_buffer_bindings() noexcept
+{ return static_cast<natural_8_bit>(max_vertex_shader_input_buffer_binding_location()) -
+         static_cast<natural_8_bit>(min_vertex_shader_input_buffer_binding_location()) +
+         1U; }
 
 enum struct vertex_shader_output_buffer_binding_location : natural_8_bit
 {
@@ -104,6 +112,15 @@ enum struct fragment_shader_texture_sampler_binding : natural_8_bit
 inline natural_8_bit  value(fragment_shader_texture_sampler_binding const  binding)
 { return static_cast<natural_8_bit>(binding); }
 std::string  sampler_binding_name(fragment_shader_texture_sampler_binding const  texture_binding);
+
+inline constexpr fragment_shader_texture_sampler_binding  min_fragment_shader_texture_sampler_binding() noexcept
+{ return fragment_shader_texture_sampler_binding::BINDING_TEXTURE_DIFFUSE; }
+inline constexpr fragment_shader_texture_sampler_binding  max_fragment_shader_texture_sampler_binding() noexcept
+{ return fragment_shader_texture_sampler_binding::BINDING_TEXTURE_DIFFUSE; }
+inline constexpr natural_8_bit  num_fragment_shader_texture_sampler_bindings() noexcept
+{ return static_cast<natural_8_bit>(max_fragment_shader_texture_sampler_binding()) -
+         static_cast<natural_8_bit>(min_fragment_shader_texture_sampler_binding()) +
+         1U; }
 
 
 bool  compatible(std::unordered_set<vertex_shader_output_buffer_binding_location> const& vertex_program_output,

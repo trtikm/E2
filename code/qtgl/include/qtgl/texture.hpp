@@ -6,7 +6,7 @@
 #   include <utility/basic_numeric_types.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <vector>
-#   include <utility>
+#   include <unordered_map>
 #   include <memory>
 
 namespace qtgl {
@@ -139,6 +139,17 @@ private:
 namespace qtgl {
 
 
+texture_properties_ptr  load_texture_file(boost::filesystem::path const&  texture_file, //!< This is path to a TEXTURE file,
+                                                                                        //!< so it is NOT a path to an IMAGE file!!
+                                          std::string&  error_message
+                                          );
+
+
+void  insert_load_request(
+        boost::filesystem::path const&  texture_file    //!< This is path to a TEXTURE file,
+                                                        //!< so it is NOT a path to an IMAGE file!!
+        );
+
 void  insert_load_request(texture_properties_ptr const  props);
 
 inline void  insert_load_request(texture_properties const&  props)
@@ -178,26 +189,39 @@ using  textures_binding_ptr = std::shared_ptr<textures_binding const>;
 
 struct textures_binding
 {
-    using  data_type = std::vector< std::pair<fragment_shader_texture_sampler_binding,texture_properties_ptr> >;
+    using  texture_files_map = std::unordered_map<fragment_shader_texture_sampler_binding,
+                                                  boost::filesystem::path   //!< This is path to a TEXTURE file,
+                                                                            //!< so it is NOT a path to an IMAGE file!!
+                                                  >;
+    using  data_type = std::unordered_map<fragment_shader_texture_sampler_binding,texture_properties_ptr>;
 
+    static textures_binding_ptr  create(texture_files_map const&  files);
     static textures_binding_ptr  create(
-            std::vector< std::pair<fragment_shader_texture_sampler_binding,texture_properties> > const&  data
+            std::unordered_map<fragment_shader_texture_sampler_binding,texture_properties> const&  data
             );
 
+    textures_binding(texture_files_map const&  files);
     textures_binding(data_type const&  data);
-    textures_binding(std::vector< std::pair<fragment_shader_texture_sampler_binding,texture_properties> > const&  data);
+    textures_binding(std::unordered_map<fragment_shader_texture_sampler_binding,texture_properties> const&  data);
 
+    texture_files_map  texture_files() const noexcept { return m_texture_files; }
     data_type const& data() const noexcept { return m_data; }
 
 private:
 
+    texture_files_map  m_texture_files;
     data_type  m_data;
 };
 
 
 void  insert_load_request(textures_binding const&  binding);
 
-void  make_current(textures_binding const&  binding,
+texture_properties_ptr  find_properties_of_texture_file(
+        boost::filesystem::path const&  texture_file    //!< This is path to a TEXTURE file,
+                                                        //!< so it is NOT a path to an IMAGE file!!
+        );
+
+bool  make_current(textures_binding const&  binding,
                    bool const  use_dummy_texture_if_requested_one_is_not_loaded_yet = true);
 
 

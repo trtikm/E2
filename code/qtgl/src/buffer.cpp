@@ -1,5 +1,6 @@
 #include <qtgl/buffer.hpp>
 #include <qtgl/detail/buffer_cache.hpp>
+#include <qtgl/detail/read_line.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -110,32 +111,6 @@ bool  check_consistency(
 
     return check_consistency(direct_bindings);
 }
-
-std::ifstream&  read_line(std::ifstream&  istr, std::string&  line)
-{
-    while (std::getline(istr,line))
-        if (!line.empty())
-        {
-            if (line.back() == '\r')
-                line.pop_back();
-            break;
-        }
-    return istr;
-}
-
-//std::string  read_string(std::ifstream  istr, std::string&  error_message)
-//{
-//    std::string  line;
-//    if (std::getline(istr,line))
-//        return line;
-//    error_message = "Cannot ";
-//    return "";
-//}
-
-//std::string  read_natural_32_bit(std::ifstream  istr, std::string&  error_message)
-//{
-
-//}
 
 
 }}
@@ -433,7 +408,7 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
     }
 
     std::string  file_type;
-    if (!read_line(istr,file_type))
+    if (!detail::read_line(istr,file_type))
     {
         error_message = msgstream() << "The passed file '" << buffer_file << "' is not a qtgl file (cannot read its type string).";
         return buffer_properties_ptr();
@@ -442,7 +417,7 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
     if (file_type == "E2::qtgl/buffer/indices/triangles/text")
     {
         std::string  line;
-        if (!read_line(istr,line))
+        if (!detail::read_line(istr,line))
         {
             error_message = msgstream() << "Cannot read number of triangles in the file '" << buffer_file << "'.";
             return buffer_properties_ptr();
@@ -456,7 +431,7 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
         for (natural_32_bit  i = 0U; i < num_triangles; ++i)
             for (natural_32_bit  j = 0U; j < 3U; ++j)
             {
-                if (!read_line(istr,line))
+                if (!detail::read_line(istr,line))
                 {
                     error_message = msgstream() << "Cannot read the index no." << j << " of the triangle no." << i
                                                 << " in the file '" << buffer_file << "'.";
@@ -467,7 +442,7 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
                           reinterpret_cast<natural_8_bit const*>(&index) + sizeof(index),
                           std::back_inserter(buffer_data));
             }
-        if (read_line(istr,line))
+        if (detail::read_line(istr,line))
         {
             error_message = msgstream() << "The file '" << buffer_file << "' contains more indices than "
                                         << 3U * num_triangles <<" indices.";

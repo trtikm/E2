@@ -4,10 +4,8 @@
 #   include <qtgl/buffer.hpp>
 #   include <qtgl/shader.hpp>
 #   include <qtgl/texture.hpp>
-#   include <utility/tensor_math.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <unordered_set>
-#   include <functional>
 #   include <memory>
 
 namespace qtgl {
@@ -15,10 +13,6 @@ namespace qtgl {
 
 struct batch
 {
-    using  uniform_initialiser = std::function<bool(uniform_variable_accessor_type const&,
-                                                    vertex_shader_uniform_symbolic_name)>;
-
-    batch(boost::filesystem::path const&  path);
     batch(boost::filesystem::path const&  path,
           buffers_binding_ptr const  buffers_binding,
           shaders_binding_ptr const  shaders_binding,
@@ -47,17 +41,7 @@ private:
 std::shared_ptr<batch const>  load_batch_file(boost::filesystem::path const&  batch_file, std::string&  error_message);
 
 
-bool  make_current(batch const&  binding,
-                   batch::uniform_initialiser const& initialiser
-                        = [](uniform_variable_accessor_type const&,vertex_shader_uniform_symbolic_name) { return true; }
-                   );
-
-
-bool  make_current(batch const&  binding,
-                   matrix44 const& transform_matrix_transposed,
-                   batch::uniform_initialiser const& initialiser
-                        = [](uniform_variable_accessor_type const&,vertex_shader_uniform_symbolic_name) { return true; }
-                   );
+bool  make_current(batch const&  binding);
 
 
 }
