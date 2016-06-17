@@ -22,6 +22,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/qtgl/draw.hpp
     ./src/draw.cpp
 
+    ./include/qtgl/draw_state.hpp
+    ./src/draw_state.cpp
+
     ./include/qtgl/shader.hpp
     ./src/shader.cpp
 

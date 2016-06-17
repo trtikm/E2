@@ -1102,12 +1102,14 @@ shaders_binding::shaders_binding(vertex_program_ptr const  vertex_program,
     ASSUMPTION(m_binding_data.operator bool());
 }
 
-bool  shaders_binding::make_current(bool const  use_dummy_shaders_if_requested_ones_are_not_loaded_yet) const
+bool  shaders_binding::make_current() const
 {
     TMPROF_BLOCK();
 
     detail::vertex_program_cache::instance().process_pending_programs();
     detail::fragment_program_cache::instance().process_pending_programs();
+
+    bool  bind_ok = true;
 
     vertex_program_ptr  vertex_program;
     if (!m_vertex_shader_file.empty())
@@ -1120,9 +1122,7 @@ bool  shaders_binding::make_current(bool const  use_dummy_shaders_if_requested_o
         else
         {
             detail::vertex_program_cache::instance().insert_load_request(m_vertex_shader_file);
-            if (!use_dummy_shaders_if_requested_ones_are_not_loaded_yet)
-                return false;
-            vertex_program = detail::vertex_program_cache::instance().get_dummy_program().lock();
+            bind_ok = false;
         }
     }
     else if (m_vertex_program_props.operator bool())
@@ -1135,9 +1135,7 @@ bool  shaders_binding::make_current(bool const  use_dummy_shaders_if_requested_o
         else
         {
             detail::vertex_program_cache::instance().insert_load_request(m_vertex_program_props);
-            if (!use_dummy_shaders_if_requested_ones_are_not_loaded_yet)
-                return false;
-            vertex_program = detail::vertex_program_cache::instance().get_dummy_program().lock();
+            bind_ok = false;
         }
     }
     else
@@ -1154,9 +1152,7 @@ bool  shaders_binding::make_current(bool const  use_dummy_shaders_if_requested_o
         else
         {
             detail::fragment_program_cache::instance().insert_load_request(m_fragment_shader_file);
-            if (!use_dummy_shaders_if_requested_ones_are_not_loaded_yet)
-                return false;
-            fragment_program = detail::fragment_program_cache::instance().get_dummy_program().lock();
+            bind_ok = false;
         }
     }
     else if (m_fragment_program_props.operator bool())
@@ -1169,13 +1165,14 @@ bool  shaders_binding::make_current(bool const  use_dummy_shaders_if_requested_o
         else
         {
             detail::fragment_program_cache::instance().insert_load_request(m_fragment_program_props);
-            if (!use_dummy_shaders_if_requested_ones_are_not_loaded_yet)
-                return false;
-            fragment_program = detail::fragment_program_cache::instance().get_dummy_program().lock();
+            bind_ok = false;
         }
     }
     else
         fragment_program = m_fragment_program;
+
+    if (!bind_ok)
+        return false;
 
     INVARIANT(vertex_program.operator bool() && fragment_program.operator bool());
 

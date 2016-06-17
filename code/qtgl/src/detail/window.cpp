@@ -258,7 +258,7 @@ void window::render_now(bool const  is_this_pure_redraw_request)
         glapi().glEnable(GL_DEPTH_TEST);
         glapi().glEnable(GL_CULL_FACE);
         glapi().glCullFace(GL_BACK);
-        glapi().glEnable(GL_BLEND);
+        glapi().glDisable(GL_BLEND);
         glapi().glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
         glapi().glDepthRangef(0.0f,1.0f);
         initialise_caches();

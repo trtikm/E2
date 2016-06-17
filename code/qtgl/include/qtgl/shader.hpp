@@ -300,7 +300,7 @@ struct shaders_binding
     uniform_variable_accessor_type  uniform_variable_accessor() const noexcept
     { return std::make_pair(vertex_program_id(), m_binding_data->vertex_program_props()); }
 
-    bool  make_current(bool const  use_dummy_shaders_if_requested_ones_are_not_loaded_yet) const;
+    bool  make_current() const;
 
 private:
     shaders_binding(boost::filesystem::path const&  vertex_shader_file,
@@ -361,8 +361,8 @@ private:
 
 void  insert_load_request(shaders_binding const&  binding);
 
-inline bool make_current(shaders_binding const&  binding, bool const  use_dummy_shaders_if_requested_ones_are_not_loaded_yet = true)
-{ return binding.make_current(use_dummy_shaders_if_requested_ones_are_not_loaded_yet); }
+inline bool make_current(shaders_binding const&  binding)
+{ return binding.make_current(); }
 
 
 }

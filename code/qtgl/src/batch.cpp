@@ -33,6 +33,7 @@ batch::batch(boost::filesystem::path const&  path)
     , m_buffers_binding()
     , m_shaders_binding()
     , m_textures_binding()
+    , m_draw_state()
 {
     ASSUMPTION(!m_path.empty());
     insert_load_request(*this);
@@ -41,16 +42,19 @@ batch::batch(boost::filesystem::path const&  path)
 batch::batch(boost::filesystem::path const&  path,
              buffers_binding_ptr const  buffers_binding,
              shaders_binding_ptr const  shaders_binding,
-             textures_binding_ptr const  textures_binding
+             textures_binding_ptr const  textures_binding,
+             draw_state_ptr const  draw_state
              )
     : m_path(path)
     , m_buffers_binding(buffers_binding)
     , m_shaders_binding(shaders_binding)
     , m_textures_binding(textures_binding)
+    , m_draw_state(draw_state)
 {
     ASSUMPTION(m_buffers_binding.operator bool());
     ASSUMPTION(m_shaders_binding.operator bool());
     ASSUMPTION(m_textures_binding.operator bool());
+    ASSUMPTION(m_draw_state.operator bool());
 }
 
 buffers_binding_ptr  batch::buffers_binding() const
@@ -86,6 +90,17 @@ textures_binding_ptr  batch::textures_binding() const
     return m_textures_binding;
 }
 
+draw_state_ptr  batch::draw_state() const
+{
+    if (!m_draw_state.operator bool())
+    {
+        batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
+        if (pbatch.operator bool())
+            m_draw_state = pbatch->m_draw_state;
+    }
+    return m_draw_state;
+}
+
 std::unordered_set<vertex_shader_uniform_symbolic_name> const&  batch::symbolic_names_of_used_uniforms() const
 {
     return shaders_binding().operator bool() && shaders_binding()->binding_vertex_program_props().operator bool() ?
@@ -95,6 +110,8 @@ std::unordered_set<vertex_shader_uniform_symbolic_name> const&  batch::symbolic_
 
 batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::string&  error_message)
 {
+    TMPROF_BLOCK();
+
     ASSUMPTION(error_message.empty());
 
     if (!boost::filesystem::exists(batch_file))
@@ -231,11 +248,8 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                     break;
                 }
             if (!found)
-            {
-                error_message = msgstream() << "Unknown fragment shader texture sampler binding '" << line
-                                            << "' in the file '" << batch_file << "'.";
-                return {};
-            }
+                break;
+
             fragment_shader_texture_sampler_binding const  bind_location = fragment_shader_texture_sampler_binding(location);
             if (texture_paths.count(bind_location) != 0ULL)
             {
@@ -263,11 +277,98 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
         }
         while (detail::read_line(istr,line));
 
+        natural_32_bit  cull_face_mode;
+        if (line == "BACK")
+            cull_face_mode = GL_BACK;
+        else if (line == "FRONT")
+            cull_face_mode = GL_FRONT;
+        else if (line == "FRONT_AND_BACK")
+            cull_face_mode = GL_FRONT_AND_BACK;
+        else
+        {
+            error_message = msgstream() << "Unknown cull face mode '" << line
+                                        << "' in the file '" << batch_file << "'.";
+            return {};
+        }
+
+        detail::read_line(istr,line);
+        bool  use_alpha_blending;
+        if (line == "true")
+            use_alpha_blending = true;
+        else if (line == "false")
+            use_alpha_blending = false;
+        else
+        {
+            error_message = msgstream() << "In the file '" << batch_file
+                                        << "' there is expected 'true'/'false' "
+                                           "for enabling/disabling alpha blending"
+                                        << (line.empty() ? "." : ", but received: ")
+                                        << line;
+            return {};
+        }
+
+        detail::read_line(istr,line);
+        natural_32_bit  alpha_blending_src_function = 0U;
+        if (use_alpha_blending)
+        {
+            if (line == "ZERO")
+                alpha_blending_src_function = GL_ZERO;
+            else if (line == "ONE")
+                alpha_blending_src_function = GL_ONE;
+            else if (line == "SRC_ALPHA")
+                alpha_blending_src_function = GL_SRC_ALPHA;
+            else if (line == "DST_ALPHA")
+                alpha_blending_src_function = GL_DST_ALPHA;
+            else if (line == "ONE_MINUS_SRC_ALPHA")
+                alpha_blending_src_function = GL_ONE_MINUS_SRC_ALPHA;
+            else if (line == "ONE_MINUS_DST_ALPHA")
+                alpha_blending_src_function = GL_ONE_MINUS_DST_ALPHA;
+            else
+            {
+                if (line.empty())
+                    error_message = msgstream() << "There is missing alpha blending source function in the file '"
+                                                << batch_file << "'.";
+                else
+                    error_message = msgstream() << "Unknown alpha blending source function '" << line << "' in the file '"
+                                                << batch_file << "'.";
+                return {};
+            }
+        }
+
+        detail::read_line(istr,line);
+        natural_32_bit  alpha_blending_dst_function = 0U;
+        if (use_alpha_blending)
+        {
+            if (line == "ZERO")
+                alpha_blending_dst_function = GL_ZERO;
+            else if (line == "ONE")
+                alpha_blending_dst_function = GL_ONE;
+            else if (line == "SRC_ALPHA")
+                alpha_blending_dst_function = GL_SRC_ALPHA;
+            else if (line == "DST_ALPHA")
+                alpha_blending_dst_function = GL_DST_ALPHA;
+            else if (line == "ONE_MINUS_SRC_ALPHA")
+                alpha_blending_dst_function = GL_ONE_MINUS_SRC_ALPHA;
+            else if (line == "ONE_MINUS_DST_ALPHA")
+                alpha_blending_dst_function = GL_ONE_MINUS_DST_ALPHA;
+            else
+            {
+                if (line.empty())
+                    error_message = msgstream() << "There is missing alpha blending destination function in the file '"
+                                                << batch_file << "'.";
+                else
+                    error_message = msgstream() << "Unknown alpha blending destination function '" << line << "' in the file '"
+                                                << batch_file << "'.";
+                return {};
+            }
+        }
+
         return std::make_shared<batch const>(
                     batch_file,
                     buffers_binding::create(index_buffer,buffer_paths),
                     shaders_binding::create(vertex_shader,fragment_shader),
-                    textures_binding::create(texture_paths)
+                    textures_binding::create(texture_paths),
+                    draw_state::create(cull_face_mode,use_alpha_blending,alpha_blending_src_function,alpha_blending_dst_function)
                     );
     }
     else if (file_type == "E2::qtgl/batch/vertices/text")
@@ -309,8 +410,11 @@ void  insert_load_request(batch const&  batch_ref)
     }
 }
 
-bool  make_current(batch const&  binding)
+
+bool  make_current(batch const&  binding, draw_state const* const  previous_state)
 {
+    TMPROF_BLOCK();
+
     detail::batch_cache::instance().process_pending_batches();
 
     bool result = true;
@@ -321,10 +425,31 @@ bool  make_current(batch const&  binding)
     if (!binding.textures_binding().operator bool() || !make_current(*binding.textures_binding()))
         result = false;
 
+    if (result)
+    {
+        if (binding.draw_state().operator bool())
+            if (previous_state != nullptr)
+                make_current(*binding.draw_state(),*previous_state);
+            else
+                make_current(*binding.draw_state());
+        else
+            result = false;
+    }
+
     if (!result)
         insert_load_request(binding);
 
     return result;
+}
+
+bool  make_current(batch const&  binding)
+{
+    return make_current(binding,nullptr);
+}
+
+bool  make_current(batch const&  binding, draw_state const&  previous_state)
+{
+    return make_current(binding,&previous_state);
 }
 
 
