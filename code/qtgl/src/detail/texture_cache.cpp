@@ -155,5 +155,25 @@ std::weak_ptr<texture const>  texture_cache::find(texture_properties_ptr const  
     return it->second;
 }
 
+void  texture_cache::cached(std::vector< std::pair<boost::filesystem::path,texture_properties_ptr> >&  output)
+{
+    TMPROF_BLOCK();
+
+    std::lock_guard<std::mutex> const  lock(m_mutex);
+    for (auto const&  path_props : m_cached_properties)
+        output.push_back({path_props.first,path_props.second});
+    for (auto const&  props_texture : m_cached_textures)
+        output.push_back({"",props_texture.second->properties()});
+}
+
+void  texture_cache::failed(std::vector< std::pair<boost::filesystem::path,std::string> >&  output)
+{
+    TMPROF_BLOCK();
+
+    std::lock_guard<std::mutex> const  lock(m_mutex);
+    for (auto const&  path_msg : m_failed_properties)
+        output.push_back({path_msg.first,path_msg.second});
+}
+
 
 }}

@@ -248,13 +248,14 @@ texture_properties_ptr  load_texture_file(boost::filesystem::path const&  textur
             error_message = msgstream() << "Cannot read a path to an image file in the file '" << texture_file << "'.";
             return {};
         }
-        boost::filesystem::path const  image_file = boost::filesystem::absolute(texture_file.parent_path() / line);
+        boost::filesystem::path  image_file = boost::filesystem::absolute(texture_file.parent_path() / line);
         if (!boost::filesystem::exists(image_file) || !boost::filesystem::is_regular_file(image_file))
         {
             error_message = msgstream() << "The image file '" << image_file.string()
                                         << "' referenced from the texture file '" << texture_file << "' does not exist.";
             return {};
         }
+        image_file = boost::filesystem::canonical(image_file);
 
         if (!detail::read_line(istr,line))
         {
@@ -381,9 +382,9 @@ bool  make_current(fragment_shader_texture_sampler_binding const  binding,
     bool  result = true;
     if (!ptr.operator bool())
     {
+        detail::texture_cache::instance().insert_load_request(props);
         if (!use_dummy_texture_if_requested_one_is_not_loaded_yet)
             return false;
-        detail::texture_cache::instance().insert_load_request(props);
         ptr = detail::texture_cache::instance().get_dummy_texture().lock();
         INVARIANT(ptr.operator bool());
         result = false;
@@ -397,6 +398,17 @@ void  make_current(fragment_shader_texture_sampler_binding const  binding, textu
     ASSUMPTION(value(binding) < GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
     glapi().glActiveTexture(GL_TEXTURE0 + value(binding));
     glapi().glBindTexture(GL_TEXTURE_2D,texture->id());
+}
+
+
+void  get_properties_of_cached_textures(std::vector< std::pair<boost::filesystem::path,texture_properties_ptr> >&  output)
+{
+    detail::texture_cache::instance().cached(output);
+}
+
+void  get_properties_of_failed_textures(std::vector< std::pair<boost::filesystem::path,std::string> >&  output)
+{
+    detail::texture_cache::instance().failed(output);
 }
 
 

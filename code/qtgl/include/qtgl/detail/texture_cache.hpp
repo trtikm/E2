@@ -34,6 +34,9 @@ struct texture_cache
 
     void  process_pending_textures();
 
+    void  cached(std::vector< std::pair<boost::filesystem::path,texture_properties_ptr> >&  output);
+    void  failed(std::vector< std::pair<boost::filesystem::path,std::string> >&  output);
+
 private:
     texture_cache();
 

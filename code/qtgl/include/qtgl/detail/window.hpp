@@ -14,7 +14,9 @@
 #   include <chrono>
 #   include <memory>
 #   include <functional>
+#   include <vector>
 #   include <unordered_map>
+#   include <unordered_set>
 
 namespace qtgl { namespace detail {
 
@@ -118,6 +120,11 @@ private:
     qtgl::window_props  m_window_props;
     qtgl::mouse_props  m_mouse_props;
     qtgl::keyboard_props  m_keyboard_props;
+
+    std::vector<std::string>  m_keyboard_text;
+    std::unordered_set<keyboard_key_name>  m_keyboard_pressed;
+    std::unordered_set<keyboard_key_name>  m_keyboard_just_pressed;
+    std::unordered_set<keyboard_key_name>  m_keyboard_just_released;
 
     bool  m_is_mouse_set;
     float_32_bit  m_mouse_x;

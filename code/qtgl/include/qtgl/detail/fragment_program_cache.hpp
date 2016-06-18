@@ -41,6 +41,9 @@ struct fragment_program_cache
 
     void  process_pending_programs();
 
+    void  cached(std::vector< std::pair<boost::filesystem::path,fragment_program_properties_ptr> >&  output);
+    void  failed(std::vector< std::pair<boost::filesystem::path,std::string> >&  output);
+
 private:
     fragment_program_cache();
 

@@ -178,4 +178,23 @@ boost::filesystem::path  vertex_program_cache::find_shader_file(vertex_program_p
 }
 
 
+void  vertex_program_cache::cached(std::vector< std::pair<boost::filesystem::path,vertex_program_properties_ptr> >&  output)
+{
+    TMPROF_BLOCK();
+
+    std::lock_guard<std::mutex> const  lock(m_mutex);
+    for (auto const&  path_program : m_cached_programs)
+        output.push_back({path_program.first,path_program.second->properties()});
+}
+
+void  vertex_program_cache::failed(std::vector< std::pair<boost::filesystem::path,std::string> >&  output)
+{
+    TMPROF_BLOCK();
+
+    std::lock_guard<std::mutex> const  lock(m_mutex);
+    for (auto const&  path_info : m_failed_loads)
+        output.push_back({path_info.first,std::get<2>(path_info.second)});
+}
+
+
 }}

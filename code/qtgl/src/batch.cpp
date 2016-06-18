@@ -154,39 +154,42 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
             error_message = msgstream() << "Cannot read a path to vertex shader file in the file '" << batch_file << "'.";
             return {};
         }
-        boost::filesystem::path const  vertex_shader = boost::filesystem::absolute(batch_file.parent_path() / line);
+        boost::filesystem::path  vertex_shader = boost::filesystem::absolute(batch_file.parent_path() / line);
         if (!boost::filesystem::exists(vertex_shader) || !boost::filesystem::is_regular_file(vertex_shader))
         {
             error_message = msgstream() << "The vertex shader file '" << vertex_shader.string()
                                         << "' referenced from the batch file '" << batch_file << "' does not exist.";
             return {};
         }
+        vertex_shader = boost::filesystem::canonical(vertex_shader);
 
         if (!detail::read_line(istr,line))
         {
             error_message = msgstream() << "Cannot read a path to fragment shader file in the file '" << batch_file << "'.";
             return {};
         }
-        boost::filesystem::path const  fragment_shader = boost::filesystem::absolute(batch_file.parent_path() / line);
+        boost::filesystem::path  fragment_shader = boost::filesystem::absolute(batch_file.parent_path() / line);
         if (!boost::filesystem::exists(fragment_shader) || !boost::filesystem::is_regular_file(fragment_shader))
         {
             error_message = msgstream() << "The fragment shader file '" << fragment_shader.string()
                                         << "' referenced from the batch file '" << batch_file << "' does not exist.";
             return {};
         }
+        fragment_shader = boost::filesystem::canonical(fragment_shader);
 
         if (!detail::read_line(istr,line))
         {
             error_message = msgstream() << "Cannot read a path to the index buffer file in the file '" << batch_file << "'.";
             return {};
         }
-        boost::filesystem::path const  index_buffer = boost::filesystem::absolute(batch_file.parent_path() / line);
+        boost::filesystem::path  index_buffer = boost::filesystem::absolute(batch_file.parent_path() / line);
         if (!boost::filesystem::exists(index_buffer) || !boost::filesystem::is_regular_file(index_buffer))
         {
             error_message = msgstream() << "The fragment shader file '" << fragment_shader.string()
                                         << "' referenced from the batch file '" << batch_file << "' does not exist.";
             return {};
         }
+        index_buffer = boost::filesystem::canonical(index_buffer);
 
         std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path>  buffer_paths;
         while (true)
@@ -224,7 +227,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                                             << "' in the file '" << batch_file << "'.";
                 return {};
             }
-            boost::filesystem::path const  buffer_file = boost::filesystem::absolute(batch_file.parent_path() / line);
+            boost::filesystem::path  buffer_file = boost::filesystem::absolute(batch_file.parent_path() / line);
             if (!boost::filesystem::exists(buffer_file) || !boost::filesystem::is_regular_file(buffer_file))
             {
                 error_message = msgstream() << "The buffer file '" << buffer_file.string()
@@ -232,6 +235,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                                             << "' referenced from the batch file '" << batch_file << "' does not exist.";
                 return {};
             }
+            buffer_file = boost::filesystem::canonical(buffer_file);
 
             buffer_paths.insert({bind_location,buffer_file});
         }
@@ -264,7 +268,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                                             << "' in the file '" << batch_file << "'.";
                 return {};
             }
-            boost::filesystem::path const  texture_file = boost::filesystem::absolute(batch_file.parent_path() / line);
+            boost::filesystem::path  texture_file = boost::filesystem::absolute(batch_file.parent_path() / line);
             if (!boost::filesystem::exists(texture_file) || !boost::filesystem::is_regular_file(texture_file))
             {
                 error_message = msgstream() << "The texture file '" << texture_file.string()
@@ -272,6 +276,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                                             << "' referenced from the batch file '" << batch_file << "' does not exist.";
                 return {};
             }
+            texture_file = boost::filesystem::canonical(texture_file);
 
             texture_paths.insert({bind_location,texture_file});
         }

@@ -5,6 +5,7 @@
 #include <qtgl/detail/fragment_program_cache.hpp>
 #include <qtgl/detail/buffer_cache.hpp>
 #include <qtgl/detail/batch_cache.hpp>
+#include <qtgl/gui_utils.hpp>
 #include <utility/tensor_math.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
@@ -62,6 +63,87 @@ void  on_window_destroy()
 }
 
 
+std::unordered_map<int,keyboard_key_name> const&  qtkey_to_keyname()
+{
+    static std::unordered_map<int,keyboard_key_name> const  ktn {
+        { Qt::Key_Escape,       KEY_ESCAPE() },
+        { Qt::Key_Tab,          KEY_TAB() },
+        { Qt::Key_Backspace,    KEY_BACKSPACE() },
+        { Qt::Key_Return,       KEY_RETURN() },
+        { Qt::Key_Enter,        KEY_RETURN() },
+        { Qt::Key_Insert,       KEY_INSERT() },
+        { Qt::Key_Delete,       KEY_DELETE() },
+        { Qt::Key_Pause,        KEY_PAUSE() },
+        { Qt::Key_Home,         KEY_HOME() },
+        { Qt::Key_End,          KEY_END() },
+        { Qt::Key_Left,         KEY_LEFT() },
+        { Qt::Key_Up,           KEY_UP() },
+        { Qt::Key_Right,        KEY_RIGHT() },
+        { Qt::Key_Down,         KEY_DOWM() },
+        { Qt::Key_PageUp,       KEY_PAGEUP() },
+        { Qt::Key_PageDown,     KEY_PAGEDOWN() },
+        { Qt::Key_CapsLock,     KEY_CAPSLOCK() },
+        { Qt::Key_NumLock,      KEY_NUMLOCK() },
+        { Qt::Key_F1,           KEY_F1() },
+        { Qt::Key_F2,           KEY_F2() },
+        { Qt::Key_F3,           KEY_F3() },
+        { Qt::Key_F4,           KEY_F4() },
+        { Qt::Key_F5,           KEY_F5() },
+        { Qt::Key_F6,           KEY_F6() },
+        { Qt::Key_F7,           KEY_F7() },
+        { Qt::Key_F8,           KEY_F8() },
+        { Qt::Key_F9,           KEY_F9() },
+        { Qt::Key_F10,          KEY_F10() },
+        { Qt::Key_F11,          KEY_F11() },
+        { Qt::Key_F12,          KEY_F12() },
+        { Qt::Key_Space,        KEY_SPACE() },
+        { Qt::Key_Comma,        KEY_COMMA() },
+        { Qt::Key_Period,       KEY_DOT() },
+        { Qt::Key_Slash,        KEY_SLASH() },
+        { Qt::Key_0,            KEY_0() },
+        { Qt::Key_1,            KEY_1() },
+        { Qt::Key_2,            KEY_2() },
+        { Qt::Key_3,            KEY_3() },
+        { Qt::Key_4,            KEY_4() },
+        { Qt::Key_5,            KEY_5() },
+        { Qt::Key_6,            KEY_6() },
+        { Qt::Key_7,            KEY_7() },
+        { Qt::Key_8,            KEY_8() },
+        { Qt::Key_9,            KEY_9() },
+        { Qt::Key_Semicolon,    KEY_SEMICOLON() },
+        { Qt::Key_A,            KEY_A() },
+        { Qt::Key_B,            KEY_B() },
+        { Qt::Key_C,            KEY_C() },
+        { Qt::Key_D,            KEY_D() },
+        { Qt::Key_E,            KEY_E() },
+        { Qt::Key_F,            KEY_F() },
+        { Qt::Key_G,            KEY_G() },
+        { Qt::Key_H,            KEY_H() },
+        { Qt::Key_I,            KEY_I() },
+        { Qt::Key_J,            KEY_J() },
+        { Qt::Key_K,            KEY_K() },
+        { Qt::Key_L,            KEY_L() },
+        { Qt::Key_M,            KEY_M() },
+        { Qt::Key_N,            KEY_N() },
+        { Qt::Key_O,            KEY_O() },
+        { Qt::Key_P,            KEY_P() },
+        { Qt::Key_Q,            KEY_Q() },
+        { Qt::Key_R,            KEY_R() },
+        { Qt::Key_S,            KEY_S() },
+        { Qt::Key_T,            KEY_T() },
+        { Qt::Key_U,            KEY_U() },
+        { Qt::Key_V,            KEY_V() },
+        { Qt::Key_W,            KEY_W() },
+        { Qt::Key_X,            KEY_X() },
+        { Qt::Key_Y,            KEY_Y() },
+        { Qt::Key_Z,            KEY_Z() },
+        { Qt::Key_Backslash,    KEY_BACKSLASH() },
+        { Qt::Key_Underscore,   KEY_UNDERSCORE() },
+    };
+    return ktn;
+}
+
+
 }}}
 
 namespace qtgl { namespace detail {
@@ -92,6 +174,11 @@ window::window(std::function<std::shared_ptr<real_time_simulator>()> const  crea
     , m_window_props(1U,1U,1.0f,1.0f,false,false)
     , m_mouse_props(0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,{})
     , m_keyboard_props()
+
+    , m_keyboard_text()
+    , m_keyboard_pressed()
+    , m_keyboard_just_pressed()
+    , m_keyboard_just_released()
 
     , m_is_mouse_set(false)
     , m_mouse_x(0.0f)
@@ -228,6 +315,10 @@ void window::render_now(bool const  is_this_pure_redraw_request)
     };
 
     m_keyboard_props = qtgl::keyboard_props {
+            m_keyboard_text,
+            m_keyboard_pressed,
+            m_keyboard_just_pressed,
+            m_keyboard_just_released
     };
 
     m_mouse_props = qtgl::mouse_props{
@@ -289,6 +380,10 @@ void window::render_now(bool const  is_this_pure_redraw_request)
         call_listeners(notifications::fps_updated());
     }
 
+    m_keyboard_text.clear();
+    m_keyboard_just_pressed.clear();
+    m_keyboard_just_released.clear();
+
     m_mouse_previous_x = m_mouse_x;
     m_mouse_previous_y = m_mouse_y;
     m_mouse_lbutton_just_pressed = false;
@@ -331,20 +426,30 @@ void window::timerEvent(QTimerEvent* const event)
 
 void window::keyPressEvent(QKeyEvent* const event)
 {
-//    if (!event->isAutoRepeat())
-//    {
-        //std::cout << "opengl_window::keyPressEvent(" << event->key() << ")\n";
-        event->accept();
-//    }
+    auto const  it = qtkey_to_keyname().find(event->key());
+    if (it != qtkey_to_keyname().cend())
+    {
+        m_keyboard_pressed.insert(it->second);
+        if (!event->isAutoRepeat())
+            m_keyboard_just_pressed.insert(it->second);
+    }
+//    else
+//        std::cout << "opengl_window::keyPressEvent(" << event->key() << ")\n";
+    m_keyboard_text.push_back(to_string(event->text()));
+    event->accept();
 }
 
 void window::keyReleaseEvent(QKeyEvent* const event)
 {
-//    if (!event->isAutoRepeat())
-//    {
-        //std::cout << "opengl_window::keyReleaseEvent(" << event->key() << ")\n";
-        event->accept();
-//    }
+    auto const  it = qtkey_to_keyname().find(event->key());
+    if (it != qtkey_to_keyname().cend())
+    {
+        m_keyboard_pressed.erase(it->second);
+        m_keyboard_just_released.insert(it->second);
+    }
+//    else
+//        std::cout << "opengl_window::keyReleaseEvent(" << event->key() << ")\n";
+    event->accept();
 }
 
 void window::mouseMoveEvent(QMouseEvent* const event)

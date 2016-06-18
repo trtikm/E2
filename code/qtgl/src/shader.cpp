@@ -76,7 +76,7 @@ std::string  parse_lines(std::istream&  istr,
         if (is_include_command(line,include_string))
         {
             boost::filesystem::path const include_filename =
-                    boost::filesystem::absolute(directory / include_string).normalize();
+                    boost::filesystem::canonical(directory / include_string);
             if (visited_files.count(include_filename.string()))
                 return "Cyclic dependency between included files.";
             visited_files.insert(include_filename.string());
@@ -141,7 +141,7 @@ std::string  parse_lines(std::istream&  istr,
 
     std::unordered_set<std::string>  visited_files;
     return parse_lines(istr,shader_type,
-                       boost::filesystem::absolute(boost::filesystem::current_path()).normalize(),
+                       boost::filesystem::canonical(boost::filesystem::current_path()),
                        visited_files,output_lines);
 }
 
@@ -154,7 +154,7 @@ std::string  parse_lines(boost::filesystem::path const&  raw_filename,
     ASSUMPTION(output_lines.empty());
 
     boost::filesystem::path const  filename =
-            boost::filesystem::absolute(raw_filename).normalize();
+            boost::filesystem::canonical(raw_filename);
 
     boost::filesystem::ifstream  istr(filename,std::ios_base::binary);
     if (!istr.good())
@@ -805,6 +805,22 @@ boost::filesystem::path  find_vertex_program_file(vertex_program_properties_ptr 
 }
 
 
+void  get_properties_of_cached_vertex_programs(
+        std::vector< std::pair<boost::filesystem::path,vertex_program_properties_ptr> >&  output
+        )
+{
+    detail::vertex_program_cache::instance().cached(output);
+}
+
+void  get_properties_of_failed_vertex_programs(
+        std::vector< std::pair<boost::filesystem::path,std::string> >&  output
+        )
+{
+    detail::vertex_program_cache::instance().failed(
+                output);
+}
+
+
 }
 
 namespace qtgl {
@@ -1012,6 +1028,22 @@ bool  associate_fragment_program_properties_with_shader_file(
 boost::filesystem::path  find_fragment_program_file(fragment_program_properties_ptr const  props)
 {
     return detail::fragment_program_cache::instance().find_shader_file(props);
+}
+
+
+void  get_properties_of_cached_fragment_programs(
+        std::vector< std::pair<boost::filesystem::path,fragment_program_properties_ptr> >&  output
+        )
+{
+    detail::fragment_program_cache::instance().cached(output);
+}
+
+void  get_properties_of_failed_fragment_programs(
+        std::vector< std::pair<boost::filesystem::path,std::string> >&  output
+        )
+{
+    detail::fragment_program_cache::instance().failed(
+                output);
 }
 
 

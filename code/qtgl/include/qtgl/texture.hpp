@@ -178,6 +178,10 @@ inline bool  make_current(fragment_shader_texture_sampler_binding const  binding
 void  make_current(fragment_shader_texture_sampler_binding const  binding, texture_ptr const  texture);
 
 
+void  get_properties_of_cached_textures(std::vector< std::pair<boost::filesystem::path,texture_properties_ptr> >&  output);
+void  get_properties_of_failed_textures(std::vector< std::pair<boost::filesystem::path,std::string> >&  output);
+
+
 }
 
 namespace qtgl {

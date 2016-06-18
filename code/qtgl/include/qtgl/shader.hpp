@@ -147,6 +147,14 @@ inline boost::filesystem::path  find_vertex_program_file(vertex_program_properti
 { return find_vertex_program_file(std::make_shared<vertex_program_properties>(props)); }
 
 
+void  get_properties_of_cached_vertex_programs(
+        std::vector< std::pair<boost::filesystem::path,vertex_program_properties_ptr> >&  output
+        );
+void  get_properties_of_failed_vertex_programs(
+        std::vector< std::pair<boost::filesystem::path,std::string> >&  output
+        );
+
+
 }
 
 namespace qtgl {
@@ -257,6 +265,15 @@ bool  associate_fragment_program_properties_with_shader_file(
 boost::filesystem::path  find_fragment_program_file(fragment_program_properties_ptr const  props);
 inline boost::filesystem::path  find_fragment_program_file(fragment_program_properties const&  props)
 { return find_fragment_program_file(std::make_shared<fragment_program_properties>(props)); }
+
+
+void  get_properties_of_cached_fragment_programs(
+        std::vector< std::pair<boost::filesystem::path,fragment_program_properties_ptr> >&  output
+        );
+void  get_properties_of_failed_fragment_programs(
+        std::vector< std::pair<boost::filesystem::path,std::string> >&  output
+        );
+
 
 }
 
