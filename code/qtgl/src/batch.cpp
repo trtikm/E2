@@ -283,7 +283,9 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
         while (detail::read_line(istr,line));
 
         natural_32_bit  cull_face_mode;
-        if (line == "BACK")
+        if (line == "NONE")
+            cull_face_mode = GL_NONE;
+        else if (line == "BACK")
             cull_face_mode = GL_BACK;
         else if (line == "FRONT")
             cull_face_mode = GL_FRONT;
@@ -455,6 +457,23 @@ bool  make_current(batch const&  binding)
 bool  make_current(batch const&  binding, draw_state const&  previous_state)
 {
     return make_current(binding,&previous_state);
+}
+
+
+std::pair<bool,bool>  get_batch_chache_state(boost::filesystem::path const&  batch_file)
+{
+    return { detail::batch_cache::instance().find(batch_file).operator bool(),
+             !detail::batch_cache::instance().fail_message(batch_file).empty() };
+}
+
+void  get_cached_batches(std::vector< std::pair<boost::filesystem::path,batch_ptr> >&  output)
+{
+    detail::batch_cache::instance().cached(output);
+}
+
+void  get_failed_batches(std::vector< std::pair<boost::filesystem::path,std::string> >&  output)
+{
+    detail::batch_cache::instance().failed(output);
 }
 
 

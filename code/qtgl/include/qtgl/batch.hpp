@@ -8,6 +8,7 @@
 #   include <boost/filesystem/path.hpp>
 #   include <unordered_set>
 #   include <memory>
+#   include <utility>
 
 namespace qtgl {
 
@@ -55,6 +56,14 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
 
 bool  make_current(batch const&  binding);
 bool  make_current(batch const&  binding, draw_state const&  previous_state);
+
+
+std::pair<bool, //!< Is inside the cache
+          bool  //!< Is inside failed
+    >  get_batch_chache_state(boost::filesystem::path const&  batch_file);
+
+void  get_cached_batches(std::vector< std::pair<boost::filesystem::path,batch_ptr> >&  output);
+void  get_failed_batches(std::vector< std::pair<boost::filesystem::path,std::string> >&  output);
 
 
 }

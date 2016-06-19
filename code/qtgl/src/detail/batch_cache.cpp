@@ -102,7 +102,7 @@ void  batch_cache::process_pending_batches()
     }
 }
 
-batch_ptr  batch_cache::find(boost::filesystem::path const&  shader_file)
+batch_ptr  batch_cache::find(boost::filesystem::path const&  shader_file) const
 {
     TMPROF_BLOCK();
 
@@ -113,13 +113,27 @@ batch_ptr  batch_cache::find(boost::filesystem::path const&  shader_file)
     return it->second;
 }
 
-void  batch_cache::cached(std::vector<boost::filesystem::path>&  output)
+std::string const&  batch_cache::fail_message(boost::filesystem::path const&  batch_file) const
+{
+    TMPROF_BLOCK();
+
+    std::lock_guard<std::mutex> const  lock(m_mutex);
+    auto const  it = m_failed_loads.find(batch_file);
+    if (it == m_failed_loads.cend())
+    {
+        static std::string  noerror;
+        return noerror;
+    }
+    return it->second;
+}
+
+void  batch_cache::cached(std::vector< std::pair<boost::filesystem::path,batch_ptr> >&  output)
 {
     TMPROF_BLOCK();
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
     for (auto const&  path_batch : m_cached_batches)
-        output.push_back(path_batch.first);
+        output.push_back(path_batch);
 }
 
 void  batch_cache::failed(std::vector< std::pair<boost::filesystem::path,std::string> >&  output)
@@ -130,7 +144,6 @@ void  batch_cache::failed(std::vector< std::pair<boost::filesystem::path,std::st
     for (auto const&  path_error : m_failed_loads)
         output.push_back(path_error);
 }
-
 
 
 }}

@@ -19,9 +19,10 @@ struct batch_cache
     void clear();
 
     void  insert_load_request(boost::filesystem::path const&  batch_file);
-    batch_ptr  find(boost::filesystem::path const&  batch_file);
+    batch_ptr  find(boost::filesystem::path const&  batch_file) const;
+    std::string const&  fail_message(boost::filesystem::path const&  batch_file) const;
 
-    void  cached(std::vector<boost::filesystem::path>&  output);
+    void  cached(std::vector< std::pair<boost::filesystem::path,batch_ptr> >&  output);
     void  failed(std::vector< std::pair<boost::filesystem::path,std::string> >&  output);
 
     void  process_pending_batches();

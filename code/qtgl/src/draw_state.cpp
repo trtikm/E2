@@ -42,7 +42,13 @@ void  make_current(draw_state const&  state)
 {
     TMPROF_BLOCK();
 
-    glapi().glCullFace(state.cull_face_mode());
+    if (state.cull_face_mode() == GL_NONE)
+        glapi().glDisable(GL_CULL_FACE);
+    else
+    {
+        glapi().glEnable(GL_CULL_FACE);
+        glapi().glCullFace(state.cull_face_mode());
+    }
     if (state.use_alpha_blending())
         glapi().glEnable(GL_BLEND);
     else
@@ -55,7 +61,16 @@ void  make_current(draw_state const&  state, draw_state const&  previous_state)
     TMPROF_BLOCK();
 
     if (state.cull_face_mode() != previous_state.cull_face_mode())
-        glapi().glCullFace(state.cull_face_mode());
+    {
+        if (state.cull_face_mode() == GL_NONE)
+            glapi().glDisable(GL_CULL_FACE);
+        else
+        {
+            if (previous_state.cull_face_mode() == GL_NONE)
+                glapi().glEnable(GL_CULL_FACE);
+            glapi().glCullFace(state.cull_face_mode());
+        }
+    }
 
     if (state.use_alpha_blending() != previous_state.use_alpha_blending())
         if (state.use_alpha_blending())
