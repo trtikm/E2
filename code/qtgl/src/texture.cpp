@@ -6,6 +6,7 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
+#include <utility/canonical_path.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/functional/hash.hpp>
@@ -255,7 +256,7 @@ texture_properties_ptr  load_texture_file(boost::filesystem::path const&  textur
                                         << "' referenced from the texture file '" << texture_file << "' does not exist.";
             return {};
         }
-        image_file = boost::filesystem::canonical(image_file);
+        image_file = canonical_path(image_file);
 
         if (!detail::read_line(istr,line))
         {

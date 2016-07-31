@@ -11,6 +11,7 @@
 #   include <QKeyEvent>
 #   include <QMouseEvent>
 #   include <QWheelEvent>
+#   include <QOpenGLDebugLogger>
 #   include <chrono>
 #   include <memory>
 #   include <functional>
@@ -45,7 +46,8 @@ private:
 
 struct window : public QWindow
 {
-    window(std::function<std::shared_ptr<real_time_simulator>()> const  create_simulator_fn);
+    explicit window(std::function<std::shared_ptr<real_time_simulator>()> const  create_simulator_fn,
+                    bool const  enable_gl_debug_mode = false);
     ~window();
 
     std::shared_ptr<real_time_simulator>  simulator() { return m_simulator; }
@@ -105,6 +107,8 @@ private:
     std::unordered_map< std::string, std::vector<notification_listener> >  m_notification_listeners;
 
     std::shared_ptr<opengl_context>  m_context;
+    bool  m_is_gl_debug_mode_enabled;
+    std::shared_ptr<QOpenGLDebugLogger>  m_gl_logger;
 
     natural_64_bit  m_round_id;
     std::chrono::high_resolution_clock::time_point  m_start_time;
@@ -113,6 +117,8 @@ private:
     natural_32_bit  m_FPS_num_rounds;
     float_64_bit  m_FPS_time;
     natural_32_bit  m_FPS;
+
+    bool  m_initialised;
 
     bool  m_has_focus;
     int  m_idleTimerId;

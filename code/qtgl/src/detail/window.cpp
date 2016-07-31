@@ -149,7 +149,8 @@ std::unordered_map<int,keyboard_key_name> const&  qtkey_to_keyname()
 namespace qtgl { namespace detail {
 
 
-window::window(std::function<std::shared_ptr<real_time_simulator>()> const  create_simulator_fn)
+window::window(std::function<std::shared_ptr<real_time_simulator>()> const  create_simulator_fn,
+               bool const  enable_gl_debug_mode)
     : QWindow((QWindow*)nullptr)
 
     , m_create_simulator_fn(create_simulator_fn)
@@ -159,6 +160,8 @@ window::window(std::function<std::shared_ptr<real_time_simulator>()> const  crea
     , m_notification_listeners()
 
     , m_context()
+    , m_is_gl_debug_mode_enabled(enable_gl_debug_mode)
+    , m_gl_logger()
 
     , m_round_id(0ULL)
     , m_start_time(std::chrono::high_resolution_clock::now())
@@ -167,6 +170,8 @@ window::window(std::function<std::shared_ptr<real_time_simulator>()> const  crea
     , m_FPS_num_rounds(0U)
     , m_FPS_time(0.0L)
     , m_FPS(0U)
+
+    , m_initialised(false)
 
     , m_has_focus(false)
     , m_idleTimerId(-1)
@@ -206,9 +211,16 @@ window::window(std::function<std::shared_ptr<real_time_simulator>()> const  crea
     format.setMinorVersion(opengl_minor_version());
     format.setProfile(QSurfaceFormat::CoreProfile);
     format.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+    if (m_is_gl_debug_mode_enabled)
+        format.setOption(QSurfaceFormat::DebugContext);
     format.setSwapInterval(0);
     format.setDepthBufferSize( 24 );
     format.setSamples(0);
+
+    m_context = std::shared_ptr<opengl_context>(new QOpenGLContext(this));
+    ASSUMPTION(m_context.operator bool());
+    m_context->setFormat(format);
+    m_context->create();
 
     setSurfaceType(QWindow::OpenGLSurface);
     setFormat(format);
@@ -293,14 +305,14 @@ void window::render_now(bool const  is_this_pure_redraw_request)
 
     bool needsInitialize = false;
 
-    if (!m_context) {
-        m_context = std::shared_ptr<opengl_context>(new QOpenGLContext(this));
-        ASSUMPTION(m_context.operator bool());
-        m_context->setFormat(requestedFormat());
-        m_context->create();
+//    if (!m_context) {
+//        m_context = std::shared_ptr<opengl_context>(new QOpenGLContext(this));
+//        ASSUMPTION(m_context.operator bool());
+//        m_context->setFormat(requestedFormat());
+//        m_context->create();
 
-        needsInitialize = true;
-    }
+//        needsInitialize = true;
+//    }
 
     detail::make_current_window_guard const  make_current_window{this};
 
@@ -344,18 +356,33 @@ void window::render_now(bool const  is_this_pure_redraw_request)
             }
     };
 
-    if (needsInitialize) {
-        glapi().initializeOpenGLFunctions();
+    if (!m_initialised) {
+
+        //glapi().initializeOpenGLFunctions();
+
+        if (m_is_gl_debug_mode_enabled
+            && !m_gl_logger.operator bool()
+            && m_context->hasExtension(QByteArrayLiteral("GL_KHR_debug")))
+        {
+            m_gl_logger = std::make_shared<QOpenGLDebugLogger>(this);
+            ASSUMPTION(m_gl_logger.operator bool());
+            m_gl_logger->initialize();
+        }
+
         glapi().glEnable(GL_DEPTH_TEST);
         glapi().glEnable(GL_CULL_FACE);
         glapi().glCullFace(GL_BACK);
         glapi().glDisable(GL_BLEND);
         glapi().glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
         glapi().glDepthRangef(0.0f,1.0f);
+
         initialise_caches();
+
         INVARIANT(!m_simulator.operator bool());
         m_simulator = m_create_simulator_fn();
-        INVARIANT(m_simulator.operator bool());        
+        INVARIANT(m_simulator.operator bool());
+
+        m_initialised = true;
     }
 
     ++m_round_id;
@@ -392,6 +419,13 @@ void window::render_now(bool const  is_this_pure_redraw_request)
     m_mouse_rbutton_just_released = false;
     m_mouse_mbutton_just_pressed = false;
     m_mouse_mbutton_just_released = false;
+
+    if (m_gl_logger.operator bool())
+    {
+        const QList<QOpenGLDebugMessage> messages = m_gl_logger->loggedMessages();
+        for (const QOpenGLDebugMessage &message : messages)
+            LOG(error,qtgl::to_string(message.message()));
+    }
 }
 
 bool window::event(QEvent* const event)

@@ -51,6 +51,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/utility/thread_synchronisarion_barrier.hpp
     ./src/thread_synchronisarion_barrier.cpp
 
+    ./include/utility/canonical_path.hpp
+    ./src/canonical_path.cpp
+
     ./include/utility/typefn_if_then_else.hpp
 
     ./include/utility/msgstream.hpp

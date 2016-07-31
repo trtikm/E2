@@ -6,6 +6,7 @@
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/msgstream.hpp>
+#include <utility/canonical_path.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <boost/algorithm/string.hpp>
@@ -75,8 +76,10 @@ std::string  parse_lines(std::istream&  istr,
         std::string  include_string;
         if (is_include_command(line,include_string))
         {
+            if (!boost::filesystem::exists(directory / include_string))
+                return "The include file does not exists: " + (directory / include_string).string();
             boost::filesystem::path const include_filename =
-                    boost::filesystem::canonical(directory / include_string);
+                    canonical_path(directory / include_string);
             if (visited_files.count(include_filename.string()))
                 return "Cyclic dependency between included files.";
             visited_files.insert(include_filename.string());
@@ -141,7 +144,7 @@ std::string  parse_lines(std::istream&  istr,
 
     std::unordered_set<std::string>  visited_files;
     return parse_lines(istr,shader_type,
-                       boost::filesystem::canonical(boost::filesystem::current_path()),
+                       canonical_path(boost::filesystem::current_path()),
                        visited_files,output_lines);
 }
 
@@ -153,8 +156,11 @@ std::string  parse_lines(boost::filesystem::path const&  raw_filename,
 
     ASSUMPTION(output_lines.empty());
 
+    if (!boost::filesystem::exists(raw_filename))
+        return "Shader file does not exist: " + raw_filename.string();
+
     boost::filesystem::path const  filename =
-            boost::filesystem::canonical(raw_filename);
+            canonical_path(raw_filename);
 
     boost::filesystem::ifstream  istr(filename,std::ios_base::binary);
     if (!istr.good())
@@ -617,7 +623,7 @@ vertex_program_properties::vertex_program_properties(std::vector<std::string> co
         if (tokens.count(binding_location_name(location)) != 0ULL)
             m_output_buffer_bindings.insert(location);
 
-    ASSUMPTION(m_output_buffer_bindings.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION) != 0U);
+    //ASSUMPTION(m_output_buffer_bindings.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION) != 0U);
 
     for (auto const  symbolic_name : std::vector<vertex_shader_uniform_symbolic_name>{
             vertex_shader_uniform_symbolic_name::COLOUR_ALPHA               ,

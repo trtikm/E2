@@ -7,6 +7,7 @@
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/msgstream.hpp>
+#include <utility/canonical_path.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/functional/hash.hpp>
 #include <limits>
@@ -161,7 +162,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                                         << "' referenced from the batch file '" << batch_file << "' does not exist.";
             return {};
         }
-        vertex_shader = boost::filesystem::canonical(vertex_shader);
+        vertex_shader = canonical_path(vertex_shader);
 
         if (!detail::read_line(istr,line))
         {
@@ -175,7 +176,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                                         << "' referenced from the batch file '" << batch_file << "' does not exist.";
             return {};
         }
-        fragment_shader = boost::filesystem::canonical(fragment_shader);
+        fragment_shader = canonical_path(fragment_shader);
 
         if (!detail::read_line(istr,line))
         {
@@ -189,7 +190,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                                         << "' referenced from the batch file '" << batch_file << "' does not exist.";
             return {};
         }
-        index_buffer = boost::filesystem::canonical(index_buffer);
+        index_buffer = canonical_path(index_buffer);
 
         std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path>  buffer_paths;
         while (true)
@@ -235,7 +236,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                                             << "' referenced from the batch file '" << batch_file << "' does not exist.";
                 return {};
             }
-            buffer_file = boost::filesystem::canonical(buffer_file);
+            buffer_file = canonical_path(buffer_file);
 
             buffer_paths.insert({bind_location,buffer_file});
         }
@@ -276,7 +277,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                                             << "' referenced from the batch file '" << batch_file << "' does not exist.";
                 return {};
             }
-            texture_file = boost::filesystem::canonical(texture_file);
+            texture_file = canonical_path(texture_file);
 
             texture_paths.insert({bind_location,texture_file});
         }
