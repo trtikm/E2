@@ -22,6 +22,7 @@ struct camera
     void  set_coordinate_system(coordinate_system_ptr const   coord_system);
 
     virtual void  projection_matrix(matrix44&  output) const = 0;
+    virtual vector3  cursor3d(vector2 const&  mouse_pos, window_props const&  props) const = 0;
 
 private:
     coordinate_system_ptr  m_coordinate_system;
@@ -99,6 +100,7 @@ struct camera_perspective : public camera
     void  set_top(float_32_bit const  top);
 
     void  projection_matrix(matrix44&  output) const;
+    vector3  cursor3d(vector2 const&  mouse_pos, window_props const&  props) const;
 
 private:
 

@@ -178,6 +178,15 @@ void  camera_perspective::projection_matrix(matrix44&  output) const
         ;
 }
 
+vector3  camera_perspective::cursor3d(vector2 const&  mouse_pos, window_props const&  props) const
+{
+    vector2 const  u(
+        m_left + (mouse_pos(0) / (float_32_bit)props.width_in_pixels()) * window_width_in_meters(props),
+        m_top - (mouse_pos(1) / (float_32_bit)props.height_in_pixels()) * window_height_in_meters(props)
+        );
+    return u(0) * axis_x(*coordinate_system()) + u(1) * axis_y(*coordinate_system()) - m_near * axis_z(*coordinate_system());
+}
+
 
 camera_perspective_ptr  create_camera_perspective(
         coordinate_system_ptr  coordinate_system,

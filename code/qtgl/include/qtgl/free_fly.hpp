@@ -65,7 +65,7 @@ std::pair<bool, // was any translation performed ?
           bool  // was any rotation performed ?
 >  free_fly(coordinate_system&  coord_system,
                free_fly_config const&  config,
-               float_64_bit const  miliseconds_from_previous_call,
+               float_64_bit const  seconds_from_previous_call,
                mouse_props const&  mouse_info,
                keyboard_props const&  keyboard_info);
 

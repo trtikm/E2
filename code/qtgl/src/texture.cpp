@@ -436,7 +436,7 @@ textures_binding::textures_binding(texture_files_map const&  files)
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(!m_texture_files.empty());
+//    ASSUMPTION(!m_texture_files.empty());
     insert_load_request(*this);
 }
 

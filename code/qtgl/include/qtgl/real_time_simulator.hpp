@@ -15,7 +15,7 @@ struct real_time_simulator
 {
     virtual ~real_time_simulator() {}
 
-    virtual void next_round(float_64_bit const  miliseconds_from_previous_call,
+    virtual void next_round(float_64_bit const  seconds_from_previous_call,
                             bool const  is_this_pure_redraw_request) {}
 
     void  call_listeners(std::string const&  notification_type) const;

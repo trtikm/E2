@@ -207,7 +207,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                 }
             if (!found)
             {
-                if (line.find("BINDING_TEXTURE_") == 0ULL)
+                if (line.find("BINDING_") != 0ULL || line.find("BINDING_TEXTURE_") == 0ULL)
                     break;
 
                 error_message = msgstream() << "Unknown vertex shader input buffer binding location '" << line

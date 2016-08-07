@@ -82,6 +82,7 @@ struct window
 
     std::shared_ptr<detail::make_current_window_guard>   make_me_current() { return m_window->make_me_current(); }
 
+    QWindow& qtbase() { return *m_window.get(); }
 
 private:
 

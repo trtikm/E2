@@ -47,6 +47,11 @@ typedef Eigen::Matrix<scalar,3,3>  matrix33;
 typedef Eigen::Matrix<scalar,4,3>  matrix43;
 typedef Eigen::Matrix<scalar,4,4>  matrix44;
 
+//template<typename T, int nrows, int ncols>
+//inline Eigen::ArrayWrapper< Eigen::Matrix<T, nrows, ncols> > as_array(Eigen::Matrix<T, nrows, ncols> const&  u)
+//{
+//    return u.array();
+//}
 
 inline vector3  vector3_zero() { return vector3::Zero(); }
 inline vector3  vector3_unit_x() { return vector3::UnitX(); }

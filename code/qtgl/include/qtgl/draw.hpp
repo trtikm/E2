@@ -6,6 +6,7 @@
 #   include <qtgl/shader.hpp>
 #   include <qtgl/texture.hpp>
 #   include <qtgl/camera.hpp>
+#   include <qtgl/draw_state.hpp>
 
 namespace qtgl {
 

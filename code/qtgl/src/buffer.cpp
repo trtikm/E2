@@ -488,7 +488,39 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
     }
     else if (file_type == "E2::qtgl/buffer/diffuse_colours/text")
     {
-        NOT_IMPLEMENTED_YET();
+        std::string  line;
+        if (!detail::read_line(istr, line))
+        {
+            error_message = msgstream() << "Cannot read number of diffuse colours in the file '" << buffer_file << "'.";
+            return buffer_properties_ptr();
+        }
+        natural_32_bit const  num_colours = std::stoul(line);
+        if (num_colours == 0U)
+        {
+            error_message = msgstream() << "The diffuse colours buffer file '" << buffer_file << "' contains zero diffuse colours.";
+            return buffer_properties_ptr();
+        }
+        for (natural_32_bit i = 0U; i < num_colours; ++i)
+            for (natural_32_bit j = 0U; j < 4U; ++j)
+            {
+                if (!detail::read_line(istr, line))
+                {
+                    error_message = msgstream() << "Cannot read the colour component no." << j << " of the diffuse colour no." << i
+                        << " in the file '" << buffer_file << "'.";
+                    return buffer_properties_ptr();
+                }
+                float_32_bit const coord = std::stof(line);
+                std::copy(reinterpret_cast<natural_8_bit const*>(&coord),
+                    reinterpret_cast<natural_8_bit const*>(&coord) + sizeof(coord),
+                    std::back_inserter(buffer_data));
+            }
+        if (detail::read_line(istr, line))
+        {
+            error_message = msgstream() << "The file '" << buffer_file << "' contains more than "
+                << 4U * num_colours << " colour components.";
+            return buffer_properties_ptr();
+        }
+        return buffer_properties::create(buffer_file, 4U, num_colours, sizeof(float_32_bit), false);
     }
     else if (file_type == "E2::qtgl/buffer/specular_colours/text")
     {

@@ -48,6 +48,8 @@ void  buffer_cache::receiver(buffer_properties_ptr const  props,
 {
     TMPROF_BLOCK();
 
+    ASSUMPTION(props.operator bool());
+
     std::lock_guard<std::mutex> const  lock(m_mutex);
     m_pending_buffers.push_back(std::make_tuple(props,data,error_message));
 }
