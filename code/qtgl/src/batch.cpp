@@ -29,6 +29,18 @@ std::shared_ptr<batch const>  batch::create(boost::filesystem::path const&  path
     return std::make_shared<batch const>(path);
 }
 
+std::shared_ptr<batch const>  batch::create(
+        boost::filesystem::path const&  path,
+        buffers_binding_ptr const  buffers_binding,
+        shaders_binding_ptr const  shaders_binding,
+        textures_binding_ptr const  textures_binding,
+        draw_state_ptr const  draw_state
+        )
+{
+    return std::make_shared<batch const>(path,buffers_binding,shaders_binding,textures_binding,draw_state);
+}
+
+
 batch::batch(boost::filesystem::path const&  path)
     : m_path(path)
     , m_buffers_binding()

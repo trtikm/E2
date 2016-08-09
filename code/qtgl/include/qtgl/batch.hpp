@@ -17,6 +17,14 @@ struct batch
 {
     static std::shared_ptr<batch const>  create(boost::filesystem::path const&  path);
 
+    static std::shared_ptr<batch const>  create(
+            boost::filesystem::path const&  path,
+            buffers_binding_ptr const  buffers_binding,
+            shaders_binding_ptr const  shaders_binding,
+            textures_binding_ptr const  textures_binding,
+            draw_state_ptr const  draw_state
+            );
+
     batch(boost::filesystem::path const&  path);
 
     batch(boost::filesystem::path const&  path,

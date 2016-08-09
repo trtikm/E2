@@ -58,6 +58,11 @@ add_library(${THIS_TARGET_NAME}
     ./include/qtgl/mouse_props.hpp
     ./src/mouse_props.cpp
 
+    ./include/qtgl/batch_generators.hpp
+
+    ./src/create_batch_grid.cpp
+    ./src/create_batch_lines.cpp
+    
     ./include/qtgl/buffer_generators.hpp
     ./src/create_grid.cpp
 

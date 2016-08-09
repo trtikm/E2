@@ -7,6 +7,7 @@
 #   include <qtgl/texture.hpp>
 #   include <qtgl/camera.hpp>
 #   include <qtgl/draw_state.hpp>
+#   include <qtgl/batch.hpp>
 
 namespace qtgl {
 
