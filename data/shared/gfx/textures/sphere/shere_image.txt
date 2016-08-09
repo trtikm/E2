@@ -1,0 +1,7 @@
+E2::qtgl/texture/text
+./shere_image.png
+COMPRESSED_RGBA
+REPEAT
+REPEAT
+LINEAR_MIPMAP_LINEAR
+LINEAR

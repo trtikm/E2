@@ -1,0 +1,7 @@
+#include ../version
+#include ../bindings
+layout(location=BINDING_IN_COLOUR) in vec4  in_colour;
+layout(location=BINDING_OUT_COLOUR) out vec4  out_colour;
+void main() {
+    out_colour = in_colour;
+}

@@ -144,7 +144,9 @@ link_directories(${Qt5Widgets_LIBRARY_DIRS})
 add_definitions(${Qt5Widgets_DEFINITIONS})
 set(QT5_CXX_FLAGS ${Qt5Widgets_EXECUTABLE_COMPILE_FLAGS})
 if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    string(REPLACE "-fPIC" "" QT5_CXX_FLAGS ${QT5_CXX_FLAGS})
+    if(QT5_CXX_FLAGS)
+        string(REPLACE "-fPIC" "     " QT5_CXX_FLAGS ${QT5_CXX_FLAGS})
+    endif()
     set(QT5_CXX_FLAGS "${QT5_CXX_FLAGS} /wd4373")
 endif()
 set(QT5_LIST_OF_LIBRARIES_TO_LINK_WITH
@@ -156,5 +158,12 @@ message("Qt5Widgets libraries was found in directory: " ${Qt5Widgets_LIBRARY_DIR
 
 # Add project specific code
 add_subdirectory(./code)
+
+install(
+    DIRECTORY
+    ./data/shared
+    DESTINATION
+    ./data
+    )
 
 message("Generating build files ...")

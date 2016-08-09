@@ -54,6 +54,19 @@ add_subdirectory(./compute_in_out_degrees)
 add_subdirectory(./ode_solvers)
     message("-- ode_solvers")
 
+add_subdirectory(./glwindow)
+    message("-- glwindow")
+add_subdirectory(./glwidget_in_composed_window)
+    message("-- glwidget_in_composed_window")
+
+add_subdirectory(./qtgl_window)
+    message("-- qtgl_window")
+    
+add_subdirectory(./view_3d_model)
+    message("-- view_3d_model")
+
+add_subdirectory(./nenet)
+    message("-- nenet")
 
 message("-- run_tests.py")
 install(

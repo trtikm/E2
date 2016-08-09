@@ -1,0 +1,11 @@
+#include ../version
+#include ../bindings
+layout(location=BINDING_IN_POSITION) in vec3  in_position;
+layout(location=BINDING_IN_COLOUR) in vec3  in_colour;
+//layout(location=BINDING_OUT_POSITION) out vec4  out_position;
+layout(location=BINDING_OUT_COLOUR) out vec4  out_colour;
+uniform mat4  TRANSFORM_MATRIX_TRANSPOSED;
+void main() {
+    gl_Position = vec4(in_position,1.0f) * TRANSFORM_MATRIX_TRANSPOSED;
+    out_colour = vec4(in_colour,1.0f);
+}
