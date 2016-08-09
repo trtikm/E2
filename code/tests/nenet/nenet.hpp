@@ -4,6 +4,7 @@
 #   include <utility/tensor_math.hpp>
 #   include <vector>
 #   include <unordered_map>
+#   include <unordered_set>
 
 struct  input_spot;
 struct  output_terminal;
@@ -48,8 +49,7 @@ struct cell
     using  input_spots_map = pos_map_template<input_spot>;
     using  input_spot_iterator = input_spots_map::iterator;
 
-    using  output_terminals_map = pos_map_template<output_terminal>;
-    using  output_terminal_iterator = output_terminals_map::iterator;
+    using  output_terminal_ptr = output_terminal*;
 
     cell();
     //cell(vector3 const&  output_area_center, scalar const  output_area_radius);
@@ -57,8 +57,8 @@ struct cell
     void  add_input_spot(input_spot_iterator const  ispot) { m_input_spots.push_back(ispot); }
     std::vector<input_spot_iterator> const&  input_spots() const noexcept { return m_input_spots; }
 
-    void  add_output_terminal(output_terminal_iterator const  oterm) { m_output_terminals.push_back(oterm); }
-    std::vector<output_terminal_iterator> const&  output_terminals() const noexcept { return m_output_terminals; }
+    void  add_output_terminal(output_terminal_ptr const  oterm) { m_output_terminals.push_back(oterm); }
+    std::vector<output_terminal_ptr> const&  output_terminals() const noexcept { return m_output_terminals; }
 
     vector3 const&  output_area_center() const noexcept { return m_output_area_center; }
     //scalar  output_area_radius() const noexcept { return m_output_area_radius; }
@@ -67,7 +67,7 @@ struct cell
 
 private:
     std::vector<input_spot_iterator>  m_input_spots;
-    std::vector<output_terminal_iterator>  m_output_terminals;
+    std::vector<output_terminal_ptr>  m_output_terminals;
     vector3  m_output_area_center;
     //scalar  m_output_area_radius;
 };
@@ -92,19 +92,51 @@ private:
 
 struct  output_terminal
 {
-    using  pos_hasher = cell::pos_hasher;
-    using  pos_equal = cell::pos_equal;
-    using  pos_map = cell::pos_map_template<output_terminal>;
+    struct  pos_hasher
+    {
+        pos_hasher(vector3 const&  origin, vector3 const&  intercell_distance,
+            natural_64_bit const  num_cells_x, natural_64_bit const  num_cells_y, natural_64_bit const  num_cells_c);
+
+        std::size_t  operator()(std::pair<vector3, output_terminal*> const&  key) const;
+
+        vector3 const&  origin() const noexcept { return  m_origin; }
+        vector3 const&  inter_distance() const noexcept { return  m_intercell_distance; }
+        natural_64_bit  size_x() const noexcept { return m_num_cells_x; }
+        natural_64_bit  size_y() const noexcept { return m_num_cells_y; }
+        natural_64_bit  size_c() const noexcept { return m_num_cells_c; }
+
+    private:
+        vector3  m_origin;
+        vector3  m_intercell_distance;
+        natural_64_bit  m_num_cells_x;
+        natural_64_bit  m_num_cells_y;
+        natural_64_bit  m_num_cells_c;
+    };
+
+    struct  pos_equal
+    {
+        pos_equal(vector3 const&  max_distance);
+        bool  operator()(std::pair<vector3, output_terminal*> const&  l, std::pair<vector3, output_terminal*> const&  r) const;
+        vector3 const&  max_distance() const noexcept { return  m_max_distance; }
+    private:
+        vector3  m_max_distance;
+    };
+
+    using  pos_set = std::unordered_set< std::pair<vector3,output_terminal*>, pos_hasher, pos_equal>;
 
     using  cells_map = cell::pos_map_template<cell>;
     using  cell_iterator = cells_map::iterator;
 
     output_terminal();
 
+    vector3 const&  pos() const noexcept { return m_pos; }
+    void  set_pos(vector3 const&  pos) { m_pos = pos; }
+
     void  set_cell(cell_iterator const  cell) { m_cell = cell; }
     cell_iterator  cell() const noexcept { return m_cell; }
 
 private:
+    vector3  m_pos;
     cell_iterator  m_cell;
 };
 
@@ -139,13 +171,14 @@ struct nenet
     vector3 const&  spots_origin() const noexcept { return  m_spots_origin; }
     input_spot::pos_map const&  input_spots() const noexcept { return  m_input_spots; }
 
-    output_terminal::pos_map const&  output_terminals() const noexcept { return  m_output_terminals; }
+    output_terminal::pos_set const&  output_terminals_set() const noexcept { return  m_output_terminals_set; }
+    std::vector<output_terminal> const&  output_terminals() const noexcept { return  m_output_terminals; }
 
     cell::pos_map::const_iterator  find_closest_cell(vector3 const&  origin, vector3 const&  ray, scalar const  radius,
                                                      scalar* const  param = nullptr) const;
     input_spot::pos_map::const_iterator  find_closest_input_spot(vector3 const&  origin, vector3 const&  ray, scalar const  radius,
                                                                  scalar* const  param = nullptr) const;
-    output_terminal::pos_map::const_iterator  find_closest_output_terminal(vector3 const&  origin, vector3 const&  ray, scalar const  radius,
+    output_terminal::pos_set::const_iterator  find_closest_output_terminal(vector3 const&  origin, vector3 const&  ray, scalar const  radius,
                                                                            scalar* const  param = nullptr) const;
 
     static float_64_bit  update_time_step_in_seconds() noexcept { return 0.001; }
@@ -175,7 +208,8 @@ private:
     vector3  m_spots_origin;
     input_spot::pos_map  m_input_spots;
 
-    output_terminal::pos_map  m_output_terminals;
+    output_terminal::pos_set  m_output_terminals_set;
+    std::vector<output_terminal>  m_output_terminals;
 };
 
 

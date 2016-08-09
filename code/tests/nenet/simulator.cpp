@@ -178,8 +178,8 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
         }
         {
             auto const oterm_iter = nenet()->find_closest_output_terminal(m_camera->coordinate_system()->origin(), ray, 0.3f, &param);
-            if (oterm_iter != nenet()->output_terminals().cend())
-                m_selected_cell = oterm_iter->second.cell();
+            if (oterm_iter != nenet()->output_terminals_set().cend())
+                m_selected_cell = oterm_iter->second->cell();
         }
         m_selected_rot_angle = 0.0f;
         m_selected_cell_input_spot_lines.reset();
@@ -265,7 +265,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                     {
                         std::vector< std::pair<vector3, vector3> >  lines;
                         for (auto const iit : it->second.output_terminals())
-                            lines.push_back({ it->first,iit->first });
+                            lines.push_back({ it->first,iit->pos() });
                         m_selected_cell_output_terminal_lines = qtgl::create_lines3d(lines, vector3{ 1.0f,0.0f,0.5f });
                     }
                 }
@@ -306,13 +306,13 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     {
         if (qtgl::make_current(*m_batch_output_terminal, *draw_state))
         {
-            for (output_terminal::pos_map::const_iterator it = nenet()->output_terminals().cbegin(); it != nenet()->output_terminals().cend(); ++it)
+            for (output_terminal const&  oterm : nenet()->output_terminals())
             {
                 matrix44  world_transformation;
                 quaternion const  orientation =
-                    (it->second.cell() == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle, vector3_unit_z()) :
-                                                             quaternion_identity();
-                qtgl::transformation_matrix(qtgl::coordinate_system(it->first, orientation), world_transformation);
+                    (oterm.cell() == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle, vector3_unit_z()) :
+                                                        quaternion_identity();
+                qtgl::transformation_matrix(qtgl::coordinate_system(oterm.pos(), orientation), world_transformation);
                 matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
 
                 for (qtgl::vertex_shader_uniform_symbolic_name const uniform : m_batch_output_terminal->symbolic_names_of_used_uniforms())

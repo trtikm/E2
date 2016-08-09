@@ -148,9 +148,11 @@ void  init_output_areas(cell::pos_map&  map)
         }
 }
 
-void  init_output_terminals(output_terminal::pos_map&  omap, cell::pos_map&  cmap, natural_16_bit const  num_terminals_per_cell)
+void  init_output_terminals(std::vector<output_terminal>&  oterms, output_terminal::pos_set&  oset, cell::pos_map&  cmap,
+                            natural_16_bit const  num_terminals_per_cell)
 {
     //vector3 const  origin = omap.hash_function().origin() - 0.5f * omap.hash_function().inter_distance();
+    oterms.reserve(cmap.size() * num_terminals_per_cell);
     std::unordered_map<cell::pos_map::value_type*, cell::pos_map::value_type*>  filled;
     for (cell::pos_map::iterator it = cmap.begin(); it != cmap.end(); ++it)
     {
@@ -163,20 +165,24 @@ void  init_output_terminals(output_terminal::pos_map&  omap, cell::pos_map&  cma
         vector3 const  lo = it->second.output_area_center() - 0.5f * cmap.hash_function().inter_distance();
         vector3 const  hi = lo + cmap.hash_function().inter_distance();
         for (natural_16_bit i = 0U; i != num_terminals_per_cell; ++i)
+        {
+            oterms.push_back({});
             while (true)
             {
                 scalar const  tx = get_random_natural_32_bit_in_range(0U, 999U) / 1000.0f;
                 scalar const  ty = get_random_natural_32_bit_in_range(0U, 999U) / 1000.0f;
                 scalar const  tc = get_random_natural_32_bit_in_range(0U, 999U) / 1000.0f;
                 vector3 const  u = lo + (vector3(tx,ty,tc).array() * (hi - lo).array()).matrix();
-                auto const  result = omap.insert({ u,{} });
+                auto const  result = oset.insert({ u,&oterms.back() });
                 if (result.second)
                 {
-                    result.first->second.set_cell(it);
-                    it->second.add_output_terminal(result.first);
+                    oterms.back().set_pos(u);
+                    oterms.back().set_cell(it);
+                    it->second.add_output_terminal(&oterms.back());
                     break;
                 }
             }
+        }
     }
 }
 
@@ -229,16 +235,14 @@ void  interconnect_cells_with_input_spots(
 }
 
 template<typename T>
-typename cell::pos_map_template<T>::const_iterator
-find_closest_element(cell::pos_map_template<T> const&  map,
-                     vector3 const&  origin, vector3 const&  ray, scalar const  radius,
-                     scalar* const  param)
+typename T::const_iterator
+find_closest_element(T const&  dict, vector3 const&  origin, vector3 const&  ray, scalar const  radius, scalar* const  param)
 {
     scalar const ray_dot = dot_product(ray, ray);
     ASSUMPTION(ray_dot > 1e-3f);
     scalar  result_t = (param != nullptr) ? *param : 1e30f;
-    typename cell::pos_map_template<T>::const_iterator  result = map.cend();
-    for (typename cell::pos_map_template<T>::const_iterator it = map.cbegin(); it != map.cend(); ++it)
+    typename T::const_iterator  result = dict.cend();
+    for (typename T::const_iterator it = dict.cbegin(); it != dict.cend(); ++it)
     {
         scalar const  t = dot_product(ray, it->first - origin) / ray_dot;
         if (t >= 1.0f)
@@ -246,7 +250,7 @@ find_closest_element(cell::pos_map_template<T> const&  map,
             vector3 const  X = origin + t * ray;
             vector3 const  u = it->first - X;
             scalar const  dist2 = dot_product(u, u);
-            if (dist2 <= radius * radius && (result == map.cend() || result_t > t))
+            if (dist2 <= radius * radius && (result == dict.cend() || result_t > t))
             {
                 result = it;
                 result_t = t;
@@ -257,6 +261,36 @@ find_closest_element(cell::pos_map_template<T> const&  map,
         *param = result_t;
     return result;
 }
+
+//template<typename T>
+//typename cell::pos_map_template<T>::const_iterator
+//find_closest_element(cell::pos_map_template<T> const&  map,
+//                     vector3 const&  origin, vector3 const&  ray, scalar const  radius,
+//                     scalar* const  param)
+//{
+//    scalar const ray_dot = dot_product(ray, ray);
+//    ASSUMPTION(ray_dot > 1e-3f);
+//    scalar  result_t = (param != nullptr) ? *param : 1e30f;
+//    typename cell::pos_map_template<T>::const_iterator  result = map.cend();
+//    for (typename cell::pos_map_template<T>::const_iterator it = map.cbegin(); it != map.cend(); ++it)
+//    {
+//        scalar const  t = dot_product(ray, it->first - origin) / ray_dot;
+//        if (t >= 1.0f)
+//        {
+//            vector3 const  X = origin + t * ray;
+//            vector3 const  u = it->first - X;
+//            scalar const  dist2 = dot_product(u, u);
+//            if (dist2 <= radius * radius && (result == map.cend() || result_t > t))
+//            {
+//                result = it;
+//                result_t = t;
+//            }
+//        }
+//    }
+//    if (param != nullptr)
+//        *param = result_t;
+//    return result;
+//}
 
 
 }
@@ -314,8 +348,43 @@ input_spot::input_spot()
     : m_cell()
 {}
 
+
+output_terminal::pos_hasher::pos_hasher(vector3 const&  origin, vector3 const&  intercell_distance,
+    natural_64_bit const  num_cells_x, natural_64_bit const  num_cells_y, natural_64_bit const  num_cells_c)
+    : m_origin(origin)
+    , m_intercell_distance(intercell_distance)
+    , m_num_cells_x(num_cells_x)
+    , m_num_cells_y(num_cells_y)
+    , m_num_cells_c(num_cells_c)
+{
+    ASSUMPTION(m_intercell_distance(0) > 0.0f && m_intercell_distance(1) > 0.0f && m_intercell_distance(2) > 0.0f);
+    ASSUMPTION(m_num_cells_x != 0 && m_num_cells_y != 0 && m_num_cells_c != 0);
+}
+
+std::size_t  output_terminal::pos_hasher::operator()(std::pair<vector3, output_terminal*> const&  key) const
+{
+    vector3 const  u = (key.first - (m_origin - 0.5f * m_intercell_distance)).array() / m_intercell_distance.array();
+    natural_64_bit  x = (u(0) <= 0.0) ? 0ULL : (natural_64_bit)u(0);
+    natural_64_bit  y = (u(1) <= 0.0) ? 0ULL : (natural_64_bit)u(1);
+    natural_64_bit  c = (u(2) <= 0.0) ? 0ULL : (natural_64_bit)u(2);
+    ASSUMPTION(x < m_num_cells_x && y < m_num_cells_y && c < m_num_cells_c);
+    return c * (m_num_cells_x * m_num_cells_y) + y * m_num_cells_x + x;
+}
+
+output_terminal::pos_equal::pos_equal(vector3 const&  max_distance)
+    : m_max_distance(max_distance)
+{
+    ASSUMPTION(m_max_distance(0) > 0.0f && m_max_distance(1) > 0.0f && m_max_distance(2) > 0.0f);
+}
+
+bool  output_terminal::pos_equal::operator()(std::pair<vector3, output_terminal*> const&  l, std::pair<vector3, output_terminal*> const&  r) const
+{
+    return l.second == r.second;
+}
+
 output_terminal::output_terminal()
-    : m_cell()
+    : m_pos(0.0f,0.0f,0.0f)
+    , m_cell()
 {}
 
 
@@ -362,7 +431,12 @@ nenet::nenet(
         cell::pos_equal(0.5f * m_interspot_distance)
         )
 
-    , m_output_terminals(m_input_spots.bucket_count(),m_input_spots.hash_function(),m_input_spots.key_eq())
+    , m_output_terminals()
+    , m_output_terminals_set(
+        m_input_spots.bucket_count(),
+        output_terminal::pos_hasher(m_spots_origin, m_interspot_distance, m_num_spots_x, m_num_spots_y, m_num_spots_c),
+        output_terminal::pos_equal(0.5f * m_interspot_distance)
+        )
 {
     TMPROF_BLOCK();
 
@@ -388,7 +462,7 @@ nenet::nenet(
     interconnect_cells_with_input_spots(m_cells, m_input_spots, m_percentage_of_territories_overlap);
 
     init_output_areas(m_cells);
-    init_output_terminals(m_output_terminals, m_cells, m_max_num_inputs_to_cell);
+    init_output_terminals(m_output_terminals, m_output_terminals_set, m_cells, m_max_num_inputs_to_cell);
 
     //init_pos_random(m_output_terminals, m_lo_corner, m_hi_corner, m_input_spots.size());
 
@@ -406,13 +480,24 @@ input_spot::pos_map::const_iterator  nenet::find_closest_input_spot(vector3 cons
     return find_closest_element(input_spots(),origin,ray,radius,param);
 }
 
-output_terminal::pos_map::const_iterator  nenet::find_closest_output_terminal(vector3 const&  origin, vector3 const&  ray, scalar const  radius,
+output_terminal::pos_set::const_iterator  nenet::find_closest_output_terminal(vector3 const&  origin, vector3 const&  ray, scalar const  radius,
                                                                               scalar* const  param) const
 {
-    return find_closest_element(output_terminals(), origin, ray, radius, param);
+    return find_closest_element(output_terminals_set(), origin, ray, radius, param);
 }
 
 void  nenet::update()
 {
     TMPROF_BLOCK();
+
+    for (output_terminal&  oterm : m_output_terminals)
+    {
+        vector3 const  u = (oterm.pos() - oterm.cell()->second.output_area_center()).array() / intercell_distance().array();
+        vector3 const  grad_f = (3.0f * std::pow(0.5f * dot_product(u, u), 0.5f)) * (u.array() / intercell_distance().array()).matrix();
+        vector3 const  new_pos = oterm.pos() - (1000.0f * (scalar)update_time_step_in_seconds()) * grad_f;
+        m_output_terminals_set.erase({oterm.pos(),&oterm});
+        oterm.set_pos(new_pos);
+        auto const result = m_output_terminals_set.insert({new_pos,&oterm});
+        INVARIANT(result.second);
+    }
 }
