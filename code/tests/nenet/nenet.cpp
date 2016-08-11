@@ -309,6 +309,8 @@ cell::pos_hasher::pos_hasher(vector3 const&  origin, vector3 const&  intercell_d
 
 std::size_t  cell::pos_hasher::operator()(vector3 const&  pos) const
 {
+    TMPROF_BLOCK();
+
     vector3 const  u = (pos - (m_origin - 0.5f * m_intercell_distance)).array() / m_intercell_distance.array();
     natural_64_bit  x = (u(0) <= 0.0) ? 0ULL : (natural_64_bit)u(0);
     natural_64_bit  y = (u(1) <= 0.0) ? 0ULL : (natural_64_bit)u(1);
@@ -325,6 +327,8 @@ cell::pos_equal::pos_equal(vector3 const&  max_distance)
 
 bool  cell::pos_equal::operator()(vector3 const&  l, vector3 const&  r) const
 {
+    TMPROF_BLOCK();
+
     vector3 const  u = l - r;
     return std::abs(u(0)) <= m_max_distance(0) && std::abs(u(1)) <= m_max_distance(1) && std::abs(u(2)) <= m_max_distance(2);
 }
@@ -363,10 +367,12 @@ output_terminal::pos_hasher::pos_hasher(vector3 const&  origin, vector3 const&  
 
 std::size_t  output_terminal::pos_hasher::operator()(std::pair<vector3, output_terminal*> const&  key) const
 {
+    TMPROF_BLOCK();
+
     vector3 const  u = (key.first - (m_origin - 0.5f * m_intercell_distance)).array() / m_intercell_distance.array();
-    natural_64_bit  x = (u(0) <= 0.0) ? 0ULL : (natural_64_bit)u(0);
-    natural_64_bit  y = (u(1) <= 0.0) ? 0ULL : (natural_64_bit)u(1);
-    natural_64_bit  c = (u(2) <= 0.0) ? 0ULL : (natural_64_bit)u(2);
+    natural_64_bit  x = (u(0) <= 0.0) ? 0ULL : (u(0) >= m_num_cells_x) ? m_num_cells_x - 1ULL : (natural_64_bit)u(0);
+    natural_64_bit  y = (u(1) <= 0.0) ? 0ULL : (u(1) >= m_num_cells_y) ? m_num_cells_y - 1ULL : (natural_64_bit)u(1);
+    natural_64_bit  c = (u(2) <= 0.0) ? 0ULL : (u(2) >= m_num_cells_c) ? m_num_cells_c - 1ULL : (natural_64_bit)u(2);
     ASSUMPTION(x < m_num_cells_x && y < m_num_cells_y && c < m_num_cells_c);
     return c * (m_num_cells_x * m_num_cells_y) + y * m_num_cells_x + x;
 }
@@ -379,6 +385,7 @@ output_terminal::pos_equal::pos_equal(vector3 const&  max_distance)
 
 bool  output_terminal::pos_equal::operator()(std::pair<vector3, output_terminal*> const&  l, std::pair<vector3, output_terminal*> const&  r) const
 {
+    TMPROF_BLOCK();
     return l.second == r.second;
 }
 
@@ -492,12 +499,61 @@ void  nenet::update()
 
     for (output_terminal&  oterm : m_output_terminals)
     {
-        vector3 const  u = (oterm.pos() - oterm.cell()->second.output_area_center()).array() / intercell_distance().array();
-        vector3 const  grad_f = (3.0f * std::pow(0.5f * dot_product(u, u), 0.5f)) * (u.array() / intercell_distance().array()).matrix();
-        vector3 const  new_pos = oterm.pos() - (1000.0f * (scalar)update_time_step_in_seconds()) * grad_f;
-        m_output_terminals_set.erase({oterm.pos(),&oterm});
-        oterm.set_pos(new_pos);
-        auto const result = m_output_terminals_set.insert({new_pos,&oterm});
-        INVARIANT(result.second);
+        vector3  gradient(0.0f,0.0f,0.0f);
+
+        {
+            TMPROF_BLOCK();
+
+            vector3 const  u = (oterm.pos() - oterm.cell()->second.output_area_center()).array() / intercell_distance().array();
+            vector3 const  grad_f = (3.0f * std::pow(0.5f * dot_product(u, u), 0.5f)) * (u.array() / intercell_distance().array()).matrix();
+            gradient += grad_f;
+        }
+
+        if (true)
+        {
+            TMPROF_BLOCK();
+
+            int iii = 0;
+            std::unordered_set<std::size_t>  visited_buckets;
+            for (scalar x = oterm.pos()(0) - interspot_distance()(0); x <= oterm.pos()(0) + 1.1f * interspot_distance()(0); x += interspot_distance()(0))
+                for (scalar y = oterm.pos()(1) - interspot_distance()(1); y <= oterm.pos()(1) + 1.1f * interspot_distance()(1); y += interspot_distance()(1))
+                    for (scalar c = oterm.pos()(2) - interspot_distance()(2); c <= oterm.pos()(2) + 1.1f * interspot_distance()(2); c += interspot_distance()(2))
+                    {
+                        TMPROF_BLOCK();
+                        ++iii;
+                        std::size_t const  bucket = output_terminals_set().bucket({{x,y,c},nullptr});
+                        if (visited_buckets.count(bucket) != 0ULL)
+                            continue;
+                        visited_buckets.insert(bucket);
+                        for (auto  it = output_terminals_set().begin(bucket), end = output_terminals_set().end(bucket); it != end; ++it)
+                            if (it->second != &oterm)
+                            {
+                                TMPROF_BLOCK();
+                                vector3 const  u = oterm.pos() - it->first;
+                                scalar const  D = min_element(interspot_distance());
+                                scalar const coef0 = -20.0f / D;
+                                scalar const coef1 = 1.0f + (10.0f / D) * dot_product(u,u);
+                                vector3 const  grad_f = (coef0 / (coef1 * coef1)) * u;
+
+                                //df(x,y)/dx = (-20*x/D) / (1 + (10/D)*(x ^ 2 + y ^ 2)) ^ 2
+                                //f(x,y) = 1/(1+10*(x^2+y^2)/D)
+                                //f(x,y) = e^-((x ^ 2 + y ^ 2) / 0.25)
+                                gradient += grad_f;
+                            }
+                    }
+            INVARIANT(iii == 27);
+        }
+
+
+
+        {
+            TMPROF_BLOCK();
+
+            vector3 const  new_pos = oterm.pos() - (1000.0f * (scalar)update_time_step_in_seconds()) * gradient;
+            m_output_terminals_set.erase({oterm.pos(),&oterm});
+            oterm.set_pos(new_pos);
+            auto const result = m_output_terminals_set.insert({new_pos,&oterm});
+            INVARIANT(result.second);
+        }
     }
 }

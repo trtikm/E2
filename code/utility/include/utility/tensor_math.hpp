@@ -53,6 +53,13 @@ typedef Eigen::Matrix<scalar,4,4>  matrix44;
 //    return u.array();
 //}
 
+template<typename T, int nrows, int ncols>
+inline T min_element(Eigen::Matrix<T, nrows, ncols> const&  u)
+{
+    return u.minCoeff();
+}
+
+
 inline vector3  vector3_zero() { return vector3::Zero(); }
 inline vector3  vector3_unit_x() { return vector3::UnitX(); }
 inline vector3  vector3_unit_y() { return vector3::UnitY(); }
