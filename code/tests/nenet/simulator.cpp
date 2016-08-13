@@ -15,7 +15,7 @@
 #   include <iostream>
 
 
-simulator::simulator()
+simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused)
     : qtgl::real_time_simulator()
     , m_nenet(std::make_shared<::nenet>(
             vector3{-30.0f, -30.0f, 0.0f}, vector3{ 30.0f, 30.0f, 40.0f },
@@ -25,6 +25,7 @@ simulator::simulator()
             ))
     , m_nenet_num_updates(0ULL)
     , m_nenet_max_update_duration(1.0/30.0)
+    , m_paused(paused)
 
     , m_selected_cell(m_nenet->cells().cend())
     , m_selected_rot_angle(0.0f)
@@ -133,7 +134,7 @@ simulator::simulator()
     , m_selected_cell_output_terminal_lines()
 {
     TMPROF_BLOCK();
-    qtgl::glapi().glClearColor(0.25f, 0.25f, 0.25f, 1.0f);
+    set_clear_color(initial_clear_colour);
 }
 
 simulator::~simulator()
@@ -150,59 +151,73 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     // Next round computation
     /////////////////////////////////////////////////////////////////////////////////////
 
+    if (!is_this_pure_redraw_request)
     {
-        TMPROF_BLOCK();
+        if (keyboard_props().was_just_released(qtgl::KEY_PAUSE()))
+        {
+            m_paused = !m_paused;
+            call_listeners(notifications::paused());
+        }
 
-        if (seconds_from_previous_call > 1e-3)
-            m_nenet_max_update_duration *= (1.0 / 30.0) / seconds_from_previous_call;
-        std::chrono::high_resolution_clock::time_point const  update_start_time = std::chrono::high_resolution_clock::now();
-        do
-        {            
+        if (!paused())
+        {
             TMPROF_BLOCK();
 
-            nenet()->update();
-            ++m_nenet_num_updates;
+            if (seconds_from_previous_call > 1e-3)
+                m_nenet_max_update_duration *= (1.0 / 30.0) / seconds_from_previous_call;
+            std::chrono::high_resolution_clock::time_point const  update_start_time = std::chrono::high_resolution_clock::now();
+            do
+            {            
+                TMPROF_BLOCK();
+
+                nenet()->update();
+                ++m_nenet_num_updates;
 
 break;
+            }
+            while (std::chrono::duration<float_64_bit>(std::chrono::high_resolution_clock::now() - update_start_time).count() < m_nenet_max_update_duration);
         }
-        while (std::chrono::duration<float_64_bit>(std::chrono::high_resolution_clock::now() - update_start_time).count() < m_nenet_max_update_duration);
-    }
 
-    qtgl::adjust(*m_camera,window_props());
-    qtgl::free_fly(*m_camera->coordinate_system(),m_free_fly_config,
-                   seconds_from_previous_call,mouse_props(),keyboard_props());
-
-    if (mouse_props().was_just_released(qtgl::LEFT_MOUSE_BUTTON()))
-    {
-        vector3 const  ray = m_camera->cursor3d({ mouse_props().x() ,mouse_props().y() },window_props());
-        scalar  param = 1e30f;
-        m_selected_cell = nenet()->find_closest_cell(m_camera->coordinate_system()->origin(),ray,0.75f,&param);
+        if (mouse_props().was_just_released(qtgl::LEFT_MOUSE_BUTTON()))
         {
-            auto const ispot_iter = nenet()->find_closest_input_spot(m_camera->coordinate_system()->origin(), ray, 0.3f, &param);
-            if (ispot_iter != nenet()->input_spots().cend())
-                m_selected_cell = ispot_iter->second.cell();
+            vector3 const  ray = m_camera->cursor3d({ mouse_props().x() ,mouse_props().y() },window_props());
+            scalar  param = 1e30f;
+            m_selected_cell = nenet()->find_closest_cell(m_camera->coordinate_system()->origin(),ray,0.75f,&param);
+            {
+                auto const ispot_iter = nenet()->find_closest_input_spot(m_camera->coordinate_system()->origin(), ray, 0.3f, &param);
+                if (ispot_iter != nenet()->input_spots().cend())
+                    m_selected_cell = ispot_iter->second.cell();
+            }
+            {
+                auto const oterm_iter = nenet()->find_closest_output_terminal(m_camera->coordinate_system()->origin(), ray, 0.3f, &param);
+                if (oterm_iter != nenet()->output_terminals_set().cend())
+                    m_selected_cell = oterm_iter->second->cell();
+            }
+            m_selected_rot_angle = 0.0f;
+            m_selected_cell_input_spot_lines.reset();
+            m_selected_cell_output_terminal_lines.reset();
         }
+
+        if (m_selected_cell != nenet()->cells().cend())
         {
-            auto const oterm_iter = nenet()->find_closest_output_terminal(m_camera->coordinate_system()->origin(), ray, 0.3f, &param);
-            if (oterm_iter != nenet()->output_terminals_set().cend())
-                m_selected_cell = oterm_iter->second->cell();
+            m_selected_rot_angle += (2.0f * PI()) * seconds_from_previous_call;
+            while (m_selected_rot_angle > 2.0f * PI())
+                m_selected_rot_angle -= 2.0f * PI();
         }
-        m_selected_rot_angle = 0.0f;
-        m_selected_cell_input_spot_lines.reset();
-        m_selected_cell_output_terminal_lines.reset();
     }
-
-    if (m_selected_cell != nenet()->cells().cend())
-    {
-        m_selected_rot_angle += (2.0f * PI()) * seconds_from_previous_call;
-        while (m_selected_rot_angle > 2.0f * PI())
-            m_selected_rot_angle -= 2.0f * PI();
-    }
-
 
     /////////////////////////////////////////////////////////////////////////////////////
     // Rendering
     /////////////////////////////////////////////////////////////////////////////////////
+
+    qtgl::adjust(*m_camera, window_props());
+    auto const translated_rotated =
+        qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
+                       seconds_from_previous_call, mouse_props(), keyboard_props());
+    if (translated_rotated.first)
+        call_listeners(notifications::camera_position_updated());
+    if (translated_rotated.second)
+        call_listeners(notifications::camera_orientation_updated());
 
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     qtgl::glapi().glViewport(0, 0, window_props().width_in_pixels(), window_props().height_in_pixels());

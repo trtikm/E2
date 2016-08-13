@@ -662,8 +662,11 @@ void  nenet::update()
         {
             TMPROF_BLOCK();
 
-            vector3 const  new_velocity = update_magnitude_of_velocity(oterm.velocity() + gradient);
-            vector3 const  new_pos = oterm.pos() - (1000.0f * (scalar)update_time_step_in_seconds()) * new_velocity;
+            // We trait the 'gradient' here as an acceleration for an output terminal
+
+            scalar const  dt = 1000.0f * (scalar)update_time_step_in_seconds();
+            vector3 const  new_velocity = update_magnitude_of_velocity(oterm.velocity() + dt * gradient);
+            vector3 const  new_pos = oterm.pos() - dt * new_velocity;
             m_output_terminals_set.erase({oterm.pos(),&oterm});
             oterm.set_pos(new_pos);
             oterm.set_velocity(new_velocity);
