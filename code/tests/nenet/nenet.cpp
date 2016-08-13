@@ -2,6 +2,7 @@
 #include <utility/random.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
+#include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 #include <unordered_set>
 #include <algorithm>
@@ -292,6 +293,42 @@ find_closest_element(T const&  dict, vector3 const&  origin, vector3 const&  ray
 //    return result;
 //}
 
+scalar  output_terminal_velocity_max_magnitude()
+{
+    return 0.1f;
+}
+
+scalar  output_terminal_velocity_min_magnitude()
+{
+    return 0.001f;
+}
+
+vector3  gen_random_velocity(scalar const  magnitude = output_terminal_velocity_min_magnitude())
+{
+    while (true)
+    {
+        natural_32_bit const  tx = get_random_natural_32_bit_in_range(0U,10000U);
+        natural_32_bit const  ty = get_random_natural_32_bit_in_range(0U, 10000U);
+        natural_32_bit const  tc = get_random_natural_32_bit_in_range(0U, 10000U);
+        vector3 const  u(((scalar)tx / 10000.0f) - 0.5f, ((scalar)ty / 10000.0f) - 0.5f, ((scalar)tc / 10000.0f) - 0.5f);
+        scalar const  u_len = length(u);
+        if (u_len >= 0.01f)
+            return (magnitude / u_len) * u;
+    }
+}
+
+vector3  update_magnitude_of_velocity(vector3 const&  v, scalar const  magnitude = output_terminal_velocity_min_magnitude())
+{
+    scalar const  speed = length(v);
+    if (speed >= output_terminal_velocity_min_magnitude())
+    {
+        if (speed <= output_terminal_velocity_max_magnitude())
+            return v;
+        return (output_terminal_velocity_max_magnitude() / speed) * v;
+    }
+    return gen_random_velocity(magnitude);
+}
+
 
 }
 
@@ -311,12 +348,31 @@ std::size_t  cell::pos_hasher::operator()(vector3 const&  pos) const
 {
     TMPROF_BLOCK();
 
-    vector3 const  u = (pos - (m_origin - 0.5f * m_intercell_distance)).array() / m_intercell_distance.array();
-    natural_64_bit  x = (u(0) <= 0.0) ? 0ULL : (natural_64_bit)u(0);
-    natural_64_bit  y = (u(1) <= 0.0) ? 0ULL : (natural_64_bit)u(1);
-    natural_64_bit  c = (u(2) <= 0.0) ? 0ULL : (natural_64_bit)u(2);
-    ASSUMPTION(x < m_num_cells_x && y < m_num_cells_y && c < m_num_cells_c);
+    natural_64_bit  x, y, c;
+    bucket_indices(pos, x, y, c);
+    return bucket(x, y, c);
+}
+
+std::size_t  cell::pos_hasher::bucket(natural_64_bit const  x, natural_64_bit const  y, natural_64_bit const  c) const
+{
     return c * (m_num_cells_x * m_num_cells_y) + y * m_num_cells_x + x;
+}
+
+void  cell::pos_hasher::bucket_indices(vector3 const&  pos, natural_64_bit&  x, natural_64_bit&  y, natural_64_bit&  c) const
+{
+    vector3 const  u = (pos - (m_origin - 0.5f * m_intercell_distance)).array() / m_intercell_distance.array();
+    x = (u(0) <= 0.0) ? 0ULL : (u(0) >= m_num_cells_x) ? m_num_cells_x - 1ULL : (natural_64_bit)u(0);
+    y = (u(1) <= 0.0) ? 0ULL : (u(1) >= m_num_cells_y) ? m_num_cells_y - 1ULL : (natural_64_bit)u(1);
+    c = (u(2) <= 0.0) ? 0ULL : (u(2) >= m_num_cells_c) ? m_num_cells_c - 1ULL : (natural_64_bit)u(2);
+}
+
+vector3  cell::pos_hasher::bucket_centre(vector3 const&  pos) const
+{
+    TMPROF_BLOCK();
+
+    natural_64_bit  x,y,c;
+    bucket_indices(pos,x,y,c);
+    return m_origin + (vector3((scalar)x, (scalar)y, (scalar)c).array() * m_intercell_distance.array()).matrix();
 }
 
 cell::pos_equal::pos_equal(vector3 const&  max_distance)
@@ -369,12 +425,31 @@ std::size_t  output_terminal::pos_hasher::operator()(std::pair<vector3, output_t
 {
     TMPROF_BLOCK();
 
-    vector3 const  u = (key.first - (m_origin - 0.5f * m_intercell_distance)).array() / m_intercell_distance.array();
-    natural_64_bit  x = (u(0) <= 0.0) ? 0ULL : (u(0) >= m_num_cells_x) ? m_num_cells_x - 1ULL : (natural_64_bit)u(0);
-    natural_64_bit  y = (u(1) <= 0.0) ? 0ULL : (u(1) >= m_num_cells_y) ? m_num_cells_y - 1ULL : (natural_64_bit)u(1);
-    natural_64_bit  c = (u(2) <= 0.0) ? 0ULL : (u(2) >= m_num_cells_c) ? m_num_cells_c - 1ULL : (natural_64_bit)u(2);
-    ASSUMPTION(x < m_num_cells_x && y < m_num_cells_y && c < m_num_cells_c);
+    natural_64_bit  x, y, c;
+    bucket_indices(key.first, x, y, c);
+    return bucket(x,y,c);
+}
+
+std::size_t  output_terminal::pos_hasher::bucket(natural_64_bit const  x, natural_64_bit const  y, natural_64_bit const  c) const
+{
     return c * (m_num_cells_x * m_num_cells_y) + y * m_num_cells_x + x;
+}
+
+void  output_terminal::pos_hasher::bucket_indices(vector3 const&  pos, natural_64_bit&  x, natural_64_bit&  y, natural_64_bit&  c) const
+{
+    vector3 const  u = (pos - (m_origin - 0.5f * m_intercell_distance)).array() / m_intercell_distance.array();
+    x = (u(0) <= 0.0) ? 0ULL : (u(0) >= m_num_cells_x) ? m_num_cells_x - 1ULL : (natural_64_bit)u(0);
+    y = (u(1) <= 0.0) ? 0ULL : (u(1) >= m_num_cells_y) ? m_num_cells_y - 1ULL : (natural_64_bit)u(1);
+    c = (u(2) <= 0.0) ? 0ULL : (u(2) >= m_num_cells_c) ? m_num_cells_c - 1ULL : (natural_64_bit)u(2);
+}
+
+vector3  output_terminal::pos_hasher::bucket_centre(vector3 const&  pos) const
+{
+    TMPROF_BLOCK();
+
+    natural_64_bit  x, y, c;
+    bucket_indices(pos, x, y, c);
+    return m_origin + (vector3((scalar)x, (scalar)y, (scalar)c).array() * m_intercell_distance.array()).matrix();
 }
 
 output_terminal::pos_equal::pos_equal(vector3 const&  max_distance)
@@ -391,6 +466,7 @@ bool  output_terminal::pos_equal::operator()(std::pair<vector3, output_terminal*
 
 output_terminal::output_terminal()
     : m_pos(0.0f,0.0f,0.0f)
+    , m_velocity(gen_random_velocity())
     , m_cell()
 {}
 
@@ -501,6 +577,7 @@ void  nenet::update()
     {
         vector3  gradient(0.0f,0.0f,0.0f);
 
+        if (false)
         {
             TMPROF_BLOCK();
 
@@ -513,45 +590,83 @@ void  nenet::update()
         {
             TMPROF_BLOCK();
 
-            int iii = 0;
-            std::unordered_set<std::size_t>  visited_buckets;
-            for (scalar x = oterm.pos()(0) - interspot_distance()(0); x <= oterm.pos()(0) + 1.1f * interspot_distance()(0); x += interspot_distance()(0))
-                for (scalar y = oterm.pos()(1) - interspot_distance()(1); y <= oterm.pos()(1) + 1.1f * interspot_distance()(1); y += interspot_distance()(1))
-                    for (scalar c = oterm.pos()(2) - interspot_distance()(2); c <= oterm.pos()(2) + 1.1f * interspot_distance()(2); c += interspot_distance()(2))
+            natural_64_bit  xlo,ylo,clo;
+            output_terminals_set().hash_function().bucket_indices(oterm.pos() - interspot_distance(),xlo,ylo,clo);
+            natural_64_bit  xhi, yhi, chi;
+            output_terminals_set().hash_function().bucket_indices(oterm.pos() + interspot_distance(), xhi, yhi, chi);
+            for (natural_64_bit  x = xlo; x <= xhi; ++x)
+                for (natural_64_bit y = ylo; y <= yhi; ++y)
+                    for (natural_64_bit c = clo; c <= chi; ++c)
                     {
                         TMPROF_BLOCK();
-                        ++iii;
-                        std::size_t const  bucket = output_terminals_set().bucket({{x,y,c},nullptr});
-                        if (visited_buckets.count(bucket) != 0ULL)
-                            continue;
-                        visited_buckets.insert(bucket);
+
+                        std::size_t const  bucket = output_terminals_set().hash_function().bucket(x,y,c);
                         for (auto  it = output_terminals_set().begin(bucket), end = output_terminals_set().end(bucket); it != end; ++it)
                             if (it->second != &oterm)
                             {
                                 TMPROF_BLOCK();
                                 vector3 const  u = oterm.pos() - it->first;
-                                scalar const  D = min_element(interspot_distance());
-                                scalar const coef0 = -20.0f / D;
-                                scalar const coef1 = 1.0f + (10.0f / D) * dot_product(u,u);
+                                scalar const  A = 0.25f;
+                                scalar const  D = 0.1f * min_element(interspot_distance());
+                                scalar const coef0 = -(2.0f * A / D);
+                                scalar const coef1 = 1.0f + dot_product(u,u) / D;
                                 vector3 const  grad_f = (coef0 / (coef1 * coef1)) * u;
-
-                                //df(x,y)/dx = (-20*x/D) / (1 + (10/D)*(x ^ 2 + y ^ 2)) ^ 2
-                                //f(x,y) = 1/(1+10*(x^2+y^2)/D)
-                                //f(x,y) = e^-((x ^ 2 + y ^ 2) / 0.25)
                                 gradient += grad_f;
                             }
                     }
-            INVARIANT(iii == 27);
         }
 
+        if (false)
+        {
+            auto const  it = input_spots().find(oterm.pos());
+            if (it != input_spots().cend())
+            {
+                vector3 const  u = oterm.pos() - it->first;
+                vector3 const  v = 0.5f * interspot_distance();
+                scalar const  gradient_scale = 1.0f + (dot_product(u, u) / dot_product(v, v));
+                //INVARIANT(gradient_scale >= 0.0f && gradient_scale <= 1.0f);
+                //gradient *= gradient_scale * gradient_scale;
+            }
+        }
 
+        if (true)
+        {
+            TMPROF_BLOCK();
+
+            natural_64_bit  xlo, ylo, clo;
+            input_spots().hash_function().bucket_indices(oterm.pos() - interspot_distance(), xlo, ylo, clo);
+            natural_64_bit  xhi, yhi, chi;
+            input_spots().hash_function().bucket_indices(oterm.pos() + interspot_distance(), xhi, yhi, chi);
+            for (natural_64_bit x = xlo; x <= xhi; ++x)
+                for (natural_64_bit y = ylo; y <= yhi; ++y)
+                    for (natural_64_bit c = clo; c <= chi; ++c)
+                    {
+                        TMPROF_BLOCK();
+
+                        std::size_t const  bucket = input_spots().hash_function().bucket(x,y,c);
+                        for (auto it = input_spots().begin(bucket), end = input_spots().end(bucket); it != end; ++it)
+                        {
+                            TMPROF_BLOCK();
+                            vector3 const  u = oterm.pos() - it->first;
+                            scalar const  A = 0.1f;
+                            scalar const  D = 0.5f * min_element(interspot_distance());
+                            scalar const  W = -1.0f;
+                            scalar const coef0 = -(2.0f * W * A / D);
+                            scalar const coef1 = 1.0f + dot_product(u, u) / D;
+                            vector3 const  grad_f = (coef0 / (coef1 * coef1)) * u;
+                            gradient += grad_f;
+                        }
+                    }
+        }
 
         {
             TMPROF_BLOCK();
 
-            vector3 const  new_pos = oterm.pos() - (1000.0f * (scalar)update_time_step_in_seconds()) * gradient;
+            vector3 const  new_velocity = update_magnitude_of_velocity(oterm.velocity() + gradient);
+            vector3 const  new_pos = oterm.pos() - (1000.0f * (scalar)update_time_step_in_seconds()) * new_velocity;
             m_output_terminals_set.erase({oterm.pos(),&oterm});
             oterm.set_pos(new_pos);
+            oterm.set_velocity(new_velocity);
             auto const result = m_output_terminals_set.insert({new_pos,&oterm});
             INVARIANT(result.second);
         }

@@ -18,6 +18,10 @@ struct cell
 
         std::size_t  operator()(vector3 const&  pos) const;
 
+        std::size_t  bucket(natural_64_bit const  x, natural_64_bit const  y, natural_64_bit const  c) const;
+        void  bucket_indices(vector3 const&  pos, natural_64_bit&  x, natural_64_bit&  y, natural_64_bit&  c) const;
+        vector3  bucket_centre(vector3 const&  pos) const;
+
         vector3 const&  origin() const noexcept { return  m_origin; }
         vector3 const&  inter_distance() const noexcept { return  m_intercell_distance; }
         natural_64_bit  size_x() const noexcept { return m_num_cells_x; }
@@ -99,6 +103,10 @@ struct  output_terminal
 
         std::size_t  operator()(std::pair<vector3, output_terminal*> const&  key) const;
 
+        std::size_t  bucket(natural_64_bit const  x, natural_64_bit const  y, natural_64_bit const  c) const;
+        void  bucket_indices(vector3 const&  pos, natural_64_bit&  x, natural_64_bit&  y, natural_64_bit&  c) const;
+        vector3  bucket_centre(vector3 const&  pos) const;
+
         vector3 const&  origin() const noexcept { return  m_origin; }
         vector3 const&  inter_distance() const noexcept { return  m_intercell_distance; }
         natural_64_bit  size_x() const noexcept { return m_num_cells_x; }
@@ -132,11 +140,15 @@ struct  output_terminal
     vector3 const&  pos() const noexcept { return m_pos; }
     void  set_pos(vector3 const&  pos) { m_pos = pos; }
 
+    vector3 const&  velocity() const noexcept { return m_velocity; }
+    void  set_velocity(vector3 const&  v) { m_velocity = v; }
+
     void  set_cell(cell_iterator const  cell) { m_cell = cell; }
     cell_iterator  cell() const noexcept { return m_cell; }
 
 private:
     vector3  m_pos;
+    vector3  m_velocity;
     cell_iterator  m_cell;
 };
 

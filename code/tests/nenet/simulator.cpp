@@ -162,6 +162,8 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
             nenet()->update();
             ++m_nenet_num_updates;
+
+break;
         }
         while (std::chrono::duration<float_64_bit>(std::chrono::high_resolution_clock::now() - update_start_time).count() < m_nenet_max_update_duration);
     }
@@ -265,7 +267,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                             lines.push_back({ it->first,iit->first });
                         m_selected_cell_input_spot_lines = qtgl::create_lines3d(lines, vector3{ 1.0f,1.0f,0.0f });
                     }
-                    if (!m_selected_cell_output_terminal_lines.operator bool())
+                    //if (!m_selected_cell_output_terminal_lines.operator bool())
                     {
                         std::vector< std::pair<vector3, vector3> >  lines;
                         for (auto const iit : it->second.output_terminals())

@@ -65,13 +65,13 @@ inline vector3  vector3_unit_x() { return vector3::UnitX(); }
 inline vector3  vector3_unit_y() { return vector3::UnitY(); }
 inline vector3  vector3_unit_z() { return vector3::UnitZ(); }
 inline scalar  dot_product(vector3 const& u, vector3 const& v) { return u.dot(v); }
-inline scalar  lenght(vector3 const& u) { return u.norm(); }
+inline scalar  length(vector3 const& u) { return u.norm(); }
 inline vector3  normalised(vector3 const&  u) { return u.normalized(); }
 inline void  normalise(vector3& u) { u.normalize(); }
 
 inline quaternion  quaternion_identity() { return quaternion::Identity(); }
 inline scalar  length_squared(quaternion const& q) { return q.squaredNorm(); }
-inline scalar  lenght(quaternion const& q) { return q.norm(); }
+inline scalar  length(quaternion const& q) { return q.norm(); }
 inline quaternion  normalised(quaternion const& q) { return q.normalized(); }
 inline void  normalise(quaternion& q) { q.normalize(); }
 
