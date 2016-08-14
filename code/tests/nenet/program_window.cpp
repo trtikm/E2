@@ -4,6 +4,7 @@
 #include <qtgl/window.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <qtgl/widget_base.hpp>
+#include <utility/msgstream.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/info_parser.hpp>
 #include <QString>
@@ -17,6 +18,7 @@
 #include <QHBoxLayout>
 #include <QGroupBox>
 #include <QPushButton>
+#include <iomanip>
 
 
 namespace tab_names { namespace {
@@ -229,6 +231,10 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
         )
 
     , m_camera_save_pos_rot(new QCheckBox("Save position and rotation"))
+
+    , m_spent_real_time(new QLabel("0.0s"))
+    , m_spent_simulation_time(new QLabel("0.0s"))
+    , m_spent_times_ratio(new QLabel("1.0"))
 {
     this->setWindowTitle(get_program_name().c_str());
     this->setWindowIcon(QIcon("../data/shared/gfx/icons/E2_icon.png"));
@@ -363,6 +369,9 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
         m_tabs->addTab(draw_tab, QString(tab_names::DRAW().c_str()));
     }
 
+    statusBar()->addPermanentWidget(m_spent_real_time);
+    statusBar()->addPermanentWidget(m_spent_simulation_time);
+    statusBar()->addPermanentWidget(m_spent_times_ratio);
     statusBar()->addPermanentWidget(
             [](qtgl::window<simulator>* const glwindow, bool const  paused) {
                 struct s : public qtgl::widget_base<s, qtgl::window<simulator> >, public QLabel {
@@ -411,7 +420,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 
     gl_window_widget->setFocus();
 
-    m_idleTimerId = startTimer(250); // In milliseconds.
+    m_idleTimerId = startTimer(100); // In milliseconds.
 }
 
 program_window::~program_window()
@@ -439,6 +448,21 @@ void program_window::timerEvent(QTimerEvent* const event)
         return;
 
     // Here put time-dependent updates...
+
+    {
+        float_64_bit const  real_time = m_glwindow.call_now(&simulator::spent_real_time);
+        std::string  msg = msgstream() << "RT: " << std::fixed << std::setprecision(3) << real_time << "s";
+        m_spent_real_time->setText(msg.c_str());
+
+        float_64_bit const  simulation_time = m_glwindow.call_now(&simulator::spent_simulation_time);
+        msg = msgstream() << "ST: " << std::fixed << std::setprecision(3) << simulation_time  << "s";
+        m_spent_simulation_time->setText(msg.c_str());
+
+        float_64_bit const  simulation_time_to_real_time = real_time > 1e-5f ? simulation_time / real_time : 1.0;
+        msg = msgstream() << "ST/RT: " << std::fixed << std::setprecision(3) << simulation_time_to_real_time;
+        m_spent_times_ratio->setText(msg.c_str());
+    }
+
 }
 
 void  program_window::closeEvent(QCloseEvent* const  event)

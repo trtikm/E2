@@ -6,6 +6,7 @@
 #   include <boost/property_tree/ptree.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <QMainWindow>
+#   include <QLabel>
 #   include <QWidget>
 #   include <QSplitter>
 #   include <QTabWidget>
@@ -73,6 +74,10 @@ private:
     QLineEdit*  m_camera_roll;
 
     QCheckBox*  m_camera_save_pos_rot;
+
+    QLabel*  m_spent_real_time;
+    QLabel*  m_spent_simulation_time;
+    QLabel*  m_spent_times_ratio;
 };
 
 

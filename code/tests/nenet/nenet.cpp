@@ -577,16 +577,24 @@ void  nenet::update()
     {
         vector3  gradient(0.0f,0.0f,0.0f);
 
-        if (false)
+        if (true)
         {
             TMPROF_BLOCK();
 
-            vector3 const  u = (oterm.pos() - oterm.cell()->second.output_area_center()).array() / intercell_distance().array();
-            vector3 const  grad_f = (3.0f * std::pow(0.5f * dot_product(u, u), 0.5f)) * (u.array() / intercell_distance().array()).matrix();
+            //vector3 const  u = (oterm.pos() - oterm.cell()->second.output_area_center()).array() / intercell_distance().array();
+            //vector3 const  grad_f = (3.0f * std::pow(0.5f * dot_product(u, u), 0.5f)) * (u.array() / intercell_distance().array()).matrix();
+
+            scalar const  A = 0.0001f;
+            scalar const  D = length(intercell_distance());
+            vector3 const  u = oterm.pos() - oterm.cell()->second.output_area_center();
+            vector3  grad_f = -((A / (D*D)) * dot_product(u,u)) * u;
+            scalar const  dist = length(u);
+            if (dist > 1e-3f)
+                grad_f /= dist;
             gradient += grad_f;
         }
 
-        if (true)
+        if (false)
         {
             TMPROF_BLOCK();
 
@@ -629,7 +637,7 @@ void  nenet::update()
             }
         }
 
-        if (true)
+        if (false)
         {
             TMPROF_BLOCK();
 
@@ -665,8 +673,8 @@ void  nenet::update()
             // We trait the 'gradient' here as an acceleration for an output terminal
 
             scalar const  dt = 1000.0f * (scalar)update_time_step_in_seconds();
-            vector3 const  new_velocity = update_magnitude_of_velocity(oterm.velocity() + dt * gradient);
-            vector3 const  new_pos = oterm.pos() - dt * new_velocity;
+            vector3 const  new_velocity = oterm.velocity() + dt * gradient;//update_magnitude_of_velocity(oterm.velocity() + dt * gradient);
+            vector3 const  new_pos = oterm.pos() + dt * new_velocity;
             m_output_terminals_set.erase({oterm.pos(),&oterm});
             oterm.set_pos(new_pos);
             oterm.set_velocity(new_velocity);

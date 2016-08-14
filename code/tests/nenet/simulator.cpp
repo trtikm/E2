@@ -25,6 +25,7 @@ simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused)
             ))
     , m_nenet_num_updates(0ULL)
     , m_nenet_max_update_duration(1.0/30.0)
+    , m_spent_real_time(0.0)
     , m_paused(paused)
 
     , m_selected_cell(m_nenet->cells().cend())
@@ -163,6 +164,15 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
         {
             TMPROF_BLOCK();
 
+
+            natural_64_bit  num_iterations =
+                std::max(
+                    1ULL,
+                    (natural_64_bit)(spent_real_time() > spent_simulation_time() ?
+                            std::ceil(seconds_from_previous_call / nenet()->update_time_step_in_seconds()) :
+                            std::floor(seconds_from_previous_call / nenet()->update_time_step_in_seconds()) )
+                    );
+
             if (seconds_from_previous_call > 1e-3)
                 m_nenet_max_update_duration *= (1.0 / 30.0) / seconds_from_previous_call;
             std::chrono::high_resolution_clock::time_point const  update_start_time = std::chrono::high_resolution_clock::now();
@@ -173,9 +183,12 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                 nenet()->update();
                 ++m_nenet_num_updates;
 
-break;
+                if (--num_iterations == 0ULL)
+                    break;
             }
             while (std::chrono::duration<float_64_bit>(std::chrono::high_resolution_clock::now() - update_start_time).count() < m_nenet_max_update_duration);
+
+            m_spent_real_time += seconds_from_previous_call;
         }
 
         if (mouse_props().was_just_released(qtgl::LEFT_MOUSE_BUTTON()))
