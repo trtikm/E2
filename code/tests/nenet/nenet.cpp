@@ -366,13 +366,18 @@ void  cell::pos_hasher::bucket_indices(vector3 const&  pos, natural_64_bit&  x, 
     c = (u(2) <= 0.0) ? 0ULL : (u(2) >= m_num_cells_c) ? m_num_cells_c - 1ULL : (natural_64_bit)u(2);
 }
 
+vector3  cell::pos_hasher::bucket_centre(natural_64_bit const  x, natural_64_bit const  y, natural_64_bit const  c) const
+{
+    return m_origin + (vector3((scalar)x, (scalar)y, (scalar)c).array() * m_intercell_distance.array()).matrix();
+}
+
 vector3  cell::pos_hasher::bucket_centre(vector3 const&  pos) const
 {
     TMPROF_BLOCK();
 
     natural_64_bit  x,y,c;
     bucket_indices(pos,x,y,c);
-    return m_origin + (vector3((scalar)x, (scalar)y, (scalar)c).array() * m_intercell_distance.array()).matrix();
+    return bucket_centre(x,y,c);
 }
 
 cell::pos_equal::pos_equal(vector3 const&  max_distance)
@@ -443,13 +448,18 @@ void  output_terminal::pos_hasher::bucket_indices(vector3 const&  pos, natural_6
     c = (u(2) <= 0.0) ? 0ULL : (u(2) >= m_num_cells_c) ? m_num_cells_c - 1ULL : (natural_64_bit)u(2);
 }
 
+vector3  output_terminal::pos_hasher::bucket_centre(natural_64_bit const  x, natural_64_bit const  y, natural_64_bit const  c) const
+{
+    return m_origin + (vector3((scalar)x, (scalar)y, (scalar)c).array() * m_intercell_distance.array()).matrix();
+}
+
 vector3  output_terminal::pos_hasher::bucket_centre(vector3 const&  pos) const
 {
     TMPROF_BLOCK();
 
     natural_64_bit  x, y, c;
     bucket_indices(pos, x, y, c);
-    return m_origin + (vector3((scalar)x, (scalar)y, (scalar)c).array() * m_intercell_distance.array()).matrix();
+    return bucket_centre(x,y,c);
 }
 
 output_terminal::pos_equal::pos_equal(vector3 const&  max_distance)
@@ -581,20 +591,17 @@ void  nenet::update()
         {
             TMPROF_BLOCK();
 
-            //vector3 const  u = (oterm.pos() - oterm.cell()->second.output_area_center()).array() / intercell_distance().array();
-            //vector3 const  grad_f = (3.0f * std::pow(0.5f * dot_product(u, u), 0.5f)) * (u.array() / intercell_distance().array()).matrix();
-
             scalar const  A = 0.0001f;
             scalar const  D = length(intercell_distance());
             vector3 const  u = oterm.pos() - oterm.cell()->second.output_area_center();
             vector3  grad_f = -((A / (D*D)) * dot_product(u,u)) * u;
-            scalar const  dist = length(u);
-            if (dist > 1e-3f)
-                grad_f /= dist;
+            scalar const  u_lenght = length(u);
+            if (u_lenght > 1e-6f)
+                grad_f /= u_lenght;
             gradient += grad_f;
         }
 
-        if (false)
+        if (true)
         {
             TMPROF_BLOCK();
 
@@ -606,19 +613,29 @@ void  nenet::update()
                 for (natural_64_bit y = ylo; y <= yhi; ++y)
                     for (natural_64_bit c = clo; c <= chi; ++c)
                     {
-                        TMPROF_BLOCK();
-
+                        vector3 const  C = output_terminals_set().hash_function().bucket_centre(x,y,c);
                         std::size_t const  bucket = output_terminals_set().hash_function().bucket(x,y,c);
                         for (auto  it = output_terminals_set().begin(bucket), end = output_terminals_set().end(bucket); it != end; ++it)
                             if (it->second != &oterm)
                             {
-                                TMPROF_BLOCK();
-                                vector3 const  u = oterm.pos() - it->first;
-                                scalar const  A = 0.25f;
-                                scalar const  D = 0.1f * min_element(interspot_distance());
-                                scalar const coef0 = -(2.0f * A / D);
-                                scalar const coef1 = 1.0f + dot_product(u,u) / D;
-                                vector3 const  grad_f = (coef0 / (coef1 * coef1)) * u;
+                                scalar  m;
+                                {
+                                    scalar const  A = 1.0f;
+                                    scalar const  D = 0.5f * length(intercell_distance());
+                                    scalar const  e = 0.1f;
+                                    scalar const  a = (e*D) / (A - e);
+                                    m = (A*a) / (length(C - it->first) + a);
+                                }
+
+                                vector3  u = oterm.pos() - it->first;
+                                scalar const u_lenght = length(u);
+                                scalar const  A = 0.001f;
+                                scalar const  D = 0.5f * length(intercell_distance());
+                                scalar const  e = 0.000001f;
+                                scalar const  a = (e*D) / (A - e);
+                                vector3  grad_f = (m * ((A*a) / (u_lenght + a))) * u;
+                                if (u_lenght > 1e-6f)
+                                    grad_f /= u_lenght;
                                 gradient += grad_f;
                             }
                     }
@@ -649,12 +666,9 @@ void  nenet::update()
                 for (natural_64_bit y = ylo; y <= yhi; ++y)
                     for (natural_64_bit c = clo; c <= chi; ++c)
                     {
-                        TMPROF_BLOCK();
-
                         std::size_t const  bucket = input_spots().hash_function().bucket(x,y,c);
                         for (auto it = input_spots().begin(bucket), end = input_spots().end(bucket); it != end; ++it)
                         {
-                            TMPROF_BLOCK();
                             vector3 const  u = oterm.pos() - it->first;
                             scalar const  A = 0.1f;
                             scalar const  D = 0.5f * min_element(interspot_distance());

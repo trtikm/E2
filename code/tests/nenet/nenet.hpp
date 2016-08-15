@@ -20,6 +20,7 @@ struct cell
 
         std::size_t  bucket(natural_64_bit const  x, natural_64_bit const  y, natural_64_bit const  c) const;
         void  bucket_indices(vector3 const&  pos, natural_64_bit&  x, natural_64_bit&  y, natural_64_bit&  c) const;
+        vector3  bucket_centre(natural_64_bit const  x, natural_64_bit const  y, natural_64_bit const  c) const;
         vector3  bucket_centre(vector3 const&  pos) const;
 
         vector3 const&  origin() const noexcept { return  m_origin; }
@@ -105,6 +106,7 @@ struct  output_terminal
 
         std::size_t  bucket(natural_64_bit const  x, natural_64_bit const  y, natural_64_bit const  c) const;
         void  bucket_indices(vector3 const&  pos, natural_64_bit&  x, natural_64_bit&  y, natural_64_bit&  c) const;
+        vector3  bucket_centre(natural_64_bit const  x, natural_64_bit const  y, natural_64_bit const  c) const;
         vector3  bucket_centre(vector3 const&  pos) const;
 
         vector3 const&  origin() const noexcept { return  m_origin; }

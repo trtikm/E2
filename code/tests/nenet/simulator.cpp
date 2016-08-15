@@ -164,7 +164,6 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
         {
             TMPROF_BLOCK();
 
-
             natural_64_bit  num_iterations =
                 std::max(
                     1ULL,
@@ -174,7 +173,13 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                     );
 
             if (seconds_from_previous_call > 1e-3)
+            {
                 m_nenet_max_update_duration *= (1.0 / 30.0) / seconds_from_previous_call;
+                if (m_nenet_max_update_duration < nenet()->update_time_step_in_seconds())
+                    m_nenet_max_update_duration = nenet()->update_time_step_in_seconds();
+                if (m_nenet_max_update_duration > 1.0 / 30.0)
+                    m_nenet_max_update_duration = 1.0 / 30.0;
+            }
             std::chrono::high_resolution_clock::time_point const  update_start_time = std::chrono::high_resolution_clock::now();
             do
             {            

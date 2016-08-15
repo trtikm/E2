@@ -55,7 +55,10 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
                  m_ptree->get("nenet.paused", false)
                  )
     , m_has_focus(false)
+    , m_focus_just_received(true)
     , m_idleTimerId(-1)
+
+    , m_gl_window_widget(m_glwindow.create_widget_container())
 
     , m_splitter(new QSplitter(Qt::Horizontal, this))
     , m_tabs(
@@ -235,16 +238,15 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     , m_spent_real_time(new QLabel("0.0s"))
     , m_spent_simulation_time(new QLabel("0.0s"))
     , m_spent_times_ratio(new QLabel("1.0"))
+    , m_num_passed_simulation_steps(new QLabel("#Steps: 0"))
 {
     this->setWindowTitle(get_program_name().c_str());
     this->setWindowIcon(QIcon("../data/shared/gfx/icons/E2_icon.png"));
     this->move({ ptree().get("program_window.pos.x",0),ptree().get("program_window.pos.y",0) });
     this->resize(ptree().get("program_window.width", 1024), ptree().get("program_window.height", 768));
 
-    QWidget* const  gl_window_widget = m_glwindow.create_widget_container();
-
     this->setCentralWidget(m_splitter);
-    m_splitter->addWidget(gl_window_widget);
+    m_splitter->addWidget(m_gl_window_widget);
     m_splitter->addWidget(m_tabs);
 
     // Building Camera tab
@@ -372,6 +374,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     statusBar()->addPermanentWidget(m_spent_real_time);
     statusBar()->addPermanentWidget(m_spent_simulation_time);
     statusBar()->addPermanentWidget(m_spent_times_ratio);
+    statusBar()->addPermanentWidget(m_num_passed_simulation_steps);
     statusBar()->addPermanentWidget(
             [](qtgl::window<simulator>* const glwindow, bool const  paused) {
                 struct s : public qtgl::widget_base<s, qtgl::window<simulator> >, public QLabel {
@@ -418,7 +421,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 
     qtgl::set_splitter_sizes(*m_splitter, ptree().get("program_window.splitter_ratio", 3.0f / 4.0f));
 
-    gl_window_widget->setFocus();
+    //m_gl_window_widget->setFocus();
 
     m_idleTimerId = startTimer(100); // In milliseconds.
 }
@@ -431,9 +434,12 @@ bool program_window::event(QEvent* const event)
 {
     switch (event->type())
     {
+    case QEvent::WindowActivate:
     case QEvent::FocusIn:
         m_has_focus = true;
+        m_focus_just_received = true;
         return QMainWindow::event(event);
+    case QEvent::WindowDeactivate:
     case QEvent::FocusOut:
         m_has_focus = false;
         return QMainWindow::event(event);
@@ -461,8 +467,17 @@ void program_window::timerEvent(QTimerEvent* const event)
         float_64_bit const  simulation_time_to_real_time = real_time > 1e-5f ? simulation_time / real_time : 1.0;
         msg = msgstream() << "ST/RT: " << std::fixed << std::setprecision(3) << simulation_time_to_real_time;
         m_spent_times_ratio->setText(msg.c_str());
+
+        natural_64_bit const  num_steps = m_glwindow.call_now(&simulator::nenet_num_updates);
+        msg = msgstream() << "#Steps: " << num_steps;
+        m_num_passed_simulation_steps->setText(msg.c_str());
     }
 
+    if (m_focus_just_received)
+    {
+        m_focus_just_received = false;
+        m_gl_window_widget->setFocus();
+    }
 }
 
 void  program_window::closeEvent(QCloseEvent* const  event)

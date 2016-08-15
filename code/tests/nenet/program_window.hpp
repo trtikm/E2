@@ -51,7 +51,10 @@ private:
     std::unique_ptr<boost::property_tree::ptree>  m_ptree;
     qtgl::window<simulator>  m_glwindow;
     bool  m_has_focus;
+    bool  m_focus_just_received;
     int  m_idleTimerId;
+
+    QWidget*  m_gl_window_widget;
 
     QSplitter*  m_splitter;
     QTabWidget*  m_tabs;
@@ -78,6 +81,7 @@ private:
     QLabel*  m_spent_real_time;
     QLabel*  m_spent_simulation_time;
     QLabel*  m_spent_times_ratio;
+    QLabel*  m_num_passed_simulation_steps;
 };
 
 
