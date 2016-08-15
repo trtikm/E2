@@ -295,12 +295,12 @@ find_closest_element(T const&  dict, vector3 const&  origin, vector3 const&  ray
 
 scalar  output_terminal_velocity_max_magnitude()
 {
-    return 0.1f;
+    return 0.01f;
 }
 
 scalar  output_terminal_velocity_min_magnitude()
 {
-    return 0.001f;
+    return 0.002f;
 }
 
 vector3  gen_random_velocity(scalar const  magnitude = output_terminal_velocity_min_magnitude())
@@ -618,22 +618,14 @@ void  nenet::update()
                         for (auto  it = output_terminals_set().begin(bucket), end = output_terminals_set().end(bucket); it != end; ++it)
                             if (it->second != &oterm)
                             {
-                                scalar  m;
-                                {
-                                    scalar const  A = 1.0f;
-                                    scalar const  D = 0.5f * length(intercell_distance());
-                                    scalar const  e = 0.1f;
-                                    scalar const  a = (e*D) / (A - e);
-                                    m = (A*a) / (length(C - it->first) + a);
-                                }
-
                                 vector3  u = oterm.pos() - it->first;
                                 scalar const u_lenght = length(u);
-                                scalar const  A = 0.001f;
-                                scalar const  D = 0.5f * length(intercell_distance());
-                                scalar const  e = 0.000001f;
-                                scalar const  a = (e*D) / (A - e);
-                                vector3  grad_f = (m * ((A*a) / (u_lenght + a))) * u;
+                                scalar const  A = 0.01f;
+                                scalar const  D = 0.25f * length(interspot_distance());
+                                scalar const  e = 0.0001f;
+                                scalar const  a = std::log(e / A) / D;
+                                scalar const  m = 1.0f / (1.0f + (length(C - it->first) / D));
+                                vector3  grad_f = (A * m * std::exp(a*u_lenght)) * u;
                                 if (u_lenght > 1e-6f)
                                     grad_f /= u_lenght;
                                 gradient += grad_f;
@@ -641,20 +633,7 @@ void  nenet::update()
                     }
         }
 
-        if (false)
-        {
-            auto const  it = input_spots().find(oterm.pos());
-            if (it != input_spots().cend())
-            {
-                vector3 const  u = oterm.pos() - it->first;
-                vector3 const  v = 0.5f * interspot_distance();
-                scalar const  gradient_scale = 1.0f + (dot_product(u, u) / dot_product(v, v));
-                //INVARIANT(gradient_scale >= 0.0f && gradient_scale <= 1.0f);
-                //gradient *= gradient_scale * gradient_scale;
-            }
-        }
-
-        if (false)
+        if (true)
         {
             TMPROF_BLOCK();
 
@@ -666,19 +645,59 @@ void  nenet::update()
                 for (natural_64_bit y = ylo; y <= yhi; ++y)
                     for (natural_64_bit c = clo; c <= chi; ++c)
                     {
+                        vector3 const  C = input_spots().hash_function().bucket_centre(x, y, c);
                         std::size_t const  bucket = input_spots().hash_function().bucket(x,y,c);
                         for (auto it = input_spots().begin(bucket), end = input_spots().end(bucket); it != end; ++it)
                         {
-                            vector3 const  u = oterm.pos() - it->first;
-                            scalar const  A = 0.1f;
-                            scalar const  D = 0.5f * min_element(interspot_distance());
-                            scalar const  W = -1.0f;
-                            scalar const coef0 = -(2.0f * W * A / D);
-                            scalar const coef1 = 1.0f + dot_product(u, u) / D;
-                            vector3 const  grad_f = (coef0 / (coef1 * coef1)) * u;
+                            vector3  u =  it->first - oterm.pos();
+                            scalar const u_lenght = length(u);
+                            scalar const  A = 0.001f;
+                            scalar const  D = 0.5f * length(interspot_distance());
+                            scalar const  e = 0.00001f;
+                            scalar const  a = std::log(e/A)/D;
+                            scalar const  m = 1.0f / (1.0f + (length(C - it->first) / D));
+                            vector3  grad_f = (A * m * std::exp(a*u_lenght)) * u;
+                            if (u_lenght > 1e-6f)
+                                grad_f /= u_lenght;
                             gradient += grad_f;
+
+                            //vector3 const  u = oterm.pos() - it->first;
+                            //scalar const  A = 0.1f;
+                            //scalar const  D = 0.5f * min_element(interspot_distance());
+                            //scalar const  W = -1.0f;
+                            //scalar const coef0 = -(2.0f * W * A / D);
+                            //scalar const coef1 = 1.0f + dot_product(u, u) / D;
+                            //vector3 const  grad_f = (coef0 / (coef1 * coef1)) * u;
+                            //gradient += grad_f;
                         }
                     }
+        }
+
+        if (false)
+        {
+            vector3  u = -oterm.velocity();
+            scalar const u_length = length(u);
+            if (u_length > output_terminal_velocity_min_magnitude())
+            {
+                scalar const  A = 0.001f;
+                scalar const  D = output_terminal_velocity_max_magnitude();
+                scalar const  e = 0.000001f;
+                scalar const  a = (A / (D * D)) * (u_length * u_length);
+                vector3  grad_f = a * u;
+                if (u_length > 1e-6f)
+                    grad_f /= u_length;
+                gradient += grad_f;
+            }
+
+            //auto const  it = input_spots().find(oterm.pos());
+            //if (it != input_spots().cend())
+            //{
+            //    vector3 const  u = oterm.pos() - it->first;
+            //    vector3 const  v = 0.5f * interspot_distance();
+            //    scalar const  gradient_scale = 1.0f + (dot_product(u, u) / dot_product(v, v));
+            //    //INVARIANT(gradient_scale >= 0.0f && gradient_scale <= 1.0f);
+            //    //gradient *= gradient_scale * gradient_scale;
+            //}
         }
 
         {
@@ -687,7 +706,9 @@ void  nenet::update()
             // We trait the 'gradient' here as an acceleration for an output terminal
 
             scalar const  dt = 1000.0f * (scalar)update_time_step_in_seconds();
-            vector3 const  new_velocity = oterm.velocity() + dt * gradient;//update_magnitude_of_velocity(oterm.velocity() + dt * gradient);
+            //vector3 const  new_velocity = 1.0f* dt * gradient;
+            //vector3 const  new_velocity = oterm.velocity() + dt * gradient;//update_magnitude_of_velocity(oterm.velocity() + dt * gradient);
+            vector3 const  new_velocity = update_magnitude_of_velocity(oterm.velocity() + dt * gradient);
             vector3 const  new_pos = oterm.pos() + dt * new_velocity;
             m_output_terminals_set.erase({oterm.pos(),&oterm});
             oterm.set_pos(new_pos);
