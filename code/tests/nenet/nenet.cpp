@@ -208,8 +208,7 @@ void  init_output_terminals(std::vector<output_terminal>&  oterms, output_termin
 //}
 
 void  interconnect_cells_with_input_spots(
-    cell::pos_map&  cmap, input_spot::pos_map&  imap,
-    scalar const percentage_of_territories_overlap)
+    cell::pos_map&  cmap, input_spot::pos_map&  imap)
 {
     for (input_spot::pos_map::iterator it = imap.begin(); it != imap.end(); ++it)
     {
@@ -399,7 +398,8 @@ cell::cell()
     : m_input_spots()
     , m_output_terminals()
     , m_output_area_center(0.0f,0.0f,0.0f)
-//    , m_output_area_radius(1.0f)
+    , m_spiking_potential(0.0f)
+    , m_last_update(0ULL)
 {}
 
 //cell::cell(vector3 const&  output_area_center, scalar const  output_area_radius)
@@ -484,8 +484,7 @@ output_terminal::output_terminal()
 nenet::nenet(
     vector3 const&  lo_corner, vector3 const&  hi_corner,
     natural_8_bit const  num_cells_x, natural_8_bit const  num_cells_y, natural_8_bit const  num_cells_c,
-    natural_16_bit const  max_num_inputs_to_cell,
-    scalar const percentage_of_territories_overlap
+    natural_16_bit const  max_num_inputs_to_cell
     )
     : m_lo_corner(lo_corner)
     , m_hi_corner(hi_corner)
@@ -495,8 +494,6 @@ nenet::nenet(
     , m_num_cells_c(num_cells_c)
 
     , m_max_num_inputs_to_cell(max_num_inputs_to_cell)
-
-    , m_percentage_of_territories_overlap(percentage_of_territories_overlap)
 
     , m_intercell_distance(compute_intercell_distance(m_lo_corner, m_hi_corner, m_num_cells_x, m_num_cells_y, m_num_cells_c))
     , m_cells_origin(m_lo_corner + 0.5f * m_intercell_distance)
@@ -530,13 +527,15 @@ nenet::nenet(
         output_terminal::pos_hasher(m_spots_origin, m_interspot_distance, m_num_spots_x, m_num_spots_y, m_num_spots_c),
         output_terminal::pos_equal(0.5f * m_interspot_distance)
         )
+
+    , m_update_id(0ULL)
+    , m_spiking_neurons()
 {
     TMPROF_BLOCK();
 
     ASSUMPTION(m_lo_corner(0) < m_hi_corner(0) && m_lo_corner(1) < m_hi_corner(1) && m_lo_corner(2) < m_hi_corner(2));
     ASSUMPTION(m_num_cells_x != 0 && m_num_cells_y != 0 && m_num_cells_c != 0);
     ASSUMPTION(m_max_num_inputs_to_cell != 0);
-    ASSUMPTION(m_percentage_of_territories_overlap >= 0.0);
     ASSUMPTION(m_intercell_distance(0) > 0.0f && m_intercell_distance(1) > 0.0f && m_intercell_distance(2) > 0.0f);
 
     init_pos_map(m_cells,m_cells_origin,m_intercell_distance,m_num_cells_x,m_num_cells_y,m_num_cells_c,holes_set(1U, m_cells.hash_function(), m_cells.key_eq()));
@@ -552,7 +551,7 @@ nenet::nenet(
         init_pos_map(m_input_spots, m_spots_origin, m_interspot_distance, m_num_spots_x, m_num_spots_y, m_num_spots_c,holes);
     }
 
-    interconnect_cells_with_input_spots(m_cells, m_input_spots, m_percentage_of_territories_overlap);
+    interconnect_cells_with_input_spots(m_cells, m_input_spots);
 
     init_output_areas(m_cells);
     init_output_terminals(m_output_terminals, m_output_terminals_set, m_cells, m_max_num_inputs_to_cell);
@@ -580,6 +579,98 @@ output_terminal::pos_set::const_iterator  nenet::find_closest_output_terminal(ve
 }
 
 void  nenet::update()
+{
+    ++m_update_id;
+
+    update_spiking();
+    update_movement_of_output_terminals();
+}
+
+void  nenet::update_spiking()
+{
+    scalar const  resting_potential = 0.0f;
+    scalar const  spiking_threshold = 1.0f;
+    scalar const  after_spike_potential = -0.5f;
+    scalar const  potential_descend_coef = 0.01f;
+    scalar const  max_connection_distance = 0.25f;
+
+    for (natural_64_bit  i = 0ULL, n = m_spiking_neurons.size(); i != n; ++i)
+    {
+        cell* const  spiking_cell = m_spiking_neurons.front();
+        m_spiking_neurons.pop_front();
+
+        spiking_cell->set_spiking_potential(after_spike_potential);
+        spiking_cell->set_last_update(update_id());
+
+        for (auto const  iit : spiking_cell->input_spots())
+        {
+            output_terminal*  oterm = nullptr;
+            {
+                std::size_t const  bucket = output_terminals_set().bucket({iit->first,nullptr});
+                for (auto it = output_terminals_set().begin(bucket), end = output_terminals_set().end(bucket); it != end; ++it)
+                {
+                    vector3 const  u = iit->first - it->first;
+                    scalar const  dist = length(u);
+                    if (dist <= max_connection_distance)
+                    {
+                        oterm = it->second;
+                        break;
+                    }
+                }
+            }
+
+            if (oterm == nullptr)
+                continue;
+
+            // TODO: Put here code for 'on post-synaptic spike' for 'oterm'
+
+            input_spot* const  ispot = &iit->second;
+
+            // TODO: Put here code for 'on post-synaptic spike' for 'ispot'
+        }
+
+        for (auto const  oterm : spiking_cell->output_terminals())
+        {
+            auto const  iit = m_input_spots.find(oterm->pos());
+            if (iit == input_spots().end())
+                continue;
+
+            vector3 const  u = iit->first - oterm->pos();
+            scalar const  dist = length(u);
+            if (dist > max_connection_distance)
+                continue;
+
+            cell* const  pcell = &iit->second.cell()->second;
+            {
+                bool const  already_spiking = pcell->spiking_potential() >= spiking_threshold;
+
+                if (pcell->last_update() < update_id() && !already_spiking)
+                {
+                    scalar const  dt = 1000.0f * (scalar)update_time_step_in_seconds();
+                    scalar  v = pcell->spiking_potential();
+                    for (natural_64_bit i = pcell->last_update(); i != update_id(); ++i)
+                    {
+                        scalar const  dvdt = -potential_descend_coef * (v - resting_potential);
+                        v = v + dt * dvdt;
+                    }
+                    pcell->set_spiking_potential(v);
+                    pcell->set_last_update(update_id());
+                }
+
+                if (pcell->spiking_potential() >= spiking_threshold && !already_spiking)
+                    m_spiking_neurons.push_back(pcell);
+            }
+
+            // TODO: Put here code for 'on pre-synaptic spike' for 'oterm'
+
+            input_spot* const  ispot = &iit->second;
+
+            // TODO: Put here code for 'on pre-synaptic spike' for 'ispot'
+        }
+    }
+}
+
+void  nenet::update_movement_of_output_terminals()
 {
     TMPROF_BLOCK();
 
@@ -660,44 +751,8 @@ void  nenet::update()
                             if (u_lenght > 1e-6f)
                                 grad_f /= u_lenght;
                             gradient += grad_f;
-
-                            //vector3 const  u = oterm.pos() - it->first;
-                            //scalar const  A = 0.1f;
-                            //scalar const  D = 0.5f * min_element(interspot_distance());
-                            //scalar const  W = -1.0f;
-                            //scalar const coef0 = -(2.0f * W * A / D);
-                            //scalar const coef1 = 1.0f + dot_product(u, u) / D;
-                            //vector3 const  grad_f = (coef0 / (coef1 * coef1)) * u;
-                            //gradient += grad_f;
                         }
                     }
-        }
-
-        if (false)
-        {
-            vector3  u = -oterm.velocity();
-            scalar const u_length = length(u);
-            if (u_length > output_terminal_velocity_min_magnitude())
-            {
-                scalar const  A = 0.001f;
-                scalar const  D = output_terminal_velocity_max_magnitude();
-                scalar const  e = 0.000001f;
-                scalar const  a = (A / (D * D)) * (u_length * u_length);
-                vector3  grad_f = a * u;
-                if (u_length > 1e-6f)
-                    grad_f /= u_length;
-                gradient += grad_f;
-            }
-
-            //auto const  it = input_spots().find(oterm.pos());
-            //if (it != input_spots().cend())
-            //{
-            //    vector3 const  u = oterm.pos() - it->first;
-            //    vector3 const  v = 0.5f * interspot_distance();
-            //    scalar const  gradient_scale = 1.0f + (dot_product(u, u) / dot_product(v, v));
-            //    //INVARIANT(gradient_scale >= 0.0f && gradient_scale <= 1.0f);
-            //    //gradient *= gradient_scale * gradient_scale;
-            //}
         }
 
         {

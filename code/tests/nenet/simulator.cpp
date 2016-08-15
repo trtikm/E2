@@ -20,10 +20,8 @@ simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused)
     , m_nenet(std::make_shared<::nenet>(
             vector3{-30.0f, -30.0f, 0.0f}, vector3{ 30.0f, 30.0f, 40.0f },
             3,3,2,
-            10,
-            0.25f
+            10
             ))
-    , m_nenet_num_updates(0ULL)
     , m_nenet_max_update_duration(1.0/30.0)
     , m_spent_real_time(0.0)
     , m_paused(paused)
@@ -186,7 +184,6 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                 TMPROF_BLOCK();
 
                 nenet()->update();
-                ++m_nenet_num_updates;
 
                 if (--num_iterations == 0ULL)
                     break;

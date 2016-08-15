@@ -28,14 +28,13 @@ struct simulator : public qtgl::real_time_simulator
     void  set_camera_orientation(quaternion const&  orientation) { m_camera->coordinate_system()->set_orientation(orientation); }
 
     float_64_bit  spent_real_time() const noexcept { return m_spent_real_time; }
-    natural_64_bit  nenet_num_updates() const noexcept { return m_nenet_num_updates; }
+    natural_64_bit  nenet_num_updates() const noexcept { return nenet()->num_passed_updates(); }
     float_64_bit  spent_simulation_time() const { return nenet_num_updates() * nenet()->update_time_step_in_seconds(); }
 
     bool  paused() const noexcept { return m_paused; }
 
 private:
     std::shared_ptr<::nenet>  m_nenet;
-    natural_64_bit  m_nenet_num_updates;
     float_64_bit  m_nenet_max_update_duration;
     float_64_bit  m_spent_real_time;
     bool  m_paused;

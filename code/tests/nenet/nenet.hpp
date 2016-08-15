@@ -5,6 +5,7 @@
 #   include <vector>
 #   include <unordered_map>
 #   include <unordered_set>
+#   include <deque>
 
 struct  input_spot;
 struct  output_terminal;
@@ -57,7 +58,6 @@ struct cell
     using  output_terminal_ptr = output_terminal*;
 
     cell();
-    //cell(vector3 const&  output_area_center, scalar const  output_area_radius);
 
     void  add_input_spot(input_spot_iterator const  ispot) { m_input_spots.push_back(ispot); }
     std::vector<input_spot_iterator> const&  input_spots() const noexcept { return m_input_spots; }
@@ -66,15 +66,20 @@ struct cell
     std::vector<output_terminal_ptr> const&  output_terminals() const noexcept { return m_output_terminals; }
 
     vector3 const&  output_area_center() const noexcept { return m_output_area_center; }
-    //scalar  output_area_radius() const noexcept { return m_output_area_radius; }
     void  set_output_area_center(vector3 const&  center) { m_output_area_center = center; }
-    //void  set_output_area_radius(scalar const  radius) { m_output_area_radius = radius; }
+
+    scalar  spiking_potential() const noexcept { return m_spiking_potential; }
+    void  set_spiking_potential(scalar const  value) { m_spiking_potential = value; }
+
+    natural_64_bit  last_update() const noexcept { return m_last_update; }
+    void  set_last_update(natural_64_bit const  value) { m_last_update = value; }
 
 private:
     std::vector<input_spot_iterator>  m_input_spots;
     std::vector<output_terminal_ptr>  m_output_terminals;
     vector3  m_output_area_center;
-    //scalar  m_output_area_radius;
+    scalar  m_spiking_potential;
+    natural_64_bit  m_last_update;
 };
 
 struct  input_spot
@@ -159,8 +164,7 @@ struct nenet
     nenet(
         vector3 const&  lo_corner, vector3 const&  hi_corner,
         natural_8_bit const  num_cells_x, natural_8_bit const  num_cells_y, natural_8_bit const  num_cells_c,
-        natural_16_bit const  max_num_inputs_to_cell,
-        scalar const percentage_of_territories_overlap
+        natural_16_bit const  max_num_inputs_to_cell
         );
 
     vector3 const&  lo_corner() const noexcept { return m_lo_corner; }
@@ -172,8 +176,6 @@ struct nenet
 
     natural_16_bit  max_num_inputs_to_cell() const noexcept { return m_max_num_inputs_to_cell; }
     
-    scalar  percentage_of_territories_overlap() const noexcept { return m_percentage_of_territories_overlap; }
-
     vector3 const&  intercell_distance() const noexcept { return  m_intercell_distance; }
     vector3 const&  cells_origin() const noexcept { return  m_cells_origin; }
     cell::pos_map const&  cells() const noexcept { return  m_cells; }
@@ -196,10 +198,16 @@ struct nenet
                                                                            scalar* const  param = nullptr) const;
 
     static float_64_bit  update_time_step_in_seconds() noexcept { return 0.001; }
+    natural_64_bit  num_passed_updates() const noexcept { return  update_id(); }
+    natural_64_bit  update_id() const noexcept { return  m_update_id; }
+
     void  update();
 
 private:
-    
+
+    void  update_spiking();
+    void  update_movement_of_output_terminals();
+
     vector3  m_lo_corner;
     vector3  m_hi_corner;
 
@@ -208,8 +216,6 @@ private:
     natural_8_bit  m_num_cells_c;
 
     natural_16_bit  m_max_num_inputs_to_cell;
-
-    scalar  m_percentage_of_territories_overlap;
 
     vector3  m_intercell_distance;
     vector3  m_cells_origin;
@@ -224,6 +230,10 @@ private:
 
     output_terminal::pos_set  m_output_terminals_set;
     std::vector<output_terminal>  m_output_terminals;
+
+    natural_64_bit  m_update_id;
+
+    std::deque<cell*>  m_spiking_neurons;
 };
 
 
