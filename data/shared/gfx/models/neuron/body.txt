@@ -1,6 +1,6 @@
 E2::qtgl/batch/indexed/text
-../../shaders/vertex/vs_IptUmOptF.txt
-../../shaders/fragment/fs_ItUdFd.txt
+../../shaders/vertex/vs_IptUmdOptdF.txt
+../../shaders/fragment/fs_ItdUdFd.txt
 ../../meshes/neuron\body\indices.txt
 BINDING_IN_POSITION
 ../../meshes/neuron\body\vertices.txt

@@ -249,7 +249,7 @@ private:
 
 inline constexpr scalar  update_time_step_in_seconds() noexcept { return 0.001f; }
 
-inline constexpr scalar  mini_spiking_potential_magnitude() noexcept { return 0.1f; }
+inline constexpr scalar  mini_spiking_potential_magnitude() noexcept { return 0.05f; }
 inline constexpr scalar  average_mini_spiking_period_in_seconds() noexcept { return 10.0f / 1000.0f; }
 
 inline constexpr scalar  spiking_potential_magnitude() noexcept { return 0.5f; }

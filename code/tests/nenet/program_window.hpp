@@ -39,6 +39,8 @@ public slots:
     void  camera_rotation_listener();
     void  update_camera_rot_widgets(quaternion const&  q);
 
+    void  on_simulation_speed_changed();
+
 private:
 
     Q_OBJECT
@@ -77,6 +79,8 @@ private:
     QLineEdit*  m_camera_roll;
 
     QCheckBox*  m_camera_save_pos_rot;
+
+    QLineEdit*  m_simulation_speed;
 
     QLabel*  m_spent_real_time;
     QLabel*  m_spent_simulation_time;

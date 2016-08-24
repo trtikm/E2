@@ -63,7 +63,8 @@ std::string  binding_location_name(vertex_shader_output_buffer_binding_location 
 enum struct vertex_shader_uniform_symbolic_name : natural_8_bit
 {
     COLOUR_ALPHA                    = 0,
-    TRANSFORM_MATRIX_TRANSPOSED     = 1,
+    DIFFUSE_COLOUR                  = 1,
+    TRANSFORM_MATRIX_TRANSPOSED     = 2,
 };
 
 inline natural_8_bit  value(vertex_shader_uniform_symbolic_name const  name)

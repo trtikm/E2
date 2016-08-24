@@ -627,6 +627,7 @@ vertex_program_properties::vertex_program_properties(std::vector<std::string> co
 
     for (auto const  symbolic_name : std::vector<vertex_shader_uniform_symbolic_name>{
             vertex_shader_uniform_symbolic_name::COLOUR_ALPHA               ,
+            vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR             ,
             vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED,
             })
     {
@@ -748,6 +749,26 @@ bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
         return false;
     }
     glapi().glProgramUniform1f(accessor.first,layout_location,value_to_store);
+    return true;
+}
+
+bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
+    std::string const&  variable_name,
+    vector4 const&  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    GLint const  layout_location = glapi().glGetUniformLocation(accessor.first, variable_name.c_str());
+    if (layout_location == -1)
+    {
+        for (auto sname : accessor.second->symbolic_names_of_used_uniforms())
+            if (variable_name == uniform_name(sname))
+            {
+                UNREACHABLE();
+            }
+        return false;
+    }
+    glapi().glProgramUniform4fv(accessor.first, layout_location, 1U, value_to_store.data());
     return true;
 }
 

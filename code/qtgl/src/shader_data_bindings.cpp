@@ -51,6 +51,7 @@ std::string  uniform_symbolic_name(vertex_shader_uniform_symbolic_name const  sy
     switch (symbolic_name)
     {
     case vertex_shader_uniform_symbolic_name::COLOUR_ALPHA: return "COLOUR_ALPHA";
+    case vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR: return "DIFFUSE_COLOUR";
     case vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED: return "TRANSFORM_MATRIX_TRANSPOSED";
     default: UNREACHABLE();
     }
@@ -61,6 +62,7 @@ std::string  uniform_name(vertex_shader_uniform_symbolic_name const  symbolic_na
     switch (symbolic_name)
     {
     case vertex_shader_uniform_symbolic_name::COLOUR_ALPHA: return "UNIFORM_COLOUR_ALPHA";
+    case vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR: return "UNIFORM_DIFFUSE_COLOUR";
     case vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED: return "UNIFORM_TRANSFORM_MATRIX_TRANSPOSED";
     default: UNREACHABLE();
     }

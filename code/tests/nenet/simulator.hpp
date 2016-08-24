@@ -12,7 +12,8 @@
 
 struct simulator : public qtgl::real_time_simulator
 {
-    simulator(vector3 const&  initial_clear_colour, bool const  paused);
+    simulator(vector3 const&  initial_clear_colour, bool const  paused,
+              float_64_bit const  desired_number_of_simulated_seconds_per_real_time_second);
     ~simulator();
     void next_round(float_64_bit const  seconds_from_previous_call,
                     bool const  is_this_pure_redraw_request);
@@ -30,14 +31,16 @@ struct simulator : public qtgl::real_time_simulator
     float_64_bit  spent_real_time() const noexcept { return m_spent_real_time; }
     natural_64_bit  nenet_num_updates() const noexcept { return nenet()->num_passed_updates(); }
     float_64_bit  spent_simulation_time() const { return nenet_num_updates() * update_time_step_in_seconds(); }
+    float_64_bit  desired_number_of_simulated_seconds_per_real_time_second() const { return m_desired_number_of_simulated_seconds_per_real_time_second; }
+    void set_desired_number_of_simulated_seconds_per_real_time_second(float_64_bit const  value);
 
     bool  paused() const noexcept { return m_paused; }
 
 private:
     std::shared_ptr<::nenet>  m_nenet;
-    float_64_bit  m_nenet_max_update_duration;
     float_64_bit  m_spent_real_time;
     bool  m_paused;
+    float_64_bit  m_desired_number_of_simulated_seconds_per_real_time_second;
 
     cell::pos_map::const_iterator  m_selected_cell;
     scalar  m_selected_rot_angle;

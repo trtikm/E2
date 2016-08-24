@@ -68,7 +68,11 @@
 
 // Names of special uniform 'uniform' variables.
 // These values must match return values of
-// the function 'qtgl::uniform_name'
-// in the file 'qtgl/shader_data_binding.cpp'.
+// enum 'vertex_shader_uniform_symbolic_name'
+// in the file 'qtgl/shader_data_binding.hpp' and
+// the functions 'qtgl::uniform_name' and 'qtgl::uniform_symbolic_name'
+// in the file 'qtgl/shader_data_binding.cpp' must
+// return names defined here.
 #define COLOUR_ALPHA                    UNIFORM_COLOUR_ALPHA
+#define DIFFUSE_COLOUR                  UNIFORM_DIFFUSE_COLOUR
 #define TRANSFORM_MATRIX_TRANSPOSED     UNIFORM_TRANSFORM_MATRIX_TRANSPOSED

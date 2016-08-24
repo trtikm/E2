@@ -1,0 +1,11 @@
+#include ../version
+#include ../bindings
+layout(location=BINDING_IN_TEXCOORD0) in vec2  in_texture_coords;
+layout(location=BINDING_IN_COLOUR) in vec4  in_colour;
+layout(binding=BINDING_TEXTURE_DIFFUSE) uniform sampler2D diffuse_sampler;
+layout(location=BINDING_OUT_COLOUR) out vec4  out_colour;
+void main() {
+    vec4  tex_colour = texture(diffuse_sampler,in_texture_coords);
+    vec3  colour = in_colour.a * in_colour.xyz + (1.0f - in_colour.a) * tex_colour.xyz;
+    out_colour = vec4(colour,tex_colour.a);
+}

@@ -26,6 +26,7 @@ namespace tab_names { namespace {
 
 inline std::string  CAMERA() noexcept { return "Camera"; }
 inline std::string  DRAW() noexcept { return "Draw"; }
+inline std::string  NENET() noexcept { return "Nenet"; }
 
 
 }}
@@ -52,7 +53,8 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     , m_glwindow(vector3(m_ptree->get("tabs.draw.clear_colour.red", 64) / 255.0f,
                          m_ptree->get("tabs.draw.clear_colour.green", 64) / 255.0f,
                          m_ptree->get("tabs.draw.clear_colour.blue", 64) / 255.0f),
-                 m_ptree->get("nenet.paused", false)
+                 m_ptree->get("nenet.simulation.paused", false),
+                 m_ptree->get("nenet.simulation.speed", 1.0f)
                  )
     , m_has_focus(false)
     , m_focus_just_received(true)
@@ -235,6 +237,19 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 
     , m_camera_save_pos_rot(new QCheckBox("Save position and rotation"))
 
+    , m_simulation_speed(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    setText(QString::number(wnd->ptree().get("nenet.simulation.speed", 1.0f)));
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_simulation_speed_changed()));
+                }
+            };
+            return new s(wnd);
+        }(this)
+        )
+
     , m_spent_real_time(new QLabel("0.0s"))
     , m_spent_simulation_time(new QLabel("0.0s"))
     , m_spent_times_ratio(new QLabel("1.0"))
@@ -371,6 +386,26 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
         m_tabs->addTab(draw_tab, QString(tab_names::DRAW().c_str()));
     }
 
+    // Building Nenet tab
+    {
+        QWidget* const  nenet_tab = new QWidget;
+        {
+            QVBoxLayout* const nenet_tab_layout = new QVBoxLayout;
+            {
+                QHBoxLayout* const speed_layout = new QHBoxLayout;
+                {
+                    speed_layout->addWidget(new QLabel("Number of simulated seconds per second:"));
+                    speed_layout->addWidget(m_simulation_speed);
+                }
+                nenet_tab_layout->addLayout(speed_layout);
+                speed_layout->addStretch(1);
+            }
+            nenet_tab->setLayout(nenet_tab_layout);
+            nenet_tab_layout->addStretch(1);
+        }
+        m_tabs->addTab(nenet_tab, QString(tab_names::NENET().c_str()));
+    }
+
     statusBar()->addPermanentWidget(m_spent_real_time);
     statusBar()->addPermanentWidget(m_spent_simulation_time);
     statusBar()->addPermanentWidget(m_spent_times_ratio);
@@ -390,7 +425,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
                     }
                 };
                 return new s(glwindow, paused);
-            }(&m_glwindow, m_ptree->get("nenet.paused", false))
+            }(&m_glwindow, m_ptree->get("nenet.simulation.paused", false))
             );
     statusBar()->addPermanentWidget(
             [](qtgl::window<simulator>* const glwindow) {
@@ -505,7 +540,8 @@ void  program_window::closeEvent(QCloseEvent* const  event)
     }
     ptree().put("tabs.camera.save_pos_rot", m_camera_save_pos_rot->isChecked());
 
-    ptree().put("nenet.paused", m_glwindow.call_now(&simulator::paused));
+    ptree().put("nenet.simulation.paused", m_glwindow.call_now(&simulator::paused));
+    ptree().put("nenet.simulation.speed", m_glwindow.call_now(&simulator::desired_number_of_simulated_seconds_per_real_time_second));
 
     boost::property_tree::write_info(m_ptree_pathname.string(), ptree());
 }
@@ -616,4 +652,9 @@ void  program_window::update_camera_rot_widgets(quaternion const&  q)
     m_camera_yaw->setText(QString::number(yaw * 180.0f / PI()));
     m_camera_pitch->setText(QString::number(pitch * 180.0f / PI()));
     m_camera_roll->setText(QString::number(roll * 180.0f / PI()));
+}
+
+void  program_window::on_simulation_speed_changed()
+{
+    m_glwindow.call_later(&simulator::set_desired_number_of_simulated_seconds_per_real_time_second, m_simulation_speed->text().toFloat());
 }

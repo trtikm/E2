@@ -263,13 +263,15 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
         for (qtgl::batch_ptr const  batch : m_batches)
             if (qtgl::make_current(*batch,*draw_state))
             {
+                INVARIANT(batch->shaders_binding().operator bool());
                 for (qtgl::vertex_shader_uniform_symbolic_name const  uniform : batch->symbolic_names_of_used_uniforms())
                     switch (uniform)
                     {
                         case qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
                             break;
+                        case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
+                            break;
                         case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
-                            INVARIANT(batch->shaders_binding().operator bool());
                             qtgl::set_uniform_variable(batch->shaders_binding()->uniform_variable_accessor(),
                                                        uniform,batch_transform_matrix);
                             break;
