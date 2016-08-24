@@ -302,7 +302,8 @@ void  update_potential_of_cell_to_current_time(cell* const  pcell, natural_64_bi
         scalar  v = pcell->spiking_potential();
         for (natural_64_bit i = pcell->last_update(); i != update_id; ++i)
         {
-            scalar const  dvdt = -potential_descend_coef() * (v - resting_potential());
+            scalar const  coef = v < 0.0f ? potential_ascend_coef() : potential_descend_coef();
+            scalar const  dvdt = -coef * (v - resting_potential());
             v = v + dt * dvdt;
         }
         pcell->set_spiking_potential(v);
@@ -601,20 +602,27 @@ output_terminal::pos_set::const_iterator  nenet::find_closest_output_terminal(ve
     return find_closest_element(output_terminals_set(), origin, ray, radius, param);
 }
 
-void  nenet::update()
+void  nenet::update(
+    bool const  use_spiking,
+    bool const  use_mini_spiking,
+    bool const  use_movement_of_teminals
+    )
 {
     ++m_update_id;
 
-    update_spiking();
-    update_mini_spiking();
+    if (use_spiking || use_mini_spiking)
+        update_spiking(!use_spiking);
+    if (use_mini_spiking)
+        update_mini_spiking();
 
     std::swap(m_current_spikers, m_next_spikers);
     m_next_spikers->clear();
 
-    update_movement_of_output_terminals();
+    if (use_movement_of_teminals)
+        update_movement_of_output_terminals();
 }
 
-void  nenet::update_spiking()
+void  nenet::update_spiking(bool const  update_only_potential)
 {
     for (auto  cit = m_current_spikers->begin(); cit != m_current_spikers->end(); ++cit)
     {
@@ -622,6 +630,9 @@ void  nenet::update_spiking()
 
         spiking_cell->set_spiking_potential(after_spike_potential());
         spiking_cell->set_last_update(update_id());
+
+        if (update_only_potential)
+            continue;
 
         for (auto const  iit : spiking_cell->input_spots())
         {

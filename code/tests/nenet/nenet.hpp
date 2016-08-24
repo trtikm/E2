@@ -209,11 +209,15 @@ struct nenet
     natural_64_bit  num_passed_updates() const noexcept { return  update_id(); }
     natural_64_bit  update_id() const noexcept { return  m_update_id; }
 
-    void  update();
+    void  update(
+        bool const  use_spiking = true,
+        bool const  use_mini_spiking = true,
+        bool const  use_movement_of_teminals = true
+        );
 
 private:
 
-    void  update_spiking();
+    void  update_spiking(bool const  update_only_potential = false);
     void  update_mini_spiking();
     void  update_movement_of_output_terminals();
 
@@ -249,14 +253,15 @@ private:
 
 inline constexpr scalar  update_time_step_in_seconds() noexcept { return 0.001f; }
 
-inline constexpr scalar  mini_spiking_potential_magnitude() noexcept { return 0.05f; }
+inline constexpr scalar  mini_spiking_potential_magnitude() noexcept { return 0.075f; }
 inline constexpr scalar  average_mini_spiking_period_in_seconds() noexcept { return 10.0f / 1000.0f; }
 
-inline constexpr scalar  spiking_potential_magnitude() noexcept { return 0.5f; }
+inline constexpr scalar  spiking_potential_magnitude() noexcept { return 0.4f; }
 inline constexpr scalar  resting_potential() noexcept { return 0.0f; }
 inline constexpr scalar  spiking_threshold() noexcept { return 1.0f; }
 inline constexpr scalar  after_spike_potential() noexcept { return -1.0f; }
-inline constexpr scalar  potential_descend_coef() noexcept { return 0.01f; }
+inline constexpr scalar  potential_descend_coef() noexcept { return 0.2f; }
+inline constexpr scalar  potential_ascend_coef() noexcept { return 0.01f; }
 inline constexpr scalar  max_connection_distance() noexcept { return 0.25f; }
 
 inline constexpr scalar  output_terminal_velocity_max_magnitude() noexcept { return 0.01f; }

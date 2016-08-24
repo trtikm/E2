@@ -173,7 +173,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             std::chrono::high_resolution_clock::time_point const  update_start_time = std::chrono::high_resolution_clock::now();
             for ( ; num_iterations != 0ULL; --num_iterations)
             {            
-                nenet()->update();
+                nenet()->update(true,true,true);
                 if (std::chrono::duration<float_64_bit>(std::chrono::high_resolution_clock::now() - update_start_time).count() > 1.0 / 30.0)
                     break;
             }
