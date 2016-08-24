@@ -292,14 +292,35 @@ find_closest_element(T const&  dict, vector3 const&  origin, vector3 const&  ray
 //    return result;
 //}
 
-scalar  output_terminal_velocity_max_magnitude()
+
+void  update_potential_of_cell_to_current_time(cell* const  pcell, natural_64_bit const  update_id)
 {
-    return 0.01f;
+    if (pcell->last_update() < update_id)
+    {
+
+        scalar const  dt = 1000.0f * (scalar)update_time_step_in_seconds();
+        scalar  v = pcell->spiking_potential();
+        for (natural_64_bit i = pcell->last_update(); i != update_id; ++i)
+        {
+            scalar const  dvdt = -potential_descend_coef() * (v - resting_potential());
+            v = v + dt * dvdt;
+        }
+        pcell->set_spiking_potential(v);
+        pcell->set_last_update(update_id);
+    }
 }
 
-scalar  output_terminal_velocity_min_magnitude()
+output_terminal*  find_connected_output_terminal(output_terminal::pos_set const&  set_of_output_temrinals, vector3 const&  input_spot_position)
 {
-    return 0.002f;
+    natural_64_bit const  obucket = set_of_output_temrinals.bucket({ input_spot_position,nullptr });
+    for (auto it = set_of_output_temrinals.begin(obucket), end = set_of_output_temrinals.end(obucket); it != end; ++it)
+    {
+        vector3 const  u = input_spot_position - it->first;
+        scalar const  dist = length(u);
+        if (dist <= max_connection_distance())
+            return it->second;
+    }
+    return nullptr;
 }
 
 vector3  gen_random_velocity(scalar const  magnitude = output_terminal_velocity_min_magnitude())
@@ -400,6 +421,7 @@ cell::cell()
     , m_output_area_center(0.0f,0.0f,0.0f)
     , m_spiking_potential(0.0f)
     , m_last_update(0ULL)
+    , m_is_excitatory(true)
 {}
 
 //cell::cell(vector3 const&  output_area_center, scalar const  output_area_radius)
@@ -529,7 +551,8 @@ nenet::nenet(
         )
 
     , m_update_id(0ULL)
-    , m_spiking_neurons()
+    , m_current_spikers(new std::unordered_set<cell*>)
+    , m_next_spikers(new std::unordered_set<cell*>)
 {
     TMPROF_BLOCK();
 
@@ -583,89 +606,114 @@ void  nenet::update()
     ++m_update_id;
 
     update_spiking();
+    update_mini_spiking();
+
+    std::swap(m_current_spikers, m_next_spikers);
+    m_next_spikers->clear();
+
     update_movement_of_output_terminals();
 }
 
 void  nenet::update_spiking()
 {
-    scalar const  resting_potential = 0.0f;
-    scalar const  spiking_threshold = 1.0f;
-    scalar const  after_spike_potential = -0.5f;
-    scalar const  potential_descend_coef = 0.01f;
-    scalar const  max_connection_distance = 0.25f;
-
-    for (natural_64_bit  i = 0ULL, n = m_spiking_neurons.size(); i != n; ++i)
+    for (auto  cit = m_current_spikers->begin(); cit != m_current_spikers->end(); ++cit)
     {
-        cell* const  spiking_cell = m_spiking_neurons.front();
-        m_spiking_neurons.pop_front();
+        cell* const  spiking_cell = *cit;
 
-        spiking_cell->set_spiking_potential(after_spike_potential);
+        spiking_cell->set_spiking_potential(after_spike_potential());
         spiking_cell->set_last_update(update_id());
 
         for (auto const  iit : spiking_cell->input_spots())
         {
-            output_terminal*  oterm = nullptr;
-            {
-                std::size_t const  bucket = output_terminals_set().bucket({iit->first,nullptr});
-                for (auto it = output_terminals_set().begin(bucket), end = output_terminals_set().end(bucket); it != end; ++it)
-                {
-                    vector3 const  u = iit->first - it->first;
-                    scalar const  dist = length(u);
-                    if (dist <= max_connection_distance)
-                    {
-                        oterm = it->second;
-                        break;
-                    }
-                }
-            }
-
-            if (oterm == nullptr)
-                continue;
-
-            // TODO: Put here code for 'on post-synaptic spike' for 'oterm'
-
+            output_terminal*  oterm = find_connected_output_terminal(output_terminals_set(), iit->first);
             input_spot* const  ispot = &iit->second;
 
-            // TODO: Put here code for 'on post-synaptic spike' for 'ispot'
+            if (oterm == nullptr)
+            {
+                // TODO: Put here code for 'on post-synaptic spike' for not-connected 'ispot'
+            }
+            else
+            {
+                {
+                    // TODO: Put here code for 'on post-synaptic spike' for connected 'ispot'
+                }
+                {
+                    // TODO: Put here code for 'on post-synaptic spike' for connected 'oterm'
+                }
+            }
         }
 
         for (auto const  oterm : spiking_cell->output_terminals())
         {
             auto const  iit = m_input_spots.find(oterm->pos());
-            if (iit == input_spots().end())
-                continue;
-
-            vector3 const  u = iit->first - oterm->pos();
-            scalar const  dist = length(u);
-            if (dist > max_connection_distance)
-                continue;
-
-            cell* const  pcell = &iit->second.cell()->second;
+            if (iit == input_spots().end() || length(iit->first - oterm->pos()) > max_connection_distance())
             {
-                bool const  already_spiking = pcell->spiking_potential() >= spiking_threshold;
-
-                if (pcell->last_update() < update_id() && !already_spiking)
+                // TODO: Put here code for 'on pre-synaptic spike' for not-connected 'oterm'
+            }
+            else
+            {
                 {
-                    scalar const  dt = 1000.0f * (scalar)update_time_step_in_seconds();
-                    scalar  v = pcell->spiking_potential();
-                    for (natural_64_bit i = pcell->last_update(); i != update_id(); ++i)
-                    {
-                        scalar const  dvdt = -potential_descend_coef * (v - resting_potential);
-                        v = v + dt * dvdt;
-                    }
-                    pcell->set_spiking_potential(v);
-                    pcell->set_last_update(update_id());
+                    // TODO: Put here code for 'on pre-synaptic spike' for connected 'oterm'
                 }
 
-                if (pcell->spiking_potential() >= spiking_threshold && !already_spiking)
-                    m_spiking_neurons.push_back(pcell);
+                input_spot* const  ispot = &iit->second;
+
+                {
+                    // TODO: Put here code for 'on pre-synaptic spike' for connected 'ispot'
+                }
+
+                cell* const  pcell = &ispot->cell()->second;
+                {
+                    update_potential_of_cell_to_current_time(pcell, update_id());
+
+                    pcell->set_spiking_potential(
+                        pcell->spiking_potential()
+                        + (pcell->is_excitatory() ? 1.0f : -1.0f) * (oterm->synaptic_weight() * spiking_potential_magnitude())
+                        );
+
+                    if (pcell->spiking_potential() >= spiking_threshold())
+                        m_next_spikers->insert(pcell);
+                    else
+                        m_next_spikers->erase(pcell);
+                }
             }
+        }
+    }
+}
 
-            // TODO: Put here code for 'on pre-synaptic spike' for 'oterm'
+void  nenet::update_mini_spiking()
+{
+    natural_32_bit  num_mini_spikes_to_generate = (natural_32_bit)
+        std::round((m_input_spots.bucket_count() / average_mini_spiking_period_in_seconds()) * update_time_step_in_seconds());
+    natural_64_bit  max_num_rounds = 2U * num_mini_spikes_to_generate;
+    for (natural_64_bit i = 0ULL; i < max_num_rounds && num_mini_spikes_to_generate != 0ULL; ++i)
+    {
+        INVARIANT(m_input_spots.bucket_count() != 0ULL);
+        natural_32_bit const  bucket = get_random_natural_32_bit_in_range(0U, (natural_32_bit)m_input_spots.bucket_count() - 1U);
+        auto it = m_input_spots.begin(bucket), end = m_input_spots.end(bucket);
+        if (it != end)
+        {
+            INVARIANT(std::next(it) == end);
 
-            input_spot* const  ispot = &iit->second;
+            output_terminal const*  oterm = find_connected_output_terminal(output_terminals_set(), it->first);
+            if (oterm != nullptr)
+            {
+                cell* const  pcell = &it->second.cell()->second;
 
-            // TODO: Put here code for 'on pre-synaptic spike' for 'ispot'
+                update_potential_of_cell_to_current_time(pcell, update_id());
+
+                pcell->set_spiking_potential(
+                    pcell->spiking_potential()
+                    + (oterm->cell()->second.is_excitatory() ? 1.0f : -1.0f) * (mini_spiking_potential_magnitude())
+                    );
+
+                if (pcell->spiking_potential() >= spiking_threshold())
+                    m_next_spikers->insert(pcell);
+                else
+                    m_next_spikers->erase(pcell);
+
+                --num_mini_spikes_to_generate;
+            }
         }
     }
 }

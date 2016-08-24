@@ -166,15 +166,15 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                 std::max(
                     1ULL,
                     (natural_64_bit)(spent_real_time() > spent_simulation_time() ?
-                            std::ceil(seconds_from_previous_call / nenet()->update_time_step_in_seconds()) :
-                            std::floor(seconds_from_previous_call / nenet()->update_time_step_in_seconds()) )
+                            std::ceil(seconds_from_previous_call / update_time_step_in_seconds()) :
+                            std::floor(seconds_from_previous_call / update_time_step_in_seconds()) )
                     );
 
             if (seconds_from_previous_call > 1e-3)
             {
                 m_nenet_max_update_duration *= (1.0 / 30.0) / seconds_from_previous_call;
-                if (m_nenet_max_update_duration < nenet()->update_time_step_in_seconds())
-                    m_nenet_max_update_duration = nenet()->update_time_step_in_seconds();
+                if (m_nenet_max_update_duration < update_time_step_in_seconds())
+                    m_nenet_max_update_duration = update_time_step_in_seconds();
                 if (m_nenet_max_update_duration > 1.0 / 30.0)
                     m_nenet_max_update_duration = 1.0 / 30.0;
             }

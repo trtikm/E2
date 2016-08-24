@@ -29,7 +29,7 @@ struct simulator : public qtgl::real_time_simulator
 
     float_64_bit  spent_real_time() const noexcept { return m_spent_real_time; }
     natural_64_bit  nenet_num_updates() const noexcept { return nenet()->num_passed_updates(); }
-    float_64_bit  spent_simulation_time() const { return nenet_num_updates() * nenet()->update_time_step_in_seconds(); }
+    float_64_bit  spent_simulation_time() const { return nenet_num_updates() * update_time_step_in_seconds(); }
 
     bool  paused() const noexcept { return m_paused; }
 
