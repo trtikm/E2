@@ -170,10 +170,81 @@ private:
 
 struct nenet
 {
+    struct params
+    {
+        static std::shared_ptr<params>  create_default();
+
+        params(
+            scalar const  update_time_step_in_seconds,
+            scalar const  mini_spiking_potential_magnitude,
+            scalar const  average_mini_spiking_period_in_seconds,
+            scalar const  spiking_potential_magnitude,
+            scalar const  resting_potential,
+            scalar const  spiking_threshold,
+            scalar const  after_spike_potential,
+            scalar const  potential_descend_coef,
+            scalar const  potential_ascend_coef,
+            scalar const  max_connection_distance,
+            scalar const  output_terminal_velocity_max_magnitude,
+            scalar const  output_terminal_velocity_min_magnitude
+            );
+
+        scalar  update_time_step_in_seconds() const noexcept { return 0.001f; }
+
+        scalar  mini_spiking_potential_magnitude() const noexcept { return 0.075f; }
+        scalar  average_mini_spiking_period_in_seconds() const noexcept { return 10.0f / 1000.0f; }
+
+        scalar  spiking_potential_magnitude() const noexcept { return 0.4f; }
+        scalar  resting_potential() const noexcept { return 0.0f; }
+        scalar  spiking_threshold() const noexcept { return 1.0f; }
+        scalar  after_spike_potential() const noexcept { return -1.0f; }
+        scalar  potential_descend_coef() const noexcept { return 0.2f; }
+        scalar  potential_ascend_coef() const noexcept { return 0.01f; }
+        scalar  max_connection_distance() const noexcept { return 0.25f; }
+
+        scalar  output_terminal_velocity_max_magnitude() const noexcept { return 0.01f; }
+        scalar  output_terminal_velocity_min_magnitude() const noexcept { return 0.002f; }
+
+        void  set_update_time_step_in_seconds(scalar const  value) { m_update_time_step_in_seconds = value; }
+
+        void  set_mini_spiking_potential_magnitude(scalar const  value) { m_mini_spiking_potential_magnitude = value; }
+        void  set_average_mini_spiking_period_in_seconds(scalar const  value) { m_average_mini_spiking_period_in_seconds = value; }
+
+        void  set_spiking_potential_magnitude(scalar const  value) { m_spiking_potential_magnitude = value; }
+        void  set_resting_potential(scalar const  value) { m_resting_potential = value; }
+        void  set_spiking_threshold(scalar const  value) { m_spiking_threshold = value; }
+        void  set_after_spike_potential(scalar const  value) { m_after_spike_potential = value; }
+        void  set_potential_descend_coef(scalar const  value) { m_potential_descend_coef = value; }
+        void  set_potential_ascend_coef(scalar const  value) { m_potential_ascend_coef = value; }
+        void  set_max_connection_distance(scalar const  value) { m_max_connection_distance = value; }
+
+        void  set_output_terminal_velocity_max_magnitude(scalar const  value) { m_output_terminal_velocity_max_magnitude = value; }
+        void  set_output_terminal_velocity_min_magnitude(scalar const  value) { m_output_terminal_velocity_min_magnitude = value; }
+    private:
+        scalar  m_update_time_step_in_seconds;
+
+        scalar  m_mini_spiking_potential_magnitude;
+        scalar  m_average_mini_spiking_period_in_seconds;
+
+        scalar  m_spiking_potential_magnitude;
+        scalar  m_resting_potential;
+        scalar  m_spiking_threshold;
+        scalar  m_after_spike_potential;
+        scalar  m_potential_descend_coef;
+        scalar  m_potential_ascend_coef;
+        scalar  m_max_connection_distance;
+
+        scalar  m_output_terminal_velocity_max_magnitude;
+        scalar  m_output_terminal_velocity_min_magnitude;
+    };
+
+    using  params_ptr = std::shared_ptr<params>;
+
     nenet(
         vector3 const&  lo_corner, vector3 const&  hi_corner,
         natural_8_bit const  num_cells_x, natural_8_bit const  num_cells_y, natural_8_bit const  num_cells_c,
-        natural_16_bit const  max_num_inputs_to_cell
+        natural_16_bit const  max_num_inputs_to_cell,
+        params_ptr const prms
         );
 
     vector3 const&  lo_corner() const noexcept { return m_lo_corner; }
@@ -184,7 +255,9 @@ struct nenet
     natural_8_bit  num_cells_c() const noexcept { return m_num_cells_c; }
 
     natural_16_bit  max_num_inputs_to_cell() const noexcept { return m_max_num_inputs_to_cell; }
-    
+
+    params_ptr  get_params() const noexcept { return m_params; }
+
     vector3 const&  intercell_distance() const noexcept { return  m_intercell_distance; }
     vector3 const&  cells_origin() const noexcept { return  m_cells_origin; }
     cell::pos_map const&  cells() const noexcept { return  m_cells; }
@@ -230,6 +303,8 @@ private:
 
     natural_16_bit  m_max_num_inputs_to_cell;
 
+    params_ptr  m_params;
+        
     vector3  m_intercell_distance;
     vector3  m_cells_origin;
     cell::pos_map  m_cells;
@@ -249,24 +324,6 @@ private:
     std::unique_ptr< std::unordered_set<cell*> >  m_current_spikers;
     std::unique_ptr< std::unordered_set<cell*> >  m_next_spikers;
 };
-
-
-inline constexpr scalar  update_time_step_in_seconds() noexcept { return 0.001f; }
-
-inline constexpr scalar  mini_spiking_potential_magnitude() noexcept { return 0.075f; }
-inline constexpr scalar  average_mini_spiking_period_in_seconds() noexcept { return 10.0f / 1000.0f; }
-
-inline constexpr scalar  spiking_potential_magnitude() noexcept { return 0.4f; }
-inline constexpr scalar  resting_potential() noexcept { return 0.0f; }
-inline constexpr scalar  spiking_threshold() noexcept { return 1.0f; }
-inline constexpr scalar  after_spike_potential() noexcept { return -1.0f; }
-inline constexpr scalar  potential_descend_coef() noexcept { return 0.2f; }
-inline constexpr scalar  potential_ascend_coef() noexcept { return 0.01f; }
-inline constexpr scalar  max_connection_distance() noexcept { return 0.25f; }
-
-inline constexpr scalar  output_terminal_velocity_max_magnitude() noexcept { return 0.01f; }
-inline constexpr scalar  output_terminal_velocity_min_magnitude() noexcept { return 0.002f; }
-
 
 
 #endif

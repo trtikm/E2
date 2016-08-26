@@ -14,22 +14,25 @@
 #include <algorithm>
 #include <cmath>
 
-#   include <iostream>
+#include <iostream>
 
 
-simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused,
+simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused, nenet::params_ptr const  params,
                      float_64_bit const  desired_number_of_simulated_seconds_per_real_time_second)
     : qtgl::real_time_simulator()
     , m_nenet(std::make_shared<::nenet>(
             vector3{-30.0f, -30.0f, 0.0f}, vector3{ 30.0f, 30.0f, 40.0f },
             3,3,2,
-            10
+            10,
+            params
             ))
     , m_spent_real_time(0.0)
     , m_paused(paused)
     , m_desired_number_of_simulated_seconds_per_real_time_second(desired_number_of_simulated_seconds_per_real_time_second)
 
     , m_selected_cell(m_nenet->cells().cend())
+    , m_selected_input_spot(m_nenet->input_spots().cend())
+    , m_selected_output_terminal(nullptr)
     , m_selected_rot_angle(0.0f)
 
     , m_camera(
@@ -168,7 +171,8 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             natural_64_bit  num_iterations = (natural_64_bit)
                 std::max(
                     0.0,
-                    std::round((desired_number_of_simulated_seconds_per_real_time_second() * spent_real_time() - spent_simulation_time()) / update_time_step_in_seconds())
+                    std::round((desired_number_of_simulated_seconds_per_real_time_second() * spent_real_time() - spent_simulation_time())
+                                    / nenet()->get_params()->update_time_step_in_seconds())
                     );
             std::chrono::high_resolution_clock::time_point const  update_start_time = std::chrono::high_resolution_clock::now();
             for ( ; num_iterations != 0ULL; --num_iterations)
@@ -181,25 +185,34 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
         if (mouse_props().was_just_released(qtgl::LEFT_MOUSE_BUTTON()))
         {
+            m_selected_cell = m_nenet->cells().cend();
+            m_selected_input_spot = m_nenet->input_spots().cend();
+            m_selected_output_terminal = nullptr;
+            m_selected_rot_angle = 0.0f;
+            m_selected_cell_input_spot_lines.reset();
+            m_selected_cell_output_terminal_lines.reset();
+
             vector3 const  ray = m_camera->cursor3d({ mouse_props().x() ,mouse_props().y() },window_props());
             scalar  param = 1e30f;
             m_selected_cell = nenet()->find_closest_cell(m_camera->coordinate_system()->origin(),ray,0.75f,&param);
             {
-                auto const ispot_iter = nenet()->find_closest_input_spot(m_camera->coordinate_system()->origin(), ray, 0.3f, &param);
-                if (ispot_iter != nenet()->input_spots().cend())
-                    m_selected_cell = ispot_iter->second.cell();
+                m_selected_input_spot = nenet()->find_closest_input_spot(m_camera->coordinate_system()->origin(), ray, 0.5f, &param);
+                if (m_selected_input_spot != nenet()->input_spots().cend())
+                    m_selected_cell = nenet()->cells().cend();//m_selected_input_spot->second.cell();
             }
             {
-                auto const oterm_iter = nenet()->find_closest_output_terminal(m_camera->coordinate_system()->origin(), ray, 0.3f, &param);
-                if (oterm_iter != nenet()->output_terminals_set().cend())
-                    m_selected_cell = oterm_iter->second->cell();
+                auto const oit = nenet()->find_closest_output_terminal(m_camera->coordinate_system()->origin(), ray, 0.22f, &param);
+                if (oit != nenet()->output_terminals_set().cend())
+                {
+                    ASSUMPTION(oit->second != nullptr);
+                    m_selected_output_terminal = oit->second;
+                    m_selected_cell = nenet()->cells().cend();//m_selected_outpu_terminal->second->cell();
+                    m_selected_input_spot = nenet()->input_spots().cend();
+                }
             }
-            m_selected_rot_angle = 0.0f;
-            m_selected_cell_input_spot_lines.reset();
-            m_selected_cell_output_terminal_lines.reset();
         }
 
-        if (m_selected_cell != nenet()->cells().cend())
+        if (is_selected_something())
         {
             m_selected_rot_angle += (2.0f * PI()) * seconds_from_previous_call;
             while (m_selected_rot_angle > 2.0f * PI())
@@ -318,8 +331,8 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             {
                 matrix44  world_transformation;
                 quaternion const  orientation =
-                    (it->second.cell() == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle, vector3_unit_z()) :
-                                                             quaternion_identity();
+                    (it == m_selected_input_spot) ? angle_axis_to_quaternion(m_selected_rot_angle, vector3_unit_z()) :
+                                                    quaternion_identity();
                 qtgl::transformation_matrix(qtgl::coordinate_system(it->first, orientation), world_transformation);
                 matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
 
@@ -337,6 +350,16 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                     }
 
                 qtgl::draw();
+
+                if (it == m_selected_input_spot)
+                {
+                    if (!m_selected_cell_input_spot_lines.operator bool())
+                        m_selected_cell_input_spot_lines =
+                            qtgl::create_lines3d(
+                                { { get_position_of_selected(), it->second.cell()->first } },
+                                vector3{ 1.0f,1.0f,0.0f }
+                                );
+                }
             }
             draw_state = m_batch_input_spot->draw_state();
         }
@@ -351,8 +374,8 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             {
                 matrix44  world_transformation;
                 quaternion const  orientation =
-                    (oterm.cell() == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle, vector3_unit_z()) :
-                                                        quaternion_identity();
+                    (&oterm == m_selected_output_terminal) ? angle_axis_to_quaternion(m_selected_rot_angle, vector3_unit_z()) :
+                                                             quaternion_identity();
                 qtgl::transformation_matrix(qtgl::coordinate_system(oterm.pos(), orientation), world_transformation);
                 matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
 
@@ -370,6 +393,15 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                     }
 
                 qtgl::draw();
+
+                if (&oterm == m_selected_output_terminal)
+                {
+                    m_selected_cell_output_terminal_lines =
+                        qtgl::create_lines3d(
+                            { { oterm.pos(), oterm.cell()->first } },
+                            vector3{ 1.0f,0.0f,0.5f }
+                            );
+                }
             }
             draw_state = m_batch_input_spot->draw_state();
         }
@@ -433,4 +465,33 @@ void simulator::set_desired_number_of_simulated_seconds_per_real_time_second(flo
     ASSUMPTION(value > 1e-5f);
     m_desired_number_of_simulated_seconds_per_real_time_second = value;
     m_spent_real_time = spent_simulation_time() / desired_number_of_simulated_seconds_per_real_time_second();
+}
+
+vector3 const&  simulator::get_position_of_selected() const
+{
+    ASSUMPTION(is_selected_something());
+    if (is_selected_cell())
+        return m_selected_cell->first;
+    else if (is_selected_input_spot())
+        return m_selected_input_spot->first;
+    else 
+        return m_selected_output_terminal->pos();
+}
+
+cell const&  simulator::get_selected_cell() const
+{
+    ASSUMPTION(is_selected_cell());
+    return m_selected_cell->second;
+}
+
+input_spot const&  simulator::get_selected_input_spot() const
+{
+    ASSUMPTION(is_selected_input_spot());
+    return m_selected_input_spot->second;
+}
+
+output_terminal const&  simulator::get_output_terminal() const
+{
+    ASSUMPTION(is_selected_output_terminal());
+    return *m_selected_output_terminal;
 }

@@ -293,17 +293,17 @@ find_closest_element(T const&  dict, vector3 const&  origin, vector3 const&  ray
 //}
 
 
-void  update_potential_of_cell_to_current_time(cell* const  pcell, natural_64_bit const  update_id)
+void  update_potential_of_cell_to_current_time(cell* const  pcell, natural_64_bit const  update_id, nenet::params_ptr const  params)
 {
     if (pcell->last_update() < update_id)
     {
 
-        scalar const  dt = 1000.0f * (scalar)update_time_step_in_seconds();
+        scalar const  dt = 1000.0f * (scalar)params->update_time_step_in_seconds();
         scalar  v = pcell->spiking_potential();
         for (natural_64_bit i = pcell->last_update(); i != update_id; ++i)
         {
-            scalar const  coef = v < 0.0f ? potential_ascend_coef() : potential_descend_coef();
-            scalar const  dvdt = -coef * (v - resting_potential());
+            scalar const  coef = v < 0.0f ? params->potential_ascend_coef() : params->potential_descend_coef();
+            scalar const  dvdt = -coef * (v - params->resting_potential());
             v = v + dt * dvdt;
         }
         pcell->set_spiking_potential(v);
@@ -311,20 +311,22 @@ void  update_potential_of_cell_to_current_time(cell* const  pcell, natural_64_bi
     }
 }
 
-output_terminal*  find_connected_output_terminal(output_terminal::pos_set const&  set_of_output_temrinals, vector3 const&  input_spot_position)
+output_terminal*  find_connected_output_terminal(output_terminal::pos_set const&  set_of_output_temrinals,
+                                                 vector3 const&  input_spot_position,
+                                                 nenet::params_ptr const  params)
 {
     natural_64_bit const  obucket = set_of_output_temrinals.bucket({ input_spot_position,nullptr });
     for (auto it = set_of_output_temrinals.begin(obucket), end = set_of_output_temrinals.end(obucket); it != end; ++it)
     {
         vector3 const  u = input_spot_position - it->first;
         scalar const  dist = length(u);
-        if (dist <= max_connection_distance())
+        if (dist <= params->max_connection_distance())
             return it->second;
     }
     return nullptr;
 }
 
-vector3  gen_random_velocity(scalar const  magnitude = output_terminal_velocity_min_magnitude())
+vector3  gen_random_velocity(scalar const  magnitude)
 {
     while (true)
     {
@@ -338,14 +340,14 @@ vector3  gen_random_velocity(scalar const  magnitude = output_terminal_velocity_
     }
 }
 
-vector3  update_magnitude_of_velocity(vector3 const&  v, scalar const  magnitude = output_terminal_velocity_min_magnitude())
+vector3  update_magnitude_of_velocity(vector3 const&  v, scalar const  magnitude, nenet::params_ptr const  params)
 {
     scalar const  speed = length(v);
-    if (speed >= output_terminal_velocity_min_magnitude())
+    if (speed >= params->output_terminal_velocity_min_magnitude())
     {
-        if (speed <= output_terminal_velocity_max_magnitude())
+        if (speed <= params->output_terminal_velocity_max_magnitude())
             return v;
-        return (output_terminal_velocity_max_magnitude() / speed) * v;
+        return (params->output_terminal_velocity_max_magnitude() / speed) * v;
     }
     return gen_random_velocity(magnitude);
 }
@@ -499,15 +501,65 @@ bool  output_terminal::pos_equal::operator()(std::pair<vector3, output_terminal*
 
 output_terminal::output_terminal()
     : m_pos(0.0f,0.0f,0.0f)
-    , m_velocity(gen_random_velocity())
+    , m_velocity(vector3(0.0f, 0.0f, 0.0f))
     , m_cell()
 {}
 
 
+std::shared_ptr<nenet::params>  nenet::params::create_default()
+{
+    return std::make_shared<nenet::params>(
+        0.001f,                 //  update_time_step_in_seconds
+
+        0.075f,                 //  mini_spiking_potential_magnitude
+        10.0f / 1000.0f,        //  average_mini_spiking_period_in_seconds
+
+        0.4f,                   //  spiking_potential_magnitude
+        0.0f,                   //  resting_potential
+        1.0f,                   //  spiking_threshold
+        -1.0f,                  //  after_spike_potential
+        0.2f,                   //  potential_descend_coef
+        0.01f,                  //  potential_ascend_coef
+        0.25f,                  //  max_connection_distance
+
+        0.01f,                  //  output_terminal_velocity_max_magnitude
+        0.003f                  //  output_terminal_velocity_min_magnitude
+        );
+}
+
+nenet::params::params(
+    scalar const  update_time_step_in_seconds,
+    scalar const  mini_spiking_potential_magnitude,
+    scalar const  average_mini_spiking_period_in_seconds,
+    scalar const  spiking_potential_magnitude,
+    scalar const  resting_potential,
+    scalar const  spiking_threshold,
+    scalar const  after_spike_potential,
+    scalar const  potential_descend_coef,
+    scalar const  potential_ascend_coef,
+    scalar const  max_connection_distance,
+    scalar const  output_terminal_velocity_max_magnitude,
+    scalar const  output_terminal_velocity_min_magnitude
+    )
+    : m_update_time_step_in_seconds(update_time_step_in_seconds)
+    , m_mini_spiking_potential_magnitude(mini_spiking_potential_magnitude)
+    , m_average_mini_spiking_period_in_seconds(average_mini_spiking_period_in_seconds)
+    , m_spiking_potential_magnitude(spiking_potential_magnitude)
+    , m_resting_potential(resting_potential)
+    , m_spiking_threshold(spiking_threshold)
+    , m_after_spike_potential(after_spike_potential)
+    , m_potential_descend_coef(potential_descend_coef)
+    , m_potential_ascend_coef(potential_ascend_coef)
+    , m_max_connection_distance(max_connection_distance)
+    , m_output_terminal_velocity_max_magnitude(output_terminal_velocity_max_magnitude)
+    , m_output_terminal_velocity_min_magnitude(output_terminal_velocity_min_magnitude)
+{}
+
 nenet::nenet(
     vector3 const&  lo_corner, vector3 const&  hi_corner,
     natural_8_bit const  num_cells_x, natural_8_bit const  num_cells_y, natural_8_bit const  num_cells_c,
-    natural_16_bit const  max_num_inputs_to_cell
+    natural_16_bit const  max_num_inputs_to_cell,
+    params_ptr const prms
     )
     : m_lo_corner(lo_corner)
     , m_hi_corner(hi_corner)
@@ -517,6 +569,8 @@ nenet::nenet(
     , m_num_cells_c(num_cells_c)
 
     , m_max_num_inputs_to_cell(max_num_inputs_to_cell)
+
+    , m_params(prms)
 
     , m_intercell_distance(compute_intercell_distance(m_lo_corner, m_hi_corner, m_num_cells_x, m_num_cells_y, m_num_cells_c))
     , m_cells_origin(m_lo_corner + 0.5f * m_intercell_distance)
@@ -628,7 +682,7 @@ void  nenet::update_spiking(bool const  update_only_potential)
     {
         cell* const  spiking_cell = *cit;
 
-        spiking_cell->set_spiking_potential(after_spike_potential());
+        spiking_cell->set_spiking_potential(get_params()->after_spike_potential());
         spiking_cell->set_last_update(update_id());
 
         if (update_only_potential)
@@ -636,7 +690,7 @@ void  nenet::update_spiking(bool const  update_only_potential)
 
         for (auto const  iit : spiking_cell->input_spots())
         {
-            output_terminal*  oterm = find_connected_output_terminal(output_terminals_set(), iit->first);
+            output_terminal*  oterm = find_connected_output_terminal(output_terminals_set(), iit->first,get_params());
             input_spot* const  ispot = &iit->second;
 
             if (oterm == nullptr)
@@ -657,7 +711,7 @@ void  nenet::update_spiking(bool const  update_only_potential)
         for (auto const  oterm : spiking_cell->output_terminals())
         {
             auto const  iit = m_input_spots.find(oterm->pos());
-            if (iit == input_spots().end() || length(iit->first - oterm->pos()) > max_connection_distance())
+            if (iit == input_spots().end() || length(iit->first - oterm->pos()) > get_params()->max_connection_distance())
             {
                 // TODO: Put here code for 'on pre-synaptic spike' for not-connected 'oterm'
             }
@@ -675,14 +729,14 @@ void  nenet::update_spiking(bool const  update_only_potential)
 
                 cell* const  pcell = &ispot->cell()->second;
                 {
-                    update_potential_of_cell_to_current_time(pcell, update_id());
+                    update_potential_of_cell_to_current_time(pcell, update_id(), get_params());
 
                     pcell->set_spiking_potential(
                         pcell->spiking_potential()
-                        + (pcell->is_excitatory() ? 1.0f : -1.0f) * (oterm->synaptic_weight() * spiking_potential_magnitude())
+                        + (pcell->is_excitatory() ? 1.0f : -1.0f) * (oterm->synaptic_weight() * get_params()->spiking_potential_magnitude())
                         );
 
-                    if (pcell->spiking_potential() >= spiking_threshold())
+                    if (pcell->spiking_potential() >= get_params()->spiking_threshold())
                         m_next_spikers->insert(pcell);
                     else
                         m_next_spikers->erase(pcell);
@@ -695,7 +749,7 @@ void  nenet::update_spiking(bool const  update_only_potential)
 void  nenet::update_mini_spiking()
 {
     natural_32_bit  num_mini_spikes_to_generate = (natural_32_bit)
-        std::round((m_input_spots.bucket_count() / average_mini_spiking_period_in_seconds()) * update_time_step_in_seconds());
+        std::round((m_input_spots.bucket_count() / get_params()->average_mini_spiking_period_in_seconds()) * get_params()->update_time_step_in_seconds());
     natural_64_bit  max_num_rounds = 2U * num_mini_spikes_to_generate;
     for (natural_64_bit i = 0ULL; i < max_num_rounds && num_mini_spikes_to_generate != 0ULL; ++i)
     {
@@ -706,19 +760,19 @@ void  nenet::update_mini_spiking()
         {
             INVARIANT(std::next(it) == end);
 
-            output_terminal const*  oterm = find_connected_output_terminal(output_terminals_set(), it->first);
+            output_terminal const*  oterm = find_connected_output_terminal(output_terminals_set(), it->first, get_params());
             if (oterm != nullptr)
             {
                 cell* const  pcell = &it->second.cell()->second;
 
-                update_potential_of_cell_to_current_time(pcell, update_id());
+                update_potential_of_cell_to_current_time(pcell, update_id(), get_params());
 
                 pcell->set_spiking_potential(
                     pcell->spiking_potential()
-                    + (oterm->cell()->second.is_excitatory() ? 1.0f : -1.0f) * (mini_spiking_potential_magnitude())
+                    + (oterm->cell()->second.is_excitatory() ? 1.0f : -1.0f) * get_params()->mini_spiking_potential_magnitude()
                     );
 
-                if (pcell->spiking_potential() >= spiking_threshold())
+                if (pcell->spiking_potential() >= get_params()->spiking_threshold())
                     m_next_spikers->insert(pcell);
                 else
                     m_next_spikers->erase(pcell);
@@ -819,10 +873,12 @@ void  nenet::update_movement_of_output_terminals()
 
             // We trait the 'gradient' here as an acceleration for an output terminal
 
-            scalar const  dt = 1000.0f * (scalar)update_time_step_in_seconds();
+            scalar const  dt = 1000.0f * (scalar)get_params()->update_time_step_in_seconds();
             //vector3 const  new_velocity = 1.0f* dt * gradient;
             //vector3 const  new_velocity = oterm.velocity() + dt * gradient;//update_magnitude_of_velocity(oterm.velocity() + dt * gradient);
-            vector3 const  new_velocity = update_magnitude_of_velocity(oterm.velocity() + dt * gradient);
+            vector3 const  new_velocity = update_magnitude_of_velocity(oterm.velocity() + dt * gradient,
+                                                                       get_params()->output_terminal_velocity_min_magnitude(),
+                                                                       get_params());
             vector3 const  new_pos = oterm.pos() + dt * new_velocity;
             m_output_terminals_set.erase({oterm.pos(),&oterm});
             oterm.set_pos(new_pos);

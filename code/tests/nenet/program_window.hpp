@@ -39,7 +39,19 @@ public slots:
     void  camera_rotation_listener();
     void  update_camera_rot_widgets(quaternion const&  q);
 
-    void  on_simulation_speed_changed();
+    void  on_nenet_param_simulation_speed_changed();
+    void  on_nenet_param_time_step_changed();
+    void  on_nenet_param_mini_spiking_potential_magnitude();
+    void  on_nenet_param_average_mini_spiking_period_in_seconds();
+    void  on_nenet_param_spiking_potential_magnitude();
+    void  on_nenet_param_resting_potential();
+    void  on_nenet_param_spiking_threshold();
+    void  on_nenet_param_after_spike_potential();
+    void  on_nenet_param_potential_descend_coef();
+    void  on_nenet_param_potential_ascend_coef();
+    void  on_nenet_param_max_connection_distance();
+    void  on_nenet_param_output_terminal_velocity_max_magnitude();
+    void  on_nenet_param_output_terminal_velocity_min_magnitude();
 
 private:
 
@@ -80,7 +92,20 @@ private:
 
     QCheckBox*  m_camera_save_pos_rot;
 
-    QLineEdit*  m_simulation_speed;
+    QLineEdit*  m_nenet_param_time_step;
+    QLineEdit*  m_nenet_param_simulation_speed;
+    QLineEdit*  m_nenet_param_mini_spiking_potential_magnitude;
+    QLineEdit*  m_nenet_param_average_mini_spiking_period_in_seconds;
+    QLineEdit*  m_nenet_param_spiking_potential_magnitude;
+    QLineEdit*  m_nenet_param_resting_potential;
+    QLineEdit*  m_nenet_param_spiking_threshold;
+    QLineEdit*  m_nenet_param_after_spike_potential;
+    QLineEdit*  m_nenet_param_potential_descend_coef;
+    QLineEdit*  m_nenet_param_potential_ascend_coef;
+    QLineEdit*  m_nenet_param_max_connection_distance;
+    QLineEdit*  m_nenet_param_output_terminal_velocity_max_magnitude;
+    QLineEdit*  m_nenet_param_output_terminal_velocity_min_magnitude;
+
 
     QLabel*  m_spent_real_time;
     QLabel*  m_spent_simulation_time;
