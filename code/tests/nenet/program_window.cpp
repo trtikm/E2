@@ -27,6 +27,7 @@ namespace tab_names { namespace {
 inline std::string  CAMERA() noexcept { return "Camera"; }
 inline std::string  DRAW() noexcept { return "Draw"; }
 inline std::string  NENET() noexcept { return "Nenet"; }
+inline std::string  SELECTED() noexcept { return "Selected"; }
 
 
 }}
@@ -409,6 +410,8 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
         }(this)
         )
 
+    , m_selected_props(new QTextEdit)
+
     , m_spent_real_time(new QLabel("0.0s"))
     , m_spent_simulation_time(new QLabel("0.0s"))
     , m_spent_times_ratio(new QLabel("1.0"))
@@ -654,6 +657,22 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
         m_tabs->addTab(nenet_tab, QString(tab_names::NENET().c_str()));
     }
 
+    // Building Selected tab
+    {
+        QWidget* const  selected_tab = new QWidget;
+        {
+            QVBoxLayout* const layout = new QVBoxLayout;
+            {
+                m_selected_props->setReadOnly(true);
+                layout->addWidget(m_selected_props);
+            }
+            selected_tab->setLayout(layout);
+            //layout->addStretch(1);
+        }
+        m_tabs->addTab(selected_tab, QString(tab_names::SELECTED().c_str()));
+        m_glwindow.register_listener(notifications::selection_changed(), { &program_window::on_selection_changed,this });
+    }
+
     statusBar()->addPermanentWidget(m_spent_real_time);
     statusBar()->addPermanentWidget(m_spent_simulation_time);
     statusBar()->addPermanentWidget(m_spent_times_ratio);
@@ -756,6 +775,9 @@ void program_window::timerEvent(QTimerEvent* const event)
         m_num_passed_simulation_steps->setText(msg.c_str());
     }
 
+    if (qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex())) == tab_names::SELECTED())
+        on_selection_changed();
+
     if (m_focus_just_received)
     {
         m_focus_just_received = false;
@@ -817,6 +839,10 @@ void  program_window::on_tab_changed(int const  tab_index)
     else if (tab_name == tab_names::DRAW())
     {
         // Nothing to do...
+    }
+    else if (tab_name == tab_names::SELECTED())
+    {
+        on_selection_changed();
     }
 }
 
@@ -978,4 +1004,10 @@ void  program_window::on_nenet_param_output_terminal_velocity_max_magnitude()
 void  program_window::on_nenet_param_output_terminal_velocity_min_magnitude()
 {
     m_glwindow.call_later(&simulator::set_output_terminal_velocity_min_magnitude, m_nenet_param_output_terminal_velocity_min_magnitude->text().toFloat());
+}
+
+void program_window::on_selection_changed()
+{
+    std::string const  text = m_glwindow.call_now(&simulator::get_selected_info_text);
+    m_selected_props->setText(QString(text.c_str()));
 }

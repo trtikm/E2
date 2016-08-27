@@ -297,15 +297,23 @@ void  update_potential_of_cell_to_current_time(cell* const  pcell, natural_64_bi
 {
     if (pcell->last_update() < update_id)
     {
-
         scalar const  dt = 1000.0f * (scalar)params->update_time_step_in_seconds();
         scalar  v = pcell->spiking_potential();
+scalar v0 = v;
         for (natural_64_bit i = pcell->last_update(); i != update_id; ++i)
         {
             scalar const  coef = v < 0.0f ? params->potential_ascend_coef() : params->potential_descend_coef();
             scalar const  dvdt = -coef * (v - params->resting_potential());
             v = v + dt * dvdt;
         }
+if (std::abs(v) > std::abs(v0))
+{
+    std::cout << "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: " << v0 << " -> " << v << "\n";
+}
+if (v0 < params->spiking_potential_magnitude() && v >= params->spiking_potential_magnitude())
+{
+    std::cout << "xxxxxxxxxxxxxxxxxxxx: " << v0 << " -> " << v << "\n";
+}
         pcell->set_spiking_potential(v);
         pcell->set_last_update(update_id);
     }
@@ -503,6 +511,7 @@ output_terminal::output_terminal()
     : m_pos(0.0f,0.0f,0.0f)
     , m_velocity(vector3(0.0f, 0.0f, 0.0f))
     , m_cell()
+    , m_synaptic_weight(1.0f)
 {}
 
 

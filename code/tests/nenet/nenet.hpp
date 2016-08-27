@@ -189,21 +189,21 @@ struct nenet
             scalar const  output_terminal_velocity_min_magnitude
             );
 
-        scalar  update_time_step_in_seconds() const noexcept { return 0.001f; }
+        scalar  update_time_step_in_seconds() const noexcept { return m_update_time_step_in_seconds; }
 
-        scalar  mini_spiking_potential_magnitude() const noexcept { return 0.075f; }
-        scalar  average_mini_spiking_period_in_seconds() const noexcept { return 10.0f / 1000.0f; }
+        scalar  mini_spiking_potential_magnitude() const noexcept { return m_mini_spiking_potential_magnitude; }
+        scalar  average_mini_spiking_period_in_seconds() const noexcept { return m_average_mini_spiking_period_in_seconds; }
 
-        scalar  spiking_potential_magnitude() const noexcept { return 0.4f; }
-        scalar  resting_potential() const noexcept { return 0.0f; }
-        scalar  spiking_threshold() const noexcept { return 1.0f; }
-        scalar  after_spike_potential() const noexcept { return -1.0f; }
-        scalar  potential_descend_coef() const noexcept { return 0.2f; }
-        scalar  potential_ascend_coef() const noexcept { return 0.01f; }
-        scalar  max_connection_distance() const noexcept { return 0.25f; }
+        scalar  spiking_potential_magnitude() const noexcept { return m_spiking_potential_magnitude; }
+        scalar  resting_potential() const noexcept { return m_resting_potential; }
+        scalar  spiking_threshold() const noexcept { return m_spiking_threshold; }
+        scalar  after_spike_potential() const noexcept { return m_after_spike_potential; }
+        scalar  potential_descend_coef() const noexcept { return m_potential_descend_coef; }
+        scalar  potential_ascend_coef() const noexcept { return m_potential_ascend_coef; }
+        scalar  max_connection_distance() const noexcept { return m_max_connection_distance; }
 
-        scalar  output_terminal_velocity_max_magnitude() const noexcept { return 0.01f; }
-        scalar  output_terminal_velocity_min_magnitude() const noexcept { return 0.002f; }
+        scalar  output_terminal_velocity_max_magnitude() const noexcept { return m_output_terminal_velocity_max_magnitude; }
+        scalar  output_terminal_velocity_min_magnitude() const noexcept { return m_output_terminal_velocity_min_magnitude; }
 
         void  set_update_time_step_in_seconds(scalar const  value) { m_update_time_step_in_seconds = value; }
 

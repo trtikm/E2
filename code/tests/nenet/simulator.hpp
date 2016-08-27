@@ -26,7 +26,7 @@ struct simulator : public qtgl::real_time_simulator
     vector3 const&  get_position_of_selected() const;
     cell const&  get_selected_cell() const;
     input_spot const&  get_selected_input_spot() const;
-    output_terminal const&  get_output_terminal() const;
+    output_terminal const&  get_selected_output_terminal() const;
 
     std::shared_ptr<nenet>  nenet() const noexcept { return m_nenet; }
 
@@ -78,10 +78,13 @@ struct simulator : public qtgl::real_time_simulator
     void  set_output_terminal_velocity_max_magnitude(scalar const  value) { nenet()->get_params()->set_output_terminal_velocity_max_magnitude(value); }
     void  set_output_terminal_velocity_min_magnitude(scalar const  value) { nenet()->get_params()->set_output_terminal_velocity_min_magnitude(value); }
 
+    std::string  get_selected_info_text() const;
+
 private:
     std::shared_ptr<::nenet>  m_nenet;
     float_64_bit  m_spent_real_time;
     bool  m_paused;
+    bool  m_do_single_step;
     float_64_bit  m_desired_number_of_simulated_seconds_per_real_time_second;
 
     cell::pos_map::const_iterator  m_selected_cell;
@@ -107,6 +110,7 @@ namespace notifications {
 inline std::string  camera_position_updated() { return "CAMERA_POSITION_UPDATED"; }
 inline std::string  camera_orientation_updated() { return "CAMERA_ORIENTATION_UPDATED"; }
 inline std::string  paused() { return "PAUSED"; }
+inline std::string  selection_changed() { return "SELECTION_CHANGED"; }
 
 
 }

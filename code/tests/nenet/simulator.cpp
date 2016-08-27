@@ -10,6 +10,7 @@
 #include <utility/random.hpp>
 #include <utility/canonical_path.hpp>
 #include <sstream>
+#include <iomanip>
 #include <string>
 #include <algorithm>
 #include <cmath>
@@ -28,6 +29,7 @@ simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused, n
             ))
     , m_spent_real_time(0.0)
     , m_paused(paused)
+    , m_do_single_step(false)
     , m_desired_number_of_simulated_seconds_per_real_time_second(desired_number_of_simulated_seconds_per_real_time_second)
 
     , m_selected_cell(m_nenet->cells().cend())
@@ -158,7 +160,17 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
     if (!is_this_pure_redraw_request)
     {
-        if (keyboard_props().was_just_released(qtgl::KEY_PAUSE()))
+        if (keyboard_props().was_just_released(qtgl::KEY_SPACE()))
+        {
+            if (paused())
+            {
+                m_paused = !m_paused;
+                call_listeners(notifications::paused());
+            }
+            m_do_single_step = true;
+        }
+        
+        if (!m_do_single_step && keyboard_props().was_just_released(qtgl::KEY_PAUSE()))
         {
             m_paused = !m_paused;
             call_listeners(notifications::paused());
@@ -178,6 +190,16 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             for ( ; num_iterations != 0ULL; --num_iterations)
             {            
                 nenet()->update(true,true,true);
+
+                if (m_do_single_step)
+                {
+                    INVARIANT(!paused());
+                    m_paused = true;
+                    call_listeners(notifications::paused());
+                    m_do_single_step = false;
+                    break;
+                }
+
                 if (std::chrono::duration<float_64_bit>(std::chrono::high_resolution_clock::now() - update_start_time).count() > 1.0 / 30.0)
                     break;
             }
@@ -210,6 +232,8 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                     m_selected_input_spot = nenet()->input_spots().cend();
                 }
             }
+
+            call_listeners(notifications::selection_changed());
         }
 
         if (is_selected_something())
@@ -490,8 +514,48 @@ input_spot const&  simulator::get_selected_input_spot() const
     return m_selected_input_spot->second;
 }
 
-output_terminal const&  simulator::get_output_terminal() const
+output_terminal const&  simulator::get_selected_output_terminal() const
 {
     ASSUMPTION(is_selected_output_terminal());
     return *m_selected_output_terminal;
+}
+
+std::string  simulator::get_selected_info_text() const
+{
+    if (!is_selected_something())
+        return "";
+
+    std::ostringstream  ostr;
+
+    ostr << "position: [ " << std::fixed << get_position_of_selected()(0)
+                          << ", "
+                          << std::fixed << get_position_of_selected()(1)
+                          << ", "
+                          << std::fixed << get_position_of_selected()(2)
+                          << " ]\n"
+         ;
+
+    if (is_selected_cell())
+    {
+        ostr << "spiking potential: " << std::fixed << get_selected_cell().spiking_potential() << "\n"
+             << "the last update: " << get_selected_cell().last_update() << "\n"
+             << "is excitatory: " << std::boolalpha << get_selected_cell().is_excitatory() << "\n"
+             ;
+    }
+    else if (is_selected_input_spot())
+    {
+        ostr << "";
+    }
+    else if (is_selected_output_terminal())
+    {
+        ostr << "velocity: [ " << std::fixed << get_selected_output_terminal().velocity()(0)
+                               << ", "
+                               << std::fixed << get_selected_output_terminal().velocity()(1)
+                               << ", "
+                               << std::fixed << get_selected_output_terminal().velocity()(2)
+                               << " ]\n"
+             << "synaptic weight: " << std::fixed << get_selected_output_terminal().synaptic_weight() << "\n"
+             ;
+    }
+    return ostr.str();
 }

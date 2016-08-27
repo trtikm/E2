@@ -11,6 +11,7 @@
 #   include <QSplitter>
 #   include <QTabWidget>
 #   include <QLineEdit>
+#   include <QTextEdit>
 #   include <QCheckBox>
 #   include <memory>
 
@@ -52,6 +53,8 @@ public slots:
     void  on_nenet_param_max_connection_distance();
     void  on_nenet_param_output_terminal_velocity_max_magnitude();
     void  on_nenet_param_output_terminal_velocity_min_magnitude();
+
+    void on_selection_changed();
 
 private:
 
@@ -106,6 +109,7 @@ private:
     QLineEdit*  m_nenet_param_output_terminal_velocity_max_magnitude;
     QLineEdit*  m_nenet_param_output_terminal_velocity_min_magnitude;
 
+    QTextEdit*  m_selected_props;
 
     QLabel*  m_spent_real_time;
     QLabel*  m_spent_simulation_time;
