@@ -168,6 +168,71 @@ private:
     float_32_bit  m_synaptic_weight;
 };
 
+
+struct stats_of_input_spot
+{
+    explicit stats_of_input_spot(input_spot::pos_map::const_iterator const  ispot_iter,
+                                 natural_64_bit const  start_update)
+        : m_ispot_iter(ispot_iter)
+        , m_start_update(start_update)
+    {}
+    virtual ~stats_of_input_spot() {}
+    input_spot::pos_map::const_iterator  ispot_iter() const noexcept { return m_ispot_iter; }
+    vector3 const&  get_position() const { return ispot_iter()->first; }
+    input_spot const&  get_cell() const { return ispot_iter()->second; }
+    natural_64_bit  start_update() const noexcept { return m_start_update; }
+
+    virtual void  on_mini_spike(natural_64_bit const  update_id, output_terminal const* const  oterm) {}
+
+private:
+    input_spot::pos_map::const_iterator  m_ispot_iter;
+    natural_64_bit  m_start_update;
+};
+
+struct stats_of_output_terminal
+{
+    explicit stats_of_output_terminal(output_terminal const* const  oterm,
+                                      natural_64_bit const  start_update)
+        : m_oterm(oterm)
+        , m_start_update(start_update)
+    {}
+    virtual ~stats_of_output_terminal() {}
+    vector3 const&  get_position() const { return get_output_terminal().pos(); }
+    output_terminal const&  get_output_terminal() const { return *m_oterm; }
+    natural_64_bit  start_update() const noexcept { return m_start_update; }
+
+    virtual void  on_mini_spike(natural_64_bit const  update_id, input_spot::pos_map::const_iterator const  ispot_iter) {}
+
+private:
+    output_terminal const*  m_oterm;
+    natural_64_bit  m_start_update;
+};
+
+struct stats_of_cell
+{
+    explicit stats_of_cell(cell::pos_map::const_iterator const  cell_iter,
+                           natural_64_bit const  start_update)
+        : m_cell_iter(cell_iter)
+        , m_start_update(start_update)
+    {}
+    virtual ~stats_of_cell() {}
+    cell::pos_map::const_iterator  cell_iter() const noexcept { return m_cell_iter; }
+    vector3 const&  get_position() const { return cell_iter()->first; }
+    cell const&  get_cell() const { return cell_iter()->second; }
+    natural_64_bit  start_update() const noexcept { return m_start_update; }
+
+    virtual void  on_mini_spike(natural_64_bit const  update_id, 
+                                input_spot::pos_map::const_iterator const  ispot_iter,
+                                output_terminal const* const  oterm) {}
+
+    virtual void  on_spike(natural_64_bit const  update_id) {}
+
+private:
+    cell::pos_map::const_iterator  m_cell_iter;
+    natural_64_bit  m_start_update;
+};
+
+
 struct nenet
 {
     struct params
@@ -285,13 +350,25 @@ struct nenet
     void  update(
         bool const  use_spiking = true,
         bool const  use_mini_spiking = true,
-        bool const  use_movement_of_teminals = true
+        bool const  use_movement_of_teminals = true,
+        stats_of_input_spot* const  stats_ispot = nullptr,
+        stats_of_output_terminal* const  stats_oterm = nullptr,
+        stats_of_cell* const  stats_cell = nullptr
         );
 
 private:
 
-    void  update_spiking(bool const  update_only_potential = false);
-    void  update_mini_spiking();
+    void  update_spiking(
+        bool const  update_only_potential,
+        stats_of_input_spot* const  stats_ispot,
+        stats_of_output_terminal* const  stats_oterm,
+        stats_of_cell* const  stats_cell
+        );
+    void  update_mini_spiking(
+        stats_of_input_spot* const  stats_ispot,
+        stats_of_output_terminal* const  stats_oterm,
+        stats_of_cell* const  stats_cell
+        );
     void  update_movement_of_output_terminals();
 
     vector3  m_lo_corner;

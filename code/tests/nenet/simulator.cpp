@@ -37,6 +37,10 @@ simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused, n
     , m_selected_output_terminal(nullptr)
     , m_selected_rot_angle(0.0f)
 
+    , m_selected_cell_stats()
+    , m_selected_input_spot_stats()
+    , m_selected_output_terminal_stats()
+
     , m_camera(
             qtgl::camera_perspective::create(
                     qtgl::coordinate_system::create(
@@ -189,7 +193,12 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             std::chrono::high_resolution_clock::time_point const  update_start_time = std::chrono::high_resolution_clock::now();
             for ( ; num_iterations != 0ULL; --num_iterations)
             {            
-                nenet()->update(true,true,true);
+                nenet()->update(
+                    true,true,true,
+                    m_selected_input_spot_stats.operator bool() ? m_selected_input_spot_stats.get() : nullptr,
+                    m_selected_output_terminal_stats.operator bool() ? m_selected_output_terminal_stats.get() : nullptr,
+                    m_selected_cell_stats.operator bool() ? m_selected_cell_stats.get() : nullptr
+                    );
 
                 if (m_do_single_step)
                 {
@@ -210,7 +219,13 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             m_selected_cell = m_nenet->cells().cend();
             m_selected_input_spot = m_nenet->input_spots().cend();
             m_selected_output_terminal = nullptr;
+
+            m_selected_cell_stats.reset();
+            m_selected_input_spot_stats.reset();
+            m_selected_output_terminal_stats.reset();
+
             m_selected_rot_angle = 0.0f;
+
             m_selected_cell_input_spot_lines.reset();
             m_selected_cell_output_terminal_lines.reset();
 
@@ -232,6 +247,13 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                     m_selected_input_spot = nenet()->input_spots().cend();
                 }
             }
+
+            if (m_selected_cell != nenet()->cells().cend())
+                m_selected_cell_stats = std::unique_ptr<stats_of_cell>(new stats_of_cell(m_selected_cell,nenet()->update_id()));
+            if (m_selected_input_spot != nenet()->input_spots().cend())
+                m_selected_input_spot_stats = std::unique_ptr<stats_of_input_spot>(new stats_of_input_spot(m_selected_input_spot, nenet()->update_id()));
+            if (m_selected_output_terminal != nullptr)
+                m_selected_output_terminal_stats = std::unique_ptr<stats_of_output_terminal>(new stats_of_output_terminal(m_selected_output_terminal, nenet()->update_id()));
 
             call_listeners(notifications::selection_changed());
         }
@@ -541,10 +563,14 @@ std::string  simulator::get_selected_info_text() const
              << "the last update: " << get_selected_cell().last_update() << "\n"
              << "is excitatory: " << std::boolalpha << get_selected_cell().is_excitatory() << "\n"
              ;
+        INVARIANT(m_selected_cell_stats.operator bool());
+        ostr << "observed from update: " << m_selected_cell_stats->start_update() << "\n";
     }
     else if (is_selected_input_spot())
     {
         ostr << "";
+        INVARIANT(m_selected_input_spot_stats.operator bool());
+        ostr << "observed from update: " << m_selected_input_spot_stats->start_update() << "\n";
     }
     else if (is_selected_output_terminal())
     {
@@ -556,6 +582,8 @@ std::string  simulator::get_selected_info_text() const
                                << " ]\n"
              << "synaptic weight: " << std::fixed << get_selected_output_terminal().synaptic_weight() << "\n"
              ;
+        INVARIANT(m_selected_output_terminal_stats.operator bool());
+        ostr << "observed from update: " << m_selected_output_terminal_stats->start_update() << "\n";
     }
     return ostr.str();
 }

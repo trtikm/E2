@@ -293,29 +293,25 @@ find_closest_element(T const&  dict, vector3 const&  origin, vector3 const&  ray
 //}
 
 
-void  update_potential_of_cell_to_current_time(cell* const  pcell, natural_64_bit const  update_id, nenet::params_ptr const  params)
+void  update_potential_of_cell_to_current_time(cell* const  pcell, natural_64_bit const  update_id, nenet::params_ptr const  params,
+                                               stats_of_cell* const  stats_cell)
 {
     if (pcell->last_update() < update_id)
     {
         scalar const  dt = 1000.0f * (scalar)params->update_time_step_in_seconds();
         scalar  v = pcell->spiking_potential();
-scalar v0 = v;
         for (natural_64_bit i = pcell->last_update(); i != update_id; ++i)
         {
             scalar const  coef = v < 0.0f ? params->potential_ascend_coef() : params->potential_descend_coef();
             scalar const  dvdt = -coef * (v - params->resting_potential());
             v = v + dt * dvdt;
         }
-if (std::abs(v) > std::abs(v0))
-{
-    std::cout << "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: " << v0 << " -> " << v << "\n";
-}
-if (v0 < params->spiking_potential_magnitude() && v >= params->spiking_potential_magnitude())
-{
-    std::cout << "xxxxxxxxxxxxxxxxxxxx: " << v0 << " -> " << v << "\n";
-}
         pcell->set_spiking_potential(v);
         pcell->set_last_update(update_id);
+
+        if (stats_cell != nullptr)
+        {
+        }
     }
 }
 
@@ -668,15 +664,18 @@ output_terminal::pos_set::const_iterator  nenet::find_closest_output_terminal(ve
 void  nenet::update(
     bool const  use_spiking,
     bool const  use_mini_spiking,
-    bool const  use_movement_of_teminals
+    bool const  use_movement_of_teminals,
+    stats_of_input_spot* const  stats_ispot,
+    stats_of_output_terminal* const  stats_oterm,
+    stats_of_cell* const  stats_cell
     )
 {
     ++m_update_id;
 
     if (use_spiking || use_mini_spiking)
-        update_spiking(!use_spiking);
+        update_spiking(!use_spiking, stats_ispot, stats_oterm, stats_cell);
     if (use_mini_spiking)
-        update_mini_spiking();
+        update_mini_spiking(stats_ispot, stats_oterm, stats_cell);
 
     std::swap(m_current_spikers, m_next_spikers);
     m_next_spikers->clear();
@@ -685,7 +684,12 @@ void  nenet::update(
         update_movement_of_output_terminals();
 }
 
-void  nenet::update_spiking(bool const  update_only_potential)
+void  nenet::update_spiking(
+    bool const  update_only_potential,
+    stats_of_input_spot* const  stats_ispot,
+    stats_of_output_terminal* const  stats_oterm,
+    stats_of_cell* const  stats_cell
+    )
 {
     for (auto  cit = m_current_spikers->begin(); cit != m_current_spikers->end(); ++cit)
     {
@@ -693,6 +697,9 @@ void  nenet::update_spiking(bool const  update_only_potential)
 
         spiking_cell->set_spiking_potential(get_params()->after_spike_potential());
         spiking_cell->set_last_update(update_id());
+
+        if (stats_cell != nullptr)
+            stats_cell->on_spike(update_id());
 
         if (update_only_potential)
             continue;
@@ -738,7 +745,7 @@ void  nenet::update_spiking(bool const  update_only_potential)
 
                 cell* const  pcell = &ispot->cell()->second;
                 {
-                    update_potential_of_cell_to_current_time(pcell, update_id(), get_params());
+                    update_potential_of_cell_to_current_time(pcell, update_id(), get_params(),stats_cell);
 
                     pcell->set_spiking_potential(
                         pcell->spiking_potential()
@@ -755,7 +762,11 @@ void  nenet::update_spiking(bool const  update_only_potential)
     }
 }
 
-void  nenet::update_mini_spiking()
+void  nenet::update_mini_spiking(
+    stats_of_input_spot* const  stats_ispot,
+    stats_of_output_terminal* const  stats_oterm,
+    stats_of_cell* const  stats_cell
+    )
 {
     natural_32_bit  num_mini_spikes_to_generate = (natural_32_bit)
         std::round((m_input_spots.bucket_count() / get_params()->average_mini_spiking_period_in_seconds()) * get_params()->update_time_step_in_seconds());
@@ -774,7 +785,7 @@ void  nenet::update_mini_spiking()
             {
                 cell* const  pcell = &it->second.cell()->second;
 
-                update_potential_of_cell_to_current_time(pcell, update_id(), get_params());
+                update_potential_of_cell_to_current_time(pcell, update_id(), get_params(), stats_cell);
 
                 pcell->set_spiking_potential(
                     pcell->spiking_potential()
@@ -787,6 +798,13 @@ void  nenet::update_mini_spiking()
                     m_next_spikers->erase(pcell);
 
                 --num_mini_spikes_to_generate;
+
+                if (stats_ispot != nullptr)
+                    stats_ispot->on_mini_spike(update_id(), oterm);
+                if (stats_oterm != nullptr)
+                    stats_oterm->on_mini_spike(update_id(), it);
+                if (stats_cell != nullptr)
+                    stats_cell->on_mini_spike(update_id(), it, oterm);
             }
         }
     }

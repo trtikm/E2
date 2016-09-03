@@ -89,8 +89,12 @@ private:
 
     cell::pos_map::const_iterator  m_selected_cell;
     input_spot::pos_map::const_iterator  m_selected_input_spot;
-    output_terminal*  m_selected_output_terminal;
+    output_terminal const*  m_selected_output_terminal;
     scalar  m_selected_rot_angle;
+
+    std::unique_ptr<stats_of_cell>  m_selected_cell_stats;
+    std::unique_ptr<stats_of_input_spot>  m_selected_input_spot_stats;
+    std::unique_ptr<stats_of_output_terminal>  m_selected_output_terminal_stats;
 
     qtgl::camera_perspective_ptr  m_camera;
     qtgl::free_fly_config  m_free_fly_config;
