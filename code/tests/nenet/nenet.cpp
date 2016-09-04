@@ -1,5 +1,4 @@
 #include "./nenet.hpp"
-#include <utility/random.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -309,7 +308,7 @@ void  update_potential_of_cell_to_current_time(cell* const  pcell, natural_64_bi
         pcell->set_spiking_potential(v);
         pcell->set_last_update(update_id);
 
-        if (stats_cell != nullptr)
+        if (stats_cell != nullptr && pcell == &stats_cell->get_cell())
         {
         }
     }
@@ -536,12 +535,63 @@ void  stats_of_input_spot::on_mini_spike(natural_64_bit const  update_id, output
 stats_of_output_terminal::stats_of_output_terminal(output_terminal const* const  oterm, natural_64_bit const  start_update)
     : m_oterm(oterm)
     , m_start_update(start_update)
+
+    , m_num_mini_spikes(0ULL)
+    , m_last_mini_spike_update_id(m_start_update)
 {}
+
+scalar  stats_of_output_terminal::average_mini_spikes_rate(scalar const  update_time_step_in_seconds) const
+{
+    scalar const  update_delta = (scalar)(last_mini_spike_update() - start_update()) * update_time_step_in_seconds;
+    return (update_delta > std::max(update_time_step_in_seconds, 1e-5f)) ? num_mini_spikes() / update_delta : 0.0f;
+}
+
+void  stats_of_output_terminal::on_mini_spike(natural_64_bit const  update_id, input_spot::pos_map::const_iterator const  ispot_iter)
+{
+    ASSUMPTION(m_last_mini_spike_update_id <= update_id);
+    ++m_num_mini_spikes;
+    m_last_mini_spike_update_id = update_id;
+}
+
 
 stats_of_cell::stats_of_cell(cell::pos_map::const_iterator const  cell_iter, natural_64_bit const  start_update)
     : m_cell_iter(cell_iter)
     , m_start_update(start_update)
+
+    , m_num_mini_spikes(0ULL)
+    , m_last_mini_spike_update_id(m_start_update)
+
+    , m_num_spikes(0ULL)
+    , m_last_spike_update_id(m_start_update)
 {}
+
+scalar  stats_of_cell::average_mini_spikes_rate(scalar const  update_time_step_in_seconds) const
+{
+    scalar const  update_delta = (scalar)(last_mini_spike_update() - start_update()) * update_time_step_in_seconds;
+    return (update_delta > std::max(update_time_step_in_seconds, 1e-5f)) ? num_mini_spikes() / update_delta : 0.0f;
+}
+
+scalar  stats_of_cell::average_spikes_rate(scalar const  update_time_step_in_seconds) const
+{
+    scalar const  update_delta = (scalar)(last_spike_update() - start_update()) * update_time_step_in_seconds;
+    return (update_delta > std::max(update_time_step_in_seconds, 1e-5f)) ? num_spikes() / update_delta : 0.0f;
+}
+
+void  stats_of_cell::on_mini_spike(natural_64_bit const  update_id,
+                                   input_spot::pos_map::const_iterator const  ispot_iter,
+                                   output_terminal const* const  oterm)
+{
+    ASSUMPTION(m_last_mini_spike_update_id <= update_id);
+    ++m_num_mini_spikes;
+    m_last_mini_spike_update_id = update_id;
+}
+
+void  stats_of_cell::on_spike(natural_64_bit const  update_id)
+{
+    ASSUMPTION(m_last_spike_update_id <= update_id);
+    ++m_num_spikes;
+    m_last_spike_update_id = update_id;
+}
 
 
 
@@ -645,8 +695,11 @@ nenet::nenet(
         )
 
     , m_update_id(0ULL)
+
     , m_current_spikers(new std::unordered_set<cell*>)
     , m_next_spikers(new std::unordered_set<cell*>)
+
+    , m_mini_spiking_random_generator()
 {
     TMPROF_BLOCK();
 
@@ -808,7 +861,8 @@ void  nenet::update_mini_spiking(
         std::round(m_input_spots.size() * (get_params()->update_time_step_in_seconds() / get_params()->average_mini_spiking_period_in_seconds()));
     for (natural_64_bit i = 0ULL; i < 2ULL * m_input_spots.size() && num_mini_spikes_to_generate != 0ULL; ++i)
     {
-        natural_32_bit const  bucket = get_random_natural_32_bit_in_range(0U, (natural_32_bit)m_input_spots.hash_function().num_buckets() - 1U);
+        natural_32_bit const  bucket = get_random_natural_32_bit_in_range(0U, (natural_32_bit)m_input_spots.hash_function().max_bucket(),
+                                                                          m_mini_spiking_random_generator);
         auto it = m_input_spots.begin(bucket), end = m_input_spots.end(bucket);
         if (it != end)
         {

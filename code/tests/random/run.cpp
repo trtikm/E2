@@ -208,7 +208,7 @@ void run()
 
         compute_content_of_data_vectors(
                 min_number,max_number,
-                std::bind(&get_random_natural_32_bit_in_range,min_number,max_number),
+                std::bind(&get_random_natural_32_bit_in_range,min_number,max_number,default_random_generator()),
                 num_classes,
                 sequence_lenghts.at(i),
                 big_sequence,

@@ -2,6 +2,7 @@
 #   define NENET_HPP_INCLUDED
 
 #   include <utility/tensor_math.hpp>
+#   include <utility/random.hpp>
 #   include <vector>
 #   include <unordered_map>
 #   include <unordered_set>
@@ -190,6 +191,7 @@ struct stats_of_input_spot
 private:
     input_spot::pos_map::const_iterator  m_ispot_iter;
     natural_64_bit  m_start_update;
+
     natural_64_bit  m_num_mini_spikes;
     natural_64_bit  m_last_mini_spike_update_id;
 };
@@ -202,11 +204,18 @@ struct stats_of_output_terminal
     output_terminal const&  get_output_terminal() const { return *m_oterm; }
     natural_64_bit  start_update() const noexcept { return m_start_update; }
 
-    virtual void  on_mini_spike(natural_64_bit const  update_id, input_spot::pos_map::const_iterator const  ispot_iter) {}
+    natural_64_bit  num_mini_spikes() const noexcept { return m_num_mini_spikes; }
+    natural_64_bit  last_mini_spike_update() const noexcept { return m_last_mini_spike_update_id; }
+    scalar  average_mini_spikes_rate(scalar const  update_time_step_in_seconds) const;
+
+    virtual void  on_mini_spike(natural_64_bit const  update_id, input_spot::pos_map::const_iterator const  ispot_iter);
 
 private:
     output_terminal const*  m_oterm;
     natural_64_bit  m_start_update;
+
+    natural_64_bit  m_num_mini_spikes;
+    natural_64_bit  m_last_mini_spike_update_id;
 };
 
 struct stats_of_cell
@@ -218,15 +227,29 @@ struct stats_of_cell
     cell const&  get_cell() const { return cell_iter()->second; }
     natural_64_bit  start_update() const noexcept { return m_start_update; }
 
+    natural_64_bit  num_mini_spikes() const noexcept { return m_num_mini_spikes; }
+    natural_64_bit  last_mini_spike_update() const noexcept { return m_last_mini_spike_update_id; }
+    scalar  average_mini_spikes_rate(scalar const  update_time_step_in_seconds) const;
+
+    natural_64_bit  num_spikes() const noexcept { return m_num_spikes; }
+    natural_64_bit  last_spike_update() const noexcept { return m_last_spike_update_id; }
+    scalar  average_spikes_rate(scalar const  update_time_step_in_seconds) const;
+
     virtual void  on_mini_spike(natural_64_bit const  update_id, 
                                 input_spot::pos_map::const_iterator const  ispot_iter,
-                                output_terminal const* const  oterm) {}
+                                output_terminal const* const  oterm);
 
-    virtual void  on_spike(natural_64_bit const  update_id) {}
+    virtual void  on_spike(natural_64_bit const  update_id);
 
 private:
     cell::pos_map::const_iterator  m_cell_iter;
     natural_64_bit  m_start_update;
+
+    natural_64_bit  m_num_mini_spikes;
+    natural_64_bit  m_last_mini_spike_update_id;
+
+    natural_64_bit  m_num_spikes;
+    natural_64_bit  m_last_spike_update_id;
 };
 
 
@@ -397,6 +420,8 @@ private:
     
     std::unique_ptr< std::unordered_set<cell*> >  m_current_spikers;
     std::unique_ptr< std::unordered_set<cell*> >  m_next_spikers;
+
+    random_generator_for_natural_32_bit  m_mini_spiking_random_generator;
 };
 
 

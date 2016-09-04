@@ -564,14 +564,23 @@ std::string  simulator::get_selected_info_text() const
              << "is excitatory: " << std::boolalpha << get_selected_cell().is_excitatory() << "\n"
              ;
         INVARIANT(m_selected_cell_stats.operator bool());
-        ostr << "observed from update: " << m_selected_cell_stats->start_update() << "\n";
+        ostr << "observed from update: " << m_selected_cell_stats->start_update() << "\n"
+             << "last mini spike update: " << m_selected_cell_stats->last_mini_spike_update() << "\n"
+             << "number of mini spikes: " << m_selected_cell_stats->num_mini_spikes() << "\n"
+             << "average mini spikes rate: " << std::fixed
+                    << m_selected_cell_stats->average_mini_spikes_rate(nenet()->get_params()->update_time_step_in_seconds()) << "\n"
+             << "last spike update: " << m_selected_cell_stats->last_spike_update() << "\n"
+             << "number of spikes: " << m_selected_cell_stats->num_spikes() << "\n"
+             << "average spikes rate: " << std::fixed
+                    << m_selected_cell_stats->average_spikes_rate(nenet()->get_params()->update_time_step_in_seconds()) << "\n"
+             ;
     }
     else if (is_selected_input_spot())
     {
         ostr << "";
         INVARIANT(m_selected_input_spot_stats.operator bool());
         ostr << "observed from update: " << m_selected_input_spot_stats->start_update() << "\n"
-             << "last update with mini spike: " << m_selected_input_spot_stats->last_mini_spike_update() << "\n"
+             << "last mini spike update: " << m_selected_input_spot_stats->last_mini_spike_update() << "\n"
              << "number of mini spikes: " << m_selected_input_spot_stats->num_mini_spikes() << "\n"
              << "average mini spikes rate: " << std::fixed
                     << m_selected_input_spot_stats->average_mini_spikes_rate(nenet()->get_params()->update_time_step_in_seconds()) << "\n"
@@ -588,7 +597,12 @@ std::string  simulator::get_selected_info_text() const
              << "synaptic weight: " << std::fixed << get_selected_output_terminal().synaptic_weight() << "\n"
              ;
         INVARIANT(m_selected_output_terminal_stats.operator bool());
-        ostr << "observed from update: " << m_selected_output_terminal_stats->start_update() << "\n";
+        ostr << "observed from update: " << m_selected_output_terminal_stats->start_update() << "\n"
+             << "last mini spike update: " << m_selected_output_terminal_stats->last_mini_spike_update() << "\n"
+             << "number of mini spikes: " << m_selected_output_terminal_stats->num_mini_spikes() << "\n"
+             << "average mini spikes rate: " << std::fixed
+                    << m_selected_output_terminal_stats->average_mini_spikes_rate(nenet()->get_params()->update_time_step_in_seconds()) << "\n"
+             ;
     }
     return ostr.str();
 }
