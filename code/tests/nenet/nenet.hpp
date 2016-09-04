@@ -235,11 +235,19 @@ struct stats_of_cell
     natural_64_bit  last_spike_update() const noexcept { return m_last_spike_update_id; }
     scalar  average_spikes_rate(scalar const  update_time_step_in_seconds) const;
 
+    natural_64_bit  num_presynaptic_potentials() const noexcept { return m_num_presynaptic_potentials; }
+    natural_64_bit  last_presynaptic_potential_update() const noexcept { return m_last_presynaptic_potential_update_id; }
+    scalar  average_presynaptic_potentials_rate(scalar const  update_time_step_in_seconds) const;
+
     virtual void  on_mini_spike(natural_64_bit const  update_id, 
                                 input_spot::pos_map::const_iterator const  ispot_iter,
                                 output_terminal const* const  oterm);
 
     virtual void  on_spike(natural_64_bit const  update_id);
+
+    virtual void  on_presynaptic_potential(natural_64_bit const  update_id,
+                                           input_spot::pos_map::const_iterator const  ispot_iter,
+                                           output_terminal const* const  oterm);
 
 private:
     cell::pos_map::const_iterator  m_cell_iter;
@@ -250,6 +258,10 @@ private:
 
     natural_64_bit  m_num_spikes;
     natural_64_bit  m_last_spike_update_id;
+
+    natural_64_bit  m_num_presynaptic_potentials;
+    natural_64_bit  m_last_presynaptic_potential_update_id;
+
 };
 
 

@@ -563,6 +563,9 @@ stats_of_cell::stats_of_cell(cell::pos_map::const_iterator const  cell_iter, nat
 
     , m_num_spikes(0ULL)
     , m_last_spike_update_id(m_start_update)
+
+    , m_num_presynaptic_potentials(0ULL)
+    , m_last_presynaptic_potential_update_id(m_start_update)
 {}
 
 scalar  stats_of_cell::average_mini_spikes_rate(scalar const  update_time_step_in_seconds) const
@@ -575,6 +578,12 @@ scalar  stats_of_cell::average_spikes_rate(scalar const  update_time_step_in_sec
 {
     scalar const  update_delta = (scalar)(last_spike_update() - start_update()) * update_time_step_in_seconds;
     return (update_delta > std::max(update_time_step_in_seconds, 1e-5f)) ? num_spikes() / update_delta : 0.0f;
+}
+
+scalar  stats_of_cell::average_presynaptic_potentials_rate(scalar const  update_time_step_in_seconds) const
+{
+    scalar const  update_delta = (scalar)(last_presynaptic_potential_update() - start_update()) * update_time_step_in_seconds;
+    return (update_delta > std::max(update_time_step_in_seconds, 1e-5f)) ? num_presynaptic_potentials() / update_delta : 0.0f;
 }
 
 void  stats_of_cell::on_mini_spike(natural_64_bit const  update_id,
@@ -593,6 +602,14 @@ void  stats_of_cell::on_spike(natural_64_bit const  update_id)
     m_last_spike_update_id = update_id;
 }
 
+void  stats_of_cell::on_presynaptic_potential(natural_64_bit const  update_id,
+                                              input_spot::pos_map::const_iterator const  ispot_iter,
+                                              output_terminal const* const  oterm)
+{
+    ASSUMPTION(m_last_presynaptic_potential_update_id <= update_id);
+    ++m_num_presynaptic_potentials;
+    m_last_presynaptic_potential_update_id = update_id;
+}
 
 
 std::shared_ptr<nenet::params>  nenet::params::create_default()
@@ -843,6 +860,9 @@ void  nenet::update_spiking(
                         m_next_spikers->insert(pcell);
                     else
                         m_next_spikers->erase(pcell);
+
+                    if (stats_cell != nullptr && pcell == &stats_cell->get_cell())
+                        stats_cell->on_presynaptic_potential(update_id(),iit,oterm);
                 }
             }
         }

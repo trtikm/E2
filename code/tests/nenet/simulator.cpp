@@ -573,6 +573,10 @@ std::string  simulator::get_selected_info_text() const
              << "number of spikes: " << m_selected_cell_stats->num_spikes() << "\n"
              << "average spikes rate: " << std::fixed
                     << m_selected_cell_stats->average_spikes_rate(nenet()->get_params()->update_time_step_in_seconds()) << "\n"
+             << "last presynaptic potential update: " << m_selected_cell_stats->last_presynaptic_potential_update() << "\n"
+             << "number of presynaptic potentials: " << m_selected_cell_stats->num_presynaptic_potentials() << "\n"
+             << "average presynaptic potentials rate: " << std::fixed
+                    << m_selected_cell_stats->average_presynaptic_potentials_rate(nenet()->get_params()->update_time_step_in_seconds()) << "\n"
              ;
     }
     else if (is_selected_input_spot())
