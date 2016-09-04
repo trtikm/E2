@@ -570,7 +570,12 @@ std::string  simulator::get_selected_info_text() const
     {
         ostr << "";
         INVARIANT(m_selected_input_spot_stats.operator bool());
-        ostr << "observed from update: " << m_selected_input_spot_stats->start_update() << "\n";
+        ostr << "observed from update: " << m_selected_input_spot_stats->start_update() << "\n"
+             << "last update with mini spike: " << m_selected_input_spot_stats->last_mini_spike_update() << "\n"
+             << "number of mini spikes: " << m_selected_input_spot_stats->num_mini_spikes() << "\n"
+             << "average mini spikes rate: " << std::fixed
+                    << m_selected_input_spot_stats->average_mini_spikes_rate(nenet()->get_params()->update_time_step_in_seconds()) << "\n"
+             ;
     }
     else if (is_selected_output_terminal())
     {

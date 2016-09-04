@@ -109,7 +109,7 @@ void  init_pos_map(
                     INVARIANT(result.second);
                 }
             }
-    INVARIANT(cmap.bucket_count() >= (natural_64_bit)num_elems_x * (natural_64_bit)num_elems_y * (natural_64_bit)num_elems_c);
+    INVARIANT(cmap.hash_function().num_buckets() >= (natural_64_bit)num_elems_x * (natural_64_bit)num_elems_y * (natural_64_bit)num_elems_c);
     INVARIANT(cmap.size() + holes.size() == (natural_64_bit)num_elems_x * (natural_64_bit)num_elems_y * (natural_64_bit)num_elems_c);
 }
 
@@ -511,6 +511,40 @@ output_terminal::output_terminal()
 {}
 
 
+stats_of_input_spot::stats_of_input_spot(input_spot::pos_map::const_iterator const  ispot_iter, natural_64_bit const  start_update)
+    : m_ispot_iter(ispot_iter)
+    , m_start_update(start_update)
+
+    , m_num_mini_spikes(0ULL)
+    , m_last_mini_spike_update_id(m_start_update)
+{}
+
+scalar  stats_of_input_spot::average_mini_spikes_rate(scalar const  update_time_step_in_seconds) const
+{
+    scalar const  update_delta = (scalar)(last_mini_spike_update() - start_update()) * update_time_step_in_seconds;
+    return (update_delta > std::max(update_time_step_in_seconds,1e-5f)) ? num_mini_spikes() / update_delta : 0.0f;
+}
+
+void  stats_of_input_spot::on_mini_spike(natural_64_bit const  update_id, output_terminal const* const  oterm)
+{
+    ASSUMPTION(m_last_mini_spike_update_id <= update_id);
+    ++m_num_mini_spikes;
+    m_last_mini_spike_update_id = update_id;
+}
+
+
+stats_of_output_terminal::stats_of_output_terminal(output_terminal const* const  oterm, natural_64_bit const  start_update)
+    : m_oterm(oterm)
+    , m_start_update(start_update)
+{}
+
+stats_of_cell::stats_of_cell(cell::pos_map::const_iterator const  cell_iter, natural_64_bit const  start_update)
+    : m_cell_iter(cell_iter)
+    , m_start_update(start_update)
+{}
+
+
+
 std::shared_ptr<nenet::params>  nenet::params::create_default()
 {
     return std::make_shared<nenet::params>(
@@ -698,7 +732,7 @@ void  nenet::update_spiking(
         spiking_cell->set_spiking_potential(get_params()->after_spike_potential());
         spiking_cell->set_last_update(update_id());
 
-        if (stats_cell != nullptr)
+        if (stats_cell != nullptr && spiking_cell == &stats_cell->get_cell())
             stats_cell->on_spike(update_id());
 
         if (update_only_potential)
@@ -768,13 +802,13 @@ void  nenet::update_mini_spiking(
     stats_of_cell* const  stats_cell
     )
 {
+    ASSUMPTION(get_params()->average_mini_spiking_period_in_seconds() > 1e-5f);
+
     natural_32_bit  num_mini_spikes_to_generate = (natural_32_bit)
-        std::round((m_input_spots.bucket_count() / get_params()->average_mini_spiking_period_in_seconds()) * get_params()->update_time_step_in_seconds());
-    natural_64_bit  max_num_rounds = 2U * num_mini_spikes_to_generate;
-    for (natural_64_bit i = 0ULL; i < max_num_rounds && num_mini_spikes_to_generate != 0ULL; ++i)
+        std::round(m_input_spots.size() * (get_params()->update_time_step_in_seconds() / get_params()->average_mini_spiking_period_in_seconds()));
+    for (natural_64_bit i = 0ULL; i < 2ULL * m_input_spots.size() && num_mini_spikes_to_generate != 0ULL; ++i)
     {
-        INVARIANT(m_input_spots.bucket_count() != 0ULL);
-        natural_32_bit const  bucket = get_random_natural_32_bit_in_range(0U, (natural_32_bit)m_input_spots.bucket_count() - 1U);
+        natural_32_bit const  bucket = get_random_natural_32_bit_in_range(0U, (natural_32_bit)m_input_spots.hash_function().num_buckets() - 1U);
         auto it = m_input_spots.begin(bucket), end = m_input_spots.end(bucket);
         if (it != end)
         {
@@ -799,11 +833,11 @@ void  nenet::update_mini_spiking(
 
                 --num_mini_spikes_to_generate;
 
-                if (stats_ispot != nullptr)
+                if (stats_ispot != nullptr && it == stats_ispot->ispot_iter())
                     stats_ispot->on_mini_spike(update_id(), oterm);
-                if (stats_oterm != nullptr)
+                if (stats_oterm != nullptr && oterm == &stats_oterm->get_output_terminal())
                     stats_oterm->on_mini_spike(update_id(), it);
-                if (stats_cell != nullptr)
+                if (stats_cell != nullptr && pcell == &stats_cell->get_cell())
                     stats_cell->on_mini_spike(update_id(), it, oterm);
             }
         }
