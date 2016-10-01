@@ -1,5 +1,6 @@
 # Here follow all libraries of E2
 include_directories(
+    "${PROJECT_SOURCE_DIR}/code/netlab/include"
     "${PROJECT_SOURCE_DIR}/code/cellab/include"
     "${PROJECT_SOURCE_DIR}/code/cellconnect/include"
     "${PROJECT_SOURCE_DIR}/code/paralab/include"
@@ -11,6 +12,8 @@ include_directories(
     "${PROJECT_SOURCE_DIR}/code/utility/include"
     )
 message("Including the following E2 libraries to the build:")
+add_subdirectory(./netlab)
+    message("-- netlab")
 add_subdirectory(./cellab)
     message("-- cellab")
 add_subdirectory(./cellconnect)

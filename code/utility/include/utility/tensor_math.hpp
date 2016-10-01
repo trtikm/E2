@@ -4,9 +4,6 @@
 #   include <utility/basic_numeric_types.hpp>
 
 
-typedef float_32_bit  scalar;
-
-
 #   ifdef E2_USE_UBLAS_MATH_LIBRARY
 
 
@@ -34,31 +31,20 @@ typedef boost::numeric::ublas::c_matrix<scalar,4,4>  matrix44;
 #   include <Eigen/Dense>
 
 
-typedef Eigen::Matrix<scalar,2,1>  vector2;
-typedef Eigen::Matrix<scalar,3,1>  vector3;
-typedef Eigen::Matrix<scalar,4,1>  vector4;
-typedef Eigen::Matrix<scalar,6,1>  vector6;
+typedef float_32_bit  scalar;
 
-typedef Eigen::Quaternion<scalar>  quaternion;
+typedef Eigen::Matrix<float_32_bit,2,1>  vector2;
+typedef Eigen::Matrix<float_32_bit,3,1>  vector3;
+typedef Eigen::Matrix<float_32_bit,4,1>  vector4;
+typedef Eigen::Matrix<float_32_bit,6,1>  vector6;
 
-typedef Eigen::Matrix<scalar,2,2>  matrix22;
-typedef Eigen::Matrix<scalar,3,2>  matrix32;
-typedef Eigen::Matrix<scalar,3,3>  matrix33;
-typedef Eigen::Matrix<scalar,4,3>  matrix43;
-typedef Eigen::Matrix<scalar,4,4>  matrix44;
+typedef Eigen::Quaternion<float_32_bit>  quaternion;
 
-//template<typename T, int nrows, int ncols>
-//inline Eigen::ArrayWrapper< Eigen::Matrix<T, nrows, ncols> > as_array(Eigen::Matrix<T, nrows, ncols> const&  u)
-//{
-//    return u.array();
-//}
-
-template<typename T, int nrows, int ncols>
-inline T min_element(Eigen::Matrix<T, nrows, ncols> const&  u)
-{
-    return u.minCoeff();
-}
-
+typedef Eigen::Matrix<float_32_bit,2,2>  matrix22;
+typedef Eigen::Matrix<float_32_bit,3,2>  matrix32;
+typedef Eigen::Matrix<float_32_bit,3,3>  matrix33;
+typedef Eigen::Matrix<float_32_bit,4,3>  matrix43;
+typedef Eigen::Matrix<float_32_bit,4,4>  matrix44;
 
 inline vector3  vector3_zero() { return vector3::Zero(); }
 inline vector3  vector3_unit_x() { return vector3::UnitX(); }
@@ -84,6 +70,18 @@ inline quaternion  angle_axis_to_quaternion(scalar const  angle, vector3 const& 
 }
 matrix33  yaw_pitch_roll_to_rotation(scalar const  yaw, scalar const  pitch, scalar const  roll);
 void  rotation_to_yaw_pitch_roll(matrix33 const&  R, scalar&  yaw, scalar&  pitch, scalar&  roll);
+
+//template<typename T, int nrows, int ncols>
+//inline Eigen::ArrayWrapper< Eigen::Matrix<T, nrows, ncols> > as_array(Eigen::Matrix<T, nrows, ncols> const&  u)
+//{
+//    return u.array();
+//}
+
+template<typename T, int nrows, int ncols>
+inline T min_element(Eigen::Matrix<T, nrows, ncols> const&  u)
+{
+    return u.minCoeff();
+}
 
 
 #   endif
