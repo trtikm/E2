@@ -7,9 +7,10 @@
 #   include <netlab/network_objects_factory.hpp>
 #   include <netlab/network_object_id.hpp>
 #   include <netlab/ship_controller.hpp>
+#   include <netlab/movement_area_centers_initialiser.hpp>
 #   include <netlab/tracked_object_stats.hpp>
 #   include <utility/array_of_derived.hpp>
-#   include <utility/basic_numeric_types.hpp>
+#   include <utility/tensor_math.hpp>
 #   include <vector>
 #   include <memory>
 
@@ -22,9 +23,12 @@ namespace netlab {
  *
  *
  */
-struct network
+struct  network
 {
-    network(std::shared_ptr<network_props> const  properties, network_objects_factory const&  objects_factory);
+    network(std::shared_ptr<network_props> const  properties,
+            network_objects_factory const&  objects_factory,
+            movement_area_centers_initialiser&  area_centers_initialiser
+            );
 
     std::shared_ptr<network_props>  properties() const noexcept { return m_properties; }
     natural_64_bit  update_id() const noexcept { return  m_update_id; }

@@ -50,7 +50,10 @@ vector3  update_magnitude_of_velocity(
 namespace netlab {
 
 
-network::network(std::shared_ptr<network_props> const  properties, network_objects_factory const&  objects_factory)
+network::network(std::shared_ptr<network_props> const  properties,
+                 network_objects_factory const&  objects_factory,
+                 movement_area_centers_initialiser&  area_centers_initialiser
+                 )
     : m_properties(properties)
     , m_spikers()
     , m_docks()
@@ -76,11 +79,47 @@ network::network(std::shared_ptr<network_props> const  properties, network_objec
         m_docks.push_back( objects_factory.create_array_of_docks(layer_index,layer_props.num_docks()) );
         m_ships.push_back( objects_factory.create_array_of_ships(layer_index,layer_props.num_ships()) );
 
-        m_movement_area_centers.at(layer_index).resize(layer_props.num_spikers(),vector3(0.0f,0.0f,0.0f));
+        {
+            std::vector<vector3>&  centers = m_movement_area_centers.at(layer_index);
+            centers.resize(layer_props.num_spikers());
+            natural_64_bit  spiker_index = 0UL;
+            for (natural_32_bit  c = 0U; c < layer_props.num_spikers_along_c_axis(); ++c)
+                for (natural_32_bit  y = 0U; y < layer_props.num_spikers_along_y_axis(); ++y)
+                    for (natural_32_bit  x = 0U; x < layer_props.num_spikers_along_x_axis(); ++x)
+                    {
+                        INVARIANT(spiker_index == layer_props.spiker_sector_index(x,y,c));
 
-        std::vector<network_object_id>  empty_dock_sector;
-        empty_dock_sector.reserve(3UL + layer_props.num_ships() / layer_props.num_docks());
-        m_ships_in_sectors.at(layer_index).resize(layer_props.num_docks(),empty_dock_sector);
+                        natural_8_bit  area_layer_index;
+                        area_centers_initialiser.compute_movement_area_center_for_ships_of_spiker(
+                                    layer_index,
+                                    spiker_index,
+                                    x,y,c,
+                                    *this->properties(),
+                                    area_layer_index,
+                                    centers.at(spiker_index)
+                                    );
+                        ASSUMPTION(
+                                [](natural_8_bit const  layer_index, vector3 const&  center,
+                                   std::vector<network_layer_props> const&  props) {
+                                    if (layer_index >= props.size())
+                                        return false;
+                                    vector3 const&  lo = props.at(layer_index).low_corner_of_ships();
+                                    vector3 const&  hi = props.at(layer_index).high_corner_of_ships();
+                                    return center(0) >= lo(0) && center(0) <= hi(0) &&
+                                           center(1) >= lo(1) && center(1) <= hi(1) &&
+                                           center(2) >= lo(2) && center(2) <= hi(2) ;
+                                    } (area_layer_index,centers.at(spiker_index),this->properties()->layer_props())
+                                );
+
+                        ++spiker_index;
+                    }
+        }
+
+        {
+            std::vector<network_object_id>  empty_dock_sector;
+            empty_dock_sector.reserve(3UL + layer_props.num_ships() / layer_props.num_docks());
+            m_ships_in_sectors.at(layer_index).resize(layer_props.num_docks(),empty_dock_sector);
+        }
     }
 }
 
