@@ -50,10 +50,39 @@ vector3  update_magnitude_of_velocity(
 namespace netlab {
 
 
-network::network(std::shared_ptr<network_props> const  properties)
+network::network(std::shared_ptr<network_props> const  properties, network_objects_factory const&  objects_factory)
     : m_properties(properties)
-    // TODO!
-{}
+    , m_spikers()
+    , m_docks()
+    , m_ships()
+    , m_movement_area_centers()
+    , m_ships_in_sectors()
+    , m_update_id(0UL)
+{
+    ASSUMPTION(this->properties().operator bool());
+
+    m_spikers.reserve(this->properties()->layer_props().size());
+    m_docks.reserve(this->properties()->layer_props().size());
+    m_ships.reserve(this->properties()->layer_props().size());
+    m_spikers.reserve(this->properties()->layer_props().size());
+    m_movement_area_centers.reserve(this->properties()->layer_props().size());
+    m_ships_in_sectors.reserve(this->properties()->layer_props().size());
+
+    for (natural_8_bit  layer_index = 0U; layer_index < this->properties()->layer_props().size(); ++layer_index)
+    {
+        network_layer_props const&  layer_props = this->properties()->layer_props().at(layer_index);
+
+        m_spikers.push_back( objects_factory.create_array_of_spikers(layer_index,layer_props.num_spikers()) );
+        m_docks.push_back( objects_factory.create_array_of_docks(layer_index,layer_props.num_docks()) );
+        m_ships.push_back( objects_factory.create_array_of_ships(layer_index,layer_props.num_ships()) );
+
+        m_movement_area_centers.at(layer_index).resize(layer_props.num_spikers(),vector3(0.0f,0.0f,0.0f));
+
+        std::vector<network_object_id>  empty_dock_sector;
+        empty_dock_sector.reserve(3UL + layer_props.num_ships() / layer_props.num_docks());
+        m_ships_in_sectors.at(layer_index).resize(layer_props.num_docks(),empty_dock_sector);
+    }
+}
 
 
 void  network::update(
@@ -85,15 +114,6 @@ void  network::update(
 }
 
 
-natural_8_bit  network::find_layer_index(float_32_bit const  coord_along_c_axis)
-{
-    return static_cast<natural_8_bit>(std::distance(
-                m_max_coods_along_c_axis.cbegin(),
-                std::lower_bound(m_max_coods_along_c_axis.cbegin(),m_max_coods_along_c_axis.cend(),coord_along_c_axis)
-                ));
-}
-
-
 //void  network::update_spiking(
 //        const bool update_only_potential,
 //        tracked_spiker_stats* const  stats_of_tracked_spiker,
@@ -122,8 +142,12 @@ void  network::update_movement_of_ships()
     TMPROF_BLOCK();
 
     for (natural_8_bit  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
-        for (natural_64_bit  ship_index_in_layer = 0UL; ship_index_in_layer < m_ships.at(layer_index).size(); ++ship_index_in_layer)
-            update_movement_of_ship(layer_index,ship_index_in_layer);
+        if (properties()->layer_props().at(layer_index).ship_controller_ptr().operator bool())
+            for (natural_64_bit  ship_index_in_layer = 0UL;
+                 ship_index_in_layer < m_ships.at(layer_index)->size();
+                 ++ship_index_in_layer
+                 )
+                update_movement_of_ship(layer_index,ship_index_in_layer);
 }
 
 
@@ -131,7 +155,7 @@ void  network::update_movement_of_ship(natural_8_bit const  layer_index, natural
 {
     TMPROF_BLOCK();
 
-    netlab::ship&  ship = m_ships.at(layer_index).at(ship_index_in_layer);
+    netlab::ship&  ship = m_ships.at(layer_index)->at(ship_index_in_layer);
     network_object_id const  ship_id(object_kind_ship(),layer_index,ship_index_in_layer);
 
     natural_64_bit  spiker_sector_index;
@@ -143,7 +167,7 @@ void  network::update_movement_of_ship(natural_8_bit const  layer_index, natural
     }
     vector3 const&  movement_area_center = m_movement_area_centers.at(layer_index).at(spiker_sector_index);
 
-    natural_8_bit const  space_layer_index = find_layer_index(movement_area_center(2));
+    natural_8_bit const  space_layer_index = properties()->find_layer_index(movement_area_center(2));
     network_layer_props const&  space_layer_props = properties()->layer_props().at(space_layer_index);
 
     natural_32_bit  sector_x, sector_y, sector_c;
@@ -191,7 +215,7 @@ void  network::update_movement_of_ship(natural_8_bit const  layer_index, natural
                         if (id != ship_id)
                         {
                             netlab::ship const&  other_ship = m_ships.at(id.index_of_network_layer())
-                                                                     .at(id.index_into_network_layer());
+                                                                     ->at(id.index_into_network_layer());
 
                             ship_acceleration += space_layer_props.ship_controller_ptr()->accelerate_from_ship(
                                     ship.position(),

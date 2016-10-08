@@ -8,6 +8,10 @@ add_library(${THIS_TARGET_NAME}
     ./src/array_of_bit_units.cpp
     ./include/utility/array_of_bit_units.hpp
 
+    ./include/utility/array_of_derived.hpp
+
+    ./include/utility/type_envelope.hpp
+    
     ./src/bits_reference.cpp
     ./include/utility/bits_reference.hpp
 

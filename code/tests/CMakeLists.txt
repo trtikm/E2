@@ -1,5 +1,8 @@
 message("Including the following E2 tests to the build:")
 
+add_subdirectory(./cpptest)
+    message("-- cpptest")
+
 add_subdirectory(./unsigned_integer_wrap_operations)
     message("-- unsigned_integer_wrap_operations")
 

@@ -20,7 +20,7 @@ namespace netlab {
  * The second most significant is the index of network.
  * And remaining 48-bits is the index into the network.
  *
- * Note that mamory layout of the data differs on little-
+ * Note that memory layout of the data differs on little-
  * and big-endian machines. Therefore, we use bit-shifts
  * rather than pointers in accessing individual components
  * in the implementation.
@@ -47,6 +47,10 @@ inline constexpr natural_8_bit  object_kind_spiker() noexcept { return 3U; }
 
 inline bool  operator!=(network_object_id const  a, network_object_id const  b) { return !(a == b); }
 
+
+inline natural_8_bit  max_num_object_kinds() noexcept { return 0x3U; }
+inline natural_8_bit  max_num_network_layers() noexcept { return 0xffU; }
+inline natural_64_bit  max_num_objects_in_a_layer() noexcept { return 0x0000ffffffffffffUL; }
 
 }
 

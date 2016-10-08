@@ -40,9 +40,9 @@ struct  network_layer_props
 
             bool const  are_spikers_excitatory,
 
-            natural_32_bit const  num_bytes_per_spiker_for_parameters_pack,
-            natural_32_bit const  num_bytes_per_dock_for_parameters_pack,
-            natural_32_bit const  num_bytes_per_ship_for_parameters_pack,
+            natural_8_bit const  num_bytes_per_spiker_for_parameters_pack,
+            natural_8_bit const  num_bytes_per_dock_for_parameters_pack,
+            natural_8_bit const  num_bytes_per_ship_for_parameters_pack,
 
             std::shared_ptr<ship_controller const> const  ship_controller_ptr
             );
@@ -53,6 +53,8 @@ struct  network_layer_props
     natural_32_bit  num_spikers_along_y_axis() const noexcept { return m_num_spikers_along_y_axis; }
     natural_32_bit  num_spikers_along_c_axis() const noexcept { return m_num_spikers_along_c_axis; }
 
+    natural_64_bit  num_spikers() const noexcept { return m_num_spikers; }
+
     natural_32_bit  num_docks_along_x_axis_per_spiker() const noexcept { return m_num_docks_along_x_axis_per_spiker; }
     natural_32_bit  num_docks_along_y_axis_per_spiker() const noexcept { return m_num_docks_along_y_axis_per_spiker; }
     natural_32_bit  num_docks_along_c_axis_per_spiker() const noexcept { return m_num_docks_along_c_axis_per_spiker; }
@@ -61,7 +63,11 @@ struct  network_layer_props
     natural_32_bit  num_docks_along_y_axis() const noexcept { return m_num_docks_along_y_axis; }
     natural_32_bit  num_docks_along_c_axis() const noexcept { return m_num_docks_along_c_axis; }
 
+    natural_64_bit  num_docks() const noexcept { return m_num_docks; }
+
     natural_32_bit  num_ships_per_spiker() const noexcept { return m_num_ships_per_spiker; }
+
+    natural_64_bit  num_ships() const noexcept { return m_num_ships; }
 
     float_32_bit  distance_of_docks_in_meters() const noexcept { return m_distance_of_docks_in_meters; }
 
@@ -84,9 +90,9 @@ struct  network_layer_props
 
     bool  are_spikers_excitatory() const noexcept { return m_are_spikers_excitatory; }
 
-    natural_32_bit  num_bytes_per_spiker_for_parameters_pack() const noexcept { return m_num_bytes_per_spiker_for_parameters_pack; }
-    natural_32_bit  num_bytes_per_dock_for_parameters_pack() const noexcept { return m_num_bytes_per_dock_for_parameters_pack; }
-    natural_32_bit  num_bytes_per_ship_for_parameters_pack() const noexcept { return m_num_bytes_per_ship_for_parameters_pack; }
+    natural_8_bit  num_bytes_per_spiker_for_parameters_pack() const noexcept { return m_num_bytes_per_spiker_for_parameters_pack; }
+    natural_8_bit  num_bytes_per_dock_for_parameters_pack() const noexcept { return m_num_bytes_per_dock_for_parameters_pack; }
+    natural_8_bit  num_bytes_per_ship_for_parameters_pack() const noexcept { return m_num_bytes_per_ship_for_parameters_pack; }
 
     std::shared_ptr<ship_controller const>  ship_controller_ptr() const noexcept { return m_ship_controller_ptr; }
 
@@ -103,6 +109,8 @@ private:
     natural_32_bit  m_num_spikers_along_y_axis;
     natural_32_bit  m_num_spikers_along_c_axis;
 
+    natural_64_bit  m_num_spikers;
+
     natural_32_bit  m_num_docks_along_x_axis_per_spiker;
     natural_32_bit  m_num_docks_along_y_axis_per_spiker;
     natural_32_bit  m_num_docks_along_c_axis_per_spiker;
@@ -111,7 +119,11 @@ private:
     natural_32_bit  m_num_docks_along_y_axis;
     natural_32_bit  m_num_docks_along_c_axis;
 
+    natural_64_bit  m_num_docks;
+
     natural_32_bit  m_num_ships_per_spiker;
+
+    natural_64_bit  m_num_ships;
 
     float_32_bit  m_distance_of_docks_in_meters;
 
@@ -134,9 +146,9 @@ private:
 
     bool  m_are_spikers_excitatory;
 
-    natural_32_bit  m_num_bytes_per_spiker_for_parameters_pack;
-    natural_32_bit  m_num_bytes_per_dock_for_parameters_pack;
-    natural_32_bit  m_num_bytes_per_ship_for_parameters_pack;
+    natural_8_bit  m_num_bytes_per_spiker_for_parameters_pack;
+    natural_8_bit  m_num_bytes_per_dock_for_parameters_pack;
+    natural_8_bit  m_num_bytes_per_ship_for_parameters_pack;
 
     std::shared_ptr<ship_controller const> const  m_ship_controller_ptr;
 };

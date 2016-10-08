@@ -4,9 +4,11 @@
 #   include <netlab/network_layer_props.hpp>
 #   include <netlab/network_props.hpp>
 #   include <netlab/network_objects.hpp>
+#   include <netlab/network_objects_factory.hpp>
 #   include <netlab/network_object_id.hpp>
 #   include <netlab/ship_controller.hpp>
 #   include <netlab/tracked_object_stats.hpp>
+#   include <utility/array_of_derived.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <vector>
 #   include <memory>
@@ -22,7 +24,7 @@ namespace netlab {
  */
 struct network
 {
-    explicit  network(std::shared_ptr<network_props> const  properties);
+    network(std::shared_ptr<network_props> const  properties, network_objects_factory const&  objects_factory);
 
     std::shared_ptr<network_props>  properties() const noexcept { return m_properties; }
     natural_64_bit  update_id() const noexcept { return  m_update_id; }
@@ -37,8 +39,6 @@ struct network
             );
 
 private:
-
-    natural_8_bit  find_layer_index(float_32_bit const  coord_along_c_axis);
 
 //    void  update_spiking(
 //            bool const  update_only_potential,
@@ -57,13 +57,11 @@ private:
 
 
     std::shared_ptr<network_props>  m_properties;
-    std::vector<float_32_bit>  m_max_coods_along_c_axis;
 
-    std::vector< std::vector<spiker> >  m_spikers;
+    std::vector< std::unique_ptr< array_of_derived<spiker> > >  m_spikers;
+    std::vector< std::unique_ptr< array_of_derived<dock> > >  m_docks;
+    std::vector< std::unique_ptr< array_of_derived<ship> > >  m_ships;
 
-    std::vector< std::vector<dock> >  m_docks;
-
-    std::vector< std::vector<ship> >  m_ships;
     std::vector< std::vector<vector3> >  m_movement_area_centers;
     std::vector< std::vector< std::vector<network_object_id> > >  m_ships_in_sectors;
 

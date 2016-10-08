@@ -51,6 +51,8 @@ struct network_props
 
     void  set_max_connection_distance_in_meters(float_32_bit const  value) { m_max_connection_distance_in_meters = value; }
 
+    natural_8_bit  find_layer_index(float_32_bit const  coord_along_c_axis);
+
 private:
     std::vector<network_layer_props>  m_layer_props;
 
@@ -62,6 +64,8 @@ private:
     float_32_bit  m_max_connection_distance_in_meters;
 
     natural_32_bit  m_num_threads_to_use;
+
+    std::vector<float_32_bit>  m_max_coods_along_c_axis;
 };
 
 

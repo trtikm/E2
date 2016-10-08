@@ -13,6 +13,12 @@ namespace netlab {
  */
 struct  spiker
 {
+    spiker();
+    virtual ~spiker() {}
+
+    natural_64_bit  last_update_id() const noexcept { return m_last_update_id; }
+    void  set_last_update_id(natural_64_bit const  value) { m_last_update_id = value; }
+
 private:
 //    std::vector<network_data_id>  m_dock_ids;
 //    std::vector<network_data_id>  m_ship_ids;
@@ -28,6 +34,7 @@ private:
  */
 struct  dock
 {
+    virtual ~dock() {}
 private:
 //    network_data_id  m_spiker_id;
 };
@@ -40,6 +47,9 @@ private:
  */
 struct  ship
 {
+    ship();
+    virtual ~ship() {}
+
     vector3 const&  position() const noexcept { return m_position; }
     void  set_position(vector3 const&  pos) { m_position = pos; }
 

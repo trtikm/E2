@@ -1,4 +1,5 @@
 #include <netlab/network_layer_props.hpp>
+#include <netlab/network_object_id.hpp>
 #include <utility/checked_number_operations.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -31,15 +32,20 @@ network_layer_props::network_layer_props(
 
         bool const  are_spikers_excitatory,
 
-        natural_32_bit const  num_bytes_per_spiker_for_parameters_pack,
-        natural_32_bit const  num_bytes_per_dock_for_parameters_pack,
-        natural_32_bit const  num_bytes_per_ship_for_parameters_pack,
+        natural_8_bit const  num_bytes_per_spiker_for_parameters_pack,
+        natural_8_bit const  num_bytes_per_dock_for_parameters_pack,
+        natural_8_bit const  num_bytes_per_ship_for_parameters_pack,
 
         std::shared_ptr<ship_controller const> const  ship_controller_ptr
         )
     : m_num_spikers_along_x_axis(num_spikers_along_x_axis)
     , m_num_spikers_along_y_axis(num_spikers_along_y_axis)
     , m_num_spikers_along_c_axis(num_spikers_along_c_axis)
+
+    , m_num_spikers(
+          checked_mul_64_bit(m_num_spikers_along_c_axis,
+                             checked_mul_64_bit(m_num_spikers_along_x_axis, m_num_spikers_along_y_axis))
+          )
 
     , m_num_docks_along_x_axis_per_spiker(num_docks_along_x_axis_per_spiker)
     , m_num_docks_along_y_axis_per_spiker(num_docks_along_y_axis_per_spiker)
@@ -49,39 +55,46 @@ network_layer_props::network_layer_props(
     , m_num_docks_along_y_axis(checked_mul_32_bit(m_num_spikers_along_y_axis,m_num_docks_along_y_axis_per_spiker))
     , m_num_docks_along_c_axis(checked_mul_32_bit(m_num_spikers_along_c_axis,m_num_docks_along_c_axis_per_spiker))
 
+    , m_num_docks(
+          checked_mul_64_bit(m_num_docks_along_c_axis,
+                             checked_mul_64_bit(m_num_docks_along_x_axis, m_num_docks_along_y_axis))
+          )
+
     , m_num_ships_per_spiker(num_ships_per_spiker)
+
+    , m_num_ships(checked_mul_64_bit(m_num_ships_per_spiker, m_num_spikers))
 
     , m_distance_of_docks_in_meters(distance_of_docks_in_meters)
 
     , m_distance_of_spikers_along_x_axis_in_meters(
-          static_cast<float_32_bit>(m_num_docks_along_x_axis_per_spiker - 1U) * m_distance_of_docks_in_meters
+          static_cast<float_32_bit>(m_num_docks_along_x_axis_per_spiker) * m_distance_of_docks_in_meters
           )
     , m_distance_of_spikers_along_y_axis_in_meters(
-          static_cast<float_32_bit>(m_num_docks_along_y_axis_per_spiker - 1U) * m_distance_of_docks_in_meters
+          static_cast<float_32_bit>(m_num_docks_along_y_axis_per_spiker) * m_distance_of_docks_in_meters
           )
     , m_distance_of_spikers_along_c_axis_in_meters(
-          static_cast<float_32_bit>(m_num_docks_along_c_axis_per_spiker - 1U) * m_distance_of_docks_in_meters
+          static_cast<float_32_bit>(m_num_docks_along_c_axis_per_spiker) * m_distance_of_docks_in_meters
           )
 
     , m_low_corner_of_docks(low_corner_of_docks)
     , m_high_corner_of_docks(
           m_low_corner_of_docks + m_distance_of_docks_in_meters *
           vector3(static_cast<float_32_bit>(m_num_docks_along_x_axis - 1U),
-                   static_cast<float_32_bit>(m_num_docks_along_y_axis - 1U),
-                   static_cast<float_32_bit>(m_num_docks_along_c_axis - 1U))
+                  static_cast<float_32_bit>(m_num_docks_along_y_axis - 1U),
+                  static_cast<float_32_bit>(m_num_docks_along_c_axis - 1U))
           )
 
     , m_low_corner_of_spikers(
           m_low_corner_of_docks + 0.5f *
-          vector3(m_distance_of_spikers_along_x_axis_in_meters,
-                   m_distance_of_spikers_along_y_axis_in_meters,
-                   m_distance_of_spikers_along_c_axis_in_meters)
+          vector3(static_cast<float_32_bit>(m_num_docks_along_x_axis_per_spiker - 1U) * m_distance_of_docks_in_meters,
+                  static_cast<float_32_bit>(m_num_docks_along_y_axis_per_spiker - 1U) * m_distance_of_docks_in_meters,
+                  static_cast<float_32_bit>(m_num_docks_along_c_axis_per_spiker - 1U) * m_distance_of_docks_in_meters)
           )
     , m_high_corner_of_spikers(
           m_high_corner_of_docks - 0.5f *
-          vector3(m_distance_of_spikers_along_x_axis_in_meters,
-                   m_distance_of_spikers_along_y_axis_in_meters,
-                   m_distance_of_spikers_along_c_axis_in_meters)
+          vector3(static_cast<float_32_bit>(m_num_docks_along_x_axis_per_spiker - 1U) * m_distance_of_docks_in_meters,
+                  static_cast<float_32_bit>(m_num_docks_along_y_axis_per_spiker - 1U) * m_distance_of_docks_in_meters,
+                  static_cast<float_32_bit>(m_num_docks_along_c_axis_per_spiker - 1U) * m_distance_of_docks_in_meters)
           )
 
     , m_size_of_ship_movement_area_along_x_axis_in_meters(size_of_ship_movement_area_along_x_axis_in_meters)
@@ -98,7 +111,49 @@ network_layer_props::network_layer_props(
     , m_num_bytes_per_ship_for_parameters_pack(num_bytes_per_ship_for_parameters_pack)
 
     , m_ship_controller_ptr(ship_controller_ptr)
-{}
+{
+    ASSUMPTION(m_num_spikers_along_x_axis > 0U);
+    ASSUMPTION(m_num_spikers_along_y_axis > 0U);
+    ASSUMPTION(m_num_spikers_along_c_axis > 0U);
+
+    ASSUMPTION(m_num_spikers > 0UL);
+    ASSUMPTION(m_num_spikers <= max_num_objects_in_a_layer());
+
+    ASSUMPTION(m_num_docks_along_x_axis_per_spiker > 0U);
+    ASSUMPTION(m_num_docks_along_y_axis_per_spiker > 0U);
+    ASSUMPTION(m_num_docks_along_c_axis_per_spiker > 0U);
+
+    ASSUMPTION((m_num_docks_along_x_axis_per_spiker & 1U) != 0U ||
+               (m_num_docks_along_y_axis_per_spiker & 1U) != 0U ||
+               (m_num_docks_along_c_axis_per_spiker & 1U) != 0U );
+
+    ASSUMPTION(m_num_docks > 0UL);
+    ASSUMPTION(m_num_docks <= max_num_objects_in_a_layer());
+
+    ASSUMPTION(m_num_ships > 0UL);
+    ASSUMPTION(m_num_ships <= max_num_objects_in_a_layer());
+
+    ASSUMPTION(m_distance_of_docks_in_meters > 0.0f);
+
+    ASSUMPTION(m_distance_of_spikers_along_x_axis_in_meters >= m_distance_of_docks_in_meters);
+    ASSUMPTION(m_distance_of_spikers_along_y_axis_in_meters >= m_distance_of_docks_in_meters);
+    ASSUMPTION(m_distance_of_spikers_along_c_axis_in_meters >= m_distance_of_docks_in_meters);
+
+    ASSUMPTION(m_low_corner_of_docks(0) <= m_high_corner_of_docks(0));
+    ASSUMPTION(m_low_corner_of_docks(1) <= m_high_corner_of_docks(1));
+    ASSUMPTION(m_low_corner_of_docks(2) <= m_high_corner_of_docks(2));
+
+    ASSUMPTION(m_low_corner_of_spikers(0) <= m_high_corner_of_spikers(0));
+    ASSUMPTION(m_low_corner_of_spikers(1) <= m_high_corner_of_spikers(1));
+    ASSUMPTION(m_low_corner_of_spikers(2) <= m_high_corner_of_spikers(2));
+
+    ASSUMPTION(m_size_of_ship_movement_area_along_x_axis_in_meters > 0.0f);
+    ASSUMPTION(m_size_of_ship_movement_area_along_y_axis_in_meters > 0.0f);
+    ASSUMPTION(m_size_of_ship_movement_area_along_c_axis_in_meters > 0.0f);
+
+    ASSUMPTION(m_min_speed_of_ship_in_meters_per_second >= 0.0f);
+    ASSUMPTION(m_max_speed_of_ship_in_meters_per_second >= m_min_speed_of_ship_in_meters_per_second);
+}
 
 
 void  network_layer_props::dock_sector_coordinates(vector3 const&  pos, natural_32_bit&  x, natural_32_bit&  y, natural_32_bit&  c) const
