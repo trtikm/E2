@@ -103,6 +103,9 @@ struct  network_layer_props
     natural_64_bit  spiker_sector_index(natural_32_bit const  x, natural_32_bit const  y, natural_32_bit const  c) const;
     vector3  spiker_sector_centre(natural_32_bit const  x, natural_32_bit const  y, natural_32_bit const  c) const;
 
+    natural_64_bit  spiker_index_from_ship_index(natural_64_bit const  ship_index) const;
+    natural_64_bit  ships_begin_index_of_spiker(natural_64_bit const  spiker_index) const;
+
 private:
     natural_32_bit  m_num_spikers_along_x_axis;
     natural_32_bit  m_num_spikers_along_y_axis;

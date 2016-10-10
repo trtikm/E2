@@ -52,7 +52,8 @@ namespace netlab {
 
 network::network(std::shared_ptr<network_props> const  properties,
                  network_objects_factory const&  objects_factory,
-                 movement_area_centers_initialiser&  area_centers_initialiser
+                 initialiser_of_movement_area_centers&  area_centers_initialiser,
+                 initialiser_of_ships_in_movement_areas&  ships_initialiser
                  )
     : m_properties(properties)
     , m_spikers()
@@ -80,8 +81,14 @@ network::network(std::shared_ptr<network_props> const  properties,
         m_ships.push_back( objects_factory.create_array_of_ships(layer_index,layer_props.num_ships()) );
 
         {
+            area_centers_initialiser.on_next_layer(layer_index, *this->properties());
+            ships_initialiser.on_next_layer(layer_index, *this->properties());
+
             std::vector<vector3>&  centers = m_movement_area_centers.at(layer_index);
             centers.resize(layer_props.num_spikers());
+
+            array_of_derived<ship>&  ships = *m_ships.at(layer_index);
+
             natural_64_bit  spiker_index = 0UL;
             for (natural_32_bit  c = 0U; c < layer_props.num_spikers_along_c_axis(); ++c)
                 for (natural_32_bit  y = 0U; y < layer_props.num_spikers_along_y_axis(); ++y)
@@ -110,6 +117,46 @@ network::network(std::shared_ptr<network_props> const  properties,
                                            center(2) >= lo(2) && center(2) <= hi(2) ;
                                     } (area_layer_index,centers.at(spiker_index),this->properties()->layer_props())
                                 );
+
+                        {
+                            ships_initialiser.on_next_area(layer_index, spiker_index, *this->properties());
+
+                            natural_64_bit const  ships_begin_index = layer_props.ships_begin_index_of_spiker(spiker_index);
+                            for (natural_32_bit i = 0U; i < layer_props.num_ships_per_spiker(); ++i)
+                            {
+                                ships_initialiser.compute_ship_position_and_velocity_in_movement_area(
+                                            centers.at(spiker_index),
+                                            i,
+                                            layer_props,
+                                            ships.at(ships_begin_index + i)
+                                            );
+                                ASSUMPTION(
+                                        [](vector3 const&  center, network_layer_props const&  props, ship const& ship_ref) {
+                                            float_32_bit  speed = length(ship_ref.velocity());
+                                            if (center(0) - 0.5f * props.size_of_ship_movement_area_along_c_axis_in_meters()
+                                                    > ship_ref.position()(0) ||
+                                                center(0) + 0.5f * props.size_of_ship_movement_area_along_c_axis_in_meters()
+                                                    < ship_ref.position()(0) ||
+
+                                                center(1) - 0.5f * props.size_of_ship_movement_area_along_c_axis_in_meters()
+                                                    > ship_ref.position()(1) ||
+                                                center(1) + 0.5f * props.size_of_ship_movement_area_along_c_axis_in_meters()
+                                                    < ship_ref.position()(1) ||
+
+                                                center(2) - 0.5f * props.size_of_ship_movement_area_along_c_axis_in_meters()
+                                                    > ship_ref.position()(2) ||
+                                                center(2) + 0.5f * props.size_of_ship_movement_area_along_c_axis_in_meters()
+                                                    < ship_ref.position()(2) ||
+
+                                                speed < props.min_speed_of_ship_in_meters_per_second() ||
+                                                speed > props.max_speed_of_ship_in_meters_per_second()
+                                                )
+                                                return false;
+                                            return true;
+                                            }(centers.at(spiker_index),layer_props,ships.at(ships_begin_index + i))
+                                        );
+                            }
+                        }
 
                         ++spiker_index;
                     }

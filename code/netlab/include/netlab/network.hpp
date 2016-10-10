@@ -7,7 +7,8 @@
 #   include <netlab/network_objects_factory.hpp>
 #   include <netlab/network_object_id.hpp>
 #   include <netlab/ship_controller.hpp>
-#   include <netlab/movement_area_centers_initialiser.hpp>
+#   include <netlab/initialiser_of_movement_area_centers.hpp>
+#   include <netlab/initialiser_of_ships_in_movement_areas.hpp>
 #   include <netlab/tracked_object_stats.hpp>
 #   include <utility/array_of_derived.hpp>
 #   include <utility/tensor_math.hpp>
@@ -27,7 +28,8 @@ struct  network
 {
     network(std::shared_ptr<network_props> const  properties,
             network_objects_factory const&  objects_factory,
-            movement_area_centers_initialiser&  area_centers_initialiser
+            initialiser_of_movement_area_centers&  area_centers_initialiser,
+            initialiser_of_ships_in_movement_areas&  ships_initialiser
             );
 
     std::shared_ptr<network_props>  properties() const noexcept { return m_properties; }

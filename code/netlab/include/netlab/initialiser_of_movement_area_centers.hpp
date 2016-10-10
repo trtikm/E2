@@ -1,5 +1,5 @@
-#ifndef NETLAB_MOVEMENT_AREA_CENTERS_INITIALISER_HPP_INCLUDED
-#   define NETLAB_MOVEMENT_AREA_CENTERS_INITIALISER_HPP_INCLUDED
+#ifndef NETLAB_INITIALISER_OF_MOVEMENT_AREA_CENTERS_HPP_INCLUDED
+#   define NETLAB_INITIALISER_OF_MOVEMENT_AREA_CENTERS_HPP_INCLUDED
 
 #   include <netlab/network_props.hpp>
 #   include <utility/tensor_math.hpp>
@@ -7,9 +7,11 @@
 namespace netlab {
 
 
-struct  movement_area_centers_initialiser
+struct  initialiser_of_movement_area_centers
 {
-    virtual ~movement_area_centers_initialiser() {}
+    virtual ~initialiser_of_movement_area_centers() {}
+
+    virtual void  on_next_layer(natural_8_bit const  layer_index, network_props const&  props) {}
 
     virtual void  compute_movement_area_center_for_ships_of_spiker(
             natural_8_bit const  spiker_layer_index,
@@ -20,7 +22,7 @@ struct  movement_area_centers_initialiser
             network_props const&  props,
             natural_8_bit&  area_layer_index,
             vector3&  area_center
-            );
+            ) = 0;
 };
 
 

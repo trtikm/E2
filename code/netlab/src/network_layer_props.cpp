@@ -129,6 +129,8 @@ network_layer_props::network_layer_props(
     ASSUMPTION(m_num_docks > 0UL);
     ASSUMPTION(m_num_docks <= max_num_objects_in_a_layer());
 
+    ASSUMPTION(m_num_ships_per_spiker > 0UL);
+
     ASSUMPTION(m_num_ships > 0UL);
     ASSUMPTION(m_num_ships <= max_num_objects_in_a_layer());
 
@@ -237,6 +239,18 @@ vector3  network_layer_props::spiker_sector_centre(natural_32_bit const  x, natu
     return low_corner_of_spikers() + vector3( distance_of_spikers_along_x_axis_in_meters() * static_cast<float_32_bit>(x),
                                               distance_of_spikers_along_y_axis_in_meters() * static_cast<float_32_bit>(y),
                                               distance_of_spikers_along_c_axis_in_meters() * static_cast<float_32_bit>(c) );
+}
+
+
+natural_64_bit  network_layer_props::spiker_index_from_ship_index(natural_64_bit const  ship_index) const
+{
+    return ship_index / num_ships_per_spiker();
+}
+
+
+natural_64_bit  network_layer_props::ships_begin_index_of_spiker(natural_64_bit const  spiker_index) const
+{
+    return spiker_index * num_ships_per_spiker();
 }
 
 
