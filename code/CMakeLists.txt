@@ -1,6 +1,8 @@
 # Here follow all libraries of E2
 include_directories(
     "${PROJECT_SOURCE_DIR}/code/netlab/include"
+    "${PROJECT_SOURCE_DIR}/code/netexp/include"
+    "${PROJECT_SOURCE_DIR}/code/netview/include"
     "${PROJECT_SOURCE_DIR}/code/cellab/include"
     "${PROJECT_SOURCE_DIR}/code/cellconnect/include"
     "${PROJECT_SOURCE_DIR}/code/paralab/include"
@@ -14,6 +16,10 @@ include_directories(
 message("Including the following E2 libraries to the build:")
 add_subdirectory(./netlab)
     message("-- netlab")
+add_subdirectory(./netexp)
+    message("-- netexp")
+add_subdirectory(./netview)
+    message("-- netview")
 add_subdirectory(./cellab)
     message("-- cellab")
 add_subdirectory(./cellconnect)
@@ -33,6 +39,18 @@ add_subdirectory(./plot)
 add_subdirectory(./utility)
     message("-- utility")
 
+    
+# Here follow tests, if they should be included.
+if(NOT DEFINED E2_BUILD_ALSO_TOOLS)
+    set(E2_BUILD_ALSO_TOOLS "Yes" CACHE STRING "Build also tools? (Yes/No)" FORCE)
+endif()
+message("Build also tools: " ${E2_BUILD_ALSO_TOOLS})
+string( TOLOWER "${E2_BUILD_ALSO_TOOLS}" E2_TEMPORARY_VARIBLE)
+if(E2_TEMPORARY_VARIBLE STREQUAL "yes")
+    add_subdirectory(./tools)
+endif()
+
+    
 # Here follow tests, if they should be included.
 if(NOT DEFINED E2_BUILD_ALSO_TESTS)
     set(E2_BUILD_ALSO_TESTS "Yes" CACHE STRING "Build also tests? (Yes/No)" FORCE)
