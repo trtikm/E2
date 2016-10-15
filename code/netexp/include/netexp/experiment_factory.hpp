@@ -1,5 +1,5 @@
-#ifndef NETEXP_CALIBRATION_HPP_INCLUDED
-#   define NETEXP_CALIBRATION_HPP_INCLUDED
+#ifndef NETEXP_EXPERIMENT_FACTORY_HPP_INCLUDED
+#   define NETEXP_EXPERIMENT_FACTORY_HPP_INCLUDED
 
 #   include <netlab/network.hpp>
 #   include <netlab/tracked_object_stats.hpp>
@@ -7,33 +7,6 @@
 #   include <string>
 #   include <unordered_map>
 #   include <functional>
-
-namespace netexp { namespace calibration {
-
-
-struct  tracked_spiker_stats : public netlab::tracked_spiker_stats
-{
-};
-
-
-struct  tracked_dock_stats : public netlab::tracked_dock_stats
-{
-};
-
-
-struct  tracked_ship_stats : public netlab::tracked_ship_stats
-{
-};
-
-
-std::shared_ptr<netlab::network>  create_network();
-
-std::shared_ptr<netlab::tracked_spiker_stats>  create_tracked_spiker_stats();
-std::shared_ptr<netlab::tracked_dock_stats>  create_tracked_dock_stats();
-std::shared_ptr<netlab::tracked_ship_stats>  create_tracked_ship_stats();
-
-
-}}
 
 namespace netexp {
 
@@ -53,10 +26,12 @@ struct  experiment_factory
             network_creator const&  network_creator_fn,
             tracked_spiker_stats_creator const&  spiker_stats_creator_fn,
             tracked_dock_stats_creator const&  dock_stats_creator_fn,
-            tracked_ship_stats_creator const&  ship_stats_creator_fn
+            tracked_ship_stats_creator const&  ship_stats_creator_fn,
+            std::string const&  experiment_description
             );
 
     void  get_names_of_registered_experiments(std::vector<std::string>&  output);
+    std::string const&  get_experiment_description(std::string const&  experiment_unique_name) const;
 
     std::shared_ptr<netlab::network>  create_network(std::string const&  experiment_unique_name) const;
 
@@ -75,10 +50,19 @@ private:
     std::unordered_map<std::string,tracked_spiker_stats_creator>  m_spiker_stats_creators;
     std::unordered_map<std::string,tracked_dock_stats_creator>  m_dock_stats_creators;
     std::unordered_map<std::string,tracked_ship_stats_creator>  m_ship_stats_creators;
+
+    std::unordered_map<std::string,std::string>  m_descriptions;
 };
 
 
-#define  NETEXP_REGISTER_EXPERIMENT(experiment_name, network_creator, spiker_stats_creator, dock_stats_creator, ship_stats_creator) \
+#define  NETEXP_REGISTER_EXPERIMENT( \
+                experiment_name, \
+                network_creator, \
+                spiker_stats_creator, \
+                dock_stats_creator, \
+                ship_stats_creator, \
+                experiment_description \
+                ) \
                 namespace { \
                     volatile bool  netexp_dummy_var = \
                         netexp::experiment_factory::instance().register_experiment( \
@@ -86,12 +70,12 @@ private:
                                 network_creator, \
                                 spiker_stats_creator, \
                                 dock_stats_creator, \
-                                ship_stats_creator \
+                                ship_stats_creator, \
+                                experiment_description \
                                 ); \
                 }
 
 
 }
-
 
 #endif

@@ -18,6 +18,10 @@ natural_32_bit  get_random_natural_32_bit_in_range(
     return std::uniform_int_distribution<natural_32_bit>(min_value,max_value)(generator);
 }
 
+void  reset(random_generator_for_natural_32_bit&  generator, natural_32_bit const  seed)
+{
+    generator.seed(seed);
+}
 
 
 //#include <utility/invariants.hpp>

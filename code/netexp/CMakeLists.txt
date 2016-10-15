@@ -1,8 +1,14 @@
 set(THIS_TARGET_NAME netexp)
 
 add_library(${THIS_TARGET_NAME}
-    ./include/netexp/calibration.hpp
-    ./src/calibration.cpp
+    ./include/netexp/experiment_factory.hpp
+    ./src/experiment_factory.cpp
+    
+    ./include/netexp/algorithm.hpp
+    ./src/algorithm.cpp
+
+    ./include/netexp/calibration/calibration.hpp
+    ./src/calibration/calibration.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

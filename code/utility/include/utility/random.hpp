@@ -21,12 +21,14 @@ typedef std::linear_congruential_engine<natural_32_bit, 16807UL, 0UL, 2147483647
 
 random_generator_for_natural_32_bit&  default_random_generator();
 
-
 natural_32_bit  get_random_natural_32_bit_in_range(
     natural_32_bit const min_value,
     natural_32_bit const max_value,
     random_generator_for_natural_32_bit&   generator = default_random_generator()
     );
+
+void  reset(random_generator_for_natural_32_bit&  generator,
+            natural_32_bit const  seed = random_generator_for_natural_32_bit::default_seed);
 
 
 #endif

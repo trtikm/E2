@@ -1,4 +1,6 @@
-#include <netexp/calibration.hpp>
+#include <netexp/calibration/calibration.hpp>
+#include <netexp/experiment_factory.hpp>
+#include <netexp/algorithm.hpp>
 #include <netlab/network_layer_props.hpp>
 #include <netlab/network_props.hpp>
 #include <netlab/network_objects.hpp>
@@ -16,7 +18,6 @@
 #include <utility/log.hpp>
 #include <utility/development.hpp>
 #include <vector>
-#include <algorithm>
 
 namespace netexp { namespace calibration { namespace detail { namespace {
 
@@ -59,7 +60,7 @@ vector3  ship_controller::accelerate_into_space_box(
         float_32_bit const  space_box_length_c      //!< Length is in meters.
         ) const
 {
-    NOT_IMPLEMENTED_YET();
+    return {0.0f,0.0f,0.0f};
 }
 
 vector3  ship_controller::accelerate_into_dock(
@@ -69,7 +70,7 @@ vector3  ship_controller::accelerate_into_dock(
         float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
         ) const
 {
-    NOT_IMPLEMENTED_YET();
+    return {0.0f,0.0f,0.0f};
 }
 
 vector3  ship_controller::accelerate_from_ship(
@@ -81,7 +82,7 @@ vector3  ship_controller::accelerate_from_ship(
         float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
         ) const
 {
-    NOT_IMPLEMENTED_YET();
+    return {0.0f,0.0f,0.0f};
 }
 
 
@@ -218,13 +219,28 @@ void  initialiser_of_movement_area_centers::compute_movement_area_center_for_shi
 
 struct  initialiser_of_ships_in_movement_areas : public netlab::initialiser_of_ships_in_movement_areas
 {
+    initialiser_of_ships_in_movement_areas();
+
+    void  on_next_layer(natural_8_bit const  layer_index, netlab::network_props const&  props) { reset(random_generator()); }
+    void  on_next_area(natural_8_bit const  layer_index, natural_64_bit const  spiker_index, netlab::network_props const&  props) {}
+
     void  compute_ship_position_and_velocity_in_movement_area(
             vector3 const&  center,
             natural_32_bit const  ship_index_in_the_area,
             netlab::network_layer_props const&  layer_props,
             netlab::ship&  ship_reference
             );
+
+    random_generator_for_natural_32_bit&  random_generator() noexcept { return m_generator; }
+
+private:
+    random_generator_for_natural_32_bit  m_generator;
 };
+
+initialiser_of_ships_in_movement_areas::initialiser_of_ships_in_movement_areas()
+    : netlab::initialiser_of_ships_in_movement_areas()
+    , m_generator()
+{}
 
 void  initialiser_of_ships_in_movement_areas::compute_ship_position_and_velocity_in_movement_area(
         vector3 const&  center,
@@ -233,7 +249,15 @@ void  initialiser_of_ships_in_movement_areas::compute_ship_position_and_velocity
         netlab::ship&  ship_reference
         )
 {
-    NOT_IMPLEMENTED_YET();
+    compute_random_ship_position_and_velocity_in_movement_area(
+                center,
+                layer_props.size_of_ship_movement_area_along_x_axis_in_meters(),
+                layer_props.size_of_ship_movement_area_along_y_axis_in_meters(),
+                layer_props.size_of_ship_movement_area_along_c_axis_in_meters(),
+                ship_reference,
+                random_generator(),
+                random_generator()
+                );
 }
 
 
@@ -270,85 +294,15 @@ std::shared_ptr<netlab::tracked_ship_stats>  create_tracked_ship_stats()
 
 
 NETEXP_REGISTER_EXPERIMENT(
-        "callibration",
+        "calibration",
         netexp::calibration::create_network,
         netexp::calibration::create_tracked_spiker_stats,
         netexp::calibration::create_tracked_dock_stats,
-        netexp::calibration::create_tracked_ship_stats
+        netexp::calibration::create_tracked_ship_stats,
+        "This is an artificial experiment. It purpose is to support the "
+        "development and tunnig of the 'netlab'' library. Therefore, it is "
+        "not an experiment in true sense. Do not include it into your research."
         )
 
 
 }}
-
-namespace netexp {
-
-
-experiment_factory&  experiment_factory::instance()
-{
-    static experiment_factory  ef;
-    return ef;
-}
-
-bool  experiment_factory::register_experiment(
-        std::string const&  experiment_unique_name,
-        network_creator const&  network_creator_fn,
-        tracked_spiker_stats_creator const&  spiker_stats_creator_fn,
-        tracked_dock_stats_creator const&  dock_stats_creator_fn,
-        tracked_ship_stats_creator const&  ship_stats_creator_fn
-        )
-{
-    auto const  it = m_network_creators.find(experiment_unique_name);
-    if (it != m_network_creators.cend())
-        return false;
-    m_network_creators.insert({experiment_unique_name,network_creator_fn});
-    m_spiker_stats_creators.insert({experiment_unique_name,spiker_stats_creator_fn});
-    m_dock_stats_creators.insert({experiment_unique_name,dock_stats_creator_fn});
-    m_ship_stats_creators.insert({experiment_unique_name,ship_stats_creator_fn});
-    return true;
-}
-
-void  experiment_factory::get_names_of_registered_experiments(std::vector<std::string>&  output)
-{
-    for (auto it = m_network_creators.cbegin(); it != m_network_creators.cend(); ++it)
-        output.push_back(it->first);
-}
-
-
-std::shared_ptr<netlab::network>  experiment_factory::create_network(
-        std::string const&  experiment_unique_name
-        ) const
-{
-    auto const  it = m_network_creators.find(experiment_unique_name);
-    ASSUMPTION(it != m_network_creators.cend());
-    return it->second();
-}
-
-std::shared_ptr<netlab::tracked_spiker_stats>  experiment_factory::create_tracked_spiker_stats(
-        std::string const&  experiment_unique_name
-        ) const
-{
-    auto const  it = m_spiker_stats_creators.find(experiment_unique_name);
-    ASSUMPTION(it != m_spiker_stats_creators.cend());
-    return it->second();
-}
-
-std::shared_ptr<netlab::tracked_dock_stats>  experiment_factory::create_tracked_dock_stats(
-        std::string const&  experiment_unique_name
-        ) const
-{
-    auto const  it = m_dock_stats_creators.find(experiment_unique_name);
-    ASSUMPTION(it != m_dock_stats_creators.cend());
-    return it->second();
-}
-
-std::shared_ptr<netlab::tracked_ship_stats>  experiment_factory::create_tracked_ship_stats(
-        std::string const&  experiment_unique_name
-        ) const
-{
-    auto const  it = m_ship_stats_creators.find(experiment_unique_name);
-    ASSUMPTION(it != m_ship_stats_creators.cend());
-    return it->second();
-}
-
-
-}
