@@ -1,5 +1,9 @@
 #include <utility/random.hpp>
 #include <utility/assumptions.hpp>
+#include <utility/invariants.hpp>
+#include <limits>
+#include <algorithm>
+#include <iterator>
 
 
 random_generator_for_natural_32_bit&  default_random_generator()
@@ -7,6 +11,7 @@ random_generator_for_natural_32_bit&  default_random_generator()
     static random_generator_for_natural_32_bit the_generator;
     return the_generator;
 }
+
 
 natural_32_bit  get_random_natural_32_bit_in_range(
     natural_32_bit const min_value,
@@ -18,9 +23,81 @@ natural_32_bit  get_random_natural_32_bit_in_range(
     return std::uniform_int_distribution<natural_32_bit>(min_value,max_value)(generator);
 }
 
+float_32_bit  get_random_float_32_bit_in_range(
+    float_32_bit const min_value,
+    float_32_bit const max_value,
+    random_generator_for_natural_32_bit&   generator
+    )
+{
+    ASSUMPTION(min_value <= max_value);
+    float_64_bit const  coef =
+            static_cast<float_64_bit>(get_random_natural_32_bit_in_range(0U,std::numeric_limits<natural_32_bit>::max(),generator))
+            / static_cast<float_64_bit>(std::numeric_limits<natural_32_bit>::max());
+    return static_cast<float_32_bit>(min_value + coef * (max_value - min_value));
+}
+
+
 void  reset(random_generator_for_natural_32_bit&  generator, natural_32_bit const  seed)
 {
     generator.seed(seed);
+}
+
+
+bar_random_distribution  make_bar_random_distribution_from_count_bars(
+        std::vector<natural_32_bit> const&  count_bars
+        )
+{
+    ASSUMPTION(count_bars.size() <= std::numeric_limits<natural_32_bit>::max());
+    natural_64_bit  sum_of_counts = 0UL;
+    for (auto const&  count : count_bars)
+        sum_of_counts += count;
+    if (sum_of_counts == 0UL)
+        return {1.0f};
+    std::vector<float_32_bit> probability_bars;
+    for (auto const&  count : count_bars)
+        probability_bars.push_back(
+            static_cast<float_32_bit>(static_cast<float_64_bit>(count) / static_cast<float_64_bit>(sum_of_counts))
+            );
+    return make_bar_random_distribution_from_probability_bars(probability_bars);
+}
+
+bar_random_distribution  make_bar_random_distribution_from_probability_bars(
+        std::vector<float_32_bit> const&  probability_bars
+        )
+{
+    ASSUMPTION(probability_bars.size() <= std::numeric_limits<natural_32_bit>::max());
+    ASSUMPTION(!probability_bars.empty());
+    float_32_bit  sum_of_probabilities = 0.0f;
+    bar_random_distribution  distribution;
+    for (auto const&  probability : probability_bars)
+    {
+        ASSUMPTION(probability >= 0.0f);
+        sum_of_probabilities += probability;
+        ASSUMPTION(sum_of_probabilities < 1.001f);
+        distribution.push_back(sum_of_probabilities);
+    }
+    INVARIANT(!distribution.empty());
+    INVARIANT(probability_bars.size() == distribution.size());
+    ASSUMPTION(distribution.back() > 0.999f && distribution.back() < 0.001f);
+    distribution.back() = 1.0f;
+    return distribution;
+}
+
+natural_32_bit  get_random_bar_index(
+    bar_random_distribution const&  bar_distribution,
+    random_generator_for_natural_32_bit&   generator
+    )
+{
+    bar_random_distribution::const_iterator const  it =
+            std::upper_bound(
+                    bar_distribution.cbegin(),
+                    bar_distribution.cend(),
+                    get_random_float_32_bit_in_range(0.0f,1.0f,generator)
+                    );
+    return static_cast<natural_32_bit>(
+                (it == bar_distribution.cend()) ? bar_distribution.size() - 1UL :
+                                                  std::distance(it,bar_distribution.cbegin())
+                );
 }
 
 

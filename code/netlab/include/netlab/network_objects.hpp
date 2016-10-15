@@ -52,9 +52,11 @@ struct  ship
 
     vector3 const&  position() const noexcept { return m_position; }
     void  set_position(vector3 const&  pos) { m_position = pos; }
+    vector3&  get_position_nonconst_reference() noexcept { return m_position; }
 
     vector3 const&  velocity() const noexcept { return m_velocity; }
     void  set_velocity(vector3 const&  v) { m_velocity = v; }
+    vector3&  get_velocity_nonconst_reference() noexcept { return m_velocity; }
 
 private:
 //    network_data_id  m_spiker_id;

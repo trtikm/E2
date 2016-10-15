@@ -7,7 +7,6 @@ add_library(${THIS_TARGET_NAME}
     ./include/netexp/algorithm.hpp
     ./src/algorithm.cpp
 
-    ./include/netexp/calibration/calibration.hpp
     ./src/calibration/calibration.cpp
     )
 

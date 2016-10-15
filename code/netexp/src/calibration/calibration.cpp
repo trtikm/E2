@@ -1,6 +1,6 @@
-#include <netexp/calibration/calibration.hpp>
 #include <netexp/experiment_factory.hpp>
 #include <netexp/algorithm.hpp>
+#include <netlab/network.hpp>
 #include <netlab/network_layer_props.hpp>
 #include <netlab/network_props.hpp>
 #include <netlab/network_objects.hpp>
@@ -9,6 +9,7 @@
 #include <netlab/ship_controller.hpp>
 #include <netlab/initialiser_of_movement_area_centers.hpp>
 #include <netlab/initialiser_of_ships_in_movement_areas.hpp>
+#include <netlab/tracked_object_stats.hpp>
 #include <utility/array_of_derived.hpp>
 #include <utility/tensor_math.hpp>
 #include <utility/random.hpp>
@@ -18,8 +19,9 @@
 #include <utility/log.hpp>
 #include <utility/development.hpp>
 #include <vector>
+#include <memory>
 
-namespace netexp { namespace calibration { namespace detail { namespace {
+namespace netexp { namespace calibration { namespace {
 
 
 struct  ship_controller : public netlab::ship_controller
@@ -249,30 +251,43 @@ void  initialiser_of_ships_in_movement_areas::compute_ship_position_and_velocity
         netlab::ship&  ship_reference
         )
 {
-    compute_random_ship_position_and_velocity_in_movement_area(
+    (void)ship_index_in_the_area;
+
+    compute_random_ship_position_in_movement_area(
                 center,
-                layer_props.size_of_ship_movement_area_along_x_axis_in_meters(),
-                layer_props.size_of_ship_movement_area_along_y_axis_in_meters(),
-                layer_props.size_of_ship_movement_area_along_c_axis_in_meters(),
-                ship_reference,
+                0.5f * layer_props.size_of_ship_movement_area_along_x_axis_in_meters(),
+                0.5f * layer_props.size_of_ship_movement_area_along_y_axis_in_meters(),
+                0.5f * layer_props.size_of_ship_movement_area_along_c_axis_in_meters(),
                 random_generator(),
-                random_generator()
+                ship_reference.get_position_nonconst_reference()
                 );
+
+    ship_reference.set_velocity({0.0f,0.0f,0.0f});
 }
 
 
-}}}}
+struct  tracked_spiker_stats : public netlab::tracked_spiker_stats
+{
+};
 
-namespace netexp { namespace calibration {
+
+struct  tracked_dock_stats : public netlab::tracked_dock_stats
+{
+};
+
+
+struct  tracked_ship_stats : public netlab::tracked_ship_stats
+{
+};
 
 
 std::shared_ptr<netlab::network>  create_network()
 {
     return std::make_shared<netlab::network>(
-        detail::create_network_props(),
-        detail::network_objects_factory(),
-        detail::initialiser_of_movement_area_centers(),
-        detail::initialiser_of_ships_in_movement_areas()
+        create_network_props(),
+        network_objects_factory(),
+        initialiser_of_movement_area_centers(),
+        initialiser_of_ships_in_movement_areas()
         );
 }
 
@@ -305,4 +320,4 @@ NETEXP_REGISTER_EXPERIMENT(
         )
 
 
-}}
+}}}

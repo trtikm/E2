@@ -52,6 +52,7 @@ inline vector3  vector3_unit_y() { return vector3::UnitY(); }
 inline vector3  vector3_unit_z() { return vector3::UnitZ(); }
 inline scalar  dot_product(vector3 const& u, vector3 const& v) { return u.dot(v); }
 inline scalar  length(vector3 const& u) { return u.norm(); }
+inline scalar  length_squared(vector3 const& u) { return dot_product(u,u); }
 inline vector3  normalised(vector3 const&  u) { return u.normalized(); }
 inline void  normalise(vector3& u) { u.normalize(); }
 

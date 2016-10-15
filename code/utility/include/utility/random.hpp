@@ -3,10 +3,11 @@
 
 #   include <utility/basic_numeric_types.hpp>
 #   include <random>
+#   include <vector>
 
 
 //The classic Minimum Standard rand0 of Lewis, Goodman, and Miller.
-typedef std::linear_congruential_engine<natural_32_bit, 16807UL, 0UL, 2147483647UL> random_generator_for_natural_32_bit;
+using  random_generator_for_natural_32_bit = std::linear_congruential_engine<natural_32_bit, 16807UL, 0UL, 2147483647UL>;
 
 // An alternative LCR (Lehmer Generator function).
 //typedef std::linear_congruential_engine<natural_32_bit, 48271UL, 0UL, 2147483647UL> random_generator_for_natural_32_bit;
@@ -27,8 +28,29 @@ natural_32_bit  get_random_natural_32_bit_in_range(
     random_generator_for_natural_32_bit&   generator = default_random_generator()
     );
 
+float_32_bit  get_random_float_32_bit_in_range(
+    float_32_bit const min_value,
+    float_32_bit const max_value,
+    random_generator_for_natural_32_bit&   generator
+    );
+
 void  reset(random_generator_for_natural_32_bit&  generator,
             natural_32_bit const  seed = random_generator_for_natural_32_bit::default_seed);
+
+
+using  bar_random_distribution = std::vector<float_32_bit>;
+
+bar_random_distribution  make_bar_random_distribution_from_count_bars(
+        std::vector<natural_32_bit> const&  count_bars
+        );
+bar_random_distribution  make_bar_random_distribution_from_probability_bars(
+        std::vector<float_32_bit> const&  probability_bars
+        );
+
+natural_32_bit  get_random_bar_index(
+    bar_random_distribution const&  bar_distribution,
+    random_generator_for_natural_32_bit&   generator
+    );
 
 
 #endif
