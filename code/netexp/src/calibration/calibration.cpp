@@ -88,9 +88,9 @@ vector3  ship_controller::accelerate_from_ship(
 }
 
 
-std::shared_ptr<netlab::network_props>  create_network_props()
+std::shared_ptr<netlab::network_props>  get_network_props()
 {
-    return std::make_shared<netlab::network_props>(
+    static std::shared_ptr<netlab::network_props> const  props = std::make_shared<netlab::network_props>(
         std::vector<netlab::network_layer_props> {
             netlab::network_layer_props {
                 3U,     //!< num_spikers_along_x_axis
@@ -126,6 +126,7 @@ std::shared_ptr<netlab::network_props>  create_network_props()
         1U              //!< num_threads_to_use
 
         );
+    return props;
 }
 
 
@@ -192,6 +193,10 @@ std::unique_ptr< array_of_derived<netlab::ship> >  network_objects_factory::crea
 
 struct  initialiser_of_movement_area_centers : public netlab::initialiser_of_movement_area_centers
 {
+    initialiser_of_movement_area_centers();
+
+    void  on_next_layer(natural_8_bit const  layer_index, netlab::network_props const&  props);
+
     void  compute_movement_area_center_for_ships_of_spiker(
             natural_8_bit const  spiker_layer_index,
             natural_64_bit const  spiker_index_into_layer,
@@ -202,7 +207,59 @@ struct  initialiser_of_movement_area_centers : public netlab::initialiser_of_mov
             natural_8_bit&  area_layer_index,
             vector3&  area_center
             );
+
+private:
+    std::vector<bar_random_distribution>  m_distribution_of_spiker_layer;
+    random_generator_for_natural_32_bit  m_generator_of_spiker_layer;
+    std::vector<float_32_bit>  m_max_distance_x;
+    std::vector<float_32_bit>  m_max_distance_y;
+    std::vector<float_32_bit>  m_max_distance_c;
+    random_generator_for_natural_32_bit  m_position_generator;
 };
+
+initialiser_of_movement_area_centers::initialiser_of_movement_area_centers()
+    : m_distribution_of_spiker_layer({
+            make_bar_random_distribution_from_count_bars({
+                get_network_props()->layer_props().at(0UL).num_spikers()
+                })
+            })
+    , m_generator_of_spiker_layer()
+    , m_max_distance_x({
+            get_network_props()->layer_props().at(0UL).num_spikers_along_x_axis() *
+                       get_network_props()->layer_props().at(0UL).distance_of_spikers_along_x_axis_in_meters()
+            })
+    , m_max_distance_y({
+           get_network_props()->layer_props().at(0UL).num_spikers_along_y_axis() *
+                      get_network_props()->layer_props().at(0UL).distance_of_spikers_along_y_axis_in_meters()
+           })
+    , m_max_distance_c({
+           get_network_props()->layer_props().at(0UL).num_spikers_along_c_axis() *
+                      get_network_props()->layer_props().at(0UL).distance_of_spikers_along_c_axis_in_meters()
+           })
+    , m_position_generator()
+{
+    ASSUMPTION(
+        [](std::vector<bar_random_distribution> const&  distributions, natural_64_bit const  size) -> bool {
+            if (distributions.size() != size)
+                return false;
+            for (auto const&  D : distributions)
+                if (get_num_bars(D) != size)
+                    return false;
+            return true;
+        }(m_distribution_of_spiker_layer,get_network_props()->layer_props().size())
+        );
+    ASSUMPTION(m_max_distance_x.size() == get_network_props()->layer_props().size());
+    ASSUMPTION(m_max_distance_y.size() == get_network_props()->layer_props().size());
+    ASSUMPTION(m_max_distance_c.size() == get_network_props()->layer_props().size());
+}
+
+void  initialiser_of_movement_area_centers::on_next_layer(natural_8_bit const  layer_index, netlab::network_props const&  props)
+{
+    (void)layer_index;
+    (void)props;
+    reset(m_generator_of_spiker_layer);
+    reset(m_position_generator);
+}
 
 void  initialiser_of_movement_area_centers::compute_movement_area_center_for_ships_of_spiker(
         natural_8_bit const  spiker_layer_index,
@@ -215,7 +272,24 @@ void  initialiser_of_movement_area_centers::compute_movement_area_center_for_shi
         vector3&  area_center
         )
 {
-    NOT_IMPLEMENTED_YET();
+    (void)spiker_index_into_layer;
+    compute_center_of_movement_area_for_ships_of_spiker(
+                spiker_layer_index,
+                props.layer_props().at(spiker_layer_index).spiker_sector_centre(
+                    spiker_sector_coordinate_x,
+                    spiker_sector_coordinate_y,
+                    spiker_sector_coordinate_c
+                    ),
+                props,
+                m_distribution_of_spiker_layer.at(spiker_layer_index),
+                m_generator_of_spiker_layer,
+                m_max_distance_x,
+                m_max_distance_y,
+                m_max_distance_c,
+                m_position_generator,
+                area_layer_index,
+                area_center
+                );
 }
 
 
@@ -284,7 +358,7 @@ struct  tracked_ship_stats : public netlab::tracked_ship_stats
 std::shared_ptr<netlab::network>  create_network()
 {
     return std::make_shared<netlab::network>(
-        create_network_props(),
+        get_network_props(),
         network_objects_factory(),
         initialiser_of_movement_area_centers(),
         initialiser_of_ships_in_movement_areas()

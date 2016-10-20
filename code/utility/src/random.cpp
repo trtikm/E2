@@ -44,7 +44,7 @@ void  reset(random_generator_for_natural_32_bit&  generator, natural_32_bit cons
 
 
 bar_random_distribution  make_bar_random_distribution_from_count_bars(
-        std::vector<natural_32_bit> const&  count_bars
+        std::vector<natural_64_bit> const&  count_bars
         )
 {
     ASSUMPTION(count_bars.size() <= std::numeric_limits<natural_32_bit>::max());
@@ -58,6 +58,25 @@ bar_random_distribution  make_bar_random_distribution_from_count_bars(
         probability_bars.push_back(
             static_cast<float_32_bit>(static_cast<float_64_bit>(count) / static_cast<float_64_bit>(sum_of_counts))
             );
+    return make_bar_random_distribution_from_probability_bars(probability_bars);
+}
+
+bar_random_distribution  make_bar_random_distribution_from_size_bars(
+        std::vector<float_32_bit> const&  size_bars
+        )
+{
+    ASSUMPTION(size_bars.size() <= std::numeric_limits<natural_32_bit>::max());
+    float_64_bit  sum_of_sizes = 0.0;
+    for (auto const  size : size_bars)
+    {
+        ASSUMPTION(size >= 0.0);
+        sum_of_sizes += size;
+    }
+    if (sum_of_sizes < 1e-5)
+        return {1.0f};
+    std::vector<float_32_bit> probability_bars;
+    for (auto const&  size : size_bars)
+        probability_bars.push_back(static_cast<float_32_bit>(static_cast<float_64_bit>(size) / sum_of_sizes));
     return make_bar_random_distribution_from_probability_bars(probability_bars);
 }
 

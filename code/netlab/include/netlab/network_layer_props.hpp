@@ -106,6 +106,11 @@ struct  network_layer_props
     natural_64_bit  spiker_index_from_ship_index(natural_64_bit const  ship_index) const;
     natural_64_bit  ships_begin_index_of_spiker(natural_64_bit const  spiker_index) const;
 
+    void  spiker_sector_coordinates_from_dock_sector_coordinates(
+            natural_32_bit const&  dock_x, natural_32_bit const&  dock_y, natural_32_bit const&  dock_c,
+            natural_32_bit&  x, natural_32_bit&  y, natural_32_bit&  c
+            ) const;
+
 private:
     natural_32_bit  m_num_spikers_along_x_axis;
     natural_32_bit  m_num_spikers_along_y_axis;

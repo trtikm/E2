@@ -29,6 +29,8 @@ struct  ship_controller
 
     /**
      * Returns an acceleration vector stearing the ship towards the passed dock.
+     * This function is called when the spiker of the dock is NOT the same as the
+     * spiker of the ship.
      */
     virtual vector3  accelerate_into_dock(
             vector3 const&  ship_position,              //!< Coordinates in meters.
@@ -36,6 +38,20 @@ struct  ship_controller
             vector3 const&  dock_position,              //!< Coordinates in meters.
             float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
             ) const = 0;
+
+    /**
+     * Returns an acceleration vector stearing the ship away from the passed dock.
+     * This function is called when the spiker of the dock is the same as the spiker
+     * of the ship. The default implementation ignores the presence of the dock (as
+     * if there was no dock at all).
+     */
+    virtual vector3  accelerate_from_dock(
+            vector3 const&  ship_position,              //!< Coordinates in meters.
+            vector3 const&  ship_velocity,              //!< In meters per second.
+            vector3 const&  dock_position,              //!< Coordinates in meters.
+            float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
+            ) const
+    { return vector3_zero(); }
 
     /**
      * Returns an acceleration vector stearing the ship from another ship. In other

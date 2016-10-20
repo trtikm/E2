@@ -247,17 +247,12 @@ void  network::update_movement_of_ship(natural_8_bit const  layer_index, natural
     natural_64_bit  spiker_sector_index;
     {
         network_layer_props const&  ship_layer_props = properties()->layer_props().at(layer_index);
-        natural_32_bit  x, y, c;
-        ship_layer_props.spiker_sector_coordinates(ship.position(),x,y,c);
-        spiker_sector_index = ship_layer_props.spiker_sector_index(x,y,c);
+        spiker_sector_index = ship_layer_props.spiker_index_from_ship_index(ship_index_in_layer);
     }
     vector3 const&  movement_area_center = m_movement_area_centers.at(layer_index).at(spiker_sector_index);
 
     natural_8_bit const  space_layer_index = properties()->find_layer_index(movement_area_center(2));
     network_layer_props const&  space_layer_props = properties()->layer_props().at(space_layer_index);
-
-    natural_32_bit  sector_x, sector_y, sector_c;
-    space_layer_props.dock_sector_coordinates(ship.position(), sector_x, sector_y, sector_c);
 
     std::vector< std::vector<network_object_id> >&  ships_in_sectors = m_ships_in_sectors.at(space_layer_index);
 
@@ -271,8 +266,6 @@ void  network::update_movement_of_ship(natural_8_bit const  layer_index, natural
                 space_layer_props.size_of_ship_movement_area_along_y_axis_in_meters(),
                 space_layer_props.size_of_ship_movement_area_along_c_axis_in_meters()
                 );
-
-        vector3 const  sector_centre = space_layer_props.dock_sector_centre(sector_x,sector_y,sector_c);
 
         natural_32_bit  x_lo, y_lo, c_lo;
         natural_32_bit  x_hi, y_hi, c_hi;
@@ -289,12 +282,41 @@ void  network::update_movement_of_ship(natural_8_bit const  layer_index, natural
             for (natural_32_bit y = y_lo; y <= y_hi; ++y)
                 for (natural_32_bit c = c_lo; c <= c_hi; ++c)
                 {
-                    ship_acceleration += space_layer_props.ship_controller_ptr()->accelerate_into_dock(
-                            ship.position(),
-                            ship.velocity(),
-                            sector_centre,
-                            space_layer_props.distance_of_docks_in_meters()
-                            );
+                    vector3 const  sector_centre = space_layer_props.dock_sector_centre(x,y,c);
+
+                    bool  dock_belongs_to_the_same_spiker_as_the_ship;
+                    {
+                        if (layer_index == space_layer_index)
+                        {
+                            natural_64_bit  spiker_index;
+                            {
+                                natural_32_bit  spiker_x, spiker_y, spiker_c;
+                                space_layer_props.spiker_sector_coordinates_from_dock_sector_coordinates(
+                                            x,y,c,
+                                            spiker_x,spiker_y,spiker_c
+                                            );
+                                spiker_index = space_layer_props.spiker_sector_index(spiker_x,spiker_y,spiker_c);
+                            }
+                            dock_belongs_to_the_same_spiker_as_the_ship = spiker_index == spiker_sector_index;
+                        }
+                        else
+                            dock_belongs_to_the_same_spiker_as_the_ship = false;
+                    }
+
+                    if (dock_belongs_to_the_same_spiker_as_the_ship)
+                        ship_acceleration += space_layer_props.ship_controller_ptr()->accelerate_from_dock(
+                                ship.position(),
+                                ship.velocity(),
+                                sector_centre,
+                                space_layer_props.distance_of_docks_in_meters()
+                                );
+                    else
+                        ship_acceleration += space_layer_props.ship_controller_ptr()->accelerate_into_dock(
+                                ship.position(),
+                                ship.velocity(),
+                                sector_centre,
+                                space_layer_props.distance_of_docks_in_meters()
+                                );
 
                     natural_64_bit const  sector_index = space_layer_props.dock_sector_index(x,y,c);
                     for (network_object_id const  id : ships_in_sectors.at(sector_index))
@@ -325,8 +347,12 @@ void  network::update_movement_of_ship(natural_8_bit const  layer_index, natural
                 );
     vector3 const  new_position = ship.position() + dt * new_velocity;
 
-    natural_64_bit const  old_sector_index = space_layer_props.dock_sector_index(sector_x, sector_y, sector_c);
-
+    natural_64_bit  old_sector_index;
+    {
+        natural_32_bit  x, y, c;
+        space_layer_props.dock_sector_coordinates(ship.position(), x, y, c);
+        old_sector_index = space_layer_props.dock_sector_index(x,y,c);
+    }
     natural_64_bit  new_sector_index;
     {
         natural_32_bit  x, y, c;

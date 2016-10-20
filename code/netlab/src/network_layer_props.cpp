@@ -254,4 +254,15 @@ natural_64_bit  network_layer_props::ships_begin_index_of_spiker(natural_64_bit 
 }
 
 
+void  network_layer_props::spiker_sector_coordinates_from_dock_sector_coordinates(
+        natural_32_bit const&  dock_x, natural_32_bit const&  dock_y, natural_32_bit const&  dock_c,
+        natural_32_bit&  x, natural_32_bit&  y, natural_32_bit&  c
+        ) const
+{
+    x = dock_x / num_docks_along_x_axis_per_spiker();
+    y = dock_y / num_docks_along_y_axis_per_spiker();
+    c = dock_c / num_docks_along_c_axis_per_spiker();
+}
+
+
 }

@@ -40,8 +40,14 @@ void  reset(random_generator_for_natural_32_bit&  generator,
 
 using  bar_random_distribution = std::vector<float_32_bit>;
 
+inline natural_32_bit  get_num_bars(bar_random_distribution const&  bar_distribution)
+{ return static_cast<natural_32_bit>(bar_distribution.size()); }
+
 bar_random_distribution  make_bar_random_distribution_from_count_bars(
-        std::vector<natural_32_bit> const&  count_bars
+        std::vector<natural_64_bit> const&  count_bars
+        );
+bar_random_distribution  make_bar_random_distribution_from_size_bars(
+        std::vector<float_32_bit> const&  size_bars
         );
 bar_random_distribution  make_bar_random_distribution_from_probability_bars(
         std::vector<float_32_bit> const&  probability_bars
