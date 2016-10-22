@@ -97,7 +97,7 @@ bar_random_distribution  make_bar_random_distribution_from_probability_bars(
     }
     INVARIANT(!distribution.empty());
     INVARIANT(probability_bars.size() == distribution.size());
-    ASSUMPTION(distribution.back() > 0.999f && distribution.back() < 0.001f);
+    ASSUMPTION(distribution.back() > 0.999f && distribution.back() < 1.001f);
     distribution.back() = 1.0f;
     return distribution;
 }
@@ -115,7 +115,7 @@ natural_32_bit  get_random_bar_index(
                     );
     return static_cast<natural_32_bit>(
                 (it == bar_distribution.cend()) ? bar_distribution.size() - 1UL :
-                                                  std::distance(it,bar_distribution.cbegin())
+                                                  std::distance(bar_distribution.cbegin(),it)
                 );
 }
 

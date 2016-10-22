@@ -65,8 +65,8 @@ void compute_content_of_data_vectors(
     for (natural_32_bit i = 0U; i < sequence_size; ++i)
     {
         natural_32_bit const  number = random_generator();
-        ASSUMPTION(number >= min_number);
-        ASSUMPTION(number <= max_number);
+        TEST_SUCCESS(number >= min_number);
+        TEST_SUCCESS(number <= max_number);
 
         ++big_sequence.at(number - min_number);
         ++modulo_classes.at(i % num_classes).at(number - min_number);

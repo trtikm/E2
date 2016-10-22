@@ -36,6 +36,9 @@ add_subdirectory(./efloop_construction_and_simulation)
 add_subdirectory(./random)
     message("-- random")
 
+add_subdirectory(./random_bar_distribution)
+    message("-- random_bar_distribution")
+
 add_subdirectory(./tensor_math)
     message("-- tensor_math")
 
