@@ -248,14 +248,13 @@ def parse_cmd_line():
                     "sub-directory of the current directory and all generated files are stored into "
                     "that sub-directory. The name of the sub-directory is equal to a passed project name "
                     "(see the option '--target_name'). The project is automatically included into "
-                    "the build of E2."
-    )
+                    "the build of E2.")
     parser.add_argument("-T", "--target_name", type=str,
                         help="A project name of the tool. All generated project files will be "
                              "generated into a newly created sub-directory of the current one. The"
                              "name of the sub-directory is equal as the passed target name.")
     parser.add_argument("-V","--version", type=str, default="0.01",
-                        help="A string representing an initial version of the test. The version can be later "
+                        help="A string representing an initial version of the tool. The version can be later "
                              "updated in a function 'get_program_version()' in a generated file 'program_info.cpp'")
     parser.add_argument("-L","--link_libs", nargs='+', type=str, default=["utility"],
                         help="A space-separated list of names of E2 libraries the tool should be "

@@ -25,6 +25,7 @@ target_link_libraries(${THIS_TARGET_NAME}
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
     DEBUG_OUTPUT_NAME "${THIS_TARGET_NAME}_${CMAKE_SYSTEM_NAME}_Debug"
     RELEASE_OUTPUT_NAME "${THIS_TARGET_NAME}_${CMAKE_SYSTEM_NAME}_Release"
+    RELWITHDEBINFO_OUTPUT_NAME "${THIS_TARGET_NAME}_${CMAKE_SYSTEM_NAME}_RelWithDebInfo"
     )
 
 install(TARGETS ${THIS_TARGET_NAME} DESTINATION "tests")
@@ -45,7 +46,7 @@ _template_main_cpp = \
 
 LOG_INITIALISE(get_program_name() + "_LOG",true,true,warning)
 
-extern void run();
+extern void run(int const argc, const char* const argv[]);
 
 static void save_crash_report(std::string const& crash_message)
 {
@@ -65,7 +66,7 @@ int main(int argc, char* argv[])
             std::cout << get_program_version() << "\\n";
         else
         {
-            run();
+            run(argc,argv);
             TMPROF_PRINT_TO_FILE(get_program_name() + "_TMPROF.html",true);
         }
 
@@ -138,6 +139,8 @@ public:
     bool helpMode() const { return vm.count("help") > 0; }
     bool versionMode() const { return vm.count("version") > 0; }
 
+    // Add more option access/query functions here, if needed.
+
     std::ostream& operator<<(std::ostream& ostr) const;
 
 private:
@@ -172,6 +175,7 @@ program_options::program_options(int argc, char* argv[])
     desc.add_options()
         ("help,h","Produces this help message.")
         ("version,v", "Prints the version string.")
+        // Specify more options here, if needed.
         ;
 
     bpo::positional_options_description pos_desc;
@@ -226,7 +230,12 @@ void run()
 
     TEST_PROGRESS_SHOW();
 
-    // TODO: Implement your unit test here. Call the macro:
+    // TODO: Implement your unit test here.
+    //       Program options are already parsed. You
+    //       thus do not have to access argc or argv.
+    //       Simply call 'get_program_options()' to
+    //       access the options.
+    //       Further, call the macro:
     //              TEST_PROGRESS_UPDATE();
     //       each time you want to update the progress bar of your test.
 
@@ -245,23 +254,23 @@ def parse_cmd_line():
                     "provided to this script via command line arguments. The script creates a new "
                     "sub-directory of the current directory and all generated files are stored into "
                     "that sub-directory. The name of the sub-directory is equal to a passed project name "
-                    "(see the option '--target_name'). Once the files are generated you will have to do "
-                    "the following three things manually: 1. Add the created sub-directory to the build "
-                    "script <E2-install-dir>/src/tests/CMakeLists.txt, 2. Implement the unit test "
-                    "in the function run() appearing inside a generated file 'run.cpp', and 3. Write "
-                    "a textual description of the test into a function 'get_program_description()' inside "
-                    "a generated file 'program_info.cpp."
-    )
+                    "(see the option '--target_name'). The project is automatically included into "
+                    "the build of E2.")
     parser.add_argument("-T", "--target_name", type=str,
                         help="A project name of the test. All generated project files will be "
                              "generated into a newly created sub-directory of the current one. The"
                              "name of the sub-directory is equal as the passed target name.")
     parser.add_argument("-V","--version", type=str, default="0.01",
-                        help="An initial version of the test. The version can be later updated "
-                             "in a function 'get_program_version()' in a generated file 'program_info.cpp'")
+                        help="A string representing an initial version of the test. The version can be later "
+                             "updated in a function 'get_program_version()' in a generated file 'program_info.cpp'")
     parser.add_argument("-L","--link_libs", nargs='+', type=str, default=["utility"],
-                        help="A list of E2 libraries with which the test should be"
-                             "linked with. The library 'utility' is always included automatically.")
+                        help="A space-separated list of names of E2 libraries the test should be "
+                             "linked with. Use quotes if library's name contains spaces. The library 'utility' "
+                             "is always included automatically. Here is a list of poosible libraries: "
+                             "netlab, netexp, netview, qtgl.\nNOTE: 3rd libraries must be added to the "
+                             "CMakeLists.txt file of the tool manually. Only libraries Boost, Qt, and  "
+                             "OpenGL are added automatically with E2 libraries dependent on them. "
+                             "The Eigen 3rd library is header only.")
     args = parser.parse_args()
     return args
 
@@ -279,17 +288,31 @@ def scriptMain():
     if os.path.exists(dir_name):
         print("ERROR: The disk path '" + dir_name + "' already exists.")
         return
-    os.mkdir(dir_name)
-
-    out_file = open(dir_name + "/CMakeLists.txt","w")
+        
+    add_qt = False
+    add_gl = False
     libs_list = ""
     for libname in args.link_libs:
+        if not libname in ["utility", "netlab", "netexp", "netview", "qtgl"]:
+            print("ERROR: '" + libname + "' is not recognised as E2 library.")
+            return
+        if libname == "qtgl":
+            add_qt = True
+            add_gl = True
         libs_list += libname + "\n    "
     if "utility" not in args.link_libs:
         libs_list += "utility\n    "
+    if add_qt:
+        libs_list += "${QT5_LIST_OF_LIBRARIES_TO_LINK_WITH}" + "\n    "
+    if add_gl:
+        libs_list += "${OPENGL_LIST_OF_LIBRARIES_TO_LINK_WITH}" + "\n    "
     libs_list = libs_list.strip()
     out_text = _template_CMakeLists_txt.replace("<%TARGET_NAME%>",args.target_name)\
                                        .replace("<%LINK_LIBS_LIST%>",libs_list)
+
+    os.mkdir(dir_name)
+
+    out_file = open(dir_name + "/CMakeLists.txt","w")
     out_file.write(out_text)
     out_file.close()
 
@@ -321,6 +344,10 @@ def scriptMain():
     out_file.write(_template_run_cpp)
     out_file.close()
 
+    out_file = open("./CMakeLists.txt","a")
+    out_file.write("\nadd_subdirectory(./" + args.target_name + ")\n    message(\"-- " + args.target_name + "\")\n")
+    out_file.close()
+    
 
 if __name__ == "__main__":
     scriptMain()

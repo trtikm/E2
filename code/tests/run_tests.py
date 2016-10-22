@@ -23,18 +23,27 @@ def parse_cmd_line():
 
 def collectExecutavblesOfTests(tests_root_dir):
     tests = []
+    tests_spd_dbg = []
     tests_dbg = []
     for name in os.listdir(tests_root_dir):
         pathname = os.path.join(tests_root_dir,name)
         if os.path.isfile(pathname) and os.access(pathname,os.X_OK):
             if name.endswith("_Release") or name.endswith("_Release.exe"):
                 tests.append(name)
+            elif name.endswith("_RelWithDebInfo") or name.endswith("_RelWithDebInfo.exe"):
+                tests_spd_dbg.append(name)
             elif name.endswith("_Debug") or name.endswith("_Debug.exe"):
                 tests_dbg.append(name)
-    for name in tests_dbg:
-        releaseName = name[:-6]+"_Release"
-        if not (releaseName in tests):
+    for name in tests_spd_dbg:
+        xname = name.replace("RelWithDebInfo","Release")
+        if not (xname in tests):
             tests.append(name)
+    for name in tests_dbg:
+        xname = name.replace("Debug","Release")
+        if xname not in tests:
+            xname = name.replace("Debug","RelWithDebInfo")
+            if xname not in tests:
+                tests.append(name)
     return tests
 
 def removeExcludedTests(tests,excluded):
