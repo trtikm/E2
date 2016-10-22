@@ -1,4 +1,4 @@
-#include "./program_info.hpp"
+#include <netviewer/program_info.hpp>
 
 std::string  get_program_name()
 {

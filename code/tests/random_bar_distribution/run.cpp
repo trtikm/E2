@@ -145,10 +145,10 @@ void  test_case<T>::check_results(float_32_bit  acceptable_percentage_error_per_
                      m_results.at(i) <= m_expected_results.at(i) * (1.0f + acceptable_percentage_error_per_bar) );
     }
 
-if (max_bar_error > acceptable_percentage_error_per_bar)
-{
-    int iii = 0;
-}
+//if (max_bar_error > acceptable_percentage_error_per_bar)
+//{
+//    int iii = 0;
+//}
 
 }
 

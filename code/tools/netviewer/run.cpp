@@ -1,21 +1,21 @@
-#include "./program_info.hpp"
-#include "./program_options.hpp"
+#include <netviewer/program_window.hpp>
+#include <netviewer/program_info.hpp>
+#include <netviewer/program_options.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <utility/basic_numeric_types.hpp>
 #include <utility/tensor_math.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
+#include <QApplication>
 
 
-void run(int const argc, const char* const argv[])
+void run(int argc, char* argv[])
 {
     TMPROF_BLOCK();
 
-    // TODO: Implement tool's functionality here.
-    //       Program options are already parsed. You
-    //       thus do not have to access argc or argv.
-    //       Simply call 'get_program_options()' to
-    //       access the options.
-
+    QApplication app(argc, argv);
+    program_window  window(std::string("./") + get_program_name() + ".info");
+    window.show();
+    app.exec();
 }

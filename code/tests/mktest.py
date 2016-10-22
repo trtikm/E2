@@ -6,6 +6,8 @@ import re
 _template_CMakeLists_txt = \
 """set(THIS_TARGET_NAME <%TARGET_NAME%>)
 
+<%QT_AUTOMOC%>
+
 add_executable(${THIS_TARGET_NAME}
     program_info.hpp
     program_info.cpp
@@ -34,8 +36,8 @@ install(TARGETS ${THIS_TARGET_NAME} DESTINATION "tests")
 
 
 _template_main_cpp = \
-"""#include "./program_info.hpp"
-#include "./program_options.hpp"
+"""#include <<%TARGET_NAME%>/program_info.hpp>
+#include <<%TARGET_NAME%>/program_options.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <boost/filesystem.hpp>
@@ -46,7 +48,7 @@ _template_main_cpp = \
 
 LOG_INITIALISE(get_program_name() + "_LOG",true,true,warning)
 
-extern void run(int const argc, const char* const argv[]);
+extern void run(int argc, char* argv[]);
 
 static void save_crash_report(std::string const& crash_message)
 {
@@ -101,7 +103,7 @@ std::string  get_program_description();
 
 
 _template_program_info_cpp = \
-"""#include "./program_info.hpp"
+"""#include <<%TARGET_NAME%>/program_info.hpp>
 
 std::string  get_program_name()
 {
@@ -160,8 +162,8 @@ std::ostream& operator<<(std::ostream& ostr, program_options_ptr options);
 
 
 _template_program_options_cpp = \
-"""#include "./program_options.hpp"
-#include "./program_info.hpp"
+"""#include <<%TARGET_NAME%>/program_options.hpp>
+#include <<%TARGET_NAME%>/program_info.hpp>
 #include <utility/assumptions.hpp>
 #include <stdexcept>
 #include <iostream>
@@ -214,8 +216,8 @@ std::ostream& operator<<(std::ostream& ostr, program_options_ptr options)
 
 
 _template_run_cpp = \
-"""#include "./program_info.hpp"
-#include "./program_options.hpp"
+"""#include <<%TARGET_NAME%>/program_info.hpp>
+#include <<%TARGET_NAME%>/program_options.hpp>
 #include <utility/test.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
@@ -224,7 +226,7 @@ _template_run_cpp = \
 #include <utility/invariants.hpp>
 
 
-void run()
+void run(int argc, char* argv[])
 {
     TMPROF_BLOCK();
 
@@ -292,6 +294,7 @@ def scriptMain():
     add_qt = False
     add_gl = False
     libs_list = ""
+    automoc_text = ""
     for libname in args.link_libs:
         if not libname in ["utility", "netlab", "netexp", "netview", "qtgl"]:
             print("ERROR: '" + libname + "' is not recognised as E2 library.")
@@ -304,20 +307,23 @@ def scriptMain():
         libs_list += "utility\n    "
     if add_qt:
         libs_list += "${QT5_LIST_OF_LIBRARIES_TO_LINK_WITH}" + "\n    "
+        automoc_text = "set(CMAKE_AUTOMOC ON)\nset(CMAKE_CXX_FLAGS \"${CMAKE_CXX_FLAGS} ${QT5_CXX_FLAGS}\")"
     if add_gl:
         libs_list += "${OPENGL_LIST_OF_LIBRARIES_TO_LINK_WITH}" + "\n    "
     libs_list = libs_list.strip()
-    out_text = _template_CMakeLists_txt.replace("<%TARGET_NAME%>",args.target_name)\
-                                       .replace("<%LINK_LIBS_LIST%>",libs_list)
 
     os.mkdir(dir_name)
 
     out_file = open(dir_name + "/CMakeLists.txt","w")
+    out_text = _template_CMakeLists_txt.replace("<%TARGET_NAME%>",args.target_name)\
+                                       .replace("<%LINK_LIBS_LIST%>",libs_list)\
+                                       .replace("<%QT_AUTOMOC%>",automoc_text)
     out_file.write(out_text)
     out_file.close()
 
     out_file = open(dir_name + "/main.cpp","w")
-    out_file.write(_template_main_cpp)
+    out_text = _template_main_cpp.replace("<%TARGET_NAME%>",args.target_name)
+    out_file.write(out_text)
     out_file.close()
 
     out_file = open(dir_name + "/program_info.hpp","w")
@@ -337,11 +343,13 @@ def scriptMain():
     out_file.close()
 
     out_file = open(dir_name + "/program_options.cpp","w")
-    out_file.write(_template_program_options_cpp)
+    out_text = _template_program_options_cpp.replace("<%TARGET_NAME%>",args.target_name)
+    out_file.write(out_text)
     out_file.close()
 
     out_file = open(dir_name + "/run.cpp","w")
-    out_file.write(_template_run_cpp)
+    out_text = _template_run_cpp.replace("<%TARGET_NAME%>",args.target_name)
+    out_file.write(out_text)
     out_file.close()
 
     out_file = open("./CMakeLists.txt","a")

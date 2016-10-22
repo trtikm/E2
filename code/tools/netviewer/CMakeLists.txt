@@ -1,5 +1,8 @@
 set(THIS_TARGET_NAME netviewer)
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${QT5_CXX_FLAGS}")
+
 add_executable(${THIS_TARGET_NAME}
     program_info.hpp
     program_info.cpp
@@ -9,6 +12,15 @@ add_executable(${THIS_TARGET_NAME}
 
     main.cpp
     run.cpp
+
+    simulator.hpp
+    simulator.cpp
+
+    program_window.hpp
+    program_window.cpp
+    
+    window_tabs/tab_camera.hpp
+    window_tabs/tab_camera.cpp
     )
 
 target_link_libraries(${THIS_TARGET_NAME}

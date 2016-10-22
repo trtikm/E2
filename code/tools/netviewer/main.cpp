@@ -1,5 +1,5 @@
-#include "./program_info.hpp"
-#include "./program_options.hpp"
+#include <netviewer/program_info.hpp>
+#include <netviewer/program_options.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <boost/filesystem.hpp>
@@ -10,7 +10,7 @@
 
 LOG_INITIALISE(get_program_name() + "_LOG",true,true,warning)
 
-extern void run(int const argc, const char* const argv[]);
+extern void run(int argc, char* argv[]);
 
 static void save_crash_report(std::string const& crash_message)
 {

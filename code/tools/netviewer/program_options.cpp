@@ -1,5 +1,5 @@
-#include "./program_options.hpp"
-#include "./program_info.hpp"
+#include <netviewer/program_options.hpp>
+#include <netviewer/program_info.hpp>
 #include <utility/assumptions.hpp>
 #include <stdexcept>
 #include <iostream>
