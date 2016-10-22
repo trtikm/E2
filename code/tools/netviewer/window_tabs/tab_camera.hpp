@@ -18,22 +18,22 @@ struct  widgets
 {
     widgets(program_window* const  wnd);
 
-    program_window* wnd() const;
+    program_window* wnd() const noexcept;
 
-    QLineEdit* camera_pos_x() const;
-    QLineEdit* camera_pos_y() const;
-    QLineEdit* camera_pos_z() const;
+    QLineEdit* camera_pos_x() const noexcept;
+    QLineEdit* camera_pos_y() const noexcept;
+    QLineEdit* camera_pos_z() const noexcept;
 
-    QLineEdit* camera_rot_w() const;
-    QLineEdit* camera_rot_x() const;
-    QLineEdit* camera_rot_y() const;
-    QLineEdit* camera_rot_z() const;
+    QLineEdit* camera_rot_w() const noexcept;
+    QLineEdit* camera_rot_x() const noexcept;
+    QLineEdit* camera_rot_y() const noexcept;
+    QLineEdit* camera_rot_z() const noexcept;
 
-    QLineEdit* camera_yaw() const;
-    QLineEdit* camera_pitch() const;
-    QLineEdit* camera_roll() const;
+    QLineEdit* camera_yaw() const noexcept;
+    QLineEdit* camera_pitch() const noexcept;
+    QLineEdit* camera_roll() const noexcept;
 
-    QCheckBox* camera_save_pos_rot() const;
+    QCheckBox* camera_save_pos_rot() const noexcept;
 
     void  on_camera_pos_changed();
     void  camera_position_listener();
@@ -65,7 +65,7 @@ private:
 };
 
 
-QWidget*  make_camera_tab_content(widgets const&  w, boost::property_tree::ptree&  ptree);
+QWidget*  make_camera_tab_content(widgets const&  w);
 
 
 

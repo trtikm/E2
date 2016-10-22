@@ -27,7 +27,7 @@ namespace tab_names { namespace {
 inline std::string  CAMERA() noexcept { return "Camera"; }
 inline std::string  DRAW() noexcept { return "Draw"; }
 //inline std::string  NENET() noexcept { return "Nenet"; }
-inline std::string  SELECTED() noexcept { return "Selected"; }
+//inline std::string  SELECTED() noexcept { return "Selected"; }
 
 
 }}
@@ -90,47 +90,8 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
         }(this)
         )
 
-    , m_clear_colour_component_red(
-        [](program_window* wnd) {
-            struct s : public QLineEdit {
-                s(program_window* wnd) : QLineEdit()
-                {
-                    setValidator(new QIntValidator(0, 255));
-                    setText(QString::number(wnd->ptree().get("draw.clear_colour.red", 64)));
-                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_clear_colour_changed()));
-                }
-            };
-            return new s(wnd);
-        }(this)
-        )
-    , m_clear_colour_component_green(
-        [](program_window* wnd) {
-            struct s : public QLineEdit {
-                s(program_window* wnd) : QLineEdit()
-                {
-                    setValidator(new QIntValidator(0, 255));
-                    setText(QString::number(wnd->ptree().get("draw.clear_colour.green", 64)));
-                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_clear_colour_changed()));
-                }
-            };
-            return new s(wnd);
-        }(this)
-        )
-    , m_clear_colour_component_blue(
-        [](program_window* wnd) {
-            struct s : public QLineEdit {
-                s(program_window* wnd) : QLineEdit()
-                {
-                    setValidator(new QIntValidator(0, 255));
-                    setText(QString::number(wnd->ptree().get("draw.clear_colour.blue", 64)));
-                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_clear_colour_changed()));
-                }
-            };
-            return new s(wnd);
-        }(this)
-        )
-
-    , m_camera_widgets(this)
+    , m_tab_draw_widgets(this)
+    , m_tab_camera_widgets(this)
 
 //    , m_nenet_param_time_step(
 //        [](program_window* wnd) {
@@ -305,65 +266,10 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     m_splitter->addWidget(m_gl_window_widget);
     m_splitter->addWidget(m_tabs);
 
-    m_tabs->addTab( window_tabs::tab_camera::make_camera_tab_content(m_camera_widgets,ptree()),
+    m_tabs->addTab( window_tabs::tab_camera::make_camera_tab_content(m_tab_camera_widgets),
                     QString(tab_names::CAMERA().c_str()) );
-
-    // Building Draw tab
-    {
-        QWidget* const  draw_tab = new QWidget;
-        {
-            QVBoxLayout* const draw_tab_layout = new QVBoxLayout;
-            {
-                QWidget* const clear_colour_group = new QGroupBox("Clear colour [rgb]");
-                {
-                    QVBoxLayout* const clear_colour_layout = new QVBoxLayout;
-                    {
-                        QHBoxLayout* const edit_boxes_layout = new QHBoxLayout;
-                        {
-                            edit_boxes_layout->addWidget(m_clear_colour_component_red);
-                            edit_boxes_layout->addWidget(m_clear_colour_component_green);
-                            edit_boxes_layout->addWidget(m_clear_colour_component_blue);
-                            on_clear_colour_changed();
-                        }
-                        clear_colour_layout->addLayout(edit_boxes_layout);
-
-                        QHBoxLayout* const buttons_layout = new QHBoxLayout;
-                        {
-                            buttons_layout->addWidget(
-                                [](program_window* wnd) {
-                                struct choose : public QPushButton {
-                                    choose(program_window* wnd) : QPushButton("Choose")
-                                    {
-                                        QObject::connect(this, SIGNAL(released()), wnd, SLOT(on_clear_colour_choose()));
-                                    }
-                                };
-                                return new choose(wnd);
-                            }(this)
-                                );
-                            buttons_layout->addWidget(
-                                [](program_window* wnd) {
-                                struct choose : public QPushButton {
-                                    choose(program_window* wnd) : QPushButton("Default")
-                                    {
-                                        QObject::connect(this, SIGNAL(released()), wnd, SLOT(on_clear_colour_reset()));
-                                    }
-                                };
-                                return new choose(wnd);
-                            }(this)
-                                );
-                        }
-                        clear_colour_layout->addLayout(buttons_layout);
-
-                    }
-                    clear_colour_group->setLayout(clear_colour_layout);
-                }
-                draw_tab_layout->addWidget(clear_colour_group);
-                draw_tab_layout->addStretch(1);
-            }
-            draw_tab->setLayout(draw_tab_layout);
-        }
-        m_tabs->addTab(draw_tab, QString(tab_names::DRAW().c_str()));
-    }
+    m_tabs->addTab( window_tabs::tab_draw::make_draw_tab_content(m_tab_draw_widgets),
+                    QString(tab_names::DRAW().c_str()) );
 
     // Building Nenet tab
 //    {
@@ -611,11 +517,8 @@ void  program_window::closeEvent(QCloseEvent* const  event)
     ptree().put("window.splitter_ratio", qtgl::get_splitter_sizes_ratio(*m_splitter));
     ptree().put("window.show_maximised", isMaximized());
 
-    ptree().put("draw.clear_colour.red", m_clear_colour_component_red->text().toInt());
-    ptree().put("draw.clear_colour.green", m_clear_colour_component_green->text().toInt());
-    ptree().put("draw.clear_colour.blue", m_clear_colour_component_blue->text().toInt());
-
-    m_camera_widgets.save();
+    m_tab_draw_widgets.save();
+    m_tab_camera_widgets.save();
 
     ptree().put("simulation.paused", m_glwindow.call_now(&simulator::paused));
     ptree().put("simulation.duration_of_second", m_glwindow.call_now(&simulator::desired_number_of_simulated_seconds_per_real_time_second));
@@ -651,40 +554,6 @@ void  program_window::on_tab_changed(int const  tab_index)
 //    {
 //        on_selection_changed();
 //    }
-}
-
-void program_window::on_clear_colour_changed()
-{
-    vector3 const  colour(
-        (float_32_bit)m_clear_colour_component_red->text().toInt() / 255.0f,
-        (float_32_bit)m_clear_colour_component_green->text().toInt() / 255.0f,
-        (float_32_bit)m_clear_colour_component_blue->text().toInt() / 255.0f
-        );
-    m_glwindow.call_later(&simulator::set_clear_color, colour);
-}
-
-void program_window::on_clear_colour_set(QColor const&  colour)
-{
-    m_clear_colour_component_red->setText(QString::number(colour.red()));
-    m_clear_colour_component_green->setText(QString::number(colour.green()));
-    m_clear_colour_component_blue->setText(QString::number(colour.blue()));
-    on_clear_colour_changed();
-}
-
-void program_window::on_clear_colour_choose()
-{
-    QColor const  init_colour(m_clear_colour_component_red->text().toInt(),
-        m_clear_colour_component_green->text().toInt(),
-        m_clear_colour_component_blue->text().toInt());
-    QColor const  colour = QColorDialog::getColor(init_colour, this, "Choose clear colour");
-    if (!colour.isValid())
-        return;
-    on_clear_colour_set(colour);
-}
-
-void program_window::on_clear_colour_reset()
-{
-    on_clear_colour_set(QColor(64, 64, 64));
 }
 
 //void  program_window::on_nenet_param_simulation_speed_changed()

@@ -136,62 +136,62 @@ widgets::widgets(program_window* const  wnd)
 
 }
 
-program_window* widgets::wnd() const
+program_window* widgets::wnd() const noexcept
 {
     return m_wnd;
 }
 
-QLineEdit*widgets::camera_pos_x() const
+QLineEdit*widgets::camera_pos_x() const noexcept
 {
     return m_camera_pos_x;
 }
 
-QLineEdit* widgets::camera_pos_y() const
+QLineEdit* widgets::camera_pos_y() const noexcept
 {
     return m_camera_pos_y;
 }
 
-QLineEdit* widgets::camera_pos_z() const
+QLineEdit* widgets::camera_pos_z() const noexcept
 {
     return m_camera_pos_z;
 }
 
-QLineEdit* widgets::camera_rot_w() const
+QLineEdit* widgets::camera_rot_w() const noexcept
 {
     return m_camera_rot_w;
 }
 
-QLineEdit* widgets::camera_rot_x() const
+QLineEdit* widgets::camera_rot_x() const noexcept
 {
     return m_camera_rot_x;
 }
 
-QLineEdit* widgets::camera_rot_y() const
+QLineEdit* widgets::camera_rot_y() const noexcept
 {
     return m_camera_rot_y;
 }
 
-QLineEdit* widgets::camera_rot_z() const
+QLineEdit* widgets::camera_rot_z() const noexcept
 {
     return m_camera_rot_z;
 }
 
-QLineEdit* widgets::camera_yaw() const
+QLineEdit* widgets::camera_yaw() const noexcept
 {
     return m_camera_yaw;
 }
 
-QLineEdit* widgets::camera_pitch() const
+QLineEdit* widgets::camera_pitch() const noexcept
 {
     return m_camera_pitch;
 }
 
-QLineEdit* widgets::camera_roll() const
+QLineEdit* widgets::camera_roll() const noexcept
 {
     return m_camera_roll;
 }
 
-QCheckBox* widgets::camera_save_pos_rot() const
+QCheckBox* widgets::camera_save_pos_rot() const noexcept
 {
     return m_camera_save_pos_rot;
 }
@@ -274,7 +274,7 @@ void  widgets::save()
 }
 
 
-QWidget*  make_camera_tab_content(widgets const&  w, boost::property_tree::ptree&  ptree)
+QWidget*  make_camera_tab_content(widgets const&  w)
 {
     QWidget* const  camera_tab = new QWidget;
     {

@@ -21,6 +21,8 @@ add_executable(${THIS_TARGET_NAME}
     
     window_tabs/tab_camera.hpp
     window_tabs/tab_camera.cpp
+    window_tabs/tab_draw.hpp
+    window_tabs/tab_draw.cpp
     )
 
 target_link_libraries(${THIS_TARGET_NAME}

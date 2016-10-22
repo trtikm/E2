@@ -3,17 +3,15 @@
 
 #   include <netviewer/simulator.hpp>
 #   include <netviewer/window_tabs/tab_camera.hpp>
+#   include <netviewer/window_tabs/tab_draw.hpp>
 #   include <qtgl/window.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <QMainWindow>
-#   include <QLabel>
 #   include <QWidget>
 #   include <QSplitter>
 #   include <QTabWidget>
-#   include <QLineEdit>
-#   include <QTextEdit>
-#   include <QCheckBox>
+#   include <QLabel>
 #   include <memory>
 
 
@@ -30,18 +28,18 @@ public slots:
     void  on_tab_changed(int const  tab_index);
 
     /// Slots for DRAW tab
-    void  on_clear_colour_changed();
-    void  on_clear_colour_set(QColor const&  colour);
-    void  on_clear_colour_choose();
-    void  on_clear_colour_reset();
+    void  on_clear_colour_changed() { m_tab_draw_widgets.on_clear_colour_changed(); }
+    void  on_clear_colour_set(QColor const&  colour) { m_tab_draw_widgets.on_clear_colour_set(colour); }
+    void  on_clear_colour_choose() { m_tab_draw_widgets.on_clear_colour_choose(); }
+    void  on_clear_colour_reset() { m_tab_draw_widgets.on_clear_colour_reset(); }
 
     /// Slots for CAMERA tab
-    void  on_camera_pos_changed() { m_camera_widgets.on_camera_pos_changed(); }
-    void  camera_position_listener() { m_camera_widgets.camera_position_listener(); }
-    void  on_camera_rot_changed() { m_camera_widgets.on_camera_rot_changed(); }
-    void  on_camera_rot_tait_bryan_changed() { m_camera_widgets.on_camera_rot_tait_bryan_changed(); }
-    void  camera_rotation_listener() { m_camera_widgets.camera_rotation_listener(); }
-    void  update_camera_rot_widgets(quaternion const&  q) { m_camera_widgets.update_camera_rot_widgets(q); }
+    void  on_camera_pos_changed() { m_tab_camera_widgets.on_camera_pos_changed(); }
+    void  camera_position_listener() { m_tab_camera_widgets.camera_position_listener(); }
+    void  on_camera_rot_changed() { m_tab_camera_widgets.on_camera_rot_changed(); }
+    void  on_camera_rot_tait_bryan_changed() { m_tab_camera_widgets.on_camera_rot_tait_bryan_changed(); }
+    void  camera_rotation_listener() { m_tab_camera_widgets.camera_rotation_listener(); }
+    void  update_camera_rot_widgets(quaternion const&  q) { m_tab_camera_widgets.update_camera_rot_widgets(q); }
 
 //    void  on_nenet_param_simulation_speed_changed();
 //    void  on_nenet_param_time_step_changed();
@@ -79,11 +77,8 @@ private:
     QSplitter*  m_splitter;
     QTabWidget*  m_tabs;
 
-    QLineEdit*  m_clear_colour_component_red;
-    QLineEdit*  m_clear_colour_component_green;
-    QLineEdit*  m_clear_colour_component_blue;
-
-    window_tabs::tab_camera::widgets  m_camera_widgets;
+    window_tabs::tab_draw::widgets  m_tab_draw_widgets;
+    window_tabs::tab_camera::widgets  m_tab_camera_widgets;
 
 //    QLineEdit*  m_nenet_param_time_step;
 //    QLineEdit*  m_nenet_param_simulation_speed;
