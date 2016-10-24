@@ -1,5 +1,6 @@
 #include <netviewer/window_tabs/tab_camera.hpp>
 #include <netviewer/program_window.hpp>
+#include <netviewer/simulator_notifications.hpp>
 #include <QLabel>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -289,7 +290,7 @@ QWidget*  make_camera_tab_content(widgets const&  w)
                     position_layout->addWidget(w.camera_pos_z());
                     w.wnd()->on_camera_pos_changed();
                     w.wnd()->glwindow().register_listener(
-                                notifications::camera_position_updated(),
+                                simulator_notifications::camera_position_updated(),
                                 { &program_window::camera_position_listener,w.wnd() }
                                 );
                 }
@@ -324,7 +325,7 @@ QWidget*  make_camera_tab_content(widgets const&  w)
 
                 w.wnd()->on_camera_rot_changed();
                 w.wnd()->glwindow().register_listener(
-                            notifications::camera_orientation_updated(),
+                            simulator_notifications::camera_orientation_updated(),
                             { &program_window::camera_rotation_listener,w.wnd() }
                             );
             }

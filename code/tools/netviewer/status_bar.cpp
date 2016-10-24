@@ -1,6 +1,7 @@
 #include <netviewer/status_bar.hpp>
 #include <netviewer/program_window.hpp>
 #include <netviewer/simulator.hpp>
+#include <netviewer/simulator_notifications.hpp>
 #include <qtgl/window.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <qtgl/widget_base.hpp>
@@ -75,7 +76,7 @@ void  make_status_bar_content(status_bar const&  w)
                         : qtgl::widget_base<s, qtgl::window<simulator> >(glwindow), QLabel()
                     {
                         setText(paused ? "PAUSED" : "RUNNING");
-                        register_listener(notifications::paused(),&s::on_paused_changed);
+                        register_listener(simulator_notifications::paused(),&s::on_paused_changed);
                     }
                     void  on_paused_changed()
                     {

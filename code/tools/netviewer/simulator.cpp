@@ -1,4 +1,5 @@
 #include <netviewer/simulator.hpp>
+#include <netviewer/simulator_notifications.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
 #include <qtgl/batch_generators.hpp>
@@ -21,29 +22,9 @@
 simulator::simulator(
         vector3 const&  initial_clear_colour,
         bool const  paused,
-//        nenet::params_ptr const  params,
         float_64_bit const  desired_number_of_simulated_seconds_per_real_time_second
         )
     : qtgl::real_time_simulator()
-//    , m_nenet(std::make_shared<::nenet>(
-//            vector3{-30.0f, -30.0f, 0.0f}, vector3{ 30.0f, 30.0f, 40.0f },
-//            3,3,2,
-//            10,
-//            params
-//            ))
-    , m_spent_real_time(0.0)
-    , m_paused(paused)
-    , m_do_single_step(false)
-    , m_desired_number_of_simulated_seconds_per_real_time_second(desired_number_of_simulated_seconds_per_real_time_second)
-
-//    , m_selected_cell(m_nenet->cells().cend())
-//    , m_selected_input_spot(m_nenet->input_spots().cend())
-//    , m_selected_output_terminal(nullptr)
-//    , m_selected_rot_angle(0.0f)
-
-//    , m_selected_cell_stats()
-//    , m_selected_input_spot_stats()
-//    , m_selected_output_terminal_stats()
 
     , m_camera(
             qtgl::camera_perspective::create(
@@ -142,9 +123,29 @@ simulator::simulator(
                     true
                     )
             }
+
+    , m_network()
+
+    , m_paused(paused)
+    , m_do_single_step(false)
+    , m_spent_real_time(0.0)
+    , m_desired_number_of_simulated_seconds_per_real_time_second(desired_number_of_simulated_seconds_per_real_time_second)
+
 //    , m_batch_cell{qtgl::batch::create(canonical_path("../data/shared/gfx/models/neuron/body.txt"))}
 //    , m_batch_input_spot{ qtgl::batch::create(canonical_path("../data/shared/gfx/models/input_spot/input_spot.txt")) }
 //    , m_batch_output_terminal{ qtgl::batch::create(canonical_path("../data/shared/gfx/models/output_terminal/output_terminal.txt")) }
+
+//    , m_selected_cell(m_nenet->cells().cend())
+//    , m_selected_input_spot(m_nenet->input_spots().cend())
+//    , m_selected_output_terminal(nullptr)
+//    , m_selected_rot_angle(0.0f)
+
+//    , m_selected_cell_stats()
+//    , m_selected_input_spot_stats()
+//    , m_selected_output_terminal_stats()
+
+
+
 //    , m_selected_cell_input_spot_lines()
 //    , m_selected_cell_output_terminal_lines()
 {
@@ -173,7 +174,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             if (paused())
             {
                 m_paused = !m_paused;
-                call_listeners(notifications::paused());
+                call_listeners(simulator_notifications::paused());
             }
             m_do_single_step = true;
         }
@@ -181,7 +182,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
         if (!m_do_single_step && keyboard_props().was_just_released(qtgl::KEY_PAUSE()))
         {
             m_paused = !m_paused;
-            call_listeners(notifications::paused());
+            call_listeners(simulator_notifications::paused());
         }
 
         if (!paused())
@@ -208,7 +209,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 //                {
 //                    INVARIANT(!paused());
 //                    m_paused = true;
-//                    call_listeners(notifications::paused());
+//                    call_listeners(simulator_notifications::paused());
 //                    m_do_single_step = false;
 //                    break;
 //                }
@@ -259,7 +260,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 //            if (m_selected_output_terminal != nullptr)
 //                m_selected_output_terminal_stats = std::unique_ptr<stats_of_output_terminal>(new stats_of_output_terminal(m_selected_output_terminal, nenet()->update_id()));
 
-//            call_listeners(notifications::selection_changed());
+//            call_listeners(simulator_notifications::selection_changed());
 //        }
 
 //        if (is_selected_something())
@@ -279,9 +280,9 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
         qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
                        seconds_from_previous_call, mouse_props(), keyboard_props());
     if (translated_rotated.first)
-        call_listeners(notifications::camera_position_updated());
+        call_listeners(simulator_notifications::camera_position_updated());
     if (translated_rotated.second)
-        call_listeners(notifications::camera_orientation_updated());
+        call_listeners(simulator_notifications::camera_orientation_updated());
 
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     qtgl::glapi().glViewport(0, 0, window_props().width_in_pixels(), window_props().height_in_pixels());

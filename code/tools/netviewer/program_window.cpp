@@ -380,7 +380,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 //            //layout->addStretch(1);
 //        }
 //        m_tabs->addTab(selected_tab, QString(tab_names::SELECTED().c_str()));
-//        m_glwindow.register_listener(notifications::selection_changed(), { &program_window::on_selection_changed,this });
+//        m_glwindow.register_listener(simulator_notifications::selection_changed(), { &program_window::on_selection_changed,this });
 //    }
 
     make_status_bar_content(m_status_bar);

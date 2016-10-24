@@ -15,6 +15,7 @@ add_executable(${THIS_TARGET_NAME}
 
     simulator.hpp
     simulator.cpp
+    simulator_notifications.hpp
 
     program_window.hpp
     program_window.cpp

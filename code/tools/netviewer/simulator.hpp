@@ -6,6 +6,7 @@
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>
 #   include <qtgl/draw.hpp>
+#   include <netlab/network.hpp>
 #   include <string>
 #   include <memory>
 
@@ -88,12 +89,28 @@ struct simulator : public qtgl::real_time_simulator
 //    std::string  get_selected_info_text() const;
 
 private:
-//    std::shared_ptr<::nenet>  m_nenet;
-    float_64_bit  m_spent_real_time;
+    /// Network independed data providing feedback loop between a human user and 3D scene in the tool
+    qtgl::camera_perspective_ptr  m_camera;
+    qtgl::free_fly_config  m_free_fly_config;
+    qtgl::batch_ptr  m_batch_grid;
+
+    /// THE NETWORK!
+    std::shared_ptr<netlab::network>  m_network;
+
+    /// Data related to updating of the network
     bool  m_paused;
     bool  m_do_single_step;
+    float_64_bit  m_spent_real_time;
     float_64_bit  m_desired_number_of_simulated_seconds_per_real_time_second;
 
+    /// Data for rendering of entities in the network
+//    qtgl::batch_ptr  m_batch_cell;
+//    qtgl::batch_ptr  m_batch_input_spot;
+//    qtgl::batch_ptr  m_batch_output_terminal;
+
+
+
+//    std::shared_ptr<::nenet>  m_nenet;
 //    cell::pos_map::const_iterator  m_selected_cell;
 //    input_spot::pos_map::const_iterator  m_selected_input_spot;
 //    output_terminal const*  m_selected_output_terminal;
@@ -103,28 +120,9 @@ private:
 //    std::unique_ptr<stats_of_input_spot>  m_selected_input_spot_stats;
 //    std::unique_ptr<stats_of_output_terminal>  m_selected_output_terminal_stats;
 
-    qtgl::camera_perspective_ptr  m_camera;
-    qtgl::free_fly_config  m_free_fly_config;
-
-    qtgl::batch_ptr  m_batch_grid;
-//    qtgl::batch_ptr  m_batch_cell;
-//    qtgl::batch_ptr  m_batch_input_spot;
-//    qtgl::batch_ptr  m_batch_output_terminal;
-
 //    qtgl::batch_ptr  m_selected_cell_input_spot_lines;
 //    qtgl::batch_ptr  m_selected_cell_output_terminal_lines;
 };
-
-namespace notifications {
-
-
-inline std::string  camera_position_updated() { return "CAMERA_POSITION_UPDATED"; }
-inline std::string  camera_orientation_updated() { return "CAMERA_ORIENTATION_UPDATED"; }
-inline std::string  paused() { return "PAUSED"; }
-//inline std::string  selection_changed() { return "SELECTION_CHANGED"; }
-
-
-}
 
 
 #endif
