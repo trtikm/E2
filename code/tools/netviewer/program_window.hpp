@@ -4,6 +4,7 @@
 #   include <netviewer/simulator.hpp>
 #   include <netviewer/window_tabs/tab_camera.hpp>
 #   include <netviewer/window_tabs/tab_draw.hpp>
+#   include <netviewer/status_bar.hpp>
 #   include <qtgl/window.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <boost/filesystem/path.hpp>
@@ -11,7 +12,10 @@
 #   include <QWidget>
 #   include <QSplitter>
 #   include <QTabWidget>
-#   include <QLabel>
+#   include <QColor>
+#   include <QEvent>
+#   include <QTimerEvent>
+#   include <QCloseEvent>
 #   include <memory>
 
 
@@ -80,6 +84,8 @@ private:
     window_tabs::tab_draw::widgets  m_tab_draw_widgets;
     window_tabs::tab_camera::widgets  m_tab_camera_widgets;
 
+    status_bar  m_status_bar;
+
 //    QLineEdit*  m_nenet_param_time_step;
 //    QLineEdit*  m_nenet_param_simulation_speed;
 //    QLineEdit*  m_nenet_param_mini_spiking_potential_magnitude;
@@ -95,11 +101,6 @@ private:
 //    QLineEdit*  m_nenet_param_output_terminal_velocity_min_magnitude;
 
 //    QTextEdit*  m_selected_props;
-
-    QLabel*  m_spent_real_time;
-    QLabel*  m_spent_simulation_time;
-    QLabel*  m_spent_times_ratio;
-    QLabel*  m_num_passed_simulation_steps;
 };
 
 

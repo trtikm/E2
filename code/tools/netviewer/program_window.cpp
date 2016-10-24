@@ -8,17 +8,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/property_tree/info_parser.hpp>
 #include <QString>
-#include <QIntValidator>
-#include <QDoubleValidator>
 #include <QIcon>
-#include <QStatusBar>
-#include <QLabel>
-#include <QColorDialog>
-#include <QVBoxLayout>
-#include <QHBoxLayout>
-#include <QGroupBox>
-#include <QPushButton>
-#include <iomanip>
 
 
 namespace tab_names { namespace {
@@ -92,6 +82,8 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 
     , m_tab_draw_widgets(this)
     , m_tab_camera_widgets(this)
+
+    , m_status_bar(this)
 
 //    , m_nenet_param_time_step(
 //        [](program_window* wnd) {
@@ -251,11 +243,6 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 //        )
 
 //    , m_selected_props(new QTextEdit)
-
-    , m_spent_real_time(new QLabel("0.0s"))
-    , m_spent_simulation_time(new QLabel("0.0s"))
-    , m_spent_times_ratio(new QLabel("1.0"))
-    , m_num_passed_simulation_steps(new QLabel("#Steps: 0"))
 {
     this->setWindowTitle(get_program_name().c_str());
     this->setWindowIcon(QIcon("../data/shared/gfx/icons/E2_icon.png"));
@@ -396,48 +383,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 //        m_glwindow.register_listener(notifications::selection_changed(), { &program_window::on_selection_changed,this });
 //    }
 
-    statusBar()->addPermanentWidget(m_spent_real_time);
-    statusBar()->addPermanentWidget(m_spent_simulation_time);
-    statusBar()->addPermanentWidget(m_spent_times_ratio);
-    statusBar()->addPermanentWidget(m_num_passed_simulation_steps);
-    statusBar()->addPermanentWidget(
-            [](qtgl::window<simulator>* const glwindow, bool const  paused) {
-                struct s : public qtgl::widget_base<s, qtgl::window<simulator> >, public QLabel {
-                    s(qtgl::window<simulator>* const  glwindow, bool const  paused)
-                        : qtgl::widget_base<s, qtgl::window<simulator> >(glwindow), QLabel()
-                    {
-                        setText(paused ? "PAUSED" : "RUNNING");
-                        register_listener(notifications::paused(),&s::on_paused_changed);
-                    }
-                    void  on_paused_changed()
-                    {
-                        setText(call_now(&simulator::paused) ? "PAUSED" : "RUNNING");
-                    }
-                };
-                return new s(glwindow, paused);
-            }(&m_glwindow, m_ptree->get("simulation.paused", false))
-            );
-    statusBar()->addPermanentWidget(
-            [](qtgl::window<simulator>* const glwindow) {
-                struct s : public qtgl::widget_base<s, qtgl::window<simulator> >, public QLabel {
-                    s(qtgl::window<simulator>* const  glwindow)
-                        : qtgl::widget_base<s, qtgl::window<simulator> >(glwindow), QLabel()
-                    {
-                        setText("FPS: 0");
-                        register_listener(qtgl::notifications::fps_updated(),
-                            &s::on_fps_changed);
-                    }
-                    void  on_fps_changed()
-                    {
-                        std::stringstream  sstr;
-                        sstr << "FPS: " << call_now(&qtgl::real_time_simulator::FPS);
-                        setText(sstr.str().c_str());
-                    }
-                };
-                return new s(glwindow);
-            }(&m_glwindow)
-            );
-    statusBar()->showMessage("Ready", 2000);
+    make_status_bar_content(m_status_bar);
 
     if (ptree().get("window.show_maximised", false))
         this->showMaximized();
@@ -445,8 +391,6 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
         this->show();
 
     qtgl::set_splitter_sizes(*m_splitter, ptree().get("window.splitter_ratio", 3.0f / 4.0f));
-
-    //m_gl_window_widget->setFocus();
 
     m_idleTimerId = startTimer(100); // In milliseconds.
 }
@@ -480,23 +424,7 @@ void program_window::timerEvent(QTimerEvent* const event)
 
     // Here put time-dependent updates...
 
-    {
-        float_64_bit const  real_time = m_glwindow.call_now(&simulator::spent_real_time);
-        std::string  msg = msgstream() << "RT: " << std::fixed << std::setprecision(3) << real_time << "s";
-        m_spent_real_time->setText(msg.c_str());
-
-//        float_64_bit const  simulation_time = m_glwindow.call_now(&simulator::spent_simulation_time);
-//        msg = msgstream() << "ST: " << std::fixed << std::setprecision(3) << simulation_time  << "s";
-//        m_spent_simulation_time->setText(msg.c_str());
-
-//        float_64_bit const  simulation_time_to_real_time = real_time > 1e-5f ? simulation_time / real_time : 1.0;
-//        msg = msgstream() << "ST/RT: " << std::fixed << std::setprecision(3) << simulation_time_to_real_time;
-//        m_spent_times_ratio->setText(msg.c_str());
-
-//        natural_64_bit const  num_steps = m_glwindow.call_now(&simulator::nenet_num_updates);
-//        msg = msgstream() << "#Steps: " << num_steps;
-//        m_num_passed_simulation_steps->setText(msg.c_str());
-    }
+    m_status_bar.update();
 
 //    if (qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex())) == tab_names::SELECTED())
 //        on_selection_changed();
