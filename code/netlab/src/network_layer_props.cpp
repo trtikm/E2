@@ -149,13 +149,16 @@ network_layer_props::network_layer_props(
     ASSUMPTION(m_low_corner_of_spikers(2) <= m_high_corner_of_spikers(2));
 
     ASSUMPTION(m_size_of_ship_movement_area_along_x_axis_in_meters > 0.0f);
-    ASSUMPTION(m_size_of_ship_movement_area_along_x_axis_in_meters < m_high_corner_of_docks(0) - m_low_corner_of_docks(0));
+    ASSUMPTION(m_size_of_ship_movement_area_along_x_axis_in_meters <=
+                    m_high_corner_of_docks(0) - m_low_corner_of_docks(0) + m_distance_of_docks_in_meters);
 
     ASSUMPTION(m_size_of_ship_movement_area_along_y_axis_in_meters > 0.0f);
-    ASSUMPTION(m_size_of_ship_movement_area_along_y_axis_in_meters < m_high_corner_of_docks(1) - m_low_corner_of_docks(1));
+    ASSUMPTION(m_size_of_ship_movement_area_along_y_axis_in_meters <=
+                    m_high_corner_of_docks(1) - m_low_corner_of_docks(1) + m_distance_of_docks_in_meters);
 
     ASSUMPTION(m_size_of_ship_movement_area_along_c_axis_in_meters > 0.0f);
-    ASSUMPTION(m_size_of_ship_movement_area_along_c_axis_in_meters < m_high_corner_of_docks(2) - m_low_corner_of_docks(2));
+    ASSUMPTION(m_size_of_ship_movement_area_along_c_axis_in_meters <=
+                    m_high_corner_of_docks(2) - m_low_corner_of_docks(2) + m_distance_of_docks_in_meters);
 
     ASSUMPTION(m_min_speed_of_ship_in_meters_per_second >= 0.0f);
     ASSUMPTION(m_max_speed_of_ship_in_meters_per_second >= m_min_speed_of_ship_in_meters_per_second);

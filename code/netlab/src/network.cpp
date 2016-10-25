@@ -69,8 +69,9 @@ network::network(std::shared_ptr<network_props> const  properties,
     m_docks.reserve(this->properties()->layer_props().size());
     m_ships.reserve(this->properties()->layer_props().size());
     m_spikers.reserve(this->properties()->layer_props().size());
-    m_movement_area_centers.reserve(this->properties()->layer_props().size());
-    m_ships_in_sectors.reserve(this->properties()->layer_props().size());
+
+    m_movement_area_centers.resize(this->properties()->layer_props().size());
+    m_ships_in_sectors.resize(this->properties()->layer_props().size());
 
     for (natural_8_bit  layer_index = 0U; layer_index < this->properties()->layer_props().size(); ++layer_index)
     {

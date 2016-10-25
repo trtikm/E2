@@ -393,6 +393,10 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     qtgl::set_splitter_sizes(*m_splitter, ptree().get("window.splitter_ratio", 3.0f / 4.0f));
 
     m_idleTimerId = startTimer(100); // In milliseconds.
+
+    std::string const  experiment_name = ptree().get("simulation.auto_load_experiment", std::string(""/*"calibration"*/));
+    if (!experiment_name.empty())
+        m_glwindow.call_later(&simulator::initiate_network_construction,experiment_name);
 }
 
 program_window::~program_window()
@@ -449,7 +453,7 @@ void  program_window::closeEvent(QCloseEvent* const  event)
     m_tab_camera_widgets.save();
 
     ptree().put("simulation.paused", m_glwindow.call_now(&simulator::paused));
-    ptree().put("simulation.duration_of_second", m_glwindow.call_now(&simulator::desired_number_of_simulated_seconds_per_real_time_second));
+    ptree().put("simulation.duration_of_second", m_glwindow.call_now(&simulator::desired_network_to_real_time_ratio));
 
 //    ptree().put("nenet.params.time_step", m_glwindow.call_now(&simulator::update_time_step_in_seconds));
 //    ptree().put("nenet.params.mini_spiking_potential_magnitude", m_glwindow.call_now(&simulator::mini_spiking_potential_magnitude));

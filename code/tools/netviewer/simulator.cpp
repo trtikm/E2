@@ -4,6 +4,7 @@
 #include <qtgl/draw.hpp>
 #include <qtgl/batch_generators.hpp>
 #include <qtgl/texture_generators.hpp>
+#include <netexp/experiment_factory.hpp>
 #include <utility/tensor_math.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/assumptions.hpp>
@@ -14,23 +15,49 @@
 #include <iomanip>
 #include <string>
 #include <algorithm>
+#include <atomic>
+#include <thread>
 #include <cmath>
 
 #include <iostream>
 
 
+namespace netexp { namespace calibration {
+char*  foo();
+}}
+
+
+namespace {
+
+
+std::shared_ptr<netlab::network>  g_constructed_network;
+std::atomic<bool>  g_is_network_being_constructed = false;
+std::thread  g_create_experiment_thread;
+
+void  create_experiment_worker(std::string const&  experiment_name)
+{
+    TMPROF_BLOCK();
+netexp::calibration::foo();
+    g_constructed_network = netexp::experiment_factory::instance().instance().create_network(experiment_name);
+    g_is_network_being_constructed = false;
+}
+
+
+}
+
+
 simulator::simulator(
         vector3 const&  initial_clear_colour,
         bool const  paused,
-        float_64_bit const  desired_number_of_simulated_seconds_per_real_time_second
+        float_64_bit const  desired_network_to_real_time_ratio
         )
     : qtgl::real_time_simulator()
 
     , m_camera(
             qtgl::camera_perspective::create(
                     qtgl::coordinate_system::create(
-                            vector3(6.56402016f, 6.53800011f, 3.27975011f),
-                            quaternion(0.298171997f, 0.228851005f, 0.564207971f, 0.735112011f)
+                            vector3(10.0f, 10.0f, 4.0f),
+                            quaternion(0.293152988f, 0.245984003f, 0.593858004f, 0.707732975f)
                             ),
                     0.25f,
                     500.0f,
@@ -104,7 +131,6 @@ simulator::simulator(
                     qtgl::free_fly_controler::mouse_button_pressed(qtgl::MIDDLE_MOUSE_BUTTON()),
                 },
             }
-
     , m_batch_grid{ 
             qtgl::create_grid(
                     50.0f,
@@ -129,7 +155,9 @@ simulator::simulator(
     , m_paused(paused)
     , m_do_single_step(false)
     , m_spent_real_time(0.0)
-    , m_desired_number_of_simulated_seconds_per_real_time_second(desired_number_of_simulated_seconds_per_real_time_second)
+    , m_spent_network_time(0.0)
+    , m_num_network_updates(0UL)
+    , m_desired_network_to_real_time_ratio(desired_network_to_real_time_ratio)
 
 //    , m_batch_cell{qtgl::batch::create(canonical_path("../data/shared/gfx/models/neuron/body.txt"))}
 //    , m_batch_input_spot{ qtgl::batch::create(canonical_path("../data/shared/gfx/models/input_spot/input_spot.txt")) }
@@ -156,6 +184,8 @@ simulator::simulator(
 simulator::~simulator()
 {
     TMPROF_BLOCK();
+    if (g_create_experiment_thread.joinable())
+        g_create_experiment_thread.join();
 }
 
 void simulator::next_round(float_64_bit const  seconds_from_previous_call,
@@ -163,126 +193,104 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 {
     TMPROF_BLOCK();
 
-    /////////////////////////////////////////////////////////////////////////////////////
-    // Next round computation
-    /////////////////////////////////////////////////////////////////////////////////////
-
     if (!is_this_pure_redraw_request)
     {
-        if (keyboard_props().was_just_released(qtgl::KEY_SPACE()))
+        qtgl::adjust(*m_camera, window_props());
+        auto const translated_rotated =
+            qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
+                           seconds_from_previous_call, mouse_props(), keyboard_props());
+        if (translated_rotated.first)
+            call_listeners(simulator_notifications::camera_position_updated());
+        if (translated_rotated.second)
+            call_listeners(simulator_notifications::camera_orientation_updated());
+
+        if (!is_network_being_constructed() && g_constructed_network.operator bool())
         {
-            if (paused())
+            m_network = g_constructed_network;
+            g_constructed_network.reset();
+
+            m_spent_real_time = 0.0;
+            m_spent_network_time = 0.0;
+            m_num_network_updates = 0UL;
+        }
+
+        if (network().operator bool())
+        {
+            if (keyboard_props().was_just_released(qtgl::KEY_SPACE()))
+            {
+                if (paused())
+                {
+                    m_paused = !m_paused;
+                    call_listeners(simulator_notifications::paused());
+                }
+                m_do_single_step = true;
+            }
+
+            if (!m_do_single_step && keyboard_props().was_just_released(qtgl::KEY_PAUSE()))
             {
                 m_paused = !m_paused;
                 call_listeners(simulator_notifications::paused());
             }
-            m_do_single_step = true;
-        }
-        
-        if (!m_do_single_step && keyboard_props().was_just_released(qtgl::KEY_PAUSE()))
-        {
-            m_paused = !m_paused;
-            call_listeners(simulator_notifications::paused());
-        }
 
-        if (!paused())
-        {
-            m_spent_real_time += seconds_from_previous_call;
+            if (!paused())
+                do_network_update(seconds_from_previous_call);
 
-//            natural_64_bit  num_iterations = (natural_64_bit)
-//                std::max(
-//                    0.0,
-//                    std::round((desired_number_of_simulated_seconds_per_real_time_second() * spent_real_time() - spent_simulation_time())
-//                                    / nenet()->get_params()->update_time_step_in_seconds())
-//                    );
-//            std::chrono::high_resolution_clock::time_point const  update_start_time = std::chrono::high_resolution_clock::now();
-//            for ( ; num_iterations != 0ULL; --num_iterations)
+//            if (mouse_props().was_just_released(qtgl::LEFT_MOUSE_BUTTON()))
 //            {
-//                nenet()->update(
-//                    true,true,true,
-//                    m_selected_input_spot_stats.operator bool() ? m_selected_input_spot_stats.get() : nullptr,
-//                    m_selected_output_terminal_stats.operator bool() ? m_selected_output_terminal_stats.get() : nullptr,
-//                    m_selected_cell_stats.operator bool() ? m_selected_cell_stats.get() : nullptr
-//                    );
+//                m_selected_cell = m_nenet->cells().cend();
+//                m_selected_input_spot = m_nenet->input_spots().cend();
+//                m_selected_output_terminal = nullptr;
 
-//                if (m_do_single_step)
+//                m_selected_cell_stats.reset();
+//                m_selected_input_spot_stats.reset();
+//                m_selected_output_terminal_stats.reset();
+
+//                m_selected_rot_angle = 0.0f;
+
+//                m_selected_cell_input_spot_lines.reset();
+//                m_selected_cell_output_terminal_lines.reset();
+
+//                vector3 const  ray = m_camera->cursor3d({ mouse_props().x() ,mouse_props().y() },window_props());
+//                scalar  param = 1e30f;
+//                m_selected_cell = nenet()->find_closest_cell(m_camera->coordinate_system()->origin(),ray,0.75f,&param);
 //                {
-//                    INVARIANT(!paused());
-//                    m_paused = true;
-//                    call_listeners(simulator_notifications::paused());
-//                    m_do_single_step = false;
-//                    break;
+//                    m_selected_input_spot = nenet()->find_closest_input_spot(m_camera->coordinate_system()->origin(), ray, 0.5f, &param);
+//                    if (m_selected_input_spot != nenet()->input_spots().cend())
+//                        m_selected_cell = nenet()->cells().cend();//m_selected_input_spot->second.cell();
+//                }
+//                {
+//                    auto const oit = nenet()->find_closest_output_terminal(m_camera->coordinate_system()->origin(), ray, 0.22f, &param);
+//                    if (oit != nenet()->output_terminals_set().cend())
+//                    {
+//                        ASSUMPTION(oit->second != nullptr);
+//                        m_selected_output_terminal = oit->second;
+//                        m_selected_cell = nenet()->cells().cend();//m_selected_outpu_terminal->second->cell();
+//                        m_selected_input_spot = nenet()->input_spots().cend();
+//                    }
 //                }
 
-//                if (std::chrono::duration<float_64_bit>(std::chrono::high_resolution_clock::now() - update_start_time).count() > 1.0 / 30.0)
-//                    break;
-//            }
-        }
-
-//        if (mouse_props().was_just_released(qtgl::LEFT_MOUSE_BUTTON()))
-//        {
-//            m_selected_cell = m_nenet->cells().cend();
-//            m_selected_input_spot = m_nenet->input_spots().cend();
-//            m_selected_output_terminal = nullptr;
-
-//            m_selected_cell_stats.reset();
-//            m_selected_input_spot_stats.reset();
-//            m_selected_output_terminal_stats.reset();
-
-//            m_selected_rot_angle = 0.0f;
-
-//            m_selected_cell_input_spot_lines.reset();
-//            m_selected_cell_output_terminal_lines.reset();
-
-//            vector3 const  ray = m_camera->cursor3d({ mouse_props().x() ,mouse_props().y() },window_props());
-//            scalar  param = 1e30f;
-//            m_selected_cell = nenet()->find_closest_cell(m_camera->coordinate_system()->origin(),ray,0.75f,&param);
-//            {
-//                m_selected_input_spot = nenet()->find_closest_input_spot(m_camera->coordinate_system()->origin(), ray, 0.5f, &param);
+//                if (m_selected_cell != nenet()->cells().cend())
+//                    m_selected_cell_stats = std::unique_ptr<stats_of_cell>(new stats_of_cell(m_selected_cell,nenet()->update_id()));
 //                if (m_selected_input_spot != nenet()->input_spots().cend())
-//                    m_selected_cell = nenet()->cells().cend();//m_selected_input_spot->second.cell();
+//                    m_selected_input_spot_stats = std::unique_ptr<stats_of_input_spot>(new stats_of_input_spot(m_selected_input_spot, nenet()->update_id()));
+//                if (m_selected_output_terminal != nullptr)
+//                    m_selected_output_terminal_stats = std::unique_ptr<stats_of_output_terminal>(new stats_of_output_terminal(m_selected_output_terminal, nenet()->update_id()));
+
+//                call_listeners(simulator_notifications::selection_changed());
 //            }
+
+//            if (is_selected_something())
 //            {
-//                auto const oit = nenet()->find_closest_output_terminal(m_camera->coordinate_system()->origin(), ray, 0.22f, &param);
-//                if (oit != nenet()->output_terminals_set().cend())
-//                {
-//                    ASSUMPTION(oit->second != nullptr);
-//                    m_selected_output_terminal = oit->second;
-//                    m_selected_cell = nenet()->cells().cend();//m_selected_outpu_terminal->second->cell();
-//                    m_selected_input_spot = nenet()->input_spots().cend();
-//                }
+//                m_selected_rot_angle += (2.0f * PI()) * seconds_from_previous_call;
+//                while (m_selected_rot_angle > 2.0f * PI())
+//                    m_selected_rot_angle -= 2.0f * PI();
 //            }
-
-//            if (m_selected_cell != nenet()->cells().cend())
-//                m_selected_cell_stats = std::unique_ptr<stats_of_cell>(new stats_of_cell(m_selected_cell,nenet()->update_id()));
-//            if (m_selected_input_spot != nenet()->input_spots().cend())
-//                m_selected_input_spot_stats = std::unique_ptr<stats_of_input_spot>(new stats_of_input_spot(m_selected_input_spot, nenet()->update_id()));
-//            if (m_selected_output_terminal != nullptr)
-//                m_selected_output_terminal_stats = std::unique_ptr<stats_of_output_terminal>(new stats_of_output_terminal(m_selected_output_terminal, nenet()->update_id()));
-
-//            call_listeners(simulator_notifications::selection_changed());
-//        }
-
-//        if (is_selected_something())
-//        {
-//            m_selected_rot_angle += (2.0f * PI()) * seconds_from_previous_call;
-//            while (m_selected_rot_angle > 2.0f * PI())
-//                m_selected_rot_angle -= 2.0f * PI();
-//        }
+        }
     }
 
     /////////////////////////////////////////////////////////////////////////////////////
     // Rendering
     /////////////////////////////////////////////////////////////////////////////////////
-
-    qtgl::adjust(*m_camera, window_props());
-    auto const translated_rotated =
-        qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
-                       seconds_from_previous_call, mouse_props(), keyboard_props());
-    if (translated_rotated.first)
-        call_listeners(simulator_notifications::camera_position_updated());
-    if (translated_rotated.second)
-        call_listeners(simulator_notifications::camera_orientation_updated());
 
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     qtgl::glapi().glViewport(0, 0, window_props().width_in_pixels(), window_props().height_in_pixels());
@@ -511,12 +519,82 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     qtgl::swap_buffers();
 }
 
-//void simulator::set_desired_number_of_simulated_seconds_per_real_time_second(float_64_bit const  value)
-//{
-//    ASSUMPTION(value > 1e-5f);
-//    m_desired_number_of_simulated_seconds_per_real_time_second = value;
-//    m_spent_real_time = spent_simulation_time() / desired_number_of_simulated_seconds_per_real_time_second();
-//}
+
+void  simulator::do_network_update(float_64_bit const  seconds_from_previous_call)
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(network().operator bool());
+
+    m_spent_real_time += seconds_from_previous_call;
+
+    natural_64_bit  num_iterations = (natural_64_bit)
+        std::max(
+            0.0,
+            std::round((desired_network_to_real_time_ratio() * spent_real_time() - spent_network_time())
+                            / network()->properties()->update_time_step_in_seconds())
+            );
+    std::chrono::high_resolution_clock::time_point const  update_start_time = std::chrono::high_resolution_clock::now();
+    for ( ; num_iterations != 0ULL; --num_iterations)
+    {
+        network()->update(
+            true,true,true,
+            nullptr,nullptr,nullptr
+//                        m_selected_input_spot_stats.operator bool() ? m_selected_input_spot_stats.get() : nullptr,
+//                        m_selected_output_terminal_stats.operator bool() ? m_selected_output_terminal_stats.get() : nullptr,
+//                        m_selected_cell_stats.operator bool() ? m_selected_cell_stats.get() : nullptr
+            );
+
+        if (m_do_single_step)
+        {
+            INVARIANT(!paused());
+            m_paused = true;
+            call_listeners(simulator_notifications::paused());
+            m_do_single_step = false;
+            break;
+        }
+
+        if (std::chrono::duration<float_64_bit>(std::chrono::high_resolution_clock::now() - update_start_time).count() > 1.0 / 30.0)
+            break;
+    }
+
+    m_num_network_updates = network()->update_id();
+    m_spent_network_time = network()->properties()->update_time_step_in_seconds() * m_num_network_updates;
+}
+
+
+void  simulator::initiate_network_construction(std::string const&  experiment_name)
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(g_is_network_being_constructed == false);
+
+    if (g_create_experiment_thread.joinable())
+        g_create_experiment_thread.join();
+
+    m_network.reset();
+    g_constructed_network.reset();
+
+    g_is_network_being_constructed = true;
+    g_create_experiment_thread = std::thread(&create_experiment_worker,experiment_name);
+}
+
+bool  simulator::is_network_being_constructed() const
+{
+    return g_is_network_being_constructed;
+}
+
+
+void simulator::set_desired_network_to_real_time_ratio(float_64_bit const  value)
+{
+    ASSUMPTION(value > 1e-5f);
+    m_desired_network_to_real_time_ratio = value;
+    m_spent_real_time = spent_network_time() / desired_network_to_real_time_ratio();
+}
+
+
+
+
 
 //vector3 const&  simulator::get_position_of_selected() const
 //{

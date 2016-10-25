@@ -232,7 +232,7 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
 }
 
 
-void  compute_random_ship_position_and_velocity_in_movement_area(
+void  compute_random_ship_position_in_movement_area(
         vector3 const&  area_center,
         float_32_bit const  half_size_of_ship_movement_area_along_x_axis_in_meters,
         float_32_bit const  half_size_of_ship_movement_area_along_y_axis_in_meters,

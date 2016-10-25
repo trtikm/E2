@@ -63,19 +63,18 @@ private:
                 ship_stats_creator, \
                 experiment_description \
                 ) \
-                namespace { \
-                    volatile bool  netexp_dummy_var = \
-                        netexp::experiment_factory::instance().register_experiment( \
-                                experiment_name, \
-                                network_creator, \
-                                spiker_stats_creator, \
-                                dock_stats_creator, \
-                                ship_stats_creator, \
-                                experiment_description \
-                                ); \
-                }
+                volatile bool  _____E2_netexp_auxiliary_variable_netexp_dummy_var______ = \
+                    netexp::experiment_factory::instance().register_experiment( \
+                            experiment_name, \
+                            network_creator, \
+                            spiker_stats_creator, \
+                            dock_stats_creator, \
+                            ship_stats_creator, \
+                            experiment_description \
+                            );
 
 
 }
+
 
 #endif

@@ -1,7 +1,6 @@
 #ifndef E2_TOOL_NETVIEWER_SIMULATOR_HPP_INCLUDED
 #   define E2_TOOL_NETVIEWER_SIMULATOR_HPP_INCLUDED
 
-//#   include "./nenet.hpp"
 #   include <qtgl/real_time_simulator.hpp>
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>
@@ -16,8 +15,7 @@ struct simulator : public qtgl::real_time_simulator
     simulator(
             vector3 const&  initial_clear_colour,
             bool const  paused,
-//            nenet::params_ptr const  params,
-            float_64_bit const  desired_number_of_simulated_seconds_per_real_time_second
+            float_64_bit const  desired_network_to_real_time_ratio
             );
     ~simulator();
 
@@ -25,6 +23,29 @@ struct simulator : public qtgl::real_time_simulator
             float_64_bit const  seconds_from_previous_call,
             bool const  is_this_pure_redraw_request
             );
+
+    /// Network independed methods.
+    void  set_clear_color(vector3 const&  colour) { qtgl::glapi().glClearColor(colour(0), colour(1), colour(2), 1.0f); }
+    vector3 const&  get_camera_position() const { return m_camera->coordinate_system()->origin(); }
+    quaternion const&  get_camera_orientation() const { return m_camera->coordinate_system()->orientation(); }
+    void  set_camera_position(vector3 const&  position) { m_camera->coordinate_system()->set_origin(position); }
+    void  set_camera_orientation(quaternion const&  orientation) { m_camera->coordinate_system()->set_orientation(orientation); }
+
+    /// Network management methods.
+    std::shared_ptr<netlab::network>  network() const noexcept { return m_network; }
+    bool  has_network() const { return network().operator bool(); }
+    void  initiate_network_construction(std::string const&  experiment_name);
+    bool  is_network_being_constructed() const;
+
+    /// Network simulation dependent methods.
+    bool  paused() const noexcept { return m_paused; }
+    float_64_bit  spent_real_time() const noexcept { return m_spent_real_time; }
+    float_64_bit  spent_network_time() const { return m_spent_network_time; }
+    natural_64_bit  num_network_updates() const noexcept { return m_num_network_updates; }
+    float_64_bit  desired_network_to_real_time_ratio() const { return m_desired_network_to_real_time_ratio; }
+    void set_desired_network_to_real_time_ratio(float_64_bit const  value);
+
+
 
 //    bool  is_selected_cell() const { return m_selected_cell != nenet()->cells().cend(); }
 //    bool  is_selected_input_spot() const { return m_selected_input_spot != nenet()->input_spots().cend(); }
@@ -35,24 +56,6 @@ struct simulator : public qtgl::real_time_simulator
 //    cell const&  get_selected_cell() const;
 //    input_spot const&  get_selected_input_spot() const;
 //    output_terminal const&  get_selected_output_terminal() const;
-
-//    std::shared_ptr<nenet>  nenet() const noexcept { return m_nenet; }
-
-    void  set_clear_color(vector3 const&  colour) { qtgl::glapi().glClearColor(colour(0), colour(1), colour(2), 1.0f); }
-
-    vector3 const&  get_camera_position() const { return m_camera->coordinate_system()->origin(); }
-    quaternion const&  get_camera_orientation() const { return m_camera->coordinate_system()->orientation(); }
-
-    void  set_camera_position(vector3 const&  position) { m_camera->coordinate_system()->set_origin(position); }
-    void  set_camera_orientation(quaternion const&  orientation) { m_camera->coordinate_system()->set_orientation(orientation); }
-
-    float_64_bit  spent_real_time() const noexcept { return m_spent_real_time; }
-//    natural_64_bit  nenet_num_updates() const noexcept { return nenet()->num_passed_updates(); }
-//    float_64_bit  spent_simulation_time() const { return nenet_num_updates() * nenet()->get_params()->update_time_step_in_seconds(); }
-    float_64_bit  desired_number_of_simulated_seconds_per_real_time_second() const { return m_desired_number_of_simulated_seconds_per_real_time_second; }
-    void set_desired_number_of_simulated_seconds_per_real_time_second(float_64_bit const  value);
-
-    bool  paused() const noexcept { return m_paused; }
 
 //    scalar  update_time_step_in_seconds() const { return nenet()->get_params()->update_time_step_in_seconds(); }
 
@@ -89,6 +92,10 @@ struct simulator : public qtgl::real_time_simulator
 //    std::string  get_selected_info_text() const;
 
 private:
+
+    void  do_network_update(float_64_bit const  seconds_from_previous_call);
+
+
     /// Network independed data providing feedback loop between a human user and 3D scene in the tool
     qtgl::camera_perspective_ptr  m_camera;
     qtgl::free_fly_config  m_free_fly_config;
@@ -101,7 +108,9 @@ private:
     bool  m_paused;
     bool  m_do_single_step;
     float_64_bit  m_spent_real_time;
-    float_64_bit  m_desired_number_of_simulated_seconds_per_real_time_second;
+    float_64_bit  m_spent_network_time;
+    natural_64_bit  m_num_network_updates;
+    float_64_bit  m_desired_network_to_real_time_ratio;
 
     /// Data for rendering of entities in the network
 //    qtgl::batch_ptr  m_batch_cell;
