@@ -328,15 +328,19 @@ void  initialiser_of_ships_in_movement_areas::compute_ship_position_and_velocity
     (void)ship_index_in_the_area;
 
     compute_random_ship_position_in_movement_area(
-                center,
-                0.5f * layer_props.size_of_ship_movement_area_along_x_axis_in_meters(),
-                0.5f * layer_props.size_of_ship_movement_area_along_y_axis_in_meters(),
-                0.5f * layer_props.size_of_ship_movement_area_along_c_axis_in_meters(),
-                random_generator(),
-                ship_reference.get_position_nonconst_reference()
-                );
-
-    ship_reference.set_velocity({0.0f,0.0f,0.0f});
+            center,
+            0.5f * layer_props.size_of_ship_movement_area_along_x_axis_in_meters(),
+            0.5f * layer_props.size_of_ship_movement_area_along_y_axis_in_meters(),
+            0.5f * layer_props.size_of_ship_movement_area_along_c_axis_in_meters(),
+            random_generator(),
+            ship_reference.get_position_nonconst_reference()
+            );
+    compute_random_ship_velocity_in_movement_area(
+            layer_props.min_speed_of_ship_in_meters_per_second(),
+            layer_props.max_speed_of_ship_in_meters_per_second(),
+            random_generator(),
+            ship_reference.get_velocity_nonconst_reference()
+            );
 }
 
 

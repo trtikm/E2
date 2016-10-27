@@ -394,7 +394,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 
     m_idleTimerId = startTimer(100); // In milliseconds.
 
-    std::string const  experiment_name = ptree().get("simulation.auto_load_experiment", std::string(""/*"calibration"*/));
+    std::string const  experiment_name = ptree().get("simulation.auto_load_experiment", std::string("calibration"));
     if (!experiment_name.empty())
         m_glwindow.call_later(&simulator::initiate_network_construction,experiment_name);
 }

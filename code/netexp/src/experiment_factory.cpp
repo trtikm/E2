@@ -3,6 +3,15 @@
 namespace netexp {
 
 
+experiment_factory::experiment_factory()
+    : m_network_creators()
+    , m_spiker_stats_creators()
+    , m_dock_stats_creators()
+    , m_ship_stats_creators()
+    , m_descriptions()
+{
+}
+
 experiment_factory&  experiment_factory::instance()
 {
     static experiment_factory  ef;

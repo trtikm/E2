@@ -40,7 +40,8 @@ struct  experiment_factory
     std::shared_ptr<netlab::tracked_ship_stats>  create_tracked_ship_stats(std::string const&  experiment_unique_name) const;
 
 private:
-    experiment_factory() = default;
+    experiment_factory();
+
     experiment_factory(experiment_factory const&) = delete;
     experiment_factory& operator=(experiment_factory const&) = delete;
     experiment_factory(experiment_factory&&) = delete;

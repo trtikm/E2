@@ -106,18 +106,23 @@ network::network(std::shared_ptr<network_props> const  properties,
                                     area_layer_index,
                                     centers.at(spiker_index)
                                     );
+                        
+                        ASSUMPTION(area_layer_index < this->properties()->layer_props().size());
+
+                        network_layer_props const&  area_layer_props = this->properties()->layer_props().at(area_layer_index);
+
                         ASSUMPTION(
-                                [](natural_8_bit const  layer_index, vector3 const&  center,
-                                   std::vector<network_layer_props> const&  props) {
-                                    if (layer_index >= props.size())
-                                        return false;
-                                    vector3 const&  lo = props.at(layer_index).low_corner_of_ships();
-                                    vector3 const&  hi = props.at(layer_index).high_corner_of_ships();
-                                    return center(0) >= lo(0) && center(0) <= hi(0) &&
-                                           center(1) >= lo(1) && center(1) <= hi(1) &&
-                                           center(2) >= lo(2) && center(2) <= hi(2) ;
-                                    } (area_layer_index,centers.at(spiker_index),this->properties()->layer_props())
-                                );
+                            centers.at(spiker_index)(0) >= area_layer_props.low_corner_of_ships()(0) &&
+                            centers.at(spiker_index)(0) <= area_layer_props.high_corner_of_ships()(0)
+                            );
+                        ASSUMPTION(
+                            centers.at(spiker_index)(1) >= area_layer_props.low_corner_of_ships()(1) &&
+                            centers.at(spiker_index)(1) <= area_layer_props.high_corner_of_ships()(1)
+                            );
+                        ASSUMPTION(
+                            centers.at(spiker_index)(2) >= area_layer_props.low_corner_of_ships()(2) &&
+                            centers.at(spiker_index)(2) <= area_layer_props.high_corner_of_ships()(2)
+                            );
 
                         {
                             ships_initialiser.on_next_area(layer_index, spiker_index, *this->properties());
@@ -128,20 +133,20 @@ network::network(std::shared_ptr<network_props> const  properties,
                                 ships_initialiser.compute_ship_position_and_velocity_in_movement_area(
                                             centers.at(spiker_index),
                                             i,
-                                            layer_props,
+                                            area_layer_props,
                                             ships.at(ships_begin_index + i)
                                             );
                                 ASSUMPTION(
                                         [](vector3 const&  center, network_layer_props const&  props, ship const& ship_ref) {
                                             float_32_bit  speed = length(ship_ref.velocity());
-                                            if (center(0) - 0.5f * props.size_of_ship_movement_area_along_c_axis_in_meters()
+                                            if (center(0) - 0.5f * props.size_of_ship_movement_area_along_x_axis_in_meters()
                                                     > ship_ref.position()(0) ||
-                                                center(0) + 0.5f * props.size_of_ship_movement_area_along_c_axis_in_meters()
+                                                center(0) + 0.5f * props.size_of_ship_movement_area_along_x_axis_in_meters()
                                                     < ship_ref.position()(0) ||
 
-                                                center(1) - 0.5f * props.size_of_ship_movement_area_along_c_axis_in_meters()
+                                                center(1) - 0.5f * props.size_of_ship_movement_area_along_y_axis_in_meters()
                                                     > ship_ref.position()(1) ||
-                                                center(1) + 0.5f * props.size_of_ship_movement_area_along_c_axis_in_meters()
+                                                center(1) + 0.5f * props.size_of_ship_movement_area_along_y_axis_in_meters()
                                                     < ship_ref.position()(1) ||
 
                                                 center(2) - 0.5f * props.size_of_ship_movement_area_along_c_axis_in_meters()
@@ -154,7 +159,7 @@ network::network(std::shared_ptr<network_props> const  properties,
                                                 )
                                                 return false;
                                             return true;
-                                            }(centers.at(spiker_index),layer_props,ships.at(ships_begin_index + i))
+                                            }(centers.at(spiker_index), area_layer_props,ships.at(ships_begin_index + i))
                                         );
                             }
                         }
@@ -166,9 +171,28 @@ network::network(std::shared_ptr<network_props> const  properties,
         {
             std::vector<network_object_id>  empty_dock_sector;
             empty_dock_sector.reserve(3UL + layer_props.num_ships() / layer_props.num_docks());
-            m_ships_in_sectors.at(layer_index).resize(layer_props.num_docks(),empty_dock_sector);
+            m_ships_in_sectors.at(layer_index).resize(layer_props.num_docks(), empty_dock_sector);
         }
     }
+
+    for (natural_8_bit layer_index = 0U; layer_index < this->properties()->layer_props().size(); ++layer_index)
+        for (natural_64_bit ship_index = 0UL; ship_index < m_ships.at(layer_index)->size(); ++ship_index)
+        {
+            vector3 const& ship_pos = m_ships.at(layer_index)->at(ship_index).position();
+            natural_8_bit const  area_layer_index = this->properties()->find_layer_index(ship_pos(2));
+            ASSUMPTION(area_layer_index < this->properties()->layer_props().size());
+            network_layer_props const&  area_layer_props = this->properties()->layer_props().at(area_layer_index);
+            natural_64_bit  sector_index;
+            {
+                natural_32_bit  x, y, c;
+                area_layer_props.dock_sector_coordinates(ship_pos, x, y, c);
+                sector_index = area_layer_props.dock_sector_index(x, y, c);
+            }
+            ASSUMPTION(sector_index < m_ships_in_sectors.at(area_layer_index).size());
+            m_ships_in_sectors.at(area_layer_index).at(sector_index).push_back(
+                    { object_kind_ship(), layer_index, ship_index }
+                    );
+        }
 }
 
 

@@ -22,7 +22,7 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
         vector3&  area_center
         )
 {
-    ASSUMPTION(get_num_bars(distribution_of_spiker_layer) < props.layer_props().size());
+    ASSUMPTION(get_num_bars(distribution_of_spiker_layer) == props.layer_props().size());
     ASSUMPTION(get_num_bars(distribution_of_spiker_layer) == max_distance_x.size());
     ASSUMPTION(get_num_bars(distribution_of_spiker_layer) == max_distance_y.size());
     ASSUMPTION(get_num_bars(distribution_of_spiker_layer) == max_distance_c.size());
@@ -78,10 +78,10 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
         }
         {
             float_32_bit const  low_center_y =
-                    spiker_layer_props.low_corner_of_ships()(0)
+                    spiker_layer_props.low_corner_of_ships()(1)
                         + 0.5f * spiker_layer_props.size_of_ship_movement_area_along_y_axis_in_meters();
             float_32_bit const  high_center_y =
-                    spiker_layer_props.high_corner_of_ships()(0)
+                    spiker_layer_props.high_corner_of_ships()(1)
                         - 0.5f * spiker_layer_props.size_of_ship_movement_area_along_y_axis_in_meters();
 
             float_32_bit const  raw_low0_y = spiker_position(1) - max_distance_y.at(area_layer_index);
@@ -123,10 +123,10 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
         }
         {
             float_32_bit const  low_center_c =
-                    spiker_layer_props.low_corner_of_ships()(0)
+                    spiker_layer_props.low_corner_of_ships()(2)
                         + 0.5f * spiker_layer_props.size_of_ship_movement_area_along_c_axis_in_meters();
             float_32_bit const  high_center_c =
-                    spiker_layer_props.high_corner_of_ships()(0)
+                    spiker_layer_props.high_corner_of_ships()(2)
                         - 0.5f * spiker_layer_props.size_of_ship_movement_area_along_c_axis_in_meters();
 
             float_32_bit const  raw_low0_c = spiker_position(2) - max_distance_c.at(area_layer_index);
