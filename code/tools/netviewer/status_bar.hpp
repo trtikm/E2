@@ -20,6 +20,8 @@ struct  status_bar
     QLabel* spent_simulation_time() const noexcept;
     QLabel* spent_times_ratio() const noexcept;
     QLabel* num_passed_simulation_steps() const noexcept;
+    QLabel* mode() const noexcept;
+    QLabel* FPS() const noexcept;
 
     void  update();
 
@@ -30,6 +32,8 @@ private:
     QLabel*  m_spent_simulation_time;
     QLabel*  m_spent_times_ratio;
     QLabel*  m_num_passed_simulation_steps;
+    QLabel*  m_mode;
+    QLabel*  m_FPS;
 };
 
 
