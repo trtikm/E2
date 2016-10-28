@@ -94,6 +94,7 @@ struct simulator : public qtgl::real_time_simulator
 private:
 
     void  do_network_update(float_64_bit const  seconds_from_previous_call);
+    void  do_network_render(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
 
 
     /// Network independed data providing feedback loop between a human user and 3D scene in the tool
@@ -113,9 +114,9 @@ private:
     float_64_bit  m_desired_network_to_real_time_ratio;
 
     /// Data for rendering of entities in the network
-//    qtgl::batch_ptr  m_batch_cell;
-//    qtgl::batch_ptr  m_batch_input_spot;
-//    qtgl::batch_ptr  m_batch_output_terminal;
+    qtgl::batch_ptr  m_batch_cell;
+    qtgl::batch_ptr  m_batch_input_spot;
+    qtgl::batch_ptr  m_batch_output_terminal;
 
 
 

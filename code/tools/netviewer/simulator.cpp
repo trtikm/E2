@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <atomic>
 #include <thread>
+#include <algorithm>
 #include <cmath>
 
 #include <iostream>
@@ -40,6 +41,48 @@ void  create_experiment_worker(std::string const&  experiment_name)
 netexp::calibration::foo();
     g_constructed_network = netexp::experiment_factory::instance().instance().create_network(experiment_name);
     g_is_network_being_constructed = false;
+}
+
+
+}
+
+namespace {
+
+
+void  render_batch(
+    qtgl::batch const&  batch,
+    matrix44 const&  transform_matrix,
+    vector4 const&  diffuse_colour = { 1.0f, 1.0f, 1.0f, 1.0f }
+    )
+{
+    for (qtgl::vertex_shader_uniform_symbolic_name const uniform : batch.symbolic_names_of_used_uniforms())
+        switch (uniform)
+        {
+        case qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
+            break;
+        case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
+            qtgl::set_uniform_variable(batch.shaders_binding()->uniform_variable_accessor(), uniform, diffuse_colour);
+            break;
+        case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
+            qtgl::set_uniform_variable(batch.shaders_binding()->uniform_variable_accessor(), uniform, transform_matrix);
+            break;
+        }
+
+    qtgl::draw();
+}
+
+
+void  render_batch(
+    qtgl::batch const&  batch,
+    matrix44 const&  view_projection_matrix,
+    qtgl::coordinate_system const&  coord_system,
+    vector4 const&  diffuse_colour = { 1.0f, 1.0f, 1.0f, 1.0f }
+    )
+{
+    matrix44  world_transformation;
+    qtgl::transformation_matrix(coord_system, world_transformation);
+    matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
+    render_batch(batch,transform_matrix,diffuse_colour);
 }
 
 
@@ -159,9 +202,9 @@ simulator::simulator(
     , m_num_network_updates(0UL)
     , m_desired_network_to_real_time_ratio(desired_network_to_real_time_ratio)
 
-//    , m_batch_cell{qtgl::batch::create(canonical_path("../data/shared/gfx/models/neuron/body.txt"))}
-//    , m_batch_input_spot{ qtgl::batch::create(canonical_path("../data/shared/gfx/models/input_spot/input_spot.txt")) }
-//    , m_batch_output_terminal{ qtgl::batch::create(canonical_path("../data/shared/gfx/models/output_terminal/output_terminal.txt")) }
+    , m_batch_cell{qtgl::batch::create(canonical_path("../data/shared/gfx/models/neuron/body.txt"))}
+    , m_batch_input_spot{ qtgl::batch::create(canonical_path("../data/shared/gfx/models/input_spot/input_spot.txt")) }
+    , m_batch_output_terminal{ qtgl::batch::create(canonical_path("../data/shared/gfx/models/output_terminal/output_terminal.txt")) }
 
 //    , m_selected_cell(m_nenet->cells().cend())
 //    , m_selected_input_spot(m_nenet->input_spots().cend())
@@ -288,40 +331,20 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
         }
     }
 
-    /////////////////////////////////////////////////////////////////////////////////////
-    // Rendering
-    /////////////////////////////////////////////////////////////////////////////////////
-
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     qtgl::glapi().glViewport(0, 0, window_props().width_in_pixels(), window_props().height_in_pixels());
 
     matrix44  view_projection_matrix;
     qtgl::view_projection_matrix(*m_camera,view_projection_matrix);
 
-    qtgl::draw_state_ptr  draw_state = m_batch_grid->draw_state();
-    qtgl::make_current(*draw_state);
-
+    qtgl::make_current(*m_batch_grid->draw_state());
+    if (qtgl::make_current(*m_batch_grid, *m_batch_grid->draw_state()))
     {
-        if (qtgl::make_current(*m_batch_grid, *draw_state))
-        {
-            INVARIANT(m_batch_grid->shaders_binding().operator bool());
-            matrix44 const  transform_matrix = view_projection_matrix;
-            for (qtgl::vertex_shader_uniform_symbolic_name const uniform : m_batch_grid->symbolic_names_of_used_uniforms())
-                switch (uniform)
-                {
-                case qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
-                    break;
-                case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
-                    break;
-                case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
-                    qtgl::set_uniform_variable(m_batch_grid->shaders_binding()->uniform_variable_accessor(), uniform, transform_matrix);
-                    break;
-                }
-
-            qtgl::draw();
-        }
-        draw_state = m_batch_grid->draw_state();
+        INVARIANT(m_batch_grid->shaders_binding().operator bool());
+        render_batch(*m_batch_grid,view_projection_matrix);
     }
+
+    do_network_render(view_projection_matrix,m_batch_grid->draw_state());
 
 //    {
 //        if (qtgl::make_current(*m_batch_cell, *draw_state))
@@ -560,6 +583,32 @@ void  simulator::do_network_update(float_64_bit const  seconds_from_previous_cal
 
     m_num_network_updates = network()->update_id();
     m_spent_network_time = network()->properties()->update_time_step_in_seconds() * m_num_network_updates;
+}
+
+
+void  simulator::do_network_render(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
+{
+    //if (qtgl::make_current(*m_batch_cell, *draw_state))
+    //{
+    //    INVARIANT(m_batch_cell->shaders_binding().operator bool());
+    //    for (cell::pos_map::const_iterator it = nenet()->cells().cbegin(); it != nenet()->cells().cend(); ++it)
+    //        render_batch(
+    //            *m_batch_cell,
+    //            view_projection_matrix,
+    //            qtgl::coordinate_system(
+    //                it->first,
+    //                //(it == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle,vector3_unit_z()) :
+    //                                            quaternion_identity()
+    //                ),
+    //            vector4(
+    //                it->second.spiking_potential() > 0.0f ? 1.0f : 0.0f,
+    //                it->second.spiking_potential() < 0.0f ? 1.0f : 0.0f,
+    //                0.0f,
+    //                1.0f //std::min(std::abs(it->second.spiking_potential()),1.0f)
+    //                )
+    //            );
+    //    draw_state = m_batch_cell->draw_state();
+    //}
 }
 
 
