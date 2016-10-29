@@ -39,6 +39,7 @@ struct array_of_derived
 
     void  swap(array_of_derived<base_type>&  other);
 
+    bool  empty() const noexcept { return m_num_elements == 0UL; }
     natural_64_bit  size() const noexcept { return m_num_elements; }
     natural_64_bit  element_size() const noexcept { return m_num_bytes_per_element; }
 
@@ -56,10 +57,9 @@ private:
         return reinterpret_cast<base_type*>(get_raw_element_ptr(element_index));
     }
 
-    natural_8_bit*  get_raw_element_ptr(natural_64_bit const  element_index)
+    natural_8_bit*  get_raw_element_ptr(natural_64_bit const  element_index) noexcept
     {
-        ASSUMPTION(element_index < m_num_elements);
-        return m_data + (element_index * m_num_bytes_per_element);
+        return m_data == nullptr || element_index >= m_num_elements ? nullptr : m_data + (element_index * m_num_bytes_per_element);
     }
 
     natural_64_bit  m_num_bytes_per_element;

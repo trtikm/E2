@@ -52,7 +52,7 @@ namespace {
 void  render_batch(
     qtgl::batch const&  batch,
     matrix44 const&  transform_matrix,
-    vector4 const&  diffuse_colour = { 1.0f, 1.0f, 1.0f, 1.0f }
+    vector4 const&  diffuse_colour = { 0.0f, 0.0f, 0.0f, 0.0f }
     )
 {
     for (qtgl::vertex_shader_uniform_symbolic_name const uniform : batch.symbolic_names_of_used_uniforms())
@@ -76,7 +76,7 @@ void  render_batch(
     qtgl::batch const&  batch,
     matrix44 const&  view_projection_matrix,
     qtgl::coordinate_system const&  coord_system,
-    vector4 const&  diffuse_colour = { 1.0f, 1.0f, 1.0f, 1.0f }
+    vector4 const&  diffuse_colour = { 0.0f, 0.0f, 0.0f, 0.0f }
     )
 {
     matrix44  world_transformation;
@@ -202,7 +202,7 @@ simulator::simulator(
     , m_num_network_updates(0UL)
     , m_desired_network_to_real_time_ratio(desired_network_to_real_time_ratio)
 
-    , m_batch_cell{qtgl::batch::create(canonical_path("../data/shared/gfx/models/neuron/body.txt"))}
+    , m_batch_spiker{qtgl::batch::create(canonical_path("../data/shared/gfx/models/neuron/body.txt"))}
     , m_batch_input_spot{ qtgl::batch::create(canonical_path("../data/shared/gfx/models/input_spot/input_spot.txt")) }
     , m_batch_output_terminal{ qtgl::batch::create(canonical_path("../data/shared/gfx/models/output_terminal/output_terminal.txt")) }
 
@@ -344,12 +344,13 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
         render_batch(*m_batch_grid,view_projection_matrix);
     }
 
-    do_network_render(view_projection_matrix,m_batch_grid->draw_state());
+    if (network().operator bool())
+        do_network_render(view_projection_matrix,m_batch_grid->draw_state());
 
 //    {
-//        if (qtgl::make_current(*m_batch_cell, *draw_state))
+//        if (qtgl::make_current(*m_batch_spiker, *draw_state))
 //        {
-//            INVARIANT(m_batch_cell->shaders_binding().operator bool());
+//            INVARIANT(m_batch_spiker->shaders_binding().operator bool());
 
 //            for (cell::pos_map::const_iterator it = nenet()->cells().cbegin(); it != nenet()->cells().cend(); ++it)
 //            {
@@ -367,16 +368,16 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 //                        std::min(std::abs(it->second.spiking_potential()),1.0f)
 //                        );
 
-//                for (qtgl::vertex_shader_uniform_symbolic_name const uniform : m_batch_cell->symbolic_names_of_used_uniforms())
+//                for (qtgl::vertex_shader_uniform_symbolic_name const uniform : m_batch_spiker->symbolic_names_of_used_uniforms())
 //                    switch (uniform)
 //                    {
 //                    case qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
 //                        break;
 //                    case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
-//                        qtgl::set_uniform_variable(m_batch_cell->shaders_binding()->uniform_variable_accessor(), uniform, diffuse_colour);
+//                        qtgl::set_uniform_variable(m_batch_spiker->shaders_binding()->uniform_variable_accessor(), uniform, diffuse_colour);
 //                        break;
 //                    case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
-//                        qtgl::set_uniform_variable(m_batch_cell->shaders_binding()->uniform_variable_accessor(),uniform,transform_matrix);
+//                        qtgl::set_uniform_variable(m_batch_spiker->shaders_binding()->uniform_variable_accessor(),uniform,transform_matrix);
 //                        break;
 //                    }
 
@@ -400,7 +401,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 //                    }
 //                }
 //            }
-//            draw_state = m_batch_cell->draw_state();
+//            draw_state = m_batch_spiker->draw_state();
 //        }
 //    }
 
@@ -588,27 +589,41 @@ void  simulator::do_network_update(float_64_bit const  seconds_from_previous_cal
 
 void  simulator::do_network_render(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
 {
-    //if (qtgl::make_current(*m_batch_cell, *draw_state))
-    //{
-    //    INVARIANT(m_batch_cell->shaders_binding().operator bool());
-    //    for (cell::pos_map::const_iterator it = nenet()->cells().cbegin(); it != nenet()->cells().cend(); ++it)
-    //        render_batch(
-    //            *m_batch_cell,
-    //            view_projection_matrix,
-    //            qtgl::coordinate_system(
-    //                it->first,
-    //                //(it == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle,vector3_unit_z()) :
-    //                                            quaternion_identity()
-    //                ),
-    //            vector4(
-    //                it->second.spiking_potential() > 0.0f ? 1.0f : 0.0f,
-    //                it->second.spiking_potential() < 0.0f ? 1.0f : 0.0f,
-    //                0.0f,
-    //                1.0f //std::min(std::abs(it->second.spiking_potential()),1.0f)
-    //                )
-    //            );
-    //    draw_state = m_batch_cell->draw_state();
-    //}
+    if (qtgl::make_current(*m_batch_spiker, *draw_state))
+    {
+        INVARIANT(m_batch_spiker->shaders_binding().operator bool());
+        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+        {
+            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_spikers(); ++object_index)
+            {
+                vector3  spiker_position;
+                {
+                    netlab::sector_coordinate_type  x,y,c;
+                    layer_props.spiker_sector_coordinates(object_index, x,y,c);
+                    spiker_position = layer_props.spiker_sector_centre(x,y,c);
+                }
+                render_batch(
+                    *m_batch_spiker,
+                    view_projection_matrix,
+                    qtgl::coordinate_system(
+                        spiker_position,
+                        //(it == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle,vector3_unit_z()) :
+                                                    quaternion_identity()
+                        )
+//                        ,
+//                    vector4(
+//                        it->second.spiking_potential() > 0.0f ? 1.0f : 0.0f,
+//                        it->second.spiking_potential() < 0.0f ? 1.0f : 0.0f,
+//                        0.0f,
+//                        1.0f //std::min(std::abs(it->second.spiking_potential()),1.0f)
+//                        )
+                    );
+            }
+
+        }
+        draw_state = m_batch_spiker->draw_state();
+    }
 }
 
 

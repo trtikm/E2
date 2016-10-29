@@ -114,7 +114,7 @@ private:
     float_64_bit  m_desired_network_to_real_time_ratio;
 
     /// Data for rendering of entities in the network
-    qtgl::batch_ptr  m_batch_cell;
+    qtgl::batch_ptr  m_batch_spiker;
     qtgl::batch_ptr  m_batch_input_spot;
     qtgl::batch_ptr  m_batch_output_terminal;
 

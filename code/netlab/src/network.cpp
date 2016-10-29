@@ -78,8 +78,13 @@ network::network(std::shared_ptr<network_props> const  network_properties,
         network_layer_props const&  layer_props = properties()->layer_props().at(layer_index);
 
         m_spikers.push_back( objects_factory.create_array_of_spikers(layer_index,layer_props.num_spikers()) );
+        ASSUMPTION(m_spikers.back()->size() == layer_props.num_spikers());
+
         m_docks.push_back( objects_factory.create_array_of_docks(layer_index,layer_props.num_docks()) );
+        ASSUMPTION(m_docks.back()->empty() || m_docks.back()->size() == layer_props.num_docks());
+
         m_ships.push_back( objects_factory.create_array_of_ships(layer_index,layer_props.num_ships()) );
+        ASSUMPTION(m_ships.back()->size() == layer_props.num_ships());
 
         {
             area_centers_initialiser.on_next_layer(layer_index, *properties());
@@ -191,6 +196,41 @@ network::network(std::shared_ptr<network_props> const  network_properties,
             ASSUMPTION(sector_index < m_ships_in_sectors.at(area_layer_index).size());
             m_ships_in_sectors.at(area_layer_index).at(sector_index).push_back({ layer_index, ship_index });
         }
+}
+
+
+spiker const&  network::get_spiker(layer_index_type const  layer_index, object_index_type const  object_index) const
+{
+    ASSUMPTION(layer_index < properties()->layer_props().size());
+    ASSUMPTION(object_index < m_spikers.at(layer_index)->size());
+    return m_spikers.at(layer_index)->at(object_index);
+}
+
+
+dock const&  network::get_dock(layer_index_type const  layer_index, object_index_type const  object_index) const
+{
+    ASSUMPTION(layer_index < properties()->layer_props().size());
+    ASSUMPTION(object_index < m_docks.at(layer_index)->size());
+    return m_docks.at(layer_index)->at(object_index);
+}
+
+
+ship const&  network::get_ship(layer_index_type const  layer_index, object_index_type const  object_index) const
+{
+    ASSUMPTION(layer_index < properties()->layer_props().size());
+    ASSUMPTION(object_index < m_ships.at(layer_index)->size());
+    return m_ships.at(layer_index)->at(object_index);
+}
+
+
+std::vector<compressed_layer_and_object_indices> const&  network::get_indices_of_ships_in_dock_sector(
+        layer_index_type const  layer_index,
+        object_index_type const  dock_sector_index
+        ) const
+{
+    ASSUMPTION(layer_index < properties()->layer_props().size());
+    ASSUMPTION(dock_sector_index < m_ships_in_sectors.at(layer_index).size());
+    return m_ships_in_sectors.at(layer_index).at(dock_sector_index);
 }
 
 
