@@ -50,12 +50,12 @@ vector3  update_magnitude_of_velocity(
 namespace netlab {
 
 
-network::network(std::shared_ptr<network_props> const  properties,
+network::network(std::shared_ptr<network_props> const  network_properties,
                  network_objects_factory const&  objects_factory,
                  initialiser_of_movement_area_centers&  area_centers_initialiser,
                  initialiser_of_ships_in_movement_areas&  ships_initialiser
                  )
-    : m_properties(properties)
+    : m_properties(network_properties)
     , m_spikers()
     , m_docks()
     , m_ships()
@@ -65,51 +65,51 @@ network::network(std::shared_ptr<network_props> const  properties,
 {
     ASSUMPTION(this->properties().operator bool());
 
-    m_spikers.reserve(this->properties()->layer_props().size());
-    m_docks.reserve(this->properties()->layer_props().size());
-    m_ships.reserve(this->properties()->layer_props().size());
-    m_spikers.reserve(this->properties()->layer_props().size());
+    m_spikers.reserve(properties()->layer_props().size());
+    m_docks.reserve(properties()->layer_props().size());
+    m_ships.reserve(properties()->layer_props().size());
+    m_spikers.reserve(properties()->layer_props().size());
 
-    m_movement_area_centers.resize(this->properties()->layer_props().size());
-    m_ships_in_sectors.resize(this->properties()->layer_props().size());
+    m_movement_area_centers.resize(properties()->layer_props().size());
+    m_ships_in_sectors.resize(properties()->layer_props().size());
 
-    for (natural_8_bit  layer_index = 0U; layer_index < this->properties()->layer_props().size(); ++layer_index)
+    for (layer_index_type  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
     {
-        network_layer_props const&  layer_props = this->properties()->layer_props().at(layer_index);
+        network_layer_props const&  layer_props = properties()->layer_props().at(layer_index);
 
         m_spikers.push_back( objects_factory.create_array_of_spikers(layer_index,layer_props.num_spikers()) );
         m_docks.push_back( objects_factory.create_array_of_docks(layer_index,layer_props.num_docks()) );
         m_ships.push_back( objects_factory.create_array_of_ships(layer_index,layer_props.num_ships()) );
 
         {
-            area_centers_initialiser.on_next_layer(layer_index, *this->properties());
-            ships_initialiser.on_next_layer(layer_index, *this->properties());
+            area_centers_initialiser.on_next_layer(layer_index, *properties());
+            ships_initialiser.on_next_layer(layer_index, *properties());
 
             std::vector<vector3>&  centers = m_movement_area_centers.at(layer_index);
             centers.resize(layer_props.num_spikers());
 
             array_of_derived<ship>&  ships = *m_ships.at(layer_index);
 
-            natural_64_bit  spiker_index = 0UL;
-            for (natural_32_bit  c = 0U; c < layer_props.num_spikers_along_c_axis(); ++c)
-                for (natural_32_bit  y = 0U; y < layer_props.num_spikers_along_y_axis(); ++y)
-                    for (natural_32_bit  x = 0U; x < layer_props.num_spikers_along_x_axis(); ++x)
+            object_index_type  spiker_index = 0UL;
+            for (sector_coordinate_type  c = 0U; c < layer_props.num_spikers_along_c_axis(); ++c)
+                for (sector_coordinate_type  y = 0U; y < layer_props.num_spikers_along_y_axis(); ++y)
+                    for (sector_coordinate_type  x = 0U; x < layer_props.num_spikers_along_x_axis(); ++x)
                     {
                         INVARIANT(spiker_index == layer_props.spiker_sector_index(x,y,c));
 
-                        natural_8_bit  area_layer_index;
+                        layer_index_type  area_layer_index;
                         area_centers_initialiser.compute_movement_area_center_for_ships_of_spiker(
                                     layer_index,
                                     spiker_index,
                                     x,y,c,
-                                    *this->properties(),
+                                    *properties(),
                                     area_layer_index,
                                     centers.at(spiker_index)
                                     );
                         
-                        ASSUMPTION(area_layer_index < this->properties()->layer_props().size());
+                        ASSUMPTION(area_layer_index < properties()->layer_props().size());
 
-                        network_layer_props const&  area_layer_props = this->properties()->layer_props().at(area_layer_index);
+                        network_layer_props const&  area_layer_props = properties()->layer_props().at(area_layer_index);
 
                         ASSUMPTION(
                             centers.at(spiker_index)(0) >= area_layer_props.low_corner_of_ships()(0) &&
@@ -125,10 +125,10 @@ network::network(std::shared_ptr<network_props> const  properties,
                             );
 
                         {
-                            ships_initialiser.on_next_area(layer_index, spiker_index, *this->properties());
+                            ships_initialiser.on_next_area(layer_index, spiker_index, *properties());
 
-                            natural_64_bit const  ships_begin_index = layer_props.ships_begin_index_of_spiker(spiker_index);
-                            for (natural_32_bit i = 0U; i < layer_props.num_ships_per_spiker(); ++i)
+                            object_index_type const  ships_begin_index = layer_props.ships_begin_index_of_spiker(spiker_index);
+                            for (sector_coordinate_type i = 0U; i < layer_props.num_ships_per_spiker(); ++i)
                             {
                                 ships_initialiser.compute_ship_position_and_velocity_in_movement_area(
                                             centers.at(spiker_index),
@@ -169,29 +169,27 @@ network::network(std::shared_ptr<network_props> const  properties,
         }
 
         {
-            std::vector<network_object_id>  empty_dock_sector;
+            std::vector<compressed_layer_and_object_indices>  empty_dock_sector;
             empty_dock_sector.reserve(3UL + layer_props.num_ships() / layer_props.num_docks());
             m_ships_in_sectors.at(layer_index).resize(layer_props.num_docks(), empty_dock_sector);
         }
     }
 
-    for (natural_8_bit layer_index = 0U; layer_index < this->properties()->layer_props().size(); ++layer_index)
-        for (natural_64_bit ship_index = 0UL; ship_index < m_ships.at(layer_index)->size(); ++ship_index)
+    for (layer_index_type  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
+        for (object_index_type  ship_index = 0UL; ship_index < m_ships.at(layer_index)->size(); ++ship_index)
         {
             vector3 const& ship_pos = m_ships.at(layer_index)->at(ship_index).position();
-            natural_8_bit const  area_layer_index = this->properties()->find_layer_index(ship_pos(2));
-            ASSUMPTION(area_layer_index < this->properties()->layer_props().size());
-            network_layer_props const&  area_layer_props = this->properties()->layer_props().at(area_layer_index);
-            natural_64_bit  sector_index;
+            layer_index_type const  area_layer_index = properties()->find_layer_index(ship_pos(2));
+            ASSUMPTION(area_layer_index < properties()->layer_props().size());
+            network_layer_props const&  area_layer_props = properties()->layer_props().at(area_layer_index);
+            object_index_type  sector_index;
             {
-                natural_32_bit  x, y, c;
+                sector_coordinate_type  x, y, c;
                 area_layer_props.dock_sector_coordinates(ship_pos, x, y, c);
                 sector_index = area_layer_props.dock_sector_index(x, y, c);
             }
             ASSUMPTION(sector_index < m_ships_in_sectors.at(area_layer_index).size());
-            m_ships_in_sectors.at(area_layer_index).at(sector_index).push_back(
-                    { object_kind_ship(), layer_index, ship_index }
-                    );
+            m_ships_in_sectors.at(area_layer_index).at(sector_index).push_back({ layer_index, ship_index });
         }
 }
 
@@ -252,9 +250,9 @@ void  network::update_movement_of_ships()
 {
     TMPROF_BLOCK();
 
-    for (natural_8_bit  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
+    for (layer_index_type  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
         if (properties()->layer_props().at(layer_index).ship_controller_ptr().operator bool())
-            for (natural_64_bit  ship_index_in_layer = 0UL;
+            for (object_index_type  ship_index_in_layer = 0UL;
                  ship_index_in_layer < m_ships.at(layer_index)->size();
                  ++ship_index_in_layer
                  )
@@ -262,24 +260,24 @@ void  network::update_movement_of_ships()
 }
 
 
-void  network::update_movement_of_ship(natural_8_bit const  layer_index, natural_64_bit const  ship_index_in_layer)
+void  network::update_movement_of_ship(layer_index_type const  layer_index, object_index_type const  ship_index_in_layer)
 {
     TMPROF_BLOCK();
 
     netlab::ship&  ship = m_ships.at(layer_index)->at(ship_index_in_layer);
-    network_object_id const  ship_id(object_kind_ship(),layer_index,ship_index_in_layer);
+    compressed_layer_and_object_indices const  ship_loc(layer_index,ship_index_in_layer);
 
-    natural_64_bit  spiker_sector_index;
+    object_index_type  spiker_sector_index;
     {
         network_layer_props const&  ship_layer_props = properties()->layer_props().at(layer_index);
         spiker_sector_index = ship_layer_props.spiker_index_from_ship_index(ship_index_in_layer);
     }
     vector3 const&  movement_area_center = m_movement_area_centers.at(layer_index).at(spiker_sector_index);
 
-    natural_8_bit const  space_layer_index = properties()->find_layer_index(movement_area_center(2));
+    layer_index_type const  space_layer_index = properties()->find_layer_index(movement_area_center(2));
     network_layer_props const&  space_layer_props = properties()->layer_props().at(space_layer_index);
 
-    std::vector< std::vector<network_object_id> >&  ships_in_sectors = m_ships_in_sectors.at(space_layer_index);
+    std::vector< std::vector<compressed_layer_and_object_indices> >&  ships_in_sectors = m_ships_in_sectors.at(space_layer_index);
 
     vector3  ship_acceleration = vector3_zero();
     {
@@ -292,8 +290,8 @@ void  network::update_movement_of_ship(natural_8_bit const  layer_index, natural
                 space_layer_props.size_of_ship_movement_area_along_c_axis_in_meters()
                 );
 
-        natural_32_bit  x_lo, y_lo, c_lo;
-        natural_32_bit  x_hi, y_hi, c_hi;
+        sector_coordinate_type  x_lo, y_lo, c_lo;
+        sector_coordinate_type  x_hi, y_hi, c_hi;
         {
             vector3 const  range_vector(
                     0.499f * space_layer_props.distance_of_docks_in_meters(),
@@ -303,9 +301,9 @@ void  network::update_movement_of_ship(natural_8_bit const  layer_index, natural
             space_layer_props.dock_sector_coordinates(ship.position() - range_vector, x_lo, y_lo, c_lo);
             space_layer_props.dock_sector_coordinates(ship.position() + range_vector, x_hi, y_hi, c_hi);
         }
-        for (natural_32_bit x = x_lo; x <= x_hi; ++x)
-            for (natural_32_bit y = y_lo; y <= y_hi; ++y)
-                for (natural_32_bit c = c_lo; c <= c_hi; ++c)
+        for (sector_coordinate_type x = x_lo; x <= x_hi; ++x)
+            for (sector_coordinate_type y = y_lo; y <= y_hi; ++y)
+                for (sector_coordinate_type c = c_lo; c <= c_hi; ++c)
                 {
                     vector3 const  sector_centre = space_layer_props.dock_sector_centre(x,y,c);
 
@@ -313,9 +311,9 @@ void  network::update_movement_of_ship(natural_8_bit const  layer_index, natural
                     {
                         if (layer_index == space_layer_index)
                         {
-                            natural_64_bit  spiker_index;
+                            object_index_type  spiker_index;
                             {
-                                natural_32_bit  spiker_x, spiker_y, spiker_c;
+                                sector_coordinate_type  spiker_x, spiker_y, spiker_c;
                                 space_layer_props.spiker_sector_coordinates_from_dock_sector_coordinates(
                                             x,y,c,
                                             spiker_x,spiker_y,spiker_c
@@ -343,12 +341,11 @@ void  network::update_movement_of_ship(natural_8_bit const  layer_index, natural
                                 space_layer_props.distance_of_docks_in_meters()
                                 );
 
-                    natural_64_bit const  sector_index = space_layer_props.dock_sector_index(x,y,c);
-                    for (network_object_id const  id : ships_in_sectors.at(sector_index))
-                        if (id != ship_id)
+                    object_index_type const  sector_index = space_layer_props.dock_sector_index(x,y,c);
+                    for (compressed_layer_and_object_indices const  loc : ships_in_sectors.at(sector_index))
+                        if (loc != ship_loc)
                         {
-                            netlab::ship const&  other_ship = m_ships.at(id.index_of_network_layer())
-                                                                     ->at(id.index_into_network_layer());
+                            netlab::ship const&  other_ship = m_ships.at(loc.layer_index())->at(loc.object_index());
 
                             ship_acceleration += space_layer_props.ship_controller_ptr()->accelerate_from_ship(
                                     ship.position(),
@@ -372,33 +369,33 @@ void  network::update_movement_of_ship(natural_8_bit const  layer_index, natural
                 );
     vector3 const  new_position = ship.position() + dt * new_velocity;
 
-    natural_64_bit  old_sector_index;
+    object_index_type  old_sector_index;
     {
-        natural_32_bit  x, y, c;
+        sector_coordinate_type  x, y, c;
         space_layer_props.dock_sector_coordinates(ship.position(), x, y, c);
         old_sector_index = space_layer_props.dock_sector_index(x,y,c);
     }
-    natural_64_bit  new_sector_index;
+    object_index_type  new_sector_index;
     {
-        natural_32_bit  x, y, c;
+        sector_coordinate_type  x, y, c;
         space_layer_props.dock_sector_coordinates(new_position, x, y, c);
         new_sector_index = space_layer_props.dock_sector_index(x,y,c);
     }
     if (new_sector_index != old_sector_index)
     {
-        std::vector<network_object_id>&  old_sector = ships_in_sectors.at(old_sector_index);
+        std::vector<compressed_layer_and_object_indices>&  old_sector = ships_in_sectors.at(old_sector_index);
         auto  it = old_sector.begin();
         while (true)
         {
             INVARIANT(it != old_sector.end());
-            if (*it == ship_id)
+            if (*it == ship_loc)
                 break;
             ++it;
         }
         *it = old_sector.back();
         old_sector.pop_back();
 
-        ships_in_sectors.at(new_sector_index).push_back(ship_id);
+        ships_in_sectors.at(new_sector_index).push_back(ship_loc);
     }
 
     ship.set_position(new_position);

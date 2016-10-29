@@ -1,5 +1,4 @@
 #include <netlab/network_layer_props.hpp>
-#include <netlab/network_object_id.hpp>
 #include <utility/checked_number_operations.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -116,7 +115,7 @@ network_layer_props::network_layer_props(
     ASSUMPTION(m_num_spikers_along_c_axis > 0U);
 
     ASSUMPTION(m_num_spikers > 0UL);
-    ASSUMPTION(m_num_spikers <= max_num_objects_in_a_layer());
+    ASSUMPTION(m_num_spikers <= max_number_of_objects_in_layer());
 
     ASSUMPTION(m_num_docks_along_x_axis_per_spiker > 0U);
     ASSUMPTION(m_num_docks_along_y_axis_per_spiker > 0U);
@@ -127,12 +126,12 @@ network_layer_props::network_layer_props(
                (m_num_docks_along_c_axis_per_spiker & 1U) != 0U );
 
     ASSUMPTION(m_num_docks > 0UL);
-    ASSUMPTION(m_num_docks <= max_num_objects_in_a_layer());
+    ASSUMPTION(m_num_docks <= max_number_of_objects_in_layer());
 
     ASSUMPTION(m_num_ships_per_spiker > 0UL);
 
     ASSUMPTION(m_num_ships > 0UL);
-    ASSUMPTION(m_num_ships <= max_num_objects_in_a_layer());
+    ASSUMPTION(m_num_ships <= max_number_of_objects_in_layer());
 
     ASSUMPTION(m_distance_of_docks_in_meters > 0.0f);
 
@@ -165,7 +164,10 @@ network_layer_props::network_layer_props(
 }
 
 
-void  network_layer_props::dock_sector_coordinates(vector3 const&  pos, natural_32_bit&  x, natural_32_bit&  y, natural_32_bit&  c) const
+void  network_layer_props::dock_sector_coordinates(
+        vector3 const&  pos,
+        sector_coordinate_type&  x, sector_coordinate_type&  y, sector_coordinate_type&  c
+        ) const
 {
     vector3 const  D(distance_of_docks_in_meters(),distance_of_docks_in_meters(),distance_of_docks_in_meters());
     vector3 const  u = (pos - (low_corner_of_docks() - 0.5f * D)).array() / D.array();
@@ -176,27 +178,31 @@ void  network_layer_props::dock_sector_coordinates(vector3 const&  pos, natural_
 
 
 void  network_layer_props::dock_sector_coordinates(
-        natural_64_bit  index_into_layer,
-        natural_64_bit&  x, natural_32_bit&  y, natural_32_bit&  c
+        object_index_type  index_into_layer,
+        sector_coordinate_type&  x, sector_coordinate_type&  y, sector_coordinate_type&  c
         ) const
 {
-    c = static_cast<natural_32_bit>(index_into_layer / num_docks_in_xy_plane());
+    c = static_cast<sector_coordinate_type>(index_into_layer / num_docks_in_xy_plane());
     index_into_layer = index_into_layer % num_docks_in_xy_plane();
-    y = static_cast<natural_32_bit>(index_into_layer / static_cast<natural_64_bit>(num_docks_along_x_axis()));
-    x = static_cast<natural_32_bit>(index_into_layer % static_cast<natural_64_bit>(num_docks_along_x_axis()));
+    y = static_cast<sector_coordinate_type>(index_into_layer / static_cast<object_index_type>(num_docks_along_x_axis()));
+    x = static_cast<sector_coordinate_type>(index_into_layer % static_cast<object_index_type>(num_docks_along_x_axis()));
 }
 
 
-natural_64_bit  network_layer_props::dock_sector_index(natural_32_bit const  x, natural_32_bit const  y, natural_32_bit const  c) const
+object_index_type  network_layer_props::dock_sector_index(
+        sector_coordinate_type const  x, sector_coordinate_type const  y, sector_coordinate_type const  c
+        ) const
 {
-    return  static_cast<natural_64_bit>(c) * num_docks_in_xy_plane()
-            + static_cast<natural_64_bit>(y) * static_cast<natural_64_bit>(num_docks_along_x_axis())
-            + static_cast<natural_64_bit>(x)
+    return  static_cast<object_index_type>(c) * static_cast<object_index_type>(num_docks_in_xy_plane())
+            + static_cast<object_index_type>(y) * static_cast<object_index_type>(num_docks_along_x_axis())
+            + static_cast<object_index_type>(x)
             ;
 }
 
 
-vector3  network_layer_props::dock_sector_centre(natural_32_bit const  x, natural_32_bit const  y, natural_32_bit const  c) const
+vector3  network_layer_props::dock_sector_centre(
+        sector_coordinate_type const  x, sector_coordinate_type const  y, sector_coordinate_type const  c
+        ) const
 {
     return low_corner_of_docks() + distance_of_docks_in_meters() * vector3( static_cast<float_32_bit>(x),
                                                                             static_cast<float_32_bit>(y),
@@ -204,40 +210,53 @@ vector3  network_layer_props::dock_sector_centre(natural_32_bit const  x, natura
 }
 
 
-void  network_layer_props::spiker_sector_coordinates(vector3 const&  pos, natural_32_bit&  x, natural_32_bit&  y, natural_32_bit&  c) const
+void  network_layer_props::spiker_sector_coordinates(
+        vector3 const&  pos,
+        sector_coordinate_type&  x, sector_coordinate_type&  y, sector_coordinate_type&  c
+        ) const
 {
     vector3 const  D(distance_of_spikers_along_x_axis_in_meters(),
                      distance_of_spikers_along_y_axis_in_meters(),
                      distance_of_spikers_along_c_axis_in_meters());
     vector3 const  u = (pos - (low_corner_of_spikers() - 0.5f * D)).array() / D.array();
-    x = (u(0) <= 0.0) ? 0UL : (u(0) >= num_spikers_along_x_axis()) ? num_spikers_along_x_axis() - 1UL : static_cast<natural_64_bit>(u(0));
-    y = (u(1) <= 0.0) ? 0UL : (u(1) >= num_spikers_along_y_axis()) ? num_spikers_along_y_axis() - 1UL : static_cast<natural_64_bit>(u(1));
-    c = (u(2) <= 0.0) ? 0UL : (u(2) >= num_spikers_along_c_axis()) ? num_spikers_along_c_axis() - 1UL : static_cast<natural_64_bit>(u(2));
+    x = (u(0) <= 0.0) ? 0U :
+                        (u(0) >= num_spikers_along_x_axis()) ? static_cast<sector_coordinate_type>(num_spikers_along_x_axis() - 1UL) :
+                                                               static_cast<sector_coordinate_type>(u(0));
+    y = (u(1) <= 0.0) ? 0U :
+                        (u(1) >= num_spikers_along_y_axis()) ? static_cast<sector_coordinate_type>(num_spikers_along_y_axis() - 1UL) :
+                                                               static_cast<sector_coordinate_type>(u(1));
+    c = (u(2) <= 0.0) ? 0U :
+                        (u(2) >= num_spikers_along_c_axis()) ? static_cast<sector_coordinate_type>(num_spikers_along_c_axis() - 1UL) :
+                                                               static_cast<sector_coordinate_type>(u(2));
 }
 
 
 void  network_layer_props::spiker_sector_coordinates(
-        natural_64_bit  index_into_layer,
-        natural_64_bit&  x, natural_32_bit&  y, natural_32_bit&  c
+        object_index_type  index_into_layer,
+        sector_coordinate_type&  x, sector_coordinate_type&  y, sector_coordinate_type&  c
         ) const
 {
-    c = static_cast<natural_32_bit>(index_into_layer / num_spikers_in_xy_plane());
+    c = static_cast<sector_coordinate_type>(index_into_layer / num_spikers_in_xy_plane());
     index_into_layer = index_into_layer % num_spikers_in_xy_plane();
-    y = static_cast<natural_32_bit>(index_into_layer / static_cast<natural_64_bit>(num_spikers_along_x_axis()));
-    x = static_cast<natural_32_bit>(index_into_layer % static_cast<natural_64_bit>(num_spikers_along_x_axis()));
+    y = static_cast<sector_coordinate_type>(index_into_layer / static_cast<object_index_type>(num_spikers_along_x_axis()));
+    x = static_cast<sector_coordinate_type>(index_into_layer % static_cast<object_index_type>(num_spikers_along_x_axis()));
 }
 
 
-natural_64_bit  network_layer_props::spiker_sector_index(natural_32_bit const  x, natural_32_bit const  y, natural_32_bit const  c) const
+object_index_type  network_layer_props::spiker_sector_index(
+        sector_coordinate_type const  x, sector_coordinate_type const  y, sector_coordinate_type const  c
+        ) const
 {
-    return  static_cast<natural_64_bit>(c) * num_spikers_in_xy_plane()
-            + static_cast<natural_64_bit>(y) * static_cast<natural_64_bit>(num_spikers_along_x_axis())
-            + static_cast<natural_64_bit>(x)
+    return  static_cast<object_index_type>(c) * static_cast<object_index_type>(num_spikers_in_xy_plane())
+            + static_cast<object_index_type>(y) * static_cast<object_index_type>(num_spikers_along_x_axis())
+            + static_cast<object_index_type>(x)
             ;
 }
 
 
-vector3  network_layer_props::spiker_sector_centre(natural_32_bit const  x, natural_32_bit const  y, natural_32_bit const  c) const
+vector3  network_layer_props::spiker_sector_centre(
+        sector_coordinate_type const  x, sector_coordinate_type const  y, sector_coordinate_type const  c
+        ) const
 {
     return low_corner_of_spikers() + vector3( distance_of_spikers_along_x_axis_in_meters() * static_cast<float_32_bit>(x),
                                               distance_of_spikers_along_y_axis_in_meters() * static_cast<float_32_bit>(y),
@@ -245,21 +264,21 @@ vector3  network_layer_props::spiker_sector_centre(natural_32_bit const  x, natu
 }
 
 
-natural_64_bit  network_layer_props::spiker_index_from_ship_index(natural_64_bit const  ship_index) const
+object_index_type  network_layer_props::spiker_index_from_ship_index(object_index_type const  ship_index) const
 {
     return ship_index / num_ships_per_spiker();
 }
 
 
-natural_64_bit  network_layer_props::ships_begin_index_of_spiker(natural_64_bit const  spiker_index) const
+object_index_type  network_layer_props::ships_begin_index_of_spiker(object_index_type const  spiker_index) const
 {
     return spiker_index * num_ships_per_spiker();
 }
 
 
 void  network_layer_props::spiker_sector_coordinates_from_dock_sector_coordinates(
-        natural_32_bit const&  dock_x, natural_32_bit const&  dock_y, natural_32_bit const&  dock_c,
-        natural_32_bit&  x, natural_32_bit&  y, natural_32_bit&  c
+        sector_coordinate_type const&  dock_x, sector_coordinate_type const&  dock_y, sector_coordinate_type const&  dock_c,
+        sector_coordinate_type&  x, sector_coordinate_type&  y, sector_coordinate_type&  c
         ) const
 {
     x = dock_x / num_docks_along_x_axis_per_spiker();

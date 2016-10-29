@@ -4,7 +4,7 @@ namespace netlab {
 
 
 std::unique_ptr< array_of_derived<spiker> >  network_objects_factory::create_array_of_spikers(
-        natural_8_bit const  layer_index,
+        layer_index_type const  layer_index,
         natural_64_bit const  num_spikers
         ) const
 {
@@ -14,7 +14,7 @@ std::unique_ptr< array_of_derived<spiker> >  network_objects_factory::create_arr
 
 
 std::unique_ptr< array_of_derived<dock> >  network_objects_factory::create_array_of_docks(
-        natural_8_bit const  layer_index,
+        layer_index_type const  layer_index,
         natural_64_bit const  num_docks
         ) const
 {
@@ -24,7 +24,7 @@ std::unique_ptr< array_of_derived<dock> >  network_objects_factory::create_array
 }
 
 std::unique_ptr< array_of_derived<ship> >  network_objects_factory::create_array_of_ships(
-        natural_8_bit const  layer_index,
+        layer_index_type const  layer_index,
         natural_64_bit const  num_ships
         ) const
 {

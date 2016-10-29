@@ -2,8 +2,10 @@
 #   define NETLAB_NETWORK_PROPS_HPP_INCLUDED
 
 #   include <netlab/network_layer_props.hpp>
+#   include <netlab/network_indices.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <vector>
+#   include <limits>
 
 namespace netlab {
 
@@ -51,7 +53,7 @@ struct network_props
 
     void  set_max_connection_distance_in_meters(float_32_bit const  value) { m_max_connection_distance_in_meters = value; }
 
-    natural_8_bit  find_layer_index(float_32_bit const  coord_along_c_axis);
+    layer_index_type  find_layer_index(float_32_bit const  coord_along_c_axis);
 
 private:
     std::vector<network_layer_props>  m_layer_props;

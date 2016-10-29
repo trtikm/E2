@@ -5,7 +5,7 @@
 #   include <netlab/network_props.hpp>
 #   include <netlab/network_objects.hpp>
 #   include <netlab/network_objects_factory.hpp>
-#   include <netlab/network_object_id.hpp>
+#   include <netlab/network_indices.hpp>
 #   include <netlab/ship_controller.hpp>
 #   include <netlab/initialiser_of_movement_area_centers.hpp>
 #   include <netlab/initialiser_of_ships_in_movement_areas.hpp>
@@ -26,11 +26,13 @@ namespace netlab {
  */
 struct  network
 {
-    network(std::shared_ptr<network_props> const  properties,
+    network(std::shared_ptr<network_props> const  network_properties,
             network_objects_factory const&  objects_factory,
             initialiser_of_movement_area_centers&  area_centers_initialiser,
             initialiser_of_ships_in_movement_areas&  ships_initialiser
             );
+
+    ship const&  get_ship(layer_index_type const  layer_index, object_index_type const  object_index) const;
 
     std::shared_ptr<network_props>  properties() const noexcept { return m_properties; }
     natural_64_bit  update_id() const noexcept { return  m_update_id; }
@@ -59,7 +61,7 @@ private:
 //            );
 
     void  update_movement_of_ships();
-    void  update_movement_of_ship(natural_8_bit const  layer_index, natural_64_bit const  ship_index_in_layer);
+    void  update_movement_of_ship(layer_index_type const  layer_index, object_index_type const  ship_index_in_layer);
 
 
     std::shared_ptr<network_props>  m_properties;
@@ -69,7 +71,7 @@ private:
     std::vector< std::unique_ptr< array_of_derived<ship> > >  m_ships;
 
     std::vector< std::vector<vector3> >  m_movement_area_centers;
-    std::vector< std::vector< std::vector<network_object_id> > >  m_ships_in_sectors;
+    std::vector< std::vector< std::vector<compressed_layer_and_object_indices> > >  m_ships_in_sectors;
 
     natural_64_bit  m_update_id;
 

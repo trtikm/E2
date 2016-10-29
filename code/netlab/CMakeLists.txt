@@ -17,8 +17,8 @@ add_library(${THIS_TARGET_NAME}
     ./include/netlab/network_objects.hpp
     ./src/network_objects.cpp
 
-    ./include/netlab/network_object_id.hpp
-    ./src/network_object_id.cpp
+    ./include/netlab/network_indices.hpp
+    ./src/network_indices.cpp
 
     ./include/netlab/network.hpp
     ./src/network.cpp

@@ -5,7 +5,7 @@
 #include <netlab/network_props.hpp>
 #include <netlab/network_objects.hpp>
 #include <netlab/network_objects_factory.hpp>
-#include <netlab/network_object_id.hpp>
+#include <netlab/network_indices.hpp>
 #include <netlab/ship_controller.hpp>
 #include <netlab/initialiser_of_movement_area_centers.hpp>
 #include <netlab/initialiser_of_ships_in_movement_areas.hpp>
@@ -148,23 +148,23 @@ struct  ship : public netlab::ship
 struct network_objects_factory : public netlab::network_objects_factory
 {
     std::unique_ptr< array_of_derived<netlab::spiker> >  create_array_of_spikers(
-            natural_8_bit const  layer_index,
+            netlab::layer_index_type const  layer_index,
             natural_64_bit const  num_spikers
             ) const;
 
     std::unique_ptr< array_of_derived<netlab::dock> >  create_array_of_docks(
-            natural_8_bit const  layer_index,
+            netlab::layer_index_type const  layer_index,
             natural_64_bit const  num_docks
             ) const;
 
     std::unique_ptr< array_of_derived<netlab::ship> >  create_array_of_ships(
-            natural_8_bit const  layer_index,
+            netlab::layer_index_type const  layer_index,
             natural_64_bit const  num_ships
             ) const;
 };
 
 std::unique_ptr< array_of_derived<netlab::spiker> >  network_objects_factory::create_array_of_spikers(
-        natural_8_bit const  layer_index,
+        netlab::layer_index_type const  layer_index,
         natural_64_bit const  num_spikers
         ) const
 {
@@ -173,7 +173,7 @@ std::unique_ptr< array_of_derived<netlab::spiker> >  network_objects_factory::cr
 }
 
 std::unique_ptr< array_of_derived<netlab::dock> >  network_objects_factory::create_array_of_docks(
-        natural_8_bit const  layer_index,
+        netlab::layer_index_type const  layer_index,
         natural_64_bit const  num_docks
         ) const
 {
@@ -182,7 +182,7 @@ std::unique_ptr< array_of_derived<netlab::dock> >  network_objects_factory::crea
 }
 
 std::unique_ptr< array_of_derived<netlab::ship> >  network_objects_factory::create_array_of_ships(
-        natural_8_bit const  layer_index,
+        netlab::layer_index_type const  layer_index,
         natural_64_bit const  num_ships
         ) const
 {
@@ -195,16 +195,16 @@ struct  initialiser_of_movement_area_centers : public netlab::initialiser_of_mov
 {
     initialiser_of_movement_area_centers();
 
-    void  on_next_layer(natural_8_bit const  layer_index, netlab::network_props const&  props);
+    void  on_next_layer(netlab::layer_index_type const  layer_index, netlab::network_props const&  props);
 
     void  compute_movement_area_center_for_ships_of_spiker(
-            natural_8_bit const  spiker_layer_index,
-            natural_64_bit const  spiker_index_into_layer,
-            natural_32_bit const  spiker_sector_coordinate_x,
-            natural_32_bit const  spiker_sector_coordinate_y,
-            natural_32_bit const  spiker_sector_coordinate_c,
+            netlab::layer_index_type const  spiker_layer_index,
+            netlab::object_index_type const  spiker_index_into_layer,
+            netlab::sector_coordinate_type const  spiker_sector_coordinate_x,
+            netlab::sector_coordinate_type const  spiker_sector_coordinate_y,
+            netlab::sector_coordinate_type const  spiker_sector_coordinate_c,
             netlab::network_props const&  props,
-            natural_8_bit&  area_layer_index,
+            netlab::layer_index_type&  area_layer_index,
             vector3&  area_center
             );
 
@@ -253,7 +253,10 @@ initialiser_of_movement_area_centers::initialiser_of_movement_area_centers()
     ASSUMPTION(m_max_distance_c.size() == get_network_props()->layer_props().size());
 }
 
-void  initialiser_of_movement_area_centers::on_next_layer(natural_8_bit const  layer_index, netlab::network_props const&  props)
+void  initialiser_of_movement_area_centers::on_next_layer(
+        netlab::layer_index_type const  layer_index,
+        netlab::network_props const&  props
+        )
 {
     (void)layer_index;
     (void)props;
@@ -262,13 +265,13 @@ void  initialiser_of_movement_area_centers::on_next_layer(natural_8_bit const  l
 }
 
 void  initialiser_of_movement_area_centers::compute_movement_area_center_for_ships_of_spiker(
-        natural_8_bit const  spiker_layer_index,
-        natural_64_bit const  spiker_index_into_layer,
-        natural_32_bit const  spiker_sector_coordinate_x,
-        natural_32_bit const  spiker_sector_coordinate_y,
-        natural_32_bit const  spiker_sector_coordinate_c,
+        netlab::layer_index_type const  spiker_layer_index,
+        netlab::object_index_type const  spiker_index_into_layer,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_x,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_y,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_c,
         netlab::network_props const&  props,
-        natural_8_bit&  area_layer_index,
+        netlab::layer_index_type&  area_layer_index,
         vector3&  area_center
         )
 {
@@ -297,8 +300,14 @@ struct  initialiser_of_ships_in_movement_areas : public netlab::initialiser_of_s
 {
     initialiser_of_ships_in_movement_areas();
 
-    void  on_next_layer(natural_8_bit const  layer_index, netlab::network_props const&  props) { reset(random_generator()); }
-    void  on_next_area(natural_8_bit const  layer_index, natural_64_bit const  spiker_index, netlab::network_props const&  props) {}
+    void  on_next_layer(netlab::layer_index_type const  layer_index, netlab::network_props const&  props) { reset(random_generator()); }
+
+    void  on_next_area(
+            netlab::layer_index_type const  layer_index,
+            netlab::object_index_type const  spiker_index,
+            netlab::network_props const&  props
+            )
+    {}
 
     void  compute_ship_position_and_velocity_in_movement_area(
             vector3 const&  center,

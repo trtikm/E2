@@ -2,10 +2,14 @@
 #   define NETLAB_NETWORK_LAYER_PROPS_HPP_INCLUDED
 
 #   include <netlab/ship_controller.hpp>
+#   include <netlab/network_indices.hpp>
 #   include <utility/tensor_math.hpp>
 #   include <memory>
 
 namespace netlab {
+
+
+using  sector_coordinate_type = natural_32_bit;
 
 
 /**
@@ -93,22 +97,42 @@ struct  network_layer_props
 
     std::shared_ptr<ship_controller const>  ship_controller_ptr() const noexcept { return m_ship_controller_ptr; }
 
-    void  dock_sector_coordinates(vector3 const&  pos, natural_32_bit&  x, natural_32_bit&  y, natural_32_bit&  c) const;
-    void  dock_sector_coordinates(natural_64_bit  index_into_layer, natural_64_bit&  x, natural_32_bit&  y, natural_32_bit&  c) const;
-    natural_64_bit  dock_sector_index(natural_32_bit const  x, natural_32_bit const  y, natural_32_bit const  c) const;
-    vector3  dock_sector_centre(natural_32_bit const  x, natural_32_bit const  y, natural_32_bit const  c) const;
+    void  dock_sector_coordinates(
+            vector3 const&  pos,
+            sector_coordinate_type&  x, sector_coordinate_type&  y, sector_coordinate_type&  c
+            ) const;
+    void  dock_sector_coordinates(
+            object_index_type  index_into_layer,
+            sector_coordinate_type&  x, sector_coordinate_type&  y, sector_coordinate_type&  c
+            ) const;
+    object_index_type  dock_sector_index(
+            sector_coordinate_type const  x, sector_coordinate_type const  y, sector_coordinate_type const  c
+            ) const;
+    vector3  dock_sector_centre(
+            sector_coordinate_type const  x, sector_coordinate_type const  y, sector_coordinate_type const  c
+            ) const;
 
-    void  spiker_sector_coordinates(vector3 const&  pos, natural_32_bit&  x, natural_32_bit&  y, natural_32_bit&  c) const;
-    void  spiker_sector_coordinates(natural_64_bit index_into_layer, natural_64_bit& x, natural_32_bit& y, natural_32_bit& c) const;
-    natural_64_bit  spiker_sector_index(natural_32_bit const  x, natural_32_bit const  y, natural_32_bit const  c) const;
-    vector3  spiker_sector_centre(natural_32_bit const  x, natural_32_bit const  y, natural_32_bit const  c) const;
+    void  spiker_sector_coordinates(
+            vector3 const&  pos,
+            sector_coordinate_type&  x, sector_coordinate_type&  y, sector_coordinate_type&  c
+            ) const;
+    void  spiker_sector_coordinates(
+            object_index_type index_into_layer,
+            sector_coordinate_type& x, sector_coordinate_type& y, sector_coordinate_type& c
+            ) const;
+    object_index_type  spiker_sector_index(
+            sector_coordinate_type const  x, sector_coordinate_type const  y, sector_coordinate_type const  c
+            ) const;
+    vector3  spiker_sector_centre(
+            sector_coordinate_type const  x, sector_coordinate_type const  y, sector_coordinate_type const  c
+            ) const;
 
-    natural_64_bit  spiker_index_from_ship_index(natural_64_bit const  ship_index) const;
-    natural_64_bit  ships_begin_index_of_spiker(natural_64_bit const  spiker_index) const;
+    object_index_type  spiker_index_from_ship_index(object_index_type const  ship_index) const;
+    object_index_type  ships_begin_index_of_spiker(object_index_type const  spiker_index) const;
 
     void  spiker_sector_coordinates_from_dock_sector_coordinates(
-            natural_32_bit const&  dock_x, natural_32_bit const&  dock_y, natural_32_bit const&  dock_c,
-            natural_32_bit&  x, natural_32_bit&  y, natural_32_bit&  c
+            sector_coordinate_type const&  dock_x, sector_coordinate_type const&  dock_y, sector_coordinate_type const&  dock_c,
+            sector_coordinate_type&  x, sector_coordinate_type&  y, sector_coordinate_type&  c
             ) const;
 
 private:

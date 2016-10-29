@@ -46,10 +46,10 @@ network_props::network_props(
 }
 
 
-natural_8_bit  network_props::find_layer_index(float_32_bit const  coord_along_c_axis)
+layer_index_type  network_props::find_layer_index(float_32_bit const  coord_along_c_axis)
 {
     auto const  it = std::lower_bound(m_max_coods_along_c_axis.cbegin(),m_max_coods_along_c_axis.cend(),coord_along_c_axis);
-    return static_cast<natural_8_bit>(
+    return static_cast<layer_index_type>(
                 it == m_max_coods_along_c_axis.cend() ? m_max_coods_along_c_axis.size() - 1UL :
                                                         std::distance(m_max_coods_along_c_axis.cbegin(),it)
                 );

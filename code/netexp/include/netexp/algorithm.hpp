@@ -9,7 +9,7 @@ namespace netexp {
 
 
 void  compute_center_of_movement_area_for_ships_of_spiker(
-        natural_8_bit const  spiker_layer_index,
+        netlab::layer_index_type const  spiker_layer_index,
         vector3 const&  spiker_position,
         netlab::network_props const&  props,
         bar_random_distribution const&  distribution_of_spiker_layer,
@@ -18,7 +18,7 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
         std::vector<float_32_bit> const&  max_distance_y,
         std::vector<float_32_bit> const&  max_distance_c,
         random_generator_for_natural_32_bit&  position_generator,
-        natural_8_bit&  area_layer_index,
+        netlab::layer_index_type&  area_layer_index,
         vector3&  area_center
         );
 
