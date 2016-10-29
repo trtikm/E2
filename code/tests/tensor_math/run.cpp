@@ -1,6 +1,6 @@
 #include "./program_info.hpp"
 #include "./program_options.hpp"
-#include <utility/tensor_math.hpp>
+#include <angeo/tensor_math.hpp>
 #include <utility/invariants.hpp>
 #include <utility/test.hpp>
 #include <utility/timeprof.hpp>

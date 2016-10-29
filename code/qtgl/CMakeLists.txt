@@ -43,8 +43,8 @@ add_library(${THIS_TARGET_NAME}
     ./include/qtgl/camera.hpp
     ./src/camera.cpp
 
-    ./include/qtgl/coordinate_system.hpp
-    ./src/coordinate_system.cpp
+    ./include/qtgl/camera_utils.hpp
+    ./src/camera_utils.cpp
 
     ./include/qtgl/free_fly.hpp
     ./src/free_fly.cpp

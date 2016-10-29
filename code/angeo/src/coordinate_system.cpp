@@ -1,8 +1,8 @@
-#include <qtgl/coordinate_system.hpp>
+#include <angeo/coordinate_system.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 
-namespace qtgl {
+namespace angeo {
 
 
 coordinate_system_ptr  coordinate_system::create(vector3 const&  origin, quaternion const&  orientation)

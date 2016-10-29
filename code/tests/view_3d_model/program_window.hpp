@@ -4,7 +4,7 @@
 #   include "./simulator.hpp"
 #   include <qtgl/window.hpp>
 #   include <qtgl/buffer.hpp>
-#   include <utility/tensor_math.hpp>
+#   include <angeo/tensor_math.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <QMainWindow>

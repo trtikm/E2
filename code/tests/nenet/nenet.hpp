@@ -1,7 +1,7 @@
 #ifndef NENET_HPP_INCLUDED
 #   define NENET_HPP_INCLUDED
 
-#   include <utility/tensor_math.hpp>
+#   include <angeo/tensor_math.hpp>
 #   include <utility/random.hpp>
 #   include <vector>
 #   include <unordered_map>

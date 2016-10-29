@@ -1,4 +1,4 @@
-#include <utility/tensor_math.hpp>
+#include <angeo/tensor_math.hpp>
 #include <utility/assumptions.hpp>
 
 #ifdef E2_USE_UBLAS_MATH_LIBRARY

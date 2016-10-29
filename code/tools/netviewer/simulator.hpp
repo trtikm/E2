@@ -93,8 +93,12 @@ struct simulator : public qtgl::real_time_simulator
 
 private:
 
-    void  do_network_update(float_64_bit const  seconds_from_previous_call);
-    void  do_network_render(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
+    void  update_network(float_64_bit const  seconds_from_previous_call);
+
+    void  render_network(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
+    void  render_network_spikers(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state);
+    void  render_network_docks(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state);
+    void  render_network_ships(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state);
 
 
     /// Network independed data providing feedback loop between a human user and 3D scene in the tool
@@ -115,8 +119,8 @@ private:
 
     /// Data for rendering of entities in the network
     qtgl::batch_ptr  m_batch_spiker;
-    qtgl::batch_ptr  m_batch_input_spot;
-    qtgl::batch_ptr  m_batch_output_terminal;
+    qtgl::batch_ptr  m_batch_dock;
+    qtgl::batch_ptr  m_batch_ship;
 
 
 

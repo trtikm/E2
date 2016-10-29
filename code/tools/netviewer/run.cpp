@@ -4,7 +4,7 @@
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <utility/basic_numeric_types.hpp>
-#include <utility/tensor_math.hpp>
+#include <angeo/tensor_math.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <QApplication>

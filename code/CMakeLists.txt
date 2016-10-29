@@ -3,6 +3,7 @@ include_directories(
     "${PROJECT_SOURCE_DIR}/code/netlab/include"
     "${PROJECT_SOURCE_DIR}/code/netexp/include"
     "${PROJECT_SOURCE_DIR}/code/netview/include"
+    "${PROJECT_SOURCE_DIR}/code/angeo/include"
     "${PROJECT_SOURCE_DIR}/code/cellab/include"
     "${PROJECT_SOURCE_DIR}/code/cellconnect/include"
     "${PROJECT_SOURCE_DIR}/code/paralab/include"
@@ -20,6 +21,8 @@ add_subdirectory(./netexp)
     message("-- netexp")
 add_subdirectory(./netview)
     message("-- netview")
+add_subdirectory(./angeo)
+    message("-- angeo")
 add_subdirectory(./cellab)
     message("-- cellab")
 add_subdirectory(./cellconnect)

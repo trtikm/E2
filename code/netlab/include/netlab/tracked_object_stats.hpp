@@ -1,7 +1,7 @@
 #ifndef NETLAB_TRACKED_OBJECT_STATS_HPP_INCLUDED
 #   define NETLAB_TRACKED_OBJECT_STATS_HPP_INCLUDED
 
-#   include <utility/tensor_math.hpp>
+#   include <angeo/tensor_math.hpp>
 
 namespace netlab {
 

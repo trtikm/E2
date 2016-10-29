@@ -11,7 +11,7 @@
 #include <netlab/initialiser_of_ships_in_movement_areas.hpp>
 #include <netlab/tracked_object_stats.hpp>
 #include <utility/array_of_derived.hpp>
-#include <utility/tensor_math.hpp>
+#include <angeo/tensor_math.hpp>
 #include <utility/random.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -106,7 +106,7 @@ std::shared_ptr<netlab::network_props>  get_network_props()
                 10.0f,  //!< distance_of_docks_in_meters
 
                 /// low_corner_of_docks
-                vector3{-45.0f,-30.0f,-20.0f},
+                vector3{-45.0f,-30.0f,5.0f},
 
                 90.0f,  //!< size_of_ship_movement_area_along_x_axis_in_meters
                 60.0f,  //!< size_of_ship_movement_area_along_y_axis_in_meters

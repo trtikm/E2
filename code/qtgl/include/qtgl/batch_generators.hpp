@@ -2,7 +2,7 @@
 #   define QTGL_BATCH_GENERATORS_HPP_INCLUDED
 
 #   include <qtgl/batch.hpp>
-#   include <utility/tensor_math.hpp>
+#   include <angeo/tensor_math.hpp>
 #   include <array>
 #   include <vector>
 

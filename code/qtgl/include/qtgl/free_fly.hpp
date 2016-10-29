@@ -1,7 +1,7 @@
 #ifndef QTGL_FREE_FLY_HPP_INCLUDED
 #   define QTGL_FREE_FLY_HPP_INCLUDED
 
-#   include <qtgl/coordinate_system.hpp>
+#   include <angeo/coordinate_system.hpp>
 #   include <qtgl/mouse_props.hpp>
 #   include <qtgl/keyboard_props.hpp>
 #   include <utility/basic_numeric_types.hpp>
@@ -63,11 +63,11 @@ typedef std::shared_ptr<free_fly_config const>  free_fly_config_const_ptr;
 
 std::pair<bool, // was any translation performed ?
           bool  // was any rotation performed ?
->  free_fly(coordinate_system&  coord_system,
-               free_fly_config const&  config,
-               float_64_bit const  seconds_from_previous_call,
-               mouse_props const&  mouse_info,
-               keyboard_props const&  keyboard_info);
+>  free_fly(angeo::coordinate_system&  coord_system,
+           free_fly_config const&  config,
+           float_64_bit const  seconds_from_previous_call,
+           mouse_props const&  mouse_info,
+           keyboard_props const&  keyboard_info);
 
 
 }

@@ -34,6 +34,7 @@ target_link_libraries(${THIS_TARGET_NAME}
     netexp
     netview
     qtgl
+    angeo
     utility
     ${QT5_LIST_OF_LIBRARIES_TO_LINK_WITH}
     ${OPENGL_LIST_OF_LIBRARIES_TO_LINK_WITH}

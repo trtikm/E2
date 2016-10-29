@@ -3,7 +3,7 @@
 
 #   include <netlab/ship_controller.hpp>
 #   include <netlab/network_indices.hpp>
-#   include <utility/tensor_math.hpp>
+#   include <angeo/tensor_math.hpp>
 #   include <memory>
 
 namespace netlab {

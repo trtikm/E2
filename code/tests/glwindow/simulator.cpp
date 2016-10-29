@@ -3,7 +3,7 @@
 #include <qtgl/draw.hpp>
 #include <qtgl/buffer_generators.hpp>
 #include <qtgl/texture_generators.hpp>
-#include <utility/tensor_math.hpp>
+#include <angeo/tensor_math.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -19,7 +19,7 @@ simulator::simulator()
     : qtgl::real_time_simulator()
     , m_camera(
             qtgl::camera_perspective::create(
-                    qtgl::coordinate_system::create(
+                    angeo::coordinate_system::create(
                             vector3(0.5f,0.5f,2.0f),
                             quaternion_identity()
                             ),
@@ -116,8 +116,8 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
     /////////////////////////////////////////////////////////////////////////////////////
 
 
-    qtgl::coordinate_system_ptr const  object_space {
-            qtgl::coordinate_system::create(vector3_zero(),quaternion_identity())
+    angeo::coordinate_system_ptr const  object_space {
+            angeo::coordinate_system::create(vector3_zero(),quaternion_identity())
             };
 
     qtgl::buffer_ptr const  object_vertex_buffer =
@@ -193,8 +193,8 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
     /////////////////////////////////////////////////////////////////////////////////////
 
 
-    qtgl::coordinate_system_ptr const  grid_space{
-            qtgl::coordinate_system::create(vector3_zero(),quaternion_identity())
+    angeo::coordinate_system_ptr const  grid_space{
+            angeo::coordinate_system::create(vector3_zero(),quaternion_identity())
             };
 
     qtgl::buffer_ptr  grid_vertex_buffer;
@@ -311,7 +311,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
 
     {
         matrix44  object_world_transformation;
-        qtgl::transformation_matrix(*object_space,object_world_transformation);
+        angeo::transformation_matrix(*object_space,object_world_transformation);
         matrix44 const  object_transform_matrix = view_projection_matrix * object_world_transformation;
 
         if (qtgl::make_current(*object_shaders_binding))
@@ -329,7 +329,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
     }
     {
         matrix44  grid_world_transformation;
-        qtgl::transformation_matrix(*grid_space,grid_world_transformation);
+        angeo::transformation_matrix(*grid_space,grid_world_transformation);
         matrix44 const  grid_transform_matrix = view_projection_matrix * grid_world_transformation;
 
         if (qtgl::make_current(*grid_shaders_binding))

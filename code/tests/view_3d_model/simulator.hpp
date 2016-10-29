@@ -7,7 +7,7 @@
 #   include <qtgl/draw.hpp>
 #   include <qtgl/batch.hpp>
 #   include <utility/basic_numeric_types.hpp>
-#   include <utility/tensor_math.hpp>
+#   include <angeo/tensor_math.hpp>
 #   include <vector>
 #   include <memory>
 
@@ -33,14 +33,14 @@ private:
     qtgl::camera_perspective_ptr  m_camera;
     qtgl::free_fly_config  m_free_fly_config;
 
-    qtgl::coordinate_system_ptr  m_grid_space;
+    angeo::coordinate_system_ptr  m_grid_space;
     qtgl::buffer_ptr  m_grid_vertex_buffer;
     qtgl::buffer_ptr  m_grid_colour_buffer;
     qtgl::buffers_binding_ptr  m_grid_buffers_binding;
     qtgl::shaders_binding_ptr  m_grid_shaders_binding;
     qtgl::draw_state_ptr  m_grid_draw_state;
 
-    qtgl::coordinate_system_ptr  m_batch_space;
+    angeo::coordinate_system_ptr  m_batch_space;
     std::vector<qtgl::batch_ptr>  m_batches;
 };
 

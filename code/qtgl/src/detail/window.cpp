@@ -6,7 +6,7 @@
 #include <qtgl/detail/buffer_cache.hpp>
 #include <qtgl/detail/batch_cache.hpp>
 #include <qtgl/gui_utils.hpp>
-#include <utility/tensor_math.hpp>
+#include <angeo/tensor_math.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>

@@ -442,10 +442,13 @@ void program_window::timerEvent(QTimerEvent* const event)
 
 void  program_window::closeEvent(QCloseEvent* const  event)
 {
-    ptree().put("window.pos.x", pos().x());
-    ptree().put("window.pos.y", pos().y());
-    ptree().put("window.width", width());
-    ptree().put("window.height", height());
+    if (!isMaximized())
+    {
+        ptree().put("window.pos.x", pos().x());
+        ptree().put("window.pos.y", pos().y());
+        ptree().put("window.width", width());
+        ptree().put("window.height", height());
+    }
     ptree().put("window.splitter_ratio", qtgl::get_splitter_sizes_ratio(*m_splitter));
     ptree().put("window.show_maximised", isMaximized());
 

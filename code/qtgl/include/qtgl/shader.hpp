@@ -4,7 +4,7 @@
 #   include <qtgl/shader_data_bindings.hpp>
 #   include <qtgl/glapi.hpp>
 #   include <utility/basic_numeric_types.hpp>
-#   include <utility/tensor_math.hpp>
+#   include <angeo/tensor_math.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <unordered_set>
 #   include <istream>

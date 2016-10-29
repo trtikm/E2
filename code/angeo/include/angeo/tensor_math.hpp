@@ -1,5 +1,5 @@
-#ifndef UTILITY_TENSOR_MATH_HPP_INCLUDED
-#   define UTILITY_TENSOR_MATH_HPP_INCLUDED
+#ifndef ANGEO_TENSOR_MATH_HPP_INCLUDED
+#   define ANGEO_TENSOR_MATH_HPP_INCLUDED
 
 #   include <utility/basic_numeric_types.hpp>
 

@@ -11,7 +11,7 @@
 #   include <netlab/initialiser_of_ships_in_movement_areas.hpp>
 #   include <netlab/tracked_object_stats.hpp>
 #   include <utility/array_of_derived.hpp>
-#   include <utility/tensor_math.hpp>
+#   include <angeo/tensor_math.hpp>
 #   include <vector>
 #   include <memory>
 

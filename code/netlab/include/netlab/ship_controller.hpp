@@ -1,7 +1,7 @@
 #ifndef NETLAB_SHIP_CONTROLLER_HPP_INCLUDED
 #   define NETLAB_SHIP_CONTROLLER_HPP_INCLUDED
 
-#   include <utility/tensor_math.hpp>
+#   include <angeo/tensor_math.hpp>
 
 namespace netlab {
 

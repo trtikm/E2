@@ -1,5 +1,5 @@
 #include <qtgl/free_fly.hpp>
-#include <utility/tensor_math.hpp>
+#include <angeo/tensor_math.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/timeprof.hpp>
 
@@ -76,7 +76,7 @@ free_fly_action::free_fly_action(
 
 std::pair<bool, // was any translation performed ?
           bool  // was any rotation performed ?
->  free_fly(coordinate_system&  coord_system,
+>  free_fly(angeo::coordinate_system&  coord_system,
                free_fly_config const&  config,
                float_64_bit const  seconds_from_previous_call,
                mouse_props const&  mouse_info,
@@ -115,12 +115,12 @@ std::pair<bool, // was any translation performed ?
 
             if (action.do_rotation())
             {
-                qtgl::rotate(coord_system,angle_axis_to_quaternion(action_value,action_axis));
+                angeo::rotate(coord_system,angle_axis_to_quaternion(action_value,action_axis));
                 rotated = true;
             }
             else
             {
-                qtgl::translate(coord_system,action_value * action_axis);
+                angeo::translate(coord_system,action_value * action_axis);
                 translated = true;
             }
         }

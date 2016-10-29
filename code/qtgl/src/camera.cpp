@@ -4,27 +4,27 @@
 namespace qtgl {
 
 
-camera::camera(qtgl::coordinate_system const&  coordinate_system)
-    : m_coordinate_system(new qtgl::coordinate_system(coordinate_system))
+camera::camera(angeo::coordinate_system const&  coordinate_system)
+    : m_coordinate_system(new angeo::coordinate_system(coordinate_system))
 {
     ASSUMPTION(m_coordinate_system.operator bool());
 }
 
 
-camera::camera(coordinate_system_ptr  coordinate_system)
+camera::camera(angeo::coordinate_system_ptr  coordinate_system)
     : m_coordinate_system(coordinate_system)
 {
     ASSUMPTION(m_coordinate_system.operator bool());
 }
 
 
-void  camera::set_coordinate_system(qtgl::coordinate_system const&   coord_system)
+void  camera::set_coordinate_system(angeo::coordinate_system const&   coord_system)
 {
-    m_coordinate_system = coordinate_system_ptr{ new qtgl::coordinate_system(coord_system) };
+    m_coordinate_system = std::make_shared<angeo::coordinate_system>(coord_system);
 }
 
 
-void  camera::set_coordinate_system(coordinate_system_ptr const   coord_system)
+void  camera::set_coordinate_system(angeo::coordinate_system_ptr const   coord_system)
 {
     ASSUMPTION(coord_system.operator bool());
     m_coordinate_system = coord_system;
@@ -42,29 +42,29 @@ void  view_projection_matrix(camera const&  camera_ref, matrix44&  output)
 
 
 camera_perspective_ptr  camera_perspective::create(
-        qtgl::coordinate_system const&  coordinate_system,
+        angeo::coordinate_system const&  coordinate_system,
         float_32_bit const  near,
         float_32_bit const  far,
         window_props const&  window_info
         )
 {
-    return create(coordinate_system_ptr{new qtgl::coordinate_system{coordinate_system}},near,far,window_info);
+    return create(std::make_shared<angeo::coordinate_system>(coordinate_system),near,far,window_info);
 }
 
 
 camera_perspective_ptr  camera_perspective::create(
-        coordinate_system_ptr  coordinate_system,
+        angeo::coordinate_system_ptr  coordinate_system,
         float_32_bit const  near,
         float_32_bit const  far,
         window_props const&  window_info
         )
 {
-    return camera_perspective_ptr{ new camera_perspective{coordinate_system,near,far,window_info} };
+    return std::make_shared<camera_perspective>(coordinate_system,near,far,window_info);
 }
 
 
 camera_perspective::camera_perspective(
-        coordinate_system_ptr  coordinate_system,
+        angeo::coordinate_system_ptr  coordinate_system,
         float_32_bit const  near,
         float_32_bit const  far,
         float_32_bit const  left,
@@ -87,7 +87,7 @@ camera_perspective::camera_perspective(
 
 
 camera_perspective::camera_perspective(
-        qtgl::coordinate_system const&  coordinate_system,
+        angeo::coordinate_system const&  coordinate_system,
         float_32_bit const  near,
         float_32_bit const  far,
         float_32_bit const  left,
@@ -96,13 +96,13 @@ camera_perspective::camera_perspective(
         float_32_bit const  top
         )
     : camera_perspective(
-          coordinate_system_ptr{new qtgl::coordinate_system{coordinate_system}},
+          std::make_shared<angeo::coordinate_system>(coordinate_system),
           near,far,left,right,bottom,top
           )
 {}
 
 
-camera_perspective::camera_perspective(coordinate_system_ptr  coordinate_system,
+camera_perspective::camera_perspective(angeo::coordinate_system_ptr  coordinate_system,
                                        float_32_bit const  near,
                                        float_32_bit const  far,
                                        window_props const&  window_info)
@@ -120,12 +120,12 @@ camera_perspective::camera_perspective(coordinate_system_ptr  coordinate_system,
 }
 
 
-camera_perspective::camera_perspective(qtgl::coordinate_system const&  coordinate_system,
+camera_perspective::camera_perspective(angeo::coordinate_system const&  coordinate_system,
                                        float_32_bit const  near,
                                        float_32_bit const  far,
                                        window_props const&  window_info)
     : camera_perspective(
-          coordinate_system_ptr{new qtgl::coordinate_system{coordinate_system}},
+          std::make_shared<angeo::coordinate_system>(coordinate_system),
           near,far,window_info
           )
 {}
@@ -178,24 +178,15 @@ void  camera_perspective::projection_matrix(matrix44&  output) const
         ;
 }
 
-vector3  camera_perspective::cursor3d(vector2 const&  mouse_pos, window_props const&  props) const
-{
-    vector2 const  u(
-        m_left + (mouse_pos(0) / (float_32_bit)props.width_in_pixels()) * window_width_in_meters(props),
-        m_top - (mouse_pos(1) / (float_32_bit)props.height_in_pixels()) * window_height_in_meters(props)
-        );
-    return u(0) * axis_x(*coordinate_system()) + u(1) * axis_y(*coordinate_system()) - m_near * axis_z(*coordinate_system());
-}
-
 
 camera_perspective_ptr  create_camera_perspective(
-        coordinate_system_ptr  coordinate_system,
+        angeo::coordinate_system_ptr  coordinate_system,
         float_32_bit const  near,
         float_32_bit const  far,
         window_props const&  window_info
         )
 {
-    return camera_perspective_ptr( new qtgl::camera_perspective(coordinate_system,near,far,window_info) );
+    return std::make_shared<camera_perspective>(coordinate_system,near,far,window_info);
 }
 
 void  adjust(camera_perspective&  camera_ref, window_props const&  window_info)

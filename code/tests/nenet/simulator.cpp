@@ -3,7 +3,8 @@
 #include <qtgl/draw.hpp>
 #include <qtgl/batch_generators.hpp>
 #include <qtgl/texture_generators.hpp>
-#include <utility/tensor_math.hpp>
+#include <qtgl/camera_utils.hpp>
+#include <angeo/tensor_math.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -43,7 +44,7 @@ simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused, n
 
     , m_camera(
             qtgl::camera_perspective::create(
-                    qtgl::coordinate_system::create(
+                    angeo::coordinate_system::create(
                             vector3(6.56402016f, 6.53800011f, 3.27975011f),
                             quaternion(0.298171997f, 0.228851005f, 0.564207971f, 0.735112011f)
                             ),
@@ -229,7 +230,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             m_selected_cell_input_spot_lines.reset();
             m_selected_cell_output_terminal_lines.reset();
 
-            vector3 const  ray = m_camera->cursor3d({ mouse_props().x() ,mouse_props().y() },window_props());
+            vector3  ray; qtgl::cursor_line_begin(*m_camera,{ mouse_props().x() ,mouse_props().y() },window_props(),ray);
             scalar  param = 1e30f;
             m_selected_cell = nenet()->find_closest_cell(m_camera->coordinate_system()->origin(),ray,0.75f,&param);
             {
@@ -321,7 +322,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                 quaternion const  orientation =
                     (it == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle,vector3_unit_z()) :
                                               quaternion_identity() ;
-                qtgl::transformation_matrix(qtgl::coordinate_system(it->first, orientation), world_transformation);
+                angeo::transformation_matrix(angeo::coordinate_system(it->first, orientation), world_transformation);
                 matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
 
                 vector4 const  diffuse_colour(
@@ -379,7 +380,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                 quaternion const  orientation =
                     (it == m_selected_input_spot) ? angle_axis_to_quaternion(m_selected_rot_angle, vector3_unit_z()) :
                                                     quaternion_identity();
-                qtgl::transformation_matrix(qtgl::coordinate_system(it->first, orientation), world_transformation);
+                angeo::transformation_matrix(angeo::coordinate_system(it->first, orientation), world_transformation);
                 matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
 
                 for (qtgl::vertex_shader_uniform_symbolic_name const uniform : m_batch_input_spot->symbolic_names_of_used_uniforms())
@@ -422,7 +423,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                 quaternion const  orientation =
                     (&oterm == m_selected_output_terminal) ? angle_axis_to_quaternion(m_selected_rot_angle, vector3_unit_z()) :
                                                              quaternion_identity();
-                qtgl::transformation_matrix(qtgl::coordinate_system(oterm.pos(), orientation), world_transformation);
+                angeo::transformation_matrix(angeo::coordinate_system(oterm.pos(), orientation), world_transformation);
                 matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
 
                 for (qtgl::vertex_shader_uniform_symbolic_name const uniform : m_batch_output_terminal->symbolic_names_of_used_uniforms())

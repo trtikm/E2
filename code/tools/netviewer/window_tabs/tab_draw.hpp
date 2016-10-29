@@ -1,7 +1,7 @@
 #ifndef E2_TOOL_NETVIEWER_WINDOW_TABS_TAB_DRAW_HPP_INCLUDED
 #   define E2_TOOL_NETVIEWER_WINDOW_TABS_TAB_DRAW_HPP_INCLUDED
 
-#   include <utility/tensor_math.hpp>
+#   include <angeo/tensor_math.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <QWidget>
 #   include <QLineEdit>

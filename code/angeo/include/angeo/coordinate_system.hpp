@@ -1,11 +1,11 @@
-#ifndef QTGL_COORDINATE_SYSTEM_HPP_INCLUDED
-#   define QTGL_COORDINATE_SYSTEM_HPP_INCLUDED
+#ifndef ANGEO_COORDINATE_SYSTEM_HPP_INCLUDED
+#   define ANGEO_COORDINATE_SYSTEM_HPP_INCLUDED
 
+#   include <angeo/tensor_math.hpp>
 #   include <utility/basic_numeric_types.hpp>
-#   include <utility/tensor_math.hpp>
 #   include <memory>
 
-namespace qtgl {
+namespace angeo {
 
 
 struct coordinate_system;

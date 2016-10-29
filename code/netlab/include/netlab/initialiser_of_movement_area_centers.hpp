@@ -3,7 +3,7 @@
 
 #   include <netlab/network_props.hpp>
 #   include <netlab/network_indices.hpp>
-#   include <utility/tensor_math.hpp>
+#   include <angeo/tensor_math.hpp>
 
 namespace netlab {
 

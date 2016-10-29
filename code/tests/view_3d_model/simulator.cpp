@@ -2,7 +2,7 @@
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
 #include <qtgl/buffer_generators.hpp>
-#include <utility/tensor_math.hpp>
+#include <angeo/tensor_math.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -20,7 +20,7 @@ simulator::simulator(vector3 const&  initial_clear_colour)
     : qtgl::real_time_simulator()
     , m_camera(
             qtgl::camera_perspective::create(
-                    qtgl::coordinate_system::create(
+                    angeo::coordinate_system::create(
                             vector3(0.5f,0.5f,2.0f),
                             quaternion_identity()
                             ),
@@ -153,14 +153,14 @@ simulator::simulator(vector3 const&  initial_clear_colour)
 //                },
             }
 
-    , m_grid_space{ qtgl::coordinate_system::create(vector3_zero(),quaternion_identity()) }
+    , m_grid_space{ angeo::coordinate_system::create(vector3_zero(),quaternion_identity()) }
     , m_grid_vertex_buffer()
     , m_grid_colour_buffer()
     , m_grid_buffers_binding()
     , m_grid_shaders_binding()
     , m_grid_draw_state(qtgl::draw_state::create())
 
-    , m_batch_space{ qtgl::coordinate_system::create(vector3_zero(),quaternion_identity()) }
+    , m_batch_space{ angeo::coordinate_system::create(vector3_zero(),quaternion_identity()) }
     , m_batches{
             //qtgl::batch::create(canonical_path("../data/shared/gfx/models/pixel_chest/all.txt")),
 
@@ -239,7 +239,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
 
     {
         matrix44  grid_world_transformation;
-        qtgl::transformation_matrix(*m_grid_space,grid_world_transformation);
+        angeo::transformation_matrix(*m_grid_space,grid_world_transformation);
         matrix44 const  grid_transform_matrix = view_projection_matrix * grid_world_transformation;
 
         if (qtgl::make_current(*m_grid_shaders_binding) && qtgl::make_current(*m_grid_buffers_binding))
@@ -257,7 +257,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
 
     {
         matrix44  batch_world_transformation;
-        qtgl::transformation_matrix(*m_batch_space, batch_world_transformation);
+        angeo::transformation_matrix(*m_batch_space, batch_world_transformation);
         matrix44 const  batch_transform_matrix = view_projection_matrix * batch_world_transformation;
 
         for (qtgl::batch_ptr const  batch : m_batches)
