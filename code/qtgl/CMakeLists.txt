@@ -59,12 +59,14 @@ add_library(${THIS_TARGET_NAME}
     ./src/mouse_props.cpp
 
     ./include/qtgl/batch_generators.hpp
-
-    ./src/create_batch_grid.cpp
-    ./src/create_batch_lines.cpp
+    ./src/generate_batch_grid.cpp
+    ./src/generate_batch_lines.cpp
     
     ./include/qtgl/buffer_generators.hpp
-    ./src/create_grid.cpp
+    ./src/generate_buffers_grid.cpp
+    ./src/generate_buffers_basis.cpp
+    ./src/generate_buffers_box.cpp
+    ./src/generate_buffers_sphere.cpp
 
     ./include/qtgl/texture_generators.hpp
     ./src/create_chessboard_texture.cpp
@@ -74,6 +76,8 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/qtgl/gui_utils.hpp
     ./src/gui_utils.cpp
+
+    ./include/qtgl/spatial_boundary.hpp 
 
     ./include/qtgl/detail/window.hpp
     ./src/detail/window.cpp

@@ -11,7 +11,7 @@ namespace qtgl {
 batch_ptr  create_lines3d(
     std::vector< std::array<float_32_bit, 3> >  vertices,
     std::vector< std::array<float_32_bit, 3> >  colours,
-    std::string const&  id = ""
+    std::string const&  id
     )
 {
     TMPROF_BLOCK();
@@ -25,9 +25,9 @@ batch_ptr  create_lines3d(
             2U, {},
             {
                 { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION,
-                  buffer::create(vertices, msgstream() << "grid/vertices" << id << msgstream::end()) },
+                  buffer::create(vertices, msgstream() << "generic/lines/vertices" << id << msgstream::end()) },
                 { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR,
-                  buffer::create(colours, msgstream() << "grid/colours" << id << msgstream::end()) },
+                  buffer::create(colours, msgstream() << "generic/lines/colours" << id << msgstream::end()) },
             }
             ),
         qtgl::shaders_binding::create(
@@ -43,7 +43,7 @@ batch_ptr  create_lines3d(
 batch_ptr  create_lines3d(
     std::vector< std::pair<vector3, vector3> > const&  lines,
     vector3 const&  common_colour,
-    std::string const&  id = ""
+    std::string const&  id
     )
 {
     TMPROF_BLOCK();

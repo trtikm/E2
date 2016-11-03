@@ -105,8 +105,8 @@ void  create_grid_vertex_and_colour_buffers(
             colours.push_back(colour_for_central_x_line);
         }
     }
-    output_vertex_buffer = buffer::create(vertices,"grid/vertices");
-    output_colour_buffer = buffer::create(colours,"grid/colours");
+    output_vertex_buffer = buffer::create(vertices,"generic/grid/vertices");
+    output_colour_buffer = buffer::create(colours,"generic/grid/colours");
 }
 
 

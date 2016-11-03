@@ -3,6 +3,7 @@
 
 #   include <qtgl/shader_data_bindings.hpp>
 #   include <qtgl/glapi.hpp>
+#   include <qtgl/spatial_boundary.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <array>
@@ -36,6 +37,11 @@ struct buffer_properties
             bool const   has_integral_components
             );
 
+    virtual ~buffer_properties() {}
+
+    virtual bool  operator==(buffer_properties const&  other) const;
+    virtual size_t  hash() const;
+
     boost::filesystem::path const&  buffer_file() const noexcept { return m_buffer_file; }
     natural_32_bit  num_primitives() const noexcept { return m_num_primitives; }
     natural_8_bit  num_components_per_primitive() const noexcept { return m_num_components_per_primitive; }
@@ -50,11 +56,29 @@ private:
     bool  m_has_integral_components;
 };
 
-
-bool  operator==(buffer_properties const&  props0, buffer_properties const&  props1);
+//bool  operator==(buffer_properties const&  props0, buffer_properties const&  props1);
 inline bool  operator!=(buffer_properties const&  props0, buffer_properties const&  props1) { return !(props0 == props1); }
 
-size_t  hasher_of_buffer_properties(buffer_properties const&  props);
+//size_t  hasher_of_buffer_properties(buffer_properties const&  props);
+inline size_t  hasher_of_buffer_properties(buffer_properties const&  props) { return props.hash(); }
+
+
+struct  vertex_buffer_properties : public buffer_properties
+{
+    vertex_buffer_properties(
+            boost::filesystem::path const&  buffer_file,
+            natural_8_bit const  num_components_per_primitive,
+            natural_32_bit const  num_primitives,
+            spatial_boundary const&  boundary
+            );
+
+    spatial_boundary const&  boundary() const noexcept { return m_boundary; }
+
+private:
+    spatial_boundary  m_boundary;
+};
+
+using  vertex_buffer_properties_ptr = std::shared_ptr<vertex_buffer_properties const>;
 
 
 }
@@ -157,6 +181,8 @@ struct buffers_binding
     GLuint  index_buffer_id() const noexcept { return m_binding_data->index_buffer_id(); }
     std::unordered_map<vertex_shader_input_buffer_binding_location,GLuint> const&  bindings() const noexcept
     { return m_binding_data->bindings(); }
+
+    vertex_buffer_properties_ptr  find_vertex_buffer_properties() const;
 
     bool  make_current() const;
 

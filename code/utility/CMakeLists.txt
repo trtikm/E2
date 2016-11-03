@@ -58,6 +58,8 @@ add_library(${THIS_TARGET_NAME}
     ./include/utility/typefn_if_then_else.hpp
 
     ./include/utility/msgstream.hpp
+
+    ./include/utility/dynamic_linking.hpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

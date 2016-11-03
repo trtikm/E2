@@ -151,26 +151,65 @@ buffer_properties::buffer_properties(
                (!m_has_integral_components && m_num_bytes_per_component == sizeof(float_32_bit)));
 }
 
-bool  operator==(buffer_properties const&  props0, buffer_properties const&  props1)
+bool  buffer_properties::operator==(buffer_properties const&  other) const
 {
-    return  props0.buffer_file() == props1.buffer_file() &&
-            props0.num_components_per_primitive() == props1.num_components_per_primitive() &&
-            props0.num_primitives() == props1.num_primitives() &&
-            props0.num_bytes_per_component() == props1.num_bytes_per_component() &&
-            props0.has_integral_components() == props1.has_integral_components()
+    return  buffer_file() == other.buffer_file() &&
+            num_components_per_primitive() == other.num_components_per_primitive() &&
+            num_primitives() == other.num_primitives() &&
+            num_bytes_per_component() == other.num_bytes_per_component() &&
+            has_integral_components() == other.has_integral_components()
             ;
 }
 
-size_t  hasher_of_buffer_properties(buffer_properties const&  props)
+size_t  buffer_properties::hash() const
 {
     std::size_t seed = 0ULL;
-    boost::hash_combine(seed,props.buffer_file().string());
-    boost::hash_combine(seed,props.num_components_per_primitive());
-    boost::hash_combine(seed,props.num_primitives());
-    boost::hash_combine(seed,props.num_bytes_per_component());
-    boost::hash_combine(seed,props.has_integral_components() ? 1U : 0U);
+    boost::hash_combine(seed,buffer_file().string());
+    boost::hash_combine(seed,num_components_per_primitive());
+    boost::hash_combine(seed,num_primitives());
+    boost::hash_combine(seed,num_bytes_per_component());
+    boost::hash_combine(seed,has_integral_components() ? 1U : 0U);
     return seed;
 }
+
+
+//bool  operator==(buffer_properties const&  props0, buffer_properties const&  props1)
+//{
+//    return  props0.buffer_file() == props1.buffer_file() &&
+//            props0.num_components_per_primitive() == props1.num_components_per_primitive() &&
+//            props0.num_primitives() == props1.num_primitives() &&
+//            props0.num_bytes_per_component() == props1.num_bytes_per_component() &&
+//            props0.has_integral_components() == props1.has_integral_components()
+//            ;
+//}
+
+//size_t  hasher_of_buffer_properties(buffer_properties const&  props)
+//{
+//    std::size_t seed = 0ULL;
+//    boost::hash_combine(seed,props.buffer_file().string());
+//    boost::hash_combine(seed,props.num_components_per_primitive());
+//    boost::hash_combine(seed,props.num_primitives());
+//    boost::hash_combine(seed,props.num_bytes_per_component());
+//    boost::hash_combine(seed,props.has_integral_components() ? 1U : 0U);
+//    return seed;
+//}
+
+
+vertex_buffer_properties::vertex_buffer_properties(
+        boost::filesystem::path const&  buffer_file,
+        natural_8_bit const  num_components_per_primitive,
+        natural_32_bit const  num_primitives,
+        spatial_boundary const&  boundary
+        )
+    : buffer_properties(
+          buffer_file,
+          num_components_per_primitive,
+          num_primitives,
+          sizeof(float_32_bit),
+          false
+          )
+    , m_boundary(boundary)
+{}
 
 
 }
@@ -464,7 +503,12 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
             error_message = msgstream() << "The vertex buffer file '" << buffer_file << "' contains zero vertices.";
             return buffer_properties_ptr();
         }
+        float_32_bit  radius_squared = 0.0f;
+        vector3  lo_corner{ 0.0f, 0.0f, 0.0f };
+        vector3  hi_corner{ 0.0f, 0.0f, 0.0f };
         for (natural_32_bit i = 0U; i < num_vertices; ++i)
+        {
+            vector3  point;
             for (natural_32_bit j = 0U; j < 3U; ++j)
             {
                 if (!detail::read_line(istr,line))
@@ -477,14 +521,26 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
                 std::copy(reinterpret_cast<natural_8_bit const*>(&coord),
                           reinterpret_cast<natural_8_bit const*>(&coord) + sizeof(coord),
                           std::back_inserter(buffer_data));
+                point(j) = coord;
+                if (coord < lo_corner(j))
+                    lo_corner(j) = coord;
+                if (coord > hi_corner(j))
+                    hi_corner(j) = coord;
             }
+            float_32_bit const  len2 = length_squared(point);
+            if (len2 > radius_squared)
+                radius_squared = len2;
+        }
         if (detail::read_line(istr,line))
         {
             error_message = msgstream() << "The file '" << buffer_file << "' contains more than "
                 << 3U * num_vertices << " coordinates.";
             return buffer_properties_ptr();
         }
-        return buffer_properties::create(buffer_file,3U,num_vertices,sizeof(float_32_bit),false);
+        return std::make_shared<vertex_buffer_properties const>(
+                    buffer_file,3U,num_vertices,
+                    spatial_boundary{ std::sqrtf(radius_squared),lo_corner,hi_corner }
+                    );
     }
     else if (file_type == "E2::qtgl/buffer/diffuse_colours/text")
     {
@@ -703,6 +759,27 @@ buffers_binding::buffers_binding(
     for (auto const&  location_path : buffer_paths)
         detail::buffer_cache::instance().insert_load_request(location_path.second);
 }
+
+
+vertex_buffer_properties_ptr  buffers_binding::find_vertex_buffer_properties() const
+{
+    auto const  path_it = m_buffer_paths.find(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION);
+    if (path_it != m_buffer_paths.cend())
+    {
+        std::weak_ptr<buffer const> const  wptr = detail::buffer_cache::instance().find(path_it->second);
+        buffer_ptr const  ptr = wptr.lock();
+        if (ptr.operator bool())
+            return std::dynamic_pointer_cast<vertex_buffer_properties const>(ptr->properties());
+    }
+    else
+    {
+        auto const  buf_it = m_direct_bindings.find(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION);
+        if (buf_it != m_direct_bindings.cend())
+            return std::dynamic_pointer_cast<vertex_buffer_properties const>(buf_it->second->properties());
+    }
+    return vertex_buffer_properties_ptr{};
+}
+
 
 bool  buffers_binding::make_current() const
 {
