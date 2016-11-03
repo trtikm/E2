@@ -48,11 +48,8 @@ batch_ptr  create_grid(
             grid_vertex_buffer,
             grid_colour_buffer
             );
-    qtgl::buffers_binding_ptr  grid_buffers_binding;
-    qtgl::shaders_binding_ptr  grid_shaders_binding;
-    qtgl::draw_state_ptr  grid_draw_state;
     batch_ptr const  pbatch = batch::create(
-            msgstream() << "grid/batch" << id << msgstream::end(),
+            msgstream() << "generic/grid/batch" << id << msgstream::end(),
             qtgl::buffers_binding::create(
                 2U, {},
                 {

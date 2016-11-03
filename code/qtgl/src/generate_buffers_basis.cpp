@@ -10,6 +10,8 @@ void  create_basis_vectors_vertex_and_colour_buffers(
         buffer_ptr&  output_colour_buffer
         )
 {
+    TMPROF_BLOCK();
+
     static std::vector< std::array<float_32_bit,3> > const  vertices {
             { 0.0f, 0.0f, 0.0f }, { 1.0f, 0.0f, 0.0f },
             { 0.0f, 0.0f, 0.0f }, { 0.0f, 1.0f, 0.0f },

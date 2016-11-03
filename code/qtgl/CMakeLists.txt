@@ -61,7 +61,10 @@ add_library(${THIS_TARGET_NAME}
     ./include/qtgl/batch_generators.hpp
     ./src/generate_batch_grid.cpp
     ./src/generate_batch_lines.cpp
-    
+    ./src/generate_batch_basis_vectors.cpp
+    ./src/generate_batch_box.cpp
+    ./src/generate_batch_sphere.cpp
+
     ./include/qtgl/buffer_generators.hpp
     ./src/generate_buffers_grid.cpp
     ./src/generate_buffers_basis.cpp

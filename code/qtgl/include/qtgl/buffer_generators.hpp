@@ -45,9 +45,8 @@ void  create_wireframe_box_vertex_buffer(
 
 
 void  create_wireframe_sphere_vertex_buffer(
-        float_32_bit const  raduis,
-        natural_8_bit const  num_horizontal_slices,
-        natural_8_bit const  num_vertical_slices,
+        float_32_bit const  radius,
+        natural_8_bit const  num_lines_per_quarter_of_circle,
         buffer_ptr&  output_vertex_buffer,
         std::string const&  id = ""
         );

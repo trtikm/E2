@@ -122,6 +122,13 @@ private:
     qtgl::batch_ptr  m_batch_dock;
     qtgl::batch_ptr  m_batch_ship;
 
+    qtgl::batch_ptr  m_batch_spiker_bbox;
+    qtgl::batch_ptr  m_batch_dock_bbox;
+    qtgl::batch_ptr  m_batch_ship_bbox;
+
+    qtgl::batch_ptr  m_batch_spiker_bsphere;
+    qtgl::batch_ptr  m_batch_dock_bsphere;
+    qtgl::batch_ptr  m_batch_ship_bsphere;
 
 
 //    std::shared_ptr<::nenet>  m_nenet;

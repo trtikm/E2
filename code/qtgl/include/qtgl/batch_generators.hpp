@@ -41,6 +41,22 @@ batch_ptr  create_lines3d(
     );
 
 
+batch_ptr  create_basis_vectors();
+
+
+batch_ptr  create_wireframe_box(
+        vector3 const&  lo_corner,
+        vector3 const&  hi_corner,
+        std::string const&  id = ""
+        );
+
+
+batch_ptr  create_wireframe_sphere(
+        float_32_bit const  radius,
+        natural_8_bit const  num_lines_per_quarter_of_circle,
+        std::string const&  id = ""
+        );
+
 }
 
 #endif

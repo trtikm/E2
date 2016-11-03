@@ -13,6 +13,8 @@ void  create_wireframe_box_vertex_buffer(
         std::string const&  id
         )
 {
+    TMPROF_BLOCK();
+
     std::vector< std::array<float_32_bit,3> > const  vertices {
         { lo_corner(0), lo_corner(1), lo_corner(2) }, { hi_corner(0), lo_corner(1), lo_corner(2) },
         { hi_corner(0), lo_corner(1), lo_corner(2) }, { hi_corner(0), hi_corner(1), lo_corner(2) },
