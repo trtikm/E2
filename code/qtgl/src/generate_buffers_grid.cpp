@@ -1,5 +1,4 @@
 #include <qtgl/buffer_generators.hpp>
-#include <utility/msgstream.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/timeprof.hpp>
 
@@ -107,8 +106,8 @@ void  create_grid_vertex_and_colour_buffers(
             colours.push_back(colour_for_central_x_line);
         }
     }
-    output_vertex_buffer = buffer::create(vertices,msgstream() << id << (id.empty() ? "" : "/") << "grid/vertices",true);
-    output_colour_buffer = buffer::create(colours,msgstream() << id << (id.empty() ? "" : "/") << "grid/colours");
+    output_vertex_buffer = buffer::create(vertices,"grid/vertices",id,true);
+    output_colour_buffer = buffer::create(colours,"grid/colours",id);
 }
 
 

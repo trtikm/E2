@@ -91,18 +91,19 @@ using  buffer_ptr = std::shared_ptr<buffer const>;
 struct buffer
 {
     static buffer_ptr  create(std::vector< std::array<float_32_bit,2> > const&  data,
-                              std::string const&  buffer_name);
+                              std::string const&  buffer_name, std::string const&  uid = "");
     static buffer_ptr  create(std::vector< std::array<float_32_bit,3> > const&  data,
-                              std::string const&  buffer_name, bool const  do_compute_boundary = false);
+                              std::string const&  buffer_name, std::string const&  uid = "",
+                              bool const  do_compute_boundary = false);
     static buffer_ptr  create(std::vector< std::array<float_32_bit,4> > const&  data,
-                              std::string const&  buffer_name);
+                              std::string const&  buffer_name, std::string const&  uid = "");
 
     static buffer_ptr  create(std::vector< natural_32_bit > const&  data,
-                              std::string const&  buffer_name);
+                              std::string const&  buffer_name, std::string const&  uid = "");
     static buffer_ptr  create(std::vector< std::array<natural_32_bit,2> > const&  data,
-                              std::string const&  buffer_name);
+                              std::string const&  buffer_name, std::string const&  uid = "");
     static buffer_ptr  create(std::vector< std::array<natural_32_bit,3> > const&  data,
-                              std::string const&  buffer_name);
+                              std::string const&  buffer_name, std::string const&  uid = "");
 
     static buffer_ptr  create(GLuint const  id, buffer_properties const&  buffer_props);
     static buffer_ptr  create(GLuint const  id, buffer_properties_ptr const  buffer_props);

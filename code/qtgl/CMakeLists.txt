@@ -64,12 +64,14 @@ add_library(${THIS_TARGET_NAME}
     ./src/generate_batch_basis_vectors.cpp
     ./src/generate_batch_box.cpp
     ./src/generate_batch_sphere.cpp
+    ./src/generate_batch_perspective_frustum.cpp
 
     ./include/qtgl/buffer_generators.hpp
     ./src/generate_buffers_grid.cpp
     ./src/generate_buffers_basis.cpp
     ./src/generate_buffers_box.cpp
     ./src/generate_buffers_sphere.cpp
+    ./src/generate_buffers_perspective_frustum.cpp
 
     ./include/qtgl/texture_generators.hpp
     ./src/create_chessboard_texture.cpp

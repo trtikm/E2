@@ -53,6 +53,18 @@ void  create_wireframe_sphere_vertex_buffer(
         );
 
 
+void  create_wireframe_perspective_frustum_vertex_buffer(
+        float_32_bit const  near_plane,
+        float_32_bit const  far_plane,
+        float_32_bit const  left_plane,
+        float_32_bit const  right_plane,
+        float_32_bit const  top_plane,
+        float_32_bit const  bottom_plane,
+        buffer_ptr&  output_vertex_buffer,
+        std::string const&  id = ""
+        );
+
+
 }
 
 #endif

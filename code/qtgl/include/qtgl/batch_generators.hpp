@@ -57,6 +57,18 @@ batch_ptr  create_wireframe_sphere(
         std::string const&  id = ""
         );
 
+
+batch_ptr  create_wireframe_perspective_frustum(
+        float_32_bit const  near_plane,
+        float_32_bit const  far_plane,
+        float_32_bit const  left_plane,
+        float_32_bit const  right_plane,
+        float_32_bit const  top_plane,
+        float_32_bit const  bottom_plane,
+        std::string const&  id = ""
+        );
+
+
 }
 
 #endif

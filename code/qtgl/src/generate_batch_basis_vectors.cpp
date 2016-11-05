@@ -15,7 +15,7 @@ batch_ptr  create_basis_vectors()
     create_basis_vectors_vertex_and_colour_buffers(basis_vertex_buffer,basis_colour_buffer);
 
     batch_ptr const  pbatch = batch::create(
-            "generic/basis/batch",
+            "generic/batch/basis",
             qtgl::buffers_binding::create(
                 2U, {},
                 {

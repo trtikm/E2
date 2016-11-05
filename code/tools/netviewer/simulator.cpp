@@ -215,6 +215,16 @@ simulator::simulator(
     , m_batch_ship_bsphere{}
 
     , m_batch_basis{ qtgl::create_basis_vectors() }
+    , m_batch_camera_frustum(
+          qtgl::create_wireframe_perspective_frustum(
+              m_camera->near_plane(),
+              10.0f,//m_camera->far_plane(),
+              m_camera->left(),
+              m_camera->right(),
+              m_camera->top(),
+              m_camera->bottom()
+              )
+          )
 
 //    , m_selected_cell(m_nenet->cells().cend())
 //    , m_selected_input_spot(m_nenet->input_spots().cend())
@@ -606,6 +616,20 @@ void  simulator::render_network(matrix44 const&  view_projection_matrix, qtgl::d
     render_network_spikers(view_projection_matrix,draw_state);
     render_network_docks(view_projection_matrix,draw_state);
     render_network_ships(view_projection_matrix,draw_state);
+
+    if (qtgl::make_current(*m_batch_camera_frustum, *draw_state))
+    {
+        INVARIANT(m_batch_camera_frustum->shaders_binding().operator bool());
+
+        render_batch(
+        *m_batch_camera_frustum,
+        view_projection_matrix,
+        angeo::coordinate_system(vector3_zero(),quaternion_identity()),
+        vector4(1.0f, 1.0f, 1.0f, 1.0f)
+        );
+
+        draw_state = m_batch_camera_frustum->draw_state();
+    }
 }
 
 

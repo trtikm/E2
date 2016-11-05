@@ -131,6 +131,7 @@ private:
     qtgl::batch_ptr  m_batch_ship_bsphere;
 
     qtgl::batch_ptr  m_batch_basis;
+    qtgl::batch_ptr  m_batch_camera_frustum;
 
 //    std::shared_ptr<::nenet>  m_nenet;
 //    cell::pos_map::const_iterator  m_selected_cell;

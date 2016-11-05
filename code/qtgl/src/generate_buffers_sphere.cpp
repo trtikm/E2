@@ -1,8 +1,6 @@
 #include <qtgl/buffer_generators.hpp>
-#include <utility/msgstream.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
-#include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 
 namespace qtgl {
@@ -59,7 +57,7 @@ void  create_wireframe_sphere_vertex_buffer(
         vertices.push_back({ 0.0f, v[0], v[1] });
     }
 
-    output_vertex_buffer = buffer::create(vertices,msgstream() << id << (id.empty() ? "" : "/") << "sphere/vertices",true);
+    output_vertex_buffer = buffer::create(vertices,"sphere/vertices",id,true);
 }
 
 

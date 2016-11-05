@@ -19,7 +19,7 @@ batch_ptr  create_wireframe_sphere(
     create_wireframe_sphere_vertex_buffer(radius,num_lines_per_quarter_of_circle,sphere_vertex_buffer,id);
 
     batch_ptr const  pbatch = batch::create(
-        msgstream() << "generic/sphere/batch" << id << msgstream::end(),
+        msgstream() << "generic/batch/sphere" << (id.empty() ? "" : "/") << id << msgstream::end(),
         qtgl::buffers_binding::create(
             2U, {},
             {

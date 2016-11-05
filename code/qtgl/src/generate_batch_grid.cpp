@@ -49,7 +49,7 @@ batch_ptr  create_grid(
             grid_colour_buffer
             );
     batch_ptr const  pbatch = batch::create(
-            msgstream() << "generic/grid/batch" << id << msgstream::end(),
+            msgstream() << "generic/batch/grid" << (id.empty() ? "" : "/") << id << msgstream::end(),
             qtgl::buffers_binding::create(
                 2U, {},
                 {

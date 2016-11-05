@@ -20,7 +20,7 @@ batch_ptr  create_lines3d(
     ASSUMPTION(vertices.size() == colours.size());
 
     batch_ptr const  pbatch = batch::create(
-        msgstream() << "generic/lines3d/batch" << id << msgstream::end(),
+        msgstream() << "generic/batch/lines3d" << (id.empty() ? "" : "/") << id << msgstream::end(),
         qtgl::buffers_binding::create(
             2U, {},
             {

@@ -195,7 +195,8 @@ vertex_buffer_properties::vertex_buffer_properties(
 namespace qtgl {
 
 
-buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,2> > const&  data, std::string const&  buffer_name)
+buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,2> > const&  data,
+                           std::string const&  buffer_name, std::string const&  uid)
 {
     TMPROF_BLOCK();
 
@@ -213,13 +214,27 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,2> > const&  dat
         boost::hash_combine(seed,elem.at(1ULL));
     }
     boost::filesystem::path  buffer_path =
-            msgstream() << "/generated_buffer/hash_" << seed << "/" << buffer_name << msgstream::end();
+            msgstream() << "/generic/buffer"
+                        << (buffer_name.empty() ? "" : "/") << buffer_name
+                        << (uid.empty() ? "" : "/") << uid
+                        << msgstream::end();
+    if (!uid.empty())
+    {
+        std::size_t  seed = 0ULL;
+        for (auto const&  elem : data)
+        {
+            boost::hash_combine(seed,elem.at(0ULL));
+            boost::hash_combine(seed,elem.at(1ULL));
+        }
+        buffer_path /= msgstream() << "/hash_" << seed << msgstream::end();
+    }
 
     return create(id,std::make_shared<buffer_properties>(buffer_path,2U,(natural_32_bit)data.size(),
                                                          (natural_8_bit)sizeof(float_32_bit),false));
 }
 
-buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,3> > const&  data, std::string const&  buffer_name,
+buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,3> > const&  data,
+                           std::string const&  buffer_name, std::string const&  uid,
                            bool const  do_compute_boundary)
 {
     TMPROF_BLOCK();
@@ -231,15 +246,22 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,3> > const&  dat
     if (id == 0U)
         return buffer_ptr{};
 
-    std::size_t  seed = 0ULL;
-    for (auto const&  elem : data)
-    {
-        boost::hash_combine(seed,elem.at(0ULL));
-        boost::hash_combine(seed,elem.at(1ULL));
-        boost::hash_combine(seed,elem.at(2ULL));
-    }
     boost::filesystem::path  buffer_path =
-            msgstream() << "/generated_buffer/hash_" << seed << "/" << buffer_name << msgstream::end();
+        msgstream() << "/generic/buffer"
+                    << (buffer_name.empty() ? "" : "/") << buffer_name
+                    << (uid.empty() ? "" : "/") << uid
+                    << msgstream::end();
+    if (!uid.empty())
+    {
+        std::size_t  seed = 0ULL;
+        for (auto const&  elem : data)
+        {
+            boost::hash_combine(seed,elem.at(0ULL));
+            boost::hash_combine(seed,elem.at(1ULL));
+            boost::hash_combine(seed,elem.at(2ULL));
+        }
+        buffer_path /= msgstream() << "/hash_" << seed << msgstream::end();
+    }
 
     if (!do_compute_boundary)
         return create(id,std::make_shared<buffer_properties>(buffer_path,3U,(natural_32_bit)data.size(),
@@ -274,7 +296,8 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,3> > const&  dat
                 );
 }
 
-buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,4> > const&  data, std::string const&  buffer_name)
+buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,4> > const&  data,
+                           std::string const&  buffer_name, std::string const&  uid)
 {
     TMPROF_BLOCK();
 
@@ -285,22 +308,30 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,4> > const&  dat
     if (id == 0U)
         return buffer_ptr{};
 
-    std::size_t  seed = 0ULL;
-    for (auto const&  elem : data)
-    {
-        boost::hash_combine(seed,elem.at(0ULL));
-        boost::hash_combine(seed,elem.at(1ULL));
-        boost::hash_combine(seed,elem.at(2ULL));
-        boost::hash_combine(seed,elem.at(3ULL));
-    }
     boost::filesystem::path  buffer_path =
-            msgstream() << "/generated_buffer/hash_" << seed << "/" << buffer_name << msgstream::end();
+        msgstream() << "/generic/buffer"
+        << (buffer_name.empty() ? "" : "/") << buffer_name
+        << (uid.empty() ? "" : "/") << uid
+        << msgstream::end();
+    if (!uid.empty())
+    {
+        std::size_t  seed = 0ULL;
+        for (auto const& elem : data)
+        {
+            boost::hash_combine(seed, elem.at(0ULL));
+            boost::hash_combine(seed, elem.at(1ULL));
+            boost::hash_combine(seed, elem.at(2ULL));
+            boost::hash_combine(seed, elem.at(3ULL));
+        }
+        buffer_path /= msgstream() << "/hash_" << seed << msgstream::end();
+    }
 
     return create(id,std::make_shared<buffer_properties>(buffer_path,4U,(natural_32_bit)data.size(),
                                                          (natural_8_bit)sizeof(float_32_bit),false));
 }
 
-buffer_ptr  buffer::create(std::vector< natural_32_bit > const&  data, std::string const&  buffer_name)
+buffer_ptr  buffer::create(std::vector< natural_32_bit > const&  data,
+                           std::string const&  buffer_name, std::string const&  uid)
 {
     TMPROF_BLOCK();
 
@@ -311,17 +342,25 @@ buffer_ptr  buffer::create(std::vector< natural_32_bit > const&  data, std::stri
     if (id == 0U)
         return buffer_ptr{};
 
-    std::size_t  seed = 0ULL;
-    for (auto const  elem : data)
-        boost::hash_combine(seed,elem);
     boost::filesystem::path  buffer_path =
-            msgstream() << "/generated_buffer/hash_" << seed << "/" << buffer_name << msgstream::end();
+        msgstream() << "/generic/buffer"
+        << (buffer_name.empty() ? "" : "/") << buffer_name
+        << (uid.empty() ? "" : "/") << uid
+        << msgstream::end();
+    if (!uid.empty())
+    {
+        std::size_t  seed = 0ULL;
+        for (auto const& elem : data)
+            boost::hash_combine(seed, elem);
+        buffer_path /= msgstream() << "/hash_" << seed << msgstream::end();
+    }
 
     return create(id,std::make_shared<buffer_properties>(buffer_path,1U,(natural_32_bit)data.size(),
                                                          (natural_8_bit)sizeof(natural_32_bit),true));
 }
 
-buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,2> > const&  data, std::string const&  buffer_name)
+buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,2> > const&  data,
+                           std::string const&  buffer_name, std::string const&  uid)
 {
     TMPROF_BLOCK();
 
@@ -332,21 +371,28 @@ buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,2> > const&  d
     if (id == 0U)
         return buffer_ptr{};
 
-    std::size_t  seed = 0ULL;
-    for (auto const&  elem : data)
-    {
-        boost::hash_combine(seed,elem.at(0ULL));
-        boost::hash_combine(seed,elem.at(1ULL));
-    }
     boost::filesystem::path  buffer_path =
-            msgstream() << "/generated_buffer/hash_" << seed << "/" << buffer_name << msgstream::end();
-
+        msgstream() << "/generic/buffer"
+        << (buffer_name.empty() ? "" : "/") << buffer_name
+        << (uid.empty() ? "" : "/") << uid
+        << msgstream::end();
+    if (!uid.empty())
+    {
+        std::size_t  seed = 0ULL;
+        for (auto const& elem : data)
+        {
+            boost::hash_combine(seed, elem.at(0ULL));
+            boost::hash_combine(seed, elem.at(1ULL));
+        }
+        buffer_path /= msgstream() << "/hash_" << seed << msgstream::end();
+    }
 
     return create(id,std::make_shared<buffer_properties>(buffer_path,2U,(natural_32_bit)data.size(),
                                                          (natural_8_bit)sizeof(natural_32_bit),true));
 }
 
-buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,3> > const&  data, std::string const&  buffer_name)
+buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,3> > const&  data,
+                           std::string const&  buffer_name, std::string const&  uid)
 {
     TMPROF_BLOCK();
 
@@ -357,15 +403,22 @@ buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,3> > const&  d
     if (id == 0U)
         return buffer_ptr{};
 
-    std::size_t  seed = 0ULL;
-    for (auto const&  elem : data)
-    {
-        boost::hash_combine(seed,elem.at(0ULL));
-        boost::hash_combine(seed,elem.at(1ULL));
-        boost::hash_combine(seed,elem.at(2ULL));
-    }
     boost::filesystem::path  buffer_path =
-            msgstream() << "/generated_buffer/hash_" << seed << "/" << buffer_name << msgstream::end();
+        msgstream() << "/generic/buffer"
+        << (buffer_name.empty() ? "" : "/") << buffer_name
+        << (uid.empty() ? "" : "/") << uid
+        << msgstream::end();
+    if (!uid.empty())
+    {
+        std::size_t  seed = 0ULL;
+        for (auto const& elem : data)
+        {
+            boost::hash_combine(seed, elem.at(0ULL));
+            boost::hash_combine(seed, elem.at(1ULL));
+            boost::hash_combine(seed, elem.at(2ULL));
+        }
+        buffer_path /= msgstream() << "/hash_" << seed << msgstream::end();
+    }
 
     return create(id,std::make_shared<buffer_properties>(buffer_path,3U,(natural_32_bit)data.size(),
                                                          (natural_8_bit)sizeof(natural_32_bit),true));

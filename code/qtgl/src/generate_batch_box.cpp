@@ -19,7 +19,7 @@ batch_ptr  create_wireframe_box(
     create_wireframe_box_vertex_buffer(lo_corner,hi_corner,box_vertex_buffer,id);
 
     batch_ptr const  pbatch = batch::create(
-        msgstream() << "generic/box/batch" << id << msgstream::end(),
+        msgstream() << "generic/batch/box" << (id.empty() ? "" : "/") << id << msgstream::end(),
         qtgl::buffers_binding::create(
             2U, {},
             {
