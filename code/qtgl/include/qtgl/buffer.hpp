@@ -56,10 +56,8 @@ private:
     bool  m_has_integral_components;
 };
 
-//bool  operator==(buffer_properties const&  props0, buffer_properties const&  props1);
-inline bool  operator!=(buffer_properties const&  props0, buffer_properties const&  props1) { return !(props0 == props1); }
 
-//size_t  hasher_of_buffer_properties(buffer_properties const&  props);
+inline bool  operator!=(buffer_properties const&  props0, buffer_properties const&  props1) { return !(props0 == props1); }
 inline size_t  hasher_of_buffer_properties(buffer_properties const&  props) { return props.hash(); }
 
 
@@ -95,7 +93,7 @@ struct buffer
     static buffer_ptr  create(std::vector< std::array<float_32_bit,2> > const&  data,
                               std::string const&  buffer_name);
     static buffer_ptr  create(std::vector< std::array<float_32_bit,3> > const&  data,
-                              std::string const&  buffer_name);
+                              std::string const&  buffer_name, bool const  do_compute_boundary = false);
     static buffer_ptr  create(std::vector< std::array<float_32_bit,4> > const&  data,
                               std::string const&  buffer_name);
 

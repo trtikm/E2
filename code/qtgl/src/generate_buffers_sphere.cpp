@@ -59,7 +59,7 @@ void  create_wireframe_sphere_vertex_buffer(
         vertices.push_back({ 0.0f, v[0], v[1] });
     }
 
-    output_vertex_buffer = buffer::create(vertices,msgstream() << "generic/sphere/vertices" << id);
+    output_vertex_buffer = buffer::create(vertices,msgstream() << id << (id.empty() ? "" : "/") << "sphere/vertices",true);
 }
 
 

@@ -50,9 +50,6 @@ void  draw()
     if (!s_are_buffers_ready)
         return;
 
-    ASSUMPTION(s_num_components_per_primitive == 2U ||
-               s_num_components_per_primitive == 3U ||
-               s_num_components_per_primitive == 4U );
     ASSUMPTION(s_num_primitives > 0U);
 
     if (s_id == 0U)

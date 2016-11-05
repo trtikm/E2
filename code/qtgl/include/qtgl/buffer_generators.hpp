@@ -26,7 +26,8 @@ void  create_grid_vertex_and_colour_buffers(
         natural_32_bit const  highlight_every,
         bool const  generate_triangle_at_origin,
         buffer_ptr&  output_vertex_buffer,
-        buffer_ptr&  output_colour_buffer
+        buffer_ptr&  output_colour_buffer,
+        std::string const&  id = ""
         );
 
 

@@ -23,8 +23,8 @@ void  create_basis_vectors_vertex_and_colour_buffers(
             { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f },
             };
 
-    output_vertex_buffer = buffer::create(vertices,"generic/basis/vertices");
-    output_colour_buffer = buffer::create(colours,"generic/basis/colours");
+    output_vertex_buffer = buffer::create(vertices,"basis/vertices",true);
+    output_colour_buffer = buffer::create(colours,"basis/colours");
 }
 
 

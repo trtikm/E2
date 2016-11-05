@@ -173,28 +173,6 @@ size_t  buffer_properties::hash() const
 }
 
 
-//bool  operator==(buffer_properties const&  props0, buffer_properties const&  props1)
-//{
-//    return  props0.buffer_file() == props1.buffer_file() &&
-//            props0.num_components_per_primitive() == props1.num_components_per_primitive() &&
-//            props0.num_primitives() == props1.num_primitives() &&
-//            props0.num_bytes_per_component() == props1.num_bytes_per_component() &&
-//            props0.has_integral_components() == props1.has_integral_components()
-//            ;
-//}
-
-//size_t  hasher_of_buffer_properties(buffer_properties const&  props)
-//{
-//    std::size_t seed = 0ULL;
-//    boost::hash_combine(seed,props.buffer_file().string());
-//    boost::hash_combine(seed,props.num_components_per_primitive());
-//    boost::hash_combine(seed,props.num_primitives());
-//    boost::hash_combine(seed,props.num_bytes_per_component());
-//    boost::hash_combine(seed,props.has_integral_components() ? 1U : 0U);
-//    return seed;
-//}
-
-
 vertex_buffer_properties::vertex_buffer_properties(
         boost::filesystem::path const&  buffer_file,
         natural_8_bit const  num_components_per_primitive,
@@ -235,13 +213,14 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,2> > const&  dat
         boost::hash_combine(seed,elem.at(1ULL));
     }
     boost::filesystem::path  buffer_path =
-            msgstream() << "/generated_buffer/id_" << seed << "/" << buffer_name << "/" << msgstream::end();
+            msgstream() << "/generated_buffer/hash_" << seed << "/" << buffer_name << msgstream::end();
 
     return create(id,std::make_shared<buffer_properties>(buffer_path,2U,(natural_32_bit)data.size(),
                                                          (natural_8_bit)sizeof(float_32_bit),false));
 }
 
-buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,3> > const&  data, std::string const&  buffer_name)
+buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,3> > const&  data, std::string const&  buffer_name,
+                           bool const  do_compute_boundary)
 {
     TMPROF_BLOCK();
 
@@ -260,10 +239,39 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,3> > const&  dat
         boost::hash_combine(seed,elem.at(2ULL));
     }
     boost::filesystem::path  buffer_path =
-            msgstream() << "/generated_buffer/id_" << seed << "/" << buffer_name << "/" << msgstream::end();
+            msgstream() << "/generated_buffer/hash_" << seed << "/" << buffer_name << msgstream::end();
 
-    return create(id,std::make_shared<buffer_properties>(buffer_path,3U,(natural_32_bit)data.size(),
-                                                         (natural_8_bit)sizeof(float_32_bit),false));
+    if (!do_compute_boundary)
+        return create(id,std::make_shared<buffer_properties>(buffer_path,3U,(natural_32_bit)data.size(),
+                                                             (natural_8_bit)sizeof(float_32_bit),false));
+
+    float_32_bit  radius_squared = 0.0f;
+    vector3  lo_corner{ 0.0f, 0.0f, 0.0f };
+    vector3  hi_corner{ 0.0f, 0.0f, 0.0f };
+    for (auto const&  point : data)
+    {
+        for (natural_32_bit j = 0U; j < 3U; ++j)
+        {
+            if (point.at(j) < lo_corner(j))
+                lo_corner(j) = point.at(j);
+            if (point.at(j) > hi_corner(j))
+                hi_corner(j) = point.at(j);
+        }
+        float_32_bit const  len2 = point.at(0U) * point.at(0U) +
+                                   point.at(1U) * point.at(1U) +
+                                   point.at(2U) * point.at(2U) ;
+        if (len2 > radius_squared)
+            radius_squared = len2;
+    }
+    return create(
+                id,
+                std::make_shared<vertex_buffer_properties const>(
+                    buffer_path,
+                    3U,
+                    (natural_32_bit)data.size(),
+                    spatial_boundary{ std::sqrtf(radius_squared),lo_corner,hi_corner }
+                    )
+                );
 }
 
 buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,4> > const&  data, std::string const&  buffer_name)
@@ -286,7 +294,7 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,4> > const&  dat
         boost::hash_combine(seed,elem.at(3ULL));
     }
     boost::filesystem::path  buffer_path =
-            msgstream() << "/generated_buffer/id_" << seed << "/" << buffer_name << "/" << msgstream::end();
+            msgstream() << "/generated_buffer/hash_" << seed << "/" << buffer_name << msgstream::end();
 
     return create(id,std::make_shared<buffer_properties>(buffer_path,4U,(natural_32_bit)data.size(),
                                                          (natural_8_bit)sizeof(float_32_bit),false));
@@ -307,7 +315,7 @@ buffer_ptr  buffer::create(std::vector< natural_32_bit > const&  data, std::stri
     for (auto const  elem : data)
         boost::hash_combine(seed,elem);
     boost::filesystem::path  buffer_path =
-            msgstream() << "/generated_buffer/id_" << seed << "/" << buffer_name << "/" << msgstream::end();
+            msgstream() << "/generated_buffer/hash_" << seed << "/" << buffer_name << msgstream::end();
 
     return create(id,std::make_shared<buffer_properties>(buffer_path,1U,(natural_32_bit)data.size(),
                                                          (natural_8_bit)sizeof(natural_32_bit),true));
@@ -331,7 +339,7 @@ buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,2> > const&  d
         boost::hash_combine(seed,elem.at(1ULL));
     }
     boost::filesystem::path  buffer_path =
-            msgstream() << "/generated_buffer/id_" << seed << "/" << buffer_name << "/" << msgstream::end();
+            msgstream() << "/generated_buffer/hash_" << seed << "/" << buffer_name << msgstream::end();
 
 
     return create(id,std::make_shared<buffer_properties>(buffer_path,2U,(natural_32_bit)data.size(),
@@ -357,7 +365,7 @@ buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,3> > const&  d
         boost::hash_combine(seed,elem.at(2ULL));
     }
     boost::filesystem::path  buffer_path =
-            msgstream() << "/generated_buffer/id_" << seed << "/" << buffer_name << "/" << msgstream::end();
+            msgstream() << "/generated_buffer/hash_" << seed << "/" << buffer_name << msgstream::end();
 
     return create(id,std::make_shared<buffer_properties>(buffer_path,3U,(natural_32_bit)data.size(),
                                                          (natural_8_bit)sizeof(natural_32_bit),true));

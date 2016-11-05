@@ -31,7 +31,7 @@ void  create_wireframe_box_vertex_buffer(
         { hi_corner(0), hi_corner(1), lo_corner(2) }, { hi_corner(0), hi_corner(1), hi_corner(2) },
         { lo_corner(0), hi_corner(1), lo_corner(2) }, { lo_corner(0), hi_corner(1), hi_corner(2) },
     };
-    output_vertex_buffer = buffer::create(vertices,msgstream() << "generic/box/vertices" << id);
+    output_vertex_buffer = buffer::create(vertices,msgstream() << id << (id.empty() ? "" : "/") << "box/vertices",true);
 }
 
 

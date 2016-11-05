@@ -1,4 +1,5 @@
 #include <qtgl/buffer_generators.hpp>
+#include <utility/msgstream.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/timeprof.hpp>
 
@@ -6,23 +7,24 @@ namespace qtgl {
 
 
 void  create_grid_vertex_and_colour_buffers(
-            float_32_bit const  max_x_coordinate,
-            float_32_bit const  max_y_coordinate,
-            float_32_bit const  max_z_coordinate,
-            float_32_bit const  step_along_x_axis,
-            float_32_bit const  step_along_y_axis,
-            std::array<float_32_bit,3> const&  colour_for_x_lines,
-            std::array<float_32_bit,3> const&  colour_for_y_lines,
-            std::array<float_32_bit,3> const&  colour_for_highlighted_x_lines,
-            std::array<float_32_bit,3> const&  colour_for_highlighted_y_lines,
-            std::array<float_32_bit,3> const&  colour_for_central_x_line,
-            std::array<float_32_bit,3> const&  colour_for_central_y_line,
-            std::array<float_32_bit,3> const&  colour_for_central_z_line,
-            natural_32_bit const  highlight_every,
-            bool const  generate_triangle_at_origin,
-            buffer_ptr&  output_vertex_buffer,
-            buffer_ptr&  output_colour_buffer
-            )
+        float_32_bit const  max_x_coordinate,
+        float_32_bit const  max_y_coordinate,
+        float_32_bit const  max_z_coordinate,
+        float_32_bit const  step_along_x_axis,
+        float_32_bit const  step_along_y_axis,
+        std::array<float_32_bit,3> const&  colour_for_x_lines,
+        std::array<float_32_bit,3> const&  colour_for_y_lines,
+        std::array<float_32_bit,3> const&  colour_for_highlighted_x_lines,
+        std::array<float_32_bit,3> const&  colour_for_highlighted_y_lines,
+        std::array<float_32_bit,3> const&  colour_for_central_x_line,
+        std::array<float_32_bit,3> const&  colour_for_central_y_line,
+        std::array<float_32_bit,3> const&  colour_for_central_z_line,
+        natural_32_bit const  highlight_every,
+        bool const  generate_triangle_at_origin,
+        buffer_ptr&  output_vertex_buffer,
+        buffer_ptr&  output_colour_buffer,
+        std::string const&  id
+        )
 {
     TMPROF_BLOCK();
 
@@ -105,8 +107,8 @@ void  create_grid_vertex_and_colour_buffers(
             colours.push_back(colour_for_central_x_line);
         }
     }
-    output_vertex_buffer = buffer::create(vertices,"generic/grid/vertices");
-    output_colour_buffer = buffer::create(colours,"generic/grid/colours");
+    output_vertex_buffer = buffer::create(vertices,msgstream() << id << (id.empty() ? "" : "/") << "grid/vertices",true);
+    output_colour_buffer = buffer::create(colours,msgstream() << id << (id.empty() ? "" : "/") << "grid/colours");
 }
 
 
