@@ -3,6 +3,9 @@ set(THIS_TARGET_NAME netview)
 add_library(${THIS_TARGET_NAME}
     ./include/netview/raycast.hpp
     ./src/raycast.cpp
+
+    ./include/netview/enumerate.hpp
+    ./src/enumerate.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

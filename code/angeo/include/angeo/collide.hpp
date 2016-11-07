@@ -17,6 +17,7 @@ namespace angeo {
  *              A unit normal vector of the plane.
  * @param output_distance_to_plane
  *              It is a distance of the passed point to the nearest point on the plane.
+ *              A negative value indicates it is a distance from behind of the plane.
  *              The value nullptr can be passed indicating 'not interested in this output'.
  * @param output_nearest_point_in_plane
  *              It is the point on the plane which is the nearest to the passed point.

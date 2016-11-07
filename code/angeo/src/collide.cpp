@@ -18,9 +18,9 @@ void  collision_point_and_plane(
 {
     float_32_bit const  parameter = dot_product(plane_unit_normal,point - plane_origin);
     if (output_distance_to_plane != nullptr)
-        *output_distance_to_plane = -parameter;
+        *output_distance_to_plane = parameter;
     if (output_nearest_point_in_plane != nullptr)
-        *output_nearest_point_in_plane = point + parameter * plane_unit_normal;
+        *output_nearest_point_in_plane = point - parameter * plane_unit_normal;
 }
 
 
