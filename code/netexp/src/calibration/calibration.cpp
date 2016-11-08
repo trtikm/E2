@@ -400,20 +400,18 @@ std::shared_ptr<netlab::tracked_ship_stats>  create_tracked_ship_stats()
 namespace netexp { namespace calibration {
 
 
-NETEXP_REGISTER_EXPERIMENT(
-    "calibration",
-    netexp::calibration::create_network,
-    netexp::calibration::create_tracked_spiker_stats,
-    netexp::calibration::create_tracked_dock_stats,
-    netexp::calibration::create_tracked_ship_stats,
-    "This is an artificial experiment. It purpose is to support the "
-    "development and tunnig of the 'netlab'' library. Therefore, it is "
-    "not an experiment in true sense. Do not include it into your research."
-    )
-
-char*  foo()
+void __register__(netexp::experiment_factory&  factory)
 {
-    return reinterpret_cast<char*>(const_cast<bool*>(&_____E2_netexp_auxiliary_variable_netexp_dummy_var______));
+    factory.register_experiment(
+            "calibration",
+            netexp::calibration::create_network,
+            netexp::calibration::create_tracked_spiker_stats,
+            netexp::calibration::create_tracked_dock_stats,
+            netexp::calibration::create_tracked_ship_stats,
+            "This is an artificial experiment. It purpose is to support the "
+            "development and tunnig of the 'netlab'' library. Therefore, it is "
+            "not an experiment in true sense. Do not include it into your research."
+            );
 }
 
 

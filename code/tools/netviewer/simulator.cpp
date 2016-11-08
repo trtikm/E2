@@ -22,14 +22,6 @@
 #include <algorithm>
 #include <cmath>
 
-#include <iostream>
-
-
-namespace netexp { namespace calibration {
-char*  foo();
-}}
-
-
 namespace {
 
 
@@ -40,7 +32,6 @@ std::thread  g_create_experiment_thread;
 void  create_experiment_worker(std::string const&  experiment_name)
 {
     TMPROF_BLOCK();
-netexp::calibration::foo();
     g_constructed_network = netexp::experiment_factory::instance().instance().create_network(experiment_name);
     g_is_network_being_constructed = false;
 }
