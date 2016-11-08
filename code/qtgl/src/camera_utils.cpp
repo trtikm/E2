@@ -35,4 +35,20 @@ void  cursor_line_end(camera_perspective const&  camera, vector3 const&  cursor_
 }
 
 
+void  compute_clip_planes(camera_perspective const&  camera, std::vector< std::pair<vector3,vector3> >&  output_planes)
+{
+    vector3 const& S = camera.coordinate_system()->origin();
+    vector3 const  X = angeo::axis_x(*camera.coordinate_system());
+    vector3 const  Y = angeo::axis_y(*camera.coordinate_system());
+    vector3 const  Z = angeo::axis_z(*camera.coordinate_system());
+
+    output_planes.push_back({ S - camera.near_plane() * Z, -Z });
+    output_planes.push_back({ S - camera.far_plane() * Z, Z });
+    output_planes.push_back({ S, normalised(camera.near_plane() * X + camera.left() * Z) });
+    output_planes.push_back({ S, normalised(-camera.near_plane() * X - camera.right() * Z) });
+    output_planes.push_back({ S, normalised(camera.near_plane() * Y + camera.bottom() * Z) });
+    output_planes.push_back({ S, normalised(-camera.near_plane() * Y - camera.top() * Z) });
+}
+
+
 }

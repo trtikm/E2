@@ -100,9 +100,21 @@ private:
     void  update_network(float_64_bit const  seconds_from_previous_call);
 
     void  render_network(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
-    void  render_network_spikers(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state);
-    void  render_network_docks(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state);
-    void  render_network_ships(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state);
+    void  render_network_spikers(
+            matrix44 const&  view_projection_matrix,
+            std::vector< std::pair<vector3,vector3> > const& clip_planes,
+            qtgl::draw_state_ptr&  draw_state
+            );
+    void  render_network_docks(
+            matrix44 const&  view_projection_matrix,
+            std::vector< std::pair<vector3,vector3> > const& clip_planes,
+            qtgl::draw_state_ptr&  draw_state
+            );
+    void  render_network_ships(
+            matrix44 const&  view_projection_matrix,
+            std::vector< std::pair<vector3,vector3> > const& clip_planes,
+            qtgl::draw_state_ptr&  draw_state
+            );
     void  render_separate_network_camera(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state);
 
 

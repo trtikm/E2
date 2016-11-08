@@ -4,8 +4,10 @@
 #include <qtgl/draw.hpp>
 #include <qtgl/batch_generators.hpp>
 #include <qtgl/texture_generators.hpp>
+#include <qtgl/camera_utils.hpp>
 #include <netexp/experiment_factory.hpp>
 #include <angeo/tensor_math.hpp>
+#include <netview/enumerate.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -615,16 +617,34 @@ void  simulator::render_network(matrix44 const&  view_projection_matrix, qtgl::d
 
     INVARIANT(network().operator bool());
 
-    render_network_spikers(view_projection_matrix,draw_state);
-    render_network_docks(view_projection_matrix,draw_state);
-    render_network_ships(view_projection_matrix,draw_state);
+    std::vector< std::pair<vector3,vector3> >  clip_planes;
+    qtgl::compute_clip_planes(
+                qtgl::camera_perspective(
+                    m_camera_network_coord_system,
+                    m_camera->near_plane(),
+                    m_camera_network_far_plane,
+                    m_camera->left(),
+                    m_camera->right(),
+                    m_camera->bottom(),
+                    m_camera->top()
+                    ),
+                clip_planes
+                );
+
+    render_network_spikers(view_projection_matrix,clip_planes,draw_state);
+    render_network_docks(view_projection_matrix,clip_planes,draw_state);
+    render_network_ships(view_projection_matrix,clip_planes,draw_state);
 
     if (!is_camera_network_synchronised())
         render_separate_network_camera(view_projection_matrix,draw_state);
 }
 
 
-void  simulator::render_network_spikers(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state)
+void  simulator::render_network_spikers(
+        matrix44 const&  view_projection_matrix,
+        std::vector< std::pair<vector3,vector3> > const& clip_planes,
+        qtgl::draw_state_ptr&  draw_state
+        )
 {
     TMPROF_BLOCK();
 
@@ -644,121 +664,166 @@ void  simulator::render_network_spikers(matrix44 const&  view_projection_matrix,
             m_batch_spiker_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,"/netviewer/spiker");
         }
 
-        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+        struct  local
         {
-            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
-            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_spikers(); ++object_index)
-            {
-                vector3  spiker_position;
-                {
-                    netlab::sector_coordinate_type  x,y,c;
-                    layer_props.spiker_sector_coordinates(object_index, x,y,c);
-                    spiker_position = layer_props.spiker_sector_centre(x,y,c);
-                }
-                render_batch(
-                    *m_batch_spiker,
-                    view_projection_matrix,
-                    angeo::coordinate_system(
-                        spiker_position,
-                        //(it == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle,vector3_unit_z()) :
-                                                    quaternion_identity()
+            static bool  callback(
+                        qtgl::batch_ptr const  batch_spiker,
+                        matrix44 const&  view_projection_matrix,
+                        vector3 const&  spiker_position
                         )
-//                        ,
-//                    vector4(
-//                        it->second.spiking_potential() > 0.0f ? 1.0f : 0.0f,
-//                        it->second.spiking_potential() < 0.0f ? 1.0f : 0.0f,
-//                        0.0f,
-//                        1.0f //std::min(std::abs(it->second.spiking_potential()),1.0f)
-//                        )
-                    );
-            }
-
-        }
-        draw_state = m_batch_spiker->draw_state();
-    }
-
-    if (m_batch_spiker_bbox.operator bool() && qtgl::make_current(*m_batch_spiker_bbox, *draw_state))
-    {
-        INVARIANT(m_batch_spiker_bbox->shaders_binding().operator bool());
-
-        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
-        {
-            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
-            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_spikers(); ++object_index)
             {
-                vector3  spiker_position;
-                {
-                    netlab::sector_coordinate_type  x,y,c;
-                    layer_props.spiker_sector_coordinates(object_index, x,y,c);
-                    spiker_position = layer_props.spiker_sector_centre(x,y,c);
-                }
                 render_batch(
-                    *m_batch_spiker_bbox,
-                    view_projection_matrix,
-                    angeo::coordinate_system(spiker_position,quaternion_identity()),
-                    vector4(1.0f,1.0f,1.0f,1.0f)
-                    );
-            }
-
-        }
-        draw_state = m_batch_spiker_bbox->draw_state();
-    }
-
-    if (m_batch_spiker_bsphere.operator bool() && qtgl::make_current(*m_batch_spiker_bsphere, *draw_state))
-    {
-        INVARIANT(m_batch_spiker_bsphere->shaders_binding().operator bool());
-
-        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
-        {
-            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
-            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_spikers(); ++object_index)
-            {
-                vector3  spiker_position;
-                {
-                    netlab::sector_coordinate_type  x,y,c;
-                    layer_props.spiker_sector_coordinates(object_index, x,y,c);
-                    spiker_position = layer_props.spiker_sector_centre(x,y,c);
-                }
-                render_batch(
-                    *m_batch_spiker_bsphere,
-                    view_projection_matrix,
-                    angeo::coordinate_system(spiker_position,quaternion_identity()),
-                    vector4(1.0f,1.0f,1.0f,1.0f)
-                    );
-            }
-
-        }
-        draw_state = m_batch_spiker_bsphere->draw_state();
-    }
-
-    if (qtgl::make_current(*m_batch_basis, *draw_state))
-    {
-        INVARIANT(m_batch_basis->shaders_binding().operator bool());
-        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
-        {
-            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
-            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_spikers(); ++object_index)
-            {
-                vector3  spiker_position;
-                {
-                    netlab::sector_coordinate_type  x,y,c;
-                    layer_props.spiker_sector_coordinates(object_index, x,y,c);
-                    spiker_position = layer_props.spiker_sector_centre(x,y,c);
-                }
-                render_batch(
-                    *m_batch_basis,
+                    *batch_spiker,
                     view_projection_matrix,
                     angeo::coordinate_system(spiker_position,quaternion_identity())
                     );
+                return true;
             }
+        };
 
-        }
-        draw_state = m_batch_basis->draw_state();
+        natural_64_bit const  num_rendered = netview::enumerate_spiker_positions(
+                    network()->properties()->layer_props(),
+                    clip_planes,
+                    std::bind(&local::callback,m_batch_spiker,std::cref(view_projection_matrix),std::placeholders::_1)
+                    );
+
+        if (num_rendered != 0UL)
+            draw_state = m_batch_spiker->draw_state();
     }
+
+
+//    if (qtgl::make_current(*m_batch_spiker, *draw_state))
+//    {
+//        INVARIANT(m_batch_spiker->shaders_binding().operator bool());
+
+//        if (!m_batch_spiker_bbox.operator bool())
+//        {
+//            INVARIANT(!m_batch_spiker_bsphere.operator bool());
+//            qtgl::spatial_boundary const  boundary =
+//                    m_batch_spiker->buffers_binding()->find_vertex_buffer_properties()->boundary();
+
+//            m_batch_spiker_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),"/netviewer/spiker");
+//            m_batch_spiker_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,"/netviewer/spiker");
+//        }
+
+//        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+//        {
+//            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+//            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_spikers(); ++object_index)
+//            {
+//                vector3  spiker_position;
+//                {
+//                    netlab::sector_coordinate_type  x,y,c;
+//                    layer_props.spiker_sector_coordinates(object_index, x,y,c);
+//                    spiker_position = layer_props.spiker_sector_centre(x,y,c);
+//                }
+//                render_batch(
+//                    *m_batch_spiker,
+//                    view_projection_matrix,
+//                    angeo::coordinate_system(
+//                        spiker_position,
+//                        //(it == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle,vector3_unit_z()) :
+//                                                    quaternion_identity()
+//                        )
+////                        ,
+////                    vector4(
+////                        it->second.spiking_potential() > 0.0f ? 1.0f : 0.0f,
+////                        it->second.spiking_potential() < 0.0f ? 1.0f : 0.0f,
+////                        0.0f,
+////                        1.0f //std::min(std::abs(it->second.spiking_potential()),1.0f)
+////                        )
+//                    );
+//            }
+
+//        }
+//        draw_state = m_batch_spiker->draw_state();
+//    }
+
+//    if (m_batch_spiker_bbox.operator bool() && qtgl::make_current(*m_batch_spiker_bbox, *draw_state))
+//    {
+//        INVARIANT(m_batch_spiker_bbox->shaders_binding().operator bool());
+
+//        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+//        {
+//            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+//            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_spikers(); ++object_index)
+//            {
+//                vector3  spiker_position;
+//                {
+//                    netlab::sector_coordinate_type  x,y,c;
+//                    layer_props.spiker_sector_coordinates(object_index, x,y,c);
+//                    spiker_position = layer_props.spiker_sector_centre(x,y,c);
+//                }
+//                render_batch(
+//                    *m_batch_spiker_bbox,
+//                    view_projection_matrix,
+//                    angeo::coordinate_system(spiker_position,quaternion_identity()),
+//                    vector4(1.0f,1.0f,1.0f,1.0f)
+//                    );
+//            }
+
+//        }
+//        draw_state = m_batch_spiker_bbox->draw_state();
+//    }
+
+//    if (m_batch_spiker_bsphere.operator bool() && qtgl::make_current(*m_batch_spiker_bsphere, *draw_state))
+//    {
+//        INVARIANT(m_batch_spiker_bsphere->shaders_binding().operator bool());
+
+//        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+//        {
+//            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+//            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_spikers(); ++object_index)
+//            {
+//                vector3  spiker_position;
+//                {
+//                    netlab::sector_coordinate_type  x,y,c;
+//                    layer_props.spiker_sector_coordinates(object_index, x,y,c);
+//                    spiker_position = layer_props.spiker_sector_centre(x,y,c);
+//                }
+//                render_batch(
+//                    *m_batch_spiker_bsphere,
+//                    view_projection_matrix,
+//                    angeo::coordinate_system(spiker_position,quaternion_identity()),
+//                    vector4(1.0f,1.0f,1.0f,1.0f)
+//                    );
+//            }
+
+//        }
+//        draw_state = m_batch_spiker_bsphere->draw_state();
+//    }
+
+//    if (qtgl::make_current(*m_batch_basis, *draw_state))
+//    {
+//        INVARIANT(m_batch_basis->shaders_binding().operator bool());
+//        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+//        {
+//            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+//            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_spikers(); ++object_index)
+//            {
+//                vector3  spiker_position;
+//                {
+//                    netlab::sector_coordinate_type  x,y,c;
+//                    layer_props.spiker_sector_coordinates(object_index, x,y,c);
+//                    spiker_position = layer_props.spiker_sector_centre(x,y,c);
+//                }
+//                render_batch(
+//                    *m_batch_basis,
+//                    view_projection_matrix,
+//                    angeo::coordinate_system(spiker_position,quaternion_identity())
+//                    );
+//            }
+
+//        }
+//        draw_state = m_batch_basis->draw_state();
+//    }
 }
 
 
-void  simulator::render_network_docks(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state)
+void  simulator::render_network_docks(
+        matrix44 const&  view_projection_matrix,
+        std::vector< std::pair<vector3,vector3> > const& clip_planes,
+        qtgl::draw_state_ptr&  draw_state)
 {
     TMPROF_BLOCK();
 
@@ -778,122 +843,166 @@ void  simulator::render_network_docks(matrix44 const&  view_projection_matrix, q
             m_batch_dock_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,"/netviewer/dock");
         }
 
-        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+        struct  local
         {
-            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
-            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_docks(); ++object_index)
-            {
-                vector3  dock_position;
-                {
-                    netlab::sector_coordinate_type  x,y,c;
-                    layer_props.dock_sector_coordinates(object_index, x,y,c);
-                    dock_position = layer_props.dock_sector_centre(x,y,c);
-                }
-                render_batch(
-                    *m_batch_dock,
-                    view_projection_matrix,
-                    angeo::coordinate_system(
-                        dock_position,
-                        //(it == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle,vector3_unit_z()) :
-                                                    quaternion_identity()
+            static bool  callback(
+                        qtgl::batch_ptr const  batch_dock,
+                        matrix44 const&  view_projection_matrix,
+                        vector3 const&  dock_position
                         )
-//                        ,
-//                    vector4(
-//                        it->second.spiking_potential() > 0.0f ? 1.0f : 0.0f,
-//                        it->second.spiking_potential() < 0.0f ? 1.0f : 0.0f,
-//                        0.0f,
-//                        1.0f //std::min(std::abs(it->second.spiking_potential()),1.0f)
-//                        )
-                    );
-            }
-
-        }
-        draw_state = m_batch_dock->draw_state();
-    }
-
-    if (m_batch_dock_bbox.operator bool() && qtgl::make_current(*m_batch_dock_bbox, *draw_state))
-    {
-        INVARIANT(m_batch_dock_bbox->shaders_binding().operator bool());
-
-        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
-        {
-            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
-            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_docks(); ++object_index)
             {
-                vector3  dock_position;
-                {
-                    netlab::sector_coordinate_type  x,y,c;
-                    layer_props.dock_sector_coordinates(object_index, x,y,c);
-                    dock_position = layer_props.dock_sector_centre(x,y,c);
-                }
                 render_batch(
-                    *m_batch_dock_bbox,
-                    view_projection_matrix,
-                    angeo::coordinate_system(dock_position,quaternion_identity()),
-                    vector4(1.0f,1.0f,1.0f,1.0f)
-                    );
-            }
-
-        }
-        draw_state = m_batch_dock_bbox->draw_state();
-    }
-
-    if (m_batch_dock_bsphere.operator bool() && qtgl::make_current(*m_batch_dock_bsphere, *draw_state))
-    {
-        INVARIANT(m_batch_dock_bsphere->shaders_binding().operator bool());
-
-        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
-        {
-            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
-            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_docks(); ++object_index)
-            {
-                vector3  dock_position;
-                {
-                    netlab::sector_coordinate_type  x,y,c;
-                    layer_props.dock_sector_coordinates(object_index, x,y,c);
-                    dock_position = layer_props.dock_sector_centre(x,y,c);
-                }
-                render_batch(
-                    *m_batch_dock_bsphere,
-                    view_projection_matrix,
-                    angeo::coordinate_system(dock_position,quaternion_identity()),
-                    vector4(1.0f,1.0f,1.0f,1.0f)
-                    );
-            }
-
-        }
-        draw_state = m_batch_dock_bsphere->draw_state();
-    }
-
-    if (qtgl::make_current(*m_batch_basis, *draw_state))
-    {
-        INVARIANT(m_batch_basis->shaders_binding().operator bool());
-        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
-        {
-            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
-            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_docks(); ++object_index)
-            {
-                vector3  dock_position;
-                {
-                    netlab::sector_coordinate_type  x,y,c;
-                    layer_props.dock_sector_coordinates(object_index, x,y,c);
-                    dock_position = layer_props.dock_sector_centre(x,y,c);
-                }
-                render_batch(
-                    *m_batch_basis,
+                    *batch_dock,
                     view_projection_matrix,
                     angeo::coordinate_system(dock_position,quaternion_identity())
                     );
+                return true;
             }
+        };
 
-        }
-        draw_state = m_batch_basis->draw_state();
+        natural_64_bit const  num_rendered = netview::enumerate_dock_positions(
+                    network()->properties()->layer_props(),
+                    clip_planes,
+                    std::bind(&local::callback,m_batch_dock,std::cref(view_projection_matrix),std::placeholders::_1)
+                    );
+
+        if (num_rendered != 0UL)
+            draw_state = m_batch_dock->draw_state();
     }
 
+//    if (qtgl::make_current(*m_batch_dock, *draw_state))
+//    {
+//        INVARIANT(m_batch_dock->shaders_binding().operator bool());
+
+//        if (!m_batch_dock_bbox.operator bool())
+//        {
+//            INVARIANT(!m_batch_dock_bsphere.operator bool());
+//            qtgl::spatial_boundary const  boundary =
+//                    m_batch_dock->buffers_binding()->find_vertex_buffer_properties()->boundary();
+
+//            m_batch_dock_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),"/netviewer/dock");
+//            m_batch_dock_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,"/netviewer/dock");
+//        }
+
+//        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+//        {
+//            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+//            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_docks(); ++object_index)
+//            {
+//                vector3  dock_position;
+//                {
+//                    netlab::sector_coordinate_type  x,y,c;
+//                    layer_props.dock_sector_coordinates(object_index, x,y,c);
+//                    dock_position = layer_props.dock_sector_centre(x,y,c);
+//                }
+//                render_batch(
+//                    *m_batch_dock,
+//                    view_projection_matrix,
+//                    angeo::coordinate_system(
+//                        dock_position,
+//                        //(it == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle,vector3_unit_z()) :
+//                                                    quaternion_identity()
+//                        )
+////                        ,
+////                    vector4(
+////                        it->second.spiking_potential() > 0.0f ? 1.0f : 0.0f,
+////                        it->second.spiking_potential() < 0.0f ? 1.0f : 0.0f,
+////                        0.0f,
+////                        1.0f //std::min(std::abs(it->second.spiking_potential()),1.0f)
+////                        )
+//                    );
+//            }
+
+//        }
+//        draw_state = m_batch_dock->draw_state();
+//    }
+
+//    if (m_batch_dock_bbox.operator bool() && qtgl::make_current(*m_batch_dock_bbox, *draw_state))
+//    {
+//        INVARIANT(m_batch_dock_bbox->shaders_binding().operator bool());
+
+//        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+//        {
+//            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+//            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_docks(); ++object_index)
+//            {
+//                vector3  dock_position;
+//                {
+//                    netlab::sector_coordinate_type  x,y,c;
+//                    layer_props.dock_sector_coordinates(object_index, x,y,c);
+//                    dock_position = layer_props.dock_sector_centre(x,y,c);
+//                }
+//                render_batch(
+//                    *m_batch_dock_bbox,
+//                    view_projection_matrix,
+//                    angeo::coordinate_system(dock_position,quaternion_identity()),
+//                    vector4(1.0f,1.0f,1.0f,1.0f)
+//                    );
+//            }
+
+//        }
+//        draw_state = m_batch_dock_bbox->draw_state();
+//    }
+
+//    if (m_batch_dock_bsphere.operator bool() && qtgl::make_current(*m_batch_dock_bsphere, *draw_state))
+//    {
+//        INVARIANT(m_batch_dock_bsphere->shaders_binding().operator bool());
+
+//        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+//        {
+//            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+//            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_docks(); ++object_index)
+//            {
+//                vector3  dock_position;
+//                {
+//                    netlab::sector_coordinate_type  x,y,c;
+//                    layer_props.dock_sector_coordinates(object_index, x,y,c);
+//                    dock_position = layer_props.dock_sector_centre(x,y,c);
+//                }
+//                render_batch(
+//                    *m_batch_dock_bsphere,
+//                    view_projection_matrix,
+//                    angeo::coordinate_system(dock_position,quaternion_identity()),
+//                    vector4(1.0f,1.0f,1.0f,1.0f)
+//                    );
+//            }
+
+//        }
+//        draw_state = m_batch_dock_bsphere->draw_state();
+//    }
+
+//    if (qtgl::make_current(*m_batch_basis, *draw_state))
+//    {
+//        INVARIANT(m_batch_basis->shaders_binding().operator bool());
+//        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+//        {
+//            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+//            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_docks(); ++object_index)
+//            {
+//                vector3  dock_position;
+//                {
+//                    netlab::sector_coordinate_type  x,y,c;
+//                    layer_props.dock_sector_coordinates(object_index, x,y,c);
+//                    dock_position = layer_props.dock_sector_centre(x,y,c);
+//                }
+//                render_batch(
+//                    *m_batch_basis,
+//                    view_projection_matrix,
+//                    angeo::coordinate_system(dock_position,quaternion_identity())
+//                    );
+//            }
+
+//        }
+//        draw_state = m_batch_basis->draw_state();
+//    }
 }
 
 
-void  simulator::render_network_ships(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state)
+void  simulator::render_network_ships(
+        matrix44 const&  view_projection_matrix,
+        std::vector< std::pair<vector3,vector3> > const& clip_planes,
+        qtgl::draw_state_ptr&  draw_state
+        )
 {
     TMPROF_BLOCK();
 
@@ -913,70 +1022,112 @@ void  simulator::render_network_ships(matrix44 const&  view_projection_matrix, q
             m_batch_ship_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,"/netviewer/ship");
         }
 
-        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+        struct  local
         {
-            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
-            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_ships(); ++object_index)
-                render_batch(
-                    *m_batch_ship,
-                    view_projection_matrix,
-                    angeo::coordinate_system(
-                        network()->get_ship(layer_index,object_index).position(),
-                        //(it == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle,vector3_unit_z()) :
-                                                    quaternion_identity()
+            static bool  callback(
+                        qtgl::batch_ptr const  batch_ship,
+                        matrix44 const&  view_projection_matrix,
+                        vector3 const&  ship_position
                         )
+            {
+                render_batch(
+                    *batch_ship,
+                    view_projection_matrix,
+                    angeo::coordinate_system(ship_position,quaternion_identity())
                     );
-        }
-        draw_state = m_batch_ship->draw_state();
+                return true;
+            }
+        };
+
+        natural_64_bit const  num_rendered = netview::enumerate_ship_positions(
+                    *network(),
+                    clip_planes,
+                    std::bind(&local::callback,m_batch_ship,std::cref(view_projection_matrix),std::placeholders::_1)
+                    );
+
+        if (num_rendered != 0UL)
+            draw_state = m_batch_ship->draw_state();
     }
 
-    if (m_batch_ship_bbox.operator bool() && qtgl::make_current(*m_batch_ship_bbox, *draw_state))
-    {
-        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
-        {
-            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
-            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_ships(); ++object_index)
-                render_batch(
-                    *m_batch_ship_bbox,
-                    view_projection_matrix,
-                    angeo::coordinate_system(network()->get_ship(layer_index,object_index).position(),quaternion_identity()),
-                    vector4(1.0f,1.0f,1.0f,1.0f)
-                    );
-        }
-        draw_state = m_batch_ship_bbox->draw_state();
-    }
 
-    if (m_batch_ship_bsphere.operator bool() && qtgl::make_current(*m_batch_ship_bsphere, *draw_state))
-    {
-        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
-        {
-            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
-            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_ships(); ++object_index)
-                render_batch(
-                    *m_batch_ship_bsphere,
-                    view_projection_matrix,
-                    angeo::coordinate_system(network()->get_ship(layer_index,object_index).position(),quaternion_identity()),
-                    vector4(1.0f,1.0f,1.0f,1.0f)
-                    );
-        }
-        draw_state = m_batch_ship_bsphere->draw_state();
-    }
+//    if (qtgl::make_current(*m_batch_ship, *draw_state))
+//    {
+//        INVARIANT(m_batch_ship->shaders_binding().operator bool());
 
-    if (qtgl::make_current(*m_batch_basis, *draw_state))
-    {
-        INVARIANT(m_batch_basis->shaders_binding().operator bool());
-        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
-        {
-            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
-            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_ships(); ++object_index)
-                render_batch(
-                    *m_batch_basis,
-                    view_projection_matrix,
-                    angeo::coordinate_system(network()->get_ship(layer_index,object_index).position(),quaternion_identity())
-                    );
-        }
-        draw_state = m_batch_basis->draw_state();
-    }
+//        if (!m_batch_ship_bbox.operator bool())
+//        {
+//            INVARIANT(!m_batch_ship_bsphere.operator bool());
+//            qtgl::spatial_boundary const  boundary =
+//                    m_batch_ship->buffers_binding()->find_vertex_buffer_properties()->boundary();
+
+//            m_batch_ship_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),"/netviewer/ship");
+//            m_batch_ship_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,"/netviewer/ship");
+//        }
+
+//        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+//        {
+//            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+//            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_ships(); ++object_index)
+//                render_batch(
+//                    *m_batch_ship,
+//                    view_projection_matrix,
+//                    angeo::coordinate_system(
+//                        network()->get_ship(layer_index,object_index).position(),
+//                        //(it == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle,vector3_unit_z()) :
+//                                                    quaternion_identity()
+//                        )
+//                    );
+//        }
+//        draw_state = m_batch_ship->draw_state();
+//    }
+
+//    if (m_batch_ship_bbox.operator bool() && qtgl::make_current(*m_batch_ship_bbox, *draw_state))
+//    {
+//        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+//        {
+//            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+//            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_ships(); ++object_index)
+//                render_batch(
+//                    *m_batch_ship_bbox,
+//                    view_projection_matrix,
+//                    angeo::coordinate_system(network()->get_ship(layer_index,object_index).position(),quaternion_identity()),
+//                    vector4(1.0f,1.0f,1.0f,1.0f)
+//                    );
+//        }
+//        draw_state = m_batch_ship_bbox->draw_state();
+//    }
+
+//    if (m_batch_ship_bsphere.operator bool() && qtgl::make_current(*m_batch_ship_bsphere, *draw_state))
+//    {
+//        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+//        {
+//            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+//            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_ships(); ++object_index)
+//                render_batch(
+//                    *m_batch_ship_bsphere,
+//                    view_projection_matrix,
+//                    angeo::coordinate_system(network()->get_ship(layer_index,object_index).position(),quaternion_identity()),
+//                    vector4(1.0f,1.0f,1.0f,1.0f)
+//                    );
+//        }
+//        draw_state = m_batch_ship_bsphere->draw_state();
+//    }
+
+//    if (qtgl::make_current(*m_batch_basis, *draw_state))
+//    {
+//        INVARIANT(m_batch_basis->shaders_binding().operator bool());
+//        for (netlab::layer_index_type  layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+//        {
+//            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+//            for (netlab::object_index_type  object_index = 0UL; object_index != layer_props.num_ships(); ++object_index)
+//                render_batch(
+//                    *m_batch_basis,
+//                    view_projection_matrix,
+//                    angeo::coordinate_system(network()->get_ship(layer_index,object_index).position(),quaternion_identity())
+//                    );
+//        }
+//        draw_state = m_batch_basis->draw_state();
+//    }
 }
 
 void  simulator::render_separate_network_camera(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state)

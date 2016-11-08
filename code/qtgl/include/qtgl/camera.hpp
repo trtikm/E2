@@ -60,16 +60,16 @@ struct camera_perspective : public camera
                        float_32_bit const  far,
                        float_32_bit const  left,
                        float_32_bit const  right,
-                       float_32_bit const  top,
-                       float_32_bit const  bottom
+                       float_32_bit const  bottom,
+                       float_32_bit const  top
                        );
     camera_perspective(angeo::coordinate_system_ptr  coordinate_system,
                        float_32_bit const  near,
                        float_32_bit const  far,
                        float_32_bit const  left,
                        float_32_bit const  right,
-                       float_32_bit const  top,
-                       float_32_bit const  bottom
+                       float_32_bit const  bottom,
+                       float_32_bit const  top
                        );
     camera_perspective(angeo::coordinate_system const&  coordinate_system,
                        float_32_bit const  near,

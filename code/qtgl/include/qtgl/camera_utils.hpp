@@ -4,12 +4,17 @@
 #   include <qtgl/camera.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <angeo/tensor_math.hpp>
+#   include <vector>
+#   include <tuple>
 
 namespace qtgl {
 
 
 void  cursor_line_begin(camera_perspective const&  camera, vector2 const&  mouse_pos, window_props const&  props, vector3&  output);
 void  cursor_line_end(camera_perspective const&  camera, vector3 const&  cursor_line_begin, vector3&  output);
+
+
+void  compute_clip_planes(camera_perspective const&  camera, std::vector< std::pair<vector3,vector3> >&  output_planes);
 
 
 }
