@@ -219,16 +219,7 @@ simulator::simulator(
     , m_batch_ship_bsphere{}
 
     , m_batch_basis{ qtgl::create_basis_vectors() }
-    , m_batch_camera_frustum(
-          qtgl::create_wireframe_perspective_frustum(
-              m_camera->near_plane(),
-              m_camera->far_plane(),
-              m_camera->left(),
-              m_camera->right(),
-              m_camera->top(),
-              m_camera->bottom()
-              )
-          )
+    , m_batch_camera_frustum()
 
 //    , m_selected_cell(m_nenet->cells().cend())
 //    , m_selected_input_spot(m_nenet->input_spots().cend())
@@ -1134,6 +1125,8 @@ void  simulator::render_separate_network_camera(matrix44 const&  view_projection
 {
     TMPROF_BLOCK();
 
+    ASSUMPTION(m_batch_camera_frustum.operator bool());
+
     if (qtgl::make_current(*m_batch_basis, *draw_state))
     {
         INVARIANT(m_batch_basis->shaders_binding().operator bool());
@@ -1180,9 +1173,23 @@ void  simulator::set_camera_network_far_plane(float_32_bit const  far_plane)
 void  simulator::set_camera_network_sync_state(bool const  synchronise)
 {
     if (synchronise)
+    {
         m_camera_network_coord_system = m_camera->coordinate_system();
+        m_batch_camera_frustum.reset();
+    }
     else if (is_camera_network_synchronised())
+    {
         m_camera_network_coord_system = angeo::coordinate_system::create(get_camera_position(),get_camera_orientation());
+        m_batch_camera_frustum = 
+            qtgl::create_wireframe_perspective_frustum(
+                m_camera->near_plane(),
+                m_camera_network_far_plane,
+                m_camera->left(),
+                m_camera->right(),
+                m_camera->top(),
+                m_camera->bottom()
+                );
+    }
 }
 
 
