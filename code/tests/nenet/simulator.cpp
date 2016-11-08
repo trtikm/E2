@@ -136,7 +136,8 @@ simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused, n
                     { 0.0f, 1.0f, 0.0f },
                     { 0.0f, 0.0f, 1.0f },
                     10U,
-                    true
+                    true,
+                    "../data"
                     )
             }
     , m_batch_cell{qtgl::batch::create(canonical_path("../data/shared/gfx/models/neuron/body.txt"))}
@@ -354,14 +355,14 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                         std::vector< std::pair<vector3, vector3> >  lines;
                         for (auto const iit : it->second.input_spots())
                             lines.push_back({ it->first,iit->first });
-                        m_selected_cell_input_spot_lines = qtgl::create_lines3d(lines, vector3{ 1.0f,1.0f,0.0f });
+                        m_selected_cell_input_spot_lines = qtgl::create_lines3d(lines, vector3{ 1.0f,1.0f,0.0f },"../data");
                     }
                     //if (!m_selected_cell_output_terminal_lines.operator bool())
                     {
                         std::vector< std::pair<vector3, vector3> >  lines;
                         for (auto const iit : it->second.output_terminals())
                             lines.push_back({ it->first,iit->pos() });
-                        m_selected_cell_output_terminal_lines = qtgl::create_lines3d(lines, vector3{ 1.0f,0.0f,0.5f });
+                        m_selected_cell_output_terminal_lines = qtgl::create_lines3d(lines, vector3{ 1.0f,0.0f,0.5f },"../data");
                     }
                 }
             }
@@ -404,7 +405,8 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                         m_selected_cell_input_spot_lines =
                             qtgl::create_lines3d(
                                 { { get_position_of_selected(), it->second.cell()->first } },
-                                vector3{ 1.0f,1.0f,0.0f }
+                                vector3{ 1.0f,1.0f,0.0f },
+                                "../data"
                                 );
                 }
             }
@@ -446,7 +448,8 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                     m_selected_cell_output_terminal_lines =
                         qtgl::create_lines3d(
                             { { oterm.pos(), oterm.cell()->first } },
-                            vector3{ 1.0f,0.0f,0.5f }
+                            vector3{ 1.0f,0.0f,0.5f },
+                            "../data"
                             );
                 }
             }

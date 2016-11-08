@@ -1,5 +1,6 @@
 #include <netviewer/simulator.hpp>
 #include <netviewer/simulator_notifications.hpp>
+#include <netviewer/program_options.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
 #include <qtgl/batch_generators.hpp>
@@ -182,7 +183,8 @@ simulator::simulator(
                     { 0.0f, 1.0f, 0.0f },
                     { 0.0f, 0.0f, 1.0f },
                     10U,
-                    true
+                    true,
+                    get_program_options()->dataRoot()
                     )
             }
     , m_camera_network_coord_system(m_camera->coordinate_system())
@@ -197,9 +199,15 @@ simulator::simulator(
     , m_num_network_updates(0UL)
     , m_desired_network_to_real_time_ratio(desired_network_to_real_time_ratio)
 
-    , m_batch_spiker{qtgl::batch::create(canonical_path("../data/shared/gfx/models/neuron/body.txt"))}
-    , m_batch_dock{ qtgl::batch::create(canonical_path("../data/shared/gfx/models/input_spot/input_spot.txt")) }
-    , m_batch_ship{ qtgl::batch::create(canonical_path("../data/shared/gfx/models/output_terminal/output_terminal.txt")) }
+    , m_batch_spiker{ qtgl::batch::create(canonical_path(
+            boost::filesystem::path{get_program_options()->dataRoot()} / "shared/gfx/models/neuron/body.txt"
+            )) }
+    , m_batch_dock{ qtgl::batch::create(canonical_path(
+            boost::filesystem::path{get_program_options()->dataRoot()} / "shared/gfx/models/input_spot/input_spot.txt"
+            )) }
+    , m_batch_ship{ qtgl::batch::create(canonical_path(
+            boost::filesystem::path{get_program_options()->dataRoot()} / "shared/gfx/models/output_terminal/output_terminal.txt"
+            )) }
 
     , m_batch_spiker_bbox{}
     , m_batch_dock_bbox{}
@@ -209,7 +217,7 @@ simulator::simulator(
     , m_batch_dock_bsphere{}
     , m_batch_ship_bsphere{}
 
-    , m_batch_basis{ qtgl::create_basis_vectors() }
+    , m_batch_basis{ qtgl::create_basis_vectors(get_program_options()->dataRoot()) }
     , m_batch_camera_frustum()
 
 //    , m_selected_cell(m_nenet->cells().cend())
@@ -1156,7 +1164,8 @@ void  simulator::set_camera_network_far_plane(float_32_bit const  far_plane)
                 m_camera->left(),
                 m_camera->right(),
                 m_camera->top(),
-                m_camera->bottom()
+                m_camera->bottom(),
+                get_program_options()->dataRoot()
                 );
 
 }
@@ -1178,7 +1187,8 @@ void  simulator::set_camera_network_sync_state(bool const  synchronise)
                 m_camera->left(),
                 m_camera->right(),
                 m_camera->top(),
-                m_camera->bottom()
+                m_camera->bottom(),
+                get_program_options()->dataRoot()
                 );
     }
 }

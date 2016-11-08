@@ -9,22 +9,23 @@ namespace qtgl {
 
 
 batch_ptr  create_grid(
-    float_32_bit const  max_x_coordinate,
-    float_32_bit const  max_y_coordinate,
-    float_32_bit const  max_z_coordinate,
-    float_32_bit const  step_along_x_axis,
-    float_32_bit const  step_along_y_axis,
-    std::array<float_32_bit, 3> const&  colour_for_x_lines,
-    std::array<float_32_bit, 3> const&  colour_for_y_lines,
-    std::array<float_32_bit, 3> const&  colour_for_highlighted_x_lines,
-    std::array<float_32_bit, 3> const&  colour_for_highlighted_y_lines,
-    std::array<float_32_bit, 3> const&  colour_for_central_x_line,
-    std::array<float_32_bit, 3> const&  colour_for_central_y_line,
-    std::array<float_32_bit, 3> const&  colour_for_central_z_line,
-    natural_32_bit const  highlight_every,
-    bool const  generate_triangle_at_origin,
-    std::string const&  id
-    )
+        float_32_bit const  max_x_coordinate,
+        float_32_bit const  max_y_coordinate,
+        float_32_bit const  max_z_coordinate,
+        float_32_bit const  step_along_x_axis,
+        float_32_bit const  step_along_y_axis,
+        std::array<float_32_bit, 3> const&  colour_for_x_lines,
+        std::array<float_32_bit, 3> const&  colour_for_y_lines,
+        std::array<float_32_bit, 3> const&  colour_for_highlighted_x_lines,
+        std::array<float_32_bit, 3> const&  colour_for_highlighted_y_lines,
+        std::array<float_32_bit, 3> const&  colour_for_central_x_line,
+        std::array<float_32_bit, 3> const&  colour_for_central_y_line,
+        std::array<float_32_bit, 3> const&  colour_for_central_z_line,
+        natural_32_bit const  highlight_every,
+        bool const  generate_triangle_at_origin,
+        boost::filesystem::path const&  data_root_dir,
+        std::string const&  id
+        )
 {
     TMPROF_BLOCK();
 
@@ -58,8 +59,8 @@ batch_ptr  create_grid(
                 }
                 ),
             qtgl::shaders_binding::create(
-                canonical_path("../data/shared/gfx/shaders/vertex/vs_IpcUmOpcFc.a=1.txt"),
-                canonical_path("../data/shared/gfx/shaders/fragment/fs_IcFc.txt")
+                canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpcUmOpcFc.a=1.txt"),
+                canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt")
                 ),
             qtgl::textures_binding::create(textures_binding::texture_files_map{}),
             qtgl::draw_state::create()

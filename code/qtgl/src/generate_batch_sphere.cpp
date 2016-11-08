@@ -10,6 +10,7 @@ namespace qtgl {
 batch_ptr  create_wireframe_sphere(
         float_32_bit const  radius,
         natural_8_bit const  num_lines_per_quarter_of_circle,
+        boost::filesystem::path const&  data_root_dir,
         std::string const&  id
         )
 {
@@ -27,8 +28,8 @@ batch_ptr  create_wireframe_sphere(
             }
             ),
         qtgl::shaders_binding::create(
-            canonical_path("../data/shared/gfx/shaders/vertex/vs_IpUmcOpcF.txt"),
-            canonical_path("../data/shared/gfx/shaders/fragment/fs_IcFc.txt")
+            canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpUmcOpcF.txt"),
+            canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt")
             ),
         qtgl::textures_binding::create(textures_binding::texture_files_map{}),
         qtgl::draw_state::create()

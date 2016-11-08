@@ -1,5 +1,6 @@
 #include <netviewer/program_window.hpp>
 #include <netviewer/program_info.hpp>
+#include <netviewer/program_options.hpp>
 #include <netviewer/simulator.hpp>
 #include <qtgl/window.hpp>
 #include <qtgl/gui_utils.hpp>
@@ -245,7 +246,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 //    , m_selected_props(new QTextEdit)
 {
     this->setWindowTitle(get_program_name().c_str());
-    this->setWindowIcon(QIcon("../data/shared/gfx/icons/E2_icon.png"));
+    this->setWindowIcon(QIcon((get_program_options()->dataRoot() + "/shared/gfx/icons/E2_icon.png").c_str()));
     this->move({ ptree().get("window.pos.x",0),ptree().get("window.pos.y",0) });
     this->resize(ptree().get("window.width", 1024), ptree().get("window.height", 768));
 

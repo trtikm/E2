@@ -10,6 +10,7 @@ namespace qtgl {
 batch_ptr  create_wireframe_box(
         vector3 const&  lo_corner,
         vector3 const&  hi_corner,
+        boost::filesystem::path const&  data_root_dir,
         std::string const&  id
         )
 {
@@ -27,8 +28,8 @@ batch_ptr  create_wireframe_box(
             }
             ),
         qtgl::shaders_binding::create(
-            canonical_path("../data/shared/gfx/shaders/vertex/vs_IpUmcOpcF.txt"),
-            canonical_path("../data/shared/gfx/shaders/fragment/fs_IcFc.txt")
+            canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpUmcOpcF.txt"),
+            canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt")
             ),
         qtgl::textures_binding::create(textures_binding::texture_files_map{}),
         qtgl::draw_state::create()

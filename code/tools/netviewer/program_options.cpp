@@ -13,6 +13,9 @@ program_options::program_options(int argc, char* argv[])
     desc.add_options()
         ("help,h","Produces this help message.")
         ("version,v", "Prints the version string.")
+        ("data,D",
+            bpo::value<std::string>()->default_value("../data"),
+            "A root directory under which program's data are stored.")
         // Specify more options here, if needed.
         ;
 

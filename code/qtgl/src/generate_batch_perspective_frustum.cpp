@@ -14,6 +14,7 @@ batch_ptr  create_wireframe_perspective_frustum(
         float_32_bit const  right_plane,
         float_32_bit const  top_plane,
         float_32_bit const  bottom_plane,
+        boost::filesystem::path const&  data_root_dir,
         std::string const&  id
         )
 {
@@ -40,8 +41,8 @@ batch_ptr  create_wireframe_perspective_frustum(
             }
             ),
         qtgl::shaders_binding::create(
-            canonical_path("../data/shared/gfx/shaders/vertex/vs_IpUmcOpcF.txt"),
-            canonical_path("../data/shared/gfx/shaders/fragment/fs_IcFc.txt")
+            canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpUmcOpcF.txt"),
+            canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt")
             ),
         qtgl::textures_binding::create(textures_binding::texture_files_map{}),
         qtgl::draw_state::create()

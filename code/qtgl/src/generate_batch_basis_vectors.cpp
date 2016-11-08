@@ -6,7 +6,7 @@
 namespace qtgl {
 
 
-batch_ptr  create_basis_vectors()
+batch_ptr  create_basis_vectors(boost::filesystem::path const&  data_root_dir)
 {
     TMPROF_BLOCK();
 
@@ -24,8 +24,8 @@ batch_ptr  create_basis_vectors()
                 }
                 ),
             qtgl::shaders_binding::create(
-                canonical_path("../data/shared/gfx/shaders/vertex/vs_IpcUmOpcFc.a=1.txt"),
-                canonical_path("../data/shared/gfx/shaders/fragment/fs_IcFc.txt")
+                canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpcUmOpcFc.a=1.txt"),
+                canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt")
                 ),
             qtgl::textures_binding::create(textures_binding::texture_files_map{}),
             qtgl::draw_state::create()
