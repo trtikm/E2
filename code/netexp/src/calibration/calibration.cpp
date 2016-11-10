@@ -26,6 +26,14 @@ namespace netexp { namespace calibration { namespace {
 
 struct  ship_controller : public netlab::ship_controller
 {
+    ship_controller(
+            float_32_bit const  min_ship_speed,
+            float_32_bit const  max_ship_speed
+            )
+        : m_min_ship_speed(min_ship_speed)
+        , m_max_ship_speed(max_ship_speed)
+    {}
+
     vector3  accelerate_into_space_box(
             vector3 const&  ship_position,              //!< Coordinates in meters.
             vector3 const&  ship_velocity,              //!< In meters per second.
@@ -50,6 +58,10 @@ struct  ship_controller : public netlab::ship_controller
             vector3 const&  nearest_dock_position,      //!< Coordinates in meters. It is nearest to the ship, not to the other one.
             float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
             ) const;
+
+private:
+    float_32_bit  m_min_ship_speed;
+    float_32_bit  m_max_ship_speed;
 };
 
 
@@ -62,7 +74,21 @@ vector3  ship_controller::accelerate_into_space_box(
         float_32_bit const  space_box_length_c      //!< Length is in meters.
         ) const
 {
-    return {0.0f,0.0f,0.0f};
+    vector3 const  delta = 2.0f * (ship_position - space_box_center);
+
+    float_32_bit const  ax = delta(0) >  space_box_length_x ? -2.0f * m_max_ship_speed :
+                             delta(0) < -space_box_length_x ?  2.0f * m_max_ship_speed :
+                                                               0.0f ;
+
+    float_32_bit const  ay = delta(1) >  space_box_length_y ? -2.0f * m_max_ship_speed :
+                             delta(1) < -space_box_length_y ?  2.0f * m_max_ship_speed :
+                                                               0.0f ;
+
+    float_32_bit const  ac = delta(2) >  space_box_length_c ? -2.0f * m_max_ship_speed :
+                             delta(2) < -space_box_length_c ?  2.0f * m_max_ship_speed :
+                                                               0.0f ;
+
+    return { ax, ay, ac };
 }
 
 vector3  ship_controller::accelerate_into_dock(
@@ -112,12 +138,12 @@ std::shared_ptr<netlab::network_props>  get_network_props()
                 60.0f,  //!< size_of_ship_movement_area_along_y_axis_in_meters
                 40.0f,  //!< size_of_ship_movement_area_along_c_axis_in_meters
 
-                0.003f, //!< min_speed_of_ship_in_meters_per_second
-                0.01f,  //!< max_speed_of_ship_in_meters_per_second
+                0.3f, //!< min_speed_of_ship_in_meters_per_second
+                1.0f,  //!< max_speed_of_ship_in_meters_per_second
 
                 true,   //!< are_spikers_excitatory
 
-                std::make_shared<ship_controller const>()
+                std::make_shared<ship_controller const>(0.3f, 1.0f)
             },
         },
 

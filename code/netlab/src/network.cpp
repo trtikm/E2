@@ -399,7 +399,7 @@ void  network::update_movement_of_ship(layer_index_type const  layer_index, obje
                 }
     }
 
-    float_32_bit const  dt = 1000.0f * properties()->update_time_step_in_seconds();
+    float_32_bit const  dt = properties()->update_time_step_in_seconds();
     vector3 const  new_velocity =
             detail::update_magnitude_of_velocity(
                 ship.velocity() + dt * ship_acceleration,
