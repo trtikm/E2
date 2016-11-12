@@ -306,4 +306,34 @@ void  compute_random_vector_of_magnitude(
 }
 
 
+float_32_bit  exponential_increase_from_zero_to_one(
+        float_32_bit const  x,
+        float_32_bit const  X_MAX,
+        float_32_bit const  POW
+        )
+{
+    if (x <= 0.0f)
+        return 0.0f;
+    if (x >= X_MAX)
+        return 1.0f;
+    float_32_bit const  f_x = (std::expf(x / X_MAX) - 1.0f) / (E() - 1.0f);
+    return POW > 1.0f ? std::powf(f_x,POW) : f_x;
+}
+
+
+float_32_bit  exponential_decrease_from_one_to_zero(
+        float_32_bit const  x,
+        float_32_bit const  X_MAX,
+        float_32_bit const  POW
+        )
+{
+    if (x <= 0.0f)
+        return 1.0f;
+    if (x >= X_MAX)
+        return 0.0f;
+    float_32_bit const  f_x = (std::expf(1.0f - x / X_MAX) - 1.0f) / (E() - 1.0f);
+    return POW > 1.0f ? std::powf(f_x,POW) : f_x;
+}
+
+
 }

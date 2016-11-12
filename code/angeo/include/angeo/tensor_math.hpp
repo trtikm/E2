@@ -89,6 +89,7 @@ inline T min_element(Eigen::Matrix<T, nrows, ncols> const&  u)
 
 
 inline constexpr scalar PI() noexcept { return scalar(3.14159265); }
+inline constexpr scalar E() noexcept { return scalar(2.7182818); }
 
 inline scalar  absolute_value(scalar const a) { return a < scalar(0) ? -a : a; }
 

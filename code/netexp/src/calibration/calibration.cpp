@@ -32,6 +32,7 @@ struct  ship_controller : public netlab::ship_controller
             )
         : m_min_ship_speed(min_ship_speed)
         , m_max_ship_speed(max_ship_speed)
+        , m_random_generator()
     {}
 
     vector3  accelerate_into_space_box(
@@ -59,9 +60,14 @@ struct  ship_controller : public netlab::ship_controller
             float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
             ) const;
 
+    vector3  accelerate_ship_in_environment(
+            vector3 const&  ship_velocity               //!< In meters per second.
+            ) const;
+
 private:
     float_32_bit  m_min_ship_speed;
     float_32_bit  m_max_ship_speed;
+    mutable random_generator_for_natural_32_bit  m_random_generator;
 };
 
 
@@ -98,7 +104,18 @@ vector3  ship_controller::accelerate_into_dock(
         float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
         ) const
 {
-    return {0.0f,0.0f,0.0f};
+    vector3 const  doc_ship_positions_delta = dock_position - ship_position;
+
+    float_32_bit const  distance_to_dock = length(doc_ship_positions_delta);
+    if (distance_to_dock < 0.001f)
+        return { 0.0f, 0.0f, 0.0f };
+    float_32_bit const  max_distance_to_dock = inter_docks_distance / 2.0f;
+
+    float_32_bit constexpr  max_acceleration_magnitude = 50.0f;
+    float_32_bit const acceleration_magnitude_scale =
+        exponential_decrease_from_one_to_zero(distance_to_dock, max_distance_to_dock, 3.0f);
+
+    return ((max_acceleration_magnitude * acceleration_magnitude_scale) / distance_to_dock) * doc_ship_positions_delta;
 }
 
 vector3  ship_controller::accelerate_from_ship(
@@ -110,7 +127,44 @@ vector3  ship_controller::accelerate_from_ship(
         float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
         ) const
 {
-    return {0.0f,0.0f,0.0f};
+    float_32_bit  max_acceleration_magnitude;
+    {
+        float_32_bit constexpr  magnitude_away_from_dock = 500.0f;
+        float_32_bit constexpr  magnitude_at_dock = 1000.0f;
+
+        float_32_bit const  distance_to_dock = length(nearest_dock_position - other_ship_position);
+        float_32_bit const  max_distance_to_dock = inter_docks_distance / 2.0f;
+
+        max_acceleration_magnitude =
+                distance_to_dock >= max_distance_to_dock ?
+                    magnitude_away_from_dock :
+                    magnitude_away_from_dock + (distance_to_dock / max_distance_to_dock) *
+                                               (magnitude_at_dock - magnitude_away_from_dock);
+    }
+
+    vector3 const  ship_positions_delta = ship_position - other_ship_position;
+
+    float_32_bit const  distance_of_ships = length(ship_positions_delta);
+    if (distance_of_ships < 0.001f)
+    {
+        vector3  acceleration;
+        compute_random_vector_of_magnitude(max_acceleration_magnitude,m_random_generator,acceleration);
+        return acceleration;
+    }
+
+    float_32_bit const  max_distance_of_ships = inter_docks_distance / 4.0f;
+
+    float_32_bit const acceleration_magnitude_scale =
+        exponential_decrease_from_one_to_zero(distance_of_ships,max_distance_of_ships,1.0f);
+
+    return ((max_acceleration_magnitude * acceleration_magnitude_scale) / distance_of_ships) * ship_positions_delta;
+}
+
+vector3  ship_controller::accelerate_ship_in_environment(
+        vector3 const&  ship_velocity               //!< In meters per second.
+        ) const
+{
+    return vector3_zero();
 }
 
 
@@ -138,8 +192,8 @@ std::shared_ptr<netlab::network_props>  get_network_props()
                 60.0f,  //!< size_of_ship_movement_area_along_y_axis_in_meters
                 40.0f,  //!< size_of_ship_movement_area_along_c_axis_in_meters
 
-                0.3f, //!< min_speed_of_ship_in_meters_per_second
-                1.0f,  //!< max_speed_of_ship_in_meters_per_second
+                0.75f, //!< min_speed_of_ship_in_meters_per_second
+                2.5f,  //!< max_speed_of_ship_in_meters_per_second
 
                 true,   //!< are_spikers_excitatory
 

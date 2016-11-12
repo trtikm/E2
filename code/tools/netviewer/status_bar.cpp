@@ -9,6 +9,41 @@
 #include <QStatusBar>
 #include <iomanip>
 
+namespace {
+
+
+std::string  seconds_to_pretty_time_string(float_64_bit  seconds)
+{
+    float_64_bit constexpr  minute_seconds = 60.0;
+    float_64_bit constexpr  hour_seconds = 60.0 * minute_seconds;
+    float_64_bit constexpr  day_seconds = 24.0 * hour_seconds;
+
+    msgstream  mstr;
+    if (seconds > day_seconds)
+    {
+        float_64_bit const  num_days = std::floor(seconds / day_seconds);
+        mstr << std::fixed << std::setprecision(0) << num_days << "d ";
+        seconds -= num_days * day_seconds;
+    }
+    if (seconds > hour_seconds)
+    {
+        float_64_bit const  num_hours = std::floor(seconds / hour_seconds);
+        mstr << std::fixed << std::setprecision(0) << num_hours << "h ";
+        seconds -= num_hours * hour_seconds;
+    }
+    if (seconds > minute_seconds)
+    {
+        float_64_bit const  num_minutes = std::floor(seconds / minute_seconds);
+        mstr << std::fixed << std::setprecision(0) << num_minutes << "m ";
+        seconds -= num_minutes * minute_seconds;
+    }
+    mstr << std::fixed << std::setprecision(3) << seconds << 's';
+    return mstr.get();
+}
+
+
+}
+
 
 status_bar::status_bar(program_window* const  wnd)
     : m_wnd(wnd)
@@ -70,11 +105,11 @@ void status_bar::update()
     else if (wnd()->glwindow().call_now(&simulator::has_network))
     {
         float_64_bit const  real_time = wnd()->glwindow().call_now(&simulator::spent_real_time);
-        std::string  msg = msgstream() << "RT: " << std::fixed << std::setprecision(3) << real_time << "s";
+        std::string  msg = msgstream() << "RT: " << seconds_to_pretty_time_string(real_time);
         m_spent_real_time->setText(msg.c_str());
 
         float_64_bit const  network_time = wnd()->glwindow().call_now(&simulator::spent_network_time);
-        msg = msgstream() << "NT: " << std::fixed << std::setprecision(3) << network_time  << "s";
+        msg = msgstream() << "NT: " << seconds_to_pretty_time_string(network_time);
         m_spent_simulation_time->setText(msg.c_str());
 
         float_64_bit const  network_time_to_real_time = real_time > 1e-5f ? network_time / real_time : 1.0;

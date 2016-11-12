@@ -70,6 +70,15 @@ struct  ship_controller
             vector3 const&  nearest_dock_position,      //!< Coordinates in meters. It is nearest to the ship, not to the other one.
             float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
             ) const = 0;
+
+
+    /**
+      * Returns an acceleration vector of the ship induced by the environment the ship is moving in.
+      */
+    virtual vector3  accelerate_ship_in_environment(
+        vector3 const&  ship_velocity               //!< In meters per second.
+        ) const
+    { return vector3_zero(); }
 };
 
 

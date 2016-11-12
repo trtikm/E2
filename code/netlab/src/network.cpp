@@ -319,7 +319,7 @@ void  network::update_movement_of_ship(layer_index_type const  layer_index, obje
 
     std::vector< std::vector<compressed_layer_and_object_indices> >&  ships_in_sectors = m_ships_in_sectors.at(space_layer_index);
 
-    vector3  ship_acceleration = vector3_zero();
+    vector3  ship_acceleration = space_layer_props.ship_controller_ptr()->accelerate_ship_in_environment(ship.velocity());
     {
         ship_acceleration += space_layer_props.ship_controller_ptr()->accelerate_into_space_box(
                 ship.position(),

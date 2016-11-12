@@ -45,6 +45,36 @@ void  compute_random_vector_of_magnitude(
         );
 
 
+/**
+* It is a function F(x) such that
+*      F(x) = x <= 0.0   ? 0.0   :
+*             x >= X_MAX ? 1.0   :
+*             POW > 1.0  ? y^POW :
+*                          y     ;
+*  where y = (e^(x / X_MAX) - 1.0) / (e - 1.0).
+*/
+float_32_bit  exponential_increase_from_zero_to_one(
+    float_32_bit const  x,
+    float_32_bit const  X_MAX = 1.0f,
+    float_32_bit const  POW = 3.0f
+    );
+
+
+/**
+ * It is a function F(x) such that
+ *      F(x) = x <= 0.0   ? 1.0   :
+ *             x >= X_MAX ? 0.0   :
+ *             POW > 1.0  ? y^POW : 
+ *                          y     ;
+ *  where y = (e^(1.0 - x / X_MAX) - 1.0) / (e - 1.0).
+ */
+float_32_bit  exponential_decrease_from_one_to_zero(
+    float_32_bit const  x,
+    float_32_bit const  X_MAX = 1.0f,
+    float_32_bit const  POW = 3.0f
+    );
+
+
 }
 
 
