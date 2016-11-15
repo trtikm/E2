@@ -1,12 +1,14 @@
 set(THIS_TARGET_NAME netlab)
 
 add_library(${THIS_TARGET_NAME}
-    ./include/netlab/ship_controller.hpp
     ./include/netlab/tracked_object_stats.hpp
     ./include/netlab/initialiser_of_movement_area_centers.hpp
     ./include/netlab/initialiser_of_ships_in_movement_areas.hpp
     ./include/netlab/network_objects_factory.hpp
     ./src/network_objects_factory.cpp
+
+    ./include/netlab/ship_controller.hpp
+    ./src/ship_controller.cpp
 
     ./include/netlab/network_layer_props.hpp
     ./src/network_layer_props.cpp

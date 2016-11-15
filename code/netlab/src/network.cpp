@@ -319,15 +319,15 @@ void  network::update_movement_of_ship(layer_index_type const  layer_index, obje
 
     std::vector< std::vector<compressed_layer_and_object_indices> >&  ships_in_sectors = m_ships_in_sectors.at(space_layer_index);
 
-    vector3  ship_acceleration = space_layer_props.ship_controller_ptr()->accelerate_ship_in_environment(ship.velocity());
+    vector3  ship_acceleration =
+        space_layer_props.ship_controller_ptr()->accelerate_ship_in_environment(ship.velocity(),space_layer_props,*properties());
     {
         ship_acceleration += space_layer_props.ship_controller_ptr()->accelerate_into_space_box(
                 ship.position(),
                 ship.velocity(),
                 movement_area_center,
-                space_layer_props.size_of_ship_movement_area_along_x_axis_in_meters(),
-                space_layer_props.size_of_ship_movement_area_along_y_axis_in_meters(),
-                space_layer_props.size_of_ship_movement_area_along_c_axis_in_meters()
+                space_layer_props,
+                *properties()
                 );
 
         sector_coordinate_type  x_lo, y_lo, c_lo;
@@ -371,14 +371,16 @@ void  network::update_movement_of_ship(layer_index_type const  layer_index, obje
                                 ship.position(),
                                 ship.velocity(),
                                 sector_centre,
-                                space_layer_props.distance_of_docks_in_meters()
+                                space_layer_props,
+                                *properties()
                                 );
                     else
                         ship_acceleration += space_layer_props.ship_controller_ptr()->accelerate_into_dock(
                                 ship.position(),
                                 ship.velocity(),
                                 sector_centre,
-                                space_layer_props.distance_of_docks_in_meters()
+                                space_layer_props,
+                                *properties()
                                 );
 
                     object_index_type const  sector_index = space_layer_props.dock_sector_index(x,y,c);
@@ -393,7 +395,8 @@ void  network::update_movement_of_ship(layer_index_type const  layer_index, obje
                                     other_ship.position(),
                                     other_ship.velocity(),
                                     sector_centre,
-                                    space_layer_props.distance_of_docks_in_meters()
+                                    space_layer_props,
+                                    *properties()
                                     );
                         }
                 }

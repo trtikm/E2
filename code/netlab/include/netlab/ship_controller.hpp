@@ -4,6 +4,11 @@
 #   include <angeo/tensor_math.hpp>
 
 namespace netlab {
+struct  network_props;
+struct  network_layer_props;
+}
+
+namespace netlab {
 
 
 struct  ship_controller
@@ -17,15 +22,19 @@ struct  ship_controller
      * but the acceleration should stir it so that it returns back into the
      * space-box soon. If the ship is inside the space-box the function
      * typically returns zero vector.
+     *
+     * This default implementation applies a constant acceleration (of
+     * magnitude proportional to the maximal speed of a ship in the layer)
+     * to the ship towards the interrior of the space box if the ship is
+     * not inside.
      */
     virtual vector3  accelerate_into_space_box(
             vector3 const&  ship_position,              //!< Coordinates in meters.
             vector3 const&  ship_velocity,              //!< In meters per second.
             vector3 const&  space_box_center,           //!< Coordinates in meters.
-            float_32_bit const  space_box_length_x,     //!< Length is in meters.
-            float_32_bit const  space_box_length_y,     //!< Length is in meters.
-            float_32_bit const  space_box_length_c      //!< Length is in meters.
-            ) const = 0;
+            network_layer_props const&  layer_props,
+            network_props const&  props
+            ) const;
 
     /**
      * Returns an acceleration vector stearing the ship towards the passed dock.
@@ -36,20 +45,24 @@ struct  ship_controller
             vector3 const&  ship_position,              //!< Coordinates in meters.
             vector3 const&  ship_velocity,              //!< In meters per second.
             vector3 const&  dock_position,              //!< Coordinates in meters.
-            float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
+            network_layer_props const&  layer_props,
+            network_props const&  props
             ) const = 0;
 
     /**
      * Returns an acceleration vector stearing the ship away from the passed dock.
      * This function is called when the spiker of the dock is the same as the spiker
-     * of the ship. The default implementation ignores the presence of the dock (as
-     * if there was no dock at all).
+     * of the ship.
+     *
+     * The default implementation ignores the presence of the dock, as if there
+     * was no dock at all.
      */
     virtual vector3  accelerate_from_dock(
             vector3 const&  ship_position,              //!< Coordinates in meters.
             vector3 const&  ship_velocity,              //!< In meters per second.
             vector3 const&  dock_position,              //!< Coordinates in meters.
-            float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
+            network_layer_props const&  layer_props,
+            network_props const&  props
             ) const
     { return vector3_zero(); }
 
@@ -68,16 +81,21 @@ struct  ship_controller
             vector3 const&  other_ship_position,        //!< Coordinates in meters.
             vector3 const&  other_ship_velocity,        //!< In meters per second.
             vector3 const&  nearest_dock_position,      //!< Coordinates in meters. It is nearest to the ship, not to the other one.
-            float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
+            network_layer_props const&  layer_props,
+            network_props const&  props
             ) const = 0;
 
 
     /**
       * Returns an acceleration vector of the ship induced by the environment the ship is moving in.
+      *
+      * The default implementation defines no effect of the environment to ship's movement.
       */
     virtual vector3  accelerate_ship_in_environment(
-        vector3 const&  ship_velocity               //!< In meters per second.
-        ) const
+            vector3 const&  ship_velocity,              //!< In meters per second.
+            network_layer_props const&  layer_props,
+            network_props const&  props
+            ) const
     { return vector3_zero(); }
 };
 

@@ -26,29 +26,12 @@ namespace netexp { namespace calibration { namespace {
 
 struct  ship_controller : public netlab::ship_controller
 {
-    ship_controller(
-            float_32_bit const  min_ship_speed,
-            float_32_bit const  max_ship_speed
-            )
-        : m_min_ship_speed(min_ship_speed)
-        , m_max_ship_speed(max_ship_speed)
-        , m_random_generator()
-    {}
-
-    vector3  accelerate_into_space_box(
-            vector3 const&  ship_position,              //!< Coordinates in meters.
-            vector3 const&  ship_velocity,              //!< In meters per second.
-            vector3 const&  space_box_center,           //!< Coordinates in meters.
-            float_32_bit const  space_box_length_x,     //!< Length is in meters.
-            float_32_bit const  space_box_length_y,     //!< Length is in meters.
-            float_32_bit const  space_box_length_c      //!< Length is in meters.
-            ) const;
-
     vector3  accelerate_into_dock(
             vector3 const&  ship_position,              //!< Coordinates in meters.
             vector3 const&  ship_velocity,              //!< In meters per second.
             vector3 const&  dock_position,              //!< Coordinates in meters.
-            float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
+            netlab::network_layer_props const&  layer_props,
+            netlab::network_props const&  props
             ) const;
 
     vector3  accelerate_from_ship(
@@ -57,65 +40,37 @@ struct  ship_controller : public netlab::ship_controller
             vector3 const&  other_ship_position,        //!< Coordinates in meters.
             vector3 const&  other_ship_velocity,        //!< In meters per second.
             vector3 const&  nearest_dock_position,      //!< Coordinates in meters. It is nearest to the ship, not to the other one.
-            float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
+            netlab::network_layer_props const&  layer_props,
+            netlab::network_props const&  props
             ) const;
-
-    vector3  accelerate_ship_in_environment(
-            vector3 const&  ship_velocity               //!< In meters per second.
-            ) const;
-
-private:
-    float_32_bit  m_min_ship_speed;
-    float_32_bit  m_max_ship_speed;
-    mutable random_generator_for_natural_32_bit  m_random_generator;
 };
 
-
-vector3  ship_controller::accelerate_into_space_box(
-        vector3 const&  ship_position,              //!< Coordinates in meters.
-        vector3 const&  ship_velocity,              //!< In meters per second.
-        vector3 const&  space_box_center,           //!< Coordinates in meters.
-        float_32_bit const  space_box_length_x,     //!< Length is in meters.
-        float_32_bit const  space_box_length_y,     //!< Length is in meters.
-        float_32_bit const  space_box_length_c      //!< Length is in meters.
-        ) const
-{
-    vector3 const  delta = 2.0f * (ship_position - space_box_center);
-
-    float_32_bit const  ax = delta(0) >  space_box_length_x ? -2.0f * m_max_ship_speed :
-                             delta(0) < -space_box_length_x ?  2.0f * m_max_ship_speed :
-                                                               0.0f ;
-
-    float_32_bit const  ay = delta(1) >  space_box_length_y ? -2.0f * m_max_ship_speed :
-                             delta(1) < -space_box_length_y ?  2.0f * m_max_ship_speed :
-                                                               0.0f ;
-
-    float_32_bit const  ac = delta(2) >  space_box_length_c ? -2.0f * m_max_ship_speed :
-                             delta(2) < -space_box_length_c ?  2.0f * m_max_ship_speed :
-                                                               0.0f ;
-
-    return { ax, ay, ac };
-}
 
 vector3  ship_controller::accelerate_into_dock(
         vector3 const&  ship_position,              //!< Coordinates in meters.
         vector3 const&  ship_velocity,              //!< In meters per second.
         vector3 const&  dock_position,              //!< Coordinates in meters.
-        float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
+        netlab::network_layer_props const&  layer_props,
+        netlab::network_props const&  props
         ) const
 {
+    TMPROF_BLOCK();
+
     vector3 const  doc_ship_positions_delta = dock_position - ship_position;
-
     float_32_bit const  distance_to_dock = length(doc_ship_positions_delta);
-    if (distance_to_dock < 0.001f)
-        return { 0.0f, 0.0f, 0.0f };
-    float_32_bit const  max_distance_to_dock = inter_docks_distance / 2.0f;
+    vector3 const  accel_dir = (distance_to_dock < 0.0001f) ? vector3_zero() :
+                                                              (1.0f / distance_to_dock) * doc_ship_positions_delta;
+    float_32_bit constexpr  accel_mag = 0.0f; // TODO!
 
-    float_32_bit constexpr  max_acceleration_magnitude = 50.0f;
-    float_32_bit const acceleration_magnitude_scale =
-        exponential_decrease_from_one_to_zero(distance_to_dock, max_distance_to_dock, 3.0f);
+    return accel_mag * accel_dir;
 
-    return ((max_acceleration_magnitude * acceleration_magnitude_scale) / distance_to_dock) * doc_ship_positions_delta;
+    //vector3 const  tangent_velocity = ship_velocity - dot_product(ship_velocity,accel_dir) * accel_dir;
+    //float_32_bit const  tangent_speed = length(tangent_velocity);
+    //vector3 const  decel_dir = (tangent_speed < 0.0001f) ? vector3_zero() :
+    //                                                       (-1.0f / tangent_speed) * tangent_velocity;
+    //float_32_bit constexpr  decel_mag = 0.0f; // TODO!
+
+    //return accel_mag * accel_dir + decel_mag * decel_dir;
 }
 
 vector3  ship_controller::accelerate_from_ship(
@@ -124,46 +79,59 @@ vector3  ship_controller::accelerate_from_ship(
         vector3 const&  other_ship_position,        //!< Coordinates in meters.
         vector3 const&  other_ship_velocity,        //!< In meters per second.
         vector3 const&  nearest_dock_position,      //!< Coordinates in meters. It is nearest to the ship, not to the other one.
-        float_32_bit const  inter_docks_distance    //!< Distance between docks in meters.
+        netlab::network_layer_props const&  layer_props,
+        netlab::network_props const&  props
         ) const
 {
-    float_32_bit  max_acceleration_magnitude;
-    {
-        float_32_bit constexpr  magnitude_away_from_dock = 500.0f;
-        float_32_bit constexpr  magnitude_at_dock = 1000.0f;
-
-        float_32_bit const  distance_to_dock = length(nearest_dock_position - other_ship_position);
-        float_32_bit const  max_distance_to_dock = inter_docks_distance / 2.0f;
-
-        max_acceleration_magnitude =
-                distance_to_dock >= max_distance_to_dock ?
-                    magnitude_away_from_dock :
-                    magnitude_away_from_dock + (distance_to_dock / max_distance_to_dock) *
-                                               (magnitude_at_dock - magnitude_away_from_dock);
-    }
+    TMPROF_BLOCK();
 
     vector3 const  ship_positions_delta = ship_position - other_ship_position;
+    float_32_bit const  squared_distance_of_ships = length_squared(ship_positions_delta);
 
-    float_32_bit const  distance_of_ships = length(ship_positions_delta);
-    if (distance_of_ships < 0.001f)
+    float_32_bit const  max_repulsion_accel_mag = 0.0f; // TODO!
+    if (squared_distance_of_ships < 1e-6f)
     {
         vector3  acceleration;
-        compute_random_vector_of_magnitude(max_acceleration_magnitude,m_random_generator,acceleration);
+        compute_random_vector_of_magnitude(max_repulsion_accel_mag, default_random_generator(), acceleration);
         return acceleration;
     }
 
-    float_32_bit const  max_distance_of_ships = inter_docks_distance / 4.0f;
+    float_32_bit const  squared_max_connection_distance = props.max_connection_distance_in_meters() *
+                                                          props.max_connection_distance_in_meters() ;
 
-    float_32_bit const acceleration_magnitude_scale =
-        exponential_decrease_from_one_to_zero(distance_of_ships,max_distance_of_ships,1.0f);
 
-    return ((max_acceleration_magnitude * acceleration_magnitude_scale) / distance_of_ships) * ship_positions_delta;
-}
+    float_32_bit  accel_mag;
+    if (length_squared(nearest_dock_position - other_ship_position) <= squared_max_connection_distance)
+    {
+        float_32_bit constexpr  base_accel_mag = 0.0f; // TODO!
+        accel_mag = base_accel_mag;
+    }
+    else
+    {
+        if (length_squared(nearest_dock_position - ship_position) <= squared_max_connection_distance)
+            return vector3_zero();
 
-vector3  ship_controller::accelerate_ship_in_environment(
-        vector3 const&  ship_velocity               //!< In meters per second.
-        ) const
-{
+        accel_mag = 0.0f;
+    }
+
+    float_32_bit const repulsion_distance = (1.0f / 5.0f) * layer_props.distance_of_docks_in_meters();
+    float_32_bit const squared_repulsion_distance = repulsion_distance * repulsion_distance;
+    if (squared_distance_of_ships < squared_repulsion_distance)
+    {
+        float_32_bit const  distance_of_ships = std::sqrtf(squared_distance_of_ships);
+        float_32_bit const  repulsion_scale =
+                exponential_increase_from_zero_to_one(1.0f - distance_of_ships / repulsion_distance,1.0f,1.0f);
+        accel_mag += repulsion_scale * max_repulsion_accel_mag;
+
+        return (accel_mag / distance_of_ships) * ship_positions_delta;
+    }
+
+    if (accel_mag > 0.0f)
+    {
+        float_32_bit const  distance_of_ships = std::sqrtf(squared_distance_of_ships);
+        return (accel_mag / distance_of_ships) * ship_positions_delta;
+    }
+
     return vector3_zero();
 }
 
@@ -197,7 +165,7 @@ std::shared_ptr<netlab::network_props>  get_network_props()
 
                 true,   //!< are_spikers_excitatory
 
-                std::make_shared<ship_controller const>(0.3f, 1.0f)
+                std::make_shared<ship_controller const>()
             },
         },
 
