@@ -2,6 +2,7 @@
 #   define ANGEO_UTILITY_HPP_INCLUDED
 
 #   include <angeo/tensor_math.hpp>
+#   include <utility/random.hpp>
 
 namespace angeo {
 
@@ -23,6 +24,13 @@ void  get_corner_points_of_bounding_box(
     *output_iterator = bbox_hi;                                         ++output_iterator;
     *output_iterator = vector3{ bbox_lo(0), bbox_hi(1), bbox_hi(2) };   ++output_iterator;
 }
+
+
+void  get_random_vector_of_magnitude(
+        float_32_bit const  magnitude,
+        random_generator_for_natural_32_bit&   random_generator,
+        vector3&  resulting_vector
+        );
 
 
 }

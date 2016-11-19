@@ -8,45 +8,6 @@
 #include <algorithm>
 #include <limits>
 
-namespace netlab { namespace detail { namespace {
-
-
-vector3 gen_random_velocity(float_32_bit const  magnitude)
-{
-    while (true)
-    {
-        natural_32_bit const  tx = get_random_natural_32_bit_in_range(0U, 10000U);
-        natural_32_bit const  ty = get_random_natural_32_bit_in_range(0U, 10000U);
-        natural_32_bit const  tc = get_random_natural_32_bit_in_range(0U, 10000U);
-        vector3 const  u( ((float_32_bit)tx / 10000.0f) - 0.5f ,
-                          ((float_32_bit)ty / 10000.0f) - 0.5f ,
-                          ((float_32_bit)tc / 10000.0f) - 0.5f );
-        float_32_bit const  u_len = length(u);
-        if (u_len >= 0.001f)
-            return (magnitude / u_len) * u;
-    }
-}
-
-vector3  update_magnitude_of_velocity(
-        vector3 const&  velocity,
-        float_32_bit const  desired_magnitude,
-        float_32_bit const  min_magnitude,
-        float_32_bit const  max_magnitude
-        )
-{
-    float_32_bit const  speed = length(velocity);
-    if (speed >= min_magnitude)
-    {
-        if (speed <= max_magnitude)
-            return velocity;
-        return (max_magnitude / speed) * velocity;
-    }
-    return gen_random_velocity(desired_magnitude);
-}
-
-
-}}}
-
 namespace netlab {
 
 
@@ -319,6 +280,30 @@ void  network::update_movement_of_ship(layer_index_type const  layer_index, obje
 
     std::vector< std::vector<compressed_layer_and_object_indices> >&  ships_in_sectors = m_ships_in_sectors.at(space_layer_index);
 
+    vector3  dock_sector_center_of_ship;
+    bool  dock_sector_belongs_to_the_same_spiker_as_the_ship;
+    {
+        sector_coordinate_type  x, y, c;
+        space_layer_props.dock_sector_coordinates(ship.position(), x,y,c);
+        dock_sector_center_of_ship = space_layer_props.dock_sector_centre(x,y,c);
+
+        if (layer_index == space_layer_index)
+        {
+            object_index_type  spiker_index;
+            {
+                sector_coordinate_type  spiker_x, spiker_y, spiker_c;
+                space_layer_props.spiker_sector_coordinates_from_dock_sector_coordinates(
+                    x, y, c,
+                    spiker_x, spiker_y, spiker_c
+                    );
+                spiker_index = space_layer_props.spiker_sector_index(spiker_x, spiker_y, spiker_c);
+            }
+            dock_sector_belongs_to_the_same_spiker_as_the_ship = spiker_index == spiker_sector_index;
+        }
+        else
+            dock_sector_belongs_to_the_same_spiker_as_the_ship = false;
+    }
+
     vector3  ship_acceleration =
         space_layer_props.ship_controller_ptr()->accelerate_ship_in_environment(ship.velocity(),space_layer_props,*properties());
     {
@@ -334,9 +319,9 @@ void  network::update_movement_of_ship(layer_index_type const  layer_index, obje
         sector_coordinate_type  x_hi, y_hi, c_hi;
         {
             vector3 const  range_vector(
-                    0.499f * space_layer_props.distance_of_docks_in_meters(),
-                    0.499f * space_layer_props.distance_of_docks_in_meters(),
-                    0.499f * space_layer_props.distance_of_docks_in_meters()
+                    space_layer_props.ship_controller_ptr()->docks_enumerations_distance_for_accelerate_into_dock(),
+                    space_layer_props.ship_controller_ptr()->docks_enumerations_distance_for_accelerate_into_dock(),
+                    space_layer_props.ship_controller_ptr()->docks_enumerations_distance_for_accelerate_into_dock()
                     );
             space_layer_props.dock_sector_coordinates(ship.position() - range_vector, x_lo, y_lo, c_lo);
             space_layer_props.dock_sector_coordinates(ship.position() + range_vector, x_hi, y_hi, c_hi);
@@ -383,6 +368,21 @@ void  network::update_movement_of_ship(layer_index_type const  layer_index, obje
                                 *properties()
                                 );
 
+                }
+
+        {
+            vector3 const  range_vector(
+                space_layer_props.ship_controller_ptr()->docks_enumerations_distance_for_accelerate_from_ship(),
+                space_layer_props.ship_controller_ptr()->docks_enumerations_distance_for_accelerate_from_ship(),
+                space_layer_props.ship_controller_ptr()->docks_enumerations_distance_for_accelerate_from_ship()
+                );
+            space_layer_props.dock_sector_coordinates(ship.position() - range_vector, x_lo, y_lo, c_lo);
+            space_layer_props.dock_sector_coordinates(ship.position() + range_vector, x_hi, y_hi, c_hi);
+        }
+        for (sector_coordinate_type x = x_lo; x <= x_hi; ++x)
+            for (sector_coordinate_type y = y_lo; y <= y_hi; ++y)
+                for (sector_coordinate_type c = c_lo; c <= c_hi; ++c)
+                {
                     object_index_type const  sector_index = space_layer_props.dock_sector_index(x,y,c);
                     for (compressed_layer_and_object_indices const  loc : ships_in_sectors.at(sector_index))
                         if (loc != ship_loc)
@@ -394,7 +394,8 @@ void  network::update_movement_of_ship(layer_index_type const  layer_index, obje
                                     ship.velocity(),
                                     other_ship.position(),
                                     other_ship.velocity(),
-                                    sector_centre,
+                                    dock_sector_center_of_ship,
+                                    dock_sector_belongs_to_the_same_spiker_as_the_ship,
                                     space_layer_props,
                                     *properties()
                                     );
@@ -403,13 +404,30 @@ void  network::update_movement_of_ship(layer_index_type const  layer_index, obje
     }
 
     float_32_bit const  dt = properties()->update_time_step_in_seconds();
-    vector3 const  new_velocity =
-            detail::update_magnitude_of_velocity(
-                ship.velocity() + dt * ship_acceleration,
-                space_layer_props.min_speed_of_ship_in_meters_per_second(),
-                space_layer_props.min_speed_of_ship_in_meters_per_second(),
-                space_layer_props.max_speed_of_ship_in_meters_per_second()
-                );
+
+    vector3  new_velocity = ship.velocity() + dt * ship_acceleration;
+    {
+        float_32_bit const  new_speed = length(new_velocity);
+        if (new_speed < space_layer_props.min_speed_of_ship_in_meters_per_second())
+            space_layer_props.ship_controller_ptr()->on_too_slow(
+                    new_velocity,
+                    ship.position(),
+                    new_speed,
+                    dock_sector_center_of_ship,
+                    space_layer_props,
+                    *properties()
+                    );
+        else if (new_speed > space_layer_props.max_speed_of_ship_in_meters_per_second())
+            space_layer_props.ship_controller_ptr()->on_too_fast(
+                    new_velocity,
+                    ship.position(),
+                    new_speed,
+                    dock_sector_center_of_ship,
+                    space_layer_props,
+                    *properties()
+                    );
+    }
+
     vector3 const  new_position = ship.position() + dt * new_velocity;
 
     object_index_type  old_sector_index;

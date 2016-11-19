@@ -38,12 +38,6 @@ void  compute_random_ship_velocity_in_movement_area(
         vector3&  ship_velocity
         );
 
-void  compute_random_vector_of_magnitude(
-        float_32_bit const  magnitude,
-        random_generator_for_natural_32_bit&   random_generator,
-        vector3&  resulting_vector
-        );
-
 
 /**
 * It is a function F(x) such that

@@ -1,9 +1,23 @@
 #include <netlab/ship_controller.hpp>
 #include <netlab/network_props.hpp>
 #include <netlab/network_layer_props.hpp>
+#include <angeo/utility.hpp>
+#include <utility/assumptions.hpp>
 #include <utility/timeprof.hpp>
 
 namespace netlab {
+
+
+ship_controller::ship_controller(
+        float_32_bit const  docks_enumerations_distance_for_accelerate_into_dock,
+        float_32_bit const  docks_enumerations_distance_for_accelerate_from_ship
+        )
+    : m_docks_enumerations_distance_for_accelerate_into_dock(docks_enumerations_distance_for_accelerate_into_dock)
+    , m_docks_enumerations_distance_for_accelerate_from_ship(docks_enumerations_distance_for_accelerate_from_ship)
+{
+    ASSUMPTION(m_docks_enumerations_distance_for_accelerate_into_dock >= 0.0f);
+    ASSUMPTION(m_docks_enumerations_distance_for_accelerate_from_ship >= 0.0f);
+}
 
 
 vector3  ship_controller::accelerate_into_space_box(
@@ -36,6 +50,40 @@ vector3  ship_controller::accelerate_into_space_box(
 
     return{ ax, ay, ac };
 }
+
+
+void  ship_controller::on_too_slow(
+        vector3&  ship_velocity,                    //!< In meters per second.
+        vector3 const&  ship_position,              //!< Coordinates in meters.
+        float_32_bit const  speed,                  //!< In meters per second.
+        vector3 const&  nearest_dock_position,
+        network_layer_props const&  layer_props,
+        network_props const&  props
+        ) const
+{
+    vector3 const  dock_ship_delta_vector = nearest_dock_position - ship_position;
+    if (length_squared(dock_ship_delta_vector) > props.max_connection_distance_in_meters() * props.max_connection_distance_in_meters())
+        angeo::get_random_vector_of_magnitude(
+                0.5f * (layer_props.min_speed_of_ship_in_meters_per_second() + layer_props.max_speed_of_ship_in_meters_per_second()),
+                default_random_generator(),
+                ship_velocity
+                );
+}
+
+
+void  ship_controller::on_too_fast(
+        vector3&  ship_velocity,                    //!< In meters per second.
+        vector3 const&  ship_position,              //!< Coordinates in meters.
+        float_32_bit const  speed,                  //!< In meters per second.
+        vector3 const&  nearest_dock_position,
+        network_layer_props const&  layer_props,
+        network_props const&  props
+        ) const
+{
+    ship_velocity *= layer_props.max_speed_of_ship_in_meters_per_second() / speed;
+}
+
+
 
 
 }

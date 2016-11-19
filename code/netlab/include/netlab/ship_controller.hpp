@@ -13,6 +13,25 @@ namespace netlab {
 
 struct  ship_controller
 {
+    /**
+     * The constructor allows to specify two distances from the processed ship which
+     * will tell the network call to methods bellow for desired docks and ships.
+     */
+    ship_controller(
+            float_32_bit const  docks_enumerations_distance_for_accelerate_into_dock,
+                //!< This distance is used by the network to call the method
+                //!< 'accelerate_into_dock' or 'accelerate_from_dock' for all
+                //!< dock whose distance to the ship is not greater than the
+                //!< passed distance.
+                //!< This value cannot be negative.
+            float_32_bit const  docks_enumerations_distance_for_accelerate_from_ship
+                //!< This distance is used by the network to call the method
+                //!< 'accelerate_from_ship' for all ships in all docks whose
+                //!< distance to the ship is not greater than the passed distance.
+                //!< This value cannot be negative.
+        );
+
+
     virtual ~ship_controller() = default;
 
     /**
@@ -81,6 +100,7 @@ struct  ship_controller
             vector3 const&  other_ship_position,        //!< Coordinates in meters.
             vector3 const&  other_ship_velocity,        //!< In meters per second.
             vector3 const&  nearest_dock_position,      //!< Coordinates in meters. It is nearest to the ship, not to the other one.
+            bool const  both_ship_and_dock_belongs_to_same_spiker,
             network_layer_props const&  layer_props,
             network_props const&  props
             ) const = 0;
@@ -97,6 +117,56 @@ struct  ship_controller
             network_props const&  props
             ) const
     { return vector3_zero(); }
+
+
+    /**
+      * This method is called when the speed of the ship becomes lower the minimal allowed speed.
+      * The method can update the velocity vector of the ship. It is also fine to leave the vector
+      * unchanged, because both minimal and maximal speeds for a ship are more related to sending
+      * these notifications then strict rules to be preserved.
+      *
+      * The default implementation leaves the velocity vector of the ship unchanged, if the ship
+      * is within a connection radius of some dock. Otherwise a random velocity vector (using the
+      * default random generator) of magnitude in the middile between minimal and maximal speed
+      * is computed.
+      */
+    virtual  void  on_too_slow(
+            vector3&  ship_velocity,                    //!< In meters per second.
+            vector3 const&  ship_position,              //!< Coordinates in meters.
+            float_32_bit const  speed,                  //!< In meters per second.
+            vector3 const&  nearest_dock_position,
+            network_layer_props const&  layer_props,
+            network_props const&  props
+            ) const;
+
+
+    /**
+      * This method is called when the speed of the ship becomes above the maximal allowed speed.
+      * The method can update the velocity vector of the ship. It is also fine to leave the vector
+      * unchanged, because both minimal and maximal speeds for a ship are more related to sending
+      * these notifications then strict rules to be preserved.
+      *
+      * The default implementation lowers the velocity of the ship to the maximal one.
+      */
+    virtual  void  on_too_fast(
+            vector3&  ship_velocity,                    //!< In meters per second.
+            vector3 const&  ship_position,              //!< Coordinates in meters.
+            float_32_bit const  speed,                  //!< In meters per second.
+            vector3 const&  nearest_dock_position,
+            network_layer_props const&  layer_props,
+            network_props const&  props
+            ) const;
+
+
+    float_32_bit  docks_enumerations_distance_for_accelerate_into_dock() const noexcept
+    { return m_docks_enumerations_distance_for_accelerate_into_dock; }
+
+    float_32_bit  docks_enumerations_distance_for_accelerate_from_ship() const noexcept
+    { return m_docks_enumerations_distance_for_accelerate_from_ship; }
+
+private:
+    float_32_bit  m_docks_enumerations_distance_for_accelerate_into_dock;
+    float_32_bit  m_docks_enumerations_distance_for_accelerate_from_ship;
 };
 
 

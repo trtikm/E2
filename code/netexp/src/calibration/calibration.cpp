@@ -10,8 +10,9 @@
 #include <netlab/initialiser_of_movement_area_centers.hpp>
 #include <netlab/initialiser_of_ships_in_movement_areas.hpp>
 #include <netlab/tracked_object_stats.hpp>
-#include <utility/array_of_derived.hpp>
 #include <angeo/tensor_math.hpp>
+#include <angeo/utility.hpp>
+#include <utility/array_of_derived.hpp>
 #include <utility/random.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -26,6 +27,10 @@ namespace netexp { namespace calibration { namespace {
 
 struct  ship_controller : public netlab::ship_controller
 {
+    ship_controller()
+        : netlab::ship_controller(0.0f,2.0f)
+    {}
+
     vector3  accelerate_into_dock(
             vector3 const&  ship_position,              //!< Coordinates in meters.
             vector3 const&  ship_velocity,              //!< In meters per second.
@@ -40,6 +45,7 @@ struct  ship_controller : public netlab::ship_controller
             vector3 const&  other_ship_position,        //!< Coordinates in meters.
             vector3 const&  other_ship_velocity,        //!< In meters per second.
             vector3 const&  nearest_dock_position,      //!< Coordinates in meters. It is nearest to the ship, not to the other one.
+            bool const  both_ship_and_dock_belongs_to_same_spiker,
             netlab::network_layer_props const&  layer_props,
             netlab::network_props const&  props
             ) const;
@@ -60,8 +66,16 @@ vector3  ship_controller::accelerate_into_dock(
     float_32_bit const  distance_to_dock = length(doc_ship_positions_delta);
     vector3 const  accel_dir = (distance_to_dock < 0.0001f) ? vector3_zero() :
                                                               (1.0f / distance_to_dock) * doc_ship_positions_delta;
-    float_32_bit constexpr  accel_mag = 0.0f; // TODO!
+    if (distance_to_dock < props.max_connection_distance_in_meters())
+    {
+        float_32_bit const  scale = distance_to_dock / props.max_connection_distance_in_meters();
+        float_32_bit const  desired_speed = scale * layer_props.max_speed_of_ship_in_meters_per_second();
+        vector3 const  velocity_delta = desired_speed * accel_dir - ship_velocity;
+        float_32_bit const  time_delta = scale * 100.0f * props.update_time_step_in_seconds() + 0.001f;
+        return (1.0f / time_delta) * velocity_delta;
 
+    }
+    float_32_bit constexpr  accel_mag = 50.0f; // TODO!
     return accel_mag * accel_dir;
 
     //vector3 const  tangent_velocity = ship_velocity - dot_product(ship_velocity,accel_dir) * accel_dir;
@@ -79,6 +93,7 @@ vector3  ship_controller::accelerate_from_ship(
         vector3 const&  other_ship_position,        //!< Coordinates in meters.
         vector3 const&  other_ship_velocity,        //!< In meters per second.
         vector3 const&  nearest_dock_position,      //!< Coordinates in meters. It is nearest to the ship, not to the other one.
+        bool const  both_ship_and_dock_belongs_to_same_spiker,
         netlab::network_layer_props const&  layer_props,
         netlab::network_props const&  props
         ) const
@@ -88,30 +103,35 @@ vector3  ship_controller::accelerate_from_ship(
     vector3 const  ship_positions_delta = ship_position - other_ship_position;
     float_32_bit const  squared_distance_of_ships = length_squared(ship_positions_delta);
 
-    float_32_bit const  max_repulsion_accel_mag = 0.0f; // TODO!
+    float_32_bit const  max_repulsion_accel_mag = 100.0f; // TODO!
     if (squared_distance_of_ships < 1e-6f)
     {
         vector3  acceleration;
-        compute_random_vector_of_magnitude(max_repulsion_accel_mag, default_random_generator(), acceleration);
+        angeo::get_random_vector_of_magnitude(max_repulsion_accel_mag, default_random_generator(), acceleration);
         return acceleration;
     }
 
-    float_32_bit const  squared_max_connection_distance = props.max_connection_distance_in_meters() *
-                                                          props.max_connection_distance_in_meters() ;
-
-
     float_32_bit  accel_mag;
-    if (length_squared(nearest_dock_position - other_ship_position) <= squared_max_connection_distance)
-    {
-        float_32_bit constexpr  base_accel_mag = 0.0f; // TODO!
-        accel_mag = base_accel_mag;
-    }
+
+    if (both_ship_and_dock_belongs_to_same_spiker)
+        accel_mag = 0.0f;
     else
     {
-        if (length_squared(nearest_dock_position - ship_position) <= squared_max_connection_distance)
-            return vector3_zero();
+        float_32_bit const  squared_max_connection_distance = props.max_connection_distance_in_meters() *
+                                                              props.max_connection_distance_in_meters() ;
 
-        accel_mag = 0.0f;
+        if (length_squared(nearest_dock_position - other_ship_position) <= squared_max_connection_distance)
+        {
+            float_32_bit constexpr  base_accel_mag = 50.0f; // TODO!
+            accel_mag = base_accel_mag;
+        }
+        else
+        {
+            if (length_squared(nearest_dock_position - ship_position) <= squared_max_connection_distance)
+                return vector3_zero();
+
+            accel_mag = 0.0f;
+        }
     }
 
     float_32_bit const repulsion_distance = (1.0f / 5.0f) * layer_props.distance_of_docks_in_meters();
@@ -154,14 +174,14 @@ std::shared_ptr<netlab::network_props>  get_network_props()
                 10.0f,  //!< distance_of_docks_in_meters
 
                 /// low_corner_of_docks
-                vector3{-45.0f,-30.0f,5.0f},
+                vector3_zero(),//vector3{-45.0f,-30.0f,5.0f},
 
                 90.0f,  //!< size_of_ship_movement_area_along_x_axis_in_meters
                 60.0f,  //!< size_of_ship_movement_area_along_y_axis_in_meters
                 40.0f,  //!< size_of_ship_movement_area_along_c_axis_in_meters
 
-                0.75f, //!< min_speed_of_ship_in_meters_per_second
-                2.5f,  //!< max_speed_of_ship_in_meters_per_second
+                0.5f, //!< min_speed_of_ship_in_meters_per_second
+                5.0f,  //!< max_speed_of_ship_in_meters_per_second
 
                 true,   //!< are_spikers_excitatory
 
