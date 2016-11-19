@@ -7,7 +7,10 @@ add_library(${THIS_TARGET_NAME}
     ./include/netexp/algorithm.hpp
     ./src/algorithm.cpp
 
-    ./src/calibration/calibration.cpp
+    ./include/netexp/ship_controller_flat_space.hpp
+    ./src/ship_controller_flat_space.cpp
+
+    ./src/calibration/calibration.cpp    
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
