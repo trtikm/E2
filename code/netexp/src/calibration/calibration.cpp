@@ -299,16 +299,25 @@ void  initialiser_of_ships_in_movement_areas::compute_ship_position_and_velocity
 
 struct  tracked_spiker_stats : public netlab::tracked_spiker_stats
 {
+    tracked_spiker_stats(netlab::compressed_layer_and_object_indices const  indices)
+        : netlab::tracked_spiker_stats(indices)
+    {}
 };
 
 
 struct  tracked_dock_stats : public netlab::tracked_dock_stats
 {
+    tracked_dock_stats(netlab::compressed_layer_and_object_indices const  indices)
+        : netlab::tracked_dock_stats(indices)
+    {}
 };
 
 
 struct  tracked_ship_stats : public netlab::tracked_ship_stats
 {
+    tracked_ship_stats(netlab::compressed_layer_and_object_indices const  indices)
+        : netlab::tracked_ship_stats(indices)
+    {}
 };
 
 
@@ -323,19 +332,19 @@ std::shared_ptr<netlab::network>  create_network()
 }
 
 
-std::shared_ptr<netlab::tracked_spiker_stats>  create_tracked_spiker_stats()
+std::shared_ptr<netlab::tracked_spiker_stats>  create_tracked_spiker_stats(netlab::compressed_layer_and_object_indices const  indices)
 {
-    return std::make_shared<tracked_spiker_stats>();
+    return std::make_shared<tracked_spiker_stats>(indices);
 }
 
-std::shared_ptr<netlab::tracked_dock_stats>  create_tracked_dock_stats()
+std::shared_ptr<netlab::tracked_dock_stats>  create_tracked_dock_stats(netlab::compressed_layer_and_object_indices const  indices)
 {
-    return std::make_shared<tracked_dock_stats>();
+    return std::make_shared<tracked_dock_stats>(indices);
 }
 
-std::shared_ptr<netlab::tracked_ship_stats>  create_tracked_ship_stats()
+std::shared_ptr<netlab::tracked_ship_stats>  create_tracked_ship_stats(netlab::compressed_layer_and_object_indices const  indices)
 {
-    return std::make_shared<tracked_ship_stats>();
+    return std::make_shared<tracked_ship_stats>(indices);
 }
 
 

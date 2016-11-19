@@ -51,9 +51,7 @@ struct  network
             bool const  use_spiking = true,
             bool const  use_mini_spiking = true,
             bool const  use_movement_of_ships = true,
-            tracked_spiker_stats* const  stats_of_tracked_spiker = nullptr,
-            tracked_dock_stats* const  stats_of_tracked_dock = nullptr,
-            tracked_ship_stats* const  stats_of_tracked_ship = nullptr
+            tracked_network_object_stats* const  stats_of_tracked_object = nullptr
             );
 
 private:
@@ -70,8 +68,12 @@ private:
 //            tracked_ship_stats* const  stats_of_tracked_ship
 //            );
 
-    void  update_movement_of_ships();
-    void  update_movement_of_ship(layer_index_type const  layer_index, object_index_type const  ship_index_in_layer);
+    void  update_movement_of_ships(tracked_ship_stats* const  stats_of_tracked_ship);
+    void  update_movement_of_ship(
+            layer_index_type const  layer_index,
+            object_index_type const  ship_index_in_layer,
+            tracked_ship_stats*  stats_of_tracked_ship
+            );
 
 
     std::shared_ptr<network_props>  m_properties;

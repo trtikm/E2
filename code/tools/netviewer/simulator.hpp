@@ -41,6 +41,8 @@ struct simulator : public qtgl::real_time_simulator
     void  initiate_network_construction(std::string const&  experiment_name);
     bool  is_network_being_constructed() const;
 
+    std::string const&  get_experiment_name() const noexcept { return m_experiment_name; }
+
     /// Network simulation dependent methods.
     bool  paused() const noexcept { return m_paused; }
     float_64_bit  spent_real_time() const noexcept { return m_spent_real_time; }
@@ -48,8 +50,6 @@ struct simulator : public qtgl::real_time_simulator
     natural_64_bit  num_network_updates() const noexcept { return m_num_network_updates; }
     float_64_bit  desired_network_to_real_time_ratio() const { return m_desired_network_to_real_time_ratio; }
     void set_desired_network_to_real_time_ratio(float_64_bit const  value);
-
-
 
 //    bool  is_selected_cell() const { return m_selected_cell != nenet()->cells().cend(); }
 //    bool  is_selected_input_spot() const { return m_selected_input_spot != nenet()->input_spots().cend(); }
@@ -98,6 +98,7 @@ struct simulator : public qtgl::real_time_simulator
 private:
 
     void  update_network(float_64_bit const  seconds_from_previous_call);
+    void  update_selection_of_network_objects(float_64_bit const  seconds_from_previous_call);
 
     void  render_network(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
     void  render_network_spikers(
@@ -127,6 +128,7 @@ private:
 
     /// THE NETWORK!
     std::shared_ptr<netlab::network>  m_network;
+    std::string  m_experiment_name;
 
     /// Data related to updating of the network
     bool  m_paused;
@@ -135,6 +137,10 @@ private:
     float_64_bit  m_spent_network_time;
     natural_64_bit  m_num_network_updates;
     float_64_bit  m_desired_network_to_real_time_ratio;
+    
+    /// Data for handling selection of entities in the network
+    std::shared_ptr<netlab::tracked_network_object_stats>  m_selected_object_stats;
+    float_32_bit  m_selected_rot_angle;
 
     /// Data for rendering of entities in the network
     qtgl::batch_ptr  m_batch_spiker;
@@ -151,16 +157,6 @@ private:
 
     qtgl::batch_ptr  m_batch_basis;
     qtgl::batch_ptr  m_batch_camera_frustum;
-
-//    std::shared_ptr<::nenet>  m_nenet;
-//    cell::pos_map::const_iterator  m_selected_cell;
-//    input_spot::pos_map::const_iterator  m_selected_input_spot;
-//    output_terminal const*  m_selected_output_terminal;
-//    scalar  m_selected_rot_angle;
-
-//    std::unique_ptr<stats_of_cell>  m_selected_cell_stats;
-//    std::unique_ptr<stats_of_input_spot>  m_selected_input_spot_stats;
-//    std::unique_ptr<stats_of_output_terminal>  m_selected_output_terminal_stats;
 
 //    qtgl::batch_ptr  m_selected_cell_input_spot_lines;
 //    qtgl::batch_ptr  m_selected_cell_output_terminal_lines;

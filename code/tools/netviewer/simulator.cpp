@@ -9,6 +9,7 @@
 #include <netexp/experiment_factory.hpp>
 #include <angeo/tensor_math.hpp>
 #include <netview/enumerate.hpp>
+#include <netview/raycast.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -27,13 +28,14 @@ namespace {
 
 
 std::shared_ptr<netlab::network>  g_constructed_network;
+std::string  g_experiment_name;
 std::atomic<bool>  g_is_network_being_constructed = false;
 std::thread  g_create_experiment_thread;
 
-void  create_experiment_worker(std::string const&  experiment_name)
+void  create_experiment_worker()
 {
     TMPROF_BLOCK();
-    g_constructed_network = netexp::experiment_factory::instance().instance().create_network(experiment_name);
+    g_constructed_network = netexp::experiment_factory::instance().instance().create_network(g_experiment_name);
     g_is_network_being_constructed = false;
 }
 
@@ -192,6 +194,9 @@ simulator::simulator(
 
     , m_network()
 
+    , m_selected_object_stats()
+    , m_selected_rot_angle(0.0f)
+
     , m_paused(paused)
     , m_do_single_step(false)
     , m_spent_real_time(0.0)
@@ -219,17 +224,6 @@ simulator::simulator(
 
     , m_batch_basis{ qtgl::create_basis_vectors(get_program_options()->dataRoot()) }
     , m_batch_camera_frustum()
-
-//    , m_selected_cell(m_nenet->cells().cend())
-//    , m_selected_input_spot(m_nenet->input_spots().cend())
-//    , m_selected_output_terminal(nullptr)
-//    , m_selected_rot_angle(0.0f)
-
-//    , m_selected_cell_stats()
-//    , m_selected_input_spot_stats()
-//    , m_selected_output_terminal_stats()
-
-
 
 //    , m_selected_cell_input_spot_lines()
 //    , m_selected_cell_output_terminal_lines()
@@ -264,7 +258,9 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
         if (!is_network_being_constructed() && g_constructed_network.operator bool())
         {
             m_network = g_constructed_network;
+            m_experiment_name = g_experiment_name;
             g_constructed_network.reset();
+            g_experiment_name.clear();
 
             m_spent_real_time = 0.0;
             m_spent_network_time = 0.0;
@@ -292,56 +288,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             if (!paused())
                 update_network(seconds_from_previous_call);
 
-//            if (mouse_props().was_just_released(qtgl::LEFT_MOUSE_BUTTON()))
-//            {
-//                m_selected_cell = m_nenet->cells().cend();
-//                m_selected_input_spot = m_nenet->input_spots().cend();
-//                m_selected_output_terminal = nullptr;
-
-//                m_selected_cell_stats.reset();
-//                m_selected_input_spot_stats.reset();
-//                m_selected_output_terminal_stats.reset();
-
-//                m_selected_rot_angle = 0.0f;
-
-//                m_selected_cell_input_spot_lines.reset();
-//                m_selected_cell_output_terminal_lines.reset();
-
-//                vector3 const  ray = m_camera->cursor3d({ mouse_props().x() ,mouse_props().y() },window_props());
-//                scalar  param = 1e30f;
-//                m_selected_cell = nenet()->find_closest_cell(m_camera->coordinate_system()->origin(),ray,0.75f,&param);
-//                {
-//                    m_selected_input_spot = nenet()->find_closest_input_spot(m_camera->coordinate_system()->origin(), ray, 0.5f, &param);
-//                    if (m_selected_input_spot != nenet()->input_spots().cend())
-//                        m_selected_cell = nenet()->cells().cend();//m_selected_input_spot->second.cell();
-//                }
-//                {
-//                    auto const oit = nenet()->find_closest_output_terminal(m_camera->coordinate_system()->origin(), ray, 0.22f, &param);
-//                    if (oit != nenet()->output_terminals_set().cend())
-//                    {
-//                        ASSUMPTION(oit->second != nullptr);
-//                        m_selected_output_terminal = oit->second;
-//                        m_selected_cell = nenet()->cells().cend();//m_selected_outpu_terminal->second->cell();
-//                        m_selected_input_spot = nenet()->input_spots().cend();
-//                    }
-//                }
-
-//                if (m_selected_cell != nenet()->cells().cend())
-//                    m_selected_cell_stats = std::unique_ptr<stats_of_cell>(new stats_of_cell(m_selected_cell,nenet()->update_id()));
-//                if (m_selected_input_spot != nenet()->input_spots().cend())
-//                    m_selected_input_spot_stats = std::unique_ptr<stats_of_input_spot>(new stats_of_input_spot(m_selected_input_spot, nenet()->update_id()));
-//                if (m_selected_output_terminal != nullptr)
-//                    m_selected_output_terminal_stats = std::unique_ptr<stats_of_output_terminal>(new stats_of_output_terminal(m_selected_output_terminal, nenet()->update_id()));
-
-//                call_listeners(simulator_notifications::selection_changed());
-//            }
-
-//            if (is_selected_something())
-//            {
-//                m_selected_rot_angle += (2.0f * PI()) * seconds_from_previous_call;
-//                while (m_selected_rot_angle > 2.0f * PI())
-//                    m_selected_rot_angle -= 2.0f * PI();
-//            }
+            update_selection_of_network_objects(seconds_from_previous_call);
         }
     }
 
@@ -577,7 +524,7 @@ void  simulator::update_network(float_64_bit const  seconds_from_previous_call)
     {
         network()->update(
             true,true,true,
-            nullptr,nullptr,nullptr
+            nullptr
 //                        m_selected_input_spot_stats.operator bool() ? m_selected_input_spot_stats.get() : nullptr,
 //                        m_selected_output_terminal_stats.operator bool() ? m_selected_output_terminal_stats.get() : nullptr,
 //                        m_selected_cell_stats.operator bool() ? m_selected_cell_stats.get() : nullptr
@@ -598,6 +545,128 @@ void  simulator::update_network(float_64_bit const  seconds_from_previous_call)
 
     m_num_network_updates = network()->update_id();
     m_spent_network_time = network()->properties()->update_time_step_in_seconds() * m_num_network_updates;
+}
+
+
+void  simulator::update_selection_of_network_objects(float_64_bit const  seconds_from_previous_call)
+{
+    if (mouse_props().was_just_released(qtgl::LEFT_MOUSE_BUTTON()))
+    {
+        m_selected_object_stats.reset();
+        m_selected_rot_angle = 0.0f;
+
+        vector3  ray_begin, ray_end;
+        {
+            qtgl::camera_perspective const  scene_camera(
+                    m_camera_network_coord_system,
+                    m_camera->near_plane(),
+                    m_camera_network_far_plane,
+                    m_camera->left(),
+                    m_camera->right(),
+                    m_camera->bottom(),
+                    m_camera->top()
+                    );
+            qtgl::cursor_line_begin(scene_camera, { mouse_props().x() ,mouse_props().y() }, window_props(), ray_begin);
+            qtgl::cursor_line_end(scene_camera, ray_begin, ray_end);
+        }
+
+        natural_8_bit  object_kind = 0U; // 0-none, 1-spiker, 2-dock, 3-ship.
+        netlab::compressed_layer_and_object_indices  object_indices(0U,0ULL);
+        {
+            float_32_bit  ray_param = 1.0f;
+
+            if (m_batch_spiker->buffers_binding().operator bool() &&
+                m_batch_spiker->buffers_binding()->find_vertex_buffer_properties().operator bool())
+            {
+                qtgl::spatial_boundary const  boundary =
+                    m_batch_spiker->buffers_binding()->find_vertex_buffer_properties()->boundary();
+
+                netlab::compressed_layer_and_object_indices  spiker_indices(0U, 0ULL);
+                float_32_bit const  ray_spiker_param =
+                    netview::find_first_spiker_on_line(
+                            m_network->properties()->layer_props(),
+                            ray_begin,
+                            ray_end,
+                            boundary.radius(),
+                            spiker_indices
+                            );
+                if (ray_spiker_param < ray_param)
+                {
+                    ray_param = ray_spiker_param;
+                    object_indices = spiker_indices;
+                    object_kind = 1U;
+                }
+            }
+
+            if (m_batch_dock->buffers_binding().operator bool() &&
+                m_batch_dock->buffers_binding()->find_vertex_buffer_properties().operator bool())
+            {
+                qtgl::spatial_boundary const  boundary =
+                    m_batch_dock->buffers_binding()->find_vertex_buffer_properties()->boundary();
+
+                netlab::compressed_layer_and_object_indices  dock_indices(0U, 0ULL);
+                float_32_bit const  ray_dock_param =
+                    netview::find_first_dock_on_line(
+                            m_network->properties()->layer_props(),
+                            ray_begin,
+                            ray_end,
+                            boundary.radius(),
+                            dock_indices
+                            );
+                if (ray_dock_param < ray_param)
+                {
+                    ray_param = ray_dock_param;
+                    object_indices = dock_indices;
+                    object_kind = 2U;
+                }
+            }
+
+            if (m_batch_ship->buffers_binding().operator bool() &&
+                m_batch_ship->buffers_binding()->find_vertex_buffer_properties().operator bool())
+            {
+                qtgl::spatial_boundary const  boundary =
+                    m_batch_ship->buffers_binding()->find_vertex_buffer_properties()->boundary();
+
+                netlab::compressed_layer_and_object_indices  ship_indices(0U, 0ULL);
+                float_32_bit const  ray_ship_param =
+                    netview::find_first_ship_on_line(
+                            *m_network,
+                            ray_begin,
+                            ray_end,
+                            boundary.radius(),
+                            ship_indices
+                            );
+                if (ray_ship_param < ray_param)
+                {
+                    ray_param = ray_ship_param;
+                    object_indices = ship_indices;
+                    object_kind = 3U;
+                }
+            }
+
+            INVARIANT(object_kind < 4U);
+            INVARIANT(object_kind == 0U || (ray_param >= 0.0f && ray_param < 1.0f));
+
+            m_selected_object_stats =
+                object_kind == 1U ? 
+                        netexp::experiment_factory::instance().create_tracked_spiker_stats(g_experiment_name, object_indices) :
+                object_kind == 2U ?
+                        netexp::experiment_factory::instance().create_tracked_dock_stats(g_experiment_name, object_indices) :
+                object_kind == 3U ?
+                        netexp::experiment_factory::instance().create_tracked_ship_stats(g_experiment_name, object_indices) :
+                        std::shared_ptr<netlab::tracked_network_object_stats>{}
+                        ;
+        }
+
+        //call_listeners(simulator_notifications::selection_changed());
+    }
+
+    if (m_selected_object_stats.operator bool())
+    {
+        m_selected_rot_angle += (2.0f * PI()) * seconds_from_previous_call;
+        while (m_selected_rot_angle > 2.0f * PI())
+            m_selected_rot_angle -= 2.0f * PI();
+    }
 }
 
 
@@ -1205,9 +1274,10 @@ void  simulator::initiate_network_construction(std::string const&  experiment_na
 
     m_network.reset();
     g_constructed_network.reset();
+    g_experiment_name = experiment_name;
 
     g_is_network_being_constructed = true;
-    g_create_experiment_thread = std::thread(&create_experiment_worker,experiment_name);
+    g_create_experiment_thread = std::thread(&create_experiment_worker);
 }
 
 bool  simulator::is_network_being_constructed() const

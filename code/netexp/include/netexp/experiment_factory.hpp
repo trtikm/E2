@@ -15,9 +15,12 @@ struct  experiment_factory
 {
     using  network_creator = std::function<std::shared_ptr<netlab::network>()>;
 
-    using  tracked_spiker_stats_creator = std::function<std::shared_ptr<netlab::tracked_spiker_stats>()>;
-    using  tracked_dock_stats_creator = std::function<std::shared_ptr<netlab::tracked_dock_stats>()>;
-    using  tracked_ship_stats_creator = std::function<std::shared_ptr<netlab::tracked_ship_stats>()>;
+    using  tracked_spiker_stats_creator =
+            std::function<std::shared_ptr<netlab::tracked_spiker_stats>(netlab::compressed_layer_and_object_indices)>;
+    using  tracked_dock_stats_creator =
+            std::function<std::shared_ptr<netlab::tracked_dock_stats>(netlab::compressed_layer_and_object_indices)>;
+    using  tracked_ship_stats_creator =
+            std::function<std::shared_ptr<netlab::tracked_ship_stats>(netlab::compressed_layer_and_object_indices)>;
 
     static experiment_factory&  instance();
 
@@ -35,9 +38,18 @@ struct  experiment_factory
 
     std::shared_ptr<netlab::network>  create_network(std::string const&  experiment_unique_name) const;
 
-    std::shared_ptr<netlab::tracked_spiker_stats>  create_tracked_spiker_stats(std::string const&  experiment_unique_name) const;
-    std::shared_ptr<netlab::tracked_dock_stats>  create_tracked_dock_stats(std::string const&  experiment_unique_name) const;
-    std::shared_ptr<netlab::tracked_ship_stats>  create_tracked_ship_stats(std::string const&  experiment_unique_name) const;
+    std::shared_ptr<netlab::tracked_spiker_stats>  create_tracked_spiker_stats(
+            std::string const&  experiment_unique_name,
+            netlab::compressed_layer_and_object_indices const  indices
+            ) const;
+    std::shared_ptr<netlab::tracked_dock_stats>  create_tracked_dock_stats(
+            std::string const&  experiment_unique_name,
+            netlab::compressed_layer_and_object_indices const  indices
+            ) const;
+    std::shared_ptr<netlab::tracked_ship_stats>  create_tracked_ship_stats(
+            std::string const&  experiment_unique_name,
+            netlab::compressed_layer_and_object_indices const  indices
+            ) const;
 
 private:
     experiment_factory();

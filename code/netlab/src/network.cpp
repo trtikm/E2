@@ -199,9 +199,7 @@ void  network::update(
         const bool  use_spiking,
         const bool  use_mini_spiking,
         const bool  use_movement_of_ships,
-        tracked_spiker_stats* const  stats_of_tracked_spiker,
-        tracked_dock_stats* const  stats_of_tracked_dock,
-        tracked_ship_stats* const  stats_of_tracked_ship
+        tracked_network_object_stats* const  stats_of_tracked_object
         )
 {
     TMPROF_BLOCK();
@@ -209,7 +207,7 @@ void  network::update(
     ++m_update_id;
 
     if (use_movement_of_ships)
-        update_movement_of_ships();
+        update_movement_of_ships(dynamic_cast<tracked_ship_stats*>(stats_of_tracked_object));
 
 //    if (use_spiking || use_mini_spiking)
 //        update_spiking(!use_spiking,stats_of_tracked_spiker,stats_of_tracked_dock,stats_of_tracked_ship);
@@ -247,7 +245,7 @@ void  network::update(
 //}
 
 
-void  network::update_movement_of_ships()
+void  network::update_movement_of_ships(tracked_ship_stats* const  stats_of_tracked_ship)
 {
     TMPROF_BLOCK();
 
@@ -257,16 +255,23 @@ void  network::update_movement_of_ships()
                  ship_index_in_layer < m_ships.at(layer_index)->size();
                  ++ship_index_in_layer
                  )
-                update_movement_of_ship(layer_index,ship_index_in_layer);
+                update_movement_of_ship(layer_index,ship_index_in_layer,stats_of_tracked_ship);
 }
 
 
-void  network::update_movement_of_ship(layer_index_type const  layer_index, object_index_type const  ship_index_in_layer)
+void  network::update_movement_of_ship(
+        layer_index_type const  layer_index,
+        object_index_type const  ship_index_in_layer,
+        tracked_ship_stats*  stats_of_tracked_ship
+        )
 {
     TMPROF_BLOCK();
 
     netlab::ship&  ship = m_ships.at(layer_index)->at(ship_index_in_layer);
     compressed_layer_and_object_indices const  ship_loc(layer_index,ship_index_in_layer);
+
+    if (stats_of_tracked_ship != nullptr && ship_loc != stats_of_tracked_ship->indices())
+        stats_of_tracked_ship = nullptr;
 
     object_index_type  spiker_sector_index;
     {

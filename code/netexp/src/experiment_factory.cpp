@@ -59,27 +59,30 @@ std::shared_ptr<netlab::network>  experiment_factory::create_network(
 }
 
 std::shared_ptr<netlab::tracked_spiker_stats>  experiment_factory::create_tracked_spiker_stats(
-        std::string const&  experiment_unique_name
+        std::string const&  experiment_unique_name,
+        netlab::compressed_layer_and_object_indices const  indices
         ) const
 {
     auto const  it = m_spiker_stats_creators.find(experiment_unique_name);
-    return (it != m_spiker_stats_creators.cend()) ?  it->second() : std::shared_ptr<netlab::tracked_spiker_stats>();
+    return (it != m_spiker_stats_creators.cend()) ?  it->second(indices) : std::shared_ptr<netlab::tracked_spiker_stats>();
 }
 
 std::shared_ptr<netlab::tracked_dock_stats>  experiment_factory::create_tracked_dock_stats(
-        std::string const&  experiment_unique_name
+        std::string const&  experiment_unique_name,
+        netlab::compressed_layer_and_object_indices const  indices
         ) const
 {
     auto const  it = m_dock_stats_creators.find(experiment_unique_name);
-    return (it != m_dock_stats_creators.cend()) ? it->second() : std::shared_ptr<netlab::tracked_dock_stats>();
+    return (it != m_dock_stats_creators.cend()) ? it->second(indices) : std::shared_ptr<netlab::tracked_dock_stats>();
 }
 
 std::shared_ptr<netlab::tracked_ship_stats>  experiment_factory::create_tracked_ship_stats(
-        std::string const&  experiment_unique_name
+        std::string const&  experiment_unique_name,
+        netlab::compressed_layer_and_object_indices const  indices
         ) const
 {
     auto const  it = m_ship_stats_creators.find(experiment_unique_name);
-    return (it != m_ship_stats_creators.cend()) ? it->second() : std::shared_ptr<netlab::tracked_ship_stats>();
+    return (it != m_ship_stats_creators.cend()) ? it->second(indices) : std::shared_ptr<netlab::tracked_ship_stats>();
 }
 
 
