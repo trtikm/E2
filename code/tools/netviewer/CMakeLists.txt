@@ -17,6 +17,9 @@ add_executable(${THIS_TARGET_NAME}
     simulator.cpp
     simulator_notifications.hpp
 
+    draw_utils.hpp
+    draw_utils.cpp
+
     program_window.hpp
     program_window.cpp
     
@@ -27,6 +30,9 @@ add_executable(${THIS_TARGET_NAME}
 
     status_bar.hpp
     status_bar.cpp
+    
+    dbg/dbg_network_camera.hpp
+    dbg/dbg_network_camera.cpp
     )
 
 target_link_libraries(${THIS_TARGET_NAME}

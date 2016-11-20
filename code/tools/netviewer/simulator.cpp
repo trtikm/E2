@@ -1,6 +1,7 @@
 #include <netviewer/simulator.hpp>
 #include <netviewer/simulator_notifications.hpp>
 #include <netviewer/program_options.hpp>
+#include <netviewer/draw_utils.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
 #include <qtgl/batch_generators.hpp>
@@ -37,48 +38,6 @@ void  create_experiment_worker()
     TMPROF_BLOCK();
     g_constructed_network = netexp::experiment_factory::instance().instance().create_network(g_experiment_name);
     g_is_network_being_constructed = false;
-}
-
-
-}
-
-namespace {
-
-
-void  render_batch(
-    qtgl::batch const&  batch,
-    matrix44 const&  transform_matrix,
-    vector4 const&  diffuse_colour = { 0.0f, 0.0f, 0.0f, 0.0f }
-    )
-{
-    for (qtgl::vertex_shader_uniform_symbolic_name const uniform : batch.symbolic_names_of_used_uniforms())
-        switch (uniform)
-        {
-        case qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
-            break;
-        case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
-            qtgl::set_uniform_variable(batch.shaders_binding()->uniform_variable_accessor(), uniform, diffuse_colour);
-            break;
-        case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
-            qtgl::set_uniform_variable(batch.shaders_binding()->uniform_variable_accessor(), uniform, transform_matrix);
-            break;
-        }
-
-    qtgl::draw();
-}
-
-
-void  render_batch(
-    qtgl::batch const&  batch,
-    matrix44 const&  view_projection_matrix,
-    angeo::coordinate_system const&  coord_system,
-    vector4 const&  diffuse_colour = { 0.0f, 0.0f, 0.0f, 0.0f }
-    )
-{
-    matrix44  world_transformation;
-    angeo::transformation_matrix(coord_system, world_transformation);
-    matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
-    render_batch(batch,transform_matrix,diffuse_colour);
 }
 
 
@@ -189,13 +148,9 @@ simulator::simulator(
                     get_program_options()->dataRoot()
                     )
             }
-    , m_camera_network_coord_system(m_camera->coordinate_system())
-    , m_camera_network_far_plane(m_camera->far_plane())
 
     , m_network()
-
-    , m_selected_object_stats()
-    , m_selected_rot_angle(0.0f)
+    , m_experiment_name()
 
     , m_paused(paused)
     , m_do_single_step(false)
@@ -203,6 +158,9 @@ simulator::simulator(
     , m_spent_network_time(0.0)
     , m_num_network_updates(0UL)
     , m_desired_network_to_real_time_ratio(desired_network_to_real_time_ratio)
+
+    , m_selected_object_stats()
+    , m_selected_rot_angle(0.0f)
 
     , m_batch_spiker{ qtgl::batch::create(canonical_path(
             boost::filesystem::path{get_program_options()->dataRoot()} / "shared/gfx/models/neuron/body.txt"
@@ -222,8 +180,7 @@ simulator::simulator(
     , m_batch_dock_bsphere{}
     , m_batch_ship_bsphere{}
 
-    , m_batch_basis{ qtgl::create_basis_vectors(get_program_options()->dataRoot()) }
-    , m_batch_camera_frustum()
+    , m_dbg_network_camera(m_camera->far_plane())
 
 //    , m_selected_cell_input_spot_lines()
 //    , m_selected_cell_output_terminal_lines()
@@ -557,15 +514,8 @@ void  simulator::update_selection_of_network_objects(float_64_bit const  seconds
 
         vector3  ray_begin, ray_end;
         {
-            qtgl::camera_perspective const  scene_camera(
-                    m_camera_network_coord_system,
-                    m_camera->near_plane(),
-                    m_camera_network_far_plane,
-                    m_camera->left(),
-                    m_camera->right(),
-                    m_camera->bottom(),
-                    m_camera->top()
-                    );
+            qtgl::camera_perspective const&  scene_camera =
+                    *(m_dbg_network_camera.is_enabled() ? m_dbg_network_camera.get_camera() : m_camera);
             qtgl::cursor_line_begin(scene_camera, { mouse_props().x() ,mouse_props().y() }, window_props(), ray_begin);
             qtgl::cursor_line_end(scene_camera, ray_begin, ray_end);
         }
@@ -678,15 +628,7 @@ void  simulator::render_network(matrix44 const&  view_projection_matrix, qtgl::d
 
     std::vector< std::pair<vector3,vector3> >  clip_planes;
     qtgl::compute_clip_planes(
-                qtgl::camera_perspective(
-                    m_camera_network_coord_system,
-                    m_camera->near_plane(),
-                    m_camera_network_far_plane,
-                    m_camera->left(),
-                    m_camera->right(),
-                    m_camera->bottom(),
-                    m_camera->top()
-                    ),
+                *(m_dbg_network_camera.is_enabled() ? m_dbg_network_camera.get_camera() : m_camera),
                 clip_planes
                 );
 
@@ -694,8 +636,8 @@ void  simulator::render_network(matrix44 const&  view_projection_matrix, qtgl::d
     render_network_docks(view_projection_matrix,clip_planes,draw_state);
     render_network_ships(view_projection_matrix,clip_planes,draw_state);
 
-    if (!is_camera_network_synchronised())
-        render_separate_network_camera(view_projection_matrix,draw_state);
+    if (m_dbg_network_camera.is_enabled())
+        m_dbg_network_camera.render_camera_frustum(view_projection_matrix,draw_state);
 }
 
 
@@ -1187,79 +1129,6 @@ void  simulator::render_network_ships(
 //        }
 //        draw_state = m_batch_basis->draw_state();
 //    }
-}
-
-void  simulator::render_separate_network_camera(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(m_batch_camera_frustum.operator bool());
-
-    if (qtgl::make_current(*m_batch_basis, *draw_state))
-    {
-        INVARIANT(m_batch_basis->shaders_binding().operator bool());
-        render_batch(*m_batch_basis,view_projection_matrix,*m_camera_network_coord_system);
-        draw_state = m_batch_basis->draw_state();
-    }
-
-    if (qtgl::make_current(*m_batch_camera_frustum, *draw_state))
-    {
-        INVARIANT(m_batch_camera_frustum->shaders_binding().operator bool());
-
-        float_32_bit const  param = -0.5f * (m_camera->near_plane() + m_camera_network_far_plane);
-
-        render_batch(
-            *m_batch_camera_frustum,
-            view_projection_matrix,
-            angeo::coordinate_system(
-                m_camera_network_coord_system->origin() + param * angeo::axis_z(*m_camera_network_coord_system),
-                m_camera_network_coord_system->orientation()
-                ),
-            vector4(1.0f, 1.0f, 1.0f, 1.0f)
-            );
-
-        draw_state = m_batch_camera_frustum->draw_state();
-    }
-}
-
-
-void  simulator::set_camera_network_far_plane(float_32_bit const  far_plane)
-{
-    m_camera_network_far_plane = far_plane;
-    m_batch_camera_frustum =
-        qtgl::create_wireframe_perspective_frustum(
-                m_camera->near_plane(),
-                m_camera_network_far_plane,
-                m_camera->left(),
-                m_camera->right(),
-                m_camera->top(),
-                m_camera->bottom(),
-                get_program_options()->dataRoot()
-                );
-
-}
-
-void  simulator::set_camera_network_sync_state(bool const  synchronise)
-{
-    if (synchronise)
-    {
-        m_camera_network_coord_system = m_camera->coordinate_system();
-        m_batch_camera_frustum.reset();
-    }
-    else if (is_camera_network_synchronised())
-    {
-        m_camera_network_coord_system = angeo::coordinate_system::create(get_camera_position(),get_camera_orientation());
-        m_batch_camera_frustum = 
-            qtgl::create_wireframe_perspective_frustum(
-                m_camera->near_plane(),
-                m_camera_network_far_plane,
-                m_camera->left(),
-                m_camera->right(),
-                m_camera->top(),
-                m_camera->bottom(),
-                get_program_options()->dataRoot()
-                );
-    }
 }
 
 

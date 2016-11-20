@@ -9,6 +9,8 @@
 #   include <string>
 #   include <memory>
 
+#   include <netviewer/dbg/dbg_network_camera.hpp>
+
 
 struct simulator : public qtgl::real_time_simulator
 {
@@ -26,22 +28,20 @@ struct simulator : public qtgl::real_time_simulator
 
     /// Network independed methods.
     void  set_clear_color(vector3 const&  colour) { qtgl::glapi().glClearColor(colour(0), colour(1), colour(2), 1.0f); }
+
+    /// Scene camera related methods.
     vector3 const&  get_camera_position() const { return m_camera->coordinate_system()->origin(); }
     quaternion const&  get_camera_orientation() const { return m_camera->coordinate_system()->orientation(); }
     void  set_camera_position(vector3 const&  position) { m_camera->coordinate_system()->set_origin(position); }
     void  set_camera_orientation(quaternion const&  orientation) { m_camera->coordinate_system()->set_orientation(orientation); }
-    bool  is_camera_network_synchronised() const { return m_camera_network_coord_system == m_camera->coordinate_system(); }
     void  set_camera_far_plane(float_32_bit const  far_plane) { m_camera->set_far_plane(far_plane); }
-    void  set_camera_network_far_plane(float_32_bit const  far_plane);
-    void  set_camera_network_sync_state(bool const  synchronise);
 
     /// Network management methods.
+    std::string const&  get_experiment_name() const noexcept { return m_experiment_name; }
     std::shared_ptr<netlab::network>  network() const noexcept { return m_network; }
     bool  has_network() const { return network().operator bool(); }
     void  initiate_network_construction(std::string const&  experiment_name);
     bool  is_network_being_constructed() const;
-
-    std::string const&  get_experiment_name() const noexcept { return m_experiment_name; }
 
     /// Network simulation dependent methods.
     bool  paused() const noexcept { return m_paused; }
@@ -50,6 +50,14 @@ struct simulator : public qtgl::real_time_simulator
     natural_64_bit  num_network_updates() const noexcept { return m_num_network_updates; }
     float_64_bit  desired_network_to_real_time_ratio() const { return m_desired_network_to_real_time_ratio; }
     void set_desired_network_to_real_time_ratio(float_64_bit const  value);
+
+    /// Debugging stuff
+    void  dbg_set_camera_far_plane(float_32_bit const  far_plane)
+    { m_dbg_network_camera.set_far_plane(far_plane); }
+    void  dbg_set_camera_sync_state(bool const  sync)
+    { if (sync) m_dbg_network_camera.disable(); else m_dbg_network_camera.enable(m_camera); }
+
+
 
 //    bool  is_selected_cell() const { return m_selected_cell != nenet()->cells().cend(); }
 //    bool  is_selected_input_spot() const { return m_selected_input_spot != nenet()->input_spots().cend(); }
@@ -123,8 +131,6 @@ private:
     qtgl::camera_perspective_ptr  m_camera;
     qtgl::free_fly_config  m_free_fly_config;
     qtgl::batch_ptr  m_batch_grid;
-    angeo::coordinate_system_ptr  m_camera_network_coord_system;
-    float_32_bit  m_camera_network_far_plane;
 
     /// THE NETWORK!
     std::shared_ptr<netlab::network>  m_network;
@@ -155,8 +161,8 @@ private:
     qtgl::batch_ptr  m_batch_dock_bsphere;
     qtgl::batch_ptr  m_batch_ship_bsphere;
 
-    qtgl::batch_ptr  m_batch_basis;
-    qtgl::batch_ptr  m_batch_camera_frustum;
+    /// Debugging stuff
+    dbg_network_camera  m_dbg_network_camera;
 
 //    qtgl::batch_ptr  m_selected_cell_input_spot_lines;
 //    qtgl::batch_ptr  m_selected_cell_output_terminal_lines;

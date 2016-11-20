@@ -149,29 +149,29 @@ widgets::widgets(program_window* const  wnd)
         }(m_wnd)
         )
 
-    , m_camera_network_far_plane(
+    , m_dbg_camera_far_plane(
         [](program_window* wnd) {
             struct s : public QLineEdit {
                 s(program_window* wnd) : QLineEdit()
                 {
                     setValidator(new QDoubleValidator(1.0, 1000.0, 1));
-                    setText(QString::number(wnd->ptree().get("camera.network_far_plane", 50.0)));
-                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_camera_network_far_changed()));
+                    setText(QString::number(wnd->ptree().get("dbg.camera.far_plane", 50.0)));
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(dbg_on_camera_far_changed()));
                 }
             };
             return new s(wnd);
         }(m_wnd)
         )
 
-    , m_camera_network_sync(
+    , m_dbg_camera_synchronised(
         [](program_window* wnd) {
             struct s : public QCheckBox {
-                s(program_window* wnd) : QCheckBox("Synchronise with view to network")
+                s(program_window* wnd) : QCheckBox("Synchronise with scene camera")
                 {
-                    setCheckState( wnd->ptree().get("camera.network_sync", true) ?
+                    setCheckState( wnd->ptree().get("dbg.camera.synchronised", true) ?
                                        Qt::CheckState::Checked :
                                        Qt::CheckState::Unchecked );
-                    QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(on_camera_network_sync_changed(int)));
+                    QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(dbg_on_camera_sync_changed(int)));
                 }
             };
             return new s(wnd);
@@ -246,14 +246,14 @@ QLineEdit* widgets::camera_far_plane() const noexcept
     return m_camera_far_plane;
 }
 
-QLineEdit* widgets::camera_network_far_plane() const noexcept
+QLineEdit* widgets::dbg_camera_far_plane() const noexcept
 {
-    return m_camera_network_far_plane;
+    return m_dbg_camera_far_plane;
 }
 
-QCheckBox* widgets::camera_network_sync() const noexcept
+QCheckBox* widgets::dbg_camera_synchronised() const noexcept
 {
-    return m_camera_network_sync;
+    return m_dbg_camera_synchronised;
 }
 
 void  widgets::on_camera_pos_changed()
@@ -323,14 +323,14 @@ void  widgets::on_camera_far_changed()
 }
 
 
-void  widgets::on_camera_network_far_changed()
+void  widgets::dbg_on_camera_far_changed()
 {
-    wnd()->glwindow().call_later(&simulator::set_camera_network_far_plane, m_camera_network_far_plane->text().toFloat());
+    wnd()->glwindow().call_later(&simulator::dbg_set_camera_far_plane, m_dbg_camera_far_plane->text().toFloat());
 }
 
-void  widgets::on_camera_network_sync_changed(int)
+void  widgets::dbg_on_camera_sync_changed(int)
 {
-    wnd()->glwindow().call_later(&simulator::set_camera_network_sync_state, m_camera_network_sync->isChecked());
+    wnd()->glwindow().call_later(&simulator::dbg_set_camera_sync_state, m_dbg_camera_synchronised->isChecked());
 }
 
 
@@ -348,8 +348,9 @@ void  widgets::save()
     }
     wnd()->ptree().put("camera.save_pos_rot", m_camera_save_pos_rot->isChecked());
     wnd()->ptree().put("camera.far_plane", m_camera_far_plane->text().toFloat());
-    wnd()->ptree().put("camera.network_far_plane", m_camera_network_far_plane->text().toFloat());
-    wnd()->ptree().put("camera.network_sync", m_camera_network_sync->isChecked());
+
+    wnd()->ptree().put("dbg.camera.far_plane", m_dbg_camera_far_plane->text().toFloat());
+    wnd()->ptree().put("dbg.camera.synchronised", m_dbg_camera_synchronised->isChecked());
 }
 
 
@@ -422,16 +423,24 @@ QWidget*  make_camera_tab_content(widgets const&  w)
             }
             camera_tab_layout->addLayout(far_plane_layout);
 
-            QHBoxLayout* const network_far_plane_layout = new QHBoxLayout;
+            QWidget* const dbg_group = new QGroupBox("Debugging");
             {
-                network_far_plane_layout->addWidget(w.camera_network_far_plane());
-                network_far_plane_layout->addWidget(new QLabel("Network's view far clip plane."));
-                w.wnd()->on_camera_network_far_changed();
-            }
-            camera_tab_layout->addLayout(network_far_plane_layout);
+                QVBoxLayout* const dbg_layout = new QVBoxLayout;
+                {
+                    dbg_layout->addWidget(w.dbg_camera_synchronised());
+                    w.wnd()->dbg_on_camera_sync_changed(0);
 
-            camera_tab_layout->addWidget(w.camera_network_sync());
-            w.wnd()->on_camera_network_sync_changed(0);
+                    QHBoxLayout* const dbg_far_plane_layout = new QHBoxLayout;
+                    {
+                        dbg_far_plane_layout->addWidget(w.dbg_camera_far_plane());
+                        dbg_far_plane_layout->addWidget(new QLabel("Camera's far clip plane."));
+                        w.wnd()->dbg_on_camera_far_changed();
+                    }
+                    dbg_layout->addLayout(dbg_far_plane_layout);
+                }
+                dbg_group->setLayout(dbg_layout);
+            }
+            camera_tab_layout->addWidget(dbg_group);
 
             camera_tab_layout->addStretch(1);
         }

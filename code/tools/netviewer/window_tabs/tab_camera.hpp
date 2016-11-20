@@ -37,8 +37,8 @@ struct  widgets
 
     QLineEdit* camera_far_plane() const noexcept;
 
-    QLineEdit* camera_network_far_plane() const noexcept;
-    QCheckBox* camera_network_sync() const noexcept;
+    QLineEdit* dbg_camera_far_plane() const noexcept;
+    QCheckBox* dbg_camera_synchronised() const noexcept;
 
     void  on_camera_pos_changed();
     void  camera_position_listener();
@@ -50,8 +50,8 @@ struct  widgets
 
     void  on_camera_far_changed();
 
-    void  on_camera_network_far_changed();
-    void  on_camera_network_sync_changed(int);
+    void  dbg_on_camera_far_changed();
+    void  dbg_on_camera_sync_changed(int);
 
 
     void  save();
@@ -76,8 +76,8 @@ private:
 
     QLineEdit*  m_camera_far_plane;
 
-    QLineEdit*  m_camera_network_far_plane;
-    QCheckBox*  m_camera_network_sync;
+    QLineEdit*  m_dbg_camera_far_plane;
+    QCheckBox*  m_dbg_camera_synchronised;
 };
 
 

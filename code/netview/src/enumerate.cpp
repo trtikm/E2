@@ -375,6 +375,13 @@ void  enumerate_sectors_intersecting_line(
         x0 = u(0) < 0.0f ? 0U : static_cast<netlab::sector_coordinate_type>(std::floor(u(0) / sector_size_x));
         y0 = u(1) < 0.0f ? 0U : static_cast<netlab::sector_coordinate_type>(std::floor(u(1) / sector_size_y));
         c0 = u(2) < 0.0f ? 0U : static_cast<netlab::sector_coordinate_type>(std::floor(u(2) / sector_size_c));
+
+        if ((static_cast<float_32_bit>(x0) + 0.5f) * sector_size_x > bbox_high_corner(0) - bbox_low_corner(0))
+            --x0;
+        if ((static_cast<float_32_bit>(y0) + 0.5f) * sector_size_y > bbox_high_corner(1) - bbox_low_corner(1))
+            --y0;
+        if ((static_cast<float_32_bit>(c0) + 0.5f) * sector_size_c > bbox_high_corner(2) - bbox_low_corner(2))
+            --c0;
     }
 
     netlab::sector_coordinate_type  x1,y1,c1;
@@ -383,6 +390,13 @@ void  enumerate_sectors_intersecting_line(
         x1 = u(0) < 0.0f ? 0U : static_cast<netlab::sector_coordinate_type>(std::floor(u(0) / sector_size_x));
         y1 = u(1) < 0.0f ? 0U : static_cast<netlab::sector_coordinate_type>(std::floor(u(1) / sector_size_y));
         c1 = u(2) < 0.0f ? 0U : static_cast<netlab::sector_coordinate_type>(std::floor(u(2) / sector_size_c));
+
+        if ((static_cast<float_32_bit>(x1) + 0.5f) * sector_size_x > bbox_high_corner(0) - bbox_low_corner(0))
+            --x1;
+        if ((static_cast<float_32_bit>(y1) + 0.5f) * sector_size_y > bbox_high_corner(1) - bbox_low_corner(1))
+            --y1;
+        if ((static_cast<float_32_bit>(c1) + 0.5f) * sector_size_c > bbox_high_corner(2) - bbox_low_corner(2))
+            --c1;
     }
 
     vector3 const  u = B - A;

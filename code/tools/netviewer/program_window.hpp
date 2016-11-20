@@ -45,8 +45,8 @@ public slots:
     void  camera_rotation_listener() { m_tab_camera_widgets.camera_rotation_listener(); }
     void  update_camera_rot_widgets(quaternion const&  q) { m_tab_camera_widgets.update_camera_rot_widgets(q); }
     void  on_camera_far_changed() { m_tab_camera_widgets.on_camera_far_changed(); }
-    void  on_camera_network_far_changed() { m_tab_camera_widgets.on_camera_network_far_changed(); }
-    void  on_camera_network_sync_changed(int value) { m_tab_camera_widgets.on_camera_network_sync_changed(value); }
+    void  dbg_on_camera_far_changed() { m_tab_camera_widgets.dbg_on_camera_far_changed(); }
+    void  dbg_on_camera_sync_changed(int value) { m_tab_camera_widgets.dbg_on_camera_sync_changed(value); }
 
 //    void  on_nenet_param_simulation_speed_changed();
 //    void  on_nenet_param_time_step_changed();
