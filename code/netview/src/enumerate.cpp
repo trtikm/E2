@@ -335,4 +335,156 @@ natural_64_bit  enumerate_ship_positions(
 }
 
 
+void  enumerate_sectors_intersecting_line(
+        vector3 const&  line_begin,
+        vector3 const&  line_end,
+        vector3 const&  bbox_low_corner,
+        vector3 const&  bbox_high_corner,
+        float_32_bit const  sector_size_x,
+        float_32_bit const  sector_size_y,
+        float_32_bit const  sector_size_c,
+        std::function<bool(netlab::sector_coordinate_type,
+                           netlab::sector_coordinate_type,
+                           netlab::sector_coordinate_type)> const&
+            enumeration_callback_fn
+        )
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(sector_size_x > 0.0001f && sector_size_y > 0.0001f && sector_size_c > 0.0001f);
+
+    vector3 A,B;
+    float_32_bit tA,tB;
+    bool const  is_intersection_non_empty =
+            angeo::clip_line_into_bbox(
+                line_begin,
+                line_end,
+                bbox_low_corner,
+                bbox_high_corner,
+                &A,
+                &B,
+                &tA,
+                &tB
+                );
+    if (is_intersection_non_empty == false)
+        return;
+
+    netlab::sector_coordinate_type  x0,y0,c0;
+    {
+        vector3 const  u = A - bbox_low_corner;
+        x0 = u(0) < 0.0f ? 0U : static_cast<netlab::sector_coordinate_type>(std::floor(u(0) / sector_size_x));
+        y0 = u(1) < 0.0f ? 0U : static_cast<netlab::sector_coordinate_type>(std::floor(u(1) / sector_size_y));
+        c0 = u(2) < 0.0f ? 0U : static_cast<netlab::sector_coordinate_type>(std::floor(u(2) / sector_size_c));
+    }
+
+    netlab::sector_coordinate_type  x1,y1,c1;
+    {
+        vector3 const  u = B - bbox_low_corner;
+        x1 = u(0) < 0.0f ? 0U : static_cast<netlab::sector_coordinate_type>(std::floor(u(0) / sector_size_x));
+        y1 = u(1) < 0.0f ? 0U : static_cast<netlab::sector_coordinate_type>(std::floor(u(1) / sector_size_y));
+        c1 = u(2) < 0.0f ? 0U : static_cast<netlab::sector_coordinate_type>(std::floor(u(2) / sector_size_c));
+    }
+
+    vector3 const  u = B - A;
+
+    if (std::fabsf(u(0)) < 1e-4f)
+        x1 = x0;
+    if (std::fabsf(u(1)) < 1e-4f)
+        y1 = y0;
+    if (std::fabsf(u(2)) < 1e-4f)
+        c1 = c0;
+
+    while (true)
+    {
+        if (enumeration_callback_fn(x0,y0,c0) == false)
+            break;
+
+        if (x0 == x1 && y0 == y1 && c0 == c1)
+            break;
+
+        int  dir = 0; // 0~nothing, 1~+x, 2~-x, 3~+y, 4~-y, 5~+c, 6~-c
+        {
+            float_32_bit  param = 1.0f;
+
+            if (x0 < x1)
+            {
+                float_32_bit const  plane_x = bbox_low_corner(0) + static_cast<float_32_bit>(x0+1U) * sector_size_x;
+                float_32_bit const  t = (plane_x - line_begin(0)) / u(0);
+                if (t < param)
+                {
+                    param = t;
+                    dir = 1;
+                }
+            }
+            else if (x1 < x0)
+            {
+                float_32_bit const  plane_x = bbox_low_corner(0) + static_cast<float_32_bit>(x0) * sector_size_x;
+                float_32_bit const  t = (plane_x - line_begin(0)) / u(0);
+                if (t < param)
+                {
+                    param = t;
+                    dir = 2;
+                }
+            }
+
+            if (y0 < y1)
+            {
+                float_32_bit const  plane_y = bbox_low_corner(1) + static_cast<float_32_bit>(y0+1U) * sector_size_y;
+                float_32_bit const  t = (plane_y - line_begin(1)) / u(1);
+                if (t < param)
+                {
+                    param = t;
+                    dir = 3;
+                }
+            }
+            else if (y1 < y0)
+            {
+                float_32_bit const  plane_y = bbox_low_corner(1) + static_cast<float_32_bit>(y0) * sector_size_y;
+                float_32_bit const  t = (plane_y - line_begin(1)) / u(1);
+                if (t < param)
+                {
+                    param = t;
+                    dir = 4;
+                }
+            }
+
+            if (c0 < c1)
+            {
+                float_32_bit const  plane_c = bbox_low_corner(2) + static_cast<float_32_bit>(c0+1U) * sector_size_c;
+                float_32_bit const  t = (plane_c - line_begin(2)) / u(2);
+                if (t < param)
+                {
+                    param = t;
+                    dir = 5;
+                }
+            }
+            else if (c1 < c0)
+            {
+                float_32_bit const  plane_c = bbox_low_corner(2) + static_cast<float_32_bit>(c0) * sector_size_c;
+                float_32_bit const  t = (plane_c - line_begin(2)) / u(2);
+                if (t < param)
+                {
+                    param = t;
+                    dir = 6;
+                }
+            }
+        }
+
+        if (dir == 0)
+            break;
+
+        switch(dir)
+        {
+        case 1: ++x0; break;
+        case 2: --x0; break;
+        case 3: ++y0; break;
+        case 4: --y0; break;
+        case 5: ++c0; break;
+        case 6: --c0; break;
+        default: UNREACHABLE();
+        }
+    }
+}
+
+
 }

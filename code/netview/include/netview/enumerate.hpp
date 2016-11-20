@@ -49,6 +49,22 @@ natural_64_bit  enumerate_ship_positions(
         std::function<bool(vector3 const&)> const&  output_callback
         );
 
+
+void  enumerate_sectors_intersecting_line(
+        vector3 const&  line_begin,
+        vector3 const&  line_end,
+        vector3 const&  bbox_low_corner,
+        vector3 const&  bbox_high_corner,
+        float_32_bit const  sector_size_x,
+        float_32_bit const  sector_size_y,
+        float_32_bit const  sector_size_c,
+        std::function<bool(netlab::sector_coordinate_type,
+                           netlab::sector_coordinate_type,
+                           netlab::sector_coordinate_type)> const&
+            enumeration_callback_fn
+        );
+
+
 }
 
 #endif
