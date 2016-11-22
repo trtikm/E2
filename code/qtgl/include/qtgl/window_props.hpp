@@ -14,7 +14,8 @@ struct window_props
             float_32_bit const  pixel_width_in_milimeters,
             float_32_bit const  pixel_height_in_milimeters,
             bool const  is_whole_program_active,
-            bool const  has_focus
+            bool const  has_focus,
+            bool const  just_resized
             );
 
     natural_32_bit  width_in_pixels() const { return m_width_in_pixels; }
@@ -26,6 +27,7 @@ struct window_props
     bool  is_whole_program_active() const { return m_is_whole_program_active; }
 
     bool  has_focus() const { return m_has_focus; }
+    bool  just_resized() const { return m_just_resized; }
 
 private:
     natural_32_bit  m_width_in_pixels;
@@ -34,6 +36,7 @@ private:
     float_32_bit  m_pixel_height_in_milimeters;
     bool  m_is_whole_program_active;
     bool  m_has_focus;
+    bool  m_just_resized;
 };
 
 

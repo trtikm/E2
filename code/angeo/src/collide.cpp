@@ -170,7 +170,7 @@ bool  clip_line_into_bbox(
     if (parameter_of_line_begin != nullptr)
         *parameter_of_line_begin = tB;
     if (parameter_of_line_end != nullptr)
-        *parameter_of_line_end = tB;
+        *parameter_of_line_end = tE;
 
     return true;
 }

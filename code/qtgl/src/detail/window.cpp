@@ -173,10 +173,11 @@ window::window(std::function<std::shared_ptr<real_time_simulator>()> const  crea
 
     , m_initialised(false)
 
+    , m_just_resized(false)
     , m_has_focus(false)
     , m_idleTimerId(-1)
 
-    , m_window_props(1U,1U,1.0f,1.0f,false,false)
+    , m_window_props(1U,1U,1.0f,1.0f,false,false,false)
     , m_mouse_props(0.0f,0.0f,0.0f,0.0f,0.0f,0.0f,{})
     , m_keyboard_props()
 
@@ -323,7 +324,8 @@ void window::render_now(bool const  is_this_pure_redraw_request)
             (float_32_bit)(inch_size_in_milimeters / screen()->physicalDotsPerInchX()),
             (float_32_bit)(inch_size_in_milimeters / screen()->physicalDotsPerInchY()),
             isActive(),
-            m_has_focus
+            m_has_focus,
+            m_just_resized
     };
 
     m_keyboard_props = qtgl::keyboard_props {
@@ -407,6 +409,8 @@ void window::render_now(bool const  is_this_pure_redraw_request)
         call_listeners(notifications::fps_updated());
     }
 
+    m_just_resized = false;
+
     m_keyboard_text.clear();
     m_keyboard_just_pressed.clear();
     m_keyboard_just_released.clear();
@@ -432,7 +436,10 @@ bool window::event(QEvent* const event)
 {
     switch (event->type())
     {
-        case QEvent::UpdateRequest:
+    case QEvent::Resize:
+            m_just_resized = true;
+            return QWindow::event(event);
+    case QEvent::UpdateRequest:
             render_now(true);
             return true;
         case QEvent::FocusIn:

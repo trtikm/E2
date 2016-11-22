@@ -10,7 +10,8 @@ window_props::window_props(
         float_32_bit const  pixel_width_in_milimeters,
         float_32_bit const  pixel_height_in_milimeters,
         bool const  is_whole_program_active,
-        bool const  has_focus
+        bool const  has_focus,
+        bool const  just_resized
         )
     : m_width_in_pixels(width_in_pixels)
     , m_height_in_pixels(height_in_pixels)
@@ -18,6 +19,7 @@ window_props::window_props(
     , m_pixel_height_in_milimeters(pixel_height_in_milimeters)
     , m_is_whole_program_active(is_whole_program_active)
     , m_has_focus(has_focus)
+    , m_just_resized(just_resized)
 {
     ASSUMPTION(m_pixel_width_in_milimeters > 0.0f);
     ASSUMPTION(m_pixel_height_in_milimeters > 0.0f);

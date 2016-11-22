@@ -218,7 +218,7 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,2> > const&  dat
                         << (buffer_name.empty() ? "" : "/") << buffer_name
                         << (uid.empty() ? "" : "/") << uid
                         << msgstream::end();
-    if (!uid.empty())
+    if (uid.empty())
     {
         std::size_t  seed = 0ULL;
         for (auto const&  elem : data)
@@ -251,7 +251,7 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,3> > const&  dat
                     << (buffer_name.empty() ? "" : "/") << buffer_name
                     << (uid.empty() ? "" : "/") << uid
                     << msgstream::end();
-    if (!uid.empty())
+    if (uid.empty())
     {
         std::size_t  seed = 0ULL;
         for (auto const&  elem : data)
@@ -313,7 +313,7 @@ buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,4> > const&  dat
         << (buffer_name.empty() ? "" : "/") << buffer_name
         << (uid.empty() ? "" : "/") << uid
         << msgstream::end();
-    if (!uid.empty())
+    if (uid.empty())
     {
         std::size_t  seed = 0ULL;
         for (auto const& elem : data)
@@ -347,7 +347,7 @@ buffer_ptr  buffer::create(std::vector< natural_32_bit > const&  data,
         << (buffer_name.empty() ? "" : "/") << buffer_name
         << (uid.empty() ? "" : "/") << uid
         << msgstream::end();
-    if (!uid.empty())
+    if (uid.empty())
     {
         std::size_t  seed = 0ULL;
         for (auto const& elem : data)
@@ -376,7 +376,7 @@ buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,2> > const&  d
         << (buffer_name.empty() ? "" : "/") << buffer_name
         << (uid.empty() ? "" : "/") << uid
         << msgstream::end();
-    if (!uid.empty())
+    if (uid.empty())
     {
         std::size_t  seed = 0ULL;
         for (auto const& elem : data)
@@ -408,7 +408,7 @@ buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,3> > const&  d
         << (buffer_name.empty() ? "" : "/") << buffer_name
         << (uid.empty() ? "" : "/") << uid
         << msgstream::end();
-    if (!uid.empty())
+    if (uid.empty())
     {
         std::size_t  seed = 0ULL;
         for (auto const& elem : data)

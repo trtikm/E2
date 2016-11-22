@@ -70,7 +70,24 @@ void  dbg_network_camera::set_far_plane(float_32_bit const  value)
 }
 
 
-void  dbg_network_camera::render_camera_frustum(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state)
+void  dbg_network_camera::on_window_resized(qtgl::window_props const&  window_props)
+{
+    qtgl::adjust(*m_camera,window_props);
+
+    m_batch_camera_frustum =
+        qtgl::create_wireframe_perspective_frustum(
+                m_camera->near_plane(),
+                m_camera->far_plane(),
+                m_camera->left(),
+                m_camera->right(),
+                m_camera->top(),
+                m_camera->bottom(),
+                get_program_options()->dataRoot()
+                );
+}
+
+
+void  dbg_network_camera::render_camera_frustum(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state) const
 {
     TMPROF_BLOCK();
 

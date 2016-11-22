@@ -177,6 +177,21 @@ widgets::widgets(program_window* const  wnd)
             return new s(wnd);
         }(m_wnd)
         )
+
+    , m_dbg_raycast_sector_enumeration(
+        [](program_window* wnd) {
+            struct s : public QCheckBox {
+                s(program_window* wnd) : QCheckBox("Enable raycast sector enumeration")
+                {
+                    setCheckState( wnd->ptree().get("dbg.camera.raycast_sector_enumeration", false) ?
+                                       Qt::CheckState::Checked :
+                                       Qt::CheckState::Unchecked );
+                    QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(dbg_on_raycast_sector_enumeration(int)));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
 {
 
 }
@@ -256,6 +271,11 @@ QCheckBox* widgets::dbg_camera_synchronised() const noexcept
     return m_dbg_camera_synchronised;
 }
 
+QCheckBox* widgets::dbg_raycast_sector_enumeration() const noexcept
+{
+    return m_dbg_raycast_sector_enumeration;
+}
+
 void  widgets::on_camera_pos_changed()
 {
     vector3 const  pos(m_camera_pos_x->text().toFloat(),
@@ -333,6 +353,11 @@ void  widgets::dbg_on_camera_sync_changed(int)
     wnd()->glwindow().call_later(&simulator::dbg_set_camera_sync_state, m_dbg_camera_synchronised->isChecked());
 }
 
+void  widgets::dbg_on_raycast_sector_enumeration(int)
+{
+    wnd()->glwindow().call_later(&simulator::dbg_enable_raycast_sector_enumeration,m_dbg_raycast_sector_enumeration->isChecked());
+}
+
 
 void  widgets::save()
 {
@@ -351,6 +376,7 @@ void  widgets::save()
 
     wnd()->ptree().put("dbg.camera.far_plane", m_dbg_camera_far_plane->text().toFloat());
     wnd()->ptree().put("dbg.camera.synchronised", m_dbg_camera_synchronised->isChecked());
+    wnd()->ptree().put("dbg.camera.raycast_sector_enumeration", m_dbg_raycast_sector_enumeration->isChecked());
 }
 
 
@@ -437,6 +463,9 @@ QWidget*  make_camera_tab_content(widgets const&  w)
                         w.wnd()->dbg_on_camera_far_changed();
                     }
                     dbg_layout->addLayout(dbg_far_plane_layout);
+
+                    dbg_layout->addWidget(w.dbg_raycast_sector_enumeration());
+                    w.wnd()->dbg_on_raycast_sector_enumeration(0);
                 }
                 dbg_group->setLayout(dbg_layout);
             }

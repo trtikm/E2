@@ -10,6 +10,7 @@
 #   include <memory>
 
 #   include <netviewer/dbg/dbg_network_camera.hpp>
+#   include <netviewer/dbg/dbg_raycast_sector_enumeration.hpp>
 
 
 struct simulator : public qtgl::real_time_simulator
@@ -56,7 +57,8 @@ struct simulator : public qtgl::real_time_simulator
     { m_dbg_network_camera.set_far_plane(far_plane); }
     void  dbg_set_camera_sync_state(bool const  sync)
     { if (sync) m_dbg_network_camera.disable(); else m_dbg_network_camera.enable(m_camera); }
-
+    void  dbg_enable_raycast_sector_enumeration(bool const  state)
+    { if (state) m_dbg_raycast_sector_enumeration.enable(); else m_dbg_raycast_sector_enumeration.disable(); }
 
 
 //    bool  is_selected_cell() const { return m_selected_cell != nenet()->cells().cend(); }
@@ -163,6 +165,7 @@ private:
 
     /// Debugging stuff
     dbg_network_camera  m_dbg_network_camera;
+    dbg_raycast_sector_enumeration  m_dbg_raycast_sector_enumeration;
 
 //    qtgl::batch_ptr  m_selected_cell_input_spot_lines;
 //    qtgl::batch_ptr  m_selected_cell_output_terminal_lines;

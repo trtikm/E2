@@ -354,7 +354,6 @@ void  enumerate_sectors_intersecting_line(
     ASSUMPTION(sector_size_x > 0.0001f && sector_size_y > 0.0001f && sector_size_c > 0.0001f);
 
     vector3 A,B;
-    float_32_bit tA,tB;
     bool const  is_intersection_non_empty =
             angeo::clip_line_into_bbox(
                 line_begin,
@@ -363,8 +362,8 @@ void  enumerate_sectors_intersecting_line(
                 bbox_high_corner,
                 &A,
                 &B,
-                &tA,
-                &tB
+                nullptr,
+                nullptr
                 );
     if (is_intersection_non_empty == false)
         return;
@@ -423,7 +422,7 @@ void  enumerate_sectors_intersecting_line(
             if (x0 < x1)
             {
                 float_32_bit const  plane_x = bbox_low_corner(0) + static_cast<float_32_bit>(x0+1U) * sector_size_x;
-                float_32_bit const  t = (plane_x - line_begin(0)) / u(0);
+                float_32_bit const  t = (plane_x - A(0)) / u(0);
                 if (t < param)
                 {
                     param = t;
@@ -433,7 +432,7 @@ void  enumerate_sectors_intersecting_line(
             else if (x1 < x0)
             {
                 float_32_bit const  plane_x = bbox_low_corner(0) + static_cast<float_32_bit>(x0) * sector_size_x;
-                float_32_bit const  t = (plane_x - line_begin(0)) / u(0);
+                float_32_bit const  t = (plane_x - A(0)) / u(0);
                 if (t < param)
                 {
                     param = t;
@@ -444,7 +443,7 @@ void  enumerate_sectors_intersecting_line(
             if (y0 < y1)
             {
                 float_32_bit const  plane_y = bbox_low_corner(1) + static_cast<float_32_bit>(y0+1U) * sector_size_y;
-                float_32_bit const  t = (plane_y - line_begin(1)) / u(1);
+                float_32_bit const  t = (plane_y - A(1)) / u(1);
                 if (t < param)
                 {
                     param = t;
@@ -454,7 +453,7 @@ void  enumerate_sectors_intersecting_line(
             else if (y1 < y0)
             {
                 float_32_bit const  plane_y = bbox_low_corner(1) + static_cast<float_32_bit>(y0) * sector_size_y;
-                float_32_bit const  t = (plane_y - line_begin(1)) / u(1);
+                float_32_bit const  t = (plane_y - A(1)) / u(1);
                 if (t < param)
                 {
                     param = t;
@@ -465,7 +464,7 @@ void  enumerate_sectors_intersecting_line(
             if (c0 < c1)
             {
                 float_32_bit const  plane_c = bbox_low_corner(2) + static_cast<float_32_bit>(c0+1U) * sector_size_c;
-                float_32_bit const  t = (plane_c - line_begin(2)) / u(2);
+                float_32_bit const  t = (plane_c - A(2)) / u(2);
                 if (t < param)
                 {
                     param = t;
@@ -475,7 +474,7 @@ void  enumerate_sectors_intersecting_line(
             else if (c1 < c0)
             {
                 float_32_bit const  plane_c = bbox_low_corner(2) + static_cast<float_32_bit>(c0) * sector_size_c;
-                float_32_bit const  t = (plane_c - line_begin(2)) / u(2);
+                float_32_bit const  t = (plane_c - A(2)) / u(2);
                 if (t < param)
                 {
                     param = t;

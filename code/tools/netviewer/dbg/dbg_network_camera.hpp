@@ -16,7 +16,9 @@ struct  dbg_network_camera
     qtgl::camera_perspective_ptr  get_camera() const noexcept { return m_camera; }
     void  set_far_plane(float_32_bit const  value);
 
-    void  render_camera_frustum(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state);
+    void  on_window_resized(qtgl::window_props const&  window_props);
+
+    void  render_camera_frustum(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state) const;
 
 private:
     float_32_bit  m_far_plane;

@@ -181,6 +181,7 @@ simulator::simulator(
     , m_batch_ship_bsphere{}
 
     , m_dbg_network_camera(m_camera->far_plane())
+    , m_dbg_raycast_sector_enumeration()
 
 //    , m_selected_cell_input_spot_lines()
 //    , m_selected_cell_output_terminal_lines()
@@ -609,6 +610,9 @@ void  simulator::update_selection_of_network_objects(float_64_bit const  seconds
         }
 
         //call_listeners(simulator_notifications::selection_changed());
+
+        if (m_dbg_raycast_sector_enumeration.is_enabled())
+            m_dbg_raycast_sector_enumeration.enumerate(ray_begin,ray_end,network()->properties()->layer_props());
     }
 
     if (m_selected_object_stats.operator bool())
@@ -637,7 +641,13 @@ void  simulator::render_network(matrix44 const&  view_projection_matrix, qtgl::d
     render_network_ships(view_projection_matrix,clip_planes,draw_state);
 
     if (m_dbg_network_camera.is_enabled())
+    {
+        if (window_props().just_resized())
+            m_dbg_network_camera.on_window_resized(window_props());
         m_dbg_network_camera.render_camera_frustum(view_projection_matrix,draw_state);
+    }
+    if (m_dbg_raycast_sector_enumeration.is_enabled())
+        m_dbg_raycast_sector_enumeration.render(view_projection_matrix,draw_state);
 }
 
 
