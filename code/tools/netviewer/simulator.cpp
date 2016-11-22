@@ -181,6 +181,7 @@ simulator::simulator(
     , m_batch_ship_bsphere{}
 
     , m_dbg_network_camera(m_camera->far_plane())
+    , m_dbg_frustum_sector_enumeration()
     , m_dbg_raycast_sector_enumeration()
 
 //    , m_selected_cell_input_spot_lines()
@@ -630,6 +631,9 @@ void  simulator::render_network(matrix44 const&  view_projection_matrix, qtgl::d
 
     INVARIANT(network().operator bool());
 
+    if (m_dbg_network_camera.is_enabled() && window_props().just_resized())
+        m_dbg_network_camera.on_window_resized(window_props());
+
     std::vector< std::pair<vector3,vector3> >  clip_planes;
     qtgl::compute_clip_planes(
                 *(m_dbg_network_camera.is_enabled() ? m_dbg_network_camera.get_camera() : m_camera),
@@ -641,10 +645,14 @@ void  simulator::render_network(matrix44 const&  view_projection_matrix, qtgl::d
     render_network_ships(view_projection_matrix,clip_planes,draw_state);
 
     if (m_dbg_network_camera.is_enabled())
-    {
-        if (window_props().just_resized())
-            m_dbg_network_camera.on_window_resized(window_props());
         m_dbg_network_camera.render_camera_frustum(view_projection_matrix,draw_state);
+    if (m_dbg_frustum_sector_enumeration.is_enabled())
+    {
+        if (m_dbg_frustum_sector_enumeration.is_invalidated() ||
+                !m_dbg_network_camera.is_enabled() ||
+                window_props().just_resized())
+            m_dbg_frustum_sector_enumeration.enumerate(clip_planes,network()->properties()->layer_props());
+        m_dbg_frustum_sector_enumeration.render(view_projection_matrix,draw_state);
     }
     if (m_dbg_raycast_sector_enumeration.is_enabled())
         m_dbg_raycast_sector_enumeration.render(view_projection_matrix,draw_state);

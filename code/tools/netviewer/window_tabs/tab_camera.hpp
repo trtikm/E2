@@ -39,6 +39,7 @@ struct  widgets
 
     QLineEdit* dbg_camera_far_plane() const noexcept;
     QCheckBox* dbg_camera_synchronised() const noexcept;
+    QCheckBox* dbg_frustum_sector_enumeration() const noexcept;
     QCheckBox* dbg_raycast_sector_enumeration() const noexcept;
 
     void  on_camera_pos_changed();
@@ -53,6 +54,7 @@ struct  widgets
 
     void  dbg_on_camera_far_changed();
     void  dbg_on_camera_sync_changed(int);
+    void  dbg_on_frustum_sector_enumeration(int);
     void  dbg_on_raycast_sector_enumeration(int);
 
     void  save();
@@ -79,6 +81,7 @@ private:
 
     QLineEdit*  m_dbg_camera_far_plane;
     QCheckBox*  m_dbg_camera_synchronised;
+    QCheckBox*  m_dbg_frustum_sector_enumeration;
     QCheckBox*  m_dbg_raycast_sector_enumeration;
 };
 

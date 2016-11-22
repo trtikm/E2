@@ -33,6 +33,8 @@ add_executable(${THIS_TARGET_NAME}
     
     dbg/dbg_network_camera.hpp
     dbg/dbg_network_camera.cpp
+    dbg/dbg_frustum_sector_enumeration.hpp
+    dbg/dbg_frustum_sector_enumeration.cpp
     dbg/dbg_raycast_sector_enumeration.hpp
     dbg/dbg_raycast_sector_enumeration.cpp
     )

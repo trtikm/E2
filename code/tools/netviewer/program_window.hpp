@@ -49,6 +49,7 @@ public slots:
     /// Slots for tool debug events
     void  dbg_on_camera_far_changed() { m_tab_camera_widgets.dbg_on_camera_far_changed(); }
     void  dbg_on_camera_sync_changed(int value) { m_tab_camera_widgets.dbg_on_camera_sync_changed(value); }
+    void  dbg_on_frustum_sector_enumeration(int value) { m_tab_camera_widgets.dbg_on_frustum_sector_enumeration(value); }
     void  dbg_on_raycast_sector_enumeration(int value) { m_tab_camera_widgets.dbg_on_raycast_sector_enumeration(value); }
 
 //    void  on_nenet_param_simulation_speed_changed();
