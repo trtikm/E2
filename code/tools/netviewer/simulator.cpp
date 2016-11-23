@@ -160,7 +160,6 @@ simulator::simulator(
     , m_desired_network_to_real_time_ratio(desired_network_to_real_time_ratio)
 
     , m_selected_object_stats()
-    , m_selected_rot_angle(0.0f)
 
     , m_batch_spiker{ qtgl::batch::create(canonical_path(
             boost::filesystem::path{get_program_options()->dataRoot()} / "shared/gfx/models/neuron/body.txt"
@@ -512,7 +511,6 @@ void  simulator::update_selection_of_network_objects(float_64_bit const  seconds
     if (mouse_props().was_just_released(qtgl::LEFT_MOUSE_BUTTON()))
     {
         m_selected_object_stats.reset();
-        m_selected_rot_angle = 0.0f;
 
         vector3  ray_begin, ray_end;
         {
@@ -594,6 +592,18 @@ void  simulator::update_selection_of_network_objects(float_64_bit const  seconds
                     object_indices = ship_indices;
                     object_kind = 3U;
                 }
+                else if (ray_ship_param < 1.0f && ray_param < 1.0f)
+                {
+                    vector3 const ship_pos = ray_begin + ray_ship_param * (ray_end - ray_begin);
+                    vector3 const other_pos = ray_begin + ray_param * (ray_end - ray_begin);
+                    float_32_bit const  dist = length(ship_pos - other_pos);
+                    if (dist <= boundary.radius())
+                    {
+                        ray_param = ray_ship_param;
+                        object_indices = ship_indices;
+                        object_kind = 3U;
+                    }
+                }
             }
 
             INVARIANT(object_kind < 4U);
@@ -601,11 +611,11 @@ void  simulator::update_selection_of_network_objects(float_64_bit const  seconds
 
             m_selected_object_stats =
                 object_kind == 1U ? 
-                        netexp::experiment_factory::instance().create_tracked_spiker_stats(g_experiment_name, object_indices) :
+                        netexp::experiment_factory::instance().create_tracked_spiker_stats(m_experiment_name, object_indices) :
                 object_kind == 2U ?
-                        netexp::experiment_factory::instance().create_tracked_dock_stats(g_experiment_name, object_indices) :
+                        netexp::experiment_factory::instance().create_tracked_dock_stats(m_experiment_name, object_indices) :
                 object_kind == 3U ?
-                        netexp::experiment_factory::instance().create_tracked_ship_stats(g_experiment_name, object_indices) :
+                        netexp::experiment_factory::instance().create_tracked_ship_stats(m_experiment_name, object_indices) :
                         std::shared_ptr<netlab::tracked_network_object_stats>{}
                         ;
         }
@@ -614,13 +624,6 @@ void  simulator::update_selection_of_network_objects(float_64_bit const  seconds
 
         if (m_dbg_raycast_sector_enumeration.is_enabled())
             m_dbg_raycast_sector_enumeration.enumerate(ray_begin,ray_end,network()->properties()->layer_props());
-    }
-
-    if (m_selected_object_stats.operator bool())
-    {
-        m_selected_rot_angle += (2.0f * PI()) * seconds_from_previous_call;
-        while (m_selected_rot_angle > 2.0f * PI())
-            m_selected_rot_angle -= 2.0f * PI();
     }
 }
 
@@ -643,6 +646,8 @@ void  simulator::render_network(matrix44 const&  view_projection_matrix, qtgl::d
     render_network_spikers(view_projection_matrix,clip_planes,draw_state);
     render_network_docks(view_projection_matrix,clip_planes,draw_state);
     render_network_ships(view_projection_matrix,clip_planes,draw_state);
+
+    render_selected_network_object(view_projection_matrix,draw_state);
 
     if (m_dbg_network_camera.is_enabled())
         m_dbg_network_camera.render_camera_frustum(view_projection_matrix,draw_state);
@@ -679,8 +684,10 @@ void  simulator::render_network_spikers(
             qtgl::spatial_boundary const  boundary =
                     m_batch_spiker->buffers_binding()->find_vertex_buffer_properties()->boundary();
 
-            m_batch_spiker_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),"/netviewer/spiker");
-            m_batch_spiker_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,"/netviewer/spiker");
+            m_batch_spiker_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
+                                                             get_program_options()->dataRoot(),"/netviewer/spiker_bbox");
+            m_batch_spiker_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,
+                                                                   get_program_options()->dataRoot(),"/netviewer/spiker_bsphere");
         }
 
         struct  local
@@ -858,8 +865,10 @@ void  simulator::render_network_docks(
             qtgl::spatial_boundary const  boundary =
                     m_batch_dock->buffers_binding()->find_vertex_buffer_properties()->boundary();
 
-            m_batch_dock_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),"/netviewer/dock");
-            m_batch_dock_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,"/netviewer/dock");
+            m_batch_dock_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
+                                                           get_program_options()->dataRoot(),"/netviewer/dock_bbox");
+            m_batch_dock_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,
+                                                                 get_program_options()->dataRoot(),"/netviewer/dock_bsphere");
         }
 
         struct  local
@@ -1037,8 +1046,10 @@ void  simulator::render_network_ships(
             qtgl::spatial_boundary const  boundary =
                     m_batch_ship->buffers_binding()->find_vertex_buffer_properties()->boundary();
 
-            m_batch_ship_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),"/netviewer/ship");
-            m_batch_ship_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,"/netviewer/ship");
+            m_batch_ship_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
+                                                           get_program_options()->dataRoot(),"/netviewer/ship_bbox");
+            m_batch_ship_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,
+                                                                 get_program_options()->dataRoot(),"/netviewer/ship_bsphere");
         }
 
         struct  local
@@ -1147,6 +1158,76 @@ void  simulator::render_network_ships(
 //        }
 //        draw_state = m_batch_basis->draw_state();
 //    }
+}
+
+
+void  simulator::render_selected_network_object(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state)
+{
+    if (!network().operator bool())
+        return;
+
+    if (std::dynamic_pointer_cast<netlab::tracked_spiker_stats>(m_selected_object_stats) != nullptr &&
+        m_batch_spiker_bsphere.operator bool())
+    {
+        if (qtgl::make_current(*m_batch_spiker_bsphere, *draw_state))
+        {
+            INVARIANT(m_batch_spiker_bsphere->shaders_binding().operator bool());
+
+            netlab::network_layer_props const&  props =
+                network()->properties()->layer_props().at(m_selected_object_stats->indices().layer_index());
+            netlab::sector_coordinate_type  x, y, c;
+            props.spiker_sector_coordinates(m_selected_object_stats->indices().object_index(), x, y, c);
+            vector3 const&  pos = props.spiker_sector_centre(x, y, c);
+            render_batch(
+                *m_batch_spiker_bsphere,
+                view_projection_matrix,
+                angeo::coordinate_system(pos, quaternion_identity()),
+                { 1.0f, 1.0f, 1.0f, 1.0f }
+            );
+            draw_state = m_batch_spiker_bsphere->draw_state();
+        }
+    }
+    else if (std::dynamic_pointer_cast<netlab::tracked_dock_stats>(m_selected_object_stats) != nullptr &&
+        m_batch_dock_bsphere.operator bool())
+    {
+        if (qtgl::make_current(*m_batch_dock_bsphere, *draw_state))
+        {
+            INVARIANT(m_batch_dock_bsphere->shaders_binding().operator bool());
+
+            netlab::network_layer_props const&  props =
+                network()->properties()->layer_props().at(m_selected_object_stats->indices().layer_index());
+            netlab::sector_coordinate_type  x,y,c;
+            props.dock_sector_coordinates(m_selected_object_stats->indices().object_index(),x,y,c);
+            vector3 const&  pos = props.dock_sector_centre(x,y,c);
+            render_batch(
+                *m_batch_dock_bsphere,
+                view_projection_matrix,
+                angeo::coordinate_system(pos,quaternion_identity()),
+                { 1.0f, 1.0f, 1.0f, 1.0f }
+                );
+            draw_state = m_batch_dock_bsphere->draw_state();
+        }
+    }
+    else if (std::dynamic_pointer_cast<netlab::tracked_ship_stats>(m_selected_object_stats) != nullptr &&
+        m_batch_ship_bsphere.operator bool())
+    {
+        if (qtgl::make_current(*m_batch_ship_bsphere, *draw_state))
+        {
+            INVARIANT(m_batch_ship_bsphere->shaders_binding().operator bool());
+
+            vector3 const&  pos =
+                network()->get_ship(m_selected_object_stats->indices().layer_index(),
+                                    m_selected_object_stats->indices().object_index())
+                        .position();
+            render_batch(
+                *m_batch_ship_bsphere,
+                view_projection_matrix,
+                angeo::coordinate_system(pos,quaternion_identity()),
+                { 1.0f, 1.0f, 1.0f, 1.0f }
+                );
+            draw_state = m_batch_ship_bsphere->draw_state();
+        }
+    }
 }
 
 

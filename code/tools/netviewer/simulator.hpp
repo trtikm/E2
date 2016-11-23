@@ -131,7 +131,7 @@ private:
             std::vector< std::pair<vector3,vector3> > const& clip_planes,
             qtgl::draw_state_ptr&  draw_state
             );
-    void  render_separate_network_camera(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state);
+    void  render_selected_network_object(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state);
 
 
     /// Network independed data providing feedback loop between a human user and 3D scene in the tool
@@ -150,10 +150,8 @@ private:
     float_64_bit  m_spent_network_time;
     natural_64_bit  m_num_network_updates;
     float_64_bit  m_desired_network_to_real_time_ratio;
-    
-    /// Data for handling selection of entities in the network
+
     std::shared_ptr<netlab::tracked_network_object_stats>  m_selected_object_stats;
-    float_32_bit  m_selected_rot_angle;
 
     /// Data for rendering of entities in the network
     qtgl::batch_ptr  m_batch_spiker;

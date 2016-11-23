@@ -299,10 +299,10 @@ float_32_bit  find_first_ship_on_line(
                             vector3  closest_point;
                             float_32_bit const  t =
                                     angeo::closest_point_on_line_to_point(line_begin,line_end,ship_pos,&closest_point);
-                            if (t < param && length_squared(sector_centre - closest_point) <= radius * radius)
+                            if (t < param && length_squared(ship_pos - closest_point) <= radius * radius)
                             {
                                 param = t;
-                                indices = netlab::compressed_layer_and_object_indices(layer_index,sector_index);
+                                indices = layer_and_object_indices;
                             }
                         }
                         return true;
