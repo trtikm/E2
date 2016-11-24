@@ -24,6 +24,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/netlab/network.hpp
     ./src/network.cpp
+
+    ./include/netlab/utility.hpp
+    ./src/utility.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

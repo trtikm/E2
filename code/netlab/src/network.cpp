@@ -94,7 +94,7 @@ network::network(std::shared_ptr<network_props> const  network_properties,
                             ships_initialiser.on_next_area(layer_index, spiker_index, *properties());
 
                             object_index_type const  ships_begin_index = layer_props.ships_begin_index_of_spiker(spiker_index);
-                            for (sector_coordinate_type i = 0U; i < layer_props.num_ships_per_spiker(); ++i)
+                            for (natural_32_bit  i = 0U; i < layer_props.num_ships_per_spiker(); ++i)
                             {
                                 ships_initialiser.compute_ship_position_and_velocity_in_movement_area(
                                             centers.at(spiker_index),
@@ -181,6 +181,17 @@ ship const&  network::get_ship(layer_index_type const  layer_index, object_index
     ASSUMPTION(layer_index < properties()->layer_props().size());
     ASSUMPTION(object_index < m_ships.at(layer_index)->size());
     return m_ships.at(layer_index)->at(object_index);
+}
+
+
+vector3 const&  network::get_center_of_ship_movement_area_associated_with_spiker(
+        layer_index_type const  layer_index,
+        object_index_type const  spiker_index
+        ) const
+{
+    ASSUMPTION(layer_index < properties()->layer_props().size());
+    ASSUMPTION(spiker_index < m_movement_area_centers.at(layer_index).size());
+    return m_movement_area_centers.at(layer_index).at(spiker_index);
 }
 
 

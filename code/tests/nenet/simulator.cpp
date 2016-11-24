@@ -231,7 +231,9 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             m_selected_cell_input_spot_lines.reset();
             m_selected_cell_output_terminal_lines.reset();
 
-            vector3  ray; qtgl::cursor_line_begin(*m_camera,{ mouse_props().x() ,mouse_props().y() },window_props(),ray);
+            vector3  line_begin;
+            qtgl::cursor_line_begin(*m_camera, { mouse_props().x() ,mouse_props().y() }, window_props(), line_begin);
+            vector3 const  ray = line_begin - m_camera->coordinate_system()->origin();
             scalar  param = 1e30f;
             m_selected_cell = nenet()->find_closest_cell(m_camera->coordinate_system()->origin(),ray,0.75f,&param);
             {

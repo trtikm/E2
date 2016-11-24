@@ -153,7 +153,7 @@ private:
 
     std::shared_ptr<netlab::tracked_network_object_stats>  m_selected_object_stats;
 
-    /// Data for rendering of entities in the network
+    /// Data for rendering of entities in the network and selection related stuff
     qtgl::batch_ptr  m_batch_spiker;
     qtgl::batch_ptr  m_batch_dock;
     qtgl::batch_ptr  m_batch_ship;
@@ -165,6 +165,8 @@ private:
     qtgl::batch_ptr  m_batch_spiker_bsphere;
     qtgl::batch_ptr  m_batch_dock_bsphere;
     qtgl::batch_ptr  m_batch_ship_bsphere;
+
+    std::vector<qtgl::batch_ptr>  m_batches_selection;
 
     /// Debugging stuff
     dbg_network_camera  m_dbg_network_camera;

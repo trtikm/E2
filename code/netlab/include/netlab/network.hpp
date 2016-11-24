@@ -39,6 +39,13 @@ struct  network
 
     ship const&  get_ship(layer_index_type const  layer_index, object_index_type const  object_index) const;
 
+    vector3 const&  get_center_of_ship_movement_area_associated_with_spiker(
+            layer_index_type const  layer_index,
+            object_index_type const  spiker_index   //!< Indeed SPIKER's index! All ships of the spaker share
+                                                    //!< the center of the movement area. So, the center is
+                                                    //!  associated only to their spiker.
+            ) const;
+
     std::vector<compressed_layer_and_object_indices> const&  get_indices_of_ships_in_dock_sector(
             layer_index_type const  layer_index,
             object_index_type const  dock_sector_index
