@@ -1536,12 +1536,28 @@ void simulator::set_desired_network_to_real_time_ratio(float_64_bit const  value
 //    return *m_selected_output_terminal;
 //}
 
-//std::string  simulator::get_selected_info_text() const
-//{
-//    if (!is_selected_something())
-//        return "";
 
-//    std::ostringstream  ostr;
+std::string  simulator::get_network_info_text() const
+{
+    if (!network().operator bool())
+        return "No network is loaded.";
+
+    std::ostringstream  ostr;
+
+    ostr << "Network of experiment: " << get_experiment_name() << '\n';
+
+    return ostr.str();
+}
+
+
+std::string  simulator::get_selected_info_text() const
+{
+    if (!m_selected_object_stats.operator bool())
+        return "No network object is selected.";
+
+    std::ostringstream  ostr;
+
+    ostr << "Some object is selected!";
 
 //    ostr << "position: [ " << std::fixed << get_position_of_selected()(0)
 //                          << ", "
@@ -1602,5 +1618,5 @@ void simulator::set_desired_network_to_real_time_ratio(float_64_bit const  value
 //                    << m_selected_output_terminal_stats->average_mini_spikes_rate(nenet()->get_params()->update_time_step_in_seconds()) << "\n"
 //             ;
 //    }
-//    return ostr.str();
-//}
+    return ostr.str();
+}

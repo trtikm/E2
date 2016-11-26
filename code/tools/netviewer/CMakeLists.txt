@@ -25,6 +25,10 @@ add_executable(${THIS_TARGET_NAME}
     
     window_tabs/tab_draw.hpp
     window_tabs/tab_draw.cpp
+    window_tabs/tab_network.hpp
+    window_tabs/tab_network.cpp
+    window_tabs/tab_selected.hpp
+    window_tabs/tab_selected.cpp
 
     status_bar.hpp
     status_bar.cpp

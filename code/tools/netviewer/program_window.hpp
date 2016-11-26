@@ -3,6 +3,8 @@
 
 #   include <netviewer/simulator.hpp>
 #   include <netviewer/window_tabs/tab_draw.hpp>
+#   include <netviewer/window_tabs/tab_network.hpp>
+#   include <netviewer/window_tabs/tab_selected.hpp>
 #   include <netviewer/status_bar.hpp>
 #   include <qtgl/window.hpp>
 #   include <boost/property_tree/ptree.hpp>
@@ -49,6 +51,12 @@ public slots:
     void  dbg_on_frustum_sector_enumeration(int value) { m_tab_draw_widgets.dbg_on_frustum_sector_enumeration(value); }
     void  dbg_on_raycast_sector_enumeration(int value) { m_tab_draw_widgets.dbg_on_raycast_sector_enumeration(value); }
 
+    /// Slots for NETWORK tab
+
+    /// Slots for SELECTED tab
+    void on_network_info_text_update()  { m_tab_network_widgets.on_text_update(); }
+    void on_selection_update()  { m_tab_selected_widgets.on_selection_update(); }
+
 //    void  on_nenet_param_simulation_speed_changed();
 //    void  on_nenet_param_time_step_changed();
 //    void  on_nenet_param_mini_spiking_potential_magnitude();
@@ -63,7 +71,6 @@ public slots:
 //    void  on_nenet_param_output_terminal_velocity_max_magnitude();
 //    void  on_nenet_param_output_terminal_velocity_min_magnitude();
 
-//    void on_selection_changed();
 
 private:
 
@@ -86,6 +93,8 @@ private:
     QTabWidget*  m_tabs;
 
     window_tabs::tab_draw::widgets  m_tab_draw_widgets;
+    window_tabs::tab_network::widgets  m_tab_network_widgets;
+    window_tabs::tab_selected::widgets  m_tab_selected_widgets;
 
     status_bar  m_status_bar;
 

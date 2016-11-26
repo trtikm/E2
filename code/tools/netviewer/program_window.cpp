@@ -16,8 +16,8 @@ namespace tab_names { namespace {
 
 
 inline std::string  DRAW() noexcept { return "Draw"; }
-//inline std::string  NENET() noexcept { return "Nenet"; }
-//inline std::string  SELECTED() noexcept { return "Selected"; }
+inline std::string  NETWORK() noexcept { return "Network"; }
+inline std::string  SELECTED() noexcept { return "Selected"; }
 
 
 }}
@@ -81,6 +81,8 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
         )
 
     , m_tab_draw_widgets(this)
+    , m_tab_network_widgets(this)
+    , m_tab_selected_widgets(this)
 
     , m_status_bar(this)
 
@@ -254,6 +256,10 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 
     m_tabs->addTab( window_tabs::tab_draw::make_draw_tab_content(m_tab_draw_widgets),
                     QString(tab_names::DRAW().c_str()) );
+    m_tabs->addTab( window_tabs::tab_network::make_network_tab_content(m_tab_network_widgets),
+                    QString(tab_names::NETWORK().c_str()) );
+    m_tabs->addTab( window_tabs::tab_selected::make_selected_tab_content(m_tab_selected_widgets),
+                    QString(tab_names::SELECTED().c_str()) );
 
     // Building Nenet tab
 //    {
@@ -364,22 +370,6 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 //        m_tabs->addTab(nenet_tab, QString(tab_names::NENET().c_str()));
 //    }
 
-    // Building Selected tab
-//    {
-//        QWidget* const  selected_tab = new QWidget;
-//        {
-//            QVBoxLayout* const layout = new QVBoxLayout;
-//            {
-//                m_selected_props->setReadOnly(true);
-//                layout->addWidget(m_selected_props);
-//            }
-//            selected_tab->setLayout(layout);
-//            //layout->addStretch(1);
-//        }
-//        m_tabs->addTab(selected_tab, QString(tab_names::SELECTED().c_str()));
-//        m_glwindow.register_listener(simulator_notifications::selection_changed(), { &program_window::on_selection_changed,this });
-//    }
-
     make_status_bar_content(m_status_bar);
 
     if (ptree().get("window.show_maximised", false))
@@ -427,8 +417,10 @@ void program_window::timerEvent(QTimerEvent* const event)
 
     m_status_bar.update();
 
-//    if (qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex())) == tab_names::SELECTED())
-//        on_selection_changed();
+    if (qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex())) == tab_names::NETWORK())
+        on_network_info_text_update();
+    else if (qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex())) == tab_names::SELECTED())
+        on_selection_update();
 
     if (m_focus_just_received)
     {
@@ -450,6 +442,8 @@ void  program_window::closeEvent(QCloseEvent* const  event)
     ptree().put("window.show_maximised", isMaximized());
 
     m_tab_draw_widgets.save();
+    m_tab_network_widgets.save();
+    m_tab_selected_widgets.save();
 
     ptree().put("simulation.paused", m_glwindow.call_now(&simulator::paused));
     ptree().put("simulation.duration_of_second", m_glwindow.call_now(&simulator::desired_network_to_real_time_ratio));
@@ -477,10 +471,14 @@ void  program_window::on_tab_changed(int const  tab_index)
     {
         // Nothing to do...
     }
-//    else if (tab_name == tab_names::SELECTED())
-//    {
-//        on_selection_changed();
-//    }
+    else if (tab_name == tab_names::NETWORK())
+    {
+        on_network_info_text_update();
+    }
+    else if (tab_name == tab_names::SELECTED())
+    {
+        on_selection_update();
+    }
 }
 
 //void  program_window::on_nenet_param_simulation_speed_changed()
@@ -546,10 +544,4 @@ void  program_window::on_tab_changed(int const  tab_index)
 //void  program_window::on_nenet_param_output_terminal_velocity_min_magnitude()
 //{
 //    m_glwindow.call_later(&simulator::set_output_terminal_velocity_min_magnitude, m_nenet_param_output_terminal_velocity_min_magnitude->text().toFloat());
-//}
-
-//void program_window::on_selection_changed()
-//{
-//    std::string const  text = m_glwindow.call_now(&simulator::get_selected_info_text);
-//    m_selected_props->setText(QString(text.c_str()));
 //}

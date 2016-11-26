@@ -53,6 +53,10 @@ struct simulator : public qtgl::real_time_simulator
     float_64_bit  desired_network_to_real_time_ratio() const { return m_desired_network_to_real_time_ratio; }
     void set_desired_network_to_real_time_ratio(float_64_bit const  value);
 
+    /// Miscelanous methods
+    std::string  get_network_info_text() const;
+    std::string  get_selected_info_text() const;
+
     /// Debugging stuff
     void  dbg_set_camera_far_plane(float_32_bit const  far_plane)
     { m_dbg_network_camera.set_far_plane(far_plane);
@@ -107,8 +111,6 @@ struct simulator : public qtgl::real_time_simulator
 
 //    void  set_output_terminal_velocity_max_magnitude(scalar const  value) { nenet()->get_params()->set_output_terminal_velocity_max_magnitude(value); }
 //    void  set_output_terminal_velocity_min_magnitude(scalar const  value) { nenet()->get_params()->set_output_terminal_velocity_min_magnitude(value); }
-
-//    std::string  get_selected_info_text() const;
 
 private:
 
