@@ -15,7 +15,6 @@
 namespace tab_names { namespace {
 
 
-inline std::string  CAMERA() noexcept { return "Camera"; }
 inline std::string  DRAW() noexcept { return "Draw"; }
 //inline std::string  NENET() noexcept { return "Nenet"; }
 //inline std::string  SELECTED() noexcept { return "Selected"; }
@@ -82,7 +81,6 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
         )
 
     , m_tab_draw_widgets(this)
-    , m_tab_camera_widgets(this)
 
     , m_status_bar(this)
 
@@ -254,8 +252,6 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     m_splitter->addWidget(m_gl_window_widget);
     m_splitter->addWidget(m_tabs);
 
-    m_tabs->addTab( window_tabs::tab_camera::make_camera_tab_content(m_tab_camera_widgets),
-                    QString(tab_names::CAMERA().c_str()) );
     m_tabs->addTab( window_tabs::tab_draw::make_draw_tab_content(m_tab_draw_widgets),
                     QString(tab_names::DRAW().c_str()) );
 
@@ -454,7 +450,6 @@ void  program_window::closeEvent(QCloseEvent* const  event)
     ptree().put("window.show_maximised", isMaximized());
 
     m_tab_draw_widgets.save();
-    m_tab_camera_widgets.save();
 
     ptree().put("simulation.paused", m_glwindow.call_now(&simulator::paused));
     ptree().put("simulation.duration_of_second", m_glwindow.call_now(&simulator::desired_network_to_real_time_ratio));
@@ -478,11 +473,7 @@ void  program_window::closeEvent(QCloseEvent* const  event)
 void  program_window::on_tab_changed(int const  tab_index)
 {
     std::string const  tab_name = qtgl::to_string(m_tabs->tabText(tab_index));
-    if (tab_name == tab_names::CAMERA())
-    {
-        // Nothing to do...
-    }
-    else if (tab_name == tab_names::DRAW())
+    if (tab_name == tab_names::DRAW())
     {
         // Nothing to do...
     }
