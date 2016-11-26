@@ -1194,19 +1194,59 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
         }
         if (m_batches_selection.empty())
         {
-            vector3 const  sector_center = netlab::spiker_sector_centre(network()->properties()->layer_props(),
-                                                                        m_selected_object_stats->indices());
-            vector3 const  sector_shift = netlab::shift_from_low_corner_of_spiker_sector_to_center(
-                                                    network()->properties()->layer_props(),
-                                                    m_selected_object_stats->indices());
-            m_batches_selection.push_back(
-                    qtgl::create_wireframe_box(sector_center - sector_shift,sector_center + sector_shift,
-                                               get_program_options()->dataRoot(),
-                                               "/netviewer/selected_spiker_sector_bbox")
-                    );
+            {
+                vector3 const  sector_center = netlab::spiker_sector_centre(network()->properties()->layer_props(),
+                                                                            m_selected_object_stats->indices());
+                vector3 const  sector_shift = netlab::shift_from_low_corner_of_spiker_sector_to_center(
+                                                        network()->properties()->layer_props(),
+                                                        m_selected_object_stats->indices());
+                m_batches_selection.push_back(
+                        qtgl::create_wireframe_box(sector_center - sector_shift,sector_center + sector_shift,
+                                                   get_program_options()->dataRoot(),
+                                                   "/netviewer/selected_spiker_sector_bbox")
+                        );
+            }
+            {
+                vector3 const&  area_center =
+                        network()->get_center_of_movement_area(m_selected_object_stats->indices().layer_index(),
+                                                               m_selected_object_stats->indices().object_index());
+                netlab::layer_index_type const  area_layer_index =
+                        network()->properties()->find_layer_index(area_center(2));
+                vector3 const  area_shift =
+                        0.5f * network()->properties()->layer_props().at(m_selected_object_stats->indices().layer_index())
+                                                                     .size_of_ship_movement_area_in_meters(area_layer_index);
+                m_batches_selection.push_back(
+                        qtgl::create_wireframe_box(area_center - area_shift,area_center + area_shift,
+                                                   get_program_options()->dataRoot(),
+                                                   "/netviewer/selected_spiker_ship_movement_area")
+                        );
+                m_batches_selection.push_back(
+                        qtgl::create_lines3d(
+                                {
+                                    std::pair<vector3,vector3>(
+                                        area_center - vector3(area_shift(0),0.0f,0.0f),
+                                        area_center + vector3(area_shift(0),0.0f,0.0f)
+                                        ),
+                                    std::pair<vector3,vector3>(
+                                        area_center - vector3{0.0f,area_shift(1),0.0f},
+                                        area_center + vector3{0.0f,area_shift(1),0.0f}
+                                        ),
+                                    std::pair<vector3,vector3>(
+                                        area_center - vector3{0.0f,0.0f,area_shift(2)},
+                                        area_center + vector3{0.0f,0.0f,area_shift(2)}
+                                        )
+                                },
+                                vector3{ 0.5f, 0.25f, 0.5f },
+                                get_program_options()->dataRoot(),
+                                "/netviewer/selected_spiker_ship_movement_area_center"
+                                )
+                        );
+            }
         }
         static std::vector<vector4> const colours = {
             vector4{ 0.5f, 0.5f, 0.5f, 1.0f },
+            vector4{ 0.5f, 0.25f, 0.5f, 1.0f },
+            vector4{ 0.5f, 0.25f, 0.5f, 1.0f },
         };
         INVARIANT(m_batches_selection.size() == colours.size());
         for (std::size_t  i = 0ULL; i != colours.size(); ++i)
@@ -1374,6 +1414,62 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                     angeo::coordinate_system(vector3_zero(), quaternion_identity())
                     );
                 draw_state = batch->draw_state();
+            }
+        }
+        if (m_batches_selection.empty())
+        {
+            netlab::network_layer_props const&  props =
+                    network()->properties()->layer_props().at(m_selected_object_stats->indices().layer_index());
+            vector3 const&  area_center =
+                    network()->get_center_of_movement_area(
+                            m_selected_object_stats->indices().layer_index(),
+                            props.spiker_index_from_ship_index(m_selected_object_stats->indices().object_index()));
+            netlab::layer_index_type const  area_layer_index =
+                    network()->properties()->find_layer_index(area_center(2));
+            vector3 const  area_shift = 0.5f * props.size_of_ship_movement_area_in_meters(area_layer_index);
+            m_batches_selection.push_back(
+                    qtgl::create_wireframe_box(area_center - area_shift,area_center + area_shift,
+                                               get_program_options()->dataRoot(),
+                                               "/netviewer/selected_ship_movement_area")
+                    );
+            m_batches_selection.push_back(
+                    qtgl::create_lines3d(
+                            {
+                                std::pair<vector3,vector3>(
+                                    area_center - vector3(area_shift(0),0.0f,0.0f),
+                                    area_center + vector3(area_shift(0),0.0f,0.0f)
+                                    ),
+                                std::pair<vector3,vector3>(
+                                    area_center - vector3{0.0f,area_shift(1),0.0f},
+                                    area_center + vector3{0.0f,area_shift(1),0.0f}
+                                    ),
+                                std::pair<vector3,vector3>(
+                                    area_center - vector3{0.0f,0.0f,area_shift(2)},
+                                    area_center + vector3{0.0f,0.0f,area_shift(2)}
+                                    )
+                            },
+                            vector3{ 0.5f, 0.25f, 0.5f },
+                            get_program_options()->dataRoot(),
+                            "/netviewer/selected_ship_movement_area_center"
+                            )
+                    );
+        }
+        static std::vector<vector4> const colours = {
+            vector4{ 0.5f, 0.25f, 0.5f, 1.0f },
+            vector4{ 0.5f, 0.25f, 0.5f, 1.0f },
+        };
+        INVARIANT(m_batches_selection.size() == colours.size());
+        for (std::size_t  i = 0ULL; i != colours.size(); ++i)
+        {
+            if (qtgl::make_current(*m_batches_selection.at(i), *draw_state))
+            {
+                render_batch(
+                    *m_batches_selection.at(i),
+                    view_projection_matrix,
+                    angeo::coordinate_system(vector3_zero(), quaternion_identity()),
+                    colours.at(i)
+                );
+                draw_state = m_batches_selection.at(i)->draw_state();
             }
         }
     }
