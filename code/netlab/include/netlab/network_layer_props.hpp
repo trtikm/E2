@@ -4,6 +4,7 @@
 #   include <netlab/ship_controller.hpp>
 #   include <netlab/network_indices.hpp>
 #   include <angeo/tensor_math.hpp>
+#   include <vector>
 #   include <memory>
 
 namespace netlab {
@@ -35,12 +36,9 @@ struct  network_layer_props
 
             vector3 const&  low_corner_of_docks,
 
-            float_32_bit const  size_of_ship_movement_area_along_x_axis_in_meters,
-            float_32_bit const  size_of_ship_movement_area_along_y_axis_in_meters,
-            float_32_bit const  size_of_ship_movement_area_along_c_axis_in_meters,
+            std::vector<vector3> const&  size_of_ship_movement_area_in_meters,
 
-            float_32_bit const  min_speed_of_ship_in_meters_per_second,
-            float_32_bit const  max_speed_of_ship_in_meters_per_second,
+            std::vector<vector2> const&  speed_limits_of_ship_in_meters_per_second,
 
             bool const  are_spikers_excitatory,
 
@@ -86,12 +84,16 @@ struct  network_layer_props
     vector3 const&  low_corner_of_ships() const noexcept { return m_low_corner_of_ships; }
     vector3 const&  high_corner_of_ships() const noexcept { return m_high_corner_of_ships; }
 
-    float_32_bit  size_of_ship_movement_area_along_x_axis_in_meters() const noexcept { return m_size_of_ship_movement_area_along_x_axis_in_meters; }
-    float_32_bit  size_of_ship_movement_area_along_y_axis_in_meters() const noexcept { return m_size_of_ship_movement_area_along_y_axis_in_meters; }
-    float_32_bit  size_of_ship_movement_area_along_c_axis_in_meters() const noexcept { return m_size_of_ship_movement_area_along_c_axis_in_meters; }
+    float_32_bit  size_of_ship_movement_area_along_x_axis_in_meters(layer_index_type const  layer_index) const;
+    float_32_bit  size_of_ship_movement_area_along_y_axis_in_meters(layer_index_type const  layer_index) const;
+    float_32_bit  size_of_ship_movement_area_along_c_axis_in_meters(layer_index_type const  layer_index) const;
+    vector3 const&  size_of_ship_movement_area_in_meters(layer_index_type const  layer_index) const;
+    std::vector<vector3> const&  sizes_of_ship_movement_areas_in_meters() const noexcept { return m_size_of_ship_movement_area_in_meters; }
 
-    float_32_bit  min_speed_of_ship_in_meters_per_second() const noexcept { return m_min_speed_of_ship_in_meters_per_second; }
-    float_32_bit  max_speed_of_ship_in_meters_per_second() const noexcept { return m_max_speed_of_ship_in_meters_per_second; }
+    float_32_bit  min_speed_of_ship_in_meters_per_second(layer_index_type const  layer_index) const;
+    float_32_bit  max_speed_of_ship_in_meters_per_second(layer_index_type const  layer_index) const;
+    vector2 const&  speed_limits_of_ship_in_meters_per_second(layer_index_type const  layer_index) const;
+    std::vector<vector2> const&  speed_limits_of_ship_in_meters_per_second() const noexcept { return m_speed_limits_of_ship_in_meters_per_second; }
 
     bool  are_spikers_excitatory() const noexcept { return m_are_spikers_excitatory; }
 
@@ -173,12 +175,9 @@ private:
     vector3  m_low_corner_of_ships;
     vector3  m_high_corner_of_ships;
 
-    float_32_bit  m_size_of_ship_movement_area_along_x_axis_in_meters;
-    float_32_bit  m_size_of_ship_movement_area_along_y_axis_in_meters;
-    float_32_bit  m_size_of_ship_movement_area_along_c_axis_in_meters;
+    std::vector<vector3>  m_size_of_ship_movement_area_in_meters;
 
-    float_32_bit  m_min_speed_of_ship_in_meters_per_second;
-    float_32_bit  m_max_speed_of_ship_in_meters_per_second;
+    std::vector<vector2>  m_speed_limits_of_ship_in_meters_per_second;
 
     bool  m_are_spikers_excitatory;
 

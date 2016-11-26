@@ -22,7 +22,8 @@ struct  ship_controller_flat_space : public netlab::ship_controller
             vector3 const&  ship_position,              //!< Coordinates in meters.
             vector3 const&  ship_velocity,              //!< In meters per second.
             vector3 const&  dock_position,              //!< Coordinates in meters.
-            netlab::network_layer_props const&  layer_props,
+            netlab::layer_index_type const  home_layer_index,//!< Index of layer where is the spiker the ship belongs to.
+            netlab::layer_index_type const  area_layer_index,//!< Index of layer where is the movement area in which the ship moves.
             netlab::network_props const&  props
             ) const;
 
@@ -34,7 +35,8 @@ struct  ship_controller_flat_space : public netlab::ship_controller
             vector3 const&  other_ship_velocity,        //!< In meters per second.
             vector3 const&  nearest_dock_position,      //!< Coordinates in meters. It is nearest to the ship, not to the other one.
             bool const  both_ship_and_dock_belongs_to_same_spiker,
-            netlab::network_layer_props const&  layer_props,
+            netlab::layer_index_type const  home_layer_index,//!< Index of layer where is the spiker the ship belongs to.
+            netlab::layer_index_type const  area_layer_index,//!< Index of layer where is the movement area in which the ship moves.
             netlab::network_props const&  props
             ) const;
 

@@ -37,15 +37,16 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
         {
             float_32_bit const  low_center_x =
                     spiker_layer_props.low_corner_of_ships()(0)
-                        + 0.5f * spiker_layer_props.size_of_ship_movement_area_along_x_axis_in_meters();
+                        + 0.5f * spiker_layer_props.size_of_ship_movement_area_along_x_axis_in_meters(area_layer_index);
             float_32_bit const  high_center_x =
                     spiker_layer_props.high_corner_of_ships()(0)
-                        - 0.5f * spiker_layer_props.size_of_ship_movement_area_along_x_axis_in_meters();
+                        - 0.5f * spiker_layer_props.size_of_ship_movement_area_along_x_axis_in_meters(area_layer_index);
 
             float_32_bit const  raw_low0_x = spiker_position(0) - max_distance_x.at(area_layer_index);
             float_32_bit const  raw_high0_x =
                     spiker_position(0) - 0.5f * (spiker_layer_props.distance_of_spikers_along_x_axis_in_meters() +
-                                                 spiker_layer_props.size_of_ship_movement_area_along_x_axis_in_meters());
+                                                 spiker_layer_props.size_of_ship_movement_area_along_x_axis_in_meters(
+                                                        area_layer_index));
 
             ASSUMPTION(raw_low0_x <= raw_high0_x);
 
@@ -58,7 +59,8 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
 
             float_32_bit const  raw_low1_x =
                     spiker_position(0) + 0.5f * (spiker_layer_props.distance_of_spikers_along_x_axis_in_meters() +
-                                                 spiker_layer_props.size_of_ship_movement_area_along_x_axis_in_meters());
+                                                 spiker_layer_props.size_of_ship_movement_area_along_x_axis_in_meters(
+                                                        area_layer_index));
             float_32_bit const  raw_high1_x = spiker_position(0) + max_distance_x.at(area_layer_index);
 
             ASSUMPTION(raw_low1_x <= raw_high1_x);
@@ -82,15 +84,16 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
         {
             float_32_bit const  low_center_y =
                     spiker_layer_props.low_corner_of_ships()(1)
-                        + 0.5f * spiker_layer_props.size_of_ship_movement_area_along_y_axis_in_meters();
+                        + 0.5f * spiker_layer_props.size_of_ship_movement_area_along_y_axis_in_meters(area_layer_index);
             float_32_bit const  high_center_y =
                     spiker_layer_props.high_corner_of_ships()(1)
-                        - 0.5f * spiker_layer_props.size_of_ship_movement_area_along_y_axis_in_meters();
+                        - 0.5f * spiker_layer_props.size_of_ship_movement_area_along_y_axis_in_meters(area_layer_index);
 
             float_32_bit const  raw_low0_y = spiker_position(1) - max_distance_y.at(area_layer_index);
             float_32_bit const  raw_high0_y =
                     spiker_position(1) - 0.5f * (spiker_layer_props.distance_of_spikers_along_y_axis_in_meters() +
-                                                 spiker_layer_props.size_of_ship_movement_area_along_y_axis_in_meters());
+                                                 spiker_layer_props.size_of_ship_movement_area_along_y_axis_in_meters(
+                                                        area_layer_index));
 
             ASSUMPTION(raw_low0_y <= raw_high0_y);
 
@@ -103,7 +106,8 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
 
             float_32_bit const  raw_low1_y =
                     spiker_position(1) + 0.5f * (spiker_layer_props.distance_of_spikers_along_y_axis_in_meters() +
-                                                 spiker_layer_props.size_of_ship_movement_area_along_y_axis_in_meters());
+                                                 spiker_layer_props.size_of_ship_movement_area_along_y_axis_in_meters(
+                                                        area_layer_index));
             float_32_bit const  raw_high1_y = spiker_position(1) + max_distance_y.at(area_layer_index);
 
             ASSUMPTION(raw_low1_y <= raw_high1_y);
@@ -127,15 +131,16 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
         {
             float_32_bit const  low_center_c =
                     spiker_layer_props.low_corner_of_ships()(2)
-                        + 0.5f * spiker_layer_props.size_of_ship_movement_area_along_c_axis_in_meters();
+                        + 0.5f * spiker_layer_props.size_of_ship_movement_area_along_c_axis_in_meters(area_layer_index);
             float_32_bit const  high_center_c =
                     spiker_layer_props.high_corner_of_ships()(2)
-                        - 0.5f * spiker_layer_props.size_of_ship_movement_area_along_c_axis_in_meters();
+                        - 0.5f * spiker_layer_props.size_of_ship_movement_area_along_c_axis_in_meters(area_layer_index);
 
             float_32_bit const  raw_low0_c = spiker_position(2) - max_distance_c.at(area_layer_index);
             float_32_bit const  raw_high0_c =
                     spiker_position(2) - 0.5f * (spiker_layer_props.distance_of_spikers_along_c_axis_in_meters() +
-                                                 spiker_layer_props.size_of_ship_movement_area_along_c_axis_in_meters());
+                                                 spiker_layer_props.size_of_ship_movement_area_along_c_axis_in_meters(
+                                                        area_layer_index));
 
             ASSUMPTION(raw_low0_c <= raw_high0_c);
 
@@ -148,7 +153,8 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
 
             float_32_bit const  raw_low1_c =
                     spiker_position(2) + 0.5f * (spiker_layer_props.distance_of_spikers_along_c_axis_in_meters() +
-                                                 spiker_layer_props.size_of_ship_movement_area_along_c_axis_in_meters());
+                                                 spiker_layer_props.size_of_ship_movement_area_along_c_axis_in_meters(
+                                                        area_layer_index));
             float_32_bit const  raw_high1_c = spiker_position(2) + max_distance_c.at(area_layer_index);
 
             ASSUMPTION(raw_low1_c <= raw_high1_c);
@@ -188,49 +194,39 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
                 area_layer_props.low_corner_of_ships()(1) + coef_y *
                     (area_layer_props.high_corner_of_ships()(1) - area_layer_props.low_corner_of_ships()(1));
 
-        float_32_bit const  raw_area_center_x =
-                projected_spiker_position_x +
-                get_random_float_32_bit_in_range(
-                        -max_distance_x.at(area_layer_index),
-                        max_distance_x.at(area_layer_index),
-                        position_generator
-                        );
-        float_32_bit const  raw_area_center_y =
-                projected_spiker_position_y +
-                get_random_float_32_bit_in_range(
-                        -max_distance_y.at(area_layer_index),
-                        max_distance_y.at(area_layer_index),
-                        position_generator
-                        );
-
         float_32_bit const  low_center_x =
-                area_layer_props.low_corner_of_ships()(0)
-                    + 0.5f * area_layer_props.size_of_ship_movement_area_along_x_axis_in_meters();
+                std::max(area_layer_props.low_corner_of_ships()(0)
+                            + 0.5f * spiker_layer_props.size_of_ship_movement_area_along_x_axis_in_meters(area_layer_index),
+                         projected_spiker_position_x - max_distance_x.at(area_layer_index)
+                         );
         float_32_bit const  high_center_x =
-                area_layer_props.high_corner_of_ships()(0)
-                    - 0.5f * area_layer_props.size_of_ship_movement_area_along_x_axis_in_meters();
+                std::min(area_layer_props.high_corner_of_ships()(0)
+                            - 0.5f * spiker_layer_props.size_of_ship_movement_area_along_x_axis_in_meters(area_layer_index),
+                         low_center_x + 2.0f * max_distance_x.at(area_layer_index)
+                         );
 
         float_32_bit const  low_center_y =
-                area_layer_props.low_corner_of_ships()(1)
-                    + 0.5f * area_layer_props.size_of_ship_movement_area_along_y_axis_in_meters();
+                std::max(area_layer_props.low_corner_of_ships()(1)
+                            + 0.5f * spiker_layer_props.size_of_ship_movement_area_along_y_axis_in_meters(area_layer_index),
+                         projected_spiker_position_y - max_distance_y.at(area_layer_index)
+                         );
         float_32_bit const  high_center_y =
-                area_layer_props.high_corner_of_ships()(1)
-                    - 0.5f * area_layer_props.size_of_ship_movement_area_along_y_axis_in_meters();
+                std::min(area_layer_props.high_corner_of_ships()(1)
+                            - 0.5f * spiker_layer_props.size_of_ship_movement_area_along_y_axis_in_meters(area_layer_index),
+                         low_center_y + 2.0f * max_distance_y.at(area_layer_index)
+                         );
 
-        area_center(0) = (raw_area_center_x < low_center_x)  ? low_center_x      :
-                         (raw_area_center_x > high_center_x) ? high_center_x     :
-                                                               raw_area_center_x ;
-        area_center(1) = (raw_area_center_y < low_center_y)  ? low_center_y      :
-                         (raw_area_center_y > high_center_y) ? high_center_y     :
-                                                               raw_area_center_y ;
-        area_center(2) =
-                get_random_float_32_bit_in_range(
-                        area_layer_props.low_corner_of_ships()(2)
-                            + 0.5f * area_layer_props.size_of_ship_movement_area_along_c_axis_in_meters(),
-                        area_layer_props.high_corner_of_ships()(2)
-                            - 0.5f * area_layer_props.size_of_ship_movement_area_along_c_axis_in_meters(),
-                        position_generator
-                        );
+        float_32_bit const  low_center_c =
+                area_layer_props.low_corner_of_ships()(2)
+                    + 0.5f * spiker_layer_props.size_of_ship_movement_area_along_c_axis_in_meters(area_layer_index);
+
+        float_32_bit const  high_center_c =
+                area_layer_props.high_corner_of_ships()(2)
+                    - 0.5f * spiker_layer_props.size_of_ship_movement_area_along_c_axis_in_meters(area_layer_index);
+
+        area_center(0) = get_random_float_32_bit_in_range(low_center_x,high_center_x,position_generator);
+        area_center(0) = get_random_float_32_bit_in_range(low_center_y,high_center_y,position_generator);
+        area_center(2) = get_random_float_32_bit_in_range(low_center_c,high_center_c,position_generator);
     }
 }
 

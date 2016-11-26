@@ -7,6 +7,12 @@
 namespace netlab {
 
 
+/**
+ *
+ *
+ *
+ *
+ */
 struct  tracked_network_object_stats
 {
     explicit tracked_network_object_stats(compressed_layer_and_object_indices const  indices) noexcept

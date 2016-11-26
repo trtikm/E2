@@ -22,12 +22,9 @@ network_layer_props::network_layer_props(
 
         vector3 const&  low_corner_of_docks,
 
-        float_32_bit const  size_of_ship_movement_area_along_x_axis_in_meters,
-        float_32_bit const  size_of_ship_movement_area_along_y_axis_in_meters,
-        float_32_bit const  size_of_ship_movement_area_along_c_axis_in_meters,
+        std::vector<vector3> const&  size_of_ship_movement_area_in_meters,
 
-        float_32_bit const  min_speed_of_ship_in_meters_per_second,
-        float_32_bit const  max_speed_of_ship_in_meters_per_second,
+        std::vector<vector2> const&  speed_limits_of_ship_in_meters_per_second,
 
         bool const  are_spikers_excitatory,
 
@@ -99,12 +96,9 @@ network_layer_props::network_layer_props(
                                                   m_distance_of_docks_in_meters)
           )
 
-    , m_size_of_ship_movement_area_along_x_axis_in_meters(size_of_ship_movement_area_along_x_axis_in_meters)
-    , m_size_of_ship_movement_area_along_y_axis_in_meters(size_of_ship_movement_area_along_y_axis_in_meters)
-    , m_size_of_ship_movement_area_along_c_axis_in_meters(size_of_ship_movement_area_along_c_axis_in_meters)
+    , m_size_of_ship_movement_area_in_meters(size_of_ship_movement_area_in_meters)
 
-    , m_min_speed_of_ship_in_meters_per_second(min_speed_of_ship_in_meters_per_second)
-    , m_max_speed_of_ship_in_meters_per_second(max_speed_of_ship_in_meters_per_second)
+    , m_speed_limits_of_ship_in_meters_per_second(speed_limits_of_ship_in_meters_per_second)
 
     , m_are_spikers_excitatory(are_spikers_excitatory)
 
@@ -146,21 +140,50 @@ network_layer_props::network_layer_props(
     ASSUMPTION(m_low_corner_of_spikers(0) <= m_high_corner_of_spikers(0));
     ASSUMPTION(m_low_corner_of_spikers(1) <= m_high_corner_of_spikers(1));
     ASSUMPTION(m_low_corner_of_spikers(2) <= m_high_corner_of_spikers(2));
+}
 
-    ASSUMPTION(m_size_of_ship_movement_area_along_x_axis_in_meters > 0.0f);
-    ASSUMPTION(m_size_of_ship_movement_area_along_x_axis_in_meters <=
-                    m_high_corner_of_docks(0) - m_low_corner_of_docks(0) + m_distance_of_docks_in_meters);
 
-    ASSUMPTION(m_size_of_ship_movement_area_along_y_axis_in_meters > 0.0f);
-    ASSUMPTION(m_size_of_ship_movement_area_along_y_axis_in_meters <=
-                    m_high_corner_of_docks(1) - m_low_corner_of_docks(1) + m_distance_of_docks_in_meters);
+float_32_bit  network_layer_props::size_of_ship_movement_area_along_x_axis_in_meters(layer_index_type const  layer_index) const
+{
+    ASSUMPTION(layer_index < m_size_of_ship_movement_area_in_meters.size());
+    return m_size_of_ship_movement_area_in_meters.at(layer_index)(0);
+}
 
-    ASSUMPTION(m_size_of_ship_movement_area_along_c_axis_in_meters > 0.0f);
-    ASSUMPTION(m_size_of_ship_movement_area_along_c_axis_in_meters <=
-                    m_high_corner_of_docks(2) - m_low_corner_of_docks(2) + m_distance_of_docks_in_meters);
+float_32_bit  network_layer_props::size_of_ship_movement_area_along_y_axis_in_meters(layer_index_type const  layer_index) const
+{
+    ASSUMPTION(layer_index < m_size_of_ship_movement_area_in_meters.size());
+    return m_size_of_ship_movement_area_in_meters.at(layer_index)(1);
+}
 
-    ASSUMPTION(m_min_speed_of_ship_in_meters_per_second >= 0.0f);
-    ASSUMPTION(m_max_speed_of_ship_in_meters_per_second >= m_min_speed_of_ship_in_meters_per_second);
+float_32_bit  network_layer_props::size_of_ship_movement_area_along_c_axis_in_meters(layer_index_type const  layer_index) const
+{
+    ASSUMPTION(layer_index < m_size_of_ship_movement_area_in_meters.size());
+    return m_size_of_ship_movement_area_in_meters.at(layer_index)(2);
+}
+
+vector3 const&  network_layer_props::size_of_ship_movement_area_in_meters(layer_index_type const  layer_index) const
+{
+    ASSUMPTION(layer_index < m_size_of_ship_movement_area_in_meters.size());
+    return m_size_of_ship_movement_area_in_meters.at(layer_index);
+}
+
+
+float_32_bit  network_layer_props::min_speed_of_ship_in_meters_per_second(layer_index_type const  layer_index) const
+{
+    ASSUMPTION(layer_index < m_speed_limits_of_ship_in_meters_per_second.size());
+    return m_speed_limits_of_ship_in_meters_per_second.at(layer_index)(0);
+}
+
+float_32_bit  network_layer_props::max_speed_of_ship_in_meters_per_second(layer_index_type const  layer_index) const
+{
+    ASSUMPTION(layer_index < m_speed_limits_of_ship_in_meters_per_second.size());
+    return m_speed_limits_of_ship_in_meters_per_second.at(layer_index)(1);
+}
+
+vector2 const&  network_layer_props::speed_limits_of_ship_in_meters_per_second(layer_index_type const  layer_index) const
+{
+    ASSUMPTION(layer_index < m_speed_limits_of_ship_in_meters_per_second.size());
+    return m_speed_limits_of_ship_in_meters_per_second.at(layer_index);
 }
 
 

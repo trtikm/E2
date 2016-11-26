@@ -43,14 +43,15 @@ std::shared_ptr<netlab::network_props>  get_network_props()
 
                 10.0f,  //!< distance_of_docks_in_meters
 
-                vector3{-45.0f,-30.0f,5.0f}, // vector3_zero(),  //!< low_corner_of_docks
+                vector3{-45.0f,-30.0f,5.0f},//vector3_zero(),  //!< low_corner_of_docks
 
-                90.0f,  //!< size_of_ship_movement_area_along_x_axis_in_meters
-                60.0f,  //!< size_of_ship_movement_area_along_y_axis_in_meters
-                40.0f,  //!< size_of_ship_movement_area_along_c_axis_in_meters
+                {
+                    {90.0f, 60.0f, 40.0f},  //!< size_of_ship_movement_area_in_meters(0)
+                },
 
-                0.5f,   //!< min_speed_of_ship_in_meters_per_second
-                5.0f,   //!< max_speed_of_ship_in_meters_per_second
+                {
+                    { 0.5f, 5.0f },     //!< speed_limits_of_ship_in_meters_per_second(0)
+                },
 
                 true,   //!< are_spikers_excitatory
 
@@ -244,7 +245,8 @@ struct  initialiser_of_ships_in_movement_areas : public netlab::initialiser_of_s
 {
     initialiser_of_ships_in_movement_areas();
 
-    void  on_next_layer(netlab::layer_index_type const  layer_index, netlab::network_props const&  props) { reset(random_generator()); }
+    void  on_next_layer(netlab::layer_index_type const  layer_index, netlab::network_props const&  props)
+    { reset(random_generator()); }
 
     void  on_next_area(
             netlab::layer_index_type const  layer_index,
@@ -256,7 +258,9 @@ struct  initialiser_of_ships_in_movement_areas : public netlab::initialiser_of_s
     void  compute_ship_position_and_velocity_in_movement_area(
             vector3 const&  center,
             natural_32_bit const  ship_index_in_the_area,
-            netlab::network_layer_props const&  layer_props,
+            netlab::layer_index_type const  home_layer_index,
+            netlab::layer_index_type const  area_layer_index,
+            netlab::network_props const&  props,
             netlab::ship&  ship_reference
             );
 
@@ -274,23 +278,27 @@ initialiser_of_ships_in_movement_areas::initialiser_of_ships_in_movement_areas()
 void  initialiser_of_ships_in_movement_areas::compute_ship_position_and_velocity_in_movement_area(
         vector3 const&  center,
         natural_32_bit const  ship_index_in_the_area,
-        netlab::network_layer_props const&  layer_props,
+        netlab::layer_index_type const  home_layer_index,
+        netlab::layer_index_type const  area_layer_index,
+        netlab::network_props const&  props,
         netlab::ship&  ship_reference
         )
 {
     (void)ship_index_in_the_area;
 
+    netlab::network_layer_props const&  layer_props = props.layer_props().at(home_layer_index);
+
     compute_random_ship_position_in_movement_area(
             center,
-            0.5f * layer_props.size_of_ship_movement_area_along_x_axis_in_meters(),
-            0.5f * layer_props.size_of_ship_movement_area_along_y_axis_in_meters(),
-            0.5f * layer_props.size_of_ship_movement_area_along_c_axis_in_meters(),
+            0.5f * layer_props.size_of_ship_movement_area_along_x_axis_in_meters(area_layer_index),
+            0.5f * layer_props.size_of_ship_movement_area_along_y_axis_in_meters(area_layer_index),
+            0.5f * layer_props.size_of_ship_movement_area_along_c_axis_in_meters(area_layer_index),
             random_generator(),
             ship_reference.get_position_nonconst_reference()
             );
     compute_random_ship_velocity_in_movement_area(
-            layer_props.min_speed_of_ship_in_meters_per_second(),
-            layer_props.max_speed_of_ship_in_meters_per_second(),
+            layer_props.min_speed_of_ship_in_meters_per_second(area_layer_index),
+            layer_props.max_speed_of_ship_in_meters_per_second(area_layer_index),
             random_generator(),
             ship_reference.get_velocity_nonconst_reference()
             );
@@ -332,17 +340,20 @@ std::shared_ptr<netlab::network>  create_network()
 }
 
 
-std::shared_ptr<netlab::tracked_spiker_stats>  create_tracked_spiker_stats(netlab::compressed_layer_and_object_indices const  indices)
+std::shared_ptr<netlab::tracked_spiker_stats>  create_tracked_spiker_stats(
+        netlab::compressed_layer_and_object_indices const  indices)
 {
     return std::make_shared<tracked_spiker_stats>(indices);
 }
 
-std::shared_ptr<netlab::tracked_dock_stats>  create_tracked_dock_stats(netlab::compressed_layer_and_object_indices const  indices)
+std::shared_ptr<netlab::tracked_dock_stats>  create_tracked_dock_stats(
+        netlab::compressed_layer_and_object_indices const  indices)
 {
     return std::make_shared<tracked_dock_stats>(indices);
 }
 
-std::shared_ptr<netlab::tracked_ship_stats>  create_tracked_ship_stats(netlab::compressed_layer_and_object_indices const  indices)
+std::shared_ptr<netlab::tracked_ship_stats>  create_tracked_ship_stats(
+        netlab::compressed_layer_and_object_indices const  indices)
 {
     return std::make_shared<tracked_ship_stats>(indices);
 }

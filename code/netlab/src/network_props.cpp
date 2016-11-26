@@ -42,6 +42,32 @@ network_props::network_props(
     {
         ASSUMPTION(i == 0UL || m_max_coods_along_c_axis.at(i-1UL) <= m_layer_props.at(i).low_corner_of_docks()(2));
         m_max_coods_along_c_axis.at(i) = m_layer_props.at(i).high_corner_of_docks()(2);
+
+        ASSUMPTION(
+                [](std::vector<network_layer_props> const&  layer_props, natural_32_bit const  layer_index,
+                   float_32_bit const  update_time_step_in_seconds) -> bool {
+                    network_layer_props const&  props = layer_props.at(layer_index);
+                    if (props.sizes_of_ship_movement_areas_in_meters().size() != layer_props.size())
+                        return false;
+                    if (props.speed_limits_of_ship_in_meters_per_second().size() != layer_props.size())
+                        return false;
+                    for (natural_32_bit  i = 0UL; i < layer_props.size(); ++i)
+                    {
+                        for (natural_32_bit  j = 0UL; j != 3UL; ++j)
+                            if (props.size_of_ship_movement_area_in_meters(i)(j) <= 0.0f ||
+                                props.size_of_ship_movement_area_in_meters(i)(j) >
+                                    layer_props.at(i).high_corner_of_ships()(j) - layer_props.at(i).low_corner_of_ships()(j))
+                                return false;
+                        if (props.min_speed_of_ship_in_meters_per_second(i) < 0.0f ||
+                                props.max_speed_of_ship_in_meters_per_second(i) < props.min_speed_of_ship_in_meters_per_second(i))
+                            return false;
+                        if (props.max_speed_of_ship_in_meters_per_second(i) * update_time_step_in_seconds >
+                                0.1f * layer_props.at(i).distance_of_docks_in_meters())
+                            return false;
+                    }
+                    return true;
+                }(m_layer_props,i,m_update_time_step_in_seconds)
+                );
     }
 }
 

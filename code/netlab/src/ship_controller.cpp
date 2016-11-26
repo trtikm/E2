@@ -21,31 +21,34 @@ ship_controller::ship_controller(
 
 
 vector3  ship_controller::accelerate_into_space_box(
-            vector3 const&  ship_position,
-            vector3 const&  ship_velocity,
-            vector3 const&  space_box_center,
-            network_layer_props const&  layer_props,
+            vector3 const&  ship_position,              //!< Coordinates in meters.
+            vector3 const&  ship_velocity,              //!< In meters per second.
+            vector3 const&  space_box_center,           //!< Coordinates in meters.
+            layer_index_type const  home_layer_index,   //!< Index of layer where is the spiker the ship belongs to.
+            layer_index_type const  area_layer_index,   //!< Index of layer where is the movement area in which the ship moves.
             network_props const&  props
             ) const
 {
     TMPROF_BLOCK();
 
+    network_layer_props const&  layer_props = props.layer_props().at(home_layer_index);
+
     vector3 const  delta = 2.0f * (ship_position - space_box_center);
-    float_32_bit const  two_times_max_speed = 2.0f * layer_props.max_speed_of_ship_in_meters_per_second();
+    float_32_bit const  two_times_max_speed = 2.0f * layer_props.max_speed_of_ship_in_meters_per_second(area_layer_index);
 
     float_32_bit const  ax =
-        delta(0) >  layer_props.size_of_ship_movement_area_along_x_axis_in_meters() ? -two_times_max_speed :
-        delta(0) < -layer_props.size_of_ship_movement_area_along_x_axis_in_meters() ? two_times_max_speed :
+        delta(0) >  layer_props.size_of_ship_movement_area_along_x_axis_in_meters(area_layer_index) ? -two_times_max_speed :
+        delta(0) < -layer_props.size_of_ship_movement_area_along_x_axis_in_meters(area_layer_index) ? two_times_max_speed :
         0.0f;
 
     float_32_bit const  ay =
-        delta(1) >  layer_props.size_of_ship_movement_area_along_y_axis_in_meters() ? -two_times_max_speed :
-        delta(1) < -layer_props.size_of_ship_movement_area_along_y_axis_in_meters() ? two_times_max_speed :
+        delta(1) >  layer_props.size_of_ship_movement_area_along_y_axis_in_meters(area_layer_index) ? -two_times_max_speed :
+        delta(1) < -layer_props.size_of_ship_movement_area_along_y_axis_in_meters(area_layer_index) ? two_times_max_speed :
         0.0f;
 
     float_32_bit const  ac =
-        delta(2) >  layer_props.size_of_ship_movement_area_along_c_axis_in_meters() ? -two_times_max_speed :
-        delta(2) < -layer_props.size_of_ship_movement_area_along_c_axis_in_meters() ? two_times_max_speed :
+        delta(2) >  layer_props.size_of_ship_movement_area_along_c_axis_in_meters(area_layer_index) ? -two_times_max_speed :
+        delta(2) < -layer_props.size_of_ship_movement_area_along_c_axis_in_meters(area_layer_index) ? two_times_max_speed :
         0.0f;
 
     return{ ax, ay, ac };
@@ -55,16 +58,19 @@ vector3  ship_controller::accelerate_into_space_box(
 void  ship_controller::on_too_slow(
         vector3&  ship_velocity,                    //!< In meters per second.
         vector3 const&  ship_position,              //!< Coordinates in meters.
-        float_32_bit const  speed,                  //!< In meters per second.
+        float_32_bit const  speed,                  //!< In meters per second. Equals to lenght of 'ship_velocity'.
         vector3 const&  nearest_dock_position,
-        network_layer_props const&  layer_props,
+        layer_index_type const  home_layer_index,   //!< Index of layer where is the spiker the ship belongs to.
+        layer_index_type const  area_layer_index,   //!< Index of layer where is the movement area in which the ship moves.
         network_props const&  props
         ) const
 {
     vector3 const  dock_ship_delta_vector = nearest_dock_position - ship_position;
-    if (length_squared(dock_ship_delta_vector) > props.max_connection_distance_in_meters() * props.max_connection_distance_in_meters())
+    if (length_squared(dock_ship_delta_vector) > props.max_connection_distance_in_meters() *
+                                                 props.max_connection_distance_in_meters())
         angeo::get_random_vector_of_magnitude(
-                0.5f * (layer_props.min_speed_of_ship_in_meters_per_second() + layer_props.max_speed_of_ship_in_meters_per_second()),
+                0.5f * (props.layer_props().at(home_layer_index).min_speed_of_ship_in_meters_per_second(area_layer_index) +
+                        props.layer_props().at(home_layer_index).max_speed_of_ship_in_meters_per_second(area_layer_index)),
                 default_random_generator(),
                 ship_velocity
                 );
@@ -74,13 +80,15 @@ void  ship_controller::on_too_slow(
 void  ship_controller::on_too_fast(
         vector3&  ship_velocity,                    //!< In meters per second.
         vector3 const&  ship_position,              //!< Coordinates in meters.
-        float_32_bit const  speed,                  //!< In meters per second.
+        float_32_bit const  speed,                  //!< In meters per second. Equals to lenght of 'ship_velocity'.
         vector3 const&  nearest_dock_position,
-        network_layer_props const&  layer_props,
+        layer_index_type const  home_layer_index,   //!< Index of layer where is the spiker the ship belongs to.
+        layer_index_type const  area_layer_index,   //!< Index of layer where is the movement area in which the ship moves.
         network_props const&  props
         ) const
 {
-    ship_velocity *= layer_props.max_speed_of_ship_in_meters_per_second() / speed;
+    if (speed > 1e-3f)
+        ship_velocity *= props.layer_props().at(home_layer_index).max_speed_of_ship_in_meters_per_second(area_layer_index) / speed;
 }
 
 

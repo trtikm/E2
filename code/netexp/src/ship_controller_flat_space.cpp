@@ -18,7 +18,8 @@ ship_controller_flat_space::ship_controller_flat_space(
         float_32_bit const  max_acceleration_from_other_ship,
         float_32_bit const max_avoidance_distance_from_other_ship
         )
-    : netlab::ship_controller(docks_enumerations_distance_for_accelerate_into_dock,docks_enumerations_distance_for_accelerate_from_ship)
+    : netlab::ship_controller(docks_enumerations_distance_for_accelerate_into_dock,
+                              docks_enumerations_distance_for_accelerate_from_ship)
     , m_acceleration_to_dock(acceleration_to_dock)
     , m_num_time_steps_to_stop_ship(num_time_steps_to_stop_ship)
     , m_max_acceleration_from_other_ship(max_acceleration_from_other_ship)
@@ -30,7 +31,8 @@ vector3  ship_controller_flat_space::accelerate_into_dock(
         vector3 const&  ship_position,              //!< Coordinates in meters.
         vector3 const&  ship_velocity,              //!< In meters per second.
         vector3 const&  dock_position,              //!< Coordinates in meters.
-        netlab::network_layer_props const&  layer_props,
+        netlab::layer_index_type const  home_layer_index,//!< Index of layer where is the spiker the ship belongs to.
+        netlab::layer_index_type const  area_layer_index,//!< Index of layer where is the movement area in which the ship moves.
         netlab::network_props const&  props
         ) const
 {
@@ -38,11 +40,13 @@ vector3  ship_controller_flat_space::accelerate_into_dock(
 
     vector3 const  doc_ship_positions_delta = dock_position - ship_position;
     float_32_bit const  distance_to_dock = length(doc_ship_positions_delta);
-    vector3 const  accel_dir = (distance_to_dock < 0.0001f) ? vector3_zero() : (1.0f / distance_to_dock) * doc_ship_positions_delta;
+    vector3 const  accel_dir =
+            (distance_to_dock < 0.0001f) ? vector3_zero() : (1.0f / distance_to_dock) * doc_ship_positions_delta;
     if (distance_to_dock < props.max_connection_distance_in_meters())
     {
+        netlab::network_layer_props const&  layer_props = props.layer_props().at(home_layer_index);
         float_32_bit const  scale = distance_to_dock / props.max_connection_distance_in_meters();
-        float_32_bit const  desired_speed = scale * layer_props.max_speed_of_ship_in_meters_per_second();
+        float_32_bit const  desired_speed = scale * layer_props.max_speed_of_ship_in_meters_per_second(area_layer_index);
         vector3 const  velocity_delta = desired_speed * accel_dir - ship_velocity;
         float_32_bit const  time_delta =
             scale * static_cast<float_32_bit>(num_time_steps_to_stop_ship()) * props.update_time_step_in_seconds() + 0.001f;
@@ -60,7 +64,8 @@ vector3  ship_controller_flat_space::accelerate_from_ship(
         vector3 const&  other_ship_velocity,        //!< In meters per second.
         vector3 const&  nearest_dock_position,      //!< Coordinates in meters. It is nearest to the ship, not to the other one.
         bool const  both_ship_and_dock_belongs_to_same_spiker,
-        netlab::network_layer_props const&  layer_props,
+        netlab::layer_index_type const  home_layer_index,//!< Index of layer where is the spiker the ship belongs to.
+        netlab::layer_index_type const  area_layer_index,//!< Index of layer where is the movement area in which the ship moves.
         netlab::network_props const&  props
         ) const
 {
@@ -82,8 +87,8 @@ vector3  ship_controller_flat_space::accelerate_from_ship(
         accel_mag = 0.0f;
     else
     {
-        float_32_bit const  squared_max_connection_distance = props.max_connection_distance_in_meters() *
-            props.max_connection_distance_in_meters();
+        float_32_bit const  squared_max_connection_distance =
+                props.max_connection_distance_in_meters() * props.max_connection_distance_in_meters();
 
         if (length_squared(nearest_dock_position - other_ship_position) <= squared_max_connection_distance)
             accel_mag = acceleration_to_dock();
