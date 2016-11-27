@@ -1544,7 +1544,105 @@ std::string  simulator::get_network_info_text() const
 
     std::ostringstream  ostr;
 
-    ostr << "Network of experiment: " << get_experiment_name() << '\n';
+    netlab::network_props const&  props = *network()->properties();
+
+    natural_64_bit  total_num_spikers = 0ULL;
+    natural_64_bit  total_num_docks = 0ULL;
+    natural_64_bit  total_num_ships = 0ULL;
+    for (netlab::layer_index_type layer_index = 0U; layer_index != props.layer_props().size(); ++layer_index)
+    {
+        netlab::network_layer_props const&  layer_props = props.layer_props().at(layer_index);
+        total_num_spikers += layer_props.num_spikers();
+        total_num_docks += layer_props.num_docks();
+        total_num_ships += layer_props.num_ships();
+    }
+
+    ostr << "Experiment: " << get_experiment_name() << "\n"
+            "Description:" << netexp::experiment_factory::instance().get_experiment_description(get_experiment_name()) << "\n\n"
+            "Network properties:\n"
+            "  num spikers: " << total_num_spikers << "\n"
+            "  num docks: " << total_num_docks << "\n"
+            "  num ships: " << total_num_ships << "\n"
+            "  time step: " << props.update_time_step_in_seconds() << "s\n"
+            "  max connection distance: " << props.max_connection_distance_in_meters() << "m\n"
+            "  max num treads to use: " << props.num_threads_to_use() << "\n"
+            "  number of layers: " << props.layer_props().size() << "\n\n"
+         ;
+
+    for (netlab::layer_index_type layer_index = 0U; layer_index != props.layer_props().size(); ++layer_index)
+    {
+        netlab::network_layer_props const&  layer_props = props.layer_props().at(layer_index);
+
+        ostr << "  layer[" << (int)layer_index << "]:\n"
+
+             << "    num spikers: " << layer_props.num_spikers() << "\n"
+             << "    excitatory: " << std::boolalpha << layer_props.are_spikers_excitatory() << "\n"
+             << "    num spikers along axes [xyc]: "
+                        << layer_props.num_spikers_along_x_axis() << ", "
+                        << layer_props.num_spikers_along_y_axis() << ", "
+                        << layer_props.num_spikers_along_c_axis() << "\n"
+             << "    distance of spikers along axes [xyc]: "
+                        << layer_props.distance_of_spikers_along_x_axis_in_meters() << "m, "
+                        << layer_props.distance_of_spikers_along_y_axis_in_meters() << "m, "
+                        << layer_props.distance_of_spikers_along_c_axis_in_meters() << "m\n"
+             << "    low corner of spikers: ["
+                        << layer_props.low_corner_of_spikers()(0) << "m, "
+                        << layer_props.low_corner_of_spikers()(1) << "m, "
+                        << layer_props.low_corner_of_spikers()(2) << "m]\n"
+             << "    high corner of spikers: ["
+                        << layer_props.high_corner_of_spikers()(0) << "m, "
+                        << layer_props.high_corner_of_spikers()(1) << "m, "
+                        << layer_props.high_corner_of_spikers()(2) << "m]\n\n"
+
+             << "    num docks: " << layer_props.num_docks() << "\n"
+             << "    num docks per spiker: " << layer_props.num_docks_along_x_axis_per_spiker() *
+                                                layer_props.num_docks_along_y_axis_per_spiker() *
+                                                layer_props.num_docks_along_c_axis_per_spiker() << "\n"
+             << "    num docks along axes [xyc]: "
+                        << layer_props.num_docks_along_x_axis() << ", "
+                        << layer_props.num_docks_along_y_axis() << ", "
+                        << layer_props.num_docks_along_c_axis() << "\n"
+             << "    num docks per spiker along axes [xyc]: "
+                        << layer_props.num_docks_along_x_axis_per_spiker() << ", "
+                        << layer_props.num_docks_along_y_axis_per_spiker() << ", "
+                        << layer_props.num_docks_along_c_axis_per_spiker() << "\n"
+             << "    distance of docks [same for all axes]: " << layer_props.distance_of_docks_in_meters() << "m\n"
+             << "    low corner of docks: ["
+                        << layer_props.low_corner_of_docks()(0) << "m, "
+                        << layer_props.low_corner_of_docks()(1) << "m, "
+                        << layer_props.low_corner_of_docks()(2) << "m]\n"
+             << "    high corner of docks: ["
+                        << layer_props.high_corner_of_docks()(0) << "m, "
+                        << layer_props.high_corner_of_docks()(1) << "m, "
+                        << layer_props.high_corner_of_docks()(2) << "m]\n\n"
+
+             << "    num ships: " << layer_props.num_ships() << "\n"
+             << "    num ships per spiker: " << layer_props.num_ships_per_spiker() << "\n"
+             << "    low corner of ships: ["
+                        << layer_props.low_corner_of_ships()(0) << "m, "
+                        << layer_props.low_corner_of_ships()(1) << "m, "
+                        << layer_props.low_corner_of_ships()(2) << "m]\n"
+             << "    high corner of ships: ["
+                        << layer_props.high_corner_of_ships()(0) << "m, "
+                        << layer_props.high_corner_of_ships()(1) << "m, "
+                        << layer_props.high_corner_of_ships()(2) << "m]\n\n"
+             ;
+
+        ostr << "    sizes of ship movement areas [xyc]:\n";
+        for (netlab::layer_index_type  other_layer_index = 0U; other_layer_index != props.layer_props().size(); ++other_layer_index)
+            ostr << "      layer[" << (int)other_layer_index << "]: "
+                 << layer_props.size_of_ship_movement_area_along_x_axis_in_meters(other_layer_index) << "m, "
+                 << layer_props.size_of_ship_movement_area_along_y_axis_in_meters(other_layer_index) << "m, "
+                 << layer_props.size_of_ship_movement_area_along_c_axis_in_meters(other_layer_index) << "m\n"
+                 ;
+        ostr << "\n    speed limits of ships [min,max]:\n";
+        for (netlab::layer_index_type  other_layer_index = 0U; other_layer_index != props.layer_props().size(); ++other_layer_index)
+            ostr << "      layer[" << (int)other_layer_index << "]: "
+                 << layer_props.min_speed_of_ship_in_meters_per_second(other_layer_index) << "m/s, "
+                 << layer_props.max_speed_of_ship_in_meters_per_second(other_layer_index) << "m/s\n"
+                 ;
+    }
+
 
     return ostr.str();
 }
