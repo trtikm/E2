@@ -310,4 +310,15 @@ void  network_layer_props::spiker_sector_coordinates_from_dock_sector_coordinate
 }
 
 
+void  network_layer_props::dock_low_sector_coordinates_from_spiker_sector_coordinates(
+        sector_coordinate_type const&  x, sector_coordinate_type const&  y, sector_coordinate_type const&  c,
+        sector_coordinate_type&  dock_x, sector_coordinate_type&  dock_y, sector_coordinate_type&  dock_c
+        ) const
+{
+    dock_x = x * num_docks_along_x_axis_per_spiker();
+    dock_y = y * num_docks_along_y_axis_per_spiker();
+    dock_c = c * num_docks_along_c_axis_per_spiker();
+}
+
+
 }

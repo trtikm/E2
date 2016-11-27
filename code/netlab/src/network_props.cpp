@@ -72,7 +72,7 @@ network_props::network_props(
 }
 
 
-layer_index_type  network_props::find_layer_index(float_32_bit const  coord_along_c_axis)
+layer_index_type  network_props::find_layer_index(float_32_bit const  coord_along_c_axis) const
 {
     auto const  it = std::lower_bound(m_max_coods_along_c_axis.cbegin(),m_max_coods_along_c_axis.cend(),coord_along_c_axis);
     return static_cast<layer_index_type>(

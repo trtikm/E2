@@ -57,6 +57,9 @@ struct  network_layer_props
     natural_32_bit  num_docks_along_x_axis_per_spiker() const noexcept { return m_num_docks_along_x_axis_per_spiker; }
     natural_32_bit  num_docks_along_y_axis_per_spiker() const noexcept { return m_num_docks_along_y_axis_per_spiker; }
     natural_32_bit  num_docks_along_c_axis_per_spiker() const noexcept { return m_num_docks_along_c_axis_per_spiker; }
+    natural_64_bit  num_docks_per_spiker() const noexcept { return (natural_64_bit)num_docks_along_x_axis_per_spiker() *
+                                                                   (natural_64_bit)num_docks_along_y_axis_per_spiker() *
+                                                                   (natural_64_bit)num_docks_along_c_axis_per_spiker() ; }
 
     natural_32_bit  num_docks_along_x_axis() const noexcept { return m_num_docks_along_x_axis; }
     natural_32_bit  num_docks_along_y_axis() const noexcept { return m_num_docks_along_y_axis; }
@@ -136,6 +139,12 @@ struct  network_layer_props
             sector_coordinate_type const&  dock_x, sector_coordinate_type const&  dock_y, sector_coordinate_type const&  dock_c,
             sector_coordinate_type&  x, sector_coordinate_type&  y, sector_coordinate_type&  c
             ) const;
+
+    void  dock_low_sector_coordinates_from_spiker_sector_coordinates(
+            sector_coordinate_type const&  x, sector_coordinate_type const&  y, sector_coordinate_type const&  c,
+            sector_coordinate_type&  dock_x, sector_coordinate_type&  dock_y, sector_coordinate_type&  dock_c
+            ) const;
+
 
 private:
     natural_32_bit  m_num_spikers_along_x_axis;

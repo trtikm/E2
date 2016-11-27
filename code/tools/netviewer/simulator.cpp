@@ -1558,7 +1558,7 @@ std::string  simulator::get_network_info_text() const
     }
 
     ostr << "Experiment: " << get_experiment_name() << "\n"
-            "Description:" << netexp::experiment_factory::instance().get_experiment_description(get_experiment_name()) << "\n\n"
+            "Description: " << netexp::experiment_factory::instance().get_experiment_description(get_experiment_name()) << "\n\n"
             "Network properties:\n"
             "  num spikers: " << total_num_spikers << "\n"
             "  num docks: " << total_num_docks << "\n"
@@ -1585,19 +1585,17 @@ std::string  simulator::get_network_info_text() const
                         << layer_props.distance_of_spikers_along_x_axis_in_meters() << "m, "
                         << layer_props.distance_of_spikers_along_y_axis_in_meters() << "m, "
                         << layer_props.distance_of_spikers_along_c_axis_in_meters() << "m\n"
-             << "    low corner of spikers: ["
+             << "    low corner of spikers: [ "
                         << layer_props.low_corner_of_spikers()(0) << "m, "
                         << layer_props.low_corner_of_spikers()(1) << "m, "
-                        << layer_props.low_corner_of_spikers()(2) << "m]\n"
-             << "    high corner of spikers: ["
+                        << layer_props.low_corner_of_spikers()(2) << "m ]\n"
+             << "    high corner of spikers: [ "
                         << layer_props.high_corner_of_spikers()(0) << "m, "
                         << layer_props.high_corner_of_spikers()(1) << "m, "
-                        << layer_props.high_corner_of_spikers()(2) << "m]\n\n"
+                        << layer_props.high_corner_of_spikers()(2) << "m ]\n\n"
 
              << "    num docks: " << layer_props.num_docks() << "\n"
-             << "    num docks per spiker: " << layer_props.num_docks_along_x_axis_per_spiker() *
-                                                layer_props.num_docks_along_y_axis_per_spiker() *
-                                                layer_props.num_docks_along_c_axis_per_spiker() << "\n"
+             << "    num docks per spiker: " << layer_props.num_docks_per_spiker() << "\n"
              << "    num docks along axes [xyc]: "
                         << layer_props.num_docks_along_x_axis() << ", "
                         << layer_props.num_docks_along_y_axis() << ", "
@@ -1607,25 +1605,25 @@ std::string  simulator::get_network_info_text() const
                         << layer_props.num_docks_along_y_axis_per_spiker() << ", "
                         << layer_props.num_docks_along_c_axis_per_spiker() << "\n"
              << "    distance of docks [same for all axes]: " << layer_props.distance_of_docks_in_meters() << "m\n"
-             << "    low corner of docks: ["
+             << "    low corner of docks: [ "
                         << layer_props.low_corner_of_docks()(0) << "m, "
                         << layer_props.low_corner_of_docks()(1) << "m, "
-                        << layer_props.low_corner_of_docks()(2) << "m]\n"
-             << "    high corner of docks: ["
+                        << layer_props.low_corner_of_docks()(2) << "m ]\n"
+             << "    high corner of docks: [ "
                         << layer_props.high_corner_of_docks()(0) << "m, "
                         << layer_props.high_corner_of_docks()(1) << "m, "
-                        << layer_props.high_corner_of_docks()(2) << "m]\n\n"
+                        << layer_props.high_corner_of_docks()(2) << "m ]\n\n"
 
              << "    num ships: " << layer_props.num_ships() << "\n"
              << "    num ships per spiker: " << layer_props.num_ships_per_spiker() << "\n"
-             << "    low corner of ships: ["
+             << "    low corner of ships: [ "
                         << layer_props.low_corner_of_ships()(0) << "m, "
                         << layer_props.low_corner_of_ships()(1) << "m, "
-                        << layer_props.low_corner_of_ships()(2) << "m]\n"
-             << "    high corner of ships: ["
+                        << layer_props.low_corner_of_ships()(2) << "m ]\n"
+             << "    high corner of ships: [ "
                         << layer_props.high_corner_of_ships()(0) << "m, "
                         << layer_props.high_corner_of_ships()(1) << "m, "
-                        << layer_props.high_corner_of_ships()(2) << "m]\n\n"
+                        << layer_props.high_corner_of_ships()(2) << "m ]\n\n"
              ;
 
         ostr << "    sizes of ship movement areas [xyc]:\n";
@@ -1655,7 +1653,174 @@ std::string  simulator::get_selected_info_text() const
 
     std::ostringstream  ostr;
 
-    ostr << "Some object is selected!";
+    netlab::network_props const&  props = *network()->properties();
+
+    if (auto ptr = std::dynamic_pointer_cast<netlab::tracked_spiker_stats>(m_selected_object_stats))
+    {
+        netlab::network_layer_props const&  layer_props = props.layer_props().at(ptr->indices().layer_index());
+
+        netlab::sector_coordinate_type  x,y,c;
+        layer_props.spiker_sector_coordinates(ptr->indices().object_index(),x,y,c);
+
+        vector3 const  sector_center = layer_props.spiker_sector_centre(x,y,c);
+
+        vector3 const&  area_center =
+                network()->get_center_of_movement_area(ptr->indices().layer_index(),ptr->indices().object_index());
+
+        netlab::layer_index_type const  area_layer_index = props.find_layer_index(area_center(2));
+
+        netlab::network_layer_props const&  area_layer_props = props.layer_props().at(area_layer_index);
+
+        netlab::object_index_type const  ships_begin_index =
+                layer_props.ships_begin_index_of_spiker(ptr->indices().object_index());
+
+        netlab::object_index_type  num_connected_ships = 0UL;
+        for (netlab::object_index_type  i = 0UL; i < layer_props.num_ships_per_spiker(); ++i)
+        {
+            vector3 const&  ship_pos = network()->get_ship(ptr->indices().layer_index(),ships_begin_index + i).position();
+
+            netlab::sector_coordinate_type  dock_x,dock_y,dock_c;
+            area_layer_props.dock_sector_coordinates(ship_pos,dock_x,dock_y,dock_c);
+
+            vector3 const  dock_pos = area_layer_props.dock_sector_centre(dock_x,dock_y,dock_c);
+
+            if (length_squared(dock_pos - ship_pos) <= props.max_connection_distance_in_meters() *
+                                                       props.max_connection_distance_in_meters() )
+                ++num_connected_ships;
+        }
+
+        netlab::sector_coordinate_type  dock_low_x,dock_low_y,dock_low_c;
+        layer_props.dock_low_sector_coordinates_from_spiker_sector_coordinates(x,y,c,dock_low_x,dock_low_y,dock_low_c);
+
+        netlab::object_index_type  num_connected_docks = 0UL;
+        for (netlab::sector_coordinate_type  i = 0UL; i != layer_props.num_docks_along_x_axis_per_spiker(); ++i)
+            for (netlab::sector_coordinate_type  j = 0UL; j != layer_props.num_docks_along_y_axis_per_spiker(); ++j)
+                for (netlab::sector_coordinate_type  k = 0UL; k != layer_props.num_docks_along_c_axis_per_spiker(); ++k)
+                {
+                    vector3 const  dock_pos = layer_props.dock_sector_centre(dock_low_x+i,dock_low_y+j,dock_low_c+k);
+                    for (auto  indices :
+                         network()->get_indices_of_ships_in_dock_sector(ptr->indices().layer_index(),
+                                                                        layer_props.dock_sector_index(dock_low_x+i,
+                                                                                                      dock_low_y+j,
+                                                                                                      dock_low_c+k)))
+                    {
+                        vector3 const&  ship_pos = network()->get_ship(indices.layer_index(),indices.object_index()).position();
+                        if (length_squared(dock_pos - ship_pos) <= props.max_connection_distance_in_meters() *
+                                                                   props.max_connection_distance_in_meters() )
+                            ++num_connected_docks;
+                    }
+                }
+
+        ostr << "Type: spiker\n"
+             << "Layer index: " << (natural_64_bit)ptr->indices().layer_index() << "\n"
+             << "Object index: " << (natural_64_bit)ptr->indices().object_index() << "\n"
+             << "Position: [ " << sector_center(0) << "m, "
+                               << sector_center(1) << "m, "
+                               << sector_center(2) << "m ]\n"
+             << "Sector coords: [" << x << ", " << y << ", " << c << "]\n"
+             << "Center of movement area: [ " << area_center(0) << "m, "
+                                              << area_center(1) << "m, "
+                                              << area_center(2) << "m ]\n"
+             << "Layer index of movement area: " << (natural_64_bit)area_layer_index << "\n"
+             << "Number of connected docks: " << (natural_64_bit)num_connected_docks << "\n"
+             << "Number of disconnected docks: "
+                    << (natural_64_bit)layer_props.num_docks_per_spiker() - num_connected_docks << "\n"
+             << "Number of connected ships: " << (natural_64_bit)num_connected_ships << "\n"
+             << "Number of disconnected ships: "
+                    << (natural_64_bit)layer_props.num_ships_per_spiker() - num_connected_ships << "\n"
+             << "Excitatory: " << std::boolalpha << layer_props.are_spikers_excitatory() << "\n"
+             ;
+    }
+    else if (auto ptr = std::dynamic_pointer_cast<netlab::tracked_dock_stats>(m_selected_object_stats))
+    {
+        netlab::network_layer_props const&  layer_props = props.layer_props().at(ptr->indices().layer_index());
+
+        netlab::sector_coordinate_type  x,y,c;
+        layer_props.dock_sector_coordinates(ptr->indices().object_index(),x,y,c);
+
+        vector3 const  sector_center = layer_props.dock_sector_centre(x,y,c);
+
+        std::size_t const  num_ships_in_dock_sector =
+                network()->get_indices_of_ships_in_dock_sector(ptr->indices().layer_index(),
+                                                               layer_props.dock_sector_index(x,y,c)).size();
+
+        bool  is_connected = false;
+        for (auto  indices : network()->get_indices_of_ships_in_dock_sector(ptr->indices().layer_index(),
+                                                                            layer_props.dock_sector_index(x,y,c)))
+        {
+            vector3 const&  ship_pos = network()->get_ship(indices.layer_index(),indices.object_index()).position();
+            if (length_squared(sector_center - ship_pos) <= props.max_connection_distance_in_meters() *
+                                                            props.max_connection_distance_in_meters() )
+            {
+                is_connected = true;
+                break;
+            }
+        }
+
+        ostr << "Type: dock\n"
+             << "Layer index: " << (natural_64_bit)ptr->indices().layer_index() << "\n"
+             << "Object index: " << (natural_64_bit)ptr->indices().object_index() << "\n"
+             << "Position: [ " << sector_center(0) << "m, "
+                               << sector_center(1) << "m, "
+                               << sector_center(2) << "m ]\n"
+             << "Sector coords: [" << x << ", " << y << ", " << c << "]\n"
+             << "Num ships in the sector: " << num_ships_in_dock_sector << "\n"
+             << "Connected: " << std::boolalpha << is_connected << "\n"
+             ;
+    }
+    else if (auto ptr = std::dynamic_pointer_cast<netlab::tracked_ship_stats>(m_selected_object_stats))
+    {
+        netlab::network_layer_props const&  layer_props = props.layer_props().at(ptr->indices().layer_index());
+
+        netlab::ship const&  ship_ref = network()->get_ship(ptr->indices().layer_index(),ptr->indices().object_index());
+        vector3 const&  ship_pos = ship_ref.position();
+        vector3 const&  ship_velocity = ship_ref.velocity();
+
+        netlab::object_index_type const  spiker_index = layer_props.spiker_index_from_ship_index(ptr->indices().object_index());
+
+        vector3 const&  area_center = network()->get_center_of_movement_area(ptr->indices().layer_index(),spiker_index);
+
+        netlab::layer_index_type const  area_layer_index = network()->properties()->find_layer_index(area_center(2));
+
+        netlab::network_layer_props const&  area_layer_props = props.layer_props().at(area_layer_index);
+
+        netlab::sector_coordinate_type  dock_x,dock_y,dock_c;
+        area_layer_props.dock_sector_coordinates(ship_pos,dock_x,dock_y,dock_c);
+
+        vector3 const  dock_pos = area_layer_props.dock_sector_centre(dock_x,dock_y,dock_c);
+
+        std::size_t const  num_ships_in_dock_sector =
+                network()->get_indices_of_ships_in_dock_sector(area_layer_index,
+                                                               area_layer_props.dock_sector_index(dock_x,dock_y,dock_c)
+                                                               ).size();
+
+        bool const  is_connected = (length_squared(dock_pos - ship_pos) <= props.max_connection_distance_in_meters() *
+                                                                           props.max_connection_distance_in_meters() );
+
+        ostr << "Type: ship\n"
+             << "Layer index: " << (natural_64_bit)ptr->indices().layer_index() << "\n"
+             << "Object index: " << (natural_64_bit)ptr->indices().object_index() << "\n"
+             << "Position: [ " << ship_pos(0) << "m, "
+                               << ship_pos(1) << "m, "
+                               << ship_pos(2) << "m ]\n"
+             << "Velocity: [ " << ship_velocity(0) << "m/s, "
+                               << ship_velocity(1) << "m/s, "
+                               << ship_velocity(2) << "m/s ]\n"
+             << "Layer index of movement area: " << (natural_64_bit)area_layer_index << "\n"
+             << "Center of movement area: [ " << area_center(0) << "m, "
+                                              << area_center(1) << "m, "
+                                              << area_center(2) << "m ]\n"
+             << "Nearest dock position: [ " << dock_pos(0) << "m, "
+                                            << dock_pos(1) << "m, "
+                                            << dock_pos(2) << "m ]\n"
+             << "Nearest dock sector coords: [" << dock_x << ", " << dock_y << ", " << dock_c << "]\n"
+             << "Num ships in nearest dock sector: " << num_ships_in_dock_sector << "\n"
+             << "Connected: " << std::boolalpha << is_connected << "\n"
+             << "Excitatory: " << std::boolalpha << layer_props.are_spikers_excitatory() << "\n"
+             ;
+    }
+    else
+        ostr << "Selected object of UNKNOWN kind!";
 
 //    ostr << "position: [ " << std::fixed << get_position_of_selected()(0)
 //                          << ", "

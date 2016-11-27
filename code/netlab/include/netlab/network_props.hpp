@@ -53,7 +53,7 @@ struct network_props
 
     void  set_max_connection_distance_in_meters(float_32_bit const  value) { m_max_connection_distance_in_meters = value; }
 
-    layer_index_type  find_layer_index(float_32_bit const  coord_along_c_axis);
+    layer_index_type  find_layer_index(float_32_bit const  coord_along_c_axis) const;
 
 private:
     std::vector<network_layer_props>  m_layer_props;
