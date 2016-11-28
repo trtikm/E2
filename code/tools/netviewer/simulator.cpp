@@ -1546,16 +1546,37 @@ std::string  simulator::get_network_info_text() const
 
     netlab::network_props const&  props = *network()->properties();
 
+    natural_64_bit  total_memory_spikers = 0ULL;
+    natural_64_bit  total_memory_docks = 0ULL;
+    natural_64_bit  total_memory_ships = 0ULL;
+    natural_64_bit  total_memory_movement_area_centers = 0ULL;
+    natural_64_bit  total_memory_index_of_ships_in_sectors = 0ULL;
     natural_64_bit  total_num_spikers = 0ULL;
     natural_64_bit  total_num_docks = 0ULL;
     natural_64_bit  total_num_ships = 0ULL;
     for (netlab::layer_index_type layer_index = 0U; layer_index != props.layer_props().size(); ++layer_index)
     {
         netlab::network_layer_props const&  layer_props = props.layer_props().at(layer_index);
+
         total_num_spikers += layer_props.num_spikers();
         total_num_docks += layer_props.num_docks();
         total_num_ships += layer_props.num_ships();
+
+        total_memory_spikers += layer_props.num_spikers() * network()->get_spiker(layer_index,0U).size_in_bytes();
+        if (network()->are_docks_allocated(layer_index))
+            total_memory_docks += layer_props.num_docks() * network()->get_dock(layer_index,0U).size_in_bytes();
+        total_memory_ships += layer_props.num_ships() * network()->get_ship(layer_index,0U).size_in_bytes();
+        total_memory_movement_area_centers += layer_props.num_spikers() * sizeof(vector3);
+        total_memory_index_of_ships_in_sectors += layer_props.num_docks() *
+                                                  3ULL * sizeof(netlab::compressed_layer_and_object_indices);
     }
+    natural_64_bit  total_memory =
+            total_memory_spikers +
+            total_memory_docks +
+            total_memory_ships +
+            total_memory_movement_area_centers +
+            total_memory_index_of_ships_in_sectors
+            ;
 
     ostr << "Experiment: " << get_experiment_name() << "\n"
             "Description: " << netexp::experiment_factory::instance().get_experiment_description(get_experiment_name()) << "\n\n"
@@ -1563,6 +1584,12 @@ std::string  simulator::get_network_info_text() const
             "  num spikers: " << total_num_spikers << "\n"
             "  num docks: " << total_num_docks << "\n"
             "  num ships: " << total_num_ships << "\n"
+            "  memory size: " << total_memory << "B\n"
+            "  memory size of spikers: " << total_memory_spikers << "B\n"
+            "  memory size of docks: " << total_memory_docks << "B\n"
+            "  memory size of ships: " << total_memory_ships << "B\n"
+            "  memory size of movement area centers: " << total_memory_movement_area_centers << "B\n"
+            "  memory size of index of ships in sectors: " << total_memory_index_of_ships_in_sectors << "B\n"
             "  time step: " << props.update_time_step_in_seconds() << "s\n"
             "  max connection distance: " << props.max_connection_distance_in_meters() << "m\n"
             "  max num treads to use: " << props.num_threads_to_use() << "\n"
@@ -1659,6 +1686,8 @@ std::string  simulator::get_selected_info_text() const
     {
         netlab::network_layer_props const&  layer_props = props.layer_props().at(ptr->indices().layer_index());
 
+        netlab::spiker const&  spiker_ref = network()->get_spiker(ptr->indices().layer_index(),ptr->indices().object_index());
+
         netlab::sector_coordinate_type  x,y,c;
         layer_props.spiker_sector_coordinates(ptr->indices().object_index(),x,y,c);
 
@@ -1711,9 +1740,10 @@ std::string  simulator::get_selected_info_text() const
                     }
                 }
 
-        ostr << "Type: spiker\n"
-             << "Layer index: " << (natural_64_bit)ptr->indices().layer_index() << "\n"
-             << "Object index: " << (natural_64_bit)ptr->indices().object_index() << "\n"
+        ptr->get_info_text(ostr);
+        spiker_ref.get_info_text(ostr);
+
+        ostr << "Memory size: " << spiker_ref.size_in_bytes() << "B\n"
              << "Position: [ " << sector_center(0) << "m, "
                                << sector_center(1) << "m, "
                                << sector_center(2) << "m ]\n"
@@ -1734,6 +1764,11 @@ std::string  simulator::get_selected_info_text() const
     else if (auto ptr = std::dynamic_pointer_cast<netlab::tracked_dock_stats>(m_selected_object_stats))
     {
         netlab::network_layer_props const&  layer_props = props.layer_props().at(ptr->indices().layer_index());
+
+        netlab::dock const* const  dock_ptr =
+                network()->are_docks_allocated(ptr->indices().layer_index()) ?
+                        &network()->get_dock(ptr->indices().layer_index(),ptr->indices().object_index()) :
+                        nullptr;
 
         netlab::sector_coordinate_type  x,y,c;
         layer_props.dock_sector_coordinates(ptr->indices().object_index(),x,y,c);
@@ -1757,10 +1792,17 @@ std::string  simulator::get_selected_info_text() const
             }
         }
 
-        ostr << "Type: dock\n"
-             << "Layer index: " << (natural_64_bit)ptr->indices().layer_index() << "\n"
-             << "Object index: " << (natural_64_bit)ptr->indices().object_index() << "\n"
-             << "Position: [ " << sector_center(0) << "m, "
+        ptr->get_info_text(ostr);
+
+        if (dock_ptr != nullptr)
+        {
+            dock_ptr->get_info_text(ostr);
+            ostr << "Memory size: " << dock_ptr->size_in_bytes() << "B\n";
+        }
+        else
+            ostr << "Memory size: 0B [NOT ALLOCATED]\n";
+
+        ostr << "Position: [ " << sector_center(0) << "m, "
                                << sector_center(1) << "m, "
                                << sector_center(2) << "m ]\n"
              << "Sector coords: [" << x << ", " << y << ", " << c << "]\n"
@@ -1797,15 +1839,10 @@ std::string  simulator::get_selected_info_text() const
         bool const  is_connected = (length_squared(dock_pos - ship_pos) <= props.max_connection_distance_in_meters() *
                                                                            props.max_connection_distance_in_meters() );
 
-        ostr << "Type: ship\n"
-             << "Layer index: " << (natural_64_bit)ptr->indices().layer_index() << "\n"
-             << "Object index: " << (natural_64_bit)ptr->indices().object_index() << "\n"
-             << "Position: [ " << ship_pos(0) << "m, "
-                               << ship_pos(1) << "m, "
-                               << ship_pos(2) << "m ]\n"
-             << "Velocity: [ " << ship_velocity(0) << "m/s, "
-                               << ship_velocity(1) << "m/s, "
-                               << ship_velocity(2) << "m/s ]\n"
+        ptr->get_info_text(ostr);
+        ship_ref.get_info_text(ostr);
+
+        ostr << "Memory size: " << ship_ref.size_in_bytes() << "B\n"
              << "Layer index of movement area: " << (natural_64_bit)area_layer_index << "\n"
              << "Center of movement area: [ " << area_center(0) << "m, "
                                               << area_center(1) << "m, "

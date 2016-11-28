@@ -1,7 +1,6 @@
 set(THIS_TARGET_NAME netlab)
 
 add_library(${THIS_TARGET_NAME}
-    ./include/netlab/tracked_object_stats.hpp
     ./include/netlab/initialiser_of_movement_area_centers.hpp
     ./include/netlab/initialiser_of_ships_in_movement_areas.hpp
     ./include/netlab/network_objects_factory.hpp
@@ -27,6 +26,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/netlab/utility.hpp
     ./src/utility.cpp
+
+    ./include/netlab/tracked_object_stats.hpp
+    ./src/tracked_object_stats.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
