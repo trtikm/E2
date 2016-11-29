@@ -38,10 +38,17 @@ network_props::network_props(
     ASSUMPTION(m_max_connection_distance_in_meters > 0.0f);
     ASSUMPTION(m_num_threads_to_use > 0U);
 
-    for (natural_32_bit  i = 0UL; i < m_layer_props.size(); ++i)
+    for (layer_index_type  i = 0U; i < m_layer_props.size(); ++i)
     {
-        ASSUMPTION(i == 0UL || m_max_coods_along_c_axis.at(i-1UL) <= m_layer_props.at(i).low_corner_of_docks()(2));
-        m_max_coods_along_c_axis.at(i) = m_layer_props.at(i).high_corner_of_docks()(2);
+        ASSUMPTION(i == 0UL || m_max_coods_along_c_axis.at(i-1UL) <= m_layer_props.at(i).low_corner_of_ships()(2));
+        if (i + 1U < m_layer_props.size())
+        {
+            ASSUMPTION(m_layer_props.at(i).high_corner_of_ships()(2) <= m_layer_props.at(i + 1U).low_corner_of_ships()(2));
+            m_max_coods_along_c_axis.at(i) = 0.5f * ( m_layer_props.at(i).high_corner_of_ships()(2) +
+                                                      m_layer_props.at(i+1U).low_corner_of_ships()(2) );
+        }
+        else
+            m_max_coods_along_c_axis.at(i) = m_layer_props.at(i).high_corner_of_ships()(2);
 
         ASSUMPTION(
                 [](std::vector<network_layer_props> const&  layer_props, natural_32_bit const  layer_index,

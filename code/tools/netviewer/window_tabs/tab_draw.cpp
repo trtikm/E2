@@ -145,7 +145,7 @@ widgets::widgets(program_window* const  wnd)
                 s(program_window* wnd) : QLineEdit()
                 {
                     //setValidator(new QDoubleValidator(1.0, 1000.0, 1));
-                    setText(QString::number(wnd->ptree().get("camera.far_plane", 500.0)));
+                    setText(QString::number(wnd->ptree().get("camera.far_plane", 200.0)));
                     QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_camera_far_changed()));
                 }
             };

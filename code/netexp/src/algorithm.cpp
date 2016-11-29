@@ -225,7 +225,7 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
                     - 0.5f * spiker_layer_props.size_of_ship_movement_area_along_c_axis_in_meters(area_layer_index);
 
         area_center(0) = get_random_float_32_bit_in_range(low_center_x,high_center_x,position_generator);
-        area_center(0) = get_random_float_32_bit_in_range(low_center_y,high_center_y,position_generator);
+        area_center(1) = get_random_float_32_bit_in_range(low_center_y,high_center_y,position_generator);
         area_center(2) = get_random_float_32_bit_in_range(low_center_c,high_center_c,position_generator);
     }
 }

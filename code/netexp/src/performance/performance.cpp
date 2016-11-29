@@ -23,7 +23,7 @@
 #include <vector>
 #include <memory>
 
-namespace netexp { namespace calibration { namespace {
+namespace netexp { namespace performance { namespace {
 
 
 std::shared_ptr<netlab::network_props>  get_network_props()
@@ -31,26 +31,106 @@ std::shared_ptr<netlab::network_props>  get_network_props()
     static std::shared_ptr<netlab::network_props> const  props = std::make_shared<netlab::network_props>(
         std::vector<netlab::network_layer_props> {
             netlab::network_layer_props {
-                3U,     //!< num_spikers_along_x_axis
-                3U,     //!< num_spikers_along_y_axis
+                10U,     //!< num_spikers_along_x_axis
+                10U,     //!< num_spikers_along_y_axis
                 2U,     //!< num_spikers_along_c_axis
 
                 3U,     //!< num_docks_along_x_axis_per_spiker
-                2U,     //!< num_docks_along_y_axis_per_spiker
+                3U,     //!< num_docks_along_y_axis_per_spiker
                 2U,     //!< num_docks_along_c_axis_per_spiker
 
-                15U,    //!< num_ships_per_spiker
+                30U,    //!< num_ships_per_spiker
 
                 10.0f,  //!< distance_of_docks_in_meters
 
-                vector3{-45.0f,-30.0f,5.0f},//vector3_zero(),  //!< low_corner_of_docks
+                vector3{-150.0f,-150.0f,5.0f},//vector3_zero(),  //!< low_corner_of_docks
 
                 {
-                    {90.0f, 60.0f, 40.0f},  //!< size_of_ship_movement_area_in_meters(0)
+                    {90.0f, 90.0f, 40.0f},  //!< size_of_ship_movement_area_in_meters(0)
+                    {90.0f, 90.0f, 40.0f},  //!< size_of_ship_movement_area_in_meters(1)
+                    {90.0f, 90.0f, 40.0f},  //!< size_of_ship_movement_area_in_meters(2)
                 },
 
                 {
                     { 0.5f, 5.0f },     //!< speed_limits_of_ship_in_meters_per_second(0)
+                    { 0.5f, 5.0f },     //!< speed_limits_of_ship_in_meters_per_second(1)
+                    { 0.5f, 5.0f },     //!< speed_limits_of_ship_in_meters_per_second(2)
+                },
+
+                true,   //!< are_spikers_excitatory
+
+                std::make_shared<ship_controller_flat_space const>(
+                        0.0f,           //!< Docks enumerations distance for 'accelerate_into_dock' method.
+                        2.0f,           //!< Docks enumerations distance for 'accelerate_from_ship' method.
+                        50.0f,          //!< Acceleration to dock (constant in whole sector of dock).
+                        100U,           //!< Number of time steps to stop a ship in connection distance to a dock from max seed to zero.
+                        100.0f,         //!< Maximal magnitude of an acceleration applied to a ship when avoiding another ship.
+                        10.0f/5.0f      //!< Maximal distance from a ship where to be concerned about avoiding another ships.
+                        )
+            },
+            netlab::network_layer_props {
+                10U,     //!< num_spikers_along_x_axis
+                10U,     //!< num_spikers_along_y_axis
+                2U,     //!< num_spikers_along_c_axis
+
+                3U,     //!< num_docks_along_x_axis_per_spiker
+                3U,     //!< num_docks_along_y_axis_per_spiker
+                2U,     //!< num_docks_along_c_axis_per_spiker
+
+                30U,    //!< num_ships_per_spiker
+
+                10.0f,  //!< distance_of_docks_in_meters
+
+                vector3{-150.0f,-150.0f,65.0f},//vector3_zero(),  //!< low_corner_of_docks
+
+                {
+                    {90.0f, 90.0f, 40.0f},  //!< size_of_ship_movement_area_in_meters(0)
+                    {90.0f, 90.0f, 40.0f},  //!< size_of_ship_movement_area_in_meters(1)
+                    {90.0f, 90.0f, 40.0f},  //!< size_of_ship_movement_area_in_meters(2)
+                },
+
+                {
+                    { 0.5f, 5.0f },     //!< speed_limits_of_ship_in_meters_per_second(0)
+                    { 0.5f, 5.0f },     //!< speed_limits_of_ship_in_meters_per_second(1)
+                    { 0.5f, 5.0f },     //!< speed_limits_of_ship_in_meters_per_second(2)
+                },
+
+                false,   //!< are_spikers_excitatory
+
+                std::make_shared<ship_controller_flat_space const>(
+                        0.0f,           //!< Docks enumerations distance for 'accelerate_into_dock' method.
+                        2.0f,           //!< Docks enumerations distance for 'accelerate_from_ship' method.
+                        50.0f,          //!< Acceleration to dock (constant in whole sector of dock).
+                        100U,           //!< Number of time steps to stop a ship in connection distance to a dock from max seed to zero.
+                        100.0f,         //!< Maximal magnitude of an acceleration applied to a ship when avoiding another ship.
+                        10.0f/5.0f      //!< Maximal distance from a ship where to be concerned about avoiding another ships.
+                        )
+            },
+            netlab::network_layer_props {
+                10U,     //!< num_spikers_along_x_axis
+                10U,     //!< num_spikers_along_y_axis
+                2U,     //!< num_spikers_along_c_axis
+
+                3U,     //!< num_docks_along_x_axis_per_spiker
+                3U,     //!< num_docks_along_y_axis_per_spiker
+                2U,     //!< num_docks_along_c_axis_per_spiker
+
+                30U,    //!< num_ships_per_spiker
+
+                10.0f,  //!< distance_of_docks_in_meters
+
+                vector3{-150.0f,-150.0f,125.0f},//vector3_zero(),  //!< low_corner_of_docks
+
+                {
+                    {90.0f, 90.0f, 40.0f},  //!< size_of_ship_movement_area_in_meters(0)
+                    {90.0f, 90.0f, 40.0f},  //!< size_of_ship_movement_area_in_meters(1)
+                    {90.0f, 90.0f, 40.0f},  //!< size_of_ship_movement_area_in_meters(2)
+                },
+
+                {
+                    { 0.5f, 5.0f },     //!< speed_limits_of_ship_in_meters_per_second(0)
+                    { 0.5f, 5.0f },     //!< speed_limits_of_ship_in_meters_per_second(1)
+                    { 0.5f, 5.0f },     //!< speed_limits_of_ship_in_meters_per_second(2)
                 },
 
                 true,   //!< are_spikers_excitatory
@@ -165,21 +245,36 @@ private:
 initialiser_of_movement_area_centers::initialiser_of_movement_area_centers()
     : m_distribution_of_spiker_layer({
             make_bar_random_distribution_from_count_bars({
-                get_network_props()->layer_props().at(0UL).num_spikers()
-                })
+                get_network_props()->layer_props().at(0UL).num_spikers(),
+                get_network_props()->layer_props().at(1UL).num_spikers(),
+                get_network_props()->layer_props().at(2UL).num_spikers(),
+                }),
+            make_bar_random_distribution_from_count_bars({
+                get_network_props()->layer_props().at(0UL).num_spikers(),
+                get_network_props()->layer_props().at(1UL).num_spikers(),
+                get_network_props()->layer_props().at(2UL).num_spikers(),
+                }),
+            make_bar_random_distribution_from_count_bars({
+                get_network_props()->layer_props().at(0UL).num_spikers(),
+                get_network_props()->layer_props().at(1UL).num_spikers(),
+                get_network_props()->layer_props().at(2UL).num_spikers(),
+                }),
             })
     , m_generator_of_spiker_layer()
     , m_max_distance_x({
-            get_network_props()->layer_props().at(0UL).num_spikers_along_x_axis() *
-                       get_network_props()->layer_props().at(0UL).distance_of_spikers_along_x_axis_in_meters()
+            7UL * get_network_props()->layer_props().at(0UL).distance_of_spikers_along_x_axis_in_meters(),
+            7UL * get_network_props()->layer_props().at(1UL).distance_of_spikers_along_x_axis_in_meters(),
+            7UL * get_network_props()->layer_props().at(2UL).distance_of_spikers_along_x_axis_in_meters(),
             })
     , m_max_distance_y({
-           get_network_props()->layer_props().at(0UL).num_spikers_along_y_axis() *
-                      get_network_props()->layer_props().at(0UL).distance_of_spikers_along_y_axis_in_meters()
+           7UL * get_network_props()->layer_props().at(0UL).distance_of_spikers_along_y_axis_in_meters(),
+           7UL * get_network_props()->layer_props().at(1UL).distance_of_spikers_along_y_axis_in_meters(),
+           7UL * get_network_props()->layer_props().at(2UL).distance_of_spikers_along_y_axis_in_meters(),
            })
     , m_max_distance_c({
-           get_network_props()->layer_props().at(0UL).num_spikers_along_c_axis() *
-                      get_network_props()->layer_props().at(0UL).distance_of_spikers_along_c_axis_in_meters()
+           5UL * get_network_props()->layer_props().at(0UL).distance_of_spikers_along_c_axis_in_meters(),
+           5UL * get_network_props()->layer_props().at(1UL).distance_of_spikers_along_c_axis_in_meters(),
+           5UL * get_network_props()->layer_props().at(2UL).distance_of_spikers_along_c_axis_in_meters(),
            })
     , m_position_generator()
 {
@@ -361,19 +456,19 @@ std::shared_ptr<netlab::tracked_ship_stats>  create_tracked_ship_stats(
 
 }}}
 
-namespace netexp { namespace calibration {
+namespace netexp { namespace performance {
 
 
 void __register__(netexp::experiment_factory&  factory)
 {
     factory.register_experiment(
-            "calibration",
-            netexp::calibration::create_network,
-            netexp::calibration::create_tracked_spiker_stats,
-            netexp::calibration::create_tracked_dock_stats,
-            netexp::calibration::create_tracked_ship_stats,
-            "This is an artificial experiment. It purpose is to support the "
-            "development and tunnig of the 'netlab' library. Therefore, it is "
+            "performance",
+            netexp::performance::create_network,
+            netexp::performance::create_tracked_spiker_stats,
+            netexp::performance::create_tracked_dock_stats,
+            netexp::performance::create_tracked_ship_stats,
+            "This is an artificial experiment. It purpose is to test the "
+            "performance and scalability of the 'netlab' library. Therefore, it is "
             "not an experiment in true sense. Do not include it into your research."
             );
 }

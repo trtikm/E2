@@ -287,7 +287,7 @@ void  network::update_movement_of_ship(
 
     vector3 const&  movement_area_center = m_movement_area_centers.at(layer_index).at(spiker_sector_index);
 
-    layer_index_type const  area_layer_index = properties()->find_layer_index(movement_area_center(2));
+    layer_index_type const  area_layer_index = properties()->find_layer_index(ship.position()(2));
     network_layer_props const&  area_layer_props = properties()->layer_props().at(area_layer_index);
 
     std::vector< std::vector<compressed_layer_and_object_indices> >&  ships_in_sectors =

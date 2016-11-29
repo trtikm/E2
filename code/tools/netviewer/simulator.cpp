@@ -500,7 +500,7 @@ void  simulator::update_network(float_64_bit const  seconds_from_previous_call)
             break;
         }
 
-        if (std::chrono::duration<float_64_bit>(std::chrono::high_resolution_clock::now() - update_start_time).count() > 1.0 / 30.0)
+        if (std::chrono::duration<float_64_bit>(std::chrono::high_resolution_clock::now() - update_start_time).count() > 1.0 / 60.0)
             break;
     }
 
