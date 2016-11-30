@@ -6,6 +6,7 @@
 #   include <netviewer/window_tabs/tab_network.hpp>
 #   include <netviewer/window_tabs/tab_selected.hpp>
 #   include <netviewer/status_bar.hpp>
+#   include <netviewer/menu_bar.hpp>
 #   include <qtgl/window.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <boost/filesystem/path.hpp>
@@ -54,8 +55,12 @@ public slots:
     /// Slots for NETWORK tab
 
     /// Slots for SELECTED tab
-    void on_network_info_text_update()  { m_tab_network_widgets.on_text_update(); }
-    void on_selection_update()  { m_tab_selected_widgets.on_selection_update(); }
+    void  on_network_info_text_update()  { m_tab_network_widgets.on_text_update(); }
+    void  on_selection_update()  { m_tab_selected_widgets.on_selection_update(); }
+
+    /// Slots for menu actions
+    void  on_menu_network_open() { m_menu_bar.on_menu_network_open(); }
+    void  on_menu_network_close() { m_menu_bar.on_menu_network_close();  }
 
 //    void  on_nenet_param_simulation_speed_changed();
 //    void  on_nenet_param_time_step_changed();
@@ -96,6 +101,7 @@ private:
     window_tabs::tab_network::widgets  m_tab_network_widgets;
     window_tabs::tab_selected::widgets  m_tab_selected_widgets;
 
+    menu_bar  m_menu_bar;
     status_bar  m_status_bar;
 
 //    QLineEdit*  m_nenet_param_time_step;

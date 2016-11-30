@@ -84,6 +84,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     , m_tab_network_widgets(this)
     , m_tab_selected_widgets(this)
 
+    , m_menu_bar(this)
     , m_status_bar(this)
 
 //    , m_nenet_param_time_step(
@@ -250,6 +251,8 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     this->move({ ptree().get("window.pos.x",0),ptree().get("window.pos.y",0) });
     this->resize(ptree().get("window.width", 1024), ptree().get("window.height", 768));
 
+    make_menu_bar_content(m_menu_bar);
+
     this->setCentralWidget(m_splitter);
     m_splitter->addWidget(m_gl_window_widget);
     m_splitter->addWidget(m_tabs);
@@ -380,10 +383,6 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     qtgl::set_splitter_sizes(*m_splitter, ptree().get("window.splitter_ratio", 3.0f / 4.0f));
 
     m_idleTimerId = startTimer(100); // In milliseconds.
-
-    std::string const  experiment_name = ptree().get("simulation.auto_load_experiment", std::string("calibration"));//performance
-    if (!experiment_name.empty())
-        m_glwindow.call_later(&simulator::initiate_network_construction,experiment_name);
 }
 
 program_window::~program_window()

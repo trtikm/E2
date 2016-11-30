@@ -173,7 +173,7 @@ void  camera_perspective::projection_matrix(matrix44&  output) const
     output <<
         (2.0f * m_near) / (m_right - m_left), 0.0f, (m_right + m_left) / (m_right - m_left), 0.0f,
         0.0f, 2.0f * m_near / (m_top - m_bottom), (m_top + m_bottom) / (m_top - m_bottom), 0.0f,
-        0.0f, 0.0f, -(m_far - m_near) / (m_far - m_near), -(2.0f * m_far * m_near) / (m_far - m_near),
+        0.0f, 0.0f, -(m_far + m_near) / (m_far - m_near), -(2.0f * m_far * m_near) / (m_far - m_near),
         0.0f, 0.0f, -1.0f, 0.0f
         ;
 }

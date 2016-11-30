@@ -44,6 +44,7 @@ struct simulator : public qtgl::real_time_simulator
     bool  has_network() const { return network().operator bool(); }
     void  initiate_network_construction(std::string const&  experiment_name);
     bool  is_network_being_constructed() const;
+    void  destroy_network();
 
     /// Network simulation dependent methods.
     bool  paused() const noexcept { return m_paused; }

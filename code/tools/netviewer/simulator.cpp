@@ -1498,6 +1498,14 @@ bool  simulator::is_network_being_constructed() const
     return g_is_network_being_constructed;
 }
 
+void  simulator::destroy_network()
+{
+    m_network.reset();
+    m_experiment_name.clear();
+    m_selected_object_stats.reset();
+    m_batches_selection.clear();
+}
+
 
 void simulator::set_desired_network_to_real_time_ratio(float_64_bit const  value)
 {
