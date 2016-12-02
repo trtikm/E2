@@ -5,6 +5,7 @@
 #   include <boost/property_tree/ptree.hpp>
 #   include <QWidget>
 #   include <QTextEdit>
+#   include <QCheckBox>
 #   include <string>
 
 
@@ -21,6 +22,7 @@ struct  widgets
     program_window* wnd() const noexcept;
 
     QTextEdit*  text() const noexcept { return m_text; }
+    QCheckBox*  auto_open_last() const noexcept { return m_auto_open_last; }
 
     void  on_text_update();
 
@@ -30,8 +32,8 @@ private:
     program_window*  m_wnd;
 
     QTextEdit*  m_text;
+    QCheckBox*  m_auto_open_last;
     std::string  m_last_experiment_name;
-
 };
 
 
