@@ -39,12 +39,14 @@ struct  free_fly_action
             float_32_bit const  action_value, // the value used in the action, e.g. motion/rotation speed/shift
             free_fly_controler::controler_fn  const&  controler // determines when to perform the action, e.g. when a key is pressed
             );
-    bool  do_rotation() const { return m_do_rotation; }
-    bool  use_world_axis() const { return m_use_world_axis; }
-    natural_8_bit  axis_index() const { return m_axis_index; }
-    natural_8_bit  mouse_move_axis() const { return m_mouse_move_axis; }
-    float_32_bit  action_value() const { return m_action_value; }
-    free_fly_controler::controler_fn  const&  controler() const { return m_controler; }
+    bool  do_rotation() const noexcept { return m_do_rotation; }
+    bool  use_world_axis() const noexcept { return m_use_world_axis; }
+    natural_8_bit  axis_index() const noexcept { return m_axis_index; }
+    natural_8_bit  mouse_move_axis() const noexcept { return m_mouse_move_axis; }
+    float_32_bit  action_value() const noexcept { return m_action_value; }
+    free_fly_controler::controler_fn  const&  controler() const noexcept { return m_controler; }
+
+    void  set_action_value(float_32_bit const  value) { m_action_value = value; }
 private:
     bool  m_do_rotation;
     bool  m_use_world_axis;

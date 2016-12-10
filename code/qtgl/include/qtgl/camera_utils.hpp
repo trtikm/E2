@@ -16,6 +16,8 @@ void  cursor_line_end(camera_perspective const&  camera, vector3 const&  cursor_
 
 void  compute_clip_planes(camera_perspective const&  camera, std::vector< std::pair<vector3,vector3> >&  output_planes);
 
+void  look_at(angeo::coordinate_system_ptr const  coordinate_system, vector3 const&  target, float_32_bit const  distance);
+
 
 }
 

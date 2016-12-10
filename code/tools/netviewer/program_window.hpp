@@ -40,12 +40,18 @@ public slots:
     void  on_camera_rot_tait_bryan_changed() { m_tab_draw_widgets.on_camera_rot_tait_bryan_changed(); }
     void  camera_rotation_listener() { m_tab_draw_widgets.camera_rotation_listener(); }
     void  update_camera_rot_widgets(quaternion const&  q) { m_tab_draw_widgets.update_camera_rot_widgets(q); }
+
+    void  on_look_at_selected() { m_tab_draw_widgets.on_look_at_selected(); }
+
     void  on_camera_far_changed() { m_tab_draw_widgets.on_camera_far_changed(); }
+    void  on_camera_speed_changed() { m_tab_draw_widgets.on_camera_speed_changed(); }
 
     void  on_clear_colour_changed() { m_tab_draw_widgets.on_clear_colour_changed(); }
     void  on_clear_colour_set(QColor const&  colour) { m_tab_draw_widgets.on_clear_colour_set(colour); }
     void  on_clear_colour_choose() { m_tab_draw_widgets.on_clear_colour_choose(); }
     void  on_clear_colour_reset() { m_tab_draw_widgets.on_clear_colour_reset(); }
+
+    void  on_show_grid_changed(int const  value) { m_tab_draw_widgets.on_show_grid_changed(value); }
 
     void  dbg_on_camera_far_changed() { m_tab_draw_widgets.dbg_on_camera_far_changed(); }
     void  dbg_on_camera_sync_changed(int value) { m_tab_draw_widgets.dbg_on_camera_sync_changed(value); }
@@ -57,6 +63,7 @@ public slots:
     /// Slots for SELECTED tab
     void  on_network_info_text_update()  { m_tab_network_widgets.on_text_update(); }
     void  on_selection_update()  { m_tab_selected_widgets.on_selection_update(); }
+    void  on_select_owner_spiker() { m_tab_selected_widgets.on_select_owner_spiker(); }
 
     /// Slots for menu actions
     void  on_menu_network_open() { m_menu_bar.on_menu_network_open(); }

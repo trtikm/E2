@@ -472,6 +472,14 @@ bool  make_current(batch const&  binding, draw_state const&  previous_state)
     return make_current(binding,&previous_state);
 }
 
+bool  make_current(batch const&  binding, draw_state_ptr const  previous_state)
+{
+    if (previous_state.operator bool())
+        return make_current(binding, *previous_state);
+    else
+        return make_current(binding);
+}
+
 
 std::pair<bool,bool>  get_batch_chache_state(boost::filesystem::path const&  batch_file)
 {

@@ -54,4 +54,30 @@ void  compute_clip_planes(camera_perspective const&  camera, std::vector< std::p
 }
 
 
+void  look_at(angeo::coordinate_system_ptr const  coordinate_system, vector3 const&  target, float_32_bit const  distance)
+{
+    vector3 const  z_axis_scaled = coordinate_system->origin() - target;
+
+    vector3 const  projected_z_axis_scaled(z_axis_scaled(0), z_axis_scaled(1), 0.0f);
+    if (length_squared(projected_z_axis_scaled) < 0.1f * 0.1f)
+    {
+        coordinate_system->set_origin(target + distance * angeo::axis_z(*coordinate_system));
+        return;
+    }
+
+    vector3 const  z_axis = normalised(z_axis_scaled);
+
+    vector3 const  x_axis_scaled = cross_product(vector3_unit_z(), z_axis);
+    vector3 const  x_axis = normalised(x_axis_scaled);
+
+    vector3 const  y_axis = cross_product(z_axis, x_axis);
+
+    matrix33  orientation;
+    basis_to_rotation_matrix(x_axis,y_axis,z_axis, orientation);
+
+    coordinate_system->set_origin(target + distance * z_axis);
+    coordinate_system->set_orientation(normalised(rotation_matrix_to_quaternion(orientation)));
+}
+
+
 }

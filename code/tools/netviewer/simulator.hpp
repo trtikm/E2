@@ -30,6 +30,7 @@ struct simulator : public qtgl::real_time_simulator
 
     /// Network independed methods.
     void  set_clear_color(vector3 const&  colour) { qtgl::glapi().glClearColor(colour(0), colour(1), colour(2), 1.0f); }
+    void  set_show_grid_state(bool const  state) { m_do_show_grid = state; }
 
     /// Scene camera related methods.
     vector3 const&  get_camera_position() const { return m_camera->coordinate_system()->origin(); }
@@ -37,6 +38,8 @@ struct simulator : public qtgl::real_time_simulator
     void  set_camera_position(vector3 const&  position) { m_camera->coordinate_system()->set_origin(position); }
     void  set_camera_orientation(quaternion const&  orientation) { m_camera->coordinate_system()->set_orientation(orientation); }
     void  set_camera_far_plane(float_32_bit const  far_plane) { m_camera->set_far_plane(far_plane); }
+    void  set_camera_speed(float_32_bit const  speed);
+    void  on_look_at_selected();
 
     /// Network management methods.
     std::string const&  get_experiment_name() const noexcept { return m_experiment_name; }
@@ -57,6 +60,7 @@ struct simulator : public qtgl::real_time_simulator
     /// Miscelanous methods
     std::string  get_network_info_text() const;
     std::string  get_selected_info_text() const;
+    void  on_select_owner_spiker();
 
     /// Debugging stuff
     void  dbg_set_camera_far_plane(float_32_bit const  far_plane)
@@ -141,6 +145,7 @@ private:
     qtgl::camera_perspective_ptr  m_camera;
     qtgl::free_fly_config  m_free_fly_config;
     qtgl::batch_ptr  m_batch_grid;
+    bool  m_do_show_grid;
 
     /// THE NETWORK!
     std::shared_ptr<netlab::network>  m_network;

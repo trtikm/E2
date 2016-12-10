@@ -51,6 +51,7 @@ inline vector3  vector3_unit_x() { return vector3::UnitX(); }
 inline vector3  vector3_unit_y() { return vector3::UnitY(); }
 inline vector3  vector3_unit_z() { return vector3::UnitZ(); }
 inline scalar  dot_product(vector3 const& u, vector3 const& v) { return u.dot(v); }
+inline vector3  cross_product(vector3 const& u, vector3 const& v) { return u.cross(v); }
 inline scalar  length(vector3 const& u) { return u.norm(); }
 inline scalar  length_squared(vector3 const& u) { return dot_product(u,u); }
 inline vector3  normalised(vector3 const&  u) { return u.normalized(); }
@@ -66,6 +67,10 @@ inline matrix44  inverse(matrix44 const&  M) { return M.inverse(); }
 
 inline matrix33  quaternion_to_rotation_matrix(quaternion const& q) { return q.toRotationMatrix(); }
 inline quaternion  rotation_matrix_to_quaternion(matrix33 const&  R) { return quaternion(R); }
+void  basis_to_rotation_matrix(vector3 const&  x_axis_unit_vector,
+                               vector3 const&  y_axis_unit_vector,
+                               vector3 const&  z_axis_unit_vector,
+                               matrix33&  R);
 inline quaternion  angle_axis_to_quaternion(scalar const  angle, vector3 const&  axis) {
     return quaternion(Eigen::AngleAxis<scalar>(angle,axis));
 }

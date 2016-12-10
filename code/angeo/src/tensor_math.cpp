@@ -9,6 +9,17 @@
 #else
 
 
+void  basis_to_rotation_matrix(vector3 const&  x_axis_unit_vector,
+                               vector3 const&  y_axis_unit_vector,
+                               vector3 const&  z_axis_unit_vector,
+                               matrix33&  R)
+{
+    R(0,0) = x_axis_unit_vector(0);  R(0,1) = y_axis_unit_vector(0);  R(0,2) = z_axis_unit_vector(0);
+    R(1,0) = x_axis_unit_vector(1);  R(1,1) = y_axis_unit_vector(1);  R(1,2) = z_axis_unit_vector(1);
+    R(2,0) = x_axis_unit_vector(2);  R(2,1) = y_axis_unit_vector(2);  R(2,2) = z_axis_unit_vector(2);
+}
+
+
 matrix33  yaw_pitch_roll_to_rotation(scalar const  yaw, scalar const  pitch, scalar const  roll)
 {
     // yaw-pitch-roll ~ zy'x''

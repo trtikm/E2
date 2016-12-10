@@ -144,9 +144,23 @@ widgets::widgets(program_window* const  wnd)
             struct s : public QLineEdit {
                 s(program_window* wnd) : QLineEdit()
                 {
-                    //setValidator(new QDoubleValidator(1.0, 1000.0, 1));
+                    //setValidator(new QDoubleValidator(1.0, 5000.0, 1));
                     setText(QString::number(wnd->ptree().get("camera.far_plane", 200.0)));
                     QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_camera_far_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+
+    , m_camera_speed(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    //setValidator(new QDoubleValidator(0.1, 500.0, 1));
+                    setText(QString::number(wnd->ptree().get("camera.speed", 15.0)));
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_camera_speed_changed()));
                 }
             };
             return new s(wnd);
@@ -187,6 +201,19 @@ widgets::widgets(program_window* const  wnd)
                     setValidator(new QIntValidator(0, 255));
                     setText(QString::number(wnd->ptree().get("draw.clear_colour.blue", 64)));
                     QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_clear_colour_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+
+    , m_show_grid(
+        [](program_window* wnd) {
+            struct s : public QCheckBox {
+                s(program_window* wnd) : QCheckBox("Show grid")
+                {
+                    setChecked(wnd->ptree().get("draw.show_grid", true));
+                    QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(on_show_grid_changed(int)));
                 }
             };
             return new s(wnd);
@@ -322,6 +349,11 @@ QLineEdit* widgets::camera_far_plane() const noexcept
     return m_camera_far_plane;
 }
 
+QLineEdit* widgets::camera_speed() const noexcept
+{
+    return m_camera_speed;
+}
+
 QLineEdit* widgets::clear_colour_component_red() const noexcept
 {
     return m_clear_colour_component_red;
@@ -335,6 +367,11 @@ QLineEdit* widgets::clear_colour_component_green() const noexcept
 QLineEdit* widgets::clear_colour_component_blue() const noexcept
 {
     return m_clear_colour_component_blue;
+}
+
+QCheckBox* widgets::show_grid() const noexcept
+{
+    return m_show_grid;
 }
 
 QLineEdit* widgets::dbg_camera_far_plane() const noexcept
@@ -418,9 +455,41 @@ void  widgets::update_camera_rot_widgets(quaternion const&  q)
     m_camera_roll->setText(QString::number(roll * 180.0f / PI()));
 }
 
+void  widgets::on_look_at_selected()
+{
+    wnd()->glwindow().call_later(&simulator::on_look_at_selected);
+}
+
 void  widgets::on_camera_far_changed()
 {
-    wnd()->glwindow().call_later(&simulator::set_camera_far_plane, m_camera_far_plane->text().toFloat());
+    float_32_bit  far_plane = m_camera_far_plane->text().toFloat();
+    if (far_plane < 1.0f)
+    {
+        far_plane = 1.0f;
+        m_camera_far_plane->setText(QString("1"));
+    }
+    else if (far_plane > 5000.0f)
+    {
+        far_plane = 5000.0f;
+        m_camera_far_plane->setText(QString("5000"));
+    }
+    wnd()->glwindow().call_later(&simulator::set_camera_far_plane, far_plane);
+}
+
+void  widgets::on_camera_speed_changed()
+{
+    float_32_bit  speed = m_camera_speed->text().toFloat();
+    if (speed < 0.1f)
+    {
+        speed = 0.1f;
+        m_camera_speed->setText(QString("0.1"));
+    }
+    else if (speed > 500.0f)
+    {
+        speed = 500.0f;
+        m_camera_speed->setText(QString("500"));
+    }
+    wnd()->glwindow().call_later(&simulator::set_camera_speed, speed);
 }
 
 void widgets::on_clear_colour_changed()
@@ -457,6 +526,12 @@ void widgets::on_clear_colour_reset()
     on_clear_colour_set(QColor(64, 64, 64));
 }
 
+void widgets::on_show_grid_changed(int const  value)
+{
+    wnd()->glwindow().call_later(&simulator::set_show_grid_state, m_show_grid->isChecked());
+}
+
+
 void  widgets::dbg_on_camera_far_changed()
 {
     wnd()->glwindow().call_later(&simulator::dbg_set_camera_far_plane, m_dbg_camera_far_plane->text().toFloat());
@@ -491,10 +566,13 @@ void  widgets::save()
     }
     wnd()->ptree().put("camera.save_pos_rot", m_camera_save_pos_rot->isChecked());
     wnd()->ptree().put("camera.far_plane", m_camera_far_plane->text().toFloat());
+    wnd()->ptree().put("camera.speed", m_camera_speed->text().toFloat());
 
     wnd()->ptree().put("draw.clear_colour.red", m_clear_colour_component_red->text().toInt());
     wnd()->ptree().put("draw.clear_colour.green", m_clear_colour_component_green->text().toInt());
     wnd()->ptree().put("draw.clear_colour.blue", m_clear_colour_component_blue->text().toInt());
+
+    wnd()->ptree().put("draw.show_grid", m_show_grid->isChecked());
 
     wnd()->ptree().put("dbg.camera.far_plane", m_dbg_camera_far_plane->text().toFloat());
     wnd()->ptree().put("dbg.camera.synchronised", m_dbg_camera_synchronised->isChecked());
@@ -562,6 +640,18 @@ QWidget*  make_draw_tab_content(widgets const&  w)
                     }
                     camera_layout->addWidget(rotation_group);
 
+                    camera_layout->addWidget(
+                            [](program_window* wnd) {
+                                    struct look_at_selected : public QPushButton {
+                                        look_at_selected(program_window* wnd) : QPushButton("Look at selected")
+                                        {
+                                            QObject::connect(this, SIGNAL(released()), wnd, SLOT(on_look_at_selected()));
+                                        }
+                                    };
+                                    return new look_at_selected(wnd);
+                            }(w.wnd())
+                            );
+
                     w.camera_save_pos_rot()->setCheckState(
                         w.wnd()->ptree().get("camera.save_pos_rot", false) ? Qt::CheckState::Checked : Qt::CheckState::Unchecked
                         );
@@ -570,10 +660,18 @@ QWidget*  make_draw_tab_content(widgets const&  w)
                     QHBoxLayout* const far_plane_layout = new QHBoxLayout;
                     {
                         far_plane_layout->addWidget(w.camera_far_plane());
-                        far_plane_layout->addWidget(new QLabel("Camera's far clip plane."));
+                        far_plane_layout->addWidget(new QLabel("Far clip plane [m]"));
                         w.wnd()->on_camera_far_changed();
                     }
                     camera_layout->addLayout(far_plane_layout);
+
+                    QHBoxLayout* const speed_layout = new QHBoxLayout;
+                    {
+                        speed_layout->addWidget(w.camera_speed());
+                        speed_layout->addWidget(new QLabel("Speed [m/s]"));
+                        w.wnd()->on_camera_speed_changed();
+                    }
+                    camera_layout->addLayout(speed_layout);
                 }
                 camera_group->setLayout(camera_layout);
             }
@@ -624,6 +722,9 @@ QWidget*  make_draw_tab_content(widgets const&  w)
             }
             draw_tab_layout->addWidget(clear_colour_group);
 
+            draw_tab_layout->addWidget(w.show_grid());
+            w.wnd()->on_show_grid_changed(0);
+
             QWidget* const dbg_group = new QGroupBox("Debugging");
             {
                 QVBoxLayout* const dbg_layout = new QVBoxLayout;
@@ -634,7 +735,7 @@ QWidget*  make_draw_tab_content(widgets const&  w)
                     QHBoxLayout* const dbg_far_plane_layout = new QHBoxLayout;
                     {
                         dbg_far_plane_layout->addWidget(w.dbg_camera_far_plane());
-                        dbg_far_plane_layout->addWidget(new QLabel("Far clip plane overload."));
+                        dbg_far_plane_layout->addWidget(new QLabel("Far clip plane overload"));
                         w.wnd()->dbg_on_camera_far_changed();
                     }
                     dbg_layout->addLayout(dbg_far_plane_layout);

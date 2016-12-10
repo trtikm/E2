@@ -37,10 +37,13 @@ struct  widgets
     QCheckBox* camera_save_pos_rot() const noexcept;
 
     QLineEdit* camera_far_plane() const noexcept;
+    QLineEdit* camera_speed() const noexcept;
 
     QLineEdit*  clear_colour_component_red() const noexcept;
     QLineEdit*  clear_colour_component_green() const noexcept;
     QLineEdit*  clear_colour_component_blue() const noexcept;
+
+    QCheckBox* show_grid() const noexcept;
 
     QLineEdit* dbg_camera_far_plane() const noexcept;
     QCheckBox* dbg_camera_synchronised() const noexcept;
@@ -55,12 +58,17 @@ struct  widgets
     void  camera_rotation_listener();
     void  update_camera_rot_widgets(quaternion const&  q);
 
+    void  on_look_at_selected();
+
     void  on_camera_far_changed();
+    void  on_camera_speed_changed();
 
     void  on_clear_colour_changed();
     void  on_clear_colour_set(QColor const&  colour);
     void  on_clear_colour_choose();
     void  on_clear_colour_reset();
+
+    void  on_show_grid_changed(int const  value);
 
     void  dbg_on_camera_far_changed();
     void  dbg_on_camera_sync_changed(int);
@@ -88,10 +96,13 @@ private:
     QCheckBox*  m_camera_save_pos_rot;
 
     QLineEdit*  m_camera_far_plane;
+    QLineEdit*  m_camera_speed;
 
     QLineEdit*  m_clear_colour_component_red;
     QLineEdit*  m_clear_colour_component_green;
     QLineEdit*  m_clear_colour_component_blue;
+
+    QCheckBox*  m_show_grid;
 
     QLineEdit*  m_dbg_camera_far_plane;
     QCheckBox*  m_dbg_camera_synchronised;

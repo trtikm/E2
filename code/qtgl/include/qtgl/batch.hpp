@@ -64,6 +64,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
 
 bool  make_current(batch const&  binding);
 bool  make_current(batch const&  binding, draw_state const&  previous_state);
+bool  make_current(batch const&  binding, draw_state_ptr const  previous_state);
 
 
 std::pair<bool, //!< Is inside the cache

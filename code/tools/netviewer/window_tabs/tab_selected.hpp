@@ -22,6 +22,7 @@ struct  widgets
     QTextEdit*  selected_text() const noexcept;
 
     void  on_selection_update();
+    void  on_select_owner_spiker();
 
     void  save();
 

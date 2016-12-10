@@ -150,6 +150,7 @@ simulator::simulator(
                     get_program_options()->dataRoot()
                     )
             }
+    , m_do_show_grid(true)
 
     , m_network()
     , m_experiment_name()
@@ -260,15 +261,17 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     matrix44  view_projection_matrix;
     qtgl::view_projection_matrix(*m_camera,view_projection_matrix);
 
-    qtgl::make_current(*m_batch_grid->draw_state());
-    if (qtgl::make_current(*m_batch_grid, *m_batch_grid->draw_state()))
-    {
-        INVARIANT(m_batch_grid->shaders_binding().operator bool());
-        render_batch(*m_batch_grid,view_projection_matrix);
-    }
+    qtgl::draw_state_ptr  draw_state;
+    if (m_do_show_grid)
+        if (qtgl::make_current(*m_batch_grid, *m_batch_grid->draw_state()))
+        {
+            INVARIANT(m_batch_grid->shaders_binding().operator bool());
+            render_batch(*m_batch_grid,view_projection_matrix);
+            draw_state = m_batch_grid->draw_state();
+        }
 
     if (network().operator bool())
-        render_network(view_projection_matrix,m_batch_grid->draw_state());
+        render_network(view_projection_matrix,draw_state);
 
 //    {
 //        if (qtgl::make_current(*m_batch_spiker, *draw_state))
@@ -722,7 +725,7 @@ void  simulator::render_network_spikers(
 
     INVARIANT(network().operator bool());
 
-    if (qtgl::make_current(*m_batch_spiker, *draw_state))
+    if (qtgl::make_current(*m_batch_spiker, draw_state))
     {
         INVARIANT(m_batch_spiker->shaders_binding().operator bool());
 
@@ -766,7 +769,7 @@ void  simulator::render_network_spikers(
     }
 
 
-//    if (qtgl::make_current(*m_batch_spiker, *draw_state))
+//    if (qtgl::make_current(*m_batch_spiker, draw_state))
 //    {
 //        INVARIANT(m_batch_spiker->shaders_binding().operator bool());
 
@@ -903,7 +906,7 @@ void  simulator::render_network_docks(
 
     INVARIANT(network().operator bool());
 
-    if (qtgl::make_current(*m_batch_dock, *draw_state))
+    if (qtgl::make_current(*m_batch_dock, draw_state))
     {
         INVARIANT(m_batch_dock->shaders_binding().operator bool());
 
@@ -1084,7 +1087,7 @@ void  simulator::render_network_ships(
 
     INVARIANT(network().operator bool());
 
-    if (qtgl::make_current(*m_batch_ship, *draw_state))
+    if (qtgl::make_current(*m_batch_ship, draw_state))
     {
         INVARIANT(m_batch_ship->shaders_binding().operator bool());
 
@@ -1268,16 +1271,16 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                         qtgl::create_lines3d(
                                 {
                                     std::pair<vector3,vector3>(
-                                        area_center - vector3(area_shift(0),0.0f,0.0f),
-                                        area_center + vector3(area_shift(0),0.0f,0.0f)
+                                        area_center - vector3( 1.0f,0.0f,0.0f),
+                                        area_center + vector3( 1.0f,0.0f,0.0f)
                                         ),
                                     std::pair<vector3,vector3>(
-                                        area_center - vector3{0.0f,area_shift(1),0.0f},
-                                        area_center + vector3{0.0f,area_shift(1),0.0f}
+                                        area_center - vector3{0.0f, 1.0f,0.0f},
+                                        area_center + vector3{0.0f, 1.0f,0.0f}
                                         ),
                                     std::pair<vector3,vector3>(
-                                        area_center - vector3{0.0f,0.0f,area_shift(2)},
-                                        area_center + vector3{0.0f,0.0f,area_shift(2)}
+                                        area_center - vector3{0.0f,0.0f, 1.0f},
+                                        area_center + vector3{0.0f,0.0f, 1.0f}
                                         )
                                 },
                                 vector3{ 0.5f, 0.25f, 0.5f },
@@ -1480,16 +1483,16 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                     qtgl::create_lines3d(
                             {
                                 std::pair<vector3,vector3>(
-                                    area_center - vector3(area_shift(0),0.0f,0.0f),
-                                    area_center + vector3(area_shift(0),0.0f,0.0f)
+                                    area_center - vector3( 1.0f,0.0f,0.0f),
+                                    area_center + vector3( 1.0f,0.0f,0.0f)
                                     ),
                                 std::pair<vector3,vector3>(
-                                    area_center - vector3{0.0f,area_shift(1),0.0f},
-                                    area_center + vector3{0.0f,area_shift(1),0.0f}
+                                    area_center - vector3{0.0f, 1.0f,0.0f},
+                                    area_center + vector3{0.0f, 1.0f,0.0f}
                                     ),
                                 std::pair<vector3,vector3>(
-                                    area_center - vector3{0.0f,0.0f,area_shift(2)},
-                                    area_center + vector3{0.0f,0.0f,area_shift(2)}
+                                    area_center - vector3{0.0f,0.0f, 1.0f},
+                                    area_center + vector3{0.0f,0.0f, 1.0f}
                                     )
                             },
                             vector3{ 0.5f, 0.25f, 0.5f },
@@ -1550,6 +1553,48 @@ void  simulator::destroy_network()
     m_batches_selection.clear();
 }
 
+
+void  simulator::set_camera_speed(float_32_bit const  speed)
+{
+    ASSUMPTION(speed > 0.001f);
+    m_free_fly_config.at(0UL).set_action_value(-speed);
+    m_free_fly_config.at(1UL).set_action_value(speed);
+    m_free_fly_config.at(2UL).set_action_value(-speed);
+    m_free_fly_config.at(3UL).set_action_value(speed);
+    m_free_fly_config.at(4UL).set_action_value(-speed);
+    m_free_fly_config.at(5UL).set_action_value(speed);
+}
+
+void  simulator::on_look_at_selected()
+{
+    if (!m_selected_object_stats.operator bool())
+        return;
+
+    vector3  pos;
+    {
+        netlab::network_layer_props const&  props =
+                network()->properties()->layer_props().at(m_selected_object_stats->indices().layer_index());
+        if (std::dynamic_pointer_cast<netlab::tracked_spiker_stats>(m_selected_object_stats) != nullptr)
+        {
+            netlab::sector_coordinate_type  x, y, c;
+            props.spiker_sector_coordinates(m_selected_object_stats->indices().object_index(), x, y, c);
+            pos = props.spiker_sector_centre(x, y, c);
+        }
+        else if (std::dynamic_pointer_cast<netlab::tracked_dock_stats>(m_selected_object_stats) != nullptr)
+        {
+            netlab::sector_coordinate_type  x, y, c;
+            props.dock_sector_coordinates(m_selected_object_stats->indices().object_index(), x, y, c);
+            pos = props.dock_sector_centre(x, y, c);
+        }
+        else if (std::dynamic_pointer_cast<netlab::tracked_ship_stats>(m_selected_object_stats) != nullptr)
+            pos = network()->get_ship(m_selected_object_stats->indices().layer_index(),
+                                      m_selected_object_stats->indices().object_index()).position();
+        else
+            return;
+    }
+
+    qtgl::look_at(m_camera->coordinate_system(),pos,2.5f);
+}
 
 void simulator::set_desired_network_to_real_time_ratio(float_64_bit const  value)
 {
@@ -1971,4 +2016,36 @@ std::string  simulator::get_selected_info_text() const
 //             ;
 //    }
     return ostr.str();
+}
+
+
+void  simulator::on_select_owner_spiker()
+{
+    if (!m_selected_object_stats.operator bool())
+        return;
+    if (m_experiment_name.empty())
+        return;
+
+    netlab::layer_index_type  layer_index = m_selected_object_stats->indices().layer_index();
+    netlab::object_index_type  object_index;
+    {
+        netlab::network_layer_props const&  props = network()->properties()->layer_props().at(layer_index);
+
+        if (std::dynamic_pointer_cast<netlab::tracked_dock_stats>(m_selected_object_stats) != nullptr)
+        {
+            netlab::sector_coordinate_type  x, y, c;
+            props.dock_sector_coordinates(m_selected_object_stats->indices().object_index(), x, y, c);
+            netlab::sector_coordinate_type  spiker_x, spiker_y, spiker_c;
+            props.spiker_sector_coordinates_from_dock_sector_coordinates(x,y,c,spiker_x, spiker_y, spiker_c);
+            object_index = props.spiker_sector_index(spiker_x, spiker_y, spiker_c);
+        }
+        else if (std::dynamic_pointer_cast<netlab::tracked_ship_stats>(m_selected_object_stats) != nullptr)
+            object_index = props.spiker_index_from_ship_index(m_selected_object_stats->indices().object_index());
+        else
+            return;
+    }
+
+    m_selected_object_stats =
+        netexp::experiment_factory::instance().create_tracked_spiker_stats(m_experiment_name, {layer_index,object_index});
+    m_batches_selection.clear();
 }
