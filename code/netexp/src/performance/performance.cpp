@@ -236,9 +236,10 @@ struct  initialiser_of_movement_area_centers : public netlab::initialiser_of_mov
 private:
     std::vector<bar_random_distribution>  m_distribution_of_spiker_layer;
     random_generator_for_natural_32_bit  m_generator_of_spiker_layer;
-    std::vector<float_32_bit>  m_max_distance_x;
-    std::vector<float_32_bit>  m_max_distance_y;
-    std::vector<float_32_bit>  m_max_distance_c;
+
+    std::vector<netlab::sector_coordinate_type>  m_max_distance_x;
+    std::vector<netlab::sector_coordinate_type>  m_max_distance_y;
+    std::vector<netlab::sector_coordinate_type>  m_max_distance_c;
     random_generator_for_natural_32_bit  m_position_generator;
 };
 
@@ -261,20 +262,21 @@ initialiser_of_movement_area_centers::initialiser_of_movement_area_centers()
                 }),
             })
     , m_generator_of_spiker_layer()
+
     , m_max_distance_x({
-            7UL * get_network_props()->layer_props().at(0UL).distance_of_spikers_along_x_axis_in_meters(),
-            7UL * get_network_props()->layer_props().at(1UL).distance_of_spikers_along_x_axis_in_meters(),
-            7UL * get_network_props()->layer_props().at(2UL).distance_of_spikers_along_x_axis_in_meters(),
+            get_network_props()->layer_props().at(0UL).num_spikers_along_x_axis(),
+            get_network_props()->layer_props().at(1UL).num_spikers_along_x_axis(),
+            get_network_props()->layer_props().at(2UL).num_spikers_along_x_axis(),
             })
     , m_max_distance_y({
-           7UL * get_network_props()->layer_props().at(0UL).distance_of_spikers_along_y_axis_in_meters(),
-           7UL * get_network_props()->layer_props().at(1UL).distance_of_spikers_along_y_axis_in_meters(),
-           7UL * get_network_props()->layer_props().at(2UL).distance_of_spikers_along_y_axis_in_meters(),
+           get_network_props()->layer_props().at(0UL).num_spikers_along_y_axis(),
+           get_network_props()->layer_props().at(1UL).num_spikers_along_y_axis(),
+           get_network_props()->layer_props().at(2UL).num_spikers_along_y_axis(),
            })
     , m_max_distance_c({
-           5UL * get_network_props()->layer_props().at(0UL).distance_of_spikers_along_c_axis_in_meters(),
-           5UL * get_network_props()->layer_props().at(1UL).distance_of_spikers_along_c_axis_in_meters(),
-           5UL * get_network_props()->layer_props().at(2UL).distance_of_spikers_along_c_axis_in_meters(),
+           get_network_props()->layer_props().at(0UL).num_spikers_along_c_axis(),
+           get_network_props()->layer_props().at(1UL).num_spikers_along_c_axis(),
+           get_network_props()->layer_props().at(2UL).num_spikers_along_c_axis(),
            })
     , m_position_generator()
 {
@@ -315,24 +317,36 @@ void  initialiser_of_movement_area_centers::compute_movement_area_center_for_shi
         vector3&  area_center
         )
 {
-    (void)spiker_index_into_layer;
-    compute_center_of_movement_area_for_ships_of_spiker(
-                spiker_layer_index,
-                props.layer_props().at(spiker_layer_index).spiker_sector_centre(
+    area_layer_index = static_cast<netlab::layer_index_type>(
+                            get_random_bar_index(m_distribution_of_spiker_layer.at(spiker_layer_index),m_generator_of_spiker_layer)
+                            );
+    if (area_layer_index == spiker_layer_index)
+        compute_center_of_movement_area_for_ships_of_spiker(
                     spiker_sector_coordinate_x,
                     spiker_sector_coordinate_y,
-                    spiker_sector_coordinate_c
-                    ),
-                props,
-                m_distribution_of_spiker_layer.at(spiker_layer_index),
-                m_generator_of_spiker_layer,
-                m_max_distance_x,
-                m_max_distance_y,
-                m_max_distance_c,
-                m_position_generator,
-                area_layer_index,
-                area_center
-                );
+                    spiker_sector_coordinate_c,
+                    props.layer_props().at(spiker_layer_index),
+                    props.layer_props().at(spiker_layer_index).size_of_ship_movement_area_in_meters(area_layer_index),
+                    m_max_distance_x.at(area_layer_index),
+                    m_max_distance_y.at(area_layer_index),
+                    m_max_distance_c.at(area_layer_index),
+                    m_position_generator,
+                    area_center
+                    );
+    else
+        compute_center_of_movement_area_for_ships_of_spiker(
+                    spiker_sector_coordinate_x,
+                    spiker_sector_coordinate_y,
+                    spiker_sector_coordinate_c,
+                    props.layer_props().at(spiker_layer_index),
+                    props.layer_props().at(area_layer_index),
+                    props.layer_props().at(spiker_layer_index).size_of_ship_movement_area_in_meters(area_layer_index),
+                    m_max_distance_x.at(area_layer_index),
+                    m_max_distance_y.at(area_layer_index),
+                    m_max_distance_c.at(area_layer_index),
+                    m_position_generator,
+                    area_center
+                    );
 }
 
 

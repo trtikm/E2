@@ -17,6 +17,7 @@
 #include <utility/invariants.hpp>
 #include <utility/random.hpp>
 #include <utility/canonical_path.hpp>
+#include <utility/msgstream.hpp>
 #include <sstream>
 #include <iomanip>
 #include <string>
@@ -485,7 +486,7 @@ void  simulator::update_network(float_64_bit const  seconds_from_previous_call)
     {
         network()->update(
             true,true,true,
-            nullptr
+            m_selected_object_stats.operator bool() ? m_selected_object_stats.get() : nullptr
 //                        m_selected_input_spot_stats.operator bool() ? m_selected_input_spot_stats.get() : nullptr,
 //                        m_selected_output_terminal_stats.operator bool() ? m_selected_output_terminal_stats.get() : nullptr,
 //                        m_selected_cell_stats.operator bool() ? m_selected_cell_stats.get() : nullptr
@@ -646,6 +647,49 @@ void  simulator::render_network(matrix44 const&  view_projection_matrix, qtgl::d
                 *(m_dbg_network_camera.is_enabled() ? m_dbg_network_camera.get_camera() : m_camera),
                 clip_planes
                 );
+
+//{
+//    for (netlab::layer_index_type layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+//    {
+//        netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+//
+//        vector3 const layer_lo =
+//            layer_props.low_corner_of_ships() + 0.5f * layer_props.size_of_ship_movement_area_in_meters(layer_index);
+//        vector3 const layer_hi =
+//            layer_props.high_corner_of_ships() - 0.5f * layer_props.size_of_ship_movement_area_in_meters(layer_index);
+//
+//        auto const  batch_bbox = qtgl::create_wireframe_box(layer_lo, layer_hi,
+//            get_program_options()->dataRoot(), msgstream() << "/netviewer/layer_bbox_" << (int)layer_index);
+//        if (qtgl::make_current(*batch_bbox, *draw_state))
+//        {
+//            render_batch(
+//                *batch_bbox,
+//                view_projection_matrix,
+//                angeo::coordinate_system(vector3_zero(), quaternion_identity()),
+//                { 1.0f, 1.0f, 1.0f, 1.0f }
+//                );
+//            draw_state = batch_bbox->draw_state();
+//        }
+//    }
+//    if (qtgl::make_current(*m_batch_ship, *draw_state))
+//    {
+//        for (netlab::layer_index_type layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
+//        {
+//            netlab::network_layer_props const&  layer_props = network()->properties()->layer_props().at(layer_index);
+//            for (netlab::object_index_type spiker_index = 0UL; spiker_index != layer_props.num_spikers(); ++spiker_index)
+//            {
+//                render_batch(
+//                    *m_batch_ship,
+//                    view_projection_matrix,
+//                    angeo::coordinate_system(network()->get_center_of_movement_area(layer_index, spiker_index),
+//                                                quaternion_identity())
+//                    );
+//            }
+//        }
+//
+//        draw_state = m_batch_ship->draw_state();
+//    }
+//}
 
     render_network_spikers(view_projection_matrix,clip_planes,draw_state);
     render_network_docks(view_projection_matrix,clip_planes,draw_state);

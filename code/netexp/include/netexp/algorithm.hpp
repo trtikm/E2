@@ -8,19 +8,59 @@
 namespace netexp {
 
 
-void  compute_center_of_movement_area_for_ships_of_spiker(
-        netlab::layer_index_type const  spiker_layer_index,
-        vector3 const&  spiker_position,
-        netlab::network_props const&  props,
-        bar_random_distribution const&  distribution_of_spiker_layer,
-        random_generator_for_natural_32_bit&  generator_of_spiker_layer,
-        std::vector<float_32_bit> const&  max_distance_x,
-        std::vector<float_32_bit> const&  max_distance_y,
-        std::vector<float_32_bit> const&  max_distance_c,
-        random_generator_for_natural_32_bit&  position_generator,
-        netlab::layer_index_type&  area_layer_index,
+void  compute_extreme_sector_coordinates_for_center_of_movement_area(
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_x,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_y,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_c,
+        netlab::network_layer_props const&  layer_props,
+        vector3 const&  size_of_ship_movement_area_in_meters,
+        netlab::sector_coordinate_type const  max_distance_x,
+        netlab::sector_coordinate_type const  max_distance_y,
+        netlab::sector_coordinate_type const  max_distance_c,
+        netlab::sector_coordinate_type&  lo_x,
+        netlab::sector_coordinate_type&  lo_y,
+        netlab::sector_coordinate_type&  lo_c,
+        netlab::sector_coordinate_type&  hi_x,
+        netlab::sector_coordinate_type&  hi_y,
+        netlab::sector_coordinate_type&  hi_c
+        );
+
+void  ensure_whole_movement_area_is_inside_layer(
+        vector3 const&  low_corner_of_ships,
+        vector3 const&  high_corner_of_ships,
+        vector3 const&  size_of_ship_movement_area_in_meters,
         vector3&  area_center
         );
+
+
+void  compute_center_of_movement_area_for_ships_of_spiker(
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_x,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_y,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_c,
+        netlab::network_layer_props const&  layer_props,
+        vector3 const&  size_of_ship_movement_area_in_meters,
+        netlab::sector_coordinate_type const  max_distance_x,
+        netlab::sector_coordinate_type const  max_distance_y,
+        netlab::sector_coordinate_type const  max_distance_c,
+        random_generator_for_natural_32_bit&  position_generator,
+        vector3&  area_center
+        );
+
+
+void  compute_center_of_movement_area_for_ships_of_spiker(
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_x,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_y,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_c,
+        netlab::network_layer_props const&  spiker_layer_props,
+        netlab::network_layer_props const&  area_layer_props,
+        vector3 const&  size_of_ship_movement_area_in_meters,
+        netlab::sector_coordinate_type const  max_distance_x,
+        netlab::sector_coordinate_type const  max_distance_y,
+        netlab::sector_coordinate_type const  max_distance_c,
+        random_generator_for_natural_32_bit&  position_generator,
+        vector3&  area_center
+        );
+
 
 void  compute_random_ship_position_in_movement_area(
         vector3 const&  area_center,
@@ -30,6 +70,7 @@ void  compute_random_ship_position_in_movement_area(
         random_generator_for_natural_32_bit&   random_generator,
         vector3&  ship_position
         );
+
 
 void  compute_random_ship_velocity_in_movement_area(
         float_32_bit const  min_speed_of_ship_in_movement_area,
