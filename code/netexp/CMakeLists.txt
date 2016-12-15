@@ -12,6 +12,7 @@ add_library(${THIS_TARGET_NAME}
 
     ./src/calibration/calibration.cpp
     ./src/performance/performance.cpp
+    ./src/dbg_spiking_develop/dbg_spiking_develop.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

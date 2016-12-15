@@ -27,11 +27,6 @@ void  compute_extreme_sector_coordinates_for_center_of_movement_area(
         )
 {
     vector3 const  area_shift = 0.5f * size_of_ship_movement_area_in_meters;
-
-    ASSUMPTION(area_shift(0) >= layer_props.distance_of_spikers_along_x_axis_in_meters() &&
-               area_shift(1) >= layer_props.distance_of_spikers_along_y_axis_in_meters() &&
-               area_shift(2) >= layer_props.distance_of_spikers_along_c_axis_in_meters());
-
     vector3 const  spiker_shift = 0.5f * vector3(layer_props.distance_of_spikers_along_x_axis_in_meters() -
                                                         layer_props.distance_of_docks_in_meters(),
                                                  layer_props.distance_of_spikers_along_y_axis_in_meters() -

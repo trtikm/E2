@@ -33,6 +33,7 @@ network_props::network_props(
     , m_max_coods_along_c_axis(layer_props.size())
 {
     ASSUMPTION(!m_layer_props.empty());
+    ASSUMPTION(m_layer_props.size() <= max_number_of_layers());
     ASSUMPTION(m_update_time_step_in_seconds < 0.1f);
     ASSUMPTION(m_update_time_step_in_seconds > 0.0001f);
     ASSUMPTION(m_max_connection_distance_in_meters > 0.0f);

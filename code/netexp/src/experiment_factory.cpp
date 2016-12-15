@@ -3,6 +3,7 @@
 /// Bellow add a declaration of a function of your experiment which performs it registeration to the factory.
 namespace netexp { namespace calibration { extern void __register__(netexp::experiment_factory&  factory); }}
 namespace netexp { namespace performance { extern void __register__(netexp::experiment_factory&  factory); } }
+namespace netexp { namespace dbg_spiking_develop { extern void __register__(netexp::experiment_factory&  factory); } }
 
 namespace netexp {
 
@@ -17,6 +18,7 @@ experiment_factory::experiment_factory()
     /// Bellow add a call to the registration function of your experiment declared above.
     netexp::calibration::__register__(*this);
     netexp::performance::__register__(*this);
+    netexp::dbg_spiking_develop::__register__(*this);
 }
 
 experiment_factory&  experiment_factory::instance()

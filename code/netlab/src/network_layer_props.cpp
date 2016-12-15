@@ -115,10 +115,6 @@ network_layer_props::network_layer_props(
     ASSUMPTION(m_num_docks_along_y_axis_per_spiker > 0U);
     ASSUMPTION(m_num_docks_along_c_axis_per_spiker > 0U);
 
-    ASSUMPTION((m_num_docks_along_x_axis_per_spiker & 1U) != 0U ||
-               (m_num_docks_along_y_axis_per_spiker & 1U) != 0U ||
-               (m_num_docks_along_c_axis_per_spiker & 1U) != 0U );
-
     ASSUMPTION(m_num_docks > 0UL);
     ASSUMPTION(m_num_docks <= max_number_of_objects_in_layer());
 
