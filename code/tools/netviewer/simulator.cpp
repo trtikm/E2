@@ -1675,6 +1675,21 @@ std::string  simulator::get_network_info_text() const
             total_memory_index_of_ships_in_sectors
             ;
 
+    std::vector< std::vector<natural_64_bit> >  counts_of_area_centers(props.layer_props().size(),
+        std::vector<natural_64_bit>(props.layer_props().size()));
+    for (netlab::layer_index_type layer_index = 0U; layer_index != props.layer_props().size(); ++layer_index)
+    {
+        netlab::network_layer_props const&  layer_props = props.layer_props().at(layer_index);
+        for (netlab::object_index_type spiker_index = 0ULL; spiker_index != layer_props.num_spikers(); ++spiker_index)
+        {
+            netlab::layer_index_type const  center_layer_index =
+                props.find_layer_index(network()->get_center_of_movement_area(layer_index, spiker_index)(2));
+
+            ++counts_of_area_centers.at(layer_index).at(center_layer_index);
+        }
+    }
+
+
     ostr << "Experiment: " << get_experiment_name() << "\n"
             "Description: " << netexp::experiment_factory::instance().get_experiment_description(get_experiment_name()) << "\n\n"
             "Network properties:\n"
@@ -1690,14 +1705,14 @@ std::string  simulator::get_network_info_text() const
             "  time step: " << props.update_time_step_in_seconds() << "s\n"
             "  max connection distance: " << props.max_connection_distance_in_meters() << "m\n"
             "  max num treads to use: " << props.num_threads_to_use() << "\n"
-            "  number of layers: " << props.layer_props().size() << "\n\n"
+            "  number of layers: " << props.layer_props().size() << "\n"
          ;
 
     for (netlab::layer_index_type layer_index = 0U; layer_index != props.layer_props().size(); ++layer_index)
     {
         netlab::network_layer_props const&  layer_props = props.layer_props().at(layer_index);
 
-        ostr << "  layer[" << (int)layer_index << "]:\n"
+        ostr << "\n  layer[" << (int)layer_index << "]:\n"
 
              << "    num spikers: " << layer_props.num_spikers() << "\n"
              << "    excitatory: " << std::boolalpha << layer_props.are_spikers_excitatory() << "\n"
@@ -1763,8 +1778,73 @@ std::string  simulator::get_network_info_text() const
                  << layer_props.min_speed_of_ship_in_meters_per_second(other_layer_index) << "m/s, "
                  << layer_props.max_speed_of_ship_in_meters_per_second(other_layer_index) << "m/s\n"
                  ;
-    }
 
+        ostr << "\n    Counts area centers and ships from this layer [centers / ships]:\n";
+        {
+            natural_64_bit  total_centers = 0ULL;
+            natural_64_bit  total_ships = 0ULL;
+            natural_64_bit  total_inhibitory_centers = 0ULL;
+            natural_64_bit  total_inhibitory_ships = 0ULL;
+            for (netlab::layer_index_type i = 0U; i != props.layer_props().size(); ++i)
+            {
+                ostr << "        to layer[" << (natural_32_bit)i << "]: "
+                     << counts_of_area_centers.at(layer_index).at(i)
+                     << " / "
+                     << counts_of_area_centers.at(layer_index).at(i) * props.layer_props().at(layer_index).num_ships_per_spiker()
+                     << (props.layer_props().at(i).are_spikers_excitatory() ? "" : " (inhibitory)")
+                     << "\n"
+                     ;
+                total_centers += counts_of_area_centers.at(layer_index).at(i);
+                total_ships += counts_of_area_centers.at(layer_index).at(i) * props.layer_props().at(layer_index).num_ships_per_spiker();
+                if (!props.layer_props().at(i).are_spikers_excitatory())
+                {
+                    total_inhibitory_centers += counts_of_area_centers.at(layer_index).at(i);
+                    total_inhibitory_ships += counts_of_area_centers.at(layer_index).at(i) *
+                                              props.layer_props().at(layer_index).num_ships_per_spiker();
+                }
+            }
+            ostr << "        TOTAL: " << total_centers << " / " << total_ships << "\n";
+            ostr << "        TOTAL to excitatory: " << total_centers - total_inhibitory_centers << " / " 
+                                                    << total_ships - total_inhibitory_ships << "\n";
+            ostr << "        TOTAL to inhibitory: " << total_inhibitory_centers << " / " << total_inhibitory_ships << "\n";
+        }
+
+        ostr << "\n    Counts area centers and ships into this layer [centers / ships]:\n";
+        {
+            natural_64_bit  total_centers = 0ULL;
+            natural_64_bit  total_ships = 0ULL;
+            natural_64_bit  total_inhibitory_centers = 0ULL;
+            natural_64_bit  total_inhibitory_ships = 0ULL;
+            for (netlab::layer_index_type i = 0U; i != props.layer_props().size(); ++i)
+            {
+                ostr << "        from layer[" << (natural_32_bit)i << "]: "
+                     << counts_of_area_centers.at(i).at(layer_index)
+                     << " / "
+                     << counts_of_area_centers.at(i).at(layer_index) * props.layer_props().at(i).num_ships_per_spiker()
+                     << (props.layer_props().at(i).are_spikers_excitatory() ? "" : " (inhibitory)")
+                     << "\n"
+                     ;
+                total_centers += counts_of_area_centers.at(i).at(layer_index);
+                total_ships += counts_of_area_centers.at(i).at(layer_index) * props.layer_props().at(i).num_ships_per_spiker();
+                if (!props.layer_props().at(i).are_spikers_excitatory())
+                {
+                    total_inhibitory_centers += counts_of_area_centers.at(i).at(layer_index);
+                    total_inhibitory_ships += counts_of_area_centers.at(i).at(layer_index) *
+                                              props.layer_props().at(i).num_ships_per_spiker();
+                }
+            }
+            ostr << "        TOTAL: " << total_centers << " / " << total_ships
+                 << " (>= " << layer_props.num_docks() << ")"
+                 << "\n";
+            ostr << "        TOTAL from excitatory: " << total_centers - total_inhibitory_centers << " / " 
+                                                      << total_ships - total_inhibitory_ships
+                 << " (>= " << (natural_64_bit)(layer_props.num_docks() * 3.0/4.0) << ")"
+                 << "\n";
+            ostr << "        TOTAL from inhibitory: " << total_inhibitory_centers << " / " << total_inhibitory_ships
+                 << " (>= " << layer_props.num_docks() - (natural_64_bit)(layer_props.num_docks() * 3.0/4.0) << ")"
+                 << "\n";
+        }
+    }
 
     return ostr.str();
 }

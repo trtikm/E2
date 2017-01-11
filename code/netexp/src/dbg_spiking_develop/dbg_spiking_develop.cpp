@@ -222,13 +222,13 @@ std::vector< std::vector<natural_64_bit> > const&  layers_interconnection_matrix
 {
     static std::vector< std::vector<natural_64_bit> > const  data{
         //   0   *1    2   *3    4   *5    6
-        {   0U,  0U,  0U,  0U,  0U,  0U,  0U }, // 0        TODO
+        {   0U,  0U,  1U,  0U,  1U,  1U,  3U }, // 0
         {   0U,  0U,  1U,  0U,  1U,  2U,  2U }, // 1*
-        {   0U,  0U,  0U,  0U,  0U,  0U,  0U }, // 2        TODO
+        {   1U,  0U,  1U,  1U,  3U,  2U,  4U }, // 2
         {   2U,  1U,  2U,  1U,  3U,  1U,  3U }, // 3*
-        {   0U,  0U,  0U,  0U,  0U,  0U,  0U }, // 4        TODO
+        {   5U,  4U,  3U,  4U, 11U,  3U, 11U }, // 4
         {   2U,  2U,  2U,  2U,  7U,  1U,  9U }, // 5*
-        {   0U,  0U,  0U,  0U,  0U,  0U,  0U }, // 6        TODO
+        {   8U,  5U, 12U,  5U, 16U,  6U, 20U }, // 6
     };
     return data;
 }
