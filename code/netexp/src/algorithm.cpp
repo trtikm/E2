@@ -9,6 +9,31 @@
 namespace netexp {
 
 
+netlab::layer_index_type  compute_layer_index_for_area_center(
+        std::vector<natural_64_bit>&  counts_of_centers_into_layers,
+        random_generator_for_natural_32_bit&  generator
+        )
+{
+    netlab::layer_index_type  layer_index =
+            static_cast<netlab::layer_index_type>(
+                    get_random_natural_32_bit_in_range(
+                            0U,
+                            static_cast<netlab::layer_index_type>(counts_of_centers_into_layers.size() - 1U),
+                            generator
+                            )
+                    );
+    for (netlab::layer_index_type i = 0U;
+            i != counts_of_centers_into_layers.size();
+            ++i, layer_index = (layer_index + 1U) % counts_of_centers_into_layers.size())
+        if (counts_of_centers_into_layers.at(layer_index) != 0ULL)
+        {
+            --counts_of_centers_into_layers.at(layer_index);
+            return layer_index;
+        }
+    UNREACHABLE();
+}
+
+
 void  compute_extreme_sector_coordinates_for_center_of_movement_area(
         netlab::sector_coordinate_type const  spiker_sector_coordinate_x,
         netlab::sector_coordinate_type const  spiker_sector_coordinate_y,
@@ -117,24 +142,25 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
                                                                       spiker_sector_coordinate_c);
     vector3 const  shift = 0.5f * size_of_ship_movement_area_in_meters;
 
-    for (int i = 0; i < 10; ++i)
+    for (int i = 0; i < 100; ++i)
     {
         area_center = layer_props.spiker_sector_centre(get_random_natural_32_bit_in_range(lo_x, hi_x, position_generator),
                                                        get_random_natural_32_bit_in_range(lo_y, hi_y, position_generator),
                                                        get_random_natural_32_bit_in_range(lo_c, hi_c, position_generator));
-        vector3 const  delta = area_center - spiker_position;
-        if (std::abs(delta(0)) >= shift(0) + 0.5f * layer_props.distance_of_spikers_along_x_axis_in_meters() ||
-            std::abs(delta(1)) >= shift(1) + 0.5f * layer_props.distance_of_spikers_along_y_axis_in_meters() ||
-            std::abs(delta(2)) >= shift(2) + 0.5f * layer_props.distance_of_spikers_along_c_axis_in_meters() )
-            break;
-    }
-
-    ensure_whole_movement_area_is_inside_layer(
+        ensure_whole_movement_area_is_inside_layer(
             layer_props.low_corner_of_ships(),
             layer_props.high_corner_of_ships(),
             size_of_ship_movement_area_in_meters,
             area_center
             );
+
+        vector3 const  delta = area_center - spiker_position;
+        if (std::abs(delta(0)) >= shift(0) + 0.5f * layer_props.distance_of_spikers_along_x_axis_in_meters() ||
+            std::abs(delta(1)) >= shift(1) + 0.5f * layer_props.distance_of_spikers_along_y_axis_in_meters() ||
+            std::abs(delta(2)) >= shift(2) + 0.5f * layer_props.distance_of_spikers_along_c_axis_in_meters() )
+            return;
+    }
+    UNREACHABLE();
 }
 
 

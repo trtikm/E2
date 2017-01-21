@@ -225,8 +225,8 @@ std::vector< std::vector<natural_64_bit> > const&  layers_interconnection_matrix
         {   0U,  0U,  1U,  0U,  1U,  1U,  3U }, // 0
         {   0U,  0U,  1U,  0U,  1U,  2U,  2U }, // 1*
         {   1U,  0U,  1U,  1U,  3U,  2U,  4U }, // 2
-        {   2U,  1U,  2U,  1U,  3U,  1U,  3U }, // 3*
-        {   5U,  4U,  3U,  4U, 11U,  3U, 11U }, // 4
+        {   2U,  1U,  1U,  1U,  3U,  1U,  3U }, // 3*
+        {   5U,  4U,  4U,  4U, 11U,  3U, 11U }, // 4
         {   2U,  2U,  2U,  2U,  7U,  1U,  9U }, // 5*
         {   8U,  5U, 12U,  5U, 16U,  6U, 20U }, // 6
     };
@@ -390,22 +390,18 @@ struct  initialiser_of_movement_area_centers : public netlab::initialiser_of_mov
             );
 
 private:
-    std::vector<bar_random_distribution>  m_distribution_of_spiker_layer;
+    std::vector<natural_64_bit>  m_counts_of_centers_into_layers;
     random_generator_for_natural_32_bit  m_generator_of_spiker_layer;
     random_generator_for_natural_32_bit  m_position_generator;
 };
 
 initialiser_of_movement_area_centers::initialiser_of_movement_area_centers()
     : netlab::initialiser_of_movement_area_centers()
-    , m_distribution_of_spiker_layer()
+    , m_counts_of_centers_into_layers()
     , m_generator_of_spiker_layer()
     , m_position_generator()
 {
-    m_distribution_of_spiker_layer.reserve(num_layers());
-    for (netlab::layer_index_type  layer_index = 0U; layer_index != num_layers(); ++layer_index)
-        m_distribution_of_spiker_layer.push_back(
-                make_bar_random_distribution_from_count_bars(layers_interconnection_matrix().at(layer_index))
-                );
+    m_counts_of_centers_into_layers.reserve(num_layers());
 }
 
 void  initialiser_of_movement_area_centers::on_next_layer(
@@ -413,10 +409,10 @@ void  initialiser_of_movement_area_centers::on_next_layer(
         netlab::network_props const&  props
         )
 {
-    (void)layer_index;
     (void)props;
-    reset(m_generator_of_spiker_layer);
-    reset(m_position_generator);
+    m_counts_of_centers_into_layers = layers_interconnection_matrix().at(layer_index);
+    //reset(m_generator_of_spiker_layer);
+    //reset(m_position_generator);
 }
 
 void  initialiser_of_movement_area_centers::compute_movement_area_center_for_ships_of_spiker(
@@ -430,9 +426,8 @@ void  initialiser_of_movement_area_centers::compute_movement_area_center_for_shi
         vector3&  area_center
         )
 {
-    area_layer_index = static_cast<netlab::layer_index_type>(
-                            get_random_bar_index(m_distribution_of_spiker_layer.at(spiker_layer_index),m_generator_of_spiker_layer)
-                            );
+    area_layer_index = netexp::compute_layer_index_for_area_center(m_counts_of_centers_into_layers,m_generator_of_spiker_layer);
+
     if (area_layer_index == spiker_layer_index)
         compute_center_of_movement_area_for_ships_of_spiker(
                     spiker_sector_coordinate_x,

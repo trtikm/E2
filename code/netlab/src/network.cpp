@@ -83,10 +83,22 @@ network::network(std::shared_ptr<network_props> const  network_properties,
                                             center(i) + area_shift(i) > high_corner(i) + 0.001f )
                                             return false;
                                     return true;
-                                }(centers.at(spiker_index),layer_props.size_of_ship_movement_area_in_meters(area_layer_index),
-                                  properties()->layer_props().at(area_layer_index).low_corner_of_ships(),
-                                  properties()->layer_props().at(area_layer_index).high_corner_of_ships())
-                            );
+                                    }(centers.at(spiker_index),layer_props.size_of_ship_movement_area_in_meters(area_layer_index),
+                                      properties()->layer_props().at(area_layer_index).low_corner_of_ships(),
+                                      properties()->layer_props().at(area_layer_index).high_corner_of_ships())
+                                );
+                        ASSUMPTION(
+                                area_layer_index != layer_index ||
+                                [](vector3 const&  spiker_pos, vector3 const&  spikers_dist,
+                                   vector3 const&  area_center, vector3 const&  area_size) -> bool {
+                                    vector3 const  area_shift = 0.5f * area_size;
+                                    vector3 const  delta = area_center - spiker_pos;
+                                    return std::abs(delta(0)) >= area_shift(0) + 0.5f * spikers_dist(0) ||
+                                           std::abs(delta(1)) >= area_shift(1) + 0.5f * spikers_dist(1) ||
+                                           std::abs(delta(2)) >= area_shift(2) + 0.5f * spikers_dist(2) ;
+                                    }(layer_props.spiker_sector_centre(x,y,c),layer_props.distance_of_spikers_in_meters(),
+                                      centers.at(spiker_index),layer_props.size_of_ship_movement_area_in_meters(area_layer_index))
+                                );
 
                         {
                             ships_initialiser.on_next_area(layer_index, spiker_index, *properties());

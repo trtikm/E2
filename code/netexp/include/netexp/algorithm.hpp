@@ -8,6 +8,12 @@
 namespace netexp {
 
 
+netlab::layer_index_type  compute_layer_index_for_area_center(
+        std::vector<natural_64_bit>&  counts_of_centers_into_layers,
+        random_generator_for_natural_32_bit&  generator
+        );
+
+
 void  compute_extreme_sector_coordinates_for_center_of_movement_area(
         netlab::sector_coordinate_type const  spiker_sector_coordinate_x,
         netlab::sector_coordinate_type const  spiker_sector_coordinate_y,

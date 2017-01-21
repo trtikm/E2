@@ -74,6 +74,12 @@ struct  network_layer_props
 
     float_32_bit  distance_of_docks_in_meters() const noexcept { return m_distance_of_docks_in_meters; }
 
+    vector3  distance_of_spikers_in_meters() const noexcept
+    {
+        return { m_distance_of_spikers_along_x_axis_in_meters,
+                 m_distance_of_spikers_along_y_axis_in_meters,
+                 m_distance_of_spikers_along_c_axis_in_meters };
+    }
     float_32_bit  distance_of_spikers_along_x_axis_in_meters() const noexcept { return m_distance_of_spikers_along_x_axis_in_meters; }
     float_32_bit  distance_of_spikers_along_y_axis_in_meters() const noexcept { return m_distance_of_spikers_along_y_axis_in_meters; }
     float_32_bit  distance_of_spikers_along_c_axis_in_meters() const noexcept { return m_distance_of_spikers_along_c_axis_in_meters; }
