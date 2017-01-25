@@ -20,6 +20,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/netlab/network_indices.hpp
     ./src/network_indices.cpp
+    
+    ./include/netlab/statistics_of_densities_of_ships_in_layers.hpp
+    ./src/statistics_of_densities_of_ships_in_layers.cpp
 
     ./include/netlab/network.hpp
     ./src/network.cpp

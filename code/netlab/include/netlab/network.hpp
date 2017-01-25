@@ -9,6 +9,7 @@
 #   include <netlab/ship_controller.hpp>
 #   include <netlab/initialiser_of_movement_area_centers.hpp>
 #   include <netlab/initialiser_of_ships_in_movement_areas.hpp>
+#   include <netlab/statistics_of_densities_of_ships_in_layers.hpp>
 #   include <netlab/tracked_object_stats.hpp>
 #   include <utility/array_of_derived.hpp>
 #   include <angeo/tensor_math.hpp>
@@ -52,6 +53,9 @@ struct  network
             ) const;
 
     std::shared_ptr<network_props>  properties() const noexcept { return m_properties; }
+
+    statistics_of_densities_of_ships_in_layers const&  densities_of_ships() const noexcept { return m_densities_of_ships; }
+
     natural_64_bit  update_id() const noexcept { return  m_update_id; }
 
     void  update(
@@ -91,6 +95,8 @@ private:
 
     std::vector< std::vector<vector3> >  m_movement_area_centers;
     std::vector< std::vector< std::vector<compressed_layer_and_object_indices> > >  m_ships_in_sectors;
+
+    statistics_of_densities_of_ships_in_layers  m_densities_of_ships;
 
     natural_64_bit  m_update_id;
 

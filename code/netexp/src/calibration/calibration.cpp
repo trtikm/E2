@@ -142,7 +142,7 @@ struct  initialiser_of_movement_area_centers : public netlab::initialiser_of_mov
 
     void  on_next_layer(netlab::layer_index_type const  layer_index, netlab::network_props const&  props);
 
-    void  compute_movement_area_center_for_ships_of_spiker(
+    void  compute_initial_movement_area_center_for_ships_of_spiker(
             netlab::layer_index_type const  spiker_layer_index,
             netlab::object_index_type const  spiker_index_into_layer,
             netlab::sector_coordinate_type const  spiker_sector_coordinate_x,
@@ -206,7 +206,7 @@ void  initialiser_of_movement_area_centers::on_next_layer(
     reset(m_position_generator);
 }
 
-void  initialiser_of_movement_area_centers::compute_movement_area_center_for_ships_of_spiker(
+void  initialiser_of_movement_area_centers::compute_initial_movement_area_center_for_ships_of_spiker(
         netlab::layer_index_type const  spiker_layer_index,
         netlab::object_index_type const  spiker_index_into_layer,
         netlab::sector_coordinate_type const  spiker_sector_coordinate_x,

@@ -22,6 +22,7 @@ network::network(std::shared_ptr<network_props> const  network_properties,
     , m_ships()
     , m_movement_area_centers()
     , m_ships_in_sectors()
+    , m_densities_of_ships(m_properties->layer_props().size())
     , m_update_id(0UL)
 {
     ASSUMPTION(this->properties().operator bool());
@@ -34,27 +35,84 @@ network::network(std::shared_ptr<network_props> const  network_properties,
     m_movement_area_centers.resize(properties()->layer_props().size());
     m_ships_in_sectors.resize(properties()->layer_props().size());
 
+    for (layer_index_type layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
+    {
+        network_layer_props const&  layer_props = properties()->layer_props().at(layer_index);
+
+        m_spikers.push_back(objects_factory.create_array_of_spikers(layer_index, layer_props.num_spikers()));
+        ASSUMPTION(m_spikers.back()->size() == layer_props.num_spikers());
+
+        m_docks.push_back(objects_factory.create_array_of_docks(layer_index, layer_props.num_docks()));
+        ASSUMPTION(m_docks.back()->empty() || m_docks.back()->size() == layer_props.num_docks());
+
+        m_ships.push_back(objects_factory.create_array_of_ships(layer_index, layer_props.num_ships()));
+        ASSUMPTION(m_ships.back()->size() == layer_props.num_ships());
+    }
+
     for (layer_index_type  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
     {
         network_layer_props const&  layer_props = properties()->layer_props().at(layer_index);
 
-        m_spikers.push_back( objects_factory.create_array_of_spikers(layer_index,layer_props.num_spikers()) );
-        ASSUMPTION(m_spikers.back()->size() == layer_props.num_spikers());
+        area_centers_initialiser.on_next_layer(layer_index, *properties());
 
-        m_docks.push_back( objects_factory.create_array_of_docks(layer_index,layer_props.num_docks()) );
-        ASSUMPTION(m_docks.back()->empty() || m_docks.back()->size() == layer_props.num_docks());
+        std::vector<vector3>&  centers = m_movement_area_centers.at(layer_index);
+        centers.resize(layer_props.num_spikers());
 
-        m_ships.push_back( objects_factory.create_array_of_ships(layer_index,layer_props.num_ships()) );
-        ASSUMPTION(m_ships.back()->size() == layer_props.num_ships());
+        object_index_type  spiker_index = 0UL;
+        for (sector_coordinate_type  c = 0U; c < layer_props.num_spikers_along_c_axis(); ++c)
+            for (sector_coordinate_type  y = 0U; y < layer_props.num_spikers_along_y_axis(); ++y)
+                for (sector_coordinate_type  x = 0U; x < layer_props.num_spikers_along_x_axis(); ++x)
+                {
+                    INVARIANT(spiker_index == layer_props.spiker_sector_index(x,y,c));
 
+                    layer_index_type  area_layer_index;
+                    area_centers_initialiser.compute_initial_movement_area_center_for_ships_of_spiker(
+                            layer_index,
+                            spiker_index,
+                            x,y,c,
+                            *properties(),
+                            area_layer_index,
+                            centers.at(spiker_index)
+                            );
+                        
+                    ASSUMPTION(area_layer_index < properties()->layer_props().size());
+                    ASSUMPTION(
+                            [](vector3 const&  center, vector3 const&  size_of_ship_movement_area_in_meters,
+                               vector3 const&  low_corner, vector3 const&  high_corner) -> bool {
+                                vector3 const  area_shift = 0.5f * size_of_ship_movement_area_in_meters;
+                                for (int i = 0; i != 3; ++i)
+                                    if (center(i) - area_shift(i) < low_corner(i) - 0.001f ||
+                                        center(i) + area_shift(i) > high_corner(i) + 0.001f )
+                                        return false;
+                                return true;
+                                }(centers.at(spiker_index),layer_props.size_of_ship_movement_area_in_meters(area_layer_index),
+                                  properties()->layer_props().at(area_layer_index).low_corner_of_ships(),
+                                  properties()->layer_props().at(area_layer_index).high_corner_of_ships())
+                            );
+                    ASSUMPTION(
+                            area_layer_index != layer_index ||
+                            [](vector3 const&  spiker_pos, vector3 const&  spikers_dist,
+                               vector3 const&  area_center, vector3 const&  area_size) -> bool {
+                                vector3 const  area_shift = 0.5f * area_size;
+                                vector3 const  delta = area_center - spiker_pos;
+                                return std::abs(delta(0)) >= area_shift(0) + 0.5f * spikers_dist(0) ||
+                                       std::abs(delta(1)) >= area_shift(1) + 0.5f * spikers_dist(1) ||
+                                       std::abs(delta(2)) >= area_shift(2) + 0.5f * spikers_dist(2) ;
+                                }(layer_props.spiker_sector_centre(x,y,c),layer_props.distance_of_spikers_in_meters(),
+                                  centers.at(spiker_index),layer_props.size_of_ship_movement_area_in_meters(area_layer_index))
+                            );
+
+                    ++spiker_index;
+                }
+    }
+
+    area_centers_initialiser.prepare_for_shifting_movement_area_centers_in_layers(*properties());
+    while (area_centers_initialiser.start_next_iteration_of_shifting_movement_area_centers_in_layers(*properties()))
+        for (layer_index_type  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
         {
-            area_centers_initialiser.on_next_layer(layer_index, *properties());
-            ships_initialiser.on_next_layer(layer_index, *properties());
+            network_layer_props const&  layer_props = properties()->layer_props().at(layer_index);
 
             std::vector<vector3>&  centers = m_movement_area_centers.at(layer_index);
-            centers.resize(layer_props.num_spikers());
-
-            array_of_derived<ship>&  ships = *m_ships.at(layer_index);
 
             object_index_type  spiker_index = 0UL;
             for (sector_coordinate_type  c = 0U; c < layer_props.num_spikers_along_c_axis(); ++c)
@@ -63,17 +121,17 @@ network::network(std::shared_ptr<network_props> const  network_properties,
                     {
                         INVARIANT(spiker_index == layer_props.spiker_sector_index(x,y,c));
 
-                        layer_index_type  area_layer_index;
-                        area_centers_initialiser.compute_movement_area_center_for_ships_of_spiker(
-                                    layer_index,
-                                    spiker_index,
-                                    x,y,c,
-                                    *properties(),
-                                    area_layer_index,
-                                    centers.at(spiker_index)
-                                    );
+                        layer_index_type const  area_layer_index = properties()->find_layer_index(centers.at(spiker_index)(2));
+
+                        area_centers_initialiser.on_shift_movement_area_center_in_layers(
+                                layer_index,
+                                spiker_index,
+                                x,y,c,
+                                area_layer_index,
+                                *properties(),
+                                centers.at(spiker_index)
+                                );
                         
-                        ASSUMPTION(area_layer_index < properties()->layer_props().size());
                         ASSUMPTION(
                                 [](vector3 const&  center, vector3 const&  size_of_ship_movement_area_in_meters,
                                    vector3 const&  low_corner, vector3 const&  high_corner) -> bool {
@@ -100,52 +158,80 @@ network::network(std::shared_ptr<network_props> const  network_properties,
                                       centers.at(spiker_index),layer_props.size_of_ship_movement_area_in_meters(area_layer_index))
                                 );
 
-                        {
-                            ships_initialiser.on_next_area(layer_index, spiker_index, *properties());
-
-                            object_index_type const  ships_begin_index = layer_props.ships_begin_index_of_spiker(spiker_index);
-                            for (natural_32_bit  i = 0U; i < layer_props.num_ships_per_spiker(); ++i)
-                            {
-                                ships_initialiser.compute_ship_position_and_velocity_in_movement_area(
-                                            centers.at(spiker_index),
-                                            i,
-                                            layer_index,
-                                            area_layer_index,
-                                            *properties(),
-                                            ships.at(ships_begin_index + i)
-                                            );
-                                ASSUMPTION(
-                                        [](vector3 const&  center, network_layer_props const&  props,
-                                           layer_index_type const area_layer_index, ship const& ship_ref) {
-                                            for (auto i = 0; i < 3; ++i)
-                                                if (center(i) - 0.5f *
-                                                        props.size_of_ship_movement_area_in_meters(area_layer_index)(i)
-                                                        > ship_ref.position()(i) ||
-                                                    center(i) + 0.5f *
-                                                        props.size_of_ship_movement_area_in_meters(area_layer_index)(i)
-                                                        < ship_ref.position()(i))
-                                                    return false;
-
-                                            float_32_bit  speed = length(ship_ref.velocity());
-                                            if (speed < props.min_speed_of_ship_in_meters_per_second(area_layer_index) ||
-                                                speed > props.max_speed_of_ship_in_meters_per_second(area_layer_index) )
-                                                return false;
-                                            return true;
-                                            }(centers.at(spiker_index), layer_props, area_layer_index,
-                                              ships.at(ships_begin_index + i))
-                                        );
-                            }
-                        }
-
                         ++spiker_index;
                     }
         }
+    if (false == area_centers_initialiser.fill_statistics_of_densities_of_ships_in_layers(m_densities_of_ships,*properties()))
+    {
+        // TODO: call the algorithm computing the ships-density-statistics.
+    }
+    // TODO: uncomment that assert when the algorithm is implemented.
+    //ASSUMPTION(densities_of_ships().ideal_densities().size() == properties()->layer_props().size());
 
-        {
-            std::vector<compressed_layer_and_object_indices>  empty_dock_sector;
-            empty_dock_sector.reserve(3UL + layer_props.num_ships() / layer_props.num_docks());
-            m_ships_in_sectors.at(layer_index).resize(layer_props.num_docks(), empty_dock_sector);
-        }
+    for (layer_index_type  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
+    {
+        network_layer_props const&  layer_props = properties()->layer_props().at(layer_index);
+
+        ships_initialiser.on_next_layer(layer_index, *properties());
+
+        array_of_derived<ship>&  ships = *m_ships.at(layer_index);
+        std::vector<vector3>&  centers = m_movement_area_centers.at(layer_index);
+
+        object_index_type  spiker_index = 0UL;
+        for (sector_coordinate_type  c = 0U; c < layer_props.num_spikers_along_c_axis(); ++c)
+            for (sector_coordinate_type  y = 0U; y < layer_props.num_spikers_along_y_axis(); ++y)
+                for (sector_coordinate_type  x = 0U; x < layer_props.num_spikers_along_x_axis(); ++x)
+                {
+                    INVARIANT(spiker_index == layer_props.spiker_sector_index(x,y,c));
+
+                    ships_initialiser.on_next_area(layer_index, spiker_index, *properties());
+
+                    layer_index_type const  area_layer_index = properties()->find_layer_index(centers.at(spiker_index)(2));
+
+                    object_index_type const  ships_begin_index = layer_props.ships_begin_index_of_spiker(spiker_index);
+                    for (natural_32_bit  i = 0U; i < layer_props.num_ships_per_spiker(); ++i)
+                    {
+                        ships_initialiser.compute_ship_position_and_velocity_in_movement_area(
+                                    centers.at(spiker_index),
+                                    i,
+                                    layer_index,
+                                    area_layer_index,
+                                    *properties(),
+                                    ships.at(ships_begin_index + i)
+                                    );
+                        ASSUMPTION(
+                                [](vector3 const&  center, network_layer_props const&  props,
+                                   layer_index_type const area_layer_index, ship const& ship_ref) -> bool {
+                                    for (auto i = 0; i < 3; ++i)
+                                        if (center(i) - 0.5f *
+                                                props.size_of_ship_movement_area_in_meters(area_layer_index)(i)
+                                                > ship_ref.position()(i) ||
+                                            center(i) + 0.5f *
+                                                props.size_of_ship_movement_area_in_meters(area_layer_index)(i)
+                                                < ship_ref.position()(i))
+                                            return false;
+
+                                    float_32_bit  speed = length(ship_ref.velocity());
+                                    if (speed < props.min_speed_of_ship_in_meters_per_second(area_layer_index) ||
+                                        speed > props.max_speed_of_ship_in_meters_per_second(area_layer_index) )
+                                        return false;
+                                    return true;
+                                    }(centers.at(spiker_index), layer_props, area_layer_index,
+                                      ships.at(ships_begin_index + i))
+                                );
+                    }
+
+                    ++spiker_index;
+                }
+    }
+
+    for (layer_index_type  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
+    {
+        network_layer_props const&  layer_props = properties()->layer_props().at(layer_index);
+
+        std::vector<compressed_layer_and_object_indices>  empty_dock_sector;
+        empty_dock_sector.reserve(3UL + layer_props.num_ships() / layer_props.num_docks());
+        m_ships_in_sectors.at(layer_index).resize(layer_props.num_docks(), empty_dock_sector);
     }
 
     for (layer_index_type  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
