@@ -57,9 +57,9 @@ struct  network_layer_props
     natural_32_bit  num_docks_along_x_axis_per_spiker() const noexcept { return m_num_docks_along_x_axis_per_spiker; }
     natural_32_bit  num_docks_along_y_axis_per_spiker() const noexcept { return m_num_docks_along_y_axis_per_spiker; }
     natural_32_bit  num_docks_along_c_axis_per_spiker() const noexcept { return m_num_docks_along_c_axis_per_spiker; }
-    natural_64_bit  num_docks_per_spiker() const noexcept { return (natural_64_bit)num_docks_along_x_axis_per_spiker() *
-                                                                   (natural_64_bit)num_docks_along_y_axis_per_spiker() *
-                                                                   (natural_64_bit)num_docks_along_c_axis_per_spiker() ; }
+    natural_32_bit  num_docks_per_spiker() const noexcept { return num_docks_along_x_axis_per_spiker() *
+                                                                   num_docks_along_y_axis_per_spiker() *
+                                                                   num_docks_along_c_axis_per_spiker() ; }
 
     natural_32_bit  num_docks_along_x_axis() const noexcept { return m_num_docks_along_x_axis; }
     natural_32_bit  num_docks_along_y_axis() const noexcept { return m_num_docks_along_y_axis; }

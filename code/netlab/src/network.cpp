@@ -22,7 +22,7 @@ network::network(std::shared_ptr<network_props> const  network_properties,
     , m_ships()
     , m_movement_area_centers()
     , m_ships_in_sectors()
-    , m_densities_of_ships(m_properties->layer_props().size())
+    , m_densities_of_ships()
     , m_update_id(0UL)
 {
     ASSUMPTION(this->properties().operator bool());
@@ -106,8 +106,11 @@ network::network(std::shared_ptr<network_props> const  network_properties,
                 }
     }
 
-    area_centers_initialiser.prepare_for_shifting_movement_area_centers_in_layers(*properties());
-    while (area_centers_initialiser.start_next_iteration_of_shifting_movement_area_centers_in_layers(*properties()))
+    std::unique_ptr<extra_data_for_spikers_in_layers>  extra_data_for_spikers = 
+            std::unique_ptr<extra_data_for_spikers_in_layers>(new extra_data_for_spikers_in_layers);
+    ASSUMPTION(extra_data_for_spikers.operator bool());
+    area_centers_initialiser.prepare_for_shifting_movement_area_centers_in_layers(*extra_data_for_spikers,*properties());
+    while (area_centers_initialiser.start_next_iteration_of_shifting_movement_area_centers_in_layers(*extra_data_for_spikers,*properties()))
         for (layer_index_type  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
         {
             network_layer_props const&  layer_props = properties()->layer_props().at(layer_index);
@@ -129,7 +132,8 @@ network::network(std::shared_ptr<network_props> const  network_properties,
                                 x,y,c,
                                 area_layer_index,
                                 *properties(),
-                                centers.at(spiker_index)
+                                centers.at(spiker_index),
+                                *extra_data_for_spikers
                                 );
                         
                         ASSUMPTION(
@@ -161,12 +165,41 @@ network::network(std::shared_ptr<network_props> const  network_properties,
                         ++spiker_index;
                     }
         }
-    if (false == area_centers_initialiser.fill_statistics_of_densities_of_ships_in_layers(m_densities_of_ships,*properties()))
+
+    if (false == area_centers_initialiser.do_extra_data_hold_densities_of_ships_per_spikers_in_layers())
     {
-        // TODO: call the algorithm computing the ships-density-statistics.
+        initialise_densities_of_ships_per_spiker_in_layers(*properties(),*extra_data_for_spikers);
+        compute_densities_of_ships_per_spiker_in_layers(*properties(),*extra_data_for_spikers);
     }
-    // TODO: uncomment that assert when the algorithm is implemented.
-    //ASSUMPTION(densities_of_ships().ideal_densities().size() == properties()->layer_props().size());
+    {
+        std::vector<float_32_bit>  ideal_densities;
+        compute_ideal_densities_of_ships_in_layers(*properties(), ideal_densities);
+
+        std::vector<float_32_bit>  minimal_densities;
+        std::vector<float_32_bit>  maximal_densities;
+        std::vector<float_32_bit>  average_densities;
+        std::vector<distribution_of_spikers_by_density_of_ships>  distribution_of_spikers;
+        compute_statistics_of_density_of_ships_in_layers(
+                *properties(),
+                *extra_data_for_spikers,
+                ideal_densities,
+                minimal_densities,
+                maximal_densities,
+                average_densities,
+                distribution_of_spikers
+                );
+        m_densities_of_ships =
+            std::unique_ptr<statistics_of_densities_of_ships_in_layers>(new statistics_of_densities_of_ships_in_layers(
+                    ideal_densities,
+                    minimal_densities,
+                    maximal_densities,
+                    average_densities,
+                    distribution_of_spikers
+                    ));
+        ASSUMPTION(extra_data_for_spikers.operator bool());
+        ASSUMPTION(densities_of_ships().ideal_densities().size() == properties()->layer_props().size());
+    }
+    extra_data_for_spikers.reset();
 
     for (layer_index_type  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
     {

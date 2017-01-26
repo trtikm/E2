@@ -3,6 +3,7 @@ set(THIS_TARGET_NAME netlab)
 add_library(${THIS_TARGET_NAME}
     ./include/netlab/initialiser_of_movement_area_centers.hpp
     ./include/netlab/initialiser_of_ships_in_movement_areas.hpp
+    ./include/netlab/extra_data_for_spikers.hpp
     ./include/netlab/network_objects_factory.hpp
     ./src/network_objects_factory.cpp
 
@@ -20,7 +21,7 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/netlab/network_indices.hpp
     ./src/network_indices.cpp
-    
+
     ./include/netlab/statistics_of_densities_of_ships_in_layers.hpp
     ./src/statistics_of_densities_of_ships_in_layers.cpp
 

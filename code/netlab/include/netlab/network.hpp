@@ -54,7 +54,7 @@ struct  network
 
     std::shared_ptr<network_props>  properties() const noexcept { return m_properties; }
 
-    statistics_of_densities_of_ships_in_layers const&  densities_of_ships() const noexcept { return m_densities_of_ships; }
+    statistics_of_densities_of_ships_in_layers const&  densities_of_ships() const { return *m_densities_of_ships; }
 
     natural_64_bit  update_id() const noexcept { return  m_update_id; }
 
@@ -96,7 +96,7 @@ private:
     std::vector< std::vector<vector3> >  m_movement_area_centers;
     std::vector< std::vector< std::vector<compressed_layer_and_object_indices> > >  m_ships_in_sectors;
 
-    statistics_of_densities_of_ships_in_layers  m_densities_of_ships;
+    std::unique_ptr<statistics_of_densities_of_ships_in_layers>  m_densities_of_ships;
 
     natural_64_bit  m_update_id;
 
