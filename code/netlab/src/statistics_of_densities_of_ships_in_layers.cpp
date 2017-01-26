@@ -2,6 +2,7 @@
 #include <angeo/collide.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
+#include <limits>
 
 namespace netlab {
 
@@ -106,12 +107,17 @@ void  compute_densities_of_ships_per_spiker_in_layers(
             ASSUMPTION(area_layer_index < densities_of_ships_per_spiker.size());
             network_layer_props const&  area_layer_props = props.layer_props().at(area_layer_index);
 
+            float_32_bit const  from_meters_to_num_docks = 1.0f / area_layer_props.distance_of_docks_in_meters();
+
             vector3 const  corner_shift = 0.5f * layer_props.size_of_ship_movement_area_in_meters(area_layer_index);
             vector3 const  area_lo_corner = area_center - corner_shift;
             vector3 const  area_hi_corner = area_center + corner_shift;
+            vector3 const  area_size = from_meters_to_num_docks * (area_hi_corner - area_lo_corner);
+            float_32_bit const  area_volume = area_size(0) * area_size(1) * area_size(2);
+            ASSUMPTION(area_volume >= 1e-3f);
+            float_32_bit const  area_density = (float_32_bit)layer_props.num_ships_per_spiker() / area_volume;
 
             vector3 const  sector_corner_shift = 0.5f * area_layer_props.distance_of_spikers_in_meters();
-
             sector_coordinate_type  x_lo,y_lo,c_lo;
             area_layer_props.spiker_sector_coordinates(area_lo_corner,x_lo,y_lo,c_lo);
             sector_coordinate_type  x_hi,y_hi,c_hi;
@@ -136,11 +142,6 @@ void  compute_densities_of_ships_per_spiker_in_layers(
                                     intersection_hi_corner
                                     ))
                         {
-                            vector3 const  area_size = area_hi_corner - area_lo_corner;
-                            float_32_bit const  area_volume = area_size(0) * area_size(1) * area_size(2);
-                            ASSUMPTION(area_volume >= 1e-3f);
-                            float_32_bit const  area_density = (float_32_bit)layer_props.num_ships_per_spiker() / area_volume;
-
                             vector3 const  sector_size = sector_hi_corner - sector_lo_corner;
                             float_32_bit const  sector_volume = sector_size(0) * sector_size(1) * sector_size(2);
                             ASSUMPTION(sector_volume >= 1e-3f);
@@ -156,6 +157,10 @@ void  compute_densities_of_ships_per_spiker_in_layers(
                             object_index_type const  area_spiker_index = area_layer_props.spiker_sector_index(x,y,c);
                             ASSUMPTION(area_spiker_index < densities_of_ships_per_spiker.at(area_layer_index).size());
                             densities_of_ships_per_spiker.at(area_layer_index).at(area_spiker_index) += sector_density;
+                        }
+                        else
+                        {
+                            UNREACHABLE();
                         }
                     }
         }
@@ -177,7 +182,7 @@ void  compute_statistics_of_density_of_ships_in_layers(
     ASSUMPTION(densities_of_ships_per_spiker.size() == props.layer_props().size());
 
     minimal_densities.clear();
-    minimal_densities.resize(props.layer_props().size(),0.0f);
+    minimal_densities.resize(props.layer_props().size(),std::numeric_limits<float_32_bit>::max());
 
     maximal_densities.clear();
     maximal_densities.resize(props.layer_props().size(),0.0f);
@@ -192,7 +197,31 @@ void  compute_statistics_of_density_of_ships_in_layers(
         distribution_of_spikers.resize(props.layer_props().size(),zeros);
     }
 
-    // TODO!
+    for (layer_index_type layer_index = 0U; layer_index < props.layer_props().size(); ++layer_index)
+    {
+        ASSUMPTION(layer_index < densities_of_ships_per_spiker.size());
+        network_layer_props const&  layer_props = props.layer_props().at(layer_index);
+        float_32_bit const  max_density = 2.0f * ideal_densities.at(layer_index);
+        ASSUMPTION(max_density > 1e-5f);
+        for (object_index_type spiker_index = 0ULL; spiker_index != layer_props.num_spikers(); ++spiker_index)
+        {
+            ASSUMPTION(spiker_index < densities_of_ships_per_spiker.at(layer_index).size());
+            float_32_bit const  density = densities_of_ships_per_spiker.at(layer_index).at(spiker_index);
+            if (density < minimal_densities.at(layer_index))
+                minimal_densities.at(layer_index) = density;
+            if (density > maximal_densities.at(layer_index))
+                maximal_densities.at(layer_index) = density;
+            average_densities.at(layer_index) += density;
+
+            float_32_bit const  param = std::min(std::max(0.0f, density / max_density),1.0f);
+            natural_64_bit const  slot_index =
+                std::min((natural_64_bit)(param  * (float_32_bit)distribution_of_spikers_by_density_of_ships().size()),
+                         distribution_of_spikers_by_density_of_ships().size() - 1ULL);
+            ++distribution_of_spikers.at(layer_index).at(slot_index);
+        }
+        INVARIANT(layer_props.num_spikers() != 0ULL);
+        average_densities.at(layer_index) /= (float_32_bit)layer_props.num_spikers();
+    }
 }
 
 

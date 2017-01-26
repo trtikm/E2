@@ -1844,6 +1844,48 @@ std::string  simulator::get_network_info_text() const
                  << " (>= " << layer_props.num_docks() - (natural_64_bit)(layer_props.num_docks() * 3.0/4.0) << ")"
                  << "\n";
         }
+
+        ostr << "\n    Densities of ships in this layer:\n";
+        {
+            netlab::statistics_of_densities_of_ships_in_layers const&  densities = network()->densities_of_ships();
+            ostr << "        Ideal density  : " << std::fixed << std::setprecision(3)
+                                                << densities.ideal_densities().at(layer_index) << "\n"
+                 << "        Minimal density: " << std::fixed << std::setprecision(3)
+                                                << densities.minimal_densities().at(layer_index) << "\n"
+                 << "        Average density: " << std::fixed << std::setprecision(3)
+                                                << densities.average_densities().at(layer_index) << "\n"
+                 << "        Maximal density: " << std::fixed << std::setprecision(3)
+                                                << densities.maximal_densities().at(layer_index) << "\n"
+                 ;
+
+            float_32_bit const  max_density = 2.0f * densities.ideal_densities().at(layer_index);
+            for (natural_64_bit j = 0ULL, n = netlab::distribution_of_spikers_by_density_of_ships().size(); j != n; ++j)
+            {
+                ostr << "        Num spikers in density range ["
+                     << std::fixed << std::setprecision(3)
+                     << (float_32_bit)j * (max_density / (float_32_bit)n)
+                     << ","
+                     ;
+                if (j + 1ULL != n || densities.maximal_densities().at(layer_index) < max_density)
+                    ostr << std::fixed << std::setprecision(3)
+                         << (float_32_bit)(j + 1ULL) * (max_density / (float_32_bit)n)
+                         << "): "
+                         ;
+                else
+                    ostr << std::fixed << std::setprecision(3)
+                         << densities.maximal_densities().at(layer_index)
+                         << "]: "
+                         ;
+                ostr << densities.distribution_of_spikers_by_densities_of_ships().at(layer_index).at(j)
+                     << " (~ "
+                     << std::fixed << std::setprecision(1)
+                     << 100.0f * (float_32_bit)densities.distribution_of_spikers_by_densities_of_ships().at(layer_index).at(j)
+                               / (float_32_bit)layer_props.num_spikers()
+                     << "%)"
+                     << "\n"
+                     ;
+            }
+        }
     }
 
     return ostr.str();
