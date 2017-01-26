@@ -109,8 +109,13 @@ network::network(std::shared_ptr<network_props> const  network_properties,
     std::unique_ptr<extra_data_for_spikers_in_layers>  extra_data_for_spikers = 
             std::unique_ptr<extra_data_for_spikers_in_layers>(new extra_data_for_spikers_in_layers);
     ASSUMPTION(extra_data_for_spikers.operator bool());
-    area_centers_initialiser.prepare_for_shifting_movement_area_centers_in_layers(*extra_data_for_spikers,*properties());
-    while (area_centers_initialiser.start_next_iteration_of_shifting_movement_area_centers_in_layers(*extra_data_for_spikers,*properties()))
+    access_to_movement_area_centers  movement_area_centers(&m_movement_area_centers);
+    area_centers_initialiser.prepare_for_shifting_movement_area_centers_in_layers(
+            movement_area_centers,
+            *properties(),
+            *extra_data_for_spikers
+            );
+    while (area_centers_initialiser.start_next_iteration_of_shifting_movement_area_centers_in_layers(*properties(),*extra_data_for_spikers))
         for (layer_index_type  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
         {
             network_layer_props const&  layer_props = properties()->layer_props().at(layer_index);
@@ -132,6 +137,7 @@ network::network(std::shared_ptr<network_props> const  network_properties,
                                 x,y,c,
                                 area_layer_index,
                                 *properties(),
+                                movement_area_centers,
                                 centers.at(spiker_index),
                                 *extra_data_for_spikers
                                 );
@@ -169,7 +175,7 @@ network::network(std::shared_ptr<network_props> const  network_properties,
     if (false == area_centers_initialiser.do_extra_data_hold_densities_of_ships_per_spikers_in_layers())
     {
         initialise_densities_of_ships_per_spiker_in_layers(*properties(),*extra_data_for_spikers);
-        compute_densities_of_ships_per_spiker_in_layers(*properties(),*extra_data_for_spikers);
+        compute_densities_of_ships_per_spiker_in_layers(*properties(),movement_area_centers,*extra_data_for_spikers);
     }
     {
         std::vector<float_32_bit>  ideal_densities;

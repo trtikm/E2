@@ -4,6 +4,7 @@ add_library(${THIS_TARGET_NAME}
     ./include/netlab/initialiser_of_movement_area_centers.hpp
     ./include/netlab/initialiser_of_ships_in_movement_areas.hpp
     ./include/netlab/extra_data_for_spikers.hpp
+    ./include/netlab/access_to_movement_area_centers.hpp
     ./include/netlab/network_objects_factory.hpp
     ./src/network_objects_factory.cpp
 

@@ -5,6 +5,7 @@
 #   include <netlab/network_props.hpp>
 #   include <netlab/network_layer_props.hpp>
 #   include <netlab/extra_data_for_spikers.hpp>
+#   include <netlab/access_to_movement_area_centers.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <vector>
 #   include <array>
@@ -63,6 +64,7 @@ void  initialise_densities_of_ships_per_spiker_in_layers(
 
 void  compute_densities_of_ships_per_spiker_in_layers(
         network_props const&  props,
+        access_to_movement_area_centers const&  movement_area_centers,
         extra_data_for_spikers_in_layers&  densities_of_ships_per_spiker
         );
 
