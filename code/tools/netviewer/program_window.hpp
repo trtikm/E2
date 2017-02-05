@@ -73,21 +73,6 @@ public slots:
     void  on_menu_network_open() { m_menu_bar.on_menu_network_open(); }
     void  on_menu_network_close() { m_menu_bar.on_menu_network_close();  }
 
-//    void  on_nenet_param_simulation_speed_changed();
-//    void  on_nenet_param_time_step_changed();
-//    void  on_nenet_param_mini_spiking_potential_magnitude();
-//    void  on_nenet_param_average_mini_spiking_period_in_seconds();
-//    void  on_nenet_param_spiking_potential_magnitude();
-//    void  on_nenet_param_resting_potential();
-//    void  on_nenet_param_spiking_threshold();
-//    void  on_nenet_param_after_spike_potential();
-//    void  on_nenet_param_potential_descend_coef();
-//    void  on_nenet_param_potential_ascend_coef();
-//    void  on_nenet_param_max_connection_distance();
-//    void  on_nenet_param_output_terminal_velocity_max_magnitude();
-//    void  on_nenet_param_output_terminal_velocity_min_magnitude();
-
-
 private:
 
     Q_OBJECT
@@ -115,22 +100,6 @@ private:
 
     menu_bar  m_menu_bar;
     status_bar  m_status_bar;
-
-//    QLineEdit*  m_nenet_param_time_step;
-//    QLineEdit*  m_nenet_param_simulation_speed;
-//    QLineEdit*  m_nenet_param_mini_spiking_potential_magnitude;
-//    QLineEdit*  m_nenet_param_average_mini_spiking_period_in_seconds;
-//    QLineEdit*  m_nenet_param_spiking_potential_magnitude;
-//    QLineEdit*  m_nenet_param_resting_potential;
-//    QLineEdit*  m_nenet_param_spiking_threshold;
-//    QLineEdit*  m_nenet_param_after_spike_potential;
-//    QLineEdit*  m_nenet_param_potential_descend_coef;
-//    QLineEdit*  m_nenet_param_potential_ascend_coef;
-//    QLineEdit*  m_nenet_param_max_connection_distance;
-//    QLineEdit*  m_nenet_param_output_terminal_velocity_max_magnitude;
-//    QLineEdit*  m_nenet_param_output_terminal_velocity_min_magnitude;
-
-//    QTextEdit*  m_selected_props;
 };
 
 

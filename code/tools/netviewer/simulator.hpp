@@ -88,49 +88,6 @@ struct simulator : public qtgl::real_time_simulator
     void  dbg_enable_draw_movement_areas(bool const  state)
     { if (state) m_dbg_draw_movement_areas.enable(); else m_dbg_draw_movement_areas.disable(); }
 
-
-//    bool  is_selected_cell() const { return m_selected_cell != nenet()->cells().cend(); }
-//    bool  is_selected_input_spot() const { return m_selected_input_spot != nenet()->input_spots().cend(); }
-//    bool  is_selected_output_terminal() const { return m_selected_output_terminal != nullptr; }
-//    bool  is_selected_something() const { return is_selected_cell() || is_selected_input_spot() || is_selected_output_terminal(); }
-
-//    vector3 const&  get_position_of_selected() const;
-//    cell const&  get_selected_cell() const;
-//    input_spot const&  get_selected_input_spot() const;
-//    output_terminal const&  get_selected_output_terminal() const;
-
-//    scalar  update_time_step_in_seconds() const { return nenet()->get_params()->update_time_step_in_seconds(); }
-
-//    scalar  mini_spiking_potential_magnitude() const { return nenet()->get_params()->mini_spiking_potential_magnitude(); }
-//    scalar  average_mini_spiking_period_in_seconds() const { return nenet()->get_params()->average_mini_spiking_period_in_seconds(); }
-
-//    scalar  spiking_potential_magnitude() const { return nenet()->get_params()->spiking_potential_magnitude(); }
-//    scalar  resting_potential() const { return nenet()->get_params()->resting_potential(); }
-//    scalar  spiking_threshold() const { return nenet()->get_params()->spiking_threshold(); }
-//    scalar  after_spike_potential() const { return nenet()->get_params()->after_spike_potential(); }
-//    scalar  potential_descend_coef() const { return nenet()->get_params()->potential_descend_coef(); }
-//    scalar  potential_ascend_coef() const { return nenet()->get_params()->potential_ascend_coef(); }
-//    scalar  max_connection_distance() const { return nenet()->get_params()->max_connection_distance(); }
-
-//    scalar  output_terminal_velocity_max_magnitude() const { return nenet()->get_params()->output_terminal_velocity_max_magnitude(); }
-//    scalar  output_terminal_velocity_min_magnitude() const { return nenet()->get_params()->output_terminal_velocity_min_magnitude(); }
-
-//    void  set_update_time_step_in_seconds(scalar const  value) { nenet()->get_params()->set_update_time_step_in_seconds(value); }
-
-//    void  set_mini_spiking_potential_magnitude(scalar const  value) { nenet()->get_params()->set_mini_spiking_potential_magnitude(value); }
-//    void  set_average_mini_spiking_period_in_seconds(scalar const  value) { nenet()->get_params()->set_average_mini_spiking_period_in_seconds(value); }
-
-//    void  set_spiking_potential_magnitude(scalar const  value) { nenet()->get_params()->set_spiking_potential_magnitude(value); }
-//    void  set_resting_potential(scalar const  value) { nenet()->get_params()->set_resting_potential(value); }
-//    void  set_spiking_threshold(scalar const  value) { nenet()->get_params()->set_spiking_threshold(value); }
-//    void  set_after_spike_potential(scalar const  value) { nenet()->get_params()->set_after_spike_potential(value); }
-//    void  set_potential_descend_coef(scalar const  value) { nenet()->get_params()->set_potential_descend_coef(value); }
-//    void  set_potential_ascend_coef(scalar const  value) { nenet()->get_params()->set_potential_ascend_coef(value); }
-//    void  set_max_connection_distance(scalar const  value) { nenet()->get_params()->set_max_connection_distance(value); }
-
-//    void  set_output_terminal_velocity_max_magnitude(scalar const  value) { nenet()->get_params()->set_output_terminal_velocity_max_magnitude(value); }
-//    void  set_output_terminal_velocity_min_magnitude(scalar const  value) { nenet()->get_params()->set_output_terminal_velocity_min_magnitude(value); }
-
 private:
 
     void  update_network(float_64_bit const  seconds_from_previous_call);
@@ -198,9 +155,6 @@ private:
     dbg_frustum_sector_enumeration  m_dbg_frustum_sector_enumeration;
     dbg_raycast_sector_enumeration  m_dbg_raycast_sector_enumeration;
     dbg_draw_movement_areas  m_dbg_draw_movement_areas;
-
-//    qtgl::batch_ptr  m_selected_cell_input_spot_lines;
-//    qtgl::batch_ptr  m_selected_cell_output_terminal_lines;
 };
 
 
