@@ -62,6 +62,11 @@ struct simulator : public qtgl::real_time_simulator
     std::string  get_network_info_text() const;
     std::string  get_selected_info_text() const;
     void  on_select_owner_spiker();
+    bool  renders_only_chosen_layer() const noexcept { return m_render_only_chosen_layer; }
+    void  enable_rendering_of_only_chosen_layer() { m_render_only_chosen_layer = true; }
+    void  disable_rendering_of_only_chosen_layer() { m_render_only_chosen_layer = false; }
+    netlab::layer_index_type  get_layer_index_of_chosen_layer_to_render() const noexcept { return m_layer_index_of_chosen_layer_to_render; }
+    bool  set_layer_index_of_chosen_layer_to_render(netlab::layer_index_type const  layer_index);
 
     /// Debugging stuff
     void  dbg_set_camera_far_plane(float_32_bit const  far_plane)
@@ -184,6 +189,9 @@ private:
     qtgl::batch_ptr  m_batch_ship_bsphere;
 
     std::vector<qtgl::batch_ptr>  m_batches_selection;
+
+    bool m_render_only_chosen_layer;
+    netlab::layer_index_type  m_layer_index_of_chosen_layer_to_render;
 
     /// Debugging stuff
     dbg_network_camera  m_dbg_network_camera;

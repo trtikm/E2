@@ -184,6 +184,9 @@ simulator::simulator(
 
     , m_batches_selection{}
 
+    , m_render_only_chosen_layer(false)
+    , m_layer_index_of_chosen_layer_to_render(0U)
+
     , m_dbg_network_camera(m_camera->far_plane())
     , m_dbg_frustum_sector_enumeration()
     , m_dbg_raycast_sector_enumeration()
@@ -229,6 +232,12 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             m_spent_real_time = 0.0;
             m_spent_network_time = 0.0;
             m_num_network_updates = 0UL;
+
+            if (network()->properties()->layer_props().size() <= get_layer_index_of_chosen_layer_to_render())
+            {
+                m_render_only_chosen_layer = false;
+                m_layer_index_of_chosen_layer_to_render = 0U;
+            }
         }
 
         if (network().operator bool())
@@ -2179,4 +2188,16 @@ void  simulator::on_select_owner_spiker()
     m_selected_object_stats =
         netexp::experiment_factory::instance().create_tracked_spiker_stats(m_experiment_name, {layer_index,object_index});
     m_batches_selection.clear();
+}
+
+
+bool  simulator::set_layer_index_of_chosen_layer_to_render(netlab::layer_index_type const  layer_index)
+{
+    if (network().operator bool() && network()->properties()->layer_props().size() <= layer_index)
+    {
+        call_listeners(simulator_notifications::on_wrong_index_of_layer_to_render());
+        return false;
+    }
+    m_layer_index_of_chosen_layer_to_render = layer_index;
+    return true;
 }

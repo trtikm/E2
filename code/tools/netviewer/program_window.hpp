@@ -52,6 +52,9 @@ public slots:
     void  on_clear_colour_reset() { m_tab_draw_widgets.on_clear_colour_reset(); }
 
     void  on_show_grid_changed(int const  value) { m_tab_draw_widgets.on_show_grid_changed(value); }
+    void  on_do_render_single_layer_changed(int const  value) { m_tab_draw_widgets.on_do_render_single_layer_changed(value); }
+    void  on_layer_index_to_render_changed() { m_tab_draw_widgets.on_layer_index_to_render_changed(); }
+    void  on_wrong_index_of_layer_to_render_listener() { m_tab_draw_widgets.on_wrong_index_of_layer_to_render_listener(); }
 
     void  dbg_on_camera_far_changed() { m_tab_draw_widgets.dbg_on_camera_far_changed(); }
     void  dbg_on_camera_sync_changed(int value) { m_tab_draw_widgets.dbg_on_camera_sync_changed(value); }
@@ -99,6 +102,7 @@ private:
     bool  m_has_focus;
     bool  m_focus_just_received;
     int  m_idleTimerId;
+    bool  m_is_this_first_timer_event;
 
     QWidget*  m_gl_window_widget;
 

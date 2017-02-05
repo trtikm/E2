@@ -64,6 +64,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     , m_has_focus(false)
     , m_focus_just_received(true)
     , m_idleTimerId(-1)
+    , m_is_this_first_timer_event(true)
 
     , m_gl_window_widget(m_glwindow.create_widget_container())
 
@@ -375,9 +376,9 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 
     make_status_bar_content(m_status_bar);
 
-    if (ptree().get("window.show_maximised", false))
-        this->showMaximized();
-    else
+    //if (ptree().get("window.show_maximised", false))
+    //    this->showMaximized();
+    //else
         this->show();
 
     qtgl::set_splitter_sizes(*m_splitter, ptree().get("window.splitter_ratio", 3.0f / 4.0f));
@@ -411,6 +412,13 @@ void program_window::timerEvent(QTimerEvent* const event)
 {
     if (event->timerId() != m_idleTimerId)
         return;
+
+    if (m_is_this_first_timer_event)
+    {
+        if (ptree().get("window.show_maximised", false))
+            this->showMaximized();
+        m_is_this_first_timer_event = false;
+    }
 
     // Here put time-dependent updates...
 

@@ -44,6 +44,8 @@ struct  widgets
     QLineEdit*  clear_colour_component_blue() const noexcept;
 
     QCheckBox* show_grid() const noexcept;
+    QCheckBox* do_render_single_layer() const noexcept;
+    QLineEdit* layer_index_to_render() const noexcept;
 
     QLineEdit* dbg_camera_far_plane() const noexcept;
     QCheckBox* dbg_camera_synchronised() const noexcept;
@@ -70,6 +72,9 @@ struct  widgets
     void  on_clear_colour_reset();
 
     void  on_show_grid_changed(int const  value);
+    void  on_do_render_single_layer_changed(int const  value);
+    void  on_layer_index_to_render_changed();
+    void  on_wrong_index_of_layer_to_render_listener();
 
     void  dbg_on_camera_far_changed();
     void  dbg_on_camera_sync_changed(int);
@@ -105,6 +110,8 @@ private:
     QLineEdit*  m_clear_colour_component_blue;
 
     QCheckBox*  m_show_grid;
+    QCheckBox*  m_do_render_single_layer;
+    QLineEdit*  m_layer_index_to_render;
 
     QLineEdit*  m_dbg_camera_far_plane;
     QCheckBox*  m_dbg_camera_synchronised;

@@ -220,6 +220,32 @@ widgets::widgets(program_window* const  wnd)
         }(m_wnd)
         )
 
+    , m_do_render_single_layer(
+        [](program_window* wnd) {
+            struct s : public QCheckBox {
+                s(program_window* wnd) : QCheckBox("Render only layer of this number:")
+                {
+                    setChecked(wnd->ptree().get("draw.do_render_single_layer", false));
+                    QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(on_do_render_single_layer_changed(int)));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+    , m_layer_index_to_render(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    setText(QString::number(wnd->ptree().get("draw.layer_index_to_render", 0)));
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_layer_index_to_render_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+
+
     , m_dbg_camera_far_plane(
         [](program_window* wnd) {
             struct s : public QLineEdit {
@@ -386,6 +412,16 @@ QCheckBox* widgets::show_grid() const noexcept
     return m_show_grid;
 }
 
+QCheckBox* widgets::do_render_single_layer() const noexcept
+{
+    return m_do_render_single_layer;
+}
+
+QLineEdit* widgets::layer_index_to_render() const noexcept
+{
+    return m_layer_index_to_render;
+}
+
 QLineEdit* widgets::dbg_camera_far_plane() const noexcept
 {
     return m_dbg_camera_far_plane;
@@ -548,6 +584,25 @@ void widgets::on_show_grid_changed(int const  value)
     wnd()->glwindow().call_later(&simulator::set_show_grid_state, m_show_grid->isChecked());
 }
 
+void  widgets::on_do_render_single_layer_changed(int const  value)
+{
+    if (m_do_render_single_layer->isChecked())
+        wnd()->glwindow().call_later(&simulator::enable_rendering_of_only_chosen_layer);
+    else
+        wnd()->glwindow().call_later(&simulator::disable_rendering_of_only_chosen_layer);
+}
+
+void  widgets::on_layer_index_to_render_changed()
+{
+    netlab::layer_index_type const  layer_index = m_layer_index_to_render->text().toInt();
+    wnd()->glwindow().call_later(&simulator::set_layer_index_of_chosen_layer_to_render, layer_index);
+}
+
+void  widgets::on_wrong_index_of_layer_to_render_listener()
+{
+    netlab::layer_index_type const  layer_index = wnd()->glwindow().call_now(&simulator::get_layer_index_of_chosen_layer_to_render);
+    m_layer_index_to_render->setText(QString::number(layer_index));
+}
 
 void  widgets::dbg_on_camera_far_changed()
 {
@@ -595,6 +650,8 @@ void  widgets::save()
     wnd()->ptree().put("draw.clear_colour.blue", m_clear_colour_component_blue->text().toInt());
 
     wnd()->ptree().put("draw.show_grid", m_show_grid->isChecked());
+    wnd()->ptree().put("draw.do_render_single_layer", m_do_render_single_layer->isChecked());
+    wnd()->ptree().put("draw.layer_index_to_render", m_layer_index_to_render->text().toInt());
 
     wnd()->ptree().put("dbg.camera.far_plane", m_dbg_camera_far_plane->text().toFloat());
     wnd()->ptree().put("dbg.camera.synchronised", m_dbg_camera_synchronised->isChecked());
@@ -745,8 +802,26 @@ QWidget*  make_draw_tab_content(widgets const&  w)
             }
             draw_tab_layout->addWidget(clear_colour_group);
 
-            draw_tab_layout->addWidget(w.show_grid());
-            w.wnd()->on_show_grid_changed(0);
+            QHBoxLayout* const render_options_layout = new QHBoxLayout;
+            {
+                render_options_layout->addWidget(w.show_grid());
+                w.wnd()->on_show_grid_changed(0);
+
+                QHBoxLayout* const render_single_layer_layout = new QHBoxLayout;
+                {
+                    render_single_layer_layout->addWidget(w.do_render_single_layer());
+                    w.wnd()->on_do_render_single_layer_changed(0);
+
+                    render_single_layer_layout->addWidget(w.layer_index_to_render());
+                    w.wnd()->on_layer_index_to_render_changed();
+                    w.wnd()->glwindow().register_listener(
+                                simulator_notifications::on_wrong_index_of_layer_to_render(),
+                                { &program_window::on_wrong_index_of_layer_to_render_listener,w.wnd() }
+                                );
+                }
+                render_options_layout->addLayout(render_single_layer_layout);
+            }
+            draw_tab_layout->addLayout(render_options_layout);
 
             QWidget* const dbg_group = new QGroupBox("Debugging");
             {
