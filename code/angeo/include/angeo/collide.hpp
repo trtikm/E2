@@ -140,6 +140,12 @@ bool  clip_line_into_bbox(
         );
 
 
+/**
+ * Aliasing of any "intersection_bbox_*_corner" with any "bbox_*_*_corner" is allowed. In that
+ * case the "bbox_*_*_corner" will be overwritten by the alliased "intersection_bbox_*_corner".
+ * However, if "intersection_bbox_low_corner" and "intersection_bbox_high_corner" are aliased,
+ * then the result is undefined.
+ */
 bool  collision_bbox_bbox(
         vector3 const&  bbox_0_low_corner,
         vector3 const&  bbox_0_high_corner,

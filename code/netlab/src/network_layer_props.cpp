@@ -190,9 +190,9 @@ void  network_layer_props::dock_sector_coordinates(
 {
     vector3 const  D(distance_of_docks_in_meters(),distance_of_docks_in_meters(),distance_of_docks_in_meters());
     vector3 const  u = (pos - (low_corner_of_docks() - 0.5f * D)).array() / D.array();
-    x = (u(0) <= 0.0) ? 0UL : (u(0) >= num_docks_along_x_axis()) ? num_docks_along_x_axis() - 1UL : static_cast<natural_64_bit>(u(0));
-    y = (u(1) <= 0.0) ? 0UL : (u(1) >= num_docks_along_y_axis()) ? num_docks_along_y_axis() - 1UL : static_cast<natural_64_bit>(u(1));
-    c = (u(2) <= 0.0) ? 0UL : (u(2) >= num_docks_along_c_axis()) ? num_docks_along_c_axis() - 1UL : static_cast<natural_64_bit>(u(2));
+    x = (u(0) <= 0.0) ? 0UL : (u(0) >= num_docks_along_x_axis()) ? num_docks_along_x_axis() - 1UL : static_cast<sector_coordinate_type>(u(0));
+    y = (u(1) <= 0.0) ? 0UL : (u(1) >= num_docks_along_y_axis()) ? num_docks_along_y_axis() - 1UL : static_cast<sector_coordinate_type>(u(1));
+    c = (u(2) <= 0.0) ? 0UL : (u(2) >= num_docks_along_c_axis()) ? num_docks_along_c_axis() - 1UL : static_cast<sector_coordinate_type>(u(2));
 }
 
 

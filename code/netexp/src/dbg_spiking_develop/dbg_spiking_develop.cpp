@@ -427,6 +427,20 @@ void  initialiser_of_movement_area_centers::compute_initial_movement_area_center
         )
 {
     area_layer_index = netexp::compute_layer_index_for_area_center(m_counts_of_centers_into_layers,m_generator_of_spiker_layer);
+    //compute_initial_movement_area_center_for_ships_of_spiker_XYC(
+    //    spiker_layer_index,
+    //    spiker_index_into_layer,
+    //    spiker_sector_coordinate_x,
+    //    spiker_sector_coordinate_y,
+    //    spiker_sector_coordinate_c,
+    //    props,
+    //    area_layer_index,
+    //    max_distance().at(spiker_layer_index).at(area_layer_index).at(0U),
+    //    max_distance().at(spiker_layer_index).at(area_layer_index).at(1U),
+    //    max_distance().at(spiker_layer_index).at(area_layer_index).at(2U),
+    //    m_position_generator,
+    //    area_center
+    //    );
 
     if (area_layer_index == spiker_layer_index)
         compute_center_of_movement_area_for_ships_of_spiker(

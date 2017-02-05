@@ -1,4 +1,5 @@
 #include <netexp/algorithm.hpp>
+#include <angeo/collide.hpp>
 #include <angeo/utility.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -232,6 +233,125 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
             );
 }
 
+
+void  compute_initial_movement_area_center_for_ships_of_spiker_XYC(
+        netlab::layer_index_type const  spiker_layer_index,
+        netlab::object_index_type const  spiker_index_into_layer,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_x,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_y,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_c,
+        netlab::network_props const&  props,
+        netlab::layer_index_type const&  area_layer_index,
+        netlab::sector_coordinate_type const  max_distance_x,
+        netlab::sector_coordinate_type const  max_distance_y,
+        netlab::sector_coordinate_type const  max_distance_c,
+        random_generator_for_natural_32_bit&  position_generator,
+        vector3&  area_center
+        )
+{
+    netlab::network_layer_props const&  layer_props = props.layer_props().at(area_layer_index);
+
+    vector3 const&  size_of_area = layer_props.size_of_ship_movement_area_in_meters(area_layer_index);
+
+    vector3  spiker_position, low_corner, high_corner;
+    {
+        netlab::network_layer_props const&  spiker_layer_props = props.layer_props().at(spiker_layer_index);
+        spiker_position = spiker_layer_props.spiker_sector_centre(spiker_sector_coordinate_x,
+                                                                  spiker_sector_coordinate_y,
+                                                                  spiker_sector_coordinate_c);
+        if (area_layer_index != spiker_layer_index)
+            spiker_position =
+                layer_props.low_corner_of_ships()
+                + ( ( (spiker_position - spiker_layer_props.low_corner_of_ships()).array() /
+                      (spiker_layer_props.high_corner_of_ships() - spiker_layer_props.low_corner_of_ships()).array() )
+                    * (layer_props.high_corner_of_ships() - layer_props.low_corner_of_ships()).array() ).matrix();
+
+        vector3 const  max_distance(max_distance_x * layer_props.distance_of_spikers_along_x_axis_in_meters(),
+                                    max_distance_y * layer_props.distance_of_spikers_along_y_axis_in_meters(),
+                                    max_distance_c * layer_props.distance_of_spikers_along_c_axis_in_meters());
+
+        vector3 const  docks_distance(layer_props.distance_of_docks_in_meters(),
+                                      layer_props.distance_of_docks_in_meters(),
+                                      layer_props.distance_of_docks_in_meters());
+
+        low_corner = spiker_position - max_distance - 0.5f * size_of_area;
+        vector3 const  u = (low_corner - layer_props.low_corner_of_ships()).array() / docks_distance.array();
+        low_corner(0) += (std::floorf(u(0)) - u(0)) * layer_props.distance_of_docks_in_meters();
+        low_corner(1) += (std::floorf(u(1)) - u(1)) * layer_props.distance_of_docks_in_meters();
+        low_corner(2) += (std::floorf(u(2)) - u(2)) * layer_props.distance_of_docks_in_meters();
+
+        high_corner = low_corner + 2.0f * max_distance + size_of_area;
+
+        bool const  must_intersect =
+            angeo::collision_bbox_bbox(
+                layer_props.low_corner_of_ships(), layer_props.high_corner_of_ships(),
+                low_corner, high_corner,
+                low_corner, high_corner
+                );
+        INVARIANT(must_intersect);
+    }
+
+    vector3 const  min_low_pos = low_corner;
+    vector3 const  max_low_pos = high_corner - size_of_area;
+    INVARIANT(min_low_pos(0) <= max_low_pos(0) && min_low_pos(1) <= max_low_pos(1) && min_low_pos(2) <= max_low_pos(2));
+
+    natural_32_bit const  max_rand_x =
+            static_cast<natural_32_bit>(0.5f + (max_low_pos(0) - min_low_pos(0)) / layer_props.distance_of_docks_in_meters());
+    natural_32_bit const  max_rand_y =
+            static_cast<natural_32_bit>(0.5f + (max_low_pos(1) - min_low_pos(1)) / layer_props.distance_of_docks_in_meters());
+    natural_32_bit const  max_rand_c =
+            static_cast<natural_32_bit>(0.5f + (max_low_pos(2) - min_low_pos(2)) / layer_props.distance_of_docks_in_meters());
+
+    auto const  generate_random_area_center =
+            [ &min_low_pos, &max_low_pos, &size_of_area,
+              max_rand_x, max_rand_y, max_rand_c,
+              &layer_props, &position_generator]() -> vector3 {
+                vector3  shift((float_32_bit)get_random_natural_32_bit_in_range(0U,max_rand_x,position_generator),
+                                (float_32_bit)get_random_natural_32_bit_in_range(0U,max_rand_y,position_generator),
+                                (float_32_bit)get_random_natural_32_bit_in_range(0U,max_rand_c,position_generator));
+                shift *= layer_props.distance_of_docks_in_meters();
+                shift(0) = std::min(shift(0),max_low_pos(0) - min_low_pos(0));
+                shift(1) = std::min(shift(1),max_low_pos(1) - min_low_pos(1));
+                shift(2) = std::min(shift(2),max_low_pos(2) - min_low_pos(2));
+                return min_low_pos + shift + 0.5f * size_of_area;
+            };
+//auto check_fn=
+//    [](vector3 const&  center, vector3 const&  size_of_ship_movement_area_in_meters,
+//        vector3 const&  low_corner, vector3 const&  high_corner) -> bool {
+//        vector3 const  area_shift = 0.5f * size_of_ship_movement_area_in_meters;
+//        for (int i = 0; i != 3; ++i)
+//            if (center(i) - area_shift(i) < low_corner(i) - 0.001f ||
+//                center(i) + area_shift(i) > high_corner(i) + 0.001f)
+//                return false;
+//        return true;
+//    };
+
+    if (area_layer_index != spiker_layer_index)
+    {
+        area_center = generate_random_area_center();
+//if (!check_fn(area_center, size_of_area, layer_props.low_corner_of_ships(), layer_props.high_corner_of_ships()))
+//{
+//    int iii = 0;
+//}
+        return;
+    }
+
+    for (int i = 0; i < 1000; ++i)
+    {
+        area_center = generate_random_area_center();
+//if (!check_fn(area_center, size_of_area, layer_props.low_corner_of_ships(), layer_props.high_corner_of_ships()))
+//{
+//    int iii = 0;
+//}
+        vector3 const  delta = area_center - spiker_position;
+        if (std::abs(delta(0)) >= 0.5f * (size_of_area(0) + layer_props.distance_of_spikers_along_x_axis_in_meters()) ||
+            std::abs(delta(1)) >= 0.5f * (size_of_area(1) + layer_props.distance_of_spikers_along_y_axis_in_meters()) ||
+            std::abs(delta(2)) >= 0.5f * (size_of_area(2) + layer_props.distance_of_spikers_along_c_axis_in_meters()) )
+            return;
+    }
+    UNREACHABLE(); // We should always succeeed to find a valid center of area. This solution (wiht throwing
+                   // exception) is perhaps better then be captured in infinite loop.
+}
 
 
 //void  compute_center_of_movement_area_for_ships_of_spiker(

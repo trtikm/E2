@@ -68,6 +68,22 @@ void  compute_center_of_movement_area_for_ships_of_spiker(
         );
 
 
+void  compute_initial_movement_area_center_for_ships_of_spiker_XYC(
+        netlab::layer_index_type const  spiker_layer_index,
+        netlab::object_index_type const  spiker_index_into_layer,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_x,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_y,
+        netlab::sector_coordinate_type const  spiker_sector_coordinate_c,
+        netlab::network_props const&  props,
+        netlab::layer_index_type const&  area_layer_index,
+        netlab::sector_coordinate_type const  max_distance_x,
+        netlab::sector_coordinate_type const  max_distance_y,
+        netlab::sector_coordinate_type const  max_distance_c,
+        random_generator_for_natural_32_bit&  position_generator,
+        vector3&  area_center
+        );
+
+
 void  compute_random_ship_position_in_movement_area(
         vector3 const&  area_center,
         float_32_bit const  half_size_of_ship_movement_area_along_x_axis_in_meters,

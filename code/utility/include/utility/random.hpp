@@ -3,6 +3,7 @@
 
 #   include <utility/basic_numeric_types.hpp>
 #   include <random>
+#   include <functional>
 #   include <vector>
 
 
@@ -57,6 +58,44 @@ natural_32_bit  get_random_bar_index(
     bar_random_distribution const&  bar_distribution,
     random_generator_for_natural_32_bit&   generator
     );
+
+
+/// It is completely specified by a function which does whole the computation.
+/// It can be any non-decreasing function mapping interval [0,1] to interval [0,1].
+/// Typically, the function represents the inverted sum (integral) of some desired
+/// probability distribution and then scaled into range [0,1].
+using  function_random_distribution = std::function<float_32_bit(float_32_bit)>;
+
+float_32_bit  get_random_float_32_bit_in_range(
+        float_32_bit const min_value,
+        float_32_bit const max_value,
+        function_random_distribution const&  distribution,
+        random_generator_for_natural_32_bit&   generator
+        );
+
+inline function_random_distribution  get_uniform_distribution_function()
+{
+    return [](float_32_bit const  x) -> float_32_bit { return x; };
+}
+
+inline function_random_distribution  get_hermit_sigma_distribution_function()
+{
+    return [](float_32_bit const  x) -> float_32_bit { float_32_bit const  x2 = x*x; return 3.0f*x2 - 2.0f*x2*x; };
+}
+
+inline function_random_distribution  get_decreasing_distribution_function(float_32_bit const  a)
+{
+    return std::bind([](float_32_bit const  x, float_32_bit const  a) -> float_32_bit { return std::pow(x,a); },
+                     std::placeholders::_1,
+                     a);
+}
+
+inline function_random_distribution  get_increasing_distribution_function(float_32_bit const  a)
+{
+    return std::bind([](float_32_bit const  x, float_32_bit const  a) -> float_32_bit { return 1.0f - std::pow(1.0f-x,a); },
+                     std::placeholders::_1,
+                     a);
+}
 
 
 #endif

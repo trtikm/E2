@@ -185,6 +185,7 @@ bool  collision_bbox_bbox(
         vector3&  intersection_bbox_high_corner
         )
 {
+    ASSUMPTION(&intersection_bbox_low_corner != &intersection_bbox_high_corner);
     for (int i = 0; i != 3; ++i)
     {
         intersection_bbox_low_corner(i) = std::max(bbox_0_low_corner(i), bbox_1_low_corner(i));

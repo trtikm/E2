@@ -119,6 +119,18 @@ natural_32_bit  get_random_bar_index(
                 );
 }
 
+float_32_bit  get_random_float_32_bit_in_range(
+        float_32_bit const min_value,
+        float_32_bit const max_value,
+        function_random_distribution const&  distribution,
+        random_generator_for_natural_32_bit&   generator
+        )
+{
+    float_32_bit const  param = distribution(get_random_float_32_bit_in_range(0.0f,1.0f,generator));
+    return std::min(std::max(min_value,min_value + param * (max_value - min_value)),max_value);
+}
+
+
 
 //#include <utility/invariants.hpp>
 //#include <vector>
