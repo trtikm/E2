@@ -660,6 +660,13 @@ void  simulator::render_network(matrix44 const&  view_projection_matrix, qtgl::d
                 *(m_dbg_network_camera.is_enabled() ? m_dbg_network_camera.get_camera() : m_camera),
                 clip_planes
                 );
+    if (renders_only_chosen_layer() && get_layer_index_of_chosen_layer_to_render() < network()->properties()->layer_props().size())
+    {
+        auto const&  props = network()->properties()->layer_props().at(get_layer_index_of_chosen_layer_to_render());
+        clip_planes.push_back({props.low_corner_of_ships(),vector3_unit_z()});
+        clip_planes.push_back({props.high_corner_of_ships(),-vector3_unit_z()});
+    }
+
 
 //{
 //    for (netlab::layer_index_type layer_index = 0U; layer_index != network()->properties()->layer_props().size(); ++layer_index)
