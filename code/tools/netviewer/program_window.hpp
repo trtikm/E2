@@ -57,6 +57,7 @@ public slots:
     void  dbg_on_camera_sync_changed(int value) { m_tab_draw_widgets.dbg_on_camera_sync_changed(value); }
     void  dbg_on_frustum_sector_enumeration(int value) { m_tab_draw_widgets.dbg_on_frustum_sector_enumeration(value); }
     void  dbg_on_raycast_sector_enumeration(int value) { m_tab_draw_widgets.dbg_on_raycast_sector_enumeration(value); }
+    void  dbg_on_draw_movement_areas(int value) { m_tab_draw_widgets.dbg_on_draw_movement_areas(value); }
 
     /// Slots for NETWORK tab
 

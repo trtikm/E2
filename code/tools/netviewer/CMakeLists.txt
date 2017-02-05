@@ -42,6 +42,8 @@ add_executable(${THIS_TARGET_NAME}
     dbg/dbg_frustum_sector_enumeration.cpp
     dbg/dbg_raycast_sector_enumeration.hpp
     dbg/dbg_raycast_sector_enumeration.cpp
+    dbg/dbg_draw_movement_areas.hpp
+    dbg/dbg_draw_movement_areas.cpp
     )
 
 target_link_libraries(${THIS_TARGET_NAME}

@@ -187,6 +187,7 @@ simulator::simulator(
     , m_dbg_network_camera(m_camera->far_plane())
     , m_dbg_frustum_sector_enumeration()
     , m_dbg_raycast_sector_enumeration()
+    , m_dbg_draw_movement_areas()
 
 //    , m_selected_cell_input_spot_lines()
 //    , m_selected_cell_output_terminal_lines()
@@ -712,6 +713,14 @@ void  simulator::render_network(matrix44 const&  view_projection_matrix, qtgl::d
     }
     if (m_dbg_raycast_sector_enumeration.is_enabled())
         m_dbg_raycast_sector_enumeration.render(view_projection_matrix,draw_state);
+    if (m_dbg_draw_movement_areas.is_enabled())
+    {
+        if (m_dbg_draw_movement_areas.is_invalidated() ||
+                !m_dbg_network_camera.is_enabled() ||
+                window_props().just_resized())
+            m_dbg_draw_movement_areas.collect_visible_areas(clip_planes,network());
+        m_dbg_draw_movement_areas.render(view_projection_matrix,draw_state);
+    }
 }
 
 

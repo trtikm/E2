@@ -279,9 +279,21 @@ widgets::widgets(program_window* const  wnd)
         }(m_wnd)
         )
 
-
+    , m_dbg_draw_movement_areas(
+        [](program_window* wnd) {
+            struct s : public QCheckBox {
+                s(program_window* wnd) : QCheckBox("Draw movement areas of ships (for small networks only!)")
+                {
+                    setCheckState( wnd->ptree().get("dbg.camera.draw_movement_areas", false) ?
+                                       Qt::CheckState::Checked :
+                                       Qt::CheckState::Unchecked );
+                    QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(dbg_on_draw_movement_areas(int)));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
 {
-
 }
 
 program_window*  widgets::wnd() const noexcept
@@ -392,6 +404,11 @@ QCheckBox* widgets::dbg_frustum_sector_enumeration() const noexcept
 QCheckBox* widgets::dbg_raycast_sector_enumeration() const noexcept
 {
     return m_dbg_raycast_sector_enumeration;
+}
+
+QCheckBox* widgets::dbg_draw_movement_areas() const noexcept
+{
+    return m_dbg_draw_movement_areas;
 }
 
 void  widgets::on_camera_pos_changed()
@@ -552,6 +569,11 @@ void  widgets::dbg_on_raycast_sector_enumeration(int)
     wnd()->glwindow().call_later(&simulator::dbg_enable_raycast_sector_enumeration,m_dbg_raycast_sector_enumeration->isChecked());
 }
 
+void  widgets::dbg_on_draw_movement_areas(int)
+{
+    wnd()->glwindow().call_later(&simulator::dbg_enable_draw_movement_areas, m_dbg_draw_movement_areas->isChecked());
+}
+
 void  widgets::save()
 {
     if (m_camera_save_pos_rot->isChecked())
@@ -578,6 +600,7 @@ void  widgets::save()
     wnd()->ptree().put("dbg.camera.synchronised", m_dbg_camera_synchronised->isChecked());
     wnd()->ptree().put("dbg.camera.frustum_sector_enumeration", m_dbg_frustum_sector_enumeration->isChecked());
     wnd()->ptree().put("dbg.camera.raycast_sector_enumeration", m_dbg_raycast_sector_enumeration->isChecked());
+    wnd()->ptree().put("dbg.camera.draw_movement_areas", m_dbg_draw_movement_areas->isChecked());
 }
 
 QWidget*  make_draw_tab_content(widgets const&  w)
@@ -745,6 +768,9 @@ QWidget*  make_draw_tab_content(widgets const&  w)
 
                     dbg_layout->addWidget(w.dbg_raycast_sector_enumeration());
                     w.wnd()->dbg_on_raycast_sector_enumeration(0);
+
+                    dbg_layout->addWidget(w.dbg_draw_movement_areas());
+                    w.wnd()->dbg_on_draw_movement_areas(0);
                 }
                 dbg_group->setLayout(dbg_layout);
             }

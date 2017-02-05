@@ -49,6 +49,7 @@ struct  widgets
     QCheckBox* dbg_camera_synchronised() const noexcept;
     QCheckBox* dbg_frustum_sector_enumeration() const noexcept;
     QCheckBox* dbg_raycast_sector_enumeration() const noexcept;
+    QCheckBox* dbg_draw_movement_areas() const noexcept;
 
     void  on_camera_pos_changed();
     void  camera_position_listener();
@@ -74,6 +75,7 @@ struct  widgets
     void  dbg_on_camera_sync_changed(int);
     void  dbg_on_frustum_sector_enumeration(int);
     void  dbg_on_raycast_sector_enumeration(int);
+    void  dbg_on_draw_movement_areas(int);
 
     void  save();
 
@@ -108,6 +110,7 @@ private:
     QCheckBox*  m_dbg_camera_synchronised;
     QCheckBox*  m_dbg_frustum_sector_enumeration;
     QCheckBox*  m_dbg_raycast_sector_enumeration;
+    QCheckBox*  m_dbg_draw_movement_areas;
 };
 
 

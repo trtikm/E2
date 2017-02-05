@@ -6,6 +6,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/netview/enumerate.hpp
     ./src/enumerate.cpp
+
+    ./include/netview/utility.hpp
+    ./src/utility.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

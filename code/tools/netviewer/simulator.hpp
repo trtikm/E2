@@ -12,6 +12,7 @@
 #   include <netviewer/dbg/dbg_network_camera.hpp>
 #   include <netviewer/dbg/dbg_frustum_sector_enumeration.hpp>
 #   include <netviewer/dbg/dbg_raycast_sector_enumeration.hpp>
+#   include <netviewer/dbg/dbg_draw_movement_areas.hpp>
 
 
 struct simulator : public qtgl::real_time_simulator
@@ -64,15 +65,23 @@ struct simulator : public qtgl::real_time_simulator
 
     /// Debugging stuff
     void  dbg_set_camera_far_plane(float_32_bit const  far_plane)
-    { m_dbg_network_camera.set_far_plane(far_plane);
-      m_dbg_frustum_sector_enumeration.invalidate(); }
+    {
+        m_dbg_network_camera.set_far_plane(far_plane);
+        m_dbg_frustum_sector_enumeration.invalidate();
+        m_dbg_draw_movement_areas.invalidate();
+    }
     void  dbg_set_camera_sync_state(bool const  sync)
-    { if (sync) m_dbg_network_camera.disable(); else m_dbg_network_camera.enable(m_camera);
-      m_dbg_frustum_sector_enumeration.invalidate(); }
+    {
+        if (sync) m_dbg_network_camera.disable(); else m_dbg_network_camera.enable(m_camera);
+        m_dbg_frustum_sector_enumeration.invalidate();
+        m_dbg_draw_movement_areas.invalidate();
+    }
     void  dbg_enable_frustum_sector_enumeration(bool const  state)
     { if (state) m_dbg_frustum_sector_enumeration.enable(); else m_dbg_frustum_sector_enumeration.disable(); }
     void  dbg_enable_raycast_sector_enumeration(bool const  state)
     { if (state) m_dbg_raycast_sector_enumeration.enable(); else m_dbg_raycast_sector_enumeration.disable(); }
+    void  dbg_enable_draw_movement_areas(bool const  state)
+    { if (state) m_dbg_draw_movement_areas.enable(); else m_dbg_draw_movement_areas.disable(); }
 
 
 //    bool  is_selected_cell() const { return m_selected_cell != nenet()->cells().cend(); }
@@ -180,6 +189,7 @@ private:
     dbg_network_camera  m_dbg_network_camera;
     dbg_frustum_sector_enumeration  m_dbg_frustum_sector_enumeration;
     dbg_raycast_sector_enumeration  m_dbg_raycast_sector_enumeration;
+    dbg_draw_movement_areas  m_dbg_draw_movement_areas;
 
 //    qtgl::batch_ptr  m_selected_cell_input_spot_lines;
 //    qtgl::batch_ptr  m_selected_cell_output_terminal_lines;
