@@ -560,36 +560,6 @@ struct  tracked_ship_stats : public netlab::tracked_ship_stats
 };
 
 
-//std::shared_ptr<netlab::network>  create_network()
-//{
-//    return std::make_shared<netlab::network>(
-//        get_network_props(),
-//        network_objects_factory(),
-//        initialiser_of_movement_area_centers(),
-//        initialiser_of_ships_in_movement_areas()
-//        );
-//}
-//
-//
-//std::shared_ptr<netlab::tracked_spiker_stats>  create_tracked_spiker_stats(
-//        netlab::compressed_layer_and_object_indices const  indices)
-//{
-//    return std::make_shared<tracked_spiker_stats>(indices);
-//}
-//
-//std::shared_ptr<netlab::tracked_dock_stats>  create_tracked_dock_stats(
-//        netlab::compressed_layer_and_object_indices const  indices)
-//{
-//    return std::make_shared<tracked_dock_stats>(indices);
-//}
-//
-//std::shared_ptr<netlab::tracked_ship_stats>  create_tracked_ship_stats(
-//        netlab::compressed_layer_and_object_indices const  indices)
-//{
-//    return std::make_shared<tracked_ship_stats>(indices);
-//}
-
-
 }}}
 
 
@@ -608,27 +578,3 @@ NETEXP_DEFINE_EXPERIMENT_REGISTERATION_FUNCTION(
         "Therefore, it is not an experiment in true sense. Do not include it into "
         "your research."
         );
-
-//namespace netexp { namespace dbg_spiking_develop {
-//
-//
-//void NETEXP_NAME_OF_EXPERIMENT_REGISTERATION_FUNCTION()(netexp::experiment_factory&  factory)
-//{
-//    factory.register_experiment(
-//            "dbg_spiking_develop",
-//            []() { return get_network_props(); },
-//            []() { return std::make_shared<network_objects_factory>(); },
-//            []() { return std::make_shared<initialiser_of_movement_area_centers>(); },
-//            []() { return std::make_shared<initialiser_of_ships_in_movement_areas>(); },
-//            [](netlab::compressed_layer_and_object_indices const  indices){ return std::make_shared<tracked_spiker_stats>(indices); },
-//            [](netlab::compressed_layer_and_object_indices const  indices) { return std::make_shared<tracked_dock_stats>(indices); },
-//            [](netlab::compressed_layer_and_object_indices const  indices) { return std::make_shared<tracked_ship_stats>(indices); },
-//            "This is an artificial experiment. It purpose is to support the "
-//            "development and tunnig of spiking of spiker objects of 'netlab' library. "
-//            "Therefore, it is not an experiment in true sense. Do not include it into "
-//            "your research."
-//            );
-//}
-//
-//
-//}}
