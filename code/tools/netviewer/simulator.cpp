@@ -32,18 +32,23 @@ namespace {
 
 std::shared_ptr<netlab::network>  g_constructed_network;
 std::string  g_experiment_name;
-netlab::NETWORK_STATE  g_construction_state;
-std::atomic<bool>  g_is_network_being_constructed = false;
+enum struct NETWORK_CONSTRUCTION_STATE : natural_8_bit
+{
+    NOT_IN_CONSTRUCTION = 0U,
+    PERFORMING_INITIALISATION_STEP = 1U,
+    PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP = 2U,
+};
+std::atomic<NETWORK_CONSTRUCTION_STATE>  g_network_construction_state = NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION;
 std::thread  g_create_experiment_thread;
 
 void  create_experiment_worker()
 {
     TMPROF_BLOCK();
 
+    ASSUMPTION(g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP);
+
     try
     {
-        g_construction_state = netlab::NETWORK_STATE::READY_FOR_CONSTRUCTION;
-
         g_constructed_network =
                 std::make_shared<netlab::network>(
                         netexp::experiment_factory::instance().create_network_props(g_experiment_name),
@@ -56,10 +61,15 @@ void  create_experiment_worker()
         std::shared_ptr<netlab::initialiser_of_ships_in_movement_areas> const  ships_initialiser =
             netexp::experiment_factory::instance().create_initialiser_of_ships_in_movement_areas(g_experiment_name);
 
+        g_network_construction_state = NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP;
+
         bool  done = false;
         do
         {
-            g_construction_state = g_constructed_network->get_state();
+            if (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP)
+                continue; // Wait with the next step till the simulator checks/draws the current state of the constructed network.
+                          // TODO: call "yield" before the "continue" statement.
+
             switch (g_constructed_network->get_state())
             {
             case netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_INITIALISATION:
@@ -108,12 +118,12 @@ void  create_experiment_worker()
             }
         }
         while (done == false);
-        g_is_network_being_constructed = false;
+        g_network_construction_state = NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION;
     }
     catch (std::exception const&)
     {
         g_constructed_network.reset();
-        g_is_network_being_constructed = false;
+        g_network_construction_state = NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION;
     }
 }
 
@@ -354,8 +364,13 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
     if (network() != nullptr)
         render_network(view_projection_matrix,draw_state);
-    else if (is_network_being_constructed())
+    else if (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP)
     {
+        if (g_constructed_network->get_state() == netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP)
+        {
+            // TODO: draw progress of migration of movement area centers.
+        }
+        g_network_construction_state = NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP;
     }
 
     qtgl::swap_buffers();
@@ -1054,7 +1069,7 @@ void  simulator::initiate_network_construction(std::string const&  experiment_na
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(g_is_network_being_constructed == false);
+    ASSUMPTION(is_network_being_constructed() == false);
 
     if (g_create_experiment_thread.joinable())
         g_create_experiment_thread.join();
@@ -1063,13 +1078,13 @@ void  simulator::initiate_network_construction(std::string const&  experiment_na
     g_constructed_network.reset();
     g_experiment_name = experiment_name;
 
-    g_is_network_being_constructed = true;
+    g_network_construction_state = NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP;
     g_create_experiment_thread = std::thread(&create_experiment_worker);
 }
 
 bool  simulator::is_network_being_constructed() const
 {
-    return g_is_network_being_constructed;
+    return g_network_construction_state != NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION;
 }
 
 void  simulator::destroy_network()
