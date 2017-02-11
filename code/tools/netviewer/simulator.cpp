@@ -32,14 +32,89 @@ namespace {
 
 std::shared_ptr<netlab::network>  g_constructed_network;
 std::string  g_experiment_name;
+netlab::NETWORK_STATE  g_construction_state;
 std::atomic<bool>  g_is_network_being_constructed = false;
 std::thread  g_create_experiment_thread;
 
 void  create_experiment_worker()
 {
     TMPROF_BLOCK();
-    g_constructed_network = netexp::experiment_factory::instance().instance().create_network(g_experiment_name);
-    g_is_network_being_constructed = false;
+
+    try
+    {
+        g_construction_state = netlab::NETWORK_STATE::READY_FOR_CONSTRUCTION;
+
+        g_constructed_network =
+                std::make_shared<netlab::network>(
+                        netexp::experiment_factory::instance().create_network_props(g_experiment_name),
+                        netexp::experiment_factory::instance().create_network_objects_factory(g_experiment_name)
+                        );
+        ASSUMPTION(g_constructed_network != nullptr);
+
+        std::shared_ptr<netlab::initialiser_of_movement_area_centers> const centers_initialiser =
+                netexp::experiment_factory::instance().create_initialiser_of_movement_area_centers(g_experiment_name);
+        std::shared_ptr<netlab::initialiser_of_ships_in_movement_areas> const  ships_initialiser =
+            netexp::experiment_factory::instance().create_initialiser_of_ships_in_movement_areas(g_experiment_name);
+
+        bool  done = false;
+        do
+        {
+            g_construction_state = g_constructed_network->get_state();
+            switch (g_constructed_network->get_state())
+            {
+            case netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_INITIALISATION:
+                g_constructed_network->initialise_movement_area_centers(*centers_initialiser);
+                if (g_constructed_network->get_state() != netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP)
+                {
+                    g_constructed_network.reset();
+                    done = true;
+                }
+                break;
+            case netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP:
+                g_constructed_network->do_movement_area_centers_migration_step(*centers_initialiser);
+                if (g_constructed_network->get_state() != netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP &&
+                    g_constructed_network->get_state() != netlab::NETWORK_STATE::READY_FOR_COMPUTATION_OF_SHIP_DENSITIES_IN_LAYERS)
+                {
+                    g_constructed_network.reset();
+                    done = true;
+                }
+                break;
+            case netlab::NETWORK_STATE::READY_FOR_COMPUTATION_OF_SHIP_DENSITIES_IN_LAYERS:
+                g_constructed_network->compute_densities_of_ships_in_layers();
+                if (g_constructed_network->get_state() != netlab::NETWORK_STATE::READY_FOR_LUNCHING_SHIPS_INTO_MOVEMENT_AREAS)
+                {
+                    g_constructed_network.reset();
+                    done = true;
+                }
+                break;
+            case netlab::NETWORK_STATE::READY_FOR_LUNCHING_SHIPS_INTO_MOVEMENT_AREAS:
+                g_constructed_network->lunch_ships_into_movement_areas(*ships_initialiser);
+                if (g_constructed_network->get_state() != netlab::NETWORK_STATE::READY_FOR_INITIALISATION_OF_MAP_FROM_DOCK_SECTORS_TO_SHIPS)
+                {
+                    g_constructed_network.reset();
+                    done = true;
+                }
+                break;
+            case netlab::NETWORK_STATE::READY_FOR_INITIALISATION_OF_MAP_FROM_DOCK_SECTORS_TO_SHIPS:
+                g_constructed_network->initialise_map_from_dock_sectors_to_ships();
+                if (g_constructed_network->get_state() != netlab::NETWORK_STATE::READY_FOR_SIMULATION_STEP)
+                    g_constructed_network.reset();
+                done = true;
+                break;
+            default:
+                g_constructed_network.reset();
+                done = true;
+                break;
+            }
+        }
+        while (done == false);
+        g_is_network_being_constructed = false;
+    }
+    catch (std::exception const&)
+    {
+        g_constructed_network.reset();
+        g_is_network_being_constructed = false;
+    }
 }
 
 
@@ -301,7 +376,7 @@ void  simulator::update_network(float_64_bit const  seconds_from_previous_call)
     std::chrono::high_resolution_clock::time_point const  update_start_time = std::chrono::high_resolution_clock::now();
     for ( ; num_iterations != 0ULL; --num_iterations)
     {
-        network()->update(
+        network()->do_simulation_step(
             true,true,true,
             m_selected_object_stats.operator bool() ? m_selected_object_stats.get() : nullptr
             );

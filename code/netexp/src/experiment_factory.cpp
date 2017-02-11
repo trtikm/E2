@@ -1,24 +1,35 @@
 #include <netexp/experiment_factory.hpp>
 
-/// Bellow add a declaration of a function of your experiment which performs it registeration to the factory.
-namespace netexp { namespace calibration { extern void __register__(netexp::experiment_factory&  factory); }}
-namespace netexp { namespace performance { extern void __register__(netexp::experiment_factory&  factory); } }
-namespace netexp { namespace dbg_spiking_develop { extern void __register__(netexp::experiment_factory&  factory); } }
+#define  NETEXP_DECLARE_EXPERIMENT_REGISTERATION_FUNCTION_IN_NAMESPACE(namespace_name_of_the_experiment) \
+            namespace netexp { namespace namespace_name_of_the_experiment { \
+                extern void NETEXP_NAME_OF_EXPERIMENT_REGISTERATION_FUNCTION()(netexp::experiment_factory&  factory); \
+            }}
+#define  NETEXP_CALL_EXPERIMENT_REGISTERATION_FUNCTION_IN_NAMESPACE(namespace_name_of_the_experiment) \
+            netexp::namespace_name_of_the_experiment::NETEXP_NAME_OF_EXPERIMENT_REGISTERATION_FUNCTION()(*this);
+
+
+/// Here append a declaration of the function of your experiment which performs the registeration into this factory.
+NETEXP_DECLARE_EXPERIMENT_REGISTERATION_FUNCTION_IN_NAMESPACE(calibration)
+NETEXP_DECLARE_EXPERIMENT_REGISTERATION_FUNCTION_IN_NAMESPACE(performance)
+NETEXP_DECLARE_EXPERIMENT_REGISTERATION_FUNCTION_IN_NAMESPACE(dbg_spiking_develop)
 
 namespace netexp {
 
 
 experiment_factory::experiment_factory()
-    : m_network_creators()
+    : m_props_creators()
+    , m_factory_creators()
+    , m_area_centers_creators()
+    , m_ships_creators()
     , m_spiker_stats_creators()
     , m_dock_stats_creators()
     , m_ship_stats_creators()
     , m_descriptions()
 {
-    /// Bellow add a call to the registration function of your experiment declared above.
-    netexp::calibration::__register__(*this);
-    netexp::performance::__register__(*this);
-    netexp::dbg_spiking_develop::__register__(*this);
+    /// Here append a call to the registration function of your experiment declared above.
+    NETEXP_CALL_EXPERIMENT_REGISTERATION_FUNCTION_IN_NAMESPACE(calibration)
+    NETEXP_CALL_EXPERIMENT_REGISTERATION_FUNCTION_IN_NAMESPACE(performance)
+    NETEXP_CALL_EXPERIMENT_REGISTERATION_FUNCTION_IN_NAMESPACE(dbg_spiking_develop)
 }
 
 experiment_factory&  experiment_factory::instance()
@@ -29,17 +40,23 @@ experiment_factory&  experiment_factory::instance()
 
 bool  experiment_factory::register_experiment(
         std::string const&  experiment_unique_name,
-        network_creator const&  network_creator_fn,
+        network_props_creator const&  props_creator_fn,
+        network_objects_factory_creator const&  factory_creator_fn,
+        initialiser_of_movement_area_centers_creator const&  initialiser_of_area_centers_fn,
+        initialiser_of_ships_in_movement_areas_creator const&  initialiser_of_ships_fn,
         tracked_spiker_stats_creator const&  spiker_stats_creator_fn,
         tracked_dock_stats_creator const&  dock_stats_creator_fn,
         tracked_ship_stats_creator const&  ship_stats_creator_fn,
         std::string const&  experiment_description
         )
 {
-    auto const  it = m_network_creators.find(experiment_unique_name);
-    if (it != m_network_creators.cend())
+    auto const  it = m_props_creators.find(experiment_unique_name);
+    if (it != m_props_creators.cend())
         return false;
-    m_network_creators.insert({experiment_unique_name,network_creator_fn});
+    m_props_creators.insert({experiment_unique_name,props_creator_fn});
+    m_factory_creators.insert({experiment_unique_name,factory_creator_fn});
+    m_area_centers_creators.insert({experiment_unique_name,initialiser_of_area_centers_fn});
+    m_ships_creators.insert({experiment_unique_name,initialiser_of_ships_fn});
     m_spiker_stats_creators.insert({experiment_unique_name,spiker_stats_creator_fn});
     m_dock_stats_creators.insert({experiment_unique_name,dock_stats_creator_fn});
     m_ship_stats_creators.insert({experiment_unique_name,ship_stats_creator_fn});
@@ -49,17 +66,40 @@ bool  experiment_factory::register_experiment(
 
 void  experiment_factory::get_names_of_registered_experiments(std::vector<std::string>&  output)
 {
-    for (auto it = m_network_creators.cbegin(); it != m_network_creators.cend(); ++it)
+    for (auto it = m_props_creators.cbegin(); it != m_props_creators.cend(); ++it)
         output.push_back(it->first);
 }
 
-
-std::shared_ptr<netlab::network>  experiment_factory::create_network(
+std::shared_ptr<netlab::network_props>  experiment_factory::create_network_props(
         std::string const&  experiment_unique_name
         ) const
 {
-    auto const  it = m_network_creators.find(experiment_unique_name);
-    return (it != m_network_creators.cend()) ? it->second() : std::shared_ptr<netlab::network>();
+    auto const  it = m_props_creators.find(experiment_unique_name);
+    return (it != m_props_creators.cend()) ? it->second() : nullptr;
+}
+
+std::shared_ptr<netlab::network_objects_factory>  experiment_factory::create_network_objects_factory(
+        std::string const&  experiment_unique_name
+        ) const
+{
+    auto const  it = m_factory_creators.find(experiment_unique_name);
+    return (it != m_factory_creators.cend()) ? it->second() : nullptr;
+}
+
+std::shared_ptr<netlab::initialiser_of_movement_area_centers>  experiment_factory::create_initialiser_of_movement_area_centers(
+        std::string const&  experiment_unique_name
+        ) const
+{
+    auto const  it = m_area_centers_creators.find(experiment_unique_name);
+    return (it != m_area_centers_creators.cend()) ? it->second() : nullptr;
+}
+
+std::shared_ptr<netlab::initialiser_of_ships_in_movement_areas>  experiment_factory::create_initialiser_of_ships_in_movement_areas(
+        std::string const&  experiment_unique_name
+        ) const
+{
+    auto const  it = m_ships_creators.find(experiment_unique_name);
+    return (it != m_ships_creators.cend()) ? it->second() : nullptr;
 }
 
 std::shared_ptr<netlab::tracked_spiker_stats>  experiment_factory::create_tracked_spiker_stats(
@@ -68,7 +108,7 @@ std::shared_ptr<netlab::tracked_spiker_stats>  experiment_factory::create_tracke
         ) const
 {
     auto const  it = m_spiker_stats_creators.find(experiment_unique_name);
-    return (it != m_spiker_stats_creators.cend()) ?  it->second(indices) : std::shared_ptr<netlab::tracked_spiker_stats>();
+    return (it != m_spiker_stats_creators.cend()) ?  it->second(indices) : nullptr;
 }
 
 std::shared_ptr<netlab::tracked_dock_stats>  experiment_factory::create_tracked_dock_stats(
@@ -77,7 +117,7 @@ std::shared_ptr<netlab::tracked_dock_stats>  experiment_factory::create_tracked_
         ) const
 {
     auto const  it = m_dock_stats_creators.find(experiment_unique_name);
-    return (it != m_dock_stats_creators.cend()) ? it->second(indices) : std::shared_ptr<netlab::tracked_dock_stats>();
+    return (it != m_dock_stats_creators.cend()) ? it->second(indices) : nullptr;
 }
 
 std::shared_ptr<netlab::tracked_ship_stats>  experiment_factory::create_tracked_ship_stats(
@@ -86,7 +126,7 @@ std::shared_ptr<netlab::tracked_ship_stats>  experiment_factory::create_tracked_
         ) const
 {
     auto const  it = m_ship_stats_creators.find(experiment_unique_name);
-    return (it != m_ship_stats_creators.cend()) ? it->second(indices) : std::shared_ptr<netlab::tracked_ship_stats>();
+    return (it != m_ship_stats_creators.cend()) ? it->second(indices) : nullptr;
 }
 
 

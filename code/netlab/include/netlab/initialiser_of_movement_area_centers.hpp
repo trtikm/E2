@@ -35,11 +35,12 @@ struct  initialiser_of_movement_area_centers
             )
     {}
 
-    virtual bool  start_next_iteration_of_shifting_movement_area_centers_in_layers(
+    virtual void  get_indices_of_layers_where_to_apply_movement_area_centers_migration(
             network_props const&  props,
-            extra_data_for_spikers_in_layers const&  extra_data_for_spikers
+            extra_data_for_spikers_in_layers const&  extra_data_for_spikers,
+            std::vector<layer_index_type>&  layers_to_update
             )
-    { return false; }
+    {}
 
     virtual void  on_shift_movement_area_center_in_layers(
             layer_index_type const  spiker_layer_index,

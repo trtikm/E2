@@ -7,6 +7,7 @@
 #   include <netlab/network_objects_factory.hpp>
 #   include <netlab/network_indices.hpp>
 #   include <netlab/ship_controller.hpp>
+#   include <netlab/extra_data_for_spikers.hpp>
 #   include <netlab/initialiser_of_movement_area_centers.hpp>
 #   include <netlab/initialiser_of_ships_in_movement_areas.hpp>
 #   include <netlab/statistics_of_densities_of_ships_in_layers.hpp>
@@ -19,6 +20,18 @@
 namespace netlab {
 
 
+enum struct  NETWORK_STATE : natural_8_bit 
+{
+    READY_FOR_CONSTRUCTION                                      = 0U,
+    READY_FOR_MOVEMENT_AREA_CENTERS_INITIALISATION              = 1U,
+    READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP              = 2U,
+    READY_FOR_COMPUTATION_OF_SHIP_DENSITIES_IN_LAYERS           = 3U,
+    READY_FOR_LUNCHING_SHIPS_INTO_MOVEMENT_AREAS                = 4U,
+    READY_FOR_INITIALISATION_OF_MAP_FROM_DOCK_SECTORS_TO_SHIPS  = 5U,
+    READY_FOR_SIMULATION_STEP                                   = 6U,
+};
+
+
 /**
  *
  *
@@ -28,10 +41,11 @@ namespace netlab {
 struct  network
 {
     network(std::shared_ptr<network_props> const  network_properties,
-            network_objects_factory const&  objects_factory,
-            initialiser_of_movement_area_centers&  area_centers_initialiser,
-            initialiser_of_ships_in_movement_areas&  ships_initialiser
+            std::shared_ptr<network_objects_factory> const  objects_factory
             );
+
+    std::shared_ptr<network_props>  properties() const noexcept { return m_properties; }
+    NETWORK_STATE  get_state() const noexcept { return m_state; }
 
     spiker const&  get_spiker(layer_index_type const  layer_index, object_index_type const  object_index) const;
 
@@ -52,13 +66,18 @@ struct  network
             object_index_type const  dock_sector_index
             ) const;
 
-    std::shared_ptr<network_props>  properties() const noexcept { return m_properties; }
-
     statistics_of_densities_of_ships_in_layers const&  densities_of_ships() const { return *m_densities_of_ships; }
 
     natural_64_bit  update_id() const noexcept { return  m_update_id; }
 
-    void  update(
+
+    void  initialise_movement_area_centers(initialiser_of_movement_area_centers&  area_centers_initialiser);
+    void  do_movement_area_centers_migration_step(initialiser_of_movement_area_centers&  area_centers_initialiser);
+    void  compute_densities_of_ships_in_layers();
+    void  lunch_ships_into_movement_areas(initialiser_of_ships_in_movement_areas&  ships_initialiser);
+    void  initialise_map_from_dock_sectors_to_ships();
+
+    void  do_simulation_step(
             bool const  use_spiking = true,
             bool const  use_mini_spiking = true,
             bool const  use_movement_of_ships = true,
@@ -88,6 +107,8 @@ private:
 
 
     std::shared_ptr<network_props>  m_properties;
+    NETWORK_STATE  m_state;
+    std::unique_ptr<extra_data_for_spikers_in_layers>  m_extra_data_for_spikers;
 
     std::vector< std::unique_ptr< array_of_derived<spiker> > >  m_spikers;
     std::vector< std::unique_ptr< array_of_derived<dock> > >  m_docks;
