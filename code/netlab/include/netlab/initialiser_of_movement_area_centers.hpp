@@ -31,13 +31,13 @@ struct  initialiser_of_movement_area_centers
     virtual void  prepare_for_shifting_movement_area_centers_in_layers(
             access_to_movement_area_centers const&  movement_area_centers,
             network_props const&  props,
-            extra_data_for_spikers_in_layers&  extra_data_for_spikers
+            accessor_to_extra_data_for_spikers_in_layers&  extra_data_for_spikers
             )
     {}
 
     virtual void  get_indices_of_layers_where_to_apply_movement_area_centers_migration(
             network_props const&  props,
-            extra_data_for_spikers_in_layers const&  extra_data_for_spikers,
+            accessor_to_extra_data_for_spikers_in_layers const&  extra_data_for_spikers,
             std::vector<layer_index_type>&  layers_to_update
             )
     {}
@@ -52,7 +52,7 @@ struct  initialiser_of_movement_area_centers
             network_props const&  props,
             access_to_movement_area_centers const&  movement_area_centers,
             vector3&  area_center,
-            extra_data_for_spikers_in_layers&  extra_data_for_spikers
+            accessor_to_extra_data_for_spikers_in_layers&  extra_data_for_spikers
             )
     {}
 

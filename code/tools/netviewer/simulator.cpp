@@ -294,7 +294,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
         if (translated_rotated.second)
             call_listeners(simulator_notifications::camera_orientation_updated());
 
-        if (!is_network_being_constructed() && g_constructed_network.operator bool())
+        if (!is_network_being_constructed() && g_constructed_network != nullptr)
         {
             m_network = g_constructed_network;
             m_experiment_name = g_experiment_name;
@@ -312,7 +312,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             }
         }
 
-        if (network().operator bool())
+        if (network() != nullptr)
         {
             if (keyboard_props().was_just_released(qtgl::KEY_SPACE()))
             {
@@ -352,8 +352,11 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             draw_state = m_batch_grid->draw_state();
         }
 
-    if (network().operator bool())
+    if (network() != nullptr)
         render_network(view_projection_matrix,draw_state);
+    else if (is_network_being_constructed())
+    {
+    }
 
     qtgl::swap_buffers();
 }

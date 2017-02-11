@@ -70,6 +70,11 @@ struct  network
 
     natural_64_bit  update_id() const noexcept { return  m_update_id; }
 
+    extra_data_for_spikers_in_one_layer::value_type  get_extra_data_of_spiker(
+            layer_index_type const  layer_index,
+            object_index_type const  object_index
+            ) const;
+
 
     void  initialise_movement_area_centers(initialiser_of_movement_area_centers&  area_centers_initialiser);
     void  do_movement_area_centers_migration_step(initialiser_of_movement_area_centers&  area_centers_initialiser);

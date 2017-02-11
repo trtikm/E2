@@ -52,25 +52,20 @@ void  compute_ideal_densities_of_ships_in_layers(
         std::vector<float_32_bit>&  ideal_densities
         );
 
-void  initialise_densities_of_ships_per_spiker_in_layer(
-        natural_64_bit const  num_spikers_in_layer,
-        extra_data_for_spikers_in_one_layer&  densities_of_ships_per_spiker
-        );
-
 void  initialise_densities_of_ships_per_spiker_in_layers(
         network_props const&  props,
-        extra_data_for_spikers_in_layers&  densities_of_ships_per_spiker
+        accessor_to_extra_data_for_spikers_in_layers&  extra_data_accessor
         );
 
 void  compute_densities_of_ships_per_spiker_in_layers(
         network_props const&  props,
         access_to_movement_area_centers const&  movement_area_centers,
-        extra_data_for_spikers_in_layers&  densities_of_ships_per_spiker
+        accessor_to_extra_data_for_spikers_in_layers&  extra_data_accessor
         );
 
 void  compute_statistics_of_density_of_ships_in_layers(
         network_props const&  props,
-        extra_data_for_spikers_in_layers const&  densities_of_ships_per_spiker,
+        accessor_to_extra_data_for_spikers_in_layers const&  extra_data_accessor,
         std::vector<float_32_bit> const&  ideal_densities,
         std::vector<float_32_bit>&  minimal_densities,
         std::vector<float_32_bit>&  maximal_densities,

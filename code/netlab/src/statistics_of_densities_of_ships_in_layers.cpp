@@ -68,34 +68,23 @@ void  compute_ideal_densities_of_ships_in_layers(
 }
 
 
-void  initialise_densities_of_ships_per_spiker_in_layer(
-        natural_64_bit const  num_spikers_in_layer,
-        extra_data_for_spikers_in_one_layer&  densities_of_ships_per_spiker
-        )
-{
-    densities_of_ships_per_spiker.resize(num_spikers_in_layer,0.0f);
-}
-
-
 void  initialise_densities_of_ships_per_spiker_in_layers(
         network_props const&  props,
-        extra_data_for_spikers_in_layers&  densities_of_ships_per_spiker
+        accessor_to_extra_data_for_spikers_in_layers&  extra_data_accessor
         )
 {
-    densities_of_ships_per_spiker.clear();
-    densities_of_ships_per_spiker.resize(props.layer_props().size());
-    for (layer_index_type i = 0U; i != props.layer_props().size(); ++i)
-        initialise_densities_of_ships_per_spiker_in_layer(props.layer_props().at(i).num_spikers(),densities_of_ships_per_spiker.at(i));
+    for (layer_index_type i = 0U, m = (layer_index_type)props.layer_props().size(); i != m; ++i)
+        for (object_index_type j = 0ULL, n = props.layer_props().at(i).num_spikers(); j != n; ++j)
+            extra_data_accessor.set_extra_data_of_spiker(i,j,0.0f);
 }
 
 
 void  compute_densities_of_ships_per_spiker_in_layers(
         network_props const&  props,
         access_to_movement_area_centers const&  movement_area_centers,
-        extra_data_for_spikers_in_layers&  densities_of_ships_per_spiker
+        accessor_to_extra_data_for_spikers_in_layers&  extra_data_accessor
         )
 {
-    ASSUMPTION(densities_of_ships_per_spiker.size() == props.layer_props().size());
     for (layer_index_type layer_index = 0U; layer_index < props.layer_props().size(); ++layer_index)
     {
         network_layer_props const&  layer_props = props.layer_props().at(layer_index);
@@ -104,7 +93,6 @@ void  compute_densities_of_ships_per_spiker_in_layers(
             vector3 const&  area_center = movement_area_centers.area_center(layer_index, spiker_index);
 
             layer_index_type const  area_layer_index = props.find_layer_index(area_center(2));
-            ASSUMPTION(area_layer_index < densities_of_ships_per_spiker.size());
             network_layer_props const&  area_layer_props = props.layer_props().at(area_layer_index);
 
             float_32_bit const  from_meters_to_num_docks = 1.0f / area_layer_props.distance_of_docks_in_meters();
@@ -155,8 +143,7 @@ void  compute_densities_of_ships_per_spiker_in_layers(
                                 std::fabs(scale * ((float_32_bit)layer_props.num_ships_per_spiker() / area_volume));
 
                             object_index_type const  area_spiker_index = area_layer_props.spiker_sector_index(x,y,c);
-                            ASSUMPTION(area_spiker_index < densities_of_ships_per_spiker.at(area_layer_index).size());
-                            densities_of_ships_per_spiker.at(area_layer_index).at(area_spiker_index) += sector_density;
+                            extra_data_accessor.add_value_to_extra_data_of_spiker(area_layer_index,area_spiker_index,sector_density);
                         }
                         else
                         {
@@ -170,7 +157,7 @@ void  compute_densities_of_ships_per_spiker_in_layers(
 
 void  compute_statistics_of_density_of_ships_in_layers(
         network_props const&  props,
-        extra_data_for_spikers_in_layers const&  densities_of_ships_per_spiker,
+        accessor_to_extra_data_for_spikers_in_layers const&  extra_data_accessor,
         std::vector<float_32_bit> const&  ideal_densities,
         std::vector<float_32_bit>&  minimal_densities,
         std::vector<float_32_bit>&  maximal_densities,
@@ -179,7 +166,6 @@ void  compute_statistics_of_density_of_ships_in_layers(
         )
 {
     ASSUMPTION(ideal_densities.size() == props.layer_props().size());
-    ASSUMPTION(densities_of_ships_per_spiker.size() == props.layer_props().size());
 
     minimal_densities.clear();
     minimal_densities.resize(props.layer_props().size(),std::numeric_limits<float_32_bit>::max());
@@ -199,14 +185,12 @@ void  compute_statistics_of_density_of_ships_in_layers(
 
     for (layer_index_type layer_index = 0U; layer_index < props.layer_props().size(); ++layer_index)
     {
-        ASSUMPTION(layer_index < densities_of_ships_per_spiker.size());
         network_layer_props const&  layer_props = props.layer_props().at(layer_index);
         float_32_bit const  max_density = 2.0f * ideal_densities.at(layer_index);
         ASSUMPTION(max_density > 1e-5f);
         for (object_index_type spiker_index = 0ULL; spiker_index != layer_props.num_spikers(); ++spiker_index)
         {
-            ASSUMPTION(spiker_index < densities_of_ships_per_spiker.at(layer_index).size());
-            float_32_bit const  density = densities_of_ships_per_spiker.at(layer_index).at(spiker_index);
+            float_32_bit const  density = extra_data_accessor.get_extra_data_of_spiker(layer_index,spiker_index);
             if (density < minimal_densities.at(layer_index))
                 minimal_densities.at(layer_index) = density;
             if (density > maximal_densities.at(layer_index))

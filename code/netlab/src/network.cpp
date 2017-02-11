@@ -8,6 +8,22 @@
 #include <algorithm>
 #include <limits>
 
+namespace netlab { namespace detail {
+
+
+std::unique_ptr<extra_data_for_spikers_in_layers>  create_extra_data_for_spikers(network_props const&  props)
+{
+    auto data = std::unique_ptr<extra_data_for_spikers_in_layers>(new extra_data_for_spikers_in_layers);
+    ASSUMPTION(data != nullptr);
+    data->resize(props.layer_props().size(), extra_data_for_spikers_in_layers::value_type(0));
+    for (layer_index_type i = 0U; i != props.layer_props().size(); ++i)
+        data->at(i).resize(props.layer_props().at(i).num_spikers(), extra_data_for_spikers_in_one_layer::value_type(0));
+    return std::move(data);
+}
+
+
+}}
+
 namespace netlab {
 
 
@@ -129,21 +145,23 @@ void  network::do_movement_area_centers_migration_step(initialiser_of_movement_a
 
     if (m_extra_data_for_spikers == nullptr)
     {
-        m_extra_data_for_spikers = std::unique_ptr<extra_data_for_spikers_in_layers>(new extra_data_for_spikers_in_layers);
-        ASSUMPTION(m_extra_data_for_spikers != nullptr);
+        m_extra_data_for_spikers = detail::create_extra_data_for_spikers(*properties());
         access_to_movement_area_centers  movement_area_centers(&m_movement_area_centers);
+        accessor_to_extra_data_for_spikers_in_layers  extra_data_accessor(m_extra_data_for_spikers.get());
         area_centers_initialiser.prepare_for_shifting_movement_area_centers_in_layers(
                 movement_area_centers,
                 *properties(),
-                *m_extra_data_for_spikers
+                extra_data_accessor
                 );
         return;
     }
 
+    accessor_to_extra_data_for_spikers_in_layers  extra_data_accessor(m_extra_data_for_spikers.get());
+
     std::vector<layer_index_type>  layers_to_update;
     area_centers_initialiser.get_indices_of_layers_where_to_apply_movement_area_centers_migration(
             *properties(),
-            *m_extra_data_for_spikers,
+            extra_data_accessor,
             layers_to_update
             );
     if (layers_to_update.empty())
@@ -179,7 +197,7 @@ void  network::do_movement_area_centers_migration_step(initialiser_of_movement_a
                             *properties(),
                             movement_area_centers,
                             centers.at(spiker_index),
-                            *m_extra_data_for_spikers
+                            extra_data_accessor
                             );
                         
                     ASSUMPTION(
@@ -222,12 +240,13 @@ void  network::compute_densities_of_ships_in_layers()
 
     if (m_extra_data_for_spikers == nullptr)
     {
-        m_extra_data_for_spikers = std::unique_ptr<extra_data_for_spikers_in_layers>(new extra_data_for_spikers_in_layers);
-        ASSUMPTION(m_extra_data_for_spikers != nullptr);
-        initialise_densities_of_ships_per_spiker_in_layers(*properties(),*m_extra_data_for_spikers);
+        m_extra_data_for_spikers = detail::create_extra_data_for_spikers(*properties());
+        accessor_to_extra_data_for_spikers_in_layers  extra_data_accessor(m_extra_data_for_spikers.get());
+        
+        initialise_densities_of_ships_per_spiker_in_layers(*properties(),extra_data_accessor);
 
         access_to_movement_area_centers  movement_area_centers(&m_movement_area_centers);
-        compute_densities_of_ships_per_spiker_in_layers(*properties(),movement_area_centers,*m_extra_data_for_spikers);
+        compute_densities_of_ships_per_spiker_in_layers(*properties(),movement_area_centers,extra_data_accessor);
     }
     {
         std::vector<float_32_bit>  ideal_densities;
@@ -239,7 +258,7 @@ void  network::compute_densities_of_ships_in_layers()
         std::vector<distribution_of_spikers_by_density_of_ships>  distribution_of_spikers;
         compute_statistics_of_density_of_ships_in_layers(
                 *properties(),
-                *m_extra_data_for_spikers,
+                accessor_to_extra_data_for_spikers_in_layers(m_extra_data_for_spikers.get()),
                 ideal_densities,
                 minimal_densities,
                 maximal_densities,
@@ -257,6 +276,7 @@ void  network::compute_densities_of_ships_in_layers()
         ASSUMPTION(m_densities_of_ships != nullptr);
         ASSUMPTION(densities_of_ships().ideal_densities().size() == properties()->layer_props().size());
     }
+
     m_extra_data_for_spikers.reset();
 
     m_state = NETWORK_STATE::READY_FOR_LUNCHING_SHIPS_INTO_MOVEMENT_AREAS;
@@ -413,6 +433,18 @@ std::vector<compressed_layer_and_object_indices> const&  network::get_indices_of
     ASSUMPTION(layer_index < properties()->layer_props().size());
     ASSUMPTION(dock_sector_index < m_ships_in_sectors.at(layer_index).size());
     return m_ships_in_sectors.at(layer_index).at(dock_sector_index);
+}
+
+
+extra_data_for_spikers_in_one_layer::value_type  network::get_extra_data_of_spiker(
+        layer_index_type const  layer_index,
+        object_index_type const  object_index
+        ) const
+{
+    ASSUMPTION(get_state() == NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP);
+    ASSUMPTION(m_extra_data_for_spikers != nullptr);
+    accessor_to_extra_data_for_spikers_in_layers const  extra_data_accessor(m_extra_data_for_spikers.get());
+    return extra_data_accessor.get_extra_data_of_spiker(layer_index,object_index);
 }
 
 
