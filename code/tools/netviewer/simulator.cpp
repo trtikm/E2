@@ -1154,7 +1154,108 @@ void  simulator::destroy_network()
 
 void  simulator::render_constructed_network(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
 {
-    // TODO!
+    TMPROF_BLOCK();
+
+    INVARIANT(network() == nullptr);
+    INVARIANT(is_network_being_constructed());
+    INVARIANT(g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP);
+    INVARIANT(g_constructed_network != nullptr);
+
+    INVARIANT(g_constructed_network->get_state() == netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP);
+
+    if (m_dbg_network_camera.is_enabled() && window_props().just_resized())
+        m_dbg_network_camera.on_window_resized(window_props());
+
+    std::vector< std::pair<vector3, vector3> >  clip_planes;
+    qtgl::compute_clip_planes(
+        *(m_dbg_network_camera.is_enabled() ? m_dbg_network_camera.get_camera() : m_camera),
+        clip_planes
+        );
+    if (renders_only_chosen_layer() &&
+        get_layer_index_of_chosen_layer_to_render() < g_constructed_network->properties()->layer_props().size())
+    {
+        auto const&  props = g_constructed_network->properties()->layer_props().at(get_layer_index_of_chosen_layer_to_render());
+        clip_planes.push_back({ props.low_corner_of_ships(),vector3_unit_z() });
+        clip_planes.push_back({ props.high_corner_of_ships(),-vector3_unit_z() });
+    }
+
+    render_spikers_of_constructed_network(view_projection_matrix, clip_planes, draw_state);
+
+    if (m_dbg_network_camera.is_enabled())
+        m_dbg_network_camera.render_camera_frustum(view_projection_matrix, draw_state);
+    if (m_dbg_frustum_sector_enumeration.is_enabled())
+    {
+        if (m_dbg_frustum_sector_enumeration.is_invalidated() ||
+            !m_dbg_network_camera.is_enabled() ||
+            window_props().just_resized())
+            m_dbg_frustum_sector_enumeration.enumerate(clip_planes, g_constructed_network->properties()->layer_props());
+        m_dbg_frustum_sector_enumeration.render(view_projection_matrix, draw_state);
+    }
+    if (m_dbg_raycast_sector_enumeration.is_enabled())
+        m_dbg_raycast_sector_enumeration.render(view_projection_matrix, draw_state);
+    if (m_dbg_draw_movement_areas.is_enabled())
+    {
+        if (m_dbg_draw_movement_areas.is_invalidated() ||
+            !m_dbg_network_camera.is_enabled() ||
+            window_props().just_resized())
+            m_dbg_draw_movement_areas.collect_visible_areas(clip_planes, g_constructed_network);
+        m_dbg_draw_movement_areas.render(view_projection_matrix, draw_state);
+    }
+}
+
+void  simulator::render_spikers_of_constructed_network(
+        matrix44 const&  view_projection_matrix,
+        std::vector< std::pair<vector3, vector3> > const&  clip_planes,
+        qtgl::draw_state_ptr&  draw_state
+        )
+{
+    TMPROF_BLOCK();
+
+    INVARIANT(g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP);
+    INVARIANT(g_constructed_network != nullptr);
+
+    if (qtgl::make_current(*m_batch_spiker, draw_state))
+    {
+        INVARIANT(m_batch_spiker->shaders_binding().operator bool());
+
+        if (!m_batch_spiker_bbox.operator bool())
+        {
+            INVARIANT(!m_batch_spiker_bsphere.operator bool());
+            qtgl::spatial_boundary const  boundary =
+                    m_batch_spiker->buffers_binding()->find_vertex_buffer_properties()->boundary();
+
+            m_batch_spiker_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
+                                                             get_program_options()->dataRoot(),"/netviewer/spiker_bbox");
+            m_batch_spiker_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,
+                                                                   get_program_options()->dataRoot(),"/netviewer/spiker_bsphere");
+        }
+
+        struct  local
+        {
+            static bool  callback(
+                        qtgl::batch_ptr const  batch_spiker,
+                        matrix44 const&  view_projection_matrix,
+                        vector3 const&  spiker_position
+                        )
+            {
+                render_batch(
+                    *batch_spiker,
+                    view_projection_matrix,
+                    angeo::coordinate_system(spiker_position,quaternion_identity())
+                    );
+                return true;
+            }
+        };
+
+        natural_64_bit const  num_rendered = netview::enumerate_spiker_positions(
+                    g_constructed_network->properties()->layer_props(),
+                    clip_planes,
+                    std::bind(&local::callback,m_batch_spiker,std::cref(view_projection_matrix),std::placeholders::_1)
+                    );
+
+        if (num_rendered != 0UL)
+            draw_state = m_batch_spiker->draw_state();
+    }
 }
 
 

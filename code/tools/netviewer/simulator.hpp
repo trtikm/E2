@@ -115,6 +115,11 @@ private:
     void  render_selected_network_object(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state);
 
     void  render_constructed_network(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
+    void  render_spikers_of_constructed_network(
+            matrix44 const&  view_projection_matrix,
+            std::vector< std::pair<vector3,vector3> > const&  clip_planes,
+            qtgl::draw_state_ptr&  draw_state
+            );
 
 
     /// Network independed data providing feedback loop between a human user and 3D scene in the tool
