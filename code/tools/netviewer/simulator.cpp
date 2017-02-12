@@ -39,6 +39,7 @@ enum struct NETWORK_CONSTRUCTION_STATE : natural_8_bit
     PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP = 2U,
 };
 std::atomic<NETWORK_CONSTRUCTION_STATE>  g_network_construction_state = NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION;
+natural_64_bit  g_num_construction_steps = 0ULL;
 std::thread  g_create_experiment_thread;
 
 void  create_experiment_worker()
@@ -62,6 +63,7 @@ void  create_experiment_worker()
             netexp::experiment_factory::instance().create_initialiser_of_ships_in_movement_areas(g_experiment_name);
 
         g_network_construction_state = NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP;
+        ++g_num_construction_steps;
 
         bool  done = false;
         while (true)
@@ -69,6 +71,8 @@ void  create_experiment_worker()
             if (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP)
                 continue; // Wait with the next step till the simulator checks/draws the current state of the constructed network.
                           // TODO: call "yield" before the "continue" statement.
+            if (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION)
+                return; // The network construction was force-terminated in the simulator's IDLE step.
 
             switch (g_constructed_network->get_state())
             {
@@ -124,6 +128,7 @@ void  create_experiment_worker()
             }
 
             g_network_construction_state = NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP;
+            ++g_num_construction_steps;
         }
     }
     catch (std::exception const&)
@@ -290,6 +295,14 @@ simulator::simulator(
 simulator::~simulator()
 {
     TMPROF_BLOCK();
+
+    if (is_network_being_constructed())
+    {
+        while (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP) {}
+        g_constructed_network.reset();
+        g_network_construction_state = NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION;
+    }
+
     if (g_create_experiment_thread.joinable())
         g_create_experiment_thread.join();
 }
@@ -312,10 +325,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
         if (!is_network_being_constructed() && g_constructed_network != nullptr)
         {
-            m_network = g_constructed_network;
-            m_experiment_name = g_experiment_name;
-            g_constructed_network.reset();
-            g_experiment_name.clear();
+            acquire_constructed_network();
 
             m_spent_real_time = 0.0;
             m_spent_network_time = 0.0;
@@ -382,9 +392,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
         if (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP)
         {
             if (g_constructed_network->get_state() == netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP)
-            {
-                // TODO: draw progress of migration of movement area centers.
-            }
+                render_constructed_network(view_projection_matrix,draw_state);
             if (!paused())
                 g_network_construction_state = NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP;
         }
@@ -541,11 +549,11 @@ void  simulator::update_selection_of_network_objects(float_64_bit const  seconds
 
             m_selected_object_stats =
                 object_kind == 1U ? 
-                        netexp::experiment_factory::instance().create_tracked_spiker_stats(m_experiment_name, object_indices) :
+                        netexp::experiment_factory::instance().create_tracked_spiker_stats(get_experiment_name(), object_indices) :
                 object_kind == 2U ?
-                        netexp::experiment_factory::instance().create_tracked_dock_stats(m_experiment_name, object_indices) :
+                        netexp::experiment_factory::instance().create_tracked_dock_stats(get_experiment_name(), object_indices) :
                 object_kind == 3U ?
-                        netexp::experiment_factory::instance().create_tracked_ship_stats(m_experiment_name, object_indices) :
+                        netexp::experiment_factory::instance().create_tracked_ship_stats(get_experiment_name(), object_indices) :
                         std::shared_ptr<netlab::tracked_network_object_stats>{}
                         ;
         }
@@ -1082,7 +1090,6 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
     }
 }
 
-
 void  simulator::initiate_network_construction(std::string const&  experiment_name)
 {
     TMPROF_BLOCK();
@@ -1095,6 +1102,7 @@ void  simulator::initiate_network_construction(std::string const&  experiment_na
     m_network.reset();
     g_constructed_network.reset();
     g_experiment_name = experiment_name;
+    g_num_construction_steps = 0ULL;
 
     g_network_construction_state = NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP;
     g_create_experiment_thread = std::thread(&create_experiment_worker);
@@ -1112,12 +1120,28 @@ std::string  simulator::get_constructed_network_progress_text() const
     case NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION:
         return "ERROR: not in construction";
     case NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP:
-        return msgstream() << "CONSTRUCTION[" << g_experiment_name << "]: performing initialisation step ...";
+        return "performing step ...";
     case NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP:
-        return msgstream() << "CONSTRUCTION[" << g_experiment_name << "]: " << to_string(g_constructed_network->get_state());
+        return to_string(g_constructed_network->get_state());
     default:
         UNREACHABLE();
     }
+}
+
+natural_64_bit  simulator::get_num_network_construction_steps() const
+{
+    return (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP) ?
+                g_num_construction_steps :
+                0ULL;
+}
+
+void  simulator::acquire_constructed_network()
+{
+    m_network = g_constructed_network;
+    m_experiment_name = g_experiment_name;
+    g_constructed_network.reset();
+    g_experiment_name.clear();
+    g_num_construction_steps = 0ULL;
 }
 
 void  simulator::destroy_network()
@@ -1126,6 +1150,11 @@ void  simulator::destroy_network()
     m_experiment_name.clear();
     m_selected_object_stats.reset();
     m_batches_selection.clear();
+}
+
+void  simulator::render_constructed_network(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
+{
+    // TODO!
 }
 
 
@@ -1169,6 +1198,11 @@ void  simulator::on_look_at_selected()
     }
 
     qtgl::look_at(m_camera->coordinate_system(),pos,2.5f);
+}
+
+std::string const&  simulator::get_experiment_name() const
+{
+    return is_network_being_constructed() ? g_experiment_name : m_experiment_name;
 }
 
 void simulator::set_desired_network_to_real_time_ratio(float_64_bit const  value)
@@ -1631,7 +1665,7 @@ void  simulator::on_select_owner_spiker()
 {
     if (!m_selected_object_stats.operator bool())
         return;
-    if (m_experiment_name.empty())
+    if (get_experiment_name().empty())
         return;
 
     netlab::layer_index_type  layer_index = m_selected_object_stats->indices().layer_index();
@@ -1654,7 +1688,7 @@ void  simulator::on_select_owner_spiker()
     }
 
     m_selected_object_stats =
-        netexp::experiment_factory::instance().create_tracked_spiker_stats(m_experiment_name, {layer_index,object_index});
+        netexp::experiment_factory::instance().create_tracked_spiker_stats(get_experiment_name(), {layer_index,object_index});
     m_batches_selection.clear();
 }
 

@@ -43,12 +43,14 @@ struct simulator : public qtgl::real_time_simulator
     void  on_look_at_selected();
 
     /// Network management methods.
-    std::string const&  get_experiment_name() const noexcept { return m_experiment_name; }
+    std::string const&  get_experiment_name() const;
     std::shared_ptr<netlab::network>  network() const noexcept { return m_network; }
     bool  has_network() const { return network().operator bool(); }
     void  initiate_network_construction(std::string const&  experiment_name);
     bool  is_network_being_constructed() const;
     std::string  get_constructed_network_progress_text() const;
+    natural_64_bit  get_num_network_construction_steps() const;
+    void  acquire_constructed_network();
     void  destroy_network();
 
     /// Network simulation dependent methods.
@@ -111,6 +113,8 @@ private:
             qtgl::draw_state_ptr&  draw_state
             );
     void  render_selected_network_object(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state);
+
+    void  render_constructed_network(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
 
 
     /// Network independed data providing feedback loop between a human user and 3D scene in the tool

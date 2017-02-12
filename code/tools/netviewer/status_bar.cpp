@@ -48,12 +48,14 @@ std::string  seconds_to_pretty_time_string(float_64_bit  seconds)
 status_bar::status_bar(program_window* const  wnd)
     : m_wnd(wnd)
 
-    , m_spent_real_time(new QLabel("RT: N/A"))
-    , m_spent_simulation_time(new QLabel("NT: N/A"))
-    , m_spent_times_ratio(new QLabel("NT/RT: N/A"))
-    , m_num_passed_simulation_steps(new QLabel("Steps: N/A"))
-    , m_mode(new QLabel("N/A"))
-    , m_FPS(new QLabel("FPS: 0"))
+    , m_spent_real_time(new QLabel(" RT: N/A "))
+    , m_spent_simulation_time(new QLabel(" NT: N/A "))
+    , m_spent_times_ratio(new QLabel(" NT/RT: N/A "))
+    , m_num_passed_simulation_steps(new QLabel(" #0 "))
+    , m_experiment_name(new QLabel(" NONE "))
+    , m_state(new QLabel(" IDLE "))
+    , m_mode(new QLabel(" PAUSED "))
+    , m_FPS(new QLabel(" FPS: 0 "))
 {}
 
 program_window*  status_bar::wnd() const noexcept
@@ -81,6 +83,16 @@ QLabel* status_bar::num_passed_simulation_steps() const noexcept
     return m_num_passed_simulation_steps;
 }
 
+QLabel* status_bar::experiment_name() const noexcept
+{
+    return m_experiment_name;
+}
+
+QLabel* status_bar::state() const noexcept
+{
+    return m_state;
+}
+
 QLabel* status_bar::mode() const noexcept
 {
     return m_mode;
@@ -96,40 +108,51 @@ void status_bar::update()
     if (wnd()->glwindow().call_now(&simulator::is_network_being_constructed))
     {
         INVARIANT(!wnd()->glwindow().call_now(&simulator::has_network));
-        m_spent_real_time->setText("");
-        m_spent_simulation_time->setText("");
-        m_spent_times_ratio->setText("");
-        m_num_passed_simulation_steps->setText("");
-        m_mode->setText(QString(wnd()->glwindow().call_now(&simulator::get_constructed_network_progress_text).c_str()));
+        m_spent_real_time->setText(" RT: N/A ");
+        m_spent_simulation_time->setText(" NT: N/A ");
+        m_spent_times_ratio->setText(" NT/RT: N/A ");
+        m_num_passed_simulation_steps->setText(QString(
+            (msgstream() << " #" << wnd()->glwindow().call_now(&simulator::get_num_network_construction_steps)).get().c_str()
+            ));
+        m_experiment_name->setText(QString(wnd()->glwindow().call_now(&simulator::get_experiment_name).c_str()));
+        m_state->setText(QString(
+            (msgstream() << " CONSTRUCTION["
+                         << wnd()->glwindow().call_now(&simulator::get_constructed_network_progress_text)
+                         << "] ").get().c_str()
+            ));
     }
     else if (wnd()->glwindow().call_now(&simulator::has_network))
     {
         float_64_bit const  real_time = wnd()->glwindow().call_now(&simulator::spent_real_time);
-        std::string  msg = msgstream() << "RT: " << seconds_to_pretty_time_string(real_time);
+        std::string  msg = msgstream() << " RT: " << seconds_to_pretty_time_string(real_time) << " ";
         m_spent_real_time->setText(msg.c_str());
 
         float_64_bit const  network_time = wnd()->glwindow().call_now(&simulator::spent_network_time);
-        msg = msgstream() << "NT: " << seconds_to_pretty_time_string(network_time);
+        msg = msgstream() << " NT: " << seconds_to_pretty_time_string(network_time) << " ";
         m_spent_simulation_time->setText(msg.c_str());
 
         float_64_bit const  network_time_to_real_time = real_time > 1e-5f ? network_time / real_time : 1.0;
-        msg = msgstream() << "NT/RT: " << std::fixed << std::setprecision(3) << network_time_to_real_time;
+        msg = msgstream() << " NT/RT: " << std::fixed << std::setprecision(3) << network_time_to_real_time << " ";
         m_spent_times_ratio->setText(msg.c_str());
 
         natural_64_bit const  num_steps = wnd()->glwindow().call_now(&simulator::num_network_updates);
-        msg = msgstream() << "#" << num_steps;
+        msg = msgstream() << " #" << num_steps << " ";
         m_num_passed_simulation_steps->setText(msg.c_str());
 
-        m_mode->setText(wnd()->glwindow().call_now(&simulator::paused) ? " PAUSED " : " RUNNING ");
+        m_experiment_name->setText(QString(wnd()->glwindow().call_now(&simulator::get_experiment_name).c_str()));
+        m_state->setText(" SIMULATION ");
     }
     else
     {
-        m_spent_real_time->setText("");
-        m_spent_simulation_time->setText("");
-        m_spent_times_ratio->setText("");
-        m_num_passed_simulation_steps->setText("");
-        m_mode->setText(" IDLE ");
+        m_spent_real_time->setText(" RT: N/A ");
+        m_spent_simulation_time->setText(" NT: N/A ");
+        m_spent_times_ratio->setText(" NT/RT: N/A ");
+        m_num_passed_simulation_steps->setText(" #0 ");
+        m_experiment_name->setText(" NONE ");
+        m_state->setText(" IDLE ");
     }
+
+    m_mode->setText(wnd()->glwindow().call_now(&simulator::paused) ? " PAUSED " : " RUNNING ");
 
     {
         std::stringstream  sstr;
@@ -144,6 +167,8 @@ void  make_status_bar_content(status_bar const&  w)
     w.wnd()->statusBar()->addPermanentWidget(w.spent_simulation_time());
     w.wnd()->statusBar()->addPermanentWidget(w.spent_times_ratio());
     w.wnd()->statusBar()->addPermanentWidget(w.num_passed_simulation_steps());
+    w.wnd()->statusBar()->addPermanentWidget(w.experiment_name());
+    w.wnd()->statusBar()->addPermanentWidget(w.state());
     w.wnd()->statusBar()->addPermanentWidget(w.mode());
     w.wnd()->statusBar()->addPermanentWidget(w.FPS());
 
