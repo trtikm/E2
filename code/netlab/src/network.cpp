@@ -5,6 +5,7 @@
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <utility/development.hpp>
+#include <array>
 #include <algorithm>
 #include <limits>
 
@@ -747,4 +748,20 @@ void  network::update_movement_of_ship(
 }
 
 
+}
+
+
+std::string const&  to_string(netlab::NETWORK_STATE const  state)
+{
+    static std::array<std::string, 7ULL>  texts{
+        "READY_FOR_CONSTRUCTION",                                       // 0U
+        "READY_FOR_MOVEMENT_AREA_CENTERS_INITIALISATION",               // 1U
+        "READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP",               // 2U
+        "READY_FOR_COMPUTATION_OF_SHIP_DENSITIES_IN_LAYERS",            // 3U
+        "READY_FOR_LUNCHING_SHIPS_INTO_MOVEMENT_AREAS",                 // 4U
+        "READY_FOR_INITIALISATION_OF_MAP_FROM_DOCK_SECTORS_TO_SHIPS",   // 5U
+        "READY_FOR_SIMULATION_STEP",                                    // 6U
+    };
+    ASSUMPTION(static_cast<natural_8_bit>(state) < texts.size());
+    return texts.at(static_cast<natural_8_bit>(state));
 }

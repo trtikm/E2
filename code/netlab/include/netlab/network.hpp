@@ -16,6 +16,7 @@
 #   include <angeo/tensor_math.hpp>
 #   include <vector>
 #   include <memory>
+#   include <string>
 
 namespace netlab {
 
@@ -133,5 +134,9 @@ private:
 
 
 }
+
+
+std::string const&  to_string(netlab::NETWORK_STATE const  state);
+
 
 #endif

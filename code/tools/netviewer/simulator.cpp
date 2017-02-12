@@ -64,7 +64,7 @@ void  create_experiment_worker()
         g_network_construction_state = NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP;
 
         bool  done = false;
-        do
+        while (true)
         {
             if (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP)
                 continue; // Wait with the next step till the simulator checks/draws the current state of the constructed network.
@@ -116,9 +116,15 @@ void  create_experiment_worker()
                 done = true;
                 break;
             }
+
+            if (done)
+            {
+                g_network_construction_state = NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION;
+                break;
+            }
+
+            g_network_construction_state = NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP;
         }
-        while (done == false);
-        g_network_construction_state = NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION;
     }
     catch (std::exception const&)
     {
@@ -322,28 +328,35 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             }
         }
 
-        if (network() != nullptr)
+        if (keyboard_props().was_just_released(qtgl::KEY_SPACE()))
         {
-            if (keyboard_props().was_just_released(qtgl::KEY_SPACE()))
-            {
-                if (paused())
-                {
-                    m_paused = !m_paused;
-                    call_listeners(simulator_notifications::paused());
-                }
-                m_do_single_step = true;
-            }
-
-            if (!m_do_single_step && keyboard_props().was_just_released(qtgl::KEY_PAUSE()))
+            if (paused())
             {
                 m_paused = !m_paused;
                 call_listeners(simulator_notifications::paused());
             }
+            m_do_single_step = true;
+        }
 
+        if (!m_do_single_step && keyboard_props().was_just_released(qtgl::KEY_PAUSE()))
+        {
+            m_paused = !m_paused;
+            call_listeners(simulator_notifications::paused());
+        }
+
+        if (network() != nullptr)
+        {
             if (!paused())
                 update_network(seconds_from_previous_call);
 
             update_selection_of_network_objects(seconds_from_previous_call);
+
+            if (m_do_single_step)
+            {
+                m_paused = true;
+                call_listeners(simulator_notifications::paused());
+                m_do_single_step = false;
+            }
         }
     }
 
@@ -364,13 +377,24 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
     if (network() != nullptr)
         render_network(view_projection_matrix,draw_state);
-    else if (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP)
+    else 
     {
-        if (g_constructed_network->get_state() == netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP)
+        if (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP)
         {
-            // TODO: draw progress of migration of movement area centers.
+            if (g_constructed_network->get_state() == netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP)
+            {
+                // TODO: draw progress of migration of movement area centers.
+            }
+            if (!paused())
+                g_network_construction_state = NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP;
         }
-        g_network_construction_state = NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP;
+        if (!is_this_pure_redraw_request && m_do_single_step)
+        {
+            INVARIANT(!paused());
+            m_paused = true;
+            call_listeners(simulator_notifications::paused());
+            m_do_single_step = false;
+        }
     }
 
     qtgl::swap_buffers();
@@ -392,7 +416,7 @@ void  simulator::update_network(float_64_bit const  seconds_from_previous_call)
                             / network()->properties()->update_time_step_in_seconds())
             );
     std::chrono::high_resolution_clock::time_point const  update_start_time = std::chrono::high_resolution_clock::now();
-    for ( ; num_iterations != 0ULL; --num_iterations)
+    for ( ; num_iterations != 0ULL || m_do_single_step; --num_iterations)
     {
         network()->do_simulation_step(
             true,true,true,
@@ -400,13 +424,7 @@ void  simulator::update_network(float_64_bit const  seconds_from_previous_call)
             );
 
         if (m_do_single_step)
-        {
-            INVARIANT(!paused());
-            m_paused = true;
-            call_listeners(simulator_notifications::paused());
-            m_do_single_step = false;
             break;
-        }
 
         if (std::chrono::duration<float_64_bit>(std::chrono::high_resolution_clock::now() - update_start_time).count() > 1.0 / 60.0)
             break;
@@ -1085,6 +1103,21 @@ void  simulator::initiate_network_construction(std::string const&  experiment_na
 bool  simulator::is_network_being_constructed() const
 {
     return g_network_construction_state != NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION;
+}
+
+std::string  simulator::get_constructed_network_progress_text() const
+{
+    switch (g_network_construction_state)
+    {
+    case NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION:
+        return "ERROR: not in construction";
+    case NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP:
+        return msgstream() << "CONSTRUCTION[" << g_experiment_name << "]: performing initialisation step ...";
+    case NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP:
+        return msgstream() << "CONSTRUCTION[" << g_experiment_name << "]: " << to_string(g_constructed_network->get_state());
+    default:
+        UNREACHABLE();
+    }
 }
 
 void  simulator::destroy_network()

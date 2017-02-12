@@ -100,7 +100,7 @@ void status_bar::update()
         m_spent_simulation_time->setText("");
         m_spent_times_ratio->setText("");
         m_num_passed_simulation_steps->setText("");
-        m_mode->setText("BUILDING...");
+        m_mode->setText(QString(wnd()->glwindow().call_now(&simulator::get_constructed_network_progress_text).c_str()));
     }
     else if (wnd()->glwindow().call_now(&simulator::has_network))
     {
