@@ -25,11 +25,12 @@ enum struct  NETWORK_STATE : natural_8_bit
 {
     READY_FOR_CONSTRUCTION                                      = 0U,
     READY_FOR_MOVEMENT_AREA_CENTERS_INITIALISATION              = 1U,
-    READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP              = 2U,
-    READY_FOR_COMPUTATION_OF_SHIP_DENSITIES_IN_LAYERS           = 3U,
-    READY_FOR_LUNCHING_SHIPS_INTO_MOVEMENT_AREAS                = 4U,
-    READY_FOR_INITIALISATION_OF_MAP_FROM_DOCK_SECTORS_TO_SHIPS  = 5U,
-    READY_FOR_SIMULATION_STEP                                   = 6U,
+    READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STARTUP           = 2U,
+    READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP              = 3U,
+    READY_FOR_COMPUTATION_OF_SHIP_DENSITIES_IN_LAYERS           = 4U,
+    READY_FOR_LUNCHING_SHIPS_INTO_MOVEMENT_AREAS                = 5U,
+    READY_FOR_INITIALISATION_OF_MAP_FROM_DOCK_SECTORS_TO_SHIPS  = 6U,
+    READY_FOR_SIMULATION_STEP                                   = 7U,
 };
 
 
@@ -78,6 +79,7 @@ struct  network
 
 
     void  initialise_movement_area_centers(initialiser_of_movement_area_centers&  area_centers_initialiser);
+    void  prepare_for_movement_area_centers_migration(initialiser_of_movement_area_centers&  area_centers_initialiser);
     void  do_movement_area_centers_migration_step(initialiser_of_movement_area_centers&  area_centers_initialiser);
     void  compute_densities_of_ships_in_layers();
     void  lunch_ships_into_movement_areas(initialiser_of_ships_in_movement_areas&  ships_initialiser);

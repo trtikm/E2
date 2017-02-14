@@ -69,8 +69,10 @@ void  create_experiment_worker()
         while (true)
         {
             if (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP)
+            {
+                std::this_thread::yield();
                 continue; // Wait with the next step till the simulator checks/draws the current state of the constructed network.
-                          // TODO: call "yield" before the "continue" statement.
+            }
             if (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION)
                 return; // The network construction was force-terminated in the simulator's IDLE step.
 
@@ -78,6 +80,14 @@ void  create_experiment_worker()
             {
             case netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_INITIALISATION:
                 g_constructed_network->initialise_movement_area_centers(*centers_initialiser);
+                if (g_constructed_network->get_state() != netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STARTUP)
+                {
+                    g_constructed_network.reset();
+                    done = true;
+                }
+                break;
+            case netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STARTUP:
+                g_constructed_network->prepare_for_movement_area_centers_migration(*centers_initialiser);
                 if (g_constructed_network->get_state() != netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP)
                 {
                     g_constructed_network.reset();
@@ -298,7 +308,8 @@ simulator::~simulator()
 
     if (is_network_being_constructed())
     {
-        while (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP) {}
+        while (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP)
+            std::this_thread::yield();
         g_constructed_network.reset();
         g_network_construction_state = NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION;
     }

@@ -14,6 +14,8 @@ namespace netlab { namespace detail {
 
 std::unique_ptr<extra_data_for_spikers_in_layers>  create_extra_data_for_spikers(network_props const&  props)
 {
+    TMPROF_BLOCK();
+
     auto data = std::unique_ptr<extra_data_for_spikers_in_layers>(new extra_data_for_spikers_in_layers);
     ASSUMPTION(data != nullptr);
     data->resize(props.layer_props().size(), extra_data_for_spikers_in_layers::value_type(0));
@@ -134,28 +136,35 @@ void  network::initialise_movement_area_centers(initialiser_of_movement_area_cen
                 }
     }
 
-    m_state = NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP;
+    m_state = NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STARTUP;
 }
 
+void  network::prepare_for_movement_area_centers_migration(initialiser_of_movement_area_centers&  area_centers_initialiser)
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(get_state() == NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STARTUP);
+    ASSUMPTION(m_extra_data_for_spikers == nullptr);
+
+    m_extra_data_for_spikers = detail::create_extra_data_for_spikers(*properties());
+    ASSUMPTION(m_extra_data_for_spikers != nullptr);
+    access_to_movement_area_centers  movement_area_centers(&m_movement_area_centers);
+    accessor_to_extra_data_for_spikers_in_layers  extra_data_accessor(m_extra_data_for_spikers.get());
+    area_centers_initialiser.prepare_for_shifting_movement_area_centers_in_layers(
+            movement_area_centers,
+            *properties(),
+            extra_data_accessor
+            );
+
+    m_state = NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP;
+}
 
 void  network::do_movement_area_centers_migration_step(initialiser_of_movement_area_centers&  area_centers_initialiser)
 {
     TMPROF_BLOCK();
 
     ASSUMPTION(get_state() == NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP);
-
-    if (m_extra_data_for_spikers == nullptr)
-    {
-        m_extra_data_for_spikers = detail::create_extra_data_for_spikers(*properties());
-        access_to_movement_area_centers  movement_area_centers(&m_movement_area_centers);
-        accessor_to_extra_data_for_spikers_in_layers  extra_data_accessor(m_extra_data_for_spikers.get());
-        area_centers_initialiser.prepare_for_shifting_movement_area_centers_in_layers(
-                movement_area_centers,
-                *properties(),
-                extra_data_accessor
-                );
-        return;
-    }
+    ASSUMPTION(m_extra_data_for_spikers != nullptr);
 
     accessor_to_extra_data_for_spikers_in_layers  extra_data_accessor(m_extra_data_for_spikers.get());
 
@@ -190,7 +199,7 @@ void  network::do_movement_area_centers_migration_step(initialiser_of_movement_a
 
                     layer_index_type const  area_layer_index = properties()->find_layer_index(centers.at(spiker_index)(2));
 
-                    area_centers_initialiser.on_shift_movement_area_center_in_layers(
+                    area_centers_initialiser.on_shift_movement_area_center_in_layer(
                             layer_index,
                             spiker_index,
                             x,y,c,
@@ -753,14 +762,15 @@ void  network::update_movement_of_ship(
 
 std::string const&  to_string(netlab::NETWORK_STATE const  state)
 {
-    static std::array<std::string, 7ULL>  texts{
+    static std::array<std::string, 8ULL>  texts{
         "READY_FOR_CONSTRUCTION",                                       // 0U
         "READY_FOR_MOVEMENT_AREA_CENTERS_INITIALISATION",               // 1U
-        "READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP",               // 2U
-        "READY_FOR_COMPUTATION_OF_SHIP_DENSITIES_IN_LAYERS",            // 3U
-        "READY_FOR_LUNCHING_SHIPS_INTO_MOVEMENT_AREAS",                 // 4U
-        "READY_FOR_INITIALISATION_OF_MAP_FROM_DOCK_SECTORS_TO_SHIPS",   // 5U
-        "READY_FOR_SIMULATION_STEP",                                    // 6U
+        "READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STARTUP",            // 2U
+        "READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP",               // 3U
+        "READY_FOR_COMPUTATION_OF_SHIP_DENSITIES_IN_LAYERS",            // 4U
+        "READY_FOR_LUNCHING_SHIPS_INTO_MOVEMENT_AREAS",                 // 5U
+        "READY_FOR_INITIALISATION_OF_MAP_FROM_DOCK_SECTORS_TO_SHIPS",   // 6U
+        "READY_FOR_SIMULATION_STEP",                                    // 7U
     };
     ASSUMPTION(static_cast<natural_8_bit>(state) < texts.size());
     return texts.at(static_cast<natural_8_bit>(state));

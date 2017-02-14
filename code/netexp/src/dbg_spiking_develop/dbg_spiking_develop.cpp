@@ -372,7 +372,7 @@ std::unique_ptr< array_of_derived<netlab::ship> >  network_objects_factory::crea
 }
 
 
-struct  initialiser_of_movement_area_centers : public netlab::initialiser_of_movement_area_centers
+struct  initialiser_of_movement_area_centers : public netlab::incremental_initialiser_of_movement_area_centers
 {
     initialiser_of_movement_area_centers();
 
@@ -396,7 +396,7 @@ private:
 };
 
 initialiser_of_movement_area_centers::initialiser_of_movement_area_centers()
-    : netlab::initialiser_of_movement_area_centers()
+    : netlab::incremental_initialiser_of_movement_area_centers()
     , m_counts_of_centers_into_layers()
     , m_generator_of_spiker_layer()
     , m_position_generator()
