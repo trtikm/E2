@@ -113,8 +113,8 @@ void  compute_densities_of_ships_per_spiker_in_layers(
             area_layer_props.spiker_sector_coordinates(area_hi_corner,x_hi,y_hi,c_hi);
 
             for (sector_coordinate_type c = c_lo; c <= c_hi; ++c)
-                for (sector_coordinate_type y = y_lo; y < y_hi; ++y)
-                    for (sector_coordinate_type x = x_lo; x < x_hi; ++x)
+                for (sector_coordinate_type y = y_lo; y <= y_hi; ++y)
+                    for (sector_coordinate_type x = x_lo; x <= x_hi; ++x)
                     {
                         vector3 const  sector_center = area_layer_props.spiker_sector_centre(x,y,c);
                         vector3 const  sector_lo_corner = sector_center - sector_corner_shift;

@@ -80,9 +80,9 @@ float_32_bit  compute_score(
                     ASSUMPTION(sector_density >= 0.0f);
                     float_32_bit const  sector_score = volume_delta * (1.0f - sector_density / ideal_average_density_in_layer);
                     INVARIANT(
-                        (volume_mult * sector_score <= 0.0f && sector_density > ideal_average_density_in_layer)
+                        (volume_mult * sector_score <= 0.0f && sector_density >= ideal_average_density_in_layer)
                         ||
-                        (volume_mult * sector_score >= 0.0f && sector_density < ideal_average_density_in_layer)
+                        (volume_mult * sector_score >= 0.0f && sector_density <= ideal_average_density_in_layer)
                         );
 
                     score += sector_score;
@@ -272,7 +272,7 @@ void  incremental_initialiser_of_movement_area_centers::get_indices_of_layers_wh
 {
     TMPROF_BLOCK();
 
-    if (m_max_iterations >= 0U)
+    if (m_max_iterations >= 10U)
         return;
     ++m_max_iterations;
 
