@@ -7,7 +7,6 @@ add_library(${THIS_TARGET_NAME}
     ./include/netlab/access_to_movement_area_centers.hpp
     ./include/netlab/network_objects_factory.hpp
     ./src/network_objects_factory.cpp
-    ./src/incremental_initialiser_of_movement_area_centers.cpp
 
     ./include/netlab/ship_controller.hpp
     ./src/ship_controller.cpp

@@ -10,6 +10,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/netexp/ship_controller_flat_space.hpp
     ./src/ship_controller_flat_space.cpp
 
+    ./include/netexp/incremental_initialiser_of_movement_area_centers.hpp
+    ./src/incremental_initialiser_of_movement_area_centers.cpp
+
     ./src/calibration/calibration.cpp
     ./src/performance/performance.cpp
     ./src/dbg_spiking_develop/dbg_spiking_develop.cpp

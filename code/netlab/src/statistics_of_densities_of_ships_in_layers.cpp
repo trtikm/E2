@@ -62,6 +62,7 @@ void  compute_ideal_densities_of_ships_in_layers(
         )
 {
     ideal_densities.reserve(props.layer_props().size());
+    ideal_densities.clear();
     for (layer_index_type  i = 0U; i != props.layer_props().size(); ++i)
         ideal_densities.push_back( compute_ideal_density_of_ships_in_layer(props.layer_props().at(i).num_docks_per_spiker(),
                                                                            props.layer_props().at(i).num_ships_per_spiker()) );
@@ -191,6 +192,7 @@ void  compute_statistics_of_density_of_ships_in_layers(
         for (object_index_type spiker_index = 0ULL; spiker_index != layer_props.num_spikers(); ++spiker_index)
         {
             float_32_bit const  density = extra_data_accessor.get_extra_data_of_spiker(layer_index,spiker_index);
+            ASSUMPTION(density >= 0.0f);
             if (density < minimal_densities.at(layer_index))
                 minimal_densities.at(layer_index) = density;
             if (density > maximal_densities.at(layer_index))

@@ -320,33 +320,20 @@ void  initialiser_of_movement_area_centers::compute_initial_movement_area_center
     area_layer_index = static_cast<netlab::layer_index_type>(
                             get_random_bar_index(m_distribution_of_spiker_layer.at(spiker_layer_index),m_generator_of_spiker_layer)
                             );
-    if (area_layer_index == spiker_layer_index)
-        compute_center_of_movement_area_for_ships_of_spiker(
-                    spiker_sector_coordinate_x,
-                    spiker_sector_coordinate_y,
-                    spiker_sector_coordinate_c,
-                    props.layer_props().at(spiker_layer_index),
-                    props.layer_props().at(spiker_layer_index).size_of_ship_movement_area_in_meters(area_layer_index),
-                    m_max_distance_x.at(area_layer_index),
-                    m_max_distance_y.at(area_layer_index),
-                    m_max_distance_c.at(area_layer_index),
-                    m_position_generator,
-                    area_center
-                    );
-    else
-        compute_center_of_movement_area_for_ships_of_spiker(
-                    spiker_sector_coordinate_x,
-                    spiker_sector_coordinate_y,
-                    spiker_sector_coordinate_c,
-                    props.layer_props().at(spiker_layer_index),
-                    props.layer_props().at(area_layer_index),
-                    props.layer_props().at(spiker_layer_index).size_of_ship_movement_area_in_meters(area_layer_index),
-                    m_max_distance_x.at(area_layer_index),
-                    m_max_distance_y.at(area_layer_index),
-                    m_max_distance_c.at(area_layer_index),
-                    m_position_generator,
-                    area_center
-                    );
+    compute_initial_movement_area_center_for_ships_of_spiker_XYC(
+            spiker_layer_index,
+            spiker_index_into_layer,
+            spiker_sector_coordinate_x,
+            spiker_sector_coordinate_y,
+            spiker_sector_coordinate_c,
+            props,
+            area_layer_index,
+            m_max_distance_x.at(area_layer_index),
+            m_max_distance_y.at(area_layer_index),
+            m_max_distance_c.at(area_layer_index),
+            m_position_generator,
+            area_center
+            );
 }
 
 

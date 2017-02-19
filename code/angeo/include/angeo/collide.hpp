@@ -28,6 +28,20 @@ float_32_bit  closest_point_on_line_to_point(
 
 
 /**
+ * It computes the point of the passed boundig box which is the closes one to the passed point.
+ *
+ * @param output_closest_point  Reference to a memory where the nearest point will be stored.
+ *                              The references point and output_closest_point may be aliased.
+ */
+void  closest_point_of_bbox_to_point(
+        vector3 const&  bbox_low_corner,
+        vector3 const&  bbox_high_corner,
+        vector3 const&  point,
+        vector3&  output_closest_point
+        );
+
+
+/**
  *
  * @param point
  * @param bbox_low_corner
@@ -153,6 +167,14 @@ bool  collision_bbox_bbox(
         vector3 const&  bbox_1_high_corner,
         vector3&  intersection_bbox_low_corner,
         vector3&  intersection_bbox_high_corner
+        );
+
+
+bool  collision_bbox_bbox(
+        vector3 const&  bbox_0_low_corner,
+        vector3 const&  bbox_0_high_corner,
+        vector3 const&  bbox_1_low_corner,
+        vector3 const&  bbox_1_high_corner
         );
 
 

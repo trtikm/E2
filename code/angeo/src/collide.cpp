@@ -29,6 +29,19 @@ float_32_bit  closest_point_on_line_to_point(
 }
 
 
+void  closest_point_of_bbox_to_point(
+        vector3 const&  bbox_low_corner,
+        vector3 const&  bbox_high_corner,
+        vector3 const&  point,
+        vector3&  output_closest_point
+        )
+{
+    output_closest_point(0) = std::min(std::max(bbox_low_corner(0),point(0)),bbox_high_corner(0));
+    output_closest_point(1) = std::min(std::max(bbox_low_corner(1),point(1)),bbox_high_corner(1));
+    output_closest_point(2) = std::min(std::max(bbox_low_corner(2),point(2)),bbox_high_corner(2));
+}
+
+
 bool  collision_point_and_bbox(
         vector3 const&  point,
         vector3 const&  bbox_low_corner,
@@ -190,10 +203,29 @@ bool  collision_bbox_bbox(
     {
         intersection_bbox_low_corner(i) = std::max(bbox_0_low_corner(i), bbox_1_low_corner(i));
         intersection_bbox_high_corner(i) = std::min(bbox_0_high_corner(i), bbox_1_high_corner(i));
-        if (intersection_bbox_low_corner(i) >= intersection_bbox_high_corner(i))
+        if (intersection_bbox_low_corner(i) > intersection_bbox_high_corner(i))
             return false;
     }
     return true;
+}
+
+
+bool  collision_bbox_bbox(
+        vector3 const&  bbox_0_low_corner,
+        vector3 const&  bbox_0_high_corner,
+        vector3 const&  bbox_1_low_corner,
+        vector3 const&  bbox_1_high_corner
+        )
+{
+    vector3  intersection_bbox_low_corner, intersection_bbox_high_corner;
+    return collision_bbox_bbox(
+                bbox_0_low_corner,
+                bbox_0_high_corner,
+                bbox_1_low_corner,
+                bbox_1_high_corner,
+                intersection_bbox_low_corner,
+                intersection_bbox_high_corner
+                );
 }
 
 
