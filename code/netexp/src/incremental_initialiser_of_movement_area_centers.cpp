@@ -79,6 +79,11 @@ float_32_bit  compute_score(
                     float_32_bit const  sector_density = extra_data_for_spikers.get_extra_data_of_spiker(layer_index,spiker_index);
                     ASSUMPTION(sector_density >= 0.0f);
                     float_32_bit const  sector_score = volume_delta * (1.0f - sector_density / ideal_average_density_in_layer);
+                    INVARIANT(
+                        (volume_mult * sector_score <= 0.0f && sector_density > ideal_average_density_in_layer)
+                        ||
+                        (volume_mult * sector_score >= 0.0f && sector_density < ideal_average_density_in_layer)
+                        );
 
                     score += sector_score;
             }
