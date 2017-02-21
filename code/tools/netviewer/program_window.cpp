@@ -166,6 +166,7 @@ void  program_window::closeEvent(QCloseEvent* const  event)
     m_tab_draw_widgets.save();
     m_tab_network_widgets.save();
     m_tab_selected_widgets.save();
+    m_menu_bar.save();
 
     ptree().put("simulation.paused", m_glwindow.call_now(&simulator::paused));
     ptree().put("simulation.duration_of_second", m_glwindow.call_now(&simulator::desired_network_to_real_time_ratio));

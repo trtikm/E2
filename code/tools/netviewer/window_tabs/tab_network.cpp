@@ -64,7 +64,11 @@ QWidget*  make_network_tab_content(widgets const&  w)
             if (experiment == experiment_name)
             {
                 w.wnd()->glwindow().call_later(&simulator::destroy_network);
-                w.wnd()->glwindow().call_later(&simulator::initiate_network_construction, experiment_name);
+                w.wnd()->glwindow().call_later(
+                        &simulator::initiate_network_construction,
+                        experiment_name,
+                        w.wnd()->ptree().get("network.pause_construction", false)
+                        );
                 break;
             }
     }

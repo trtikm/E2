@@ -25,6 +25,10 @@ struct  menu_bar
     void  on_menu_network_open();
     void  on_menu_network_close();
 
+    bool  does_pause_apply_to_network_open() const noexcept { return m_pause_applies_to_network_open; }
+
+    void  save();
+
 private:
     program_window*  m_wnd;
 
@@ -32,6 +36,7 @@ private:
     QMenu*  m_menu_network;
     QAction*  m_action_network_open;
     QAction*  m_action_network_close;
+    bool  m_pause_applies_to_network_open;
 };
 
 

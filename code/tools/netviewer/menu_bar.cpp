@@ -15,10 +15,11 @@
 #include <QGroupBox>
 #include <QTextEdit>
 #include <QLabel>
+#include <QCheckBox>
 
 struct  open_network_dialog : public QDialog
 {
-    open_network_dialog(program_window* const  wnd)
+    open_network_dialog(program_window* const  wnd, bool* const  pause_applies_to_network_open_ptr)
         : QDialog(wnd)
         , m_wnd(wnd)
         , m_list(
@@ -34,7 +35,20 @@ struct  open_network_dialog : public QDialog
             )
         , m_info(new QTextEdit("Select an experiment."))
         , m_selected_experiment()
+        , m_pause_initialisation(
+            [](bool const  pause_applies_to_network_open) {
+                struct s : public QCheckBox {
+                    s(bool const  pause_applies_to_network_open) : QCheckBox("Pause applies also to network construction")
+                    {
+                        setChecked(pause_applies_to_network_open);
+                    }
+                };
+                return new s(pause_applies_to_network_open);
+            }(*pause_applies_to_network_open_ptr)
+            )
+        , m_pause_applies_to_network_open_ptr(pause_applies_to_network_open_ptr)
     {
+        ASSUMPTION(m_pause_applies_to_network_open_ptr != nullptr);
         std::vector<std::string>  experiments;
         netexp::experiment_factory::instance().get_names_of_registered_experiments(experiments);
         m_list->setSortingEnabled(true);
@@ -69,6 +83,8 @@ struct  open_network_dialog : public QDialog
                 experiments_layout->setStretch(1,4);
             }
             dlg_layout->addLayout(experiments_layout);
+
+            dlg_layout->addWidget(m_pause_initialisation);
 
             QHBoxLayout* const buttons_layout = new QHBoxLayout;
             {
@@ -111,6 +127,8 @@ public slots:
 
     void  accept()
     {
+        *m_pause_applies_to_network_open_ptr = m_pause_initialisation->isChecked();
+
         auto const  selected = m_list->selectedItems();
         if (selected.size() != 1ULL)
             return;
@@ -128,6 +146,8 @@ public slots:
 
     void  reject()
     {
+        *m_pause_applies_to_network_open_ptr = m_pause_initialisation->isChecked();
+
         QDialog::reject();
     }
 
@@ -136,8 +156,9 @@ private:
     QListWidget*  m_list;
     QTextEdit*  m_info;
     std::string  m_selected_experiment;
+    QCheckBox*  m_pause_initialisation;
+    bool*  m_pause_applies_to_network_open_ptr;
 };
-
 
 
 menu_bar::menu_bar(program_window* const  wnd)
@@ -147,6 +168,8 @@ menu_bar::menu_bar(program_window* const  wnd)
     , m_menu_network(new QMenu("&Network",wnd))
     , m_action_network_open(new QAction(QString("&Open"), wnd))
     , m_action_network_close(new QAction(QString("&Close"), wnd))
+
+    , m_pause_applies_to_network_open(wnd->ptree().get("network.pause_construction", false))
 {}
 
 void  menu_bar::on_menu_network_open()
@@ -154,26 +177,29 @@ void  menu_bar::on_menu_network_open()
     if (wnd()->glwindow().call_now(&simulator::is_network_being_constructed))
         return;
 
-    open_network_dialog  dlg(wnd());
+    open_network_dialog  dlg(wnd(),&m_pause_applies_to_network_open);
     dlg.exec();
 
     if (dlg.selected_experiment().empty())
         return;
 
     on_menu_network_close();
-    wnd()->glwindow().call_later(&simulator::initiate_network_construction, dlg.selected_experiment());
-
-    //std::string const  experiment_name = wnd()->ptree().get("simulation.auto_load_experiment", std::string("calibration"));//performance
-    //if (!experiment_name.empty())
-    //{
-    //    on_menu_network_close();
-    //    wnd()->glwindow().call_later(&simulator::initiate_network_construction, experiment_name);
-    //}
+    wnd()->glwindow().call_later(
+            &simulator::initiate_network_construction,
+            dlg.selected_experiment(),
+            does_pause_apply_to_network_open()
+            );
 }
 
 void  menu_bar::on_menu_network_close()
 {
     wnd()->glwindow().call_later(&simulator::destroy_network);
+}
+
+
+void  menu_bar::save()
+{
+    wnd()->ptree().put("network.pause_construction",m_pause_applies_to_network_open);
 }
 
 

@@ -41,6 +41,8 @@ enum struct NETWORK_CONSTRUCTION_STATE : natural_8_bit
 std::atomic<NETWORK_CONSTRUCTION_STATE>  g_network_construction_state = NETWORK_CONSTRUCTION_STATE::NOT_IN_CONSTRUCTION;
 natural_64_bit  g_num_construction_steps = 0ULL;
 std::thread  g_create_experiment_thread;
+bool  g_pre_construction_pause_state = false;
+bool  g_apply_pause_to_construction = false;
 
 void  create_experiment_worker()
 {
@@ -341,6 +343,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             m_spent_real_time = 0.0;
             m_spent_network_time = 0.0;
             m_num_network_updates = 0UL;
+            m_paused = g_pre_construction_pause_state;
 
             if (network()->properties()->layer_props().size() <= get_layer_index_of_chosen_layer_to_render())
             {
@@ -398,7 +401,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
     if (network() != nullptr)
         render_network(view_projection_matrix,draw_state);
-    else 
+    else if (g_apply_pause_to_construction)
     {
         if (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP)
         {
@@ -415,6 +418,9 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
             m_do_single_step = false;
         }
     }
+    else if (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP)
+        g_network_construction_state = NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP;
+
 
     qtgl::swap_buffers();
 }
@@ -1101,7 +1107,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
     }
 }
 
-void  simulator::initiate_network_construction(std::string const&  experiment_name)
+void  simulator::initiate_network_construction(std::string const&  experiment_name, bool const  pause_applies_to_network_open)
 {
     TMPROF_BLOCK();
 
@@ -1114,6 +1120,8 @@ void  simulator::initiate_network_construction(std::string const&  experiment_na
     g_constructed_network.reset();
     g_experiment_name = experiment_name;
     g_num_construction_steps = 0ULL;
+    g_pre_construction_pause_state = paused();
+    g_apply_pause_to_construction = pause_applies_to_network_open;
 
     g_network_construction_state = NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP;
     g_create_experiment_thread = std::thread(&create_experiment_worker);
