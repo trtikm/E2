@@ -80,11 +80,11 @@ vector3  compute_spiker_position_projected_to_area_layer(
 
 void  compute_maximal_bbox_for_storing_movement_area_of_spiker_into(
         vector3 const&  spiker_position_projected_to_area_layer,
-        netlab::layer_index_type const  area_layer_index,
+        vector3 const&  size_of_area,
         netlab::sector_coordinate_type const  max_distance_x,
         netlab::sector_coordinate_type const  max_distance_y,
         netlab::sector_coordinate_type const  max_distance_c,
-        netlab::network_props const&  props,
+        netlab::network_layer_props const&  area_layer_props,
         vector3&  low_corner,
         vector3&  high_corner
         );

@@ -32,6 +32,7 @@ struct  incremental_initialiser_of_movement_area_centers : public netlab::initia
         , m_solved()
         , m_ideal_average_ship_densities_in_layers()
         , m_max_iterations(0U)
+, m_scores()
     {}
 
     virtual void  prepare_for_shifting_movement_area_centers_in_layers(
@@ -68,6 +69,7 @@ private:
     std::vector<bool>  m_solved;
     std::vector<float_32_bit>  m_ideal_average_ship_densities_in_layers;
     natural_32_bit  m_max_iterations;
+std::vector<float_32_bit>  m_scores;
 };
 
 
