@@ -258,30 +258,6 @@ void  network::compute_densities_of_ships_in_layers()
         access_to_movement_area_centers  movement_area_centers(&m_movement_area_centers);
         compute_densities_of_ships_per_spiker_in_layers(*properties(),movement_area_centers,extra_data_accessor);
     }
-//else
-//{
-//    accessor_to_extra_data_for_spikers_in_layers  extra_data_accessor_1(m_extra_data_for_spikers.get());
-//
-//    auto extra_data_2 = detail::create_extra_data_for_spikers(*properties());
-//    accessor_to_extra_data_for_spikers_in_layers  extra_data_accessor_2(extra_data_2.get());
-//        
-//    initialise_densities_of_ships_per_spiker_in_layers(*properties(),extra_data_accessor_2);
-//
-//    access_to_movement_area_centers  movement_area_centers(&m_movement_area_centers);
-//    compute_densities_of_ships_per_spiker_in_layers(*properties(),movement_area_centers,extra_data_accessor_2);
-//
-//    for (layer_index_type  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
-//        for (object_index_type  spiker_index = 0U; spiker_index < properties()->layer_props().at(layer_index).num_spikers(); ++spiker_index)
-//        {
-//            float_32_bit const  value_1 = extra_data_accessor_1.get_extra_data_of_spiker(layer_index,spiker_index);
-//            float_32_bit const  value_2 = extra_data_accessor_2.get_extra_data_of_spiker(layer_index,spiker_index);
-//            float_32_bit const  delta = std::fabsf(value_2 - value_1);
-//            if (delta > 1e-3f)
-//            {
-//                int iii = 0;
-//            }
-//        }
-//}
     {
         std::vector<float_32_bit>  ideal_densities;
         compute_ideal_densities_of_ships_in_layers(*properties(), ideal_densities);
