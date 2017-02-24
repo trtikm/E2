@@ -398,6 +398,11 @@ void  incremental_initialiser_of_movement_area_centers::on_shift_movement_area_c
 
     vector3 const  center_low_corner = low_corner + 0.5f * size_of_area;
     vector3 const  center_high_corner = high_corner - 0.5f * size_of_area;
+    INVARIANT(
+        center_low_corner(0) <= center_high_corner(0) &&
+        center_low_corner(1) <= center_high_corner(1) &&
+        center_low_corner(2) <= center_high_corner(2)
+        );
 
     float_32_bit const  score_limit = 0.0f;
     std::vector<std::pair<int,float_32_bit> > const  directions = {
@@ -461,6 +466,18 @@ void  incremental_initialiser_of_movement_area_centers::on_shift_movement_area_c
                 extra_data_for_spikers,
                 area_center
                 );
+
+        INVARIANT(
+            std::fabsf(area_center(0) - spiker_position(0)) <
+                (float_32_bit)max_distances.at(0) * area_layer_props.distance_of_spikers_along_x_axis_in_meters() +
+                area_layer_props.distance_of_docks_in_meters() &&
+            std::fabsf(area_center(1) - spiker_position(1)) <
+                (float_32_bit)max_distances.at(1) * area_layer_props.distance_of_spikers_along_y_axis_in_meters() +
+                area_layer_props.distance_of_docks_in_meters() &&
+            std::fabsf(area_center(2) - spiker_position(2)) <
+                (float_32_bit)max_distances.at(2) * area_layer_props.distance_of_spikers_along_c_axis_in_meters() +
+                area_layer_props.distance_of_docks_in_meters()
+            );
 
         m_sources.at(spiker_layer_index) = true;
         m_updated.at(area_layer_index) = true;
