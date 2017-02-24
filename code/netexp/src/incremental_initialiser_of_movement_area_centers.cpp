@@ -6,6 +6,7 @@
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 #include <algorithm>
+#include <limits>
 
 namespace netexp { namespace detail { namespace {
 
@@ -40,17 +41,20 @@ float_32_bit  compute_score(
         vector3 const&  low_corner,
         vector3 const&  high_corner,
         float_32_bit const  volume_mult,
+        float_32_bit const  density_of_ships_in_movement_area,
         float_32_bit const  ideal_average_density_in_layer,
         netlab::layer_index_type const  layer_index,
         netlab::network_layer_props const&  area_layer_props,
         netlab::accessor_to_extra_data_for_spikers_in_layers const&  extra_data_for_spikers
         )
 {
-    float_32_bit const  volume_scale =
-            1.0f / (area_layer_props.distance_of_docks_in_meters() * 
-                    area_layer_props.distance_of_docks_in_meters() * 
-                    area_layer_props.distance_of_docks_in_meters() );
+    TMPROF_BLOCK();
+
     float_32_bit  score = 0.0f;
+    float_32_bit const  spiker_sector_volume = 
+            area_layer_props.distance_of_spikers_in_meters()(0) *
+            area_layer_props.distance_of_spikers_in_meters()(1) *
+            area_layer_props.distance_of_spikers_in_meters()(2) ;
     netlab::sector_coordinate_type  x_lo, y_lo, c_lo;
     area_layer_props.spiker_sector_coordinates(low_corner,x_lo,y_lo,c_lo);
     netlab::sector_coordinate_type  x_hi, y_hi, c_hi;
@@ -59,41 +63,50 @@ float_32_bit  compute_score(
         for (netlab::sector_coordinate_type y = y_lo; y <= y_hi; ++y)
             for (netlab::sector_coordinate_type c = c_lo; c <= c_hi; ++c)
             {
-                    vector3 const  spiker_position = area_layer_props.spiker_sector_centre(x,y,c);
-                    netlab::object_index_type const  spiker_index = area_layer_props.spiker_sector_index(x,y,c);
+                vector3 const  spiker_position = area_layer_props.spiker_sector_centre(x,y,c);
+                netlab::object_index_type const  spiker_index = area_layer_props.spiker_sector_index(x,y,c);
 
-                    vector3  intersection_low_corner, intersection_high_corner;
-                    bool const  do_intersect = angeo::collision_bbox_bbox(
-                            spiker_position - 0.5f * area_layer_props.distance_of_spikers_in_meters(),
-                            spiker_position + 0.5f * area_layer_props.distance_of_spikers_in_meters(),
-                            low_corner,
-                            high_corner,
-                            intersection_low_corner,
-                            intersection_high_corner
-                            );
-                    INVARIANT(do_intersect);
-
-                    vector3 const  size = intersection_high_corner - intersection_low_corner;
-
-                    float_32_bit const  volume_delta = volume_mult * volume_scale * size(0) * size(1) * size(2);
-                    float_32_bit const  sector_density = extra_data_for_spikers.get_extra_data_of_spiker(layer_index,spiker_index);
-                    ASSUMPTION(sector_density >= 0.0f);
-                    float_32_bit const  sector_score = volume_delta * (1.0f - sector_density / ideal_average_density_in_layer);
-                    INVARIANT(
-                        (volume_mult * sector_score <= 0.0f && sector_density >= ideal_average_density_in_layer)
-                        ||
-                        (volume_mult * sector_score >= 0.0f && sector_density <= ideal_average_density_in_layer)
+                vector3  intersection_low_corner, intersection_high_corner;
+                bool const  do_intersect = angeo::collision_bbox_bbox(
+                        spiker_position - 0.5f * area_layer_props.distance_of_spikers_in_meters(),
+                        spiker_position + 0.5f * area_layer_props.distance_of_spikers_in_meters(),
+                        low_corner,
+                        high_corner,
+                        intersection_low_corner,
+                        intersection_high_corner
                         );
+                INVARIANT(do_intersect);
 
-                    score += sector_score;
+                vector3 const  size = intersection_high_corner - intersection_low_corner;
+
+                float_32_bit const  volume = volume_mult * size(0) * size(1) * size(2);
+                float_32_bit const  density_delta = density_of_ships_in_movement_area * (volume / spiker_sector_volume);
+                float_32_bit const  orig_sector_density = extra_data_for_spikers.get_extra_data_of_spiker(layer_index,spiker_index);
+                ASSUMPTION(orig_sector_density >= 0.0f);
+                ASSUMPTION(orig_sector_density + density_delta >= 0.0f);
+
+                float_32_bit const  orig_distance_to_ideal =
+                        std::fabsf(ideal_average_density_in_layer - orig_sector_density);
+                float_32_bit const  new_distance_to_ideal =
+                        std::fabsf(ideal_average_density_in_layer - orig_sector_density - density_delta);
+
+                float_32_bit const  max_distance_to_ideal = std::max(orig_distance_to_ideal,new_distance_to_ideal);
+                float_32_bit const  distance_change = orig_distance_to_ideal - new_distance_to_ideal;
+
+                float_32_bit const  score_mult = 1000.0f;
+
+                float_32_bit const  sector_score = score_mult * distance_change * max_distance_to_ideal;
+
+                score += sector_score;
             }
     return score;
 }
 
 
 float_32_bit  compute_score(
-        vector3 const&  area_low_corner,
-        vector3 const&  area_high_corner,
+        vector3 const&  area_center,
+        vector3 const&  size_of_area,
+        natural_32_bit const  num_ships_in_area,
         int const  coord_index,
         float_32_bit const  coord_shift,
         float_32_bit const  ideal_average_density_in_layer,
@@ -102,6 +115,10 @@ float_32_bit  compute_score(
         netlab::accessor_to_extra_data_for_spikers_in_layers const&  extra_data_for_spikers
         )
 {
+    TMPROF_BLOCK();
+
+    vector3 const  area_low_corner = area_center - 0.5f * size_of_area;
+    vector3 const  area_high_corner = area_center + 0.5f * size_of_area;
     vector3  low_corner_0, high_corner_0;
     vector3  low_corner_1, high_corner_1;
     compute_both_change_bboxes(
@@ -116,10 +133,16 @@ float_32_bit  compute_score(
             );
     float_32_bit const  volume_mult_0 = coord_shift < 0.0f ? 1.0f : -1.0f;
     float_32_bit const  volume_mult_1 = -volume_mult_0;
+
+    vector3 const  scaled_size_of_area = (1.0f / area_layer_props.distance_of_docks_in_meters()) * size_of_area;
+    float_32_bit const  volume_of_area = scaled_size_of_area(0) * scaled_size_of_area(1) * scaled_size_of_area(2);
+    float_32_bit const  density_of_ships = (float_32_bit)num_ships_in_area / volume_of_area;
+
     return compute_score(
                 low_corner_0,
                 high_corner_0,
                 volume_mult_0,
+                density_of_ships,
                 ideal_average_density_in_layer,
                 layer_index,
                 area_layer_props,
@@ -130,6 +153,7 @@ float_32_bit  compute_score(
                 low_corner_1,
                 high_corner_1,
                 volume_mult_1,
+                density_of_ships,
                 ideal_average_density_in_layer,
                 layer_index,
                 area_layer_props,
@@ -148,6 +172,8 @@ float_32_bit  update_densities_in_bbox(
         netlab::accessor_to_extra_data_for_spikers_in_layers&  extra_data_for_spikers
         )
 {
+    TMPROF_BLOCK();
+
     float_32_bit  total_density_delta = 0.0f;
     float_32_bit const  spiker_sector_volume = 
             area_layer_props.distance_of_spikers_in_meters()(0) *
@@ -201,6 +227,8 @@ void  shift_movement_area_center(
         vector3&  area_center
         )
 {
+    TMPROF_BLOCK();
+
     vector3 const  area_low_corner = area_center - 0.5f * size_of_area;
     vector3 const  area_high_corner = area_center + 0.5f * size_of_area;
     vector3  low_corner_0, high_corner_0;
@@ -267,9 +295,12 @@ void  incremental_initialiser_of_movement_area_centers::prepare_for_shifting_mov
     m_sources.resize(props.layer_props().size(),true);
     m_updated.resize(props.layer_props().size(),true);
     m_solved.resize(props.layer_props().size(),false);
-m_scores.resize(props.layer_props().size(),0.0f);
     compute_ideal_densities_of_ships_in_layers(props,m_ideal_average_ship_densities_in_layers);
+
+    m_dbg_scores_old.resize(props.layer_props().size(),std::numeric_limits<float_32_bit>::max());
+    m_dbg_scores_new.resize(props.layer_props().size(),std::numeric_limits<float_32_bit>::max());
 }
+
 
 void  incremental_initialiser_of_movement_area_centers::get_indices_of_layers_where_to_apply_movement_area_centers_migration(
         netlab::network_props const&  props,
@@ -297,8 +328,20 @@ void  incremental_initialiser_of_movement_area_centers::get_indices_of_layers_wh
 
     std::fill(m_updated.begin(),m_updated.end(),false);
 
-std::fill(m_scores.begin(),m_scores.end(),0.0f);
+    // I did not prove that the following invariant statement is really an invariant. However, 
+    // it is desired the score function to be non-increasing. So, the purpose of the statement
+    // should be treated as a debug code (to catch a case, then the score function becomes inreasing).
+    INVARIANT(
+        [](std::vector<float_32_bit> const&  old_scores, std::vector<float_32_bit> const&  new_scores) -> bool {
+            for (natural_64_bit  i = 0ULL; i != old_scores.size(); ++i)
+                if (old_scores.at(i) < new_scores.at(i))
+                    return false;
+            return true;
+        }(m_dbg_scores_old,m_dbg_scores_new));
+    std::copy(m_dbg_scores_new.cbegin(),m_dbg_scores_new.cend(),m_dbg_scores_old.begin());
+    std::fill(m_dbg_scores_new.begin(),m_dbg_scores_new.end(),0.0f);
 }
+
 
 void  incremental_initialiser_of_movement_area_centers::on_shift_movement_area_center_in_layer(
         netlab::layer_index_type const  spiker_layer_index,
@@ -314,11 +357,6 @@ void  incremental_initialiser_of_movement_area_centers::on_shift_movement_area_c
         )
 {
     TMPROF_BLOCK();
-
-//if (spiker_layer_index == 1U && spiker_index_into_layer == 5ULL && area_layer_index == 6U)
-//{
-//    int iii = 0;
-//}
 
     ASSUMPTION(spiker_layer_index < m_sources.size());
     ASSUMPTION(area_layer_index < m_sources.size());
@@ -394,8 +432,9 @@ void  incremental_initialiser_of_movement_area_centers::on_shift_movement_area_c
             continue;
         float_32_bit const  score =
                 detail::compute_score(
-                        area_center - 0.5f * size_of_area,
-                        area_center + 0.5f * size_of_area,
+                        area_center,
+                        size_of_area,
+                        spiker_layer_props.num_ships_per_spiker(),
                         index_shift.first,
                         moved_area_center(index_shift.first) - area_center(index_shift.first),
                         m_ideal_average_ship_densities_in_layers.at(area_layer_index),
@@ -412,25 +451,6 @@ void  incremental_initialiser_of_movement_area_centers::on_shift_movement_area_c
 
     if (best_score > score_limit)
     {
-//if (m_max_iterations == 9U)
-//{
-//    int iii = 0;
-//}
-
-//std::vector<float_32_bit>  minimal_densities_1;
-//std::vector<float_32_bit>  maximal_densities_1;
-//std::vector<float_32_bit>  average_densities_1;
-//std::vector<netlab::distribution_of_spikers_by_density_of_ships>  distribution_of_spikers_1;
-//netlab::compute_statistics_of_density_of_ships_in_layers(
-//        props,
-//        extra_data_for_spikers,
-//        m_ideal_average_ship_densities_in_layers,
-//        minimal_densities_1,
-//        maximal_densities_1,
-//        average_densities_1,
-//        distribution_of_spikers_1
-//        );
-
         detail::shift_movement_area_center(
                 size_of_area,
                 spiker_layer_props.num_ships_per_spiker(),
@@ -442,39 +462,10 @@ void  incremental_initialiser_of_movement_area_centers::on_shift_movement_area_c
                 area_center
                 );
 
-//std::vector<float_32_bit>  minimal_densities_2;
-//std::vector<float_32_bit>  maximal_densities_2;
-//std::vector<float_32_bit>  average_densities_2;
-//std::vector<netlab::distribution_of_spikers_by_density_of_ships>  distribution_of_spikers_2;
-//netlab::compute_statistics_of_density_of_ships_in_layers(
-//        props,
-//        extra_data_for_spikers,
-//        m_ideal_average_ship_densities_in_layers,
-//        minimal_densities_2,
-//        maximal_densities_2,
-//        average_densities_2,
-//        distribution_of_spikers_2
-//        );
-//ASSUMPTION(average_densities_1.size() == average_densities_2.size());
-//for (natural_64_bit i = 0ULL; i != average_densities_1.size(); ++i)
-//{
-//    if (std::fabsf(average_densities_2.at(i) - average_densities_1.at(i)) > 1e-3f)
-//    {
-//        int iii = 0;
-//    }
-//    if (minimal_densities_2.at(i) < minimal_densities_1.at(i))
-//    {
-//        int iii = 0;
-//    }
-//    if (maximal_densities_2.at(i) > maximal_densities_1.at(i))
-//    {
-//        int iii = 0;
-//    }
-//}
-
         m_sources.at(spiker_layer_index) = true;
         m_updated.at(area_layer_index) = true;
-m_scores.at(area_layer_index) += best_score;
+
+        m_dbg_scores_new.at(area_layer_index) += best_score;
     }
 }
 
