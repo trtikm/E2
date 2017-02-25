@@ -3,6 +3,23 @@
 #include <netviewer/simulator_notifications.hpp>
 #include <QVBoxLayout>
 #include <QPushButton>
+#include <limits>
+
+namespace {
+
+
+constexpr natural_64_bit  invalid_network_update_id()
+{
+    return std::numeric_limits<natural_64_bit>::max();
+}
+
+inline netlab::compressed_layer_and_object_indices  invalid_network_object()
+{
+    return { std::numeric_limits<netlab::layer_index_type>::max(), std::numeric_limits<netlab::object_index_type>::max() };
+}
+
+
+}
 
 namespace window_tabs { namespace tab_selected {
 
@@ -10,6 +27,8 @@ namespace window_tabs { namespace tab_selected {
 widgets::widgets(program_window* const  wnd)
     : m_wnd(wnd)
     , m_selected_text(new QTextEdit)
+    , m_update_id(invalid_network_update_id())
+    , m_selected_object(invalid_network_object())
 {}
 
 program_window* widgets::wnd() const noexcept
@@ -24,8 +43,30 @@ QTextEdit*  widgets::selected_text() const noexcept
 
 void  widgets::on_selection_update()
 {
-    std::string const  text = wnd()->glwindow().call_now(&simulator::get_selected_info_text);
-    selected_text()->setText(QString(text.c_str()));
+    if (!wnd()->glwindow().call_now(&simulator::has_network))
+    {
+        selected_text()->setText(QString("No network is loaded."));
+        m_update_id = invalid_network_update_id();
+        m_selected_object = invalid_network_object();
+        return;
+    }
+    auto const  stats_ptr = wnd()->glwindow().call_now(&simulator::get_selected_object_stats);
+    if (stats_ptr == nullptr)
+    {
+        selected_text()->setText(QString("No network object is selected."));
+        m_update_id = invalid_network_update_id();
+        m_selected_object = invalid_network_object();
+        return;
+    }
+    natural_64_bit const  update_id = wnd()->glwindow().call_now(&simulator::get_network_update_id);
+    if (update_id != m_update_id || m_selected_object != stats_ptr->indices())
+    {
+        std::string const  text = wnd()->glwindow().call_now(&simulator::get_selected_info_text);
+        selected_text()->setText(QString(text.c_str()));
+
+        m_update_id = update_id;
+        m_selected_object = stats_ptr->indices();
+    }
 }
 
 void  widgets::on_select_owner_spiker()

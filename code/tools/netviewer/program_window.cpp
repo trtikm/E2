@@ -18,6 +18,7 @@ namespace tab_names { namespace {
 inline std::string  DRAW() noexcept { return "Draw"; }
 inline std::string  NETWORK() noexcept { return "Network"; }
 inline std::string  SELECTED() noexcept { return "Selected"; }
+inline std::string  PERFORMANCE() noexcept { return "Performance"; }
 
 
 }}
@@ -70,6 +71,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     , m_tab_draw_widgets(this)
     , m_tab_network_widgets(this)
     , m_tab_selected_widgets(this)
+    , m_tab_performance_widgets(this)
 
     , m_menu_bar(this)
     , m_status_bar(this)
@@ -91,6 +93,8 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
                     QString(tab_names::NETWORK().c_str()) );
     m_tabs->addTab( window_tabs::tab_selected::make_selected_tab_content(m_tab_selected_widgets),
                     QString(tab_names::SELECTED().c_str()) );
+    m_tabs->addTab( window_tabs::tab_performance::make_performance_tab_content(m_tab_performance_widgets),
+                    QString(tab_names::PERFORMANCE().c_str()) );
 
     make_status_bar_content(m_status_bar);
 
@@ -143,6 +147,8 @@ void program_window::timerEvent(QTimerEvent* const event)
         on_network_info_text_update();
     else if (qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex())) == tab_names::SELECTED())
         on_selection_update();
+    else if (qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex())) == tab_names::PERFORMANCE())
+        on_performance_update();
 
     if (m_focus_just_received)
     {
@@ -166,6 +172,8 @@ void  program_window::closeEvent(QCloseEvent* const  event)
     m_tab_draw_widgets.save();
     m_tab_network_widgets.save();
     m_tab_selected_widgets.save();
+    m_tab_performance_widgets.save();
+
     m_menu_bar.save();
 
     ptree().put("simulation.paused", m_glwindow.call_now(&simulator::paused));

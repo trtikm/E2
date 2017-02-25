@@ -464,6 +464,12 @@ extra_data_for_spikers_in_one_layer::value_type  network::get_extra_data_of_spik
 }
 
 
+bool  network::is_overloaded_update_queue_of_ships_in_layer(layer_index_type const  layer_index) const
+{
+    ASSUMPTION(layer_index < properties()->layer_props().size());
+    return m_overloads_of_update_queues_of_ships.at(layer_index);
+}
+
 natural_64_bit  network::size_of_ships_update_queue_of_layer(layer_index_type const  layer_index) const
 {
     ASSUMPTION(layer_index < properties()->layer_props().size());
@@ -474,7 +480,7 @@ natural_64_bit  network::size_of_ships_update_queue_of_layer(layer_index_type co
 natural_64_bit  network::max_size_of_ships_update_queue_of_layer(layer_index_type const  layer_index) const
 {
     ASSUMPTION(layer_index < properties()->layer_props().size());
-    return properties()->layer_props().at(layer_index).num_docks() / 4ULL;
+    return properties()->layer_props().at(layer_index).num_ships() / 1ULL;
 }
 
 
@@ -542,7 +548,7 @@ void  network::update_movement_of_ships(tracked_ship_stats* const  stats_of_trac
 
             if (is_overloaded_ref || !are_queues_used_in_update_of_ships())
             {
-                is_overloaded_ref = false;
+                is_overloaded_ref = !are_queues_used_in_update_of_ships();
                 queue_ref.clear();
 
                 network_layer_props const&  ship_layer_props = properties()->layer_props().at(layer_index);
@@ -567,12 +573,12 @@ void  network::update_movement_of_ships(tracked_ship_stats* const  stats_of_trac
                         !area_layer_props.ship_controller_ptr()->is_ship_docked(
                                 ship.position(),
                                 ship.velocity(),
-                                layer_index,
+                                area_layer_index,
                                 *properties()
                                 ))
                     {
                         queue_ref.push_back({layer_index,ship_index_in_layer});
-                        if (queue_ref.size() > max_size_of_ships_update_queue_of_layer(area_layer_index))
+                        if (queue_ref.size() > max_size_of_ships_update_queue_of_layer(layer_index))
                             is_overloaded_ref = true;
                     }
                 }

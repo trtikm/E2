@@ -46,11 +46,13 @@ struct simulator : public qtgl::real_time_simulator
     std::string const&  get_experiment_name() const;
     std::shared_ptr<netlab::network>  network() const noexcept { return m_network; }
     bool  has_network() const { return network().operator bool(); }
+    natural_64_bit  get_network_update_id() const;
     void  initiate_network_construction(std::string const&  experiment_name, bool const  pause_applies_to_network_open);
     bool  is_network_being_constructed() const;
     std::string  get_constructed_network_progress_text() const;
     natural_64_bit  get_num_network_construction_steps() const;
     void  acquire_constructed_network();
+    void  enable_usage_of_queues_in_update_of_ships_in_network(bool const  enable_state);
     void  destroy_network();
 
     /// Network simulation dependent methods.
@@ -62,8 +64,10 @@ struct simulator : public qtgl::real_time_simulator
     void set_desired_network_to_real_time_ratio(float_64_bit const  value);
 
     /// Miscelanous methods
+    std::shared_ptr<netlab::tracked_network_object_stats>  get_selected_object_stats() const { return m_selected_object_stats; }
     std::string  get_network_info_text() const;
     std::string  get_selected_info_text() const;
+    std::string  get_network_performance_text() const;
     void  on_select_owner_spiker();
     bool  renders_only_chosen_layer() const noexcept { return m_render_only_chosen_layer; }
     void  enable_rendering_of_only_chosen_layer() { m_render_only_chosen_layer = true; }

@@ -81,6 +81,7 @@ struct  network
     using  element_type_in_update_queue_of_ships = compressed_layer_and_object_indices;
     void  enable_usage_of_queues_in_update_of_ships(bool const  enable_state) { m_use_update_queues_of_ships = enable_state; }
     bool  are_queues_used_in_update_of_ships() const { return m_use_update_queues_of_ships; };
+    bool  is_overloaded_update_queue_of_ships_in_layer(layer_index_type const  layer_index) const;
     natural_64_bit  size_of_ships_update_queue_of_layer(layer_index_type const  layer_index) const;
     natural_64_bit  max_size_of_ships_update_queue_of_layer(layer_index_type const  layer_index) const;
 

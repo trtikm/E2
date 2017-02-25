@@ -5,6 +5,7 @@
 #   include <netviewer/window_tabs/tab_draw.hpp>
 #   include <netviewer/window_tabs/tab_network.hpp>
 #   include <netviewer/window_tabs/tab_selected.hpp>
+#   include <netviewer/window_tabs/tab_performance.hpp>
 #   include <netviewer/status_bar.hpp>
 #   include <netviewer/menu_bar.hpp>
 #   include <qtgl/window.hpp>
@@ -69,6 +70,11 @@ public slots:
     void  on_selection_update()  { m_tab_selected_widgets.on_selection_update(); }
     void  on_select_owner_spiker() { m_tab_selected_widgets.on_select_owner_spiker(); }
 
+    /// Slots for PERFORMANCE tab
+    void  on_use_update_queues_of_ships_in_network_changed(int const  value)
+    { m_tab_performance_widgets.on_use_update_queues_of_ships_in_network_changed(value); }
+    void  on_performance_update()  { m_tab_performance_widgets.on_performance_update(); }
+
     /// Slots for menu actions
     void  on_menu_network_open() { m_menu_bar.on_menu_network_open(); }
     void  on_menu_network_close() { m_menu_bar.on_menu_network_close();  }
@@ -97,6 +103,7 @@ private:
     window_tabs::tab_draw::widgets  m_tab_draw_widgets;
     window_tabs::tab_network::widgets  m_tab_network_widgets;
     window_tabs::tab_selected::widgets  m_tab_selected_widgets;
+    window_tabs::tab_performance::widgets  m_tab_performance_widgets;
 
     menu_bar  m_menu_bar;
     status_bar  m_status_bar;

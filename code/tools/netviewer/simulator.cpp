@@ -153,6 +153,25 @@ void  create_experiment_worker()
 
 }
 
+namespace {
+
+
+template<typename  numeric_type>
+float_32_bit  percentage(numeric_type const  part, numeric_type const  base)
+{
+    ASSUMPTION(base != 0);
+    return (float_32_bit)(float_64_bit)(100.0f * (float_64_bit)part / (float_64_bit)base);
+}
+
+template<typename  numeric_type>
+std::string  percentage_string(numeric_type const  part, numeric_type const  base)
+{
+    return msgstream() << std::fixed << std::setprecision(3) << percentage(part,base);
+};
+
+
+}
+
 
 simulator::simulator(
         vector3 const&  initial_clear_colour,
@@ -1171,6 +1190,19 @@ void  simulator::destroy_network()
     m_batches_selection.clear();
 }
 
+natural_64_bit  simulator::get_network_update_id() const
+{
+    ASSUMPTION(has_network());
+    return network()->update_id();
+}
+
+void  simulator::enable_usage_of_queues_in_update_of_ships_in_network(bool const  enable_state)
+{
+    ASSUMPTION(has_network());
+    network()->enable_usage_of_queues_in_update_of_ships(enable_state);
+}
+
+
 void  simulator::render_constructed_network(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
 {
     TMPROF_BLOCK();
@@ -1392,14 +1424,6 @@ std::string  simulator::get_network_info_text() const
             ++counts_of_area_centers.at(layer_index).at(center_layer_index);
         }
     }
-
-    auto const  percentage = [](natural_64_bit const  part, natural_64_bit const  base) -> float_32_bit {
-        ASSUMPTION(base != 0ULL);
-        return (float_32_bit)(float_64_bit)(100.0f * (float_64_bit)part / (float_64_bit)base);
-    };
-    auto const  percentage_string = [&percentage](natural_64_bit const  part, natural_64_bit const  base) -> std::string {
-        return msgstream() << std::fixed << std::setprecision(3) << percentage(part,base);
-    };
 
     ostr << "Experiment: " << get_experiment_name() << "\n"
             "Description: " << netexp::experiment_factory::instance().get_experiment_description(get_experiment_name()) << "\n\n"
@@ -1817,6 +1841,43 @@ std::string  simulator::get_selected_info_text() const
     }
     else
         ostr << "Selected object of UNKNOWN kind!";
+
+    return ostr.str();
+}
+
+
+std::string  simulator::get_network_performance_text() const
+{
+    if (!network().operator bool())
+        return "No network is loaded.";
+
+    netlab::network_props const&  props = *network()->properties();
+
+    std::ostringstream  ostr;
+
+    if (network()->are_queues_used_in_update_of_ships())
+    {
+        ostr << "Usage of update queues of ships in layers:\n";
+        for (netlab::layer_index_type  layer_index = 0U; layer_index != props.layer_props().size(); ++layer_index)
+        {
+            ostr << "  [" << (natural_32_bit)layer_index << "]: ";
+            if (network()->is_overloaded_update_queue_of_ships_in_layer(layer_index))
+                ostr << "OVERLOADED! (=> all ships are simulated)";
+            else
+                ostr << network()->size_of_ships_update_queue_of_layer(layer_index) << " / "
+                     << network()->max_size_of_ships_update_queue_of_layer(layer_index) << " (~"
+                     << percentage_string(network()->size_of_ships_update_queue_of_layer(layer_index),
+                                          network()->max_size_of_ships_update_queue_of_layer(layer_index))
+                     << "%)"
+                     ;
+            ostr << "\n";
+        }
+    }
+    else
+    {
+        ostr << "Update queues of ships are NOT used.\n"
+                "  => updating all ships in each simulation step.\n";
+    }
 
     return ostr.str();
 }
