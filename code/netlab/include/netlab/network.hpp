@@ -79,11 +79,11 @@ struct  network
             ) const;
 
     using  element_type_in_update_queue_of_ships = compressed_layer_and_object_indices;
-    void  enable_usage_of_queues_in_update_of_ships(bool const  enable_state) { m_use_update_queues_of_ships = enable_state; }
-    bool  are_queues_used_in_update_of_ships() const { return m_use_update_queues_of_ships; };
-    bool  is_overloaded_update_queue_of_ships_in_layer(layer_index_type const  layer_index) const;
-    natural_64_bit  size_of_ships_update_queue_of_layer(layer_index_type const  layer_index) const;
-    natural_64_bit  max_size_of_ships_update_queue_of_layer(layer_index_type const  layer_index) const;
+    void  enable_usage_of_queues_in_update_of_ships(bool const  enable_state) { m_use_update_queue_of_ships = enable_state; }
+    bool  is_update_queue_of_ships_used() const { return m_use_update_queue_of_ships; };
+    bool  is_update_queue_of_ships_overloaded() const { return m_is_update_queue_of_ships_overloaded; };
+    natural_64_bit  size_of_update_queue_of_ships() const { return m_update_queue_of_ships.size(); }
+    natural_64_bit  max_size_of_update_queue_of_ships() const { return m_max_size_of_update_queue_of_ships; }
 
     void  initialise_movement_area_centers(initialiser_of_movement_area_centers&  area_centers_initialiser);
     void  prepare_for_movement_area_centers_migration(initialiser_of_movement_area_centers&  area_centers_initialiser);
@@ -136,9 +136,11 @@ private:
 
     natural_64_bit  m_update_id;
     
-    std::vector< std::deque<element_type_in_update_queue_of_ships> >  m_update_queues_of_ships;
-    std::vector<bool>  m_overloads_of_update_queues_of_ships;
-    bool  m_use_update_queues_of_ships;
+    /// Data of update queue of ships
+    std::deque<element_type_in_update_queue_of_ships>  m_update_queue_of_ships;
+    natural_64_bit  m_max_size_of_update_queue_of_ships;
+    bool  m_is_update_queue_of_ships_overloaded;
+    bool  m_use_update_queue_of_ships;
 
 //    TODO!:
 //    std::unique_ptr< std::unordered_set<cell*> >  m_current_spikers;

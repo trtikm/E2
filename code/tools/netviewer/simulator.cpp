@@ -1379,7 +1379,8 @@ std::string  simulator::get_network_info_text() const
     natural_64_bit  total_memory_ships = 0ULL;
     natural_64_bit  total_memory_movement_area_centers = 0ULL;
     natural_64_bit  total_memory_index_of_ships_in_sectors = 0ULL;
-    natural_64_bit  total_max_memory_of_update_queues_of_ships = 0ULL;
+    natural_64_bit  total_max_memory_of_update_queues_of_ships =
+            network()->max_size_of_update_queue_of_ships() * sizeof(netlab::network::element_type_in_update_queue_of_ships);
     natural_64_bit  total_num_spikers = 0ULL;
     natural_64_bit  total_num_docks = 0ULL;
     natural_64_bit  total_num_ships = 0ULL;
@@ -1399,8 +1400,6 @@ std::string  simulator::get_network_info_text() const
         total_memory_index_of_ships_in_sectors += layer_props.num_docks() *
                                                   3ULL * sizeof(netlab::compressed_layer_and_object_indices);
 
-        total_max_memory_of_update_queues_of_ships += network()->max_size_of_ships_update_queue_of_layer(layer_index) *
-                                                      sizeof(netlab::network::element_type_in_update_queue_of_ships);
     }
     natural_64_bit  total_memory =
             total_memory_spikers +
@@ -1511,10 +1510,6 @@ std::string  simulator::get_network_info_text() const
                         << layer_props.high_corner_of_ships()(0) << "m, "
                         << layer_props.high_corner_of_ships()(1) << "m, "
                         << layer_props.high_corner_of_ships()(2) << "m ]\n\n"
-
-             << "    max size of update queue of ships: " << network()->max_size_of_ships_update_queue_of_layer(layer_index) << "\n"
-
-             << "\n"
              ;
 
         ostr << "    sizes of ship movement areas [xyc]:\n";
@@ -1855,29 +1850,23 @@ std::string  simulator::get_network_performance_text() const
 
     std::ostringstream  ostr;
 
-    if (network()->are_queues_used_in_update_of_ships())
+    if (network()->is_update_queue_of_ships_used())
     {
-        ostr << "Usage of update queues of ships in layers:\n";
-        for (netlab::layer_index_type  layer_index = 0U; layer_index != props.layer_props().size(); ++layer_index)
-        {
-            ostr << "  [" << (natural_32_bit)layer_index << "]: ";
-            if (network()->is_overloaded_update_queue_of_ships_in_layer(layer_index))
-                ostr << "OVERLOADED! (=> all ships are simulated)";
-            else
-                ostr << network()->size_of_ships_update_queue_of_layer(layer_index) << " / "
-                     << network()->max_size_of_ships_update_queue_of_layer(layer_index) << " (~"
-                     << percentage_string(network()->size_of_ships_update_queue_of_layer(layer_index),
-                                          network()->max_size_of_ships_update_queue_of_layer(layer_index))
-                     << "%)"
-                     ;
-            ostr << "\n";
-        }
+        ostr << "Update queue of ships: ";
+        if (network()->is_update_queue_of_ships_overloaded())
+            ostr << "OVERLOADED! (=> all ships are simulated)";
+        else
+            ostr << network()->size_of_update_queue_of_ships() << " / "
+                    << network()->max_size_of_update_queue_of_ships() << " (~"
+                    << percentage_string(network()->size_of_update_queue_of_ships(),
+                                        network()->max_size_of_update_queue_of_ships())
+                    << "%)"
+                    ;
+        ostr << "\n";
     }
     else
-    {
-        ostr << "Update queues of ships are NOT used.\n"
+        ostr << "Update queue of ships is NOT used.\n"
                 "  => updating all ships in each simulation step.\n";
-    }
 
     return ostr.str();
 }
