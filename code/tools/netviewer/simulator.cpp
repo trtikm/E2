@@ -1347,6 +1347,7 @@ std::string  simulator::get_network_info_text() const
     natural_64_bit  total_memory_ships = 0ULL;
     natural_64_bit  total_memory_movement_area_centers = 0ULL;
     natural_64_bit  total_memory_index_of_ships_in_sectors = 0ULL;
+    natural_64_bit  total_max_memory_of_update_queues_of_ships = 0ULL;
     natural_64_bit  total_num_spikers = 0ULL;
     natural_64_bit  total_num_docks = 0ULL;
     natural_64_bit  total_num_ships = 0ULL;
@@ -1365,13 +1366,17 @@ std::string  simulator::get_network_info_text() const
         total_memory_movement_area_centers += layer_props.num_spikers() * sizeof(vector3);
         total_memory_index_of_ships_in_sectors += layer_props.num_docks() *
                                                   3ULL * sizeof(netlab::compressed_layer_and_object_indices);
+
+        total_max_memory_of_update_queues_of_ships += network()->max_size_of_ships_update_queue_of_layer(layer_index) *
+                                                      sizeof(netlab::network::element_type_in_update_queue_of_ships);
     }
     natural_64_bit  total_memory =
             total_memory_spikers +
             total_memory_docks +
             total_memory_ships +
             total_memory_movement_area_centers +
-            total_memory_index_of_ships_in_sectors
+            total_memory_index_of_ships_in_sectors +
+            total_max_memory_of_update_queues_of_ships
             ;
 
     std::vector< std::vector<natural_64_bit> >  counts_of_area_centers(props.layer_props().size(),
@@ -1388,6 +1393,13 @@ std::string  simulator::get_network_info_text() const
         }
     }
 
+    auto const  percentage = [](natural_64_bit const  part, natural_64_bit const  base) -> float_32_bit {
+        ASSUMPTION(base != 0ULL);
+        return (float_32_bit)(float_64_bit)(100.0f * (float_64_bit)part / (float_64_bit)base);
+    };
+    auto const  percentage_string = [&percentage](natural_64_bit const  part, natural_64_bit const  base) -> std::string {
+        return msgstream() << std::fixed << std::setprecision(3) << percentage(part,base);
+    };
 
     ostr << "Experiment: " << get_experiment_name() << "\n"
             "Description: " << netexp::experiment_factory::instance().get_experiment_description(get_experiment_name()) << "\n\n"
@@ -1395,12 +1407,25 @@ std::string  simulator::get_network_info_text() const
             "  num spikers: " << total_num_spikers << "\n"
             "  num docks: " << total_num_docks << "\n"
             "  num ships: " << total_num_ships << "\n"
-            "  memory size: " << total_memory << "B\n"
-            "  memory size of spikers: " << total_memory_spikers << "B\n"
-            "  memory size of docks: " << total_memory_docks << "B\n"
-            "  memory size of ships: " << total_memory_ships << "B\n"
-            "  memory size of movement area centers: " << total_memory_movement_area_centers << "B\n"
-            "  memory size of index of ships in sectors: " << total_memory_index_of_ships_in_sectors << "B\n"
+            "  total memory size: " << total_memory << "B\n"
+            "  memory size of spikers: " << total_memory_spikers << "B (~"
+                                         << percentage_string(total_memory_spikers,total_memory)
+                                         << "%)\n"
+            "  memory size of docks: " << total_memory_docks << "B (~"
+                                       << percentage_string(total_memory_docks,total_memory)
+                                       << "%)\n"
+            "  memory size of ships: " << total_memory_ships << "B (~"
+                                       << percentage_string(total_memory_ships,total_memory)
+                                       << "%)\n"
+            "  memory size of movement area centers: " << total_memory_movement_area_centers << "B (~"
+                                                       << percentage_string(total_memory_movement_area_centers,total_memory)
+                                                       << "%)\n"
+            "  memory size of index of ships in sectors: " << total_memory_index_of_ships_in_sectors << "B (~"
+                                                           << percentage_string(total_memory_index_of_ships_in_sectors,total_memory)
+                                                           << "%)\n"
+            "  max memory size of update queues of ships: " << total_max_memory_of_update_queues_of_ships << "B (~"
+                                                           << percentage_string(total_max_memory_of_update_queues_of_ships,total_memory)
+                                                           << "%)\n"
             "  time step: " << props.update_time_step_in_seconds() << "s\n"
             "  max connection distance: " << props.max_connection_distance_in_meters() << "m\n"
             "  max num treads to use: " << props.num_threads_to_use() << "\n"
@@ -1462,6 +1487,10 @@ std::string  simulator::get_network_info_text() const
                         << layer_props.high_corner_of_ships()(0) << "m, "
                         << layer_props.high_corner_of_ships()(1) << "m, "
                         << layer_props.high_corner_of_ships()(2) << "m ]\n\n"
+
+             << "    max size of update queue of ships: " << network()->max_size_of_ships_update_queue_of_layer(layer_index) << "\n"
+
+             << "\n"
              ;
 
         ostr << "    sizes of ship movement areas [xyc]:\n";
@@ -1698,16 +1727,21 @@ std::string  simulator::get_selected_info_text() const
                                                                layer_props.dock_sector_index(x,y,c)).size();
 
         bool  is_connected = false;
+        bool  is_occupied = false;
+        float_32_bit  dist_to_nearest_ship = std::numeric_limits<float_32_bit>::max();
         for (auto  indices : network()->get_indices_of_ships_in_dock_sector(ptr->indices().layer_index(),
                                                                             layer_props.dock_sector_index(x,y,c)))
         {
             vector3 const&  ship_pos = network()->get_ship(indices.layer_index(),indices.object_index()).position();
             if (length_squared(sector_center - ship_pos) <= props.max_connection_distance_in_meters() *
                                                             props.max_connection_distance_in_meters() )
-            {
                 is_connected = true;
-                break;
-            }
+            vector3 const&  ship_velocity = network()->get_ship(indices.layer_index(),indices.object_index()).velocity();
+            if (layer_props.ship_controller_ptr()->is_ship_docked(ship_pos,ship_velocity,ptr->indices().layer_index(),props))
+                is_occupied = true;
+            float_32_bit const  dist = length(ship_pos - sector_center);
+            if (dist < dist_to_nearest_ship)
+                dist_to_nearest_ship = dist;
         }
 
         ptr->get_info_text(ostr);
@@ -1725,7 +1759,11 @@ std::string  simulator::get_selected_info_text() const
                                << sector_center(2) << "m ]\n"
              << "Sector coords: [" << x << ", " << y << ", " << c << "]\n"
              << "Num ships in the sector: " << num_ships_in_dock_sector << "\n"
-             << "Connected: " << std::boolalpha << is_connected << "\n"
+             ;
+        if (num_ships_in_dock_sector != 0ULL)
+            ostr  << "Distance to nearest ship in the sector: " << dist_to_nearest_ship << "m\n";
+        ostr << "Connected: " << std::boolalpha << is_connected << "\n"
+             << "Occupied by a ship: " << std::boolalpha << is_occupied << "\n"
              ;
     }
     else if (auto ptr = std::dynamic_pointer_cast<netlab::tracked_ship_stats>(m_selected_object_stats))
@@ -1756,6 +1794,7 @@ std::string  simulator::get_selected_info_text() const
 
         bool const  is_connected = (length_squared(dock_pos - ship_pos) <= props.max_connection_distance_in_meters() *
                                                                            props.max_connection_distance_in_meters() );
+        bool const  is_docked = area_layer_props.ship_controller_ptr()->is_ship_docked(ship_pos,ship_velocity,area_layer_index,props);
 
         ptr->get_info_text(ostr);
         ship_ref.get_info_text(ostr);
@@ -1769,8 +1808,10 @@ std::string  simulator::get_selected_info_text() const
                                             << dock_pos(1) << "m, "
                                             << dock_pos(2) << "m ]\n"
              << "Nearest dock sector coords: [" << dock_x << ", " << dock_y << ", " << dock_c << "]\n"
+             << "Distance to the nearest dock: " << length(dock_pos - ship_pos) << "m\n"
              << "Num ships in nearest dock sector: " << num_ships_in_dock_sector << "\n"
              << "Connected: " << std::boolalpha << is_connected << "\n"
+             << "Docked: " << std::boolalpha << is_docked << "\n"
              << "Excitatory: " << std::boolalpha << layer_props.are_spikers_excitatory() << "\n"
              ;
     }

@@ -92,6 +92,30 @@ void  ship_controller::on_too_fast(
 }
 
 
+bool  ship_controller::is_ship_docked(
+        vector3 const&  ship_position,
+        vector3 const&  ship_velocity,
+        layer_index_type const  area_layer_index,   //!< Index of layer where is the movement area in which the ship moves.
+        network_props const&  props
+        ) const
+{
+    network_layer_props const&  area_layer_props = props.layer_props().at(area_layer_index);
+
+    sector_coordinate_type  x,y,c;
+    area_layer_props.dock_sector_coordinates(ship_position,x,y,c);
+    vector3 const  nearest_dock_position = area_layer_props.dock_sector_centre(x,y,c);
+
+    float_32_bit const  docking_radius = props.max_connection_distance_in_meters() / 3.0f;
+    float_32_bit const  docking_radius_squared = docking_radius * docking_radius;
+    float_32_bit const  max_docking_speed = docking_radius / 1.0f;
+    float_32_bit const  max_docking_speed_squared = max_docking_speed * max_docking_speed;
+
+    if (length_squared(nearest_dock_position - ship_position) <= docking_radius_squared &&
+        length_squared(ship_velocity) <= max_docking_speed_squared)
+        return true;
+
+    return false;
+}
 
 
 }

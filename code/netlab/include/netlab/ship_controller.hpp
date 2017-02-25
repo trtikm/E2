@@ -172,6 +172,14 @@ struct  ship_controller
             ) const;
 
 
+    virtual bool  is_ship_docked(
+            vector3 const&  ship_position,
+            vector3 const&  ship_velocity,
+            layer_index_type const  area_layer_index,   //!< Index of layer where is the movement area in which the ship moves.
+            network_props const&  props
+            ) const;
+
+
     float_32_bit  docks_enumerations_distance_for_accelerate_into_dock() const noexcept
     { return m_docks_enumerations_distance_for_accelerate_into_dock; }
 
