@@ -43,6 +43,11 @@ std::chrono::high_resolution_clock::time_point  real_time_simulator::start_time(
     return detail::current_window_cref().start_time();
 }
 
+float_64_bit  real_time_simulator::total_simulation_time() const
+{
+    return detail::current_window_cref().total_simulation_time();
+}
+
 natural_32_bit  real_time_simulator::FPS() const
 {
     return detail::current_window_cref().FPS();

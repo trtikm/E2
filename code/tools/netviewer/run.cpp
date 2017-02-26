@@ -1,10 +1,10 @@
 #include <netviewer/program_window.hpp>
 #include <netviewer/program_info.hpp>
 #include <netviewer/program_options.hpp>
+#include <angeo/tensor_math.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <utility/basic_numeric_types.hpp>
-#include <angeo/tensor_math.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <QApplication>

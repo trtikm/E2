@@ -26,6 +26,7 @@ struct real_time_simulator
 
     natural_64_bit  round_id() const;
     std::chrono::high_resolution_clock::time_point  start_time() const;
+    float_64_bit  total_simulation_time() const;
     natural_32_bit  FPS() const;
 };
 

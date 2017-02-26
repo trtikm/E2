@@ -12,6 +12,25 @@ add_executable(${THIS_TARGET_NAME}
 
     main.cpp
     run.cpp
+
+    simulator.hpp
+    simulator.cpp
+    simulator_notifications.hpp
+
+    draw_utils.hpp
+    draw_utils.cpp
+
+    program_window.hpp
+    program_window.cpp
+    
+    status_bar.hpp
+    status_bar.cpp
+    
+    menu_bar.hpp
+    menu_bar.cpp
+
+    window_tabs/tab_draw.hpp
+    window_tabs/tab_draw.cpp
     )
 
 target_link_libraries(${THIS_TARGET_NAME}

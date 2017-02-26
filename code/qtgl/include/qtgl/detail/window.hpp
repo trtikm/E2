@@ -76,6 +76,7 @@ struct window : public QWindow
 
     natural_64_bit  round_id() const { return m_round_id; }
     std::chrono::high_resolution_clock::time_point  start_time() const { return m_start_time; }
+    float_64_bit  total_simulation_time() const { return m_total_simulation_time; }
     natural_32_bit  FPS() const { return m_FPS; }
 
     qtgl::window_props const&  window_props() const { return m_window_props; }
@@ -113,6 +114,7 @@ private:
     natural_64_bit  m_round_id;
     std::chrono::high_resolution_clock::time_point  m_start_time;
     std::chrono::high_resolution_clock::time_point  m_time_of_last_simulation_round;
+    float_64_bit  m_total_simulation_time;
 
     natural_32_bit  m_FPS_num_rounds;
     float_64_bit  m_FPS_time;

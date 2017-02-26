@@ -166,6 +166,7 @@ window::window(std::function<std::shared_ptr<real_time_simulator>()> const  crea
     , m_round_id(0ULL)
     , m_start_time(std::chrono::high_resolution_clock::now())
     , m_time_of_last_simulation_round(m_start_time)
+    , m_total_simulation_time(0.0)
 
     , m_FPS_num_rounds(0U)
     , m_FPS_time(0.0L)
@@ -240,15 +241,6 @@ window::~window()
     make_current_window_guard const  make_current_window{this};
     m_simulator.reset();
     on_window_destroy();
-
-    std::chrono::high_resolution_clock::time_point const  current_time = std::chrono::high_resolution_clock::now();
-    float_64_bit const  time_delta =
-            std::chrono::duration<float_64_bit>(current_time - m_start_time).count();
-
-    LOG(testing,"Num steps: " << m_round_id << ", Elapsed time: " << time_delta << "sec, FPS: " << m_round_id / time_delta);
-    std::cout << "Num steps   : " << m_round_id << "\n";
-    std::cout << "Elapsed time: " << time_delta << " sec\n";
-    std::cout << "FPS         : " << m_round_id / time_delta << "\n";
 }
 
 opengl_context&  window::glcontext()
@@ -398,6 +390,8 @@ void window::render_now(bool const  is_this_pure_redraw_request)
     m_simulator_calls.clear();
     INVARIANT(m_simulator.operator bool());
     m_simulator->next_round(time_delta,is_this_pure_redraw_request);
+
+    m_total_simulation_time += time_delta;
 
     ++m_FPS_num_rounds;
     m_FPS_time += time_delta;
