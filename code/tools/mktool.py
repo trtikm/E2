@@ -219,10 +219,10 @@ std::ostream& operator<<(std::ostream& ostr, program_options_ptr options)
 _template_run_cpp = \
 """#include <<%TARGET_NAME%>/program_info.hpp>
 #include <<%TARGET_NAME%>/program_options.hpp>
+#include <angeo/tensor_math.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <utility/basic_numeric_types.hpp>
-#include <utility/tensor_math.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 
@@ -240,6 +240,32 @@ void run(int argc, char* argv[])
 }
 """
 
+def get_list_of_E2_libraries():
+    return sorted([
+        "angeo",
+        "netexp",
+        "netlab",
+        "netview",
+        "plot",
+        "qtgl",
+        "utility",
+        
+        # Obsolete libraries:
+        "cellab",
+        "cellconnect",
+        "efloop",
+        "envlab",
+        "ode",
+        "paralab",
+        "pycellab"
+        ])
+
+def get_list_of_E2_libraries_dependent_on_QT_or_GL():
+    return sorted([
+        "netview",
+        "qtgl"
+        ])
+        
 
 def parse_cmd_line():
     parser = argparse.ArgumentParser(
@@ -253,7 +279,7 @@ def parse_cmd_line():
                     "the build of E2.")
     parser.add_argument("-T", "--target_name", type=str,
                         help="A project name of the tool. All generated project files will be "
-                             "generated into a newly created sub-directory of the current one. The"
+                             "generated into a newly created sub-directory of the current one. The "
                              "name of the sub-directory is equal as the passed target name.")
     parser.add_argument("-V","--version", type=str, default="0.01",
                         help="A string representing an initial version of the tool. The version can be later "
@@ -265,7 +291,7 @@ def parse_cmd_line():
                              "netlab, netexp, netview, qtgl.\nNOTE: 3rd libraries must be added to the "
                              "CMakeLists.txt file of the tool manually. Only libraries Boost, Qt, and  "
                              "OpenGL are added automatically with E2 libraries dependent on them. "
-                             "The Eigen 3rd library is header only.")
+                             "Header only libraries, like Eigen, should not be listed here.")
     args = parser.parse_args()
     return args
 
@@ -289,10 +315,10 @@ def scriptMain():
     libs_list = ""
     automoc_text = ""
     for libname in args.link_libs:
-        if not libname in ["utility", "netlab", "netexp", "netview", "qtgl"]:
+        if not libname in get_list_of_E2_libraries():
             print("ERROR: '" + libname + "' is not recognised as E2 library.")
             return
-        if libname == "qtgl":
+        if libname in get_list_of_E2_libraries_dependent_on_QT_or_GL():
             add_qt = True
             add_gl = True
         libs_list += libname + "\n    "
