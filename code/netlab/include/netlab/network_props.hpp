@@ -22,8 +22,10 @@ struct network_props
 
             float_32_bit const  update_time_step_in_seconds,
 
-//            float_32_bit const  mini_spiking_potential_magnitude,
-//            float_32_bit const  average_mini_spiking_period_in_seconds,
+            float_32_bit const  spiking_potential_magnitude,
+
+            float_32_bit const  mini_spiking_potential_magnitude,
+            float_32_bit const  average_mini_spiking_period_in_seconds,
 
             float_32_bit const  max_connection_distance_in_meters,
 
@@ -36,8 +38,10 @@ struct network_props
 
     float_32_bit  update_time_step_in_seconds() const noexcept { return m_update_time_step_in_seconds; }
 
-//    float_32_bit  mini_spiking_potential_magnitude() const noexcept { return m_mini_spiking_potential_magnitude; }
-//    float_32_bit  average_mini_spiking_period_in_seconds() const noexcept { return m_average_mini_spiking_period_in_seconds; }
+    float_32_bit  spiking_potential_magnitude() const noexcept { return m_spiking_potential_magnitude; }
+
+    float_32_bit  mini_spiking_potential_magnitude() const noexcept { return m_mini_spiking_potential_magnitude; }
+    float_32_bit  average_mini_spiking_period_in_seconds() const noexcept { return m_average_mini_spiking_period_in_seconds; }
 
     float_32_bit  max_connection_distance_in_meters() const noexcept { return m_max_connection_distance_in_meters; }
 
@@ -60,8 +64,10 @@ private:
 
     float_32_bit  m_update_time_step_in_seconds;
 
-//    float_32_bit  m_mini_spiking_potential_magnitude;
-//    float_32_bit  m_average_mini_spiking_period_in_seconds;
+    float_32_bit  m_spiking_potential_magnitude;
+
+    float_32_bit  m_mini_spiking_potential_magnitude;
+    float_32_bit  m_average_mini_spiking_period_in_seconds;
 
     float_32_bit  m_max_connection_distance_in_meters;
 

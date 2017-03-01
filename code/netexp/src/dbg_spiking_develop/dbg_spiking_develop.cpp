@@ -211,6 +211,9 @@ std::shared_ptr<netlab::network_props>  get_network_props()
                     size_of_movement_area()
                     ),
             0.01f,          //!< update_time_step_in_seconds
+            1.0f,           //!< spiking_potential_magnitude
+            0.25f,          //!< mini_spiking_potential_magnitude
+            1.0f,           //!< average_mini_spiking_period_in_seconds
             0.25f,          //!< max_connection_distance_in_meters
             1U              //!< num_threads_to_use
             );

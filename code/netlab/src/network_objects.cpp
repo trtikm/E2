@@ -8,13 +8,24 @@ namespace netlab {
 
 
 spiker::spiker()
-    : m_last_update_id(0UL)
+    : m_last_update_id(0ULL)
 {}
 
 std::ostream&  spiker::get_info_text(std::ostream&  ostr, std::string const&  shift) const
 {
     ostr << shift << "Last update id: " << m_last_update_id << "\n";
     return ostr;
+}
+
+void  spiker::update_spiking_potential(
+        natural_64_bit const  current_update_id,
+        float_32_bit const  time_step_per_update_id_in_seconds,
+        layer_index_type const  spiker_layer_index,
+        network_props const&  props
+        )
+{
+    for ( ; m_last_update_id < current_update_id; ++m_last_update_id)
+        integrate_spiking_potential(time_step_per_update_id_in_seconds,spiker_layer_index,props);
 }
 
 
