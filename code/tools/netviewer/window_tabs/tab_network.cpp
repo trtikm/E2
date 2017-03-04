@@ -4,6 +4,14 @@
 #include <netexp/experiment_factory.hpp>
 #include <QVBoxLayout>
 
+namespace {
+
+
+inline std::string  invalidated_experiment_name() { return "<--!NETVIEWER-TAB-NETWORK-INVALIDATED-EXPERIMENT-NAME-->"; }
+
+
+}
+
 namespace window_tabs { namespace tab_network {
 
 
@@ -11,7 +19,7 @@ widgets::widgets(program_window* const  wnd)
     : m_wnd(wnd)
     , m_text(new QTextEdit)
     , m_auto_open_last(new QCheckBox("Auto-open last opened network"))
-    , m_last_experiment_name("<--!NETVIEWER-TAB-NETWORK-NO-EXPERIMENT-AVAILABLE-YET!-->")
+    , m_last_experiment_name(invalidated_experiment_name())
 {}
 
 program_window* widgets::wnd() const noexcept
@@ -21,6 +29,12 @@ program_window* widgets::wnd() const noexcept
 
 void  widgets::on_text_update()
 {
+    if (!wnd()->glwindow().call_now(&simulator::has_network))
+    {
+        text()->setText(QString("No network is loaded."));
+        m_last_experiment_name = invalidated_experiment_name();
+        return;
+    }
     std::string const  experiment_name = wnd()->glwindow().call_now(&simulator::get_experiment_name);
     if (m_last_experiment_name != experiment_name)
     {
