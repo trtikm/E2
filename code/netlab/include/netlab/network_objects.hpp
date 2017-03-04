@@ -28,12 +28,9 @@ struct  spiker
      * update id of the network, passed to the function as the parameter @current_update_id.
      *
      * @param current_update_id  The id of the current update step of the network.
-     * @param time_step_per_update_id_in_seconds  Time interval in seconds a single update step
-     *                                            of the network corresponds to.
      */
     void  update_spiking_potential(
             natural_64_bit const  current_update_id,
-            float_32_bit const  time_step_per_update_id_in_seconds,
             layer_index_type const  spiker_layer_index,
             network_props const&  props
             );
@@ -57,17 +54,15 @@ struct  spiker
     {}
 
     /**
-     * It performs an update of the potential function of the spaker according to an instant
+     * It performs an update of the potential function of the spiker according to an instant
      * change of the potential (impulse) arrived from some dock of the spiker.
      *
      * @param potential_delta  An instant change of the potential (impulse) arrived from some dock
      *                         of the spiker. Note that the argument has the opposite sign for the potential
      *                         change from excitatory and inhibitory spikers.
-     * @return The function always returns false, except in one special case: The integration of spiker's
-     *         potential function from the current spiker's potential (using "integrate_spiking_potential"
-     *         for any time interval) would NOT lead to the generation of a spike, but the integration from
-     *         the updated spiker's potential (by the passed potential change) the generation of a spike
-     *         would be unavoidable.
+     * @return If the integration of spiker's potential function from the updated potential (by the passed 
+     *         potential change) would necessarily lead to genetation of a spike (without arrival of any
+     *         further postsynaptic potential), then the function returns true. Otherwise it returns false.
      */
     virtual bool  on_arrival_of_postsynaptic_potential(
             float_32_bit const  potential_delta,
