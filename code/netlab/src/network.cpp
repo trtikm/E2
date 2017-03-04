@@ -922,6 +922,11 @@ void  network::update_spiking(
         for (natural_32_bit  i = 0U; i != spiker_layer_props.num_ships_per_spiker(); ++i)
         {
         }
+
+        object_index_type const  docks_begin_index = spiker_layer_props.docks_begin_index_of_spiker(spiker_index);
+        for (natural_32_bit  i = 0U; i != spiker_layer_props.num_ships_per_spiker(); ++i)
+        {
+        }
     }
 
     std::swap(m_current_spikers, m_next_spikers);
