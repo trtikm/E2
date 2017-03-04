@@ -56,24 +56,43 @@ inline constexpr natural_64_bit  max_number_of_objects_in_layer() noexcept { ret
  */
 struct  compressed_layer_and_object_indices
 {
-    compressed_layer_and_object_indices(layer_index_type const  layer_index, object_index_type const  object_index) noexcept;
+    using  data_holder_type = natural_64_bit;
 
-    layer_index_type   layer_index() const noexcept;
-    object_index_type  object_index() const noexcept;
+    compressed_layer_and_object_indices(layer_index_type const  layer_index, object_index_type const  object_index);
 
-    bool  operator==(compressed_layer_and_object_indices const  other) const noexcept
+    layer_index_type   layer_index() const;
+    object_index_type  object_index() const;
+
+    bool  operator==(compressed_layer_and_object_indices const  other) const
     { return m_compressed_indices == other.m_compressed_indices; }
 
-    bool  operator<(compressed_layer_and_object_indices const  other) const noexcept
+    bool  operator<(compressed_layer_and_object_indices const  other) const
     { return m_compressed_indices < other.m_compressed_indices; }
 
+    data_holder_type  get_raw_data() const { return m_compressed_indices; }
+
 private:
-    natural_64_bit  m_compressed_indices;
+    data_holder_type  m_compressed_indices;
 };
 
 
 inline bool  operator!=(compressed_layer_and_object_indices const  a, compressed_layer_and_object_indices const  b) noexcept
 { return !(a == b); }
+
+
+}
+
+namespace std {
+
+
+template<>
+struct hash<netlab::compressed_layer_and_object_indices>
+{
+	size_t operator()(netlab::compressed_layer_and_object_indices const&  value) const
+    {
+        return hash<netlab::compressed_layer_and_object_indices::data_holder_type>()(value.get_raw_data());
+    }
+};
 
 
 }
