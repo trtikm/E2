@@ -35,6 +35,10 @@ network_props::network_props(
     , m_num_threads_to_use(num_threads_to_use)
 
     , m_max_coods_along_c_axis(layer_props.size())
+
+    , m_num_spikers(0ULL)
+    , m_num_docks(0ULL)
+    , m_num_ships(0ULL)
 {
     ASSUMPTION(!m_layer_props.empty());
     ASSUMPTION(m_layer_props.size() <= max_number_of_layers());
@@ -80,7 +84,18 @@ network_props::network_props(
                     return true;
                 }(m_layer_props,i,m_update_time_step_in_seconds)
                 );
+
+        m_num_spikers += m_layer_props.at(i).num_spikers();
+        m_num_docks += m_layer_props.at(i).num_docks();
+        m_num_ships += m_layer_props.at(i).num_ships();
     }
+}
+
+
+natural_64_bit  network_props::num_mini_spikes_to_generate_per_simulation_step() const
+{
+    return (natural_64_bit)std::round((float_64_bit)num_ships() * ((float_64_bit)update_time_step_in_seconds() /
+                                                                   (float_64_bit)average_mini_spiking_period_in_seconds()));
 }
 
 
