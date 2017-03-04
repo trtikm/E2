@@ -1381,16 +1381,9 @@ std::string  simulator::get_network_info_text() const
     natural_64_bit  total_memory_index_of_ships_in_sectors = 0ULL;
     natural_64_bit  total_max_memory_of_update_queues_of_ships =
             network()->max_size_of_update_queue_of_ships() * sizeof(netlab::network::element_type_in_update_queue_of_ships);
-    natural_64_bit  total_num_spikers = 0ULL;
-    natural_64_bit  total_num_docks = 0ULL;
-    natural_64_bit  total_num_ships = 0ULL;
     for (netlab::layer_index_type layer_index = 0U; layer_index != props.layer_props().size(); ++layer_index)
     {
         netlab::network_layer_props const&  layer_props = props.layer_props().at(layer_index);
-
-        total_num_spikers += layer_props.num_spikers();
-        total_num_docks += layer_props.num_docks();
-        total_num_ships += layer_props.num_ships();
 
         total_memory_spikers += layer_props.num_spikers() * network()->get_spiker(layer_index,0U).size_in_bytes();
         if (network()->are_docks_allocated(layer_index))
@@ -1427,9 +1420,9 @@ std::string  simulator::get_network_info_text() const
     ostr << "Experiment: " << get_experiment_name() << "\n"
             "Description: " << netexp::experiment_factory::instance().get_experiment_description(get_experiment_name()) << "\n\n"
             "Network properties:\n"
-            "  num spikers: " << total_num_spikers << "\n"
-            "  num docks: " << total_num_docks << "\n"
-            "  num ships: " << total_num_ships << "\n"
+            "  num spikers: " << props.num_spikers() << "\n"
+            "  num docks: " << props.num_docks() << "\n"
+            "  num ships: " << props.num_ships() << "\n"
             "  total memory size: " << total_memory << "B\n"
             "  memory size of spikers: " << total_memory_spikers << "B (~"
                                          << percentage_string(total_memory_spikers,total_memory)
@@ -1449,8 +1442,12 @@ std::string  simulator::get_network_info_text() const
             "  max memory size of update queues of ships: " << total_max_memory_of_update_queues_of_ships << "B (~"
                                                            << percentage_string(total_max_memory_of_update_queues_of_ships,total_memory)
                                                            << "%)\n"
-            "  time step: " << props.update_time_step_in_seconds() << "s\n"
+            "  simulation time step: " << props.update_time_step_in_seconds() << "s\n"
             "  max connection distance: " << props.max_connection_distance_in_meters() << "m\n"
+            "  spiking potential magnitude: " << props.spiking_potential_magnitude() << "\n"
+            "  mini spiking potential magnitude: " << props.mini_spiking_potential_magnitude() << "\n"
+            "  average mini spiking period: " << props.average_mini_spiking_period_in_seconds() << "s\n"
+            "  number of mini spikes generated per simulation step: " << props.num_mini_spikes_to_generate_per_simulation_step() << "\n"
             "  max num treads to use: " << props.num_threads_to_use() << "\n"
             "  number of layers: " << props.layer_props().size() << "\n"
          ;
