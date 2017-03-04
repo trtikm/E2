@@ -1478,6 +1478,7 @@ std::string  simulator::get_network_info_text() const
                         << layer_props.high_corner_of_spikers()(2) << "m ]\n\n"
 
              << "    num docks: " << layer_props.num_docks() << "\n"
+             << "    are docks allocated: " << std::boolalpha << network()->are_docks_allocated(layer_index) << "\n"
              << "    num docks per spiker: " << layer_props.num_docks_per_spiker() << "\n"
              << "    num docks along axes [xyc]: "
                         << layer_props.num_docks_along_x_axis() << ", "
