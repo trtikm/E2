@@ -46,6 +46,7 @@ network_layer_props::network_layer_props(
     , m_num_docks_along_c_axis(checked_mul_32_bit(m_num_spikers_along_c_axis,m_num_docks_along_c_axis_per_spiker))
 
     , m_num_docks_in_xy_plane( checked_mul_64_bit(m_num_docks_along_x_axis, m_num_docks_along_y_axis) )
+    , m_num_docks_in_xy_plane_per_spiker( checked_mul_32_bit(m_num_docks_along_x_axis_per_spiker, m_num_docks_along_y_axis_per_spiker) )
     , m_num_docks( checked_mul_64_bit(m_num_docks_along_c_axis,m_num_docks_in_xy_plane) )
 
     , m_num_ships_per_spiker(num_ships_per_spiker)
@@ -201,10 +202,36 @@ void  network_layer_props::dock_sector_coordinates(
         sector_coordinate_type&  x, sector_coordinate_type&  y, sector_coordinate_type&  c
         ) const
 {
+    //*
+
+    // In this version indices of docks are grouped accorging to indices of their spikers, just like indices of ships.
+
+    object_index_type const  spiker_index = index_into_layer / num_docks_per_spiker();
+    natural_32_bit  relative_index_of_dock_from_spiker = index_into_layer % num_docks_per_spiker();
+
+    sector_coordinate_type  spiker_x,spiker_y,spiker_c;
+    spiker_sector_coordinates(spiker_index,spiker_x,spiker_y,spiker_c);
+
+    sector_coordinate_type  shift_x,shift_y,shift_c;
+    shift_c = relative_index_of_dock_from_spiker / num_docks_in_xy_plane_per_spiker();
+    relative_index_of_dock_from_spiker = relative_index_of_dock_from_spiker % num_docks_in_xy_plane_per_spiker();
+    shift_y = relative_index_of_dock_from_spiker / num_docks_along_x_axis_per_spiker();
+    shift_x = relative_index_of_dock_from_spiker % num_docks_along_x_axis_per_spiker();
+
+    x = spiker_x * num_docks_along_x_axis_per_spiker() + shift_x;
+    y = spiker_y * num_docks_along_y_axis_per_spiker() + shift_y;
+    c = spiker_c * num_docks_along_c_axis_per_spiker() + shift_c;
+
+    /*/
+
+    // In this version indices of docks match indices of 3D array of dock sectors in space.
+
     c = static_cast<sector_coordinate_type>(index_into_layer / num_docks_in_xy_plane());
     index_into_layer = index_into_layer % num_docks_in_xy_plane();
     y = static_cast<sector_coordinate_type>(index_into_layer / static_cast<object_index_type>(num_docks_along_x_axis()));
     x = static_cast<sector_coordinate_type>(index_into_layer % static_cast<object_index_type>(num_docks_along_x_axis()));
+
+    */
 }
 
 
@@ -212,10 +239,38 @@ object_index_type  network_layer_props::dock_sector_index(
         sector_coordinate_type const  x, sector_coordinate_type const  y, sector_coordinate_type const  c
         ) const
 {
+    //*
+
+    // In this version indices of docks are grouped accorging to indices of their spikers, just like indices of ships.
+
+    sector_coordinate_type const  spiker_x = x / num_docks_along_x_axis_per_spiker();
+    sector_coordinate_type const  shift_x = x % num_docks_along_x_axis_per_spiker();
+
+    sector_coordinate_type const  spiker_y = y / num_docks_along_y_axis_per_spiker();
+    sector_coordinate_type const  shift_y = y % num_docks_along_y_axis_per_spiker();
+
+    sector_coordinate_type const  spiker_c = c / num_docks_along_c_axis_per_spiker();
+    sector_coordinate_type const  shift_c = c % num_docks_along_c_axis_per_spiker();
+
+    object_index_type const  spiker_index = spiker_sector_index(spiker_x,spiker_y,spiker_c);
+
+    natural_32_bit const  relative_index_of_dock_from_spiker = 
+            shift_c * num_docks_in_xy_plane_per_spiker() + shift_y * num_docks_along_x_axis_per_spiker() + shift_x;
+
+    object_index_type const  dock_index = spiker_index * num_docks_per_spiker() + relative_index_of_dock_from_spiker;
+
+    return dock_index;
+
+    /*/
+
+    // In this version indices of docks match indices of 3D array of dock sectors in space.
+
     return  static_cast<object_index_type>(c) * static_cast<object_index_type>(num_docks_in_xy_plane())
             + static_cast<object_index_type>(y) * static_cast<object_index_type>(num_docks_along_x_axis())
             + static_cast<object_index_type>(x)
             ;
+
+    */
 }
 
 
@@ -292,6 +347,18 @@ object_index_type  network_layer_props::spiker_index_from_ship_index(object_inde
 object_index_type  network_layer_props::ships_begin_index_of_spiker(object_index_type const  spiker_index) const
 {
     return spiker_index * num_ships_per_spiker();
+}
+
+
+object_index_type  network_layer_props::spiker_index_from_dock_index(object_index_type const  dock_index) const
+{
+    return dock_index / num_docks_per_spiker();
+}
+
+
+object_index_type  network_layer_props::docks_begin_index_of_spiker(object_index_type const  spiker_index) const
+{
+    return spiker_index * num_docks_per_spiker();
 }
 
 

@@ -66,6 +66,7 @@ struct  network_layer_props
     natural_32_bit  num_docks_along_c_axis() const noexcept { return m_num_docks_along_c_axis; }
 
     natural_64_bit  num_docks_in_xy_plane() const noexcept { return m_num_docks_in_xy_plane; }
+    natural_32_bit  num_docks_in_xy_plane_per_spiker() const noexcept { return m_num_docks_in_xy_plane_per_spiker; }
     natural_64_bit  num_docks() const noexcept { return m_num_docks; }
 
     natural_32_bit  num_ships_per_spiker() const noexcept { return m_num_ships_per_spiker; }
@@ -141,6 +142,9 @@ struct  network_layer_props
     object_index_type  spiker_index_from_ship_index(object_index_type const  ship_index) const;
     object_index_type  ships_begin_index_of_spiker(object_index_type const  spiker_index) const;
 
+    object_index_type  spiker_index_from_dock_index(object_index_type const  dock_index) const;
+    object_index_type  docks_begin_index_of_spiker(object_index_type const  spiker_index) const;
+
     void  spiker_sector_coordinates_from_dock_sector_coordinates(
             sector_coordinate_type const  dock_x, sector_coordinate_type const  dock_y, sector_coordinate_type const  dock_c,
             sector_coordinate_type&  x, sector_coordinate_type&  y, sector_coordinate_type&  c
@@ -169,6 +173,7 @@ private:
     natural_32_bit  m_num_docks_along_c_axis;
 
     natural_64_bit  m_num_docks_in_xy_plane;
+    natural_32_bit  m_num_docks_in_xy_plane_per_spiker;
     natural_64_bit  m_num_docks;
 
     natural_32_bit  m_num_ships_per_spiker;
