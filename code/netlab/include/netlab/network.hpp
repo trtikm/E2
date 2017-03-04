@@ -13,6 +13,7 @@
 #   include <netlab/statistics_of_densities_of_ships_in_layers.hpp>
 #   include <netlab/tracked_object_stats.hpp>
 #   include <utility/array_of_derived.hpp>
+#   include <utility/random.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <vector>
 #   include <memory>
@@ -33,6 +34,15 @@ enum struct  NETWORK_STATE : natural_8_bit
     READY_FOR_INITIALISATION_OF_MAP_FROM_DOCK_SECTORS_TO_SHIPS  = 6U,
     READY_FOR_SIMULATION_STEP                                   = 7U,
 };
+
+
+}
+
+
+std::string const&  to_string(netlab::NETWORK_STATE const  state);
+
+
+namespace netlab {
 
 
 /**
@@ -80,8 +90,8 @@ struct  network
 
     using  element_type_in_update_queue_of_ships = compressed_layer_and_object_indices;
     void  enable_usage_of_queues_in_update_of_ships(bool const  enable_state) { m_use_update_queue_of_ships = enable_state; }
-    bool  is_update_queue_of_ships_used() const { return m_use_update_queue_of_ships; };
-    bool  is_update_queue_of_ships_overloaded() const { return m_is_update_queue_of_ships_overloaded; };
+    bool  is_update_queue_of_ships_used() const { return m_use_update_queue_of_ships; }
+    bool  is_update_queue_of_ships_overloaded() const { return m_is_update_queue_of_ships_overloaded; }
     natural_64_bit  size_of_update_queue_of_ships() const { return m_update_queue_of_ships.size(); }
     natural_64_bit  max_size_of_update_queue_of_ships() const { return m_max_size_of_update_queue_of_ships; }
 
@@ -107,11 +117,6 @@ private:
 //            tracked_dock_stats* const  stats_of_tracked_dock,
 //            tracked_ship_stats* const  stats_of_tracked_ship
 //            );
-//    void  update_mini_spiking(
-//            tracked_spiker_stats* const  stats_of_tracked_spiker,
-//            tracked_dock_stats* const  stats_of_tracked_dock,
-//            tracked_ship_stats* const  stats_of_tracked_ship
-//            );
 
     void  update_movement_of_ships(tracked_ship_stats* const  stats_of_tracked_ship);
     void  update_movement_of_ship(
@@ -120,6 +125,9 @@ private:
             tracked_ship_stats*  stats_of_tracked_ship
             );
 
+    void  update_mini_spiking(
+            tracked_network_object_stats* const  stats_of_tracked_object
+            );
 
     std::shared_ptr<network_props>  m_properties;
     NETWORK_STATE  m_state;
@@ -142,6 +150,8 @@ private:
     bool  m_is_update_queue_of_ships_overloaded;
     bool  m_use_update_queue_of_ships;
 
+    random_generator_for_natural_64_bit  m_mini_spiking_random_generator;
+
 //    TODO!:
 //    std::unique_ptr< std::unordered_set<cell*> >  m_current_spikers;
 //    std::unique_ptr< std::unordered_set<cell*> >  m_next_spikers;
@@ -149,9 +159,6 @@ private:
 
 
 }
-
-
-std::string const&  to_string(netlab::NETWORK_STATE const  state);
 
 
 #endif

@@ -61,7 +61,8 @@ struct  spiker
      * change of the potential (impulse) arrived from some dock of the spiker.
      *
      * @param potential_delta  An instant change of the potential (impulse) arrived from some dock
-     *                         of the spiker.
+     *                         of the spiker. Note that the argument has the opposite sign for the potential
+     *                         change from excitatory and inhibitory spikers.
      * @return The function always returns false, except in one special case: The integration of spiker's
      *         potential function from the current spiker's potential (using "integrate_spiking_potential"
      *         for any time interval) would NOT lead to the generation of a spike, but the integration from
@@ -109,7 +110,8 @@ struct  dock
      * @param potential_delta   It is the change of potential caused by release of the neuro-transmitter
      *                          from the connected ship into the synaptic cleft between this dock and the ship.
      *                          It is a value returned from the function "ship::on_arrival_of_presynaptic_potential"
-     *                          invoked on the ship connected to this dock.
+     *                          invoked on the ship connected to this dock. Note that the argument has the opposite
+     *                          sign for a potential change from excitatory and inhibitory spikers.
      * @return It is supposed to compute (return) a potential change which would arrive from this dock to the soma
      *         of the spiker owning this dock.
      */
@@ -128,7 +130,8 @@ struct  dock
      * a change of potential transferable to the connected ship through the synaptic claft. This potential
      * change is returned.
      *
-     * @return A change of potential transferable to the connected ship through the synaptic claft.
+     * @return A change of potential transferable to the connected ship through the synaptic claft. The
+     *         change is always non negative, no matter whether the spiker is excitatoty or inhibitory.
      */
     virtual float_32_bit  on_arrival_of_presynaptic_potential(
             float_32_bit const  potential_of_the_spiker_owning_the_connected_ship,
@@ -137,6 +140,24 @@ struct  dock
             network_props const&  props
             )
     { return props.spiking_potential_magnitude(); }
+
+    /**
+     * The function computes (returns) what portion of the mini spiking potential will arrive from this dock to
+     * the spiker (owning the dock).
+     *
+     * @return It returns that portion of "network_props::mini_spiking_potential_magnitude()" which would arrive
+     *         from this dock to the soma of the spiker owning this dock. The return value has the opposite
+     *         sign depending on whether the mini spike comes from ship of excitatory or inhibitory spiker (see
+     *         the value of the parameter "is_it_mini_spike_from_excitatory_spiker").
+     */
+    virtual float_32_bit  on_arrival_of_mini_spiking_potential(
+            bool const  is_it_mini_spike_from_excitatory_spiker,
+            vector3 const&  spiker_position,
+            vector3 const&  dock_position,
+            layer_index_type const  spiker_layer_index,
+            network_props const&  props
+            ) const
+    { return props.mini_spiking_potential_magnitude() * (is_it_mini_spike_from_excitatory_spiker ? 1.0f : -1.0f); }
 
     /**
      * It computes (and returns) a spiker's potential at the position of this dock from the passed spiker's

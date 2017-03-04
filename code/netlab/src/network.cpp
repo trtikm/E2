@@ -8,6 +8,7 @@
 #include <array>
 #include <algorithm>
 #include <limits>
+#include <iterator>
 
 namespace netlab { namespace detail {
 
@@ -26,6 +27,24 @@ std::unique_ptr<extra_data_for_spikers_in_layers>  create_extra_data_for_spikers
 
 
 }}
+
+
+std::string const&  to_string(netlab::NETWORK_STATE const  state)
+{
+    static std::array<std::string, 8ULL>  texts{
+        "READY_FOR_CONSTRUCTION",                                       // 0U
+        "READY_FOR_MOVEMENT_AREA_CENTERS_INITIALISATION",               // 1U
+        "READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STARTUP",            // 2U
+        "READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP",               // 3U
+        "READY_FOR_COMPUTATION_OF_SHIP_DENSITIES_IN_LAYERS",            // 4U
+        "READY_FOR_LUNCHING_SHIPS_INTO_MOVEMENT_AREAS",                 // 5U
+        "READY_FOR_INITIALISATION_OF_MAP_FROM_DOCK_SECTORS_TO_SHIPS",   // 6U
+        "READY_FOR_SIMULATION_STEP",                                    // 7U
+    };
+    ASSUMPTION(static_cast<natural_8_bit>(state) < texts.size());
+    return texts.at(static_cast<natural_8_bit>(state));
+}
+
 
 namespace netlab {
 
@@ -47,6 +66,7 @@ network::network(std::shared_ptr<network_props> const  network_properties,
     , m_max_size_of_update_queue_of_ships(0ULL)
     , m_is_update_queue_of_ships_overloaded(true)
     , m_use_update_queue_of_ships(true)
+    , m_mini_spiking_random_generator()
 {
     TMPROF_BLOCK();
 
@@ -485,8 +505,8 @@ void  network::do_simulation_step(
 
 //    if (use_spiking || use_mini_spiking)
 //        update_spiking(!use_spiking,stats_of_tracked_spiker,stats_of_tracked_dock,stats_of_tracked_ship);
-//    if (use_mini_spiking)
-//        update_mini_spiking(stats_of_tracked_spiker,stats_of_tracked_dock,stats_of_tracked_ship);
+    if (use_mini_spiking)
+        update_mini_spiking(stats_of_tracked_object);
 
 //    TODO!:
 //    std::swap(m_current_spikers, m_next_spikers);
@@ -498,17 +518,6 @@ void  network::do_simulation_step(
 
 //void  network::update_spiking(
 //        const bool update_only_potential,
-//        tracked_spiker_stats* const  stats_of_tracked_spiker,
-//        tracked_dock_stats* const  stats_of_tracked_dock,
-//        tracked_ship_stats* const  stats_of_tracked_ship
-//        )
-//{
-//    TMPROF_BLOCK();
-
-//}
-
-
-//void  network::update_mini_spiking(
 //        tracked_spiker_stats* const  stats_of_tracked_spiker,
 //        tracked_dock_stats* const  stats_of_tracked_dock,
 //        tracked_ship_stats* const  stats_of_tracked_ship
@@ -832,21 +841,79 @@ void  network::update_movement_of_ship(
 }
 
 
+void  network::update_mini_spiking(
+        tracked_network_object_stats* const  stats_of_tracked_object
+        )
+{
+    TMPROF_BLOCK();
+
+    std::vector<natural_64_bit>  counts_of_ships{0ULL};
+    for (layer_index_type  layer_index = 0U; layer_index != properties()->layer_props().size(); ++layer_index)
+        counts_of_ships.push_back(counts_of_ships.back() + properties()->layer_props().at(layer_index).num_ships());
+
+    for (natural_64_bit i = 0ULL, n = properties()->num_mini_spikes_to_generate_per_simulation_step(); i != n; ++i)
+    {
+        natural_64_bit const  ship_super_index =
+                get_random_natural_64_bit_in_range(0ULL,properties()->num_ships() - 1ULL,m_mini_spiking_random_generator);
+
+        auto const  layer_it = std::upper_bound(counts_of_ships.cbegin(),counts_of_ships.cend(),ship_super_index);
+        INVARIANT(layer_it != counts_of_ships.cbegin() && layer_it != counts_of_ships.cend());
+        layer_index_type const  layer_index =
+            (layer_index_type)std::distance(counts_of_ships.cbegin(),layer_it) - 1U;
+        INVARIANT(layer_index < properties()->layer_props().size());
+        object_index_type const  ship_index = ship_super_index - counts_of_ships.at(layer_index);
+        INVARIANT(ship_index < properties()->layer_props().at(layer_index).num_ships());
+
+        ship const&  ship = m_ships.at(layer_index)->at(ship_index);
+
+        layer_index_type const  area_layer_index = properties()->find_layer_index(ship.position()(2));
+        network_layer_props const&  area_layer_props = properties()->layer_props().at(area_layer_index);
+        sector_coordinate_type  dock_x,dock_y,dock_c;
+        area_layer_props.dock_sector_coordinates(ship.position(),dock_x,dock_y,dock_c);
+        vector3 const  nearest_dock_pos = area_layer_props.dock_sector_centre(dock_x,dock_y,dock_c);
+
+        if (length_squared(nearest_dock_pos - ship.position()) <=
+                properties()->max_connection_distance_in_meters() * properties()->max_connection_distance_in_meters())
+        {
+            sector_coordinate_type  spiker_x,spiker_y,spiker_c;
+            if (are_docks_allocated(area_layer_index))
+                area_layer_props.spiker_sector_coordinates_from_dock_sector_coordinates(dock_x,dock_y,dock_c,spiker_x,spiker_y,spiker_c);
+            else
+                area_layer_props.spiker_sector_coordinates(nearest_dock_pos,spiker_x,spiker_y,spiker_c);
+
+            object_index_type const  spiker_index = area_layer_props.spiker_sector_index(spiker_x,spiker_y,spiker_c);
+            vector3 const  spiker_pos = area_layer_props.spiker_sector_centre(spiker_x,spiker_y,spiker_c);
+            spiker&  spiker = m_spikers.at(area_layer_index)->at(spiker_index);
+
+            float_32_bit  mini_potential_on_spiker;
+            if (are_docks_allocated(area_layer_index))
+            {
+                object_index_type const  dock_index = area_layer_props.dock_sector_index(dock_x,dock_y,dock_c);
+                dock const&  dock = get_dock(area_layer_index,dock_index);
+                mini_potential_on_spiker =
+                        dock.on_arrival_of_mini_spiking_potential(
+                                properties()->layer_props().at(layer_index).are_spikers_excitatory(),
+                                spiker_pos,
+                                nearest_dock_pos,
+                                area_layer_index,
+                                *properties()
+                                );
+            }
+            else
+                mini_potential_on_spiker =
+                        properties()->mini_spiking_potential_magnitude() *
+                            (properties()->layer_props().at(layer_index).are_spikers_excitatory() ? 1.0f : -1.0f);
+
+            bool const  did_mini_spike_cause_spike_generation =
+                    spiker.on_arrival_of_postsynaptic_potential(mini_potential_on_spiker,area_layer_index,*properties());
+
+            if (did_mini_spike_cause_spike_generation)
+            {
+                // TODO: add the spiker into the spiking queue! 
+            }
+        }
+    }
 }
 
 
-std::string const&  to_string(netlab::NETWORK_STATE const  state)
-{
-    static std::array<std::string, 8ULL>  texts{
-        "READY_FOR_CONSTRUCTION",                                       // 0U
-        "READY_FOR_MOVEMENT_AREA_CENTERS_INITIALISATION",               // 1U
-        "READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STARTUP",            // 2U
-        "READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP",               // 3U
-        "READY_FOR_COMPUTATION_OF_SHIP_DENSITIES_IN_LAYERS",            // 4U
-        "READY_FOR_LUNCHING_SHIPS_INTO_MOVEMENT_AREAS",                 // 5U
-        "READY_FOR_INITIALISATION_OF_MAP_FROM_DOCK_SECTORS_TO_SHIPS",   // 6U
-        "READY_FOR_SIMULATION_STEP",                                    // 7U
-    };
-    ASSUMPTION(static_cast<natural_8_bit>(state) < texts.size());
-    return texts.at(static_cast<natural_8_bit>(state));
 }
