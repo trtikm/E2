@@ -9,6 +9,7 @@
 
 //The classic Minimum Standard rand0 of Lewis, Goodman, and Miller.
 using  random_generator_for_natural_32_bit = std::linear_congruential_engine<natural_32_bit, 16807UL, 0UL, 2147483647UL>;
+using  random_generator_for_natural_64_bit = std::linear_congruential_engine<natural_64_bit, 16807UL, 0UL, 2147483647UL>;
 
 // An alternative LCR (Lehmer Generator function).
 //typedef std::linear_congruential_engine<natural_32_bit, 48271UL, 0UL, 2147483647UL> random_generator_for_natural_32_bit;
@@ -37,6 +38,16 @@ float_32_bit  get_random_float_32_bit_in_range(
 
 void  reset(random_generator_for_natural_32_bit&  generator,
             natural_32_bit const  seed = random_generator_for_natural_32_bit::default_seed);
+
+
+natural_64_bit  get_random_natural_64_bit_in_range(
+    natural_64_bit const  min_value,
+    natural_64_bit const  max_value,
+    random_generator_for_natural_64_bit&  generator
+    );
+
+void  reset(random_generator_for_natural_64_bit&  generator,
+            natural_64_bit const  seed = random_generator_for_natural_64_bit::default_seed);
 
 
 using  bar_random_distribution = std::vector<float_32_bit>;

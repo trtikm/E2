@@ -43,6 +43,23 @@ void  reset(random_generator_for_natural_32_bit&  generator, natural_32_bit cons
 }
 
 
+natural_64_bit  get_random_natural_64_bit_in_range(
+    natural_64_bit const  min_value,
+    natural_64_bit const  max_value,
+    random_generator_for_natural_64_bit&  generator
+    )
+{
+    ASSUMPTION(min_value <= max_value);
+    return std::uniform_int_distribution<natural_64_bit>(min_value,max_value)(generator);
+}
+
+
+void  reset(random_generator_for_natural_64_bit&  generator, natural_64_bit const  seed)
+{
+    generator.seed(seed);
+}
+
+
 bar_random_distribution  make_bar_random_distribution_from_count_bars(
         std::vector<natural_64_bit> const&  count_bars
         )
