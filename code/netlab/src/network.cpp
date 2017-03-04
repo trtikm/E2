@@ -67,6 +67,8 @@ network::network(std::shared_ptr<network_props> const  network_properties,
     , m_is_update_queue_of_ships_overloaded(true)
     , m_use_update_queue_of_ships(true)
     , m_mini_spiking_random_generator()
+    , m_current_spikers(std::make_unique< std::unordered_set<compressed_layer_and_object_indices> >())
+    , m_next_spikers(std::make_unique< std::unordered_set<compressed_layer_and_object_indices> >())
 {
     TMPROF_BLOCK();
 
@@ -503,29 +505,12 @@ void  network::do_simulation_step(
     if (use_movement_of_ships)
         update_movement_of_ships(dynamic_cast<tracked_ship_stats*>(stats_of_tracked_object));
 
-//    if (use_spiking || use_mini_spiking)
-//        update_spiking(!use_spiking,stats_of_tracked_spiker,stats_of_tracked_dock,stats_of_tracked_ship);
     if (use_mini_spiking)
-        update_mini_spiking(stats_of_tracked_object);
+        update_mini_spiking(use_spiking,stats_of_tracked_object);
 
-//    TODO!:
-//    std::swap(m_current_spikers, m_next_spikers);
-//    m_next_spikers->clear();
-
-
+    if (use_spiking)
+        update_spiking(stats_of_tracked_object);
 }
-
-
-//void  network::update_spiking(
-//        const bool update_only_potential,
-//        tracked_spiker_stats* const  stats_of_tracked_spiker,
-//        tracked_dock_stats* const  stats_of_tracked_dock,
-//        tracked_ship_stats* const  stats_of_tracked_ship
-//        )
-//{
-//    TMPROF_BLOCK();
-
-//}
 
 
 void  network::update_movement_of_ships(tracked_ship_stats* const  stats_of_tracked_ship)
@@ -842,6 +827,7 @@ void  network::update_movement_of_ship(
 
 
 void  network::update_mini_spiking(
+        const bool  use_spiking,
         tracked_network_object_stats* const  stats_of_tracked_object
         )
 {
@@ -904,15 +890,42 @@ void  network::update_mini_spiking(
                         properties()->mini_spiking_potential_magnitude() *
                             (properties()->layer_props().at(layer_index).are_spikers_excitatory() ? 1.0f : -1.0f);
 
+            spiker.update_spiking_potential(m_update_id,area_layer_index,*properties());
+
             bool const  did_mini_spike_cause_spike_generation =
                     spiker.on_arrival_of_postsynaptic_potential(mini_potential_on_spiker,area_layer_index,*properties());
 
-            if (did_mini_spike_cause_spike_generation)
-            {
-                // TODO: add the spiker into the spiking queue! 
-            }
+            if (use_spiking)
+                if (did_mini_spike_cause_spike_generation)
+                    m_next_spikers->insert({area_layer_index,spiker_index});
+                else
+                    m_next_spikers->erase({area_layer_index,spiker_index});
         }
     }
+}
+
+
+void  network::update_spiking(
+        tracked_network_object_stats* const  stats_of_tracked_object
+        )
+{
+    TMPROF_BLOCK();
+
+    for (auto const spiker_id : *m_current_spikers)
+    {
+        layer_index_type const  spiker_layer_index = spiker_id.layer_index();
+        object_index_type const  spiker_index = spiker_id.object_index();
+
+        network_layer_props const&  spiker_layer_props = properties()->layer_props().at(spiker_layer_index);
+
+        object_index_type const  ships_begin_index = spiker_layer_props.ships_begin_index_of_spiker(spiker_index);
+        for (natural_32_bit  i = 0U; i != spiker_layer_props.num_ships_per_spiker(); ++i)
+        {
+        }
+    }
+
+    std::swap(m_current_spikers, m_next_spikers);
+    m_next_spikers->clear();
 }
 
 

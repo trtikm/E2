@@ -19,6 +19,7 @@
 #   include <memory>
 #   include <string>
 #   include <deque>
+#   include <unordered_set>
 
 namespace netlab {
 
@@ -111,13 +112,6 @@ struct  network
 
 private:
 
-//    void  update_spiking(
-//            bool const  update_only_potential,
-//            tracked_spiker_stats* const  stats_of_tracked_spiker,
-//            tracked_dock_stats* const  stats_of_tracked_dock,
-//            tracked_ship_stats* const  stats_of_tracked_ship
-//            );
-
     void  update_movement_of_ships(tracked_ship_stats* const  stats_of_tracked_ship);
     void  update_movement_of_ship(
             layer_index_type const  layer_index,
@@ -126,6 +120,11 @@ private:
             );
 
     void  update_mini_spiking(
+            const bool  use_spiking,
+            tracked_network_object_stats* const  stats_of_tracked_object
+            );
+
+    void  update_spiking(
             tracked_network_object_stats* const  stats_of_tracked_object
             );
 
@@ -152,9 +151,8 @@ private:
 
     random_generator_for_natural_64_bit  m_mini_spiking_random_generator;
 
-//    TODO!:
-//    std::unique_ptr< std::unordered_set<cell*> >  m_current_spikers;
-//    std::unique_ptr< std::unordered_set<cell*> >  m_next_spikers;
+    std::unique_ptr< std::unordered_set<compressed_layer_and_object_indices> >  m_current_spikers;
+    std::unique_ptr< std::unordered_set<compressed_layer_and_object_indices> >  m_next_spikers;
 };
 
 
