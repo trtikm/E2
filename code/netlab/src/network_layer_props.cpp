@@ -296,7 +296,7 @@ object_index_type  network_layer_props::ships_begin_index_of_spiker(object_index
 
 
 void  network_layer_props::spiker_sector_coordinates_from_dock_sector_coordinates(
-        sector_coordinate_type const&  dock_x, sector_coordinate_type const&  dock_y, sector_coordinate_type const&  dock_c,
+        sector_coordinate_type const  dock_x, sector_coordinate_type const  dock_y, sector_coordinate_type const  dock_c,
         sector_coordinate_type&  x, sector_coordinate_type&  y, sector_coordinate_type&  c
         ) const
 {
@@ -307,7 +307,7 @@ void  network_layer_props::spiker_sector_coordinates_from_dock_sector_coordinate
 
 
 void  network_layer_props::dock_low_sector_coordinates_from_spiker_sector_coordinates(
-        sector_coordinate_type const&  x, sector_coordinate_type const&  y, sector_coordinate_type const&  c,
+        sector_coordinate_type const  x, sector_coordinate_type const  y, sector_coordinate_type const  c,
         sector_coordinate_type&  dock_x, sector_coordinate_type&  dock_y, sector_coordinate_type&  dock_c
         ) const
 {
