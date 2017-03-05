@@ -921,6 +921,81 @@ void  network::update_spiking(
         object_index_type const  ships_begin_index = spiker_layer_props.ships_begin_index_of_spiker(spiker_index);
         for (natural_32_bit  i = 0U; i != spiker_layer_props.num_ships_per_spiker(); ++i)
         {
+            ship&  ship_ref = m_ships.at(spiker_layer_index)->at(ships_begin_index + i);
+
+            layer_index_type const  area_layer_index = properties()->find_layer_index(ship_ref.position()(2));
+            network_layer_props const&  area_layer_props = properties()->layer_props().at(area_layer_index);
+
+            sector_coordinate_type  dock_x,dock_y,dock_c;
+            area_layer_props.dock_sector_coordinates(ship_ref.position(),dock_x,dock_y,dock_c);
+            vector3 const  dock_position = area_layer_props.dock_sector_centre(dock_x,dock_y,dock_c);
+
+            if (length_squared(dock_position - ship_ref.position()) <=
+                    properties()->max_connection_distance_in_meters() * properties()->max_connection_distance_in_meters())
+            {
+                sector_coordinate_type  target_spiker_x,target_spiker_y,target_spiker_c;
+                area_layer_props.spiker_sector_coordinates_from_dock_sector_coordinates(
+                        dock_x,dock_y,dock_c,
+                        target_spiker_x,target_spiker_y,target_spiker_c
+                        );
+                vector3 const  target_spiker_position = area_layer_props.spiker_sector_centre(
+                        target_spiker_x,target_spiker_y,target_spiker_c
+                        );
+                object_index_type const  target_spiker_index =
+                        area_layer_props.spiker_sector_index(target_spiker_x,target_spiker_y,target_spiker_c);
+
+                spiker&  target_spiker_ref = m_spikers.at(area_layer_index)->at(target_spiker_index);
+
+                if (are_docks_allocated(area_layer_index))
+                {
+                    object_index_type const  dock_index = area_layer_props.dock_sector_index(dock_x,dock_y,dock_c);
+
+                    dock&  dock_ref = m_docks.at(area_layer_index)->at(dock_index);
+
+                    float_32_bit const  potential_of_the_target_spiker_at_dock =
+                            dock_ref.compute_potential_of_spiker_at_dock(
+                                    target_spiker_ref.get_potential(),
+                                    target_spiker_position,
+                                    dock_position,
+                                    area_layer_index,
+                                    *properties()
+                                    );
+
+                    float_32_bit const  potential_delta_at_dock =
+                            ship_ref.on_arrival_of_presynaptic_potential(
+                                    potential_of_the_target_spiker_at_dock,
+                                    spiker_layer_index,    
+                                    area_layer_index,
+                                    *properties()
+                                    );
+
+                    float_32_bit const  potential_delta_at_target_spiker =
+                            dock_ref.on_arrival_of_postsynaptic_potential(
+                                    potential_delta_at_dock,
+                                    target_spiker_position,
+                                    dock_position,
+                                    area_layer_index,
+                                    spiker_layer_index,
+                                    *properties()
+                                    );
+
+                    bool const  does_posynaptic_potential_causes_generation_of_spike =
+                            target_spiker_ref.on_arrival_of_postsynaptic_potential(
+                                    potential_delta_at_target_spiker,
+                                    area_layer_index,
+                                    *properties()
+                                    );
+
+                    if (does_posynaptic_potential_causes_generation_of_spike)
+                        m_next_spikers->insert({area_layer_index,target_spiker_index});
+                    else
+                        m_next_spikers->erase({area_layer_index,target_spiker_index});
+                }
+                else
+                {
+                    NOT_IMPLEMENTED_YET();
+                }
+            }
         }
 
         object_index_type const  docks_begin_index = spiker_layer_props.docks_begin_index_of_spiker(spiker_index);
