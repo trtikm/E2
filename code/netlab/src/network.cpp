@@ -848,11 +848,14 @@ void  network::update_mini_spiking(
             (layer_index_type)std::distance(counts_of_ships.cbegin(),layer_it) - 1U;
         INVARIANT(layer_index < properties()->layer_props().size());
         object_index_type const  ship_index = ship_super_index - counts_of_ships.at(layer_index);
-        INVARIANT(ship_index < properties()->layer_props().at(layer_index).num_ships());
+        network_layer_props const&  ship_layer_props = properties()->layer_props().at(layer_index);
+        INVARIANT(ship_index < ship_layer_props.num_ships());
 
         ship const&  ship = m_ships.at(layer_index)->at(ship_index);
 
-        layer_index_type const  area_layer_index = properties()->find_layer_index(ship.position()(2));
+        layer_index_type const  area_layer_index = properties()->find_layer_index(
+            m_movement_area_centers.at(layer_index).at(ship_layer_props.spiker_index_from_ship_index(ship_index))(2)
+            );
         network_layer_props const&  area_layer_props = properties()->layer_props().at(area_layer_index);
         sector_coordinate_type  dock_x,dock_y,dock_c;
         area_layer_props.dock_sector_coordinates(ship.position(),dock_x,dock_y,dock_c);
@@ -918,13 +921,15 @@ void  network::update_spiking(
 
         network_layer_props const&  spiker_layer_props = properties()->layer_props().at(spiker_layer_index);
 
+        layer_index_type const  area_layer_index = properties()->find_layer_index(
+                m_movement_area_centers.at(spiker_layer_index).at(spiker_index)(2)
+                );
+        network_layer_props const&  area_layer_props = properties()->layer_props().at(area_layer_index);
+
         object_index_type const  ships_begin_index = spiker_layer_props.ships_begin_index_of_spiker(spiker_index);
         for (natural_32_bit  i = 0U; i != spiker_layer_props.num_ships_per_spiker(); ++i)
         {
             ship&  ship_ref = m_ships.at(spiker_layer_index)->at(ships_begin_index + i);
-
-            layer_index_type const  area_layer_index = properties()->find_layer_index(ship_ref.position()(2));
-            network_layer_props const&  area_layer_props = properties()->layer_props().at(area_layer_index);
 
             sector_coordinate_type  dock_x,dock_y,dock_c;
             area_layer_props.dock_sector_coordinates(ship_ref.position(),dock_x,dock_y,dock_c);
@@ -1001,6 +1006,41 @@ void  network::update_spiking(
         object_index_type const  docks_begin_index = spiker_layer_props.docks_begin_index_of_spiker(spiker_index);
         for (natural_32_bit  i = 0U; i != spiker_layer_props.num_ships_per_spiker(); ++i)
         {
+            sector_coordinate_type  dock_x,dock_y,dock_c;
+            spiker_layer_props.dock_sector_coordinates(docks_begin_index + i,dock_x,dock_y,dock_c);
+            vector3 const  dock_position = spiker_layer_props.dock_sector_centre(dock_x,dock_y,dock_c);
+
+            for (compressed_layer_and_object_indices const  ship_idx : m_ships_in_sectors.at(spiker_layer_index).at(docks_begin_index + i))
+            {
+                ship&  ship_ref = m_ships.at(ship_idx.layer_index())->at(ship_idx.object_index());
+                if (length_squared(dock_position - ship_ref.position()) >
+                        properties()->max_connection_distance_in_meters() * properties()->max_connection_distance_in_meters())
+                    continue;
+
+                if (are_docks_allocated(spiker_layer_index))
+                {
+                    dock&  dock_ref = m_docks.at(spiker_layer_index)->at(docks_begin_index + i);
+
+                    float_32_bit const  potential_delta_for_connected_ship =
+                            dock_ref.on_arrival_of_presynaptic_potential(
+                                    m_spikers.at(spiker_layer_index)->at(spiker_index).get_potential(),
+                                    spiker_layer_index,
+                                    ship_idx.layer_index(),
+                                    *properties()
+                                    );
+
+                    ship_ref.on_arrival_of_postsynaptic_potential(
+                            potential_delta_for_connected_ship,
+                            ship_idx.layer_index(),
+                            spiker_layer_index,
+                            *properties()
+                            );
+                }
+                else
+                {
+                    NOT_IMPLEMENTED_YET();
+                }
+            }
         }
     }
 

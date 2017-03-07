@@ -97,7 +97,7 @@ struct  dock
     virtual std::ostream&  get_info_text(std::ostream&  ostr, std::string const&  shift = "") const { return ostr; }
 
     /**
-     * It is called by the network whenewer a ship connected to this dock (if there is any) releases the
+     * It is called by the network whenewer a ship connected to this dock releases the
      * neuro-transmitter into the synaptic cleft between this dock and the ship. The function is supposed
      * to update its connection weight with the connected ship and to compute (return) a change of potential
      * which will arrive from the dock to the spiker (owning the dock).
@@ -121,9 +121,11 @@ struct  dock
     { return potential_delta; }
 
     /**
-     * It updates the connetion weight of the dock with the ship it is connected to. Then it computes
-     * a change of potential transferable to the connected ship through the synaptic claft. This potential
-     * change is returned.
+     * First it computes what ammout of the passed potential of the spiker (owning this dock) arrives
+     * from the soma of the spiker to this dock. Then it uses the computed potential for an update of
+     * the connetion weight of the dock with the connected ship. Next, based on the computed potential
+     * it computes a change of potential transferable to the connected ship through the synaptic claft.
+     * This potential change is returned.
      *
      * @return A change of potential transferable to the connected ship through the synaptic claft. The
      *         change is always non negative, no matter whether the spiker is excitatoty or inhibitory.
