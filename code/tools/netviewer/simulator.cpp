@@ -1677,8 +1677,7 @@ std::string  simulator::get_selected_info_text() const
 
             vector3 const  dock_pos = area_layer_props.dock_sector_centre(dock_x,dock_y,dock_c);
 
-            if (length_squared(dock_pos - ship_pos) <= props.max_connection_distance_in_meters() *
-                                                       props.max_connection_distance_in_meters() )
+            if (netlab::are_ship_and_dock_connected(ship_pos,dock_pos,props.max_connection_distance_in_meters()))
                 ++num_connected_ships;
         }
 
@@ -1698,8 +1697,7 @@ std::string  simulator::get_selected_info_text() const
                                                                                                       dock_low_c+k)))
                     {
                         vector3 const&  ship_pos = network()->get_ship(indices.layer_index(),indices.object_index()).position();
-                        if (length_squared(dock_pos - ship_pos) <= props.max_connection_distance_in_meters() *
-                                                                   props.max_connection_distance_in_meters() )
+                        if (netlab::are_ship_and_dock_connected(ship_pos,dock_pos,props.max_connection_distance_in_meters()))
                             ++num_connected_docks;
                     }
                 }
@@ -1750,8 +1748,7 @@ std::string  simulator::get_selected_info_text() const
                                                                             layer_props.dock_sector_index(x,y,c)))
         {
             vector3 const&  ship_pos = network()->get_ship(indices.layer_index(),indices.object_index()).position();
-            if (length_squared(sector_center - ship_pos) <= props.max_connection_distance_in_meters() *
-                                                            props.max_connection_distance_in_meters() )
+            if (netlab::are_ship_and_dock_connected(ship_pos,sector_center,props.max_connection_distance_in_meters()))
                 is_connected = true;
             vector3 const&  ship_velocity = network()->get_ship(indices.layer_index(),indices.object_index()).velocity();
             if (layer_props.ship_controller_ptr()->is_ship_docked(ship_pos,ship_velocity,ptr->indices().layer_index(),props))
@@ -1809,8 +1806,8 @@ std::string  simulator::get_selected_info_text() const
                                                                area_layer_props.dock_sector_index(dock_x,dock_y,dock_c)
                                                                ).size();
 
-        bool const  is_connected = (length_squared(dock_pos - ship_pos) <= props.max_connection_distance_in_meters() *
-                                                                           props.max_connection_distance_in_meters() );
+            
+        bool const  is_connected = netlab::are_ship_and_dock_connected(ship_pos,dock_pos,props.max_connection_distance_in_meters());
         bool const  is_docked = area_layer_props.ship_controller_ptr()->is_ship_docked(ship_pos,ship_velocity,area_layer_index,props);
 
         ptr->get_info_text(ostr);
