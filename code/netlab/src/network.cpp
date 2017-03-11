@@ -87,7 +87,7 @@ network::network(std::shared_ptr<network_props> const  network_properties,
         ASSUMPTION(m_spikers.back()->size() == layer_props.num_spikers());
 
         m_docks.push_back(objects_factory->create_array_of_docks(layer_index, layer_props.num_docks()));
-        ASSUMPTION(m_docks.back()->empty() || m_docks.back()->size() == layer_props.num_docks());
+        ASSUMPTION(m_docks.back()->size() == 1ULL || m_docks.back()->size() == layer_props.num_docks());
 
         m_ships.push_back(objects_factory->create_array_of_ships(layer_index, layer_props.num_ships()));
         ASSUMPTION(m_ships.back()->size() == layer_props.num_ships());
@@ -439,11 +439,23 @@ spiker const&  network::get_spiker(layer_index_type const  layer_index, object_i
 }
 
 
+bool  network::are_docks_allocated(layer_index_type const  layer_index) const
+{
+    return m_docks.at(layer_index)->size() == properties()->layer_props().at(layer_index).num_docks();
+}
+
+
 dock const&  network::get_dock(layer_index_type const  layer_index, object_index_type const  object_index) const
 {
     ASSUMPTION(layer_index < properties()->layer_props().size());
-    ASSUMPTION(object_index < m_docks.at(layer_index)->size());
-    return m_docks.at(layer_index)->at(object_index);
+    ASSUMPTION(object_index < properties()->layer_props().at(layer_index).num_docks());
+    return m_docks.at(layer_index)->at(std::min(object_index,m_docks.at(layer_index)->size() - 1ULL));
+}
+
+
+dock&  network::get_dock_ref(layer_index_type const  layer_index, object_index_type const  object_index)
+{
+    return m_docks.at(layer_index)->at(std::min(object_index,m_docks.at(layer_index)->size() - 1ULL));
 }
 
 
@@ -861,37 +873,25 @@ void  network::update_mini_spiking(
         area_layer_props.dock_sector_coordinates(ship.position(),dock_x,dock_y,dock_c);
         vector3 const  nearest_dock_pos = area_layer_props.dock_sector_centre(dock_x,dock_y,dock_c);
 
-        if (length_squared(nearest_dock_pos - ship.position()) <=
-                properties()->max_connection_distance_in_meters() * properties()->max_connection_distance_in_meters())
+        if (are_ship_and_dock_connected(ship.position(),nearest_dock_pos,properties()->max_connection_distance_in_meters()))
         {
             sector_coordinate_type  spiker_x,spiker_y,spiker_c;
-            if (are_docks_allocated(area_layer_index))
-                area_layer_props.spiker_sector_coordinates_from_dock_sector_coordinates(dock_x,dock_y,dock_c,spiker_x,spiker_y,spiker_c);
-            else
-                area_layer_props.spiker_sector_coordinates(nearest_dock_pos,spiker_x,spiker_y,spiker_c);
+            area_layer_props.spiker_sector_coordinates_from_dock_sector_coordinates(dock_x,dock_y,dock_c,spiker_x,spiker_y,spiker_c);
 
             object_index_type const  spiker_index = area_layer_props.spiker_sector_index(spiker_x,spiker_y,spiker_c);
             vector3 const  spiker_pos = area_layer_props.spiker_sector_centre(spiker_x,spiker_y,spiker_c);
             spiker&  spiker = m_spikers.at(area_layer_index)->at(spiker_index);
 
-            float_32_bit  mini_potential_on_spiker;
-            if (are_docks_allocated(area_layer_index))
-            {
-                object_index_type const  dock_index = area_layer_props.dock_sector_index(dock_x,dock_y,dock_c);
-                dock const&  dock = get_dock(area_layer_index,dock_index);
-                mini_potential_on_spiker =
-                        dock.on_arrival_of_mini_spiking_potential(
-                                properties()->layer_props().at(layer_index).are_spikers_excitatory(),
-                                spiker_pos,
-                                nearest_dock_pos,
-                                area_layer_index,
-                                *properties()
-                                );
-            }
-            else
-                mini_potential_on_spiker =
-                        properties()->mini_spiking_potential_magnitude() *
-                            (properties()->layer_props().at(layer_index).are_spikers_excitatory() ? 1.0f : -1.0f);
+            object_index_type const  dock_index = area_layer_props.dock_sector_index(dock_x,dock_y,dock_c);
+            dock const&  dock = get_dock_ref(area_layer_index,dock_index);
+            float_32_bit const  mini_potential_on_spiker =
+                    dock.on_arrival_of_mini_spiking_potential(
+                            properties()->layer_props().at(layer_index).are_spikers_excitatory(),
+                            spiker_pos,
+                            nearest_dock_pos,
+                            area_layer_index,
+                            *properties()
+                            );
 
             spiker.update_spiking_potential(m_update_id,area_layer_index,*properties());
 
@@ -935,8 +935,7 @@ void  network::update_spiking(
             area_layer_props.dock_sector_coordinates(ship_ref.position(),dock_x,dock_y,dock_c);
             vector3 const  dock_position = area_layer_props.dock_sector_centre(dock_x,dock_y,dock_c);
 
-            if (length_squared(dock_position - ship_ref.position()) <=
-                    properties()->max_connection_distance_in_meters() * properties()->max_connection_distance_in_meters())
+            if (are_ship_and_dock_connected(ship_ref.position(),dock_position,properties()->max_connection_distance_in_meters()))
             {
                 sector_coordinate_type  target_spiker_x,target_spiker_y,target_spiker_c;
                 area_layer_props.spiker_sector_coordinates_from_dock_sector_coordinates(
@@ -951,55 +950,48 @@ void  network::update_spiking(
 
                 spiker&  target_spiker_ref = m_spikers.at(area_layer_index)->at(target_spiker_index);
 
-                if (are_docks_allocated(area_layer_index))
-                {
-                    object_index_type const  dock_index = area_layer_props.dock_sector_index(dock_x,dock_y,dock_c);
+                object_index_type const  dock_index = area_layer_props.dock_sector_index(dock_x,dock_y,dock_c);
 
-                    dock&  dock_ref = m_docks.at(area_layer_index)->at(dock_index);
+                dock&  dock_ref = get_dock_ref(area_layer_index,dock_index);
 
-                    float_32_bit const  potential_of_the_target_spiker_at_dock =
-                            dock_ref.compute_potential_of_spiker_at_dock(
-                                    target_spiker_ref.get_potential(),
-                                    target_spiker_position,
-                                    dock_position,
-                                    area_layer_index,
-                                    *properties()
-                                    );
+                float_32_bit const  potential_of_the_target_spiker_at_dock =
+                        dock_ref.compute_potential_of_spiker_at_dock(
+                                target_spiker_ref.get_potential(),
+                                target_spiker_position,
+                                dock_position,
+                                area_layer_index,
+                                *properties()
+                                );
 
-                    float_32_bit const  potential_delta_at_dock =
-                            ship_ref.on_arrival_of_presynaptic_potential(
-                                    potential_of_the_target_spiker_at_dock,
-                                    spiker_layer_index,    
-                                    area_layer_index,
-                                    *properties()
-                                    );
+                float_32_bit const  potential_delta_at_dock =
+                        ship_ref.on_arrival_of_presynaptic_potential(
+                                potential_of_the_target_spiker_at_dock,
+                                spiker_layer_index,
+                                area_layer_index,
+                                *properties()
+                                );
 
-                    float_32_bit const  potential_delta_at_target_spiker =
-                            dock_ref.on_arrival_of_postsynaptic_potential(
-                                    potential_delta_at_dock,
-                                    target_spiker_position,
-                                    dock_position,
-                                    area_layer_index,
-                                    spiker_layer_index,
-                                    *properties()
-                                    );
+                float_32_bit const  potential_delta_at_target_spiker =
+                        dock_ref.on_arrival_of_postsynaptic_potential(
+                                potential_delta_at_dock,
+                                target_spiker_position,
+                                dock_position,
+                                area_layer_index,
+                                spiker_layer_index,
+                                *properties()
+                                );
 
-                    bool const  does_posynaptic_potential_causes_generation_of_spike =
-                            target_spiker_ref.on_arrival_of_postsynaptic_potential(
-                                    potential_delta_at_target_spiker,
-                                    area_layer_index,
-                                    *properties()
-                                    );
+                bool const  does_posynaptic_potential_causes_generation_of_spike =
+                        target_spiker_ref.on_arrival_of_postsynaptic_potential(
+                                potential_delta_at_target_spiker,
+                                area_layer_index,
+                                *properties()
+                                );
 
-                    if (does_posynaptic_potential_causes_generation_of_spike)
-                        m_next_spikers->insert({area_layer_index,target_spiker_index});
-                    else
-                        m_next_spikers->erase({area_layer_index,target_spiker_index});
-                }
+                if (does_posynaptic_potential_causes_generation_of_spike)
+                    m_next_spikers->insert({area_layer_index,target_spiker_index});
                 else
-                {
-                    NOT_IMPLEMENTED_YET();
-                }
+                    m_next_spikers->erase({area_layer_index,target_spiker_index});
             }
         }
 
@@ -1013,33 +1005,25 @@ void  network::update_spiking(
             for (compressed_layer_and_object_indices const  ship_idx : m_ships_in_sectors.at(spiker_layer_index).at(docks_begin_index + i))
             {
                 ship&  ship_ref = m_ships.at(ship_idx.layer_index())->at(ship_idx.object_index());
-                if (length_squared(dock_position - ship_ref.position()) >
-                        properties()->max_connection_distance_in_meters() * properties()->max_connection_distance_in_meters())
+                if (!are_ship_and_dock_connected(ship_ref.position(),dock_position,properties()->max_connection_distance_in_meters()))
                     continue;
 
-                if (are_docks_allocated(spiker_layer_index))
-                {
-                    dock&  dock_ref = m_docks.at(spiker_layer_index)->at(docks_begin_index + i);
+                dock&  dock_ref = get_dock_ref(spiker_layer_index,docks_begin_index + i);
 
-                    float_32_bit const  potential_delta_for_connected_ship =
-                            dock_ref.on_arrival_of_presynaptic_potential(
-                                    m_spikers.at(spiker_layer_index)->at(spiker_index).get_potential(),
-                                    spiker_layer_index,
-                                    ship_idx.layer_index(),
-                                    *properties()
-                                    );
+                float_32_bit const  potential_delta_for_connected_ship =
+                        dock_ref.on_arrival_of_presynaptic_potential(
+                                m_spikers.at(spiker_layer_index)->at(spiker_index).get_potential(),
+                                spiker_layer_index,
+                                ship_idx.layer_index(),
+                                *properties()
+                                );
 
-                    ship_ref.on_arrival_of_postsynaptic_potential(
-                            potential_delta_for_connected_ship,
-                            ship_idx.layer_index(),
-                            spiker_layer_index,
-                            *properties()
-                            );
-                }
-                else
-                {
-                    NOT_IMPLEMENTED_YET();
-                }
+                ship_ref.on_arrival_of_postsynaptic_potential(
+                        potential_delta_for_connected_ship,
+                        ship_idx.layer_index(),
+                        spiker_layer_index,
+                        *properties()
+                        );
             }
         }
     }

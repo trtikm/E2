@@ -20,7 +20,7 @@ std::unique_ptr< array_of_derived<dock> >  network_objects_factory::create_array
 {
     (void)layer_index;
     (void)num_docks;
-    return make_array_of_derived<dock,dock>(0UL);
+    return make_array_of_derived<dock,dock>(1UL);
 }
 
 std::unique_ptr< array_of_derived<ship> >  network_objects_factory::create_array_of_ships(

@@ -63,7 +63,7 @@ struct  network
 
     spiker const&  get_spiker(layer_index_type const  layer_index, object_index_type const  object_index) const;
 
-    bool  are_docks_allocated(layer_index_type const  layer_index) const { return !m_docks.at(layer_index)->empty(); }
+    bool  are_docks_allocated(layer_index_type const  layer_index) const;
     dock const&  get_dock(layer_index_type const  layer_index, object_index_type const  object_index) const;
 
     ship const&  get_ship(layer_index_type const  layer_index, object_index_type const  object_index) const;
@@ -111,6 +111,8 @@ struct  network
             );
 
 private:
+
+    dock&  get_dock_ref(layer_index_type const  layer_index, object_index_type const  object_index);
 
     void  update_movement_of_ships(tracked_ship_stats* const  stats_of_tracked_ship);
     void  update_movement_of_ship(

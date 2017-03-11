@@ -65,9 +65,7 @@ void  ship_controller::on_too_slow(
         network_props const&  props
         ) const
 {
-    vector3 const  dock_ship_delta_vector = nearest_dock_position - ship_position;
-    if (length_squared(dock_ship_delta_vector) > props.max_connection_distance_in_meters() *
-                                                 props.max_connection_distance_in_meters())
+    if (!are_ship_and_dock_connected(ship_position,nearest_dock_position,props.max_connection_distance_in_meters()))
         angeo::get_random_vector_of_magnitude(
                 0.5f * (props.layer_props().at(home_layer_index).min_speed_of_ship_in_meters_per_second(area_layer_index) +
                         props.layer_props().at(home_layer_index).max_speed_of_ship_in_meters_per_second(area_layer_index)),

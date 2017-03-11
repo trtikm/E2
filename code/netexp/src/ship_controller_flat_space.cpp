@@ -24,7 +24,9 @@ ship_controller_flat_space::ship_controller_flat_space(
     , m_num_time_steps_to_stop_ship(num_time_steps_to_stop_ship)
     , m_max_acceleration_from_other_ship(max_acceleration_from_other_ship)
     , m_max_avoidance_distance_from_other_ship(max_avoidance_distance_from_other_ship)
-{}
+{
+    ASSUMPTION(m_num_time_steps_to_stop_ship >= 1U);
+}
 
 
 vector3  ship_controller_flat_space::accelerate_into_dock(
@@ -38,22 +40,16 @@ vector3  ship_controller_flat_space::accelerate_into_dock(
 {
     TMPROF_BLOCK();
 
-    vector3 const  doc_ship_positions_delta = dock_position - ship_position;
-    float_32_bit const  distance_to_dock = length(doc_ship_positions_delta);
+    vector3 const  dock_ship_positions_delta = dock_position - ship_position;
+    float_32_bit const  distance_to_dock = length(dock_ship_positions_delta);
     vector3 const  accel_dir =
-            (distance_to_dock < 0.0001f) ? vector3_zero() : (1.0f / distance_to_dock) * doc_ship_positions_delta;
-    if (distance_to_dock < props.max_connection_distance_in_meters())
-    {
-        netlab::network_layer_props const&  layer_props = props.layer_props().at(home_layer_index);
-        float_32_bit const  scale = distance_to_dock / props.max_connection_distance_in_meters();
-        float_32_bit const  desired_speed = scale * layer_props.max_speed_of_ship_in_meters_per_second(area_layer_index);
-        vector3 const  velocity_delta = desired_speed * accel_dir - ship_velocity;
-        float_32_bit const  time_delta =
-            scale * static_cast<float_32_bit>(num_time_steps_to_stop_ship()) * props.update_time_step_in_seconds() + 0.001f;
-        return (1.0f / time_delta) * velocity_delta;
+            (distance_to_dock < 0.001f) ? vector3_zero() : (1.0f / distance_to_dock) * dock_ship_positions_delta;
+    if (distance_to_dock >= props.max_connection_distance_in_meters())
+        return acceleration_to_dock() * accel_dir;
 
-    }
-    return acceleration_to_dock() * accel_dir;
+    float_32_bit const  desired_speed = distance_to_dock / (num_time_steps_to_stop_ship() * props.update_time_step_in_seconds());
+
+    return (1.0f / props.update_time_step_in_seconds()) * (desired_speed * accel_dir - ship_velocity);
 }
 
 
@@ -71,6 +67,43 @@ vector3  ship_controller_flat_space::accelerate_from_ship(
 {
     TMPROF_BLOCK();
 
+    //vector3 const  ship_positions_delta = ship_position - other_ship_position;
+    //float_32_bit const  squared_distance_of_ships = length_squared(ship_positions_delta);
+
+    //if (squared_distance_of_ships > max_avoidance_distance_from_other_ship() * max_avoidance_distance_from_other_ship())
+    //    return vector3_zero();
+
+    //float_32_bit const  squared_distance_of_ship_to_dock = length_squared(nearest_dock_position - ship_position);
+    //float_32_bit const  squared_distance_of_other_ship_to_dock = length_squared(nearest_dock_position - ship_position);
+    //float_32_bit const  min_squared_distance_of_ships_to_dock =
+    //        std::min(squared_distance_of_ship_to_dock,squared_distance_of_other_ship_to_dock);
+    //float_32_bit const  squared_max_connection_distance =
+    //        props.max_connection_distance_in_meters() * props.max_connection_distance_in_meters();
+
+    //if (min_squared_distance_of_ships_to_dock <= squared_max_connection_distance &&
+    //    squared_distance_of_ship_to_dock < squared_distance_of_other_ship_to_dock)
+    //        return vector3_zero();
+
+    //if (squared_distance_of_ships < 1e-6f)
+    //{
+    //    vector3  acceleration;
+    //    angeo::get_random_vector_of_magnitude(max_acceleration_from_other_ship(), default_random_generator(), acceleration);
+    //    return acceleration;
+    //}
+
+    //float_32_bit const  distance_of_ships = std::sqrtf(squared_distance_of_ships);
+    //float_32_bit const  repulsion_scale =
+    //    exponential_increase_from_zero_to_one(1.0f - distance_of_ships / max_avoidance_distance_from_other_ship(), 1.0f, 1.0f);
+
+    //vector3  acceleration = ((repulsion_scale * max_acceleration_from_other_ship()) / distance_of_ships) * ship_positions_delta;
+
+    //if (!both_ship_and_dock_belongs_to_same_spiker && squared_distance_of_other_ship_to_dock <= squared_max_connection_distance)
+    //    acceleration += acceleration_to_dock() * normalised(ship_position - nearest_dock_position);
+
+    //return acceleration;
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     vector3 const  ship_positions_delta = ship_position - other_ship_position;
     float_32_bit const  squared_distance_of_ships = length_squared(ship_positions_delta);
 
@@ -87,14 +120,11 @@ vector3  ship_controller_flat_space::accelerate_from_ship(
         accel_mag = 0.0f;
     else
     {
-        float_32_bit const  squared_max_connection_distance =
-                props.max_connection_distance_in_meters() * props.max_connection_distance_in_meters();
-
-        if (length_squared(nearest_dock_position - other_ship_position) <= squared_max_connection_distance)
+        if (netlab::are_ship_and_dock_connected(other_ship_position,nearest_dock_position,props.max_connection_distance_in_meters()))
             accel_mag = acceleration_to_dock();
         else
         {
-            if (length_squared(nearest_dock_position - ship_position) <= squared_max_connection_distance)
+            if (netlab::are_ship_and_dock_connected(ship_position,nearest_dock_position,props.max_connection_distance_in_meters()))
                 return vector3_zero();
 
             accel_mag = 0.0f;
