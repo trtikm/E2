@@ -3,7 +3,7 @@
 
 #   include <netlab/network_layer_props.hpp>
 #   include <netlab/network_indices.hpp>
-#   include <utility/basic_numeric_types.hpp>
+#   include <angeo/tensor_math.hpp>
 #   include <vector>
 #   include <limits>
 
@@ -85,6 +85,15 @@ private:
     natural_64_bit  m_num_docks;
     natural_64_bit  m_num_ships;
 };
+
+
+inline bool  are_ship_and_dock_connected(
+        vector3 const&  ship_position,
+        vector3 const&  dock_position,
+        float_32_bit const max_connection_distance)
+{
+    return length_squared(dock_position - ship_position) <= max_connection_distance * max_connection_distance;
+}
 
 
 }
