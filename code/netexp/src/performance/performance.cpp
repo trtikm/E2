@@ -4,8 +4,8 @@
 #include <netlab/network.hpp>
 #include <netlab/network_layer_props.hpp>
 #include <netlab/network_props.hpp>
-#include <netlab/network_objects.hpp>
-#include <netlab/network_objects_factory.hpp>
+#include <netlab/network_layer_arrays_of_objects.hpp>
+#include <netlab/network_layers_factory.hpp>
 #include <netlab/network_indices.hpp>
 #include <netlab/ship_controller.hpp>
 #include <netlab/initialiser_of_movement_area_centers.hpp>

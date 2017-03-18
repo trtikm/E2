@@ -1,7 +1,7 @@
 #ifndef NETLAB_INITIALISER_OF_SHIPS_IN_MOVEMENT_AREAS_HPP_INCLUDED
 #   define NETLAB_INITIALISER_OF_SHIPS_IN_MOVEMENT_AREAS_HPP_INCLUDED
 
-#   include <netlab/network_objects.hpp>
+#   include <netlab/network_layer_arrays_of_objects.hpp>
 #   include <netlab/network_props.hpp>
 #   include <netlab/network_indices.hpp>
 #   include <netlab/network_layer_props.hpp>

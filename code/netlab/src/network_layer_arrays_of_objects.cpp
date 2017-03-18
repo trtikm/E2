@@ -1,4 +1,4 @@
-#include <netlab/network_objects.hpp>
+#include <netlab/network_layer_arrays_of_objects.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
