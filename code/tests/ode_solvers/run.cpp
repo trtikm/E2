@@ -1015,13 +1015,13 @@ void run()
     test_PSP();
 
     //test_euler_01();
-    //test_synapse_euler();
-    //test_synapse_inhibitory_exact();
-    //test_synapse_excitatory_exact();
-    //test_neuron_hodgkin_huxley_euler();
-    //test_neuron_wilson_euler();
-    //test_neuron_leaky_integrate_and_fire_euler();
-    //test_neuron_izhikevich();
+    test_synapse_euler();
+    test_synapse_inhibitory_exact();
+    test_synapse_excitatory_exact();
+    test_neuron_hodgkin_huxley_euler();
+    test_neuron_wilson_euler();
+    test_neuron_leaky_integrate_and_fire_euler();
+    test_neuron_izhikevich();
 
     TEST_PROGRESS_HIDE();
 
