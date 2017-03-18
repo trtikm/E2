@@ -70,14 +70,6 @@ struct  network
     layer_of_ships const&  get_layer_of_ships(layer_index_type const  layer_index) const
     { return *m_layers_of_ships.at(layer_index); }
 
-    vector3 const&  get_center_of_movement_area(
-            layer_index_type const  layer_index,
-            object_index_type const  spiker_index   //!< Indeed spiker's index, NOT ship! All ships of the spaker
-                                                    //!< share the center of the movement area. So, the center is
-                                                    //!< associated to their common spiker.
-            ) const
-    { return m_movement_area_centers.at(layer_index).at(spiker_index); }
-
     std::vector<compressed_layer_and_object_indices> const&  get_indices_of_ships_in_dock_sector(
             layer_index_type const  layer_index,
             object_index_type const  dock_sector_index
@@ -144,7 +136,6 @@ private:
     std::vector<std::unique_ptr<layer_of_docks> >  m_layers_of_docks;
     std::vector<std::unique_ptr<layer_of_ships> >  m_layers_of_ships;
 
-    std::vector< std::vector<vector3> >  m_movement_area_centers;
     std::vector< std::vector< std::vector<compressed_layer_and_object_indices> > >  m_ships_in_sectors;
 
     std::unique_ptr<statistics_of_densities_of_ships_in_layers>  m_densities_of_ships;

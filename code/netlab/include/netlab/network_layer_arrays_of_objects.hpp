@@ -23,11 +23,17 @@ struct  layer_of_spikers
     object_index_type size() const { return m_last_update_ids.size(); }
 
     virtual natural_64_bit  num_bytes_per_spiker() const { return 0UL; }
-    static natural_64_bit  num_extra_bytes_per_spiker() { return sizeof(natural_64_bit); }
+    static natural_64_bit  num_extra_bytes_per_spiker() { return sizeof(natural_64_bit) + sizeof(vector3); }
 
     layer_index_type  layer_index() const { return m_layer_index; }
 
     natural_64_bit  last_update_id(object_index_type const  spiker_index) const { return m_last_update_ids.at(spiker_index); }
+
+    const vector3 &get_movement_area_center(object_index_type const  spiker_index) const
+    { return m_movement_area_center.at(spiker_index); }
+
+    vector3 &get_movement_area_center(object_index_type const  spiker_index)
+    { return m_movement_area_center.at(spiker_index); }
 
     /**
      * The function is automatically called by the network in order to update the spiking potential
@@ -97,6 +103,15 @@ private:
      * id where the network called the method @integrate_spiking_potential).
      */
     std::vector<natural_64_bit>  m_last_update_ids;
+
+    /**
+     * Each spiker is associated with a space region in the neural tissue where ships (axon terminals)
+     * of the spiker can make connections to docks (synaptic boutons) of other spikers. This region is always
+     * comprised in some layer of the tissue, it further always has a box shape with the center stored in this
+     * vector. The size of the box is the same for all spikers in this layer (it is stored in "network_layer_props"
+     * of this layer). 
+     */
+    std::vector<vector3>  m_movement_area_center;
 };
 
 

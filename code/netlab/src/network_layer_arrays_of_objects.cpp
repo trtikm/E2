@@ -11,6 +11,7 @@ namespace netlab {
 layer_of_spikers::layer_of_spikers(layer_index_type const  layer_index, object_index_type const  num_spikers_in_the_layer)
     : m_layer_index(layer_index)
     , m_last_update_ids(num_spikers_in_the_layer,0ULL)
+    , m_movement_area_center(num_spikers_in_the_layer,{0.0f,0.0f,0.0f})
 {
     ASSUMPTION(!m_last_update_ids.empty());
 }
@@ -32,7 +33,12 @@ std::ostream&  layer_of_spikers::get_info_text(
         std::string const&  shift
         ) const
 {
-    ostr << shift << "Last update id: " << last_update_id(spiker_index) << "\n";
+    vector3 const&  center = get_movement_area_center(spiker_index);
+    ostr << shift
+         << "Last update id: " << last_update_id(spiker_index) << "\n"
+         << shift
+         << std::fixed << std::setprecision(3) 
+         << "Center of movement area: [ " << center(0) << "m, " << center(1) << "m, " << center(2) << "m ]\n";
     return ostr;
 }
 

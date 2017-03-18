@@ -859,8 +859,8 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
             }
             {
                 vector3 const&  area_center =
-                        network()->get_center_of_movement_area(m_selected_object_stats->indices().layer_index(),
-                                                               m_selected_object_stats->indices().object_index());
+                        network()->get_layer_of_spikers(m_selected_object_stats->indices().layer_index())
+                                  .get_movement_area_center(m_selected_object_stats->indices().object_index());
                 netlab::layer_index_type const  area_layer_index =
                         network()->properties()->find_layer_index(area_center(2));
                 vector3 const  area_shift =
@@ -1071,9 +1071,9 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
             netlab::network_layer_props const&  props =
                     network()->properties()->layer_props().at(m_selected_object_stats->indices().layer_index());
             vector3 const&  area_center =
-                    network()->get_center_of_movement_area(
-                            m_selected_object_stats->indices().layer_index(),
-                            props.spiker_index_from_ship_index(m_selected_object_stats->indices().object_index()));
+                    network()->get_layer_of_spikers(m_selected_object_stats->indices().layer_index())
+                              .get_movement_area_center(
+                                    props.spiker_index_from_ship_index(m_selected_object_stats->indices().object_index()));
             netlab::layer_index_type const  area_layer_index =
                     network()->properties()->find_layer_index(area_center(2));
             vector3 const  area_shift = 0.5f * props.size_of_ship_movement_area_in_meters(area_layer_index);
@@ -1418,7 +1418,7 @@ std::string  simulator::get_network_info_text() const
         for (netlab::object_index_type spiker_index = 0ULL; spiker_index != layer_props.num_spikers(); ++spiker_index)
         {
             netlab::layer_index_type const  center_layer_index =
-                props.find_layer_index(network()->get_center_of_movement_area(layer_index, spiker_index)(2));
+                props.find_layer_index(network()->get_layer_of_spikers(layer_index).get_movement_area_center(spiker_index)(2));
 
             ++counts_of_area_centers.at(layer_index).at(center_layer_index);
         }
@@ -1664,7 +1664,7 @@ std::string  simulator::get_selected_info_text() const
         vector3 const  sector_center = layer_props.spiker_sector_centre(x,y,c);
 
         vector3 const&  area_center =
-                network()->get_center_of_movement_area(ptr->indices().layer_index(),ptr->indices().object_index());
+                network()->get_layer_of_spikers(ptr->indices().layer_index()).get_movement_area_center(ptr->indices().object_index());
 
         netlab::layer_index_type const  area_layer_index = props.find_layer_index(area_center(2));
 
@@ -1715,9 +1715,6 @@ std::string  simulator::get_selected_info_text() const
                                << sector_center(1) << "m, "
                                << sector_center(2) << "m ]\n"
              << "Sector coords: [" << x << ", " << y << ", " << c << "]\n"
-             << "Center of movement area: [ " << area_center(0) << "m, "
-                                              << area_center(1) << "m, "
-                                              << area_center(2) << "m ]\n"
              << "Layer index of movement area: " << (natural_64_bit)area_layer_index << "\n"
              << "Number of connected docks: " << (natural_64_bit)num_connected_docks << "\n"
              << "Number of disconnected docks: "
@@ -1782,7 +1779,7 @@ std::string  simulator::get_selected_info_text() const
 
         netlab::object_index_type const  spiker_index = layer_props.spiker_index_from_ship_index(ptr->indices().object_index());
 
-        vector3 const&  area_center = network()->get_center_of_movement_area(ptr->indices().layer_index(),spiker_index);
+        vector3 const&  area_center = network()->get_layer_of_spikers(ptr->indices().layer_index()).get_movement_area_center(spiker_index);
 
         netlab::layer_index_type const  area_layer_index = network()->properties()->find_layer_index(area_center(2));
 

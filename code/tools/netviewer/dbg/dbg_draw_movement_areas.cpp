@@ -59,7 +59,7 @@ void  dbg_draw_movement_areas::collect_visible_areas(
         for (netlab::object_index_type spiker_index = 0ULL; spiker_index != props.num_spikers(); ++spiker_index)
         {
             auto const&  props = layer_props.at(layer_index);
-            vector3 const&  area_center = network->get_center_of_movement_area(layer_index,spiker_index);
+            vector3 const&  area_center = network->get_layer_of_spikers(layer_index).get_movement_area_center(spiker_index);
             netlab::layer_index_type const  area_layer_index = network->properties()->find_layer_index(area_center(2));
             if (netview::is_bbox_behind_any_of_planes(
                         area_center - 0.5f * props.size_of_ship_movement_area_in_meters(area_layer_index),
