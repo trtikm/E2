@@ -55,30 +55,34 @@ namespace netlab {
 struct  network
 {
     network(std::shared_ptr<network_props> const  network_properties,
-            std::shared_ptr<network_objects_factory> const  objects_factory
+            std::shared_ptr<network_layers_factory> const  layers_factory
             );
 
     std::shared_ptr<network_props>  properties() const noexcept { return m_properties; }
     NETWORK_STATE  get_state() const noexcept { return m_state; }
 
-    spiker const&  get_spiker(layer_index_type const  layer_index, object_index_type const  object_index) const;
+    layer_of_spikers const&  get_layer_of_spikers(layer_index_type const  layer_index) const
+    { return *m_layers_of_spikers.at(layer_index); }
 
-    bool  are_docks_allocated(layer_index_type const  layer_index) const;
-    dock const&  get_dock(layer_index_type const  layer_index, object_index_type const  object_index) const;
+    layer_of_docks const&  get_layer_of_docks(layer_index_type const  layer_index) const
+    { return *m_layers_of_docks.at(layer_index); }
 
-    ship const&  get_ship(layer_index_type const  layer_index, object_index_type const  object_index) const;
+    layer_of_ships const&  get_layer_of_ships(layer_index_type const  layer_index) const
+    { return *m_layers_of_ships.at(layer_index); }
 
     vector3 const&  get_center_of_movement_area(
             layer_index_type const  layer_index,
             object_index_type const  spiker_index   //!< Indeed spiker's index, NOT ship! All ships of the spaker
                                                     //!< share the center of the movement area. So, the center is
                                                     //!< associated to their common spiker.
-            ) const;
+            ) const
+    { return m_movement_area_centers.at(layer_index).at(spiker_index); }
 
     std::vector<compressed_layer_and_object_indices> const&  get_indices_of_ships_in_dock_sector(
             layer_index_type const  layer_index,
             object_index_type const  dock_sector_index
-            ) const;
+            ) const
+    { return m_ships_in_sectors.at(layer_index).at(dock_sector_index); }
 
     statistics_of_densities_of_ships_in_layers const&  densities_of_ships() const { return *m_densities_of_ships; }
 
@@ -112,7 +116,8 @@ struct  network
 
 private:
 
-    dock&  get_dock_ref(layer_index_type const  layer_index, object_index_type const  object_index);
+    network(network const&) = delete;
+    network& operator=(network const&) = delete;
 
     void  update_movement_of_ships(tracked_ship_stats* const  stats_of_tracked_ship);
     void  update_movement_of_ship(
@@ -132,11 +137,12 @@ private:
 
     std::shared_ptr<network_props>  m_properties;
     NETWORK_STATE  m_state;
+
     std::unique_ptr<extra_data_for_spikers_in_layers>  m_extra_data_for_spikers;
 
-    std::vector< std::unique_ptr< array_of_derived<spiker> > >  m_spikers;
-    std::vector< std::unique_ptr< array_of_derived<dock> > >  m_docks;
-    std::vector< std::unique_ptr< array_of_derived<ship> > >  m_ships;
+    std::vector<std::unique_ptr<layer_of_spikers> >  m_layers_of_spikers;
+    std::vector<std::unique_ptr<layer_of_docks> >  m_layers_of_docks;
+    std::vector<std::unique_ptr<layer_of_ships> >  m_layers_of_ships;
 
     std::vector< std::vector<vector3> >  m_movement_area_centers;
     std::vector< std::vector< std::vector<compressed_layer_and_object_indices> > >  m_ships_in_sectors;

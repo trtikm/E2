@@ -314,67 +314,6 @@ std::vector< std::vector< std::array<natural_32_bit, 3ULL> > > const&  max_dista
 }
 
 
-struct  spiker : public netlab::spiker
-{
-};
-
-
-struct  dock : public netlab::dock
-{
-};
-
-
-struct  ship : public netlab::ship
-{
-};
-
-
-struct network_objects_factory : public netlab::network_objects_factory
-{
-    std::unique_ptr< array_of_derived<netlab::spiker> >  create_array_of_spikers(
-            netlab::layer_index_type const  layer_index,
-            natural_64_bit const  num_spikers
-            ) const;
-
-    std::unique_ptr< array_of_derived<netlab::dock> >  create_array_of_docks(
-            netlab::layer_index_type const  layer_index,
-            natural_64_bit const  num_docks
-            ) const;
-
-    std::unique_ptr< array_of_derived<netlab::ship> >  create_array_of_ships(
-            netlab::layer_index_type const  layer_index,
-            natural_64_bit const  num_ships
-            ) const;
-};
-
-std::unique_ptr< array_of_derived<netlab::spiker> >  network_objects_factory::create_array_of_spikers(
-        netlab::layer_index_type const  layer_index,
-        natural_64_bit const  num_spikers
-        ) const
-{
-    (void)layer_index;
-    return make_array_of_derived<netlab::spiker,spiker>(num_spikers);
-}
-
-std::unique_ptr< array_of_derived<netlab::dock> >  network_objects_factory::create_array_of_docks(
-        netlab::layer_index_type const  layer_index,
-        natural_64_bit const  num_docks
-        ) const
-{
-    (void)layer_index;
-    return make_array_of_derived<netlab::dock,dock>(num_docks);
-}
-
-std::unique_ptr< array_of_derived<netlab::ship> >  network_objects_factory::create_array_of_ships(
-        netlab::layer_index_type const  layer_index,
-        natural_64_bit const  num_ships
-        ) const
-{
-    (void)layer_index;
-    return make_array_of_derived<netlab::ship,ship>(num_ships);
-}
-
-
 struct  initialiser_of_movement_area_centers : public netexp::incremental_initialiser_of_movement_area_centers
 {
     initialiser_of_movement_area_centers();
@@ -471,7 +410,8 @@ struct  initialiser_of_ships_in_movement_areas : public netlab::initialiser_of_s
             netlab::layer_index_type const  home_layer_index,
             netlab::layer_index_type const  area_layer_index,
             netlab::network_props const&  props,
-            netlab::ship&  ship_reference
+            vector3&  ship_position,
+            vector3&  ship_velocity 
             );
 
     random_generator_for_natural_32_bit&  random_generator() noexcept { return m_generator; }
@@ -491,7 +431,8 @@ void  initialiser_of_ships_in_movement_areas::compute_ship_position_and_velocity
         netlab::layer_index_type const  home_layer_index,
         netlab::layer_index_type const  area_layer_index,
         netlab::network_props const&  props,
-        netlab::ship&  ship_reference
+        vector3&  ship_position,
+        vector3&  ship_velocity 
         )
 {
     (void)ship_index_in_the_area;
@@ -504,13 +445,13 @@ void  initialiser_of_ships_in_movement_areas::compute_ship_position_and_velocity
             0.5f * layer_props.size_of_ship_movement_area_along_y_axis_in_meters(area_layer_index),
             0.5f * layer_props.size_of_ship_movement_area_along_c_axis_in_meters(area_layer_index),
             random_generator(),
-            ship_reference.get_position_nonconst_reference()
+            ship_position
             );
     compute_random_ship_velocity_in_movement_area(
             layer_props.min_speed_of_ship_in_meters_per_second(area_layer_index),
             layer_props.max_speed_of_ship_in_meters_per_second(area_layer_index),
             random_generator(),
-            ship_reference.get_velocity_nonconst_reference()
+            ship_velocity
             );
 }
 
@@ -546,7 +487,7 @@ NETEXP_DEFINE_EXPERIMENT_REGISTERATION_FUNCTION(
         dbg_spiking_develop,
         "dbg_spiking_develop",
         []() { return get_network_props(); },
-        []() { return std::make_shared<network_objects_factory>(); },
+        []() { return std::make_shared<netlab::network_layers_factory>(); },
         []() { return std::make_shared<initialiser_of_movement_area_centers>(); },
         []() { return std::make_shared<initialiser_of_ships_in_movement_areas>(); },
         [](netlab::compressed_layer_and_object_indices const  indices){ return std::make_shared<tracked_spiker_stats>(indices); },

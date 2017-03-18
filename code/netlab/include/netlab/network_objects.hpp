@@ -1,9 +1,10 @@
-#ifndef NETLAB_NETWORK_OBJECTS_HPP_INCLUDED
-#   define NETLAB_NETWORK_OBJECTS_HPP_INCLUDED
+#ifndef NETLAB_NETWORK_LAYER_ARRAYS_OF_OBJECTS_HPP_INCLUDED
+#   define NETLAB_NETWORK_LAYER_ARRAYS_OF_OBJECTS_HPP_INCLUDED
 
 #   include <netlab/network_indices.hpp>
 #   include <netlab/network_props.hpp>
 #   include <angeo/tensor_math.hpp>
+#   include <vector>
 #   include <string>
 #   include <iosfwd>
 
@@ -11,15 +12,22 @@ namespace netlab {
 
 
 /**
- * It models a neuron.
+ * It models spikers (neurons) of a single kind appearing in a certain layer of the neural tissue.
+ * The layer is implementedas 1D array. Each spiker is thus associated with a unique index in the array.
  */
-struct  spiker
+struct  layer_of_spikers
 {
-    spiker();
-    virtual ~spiker() {}
+    layer_of_spikers(layer_index_type const  layer_index, object_index_type const  num_spikers_in_the_layer);
+    virtual ~layer_of_spikers() {}
 
-    natural_64_bit  last_update_id() const noexcept { return m_last_update_id; }
-    //void  set_last_update_id(natural_64_bit const  value) { m_last_update_id = value; }
+    object_index_type size() const { return m_last_update_ids.size(); }
+
+    virtual natural_64_bit  num_bytes_per_spiker() const { return 0UL; }
+    static natural_64_bit  num_extra_bytes_per_spiker() { return sizeof(natural_64_bit); }
+
+    layer_index_type  layer_index() const { return m_layer_index; }
+
+    natural_64_bit  last_update_id(object_index_type const  spiker_index) const { return m_last_update_ids.at(spiker_index); }
 
     /**
      * The function is automatically called by the network in order to update the spiking potential
@@ -30,14 +38,13 @@ struct  spiker
      * @param current_update_id  The id of the current update step of the network.
      */
     void  update_spiking_potential(
+            object_index_type const  spiker_index,
             natural_64_bit const  current_update_id,
-            layer_index_type const  spiker_layer_index,
             network_props const&  props
             );
 
-    virtual natural_64_bit  size_in_bytes() const { return sizeof(spiker); }
 
-    virtual float_32_bit  get_potential() const { return 0.0f; }
+    virtual float_32_bit  get_potential(object_index_type const  spiker_index) const { return 0.0f; }
 
     /**
      * It defines an integrator of the potential function of the spiker. It is supposed to integrate the
@@ -47,8 +54,8 @@ struct  spiker
      *                               should be integrated for.
      */
     virtual void  integrate_spiking_potential(
+            object_index_type const  spiker_index,
             float_32_bit const  time_delta_in_seconds,
-            layer_index_type const  spiker_layer_index,
             network_props const&  props
             )
     {}
@@ -65,36 +72,60 @@ struct  spiker
      *         further postsynaptic potential), then the function returns true. Otherwise it returns false.
      */
     virtual bool  on_arrival_of_postsynaptic_potential(
+            object_index_type const  spiker_index,
             float_32_bit const  potential_delta,
-            layer_index_type const  spiker_layer_index,
             network_props const&  props
             )
     { return false; }
 
-    virtual std::ostream&  get_info_text(std::ostream&  ostr, std::string const&  shift = "") const;
+    virtual std::ostream&  get_info_text(
+            object_index_type const  spiker_index,
+            std::ostream&  ostr,
+            std::string const&  shift = ""
+            ) const;
 
 private:
+    layer_of_spikers(layer_of_spikers const&) = delete;
+    layer_of_spikers& operator=(layer_of_spikers const&) = delete;
+
+    layer_index_type  m_layer_index;
+
     /**
      * The network is updated in discrete steps. Each step has its unique id.
-     * This member saves id of the network update in which the spiking potential
+     * This member saves for each spiker the id of the network update in which the spiking potential
      * function function of the spiker was integrated for the last (i.e. the last update
      * id where the network called the method @integrate_spiking_potential).
      */
-    natural_64_bit  m_last_update_id;
+    std::vector<natural_64_bit>  m_last_update_ids;
 };
 
 
 /**
- * It models a synaptic bouton on a dendrite of the owner spiker. It thus models a place on the dendrite
- * where a ship may connect to, and to allow the ship there to transmit a spike from the spiker of the ship
- * to the spiker of the dock.
+ * It models docks (synaptic boutons) on dendrites of spikers in one layer of the neural tissue. (Note: a docks is thus a
+ * place on a dendrite where ships (axon terminals) of other spikers may connect to). This layer of docks is implemented
+ * as 1D array. Each dock (bouton) is thus associated with a unique index in the array. Docks are grouped according to their
+ * spikers. It means that first are stored all docks of the first spiker, then all docks of the second one, and so on.
+ * Each spiker in the layer has exactly the same count of docks. Also all docks of all spikers in the layer are of the
+ * same kind.
  */
-struct  dock
+struct  layer_of_docks
 {
-    virtual ~dock() {}
+    layer_of_docks(layer_index_type const  layer_index, object_index_type const  num_docks_in_the_layer);
+    virtual ~layer_of_docks() {}
 
-    virtual natural_64_bit  size_in_bytes() const { return sizeof(dock); }
-    virtual std::ostream&  get_info_text(std::ostream&  ostr, std::string const&  shift = "") const { return ostr; }
+    object_index_type size() const { return m_num_docks_in_the_layer; }
+
+    virtual natural_64_bit  num_bytes_per_dock() const { return 0UL; }
+    static natural_64_bit  num_extra_bytes_per_dock() { return 0UL; }
+
+    layer_index_type  layer_index() const { return m_layer_index; }
+
+    virtual std::ostream&  get_info_text(
+            object_index_type const  dock_index,
+            std::ostream&  ostr,
+            std::string const&  shift = ""
+            ) const
+    { return ostr; }
 
     /**
      * It is called by the network whenewer a ship connected to this dock releases the
@@ -111,10 +142,10 @@ struct  dock
      *         of the spiker owning this dock.
      */
     virtual float_32_bit  on_arrival_of_postsynaptic_potential(
+            object_index_type const  dock_index,
             float_32_bit const  potential_delta,
             vector3 const&  spiker_position,
             vector3 const&  dock_position,
-            layer_index_type const  spiker_layer_index,
             layer_index_type const  layer_index_of_spiker_owning_the_connected_ship,
             network_props const&  props
             )
@@ -131,8 +162,8 @@ struct  dock
      *         change is always non negative, no matter whether the spiker is excitatoty or inhibitory.
      */
     virtual float_32_bit  on_arrival_of_presynaptic_potential(
+            object_index_type const  dock_index,
             float_32_bit const  potential_of_the_spiker_owning_the_connected_ship,
-            layer_index_type const  spiker_layer_index,
             layer_index_type const  layer_index_of_spiker_owning_the_connected_ship,
             network_props const&  props
             )
@@ -148,10 +179,10 @@ struct  dock
      *         the value of the parameter "is_it_mini_spike_from_excitatory_spiker").
      */
     virtual float_32_bit  on_arrival_of_mini_spiking_potential(
+            object_index_type const  dock_index,
             bool const  is_it_mini_spike_from_excitatory_spiker,
             vector3 const&  spiker_position,
             vector3 const&  dock_position,
-            layer_index_type const  spiker_layer_index,
             network_props const&  props
             ) const
     { return props.mini_spiking_potential_magnitude() * (is_it_mini_spike_from_excitatory_spiker ? 1.0f : -1.0f); }
@@ -162,37 +193,56 @@ struct  dock
      * @param potential_of_spiker  Spiker's potential at the soma, i.e. the current potential stored in the spiker.
      */
     virtual float_32_bit  compute_potential_of_spiker_at_dock(
+            object_index_type const  dock_index,
             float_32_bit const  potential_of_spiker,
             vector3 const&  spiker_position,
             vector3 const&  dock_position,
-            layer_index_type const  spiker_layer_index,
             network_props const&  props
             ) const
     { return potential_of_spiker; }
+
+private:
+    layer_of_docks(layer_of_docks const&) = delete;
+    layer_of_docks& operator=(layer_of_docks const&) = delete;
+
+    layer_index_type  m_layer_index;
+    object_index_type  m_num_docks_in_the_layer;
 };
 
 
 /**
- * It model an axon terminal of its spiker's axon. It thus models a search of the axon terminal
- * for dendridic boutons (docks) on dendrites of other spikers where the ship can connect to
- * and create a synapse with the other spiker. It is also supposed to model the behaviour of the
- * synapse (i.e. when the ship is connected with a dock).
+ * It models ships (axon terminals) of spikers in one layer of the neural tissue. (Note: a ship is thus a 
+ * "connector" to a dock (synaptic bouton) on a dendrite of another spiker. This layer of ships is implemented
+ * as 1D array. Each ship is thus associated with a unique index in the array. Ships are grouped according to their
+ * spikers. It means that first are stored all ships of the first spiker, then all ships of the second one, and so on.
+ * Each spiker in the layer has exactly the same count of ships. Also all ships of all spikers in the layer are of the
+ * same kind.
  */
-struct  ship
+struct  layer_of_ships
 {
-    ship();
-    virtual ~ship() {}
+    layer_of_ships(layer_index_type const  layer_index, object_index_type const  num_ships_in_the_layer);
+    virtual ~layer_of_ships() {}
 
-    vector3 const&  position() const noexcept { return m_position; }
-    void  set_position(vector3 const&  pos) { m_position = pos; }
-    vector3&  get_position_nonconst_reference() noexcept { return m_position; }
+    object_index_type size() const { return m_positions.size(); }
 
-    vector3 const&  velocity() const noexcept { return m_velocity; }
-    void  set_velocity(vector3 const&  v) { m_velocity = v; }
-    vector3&  get_velocity_nonconst_reference() noexcept { return m_velocity; }
+    virtual natural_64_bit  num_bytes_per_ship() const { return 0UL; }
+    static natural_64_bit  num_extra_bytes_per_ship() { return 2ULL * sizeof(vector3); }
 
-    virtual natural_64_bit  size_in_bytes() const { return sizeof(ship); }
-    virtual std::ostream&  get_info_text(std::ostream&  ostr, std::string const&  shift = "") const;
+    layer_index_type  layer_index() const { return m_layer_index; }
+
+    vector3 const&  position(object_index_type const  ship_index) const { return m_positions.at(ship_index); }
+    void  set_position(object_index_type const  ship_index, vector3 const&  pos) { m_positions.at(ship_index) = pos; }
+    vector3&  get_position_nonconst_reference(object_index_type const  ship_index) { return m_positions.at(ship_index); }
+
+    vector3 const&  velocity(object_index_type const  ship_index) const { return m_velocities.at(ship_index); }
+    void  set_velocity(object_index_type const  ship_index, vector3 const&  v) { m_velocities.at(ship_index) = v; }
+    vector3&  get_velocity_nonconst_reference(object_index_type const  ship_index) { return m_velocities.at(ship_index); }
+
+    virtual std::ostream&  get_info_text(
+            object_index_type const  ship_index,
+            std::ostream&  ostr,
+            std::string const&  shift = ""
+            ) const;
 
     /**
      * It updates the connetion weight of the ship with the dock it is connected to. Then it computes
@@ -206,8 +256,8 @@ struct  ship
      *         into the synaptic claft.
      */
     virtual float_32_bit  on_arrival_of_presynaptic_potential(
+            object_index_type const  ship_index,
             float_32_bit const  potential_of_the_other_spiker_at_connected_dock,
-            layer_index_type const  spiker_layer_index,
             layer_index_type const  area_layer_index,
             network_props const&  props
             )
@@ -221,16 +271,20 @@ struct  ship
      *              is connected to.
      */
     virtual void  on_arrival_of_postsynaptic_potential(
+            object_index_type const  ship_index,
             float_32_bit const  potential_of_the_spiker_owning_the_connected_dock,
-            layer_index_type const  spiker_layer_index,
             layer_index_type const  area_layer_index,
             network_props const&  props
             )
     {}
 
 private:
-    vector3  m_position;
-    vector3  m_velocity;
+    layer_of_ships(layer_of_ships const&) = delete;
+    layer_of_ships& operator=(layer_of_ships const&) = delete;
+
+    layer_index_type  m_layer_index;
+    std::vector<vector3>  m_positions;
+    std::vector<vector3>  m_velocities;
 };
 
 

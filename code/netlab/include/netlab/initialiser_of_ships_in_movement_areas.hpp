@@ -28,9 +28,12 @@ struct  initialiser_of_ships_in_movement_areas
             layer_index_type const  area_layer_index,
                     //!< Index of layer where is the movement area in which the ship moves.
             network_props const&  props,
-            ship&  ship_reference
-                    //!< A reference to the ship whose position and velocity should be computed. The position
-                    //!< must be computed within the area and the length of the velocity should be within limits:
+            vector3&  ship_position,
+                    //!< A reference to the ship's position which should be computed. The position
+                    //!< must be computed within the area.
+            vector3&  ship_velocity 
+                    //!< A reference to the ship's velocity which should be computed. The length of
+                    //!< the velocity should be within limits:
                     //!< props.layer_props().at(home_layer_index).speed_limits_of_ship_in_meters_per_second(area_layer_index)
             ) = 0;
 };

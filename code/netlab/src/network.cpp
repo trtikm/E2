@@ -50,14 +50,14 @@ namespace netlab {
 
 
 network::network(std::shared_ptr<network_props> const  network_properties,
-                 std::shared_ptr<network_objects_factory> const  objects_factory
+                 std::shared_ptr<network_layers_factory> const  layers_factory
                  )
     : m_properties(network_properties)
     , m_state(NETWORK_STATE::READY_FOR_CONSTRUCTION)
     , m_extra_data_for_spikers()
-    , m_spikers()
-    , m_docks()
-    , m_ships()
+    , m_layers_of_spikers()
+    , m_layers_of_docks()
+    , m_layers_of_ships()
     , m_movement_area_centers()
     , m_ships_in_sectors()
     , m_densities_of_ships()
@@ -73,24 +73,24 @@ network::network(std::shared_ptr<network_props> const  network_properties,
     TMPROF_BLOCK();
 
     ASSUMPTION(this->properties() != nullptr);
-    ASSUMPTION(objects_factory != nullptr);
+    ASSUMPTION(layers_factory != nullptr);
 
-    m_spikers.reserve(properties()->layer_props().size());
-    m_docks.reserve(properties()->layer_props().size());
-    m_ships.reserve(properties()->layer_props().size());
+    m_layers_of_spikers.reserve(properties()->layer_props().size());
+    m_layers_of_docks.reserve(properties()->layer_props().size());
+    m_layers_of_ships.reserve(properties()->layer_props().size());
 
     for (layer_index_type layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
     {
         network_layer_props const&  layer_props = properties()->layer_props().at(layer_index);
 
-        m_spikers.push_back(objects_factory->create_array_of_spikers(layer_index, layer_props.num_spikers()));
-        ASSUMPTION(m_spikers.back()->size() == layer_props.num_spikers());
+        m_layers_of_spikers.emplace_back(layers_factory->create_layer_of_spikers(layer_index, layer_props.num_spikers()));
+        ASSUMPTION(m_layers_of_spikers.back()->size() == layer_props.num_spikers());
 
-        m_docks.push_back(objects_factory->create_array_of_docks(layer_index, layer_props.num_docks()));
-        ASSUMPTION(m_docks.back()->size() == 1ULL || m_docks.back()->size() == layer_props.num_docks());
+        m_layers_of_docks.emplace_back(layers_factory->create_layer_of_docks(layer_index, layer_props.num_docks()));
+        ASSUMPTION(m_layers_of_docks.back()->size() == layer_props.num_docks());
 
-        m_ships.push_back(objects_factory->create_array_of_ships(layer_index, layer_props.num_ships()));
-        ASSUMPTION(m_ships.back()->size() == layer_props.num_ships());
+        m_layers_of_ships.emplace_back(layers_factory->create_layer_of_ships(layer_index, layer_props.num_ships()));
+        ASSUMPTION(m_layers_of_ships.back()->size() == layer_props.num_ships());
 
         m_max_size_of_update_queue_of_ships += layer_props.num_ships();
     }
@@ -336,7 +336,7 @@ void  network::lunch_ships_into_movement_areas(initialiser_of_ships_in_movement_
 
         ships_initialiser.on_next_layer(layer_index, *properties());
 
-        array_of_derived<ship>&  ships = *m_ships.at(layer_index);
+        layer_of_ships&  ships = *m_layers_of_ships.at(layer_index);
         std::vector<vector3>&  centers = m_movement_area_centers.at(layer_index);
 
         object_index_type  spiker_index = 0UL;
@@ -359,27 +359,29 @@ void  network::lunch_ships_into_movement_areas(initialiser_of_ships_in_movement_
                                     layer_index,
                                     area_layer_index,
                                     *properties(),
-                                    ships.at(ships_begin_index + i)
+                                    ships.get_position_nonconst_reference(ships_begin_index + i),
+                                    ships.get_velocity_nonconst_reference(ships_begin_index + i)
                                     );
                         ASSUMPTION(
                                 [](vector3 const&  center, network_layer_props const&  props,
-                                   layer_index_type const area_layer_index, ship const& ship_ref) -> bool {
+                                   layer_index_type const  area_layer_index, vector3 const&  ship_position,
+                                   vector3 const&  ship_velocity) -> bool {
                                     for (auto i = 0; i < 3; ++i)
                                         if (center(i) - 0.5f *
                                                 props.size_of_ship_movement_area_in_meters(area_layer_index)(i)
-                                                > ship_ref.position()(i) ||
+                                                > ship_position(i) ||
                                             center(i) + 0.5f *
                                                 props.size_of_ship_movement_area_in_meters(area_layer_index)(i)
-                                                < ship_ref.position()(i))
+                                                < ship_position(i))
                                             return false;
 
-                                    float_32_bit  speed = length(ship_ref.velocity());
+                                    float_32_bit  speed = length(ship_velocity);
                                     if (speed < props.min_speed_of_ship_in_meters_per_second(area_layer_index) ||
                                         speed > props.max_speed_of_ship_in_meters_per_second(area_layer_index) )
                                         return false;
                                     return true;
                                     }(centers.at(spiker_index), layer_props, area_layer_index,
-                                      ships.at(ships_begin_index + i))
+                                      ships.position(ships_begin_index + i),ships.velocity(ships_begin_index + i))
                                 );
                     }
 
@@ -409,7 +411,7 @@ void  network::initialise_map_from_dock_sectors_to_ships()
     }
 
     for (layer_index_type  layer_index = 0U; layer_index < properties()->layer_props().size(); ++layer_index)
-        for (object_index_type  ship_index = 0UL; ship_index < m_ships.at(layer_index)->size(); ++ship_index)
+        for (object_index_type  ship_index = 0UL; ship_index < m_layers_of_ships.at(layer_index)->size(); ++ship_index)
         {
             network_layer_props const&  ship_layer_props = properties()->layer_props().at(layer_index);
             object_index_type const  spiker_sector_index = ship_layer_props.spiker_index_from_ship_index(ship_index);
@@ -420,7 +422,7 @@ void  network::initialise_map_from_dock_sectors_to_ships()
             object_index_type  sector_index;
             {
                 sector_coordinate_type  x, y, c;
-                area_layer_props.dock_sector_coordinates(m_ships.at(layer_index)->at(ship_index).position(), x, y, c);
+                area_layer_props.dock_sector_coordinates(m_layers_of_ships.at(layer_index)->position(ship_index), x, y, c);
                 sector_index = area_layer_props.dock_sector_index(x, y, c);
             }
             ASSUMPTION(sector_index < m_ships_in_sectors.at(area_layer_index).size());
@@ -428,64 +430,6 @@ void  network::initialise_map_from_dock_sectors_to_ships()
         }
 
     m_state = NETWORK_STATE::READY_FOR_SIMULATION_STEP;
-}
-
-
-spiker const&  network::get_spiker(layer_index_type const  layer_index, object_index_type const  object_index) const
-{
-    ASSUMPTION(layer_index < properties()->layer_props().size());
-    ASSUMPTION(object_index < m_spikers.at(layer_index)->size());
-    return m_spikers.at(layer_index)->at(object_index);
-}
-
-
-bool  network::are_docks_allocated(layer_index_type const  layer_index) const
-{
-    return m_docks.at(layer_index)->size() == properties()->layer_props().at(layer_index).num_docks();
-}
-
-
-dock const&  network::get_dock(layer_index_type const  layer_index, object_index_type const  object_index) const
-{
-    ASSUMPTION(layer_index < properties()->layer_props().size());
-    ASSUMPTION(object_index < properties()->layer_props().at(layer_index).num_docks());
-    return m_docks.at(layer_index)->at(std::min(object_index,m_docks.at(layer_index)->size() - 1ULL));
-}
-
-
-dock&  network::get_dock_ref(layer_index_type const  layer_index, object_index_type const  object_index)
-{
-    return m_docks.at(layer_index)->at(std::min(object_index,m_docks.at(layer_index)->size() - 1ULL));
-}
-
-
-ship const&  network::get_ship(layer_index_type const  layer_index, object_index_type const  object_index) const
-{
-    ASSUMPTION(layer_index < properties()->layer_props().size());
-    ASSUMPTION(object_index < m_ships.at(layer_index)->size());
-    return m_ships.at(layer_index)->at(object_index);
-}
-
-
-vector3 const&  network::get_center_of_movement_area(
-        layer_index_type const  layer_index,
-        object_index_type const  spiker_index
-        ) const
-{
-    ASSUMPTION(layer_index < properties()->layer_props().size());
-    ASSUMPTION(spiker_index < m_movement_area_centers.at(layer_index).size());
-    return m_movement_area_centers.at(layer_index).at(spiker_index);
-}
-
-
-std::vector<compressed_layer_and_object_indices> const&  network::get_indices_of_ships_in_dock_sector(
-        layer_index_type const  layer_index,
-        object_index_type const  dock_sector_index
-        ) const
-{
-    ASSUMPTION(layer_index < properties()->layer_props().size());
-    ASSUMPTION(dock_sector_index < m_ships_in_sectors.at(layer_index).size());
-    return m_ships_in_sectors.at(layer_index).at(dock_sector_index);
 }
 
 
@@ -541,14 +485,13 @@ void  network::update_movement_of_ships(tracked_ship_stats* const  stats_of_trac
 
             network_layer_props const&  ship_layer_props = properties()->layer_props().at(layer_index);
 
-            for (object_index_type  ship_index_in_layer = 0ULL, num_ships = m_ships.at(layer_index)->size();
+            for (object_index_type  ship_index_in_layer = 0ULL, num_ships = m_layers_of_ships.at(layer_index)->size();
                     ship_index_in_layer < num_ships;
                     ++ship_index_in_layer
                     )
             {
                 update_movement_of_ship(layer_index,ship_index_in_layer,stats_of_tracked_ship);
 
-                netlab::ship const&  ship = m_ships.at(layer_index)->at(ship_index_in_layer);
                 layer_index_type const  area_layer_index =
                         properties()->find_layer_index(
                             m_movement_area_centers.at(layer_index).at(
@@ -557,10 +500,11 @@ void  network::update_movement_of_ships(tracked_ship_stats* const  stats_of_trac
                             );
                 network_layer_props const&  area_layer_props = properties()->layer_props().at(area_layer_index);
 
+                layer_of_ships const&  ships = *m_layers_of_ships.at(layer_index);
                 if (!is_update_queue_of_ships_overloaded() && is_update_queue_of_ships_used() &&
                     !area_layer_props.ship_controller_ptr()->is_ship_docked(
-                            ship.position(),
-                            ship.velocity(),
+                            ships.position(ship_index_in_layer),
+                            ships.velocity(ship_index_in_layer),
                             area_layer_index,
                             *properties()
                             ))
@@ -584,7 +528,6 @@ void  network::update_movement_of_ships(tracked_ship_stats* const  stats_of_trac
             update_movement_of_ship(ship_id.layer_index(),ship_id.object_index(),stats_of_tracked_ship);
 
             network_layer_props const&  ship_layer_props = properties()->layer_props().at(ship_id.layer_index());
-            netlab::ship const&  ship = m_ships.at(ship_id.layer_index())->at(ship_id.object_index());
             layer_index_type const  area_layer_index =
                     properties()->find_layer_index(
                         m_movement_area_centers.at(ship_id.layer_index()).at(
@@ -593,9 +536,10 @@ void  network::update_movement_of_ships(tracked_ship_stats* const  stats_of_trac
                         );
             network_layer_props const&  area_layer_props = properties()->layer_props().at(area_layer_index);
 
+            layer_of_ships const&  ships = *m_layers_of_ships.at(ship_id.layer_index());
             if (!area_layer_props.ship_controller_ptr()->is_ship_docked(
-                        ship.position(),
-                        ship.velocity(),
+                        ships.position(ship_id.object_index()),
+                        ships.velocity(ship_id.object_index()),
                         area_layer_index,
                         *properties()
                         ))
@@ -613,7 +557,9 @@ void  network::update_movement_of_ship(
 {
     TMPROF_BLOCK();
 
-    netlab::ship&  ship = m_ships.at(layer_index)->at(ship_index_in_layer);
+    vector3&  ship_position_ref = m_layers_of_ships.at(layer_index)->get_position_nonconst_reference(ship_index_in_layer);
+    vector3&  ship_velocity_ref = m_layers_of_ships.at(layer_index)->get_velocity_nonconst_reference(ship_index_in_layer);
+
     compressed_layer_and_object_indices const  ship_loc(layer_index,ship_index_in_layer);
 
     if (stats_of_tracked_ship != nullptr && ship_loc != stats_of_tracked_ship->indices())
@@ -641,7 +587,7 @@ void  network::update_movement_of_ship(
     bool  dock_sector_belongs_to_the_same_spiker_as_the_ship;
     {
         sector_coordinate_type  x, y, c;
-        area_layer_props.dock_sector_coordinates(ship.position(), x,y,c);
+        area_layer_props.dock_sector_coordinates(ship_position_ref, x,y,c);
         dock_sector_center_of_ship = area_layer_props.dock_sector_centre(x,y,c);
 
         if (layer_index == area_layer_index)
@@ -663,14 +609,14 @@ void  network::update_movement_of_ship(
 
     vector3  ship_acceleration =
         area_layer_props.ship_controller_ptr()->accelerate_ship_in_environment(
-                ship.velocity(),
+                ship_velocity_ref,
                 layer_index,
                 area_layer_index,
                 *properties());
     {
         ship_acceleration += area_layer_props.ship_controller_ptr()->accelerate_into_space_box(
-                ship.position(),
-                ship.velocity(),
+                ship_position_ref,
+                ship_velocity_ref,
                 movement_area_center,
                 layer_index,
                 area_layer_index,
@@ -685,8 +631,8 @@ void  network::update_movement_of_ship(
                     area_layer_props.ship_controller_ptr()->docks_enumerations_distance_for_accelerate_into_dock(),
                     area_layer_props.ship_controller_ptr()->docks_enumerations_distance_for_accelerate_into_dock()
                     );
-            area_layer_props.dock_sector_coordinates(ship.position() - range_vector, x_lo, y_lo, c_lo);
-            area_layer_props.dock_sector_coordinates(ship.position() + range_vector, x_hi, y_hi, c_hi);
+            area_layer_props.dock_sector_coordinates(ship_position_ref - range_vector, x_lo, y_lo, c_lo);
+            area_layer_props.dock_sector_coordinates(ship_position_ref + range_vector, x_hi, y_hi, c_hi);
         }
         for (sector_coordinate_type x = x_lo; x <= x_hi; ++x)
             for (sector_coordinate_type y = y_lo; y <= y_hi; ++y)
@@ -720,8 +666,8 @@ void  network::update_movement_of_ship(
 
                     if (dock_belongs_to_the_same_spiker_as_the_ship)
                         ship_acceleration += area_layer_props.ship_controller_ptr()->accelerate_from_dock(
-                                ship.position(),
-                                ship.velocity(),
+                                ship_position_ref,
+                                ship_velocity_ref,
                                 sector_centre,
                                 layer_index,
                                 area_layer_index,
@@ -729,8 +675,8 @@ void  network::update_movement_of_ship(
                                 );
                     else
                         ship_acceleration += area_layer_props.ship_controller_ptr()->accelerate_into_dock(
-                                ship.position(),
-                                ship.velocity(),
+                                ship_position_ref,
+                                ship_velocity_ref,
                                 sector_centre,
                                 layer_index,
                                 area_layer_index,
@@ -738,17 +684,17 @@ void  network::update_movement_of_ship(
                                 );
                 }
 
-        if (ship.position()(0) >= movement_area_low_corner(0) && ship.position()(0) <= movement_area_high_corner(0) &&
-            ship.position()(1) >= movement_area_low_corner(1) && ship.position()(1) <= movement_area_high_corner(1) &&
-            ship.position()(2) >= movement_area_low_corner(2) && ship.position()(2) <= movement_area_high_corner(2))
+        if (ship_position_ref(0) >= movement_area_low_corner(0) && ship_position_ref(0) <= movement_area_high_corner(0) &&
+            ship_position_ref(1) >= movement_area_low_corner(1) && ship_position_ref(1) <= movement_area_high_corner(1) &&
+            ship_position_ref(2) >= movement_area_low_corner(2) && ship_position_ref(2) <= movement_area_high_corner(2))
         {
             vector3 const  range_vector(
                 area_layer_props.ship_controller_ptr()->docks_enumerations_distance_for_accelerate_from_ship(),
                 area_layer_props.ship_controller_ptr()->docks_enumerations_distance_for_accelerate_from_ship(),
                 area_layer_props.ship_controller_ptr()->docks_enumerations_distance_for_accelerate_from_ship()
                 );
-            area_layer_props.dock_sector_coordinates(ship.position() - range_vector, x_lo, y_lo, c_lo);
-            area_layer_props.dock_sector_coordinates(ship.position() + range_vector, x_hi, y_hi, c_hi);
+            area_layer_props.dock_sector_coordinates(ship_position_ref- range_vector, x_lo, y_lo, c_lo);
+            area_layer_props.dock_sector_coordinates(ship_position_ref + range_vector, x_hi, y_hi, c_hi);
             for (sector_coordinate_type x = x_lo; x <= x_hi; ++x)
                 for (sector_coordinate_type y = y_lo; y <= y_hi; ++y)
                     for (sector_coordinate_type c = c_lo; c <= c_hi; ++c)
@@ -756,34 +702,30 @@ void  network::update_movement_of_ship(
                         object_index_type const  sector_index = area_layer_props.dock_sector_index(x,y,c);
                         for (compressed_layer_and_object_indices const  loc : ships_in_sectors.at(sector_index))
                             if (loc != ship_loc)
-                            {
-                                netlab::ship const&  other_ship = m_ships.at(loc.layer_index())->at(loc.object_index());
-
                                 ship_acceleration += area_layer_props.ship_controller_ptr()->accelerate_from_ship(
-                                        ship.position(),
-                                        ship.velocity(),
-                                        other_ship.position(),
-                                        other_ship.velocity(),
+                                        ship_position_ref,
+                                        ship_velocity_ref,
+                                        m_layers_of_ships.at(loc.layer_index())->position(loc.object_index()),
+                                        m_layers_of_ships.at(loc.layer_index())->velocity(loc.object_index()),
                                         dock_sector_center_of_ship,
                                         dock_sector_belongs_to_the_same_spiker_as_the_ship,
                                         layer_index,
                                         area_layer_index,
                                         *properties()
                                         );
-                            }
                     }
         }
     }
 
     float_32_bit const  dt = properties()->update_time_step_in_seconds();
 
-    vector3  new_velocity = ship.velocity() + dt * ship_acceleration;
+    vector3  new_velocity = ship_velocity_ref + dt * ship_acceleration;
     {
         float_32_bit const  new_speed = length(new_velocity);
         if (new_speed < ship_layer_props.min_speed_of_ship_in_meters_per_second(area_layer_index))
             area_layer_props.ship_controller_ptr()->on_too_slow(
                     new_velocity,
-                    ship.position(),
+                    ship_position_ref,
                     new_speed,
                     dock_sector_center_of_ship,
                     layer_index,
@@ -793,7 +735,7 @@ void  network::update_movement_of_ship(
         else if (new_speed > ship_layer_props.max_speed_of_ship_in_meters_per_second(area_layer_index))
             area_layer_props.ship_controller_ptr()->on_too_fast(
                     new_velocity,
-                    ship.position(),
+                    ship_position_ref,
                     new_speed,
                     dock_sector_center_of_ship,
                     layer_index,
@@ -802,12 +744,12 @@ void  network::update_movement_of_ship(
                     );
     }
 
-    vector3 const  new_position = ship.position() + dt * new_velocity;
+    vector3 const  new_position = ship_position_ref + dt * new_velocity;
 
     object_index_type  old_sector_index;
     {
         sector_coordinate_type  x, y, c;
-        area_layer_props.dock_sector_coordinates(ship.position(), x, y, c);
+        area_layer_props.dock_sector_coordinates(ship_position_ref, x, y, c);
         old_sector_index = area_layer_props.dock_sector_index(x,y,c);
     }
     object_index_type  new_sector_index;
@@ -833,8 +775,8 @@ void  network::update_movement_of_ship(
         ships_in_sectors.at(new_sector_index).push_back(ship_loc);
     }
 
-    ship.set_position(new_position);
-    ship.set_velocity(new_velocity);
+    ship_position_ref = new_position;
+    ship_velocity_ref = new_velocity;
 }
 
 
@@ -863,40 +805,42 @@ void  network::update_mini_spiking(
         network_layer_props const&  ship_layer_props = properties()->layer_props().at(layer_index);
         INVARIANT(ship_index < ship_layer_props.num_ships());
 
-        ship const&  ship = m_ships.at(layer_index)->at(ship_index);
-
         layer_index_type const  area_layer_index = properties()->find_layer_index(
             m_movement_area_centers.at(layer_index).at(ship_layer_props.spiker_index_from_ship_index(ship_index))(2)
             );
         network_layer_props const&  area_layer_props = properties()->layer_props().at(area_layer_index);
         sector_coordinate_type  dock_x,dock_y,dock_c;
-        area_layer_props.dock_sector_coordinates(ship.position(),dock_x,dock_y,dock_c);
+        area_layer_props.dock_sector_coordinates(m_layers_of_ships.at(layer_index)->position(ship_index),dock_x,dock_y,dock_c);
         vector3 const  nearest_dock_pos = area_layer_props.dock_sector_centre(dock_x,dock_y,dock_c);
 
-        if (are_ship_and_dock_connected(ship.position(),nearest_dock_pos,properties()->max_connection_distance_in_meters()))
+        if (are_ship_and_dock_connected(
+                    m_layers_of_ships.at(layer_index)->position(ship_index),
+                    nearest_dock_pos,
+                    properties()->max_connection_distance_in_meters()))
         {
             sector_coordinate_type  spiker_x,spiker_y,spiker_c;
             area_layer_props.spiker_sector_coordinates_from_dock_sector_coordinates(dock_x,dock_y,dock_c,spiker_x,spiker_y,spiker_c);
 
             object_index_type const  spiker_index = area_layer_props.spiker_sector_index(spiker_x,spiker_y,spiker_c);
             vector3 const  spiker_pos = area_layer_props.spiker_sector_centre(spiker_x,spiker_y,spiker_c);
-            spiker&  spiker = m_spikers.at(area_layer_index)->at(spiker_index);
 
             object_index_type const  dock_index = area_layer_props.dock_sector_index(dock_x,dock_y,dock_c);
-            dock const&  dock = get_dock_ref(area_layer_index,dock_index);
             float_32_bit const  mini_potential_on_spiker =
-                    dock.on_arrival_of_mini_spiking_potential(
+                    m_layers_of_docks.at(area_layer_index)->on_arrival_of_mini_spiking_potential(
+                            dock_index,
                             properties()->layer_props().at(layer_index).are_spikers_excitatory(),
                             spiker_pos,
                             nearest_dock_pos,
-                            area_layer_index,
                             *properties()
                             );
 
-            spiker.update_spiking_potential(m_update_id,area_layer_index,*properties());
+            m_layers_of_spikers.at(area_layer_index)->update_spiking_potential(spiker_index,m_update_id,*properties());
 
             bool const  did_mini_spike_cause_spike_generation =
-                    spiker.on_arrival_of_postsynaptic_potential(mini_potential_on_spiker,area_layer_index,*properties());
+                    m_layers_of_spikers.at(area_layer_index)->on_arrival_of_postsynaptic_potential(
+                            spiker_index,
+                            mini_potential_on_spiker,
+                            *properties());
 
             if (use_spiking)
                 if (did_mini_spike_cause_spike_generation)
@@ -929,13 +873,16 @@ void  network::update_spiking(
         object_index_type const  ships_begin_index = spiker_layer_props.ships_begin_index_of_spiker(spiker_index);
         for (natural_32_bit  i = 0U; i != spiker_layer_props.num_ships_per_spiker(); ++i)
         {
-            ship&  ship_ref = m_ships.at(spiker_layer_index)->at(ships_begin_index + i);
+            layer_of_ships&  ships = *m_layers_of_ships.at(spiker_layer_index);
 
             sector_coordinate_type  dock_x,dock_y,dock_c;
-            area_layer_props.dock_sector_coordinates(ship_ref.position(),dock_x,dock_y,dock_c);
+            area_layer_props.dock_sector_coordinates(ships.position(ships_begin_index + i),dock_x,dock_y,dock_c);
             vector3 const  dock_position = area_layer_props.dock_sector_centre(dock_x,dock_y,dock_c);
 
-            if (are_ship_and_dock_connected(ship_ref.position(),dock_position,properties()->max_connection_distance_in_meters()))
+            if (are_ship_and_dock_connected(
+                        ships.position(ships_begin_index + i),
+                        dock_position,
+                        properties()->max_connection_distance_in_meters()))
             {
                 sector_coordinate_type  target_spiker_x,target_spiker_y,target_spiker_c;
                 area_layer_props.spiker_sector_coordinates_from_dock_sector_coordinates(
@@ -948,43 +895,42 @@ void  network::update_spiking(
                 object_index_type const  target_spiker_index =
                         area_layer_props.spiker_sector_index(target_spiker_x,target_spiker_y,target_spiker_c);
 
-                spiker&  target_spiker_ref = m_spikers.at(area_layer_index)->at(target_spiker_index);
+                layer_of_spikers&  target_spikers = *m_layers_of_spikers.at(area_layer_index);
+                layer_of_docks&  docks = *m_layers_of_docks.at(area_layer_index);
 
                 object_index_type const  dock_index = area_layer_props.dock_sector_index(dock_x,dock_y,dock_c);
 
-                dock&  dock_ref = get_dock_ref(area_layer_index,dock_index);
-
                 float_32_bit const  potential_of_the_target_spiker_at_dock =
-                        dock_ref.compute_potential_of_spiker_at_dock(
-                                target_spiker_ref.get_potential(),
+                        docks.compute_potential_of_spiker_at_dock(
+                                dock_index,
+                                target_spikers.get_potential(target_spiker_index),
                                 target_spiker_position,
                                 dock_position,
-                                area_layer_index,
                                 *properties()
                                 );
 
                 float_32_bit const  potential_delta_at_dock =
-                        ship_ref.on_arrival_of_presynaptic_potential(
+                        ships.on_arrival_of_presynaptic_potential(
+                                ships_begin_index + i,
                                 potential_of_the_target_spiker_at_dock,
-                                spiker_layer_index,
                                 area_layer_index,
                                 *properties()
                                 );
 
                 float_32_bit const  potential_delta_at_target_spiker =
-                        dock_ref.on_arrival_of_postsynaptic_potential(
+                        docks.on_arrival_of_postsynaptic_potential(
+                                dock_index,
                                 potential_delta_at_dock,
                                 target_spiker_position,
                                 dock_position,
-                                area_layer_index,
                                 spiker_layer_index,
                                 *properties()
                                 );
 
                 bool const  does_posynaptic_potential_causes_generation_of_spike =
-                        target_spiker_ref.on_arrival_of_postsynaptic_potential(
+                        target_spikers.on_arrival_of_postsynaptic_potential(
+                                target_spiker_index,
                                 potential_delta_at_target_spiker,
-                                area_layer_index,
                                 *properties()
                                 );
 
@@ -1004,24 +950,25 @@ void  network::update_spiking(
 
             for (compressed_layer_and_object_indices const  ship_idx : m_ships_in_sectors.at(spiker_layer_index).at(docks_begin_index + i))
             {
-                ship&  ship_ref = m_ships.at(ship_idx.layer_index())->at(ship_idx.object_index());
-                if (!are_ship_and_dock_connected(ship_ref.position(),dock_position,properties()->max_connection_distance_in_meters()))
+                layer_of_ships&  ships = *m_layers_of_ships.at(ship_idx.layer_index());
+                if (!are_ship_and_dock_connected(
+                            ships.position(ship_idx.object_index()),
+                            dock_position,
+                            properties()->max_connection_distance_in_meters()))
                     continue;
 
-                dock&  dock_ref = get_dock_ref(spiker_layer_index,docks_begin_index + i);
-
                 float_32_bit const  potential_delta_for_connected_ship =
-                        dock_ref.on_arrival_of_presynaptic_potential(
-                                m_spikers.at(spiker_layer_index)->at(spiker_index).get_potential(),
-                                spiker_layer_index,
+                        m_layers_of_docks.at(spiker_layer_index)->on_arrival_of_presynaptic_potential(
+                                docks_begin_index + i,
+                                m_layers_of_spikers.at(spiker_layer_index)->get_potential(spiker_index),
                                 ship_idx.layer_index(),
                                 *properties()
                                 );
 
-                ship_ref.on_arrival_of_postsynaptic_potential(
+                ships.on_arrival_of_postsynaptic_potential(
+                        ship_idx.object_index(),
                         potential_delta_for_connected_ship,
                         ship_idx.layer_index(),
-                        spiker_layer_index,
                         *properties()
                         );
             }

@@ -255,8 +255,8 @@ natural_64_bit  enumerate_ship_positions(
             for (auto const&  layer_and_object_indices :
                  network.get_indices_of_ships_in_dock_sector(layer_index,layer_props.dock_sector_index(x,y,c)))
             {
-                vector3 const&  ship_pos = network.get_ship(layer_and_object_indices.layer_index(),
-                                                            layer_and_object_indices.object_index()).position();
+                vector3 const&  ship_pos = network.get_layer_of_ships(layer_and_object_indices.layer_index())
+                                                  .position(layer_and_object_indices.object_index());
                 ++count;
                 if (output_callback(ship_pos) == false)
                     return false;

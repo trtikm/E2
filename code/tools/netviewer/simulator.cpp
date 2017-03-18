@@ -55,7 +55,7 @@ void  create_experiment_worker()
         g_constructed_network =
                 std::make_shared<netlab::network>(
                         netexp::experiment_factory::instance().create_network_props(g_experiment_name),
-                        netexp::experiment_factory::instance().create_network_objects_factory(g_experiment_name)
+                        netexp::experiment_factory::instance().create_network_layers_factory(g_experiment_name)
                         );
         ASSUMPTION(g_constructed_network != nullptr);
 
@@ -924,7 +924,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
             for (natural_32_bit i = 0U; i < props.num_ships_per_spiker(); ++i)
                 lines.push_back({
                         spiker_sector_centre,
-                        network()->get_ship(m_selected_object_stats->indices().layer_index(),ships_begin_index + i).position()
+                        network()->get_layer_of_ships(m_selected_object_stats->indices().layer_index()).position(ships_begin_index + i)
                         });
             qtgl::batch_ptr const  batch =
                     qtgl::create_lines3d(lines, { 0.5f, 0.5f, 0.5f }, get_program_options()->dataRoot(),
@@ -1029,9 +1029,8 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                 INVARIANT(m_batch_ship_bsphere->shaders_binding().operator bool());
 
                 vector3 const&  pos =
-                    network()->get_ship(m_selected_object_stats->indices().layer_index(),
-                                        m_selected_object_stats->indices().object_index())
-                            .position();
+                    network()->get_layer_of_ships(m_selected_object_stats->indices().layer_index())
+                              .position(m_selected_object_stats->indices().object_index());
                 render_batch(
                     *m_batch_ship_bsphere,
                     view_projection_matrix,
@@ -1049,8 +1048,8 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
             qtgl::batch_ptr const  batch =
                 qtgl::create_lines3d(
                         {{
-                            network()->get_ship(m_selected_object_stats->indices().layer_index(),
-                                                m_selected_object_stats->indices().object_index()).position(),
+                            network()->get_layer_of_ships(m_selected_object_stats->indices().layer_index())
+                                      .position(m_selected_object_stats->indices().object_index()),
                             netlab::spiker_sector_centre(props,spiker_index)
                         }},
                         { 0.5f, 0.5f, 0.5f },
@@ -1343,8 +1342,8 @@ void  simulator::on_look_at_selected()
             pos = props.dock_sector_centre(x, y, c);
         }
         else if (std::dynamic_pointer_cast<netlab::tracked_ship_stats>(m_selected_object_stats) != nullptr)
-            pos = network()->get_ship(m_selected_object_stats->indices().layer_index(),
-                                      m_selected_object_stats->indices().object_index()).position();
+            pos = network()->get_layer_of_ships(m_selected_object_stats->indices().layer_index())
+                            .position(m_selected_object_stats->indices().object_index());
         else
             return;
     }
@@ -1385,10 +1384,18 @@ std::string  simulator::get_network_info_text() const
     {
         netlab::network_layer_props const&  layer_props = props.layer_props().at(layer_index);
 
-        total_memory_spikers += layer_props.num_spikers() * network()->get_spiker(layer_index,0U).size_in_bytes();
-        if (network()->are_docks_allocated(layer_index))
-            total_memory_docks += layer_props.num_docks() * network()->get_dock(layer_index,0U).size_in_bytes();
-        total_memory_ships += layer_props.num_ships() * network()->get_ship(layer_index,0U).size_in_bytes();
+        total_memory_spikers += layer_props.num_spikers() * (
+                network()->get_layer_of_spikers(layer_index).num_bytes_per_spiker() +
+                network()->get_layer_of_spikers(layer_index).num_extra_bytes_per_spiker()
+                );
+        total_memory_docks += layer_props.num_docks() * (
+                network()->get_layer_of_docks(layer_index).num_bytes_per_dock() +
+                network()->get_layer_of_docks(layer_index).num_extra_bytes_per_dock()
+                );
+        total_memory_ships += layer_props.num_ships() * (
+                network()->get_layer_of_ships(layer_index).num_bytes_per_ship() +
+                network()->get_layer_of_ships(layer_index).num_extra_bytes_per_ship()
+                );
         total_memory_movement_area_centers += layer_props.num_spikers() * sizeof(vector3);
         total_memory_index_of_ships_in_sectors += layer_props.num_docks() *
                                                   3ULL * sizeof(netlab::compressed_layer_and_object_indices);
@@ -1478,7 +1485,6 @@ std::string  simulator::get_network_info_text() const
                         << layer_props.high_corner_of_spikers()(2) << "m ]\n\n"
 
              << "    num docks: " << layer_props.num_docks() << "\n"
-             << "    are docks allocated: " << std::boolalpha << network()->are_docks_allocated(layer_index) << "\n"
              << "    num docks per spiker: " << layer_props.num_docks_per_spiker() << "\n"
              << "    num docks along axes [xyc]: "
                         << layer_props.num_docks_along_x_axis() << ", "
@@ -1650,7 +1656,7 @@ std::string  simulator::get_selected_info_text() const
     {
         netlab::network_layer_props const&  layer_props = props.layer_props().at(ptr->indices().layer_index());
 
-        netlab::spiker const&  spiker_ref = network()->get_spiker(ptr->indices().layer_index(),ptr->indices().object_index());
+        //netlab::spiker const&  spiker_ref = network()->get_spiker(ptr->indices().layer_index(),ptr->indices().object_index());
 
         netlab::sector_coordinate_type  x,y,c;
         layer_props.spiker_sector_coordinates(ptr->indices().object_index(),x,y,c);
@@ -1670,7 +1676,7 @@ std::string  simulator::get_selected_info_text() const
         netlab::object_index_type  num_connected_ships = 0UL;
         for (netlab::object_index_type  i = 0UL; i < layer_props.num_ships_per_spiker(); ++i)
         {
-            vector3 const&  ship_pos = network()->get_ship(ptr->indices().layer_index(),ships_begin_index + i).position();
+            vector3 const&  ship_pos = network()->get_layer_of_ships(ptr->indices().layer_index()).position(ships_begin_index + i);
 
             netlab::sector_coordinate_type  dock_x,dock_y,dock_c;
             area_layer_props.dock_sector_coordinates(ship_pos,dock_x,dock_y,dock_c);
@@ -1696,17 +1702,16 @@ std::string  simulator::get_selected_info_text() const
                                                                                                       dock_low_y+j,
                                                                                                       dock_low_c+k)))
                     {
-                        vector3 const&  ship_pos = network()->get_ship(indices.layer_index(),indices.object_index()).position();
+                        vector3 const&  ship_pos = network()->get_layer_of_ships(indices.layer_index()).position(indices.object_index());
                         if (netlab::are_ship_and_dock_connected(ship_pos,dock_pos,props.max_connection_distance_in_meters()))
                             ++num_connected_docks;
                     }
                 }
 
         ptr->get_info_text(ostr);
-        spiker_ref.get_info_text(ostr);
+        network()->get_layer_of_spikers(ptr->indices().layer_index()).get_info_text(ptr->indices().object_index(),ostr);
 
-        ostr << "Memory size: " << spiker_ref.size_in_bytes() << "B\n"
-             << "Position: [ " << sector_center(0) << "m, "
+        ostr << "Position: [ " << sector_center(0) << "m, "
                                << sector_center(1) << "m, "
                                << sector_center(2) << "m ]\n"
              << "Sector coords: [" << x << ", " << y << ", " << c << "]\n"
@@ -1727,11 +1732,6 @@ std::string  simulator::get_selected_info_text() const
     {
         netlab::network_layer_props const&  layer_props = props.layer_props().at(ptr->indices().layer_index());
 
-        netlab::dock const* const  dock_ptr =
-                network()->are_docks_allocated(ptr->indices().layer_index()) ?
-                        &network()->get_dock(ptr->indices().layer_index(),ptr->indices().object_index()) :
-                        nullptr;
-
         netlab::sector_coordinate_type  x,y,c;
         layer_props.dock_sector_coordinates(ptr->indices().object_index(),x,y,c);
 
@@ -1747,10 +1747,10 @@ std::string  simulator::get_selected_info_text() const
         for (auto  indices : network()->get_indices_of_ships_in_dock_sector(ptr->indices().layer_index(),
                                                                             layer_props.dock_sector_index(x,y,c)))
         {
-            vector3 const&  ship_pos = network()->get_ship(indices.layer_index(),indices.object_index()).position();
+            vector3 const&  ship_pos = network()->get_layer_of_ships(indices.layer_index()).position(indices.object_index());
             if (netlab::are_ship_and_dock_connected(ship_pos,sector_center,props.max_connection_distance_in_meters()))
                 is_connected = true;
-            vector3 const&  ship_velocity = network()->get_ship(indices.layer_index(),indices.object_index()).velocity();
+            vector3 const&  ship_velocity = network()->get_layer_of_ships(indices.layer_index()).velocity(indices.object_index());
             if (layer_props.ship_controller_ptr()->is_ship_docked(ship_pos,ship_velocity,ptr->indices().layer_index(),props))
                 is_occupied = true;
             float_32_bit const  dist = length(ship_pos - sector_center);
@@ -1759,14 +1759,7 @@ std::string  simulator::get_selected_info_text() const
         }
 
         ptr->get_info_text(ostr);
-
-        if (dock_ptr != nullptr)
-        {
-            dock_ptr->get_info_text(ostr);
-            ostr << "Memory size: " << dock_ptr->size_in_bytes() << "B\n";
-        }
-        else
-            ostr << "Memory size: 0B [NOT ALLOCATED]\n";
+        network()->get_layer_of_docks(ptr->indices().layer_index()).get_info_text(ptr->indices().object_index(),ostr);
 
         ostr << "Position: [ " << sector_center(0) << "m, "
                                << sector_center(1) << "m, "
@@ -1784,9 +1777,8 @@ std::string  simulator::get_selected_info_text() const
     {
         netlab::network_layer_props const&  layer_props = props.layer_props().at(ptr->indices().layer_index());
 
-        netlab::ship const&  ship_ref = network()->get_ship(ptr->indices().layer_index(),ptr->indices().object_index());
-        vector3 const&  ship_pos = ship_ref.position();
-        vector3 const&  ship_velocity = ship_ref.velocity();
+        vector3 const&  ship_pos = network()->get_layer_of_ships(ptr->indices().layer_index()).position(ptr->indices().object_index());
+        vector3 const&  ship_velocity = network()->get_layer_of_ships(ptr->indices().layer_index()).velocity(ptr->indices().object_index());
 
         netlab::object_index_type const  spiker_index = layer_props.spiker_index_from_ship_index(ptr->indices().object_index());
 
@@ -1811,10 +1803,9 @@ std::string  simulator::get_selected_info_text() const
         bool const  is_docked = area_layer_props.ship_controller_ptr()->is_ship_docked(ship_pos,ship_velocity,area_layer_index,props);
 
         ptr->get_info_text(ostr);
-        ship_ref.get_info_text(ostr);
+        network()->get_layer_of_ships(ptr->indices().layer_index()).get_info_text(ptr->indices().object_index(),ostr);
 
-        ostr << "Memory size: " << ship_ref.size_in_bytes() << "B\n"
-             << "Layer index of movement area: " << (natural_64_bit)area_layer_index << "\n"
+        ostr << "Layer index of movement area: " << (natural_64_bit)area_layer_index << "\n"
              << "Center of movement area: [ " << area_center(0) << "m, "
                                               << area_center(1) << "m, "
                                               << area_center(2) << "m ]\n"

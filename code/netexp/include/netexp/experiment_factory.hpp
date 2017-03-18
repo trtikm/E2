@@ -15,8 +15,8 @@ struct  experiment_factory
 {
     using  network_props_creator =
             std::function<std::shared_ptr<netlab::network_props>()>;
-    using  network_objects_factory_creator =
-            std::function<std::shared_ptr<netlab::network_objects_factory>()>;
+    using  network_layers_factory_creator =
+            std::function<std::shared_ptr<netlab::network_layers_factory>()>;
     using  initialiser_of_movement_area_centers_creator =
             std::function<std::shared_ptr<netlab::initialiser_of_movement_area_centers>()>;
     using  initialiser_of_ships_in_movement_areas_creator =
@@ -33,7 +33,7 @@ struct  experiment_factory
     bool  register_experiment(
             std::string const&  experiment_unique_name,
             network_props_creator const&  props_creator_fn,
-            network_objects_factory_creator const&  factory_creator_fn,
+            network_layers_factory_creator const&  factory_creator_fn,
             initialiser_of_movement_area_centers_creator const&  initialiser_of_area_centers_fn,
             initialiser_of_ships_in_movement_areas_creator const&  initialiser_of_ships_fn,
             tracked_spiker_stats_creator const&  spiker_stats_creator_fn,
@@ -48,7 +48,7 @@ struct  experiment_factory
     std::shared_ptr<netlab::network_props>  create_network_props(
             std::string const&  experiment_unique_name
             ) const;
-    std::shared_ptr<netlab::network_objects_factory>  create_network_objects_factory(
+    std::shared_ptr<netlab::network_layers_factory>  create_network_layers_factory(
             std::string const&  experiment_unique_name
             ) const;
     std::shared_ptr<netlab::initialiser_of_movement_area_centers>  create_initialiser_of_movement_area_centers(
@@ -78,7 +78,7 @@ private:
     experiment_factory(experiment_factory&&) = delete;
 
     std::unordered_map<std::string,network_props_creator>  m_props_creators;
-    std::unordered_map<std::string,network_objects_factory_creator>  m_factory_creators;
+    std::unordered_map<std::string,network_layers_factory_creator>  m_factory_creators;
     std::unordered_map<std::string,initialiser_of_movement_area_centers_creator>  m_area_centers_creators;
     std::unordered_map<std::string,initialiser_of_ships_in_movement_areas_creator>  m_ships_creators;
     std::unordered_map<std::string,tracked_spiker_stats_creator>  m_spiker_stats_creators;
@@ -95,7 +95,7 @@ private:
             namespace_name,                                             \
             experiment_name,                                            \
             network_props_creator_fn,                                   \
-            network_objects_factory_creator_fn,                         \
+            network_layers_factory_creator_fn,                          \
             initialiser_of_movement_area_centers_creator_fn,            \
             initialiser_of_ships_in_movement_areas_creator_fn,          \
             tracked_spiker_stats_creator_fn,                            \
@@ -111,7 +111,7 @@ private:
                 factory.register_experiment(                            \
                     experiment_name,                                    \
                     network_props_creator_fn,                           \
-                    network_objects_factory_creator_fn,                 \
+                    network_layers_factory_creator_fn,                  \
                     initialiser_of_movement_area_centers_creator_fn,    \
                     initialiser_of_ships_in_movement_areas_creator_fn,  \
                     tracked_spiker_stats_creator_fn,                    \

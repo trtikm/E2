@@ -41,7 +41,7 @@ experiment_factory&  experiment_factory::instance()
 bool  experiment_factory::register_experiment(
         std::string const&  experiment_unique_name,
         network_props_creator const&  props_creator_fn,
-        network_objects_factory_creator const&  factory_creator_fn,
+        network_layers_factory_creator const&  factory_creator_fn,
         initialiser_of_movement_area_centers_creator const&  initialiser_of_area_centers_fn,
         initialiser_of_ships_in_movement_areas_creator const&  initialiser_of_ships_fn,
         tracked_spiker_stats_creator const&  spiker_stats_creator_fn,
@@ -78,7 +78,7 @@ std::shared_ptr<netlab::network_props>  experiment_factory::create_network_props
     return (it != m_props_creators.cend()) ? it->second() : nullptr;
 }
 
-std::shared_ptr<netlab::network_objects_factory>  experiment_factory::create_network_objects_factory(
+std::shared_ptr<netlab::network_layers_factory>  experiment_factory::create_network_layers_factory(
         std::string const&  experiment_unique_name
         ) const
 {

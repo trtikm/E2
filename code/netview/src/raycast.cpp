@@ -294,8 +294,8 @@ float_32_bit  find_first_ship_on_line(
                         for (auto const&  layer_and_object_indices :
                              network.get_indices_of_ships_in_dock_sector(layer_index,sector_index))
                         {
-                            vector3 const&  ship_pos = network.get_ship(layer_and_object_indices.layer_index(),
-                                                                        layer_and_object_indices.object_index()).position();
+                            vector3 const&  ship_pos = network.get_layer_of_ships(layer_and_object_indices.layer_index())
+                                                              .position(layer_and_object_indices.object_index());
                             vector3  closest_point;
                             float_32_bit const  t =
                                     angeo::closest_point_on_line_to_point(line_begin,line_end,ship_pos,&closest_point);
