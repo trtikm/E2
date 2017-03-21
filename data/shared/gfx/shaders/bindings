@@ -16,6 +16,8 @@
 #   define BINDING_IN_TEXCOORD7            10
 #   define BINDING_IN_TEXCOORD8            11
 #   define BINDING_IN_TEXCOORD9            12
+#   define BINDING_IN_INDICES_OF_MATRICES  13
+#   define BINDING_IN_WEIGHTS_OF_MATRICES  14
 #elif SHADER_TYPE == FRAGMENT_SHADER_TYPE
 //  These must match the corresponding values of
 //  enum 'fragment_shader_input_buffer_binding_location'
@@ -76,3 +78,8 @@
 #define COLOUR_ALPHA                    UNIFORM_COLOUR_ALPHA
 #define DIFFUSE_COLOUR                  UNIFORM_DIFFUSE_COLOUR
 #define TRANSFORM_MATRIX_TRANSPOSED     UNIFORM_TRANSFORM_MATRIX_TRANSPOSED
+
+// This constant must match the value returned
+// from the function 'uniform_max_transform_matrices'
+// defined in the file 'qtgl/shader_data_binding.hpp'.
+const int  MAX_TRANSFORM_MATRICES =     32;
