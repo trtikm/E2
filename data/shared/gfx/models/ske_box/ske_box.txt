@@ -1,0 +1,14 @@
+E2::qtgl/batch/indexed/text
+../../shaders/vertex/vs_IpUmcOpcFX.txt
+../../shaders/fragment/fs_IcFc.txt
+../../meshes/ske_box\ske_box\indices.txt
+BINDING_IN_POSITION
+../../meshes/ske_box\ske_box\vertices.txt
+BINDING_IN_COLOUR
+../../meshes/ske_box\ske_box\diffuse_colours.txt
+BINDING_IN_INDICES_OF_MATRICES
+../../meshes/ske_box/ske_box/indices_of_matrices.txt
+BINDING_IN_WEIGHTS_OF_MATRICES
+../../meshes/ske_box/ske_box/weights_of_matrices.txt
+BACK
+false
