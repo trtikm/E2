@@ -15,6 +15,13 @@ void  render_batch(
 
 void  render_batch(
     qtgl::batch const&  batch,
+    std::vector<matrix44> const&  transform_matrices,
+    vector4 const&  diffuse_colour = { 0.0f, 0.0f, 0.0f, 0.0f }
+    );
+
+
+void  render_batch(
+    qtgl::batch const&  batch,
     matrix44 const&  view_projection_matrix,
     angeo::coordinate_system const&  coord_system,
     vector4 const&  diffuse_colour = { 0.0f, 0.0f, 0.0f, 0.0f }

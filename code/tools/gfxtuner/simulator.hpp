@@ -40,6 +40,8 @@ private:
     qtgl::batch_ptr  m_batch_grid;
     bool  m_do_show_grid;
 
+    qtgl::batch_ptr  m_batch_ske_test;
+
     /// Data related to simulation
     bool  m_paused;
     bool  m_do_single_step;

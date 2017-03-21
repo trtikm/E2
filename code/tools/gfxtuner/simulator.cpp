@@ -117,6 +117,10 @@ simulator::simulator()
             }
     , m_do_show_grid(true)
 
+    , m_batch_ske_test{ qtgl::batch::create(canonical_path(
+            boost::filesystem::path{get_program_options()->dataRoot()} / "shared/gfx/models/ske_box/ske_box.txt"
+            )) }
+
     , m_paused(true)
     , m_do_single_step(false)
 {}
@@ -212,4 +216,20 @@ void  simulator::render_simulation_state(matrix44 const&  view_projection_matrix
 {
     TMPROF_BLOCK();
 
+    if (m_batch_ske_test != nullptr && qtgl::make_current(*m_batch_ske_test, draw_state))
+    {
+        INVARIANT(m_batch_ske_test->shaders_binding().operator bool());
+        angeo::coordinate_system coord_system{
+                vector3_zero(),
+                angle_axis_to_quaternion(PI()/2.0f,vector3_unit_x())
+                };
+        matrix44  world_transform;
+        angeo::transformation_matrix(coord_system,world_transform);
+        std::vector<matrix44> transform_matrices{
+                view_projection_matrix,
+                view_projection_matrix * world_transform
+                };
+        render_batch(*m_batch_ske_test,transform_matrices,{1.0f,0.0f,0.0f,0.0f});
+        draw_state = m_batch_ske_test->draw_state();
+    }
 }

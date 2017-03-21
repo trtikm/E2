@@ -26,6 +26,29 @@ void  render_batch(
 
 void  render_batch(
     qtgl::batch const&  batch,
+    std::vector<matrix44> const&  transform_matrices,
+    vector4 const&  diffuse_colour
+    )
+{
+    for (qtgl::vertex_shader_uniform_symbolic_name const uniform : batch.symbolic_names_of_used_uniforms())
+        switch (uniform)
+        {
+        case qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
+            break;
+        case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
+            qtgl::set_uniform_variable(batch.shaders_binding()->uniform_variable_accessor(), uniform, diffuse_colour);
+            break;
+        case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
+            qtgl::set_uniform_variable(batch.shaders_binding()->uniform_variable_accessor(), uniform, transform_matrices);
+            break;
+        }
+
+    qtgl::draw();
+}
+
+
+void  render_batch(
+    qtgl::batch const&  batch,
     matrix44 const&  view_projection_matrix,
     angeo::coordinate_system const&  coord_system,
     vector4 const&  diffuse_colour
