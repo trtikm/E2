@@ -143,9 +143,7 @@ buffer_properties::buffer_properties(
     , m_num_bytes_per_component(num_bytes_per_component)
     , m_has_integral_components(has_integral_components)
 {
-    ASSUMPTION(m_num_components_per_primitive == 2U ||
-               m_num_components_per_primitive == 3U ||
-               m_num_components_per_primitive == 4U );
+    ASSUMPTION(m_num_components_per_primitive != 0U);
     ASSUMPTION(m_num_primitives > 0U);
     ASSUMPTION((m_has_integral_components && m_num_bytes_per_component == (natural_8_bit)sizeof(natural_32_bit)) ||
                (!m_has_integral_components && m_num_bytes_per_component == sizeof(float_32_bit)));
@@ -696,6 +694,77 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
             return buffer_properties_ptr();
         }
         return buffer_properties::create(buffer_file,2U,num_vertices,sizeof(float_32_bit),false);
+    }
+    else if (file_type == "E2::qtgl/buffer/indices_of_matrices/2/text")
+    {
+        std::string  line;
+        if (!detail::read_line(istr,line))
+        {
+            error_message = msgstream() << "Cannot read indices of matrices in the file '" << buffer_file << "'.";
+            return buffer_properties_ptr();
+        }
+        natural_32_bit const  num_elements = std::stoul(line);
+        if (num_elements == 0U)
+        {
+            error_message = msgstream() << "The buffer file '" << buffer_file << "' contains zero indices of matrices.";
+            return buffer_properties_ptr();
+        }
+        for (natural_32_bit  i = 0U; i < num_elements; ++i)
+            for (natural_32_bit  j = 0U; j < 2U; ++j)
+            {
+                if (!detail::read_line(istr,line))
+                {
+                    error_message = msgstream() << "Cannot read the index no." << j << " of the element no." << i
+                                                << " in the file '" << buffer_file << "'.";
+                    return buffer_properties_ptr();
+                }
+                natural_32_bit const index = std::stoul(line);
+                std::copy(reinterpret_cast<natural_8_bit const*>(&index),
+                          reinterpret_cast<natural_8_bit const*>(&index) + sizeof(index),
+                          std::back_inserter(buffer_data));
+            }
+        if (detail::read_line(istr,line))
+        {
+            error_message = msgstream() << "The file '" << buffer_file << "' contains more indices than "
+                                        << 2U * num_elements <<" indices.";
+            return buffer_properties_ptr();
+        }
+        return buffer_properties::create(buffer_file,2U,num_elements,sizeof(natural_32_bit),true);
+    }
+    else if (file_type == "E2::qtgl/buffer/weights_of_matrices/1/text")
+    {
+        std::string  line;
+        if (!detail::read_line(istr, line))
+        {
+            error_message = msgstream() << "Cannot read number of weights in the file '" << buffer_file << "'.";
+            return buffer_properties_ptr();
+        }
+        natural_32_bit const  num_weights = std::stoul(line);
+        if (num_weights == 0U)
+        {
+            error_message = msgstream() << "The buffer file '" << buffer_file << "' contains zero weights of matrices.";
+            return buffer_properties_ptr();
+        }
+        for (natural_32_bit i = 0U; i < num_weights; ++i)
+            for (natural_32_bit j = 0U; j < 1U; ++j)
+            {
+                if (!detail::read_line(istr, line))
+                {
+                    error_message = msgstream() << "Cannot read the weight no." << i+j << " in the file '" << buffer_file << "'.";
+                    return buffer_properties_ptr();
+                }
+                float_32_bit const coord = std::stof(line);
+                std::copy(reinterpret_cast<natural_8_bit const*>(&coord),
+                    reinterpret_cast<natural_8_bit const*>(&coord) + sizeof(coord),
+                    std::back_inserter(buffer_data));
+            }
+        if (detail::read_line(istr, line))
+        {
+            error_message = msgstream() << "The file '" << buffer_file << "' contains more than "
+                << 1U * num_weights << " weights of matrices.";
+            return buffer_properties_ptr();
+        }
+        return buffer_properties::create(buffer_file, 1U, num_weights, sizeof(float_32_bit), false);
     }
     else if (file_type == "E2::qtgl/buffer/texcoords/2d/1/text")
     {

@@ -126,6 +126,9 @@ bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
 bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
                            std::string const&  variable_name,
                            matrix44 const&  value_to_store);
+bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
+                           std::string const&  variable_name,
+                           std::vector<matrix44> const&  value_to_store);
 
 
 std::string  load_vertex_program_file(boost::filesystem::path const&  shader_file,

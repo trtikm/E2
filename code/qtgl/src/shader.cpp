@@ -778,6 +778,8 @@ bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
 {
     TMPROF_BLOCK();
 
+    static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
+
     GLint const  layout_location = glapi().glGetUniformLocation(accessor.first,variable_name.c_str());
     if (layout_location == -1)
     {
@@ -789,6 +791,29 @@ bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
         return false;
     }
     glapi().glProgramUniformMatrix4fv(accessor.first,layout_location,1U,GL_TRUE,value_to_store.data());
+    return true;
+}
+
+
+bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
+                           std::string const&  variable_name,
+                           std::vector<matrix44> const&  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
+
+    GLint const  layout_location = glapi().glGetUniformLocation(accessor.first,variable_name.c_str());
+    if (layout_location == -1)
+    {
+        for (auto sname : accessor.second->symbolic_names_of_used_uniforms())
+            if (variable_name == uniform_name(sname))
+            {
+                UNREACHABLE();
+            }
+        return false;
+    }
+    glapi().glProgramUniformMatrix4fv(accessor.first,layout_location,(GLsizei)value_to_store.size(),GL_TRUE,value_to_store.data()->data());
     return true;
 }
 

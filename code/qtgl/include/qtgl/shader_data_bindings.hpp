@@ -23,6 +23,8 @@ enum struct vertex_shader_input_buffer_binding_location : natural_8_bit
     BINDING_IN_TEXCOORD7            = 10,
     BINDING_IN_TEXCOORD8            = 11,
     BINDING_IN_TEXCOORD9            = 12,
+    BINDING_IN_INDICES_OF_MATRICES  = 13,
+    BINDING_IN_WEIGHTS_OF_MATRICES  = 14
 };
 
 inline natural_8_bit  value(vertex_shader_input_buffer_binding_location const  location)
@@ -32,7 +34,7 @@ std::string  binding_location_name(vertex_shader_input_buffer_binding_location c
 inline constexpr vertex_shader_input_buffer_binding_location  min_vertex_shader_input_buffer_binding_location() noexcept
 { return vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION; }
 inline constexpr vertex_shader_input_buffer_binding_location  max_vertex_shader_input_buffer_binding_location() noexcept
-{ return vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD9; }
+{ return vertex_shader_input_buffer_binding_location::BINDING_IN_WEIGHTS_OF_MATRICES; }
 inline constexpr natural_8_bit  num_vertex_shader_input_buffer_bindings() noexcept
 { return static_cast<natural_8_bit>(max_vertex_shader_input_buffer_binding_location()) -
          static_cast<natural_8_bit>(min_vertex_shader_input_buffer_binding_location()) +
@@ -71,7 +73,7 @@ inline natural_8_bit  value(vertex_shader_uniform_symbolic_name const  name)
 { return static_cast<natural_8_bit>(name); }
 std::string  uniform_symbolic_name(vertex_shader_uniform_symbolic_name const  symbolic_name);
 std::string  uniform_name(vertex_shader_uniform_symbolic_name const  symbolic_name);
-
+inline constexpr natural_32_bit  uniform_max_transform_matrices() { return 32U; }
 
 enum struct fragment_shader_input_buffer_binding_location : natural_8_bit
 {

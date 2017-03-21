@@ -21,6 +21,8 @@ std::string  binding_location_name(vertex_shader_input_buffer_binding_location c
     case vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD7: return "BINDING_IN_TEXCOORD7";
     case vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD8: return "BINDING_IN_TEXCOORD8";
     case vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD9: return "BINDING_IN_TEXCOORD9";
+    case vertex_shader_input_buffer_binding_location::BINDING_IN_INDICES_OF_MATRICES: return "BINDING_IN_INDICES_OF_MATRICES";
+    case vertex_shader_input_buffer_binding_location::BINDING_IN_WEIGHTS_OF_MATRICES: return "BINDING_IN_WEIGHTS_OF_MATRICES";
     default: UNREACHABLE();
     }
 }
