@@ -173,6 +173,7 @@ def save_buffers(
         
     os.makedirs(root_dir, exist_ok=True)
 
+    print("    Saving index buffer to '" + os.path.join(root_dir,"indices.txt") +"'.")
     f = open(os.path.join(root_dir,"indices.txt"),"w")
     f.write("E2::qtgl/buffer/indices/triangles/text\n")
     f.write(str(buffers.num_triangles()) + "\n")
@@ -183,6 +184,7 @@ def save_buffers(
             f.write(str(t[j]) + "\n")
     f.close()
         
+    print("    Saving vertex buffer to '" + os.path.join(root_dir,"vertices.txt") +"'.")
     f = open(os.path.join(root_dir,"vertices.txt"),"w")
     f.write("E2::qtgl/buffer/vertices/3d/text\n")
     f.write(str(buffers.num_elements()) + "\n")
@@ -193,6 +195,7 @@ def save_buffers(
         f.write((precision_str % c[2]) + "\n")
     f.close()
 
+    print("    Saving normals to '" + os.path.join(root_dir,"normals.txt") +"'.")
     f = open(os.path.join(root_dir,"normals.txt"),"w")
     f.write("E2::qtgl/buffer/normals/3d/text\n")
     f.write(str(buffers.num_elements()) + "\n")
@@ -203,6 +206,7 @@ def save_buffers(
         f.write((precision_str % c[2]) + "\n")
     f.close()
 
+    print("    Saving diffuse colours to '" + os.path.join(root_dir,"diffuse_colours.txt") +"'.")
     f = open(os.path.join(root_dir,"diffuse_colours.txt"),"w")
     f.write("E2::qtgl/buffer/diffuse_colours/text\n")
     f.write(str(buffers.num_elements()) + "\n")
@@ -214,6 +218,7 @@ def save_buffers(
         f.write((precision_str % c[3]) + "\n")
     f.close()
         
+    print("    Saving specular colours to '" + os.path.join(root_dir,"specular_colours.txt") +"'.")
     f = open(os.path.join(root_dir,"specular_colours.txt"),"w")
     f.write("E2::qtgl/buffer/specular_colours/text\n")
     f.write(str(buffers.num_elements()) + "\n")
@@ -226,6 +231,8 @@ def save_buffers(
     f.close()
 
     for i in range(0,buffers.num_texture_coords()):
+        print("    Saving coordinates of texture " + str(i) + "to '" +
+              os.path.join(root_dir,"texcoords" + str(i) + ".txt") +"'.")
         f = open(os.path.join(root_dir,"texcoords" + str(i) + ".txt"),"w")
         f.write("E2::qtgl/buffer/texcoords/2d/" + str(i) + "/text\n")
         f.write(str(buffers.num_elements()) + "\n")
@@ -271,7 +278,7 @@ def export_mesh(
                         mesh.vertex_colors[k].data[j].color[2],
                         1.0
                         ))
-                assert len(colors) > 0
+                assert len(colours) > 0
                 diffuse_colour = colours[0]
                 if len(colours) > 1:
                     specular_colour = colours[1]
@@ -361,6 +368,8 @@ def export_textures(
             shutil.copyfile(src_image_pathname,os.path.join(root_dir,dst_image_name + dst_image_extension))
             
             texture_txt_file = os.path.join(root_dir,dst_image_name + ".txt")
+
+            print("    Saving texture number " + str(i) + " to '" + texture_txt_file +"'.")
             f = open(texture_txt_file,"w")
 
             f.write("E2::qtgl/texture/text\n")
@@ -402,6 +411,7 @@ def export_batches(
         else:
             image_files = []
             
+        print("    Saving render batch to '" + os.path.join(root_dir,batch_name + ".txt") +"'.")
         f = open(os.path.join(root_dir,batch_name + ".txt"),"w")
 
         f.write("E2::qtgl/batch/indexed/text\n")
@@ -463,6 +473,7 @@ def export_model(
     #print("   root_dir = " + root_dir)
     #print("   model_name = " + model_name)
     #print("   mesh_name = " + mesh_name)
+    print("  Exporting '" + mesh.name + "' under '" + root_dir + "'.")
     bufferdirs_to_mtlindices = export_mesh(mesh,os.path.join(root_dir,"meshes",model_name,mesh_name))
     mtlindices_to_textures = export_textures(mesh.materials,os.path.join(root_dir,"textures",model_name))
     export_batches(bufferdirs_to_mtlindices,mtlindices_to_textures,len(mesh.uv_layers),os.path.join(root_dir,"models",model_name))
@@ -483,7 +494,7 @@ class E2_buffer_exporter(bpy.types.Operator):
         if len(bpy.context.selected_objects) < 1:
             return False
         for i in range(0,len(bpy.context.selected_objects)):
-            if bpy.context.selected_objects[0].type != "MESH":
+            if bpy.context.selected_objects[i].type != "MESH":
                 return False
         return True
         #return (len(bpy.context.selected_objects) == 1
@@ -494,6 +505,8 @@ class E2_buffer_exporter(bpy.types.Operator):
         return {'RUNNING_MODAL'}
     
     def execute(self, context):
+        print("Starting E2::qtgl model exporter.")
+
         bpy.ops.object.transform_apply(rotation=True, scale=True)
 
         export_dir = os.path.normpath(self.directory)
@@ -503,7 +516,6 @@ class E2_buffer_exporter(bpy.types.Operator):
             model_name = "model_name"
         mesh_names = set()
 
-        #print("\n\n\n*** E2::qtgl model exporter **************************************")
         for i in range(0,len(bpy.context.selected_objects)):
             obj = bpy.context.selected_objects[i]
             mesh = obj.data
@@ -518,6 +530,7 @@ class E2_buffer_exporter(bpy.types.Operator):
 
             export_model(mesh,export_dir,model_name,mesh_name)
 
+        print("Terminating E2::qtgl model exporter.")
         return{'FINISHED'}
 
 
