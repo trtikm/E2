@@ -344,7 +344,10 @@ def export_textures(
     for mtl_index in range(0,len(materials)):
         #print("      material[" + str(mtl_index) + "]:")
         material = materials[mtl_index]
-        images = get_texture_images_of_material(materials[mtl_index])
+        if not material:
+            continue
+        #print("      material=" + str(material))
+        images = get_texture_images_of_material(material)
         #print("      num_images = " + str(len(images)))
         for i in range(0,len(images)):
             image = images[i]
@@ -479,8 +482,8 @@ def export_model(
     export_batches(bufferdirs_to_mtlindices,mtlindices_to_textures,len(mesh.uv_layers),os.path.join(root_dir,"models",model_name))
 
 
-class E2_buffer_exporter(bpy.types.Operator):
-    bl_idname = "export.e2_model"
+class E2_model_exporter(bpy.types.Operator):
+    bl_idname = "export.e2_qtgl_model_exporter"
     bl_label = "E2::qtgl model exporter"
     directory = bpy.props.StringProperty(
                     name="An output directory",
@@ -535,16 +538,16 @@ class E2_buffer_exporter(bpy.types.Operator):
 
 
 def menu_func_export(self, context):
-    self.layout.operator(E2_buffer_exporter.bl_idname, text="E2 gtgl model")
+    self.layout.operator(E2_model_exporter.bl_idname, text="E2::qtgl model")
 
 
 def register():
-    bpy.utils.register_module(__name__)
+    bpy.utils.register_class(E2_model_exporter)
     bpy.types.INFO_MT_file_export.append(menu_func_export)
 
 
 def unregister():
-    bpy.utils.unregister_module(__name__)
+    bpy.utils.unregister_class(E2_model_exporter)
     bpy.types.INFO_MT_file_export.remove(menu_func_export)
 
 if __name__ == "__main__":
