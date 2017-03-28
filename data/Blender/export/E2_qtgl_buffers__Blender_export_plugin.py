@@ -19,12 +19,15 @@ class render_element:
     
     def __init__(
             self,
-            vertex_coords,      # A tuple of 3 floats.
-            normal_coords,      # A tuple of 3 floats.
-            diffuse_colour,     # A tuple of 4 floats all in the range [0,1].
-            specular_colour,    # A tuple of 4 floats all in the range [0,1].
-            texture_coords      # A list of tuples of 2 floats in the range [0,1] each.
+            vertex_coords,          # A tuple of 3 floats.
+            normal_coords,          # A tuple of 3 floats.
+            diffuse_colour,         # A tuple of 4 floats all in the range [0,1].
+            specular_colour,        # A tuple of 4 floats all in the range [0,1].
+            texture_coords,         # A list of tuples of 2 floats in the range [0,1] each.
+            weights_of_matrices,    # A list of floats
+            indices_of_matrices     # A list of ints
             ):
+        assert len(weights_of_matrices) == len(indices_of_matrices)
         self._vertex_coords = (vertex_coords[0],vertex_coords[1],vertex_coords[2])
         self._normal_coords = (normal_coords[0],normal_coords[1],normal_coords[2])
         self._diffuse_colour = (diffuse_colour[0],diffuse_colour[1],diffuse_colour[2],diffuse_colour[3])
@@ -32,6 +35,12 @@ class render_element:
         self._texture_coords = []
         for tc in texture_coords:
             self._texture_coords.append((tc[0],tc[1]))
+        self._weights_of_matrices = []
+        for w in weights_of_matrices:
+            self._weights_of_matrices.append(w)
+        self._indices_of_matrices = []
+        for i in indices_of_matrices:
+            self._indices_of_matrices.append(i)
 
     def vertex_coords(self):
         return self._vertex_coords
@@ -51,15 +60,35 @@ class render_element:
     def texture_coords(self,index):
         return self._texture_coords[index] 
         
+    def num_weights_of_matrices(self):
+        return len(self._weights_of_matrices)
+
+    def weight_of_matrix(self,index):
+        return self._weights_of_matrices[index]
+
+    def num_indices_of_matrices(self):
+        return len(self._indices_of_matrices)
+
+    def index_of_matrix(self,index):
+        return self._indices_of_matrices[index]
+
     def __eq__(self,other):
         if (self.vertex_coords() != other.vertex_coords()
             or self.normal_coords() != other.normal_coords()
             or self.diffuse_colour() != other.diffuse_colour()
             or self.specular_colour() != other.specular_colour()
-            or self.num_texture_coords() != other.num_texture_coords()):
+            or self.num_texture_coords() != other.num_texture_coords()
+            or self.num_weights_of_matrices() != other.num_weights_of_matrices()
+            or self.num_indices_of_matrices() != other.num_indices_of_matrices()):
             return False
         for i in range(0,self.num_texture_coords()):
             if self.texture_coords(i) != other.texture_coords(i):
+                return False
+        for i in range(0,self.num_weights_of_matrices()):
+            if self.weight_of_matrix(i) != other.weight_of_matrix(i):
+                return False
+        for i in range(0,self.num_indices_of_matrices()):
+            if self.index_of_matrix(i) != other.index_of_matrix(i):
                 return False
         return True
 
@@ -70,6 +99,10 @@ class render_element:
                   + 29 * hash(self.specular_colour()))
         for i in range(0,self.num_texture_coords()):
             result = result + 101 * hash(self.texture_coords(i))
+        for i in range(0,self.num_weights_of_matrices()):
+            result = result + 101 * hash(self.weight_of_matrix(i))
+        for i in range(0,self.num_indices_of_matrices()):
+            result = result + 101 * hash(self.index_of_matrix(i))
         return result
 
 
@@ -111,6 +144,16 @@ class render_buffers:
     def num_texture_coords(self):
         return self._num_texture_coordinates
         
+    def num_weights_of_matrices_per_vertex(self):
+        if self.num_elements() == 0:
+            return 0
+        return self.element_at_index(0).num_weights_of_matrices()
+
+    def num_indices_of_matrices_per_vertex(self):
+        if self.num_elements() == 0:
+            return 0
+        return self.element_at_index(0).num_indices_of_matrices()
+
     def add_triangle(
             self,
             A,  # An instance of class 'render_element' representing the first vertex.
@@ -243,6 +286,26 @@ def save_buffers(
             f.write((precision_str % c[1]) + "\n")
         f.close()
 
+    if buffers.num_weights_of_matrices_per_vertex() > 0:
+        print("    Saving weights of matrices to '" + os.path.join(root_dir,"weights_of_matrices.txt") +"'.")
+        with open(os.path.join(root_dir,"weights_of_matrices.txt"),"w") as f:
+            f.write("E2::qtgl/buffer/weights_of_matrices/" + str(buffers.num_weights_of_matrices_per_vertex()) + "/text\n")
+            f.write(str(buffers.num_elements()) + "\n")
+            for elem_idx in range(0,buffers.num_elements()):
+                elem = buffers.element_at_index(elem_idx)
+                for weight_idx in range(0,elem.num_weights_of_matrices()):
+                    f.write(str(elem.weight_of_matrix(weight_idx)) + "\n")
+
+    if buffers.num_indices_of_matrices_per_vertex() > 0:
+        print("    Saving indices of matrices to '" + os.path.join(root_dir,"indices_of_matrices.txt") +"'.")
+        with open(os.path.join(root_dir,"indices_of_matrices.txt"),"w") as f:
+            f.write("E2::qtgl/buffer/indices_of_matrices/" + str(buffers.num_indices_of_matrices_per_vertex()) + "/text\n")
+            f.write(str(buffers.num_elements()) + "\n")
+            for elem_idx in range(0,buffers.num_elements()):
+                elem = buffers.element_at_index(elem_idx)
+                for index_idx in range(0,elem.num_indices_of_matrices()):
+                    f.write(str(elem.index_of_matrix(index_idx)) + "\n")
+
 
 def export_mesh(
         mesh,       # An instance of class 'bpy.types.Mesh'
@@ -252,6 +315,10 @@ def export_mesh(
                     # is a number of generated batch.
         ):  # Returns a map from generated directories of individual buffers to indices
             # of corresponding materials.
+    num_weights_per_vertex = 0
+    for idx in range(0,len(mesh.vertices)):
+        num_weights_per_vertex = max(num_weights_per_vertex,len(mesh.vertices[idx].groups))
+
     #print("export_mesh")
     #print("   root_dir = " + root_dir)
     buffers = []
@@ -309,26 +376,44 @@ def export_mesh(
             #    assert len(texcoords) > 0
             #    texcoords.append(texcoords[len(texcoords)-1])
 
+            vtx = mesh.vertices[mesh.loops[j].vertex_index]
+
+            weights_of_matrices = []
+            indices_of_matrices = []
+            for i in range(0,num_weights_per_vertex):
+                weights_of_matrices.append(0.0)
+                indices_of_matrices.append(0)
+            for i in range(0,len(vtx.groups)):
+                weights_of_matrices[i] = vtx.groups[i].weight
+                indices_of_matrices[i] = vtx.groups[i].group
+            if num_weights_per_vertex > 1 and abs(sum(weights_of_matrices) - 1.0) > 0.001:
+                print("ERROR: Sum of weights of vertex " + str(mesh.loops[j].vertex_index) + " is " + str(sum(weights_of_matrices)))
+
             E = render_element(
                     mesh.vertices[mesh.loops[j].vertex_index].co,
                     mesh.vertices[mesh.loops[j].vertex_index].normal,
                     diffuse_colour,
                     specular_colour,
-                    texcoords
+                    texcoords,
+                    weights_of_matrices,
+                    indices_of_matrices
                     )
             polygon.append(E)
         buffers[mtl_index].add_polygon(polygon)
         
     bufferdirs_to_mtlindices = {}
+    has_armature = []
     if len(buffers) == 1:
         save_buffers(buffers[0],root_dir)
         bufferdirs_to_mtlindices[root_dir] = 0
+        has_armature.append(buffers[0].num_weights_of_matrices_per_vertex() > 0)
     else:
         for i in range(0,len(buffers)):
             export_dir = root_dir + "_" + str(i)
             save_buffers(buffers[i],export_dir)
             bufferdirs_to_mtlindices[export_dir] = i
-    return bufferdirs_to_mtlindices
+            has_armature.append(buffers[i].num_weights_of_matrices_per_vertex() > 0)
+    return bufferdirs_to_mtlindices, has_armature
 
 
 def export_textures(
@@ -395,6 +480,7 @@ def export_textures(
 
 def export_batches(
         bufferdirs_to_mtlindices,   # A map from buffer directories to indices of corresponding materials.
+        has_armature,               # A list of bools for each mesh (buffersdir) one.
         mtlindices_to_textures,     # A map from indices of materials to path-names of created texture files.
         num_uv_layers,              # A number of texture coordinates per a vertex, i.e. len(mesh.uv_layers)
         root_dir,                   # A directory into which all exported batch files will be created.
@@ -404,6 +490,7 @@ def export_batches(
     os.makedirs(root_dir, exist_ok=True)
     model_name = os.path.basename(root_dir)
     #print("   model_name = " + model_name)
+    item_index = 0
     for buffers_dir, mtl_index in bufferdirs_to_mtlindices.items():
         batch_name = os.path.basename(buffers_dir)
         #print("   batch_name = " + batch_name)
@@ -460,8 +547,15 @@ def export_batches(
             
             f.write(os.path.join("../../textures",model_name,os.path.basename(image_files[i])) + "\n")
 
+        if has_armature[item_index]:
+            f.write("BINDING_IN_INDICES_OF_MATRICES\n")
+            f.write(os.path.join(buffers_dir,"indices_of_matrices.txt") + "\n")
+            f.write("BINDING_IN_WEIGHTS_OF_MATRICES\n")
+            f.write(os.path.join(buffers_dir,"weights_of_matrices.txt") + "\n")
+
         f.write("BACK\n")
         f.write("false\n")
+        item_index += 1
 
         f.close()
 
@@ -477,9 +571,15 @@ def export_model(
     #print("   model_name = " + model_name)
     #print("   mesh_name = " + mesh_name)
     print("  Exporting '" + mesh.name + "' under '" + root_dir + "'.")
-    bufferdirs_to_mtlindices = export_mesh(mesh,os.path.join(root_dir,"meshes",model_name,mesh_name))
+    bufferdirs_to_mtlindices, has_armature = export_mesh(mesh,os.path.join(root_dir,"meshes",model_name,mesh_name))
     mtlindices_to_textures = export_textures(mesh.materials,os.path.join(root_dir,"textures",model_name))
-    export_batches(bufferdirs_to_mtlindices,mtlindices_to_textures,len(mesh.uv_layers),os.path.join(root_dir,"models",model_name))
+    export_batches(
+        bufferdirs_to_mtlindices,
+        has_armature,
+        mtlindices_to_textures,
+        len(mesh.uv_layers),
+        os.path.join(root_dir,"models",model_name)
+        )
 
 
 class E2_model_exporter(bpy.types.Operator):
