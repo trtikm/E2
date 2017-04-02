@@ -592,17 +592,86 @@ def save_textures(
         assert len(export_info["images"][-1]) == len(export_info["textures"][-1])
 
 
-def export_coord_systems_of_bones(mesh,output_dir):
-    for mod in mesh.modifiers:
+def export_coord_systems_of_bones(
+        obj,        # An instance of "bpy.types.Object" with "obj.type == 'MESH'" and "obj.data" being of type
+                    # "bpy.type.Mesh".
+        export_info # A dictionary holding properties related to the exported mesh. Both keys and values are strings.
+        ):
+    """
+    This function exports coordinate systems of all bones of the armature applied to the passed mesh object "obj".
+    The function also updates "export_info" so that "export_info["coord_systems"]" is the pathname of the exported
+    file. In case there is no armature applied to the mesh object, this function does nothing (i.e. nothing is exported
+    and "export_info" is not modified).
+    :param obj: An instance of "bpy.types.Object" with "obj.type == 'MESH'" and "obj.data" being of type
+                "bpy.type.Mesh".
+    :param export_info: A dictionary holding properties related to the exported mesh. Both keys and values are strings.
+    :return: None
+    """
+
+    assert obj.type == 'MESH'
+
+    # We first find an armature applied to the mesh object. It might also be the case there is none.
+    armature = None
+    for mod in obj.modifiers:
         if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
             armature = mod.object
-            coord_systems = []
-            for _ in armature.data.bones:
-                coord_systems.append((
-                    mathutils.Vector((0.0,0.0,0.0)),
-                    mathutils.Quaternion((1.0, 0.0, 0.0, 0.0))
-                    ))
-            #for bone in armature.data.bones:
+            break
+    if not armature:
+        return
+
+    # This is the list into which we store coordinate systems of all bones in the armature
+    # in the order as they are listed in the armature (to match their indices in vertex groups).
+    coord_systems = []
+
+    # So, let's compute coordinate systems of individual bones.
+    for bone in armature.data.bones:
+
+        # First we collect the whole chain of parent bones from the root one to this bone.
+        bones_list = []
+        xbone = bone
+        while xbone:
+            bones_list.append(xbone)
+            xbone = xbone.parent
+        bones_list.reverse()
+
+        # Now we compute "to-space" transformation matrix of the bone.
+        # We have to do so by composition with same matrices of all parent bones.
+        # And lastly we have to also include the transformation of the mesh into
+        # the parent armature.
+        transform_matrix = mathutils.Matrix()
+        transform_matrix.identity()
+        for xbone in bones_list:
+            origin = transform_matrix * xbone.head_local.to_4d()
+            origin.resize_3d()
+            transform_matrix = to_base_matrix(origin,xbone.matrix.to_quaternion()) * transform_matrix
+        transform_matrix = transform_matrix * from_base_matrix(obj.location,obj.rotation_quaternion)
+
+        # Finally we compute the position (origin) and rotation (orientation) of the
+        # coordinate system of the bone.
+        pos = transform_matrix.inverted() * mathutils.Vector((0.0, 0.0, 0.0, 1.0))
+        pos.resize_3d()
+        rot = transform_matrix.to_3x3().transposed().to_quaternion().normalized()
+
+        # And we store the computed data (i.e. the coordinate system).
+        coord_systems.append({ "position": pos, "orientation": rot })
+
+    export_info["coord_systems"] = os.path.join(
+            export_info["root_dir"],
+            "meshes",
+            export_info["model_name"],
+            export_info["mesh_name"],
+            "coord_systems.txt"
+            )
+    os.makedirs(os.path.dirname(export_info["coord_systems"]), exist_ok=True)
+    with open(export_info["coord_systems"],"w") as f:
+        print("    Saving coordinate system: " + os.path.relpath(export_info["coord_systems"],export_info["root_dir"]))
+        f.write("E2::qtgl/coordsystems/text\n")
+        f.write(str(len(coord_systems)) + "\n")
+        for system in coord_systems:
+            for i in range(0,3):
+                f.write(str(system["position"][i]) + "\n")
+            for i in range(0,4):
+                f.write(str(system["orientation"][i]) + "\n")
 
 
 def select_best_shaders(
@@ -727,6 +796,19 @@ def export_selected_meshes(
                 print("  ERROR: The mesh object '" + obj.name + "' has more than 2 colours per vertex. "
                       "Skipping it...")
                 continue
+            num_armatures = 0
+            armature = None
+            for mod in obj.modifiers:
+                if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
+                    armature = mod.object
+                    num_armatures += 1
+            if num_armatures > 1:
+                print("  ERROR: The mesh object '" + obj.name + "' has more than one armature. Skipping it...")
+                continue
+            if num_armatures == 1 and len(armature.data.bones) == 0:
+                print("  ERROR: The armature '" + armature.name + "' of the object '" + obj.name + "'has no bone."
+                      " Skipping the object...")
+                continue
 
             mesh = obj.data
 
@@ -754,6 +836,8 @@ def export_selected_meshes(
 
             assert len(export_info["render_buffers"]) == len(export_info["images"])
             assert len(export_info["render_buffers"]) == len(export_info["textures"])
+
+            export_coord_systems_of_bones(obj,export_info)
 
             save_batch_files(export_info)
     else:
