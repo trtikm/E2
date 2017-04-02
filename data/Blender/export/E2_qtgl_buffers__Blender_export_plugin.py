@@ -592,7 +592,7 @@ def save_textures(
         assert len(export_info["images"][-1]) == len(export_info["textures"][-1])
 
 
-def export_coord_systems_of_bones(
+def save_coord_systems_of_bones(
         obj,        # An instance of "bpy.types.Object" with "obj.type == 'MESH'" and "obj.data" being of type
                     # "bpy.type.Mesh".
         export_info # A dictionary holding properties related to the exported mesh. Both keys and values are strings.
@@ -672,6 +672,61 @@ def export_coord_systems_of_bones(
                 f.write(str(system["position"][i]) + "\n")
             for i in range(0,4):
                 f.write(str(system["orientation"][i]) + "\n")
+
+    # Now we focus on export of a keyframe animation associated with the armature, if any.
+
+    if not armature.animation_data:
+        return
+    if not armature.animation_data.action:
+        return
+
+    # Before we can start collecting data from the animation, we have to prepare the supporting data stricture:
+    from_bone_name_to_bone_index = {}
+    for idx in range(0,len(armature.data.bones)):
+        assert armature.data.bones[idx].name not in from_bone_name_to_bone_index
+        from_bone_name_to_bone_index[armature.data.bones[idx].name] = idx
+    assert len(from_bone_name_to_bone_index) == len(coord_systems)
+
+    # First we collect data from individual frames in the animation. We store them into the dictionary "keyframes";
+    # keys are time points of the frames and values are arrays of raw coordinate systems of bones at that time.
+    # Index of a system in the list relates to the index of the corresponding bone in the armature. Note that
+    # the coordinate systems are "raw" - they relay on hierarchy of bones. So, this will be fixed later.
+    keyframes = {}
+
+    action = armature.animation_data.action
+    start_frame = action.frame_range[0]
+    end_frame = action.frame_range[1]
+    for fcurve in action.fcurves:
+        assert fcurve.group.name in from_bone_name_to_bone_index
+        assert fcurve.data_path.endswith("location") or fcurve.data_path.endswith("rotation_quaternion")
+        bone_index = from_bone_name_to_bone_index[fcurve.group.name]
+        coord_index = fcurve.array_index
+        for point in fcurve.keyframe_points:
+            frame_number = point.co[0]
+            frame_value = point.co[1]
+
+            assert start_frame <= frame_number and frame_number <= end_frame
+            frame_time_point = (frame_number - start_frame) * 0.04 # Frame-rate of frames is 25Hz; It is 0.04s per frame.
+
+            if frame_time_point not in keyframes:
+                keyframes[frame_time_point] = []
+                for idx in range(0,len(armature.data.bones)):
+                    keyframes[frame_time_point].append({
+                        "position": mathutils.Vector((0.0, 0.0, 0.0)),
+                        "orientation": mathutils.Quaternion((1.0, 0.0, 0.0, 0.0))
+                        })
+
+            if fcurve.data_path.endswith("location"):
+                assert coord_index in [0,1,2]
+                keyframes[frame_time_point][bone_index]["position"][coord_index] = frame_value
+            else:
+                assert coord_index in [0,1,2,3]
+                keyframes[frame_time_point][bone_index]["orientation"][coord_index] = frame_value
+
+    # Now, when the data are collected, we can compute the final coordinate systems from the collected coordinate
+    # system in "keyframes" and from the coordinate systems of bones computed (and saved) before "coord_systems".
+
+    # TODO!
 
 
 def select_best_shaders(
@@ -837,7 +892,7 @@ def export_selected_meshes(
             assert len(export_info["render_buffers"]) == len(export_info["images"])
             assert len(export_info["render_buffers"]) == len(export_info["textures"])
 
-            export_coord_systems_of_bones(obj,export_info)
+            save_coord_systems_of_bones(obj,export_info)
 
             save_batch_files(export_info)
     else:
