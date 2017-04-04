@@ -640,10 +640,12 @@ def save_coord_systems_of_bones(
         # the parent armature.
         transform_matrix = mathutils.Matrix()
         transform_matrix.identity()
+        parent_tail = mathutils.Vector((0.0, 0.0, 0.0))
         for xbone in bones_list:
-            origin = transform_matrix * xbone.head_local.to_4d()
-            origin.resize_3d()
-            transform_matrix = to_base_matrix(origin,xbone.matrix.to_quaternion()) * transform_matrix
+            bone_to_base_matrix = to_base_matrix(parent_tail + xbone.head,xbone.matrix.to_quaternion())
+            transform_matrix = bone_to_base_matrix * transform_matrix
+            parent_tail = bone_to_base_matrix * (parent_tail + xbone.tail).to_4d()
+            parent_tail.resize_3d()
         transform_matrix = transform_matrix * from_base_matrix(obj.location,obj.rotation_quaternion)
 
         # Finally we compute the position (origin) and rotation (orientation) of the
@@ -664,7 +666,7 @@ def save_coord_systems_of_bones(
             )
     os.makedirs(os.path.dirname(export_info["coord_systems"]), exist_ok=True)
     with open(export_info["coord_systems"],"w") as f:
-        print("    Saving coordinate system: " + os.path.relpath(export_info["coord_systems"],export_info["root_dir"]))
+        print("    Saving coordinate systems: " + os.path.relpath(export_info["coord_systems"],export_info["root_dir"]))
         f.write("E2::qtgl/coordsystems/text\n")
         f.write(str(len(coord_systems)) + "\n")
         for system in coord_systems:
@@ -673,32 +675,58 @@ def save_coord_systems_of_bones(
             for i in range(0,4):
                 f.write(str(system["orientation"][i]) + "\n")
 
-    # Now we focus on export of a keyframe animation associated with the armature, if any.
 
+def save_keyframe_coord_systems_of_bones(
+        obj,        # An instance of "bpy.types.Object" with "obj.type == 'MESH'" and "obj.data" being of type
+                    # "bpy.type.Mesh".
+        export_info # A dictionary holding properties related to the exported mesh. Both keys and values are strings.
+        ):
+    """
+    This function exports coordinate systems of all keyframes of an animation of the bones of the armature applied to
+    the passed mesh object "obj". The function also updates "export_info" so that
+    "export_info["keyframe_coord_systems"]" is a list of the pathnames of the exported files (one file per keyframe).
+    In case there is no armature or animation applied to the mesh object, this function does nothing (i.e. nothing
+    is exported and "export_info" is not modified).
+    :param obj: An instance of "bpy.types.Object" with "obj.type == 'MESH'" and "obj.data" being of type
+                "bpy.type.Mesh".
+    :param export_info: A dictionary holding properties related to the exported mesh. Both keys and values are strings.
+    :return: None
+    """
+    assert obj.type == 'MESH'
+
+    # We first find an armature applied to the mesh object. It might also be the case there is none.
+    armature = None
+    for mod in obj.modifiers:
+        if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
+            armature = mod.object
+            break
+    if not armature:
+        return
     if not armature.animation_data:
         return
     if not armature.animation_data.action:
         return
 
-    # Before we can start collecting data from the animation, we have to prepare the supporting data stricture:
+    # Before we can start collecting data from the animation, we have to prepare the supporting data structure:
     from_bone_name_to_bone_index = {}
     for idx in range(0,len(armature.data.bones)):
         assert armature.data.bones[idx].name not in from_bone_name_to_bone_index
         from_bone_name_to_bone_index[armature.data.bones[idx].name] = idx
-    assert len(from_bone_name_to_bone_index) == len(coord_systems)
 
     # First we collect data from individual frames in the animation. We store them into the dictionary "keyframes";
-    # keys are time points of the frames and values are arrays of raw coordinate systems of bones at that time.
-    # Index of a system in the list relates to the index of the corresponding bone in the armature. Note that
-    # the coordinate systems are "raw" - they relay on hierarchy of bones. So, this will be fixed later.
+    # keys are time points of the frames and values are arrays of coordinate systems of individual bones relative
+    # to their default locations in the armature. Index of a coordinate system in the list relates to the index
+    # of the corresponding bone in the armature.
     keyframes = {}
 
     action = armature.animation_data.action
     start_frame = action.frame_range[0]
     end_frame = action.frame_range[1]
+
     for fcurve in action.fcurves:
         assert fcurve.group.name in from_bone_name_to_bone_index
         assert fcurve.data_path.endswith("location") or fcurve.data_path.endswith("rotation_quaternion")
+
         bone_index = from_bone_name_to_bone_index[fcurve.group.name]
         coord_index = fcurve.array_index
         for point in fcurve.keyframe_points:
@@ -709,6 +737,8 @@ def save_coord_systems_of_bones(
             frame_time_point = (frame_number - start_frame) * 0.04 # Frame-rate of frames is 25Hz; It is 0.04s per frame.
 
             if frame_time_point not in keyframes:
+                # Not animated data should be set to identity (no modification of the default location in the armature).
+                # We initialise all data to identity; later some of them might be updated.
                 keyframes[frame_time_point] = []
                 for idx in range(0,len(armature.data.bones)):
                     keyframes[frame_time_point].append({
@@ -723,10 +753,80 @@ def save_coord_systems_of_bones(
                 assert coord_index in [0,1,2,3]
                 keyframes[frame_time_point][bone_index]["orientation"][coord_index] = frame_value
 
-    # Now, when the data are collected, we can compute the final coordinate systems from the collected coordinate
-    # system in "keyframes" and from the coordinate systems of bones computed (and saved) before "coord_systems".
+    # We are ready to compute the coordinate systems of bones in individual frames from the collected relative
+    # coordinate systems in "keyframes" and from the default coordinate systems of bones in the armature.
 
-    # TODO!
+    coord_systems_of_frames = {}  # Here we shall store the results
+
+    for time_stamp in keyframes:
+
+        coord_systems_of_frames[time_stamp] = []    # Next we fill in this list by coordinate systems for all bones.
+
+        keyframe = keyframes[time_stamp]
+        for bone in armature.data.bones:
+
+            # First we collect the whole chain of parent bones from the root one to this bone.
+            bones_list = []
+            xbone = bone
+            while xbone:
+                bones_list.append(xbone)
+                xbone = xbone.parent
+            bones_list.reverse()
+
+            # Now we compute "to-space" transformation matrix of the bone. We do so by composition of its local
+            # coordinate system with the relative coordinate system of the animation and also with the similarly
+            # constructed matrices of all parent bones.
+            transform_matrix = mathutils.Matrix()
+            transform_matrix.identity()
+            parent_tail = mathutils.Vector((0.0, 0.0, 0.0))
+            for xbone in bones_list:
+                bone_to_base_matrix = to_base_matrix(parent_tail + xbone.head,xbone.matrix.to_quaternion())
+                xbone_idx = from_bone_name_to_bone_index[xbone.name]
+                transform_matrix = to_base_matrix(keyframe[xbone_idx]["position"],keyframe[xbone_idx]["orientation"]) *\
+                                   bone_to_base_matrix *\
+                                   transform_matrix
+                parent_tail = bone_to_base_matrix * (parent_tail + xbone.tail).to_4d()
+                parent_tail.resize_3d()
+
+            # Finally we compute the position (origin) and rotation (orientation) of the
+            # coordinate system of the bone.
+            pos = transform_matrix.inverted() * mathutils.Vector((0.0, 0.0, 0.0, 1.0))
+            pos.resize_3d()
+            rot = transform_matrix.to_3x3().transposed().to_quaternion().normalized()
+
+            # And we store the computed data (i.e. the coordinate system).
+            coord_systems_of_frames[time_stamp].append({ "position": pos, "orientation": rot })
+
+    # It remains to save the computed coordinate systems of bones in individual frames to disc.
+    # We store each frame into a separate file. But all files will be written into the same output directory:
+
+    keyframes_output_dir = os.path.join(
+            export_info["root_dir"],
+            "animation",
+            export_info["model_name"],
+            export_info["mesh_name"],
+            action.name
+            )
+    os.makedirs(keyframes_output_dir, exist_ok=True)
+
+    export_info["keyframe_coord_systems"] = []  # Here we store pathnames of all saved files.
+    frame_idx = 0
+    for time_stamp in sorted(coord_systems_of_frames.keys()):
+        export_info["keyframe_coord_systems"].append(
+            os.path.join(keyframes_output_dir,"keyframe_" + str(frame_idx) + ".txt")
+            )
+        with open(export_info["keyframe_coord_systems"][-1],"w") as f:
+            print("    Saving keyframe " + str(frame_idx + 1) + "/" + str(len(coord_systems_of_frames))  + ": " +
+                  os.path.relpath(export_info["keyframe_coord_systems"][-1],export_info["root_dir"]))
+            f.write("E2::qtgl/keyframe/text\n")
+            f.write(str(time_stamp) + "\n")
+            f.write(str(len(coord_systems_of_frames[time_stamp])) + "\n")
+            for system in coord_systems_of_frames[time_stamp]:
+                for i in range(0,3):
+                    f.write(str(system["position"][i]) + "\n")
+                for i in range(0,4):
+                    f.write(str(system["orientation"][i]) + "\n")
+        frame_idx += 1
 
 
 def select_best_shaders(
@@ -893,6 +993,7 @@ def export_selected_meshes(
             assert len(export_info["render_buffers"]) == len(export_info["textures"])
 
             save_coord_systems_of_bones(obj,export_info)
+            save_keyframe_coord_systems_of_bones(obj,export_info)
 
             save_batch_files(export_info)
     else:
