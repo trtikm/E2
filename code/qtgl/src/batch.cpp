@@ -121,6 +121,12 @@ std::unordered_set<vertex_shader_uniform_symbolic_name> const&  batch::symbolic_
                 s_empty_uniforms ;
 }
 
+natural_32_bit  batch::num_matrices_per_vertex() const
+{
+    return buffers_binding() == nullptr ? 0 : buffers_binding()->num_matrices_per_vertex();
+}
+
+
 batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::string&  error_message)
 {
     TMPROF_BLOCK();

@@ -182,6 +182,7 @@ struct buffers_binding
     { return m_binding_data->bindings(); }
 
     vertex_buffer_properties_ptr  find_vertex_buffer_properties() const;
+    natural_32_bit  num_matrices_per_vertex() const;
 
     bool  make_current() const;
 

@@ -41,6 +41,9 @@ void  render_batch(
         case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
             qtgl::set_uniform_variable(batch.shaders_binding()->uniform_variable_accessor(), uniform, transform_matrices);
             break;
+        case qtgl::vertex_shader_uniform_symbolic_name::NUM_MATRICES_PER_VERTEX:
+            qtgl::set_uniform_variable(batch.shaders_binding()->uniform_variable_accessor(), uniform, batch.num_matrices_per_vertex());
+            break;
         }
 
     qtgl::draw();

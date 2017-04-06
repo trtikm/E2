@@ -42,6 +42,7 @@ struct batch
     draw_state_ptr  draw_state() const;
 
     std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms() const;
+    natural_32_bit  num_matrices_per_vertex() const;
 
 private:
 

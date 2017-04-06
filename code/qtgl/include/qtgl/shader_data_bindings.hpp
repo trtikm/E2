@@ -67,6 +67,7 @@ enum struct vertex_shader_uniform_symbolic_name : natural_8_bit
     COLOUR_ALPHA                    = 0,
     DIFFUSE_COLOUR                  = 1,
     TRANSFORM_MATRIX_TRANSPOSED     = 2,
+    NUM_MATRICES_PER_VERTEX         = 3,
 };
 
 inline natural_8_bit  value(vertex_shader_uniform_symbolic_name const  name)

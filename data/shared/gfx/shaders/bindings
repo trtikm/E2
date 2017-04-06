@@ -78,6 +78,7 @@
 #define COLOUR_ALPHA                    UNIFORM_COLOUR_ALPHA
 #define DIFFUSE_COLOUR                  UNIFORM_DIFFUSE_COLOUR
 #define TRANSFORM_MATRIX_TRANSPOSED     UNIFORM_TRANSFORM_MATRIX_TRANSPOSED
+#define NUM_MATRICES_PER_VERTEX         UNIFORM_NUM_MATRICES_PER_VERTEX
 
 // This constant must match the value returned
 // from the function 'uniform_max_transform_matrices'

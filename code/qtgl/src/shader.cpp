@@ -230,7 +230,10 @@ GLuint  create_opengl_shader_program(GLenum shader_type,
         glapi().glCompileShader(shader);
         parse_shader_build_error_message(shader,GL_COMPILE_STATUS,error_message);
         if (!error_message.empty())
+        {
+            LOG(error,error_message);
             return 0U;
+        }
     }
 
     GLuint const  shader_program = glapi().glCreateProgram();
@@ -629,6 +632,7 @@ vertex_program_properties::vertex_program_properties(std::vector<std::string> co
             vertex_shader_uniform_symbolic_name::COLOUR_ALPHA               ,
             vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR             ,
             vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED,
+            vertex_shader_uniform_symbolic_name::NUM_MATRICES_PER_VERTEX    ,
             })
     {
         if (tokens.count(uniform_name(symbolic_name)) != 0ULL || tokens.count(uniform_symbolic_name(symbolic_name)) != 0ULL)
@@ -731,6 +735,26 @@ vertex_program::~vertex_program()
     glapi().glDeleteProgram(id());
 }
 
+
+bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
+                           std::string const&  variable_name,
+                           natural_32_bit const  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    GLint const  layout_location = glapi().glGetUniformLocation(accessor.first,variable_name.c_str());
+    if (layout_location == -1)
+    {
+        for (auto sname : accessor.second->symbolic_names_of_used_uniforms())
+            if (variable_name == uniform_name(sname))
+            {
+                UNREACHABLE();
+            }
+        return false;
+    }
+    glapi().glProgramUniform1ui(accessor.first,layout_location,value_to_store);
+    return true;
+}
 
 bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
                            std::string const&  variable_name,

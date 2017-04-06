@@ -2,15 +2,20 @@
 #include ../bindings
 layout(location=BINDING_IN_POSITION) in vec3  in_position;
 layout(location=BINDING_IN_COLOUR) in vec3  in_colour;
-layout(location=BINDING_IN_INDICES_OF_MATRICES) in ivec2  in_indices_of_matrices;
-layout(location=BINDING_IN_WEIGHTS_OF_MATRICES) in float  in_weights_of_matrices;
+layout(location=BINDING_IN_INDICES_OF_MATRICES) in ivec3  in_indices_of_matrices;
+layout(location=BINDING_IN_WEIGHTS_OF_MATRICES) in vec3  in_weights_of_matrices;
 layout(location=BINDING_OUT_COLOUR) out vec4  out_colour;
+uniform uint NUM_MATRICES_PER_VERTEX;
 uniform mat4  TRANSFORM_MATRIX_TRANSPOSED[MAX_TRANSFORM_MATRICES];
 void main() {
-    const vec4 pos0 =
-        vec4(in_position,1.0f) * TRANSFORM_MATRIX_TRANSPOSED[in_indices_of_matrices[0]];
-    const vec4 pos1 =
-        vec4(in_position,1.0f) * TRANSFORM_MATRIX_TRANSPOSED[in_indices_of_matrices[1]];
-    gl_Position = in_weights_of_matrices * pos0 + (1 - in_weights_of_matrices) * pos1;
+    int i;
+    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)
+    {
+        const vec4 pos = vec4(in_position,1.0f) *
+                         TRANSFORM_MATRIX_TRANSPOSED[in_indices_of_matrices[i]];
+        result_position = result_position + in_weights_of_matrices[i] * pos;
+    }
+    gl_Position = result_position;
     out_colour = vec4(in_colour,1.0f);
 }

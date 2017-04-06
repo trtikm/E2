@@ -695,8 +695,11 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
         }
         return buffer_properties::create(buffer_file,2U,num_vertices,sizeof(float_32_bit),false);
     }
-    else if (file_type == "E2::qtgl/buffer/indices_of_matrices/2/text")
+    else if (file_type == "E2::qtgl/buffer/indices_of_matrices/2/text" ||
+             file_type == "E2::qtgl/buffer/indices_of_matrices/3/text")
     {
+        natural_32_bit const  num_matrices_per_vertex = file_type == "E2::qtgl/buffer/indices_of_matrices/2/text" ? 2U : 3U;
+
         std::string  line;
         if (!detail::read_line(istr,line))
         {
@@ -710,7 +713,7 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
             return buffer_properties_ptr();
         }
         for (natural_32_bit  i = 0U; i < num_elements; ++i)
-            for (natural_32_bit  j = 0U; j < 2U; ++j)
+            for (natural_32_bit  j = 0U; j < num_matrices_per_vertex; ++j)
             {
                 if (!detail::read_line(istr,line))
                 {
@@ -726,13 +729,16 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
         if (detail::read_line(istr,line))
         {
             error_message = msgstream() << "The file '" << buffer_file << "' contains more indices than "
-                                        << 2U * num_elements <<" indices.";
+                                        << num_matrices_per_vertex * num_elements <<" indices.";
             return buffer_properties_ptr();
         }
-        return buffer_properties::create(buffer_file,2U,num_elements,sizeof(natural_32_bit),true);
+        return buffer_properties::create(buffer_file,num_matrices_per_vertex,num_elements,sizeof(natural_32_bit),true);
     }
-    else if (file_type == "E2::qtgl/buffer/weights_of_matrices/1/text")
+    else if (file_type == "E2::qtgl/buffer/weights_of_matrices/2/text" ||
+             file_type == "E2::qtgl/buffer/weights_of_matrices/3/text")
     {
+        natural_32_bit const  num_matrices_per_vertex = file_type == "E2::qtgl/buffer/weights_of_matrices/2/text" ? 2U : 3U;
+
         std::string  line;
         if (!detail::read_line(istr, line))
         {
@@ -746,7 +752,7 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
             return buffer_properties_ptr();
         }
         for (natural_32_bit i = 0U; i < num_weights; ++i)
-            for (natural_32_bit j = 0U; j < 1U; ++j)
+            for (natural_32_bit j = 0U; j < num_matrices_per_vertex; ++j)
             {
                 if (!detail::read_line(istr, line))
                 {
@@ -764,7 +770,7 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
                 << 1U * num_weights << " weights of matrices.";
             return buffer_properties_ptr();
         }
-        return buffer_properties::create(buffer_file, 1U, num_weights, sizeof(float_32_bit), false);
+        return buffer_properties::create(buffer_file, num_matrices_per_vertex, num_weights, sizeof(float_32_bit), false);
     }
     else if (file_type == "E2::qtgl/buffer/texcoords/2d/1/text")
     {
@@ -908,6 +914,26 @@ vertex_buffer_properties_ptr  buffers_binding::find_vertex_buffer_properties() c
             return std::dynamic_pointer_cast<vertex_buffer_properties const>(buf_it->second->properties());
     }
     return vertex_buffer_properties_ptr{};
+}
+
+
+natural_32_bit  buffers_binding::num_matrices_per_vertex() const
+{
+    auto const  path_it = m_buffer_paths.find(vertex_shader_input_buffer_binding_location::BINDING_IN_INDICES_OF_MATRICES);
+    if (path_it != m_buffer_paths.cend())
+    {
+        std::weak_ptr<buffer const> const  wptr = detail::buffer_cache::instance().find(path_it->second);
+        buffer_ptr const  ptr = wptr.lock();
+        if (ptr.operator bool())
+            return ptr->properties()->num_components_per_primitive();
+    }
+    else
+    {
+        auto const  buf_it = m_direct_bindings.find(vertex_shader_input_buffer_binding_location::BINDING_IN_INDICES_OF_MATRICES);
+        if (buf_it != m_direct_bindings.cend())
+            return buf_it->second->properties()->num_components_per_primitive();
+    }
+    return 0U;
 }
 
 

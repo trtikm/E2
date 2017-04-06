@@ -119,6 +119,9 @@ bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
 
 bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
                            std::string const&  variable_name,
+                           natural_32_bit const  value_to_store);
+bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
+                           std::string const&  variable_name,
                            float_32_bit const  value_to_store);
 bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
                            std::string const&  variable_name,
