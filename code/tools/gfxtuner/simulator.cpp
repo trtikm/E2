@@ -14,6 +14,10 @@
 #include <utility/canonical_path.hpp>
 #include <utility/msgstream.hpp>
 
+#include <vector>
+#include <map>
+#include <algorithm>
+
 
 simulator::simulator()
     : qtgl::real_time_simulator()
@@ -117,9 +121,37 @@ simulator::simulator()
             }
     , m_do_show_grid(true)
 
-    , m_batch_ske_test{ qtgl::batch::create(canonical_path(
-            boost::filesystem::path{get_program_options()->dataRoot()} / "shared/gfx/models/ske_box/ske_box.txt"
-            )) }
+    , m_ske_test_batch{
+            qtgl::batch::create(canonical_path(
+                    boost::filesystem::path{get_program_options()->dataRoot()} /
+                    "shared/gfx/models/ske_box/ske_box.txt"
+                    ))
+            }
+    , m_ske_test_modelspace{
+            canonical_path(
+                boost::filesystem::path{get_program_options()->dataRoot()} /
+                "shared/gfx/meshes/ske_box/ske_box/coord_systems.txt"
+                )
+            }
+    , m_ske_test_keyframes{
+            {canonical_path(
+                boost::filesystem::path{get_program_options()->dataRoot()} /
+                "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_0.txt"
+                )},
+            {canonical_path(
+                boost::filesystem::path{get_program_options()->dataRoot()} /
+                "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_1.txt"
+                )},
+            {canonical_path(
+                boost::filesystem::path{get_program_options()->dataRoot()} /
+                "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_2.txt"
+                )},
+            {canonical_path(
+                boost::filesystem::path{get_program_options()->dataRoot()} /
+                "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_3.txt"
+                )},
+            }
+    , m_ske_test_time(0.0f)
 
     , m_paused(true)
     , m_do_single_step(false)
@@ -209,6 +241,27 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
 {
     TMPROF_BLOCK();
 
+    if (m_ske_test_modelspace.data() == nullptr)
+        return;
+    for (natural_64_bit  i = 0ULL; i != m_ske_test_keyframes.size(); ++i)
+    {
+        if (m_ske_test_keyframes.at(i).data() == nullptr)
+            return;
+        if (m_ske_test_keyframes.at(i).data()->coord_systems().size() !=
+            m_ske_test_modelspace.data()->coord_systems().size())
+            return;
+    }
+    std::sort(
+        m_ske_test_keyframes.begin(),m_ske_test_keyframes.end(),
+        [](qtgl::keyframe const& left, qtgl::keyframe const& right) -> bool {
+            return left.data()->time_point() < right.data()->time_point();
+        });
+
+    m_ske_test_time += time_to_simulate_in_seconds;
+    float_32_bit const  animation_length =
+            m_ske_test_keyframes.back().data()->time_point() - m_ske_test_keyframes.front().data()->time_point();
+    while (m_ske_test_time >= animation_length)
+        m_ske_test_time -= animation_length;
 }
 
 
@@ -216,20 +269,77 @@ void  simulator::render_simulation_state(matrix44 const&  view_projection_matrix
 {
     TMPROF_BLOCK();
 
-    if (m_batch_ske_test != nullptr && qtgl::make_current(*m_batch_ske_test, draw_state))
+    if (m_ske_test_modelspace.data() == nullptr)
+        return;
+    for (natural_64_bit  i = 0ULL; i != m_ske_test_keyframes.size(); ++i)
     {
-        INVARIANT(m_batch_ske_test->shaders_binding().operator bool());
-        angeo::coordinate_system coord_system{
-                vector3_zero(),
-                angle_axis_to_quaternion(PI()/2.0f,vector3_unit_x())
-                };
-        matrix44  world_transform;
-        angeo::transformation_matrix(coord_system,world_transform);
-        std::vector<matrix44> transform_matrices{
-                view_projection_matrix,
-                view_projection_matrix * world_transform
-                };
-        render_batch(*m_batch_ske_test,transform_matrices,{1.0f,0.0f,0.0f,0.0f});
-        draw_state = m_batch_ske_test->draw_state();
+        if (m_ske_test_keyframes.at(i).data() == nullptr)
+            return;
+        if (m_ske_test_keyframes.at(i).data()->coord_systems().size() !=
+            m_ske_test_modelspace.data()->coord_systems().size())
+            return;
+    }
+    std::sort(
+        m_ske_test_keyframes.begin(),m_ske_test_keyframes.end(),
+        [](qtgl::keyframe const& left, qtgl::keyframe const& right) -> bool {
+            return left.data()->time_point() < right.data()->time_point();
+        });
+
+    if (m_ske_test_batch != nullptr && qtgl::make_current(*m_ske_test_batch, draw_state))
+    {
+        INVARIANT(m_ske_test_batch->shaders_binding().operator bool());
+        std::vector<matrix44> transform_matrices(m_ske_test_modelspace.data()->coord_systems().size(),view_projection_matrix);
+        {
+            float_32_bit const  time_point = m_ske_test_keyframes.front().data()->time_point() + m_ske_test_time;
+            natural_64_bit  keyframe_index = 0ULL;
+            while (keyframe_index + 2ULL < m_ske_test_keyframes.size() &&
+                   time_point >= m_ske_test_keyframes.at(keyframe_index + 1ULL).data()->time_point())
+                ++keyframe_index;
+            INVARIANT(keyframe_index + 1ULL < m_ske_test_keyframes.size());
+            INVARIANT(time_point >= m_ske_test_keyframes.at(keyframe_index).data()->time_point());
+            INVARIANT(time_point < m_ske_test_keyframes.at(keyframe_index + 1ULL).data()->time_point());
+
+            float_32_bit  interpolation_param;
+            {
+                float_32_bit const  dt =
+                        m_ske_test_keyframes.at(keyframe_index + 1ULL).data()->time_point() -
+                        m_ske_test_keyframes.at(keyframe_index).data()->time_point()
+                        ;
+                if (dt < 0.001f)
+                    interpolation_param = 0.0f;
+                else
+                    interpolation_param = (time_point - m_ske_test_keyframes.at(keyframe_index).data()->time_point()) / dt;
+                interpolation_param = std::max(-1.0f,std::min(interpolation_param,1.0f));
+            }
+
+//keyframe_index = 0ULL;
+//interpolation_param = 0.0f;
+
+            for (natural_64_bit  i = 0; i != m_ske_test_modelspace.data()->coord_systems().size(); ++i)
+            {
+                matrix44 M;
+                {
+                    angeo::coordinate_system  S;
+                    S = m_ske_test_keyframes.at(keyframe_index).data()->coord_systems().at(i);
+                    angeo::interpolate_spherical(
+                                m_ske_test_keyframes.at(keyframe_index).data()->coord_systems().at(i),
+                                m_ske_test_keyframes.at(keyframe_index + 1ULL).data()->coord_systems().at(i),
+                                interpolation_param,
+                                S
+                                );
+                    angeo::from_base_matrix(S,M);
+                }
+                transform_matrices.at(i) *= M;
+            }
+
+            for (natural_64_bit  i = 0; i != m_ske_test_modelspace.data()->coord_systems().size(); ++i)
+            {
+                matrix44 M;
+                angeo::to_base_matrix(m_ske_test_modelspace.data()->coord_systems().at(i),M);
+                transform_matrices.at(i) *= M;
+            }
+        }
+        render_batch(*m_ske_test_batch,transform_matrices,{1.0f,0.0f,0.0f,0.0f});
+        draw_state = m_ske_test_batch->draw_state();
     }
 }

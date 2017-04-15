@@ -9,6 +9,44 @@
 #else
 
 
+vector3  interpolate_linear(vector3 const&  u, vector3 const&  v, float_32_bit const  t)
+{
+    return u + t * (v - u);
+}
+
+
+quaternion  interpolate_linear(quaternion const& u, quaternion const& v, float_32_bit const  t)
+{
+    quaternion q(u.coeffs() + t * (v.coeffs() - u.coeffs()));
+    float_32_bit const  q_lenght2 = length_squared(q);
+    if (std::fabsf(q_lenght2) > 0.001f)
+        return quaternion((1.0f / std::sqrtf(q_lenght2)) * q.coeffs());
+    else
+        return quaternion_identity();
+}
+
+quaternion  interpolate_spherical(quaternion const& u, quaternion const& v, float_32_bit const  t)
+{
+    return u.slerp(t,v);
+    //float_32_bit  dot = std::max(-1.0f,std::min(dot_product(u,v),1.0f));
+    //if (dot > 0.999f)
+    //    return interpolate_linear(u,v,t);
+
+    //// If the dot product is negative, the quaternions
+    //// have opposite handed-ness and slerp won't take
+    //// the shorter path. Fix by reversing one quaternion.
+    ////if (dot < 0.0f) {
+    ////    v = quaternion(-v.coeffs());
+    ////    dot = -dot;
+    ////}
+
+    //quaternion  w(v.coeffs() - dot * u.coeffs());
+    //w.normalize();
+    //float_32_bit const  theta = t * std::acosf(dot);
+    //return quaternion(std::cosf(theta) * u.coeffs() + std::sinf(theta) * w.coeffs());
+}
+
+
 void  basis_to_rotation_matrix(vector3 const&  x_axis_unit_vector,
                                vector3 const&  y_axis_unit_vector,
                                vector3 const&  z_axis_unit_vector,

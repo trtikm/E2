@@ -15,7 +15,7 @@ struct instance_wrapper
 
     ~instance_wrapper()
     {
-        destruct_instance();
+        destroy_instance();
     }
 
     instance_wrapper(instance_wrapper const& other)
@@ -37,7 +37,7 @@ struct instance_wrapper
             if (other.m_constructed)
                 this->reference_to_instance() = other.reference_to_instance();
             else
-                destruct_instance();
+                destroy_instance();
         else
             if (other.m_constructed)
                 construct_instance(other.reference_to_instance());
@@ -55,13 +55,15 @@ struct instance_wrapper
         return *this;
     }
 
-    template<typename argument_type>
-    void construct_instance(argument_type const& argument)
+    template<typename... arg_types>
+    void construct_instance(arg_types...  args)
     {
-        destruct_instance();
-        new(&m_memory[0]) instance_type(argument);
+        destroy_instance();
+        new(&m_memory[0]) instance_type(args...);
         m_constructed = true;
     }
+
+    bool  is_constructed() const noexcept { return m_constructed; }
 
     instance_type* operator->()
     {
@@ -90,9 +92,7 @@ struct instance_wrapper
         return reference_to_instance();
     }
 
-private:
-
-    void destruct_instance()
+    void destroy_instance()
     {
         if (m_constructed)
         {
@@ -101,8 +101,10 @@ private:
         }
     }
 
-    natural_8_bit m_memory[sizeof(instance_type)];
+private:
+
     bool m_constructed;
+    natural_8_bit m_memory[sizeof(instance_type)];
 };
 
 

@@ -239,7 +239,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
 
     {
         matrix44  grid_world_transformation;
-        angeo::transformation_matrix(*m_grid_space,grid_world_transformation);
+        angeo::from_base_matrix(*m_grid_space,grid_world_transformation);
         matrix44 const  grid_transform_matrix = view_projection_matrix * grid_world_transformation;
 
         if (qtgl::make_current(*m_grid_shaders_binding) && qtgl::make_current(*m_grid_buffers_binding))
@@ -257,7 +257,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
 
     {
         matrix44  batch_world_transformation;
-        angeo::transformation_matrix(*m_batch_space, batch_world_transformation);
+        angeo::from_base_matrix(*m_batch_space, batch_world_transformation);
         matrix44 const  batch_transform_matrix = view_projection_matrix * batch_world_transformation;
 
         for (qtgl::batch_ptr const  batch : m_batches)

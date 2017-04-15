@@ -34,7 +34,7 @@ void  camera::set_coordinate_system(angeo::coordinate_system_ptr const   coord_s
 void  view_projection_matrix(camera const&  camera_ref, matrix44&  output)
 {
     matrix44  view_matrix;
-    inverted_transformation_matrix(*camera_ref.coordinate_system(),view_matrix);
+    to_base_matrix(*camera_ref.coordinate_system(),view_matrix);
     matrix44  projection_matrix;
     camera_ref.projection_matrix(projection_matrix);
     output = projection_matrix * view_matrix;

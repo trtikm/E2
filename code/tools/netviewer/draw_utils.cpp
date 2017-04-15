@@ -32,7 +32,7 @@ void  render_batch(
     )
 {
     matrix44  world_transformation;
-    angeo::transformation_matrix(coord_system, world_transformation);
+    angeo::from_base_matrix(coord_system, world_transformation);
     matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
     render_batch(batch,transform_matrix,diffuse_colour);
 }

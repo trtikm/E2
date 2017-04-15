@@ -325,7 +325,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                 quaternion const  orientation =
                     (it == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle,vector3_unit_z()) :
                                               quaternion_identity() ;
-                angeo::transformation_matrix(angeo::coordinate_system(it->first, orientation), world_transformation);
+                angeo::from_base_matrix(angeo::coordinate_system(it->first, orientation), world_transformation);
                 matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
 
                 vector4 const  diffuse_colour(
@@ -383,7 +383,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                 quaternion const  orientation =
                     (it == m_selected_input_spot) ? angle_axis_to_quaternion(m_selected_rot_angle, vector3_unit_z()) :
                                                     quaternion_identity();
-                angeo::transformation_matrix(angeo::coordinate_system(it->first, orientation), world_transformation);
+                angeo::from_base_matrix(angeo::coordinate_system(it->first, orientation), world_transformation);
                 matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
 
                 for (qtgl::vertex_shader_uniform_symbolic_name const uniform : m_batch_input_spot->symbolic_names_of_used_uniforms())
@@ -427,7 +427,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                 quaternion const  orientation =
                     (&oterm == m_selected_output_terminal) ? angle_axis_to_quaternion(m_selected_rot_angle, vector3_unit_z()) :
                                                              quaternion_identity();
-                angeo::transformation_matrix(angeo::coordinate_system(oterm.pos(), orientation), world_transformation);
+                angeo::from_base_matrix(angeo::coordinate_system(oterm.pos(), orientation), world_transformation);
                 matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
 
                 for (qtgl::vertex_shader_uniform_symbolic_name const uniform : m_batch_output_terminal->symbolic_names_of_used_uniforms())

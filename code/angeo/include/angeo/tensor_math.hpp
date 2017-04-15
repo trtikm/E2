@@ -57,11 +57,17 @@ inline scalar  length_squared(vector3 const& u) { return dot_product(u,u); }
 inline vector3  normalised(vector3 const&  u) { return u.normalized(); }
 inline void  normalise(vector3& u) { u.normalize(); }
 
+vector3  interpolate_linear(vector3 const&  u, vector3 const&  v, float_32_bit const  t);
+
 inline quaternion  quaternion_identity() { return quaternion::Identity(); }
 inline scalar  length_squared(quaternion const& q) { return q.squaredNorm(); }
 inline scalar  length(quaternion const& q) { return q.norm(); }
 inline quaternion  normalised(quaternion const& q) { return q.normalized(); }
 inline void  normalise(quaternion& q) { q.normalize(); }
+inline scalar  dot_product(quaternion const& u, quaternion const& v) { return u.dot(v); }
+
+quaternion  interpolate_linear(quaternion const& u, quaternion const& v, float_32_bit const  t);
+quaternion  interpolate_spherical(quaternion const& u, quaternion const& v, float_32_bit const  t);
 
 inline matrix44  inverse(matrix44 const&  M) { return M.inverse(); }
 

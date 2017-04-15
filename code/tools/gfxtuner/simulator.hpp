@@ -5,8 +5,11 @@
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>
 #   include <qtgl/draw.hpp>
+#   include <qtgl/batch.hpp>
+#   include <qtgl/modelspace.hpp>
+#   include <qtgl/keyframe.hpp>
 #   include <angeo/tensor_math.hpp>
-
+#   include <vector>
 
 struct simulator : public qtgl::real_time_simulator
 {
@@ -40,7 +43,10 @@ private:
     qtgl::batch_ptr  m_batch_grid;
     bool  m_do_show_grid;
 
-    qtgl::batch_ptr  m_batch_ske_test;
+    qtgl::batch_ptr  m_ske_test_batch;
+    qtgl::modelspace  m_ske_test_modelspace;
+    std::vector<qtgl::keyframe>  m_ske_test_keyframes;
+    float_32_bit  m_ske_test_time;
 
     /// Data related to simulation
     bool  m_paused;

@@ -58,6 +58,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/qtgl/mouse_props.hpp
     ./src/mouse_props.cpp
 
+    ./include/qtgl/modelspace.hpp
+    ./include/qtgl/keyframe.hpp
+
     ./include/qtgl/batch_generators.hpp
     ./src/generate_batch_grid.cpp
     ./src/generate_batch_lines.cpp
@@ -96,6 +99,12 @@ add_library(${THIS_TARGET_NAME}
     ./src/detail/fragment_program_cache.cpp
     ./include/qtgl/detail/batch_cache.hpp
     ./src/detail/batch_cache.cpp
+    ./include/qtgl/detail/modelspace_cache.hpp
+    ./src/detail/modelspace_cache.cpp
+    ./include/qtgl/detail/keyframe_cache.hpp
+    ./src/detail/keyframe_cache.cpp
+    ./include/qtgl/detail/resource_cache.hpp
+    ./src/detail/resource_cache.cpp
     ./include/qtgl/detail/resource_loader.hpp
     ./src/detail/resource_loader.cpp
     ./include/qtgl/detail/read_line.hpp

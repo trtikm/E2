@@ -311,7 +311,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
 
     {
         matrix44  object_world_transformation;
-        angeo::transformation_matrix(*object_space,object_world_transformation);
+        angeo::from_base_matrix(*object_space,object_world_transformation);
         matrix44 const  object_transform_matrix = view_projection_matrix * object_world_transformation;
 
         if (qtgl::make_current(*object_shaders_binding))
@@ -329,7 +329,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
     }
     {
         matrix44  grid_world_transformation;
-        angeo::transformation_matrix(*grid_space,grid_world_transformation);
+        angeo::from_base_matrix(*grid_space,grid_world_transformation);
         matrix44 const  grid_transform_matrix = view_projection_matrix * grid_world_transformation;
 
         if (qtgl::make_current(*grid_shaders_binding))
