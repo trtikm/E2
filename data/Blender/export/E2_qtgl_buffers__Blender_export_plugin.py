@@ -626,6 +626,11 @@ def save_coord_systems_of_bones(
     # So, let's compute coordinate systems of individual bones.
     for bone in armature.data.bones:
 
+        if not bone.use_deform:
+            # The bone is not used for deformation of the child mesh object. It means, that the bone
+            # is some "helper" bone, like inverse kinematic bone, so we have to skip it from the export.
+            continue
+
         # First we collect the whole chain of parent bones from the root one to this bone.
         bones_list = []
         xbone = bone
@@ -642,11 +647,11 @@ def save_coord_systems_of_bones(
         transform_matrix.identity()
         parent_tail = mathutils.Vector((0.0, 0.0, 0.0))
         for xbone in bones_list:
-            bone_to_base_matrix = to_base_matrix(parent_tail + xbone.head,xbone.matrix.to_quaternion())
+            bone_to_base_matrix = to_base_matrix(parent_tail + xbone.head, xbone.matrix.to_quaternion())
             transform_matrix = bone_to_base_matrix * transform_matrix
             parent_tail = bone_to_base_matrix * (parent_tail + xbone.tail).to_4d()
             parent_tail.resize_3d()
-        transform_matrix = transform_matrix * from_base_matrix(obj.location,obj.rotation_quaternion)
+        transform_matrix = transform_matrix * from_base_matrix(obj.location, obj.rotation_quaternion)
 
         # Finally we compute the position (origin) and rotation (orientation) of the
         # coordinate system of the bone.
@@ -658,12 +663,12 @@ def save_coord_systems_of_bones(
         coord_systems.append({ "position": pos, "orientation": rot })
 
     export_info["coord_systems"] = os.path.join(
-            export_info["root_dir"],
-            "meshes",
-            export_info["model_name"],
-            export_info["mesh_name"],
-            "coord_systems.txt"
-            )
+        export_info["root_dir"],
+        "animation",
+        export_info["model_name"],
+        export_info["mesh_name"],
+        "coord_systems.txt"
+        )
     os.makedirs(os.path.dirname(export_info["coord_systems"]), exist_ok=True)
     with open(export_info["coord_systems"],"w") as f:
         print("    Saving coordinate systems: " + os.path.relpath(export_info["coord_systems"],export_info["root_dir"]))
@@ -709,9 +714,10 @@ def save_keyframe_coord_systems_of_bones(
 
     # Before we can start collecting data from the animation, we have to prepare the supporting data structure:
     from_bone_name_to_bone_index = {}
-    for idx in range(0,len(armature.data.bones)):
-        assert armature.data.bones[idx].name not in from_bone_name_to_bone_index
-        from_bone_name_to_bone_index[armature.data.bones[idx].name] = idx
+    for idx in range(0, len(armature.data.bones)):
+        bone = armature.data.bones[idx]
+        assert bone.name not in from_bone_name_to_bone_index
+        from_bone_name_to_bone_index[bone.name] = idx
 
     # First we collect data from individual frames in the animation. We store them into the dictionary "keyframes";
     # keys are time points of the frames and values are arrays of coordinate systems of individual bones relative
@@ -724,17 +730,24 @@ def save_keyframe_coord_systems_of_bones(
     end_frame = action.frame_range[1]
 
     for fcurve in action.fcurves:
-        assert fcurve.group.name in from_bone_name_to_bone_index
-        assert fcurve.data_path.endswith("location") or fcurve.data_path.endswith("rotation_quaternion")
+        if fcurve.group:
+            bone_name = fcurve.group.name
+        else:
+            bname_start_idx = fcurve.data_path.index(".bones[\"") + len(".bones[\"")
+            bname_end_idx = fcurve.data_path.index("\"].", bname_start_idx)
+            bone_name = fcurve.data_path[bname_start_idx:bname_end_idx]
 
-        bone_index = from_bone_name_to_bone_index[fcurve.group.name]
+        assert bone_name in from_bone_name_to_bone_index
+        bone_index = from_bone_name_to_bone_index[bone_name]
+        rotation_mode = armature.pose.bones[bone_index].rotation_mode
         coord_index = fcurve.array_index
         for point in fcurve.keyframe_points:
             frame_number = point.co[0]
             frame_value = point.co[1]
 
             assert start_frame <= frame_number and frame_number <= end_frame
-            frame_time_point = (frame_number - start_frame) * 0.04 # Frame-rate of frames is 25Hz; It is 0.04s per frame.
+            # Frame-rate of frames is 25Hz; It is 0.041666666s per frame.
+            frame_time_point = (frame_number - start_frame) * 0.041666666
 
             if frame_time_point not in keyframes:
                 # Not animated data should be set to identity (no modification of the default location in the armature).
@@ -743,7 +756,7 @@ def save_keyframe_coord_systems_of_bones(
                 for idx in range(0,len(armature.data.bones)):
                     keyframes[frame_time_point].append({
                         "position": mathutils.Vector((0.0, 0.0, 0.0)),
-                        "orientation": mathutils.Quaternion((1.0, 0.0, 0.0, 0.0))
+                        "orientation": [0.0, 0.0, 0.0, 0.0, rotation_mode]
                         })
 
             if fcurve.data_path.endswith("location"):
@@ -752,6 +765,26 @@ def save_keyframe_coord_systems_of_bones(
             else:
                 assert coord_index in [0,1,2,3]
                 keyframes[frame_time_point][bone_index]["orientation"][coord_index] = frame_value
+
+    for time_point in keyframes.keys():
+        for system in keyframes[time_point]:
+            if system["orientation"][4] == "QUATERNION":
+                system["orientation"] = mathutils.Quaternion((
+                    system["orientation"][0],
+                    system["orientation"][1],
+                    system["orientation"][2],
+                    system["orientation"][3]
+                    ))
+            elif system["orientation"][4] == "AXIS_ANGLE":
+                system["orientation"] = mathutils.Quaternion(
+                    (system["orientation"][0], system["orientation"][1], system["orientation"][2]),
+                    system["orientation"][3]
+                    )
+            else:
+                system["orientation"] = mathutils.Euler(
+                    (system["orientation"][0], system["orientation"][1], system["orientation"][2]),
+                    system["orientation"][4]
+                    ).to_quaternion()
 
     # We are ready to compute the coordinate systems of bones in individual frames from the collected relative
     # coordinate systems in "keyframes" and from the default coordinate systems of bones in the armature.
@@ -764,6 +797,11 @@ def save_keyframe_coord_systems_of_bones(
 
         keyframe = keyframes[time_stamp]
         for bone in armature.data.bones:
+
+            if not bone.use_deform:
+                # The bone is not used for deformation of the child mesh object. It means, that the bone
+                # is some "helper" bone, like inverse kinematic bone, so we have to skip it from the export.
+                continue
 
             # First we collect the whole chain of parent bones from the root one to this bone.
             bones_list = []
@@ -801,19 +839,19 @@ def save_keyframe_coord_systems_of_bones(
     # We store each frame into a separate file. But all files will be written into the same output directory:
 
     keyframes_output_dir = os.path.join(
-            export_info["root_dir"],
-            "animation",
-            export_info["model_name"],
-            export_info["mesh_name"],
-            action.name
-            )
+        export_info["root_dir"],
+        "animation",
+        export_info["model_name"],
+        export_info["mesh_name"],
+        action.name
+        )
     os.makedirs(keyframes_output_dir, exist_ok=True)
 
     export_info["keyframe_coord_systems"] = []  # Here we store pathnames of all saved files.
     frame_idx = 0
     for time_stamp in sorted(coord_systems_of_frames.keys()):
         export_info["keyframe_coord_systems"].append(
-            os.path.join(keyframes_output_dir,"keyframe_" + str(frame_idx) + ".txt")
+            os.path.join(keyframes_output_dir,"keyaframe_" + str(frame_idx) + ".txt")
             )
         with open(export_info["keyframe_coord_systems"][-1],"w") as f:
             print("    Saving keyframe " + str(frame_idx + 1) + "/" + str(len(coord_systems_of_frames))  + ": " +
@@ -832,7 +870,7 @@ def save_keyframe_coord_systems_of_bones(
 def select_best_shaders(
         material_idx,   # An index of material for which the besh shader should be chosen. It is basically an index
                         # into the lists "export_info["render_buffers"]" and "export_info["textures"]".
-        export_info # A dictionary holding properties related to the exported mesh. Both keys and values are strings.
+        export_info   # A dictionary holding properties related to the exported mesh. Both keys and values are strings.
         ):
     """
     The function tries to choose the best pair of vertex and fragment shader w.r.t the exported data (buffers,
@@ -1053,5 +1091,5 @@ def unregister():
 
 
 if __name__ == "__main__":
-    #export_selected_meshes("c:/Users/Marek/root/E2/temp/!MODELS/SKE_BOX/test_export")
-    register()
+    export_selected_meshes("c:/Users/Marek/root/E2/temp/!MODELS/barbarian_female/barbarian_female")
+    #register()
