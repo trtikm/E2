@@ -423,7 +423,8 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
 
 void  insert_load_request(batch const&  batch_ref)
 {
-    if (!detail::batch_cache::instance().find(batch_ref.path()).operator bool())
+    if (batch_ref.path().string().find("generic/") != 0UL &&
+        !detail::batch_cache::instance().find(batch_ref.path()).operator bool())
         detail::batch_cache::instance().insert_load_request(batch_ref.path());
     else
     {
