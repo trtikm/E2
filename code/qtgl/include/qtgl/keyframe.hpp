@@ -10,7 +10,7 @@ struct  keyframe
 {
     using  data_ptr = detail::keyframe_data;
 
-    keyframe(boost::filesystem::path const&  path)
+    explicit keyframe(boost::filesystem::path const&  path)
         : m_handle(detail::keyframe_cache::instance().insert_load_request(path,1U))
     {}
 
@@ -18,6 +18,7 @@ struct  keyframe
     bool  is_load_finished() const { return m_handle.is_load_finished(); }
 
     data_ptr const*  data() const { return m_handle.resource_ptr(); }
+    std::string const*  error_message() const  { return m_handle.error_message(); }
 
 private:
 

@@ -135,7 +135,7 @@ struct  resource_cache  final
 
         resource_type const*  resource_ptr() const
         {
-            return is_load_finished() ? m_wrapped_resource.operator->() : nullptr;
+            return is_load_finished() && m_error_message.empty() ? m_wrapped_resource.operator->() : nullptr;
         }
 
         std::string const*  error_message_ptr() const
@@ -159,7 +159,7 @@ struct  resource_cache  final
 
     struct  resource_handle  final
     {
-        resource_handle(typename cache_type::value_type* const  data_ptr)
+        explicit resource_handle(typename cache_type::value_type* const  data_ptr)
             : m_data_ptr(data_ptr)
         {
             ASSUMPTION(m_data_ptr != nullptr);

@@ -696,9 +696,13 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
         return buffer_properties::create(buffer_file,2U,num_vertices,sizeof(float_32_bit),false);
     }
     else if (file_type == "E2::qtgl/buffer/indices_of_matrices/2/text" ||
-             file_type == "E2::qtgl/buffer/indices_of_matrices/3/text")
+             file_type == "E2::qtgl/buffer/indices_of_matrices/3/text" ||
+             file_type == "E2::qtgl/buffer/indices_of_matrices/4/text" )
     {
-        natural_32_bit const  num_matrices_per_vertex = file_type == "E2::qtgl/buffer/indices_of_matrices/2/text" ? 2U : 3U;
+        natural_32_bit const  num_matrices_per_vertex =
+                file_type == "E2::qtgl/buffer/indices_of_matrices/2/text" ? 2U :
+                file_type == "E2::qtgl/buffer/indices_of_matrices/3/text" ? 3U :
+                                                                            4U ;
 
         std::string  line;
         if (!detail::read_line(istr,line))
@@ -735,9 +739,13 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
         return buffer_properties::create(buffer_file,num_matrices_per_vertex,num_elements,sizeof(natural_32_bit),true);
     }
     else if (file_type == "E2::qtgl/buffer/weights_of_matrices/2/text" ||
-             file_type == "E2::qtgl/buffer/weights_of_matrices/3/text")
+             file_type == "E2::qtgl/buffer/weights_of_matrices/3/text" ||
+             file_type == "E2::qtgl/buffer/weights_of_matrices/4/text" )
     {
-        natural_32_bit const  num_matrices_per_vertex = file_type == "E2::qtgl/buffer/weights_of_matrices/2/text" ? 2U : 3U;
+        natural_32_bit const  num_matrices_per_vertex =
+                file_type == "E2::qtgl/buffer/weights_of_matrices/2/text" ? 2U :
+                file_type == "E2::qtgl/buffer/weights_of_matrices/3/text" ? 3U :
+                                                                            4U ;
 
         std::string  line;
         if (!detail::read_line(istr, line))

@@ -826,6 +826,7 @@ bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
     TMPROF_BLOCK();
 
     static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
+    ASSUMPTION(value_to_store.size() <= uniform_max_transform_matrices());
 
     GLint const  layout_location = glapi().glGetUniformLocation(accessor.first,variable_name.c_str());
     if (layout_location == -1)

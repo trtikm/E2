@@ -51,6 +51,7 @@ struct resource_loader
     using  buffer_receiver_fn =
             std::function<void(buffer_properties_ptr,   //!< Properties of the buffer
                                std::shared_ptr<std::vector<natural_8_bit> const>,   //!< The loaded data of the buffer
+                               boost::filesystem::path const&,
                                std::string const&               //!< Error message. Empty string means no error.
                                )>;
     void  insert_buffer_request(boost::filesystem::path const&  buffer_file, buffer_receiver_fn const&  receiver);

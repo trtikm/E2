@@ -74,7 +74,7 @@ inline natural_8_bit  value(vertex_shader_uniform_symbolic_name const  name)
 { return static_cast<natural_8_bit>(name); }
 std::string  uniform_symbolic_name(vertex_shader_uniform_symbolic_name const  symbolic_name);
 std::string  uniform_name(vertex_shader_uniform_symbolic_name const  symbolic_name);
-inline constexpr natural_32_bit  uniform_max_transform_matrices() { return 32U; }
+inline constexpr natural_32_bit  uniform_max_transform_matrices() { return 64U; }
 
 enum struct fragment_shader_input_buffer_binding_location : natural_8_bit
 {

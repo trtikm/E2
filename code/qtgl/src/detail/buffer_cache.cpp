@@ -43,12 +43,18 @@ buffer_cache::buffer_cache()
 
 void  buffer_cache::receiver(buffer_properties_ptr const  props,
                              buffer_data_ptr const  data,
+                             boost::filesystem::path const&  path,
                              std::string const&  error_message
                              )
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(props.operator bool());
+    if (props == nullptr || !error_message.empty())
+    {
+        std::lock_guard<std::mutex> const  lock(m_mutex);
+        m_failed_loads.insert({path,buffer_load_info{props,data,error_message}});
+        return;
+    }
 
     std::lock_guard<std::mutex> const  lock(m_mutex);
     m_pending_buffers.push_back(std::make_tuple(props,data,error_message));
@@ -82,7 +88,8 @@ void  buffer_cache::insert_load_request(boost::filesystem::path const&  buffer_f
                           this,
                           std::placeholders::_1,
                           std::placeholders::_2,
-                          std::placeholders::_3)
+                          std::placeholders::_3,
+                          std::placeholders::_4)
                 );
 }
 

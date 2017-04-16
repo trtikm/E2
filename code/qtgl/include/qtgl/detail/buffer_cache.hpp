@@ -41,6 +41,7 @@ private:
 
     void  receiver(buffer_properties_ptr const  props,
                    buffer_data_ptr const  data,
+                   boost::filesystem::path const&  path,
                    std::string const&  error_message //!< Empty string means no error.
                    );
 
