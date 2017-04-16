@@ -6,6 +6,7 @@
 #   include <utility/invariants.hpp>
 #   include <utility/timeprof.hpp>
 #   include <utility/msgstream.hpp>
+#   include <utility/log.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <map>
 #   include <vector>
@@ -124,6 +125,8 @@ struct  resource_cache  final
             {
                 this_ptr->m_error_message = msgstream() << "ERROR: " << e.what();
             }
+            if (!this_ptr->m_error_message.empty())
+                LOG(error,this_ptr->m_error_message);
         }
 
         bool  is_load_finished() const
