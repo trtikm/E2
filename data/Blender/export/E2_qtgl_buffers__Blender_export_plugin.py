@@ -51,6 +51,27 @@ def to_base_matrix(
     return orientation.to_matrix().transposed().to_4x4() * mathutils.Matrix.Translation(-position)
 
 
+def get_object_rotation_quaternion(obj):
+    """
+    :param obj: Any instance of 'bpy.types.Object'.
+    :return: A quaternion representing rotation of the passed object. If the object uses some other kind of
+             rotation representation, then there is applied a conversion.
+    """
+    if obj.rotation_mode == 'QUATERNION':
+        return obj.rotation_quaternion
+    elif obj.rotation_mode == "AXIS_ANGLE":
+        return mathutils.Quaternion(
+            (obj.rotation_axis_angle[0], obj.rotation_axis_angle[1], obj.rotation_axis_angle[2]),
+            obj.rotation_axis_angle[3]
+            )
+    else:
+        return mathutils.Euler(
+            (obj.rotation_euler[0], obj.rotation_euler[1], obj.rotation_euler[2]),
+            obj.rotation_mode
+            ).to_quaternion()
+
+
+
 def is_correct_scale_vector(
         scale_vector    # An instance of 'mathutils.Vector'; i.e. a 3d vector whose coord define scales along axes
         ):
@@ -91,6 +112,40 @@ def does_selected_mesh_object_have_correct_scales(
                 if not is_correct_scale_vector(bone.scale):
                     print("  ERROR: Pose bone '" + bone.name + "' of armature '" + armature.name + "' is scaled: " + str(bone.scale) + ".")
                     return False
+    return True
+
+
+def does_selected_mesh_object_have_correct_weights(
+        obj     # An instance of 'bpy.types.Mesh'
+        ):
+    """
+    This function checks whether vertices of the passed object have correct number of wights, i.e. at most 4.
+    It also checks whether the weights are normalised. i.e. their sum is equal to 1, for each vertex.
+    :param obj: An instance of 'bpy.types.Mesh'
+    :return: The function returns True, if both check succeed for each vertex. Otherwise False is returned.
+    """
+
+    assert obj.type == 'MESH'
+    mesh = obj.data
+    for idx in range(0, len(mesh.vertices)):
+        num_weights = len(mesh.vertices[idx].groups)
+        if num_weights > 4:
+            print("ERROR: The vertex no." + str(idx) + " of the mesh object '" + obj.name + "' has more than 4 weights "
+                  ", namely " + str(num_weights) + ". You can fix the issue by 1. switching to 'Wight Paint' mode "
+                  "(select armature, then mesh, and press Ctrl+TAB), 2. Select menu option 'Weights/Limit Total'.")
+            return False
+    for idx in range(0, len(mesh.vertices)):
+        num_weights = len(mesh.vertices[idx].groups)
+        if num_weights > 1:
+            sum_of_weights = 0
+            for i in range(0, num_weights):
+                sum_of_weights += mesh.vertices[idx].groups[i].weight
+            if abs(sum_of_weights - 1.0) > 0.001:
+                print("ERROR: Sum of weights of vertex " + str(idx) + " of the mesh object '" + obj.name + "' is " +
+                      str(sum_of_weights) + ". To normalise the weights (so that the sum is 1) do this: 1. switching "
+                      "to 'Wight Paint' mode (select armature, then mesh, and press Ctrl+TAB), 2. Select "
+                      "menu option 'Weights/Normalize All'.")
+                return False
     return True
 
 
@@ -651,7 +706,7 @@ def save_coord_systems_of_bones(
             transform_matrix = bone_to_base_matrix * transform_matrix
             parent_tail = bone_to_base_matrix * (parent_tail + xbone.tail).to_4d()
             parent_tail.resize_3d()
-        transform_matrix = transform_matrix * from_base_matrix(obj.location, obj.rotation_quaternion)
+        transform_matrix = transform_matrix * from_base_matrix(obj.location, get_object_rotation_quaternion(obj))
 
         # Finally we compute the position (origin) and rotation (orientation) of the
         # coordinate system of the bone.
@@ -851,7 +906,7 @@ def save_keyframe_coord_systems_of_bones(
     frame_idx = 0
     for time_stamp in sorted(coord_systems_of_frames.keys()):
         export_info["keyframe_coord_systems"].append(
-            os.path.join(keyframes_output_dir,"keyaframe_" + str(frame_idx) + ".txt")
+            os.path.join(keyframes_output_dir,"keyframe_" + str(frame_idx) + ".txt")
             )
         with open(export_info["keyframe_coord_systems"][-1],"w") as f:
             print("    Saving keyframe " + str(frame_idx + 1) + "/" + str(len(coord_systems_of_frames))  + ": " +
@@ -888,6 +943,8 @@ def select_best_shaders(
     if "matrix_weight_buffer" in buffers_export_info:
         if len(textures_export_info) == 0:
             return "vs_IpUmcOpcFX.txt", "fs_IcFc.txt"
+        elif len(textures_export_info) == 1:
+            return "vs_IptUmOptFX.txt", "fs_ItUdFd.txt"
     else:
         if len(textures_export_info) == 0:
             return "vs_IpcUmOpcFc.a=1.txt", "fs_IcFc.txt"
@@ -927,6 +984,14 @@ def save_batch_files(
             f.write(os.path.relpath(buffers_export_info["index_buffer"],batch_root_dir) + "\n")
             f.write("BINDING_IN_POSITION\n")
             f.write(os.path.relpath(buffers_export_info["vertex_buffer"],batch_root_dir) + "\n")
+
+            if "matrix_weight_buffer" in buffers_export_info:
+                assert "matrix_index_buffer" in buffers_export_info
+                f.write("BINDING_IN_INDICES_OF_MATRICES\n")
+                f.write(os.path.relpath(buffers_export_info["matrix_index_buffer"],batch_root_dir) + "\n")
+                f.write("BINDING_IN_WEIGHTS_OF_MATRICES\n")
+                f.write(os.path.relpath(buffers_export_info["matrix_weight_buffer"],batch_root_dir) + "\n")
+
             for texcoords_idx in range(0,len(buffers_export_info["texcoord_buffers"])):
                 f.write("BINDING_IN_TEXCOORD" + str(texcoords_idx) + "\n")
                 f.write(os.path.relpath(buffers_export_info["texcoord_buffers"][texcoords_idx],batch_root_dir) + "\n")
@@ -945,13 +1010,6 @@ def save_batch_files(
                 else:
                     f.write("BINDING_TEXTURE_??\n")
                 f.write(os.path.relpath(textures_export_info[i],batch_root_dir) + "\n")
-
-            if "matrix_weight_buffer" in buffers_export_info:
-                assert "matrix_index_buffer" in buffers_export_info
-                f.write("BINDING_IN_INDICES_OF_MATRICES\n")
-                f.write(os.path.relpath(buffers_export_info["matrix_index_buffer"],batch_root_dir) + "\n")
-                f.write("BINDING_IN_WEIGHTS_OF_MATRICES\n")
-                f.write(os.path.relpath(buffers_export_info["matrix_weight_buffer"],batch_root_dir) + "\n")
 
             f.write("BACK\n")
             f.write("false\n")
@@ -984,6 +1042,8 @@ def export_selected_meshes(
                 print("  ERROR: The selected mesh object has invalid name '" + obj.data.name + "'. Skipping it...")
                 continue
             if not does_selected_mesh_object_have_correct_scales(obj):
+                continue
+            if not does_selected_mesh_object_have_correct_weights(obj):
                 continue
             if len(obj.data.vertex_colors) > 2:
                 print("  ERROR: The mesh object '" + obj.name + "' has more than 2 colours per vertex. "
@@ -1091,5 +1151,5 @@ def unregister():
 
 
 if __name__ == "__main__":
-    export_selected_meshes("c:/Users/Marek/root/E2/temp/!MODELS/barbarian_female/barbarian_female")
-    #register()
+    #export_selected_meshes("c:/Users/Marek/root/E2/temp/!MODELS/barbarian_female/barbarian_female")
+    register()
