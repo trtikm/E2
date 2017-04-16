@@ -149,6 +149,27 @@ def does_selected_mesh_object_have_correct_weights(
     return True
 
 
+def does_vertex_groups_names_match_names_of_bones(
+        obj,        # An instance of "bpy.types.Object" with "obj.type == 'MESH'" and "obj.data" being of type
+                    # "bpy.type.Mesh".
+        armature
+        ):
+
+    if not armature:
+        return True
+
+    bone_names = set()
+    for bone in armature.data.bones:
+        if bone.use_deform:
+            bone_names.add(bone.name)
+    for grp in obj.vertex_groups:
+        if grp.name not in bone_names:
+            print("ERROR: The name '" + grp.name + "' of vertex group does not match the name of any bone. NOTE: "
+                  "We assume that names of vertex groups match the names of the corresponding bones. ")
+            return False
+    return True
+
+
 class render_element:
     """
     This class represent a render vertex. It consists of coordinates, normal,
@@ -344,7 +365,9 @@ class render_buffers:
 
 
 def build_render_buffers(
-        mesh    # An instance of class 'bpy.types.Mesh'
+        obj,        # An instance of "bpy.types.Object" with "obj.type == 'MESH'" and "obj.data" being of type
+                    # "bpy.type.Mesh".
+        armature    # An armature deforming the mesh. It can be None (when no such armature exists)
         ):
     """
     The function reads the passed 'mesh' object and builds a list of instances
@@ -354,8 +377,22 @@ def build_render_buffers(
     list correspond to indices into the list of materials.
 
     :param mesh: An instance of class 'bpy.types.Mesh'
+    :param armature: An armature deforming the mesh. It can be None (when no such armature exists)
     :return: The constructed instance of the class 'render_buffers'
     """
+
+    mesh = obj.data
+
+    if not armature:
+        deform_bone_index = None
+    else:
+        deform_bone_index = {}
+        deform_bones_counter = 0
+        for idx in range(0, len(armature.data.bones)):
+            bone = armature.data.bones[idx]
+            if bone.use_deform:
+                deform_bone_index[bone.name] = deform_bones_counter
+                deform_bones_counter += 1
 
     num_weights_per_vertex = 0
     for idx in range(0,len(mesh.vertices)):
@@ -414,14 +451,16 @@ def build_render_buffers(
 
             vtx = mesh.vertices[mesh.loops[j].vertex_index]
 
+            assert len(vtx.groups) == 0 or deform_bone_index is not None
+
             weights_of_matrices = []
             indices_of_matrices = []
-            for i in range(0,num_weights_per_vertex):
+            for _ in range(0, num_weights_per_vertex):
                 weights_of_matrices.append(0.0)
                 indices_of_matrices.append(0)
-            for i in range(0,len(vtx.groups)):
-                weights_of_matrices[i] = vtx.groups[i].weight
-                indices_of_matrices[i] = vtx.groups[i].group
+            for grp_idx in range(0, len(vtx.groups)):
+                weights_of_matrices[grp_idx] = vtx.groups[grp_idx].weight
+                indices_of_matrices[grp_idx] = deform_bone_index[obj.vertex_groups[vtx.groups[grp_idx].group].name]
             if num_weights_per_vertex > 1 and abs(sum(weights_of_matrices) - 1.0) > 0.001:
                 print("  WARNING: Sum of weights of vertex " + str(mesh.loops[j].vertex_index) + " is " +
                       str(sum(weights_of_matrices)))
@@ -754,6 +793,8 @@ def save_keyframe_coord_systems_of_bones(
     """
     assert obj.type == 'MESH'
 
+    coord_systems_of_frames = {}
+
     # We first find an armature applied to the mesh object. It might also be the case there is none.
     armature = None
     for mod in obj.modifiers:
@@ -767,128 +808,31 @@ def save_keyframe_coord_systems_of_bones(
     if not armature.animation_data.action:
         return
 
-    # Before we can start collecting data from the animation, we have to prepare the supporting data structure:
-    from_bone_name_to_bone_index = {}
-    for idx in range(0, len(armature.data.bones)):
-        bone = armature.data.bones[idx]
-        assert bone.name not in from_bone_name_to_bone_index
-        from_bone_name_to_bone_index[bone.name] = idx
+    scene = bpy.context.scene
 
-    # First we collect data from individual frames in the animation. We store them into the dictionary "keyframes";
-    # keys are time points of the frames and values are arrays of coordinate systems of individual bones relative
-    # to their default locations in the armature. Index of a coordinate system in the list relates to the index
-    # of the corresponding bone in the armature.
-    keyframes = {}
-
+    keyframes = set()
     action = armature.animation_data.action
-    start_frame = action.frame_range[0]
-    end_frame = action.frame_range[1]
-
     for fcurve in action.fcurves:
-        if fcurve.group:
-            bone_name = fcurve.group.name
-        else:
-            bname_start_idx = fcurve.data_path.index(".bones[\"") + len(".bones[\"")
-            bname_end_idx = fcurve.data_path.index("\"].", bname_start_idx)
-            bone_name = fcurve.data_path[bname_start_idx:bname_end_idx]
-
-        assert bone_name in from_bone_name_to_bone_index
-        bone_index = from_bone_name_to_bone_index[bone_name]
-        rotation_mode = armature.pose.bones[bone_index].rotation_mode
-        coord_index = fcurve.array_index
         for point in fcurve.keyframe_points:
-            frame_number = point.co[0]
-            frame_value = point.co[1]
+            keyframes.add(round(point.co[0]))
+    start_frame = min(keyframes)
 
-            assert start_frame <= frame_number and frame_number <= end_frame
-            # Frame-rate of frames is 25Hz; It is 0.041666666s per frame.
-            frame_time_point = (frame_number - start_frame) * 0.041666666
+    frame_current_backup = scene.frame_current
 
-            if frame_time_point not in keyframes:
-                # Not animated data should be set to identity (no modification of the default location in the armature).
-                # We initialise all data to identity; later some of them might be updated.
-                keyframes[frame_time_point] = []
-                for idx in range(0,len(armature.data.bones)):
-                    keyframes[frame_time_point].append({
-                        "position": mathutils.Vector((0.0, 0.0, 0.0)),
-                        "orientation": [0.0, 0.0, 0.0, 0.0, rotation_mode]
-                        })
-
-            if fcurve.data_path.endswith("location"):
-                assert coord_index in [0,1,2]
-                keyframes[frame_time_point][bone_index]["position"][coord_index] = frame_value
-            else:
-                assert coord_index in [0,1,2,3]
-                keyframes[frame_time_point][bone_index]["orientation"][coord_index] = frame_value
-
-    for time_point in keyframes.keys():
-        for system in keyframes[time_point]:
-            if system["orientation"][4] == "QUATERNION":
-                system["orientation"] = mathutils.Quaternion((
-                    system["orientation"][0],
-                    system["orientation"][1],
-                    system["orientation"][2],
-                    system["orientation"][3]
-                    ))
-            elif system["orientation"][4] == "AXIS_ANGLE":
-                system["orientation"] = mathutils.Quaternion(
-                    (system["orientation"][0], system["orientation"][1], system["orientation"][2]),
-                    system["orientation"][3]
-                    )
-            else:
-                system["orientation"] = mathutils.Euler(
-                    (system["orientation"][0], system["orientation"][1], system["orientation"][2]),
-                    system["orientation"][4]
-                    ).to_quaternion()
-
-    # We are ready to compute the coordinate systems of bones in individual frames from the collected relative
-    # coordinate systems in "keyframes" and from the default coordinate systems of bones in the armature.
-
-    coord_systems_of_frames = {}  # Here we shall store the results
-
-    for time_stamp in keyframes:
-
-        coord_systems_of_frames[time_stamp] = []    # Next we fill in this list by coordinate systems for all bones.
-
-        keyframe = keyframes[time_stamp]
-        for bone in armature.data.bones:
-
-            if not bone.use_deform:
-                # The bone is not used for deformation of the child mesh object. It means, that the bone
-                # is some "helper" bone, like inverse kinematic bone, so we have to skip it from the export.
+    for frame in keyframes:
+        scene.frame_set(frame)
+        coord_systems = []
+        for armature_bone in armature.data.bones:
+            if not armature_bone.use_deform:
                 continue
+            bone = armature.pose.bones[armature_bone.name]
+            coord_systems.append({
+                "position": bone.matrix * mathutils.Vector((0.0, 0.0, 0.0, 1.0)),
+                "orientation": bone.matrix.to_quaternion()
+                })
+        coord_systems_of_frames[(frame - start_frame) * 0.041666666] = coord_systems
 
-            # First we collect the whole chain of parent bones from the root one to this bone.
-            bones_list = []
-            xbone = bone
-            while xbone:
-                bones_list.append(xbone)
-                xbone = xbone.parent
-            bones_list.reverse()
-
-            # Now we compute "to-space" transformation matrix of the bone. We do so by composition of its local
-            # coordinate system with the relative coordinate system of the animation and also with the similarly
-            # constructed matrices of all parent bones.
-            transform_matrix = mathutils.Matrix()
-            transform_matrix.identity()
-            parent_tail = mathutils.Vector((0.0, 0.0, 0.0))
-            for xbone in bones_list:
-                bone_to_base_matrix = to_base_matrix(parent_tail + xbone.head,xbone.matrix.to_quaternion())
-                xbone_idx = from_bone_name_to_bone_index[xbone.name]
-                transform_matrix = to_base_matrix(keyframe[xbone_idx]["position"],keyframe[xbone_idx]["orientation"]) *\
-                                   bone_to_base_matrix *\
-                                   transform_matrix
-                parent_tail = bone_to_base_matrix * (parent_tail + xbone.tail).to_4d()
-                parent_tail.resize_3d()
-
-            # Finally we compute the position (origin) and rotation (orientation) of the
-            # coordinate system of the bone.
-            pos = transform_matrix.inverted() * mathutils.Vector((0.0, 0.0, 0.0, 1.0))
-            pos.resize_3d()
-            rot = transform_matrix.to_3x3().transposed().to_quaternion().normalized()
-
-            # And we store the computed data (i.e. the coordinate system).
-            coord_systems_of_frames[time_stamp].append({ "position": pos, "orientation": rot })
+    scene.frame_set(frame_current_backup)
 
     # It remains to save the computed coordinate systems of bones in individual frames to disc.
     # We store each frame into a separate file. But all files will be written into the same output directory:
@@ -1062,6 +1006,8 @@ def export_selected_meshes(
                 print("  ERROR: The armature '" + armature.name + "' of the object '" + obj.name + "'has no bone."
                       " Skipping the object...")
                 continue
+            if not does_vertex_groups_names_match_names_of_bones(obj, armature):
+                continue
 
             mesh = obj.data
 
@@ -1078,7 +1024,7 @@ def export_selected_meshes(
                 "root_dir": export_dir
             }
 
-            buffers_list = build_render_buffers(mesh)
+            buffers_list = build_render_buffers(obj, armature)
             for idx in range(0,len(buffers_list)):
                 sub_directory = ""
                 if len(buffers_list) > 1:
