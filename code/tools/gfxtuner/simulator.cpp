@@ -19,6 +19,139 @@
 #include <algorithm>
 
 
+static  void update(
+    qtgl::modelspace const  modelspace,
+    std::vector<qtgl::keyframe>&  keyframes,
+    float_64_bit const  time_to_simulate_in_seconds,
+    float_32_bit&  time
+    )
+{
+    TMPROF_BLOCK();
+
+    if (modelspace.data() == nullptr)
+        return;
+    for (natural_64_bit  i = 0ULL; i != keyframes.size(); ++i)
+    {
+        if (keyframes.at(i).data() == nullptr)
+        {
+            std::string const* const  error =  keyframes.at(i).error_message();
+            return;
+        }
+        if (keyframes.at(i).data()->coord_systems().size() !=
+            modelspace.data()->coord_systems().size())
+            return;
+    }
+    std::sort(
+        keyframes.begin(),keyframes.end(),
+        [](qtgl::keyframe const& left, qtgl::keyframe const& right) -> bool {
+            return left.data()->time_point() < right.data()->time_point();
+        });
+
+    float_32_bit const  animation_length =
+            keyframes.back().data()->time_point() - keyframes.front().data()->time_point();
+    if (time_to_simulate_in_seconds >= animation_length)
+        time = 0.0f;
+    else
+    {
+        ASSUMPTION(time_to_simulate_in_seconds >= 0.0f && animation_length > 0.001f);
+        time += time_to_simulate_in_seconds;
+        while (time >= animation_length)
+            time -= animation_length;
+    }
+}
+
+
+static void  draw(
+    qtgl::batch_ptr const  batch,
+    qtgl::modelspace const  modelspace,
+    std::vector<qtgl::keyframe>&  keyframes,
+    float_32_bit const  time,
+    matrix44 const&  view_projection_matrix,
+    qtgl::draw_state_ptr&  draw_state
+    )
+{
+    TMPROF_BLOCK();
+
+    if (modelspace.data() == nullptr)
+        return;
+    for (natural_64_bit  i = 0ULL; i != keyframes.size(); ++i)
+    {
+        if (keyframes.at(i).data() == nullptr)
+        {
+            std::string const* const  error =  keyframes.at(i).error_message();
+            return;
+        }
+        if (keyframes.at(i).data()->coord_systems().size() !=
+            modelspace.data()->coord_systems().size())
+            return;
+    }
+    std::sort(
+        keyframes.begin(),keyframes.end(),
+        [](qtgl::keyframe const& left, qtgl::keyframe const& right) -> bool {
+            return left.data()->time_point() < right.data()->time_point();
+        });
+
+    if (batch != nullptr && qtgl::make_current(*batch, draw_state))
+    {
+        INVARIANT(batch->shaders_binding().operator bool());
+        std::vector<matrix44> transform_matrices(modelspace.data()->coord_systems().size(),view_projection_matrix);
+        {
+            float_32_bit const  time_point = keyframes.front().data()->time_point() + time;
+            natural_64_bit  keyframe_index = 0ULL;
+            while (keyframe_index + 2ULL < keyframes.size() &&
+                   time_point >= keyframes.at(keyframe_index + 1ULL).data()->time_point())
+                ++keyframe_index;
+            natural_64_bit const  keyframe_succ_index = keyframe_index + (keyframes.size() < 2ULL ? 0ULL : 1ULL);
+            INVARIANT(keyframe_succ_index < keyframes.size());
+            INVARIANT(time_point >= keyframes.at(keyframe_index).data()->time_point());
+            INVARIANT(keyframe_index == keyframe_succ_index || time_point < keyframes.at(keyframe_succ_index).data()->time_point());
+
+            float_32_bit  interpolation_param;
+            {
+                float_32_bit const  dt =
+                        keyframes.at(keyframe_succ_index).data()->time_point() -
+                        keyframes.at(keyframe_index).data()->time_point()
+                        ;
+                if (dt < 0.001f)
+                    interpolation_param = 0.0f;
+                else
+                    interpolation_param = (time_point - keyframes.at(keyframe_index).data()->time_point()) / dt;
+                interpolation_param = std::max(-1.0f,std::min(interpolation_param,1.0f));
+            }
+
+//keyframe_index = 0ULL;
+//interpolation_param = 0.0f;
+
+            for (natural_64_bit  i = 0; i != modelspace.data()->coord_systems().size(); ++i)
+            {
+                matrix44 M;
+                {
+                    angeo::coordinate_system  S;
+                    S = keyframes.at(keyframe_index).data()->coord_systems().at(i);
+                    angeo::interpolate_spherical(
+                                keyframes.at(keyframe_index).data()->coord_systems().at(i),
+                                keyframes.at(keyframe_succ_index).data()->coord_systems().at(i),
+                                interpolation_param,
+                                S
+                                );
+                    angeo::from_base_matrix(S,M);
+                }
+                transform_matrices.at(i) *= M;
+            }
+
+            for (natural_64_bit  i = 0; i != modelspace.data()->coord_systems().size(); ++i)
+            {
+                matrix44 M;
+                angeo::to_base_matrix(modelspace.data()->coord_systems().at(i),M);
+                transform_matrices.at(i) *= M;
+            }
+        }
+        render_batch(*batch,transform_matrices,{1.0f,0.0f,0.0f,0.0f});
+        draw_state = batch->draw_state();
+    }
+}
+
+
 simulator::simulator()
     : qtgl::real_time_simulator()
 
@@ -121,44 +254,152 @@ simulator::simulator()
             }
     , m_do_show_grid(true)
 
-    , m_ske_test_batch{
+    //, m_ske_test_batch{
+    //        qtgl::batch::create(canonical_path(
+    //                boost::filesystem::path{get_program_options()->dataRoot()} /
+    //                "shared/gfx/models/ske_box/ske_box.txt"
+    //                ))
+    //        }
+    //, m_ske_test_modelspace{
+    //        canonical_path(
+    //            boost::filesystem::path{get_program_options()->dataRoot()} /
+    //            "shared/gfx/animation/ske_box/ske_box/coord_systems.txt"
+    //            )
+    //        }
+    //, m_ske_test_keyframes{
+    //        qtgl::keyframe{canonical_path(
+    //            boost::filesystem::path{get_program_options()->dataRoot()} /
+    //            "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_0.txt"
+    //            )},
+    //        qtgl::keyframe{canonical_path(
+    //            boost::filesystem::path{get_program_options()->dataRoot()} /
+    //            "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_1.txt"
+    //            )},
+    //        qtgl::keyframe{canonical_path(
+    //            boost::filesystem::path{get_program_options()->dataRoot()} /
+    //            "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_2.txt"
+    //            )},
+    //        qtgl::keyframe{canonical_path(
+    //            boost::filesystem::path{get_program_options()->dataRoot()} /
+    //            "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_3.txt"
+    //            )},
+    //        }
+    //, m_ske_test_time(0.0f)
+
+    , m_barb_batch{
             qtgl::batch::create(canonical_path(
                     boost::filesystem::path{get_program_options()->dataRoot()} /
-                    "shared/gfx/models/ske_box/ske_box.txt"
+                    "shared/gfx/models/barbarian_female/body.txt"
+                    //"shared/gfx/models/barbarian_female_ow/body.txt"
                     ))
             }
-    , m_ske_test_modelspace{
+    , m_barb_modelspace{
             canonical_path(
                 boost::filesystem::path{get_program_options()->dataRoot()} /
-                "shared/gfx/meshes/ske_box/ske_box/coord_systems.txt"
+                "shared/gfx/animation/barbarian_female/body/coord_systems.txt"
+                //"shared/gfx/animation/barbarian_female_ow/body/coord_systems.txt"
                 )
             }
-    , m_ske_test_keyframes{
-            {canonical_path(
+    , m_barb_keyframes{
+            qtgl::keyframe{canonical_path(
                 boost::filesystem::path{get_program_options()->dataRoot()} /
-                "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_0.txt"
+                "shared/gfx/animation/barbarian_female/body/ArmatureAction/keyframe_0.txt"
                 )},
-            {canonical_path(
-                boost::filesystem::path{get_program_options()->dataRoot()} /
-                "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_1.txt"
-                )},
-            {canonical_path(
-                boost::filesystem::path{get_program_options()->dataRoot()} /
-                "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_2.txt"
-                )},
-            {canonical_path(
-                boost::filesystem::path{get_program_options()->dataRoot()} /
-                "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_3.txt"
-                )},
+
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_0.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_1.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_2.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_3.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_4.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_5.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_6.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_7.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_8.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_9.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_10.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_11.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_12.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_13.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_14.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_15.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_16.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_17.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_18.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_19.txt"
+            //    )},
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_20.txt"
+            //    )},
             }
-    , m_ske_test_time(0.0f)
+    , m_barb_time(0.0f)
 
     , m_paused(true)
     , m_do_single_step(false)
 {}
 
 simulator::~simulator()
-{}
+{
+}
 
 
 void  simulator::set_camera_speed(float_32_bit const  speed)
@@ -241,27 +482,8 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
 {
     TMPROF_BLOCK();
 
-    if (m_ske_test_modelspace.data() == nullptr)
-        return;
-    for (natural_64_bit  i = 0ULL; i != m_ske_test_keyframes.size(); ++i)
-    {
-        if (m_ske_test_keyframes.at(i).data() == nullptr)
-            return;
-        if (m_ske_test_keyframes.at(i).data()->coord_systems().size() !=
-            m_ske_test_modelspace.data()->coord_systems().size())
-            return;
-    }
-    std::sort(
-        m_ske_test_keyframes.begin(),m_ske_test_keyframes.end(),
-        [](qtgl::keyframe const& left, qtgl::keyframe const& right) -> bool {
-            return left.data()->time_point() < right.data()->time_point();
-        });
-
-    m_ske_test_time += time_to_simulate_in_seconds;
-    float_32_bit const  animation_length =
-            m_ske_test_keyframes.back().data()->time_point() - m_ske_test_keyframes.front().data()->time_point();
-    while (m_ske_test_time >= animation_length)
-        m_ske_test_time -= animation_length;
+    //update(m_ske_test_modelspace, m_ske_test_keyframes, time_to_simulate_in_seconds, m_ske_test_time);
+    update(m_barb_modelspace, m_barb_keyframes, time_to_simulate_in_seconds, m_barb_time);
 }
 
 
@@ -269,77 +491,6 @@ void  simulator::render_simulation_state(matrix44 const&  view_projection_matrix
 {
     TMPROF_BLOCK();
 
-    if (m_ske_test_modelspace.data() == nullptr)
-        return;
-    for (natural_64_bit  i = 0ULL; i != m_ske_test_keyframes.size(); ++i)
-    {
-        if (m_ske_test_keyframes.at(i).data() == nullptr)
-            return;
-        if (m_ske_test_keyframes.at(i).data()->coord_systems().size() !=
-            m_ske_test_modelspace.data()->coord_systems().size())
-            return;
-    }
-    std::sort(
-        m_ske_test_keyframes.begin(),m_ske_test_keyframes.end(),
-        [](qtgl::keyframe const& left, qtgl::keyframe const& right) -> bool {
-            return left.data()->time_point() < right.data()->time_point();
-        });
-
-    if (m_ske_test_batch != nullptr && qtgl::make_current(*m_ske_test_batch, draw_state))
-    {
-        INVARIANT(m_ske_test_batch->shaders_binding().operator bool());
-        std::vector<matrix44> transform_matrices(m_ske_test_modelspace.data()->coord_systems().size(),view_projection_matrix);
-        {
-            float_32_bit const  time_point = m_ske_test_keyframes.front().data()->time_point() + m_ske_test_time;
-            natural_64_bit  keyframe_index = 0ULL;
-            while (keyframe_index + 2ULL < m_ske_test_keyframes.size() &&
-                   time_point >= m_ske_test_keyframes.at(keyframe_index + 1ULL).data()->time_point())
-                ++keyframe_index;
-            INVARIANT(keyframe_index + 1ULL < m_ske_test_keyframes.size());
-            INVARIANT(time_point >= m_ske_test_keyframes.at(keyframe_index).data()->time_point());
-            INVARIANT(time_point < m_ske_test_keyframes.at(keyframe_index + 1ULL).data()->time_point());
-
-            float_32_bit  interpolation_param;
-            {
-                float_32_bit const  dt =
-                        m_ske_test_keyframes.at(keyframe_index + 1ULL).data()->time_point() -
-                        m_ske_test_keyframes.at(keyframe_index).data()->time_point()
-                        ;
-                if (dt < 0.001f)
-                    interpolation_param = 0.0f;
-                else
-                    interpolation_param = (time_point - m_ske_test_keyframes.at(keyframe_index).data()->time_point()) / dt;
-                interpolation_param = std::max(-1.0f,std::min(interpolation_param,1.0f));
-            }
-
-//keyframe_index = 0ULL;
-//interpolation_param = 0.0f;
-
-            for (natural_64_bit  i = 0; i != m_ske_test_modelspace.data()->coord_systems().size(); ++i)
-            {
-                matrix44 M;
-                {
-                    angeo::coordinate_system  S;
-                    S = m_ske_test_keyframes.at(keyframe_index).data()->coord_systems().at(i);
-                    angeo::interpolate_spherical(
-                                m_ske_test_keyframes.at(keyframe_index).data()->coord_systems().at(i),
-                                m_ske_test_keyframes.at(keyframe_index + 1ULL).data()->coord_systems().at(i),
-                                interpolation_param,
-                                S
-                                );
-                    angeo::from_base_matrix(S,M);
-                }
-                transform_matrices.at(i) *= M;
-            }
-
-            for (natural_64_bit  i = 0; i != m_ske_test_modelspace.data()->coord_systems().size(); ++i)
-            {
-                matrix44 M;
-                angeo::to_base_matrix(m_ske_test_modelspace.data()->coord_systems().at(i),M);
-                transform_matrices.at(i) *= M;
-            }
-        }
-        render_batch(*m_ske_test_batch,transform_matrices,{1.0f,0.0f,0.0f,0.0f});
-        draw_state = m_ske_test_batch->draw_state();
-    }
+    //draw(m_ske_test_batch, m_ske_test_modelspace, m_ske_test_keyframes, m_ske_test_time, view_projection_matrix, draw_state);
+    draw(m_barb_batch, m_barb_modelspace, m_barb_keyframes, m_barb_time, view_projection_matrix, draw_state);
 }
