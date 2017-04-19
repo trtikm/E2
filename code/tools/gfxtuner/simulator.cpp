@@ -303,8 +303,33 @@ simulator::simulator()
     , m_barb_keyframes{
             qtgl::keyframe{canonical_path(
                 boost::filesystem::path{get_program_options()->dataRoot()} /
-                "shared/gfx/animation/barbarian_female/body/ArmatureAction/keyframe_0.txt"
+                "shared/gfx/animation/barbarian_female/body/walk/keyframe_0.txt"
                 )},
+            qtgl::keyframe{canonical_path(
+                boost::filesystem::path{get_program_options()->dataRoot()} /
+                "shared/gfx/animation/barbarian_female/body/walk/keyframe_1.txt"
+                )},
+            qtgl::keyframe{canonical_path(
+                boost::filesystem::path{get_program_options()->dataRoot()} /
+                "shared/gfx/animation/barbarian_female/body/walk/keyframe_2.txt"
+                )},
+            qtgl::keyframe{canonical_path(
+                boost::filesystem::path{get_program_options()->dataRoot()} /
+                "shared/gfx/animation/barbarian_female/body/walk/keyframe_3.txt"
+                )},
+            qtgl::keyframe{canonical_path(
+                boost::filesystem::path{get_program_options()->dataRoot()} /
+                "shared/gfx/animation/barbarian_female/body/walk/keyframe_4.txt"
+                )},
+
+        
+        
+            //qtgl::keyframe{canonical_path(
+            //    boost::filesystem::path{get_program_options()->dataRoot()} /
+            //    "shared/gfx/animation/barbarian_female/body/stand_straight/keyframe_0.txt"
+            //    )},
+
+
 
             //qtgl::keyframe{canonical_path(
             //    boost::filesystem::path{get_program_options()->dataRoot()} /
