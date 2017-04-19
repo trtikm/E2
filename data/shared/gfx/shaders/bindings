@@ -83,4 +83,4 @@
 // This constant must match the value returned
 // from the function 'uniform_max_transform_matrices'
 // defined in the file 'qtgl/shader_data_binding.hpp'.
-const int  MAX_TRANSFORM_MATRICES =     32;
+const int  MAX_TRANSFORM_MATRICES =     64;

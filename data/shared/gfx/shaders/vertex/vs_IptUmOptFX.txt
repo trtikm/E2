@@ -1,10 +1,10 @@
 #include ../version
 #include ../bindings
 layout(location=BINDING_IN_POSITION) in vec3  in_position;
-layout(location=BINDING_IN_COLOUR) in vec3  in_colour;
+layout(location=BINDING_IN_TEXCOORD0) in vec2  in_texture_coords;
 layout(location=BINDING_IN_INDICES_OF_MATRICES) in ivec4  in_indices_of_matrices;
 layout(location=BINDING_IN_WEIGHTS_OF_MATRICES) in vec4  in_weights_of_matrices;
-layout(location=BINDING_OUT_COLOUR) out vec4  out_colour;
+layout(location=BINDING_OUT_TEXCOORD0) out vec2  out_texture_coords;
 uniform uint NUM_MATRICES_PER_VERTEX;
 uniform mat4  TRANSFORM_MATRIX_TRANSPOSED[MAX_TRANSFORM_MATRICES];
 void main() {
@@ -17,5 +17,5 @@ void main() {
         result_position = result_position + in_weights_of_matrices[i] * pos;
     }
     gl_Position = result_position;
-    out_colour = vec4(in_colour,1.0f);
+    out_texture_coords = in_texture_coords;
 }
