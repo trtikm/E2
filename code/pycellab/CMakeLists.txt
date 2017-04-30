@@ -1,0 +1,15 @@
+install(
+    FILES
+        check_probab.py
+        config.py
+        distribution.py
+        integrator.py
+        neuron.py
+        plot.py
+        soma.py
+        spike_train.py
+        spiking.py
+        __init__.py
+    DESTINATION
+        "evaluation/pycellab"
+    )

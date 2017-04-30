@@ -41,7 +41,8 @@ add_subdirectory(./plot)
     message("-- plot")
 add_subdirectory(./utility)
     message("-- utility")
-
+add_subdirectory(./pycellab)
+    message("-- pycellab")
     
 # Here follow tests, if they should be included.
 if(NOT DEFINED E2_BUILD_ALSO_TOOLS)
