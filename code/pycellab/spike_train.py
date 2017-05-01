@@ -8,9 +8,13 @@ class spike_train:
     to a distribution passed to the constructor.
     """
     def __init__(self, noise_distribution, is_excitatory):
+        assert isinstance(noise_distribution, distribution.distribution)
         assert type(is_excitatory) is bool
-        self._noise_isi = distribution.disi(noise_distribution)
+        self._noise_isi = noise_distribution
         self._excitatory = is_excitatory
+
+    def get_isi_noise_distribution(self):
+        return self._noise_isi
 
     def copy(self):
         return spike_train(self._noise_isi.get_histogram(), self.is_excitatory())

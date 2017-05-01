@@ -25,7 +25,7 @@ class neuron:
             self._soma_recording[key] = [(self._time, value)]
         self._soma_recording_epsilons = {}
         for key, (low, high) in self._soma.ranges_of_variables(len(self._trains)).items():
-            self._soma_recording_epsilons[key] = (high - low) / 500.0
+            self._soma_recording_epsilons[key] = (high - low) / 2000.0
 
     def get_time(self):
         return self._time
@@ -42,7 +42,7 @@ class neuron:
     def get_soma_recording(self):
         return self._soma_recording
 
-    def integrate(self, dt):
+    def integrate(self, dt, is_this_last_step):
         was_spiking = self._soma.is_spiking()
         self._soma.integrate(dt)
         self._time += dt
@@ -65,5 +65,5 @@ class neuron:
                 self._soma_recording[key].append((self._time, last_value))
         for key, value in self._soma.variables.items():
             last_value = self._soma_recording[key][-1][1]
-            if abs(value - last_value) > self._soma_recording_epsilons[key]:
+            if abs(value - last_value) > self._soma_recording_epsilons[key] or is_this_last_step:
                 self._soma_recording[key].append((self._time, value))

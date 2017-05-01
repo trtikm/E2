@@ -23,39 +23,50 @@ def evaluate(cfg):
     print("  Starting simulation.")
     for step in range(cfg.nsteps):
         print("    " + format(100.0 * step / float(cfg.nsteps), '.1f') + "%", end='\r')
-        cell.integrate(cfg.dt)
+        cell.integrate(cfg.dt, step + 1 == cfg.nsteps)
     print("    There has been performed " + str(cfg.nsteps) + " steps, each " + str(cfg.dt) + "s long.")
 
     print("  Saving results.")
-    for key, points in cell.get_soma_recording().items():
-        pathname = os.path.join(cfg.output_dir, "soma_" + key + ".plt")
-        print("    Saving plot " + pathname + " [.svg]")
-        plot.curve(points, pathname)
-        plot.mksvg(pathname)
+    if cfg.use_matplotlib:
+        plotfn = { "curve": plot.xcurve, "scatter": plot.xscatter, "histogram": plot.xhistogram }
+    else:
+        plotfn = { "curve": plot.curve, "scatter": plot.scatter, "histogram": plot.histogram }
 
-    pathname = os.path.join(cfg.output_dir, "pre_spikes.plt")
-    print("    Saving plot " + pathname + " [.svg]")
-    plot.scatter(
+    for key, points in cell.get_soma_recording().items():
+        pathname = os.path.join(cfg.output_dir, "soma_" + key + cfg.plot_files_extension)
+        print("    Saving plot " + pathname)
+        plotfn["curve"](points, pathname)
+
+    pathname = os.path.join(cfg.output_dir, "pre_spikes" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plotfn["scatter"](
         cell.get_pre_spikes() + [(t, -1) for t in cell.get_post_spikes()],
         pathname
         )
-    plot.mksvg(pathname)
 
-    pathname = os.path.join(cfg.output_dir, "pre_isi.plt")
-    print("    Saving plot " + pathname + " [.svg]")
-    plot.histogram(
-        distribution.mk_isi_histogram([t for t, n in cell.get_pre_spikes()], cfg.dt),
-        pathname
+    pathname = os.path.join(cfg.output_dir, "pre_isi" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plotfn["histogram"](
+        distribution.make_isi_histogram([t for t, n in cell.get_pre_spikes()], cfg.dt),
+        pathname,
+        bar_width=cfg.dt
         )
-    plot.mksvg(pathname)
 
-    pathname = os.path.join(cfg.output_dir, "post_isi.plt")
-    print("    Saving plot " + pathname + " [.svg]")
-    plot.histogram(
-        distribution.mk_isi_histogram(cell.get_post_spikes(), cfg.dt),
-        pathname
+    pathname = os.path.join(cfg.output_dir, "post_isi" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plotfn["histogram"](
+        distribution.make_isi_histogram(cell.get_post_spikes(), cfg.dt),
+        pathname,
+        bar_width=cfg.dt
         )
-    plot.mksvg(pathname)
+
+    if cfg.are_equal_noise_distributions:
+        pathname = os.path.join(cfg.output_dir, "trains_noise" + cfg.plot_files_extension)
+        print("    Saving plot " + pathname)
+        plotfn["histogram"](
+            cfg.excitatory_noise_distributions[0],
+            pathname
+            )
 
     print("  Done.")
 
@@ -103,5 +114,5 @@ if __name__ == "__main__":
         help="The system evaluates the configuration of the passed name. Use the option "
              "'--configurations' to list all available."
         )
-    # evaluate(config.development())
+    # config.__dbg()
     exit(main(parser.parse_args()))

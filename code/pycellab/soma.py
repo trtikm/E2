@@ -3,14 +3,14 @@ import integrator
 
 class leaky_integrate_and_fire:
     def __init__(self,
-                 initial_potential=-65,
-                 initial_input=0.0,
+                 initial_potential=-70,
+                 initial_input=40.0,
                  resting_potential=-65,
                  firing_potential=-55,
                  saturation_potential=-70,
-                 potential_cooling_coef=-0.1,
+                 potential_cooling_coef=-58.0,
                  input_cooling_coef=-250.0,
-                 psp_max_potential=60.0,
+                 psp_max_potential=-50.0,
                  spike_magnitude=1.0,
                  integrator_function=integrator.euler
                  ):
@@ -31,8 +31,9 @@ class leaky_integrate_and_fire:
         self.integrator = integrator_function
 
     def derivatives(self, var):
-        psp_voltage = var["input"] * (self.constants["psp_max_potential"] - var["potential"]) # / (self.constants["psp_max_potential"] - self.constants["resting_potential"])
-
+        psp_voltage = var["input"] * (self.constants["psp_max_potential"] - self.constants["resting_potential"])
+        # * (self.constants["psp_max_potential"] - var["potential"])
+        # / (self.constants["psp_max_potential"] - self.constants["resting_potential"])
         return {
             "potential":
                 psp_voltage
