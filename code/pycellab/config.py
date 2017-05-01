@@ -101,7 +101,7 @@ def leaky_integrate_and_fire__const_input():
             input_cooling_coef=-250.0 * 4.0,
             psp_max_potential=-50.0,
             spike_magnitude=40.0,
-            integrator_function=integrator.euler
+            integrator_function=integrator.midpoint
             ),
         excitatory_noise_distributions=[distribution.distribution({1.0*dt: 1.0})],
         inhibitory_noise_distributions=[],
@@ -133,7 +133,7 @@ def leaky_integrate_and_fire_input_800ex_200in_std_noise():
             input_cooling_coef=-250.0,
             psp_max_potential=-50.0,
             spike_magnitude=1.0,
-            integrator_function=integrator.euler
+            integrator_function=integrator.midpoint
             ),
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
@@ -166,7 +166,7 @@ def development():
             input_cooling_coef=-250.0,
             psp_max_potential=-50.0,
             spike_magnitude=10.0,
-            integrator_function=integrator.euler
+            integrator_function=integrator.midpoint
             ),
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
