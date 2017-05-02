@@ -73,6 +73,19 @@ class leaky_integrate_and_fire:
     def get_on_spike_variable_names(self):
         return ["input"]
 
+    def get_short_description(self):
+        return (
+            "Leaky IF"
+            ", V[resting]=" + str(self.constants["resting_potential"]) +
+            ", V[firing]=" + str(self.constants["firing_potential"]) +
+            ", V[saturation]=" + str(self.constants["saturation_potential"]) +
+            ", V[firing]=" + str(self.constants["firing_potential"]) +
+            ", V[psp_max]=" + str(self.constants["psp_max_potential"]) +
+            ", V[cooling]=" + str(self.constants["potential_cooling_coef"]) +
+            ", I[cooling]=" + str(self.constants["input_cooling_coef"]) +
+            ", spike magnitude=" + str(self.constants["spike_magnitude"])
+            )
+
 
 class izhikevich:
     def __init__(self,
@@ -226,3 +239,14 @@ class izhikevich:
 
     def get_on_spike_variable_names(self):
         return ["input"]
+
+    def get_short_description(self):
+        return (
+            "Izhikevich"
+            ", U[resting]=" + str(self.constants["resting_potential_U"]) +
+            ", V[resting]=" + str(self.constants["resting_potential_V"]) +
+            ", V[firing]=" + str(self.constants["firing_potential"]) +
+            ", a=" + str(self.constants["coef_a"]) +
+            ", b=" + str(self.constants["coef_b"]) +
+            ", spike magnitude=" + str(self.constants["spike_magnitude"])
+            )

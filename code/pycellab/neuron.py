@@ -11,6 +11,9 @@ class neuron:
                  excitatory_weights,
                  inhibitory_weights
                  ):
+        assert len(excitatory_noise_distributions) == len(excitatory_weights)
+        assert len(inhibitory_noise_distributions) == len(inhibitory_weights)
+        self._num_excitatory_spike_trains = len(excitatory_noise_distributions)
         self._trains =\
             [spike_train.spike_train(noise, True) for noise in excitatory_noise_distributions] +\
             [spike_train.spike_train(noise, False) for noise in inhibitory_noise_distributions]
@@ -27,6 +30,12 @@ class neuron:
         for key, (low, high) in self._soma.ranges_of_variables(len(self._trains)).items():
             self._soma_recording_epsilons[key] = (high - low) / 2000.0
 
+    def get_interval_of_excitatory_spike_trains(self):
+        return 0, self._num_excitatory_spike_trains
+
+    def get_interval_of_inhibitory_spike_trains(self):
+        return self._num_excitatory_spike_trains, len(self._trains)
+
     def get_time(self):
         return self._time
 
@@ -42,11 +51,13 @@ class neuron:
     def get_soma_recording(self):
         return self._soma_recording
 
+    def get_soma(self):
+        return self._soma
+
     def integrate(self, dt, is_this_last_step):
         was_spiking = self._soma.is_spiking()
         self._soma.integrate(dt)
         self._time += dt
-        was_pre_spike = False
         for i in range(len(self._spike_times)):
             if self._spike_times[i] <= self._time:
                 self._pre_spikes.append((self._time, i))
@@ -55,15 +66,10 @@ class neuron:
                 else:
                     self._soma.on_inhibitory_spike(self._weights[i])
                 self._spike_times[i] = self._time + self._trains[i].next_spike_time()
-                was_pre_spike = True
         is_spiking = self._soma.is_spiking()
         if was_spiking is False and is_spiking is True:
             self._post_spikes.append(self._time)
-        if was_pre_spike:
-            for key in self._soma.get_on_spike_variable_names():
-                last_value = self._soma_recording[key][-1][1]
-                self._soma_recording[key].append((self._time, last_value))
         for key, value in self._soma.variables.items():
-            last_value = self._soma_recording[key][-1][1]
-            if abs(value - last_value) > self._soma_recording_epsilons[key] or is_this_last_step:
-                self._soma_recording[key].append((self._time, value))
+            # last_value = self._soma_recording[key][-1][1]
+            # if abs(value - last_value) > self._soma_recording_epsilons[key] or is_this_last_step:
+            self._soma_recording[key].append((self._time, value))

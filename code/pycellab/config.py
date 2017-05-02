@@ -53,7 +53,6 @@ class configuration:
                  inhibitory_weights,
                  output_dir,
                  plot_files_extension,
-                 use_matplotlib,
                  description
                  ):
         self.dt = dt
@@ -65,7 +64,6 @@ class configuration:
         self.inhibitory_weights = inhibitory_weights
         self.output_dir = output_dir
         self.plot_files_extension = plot_files_extension
-        self.use_matplotlib = use_matplotlib
         self.name = os.path.basename(self.output_dir)
         self.description = description
         self.are_equal_excitatory_noise_distributions = len(self.excitatory_noise_distributions) > 0
@@ -109,7 +107,6 @@ def leaky_integrate_and_fire__const_input():
         inhibitory_weights=[],
         output_dir=os.path.join(__output_root_dir(), "leaky_integrate_and_fire__const_input"),
         plot_files_extension=".png",
-        use_matplotlib=True,
         description="A simulation of a 'leaky integrate and fire' neuron with a constant input current. "
                     "strong enough to trigger constant firing of the neuron."
         )
@@ -141,7 +138,6 @@ def leaky_integrate_and_fire_input_800ex_200in_std_noise():
         inhibitory_weights=[1.0 for _ in range(num_inhibitory)],
         output_dir=os.path.join(__output_root_dir(), "leaky_integrate_and_fire_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
-        use_matplotlib=True,
         description="A simulation of a 'leaky integrate and fire' neuron with a 800 excitatory and 200 "
                     "inhibitory input spike trains, all with the standard noise distribution. Weights of "
                     "all synapses is 1."
@@ -174,7 +170,6 @@ def development():
         inhibitory_weights=[1.0 for _ in range(num_inhibitory)],
         output_dir=os.path.join(__output_root_dir(), "development"),
         plot_files_extension=".png",
-        use_matplotlib=True,
         description="This is not a genuine configuration. It serves only for development, testing, and "
                     "bug-fixing of this evaluation system."
         )

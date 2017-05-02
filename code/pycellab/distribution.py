@@ -132,6 +132,19 @@ def make_isi_histogram(time_events, minimal_time_delta, start_time=0.0):
     return hist
 
 
+def make_counts_histogram(events, start_bin=0, bin_size=1):
+    assert bin_size > 0.00001
+    xhist = {}
+    for event in events:
+        idx = int((event - start_bin) / bin_size)
+        if idx in xhist:
+            xhist[idx] += 1
+        else:
+            xhist[idx] = 1
+    return {i * bin_size: c for i, c in xhist.items()}
+
+
+
 def test():
     def doit(hist, n):
         xhist = hist.copy()
