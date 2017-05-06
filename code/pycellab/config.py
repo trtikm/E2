@@ -210,19 +210,42 @@ def izhikevich_fast_spiking_input_800ex_200in_std_noise():
         )
 
 
-def development():
+def hodgkin_huxley_input_800ex_200in_std_noise():
     num_excitatory = 800
     num_inhibitory = 200
-    spike_magnitude = 0.15
     excitatory_noise = get_standard_spike_noise_distribution()
     inhibitory_noise = excitatory_noise
     return configuration(
         dt=0.001,
         nsteps=1000,
-        # cell_soma=soma.izhikevich.default(spike_magnitude=spike_magnitude),
-        # cell_soma=soma.izhikevich.regular_spiking(spike_magnitude=spike_magnitude),
-        cell_soma=soma.izhikevich.chattering(spike_magnitude=spike_magnitude),
-        # cell_soma=soma.izhikevich.fast_spiking(spike_magnitude=spike_magnitude),
+        cell_soma=soma.hodgkin_huxley(
+            spike_magnitude=0.15,
+            integrator_function=integrator.midpoint
+            ),
+        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+        excitatory_weights=[1.0 for _ in range(num_excitatory)],
+        inhibitory_weights=[1.0 for _ in range(num_inhibitory)],
+        output_dir=os.path.join(__output_root_dir(), "hodgkin_huxley_input_800ex_200in_std_noise"),
+        plot_files_extension=".png",
+        description="A simulation of a 'hodgkin-huxley' neuron with a 800 excitatory and 200 "
+                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
+                    "all synapses is 1. Spike magnitude is 0.15."
+        )
+
+
+def development():
+    num_excitatory = 800
+    num_inhibitory = 200
+    excitatory_noise = get_standard_spike_noise_distribution()
+    inhibitory_noise = excitatory_noise
+    return configuration(
+        dt=0.001,
+        nsteps=1000,
+        cell_soma=soma.hodgkin_huxley(
+            spike_magnitude=0.15,
+            integrator_function=integrator.midpoint
+            ),
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
         excitatory_weights=[1.0 for _ in range(num_excitatory)],
@@ -241,6 +264,7 @@ def get_registered_configurations():
         izhikevich_regular_spiking_input_800ex_200in_std_noise(),
         izhikevich_chattering_input_800ex_200in_std_noise(),
         izhikevich_fast_spiking_input_800ex_200in_std_noise(),
+        hodgkin_huxley_input_800ex_200in_std_noise(),
         development()
         ]
 

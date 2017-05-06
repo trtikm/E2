@@ -133,7 +133,7 @@ def make_isi_histogram(time_events, minimal_time_delta, start_time=0.0):
 
 
 def make_counts_histogram(events, start_bin=0, bin_size=1):
-    assert bin_size > 0.00001
+    assert bin_size > 0.000001
     xhist = {}
     for event in events:
         idx = int((event - start_bin) / bin_size)
@@ -145,12 +145,17 @@ def make_counts_histogram(events, start_bin=0, bin_size=1):
 
 
 def make_counts_curve(points, dx=1.0):
-    assert dx > 0.00001
+    assert dx > 0.000001
     result = []
     for x, _ in points:
         if len(result) > 0 and abs(x - result[-1][0]) < dx:
             result[-1] = (result[-1][0], result[-1][1] + 1)
         else:
+            if len(result) > 0:
+                last_x = result[-1][0]
+                if abs(x - last_x) > dx + dx/2.0:
+                    result.append((last_x+dx, 0))
+                    result.append((x-dx, 0))
             result.append((x, 1))
     return result
 

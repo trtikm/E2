@@ -73,7 +73,7 @@ class neuron:
                     self._soma.on_inhibitory_spike(self._weights[i])
                 self._spike_times[i] = self._time + self._trains[i].next_spike_time()
         is_spiking = self._soma.is_spiking()
-        if was_spiking is False and is_spiking is True:
+        if not was_spiking and is_spiking:
             self._post_spikes.append(self._time)
         for key, value in self._soma.variables.items():
             self._soma_recording[key].append((self._time, value))
