@@ -144,6 +144,16 @@ def make_counts_histogram(events, start_bin=0, bin_size=1):
     return {i * bin_size: c for i, c in xhist.items()}
 
 
+def make_counts_curve(points, dx=1.0):
+    assert dx > 0.00001
+    result = []
+    for x, _ in points:
+        if len(result) > 0 and abs(x - result[-1][0]) < dx:
+            result[-1] = (result[-1][0], result[-1][1] + 1)
+        else:
+            result.append((x, 1))
+    return result
+
 
 def test():
     def doit(hist, n):

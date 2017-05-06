@@ -97,6 +97,7 @@ class izhikevich:
                  firing_potential,
                  coef_a,
                  coef_b,
+                 input_cooling_coef,
                  spike_magnitude=1.0,
                  integrator_function=integrator.midpoint
                  ):
@@ -106,6 +107,7 @@ class izhikevich:
             "firing_potential": firing_potential,
             "coef_a": coef_a,
             "coef_b": coef_b,
+            "input_cooling_coef": input_cooling_coef,
             "spike_magnitude": spike_magnitude
             }
         self.variables = {
@@ -120,6 +122,7 @@ class izhikevich:
     def default(initial_potential_U=-14.0,
                 initial_potential_V=-70.0,
                 initial_input=0.0,
+                input_cooling_coef=-0.25,
                 spike_magnitude=1.0,
                 integrator_function=integrator.midpoint
                 ):
@@ -132,26 +135,7 @@ class izhikevich:
                     firing_potential=30.0,
                     coef_a=0.02,
                     coef_b=0.2,
-                    spike_magnitude=spike_magnitude,
-                    integrator_function=integrator_function
-                    )
-
-    @staticmethod
-    def fast_spiking(initial_potential_U=-14.0,
-                     initial_potential_V=-70.0,
-                     initial_input=0.0,
-                     spike_magnitude=1.0,
-                     integrator_function=integrator.midpoint
-                     ):
-        return izhikevich(
-                    initial_potential_U=initial_potential_U,
-                    initial_potential_V=initial_potential_V,
-                    initial_input=initial_input,
-                    resting_potential_U=2.0,
-                    resting_potential_V=-65.0,
-                    firing_potential=30.0,
-                    coef_a=0.1,
-                    coef_b=0.2,
+                    input_cooling_coef=input_cooling_coef,
                     spike_magnitude=spike_magnitude,
                     integrator_function=integrator_function
                     )
@@ -160,6 +144,7 @@ class izhikevich:
     def regular_spiking(initial_potential_U=-14.0,
                         initial_potential_V=-70.0,
                         initial_input=0.0,
+                        input_cooling_coef=-0.25,
                         spike_magnitude=1.0,
                         integrator_function=integrator.midpoint
                         ):
@@ -172,17 +157,19 @@ class izhikevich:
                     firing_potential=30.0,
                     coef_a=0.02,
                     coef_b=0.2,
+                    input_cooling_coef=input_cooling_coef,
                     spike_magnitude=spike_magnitude,
                     integrator_function=integrator_function
                     )
 
     @staticmethod
-    def bursting(initial_potential_U=-14.0,
-                 initial_potential_V=-70.0,
-                 initial_input=0.0,
-                 spike_magnitude=1.0,
-                 integrator_function=integrator.midpoint
-                 ):
+    def chattering(initial_potential_U=-14.0,
+                   initial_potential_V=-70.0,
+                   initial_input=0.0,
+                   input_cooling_coef=-0.25,
+                   spike_magnitude=1.0,
+                   integrator_function=integrator.midpoint
+                   ):
         return izhikevich(
                     initial_potential_U=initial_potential_U,
                     initial_potential_V=initial_potential_V,
@@ -192,17 +179,40 @@ class izhikevich:
                     firing_potential=30.0,
                     coef_a=0.02,
                     coef_b=0.2,
+                    input_cooling_coef=input_cooling_coef,
+                    spike_magnitude=spike_magnitude,
+                    integrator_function=integrator_function
+                    )
+
+    @staticmethod
+    def fast_spiking(initial_potential_U=-14.0,
+                     initial_potential_V=-70.0,
+                     initial_input=0.0,
+                     input_cooling_coef=-0.25,
+                     spike_magnitude=1.0,
+                     integrator_function=integrator.midpoint
+                     ):
+        return izhikevich(
+                    initial_potential_U=initial_potential_U,
+                    initial_potential_V=initial_potential_V,
+                    initial_input=initial_input,
+                    resting_potential_U=2.0,
+                    resting_potential_V=-65.0,
+                    firing_potential=30.0,
+                    coef_a=0.1,
+                    coef_b=0.2,
+                    input_cooling_coef=input_cooling_coef,
                     spike_magnitude=spike_magnitude,
                     integrator_function=integrator_function
                     )
 
     def derivatives(self, var):
-        psp_voltage = var["input"] * (self.constants["firing_potential"] - self.constants["resting_potential_V"])
+        psp_voltage = var["input"]
         return {
             "U":
                 self.constants["coef_a"] * (self.constants["coef_b"] * var["V"] - var["U"]),
             "V":
-                0.04 * var["V"]**2.0 + 5.0 * var["V"] + 140 - var["U"] + psp_voltage,
+                0.04 * var["V"]**2.0 + 5.0 * var["V"] + 140.0 - var["U"] + psp_voltage,
             "input":
                 self.constants["input_cooling_coef"] * var["input"]
             }
@@ -213,7 +223,10 @@ class izhikevich:
             self.variables["V"] = self.constants["resting_potential_V"]
             self.variables["input"] = 0.0
         else:
-            self.integrator(dt, self.variables, self.derivatives)
+            # Derivatives are expressed in 'ms' time unit, but we have 'dt' in seconds.
+            self.integrator(1000.0 * dt, self.variables, self.derivatives)
+            if self.variables["V"] > 300.0:
+                self.variables["V"] = 300.0
 
     def ranges_of_variables(self, num_spike_trains):
         return {
@@ -248,5 +261,6 @@ class izhikevich:
             ", V[firing]=" + str(self.constants["firing_potential"]) +
             ", a=" + str(self.constants["coef_a"]) +
             ", b=" + str(self.constants["coef_b"]) +
+            ", I[cooling]=" + str(self.constants["input_cooling_coef"]) +
             ", spike magnitude=" + str(self.constants["spike_magnitude"])
             )

@@ -45,6 +45,12 @@ class neuron:
     def get_pre_spikes(self):
         return self._pre_spikes
 
+    def get_pre_spikes_excitatory(self):
+        return [(x, n) for x, n in self.get_pre_spikes() if n < self._num_excitatory_spike_trains]
+
+    def get_pre_spikes_inhibitory(self):
+        return [(x, n) for x, n in self.get_pre_spikes() if n >= self._num_excitatory_spike_trains]
+
     def get_post_spikes(self):
         return self._post_spikes
 
@@ -54,7 +60,7 @@ class neuron:
     def get_soma(self):
         return self._soma
 
-    def integrate(self, dt, is_this_last_step):
+    def integrate(self, dt):
         was_spiking = self._soma.is_spiking()
         self._soma.integrate(dt)
         self._time += dt
@@ -70,6 +76,4 @@ class neuron:
         if was_spiking is False and is_spiking is True:
             self._post_spikes.append(self._time)
         for key, value in self._soma.variables.items():
-            # last_value = self._soma_recording[key][-1][1]
-            # if abs(value - last_value) > self._soma_recording_epsilons[key] or is_this_last_step:
             self._soma_recording[key].append((self._time, value))

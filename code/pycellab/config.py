@@ -84,7 +84,7 @@ class configuration:
             )
 
 
-def leaky_integrate_and_fire__const_input():
+def leaky_integrate_and_fire_const_input():
     dt = 0.001
     return configuration(
         dt=dt,
@@ -105,7 +105,7 @@ def leaky_integrate_and_fire__const_input():
         inhibitory_noise_distributions=[],
         excitatory_weights=[1.0],
         inhibitory_weights=[],
-        output_dir=os.path.join(__output_root_dir(), "leaky_integrate_and_fire__const_input"),
+        output_dir=os.path.join(__output_root_dir(), "leaky_integrate_and_fire_const_input"),
         plot_files_extension=".png",
         description="A simulation of a 'leaky integrate and fire' neuron with a constant input current. "
                     "strong enough to trigger constant firing of the neuron."
@@ -144,26 +144,85 @@ def leaky_integrate_and_fire_input_800ex_200in_std_noise():
         )
 
 
-def development():
-    num_excitatory = 80
-    num_inhibitory = 20
+def izhikevich_regular_spiking_input_800ex_200in_std_noise():
+    num_excitatory = 800
+    num_inhibitory = 200
     excitatory_noise = get_standard_spike_noise_distribution()
     inhibitory_noise = excitatory_noise
     return configuration(
         dt=0.001,
         nsteps=1000,
-        cell_soma=soma.leaky_integrate_and_fire(
-            initial_potential=-70,
-            initial_input=40.0,
-            resting_potential=-65,
-            firing_potential=-55,
-            saturation_potential=-70,
-            potential_cooling_coef=-58.0,
-            input_cooling_coef=-250.0,
-            psp_max_potential=-50.0,
-            spike_magnitude=10.0,
-            integrator_function=integrator.midpoint
-            ),
+        cell_soma=soma.izhikevich.regular_spiking(spike_magnitude=0.15),
+        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+        excitatory_weights=[1.0 for _ in range(num_excitatory)],
+        inhibitory_weights=[1.0 for _ in range(num_inhibitory)],
+        output_dir=os.path.join(__output_root_dir(), "izhikevich_regular_spiking_input_800ex_200in_std_noise"),
+        plot_files_extension=".png",
+        description="A simulation of a 'izhikevich regular spiking' neuron with a 800 excitatory and 200 "
+                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
+                    "all synapses is 1. Spike magnitude is 0.15. This neuron typically creates excitatory "
+                    "synapses to other neurons. These neurons are the most common in the cortex."
+        )
+
+
+def izhikevich_chattering_input_800ex_200in_std_noise():
+    num_excitatory = 800
+    num_inhibitory = 200
+    excitatory_noise = get_standard_spike_noise_distribution()
+    inhibitory_noise = excitatory_noise
+    return configuration(
+        dt=0.001,
+        nsteps=1000,
+        cell_soma=soma.izhikevich.chattering(spike_magnitude=0.15),
+        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+        excitatory_weights=[1.0 for _ in range(num_excitatory)],
+        inhibitory_weights=[1.0 for _ in range(num_inhibitory)],
+        output_dir=os.path.join(__output_root_dir(), "izhikevich_chattering_input_800ex_200in_std_noise"),
+        plot_files_extension=".png",
+        description="A simulation of a 'izhikevich chattering' neuron with a 800 excitatory and 200 "
+                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
+                    "all synapses is 1. Spike magnitude is 0.15. This neuron typically creates excitatory "
+                    "synapses to other neurons."
+        )
+
+
+def izhikevich_fast_spiking_input_800ex_200in_std_noise():
+    num_excitatory = 800
+    num_inhibitory = 200
+    excitatory_noise = get_standard_spike_noise_distribution()
+    inhibitory_noise = excitatory_noise
+    return configuration(
+        dt=0.001,
+        nsteps=1000,
+        cell_soma=soma.izhikevich.fast_spiking(spike_magnitude=0.15),
+        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+        excitatory_weights=[1.0 for _ in range(num_excitatory)],
+        inhibitory_weights=[1.0 for _ in range(num_inhibitory)],
+        output_dir=os.path.join(__output_root_dir(), "izhikevich_fast_spiking_input_800ex_200in_std_noise"),
+        plot_files_extension=".png",
+        description="A simulation of a 'izhikevich fast spiking' neuron with a 800 excitatory and 200 "
+                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
+                    "all synapses is 1. Spike magnitude is 0.15. This neuron typically creates inhibitory "
+                    "synapses to other neurons."
+        )
+
+
+def development():
+    num_excitatory = 800
+    num_inhibitory = 200
+    spike_magnitude = 0.15
+    excitatory_noise = get_standard_spike_noise_distribution()
+    inhibitory_noise = excitatory_noise
+    return configuration(
+        dt=0.001,
+        nsteps=1000,
+        # cell_soma=soma.izhikevich.default(spike_magnitude=spike_magnitude),
+        # cell_soma=soma.izhikevich.regular_spiking(spike_magnitude=spike_magnitude),
+        cell_soma=soma.izhikevich.chattering(spike_magnitude=spike_magnitude),
+        # cell_soma=soma.izhikevich.fast_spiking(spike_magnitude=spike_magnitude),
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
         excitatory_weights=[1.0 for _ in range(num_excitatory)],
@@ -177,8 +236,11 @@ def development():
 
 def get_registered_configurations():
     return [
-        leaky_integrate_and_fire__const_input(),
+        leaky_integrate_and_fire_const_input(),
         leaky_integrate_and_fire_input_800ex_200in_std_noise(),
+        izhikevich_regular_spiking_input_800ex_200in_std_noise(),
+        izhikevich_chattering_input_800ex_200in_std_noise(),
+        izhikevich_fast_spiking_input_800ex_200in_std_noise(),
         development()
         ]
 
