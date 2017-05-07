@@ -69,7 +69,7 @@ def save_post_isi_distribution(cfg, post_spikes, subdir):
         )
 
 
-def save_spikes_board(cfg, pre_spikes_excitatory, pre_spikes_inhibitory, post_spikes):
+def save_spikes_board(cfg, pre_spikes_excitatory, pre_spikes_inhibitory, post_spikes, soma_names):
     pathname = os.path.join(cfg.output_dir, "pre_spikes" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
 
@@ -91,20 +91,20 @@ def save_spikes_board(cfg, pre_spikes_excitatory, pre_spikes_inhibitory, post_sp
                 [get_colour_pre_inhibitory() for spikes in pre_spikes_inhibitory for _ in spikes] +
                 [get_colour_post() for spikes in post_spikes for _ in spikes],
         title=(
-            "total pre-spikes=" +
+            "pre-total=" +
                     str(len(pre_spikes_excitatory) + len(pre_spikes_inhibitory)) +
-            ", excitatory pre-spikes[0," +
+            ", pre-excitatory[0," +
                     str(len(pre_spikes_excitatory)) + ")=" +
                     str(len(pre_spikes_excitatory)) +
-            ", inhibitory pre-spikes[" +
+            ", pre-inhibitory[" +
                     str(len(pre_spikes_excitatory)) + "," +
                     str(len(pre_spikes_excitatory) + len(pre_spikes_inhibitory)) + ")=" +
-                    str(len(pre_spikes_inhibitory)) +
-            ", post-spikes[" +
-                    str(base_shift) + ":" +
-                    str(stride) + ":" +
-                    str(base_shift + stride * (len(post_spikes) - 1)) + "]={" +
-                    "".join([str(len(spikes)) + "," for spikes in post_spikes]) + "}"
+                    str(len(pre_spikes_inhibitory)) + ", " +
+            "".join(filter(lambda _: len(soma_names) > 1, ["\n"])) +
+            "".join(map(lambda x: "post[" + x[0] + "][" + x[1] + "]=" + x[2] + ", ",
+                        zip([name for name in soma_names],
+                            [str(stride * i + base_shift) for i in range(len(post_spikes))],
+                            [str(len(spikes)) for spikes in post_spikes])))
             )
         )
 
@@ -234,7 +234,8 @@ def evaluate(cfg):
     save_pre_isi_distributions(cfg)
     save_spikes_board(cfg, [train.get_spikes() for train in excitatory_spike_trains],
                            [train.get_spikes() for train in inhibitory_spike_trains],
-                           [cell.get_spikes() for cell in cells])
+                           [cell.get_spikes() for cell in cells],
+                           [cell.get_soma().get_name() for cell in cells])
     save_pre_spike_counts_histograms(cfg, [train.get_spikes() for train in excitatory_spike_trains],
                                           [train.get_spikes() for train in inhibitory_spike_trains])
     save_pre_spike_counts_curves(cfg, [train.get_spikes() for train in excitatory_spike_trains],
