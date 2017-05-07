@@ -1,4 +1,5 @@
 import numpy
+import matplotlib.pyplot as plt
 
 
 class distribution:
@@ -106,6 +107,31 @@ class distribution:
 
     def get_coefficient_of_variation(self):
         return self._coefficient_of_variation
+
+
+def get_standard_spike_noise():
+    s = numpy.random.exponential(1, 100000)
+    count, bins, ignored = plt.hist(s, 500, normed=True)
+    n = min([len(count), len(bins)])
+    assert n >= 300
+    hist = {}
+    for i in range(n):
+        assert bins[i] not in hist
+        hist[float(bins[i])] = float(count[i]) # float(abs(count[i] - 1.0 * (1.0 - numpy.sqrt(1 + count[i]))))
+    xhist = {}
+    keys = sorted(hist.keys())
+    for idx in range(0, min(300, len(keys))):
+        if idx < 5:
+            value = 0.0
+        elif idx < 10:
+            x = (idx - 5.0) / 10.0
+            assert x >= 0.0 and x <= 1.0
+            value = hist[keys[10]] * (3.0 * x**2 - 2.0 * x**3)
+        else:
+            value = hist[keys[idx]]
+        xhist[0.001 * (idx + 2)] = value
+        idx += 1
+    return distribution(xhist)
 
 
 def make_isi_histogram(time_events, minimal_time_delta, start_time=0.0):
