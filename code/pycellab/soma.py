@@ -31,6 +31,10 @@ class leaky_integrate_and_fire:
         assert callable(integrator_function)
         self.integrator = integrator_function
 
+    @staticmethod
+    def get_name():
+        return "leaky_integrate_and_fire"
+
     def derivatives(self, var):
         psp_voltage = var["input"] * (self.constants["psp_max_potential"] - self.constants["resting_potential"])
         # * (self.constants["psp_max_potential"] - var["potential"])
@@ -71,7 +75,8 @@ class leaky_integrate_and_fire:
         assert weight >= 0.0
         self.variables["input"] -= weight * self.constants["spike_magnitude"]
 
-    def get_on_spike_variable_names(self):
+    @staticmethod
+    def get_on_spike_variable_names():
         return ["input"]
 
     def get_short_description(self):
@@ -99,7 +104,8 @@ class izhikevich:
                  coef_b,
                  input_cooling_coef,
                  spike_magnitude=1.0,
-                 integrator_function=integrator.midpoint
+                 integrator_function=integrator.midpoint,
+                 name="izhikevich_custom"
                  ):
         self.constants = {
             "resting_potential_U": resting_potential_U,
@@ -117,6 +123,10 @@ class izhikevich:
             }
         assert callable(integrator_function)
         self.integrator = integrator_function
+        self.name = name
+
+    def get_name(self):
+        return self.name
 
     @staticmethod
     def default(initial_potential_U=-14.0,
@@ -137,7 +147,8 @@ class izhikevich:
                     coef_b=0.2,
                     input_cooling_coef=input_cooling_coef,
                     spike_magnitude=spike_magnitude,
-                    integrator_function=integrator_function
+                    integrator_function=integrator_function,
+                    name="izhikevich_default"
                     )
 
     @staticmethod
@@ -159,7 +170,8 @@ class izhikevich:
                     coef_b=0.2,
                     input_cooling_coef=input_cooling_coef,
                     spike_magnitude=spike_magnitude,
-                    integrator_function=integrator_function
+                    integrator_function=integrator_function,
+                    name="izhikevich_regular_spiking"
                     )
 
     @staticmethod
@@ -181,7 +193,8 @@ class izhikevich:
                     coef_b=0.2,
                     input_cooling_coef=input_cooling_coef,
                     spike_magnitude=spike_magnitude,
-                    integrator_function=integrator_function
+                    integrator_function=integrator_function,
+                    name="izhikevich_chattering"
                     )
 
     @staticmethod
@@ -203,7 +216,8 @@ class izhikevich:
                     coef_b=0.2,
                     input_cooling_coef=input_cooling_coef,
                     spike_magnitude=spike_magnitude,
-                    integrator_function=integrator_function
+                    integrator_function=integrator_function,
+                    name="izhikevich_fast_spiking"
                     )
 
     def derivatives(self, var):
@@ -250,12 +264,13 @@ class izhikevich:
         assert weight >= 0.0
         self.variables["input"] -= weight * self.constants["spike_magnitude"]
 
-    def get_on_spike_variable_names(self):
+    @staticmethod
+    def get_on_spike_variable_names():
         return ["input"]
 
     def get_short_description(self):
         return (
-            "Izhikevich"
+            self.get_name() +
             ", U[resting]=" + str(self.constants["resting_potential_U"]) +
             ", V[resting]=" + str(self.constants["resting_potential_V"]) +
             ", V[firing]=" + str(self.constants["firing_potential"]) +
@@ -306,6 +321,10 @@ class hodgkin_huxley:
             }
         assert callable(integrator_function)
         self.integrator = integrator_function
+
+    @staticmethod
+    def get_name():
+        return "hodgkin_huxley"
 
     def derivatives(self, var):
         psp_voltage = var["input"]
@@ -363,12 +382,13 @@ class hodgkin_huxley:
         assert weight >= 0.0
         self.variables["input"] -= weight * self.constants["spike_magnitude"]
 
-    def get_on_spike_variable_names(self):
+    @staticmethod
+    def get_on_spike_variable_names():
         return ["input"]
 
     def get_short_description(self):
         return (
-            "hodgkin_huxley "
+            self.get_name() +
             ", g_K=" + str(self.constants["g_K"]) +
             ", g_Na=" + str(self.constants["g_Na"]) +
             ", g_L=" + str(self.constants["g_L"]) +
