@@ -172,15 +172,14 @@ def make_counts_histogram(time_events, start_bin=0, bin_size=1):
 
 def make_counts_curve(time_events, dx=1.0):
     assert dx > 0.000001
-    result = []
-    for x in time_events:
-        if len(result) > 0 and abs(x - result[-1][0]) < dx:
+    result = [(time_events[0], 1)]
+    for x in time_events[1:]:
+        if abs(x - result[-1][0]) < 0.5 * dx:
             result[-1] = (result[-1][0], result[-1][1] + 1)
         else:
-            if len(result) > 0:
-                last_x = result[-1][0]
-                if abs(x - last_x) > dx + dx/2.0:
-                    result.append((last_x+dx, 0))
+            if abs(x - result[-1][0]) >= 1.5 * dx:
+                result.append((result[-1][0]+dx, 0))
+                if x-dx > result[-1][0]+dx:
                     result.append((x-dx, 0))
             result.append((x, 1))
     return result

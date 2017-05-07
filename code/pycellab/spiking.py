@@ -160,7 +160,7 @@ def save_pre_spike_counts_curves(cfg, pre_spikes_excitatory, pre_spikes_inhibito
     plot.curve(
         distribution.make_counts_curve(
             sorted([t for spikes in pre_spikes_excitatory + pre_spikes_inhibitory for t in spikes]),
-            dx=cfg.dt / 2.0),
+            dx=cfg.dt),
         pathname,
         colours=get_colour_pre_excitatory_and_inhibitory()
         )
@@ -170,7 +170,7 @@ def save_pre_spike_counts_curves(cfg, pre_spikes_excitatory, pre_spikes_inhibito
     plot.curve(
         distribution.make_counts_curve(
             sorted([t for spikes in pre_spikes_excitatory for t in spikes]),
-            dx=cfg.dt / 2.0),
+            dx=cfg.dt),
         pathname,
         colours=get_colour_pre_excitatory()
         )
@@ -180,7 +180,7 @@ def save_pre_spike_counts_curves(cfg, pre_spikes_excitatory, pre_spikes_inhibito
     plot.curve(
         distribution.make_counts_curve(
             sorted([t for spikes in pre_spikes_inhibitory for t in spikes]),
-            dx=cfg.dt / 2.0),
+            dx=cfg.dt),
         pathname,
         colours=get_colour_pre_inhibitory()
         )
