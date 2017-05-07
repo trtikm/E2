@@ -27,6 +27,11 @@ def __write_xplot(draw_fn, points, pathname, title, xaxis_name, faxis_name):
 
 
 def curve(points, pathname, colours=None, title=None, xaxis_name=None, faxis_name=None):
+    if not title:
+        title = (
+            "#points=" + str(len(points)) +
+            ", mean=" + format(sum([n for _, n in points]) / (len(points) + 0.000001), ".2f")
+            )
     __write_xplot(lambda ax, x, y: ax.plot(x, y, c=colours), points, pathname, title, xaxis_name, faxis_name)
 
 
