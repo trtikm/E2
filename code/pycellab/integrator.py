@@ -15,3 +15,11 @@ def midpoint(dt, variables, derivatives):
     euler(dt * 0.5, middle_variables, derivatives)
     df = derivatives(middle_variables)
     euler(dt, variables, lambda _: df)
+
+
+def get_name(fn):
+    if fn == euler:
+        return "euler"
+    if fn == midpoint:
+        return "midpoint"
+    return "UNKNOWN"

@@ -29,7 +29,7 @@ class leaky_integrate_and_fire:
             "input": initial_input
             }
         assert callable(integrator_function)
-        self.integrator = integrator_function
+        self._integrator = integrator_function
 
     @staticmethod
     def get_name():
@@ -53,7 +53,7 @@ class leaky_integrate_and_fire:
             self.variables["potential"] = self.constants["saturation_potential"]
             self.variables["input"] = 0.0
         else:
-            self.integrator(dt, self.variables, self.derivatives)
+            self._integrator(dt, self.variables, self.derivatives)
 
     def ranges_of_variables(self, num_spike_trains):
         return {
@@ -88,7 +88,8 @@ class leaky_integrate_and_fire:
             ", V[psp_max]=" + str(self.constants["psp_max_potential"]) +
             ", V[cooling]=" + str(self.constants["potential_cooling_coef"]) +
             ", I[cooling]=" + str(self.constants["input_cooling_coef"]) +
-            ", spike magnitude=" + str(self.constants["spike_magnitude"])
+            ", spike magnitude=" + str(self.constants["spike_magnitude"]) +
+            ", intergator=" + str(integrator.get_name(self._integrator))
             )
 
 
@@ -122,11 +123,11 @@ class izhikevich:
             "input": initial_input
             }
         assert callable(integrator_function)
-        self.integrator = integrator_function
-        self.name = name
+        self._integrator = integrator_function
+        self._name = name
 
     def get_name(self):
-        return self.name
+        return self._name
 
     @staticmethod
     def default(initial_potential_U=-14.0,
@@ -238,7 +239,7 @@ class izhikevich:
             self.variables["input"] = 0.0
         else:
             # Derivatives are expressed in 'ms' time unit, but we have 'dt' in seconds.
-            self.integrator(1000.0 * dt, self.variables, self.derivatives)
+            self._integrator(1000.0 * dt, self.variables, self.derivatives)
             if self.variables["V"] > 300.0:
                 self.variables["V"] = 300.0
 
@@ -277,7 +278,8 @@ class izhikevich:
             ", a=" + str(self.constants["coef_a"]) +
             ", b=" + str(self.constants["coef_b"]) +
             ", I[cooling]=" + str(self.constants["input_cooling_coef"]) +
-            ", spike magnitude=" + str(self.constants["spike_magnitude"])
+            ", spike magnitude=" + str(self.constants["spike_magnitude"]) +
+            ", intergator=" + str(integrator.get_name(self._integrator))
             )
 
 
@@ -297,7 +299,8 @@ class hodgkin_huxley:
                  C=1.0,
                  input_cooling_coef=-0.25,
                  spike_magnitude=1.0,
-                 integrator_function=integrator.midpoint
+                 integrator_function=integrator.euler,
+                 num_sub_iterations=100
                  ):
         self.constants = {
             "g_K": g_K,
@@ -310,7 +313,7 @@ class hodgkin_huxley:
             "firing_potential": 50.0,
             "spike_magnitude": spike_magnitude,
             "input_cooling_coef": input_cooling_coef,
-            "num_sub_iterations": 100
+            "num_sub_iterations": num_sub_iterations
             }
         self.variables = {
             "V": initial_V,
@@ -320,7 +323,7 @@ class hodgkin_huxley:
             "input": initial_input
             }
         assert callable(integrator_function)
-        self.integrator = integrator_function
+        self._integrator = integrator_function
 
     @staticmethod
     def get_name():
@@ -354,7 +357,7 @@ class hodgkin_huxley:
         # Derivatives are expressed in 'ms' time unit, but we have 'dt' in seconds.
         sub_dt = (1000.0 * dt) / self.constants["num_sub_iterations"]
         for _ in range(self.constants["num_sub_iterations"]):
-            self.integrator(sub_dt, self.variables, self.derivatives)
+            self._integrator(sub_dt, self.variables, self.derivatives)
 
     def ranges_of_variables(self, num_spike_trains):
         return {
@@ -398,6 +401,263 @@ class hodgkin_huxley:
             ", C=" + str(self.constants["C"]) +
             ", V[firing]=" + str(self.constants["firing_potential"]) +
             ", I[cooling]=" + str(self.constants["input_cooling_coef"]) +
-            ", #subiters=" + str(self.constants["num_sub_iterations"]) +
-            ", spike magnitude=" + str(self.constants["spike_magnitude"])
+            ", spike magnitude=" + str(self.constants["spike_magnitude"]) +
+            ", intergator=" + str(integrator.get_name(self._integrator)) +
+            ", #subiters=" + str(self.constants["num_sub_iterations"])
+            )
+
+
+class wilson:
+    def __init__(self,
+                 initial_V,
+                 initial_R,
+                 initial_T,
+                 initial_H,
+                 initial_input,
+                 g_K,
+                 g_T,
+                 g_H,
+                 E_K,
+                 E_Na,
+                 E_T,
+                 E_H,
+                 tau_R,
+                 tau_T,
+                 tau_H,
+                 C,
+                 input_cooling_coef,
+                 spike_magnitude,
+                 integrator_function,
+                 num_sub_iterations,
+                 name="wilson_custom"
+                 ):
+        self.constants = {
+            "g_K": g_K,
+            "g_T": g_T,
+            "g_H": g_H,
+            "E_K": E_K,
+            "E_Na": E_Na,
+            "E_T": E_T,
+            "E_H": E_H,
+            "tau_R": tau_R,
+            "tau_T": tau_T,
+            "tau_H": tau_H,
+            "C": C,
+            "input_cooling_coef": input_cooling_coef,
+            }
+        self.variables = {
+            "V": initial_V,
+            "R": initial_R,
+            "T": initial_T,
+            "H": initial_H,
+            "input": initial_input
+            }
+        self._firing_potential = -40.0
+        self._spike_magnitude = spike_magnitude
+        self._num_sub_iterations = num_sub_iterations
+        assert callable(integrator_function)
+        self._integrator = integrator_function
+        self._name = name
+
+    @staticmethod
+    def regular_spiking(
+                initial_V=-100.0,
+                initial_R=0.0,
+                initial_T=0.0,
+                initial_H=0.0,
+                initial_input=0.0,
+                input_cooling_coef=-0.25,
+                spike_magnitude=1.0,
+                integrator_function=integrator.euler,
+                num_sub_iterations=100
+                ):
+        return wilson(
+                initial_V=initial_V,
+                initial_R=initial_R,
+                initial_T=initial_T,
+                initial_H=initial_H,
+                initial_input=initial_input,
+                g_K=26.0,
+                g_T=0.1,
+                g_H=5.0,
+                E_K=-95.0,
+                E_Na=50.0,
+                E_T=120.0,
+                E_H=-95.0,
+                tau_R=4.2,
+                tau_T=14.0,
+                tau_H=45.0,
+                C=1.0,
+                input_cooling_coef=input_cooling_coef,
+                spike_magnitude=spike_magnitude,
+                integrator_function=integrator_function,
+                num_sub_iterations=num_sub_iterations,
+                name="wilson_regular_spiking"
+                )
+
+    @staticmethod
+    def fast_spiking(
+                initial_V=-100.0,
+                initial_R=0.0,
+                initial_T=0.0,
+                initial_H=0.0,
+                initial_input=0.0,
+                input_cooling_coef=-0.25,
+                spike_magnitude=1.0,
+                integrator_function=integrator.euler,
+                num_sub_iterations=100
+                ):
+        return wilson(
+                initial_V=initial_V,
+                initial_R=initial_R,
+                initial_T=initial_T,
+                initial_H=initial_H,
+                initial_input=initial_input,
+                g_K=26.0,
+                g_T=0.25,
+                g_H=0.0,
+                E_K=-95.0,
+                E_Na=50.0,
+                E_T=120.0,
+                E_H=-95.0,
+                tau_R=1.5,
+                tau_T=14.0,
+                tau_H=45.0,
+                C=1.0,
+                input_cooling_coef=input_cooling_coef,
+                spike_magnitude=spike_magnitude,
+                integrator_function=integrator_function,
+                num_sub_iterations=num_sub_iterations,
+                name="wilson_fast_spiking"
+                )
+
+    @staticmethod
+    def bursting(
+                initial_V=-100.0,
+                initial_R=0.0,
+                initial_T=0.0,
+                initial_H=0.0,
+                initial_input=0.0,
+                input_cooling_coef=-0.25,
+                spike_magnitude=1.0,
+                integrator_function=integrator.euler,
+                num_sub_iterations=100
+                ):
+        return wilson(
+                initial_V=initial_V,
+                initial_R=initial_R,
+                initial_T=initial_T,
+                initial_H=initial_H,
+                initial_input=initial_input,
+                g_K=26.0,
+                g_T=2.25,
+                g_H=9.5,
+                E_K=-95.0,
+                E_Na=50.0,
+                E_T=120.0,
+                E_H=-95.0,
+                tau_R=4.2,
+                tau_T=14.0,
+                tau_H=45.0,
+                C=1.0,
+                input_cooling_coef=input_cooling_coef,
+                spike_magnitude=spike_magnitude,
+                integrator_function=integrator_function,
+                num_sub_iterations=num_sub_iterations,
+                name="wilson_bursting"
+                )
+
+    def get_name(self):
+        return self._name
+
+    def derivatives(self, var):
+        psp_voltage = 100.0 # var["input"]
+        return {
+            "V":
+                (- (17.8 + 0.476*var["V"] + 0.00338*var["V"]*var["V"]) * (var["V"] - self.constants["E_Na"])
+                 - self.constants["g_K"] * var["R"] * (var["V"] - self.constants["E_K"])
+                 - self.constants["g_T"] * var["T"] * (var["V"] - self.constants["E_T"])
+                 - self.constants["g_H"] * var["H"] * (var["V"] - self.constants["E_H"])
+                 + psp_voltage
+                 ) / self.constants["C"],
+            "R":
+                -(var["R"] - (1.24 + 0.037*var["V"] + 0.00032*var["V"]*var["V"])) / self.constants["tau_R"],
+            "T":
+                -(var["T"] - (4.205 + 0.116*var["V"] + 0.0008*var["V"]*var["V"])) / self.constants["tau_T"],
+            "H":
+                -(var["H"] - 3.0 * var["T"]) / self.constants["tau_H"],
+            # "V":
+            #     (- (17.8 + 47.6*var["V"] + 33.8*var["V"]*var["V"]) * (var["V"] - self.constants["E_Na"])
+            #      - self.constants["g_K"] * var["R"] * (var["V"] - self.constants["E_K"])
+            #      - self.constants["g_T"] * var["T"] * (var["V"] - self.constants["E_T"])
+            #      - self.constants["g_H"] * var["H"] * (var["V"] - self.constants["E_H"])
+            #      + psp_voltage
+            #      ) / self.constants["C"],
+            # "R":
+            #     -(var["R"] - (1.24 + 3.7*var["V"] + 3.2*var["V"]*var["V"])) / self.constants["tau_R"],
+            # "T":
+            #     -(var["T"] - (4.205 + 11.6*var["V"] + 8.0*var["V"]*var["V"])) / self.constants["tau_T"],
+            # "H":
+            #     -(var["H"] - 3.0 * var["T"]) / self.constants["tau_H"],
+            "input":
+                self.constants["input_cooling_coef"] * var["input"]
+            }
+
+    def integrate(self, dt):
+        if self.is_spiking():
+            self.variables["input"] = 0.0
+        # Derivatives are expressed in 'ms' time unit, but we have 'dt' in seconds.
+        sub_dt = (1000.0 * dt) / self._num_sub_iterations
+        for _ in range(self._num_sub_iterations):
+            self._integrator(sub_dt, self.variables, self.derivatives)
+
+    def ranges_of_variables(self, num_spike_trains):
+        return {
+            "V":
+                (-80.0, 60.0),
+            "R":
+                (0.0, 10.0),
+            "T":
+                (0.0, 10.0),
+            "H":
+                (0.0, 10.0),
+            "input":
+                (-num_spike_trains * self._spike_magnitude,
+                 +num_spike_trains * self._spike_magnitude)
+            }
+
+    def is_spiking(self):
+        return self.variables["V"] >= self._firing_potential
+
+    def on_excitatory_spike(self, weight):
+        assert weight >= 0.0
+        self.variables["input"] += weight * self._spike_magnitude
+
+    def on_inhibitory_spike(self, weight):
+        assert weight >= 0.0
+        self.variables["input"] -= weight * self._spike_magnitude
+
+    @staticmethod
+    def get_on_spike_variable_names():
+        return ["input"]
+
+    def get_short_description(self):
+        return (
+            self.get_name() +
+            ", g_K=" + str(self.constants["g_K"]) +
+            ", g_T=" + str(self.constants["g_T"]) +
+            ", g_H=" + str(self.constants["g_H"]) +
+            ", E_K=" + str(self.constants["E_K"]) +
+            ", E_Na=" + str(self.constants["E_Na"]) +
+            ", E_T=" + str(self.constants["E_T"]) +
+            ", E_H=" + str(self.constants["E_H"]) +
+            ", tau_R=" + str(self.constants["tau_R"]) +
+            ", tau_T=" + str(self.constants["tau_T"]) +
+            ", tau_H=" + str(self.constants["tau_H"]) +
+            ", C=" + str(self.constants["C"]) +
+            "\nV[firing]=" + str(self._firing_potential) +
+            ", I[cooling]=" + str(self.constants["input_cooling_coef"]) +
+            ", spike magnitude=" + str(self._spike_magnitude) +
+            ", intergator=" + str(integrator.get_name(self._integrator)) +
+            ", #subiters=" + str(self._num_sub_iterations)
             )
