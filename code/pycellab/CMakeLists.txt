@@ -1,6 +1,6 @@
 install(
     FILES
-        check_probab.py
+        __init__.py
         config.py
         distribution.py
         integrator.py
@@ -9,7 +9,6 @@ install(
         soma.py
         spike_train.py
         spiking.py
-        __init__.py
     DESTINATION
         "evaluation/pycellab"
     )
