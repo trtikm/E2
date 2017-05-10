@@ -269,21 +269,15 @@ def development():
         dt=0.001,
         nsteps=100,
         cell_soma=[
-            soma.izhikevich.default(spike_magnitude=0.15),
-            soma.izhikevich.fast_spiking(spike_magnitude=0.15),
-            soma.izhikevich.chattering(spike_magnitude=0.15)
+            soma.wilson.regular_spiking(),
             ],
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
         excitatory_weights=[
             [1.0 for _ in range(num_excitatory)],
-            [1.0 for _ in range(num_excitatory)],
-            [1.0 for _ in range(num_excitatory)]
             ],
         inhibitory_weights=[
             [1.0 for _ in range(num_inhibitory)],
-            [1.0 for _ in range(num_inhibitory)],
-            [1.0 for _ in range(num_inhibitory)]
             ],
         output_dir=os.path.join(__output_root_dir(), "development"),
         plot_files_extension=".png",
@@ -311,17 +305,70 @@ def get_registered_configurations():
 
 
 # import plot
+# import numpy
+# import matplotlib.pyplot as plt
+#
+#
+# def __Xget_standard_spike_noise():
+#     s = numpy.random.poisson(15, 100000)
+#     count, bins, ignored = plt.hist(s, 500, normed=True)
+#     plt.close()
+#     n = min([len(count), len(bins)])
+#     assert n >= 300
+#     hist = {}
+#     for i in range(n):
+#         assert bins[i] not in hist
+#         hist[float(bins[i])] = float(count[i]) # float(abs(count[i] - 1.0 * (1.0 - numpy.sqrt(1 + count[i]))))
+#     xhist = {}
+#     keys = sorted(hist.keys())
+#     for idx in range(0, min(300, len(keys))):
+#         if idx < 5:
+#             value = 0.0
+#         elif idx < 10:
+#             x = (idx - 5.0) / 10.0
+#             assert x >= 0.0 and x <= 1.0
+#             value = hist[keys[10]] * (3.0 * x**2 - 2.0 * x**3)
+#         else:
+#             value = hist[keys[idx]]
+#         xhist[0.001 * (idx + 2)] = value
+#         idx += 1
+#     return distribution.distribution(xhist)
+#
+#
 # def __dbg():
-#     distrib = distribution.get_standard_spike_noise()
+#     hist = distribution.mkhist(numpy.random.power(5.0, 10000))
+#
+#     plt.stem([x for x in sorted(hist.keys())],
+#              [hist[x] for x in sorted(hist.keys())],
+#              linefmt="b-", markerfmt="b-",
+#              basefmt="None")
+#
+#     # distrib = __Xget_standard_spike_noise()
+#     # plt.stem([x for x, _ in distrib.get_points()],
+#     #          [fx for _, fx in distrib.get_points()],
+#     #          linefmt="b-", markerfmt="b-", basefmt="None")
+#
+#     # s = numpy.random.binomial(10, 0.5, 100000)
+#     # count, bins, ignored = plt.hist(s, 150, normed=True)
+#
+#     # s = numpy.random.exponential(1, 100000)
+#     # count, bins, ignored = plt.hist(s, 500, normed=False)
+#     plt.show()
+#
+#     # s = numpy.random.poisson(1, 100000)
+#     # count, bins, ignored = plt.hist(s, 500, normed=True)
+#     #
+#     #
+#     # distrib = distribution.get_standard_spike_noise()
 #
 #     # for k in sorted(distrib.get_histogram().keys()):
 #     #     print(str(k) + ": " + format(distrib.get_histogram()[k], ".4f") + ",")
 #
-#     plot.histogram(
-#         distrib,
-#         os.path.join(__output_root_dir(), "__dbg", "poisson_noise_distribution.svg"),
-#         normalised=True
-#         )
+#     # plot.histogram(
+#     #     distrib,
+#     #     os.path.join(__output_root_dir(), "__dbg", "poisson_noise_distribution.svg"),
+#     #     normalised=True
+#     #     )
 #
 #     # samples = distrib.generate(10000)
 #     # print("median = " + str(numpy.median(samples)))
@@ -340,4 +387,4 @@ def get_registered_configurations():
 #     # print("#spikes = " + str(n))
 #     # print("time = " + str(time))
 #     # print("average spiking rate = " + str(n / time))
-
+#
