@@ -109,9 +109,29 @@ class distribution:
         return self._coefficient_of_variation
 
 
+def mkhist(events, nbins=100):
+    assert nbins > 0.00001
+    if len(events) == 0:
+        return {}
+    lo = min(events)
+    hi = max(events)
+    dx = (hi - lo) / nbins
+    if dx < 0.00001:
+        return {events[0]: len(events)}
+    hist = {}
+    for x in events:
+        b = int((x - lo) / dx)
+        if b in hist:
+            hist[b] += 1
+        else:
+            hist[b] = 1
+    return hist
+
+
 def get_standard_spike_noise():
     s = numpy.random.exponential(1, 100000)
     count, bins, ignored = plt.hist(s, 500, normed=True)
+    plt.close()
     n = min([len(count), len(bins)])
     assert n >= 300
     hist = {}
@@ -172,6 +192,8 @@ def make_counts_histogram(time_events, start_bin=0, bin_size=1):
 
 def make_counts_curve(time_events, dx=1.0):
     assert dx > 0.000001
+    if len(time_events) == 0:
+        return []
     result = [(time_events[0], 1)]
     for x in time_events[1:]:
         if abs(x - result[-1][0]) < 0.5 * dx:
