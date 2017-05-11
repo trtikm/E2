@@ -24,6 +24,7 @@
 #include <vector>
 #include <memory>
 #include <array>
+#include <iomanip>
 
 namespace netexp { namespace dbg_spiking_develop { namespace {
 
@@ -456,6 +457,242 @@ void  initialiser_of_ships_in_movement_areas::compute_ship_position_and_velocity
 }
 
 
+struct layer_of_spikers : public netlab::layer_of_spikers
+{
+    using  self = layer_of_spikers;
+    using  super = netlab::layer_of_spikers;
+
+    layer_of_spikers(netlab::layer_index_type const  layer_index, netlab::object_index_type const  num_spikers_in_the_layer)
+        : super(layer_index, num_spikers_in_the_layer)
+        , m_potential(num_spikers_in_the_layer, get_resting_potential())
+    {}
+
+    float_32_bit  get_potential(netlab::object_index_type const  spiker_index) const override { return m_potential.at(spiker_index); }
+
+    float_32_bit  get_resting_potential() const override { return s_resting_potential.at(super::layer_index()); }
+    float_32_bit  get_firing_potential() const override { return s_firing_potential.at(super::layer_index()); }
+    float_32_bit  get_saturation_potential() const { return s_saturation_potential.at(super::layer_index()); }
+
+    float_32_bit  get_potential_cooling_coef() const { return s_potential_cooling_coef.at(super::layer_index()); }
+
+    void  integrate_spiking_potential(
+            netlab::object_index_type const  spiker_index,
+            float_32_bit const  time_delta_in_seconds,
+            netlab::network_props const&  props
+            ) override
+    {
+        auto &potential = get_potential_ref(spiker_index);
+        float_32_bit const  potential_derivative = get_potential_cooling_coef() * (potential - self::get_resting_potential());
+        potential = potential + time_delta_in_seconds * potential_derivative;
+    }
+
+    bool  on_arrival_of_postsynaptic_potential(
+            netlab::object_index_type const  spiker_index,
+            float_32_bit const  potential_delta,
+            netlab::network_props const&  props
+            ) override
+    {
+        auto &potential = get_potential_ref(spiker_index);
+        potential += potential_delta;
+        return potential >= self::get_firing_potential();
+    }
+
+    std::ostream&  get_info_text(
+            netlab::object_index_type const  spiker_index,
+            std::ostream&  ostr,
+            std::string const&  shift = ""
+            ) const override
+    {
+        super::get_info_text(spiker_index, ostr, shift);
+        ostr << shift
+             << std::fixed << std::setprecision(3) 
+             << "Potential: " << self::get_potential(spiker_index) << "[~"
+             << ( self::get_potential(spiker_index) >= self::get_resting_potential() ?
+                    ((self::get_potential(spiker_index) - self::get_resting_potential()) /
+                        (self::get_firing_potential() - self::get_resting_potential())) :
+                    -((self::get_potential(spiker_index) - self::get_saturation_potential()) /
+                        (self::get_resting_potential() - self::get_saturation_potential())) )
+             << "%]\n"
+             ;
+        return ostr;
+    }
+
+private:
+    float_32_bit&  get_potential_ref(netlab::object_index_type const  spiker_index) { return m_potential.at(spiker_index); }
+
+    static std::vector<float_32_bit> const  s_resting_potential;
+    static std::vector<float_32_bit> const  s_firing_potential;
+    static std::vector<float_32_bit> const  s_saturation_potential;
+
+    static std::vector<float_32_bit> const  s_potential_cooling_coef;
+
+    std::vector<float_32_bit>  m_potential;
+};
+
+std::vector<float_32_bit> const  layer_of_spikers::s_resting_potential
+{
+    0.0f,       // 0
+    0.0f,       // 1
+    0.0f,       // 2
+    0.0f,       // 3
+    0.0f,       // 4
+    0.0f,       // 5
+    0.0f,       // 6
+};
+
+std::vector<float_32_bit> const  layer_of_spikers::s_firing_potential
+{
+    1.0f,       // 0
+    1.0f,       // 1
+    1.0f,       // 2
+    1.0f,       // 3
+    1.0f,       // 4
+    1.0f,       // 5
+    1.0f,       // 6
+};
+
+std::vector<float_32_bit> const  layer_of_spikers::s_saturation_potential
+{
+    -1.0f,      // 0
+    -1.0f,      // 1
+    -1.0f,      // 2
+    -1.0f,      // 3
+    -1.0f,      // 4
+    -1.0f,      // 5
+    -1.0f,      // 6
+};
+
+std::vector<float_32_bit> const  layer_of_spikers::s_potential_cooling_coef
+{
+    -0.02f,     // 0
+    -0.02f,     // 1
+    -0.02f,     // 2
+    -0.02f,     // 3
+    -0.02f,     // 4
+    -0.02f,     // 5
+    -0.02f,     // 6
+};
+
+
+struct layer_of_docks : public netlab::layer_of_docks
+{
+    using  self = layer_of_spikers;
+    using  super = netlab::layer_of_docks;
+
+    layer_of_docks(netlab::layer_index_type const  layer_index, netlab::object_index_type const  num_docks_in_the_layer)
+        : super(layer_index, num_docks_in_the_layer)
+    {}
+
+    float_32_bit  on_arrival_of_postsynaptic_potential(
+            netlab::object_index_type const  dock_index,
+            float_32_bit const  potential_delta,
+            vector3 const&  spiker_position,
+            vector3 const&  dock_position,
+            netlab::layer_index_type const  layer_index_of_spiker_owning_the_connected_ship,
+            netlab::network_props const&  props
+            ) override
+    { return potential_delta; }
+
+    float_32_bit  on_arrival_of_presynaptic_potential(
+            netlab::object_index_type const  dock_index,
+            float_32_bit const  potential_of_the_spiker_owning_the_connected_ship,
+            netlab::layer_index_type const  layer_index_of_spiker_owning_the_connected_ship,
+            netlab::network_props const&  props
+            ) override
+    { return props.spiking_potential_magnitude(); }
+
+    float_32_bit  on_arrival_of_mini_spiking_potential(
+            netlab::object_index_type const  dock_index,
+            bool const  is_it_mini_spike_from_excitatory_spiker,
+            vector3 const&  spiker_position,
+            vector3 const&  dock_position,
+            netlab::network_props const&  props
+            ) const override
+    { return props.mini_spiking_potential_magnitude() * (is_it_mini_spike_from_excitatory_spiker ? 1.0f : -1.0f); }
+
+    float_32_bit  compute_potential_of_spiker_at_dock(
+            netlab::object_index_type const  dock_index,
+            float_32_bit const  potential_of_spiker,
+            vector3 const&  spiker_position,
+            vector3 const&  dock_position,
+            netlab::network_props const&  props
+            ) const
+    { return potential_of_spiker; }
+
+    std::ostream&  get_info_text(
+            netlab::object_index_type const  dock_index,
+            std::ostream&  ostr,
+            std::string const&  shift = ""
+            ) const override
+    {
+        super::get_info_text(dock_index, ostr, shift);
+        return ostr;
+    }
+
+};
+
+
+struct layer_of_ships : public netlab::layer_of_ships
+{
+    using  self = layer_of_spikers;
+    using  super = netlab::layer_of_ships;
+
+    layer_of_ships(netlab::layer_index_type const  layer_index, netlab::object_index_type const  num_ships_in_the_layer)
+        : super(layer_index, num_ships_in_the_layer)
+    {}
+
+    float_32_bit  on_arrival_of_presynaptic_potential(
+            netlab::object_index_type const  ship_index,
+            float_32_bit const  potential_of_the_other_spiker_at_connected_dock,
+            netlab::layer_index_type const  area_layer_index,
+            netlab::network_props const&  props
+            ) override
+    { return props.spiking_potential_magnitude(); }
+
+    void  on_arrival_of_postsynaptic_potential(
+            netlab::object_index_type const  ship_index,
+            float_32_bit const  potential_of_the_spiker_owning_the_connected_dock,
+            netlab::layer_index_type const  area_layer_index,
+            netlab::network_props const&  props
+            ) override
+    {}
+
+    std::ostream&  get_info_text(
+            netlab::object_index_type const  ship_index,
+            std::ostream&  ostr,
+            std::string const&  shift = ""
+            ) const override
+    {
+        super::get_info_text(ship_index, ostr, shift);
+        return ostr;
+    }
+
+};
+
+
+struct network_layers_factory : public netlab::network_layers_factory
+{
+    std::unique_ptr<netlab::layer_of_spikers>  create_layer_of_spikers(
+            netlab::layer_index_type const  layer_index,
+            netlab::object_index_type const  num_spikers
+            ) const override
+    { return std::make_unique<layer_of_spikers>(layer_index,num_spikers); }
+
+    std::unique_ptr<netlab::layer_of_docks>  create_layer_of_docks(
+            netlab::layer_index_type const  layer_index,
+            netlab::object_index_type const  num_docks
+            ) const override
+    { return std::make_unique<layer_of_docks>(layer_index,num_docks); }
+
+    std::unique_ptr<netlab::layer_of_ships>  create_layer_of_ships(
+            netlab::layer_index_type const  layer_index,
+            netlab::object_index_type const  num_ships
+            ) const override
+    { return std::make_unique<layer_of_ships>(layer_index,num_ships); }
+
+};
+
+
 struct  tracked_spiker_stats : public netlab::tracked_spiker_stats
 {
     tracked_spiker_stats(netlab::compressed_layer_and_object_indices const  indices)
@@ -487,7 +724,7 @@ NETEXP_DEFINE_EXPERIMENT_REGISTERATION_FUNCTION(
         dbg_spiking_develop,
         "dbg_spiking_develop",
         []() { return get_network_props(); },
-        []() { return std::make_shared<netlab::network_layers_factory>(); },
+        []() { return std::make_shared<network_layers_factory>(); },
         []() { return std::make_shared<initialiser_of_movement_area_centers>(); },
         []() { return std::make_shared<initialiser_of_ships_in_movement_areas>(); },
         [](netlab::compressed_layer_and_object_indices const  indices){ return std::make_shared<tracked_spiker_stats>(indices); },
