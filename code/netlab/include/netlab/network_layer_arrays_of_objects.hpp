@@ -50,7 +50,10 @@ struct  layer_of_spikers
             );
 
 
-    virtual float_32_bit  get_potential(object_index_type const  spiker_index) const { return 0.0f; }
+    virtual float_32_bit  get_potential(object_index_type const  spiker_index) const { return get_resting_potential(); }
+
+    virtual float_32_bit  get_resting_potential() const { return 0.0f; }
+    virtual float_32_bit  get_firing_potential() const { return 1.0f; }
 
     /**
      * It defines an integrator of the potential function of the spiker. It is supposed to integrate the
