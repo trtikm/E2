@@ -201,7 +201,12 @@ def evaluate(cfg):
     print("  Constructing and initialising data structures,")
     excitatory_spike_trains = [spike_train.spike_train(noise, True) for noise in cfg.excitatory_noise_distributions]
     inhibitory_spike_trains = [spike_train.spike_train(noise, False) for noise in cfg.inhibitory_noise_distributions]
-    cells = [neuron.neuron(cfg.cell_soma[i], cfg.excitatory_weights[i], cfg.inhibitory_weights[i], cfg.start_time)
+    cells = [neuron.neuron(
+                cfg.cell_soma[i],
+                cfg.excitatory_weights[i],
+                cfg.inhibitory_weights[i],
+                cfg.num_sub_iterations[i],
+                cfg.start_time)
              for i in range(len(cfg.cell_soma))]
 
     print("  Starting simulation.")

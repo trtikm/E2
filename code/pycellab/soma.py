@@ -300,7 +300,6 @@ class hodgkin_huxley:
                  input_cooling_coef=-0.25,
                  spike_magnitude=1.0,
                  integrator_function=integrator.euler,
-                 num_sub_iterations=100
                  ):
         self.constants = {
             "g_K": g_K,
@@ -313,7 +312,6 @@ class hodgkin_huxley:
             "firing_potential": 50.0,
             "spike_magnitude": spike_magnitude,
             "input_cooling_coef": input_cooling_coef,
-            "num_sub_iterations": num_sub_iterations
             }
         self.variables = {
             "V": initial_V,
@@ -355,9 +353,7 @@ class hodgkin_huxley:
         if self.is_spiking():
             self.variables["input"] = 0.0
         # Derivatives are expressed in 'ms' time unit, but we have 'dt' in seconds.
-        sub_dt = (1000.0 * dt) / self.constants["num_sub_iterations"]
-        for _ in range(self.constants["num_sub_iterations"]):
-            self._integrator(sub_dt, self.variables, self.derivatives)
+        self._integrator(1000.0 * dt, self.variables, self.derivatives)
 
     def ranges_of_variables(self, num_spike_trains):
         return {
@@ -402,8 +398,7 @@ class hodgkin_huxley:
             ", V[firing]=" + str(self.constants["firing_potential"]) +
             ", I[cooling]=" + str(self.constants["input_cooling_coef"]) +
             ", spike magnitude=" + str(self.constants["spike_magnitude"]) +
-            ", intergator=" + str(integrator.get_name(self._integrator)) +
-            ", #subiters=" + str(self.constants["num_sub_iterations"])
+            ", intergator=" + str(integrator.get_name(self._integrator))
             )
 
 
@@ -428,7 +423,6 @@ class wilson:
                  input_cooling_coef,
                  spike_magnitude,
                  integrator_function,
-                 num_sub_iterations,
                  name="wilson_custom"
                  ):
         self.constants = {
@@ -454,7 +448,6 @@ class wilson:
             }
         self._firing_potential = -40.0
         self._spike_magnitude = spike_magnitude
-        self._num_sub_iterations = num_sub_iterations
         assert callable(integrator_function)
         self._integrator = integrator_function
         self._name = name
@@ -491,7 +484,6 @@ class wilson:
                 input_cooling_coef=input_cooling_coef,
                 spike_magnitude=spike_magnitude,
                 integrator_function=integrator_function,
-                num_sub_iterations=num_sub_iterations,
                 name="wilson_regular_spiking"
                 )
 
@@ -527,7 +519,6 @@ class wilson:
                 input_cooling_coef=input_cooling_coef,
                 spike_magnitude=spike_magnitude,
                 integrator_function=integrator_function,
-                num_sub_iterations=num_sub_iterations,
                 name="wilson_fast_spiking"
                 )
 
@@ -563,7 +554,6 @@ class wilson:
                 input_cooling_coef=input_cooling_coef,
                 spike_magnitude=spike_magnitude,
                 integrator_function=integrator_function,
-                num_sub_iterations=num_sub_iterations,
                 name="wilson_bursting"
                 )
 
@@ -607,9 +597,7 @@ class wilson:
         if self.is_spiking():
             self.variables["input"] = 0.0
         # Derivatives are expressed in 'ms' time unit, but we have 'dt' in seconds.
-        sub_dt = (1000.0 * dt) / self._num_sub_iterations
-        for _ in range(self._num_sub_iterations):
-            self._integrator(sub_dt, self.variables, self.derivatives)
+        self._integrator(1000.0 * dt, self.variables, self.derivatives)
 
     def ranges_of_variables(self, num_spike_trains):
         return {
@@ -658,6 +646,5 @@ class wilson:
             "\nV[firing]=" + str(self._firing_potential) +
             ", I[cooling]=" + str(self.constants["input_cooling_coef"]) +
             ", spike magnitude=" + str(self._spike_magnitude) +
-            ", intergator=" + str(integrator.get_name(self._integrator)) +
-            ", #subiters=" + str(self._num_sub_iterations)
+            ", intergator=" + str(integrator.get_name(self._integrator))
             )

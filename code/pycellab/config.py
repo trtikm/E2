@@ -20,6 +20,7 @@ class configuration:
                  start_time,
                  dt,
                  nsteps,
+                 num_sub_iterations,
                  cell_soma,
                  excitatory_noise_distributions,
                  inhibitory_noise_distributions,
@@ -31,16 +32,20 @@ class configuration:
                  ):
         assert dt > 0.0
         assert nsteps >= 0
+        assert isinstance(num_sub_iterations, list)
+        assert False not in list(map(lambda x: type(x) is int and x > 0, num_sub_iterations))
         assert isinstance(cell_soma, list)
         assert isinstance(excitatory_weights, list)
         assert isinstance(inhibitory_weights, list)
         assert len(cell_soma) == len(excitatory_weights) and len(cell_soma) == len(inhibitory_weights)
+        assert len(cell_soma) == len(num_sub_iterations)
         assert False not in list(map(lambda x: len(x) == len(excitatory_noise_distributions), excitatory_weights))
         assert False not in list(map(lambda x: len(x) == len(inhibitory_noise_distributions), inhibitory_weights))
         assert plot_files_extension.lower() == ".svg" or plot_files_extension.lower() == ".png"
         self.start_time = start_time
         self.dt = dt
         self.nsteps = nsteps
+        self.num_sub_iterations = num_sub_iterations
         self.cell_soma = cell_soma
         self.excitatory_noise_distributions = excitatory_noise_distributions
         self.inhibitory_noise_distributions = inhibitory_noise_distributions
@@ -74,6 +79,7 @@ def leaky_integrate_and_fire_const_input():
         start_time=0.0,
         dt=dt,
         nsteps=1000,
+        num_sub_iterations=[1],
         cell_soma=[soma.leaky_integrate_and_fire(
             initial_potential=-70,
             initial_input=40.0,
@@ -106,6 +112,7 @@ def leaky_integrate_and_fire_input_800ex_200in_std_noise():
         start_time=0.0,
         dt=0.001,
         nsteps=1000,
+        num_sub_iterations=[1],
         cell_soma=[soma.leaky_integrate_and_fire(
             initial_potential=-70,
             initial_input=40.0,
@@ -139,6 +146,7 @@ def izhikevich_regular_spiking_input_800ex_200in_std_noise():
         start_time=0.0,
         dt=0.001,
         nsteps=1000,
+        num_sub_iterations=[1],
         cell_soma=[soma.izhikevich.regular_spiking(spike_magnitude=0.15)],
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
@@ -162,6 +170,7 @@ def izhikevich_chattering_input_800ex_200in_std_noise():
         start_time=0.0,
         dt=0.001,
         nsteps=1000,
+        num_sub_iterations=[1],
         cell_soma=[soma.izhikevich.chattering(spike_magnitude=0.15)],
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
@@ -185,6 +194,7 @@ def izhikevich_fast_spiking_input_800ex_200in_std_noise():
         start_time=0.0,
         dt=0.001,
         nsteps=1000,
+        num_sub_iterations=[1],
         cell_soma=[soma.izhikevich.fast_spiking(spike_magnitude=0.15)],
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
@@ -208,6 +218,7 @@ def hodgkin_huxley_input_800ex_200in_std_noise():
         start_time=0.0,
         dt=0.001,
         nsteps=1000,
+        num_sub_iterations=[100],
         cell_soma=[soma.hodgkin_huxley(
             spike_magnitude=0.15,
             integrator_function=integrator.midpoint
@@ -233,6 +244,7 @@ def izhikevich_and_hodgkin_huxley_input_800ex_200in_std_noise():
         start_time=0.0,
         dt=0.001,
         nsteps=1000,
+        num_sub_iterations=[1, 1, 100],
         cell_soma=[
             soma.izhikevich.regular_spiking(spike_magnitude=0.15),
             soma.izhikevich.fast_spiking(spike_magnitude=0.15),
@@ -268,6 +280,7 @@ def development():
         start_time=0.0,
         dt=0.001,
         nsteps=100,
+        num_sub_iterations=[100],
         cell_soma=[
             soma.wilson.regular_spiking(),
             ],
