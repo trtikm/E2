@@ -1,5 +1,6 @@
 import os
 import soma
+import synapse
 import integrator
 import distribution
 
@@ -24,8 +25,8 @@ class configuration:
                  cell_soma,
                  excitatory_noise_distributions,
                  inhibitory_noise_distributions,
-                 excitatory_weights,
-                 inhibitory_weights,
+                 excitatory_synapses,
+                 inhibitory_synapses,
                  output_dir,
                  plot_files_extension,
                  description
@@ -35,12 +36,12 @@ class configuration:
         assert isinstance(num_sub_iterations, list)
         assert False not in list(map(lambda x: type(x) is int and x > 0, num_sub_iterations))
         assert isinstance(cell_soma, list)
-        assert isinstance(excitatory_weights, list)
-        assert isinstance(inhibitory_weights, list)
-        assert len(cell_soma) == len(excitatory_weights) and len(cell_soma) == len(inhibitory_weights)
+        assert isinstance(excitatory_synapses, list)
+        assert isinstance(inhibitory_synapses, list)
+        assert len(cell_soma) == len(excitatory_synapses) and len(cell_soma) == len(inhibitory_synapses)
         assert len(cell_soma) == len(num_sub_iterations)
-        assert False not in list(map(lambda x: len(x) == len(excitatory_noise_distributions), excitatory_weights))
-        assert False not in list(map(lambda x: len(x) == len(inhibitory_noise_distributions), inhibitory_weights))
+        assert False not in list(map(lambda x: len(x) == len(excitatory_noise_distributions), excitatory_synapses))
+        assert False not in list(map(lambda x: len(x) == len(inhibitory_noise_distributions), inhibitory_synapses))
         assert plot_files_extension.lower() == ".svg" or plot_files_extension.lower() == ".png"
         self.start_time = start_time
         self.dt = dt
@@ -49,8 +50,8 @@ class configuration:
         self.cell_soma = cell_soma
         self.excitatory_noise_distributions = excitatory_noise_distributions
         self.inhibitory_noise_distributions = inhibitory_noise_distributions
-        self.excitatory_weights = excitatory_weights
-        self.inhibitory_weights = inhibitory_weights
+        self.excitatory_synapses = excitatory_synapses
+        self.inhibitory_synapses = inhibitory_synapses
         self.output_dir = output_dir
         self.plot_files_extension = plot_files_extension.lower()
         self.name = os.path.basename(self.output_dir)
@@ -94,8 +95,8 @@ def leaky_integrate_and_fire_const_input():
             )],
         excitatory_noise_distributions=[distribution.distribution({1.0*dt: 1.0})],
         inhibitory_noise_distributions=[],
-        excitatory_weights=[[1.0]],
-        inhibitory_weights=[[]],
+        excitatory_synapses=[[synapse.synapse()]],
+        inhibitory_synapses=[[]],
         output_dir=os.path.join(__output_root_dir(), "leaky_integrate_and_fire_const_input"),
         plot_files_extension=".png",
         description="A simulation of a 'leaky integrate and fire' neuron with a constant input current. "
@@ -127,8 +128,8 @@ def leaky_integrate_and_fire_input_800ex_200in_std_noise():
             )],
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_weights=[[1.0 for _ in range(num_excitatory)]],
-        inhibitory_weights=[[1.0 for _ in range(num_inhibitory)]],
+        excitatory_synapses=[[synapse.synapse() for _ in range(num_excitatory)]],
+        inhibitory_synapses=[[synapse.synapse() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "leaky_integrate_and_fire_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
         description="A simulation of a 'leaky integrate and fire' neuron with a 800 excitatory and 200 "
@@ -150,8 +151,8 @@ def izhikevich_regular_spiking_input_800ex_200in_std_noise():
         cell_soma=[soma.izhikevich.regular_spiking(spike_magnitude=0.15)],
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_weights=[[1.0 for _ in range(num_excitatory)]],
-        inhibitory_weights=[[1.0 for _ in range(num_inhibitory)]],
+        excitatory_synapses=[[synapse.synapse() for _ in range(num_excitatory)]],
+        inhibitory_synapses=[[synapse.synapse() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "izhikevich_regular_spiking_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
         description="A simulation of a 'izhikevich regular spiking' neuron with a 800 excitatory and 200 "
@@ -174,8 +175,8 @@ def izhikevich_chattering_input_800ex_200in_std_noise():
         cell_soma=[soma.izhikevich.chattering(spike_magnitude=0.15)],
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_weights=[[1.0 for _ in range(num_excitatory)]],
-        inhibitory_weights=[[1.0 for _ in range(num_inhibitory)]],
+        excitatory_synapses=[[synapse.synapse() for _ in range(num_excitatory)]],
+        inhibitory_synapses=[[synapse.synapse() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "izhikevich_chattering_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
         description="A simulation of a 'izhikevich chattering' neuron with a 800 excitatory and 200 "
@@ -198,8 +199,8 @@ def izhikevich_fast_spiking_input_800ex_200in_std_noise():
         cell_soma=[soma.izhikevich.fast_spiking(spike_magnitude=0.15)],
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_weights=[[1.0 for _ in range(num_excitatory)]],
-        inhibitory_weights=[[1.0 for _ in range(num_inhibitory)]],
+        excitatory_synapses=[[synapse.synapse() for _ in range(num_excitatory)]],
+        inhibitory_synapses=[[synapse.synapse() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "izhikevich_fast_spiking_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
         description="A simulation of a 'izhikevich fast spiking' neuron with a 800 excitatory and 200 "
@@ -225,8 +226,8 @@ def hodgkin_huxley_input_800ex_200in_std_noise():
             )],
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_weights=[[1.0 for _ in range(num_excitatory)]],
-        inhibitory_weights=[[1.0 for _ in range(num_inhibitory)]],
+        excitatory_synapses=[[synapse.synapse() for _ in range(num_excitatory)]],
+        inhibitory_synapses=[[synapse.synapse() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "hodgkin_huxley_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
         description="A simulation of a 'hodgkin-huxley' neuron with a 800 excitatory and 200 "
@@ -252,15 +253,15 @@ def izhikevich_and_hodgkin_huxley_input_800ex_200in_std_noise():
             ],
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_weights=[
-            [1.0 for _ in range(num_excitatory)],
-            [1.0 for _ in range(num_excitatory)],
-            [1.0 for _ in range(num_excitatory)]
+        excitatory_synapses=[
+            [synapse.synapse() for _ in range(num_excitatory)],
+            [synapse.synapse() for _ in range(num_excitatory)],
+            [synapse.synapse() for _ in range(num_excitatory)]
             ],
-        inhibitory_weights=[
-            [1.0 for _ in range(num_inhibitory)],
-            [1.0 for _ in range(num_inhibitory)],
-            [1.0 for _ in range(num_inhibitory)]
+        inhibitory_synapses=[
+            [synapse.synapse() for _ in range(num_inhibitory)],
+            [synapse.synapse() for _ in range(num_inhibitory)],
+            [synapse.synapse() for _ in range(num_inhibitory)]
             ],
         output_dir=os.path.join(__output_root_dir(), "izhikevich_and_hodgkin_huxley_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
@@ -279,19 +280,13 @@ def development():
     return configuration(
         start_time=0.0,
         dt=0.001,
-        nsteps=100,
-        num_sub_iterations=[100],
-        cell_soma=[
-            soma.wilson.regular_spiking(),
-            ],
+        nsteps=1000,
+        num_sub_iterations=[1],
+        cell_soma=[soma.izhikevich.regular_spiking(spike_magnitude=0.15)],
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_weights=[
-            [1.0 for _ in range(num_excitatory)],
-            ],
-        inhibitory_weights=[
-            [1.0 for _ in range(num_inhibitory)],
-            ],
+        excitatory_synapses=[[synapse.synapse() for _ in range(num_excitatory)]],
+        inhibitory_synapses=[[synapse.synapse() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "development"),
         plot_files_extension=".png",
         description="This is not a genuine configuration. It serves only for development, testing, and "

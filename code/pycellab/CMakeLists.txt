@@ -7,6 +7,7 @@ install(
         neuron.py
         plot.py
         soma.py
+        synapse.py
         spike_train.py
         spiking.py
     DESTINATION
