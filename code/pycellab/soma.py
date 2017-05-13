@@ -446,7 +446,7 @@ class wilson:
             "H": initial_H,
             "input": initial_input
             }
-        self._firing_potential = -40.0
+        self._firing_potential = -30.0
         self._spike_magnitude = spike_magnitude
         assert callable(integrator_function)
         self._integrator = integrator_function
@@ -454,15 +454,14 @@ class wilson:
 
     @staticmethod
     def regular_spiking(
-                initial_V=-100.0,
+                initial_V=-70.0,
                 initial_R=0.0,
                 initial_T=0.0,
                 initial_H=0.0,
                 initial_input=0.0,
                 input_cooling_coef=-0.25,
                 spike_magnitude=1.0,
-                integrator_function=integrator.euler,
-                num_sub_iterations=100
+                integrator_function=integrator.euler
                 ):
         return wilson(
                 initial_V=initial_V,
@@ -489,15 +488,14 @@ class wilson:
 
     @staticmethod
     def fast_spiking(
-                initial_V=-100.0,
+                initial_V=-70.0,
                 initial_R=0.0,
                 initial_T=0.0,
                 initial_H=0.0,
                 initial_input=0.0,
                 input_cooling_coef=-0.25,
                 spike_magnitude=1.0,
-                integrator_function=integrator.euler,
-                num_sub_iterations=100
+                integrator_function=integrator.euler
                 ):
         return wilson(
                 initial_V=initial_V,
@@ -524,15 +522,14 @@ class wilson:
 
     @staticmethod
     def bursting(
-                initial_V=-100.0,
+                initial_V=-70.0,
                 initial_R=0.0,
                 initial_T=0.0,
                 initial_H=0.0,
                 initial_input=0.0,
                 input_cooling_coef=-0.25,
                 spike_magnitude=1.0,
-                integrator_function=integrator.euler,
-                num_sub_iterations=100
+                integrator_function=integrator.euler
                 ):
         return wilson(
                 initial_V=initial_V,
@@ -561,7 +558,7 @@ class wilson:
         return self._name
 
     def derivatives(self, var):
-        psp_voltage = 100.0 # var["input"]
+        psp_voltage = var["input"]
         return {
             "V":
                 (- (17.8 + 0.476*var["V"] + 0.00338*var["V"]*var["V"]) * (var["V"] - self.constants["E_Na"])
