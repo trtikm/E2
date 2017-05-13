@@ -236,7 +236,7 @@ def hodgkin_huxley_input_800ex_200in_std_noise():
         )
 
 
-def izhikevich_and_hodgkin_huxley_input_800ex_200in_std_noise():
+def wilson_reguar_spiking_input_800ex_200in_std_noise():
     num_excitatory = 800
     num_inhibitory = 200
     excitatory_noise = distribution.get_standard_spike_noise()
@@ -245,15 +245,88 @@ def izhikevich_and_hodgkin_huxley_input_800ex_200in_std_noise():
         start_time=0.0,
         dt=0.001,
         nsteps=1000,
-        num_sub_iterations=[1, 1, 100],
+        num_sub_iterations=[100],
+        cell_soma=[soma.wilson.regular_spiking()],
+        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+        excitatory_synapses=[[synapse.synapse() for _ in range(num_excitatory)]],
+        inhibitory_synapses=[[synapse.synapse() for _ in range(num_inhibitory)]],
+        output_dir=os.path.join(__output_root_dir(), "wilson_reguar_spiking_input_800ex_200in_std_noise"),
+        plot_files_extension=".png",
+        description="A simulation of a 'wilson's regular spiking' neuron with a 800 excitatory and 200 "
+                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
+                    "all synapses is 1. Spike magnitude is 1.0."
+        )
+
+
+def wilson_fast_spiking_input_800ex_200in_std_noise():
+    num_excitatory = 800
+    num_inhibitory = 200
+    excitatory_noise = distribution.get_standard_spike_noise()
+    inhibitory_noise = excitatory_noise
+    return configuration(
+        start_time=0.0,
+        dt=0.001,
+        nsteps=1000,
+        num_sub_iterations=[100],
+        cell_soma=[soma.wilson.fast_spiking()],
+        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+        excitatory_synapses=[[synapse.synapse() for _ in range(num_excitatory)]],
+        inhibitory_synapses=[[synapse.synapse() for _ in range(num_inhibitory)]],
+        output_dir=os.path.join(__output_root_dir(), "wilson_fast_spiking_input_800ex_200in_std_noise"),
+        plot_files_extension=".png",
+        description="A simulation of a 'wilson's fast spiking' neuron with a 800 excitatory and 200 "
+                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
+                    "all synapses is 1. Spike magnitude is 1.0."
+        )
+
+
+def wilson_bursting_input_800ex_200in_std_noise():
+    num_excitatory = 800
+    num_inhibitory = 200
+    excitatory_noise = distribution.get_standard_spike_noise()
+    inhibitory_noise = excitatory_noise
+    return configuration(
+        start_time=0.0,
+        dt=0.001,
+        nsteps=1000,
+        num_sub_iterations=[100],
+        cell_soma=[soma.wilson.bursting()],
+        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+        excitatory_synapses=[[synapse.synapse() for _ in range(num_excitatory)]],
+        inhibitory_synapses=[[synapse.synapse() for _ in range(num_inhibitory)]],
+        output_dir=os.path.join(__output_root_dir(), "wilson_bursting_input_800ex_200in_std_noise"),
+        plot_files_extension=".png",
+        description="A simulation of a 'wilson's bursting' neuron with a 800 excitatory and 200 "
+                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
+                    "all synapses is 1. Spike magnitude is 1.0."
+        )
+
+
+def izhikevich_hodgkin_huxley_wison_input_800ex_200in_std_noise():
+    num_excitatory = 800
+    num_inhibitory = 200
+    excitatory_noise = distribution.get_standard_spike_noise()
+    inhibitory_noise = excitatory_noise
+    return configuration(
+        start_time=0.0,
+        dt=0.001,
+        nsteps=1000,
+        num_sub_iterations=[1, 1, 100, 100, 100],
         cell_soma=[
             soma.izhikevich.regular_spiking(spike_magnitude=0.15),
             soma.izhikevich.fast_spiking(spike_magnitude=0.15),
-            soma.hodgkin_huxley(spike_magnitude=0.15)
+            soma.hodgkin_huxley(spike_magnitude=0.15),
+            soma.wilson.regular_spiking(),
+            soma.wilson.fast_spiking(),
             ],
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
         excitatory_synapses=[
+            [synapse.synapse() for _ in range(num_excitatory)],
+            [synapse.synapse() for _ in range(num_excitatory)],
             [synapse.synapse() for _ in range(num_excitatory)],
             [synapse.synapse() for _ in range(num_excitatory)],
             [synapse.synapse() for _ in range(num_excitatory)]
@@ -261,14 +334,17 @@ def izhikevich_and_hodgkin_huxley_input_800ex_200in_std_noise():
         inhibitory_synapses=[
             [synapse.synapse() for _ in range(num_inhibitory)],
             [synapse.synapse() for _ in range(num_inhibitory)],
+            [synapse.synapse() for _ in range(num_inhibitory)],
+            [synapse.synapse() for _ in range(num_inhibitory)],
             [synapse.synapse() for _ in range(num_inhibitory)]
             ],
-        output_dir=os.path.join(__output_root_dir(), "izhikevich_and_hodgkin_huxley_input_800ex_200in_std_noise"),
+        output_dir=os.path.join(__output_root_dir(), "izhikevich_hodgkin_huxley_wison_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
         description="A simulation of three neurons 'izhikevich regular spiking', 'izhikevich fast spiking', "
-                    "and 'hodgkin-huxley' with common spike input trains 800 excitatory and 200 "
-                    "inhibitory, all with the standard noise distribution. Initial weights of "
-                    "all synapses of all neurons are 1. Spike magnitude for all neurons is 0.15."
+                    "'hodgkin-huxley', 'wilson regular spiking', and 'wilson fast spiking', with common spike "
+                    "input trains 800 excitatory and 200 inhibitory, all with the standard noise distribution. "
+                    "Initial weights of all synapses of all neurons are 1. Spike magnitude for all neurons is 0.15, "
+                    "except for both wilson neurons for which it is 1.0."
         )
 
 
@@ -302,7 +378,10 @@ def get_registered_configurations():
         izhikevich_chattering_input_800ex_200in_std_noise(),
         izhikevich_fast_spiking_input_800ex_200in_std_noise(),
         hodgkin_huxley_input_800ex_200in_std_noise(),
-        izhikevich_and_hodgkin_huxley_input_800ex_200in_std_noise(),
+        wilson_reguar_spiking_input_800ex_200in_std_noise(),
+        wilson_fast_spiking_input_800ex_200in_std_noise(),
+        wilson_bursting_input_800ex_200in_std_noise(),
+        izhikevich_hodgkin_huxley_wison_input_800ex_200in_std_noise(),
         development()
         ], key=lambda cfg: cfg.output_dir)
 
