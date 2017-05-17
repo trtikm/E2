@@ -207,6 +207,19 @@ def make_counts_curve(time_events, dx=1.0):
     return result
 
 
+def make_sum_points(pairs, dx=1.0):
+    assert dx > 0.000001
+    if len(pairs) == 0:
+        return []
+    result = [pairs[0]]
+    for x, fx in pairs[1:]:
+        if abs(x - result[-1][0]) < 0.5 * dx:
+            result[-1] = (result[-1][0], result[-1][1] + fx)
+        else:
+            result.append((x, fx))
+    return result
+
+
 def test():
     def doit(hist, n):
         xhist = hist.copy()
