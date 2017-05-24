@@ -6,7 +6,7 @@ class distribution:
     def __init__(self, histogram):
         assert isinstance(histogram, dict)
         if not histogram or len(histogram) == 0:
-            self._histogram = {0: 0.0}
+            self._histogram = {1e23: 0.0}
         else:
             self._histogram = histogram.copy()
         self._bars_line = numpy.arange(len(self._histogram) + 1, dtype=float)
