@@ -199,9 +199,9 @@ def evaluate(cfg):
     print("Evaluating the configuration '" + cfg.name + "'.")
 
     print("  Constructing and initialising data structures,")
-    excitatory_spike_trains = [spike_train.spike_train(noise, cfg.start_time)
+    excitatory_spike_trains = [spike_train.spike_train(noise, [], cfg.start_time)
                                for noise in cfg.excitatory_noise_distributions]
-    inhibitory_spike_trains = [spike_train.spike_train(noise, cfg.start_time)
+    inhibitory_spike_trains = [spike_train.spike_train(noise, [], cfg.start_time)
                                for noise in cfg.inhibitory_noise_distributions]
     cells = [neuron.neuron(
                 cfg.cell_soma[i],
