@@ -69,7 +69,7 @@ class synapse:
                 input_pre_cooling_coef=-200.0,
                 input_post_cooling_coef=-200.0,
                 spike_magnitude=1.0,
-                integrator_function=integrator.midpoint
+                integrator_function=integrator.euler
                 ):
         return synapse(
             initial_input_pre=initial_input_pre,
