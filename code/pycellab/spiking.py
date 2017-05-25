@@ -69,8 +69,8 @@ def save_post_isi_distribution(cfg, post_spikes, subdir):
         )
 
 
-def save_spikes_board(cfg, pre_spikes_excitatory, pre_spikes_inhibitory, post_spikes, soma_names):
-    pathname = os.path.join(cfg.output_dir, "pre_spikes" + cfg.plot_files_extension)
+def save_spikes_board(cfg, pre_spikes_excitatory, pre_spikes_inhibitory, post_spikes, soma_names, suffix):
+    pathname = os.path.join(cfg.output_dir, "pre_spikes" + suffix + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
 
     stride = -max(int((len(pre_spikes_excitatory) + len(pre_spikes_inhibitory))/100), 5)
@@ -107,6 +107,38 @@ def save_spikes_board(cfg, pre_spikes_excitatory, pre_spikes_inhibitory, post_sp
                             [str(len(spikes)) for spikes in post_spikes])))
             )
         )
+
+
+def save_spikes_board_per_partes(
+        cfg,
+        pre_spikes_excitatory,
+        pre_spikes_inhibitory,
+        post_spikes,
+        soma_names,
+        start_time,
+        end_time,
+        dt
+        ):
+    assert start_time <= end_time and dt > 0.0
+    idx = 0
+    t = start_time
+    while t < end_time:
+        end = min(t + dt, end_time)
+
+        def time_filer(event):
+            return t <= event and event < end
+
+        save_spikes_board(
+            cfg,
+            [list(filter(time_filer, spikes)) for spikes in pre_spikes_excitatory],
+            [list(filter(time_filer, spikes)) for spikes in pre_spikes_inhibitory],
+            [list(filter(time_filer, spikes)) for spikes in post_spikes],
+            soma_names,
+            "_" + str(idx).zfill(4) + "_" + format(t, ".4f")
+            )
+
+        t += dt
+        idx += 1
 
 
 def save_pre_spike_counts_histograms(cfg, pre_spikes_excitatory, pre_spikes_inhibitory):
@@ -154,8 +186,8 @@ def save_pre_spike_counts_histograms(cfg, pre_spikes_excitatory, pre_spikes_inhi
         )
 
 
-def save_pre_spike_counts_curves(cfg, pre_spikes_excitatory, pre_spikes_inhibitory):
-    pathname = os.path.join(cfg.output_dir, "pre_spike_counts_curve" + cfg.plot_files_extension)
+def save_pre_spike_counts_curves(cfg, pre_spikes_excitatory, pre_spikes_inhibitory, suffix):
+    pathname = os.path.join(cfg.output_dir, "pre_spike_counts_curve" + suffix + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
     plot.curve(
         distribution.make_counts_curve(
@@ -165,7 +197,7 @@ def save_pre_spike_counts_curves(cfg, pre_spikes_excitatory, pre_spikes_inhibito
         colours=get_colour_pre_excitatory_and_inhibitory()
         )
 
-    pathname = os.path.join(cfg.output_dir, "pre_spike_counts_curve_excitatory" + cfg.plot_files_extension)
+    pathname = os.path.join(cfg.output_dir, "pre_spike_counts_curve_excitatory" + suffix + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
     plot.curve(
         distribution.make_counts_curve(
@@ -175,7 +207,7 @@ def save_pre_spike_counts_curves(cfg, pre_spikes_excitatory, pre_spikes_inhibito
         colours=get_colour_pre_excitatory()
         )
 
-    pathname = os.path.join(cfg.output_dir, "pre_spike_counts_curve_inhibitory" + cfg.plot_files_extension)
+    pathname = os.path.join(cfg.output_dir, "pre_spike_counts_curve_inhibitory" + suffix + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
     plot.curve(
         distribution.make_counts_curve(
@@ -186,11 +218,69 @@ def save_pre_spike_counts_curves(cfg, pre_spikes_excitatory, pre_spikes_inhibito
         )
 
 
-def save_soma_recording(cfg, data, title, subdir):
+def save_pre_spike_counts_curves_per_partes(
+        cfg,
+        pre_spikes_excitatory,
+        pre_spikes_inhibitory,
+        start_time,
+        end_time,
+        dt
+        ):
+    assert start_time <= end_time and dt > 0.0
+    idx = 0
+    t = start_time
+    while t < end_time:
+        end = min(t + dt, end_time)
+
+        def time_filer(event):
+            return t <= event and event < end
+
+        save_pre_spike_counts_curves(
+            cfg,
+            [list(filter(time_filer, spikes)) for spikes in pre_spikes_excitatory],
+            [list(filter(time_filer, spikes)) for spikes in pre_spikes_inhibitory],
+            "_" + str(idx).zfill(4) + "_" + format(t, ".4f")
+            )
+
+        t += dt
+        idx += 1
+
+
+def save_soma_recording(cfg, data, title, subdir, suffix):
     for key, points in data.items():
-        pathname = os.path.join(cfg.output_dir, subdir, "soma_" + key + cfg.plot_files_extension)
+        pathname = os.path.join(cfg.output_dir, subdir, "soma_" + key + suffix + cfg.plot_files_extension)
         print("    Saving plot " + pathname)
         plot.curve(points, pathname, colours=get_colour_soma(), title=title)
+
+
+def save_soma_recording_per_partes(
+        cfg,
+        data,
+        title,
+        subdir,
+        start_time,
+        end_time,
+        dt
+        ):
+    assert start_time <= end_time and dt > 0.0
+    idx = 0
+    t = start_time
+    while t < end_time:
+        end = min(t + dt, end_time)
+
+        def time_filer(event):
+            return t <= event and event < end
+
+        save_soma_recording(
+            cfg,
+            dict([(key, list(filter(lambda p: time_filer(p[0]), points))) for key, points in data.items()]),
+            title,
+            subdir,
+            "_" + str(idx).zfill(4) + "_" + format(t, ".4f")
+            )
+
+        t += dt
+        idx += 1
 
 
 def evaluate(cfg):
@@ -239,14 +329,29 @@ def evaluate(cfg):
     print("  Saving results.")
     os.makedirs(cfg.output_dir, exist_ok=True)
     save_pre_isi_distributions(cfg)
-    save_spikes_board(cfg, [train.get_spikes() for train in excitatory_spike_trains],
-                           [train.get_spikes() for train in inhibitory_spike_trains],
-                           [cell.get_spikes() for cell in cells],
-                           [cell.get_soma().get_name() for cell in cells])
-    save_pre_spike_counts_histograms(cfg, [train.get_spikes() for train in excitatory_spike_trains],
-                                          [train.get_spikes() for train in inhibitory_spike_trains])
-    save_pre_spike_counts_curves(cfg, [train.get_spikes() for train in excitatory_spike_trains],
-                                      [train.get_spikes() for train in inhibitory_spike_trains])
+    save_spikes_board_per_partes(
+        cfg,
+        [train.get_spikes() for train in excitatory_spike_trains],
+        [train.get_spikes() for train in inhibitory_spike_trains],
+        [cell.get_spikes() for cell in cells],
+        [cell.get_soma().get_name() for cell in cells],
+        cfg.start_time,
+        cfg.start_time + cfg.nsteps * cfg.dt,
+        cfg.plot_time_step
+        )
+    save_pre_spike_counts_histograms(
+        cfg,
+        [train.get_spikes() for train in excitatory_spike_trains],
+        [train.get_spikes() for train in inhibitory_spike_trains]
+        )
+    save_pre_spike_counts_curves_per_partes(
+        cfg,
+        [train.get_spikes() for train in excitatory_spike_trains],
+        [train.get_spikes() for train in inhibitory_spike_trains],
+        cfg.start_time,
+        cfg.start_time + cfg.nsteps * cfg.dt,
+        cfg.plot_time_step
+        )
     if len(cells) == 1:
         subdirs = [""]
     else:
@@ -254,7 +359,15 @@ def evaluate(cfg):
     for i in range(len(cells)):
         os.makedirs(os.path.join(cfg.output_dir, subdirs[i]), exist_ok=True)
         save_post_isi_distribution(cfg, cells[i].get_spikes(), subdirs[i])
-        save_soma_recording(cfg, cells[i].get_soma_recording(), cells[i].get_soma().get_short_description(), subdirs[i])
+        save_soma_recording_per_partes(
+            cfg,
+            cells[i].get_soma_recording(),
+            cells[i].get_soma().get_short_description(),
+            subdirs[i],
+            cfg.start_time,
+            cfg.start_time + cfg.nsteps * cfg.dt,
+            cfg.plot_time_step
+            )
 
     print("  Done.")
 

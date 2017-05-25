@@ -29,6 +29,7 @@ class configuration:
                  inhibitory_synapses,
                  output_dir,
                  plot_files_extension,
+                 plot_time_step,
                  description
                  ):
         assert dt > 0.0
@@ -43,6 +44,8 @@ class configuration:
         assert False not in list(map(lambda x: len(x) == len(excitatory_noise_distributions), excitatory_synapses))
         assert False not in list(map(lambda x: len(x) == len(inhibitory_noise_distributions), inhibitory_synapses))
         assert plot_files_extension.lower() == ".svg" or plot_files_extension.lower() == ".png"
+        assert plot_time_step > 0.0
+
         self.start_time = start_time
         self.dt = dt
         self.nsteps = nsteps
@@ -55,6 +58,7 @@ class configuration:
         self.output_dir = output_dir
         self.plot_files_extension = plot_files_extension.lower()
         self.name = os.path.basename(self.output_dir)
+        self.plot_time_step = plot_time_step
         self.description = description
         self.are_equal_excitatory_noise_distributions = len(self.excitatory_noise_distributions) > 0
         for d in self.excitatory_noise_distributions:
@@ -99,6 +103,7 @@ def leaky_integrate_and_fire_const_input():
         inhibitory_synapses=[[]],
         output_dir=os.path.join(__output_root_dir(), "leaky_integrate_and_fire_const_input"),
         plot_files_extension=".png",
+        plot_time_step=1.0,
         description="A simulation of a 'leaky integrate and fire' neuron with a constant input current. "
                     "strong enough to trigger constant firing of the neuron."
         )
@@ -132,6 +137,7 @@ def leaky_integrate_and_fire_input_800ex_200in_std_noise():
         inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "leaky_integrate_and_fire_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
+        plot_time_step=1.0,
         description="A simulation of a 'leaky integrate and fire' neuron with a 800 excitatory and 200 "
                     "inhibitory input spike trains, all with the standard noise distribution. Weights of "
                     "all synapses is 1."
@@ -155,6 +161,7 @@ def izhikevich_regular_spiking_input_800ex_200in_std_noise():
         inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "izhikevich_regular_spiking_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
+        plot_time_step=1.0,
         description="A simulation of a 'izhikevich regular spiking' neuron with a 800 excitatory and 200 "
                     "inhibitory input spike trains, all with the standard noise distribution. Weights of "
                     "all synapses is 1. Spike magnitude is 0.15. This neuron typically creates excitatory "
@@ -179,6 +186,7 @@ def izhikevich_chattering_input_800ex_200in_std_noise():
         inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "izhikevich_chattering_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
+        plot_time_step=1.0,
         description="A simulation of a 'izhikevich chattering' neuron with a 800 excitatory and 200 "
                     "inhibitory input spike trains, all with the standard noise distribution. Weights of "
                     "all synapses is 1. Spike magnitude is 0.15. This neuron typically creates excitatory "
@@ -203,6 +211,7 @@ def izhikevich_fast_spiking_input_800ex_200in_std_noise():
         inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "izhikevich_fast_spiking_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
+        plot_time_step=1.0,
         description="A simulation of a 'izhikevich fast spiking' neuron with a 800 excitatory and 200 "
                     "inhibitory input spike trains, all with the standard noise distribution. Weights of "
                     "all synapses is 1. Spike magnitude is 0.15. This neuron typically creates inhibitory "
@@ -230,6 +239,7 @@ def hodgkin_huxley_input_800ex_200in_std_noise():
         inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "hodgkin_huxley_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
+        plot_time_step=1.0,
         description="A simulation of a 'hodgkin-huxley' neuron with a 800 excitatory and 200 "
                     "inhibitory input spike trains, all with the standard noise distribution. Weights of "
                     "all synapses is 1. Spike magnitude is 0.15."
@@ -253,6 +263,7 @@ def wilson_reguar_spiking_input_800ex_200in_std_noise():
         inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "wilson_reguar_spiking_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
+        plot_time_step=1.0,
         description="A simulation of a 'wilson's regular spiking' neuron with a 800 excitatory and 200 "
                     "inhibitory input spike trains, all with the standard noise distribution. Weights of "
                     "all synapses is 1. Spike magnitude is 1.0."
@@ -276,6 +287,7 @@ def wilson_fast_spiking_input_800ex_200in_std_noise():
         inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "wilson_fast_spiking_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
+        plot_time_step=1.0,
         description="A simulation of a 'wilson's fast spiking' neuron with a 800 excitatory and 200 "
                     "inhibitory input spike trains, all with the standard noise distribution. Weights of "
                     "all synapses is 1. Spike magnitude is 1.0."
@@ -299,6 +311,7 @@ def wilson_bursting_input_800ex_200in_std_noise():
         inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "wilson_bursting_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
+        plot_time_step=1.0,
         description="A simulation of a 'wilson's bursting' neuron with a 800 excitatory and 200 "
                     "inhibitory input spike trains, all with the standard noise distribution. Weights of "
                     "all synapses is 1. Spike magnitude is 1.0."
@@ -340,6 +353,7 @@ def izhikevich_hodgkin_huxley_wison_input_800ex_200in_std_noise():
             ],
         output_dir=os.path.join(__output_root_dir(), "izhikevich_hodgkin_huxley_wison_input_800ex_200in_std_noise"),
         plot_files_extension=".png",
+        plot_time_step=1.0,
         description="A simulation of three neurons 'izhikevich regular spiking', 'izhikevich fast spiking', "
                     "'hodgkin-huxley', 'wilson regular spiking', and 'wilson fast spiking', with common spike "
                     "input trains 800 excitatory and 200 inhibitory, all with the standard noise distribution. "
@@ -361,10 +375,11 @@ def development():
         cell_soma=[soma.izhikevich.regular_spiking(spike_magnitude=0.15)],
         excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
         inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
-        inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
+        excitatory_synapses=[[synapse.synapse.plastic() for _ in range(num_excitatory)]],
+        inhibitory_synapses=[[synapse.synapse.plastic() for _ in range(num_inhibitory)]],
         output_dir=os.path.join(__output_root_dir(), "development"),
         plot_files_extension=".png",
+        plot_time_step=1.0,
         description="This is not a genuine configuration. It serves only for development, testing, and "
                     "bug-fixing of this evaluation system."
         )
