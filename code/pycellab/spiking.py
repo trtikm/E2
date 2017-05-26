@@ -34,7 +34,6 @@ def save_pre_isi_distributions(cfg):
         plot.histogram(
             cfg.excitatory_noise_distributions[0],
             pathname,
-            markers="-",
             colours=get_colour_pre_excitatory_and_inhibitory()
             )
     else:
@@ -44,7 +43,6 @@ def save_pre_isi_distributions(cfg):
             plot.histogram(
                 cfg.excitatory_noise_distributions[0],
                 pathname,
-                markers="-",
                 colours=get_colour_pre_excitatory()
                 )
         if cfg.are_equal_inhibitory_noise_distributions:
@@ -53,7 +51,6 @@ def save_pre_isi_distributions(cfg):
             plot.histogram(
                 cfg.inhibitory_noise_distributions[0],
                 pathname,
-                markers="-",
                 colours=get_colour_pre_inhibitory()
                 )
 
@@ -87,9 +84,9 @@ def save_spikes_board(cfg, pre_spikes_excitatory, pre_spikes_inhibitory, post_sp
                     for i in range(len(post_spikes))
                     for j in range(len(post_spikes[i]))],
         pathname=pathname,
-        colours=[get_colour_pre_excitatory() for spikes in pre_spikes_excitatory for _ in spikes] +
-                [get_colour_pre_inhibitory() for spikes in pre_spikes_inhibitory for _ in spikes] +
-                [get_colour_post() for spikes in post_spikes for _ in spikes],
+        colours=[(0.1, 0.2, 0.5) for spikes in pre_spikes_excitatory for _ in spikes] +
+                [(0.1, 0.2, 0.5) for spikes in pre_spikes_inhibitory for _ in spikes] +
+                [(0.1, 0.2, 0.5) for spikes in post_spikes for _ in spikes],
         title=(
             "pre-total=" +
                     str(len(pre_spikes_excitatory) + len(pre_spikes_inhibitory)) +

@@ -41,7 +41,7 @@ def scatter(points, pathname, colours=None, title=None, xaxis_name=None, faxis_n
     __write_xplot(lambda ax, x, y: ax.scatter(x, y, s=2, c=colours), points, pathname, title, xaxis_name, faxis_name)
 
 
-def histogram(distrib, pathname, normalised=True, markers="o", colours=None, title=None, xaxis_name=None, faxis_name=None):
+def histogram(distrib, pathname, normalised=True, colours=None, title=None, xaxis_name=None, faxis_name=None):
     if isinstance(distrib, dict):   # 'distrib' is a plain histogram.
         distrib = distribution.distribution(distrib)
     assert isinstance(distrib, distribution.distribution)
@@ -62,6 +62,8 @@ def histogram(distrib, pathname, normalised=True, markers="o", colours=None, tit
         points = distrib.get_probability_points()
     else:
         points = distrib.get_points()
+
+    bar_width = min(map(lambda x: abs(x[1] - x[0]), zip(distrib.get_events()[:-1], distrib.get_events()[1:])))
     __write_xplot(
-        lambda ax, x, y: ax.stem(x, y, linefmt=colours+"-", markerfmt=colours+markers, basefmt="None"),
+        lambda ax, x, y: ax.bar(x, y, bar_width, color=colours, align="center"),
         points, pathname, title, xaxis_name, faxis_name)
