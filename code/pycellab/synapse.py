@@ -111,6 +111,9 @@ class synapse:
     def get_weight(self):
         return self._variables["weight"]
 
+    def get_neutral_weight(self):
+        return self._weight_neutral
+
     def get_min_weight(self):
         return self._weight_neutral - self._weight_epsilon
 
