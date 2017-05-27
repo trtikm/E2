@@ -111,6 +111,12 @@ class synapse:
     def get_weight(self):
         return self._variables["weight"]
 
+    def get_min_weight(self):
+        return self._weight_neutral - self._weight_epsilon
+
+    def get_max_weight(self):
+        return self._weight_neutral + self._weight_epsilon
+
     def on_pre_synaptic_spike(self):
         self._variables["input_pre"] += self._spike_magnitude
 
