@@ -1,7 +1,3 @@
-import spike_train
-import soma
-
-
 class neuron:
     def __init__(self,
                  cell_soma,
@@ -19,6 +15,14 @@ class neuron:
         for key, value in self._soma.variables.items():
             self._soma_recording[key] = [(start_time, value)]
         self._num_sub_iterations = num_sub_iterations
+        self._excitatory_synapses_recording = [
+            dict([(var, [(start_time, value)]) for var, value in syn.get_variables().items()])
+            for syn in self._excitatory_synapses
+        ]
+        self._inhibitory_synapses_recording = [
+            dict([(var, [(start_time, value)]) for var, value in syn.get_variables().items()])
+            for syn in self._inhibitory_synapses
+        ]
 
     def get_excitatory_synapses(self):
         return self._excitatory_synapses
@@ -31,6 +35,12 @@ class neuron:
 
     def get_soma_recording(self):
         return self._soma_recording
+
+    def get_excitatory_synapses_recording(self):
+        return self._excitatory_synapses_recording
+
+    def get_inhibitory_synapses_recording(self):
+        return self._inhibitory_synapses_recording
 
     def get_soma(self):
         return self._soma
@@ -57,15 +67,21 @@ class neuron:
             is_spiking = self._soma.is_spiking()
             if not was_spiking and is_spiking:
                 was_spike_generated = True
-        for synapse in self._excitatory_synapses:
-            synapse.integrate(dt)
-        for synapse in self._inhibitory_synapses:
-            synapse.integrate(dt)
+        for syn in self._excitatory_synapses:
+            syn.integrate(dt)
+        for syn in self._inhibitory_synapses:
+            syn.integrate(dt)
         if was_spike_generated:
-            for synapse in self._excitatory_synapses:
-                synapse.on_post_synaptic_spike()
-            for synapse in self._inhibitory_synapses:
-                synapse.on_post_synaptic_spike()
+            for syn in self._excitatory_synapses:
+                syn.on_post_synaptic_spike()
+            for syn in self._inhibitory_synapses:
+                syn.on_post_synaptic_spike()
             self._spikes.append(t + dt)
         for key, value in self._soma.variables.items():
             self._soma_recording[key].append((t + dt, value))
+        for i in range(len(self._excitatory_synapses)):
+            for key, value in self._excitatory_synapses[i].get_variables().items():
+                self._excitatory_synapses_recording[i][key].append((t + dt, value))
+        for i in range(len(self._inhibitory_synapses)):
+            for key, value in self._inhibitory_synapses[i].get_variables().items():
+                self._inhibitory_synapses_recording[i][key].append((t + dt, value))
