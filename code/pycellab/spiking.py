@@ -66,8 +66,18 @@ def save_post_isi_distribution(cfg, post_spikes, subdir):
         )
 
 
-def save_spikes_board(cfg, pre_spikes_excitatory, pre_spikes_inhibitory, post_spikes, soma_names, suffix):
-    pathname = os.path.join(cfg.output_dir, "pre_spikes" + suffix + cfg.plot_files_extension)
+def save_spikes_board(
+        cfg,
+        pre_spikes_excitatory,
+        pre_spikes_inhibitory,
+        pre_weights_excitatory,
+        pre_weights_inhibitory,
+        post_spikes,
+        soma_name,
+        sub_dir,
+        suffix
+        ):
+    pathname = os.path.join(cfg.output_dir, sub_dir, "pre_spikes" + suffix + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
 
     stride = -max(int((len(pre_spikes_excitatory) + len(pre_spikes_inhibitory))/100), 5)
@@ -75,18 +85,18 @@ def save_spikes_board(cfg, pre_spikes_excitatory, pre_spikes_inhibitory, post_sp
 
     plot.scatter(
         points=[(pre_spikes_excitatory[i][j], i)
-                    for i in range(len(pre_spikes_excitatory))
-                    for j in range(len(pre_spikes_excitatory[i]))] +
+                for i in range(len(pre_spikes_excitatory))
+                for j in range(len(pre_spikes_excitatory[i]))] +
                [(pre_spikes_inhibitory[i][j], i + len(pre_spikes_excitatory))
-                    for i in range(len(pre_spikes_inhibitory))
-                    for j in range(len(pre_spikes_inhibitory[i]))] +
+                for i in range(len(pre_spikes_inhibitory))
+                for j in range(len(pre_spikes_inhibitory[i]))] +
                [(post_spikes[i][j], stride * i + base_shift)
-                    for i in range(len(post_spikes))
-                    for j in range(len(post_spikes[i]))],
+                for i in range(len(post_spikes))
+                for j in range(len(post_spikes[i]))],
         pathname=pathname,
-        colours=[(0.1, 0.2, 0.5) for spikes in pre_spikes_excitatory for _ in spikes] +
-                [(0.1, 0.2, 0.5) for spikes in pre_spikes_inhibitory for _ in spikes] +
-                [(0.1, 0.2, 0.5) for spikes in post_spikes for _ in spikes],
+        colours=[(weight, 0.1, 1.0 - weight) for weights in pre_weights_excitatory for weight in weights] +
+                [(0.0, weight, 1.0 - weight) for weights in pre_weights_inhibitory for weight in weights] +
+                [(0.0, 0.0, 0.0) for spikes in post_spikes for _ in spikes],
         title=(
             "pre-total=" +
                     str(len(pre_spikes_excitatory) + len(pre_spikes_inhibitory)) +
@@ -96,12 +106,8 @@ def save_spikes_board(cfg, pre_spikes_excitatory, pre_spikes_inhibitory, post_sp
             ", pre-inhibitory[" +
                     str(len(pre_spikes_excitatory)) + "," +
                     str(len(pre_spikes_excitatory) + len(pre_spikes_inhibitory)) + ")=" +
-                    str(len(pre_spikes_inhibitory)) + ", " +
-            "".join(filter(lambda _: len(soma_names) > 1, ["\n"])) +
-            "".join(map(lambda x: "post[" + x[0] + "][" + x[1] + "]=" + x[2] + ", ",
-                        zip([name for name in soma_names],
-                            [str(stride * i + base_shift) for i in range(len(post_spikes))],
-                            [str(len(spikes)) for spikes in post_spikes])))
+                    str(len(pre_spikes_inhibitory)) +
+            ", post[" + str(base_shift + stride) + "]=" + soma_name
             )
         )
 
@@ -110,27 +116,64 @@ def save_spikes_board_per_partes(
         cfg,
         pre_spikes_excitatory,
         pre_spikes_inhibitory,
+        pre_weights_excitatory,
+        pre_weights_inhibitory,
         post_spikes,
-        soma_names,
+        soma_name,
+        sub_dir,
         start_time,
         end_time,
         dt
         ):
     assert start_time <= end_time and dt > 0.0
+    assert len(pre_spikes_excitatory) == len(pre_weights_excitatory)
+    assert len(pre_spikes_inhibitory) == len(pre_weights_inhibitory)
+    indices_excitatory = [0 for _ in pre_spikes_excitatory]
+    indices_inhibitory = [0 for _ in pre_spikes_inhibitory]
+    indices_post = [0]
     idx = 0
     t = start_time
     while t < end_time:
         end = min(t + dt, end_time)
 
-        def time_filer(event):
-            return t <= event and event < end
+        def make_slice(spikes, weights, t_start, t_end, indices):
+            assert weights is None or len(spikes) == len(weights)
+            assert len(spikes) == len(indices)
+            assert t_start <= t_end
+            spikes_slice = []
+            weights_slice = []
+            for i, j in enumerate(indices):
+                res_spikes = []
+                res_weights = []
+                while j < len(spikes[i]) and spikes[i][j] < t_end:
+                    if spikes[i][j] >= t_start:
+                        res_spikes.append(spikes[i][j])
+                        if weights:
+                            res_weights.append(weights[i][j])
+                    j += 1
+                spikes_slice.append(res_spikes)
+                if weights:
+                    weights_slice.append(res_weights)
+                indices[i] = j
+            if weights:
+                return spikes_slice, weights_slice
+            else:
+                return spikes_slice
+
+        slice_spikes_excitatory, slice_weights_excitatory =\
+            make_slice(pre_spikes_excitatory, pre_weights_excitatory, t, end, indices_excitatory)
+        slice_spikes_inhibitory, slice_weights_inhibitory =\
+            make_slice(pre_spikes_inhibitory, pre_weights_inhibitory, t, end, indices_inhibitory)
 
         save_spikes_board(
             cfg,
-            [list(filter(time_filer, spikes)) for spikes in pre_spikes_excitatory],
-            [list(filter(time_filer, spikes)) for spikes in pre_spikes_inhibitory],
-            [list(filter(time_filer, spikes)) for spikes in post_spikes],
-            soma_names,
+            slice_spikes_excitatory,
+            slice_spikes_inhibitory,
+            slice_weights_excitatory,
+            slice_weights_inhibitory,
+            make_slice([post_spikes], None, t, end, indices_post),
+            soma_name,
+            sub_dir,
             "_" + str(idx).zfill(4) + "_" + format(t, ".4f")
             )
 
@@ -324,18 +367,9 @@ def evaluate(cfg):
         t += cfg.dt
 
     print("  Saving results.")
+
     os.makedirs(cfg.output_dir, exist_ok=True)
     save_pre_isi_distributions(cfg)
-    save_spikes_board_per_partes(
-        cfg,
-        [train.get_spikes() for train in excitatory_spike_trains],
-        [train.get_spikes() for train in inhibitory_spike_trains],
-        [cell.get_spikes() for cell in cells],
-        [cell.get_soma().get_name() for cell in cells],
-        cfg.start_time,
-        cfg.start_time + cfg.nsteps * cfg.dt,
-        cfg.plot_time_step
-        )
     save_pre_spike_counts_histograms(
         cfg,
         [train.get_spikes() for train in excitatory_spike_trains],
@@ -349,18 +383,63 @@ def evaluate(cfg):
         cfg.start_time + cfg.nsteps * cfg.dt,
         cfg.plot_time_step
         )
-    if len(cells) == 1:
-        subdirs = [""]
-    else:
-        subdirs = [cell.get_soma().get_name() for cell in cells]
-    for i in range(len(cells)):
-        os.makedirs(os.path.join(cfg.output_dir, subdirs[i]), exist_ok=True)
-        save_post_isi_distribution(cfg, cells[i].get_spikes(), subdirs[i])
+    for cell, sub_dir in list(zip(cells, map(lambda cell: cell.get_soma().get_name() * int(len(cells) > 1), cells))):
+        os.makedirs(os.path.join(cfg.output_dir, sub_dir), exist_ok=True)
+        save_post_isi_distribution(cfg, cell.get_spikes(), sub_dir)
         save_soma_recording_per_partes(
             cfg,
-            cells[i].get_soma_recording(),
-            cells[i].get_soma().get_short_description(),
-            subdirs[i],
+            cell.get_soma_recording(),
+            cell.get_soma().get_short_description(),
+            sub_dir,
+            cfg.start_time,
+            cfg.start_time + cfg.nsteps * cfg.dt,
+            cfg.plot_time_step
+            )
+
+        def compute_normalised_weights(spikes, syn, points):
+            weights = []
+            idx = 0
+            for j, event in enumerate(spikes):
+                start_time = event
+                if j + 1 < len(spikes):
+                    end_time = spikes[j + 1]
+                else:
+                    end_time = cfg.start_time + cfg.nsteps * cfg.dt
+                weight = 0.0
+                count = 0
+                while idx < len(points) and points[idx][0] < end_time:
+                    if points[idx][0] >= start_time:
+                        weight = points[idx][1]
+                        count = 1
+                        # weight += points[idx][1]
+                        # count += 1
+                    idx += 1
+                if count == 0:
+                    weight = syn.get_neutral_weight()
+                else:
+                    weight /= float(count)
+                weight = (weight - syn.get_min_weight()) / (syn.get_max_weight() - syn.get_min_weight())
+                weights.append(max(0.0, min(1.0, weight)))
+            assert len(spikes) == len(weights)
+            return weights
+
+        save_spikes_board_per_partes(
+            cfg,
+            [train.get_spikes() for train in excitatory_spike_trains],
+            [train.get_spikes() for train in inhibitory_spike_trains],
+            [compute_normalised_weights(
+                train.get_spikes(),
+                cell.get_excitatory_synapses()[i],
+                cell.get_excitatory_synapses_recording()[i][cell.get_excitatory_synapses()[i].get_weight_variable_name()]
+                ) for i, train in enumerate(excitatory_spike_trains)],
+            [compute_normalised_weights(
+                train.get_spikes(),
+                cell.get_inhibitory_synapses()[i],
+                cell.get_inhibitory_synapses_recording()[i][cell.get_inhibitory_synapses()[i].get_weight_variable_name()]
+                ) for i, train in enumerate(inhibitory_spike_trains)],
+            cell.get_spikes(),
+            cell.get_soma().get_name(),
+            sub_dir,
             cfg.start_time,
             cfg.start_time + cfg.nsteps * cfg.dt,
             cfg.plot_time_step
