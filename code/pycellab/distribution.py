@@ -207,17 +207,30 @@ def make_counts_curve(time_events, dx=1.0):
     return result
 
 
-def make_sum_points(pairs, dx=1.0):
+def make_fx_points(pairs, function, dx=1.0):
     assert dx > 0.000001
+    assert callable(function)
     if len(pairs) == 0:
         return []
     result = [pairs[0]]
     for x, fx in pairs[1:]:
         if abs(x - result[-1][0]) < 0.5 * dx:
-            result[-1] = (result[-1][0], result[-1][1] + fx)
+            result[-1] = (result[-1][0], function(result[-1][1], fx))
         else:
             result.append((x, fx))
     return result
+
+
+def make_sum_points(pairs, dx=1.0):
+    return make_fx_points(pairs, float.__add__, dx)
+
+
+def make_min_points(pairs, dx=1.0):
+    return make_fx_points(pairs, min, dx)
+
+
+def make_max_points(pairs, dx=1.0):
+    return make_fx_points(pairs, max, dx)
 
 
 def test():
