@@ -323,6 +323,109 @@ def save_soma_recording_per_partes(
         idx += 1
 
 
+def save_weights_recording_per_partes(
+        cfg,
+        weights_excitatory,
+        weights_inhibitory,
+        sub_dir
+        ):
+    indices_excitatory = [0 for _ in weights_excitatory]
+    indices_inhibitory = [0 for _ in weights_inhibitory]
+    idx = 0
+    end_time = cfg.start_time + cfg.nsteps * cfg.dt
+    t = cfg.start_time
+    while t < end_time:
+        end = min(t + cfg.plot_time_step, end_time)
+
+        def make_slice(weights, t_start, t_end, indices):
+            assert len(weights) == len(indices)
+            assert t_start <= t_end
+            weights_slice = []
+            for i, j in enumerate(indices):
+                res_weights = []
+                while j < len(weights[i]) and weights[i][j][0] < t_end:
+                    if weights[i][j][0] >= t_start:
+                        res_weights.append(weights[i][j])
+                    j += 1
+                weights_slice.append(res_weights)
+                indices[i] = j
+            return weights_slice
+
+        def merge_lists_of_points(lists, merge_function, finalise_function=lambda x: x):
+            assert all([isinstance(alist, list) for alist in lists])
+            assert callable(merge_function)
+            merge_result = []
+            for i in range(max([len(x) for x in lists])):
+                value = None
+                for alist in lists:
+                    if i < len(alist):
+                        if value:
+                            assert abs(value[0] - alist[i][0]) < 0.00001
+                            value = (value[0], merge_function(value[1], alist[i][1]))
+                        else:
+                            value = alist[i]
+                assert value is not None
+                merge_result.append((value[0], finalise_function(value[1])))
+            return merge_result
+
+        plot_data = {}
+
+        sliced_weights_excitatory = make_slice(weights_excitatory, t, end, indices_excitatory)
+        plot_data["weights_excitatory_min"] = merge_lists_of_points(sliced_weights_excitatory, min)
+        plot_data["weights_excitatory_max"] = merge_lists_of_points(sliced_weights_excitatory, max)
+        plot_data["weights_excitatory_average"] = merge_lists_of_points(sliced_weights_excitatory, lambda x, y: x + y,
+                                                                        lambda x: x / len(weights_excitatory))
+        sliced_weights_inhibitory = make_slice(weights_inhibitory, t, end, indices_inhibitory)
+        plot_data["weights_inhibitory_min"] = merge_lists_of_points(sliced_weights_inhibitory, min)
+        plot_data["weights_inhibitory_max"] = merge_lists_of_points(sliced_weights_inhibitory, max)
+        plot_data["weights_inhibitory_average"] = merge_lists_of_points(sliced_weights_inhibitory, lambda x, y: x + y,
+                                                                        lambda x: x / len(weights_inhibitory))
+        sliced_weights_both = sliced_weights_excitatory + sliced_weights_inhibitory
+        plot_data["weights_both_min"] = merge_lists_of_points(sliced_weights_both, min)
+        plot_data["weights_both_max"] = merge_lists_of_points(sliced_weights_both, max)
+        plot_data["weights_both_average"] = merge_lists_of_points(sliced_weights_both, lambda x, y: x + y,
+                                                                  lambda x: x / (len(weights_excitatory) +
+                                                                                 len(weights_inhibitory)))
+        suffix = "_" + str(idx).zfill(4) + "_" + format(t, ".4f")
+
+        for name, points in plot_data.items():
+            pathname = os.path.join(cfg.output_dir, sub_dir, name + suffix + cfg.plot_files_extension)
+            print("    Saving plot " + pathname)
+            plot.curve(points, pathname, colours=get_colour_pre_excitatory())
+
+        t += cfg.plot_time_step
+        idx += 1
+
+
+def save_synapse_recording_per_partes(
+        cfg,
+        recording,
+        title,
+        sub_dir
+        ):
+    idx = 0
+    end_time = cfg.start_time + cfg.nsteps * cfg.dt
+    t = cfg.start_time
+    while t < end_time:
+        end = min(t + cfg.plot_time_step, end_time)
+
+        suffix = "_" + str(idx).zfill(4) + "_" + format(t, ".4f")
+        for var, points in recording.items():
+            pathname = os.path.join(cfg.output_dir, sub_dir, "synapse_" + title + "_" + var + "_" + suffix +
+                                    cfg.plot_files_extension)
+            print("    Saving plot " + pathname)
+            if "excitatory" in title:
+                colour = get_colour_pre_excitatory()
+            elif "inhibitory" in title:
+                colour = get_colour_pre_inhibitory()
+            else:
+                colour = get_colour_pre_excitatory_and_inhibitory()
+            plot.curve(list(filter(lambda p: t <= p[0] and p[0] < end, points)), pathname, colours=colour, title=title)
+
+        t += cfg.plot_time_step
+        idx += 1
+
+
 def evaluate(cfg):
     assert isinstance(cfg, config.configuration)
 
@@ -395,6 +498,42 @@ def evaluate(cfg):
             cfg.start_time + cfg.nsteps * cfg.dt,
             cfg.plot_time_step
             )
+        save_weights_recording_per_partes(
+            cfg,
+            [recording[cell.get_excitatory_synapses()[i].get_weight_variable_name()]
+             for i, recording in enumerate(cell.get_excitatory_synapses_recording())],
+            [recording[cell.get_inhibitory_synapses()[i].get_weight_variable_name()]
+             for i, recording in enumerate(cell.get_inhibitory_synapses_recording())],
+            sub_dir
+            )
+        if len(cell.get_excitatory_synapses_recording()) > 0:
+            save_synapse_recording_per_partes(
+                cfg,
+                cell.get_excitatory_synapses_recording()[0],
+                "excitatory_0",
+                sub_dir
+                )
+        if len(cell.get_excitatory_synapses_recording()) > 1:
+            save_synapse_recording_per_partes(
+                cfg,
+                cell.get_excitatory_synapses_recording()[-1],
+                "excitatory_" + str(len(cell.get_excitatory_synapses_recording()) - 1),
+                sub_dir
+                )
+        if len(cell.get_inhibitory_synapses_recording()) > 0:
+            save_synapse_recording_per_partes(
+                cfg,
+                cell.get_inhibitory_synapses_recording()[0],
+                "inhibitory_0",
+                sub_dir
+                )
+        if len(cell.get_inhibitory_synapses_recording()) > 1:
+            save_synapse_recording_per_partes(
+                cfg,
+                cell.get_inhibitory_synapses_recording()[-1],
+                "inhibitory_" + str(len(cell.get_inhibitory_synapses_recording()) - 1),
+                sub_dir
+                )
 
         def compute_normalised_weights(spikes, syn, points):
             weights = []
