@@ -1,5 +1,4 @@
 import numpy
-import matplotlib.pyplot as plt
 
 
 class distribution:
@@ -130,14 +129,7 @@ def mkhist(events, nbins=100):
 
 def get_standard_spike_noise():
     s = numpy.random.exponential(1, 100000)
-    count, bins, ignored = plt.hist(s, 500, normed=True)
-    plt.close()
-    n = min([len(count), len(bins)])
-    assert n >= 300
-    hist = {}
-    for i in range(n):
-        assert bins[i] not in hist
-        hist[float(bins[i])] = float(count[i]) # float(abs(count[i] - 1.0 * (1.0 - numpy.sqrt(1 + count[i]))))
+    hist = mkhist(s, 500)
     xhist = {}
     keys = sorted(hist.keys())
     for idx in range(0, min(300, len(keys))):
