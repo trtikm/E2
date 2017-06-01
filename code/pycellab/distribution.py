@@ -128,7 +128,7 @@ def mkhist(events, nbins=100):
 
 
 def get_standard_spike_noise():
-    s = numpy.random.exponential(1, 100000)
+    s = numpy.random.exponential(1, 10000)
     hist = mkhist(s, 500)
     xhist = {}
     keys = sorted(hist.keys())
