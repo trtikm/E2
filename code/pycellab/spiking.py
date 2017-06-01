@@ -426,8 +426,8 @@ def save_synapse_recording_per_partes(
         idx += 1
 
 
-def evaluate(cfg):
-    assert isinstance(cfg, config.configuration)
+def evaluate_neuron_with_input_synapses(cfg):
+    assert isinstance(cfg, config.NeuronWithInputSynapses)
 
     print("Evaluating the configuration '" + cfg.name + "'.")
 
@@ -595,18 +595,11 @@ def evaluate_synapse_and_spike_noise(cfg):
 
 
 def main(cmdline):
-    if cmdline.evaluate:
-        for cfg in config.get_registered_configurations():
-            if cfg.name == cmdline.evaluate:
-                evaluate(cfg)
-                return 0
-    else:
-        for cfg in config.get_registered_configurations():
-            evaluate(cfg)
-
-    for cfg in config.get_registered_configurations_2():
+    for cfg in config.get_registered_configurations():
         if cmdline.evaluate is None or cfg["name"] == cmdline.evaluate:
-            if cfg["class_name"] == config.SynapseAndSpikeNoise.__name__:
+            if cfg["class_name"] == config.NeuronWithInputSynapses.__name__:
+                evaluate_neuron_with_input_synapses(config.construct_experiment(cfg))
+            elif cfg["class_name"] == config.SynapseAndSpikeNoise.__name__:
                 evaluate_synapse_and_spike_noise(config.construct_experiment(cfg))
             else:
                 print("ERROR: There is not defined the evaluation function for configuration class '" +
@@ -628,11 +621,8 @@ if __name__ == "__main__":
                     "Individual experiments are fully defined in so called 'configurations'.\n"
                     "To evaluate an experiment specify the name of its configuration.",
         epilog="Here is the list of all available configurations:\n\n" +
-               "\n\n".join(["* " + cfg.name + "\n\n" + cfg.description
-                            for cfg in config.get_registered_configurations()]) +
-               "\n\n" +
                "\n\n".join(["* " + cfg["name"] + "\n\n" + cfg["description"]
-                            for cfg in config.get_registered_configurations_2()])
+                            for cfg in config.get_registered_configurations()])
         )
     parser.add_argument(
         "--evaluate", type=str, default=None,

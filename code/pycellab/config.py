@@ -16,8 +16,9 @@ def _output_root_dir():
         return __get_my_dir()
 
 
-class configuration:
+class NeuronWithInputSynapses:
     def __init__(self,
+                 name,
                  start_time,
                  dt,
                  nsteps,
@@ -27,10 +28,8 @@ class configuration:
                  inhibitory_noise_distributions,
                  excitatory_synapses,
                  inhibitory_synapses,
-                 output_dir,
                  plot_files_extension,
-                 plot_time_step,
-                 description
+                 plot_time_step
                  ):
         assert dt > 0.0
         assert nsteps >= 0
@@ -45,7 +44,7 @@ class configuration:
         assert False not in list(map(lambda x: len(x) == len(inhibitory_noise_distributions), inhibitory_synapses))
         assert plot_files_extension.lower() == ".svg" or plot_files_extension.lower() == ".png"
         assert plot_time_step > 0.0
-
+        self.name = name
         self.start_time = start_time
         self.dt = dt
         self.nsteps = nsteps
@@ -55,11 +54,9 @@ class configuration:
         self.inhibitory_noise_distributions = inhibitory_noise_distributions
         self.excitatory_synapses = excitatory_synapses
         self.inhibitory_synapses = inhibitory_synapses
-        self.output_dir = output_dir
+        self.output_dir = os.path.abspath(os.path.join(_output_root_dir(), name))
         self.plot_files_extension = plot_files_extension.lower()
-        self.name = os.path.basename(self.output_dir)
         self.plot_time_step = plot_time_step
-        self.description = description
         self.are_equal_excitatory_noise_distributions = len(self.excitatory_noise_distributions) > 0
         for d in self.excitatory_noise_distributions:
             if d.get_histogram() != self.excitatory_noise_distributions[0].get_histogram():
@@ -77,328 +74,342 @@ class configuration:
                 self.inhibitory_noise_distributions[0].get_histogram()
             )
 
+    @staticmethod
+    def leaky_integrate_and_fire_const_input(my_precomputed_full_name):
+        """
+        A simulation of a 'leaky integrate and fire' neuron with a constant
+        input current. strong enough to trigger constant firing of the neuron.
+        """
+        dt = 0.001
+        return NeuronWithInputSynapses(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=dt,
+            nsteps=1000,
+            num_sub_iterations=[1],
+            cell_soma=[soma.leaky_integrate_and_fire(
+                initial_potential=-70,
+                initial_input=40.0,
+                resting_potential=-65,
+                firing_potential=-55,
+                saturation_potential=-70,
+                potential_cooling_coef=-58.0,
+                input_cooling_coef=-250.0 * 4.0,
+                psp_max_potential=-50.0,
+                spike_magnitude=40.0,
+                integrator_function=integrator.midpoint
+                )],
+            excitatory_noise_distributions=[distribution.distribution({1.0*dt: 1.0})],
+            inhibitory_noise_distributions=[],
+            excitatory_synapses=[[synapse.synapse.constant()]],
+            inhibitory_synapses=[[]],
+            plot_files_extension=".png",
+            plot_time_step=1.0
+            )
 
-def leaky_integrate_and_fire_const_input():
-    dt = 0.001
-    return configuration(
-        start_time=0.0,
-        dt=dt,
-        nsteps=1000,
-        num_sub_iterations=[1],
-        cell_soma=[soma.leaky_integrate_and_fire(
-            initial_potential=-70,
-            initial_input=40.0,
-            resting_potential=-65,
-            firing_potential=-55,
-            saturation_potential=-70,
-            potential_cooling_coef=-58.0,
-            input_cooling_coef=-250.0 * 4.0,
-            psp_max_potential=-50.0,
-            spike_magnitude=40.0,
-            integrator_function=integrator.midpoint
-            )],
-        excitatory_noise_distributions=[distribution.distribution({1.0*dt: 1.0})],
-        inhibitory_noise_distributions=[],
-        excitatory_synapses=[[synapse.synapse.constant()]],
-        inhibitory_synapses=[[]],
-        output_dir=os.path.join(_output_root_dir(), "leaky_integrate_and_fire_const_input"),
-        plot_files_extension=".png",
-        plot_time_step=1.0,
-        description="A simulation of a 'leaky integrate and fire' neuron with a constant input current. "
-                    "strong enough to trigger constant firing of the neuron."
-        )
+    @staticmethod
+    def leaky_integrate_and_fire_input_800ex_200in_std_noise(my_precomputed_full_name):
+        """
+        A simulation of a 'leaky integrate and fire' neuron with a 800
+        excitatory and 200 inhibitory input spike trains, all with the
+        standard noise distribution. Weights of all synapses is 1.
+        """
+        num_excitatory = 800
+        num_inhibitory = 200
+        excitatory_noise = distribution.get_standard_spike_noise()
+        inhibitory_noise = excitatory_noise
+        return NeuronWithInputSynapses(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=1000,
+            num_sub_iterations=[1],
+            cell_soma=[soma.leaky_integrate_and_fire(
+                initial_potential=-70,
+                initial_input=40.0,
+                resting_potential=-65,
+                firing_potential=-55,
+                saturation_potential=-70,
+                potential_cooling_coef=-58.0,
+                input_cooling_coef=-250.0,
+                psp_max_potential=-50.0,
+                spike_magnitude=1.0,
+                integrator_function=integrator.midpoint
+                )],
+            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
+            inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
+            plot_files_extension=".png",
+            plot_time_step=1.0
+            )
 
+    @staticmethod
+    def izhikevich_regular_spiking_input_800ex_200in_std_noise(my_precomputed_full_name):
+        """
+        A simulation of a 'izhikevich regular spiking' neuron with a 800
+        excitatory and 200 inhibitory input spike trains, all with the standard
+        noise distribution. Weights of all synapses is 1. Spike magnitude is
+        0.15. This neuron typically creates excitatory synapses to other
+        neurons. These neurons are the most common in the cortex.
+        """
+        num_excitatory = 800
+        num_inhibitory = 200
+        excitatory_noise = distribution.get_standard_spike_noise()
+        inhibitory_noise = excitatory_noise
+        return NeuronWithInputSynapses(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=1000,
+            num_sub_iterations=[1],
+            cell_soma=[soma.izhikevich.regular_spiking(spike_magnitude=0.15)],
+            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
+            inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
+            plot_files_extension=".png",
+            plot_time_step=1.0
+            )
 
-def leaky_integrate_and_fire_input_800ex_200in_std_noise():
-    num_excitatory = 800
-    num_inhibitory = 200
-    excitatory_noise = distribution.get_standard_spike_noise()
-    inhibitory_noise = excitatory_noise
-    return configuration(
-        start_time=0.0,
-        dt=0.001,
-        nsteps=1000,
-        num_sub_iterations=[1],
-        cell_soma=[soma.leaky_integrate_and_fire(
-            initial_potential=-70,
-            initial_input=40.0,
-            resting_potential=-65,
-            firing_potential=-55,
-            saturation_potential=-70,
-            potential_cooling_coef=-58.0,
-            input_cooling_coef=-250.0,
-            psp_max_potential=-50.0,
-            spike_magnitude=1.0,
-            integrator_function=integrator.midpoint
-            )],
-        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
-        inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
-        output_dir=os.path.join(_output_root_dir(), "leaky_integrate_and_fire_input_800ex_200in_std_noise"),
-        plot_files_extension=".png",
-        plot_time_step=1.0,
-        description="A simulation of a 'leaky integrate and fire' neuron with a 800 excitatory and 200 "
-                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
-                    "all synapses is 1."
-        )
+    @staticmethod
+    def izhikevich_chattering_input_800ex_200in_std_noise(my_precomputed_full_name):
+        """
+        A simulation of a 'izhikevich chattering' neuron with a 800
+        excitatory and 200 inhibitory input spike trains, all with the standard
+        noise distribution. Weights of all synapses is 1. Spike magnitude is
+        0.15. This neuron typically creates excitatory synapses to other
+        neurons.
+        """
+        num_excitatory = 800
+        num_inhibitory = 200
+        excitatory_noise = distribution.get_standard_spike_noise()
+        inhibitory_noise = excitatory_noise
+        return NeuronWithInputSynapses(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=1000,
+            num_sub_iterations=[1],
+            cell_soma=[soma.izhikevich.chattering(spike_magnitude=0.15)],
+            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
+            inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
+            plot_files_extension=".png",
+            plot_time_step=1.0
+            )
 
+    @staticmethod
+    def izhikevich_fast_spiking_input_800ex_200in_std_noise(my_precomputed_full_name):
+        """
+        A simulation of a 'izhikevich fast spiking' neuron with a 800
+        excitatory and 200 inhibitory input spike trains, all with the standard
+        noise distribution. Weights of all synapses is 1. Spike magnitude is
+        0.15. This neuron typically creates inhibitory synapses to other
+        neurons.
+        """
+        num_excitatory = 800
+        num_inhibitory = 200
+        excitatory_noise = distribution.get_standard_spike_noise()
+        inhibitory_noise = excitatory_noise
+        return NeuronWithInputSynapses(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=1000,
+            num_sub_iterations=[1],
+            cell_soma=[soma.izhikevich.fast_spiking(spike_magnitude=0.15)],
+            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
+            inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
+            plot_files_extension=".png",
+            plot_time_step=1.0
+            )
 
-def izhikevich_regular_spiking_input_800ex_200in_std_noise():
-    num_excitatory = 800
-    num_inhibitory = 200
-    excitatory_noise = distribution.get_standard_spike_noise()
-    inhibitory_noise = excitatory_noise
-    return configuration(
-        start_time=0.0,
-        dt=0.001,
-        nsteps=1000,
-        num_sub_iterations=[1],
-        cell_soma=[soma.izhikevich.regular_spiking(spike_magnitude=0.15)],
-        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
-        inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
-        output_dir=os.path.join(_output_root_dir(), "izhikevich_regular_spiking_input_800ex_200in_std_noise"),
-        plot_files_extension=".png",
-        plot_time_step=1.0,
-        description="A simulation of a 'izhikevich regular spiking' neuron with a 800 excitatory and 200 "
-                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
-                    "all synapses is 1. Spike magnitude is 0.15. This neuron typically creates excitatory "
-                    "synapses to other neurons. These neurons are the most common in the cortex."
-        )
+    @staticmethod
+    def hodgkin_huxley_input_800ex_200in_std_noise(my_precomputed_full_name):
+        """
+        A simulation of a 'hodgkin-huxley' neuron with a 800 excitatory and
+        200 inhibitory input spike trains, all with the standard noise
+        distribution. Weights of all synapses is 1. Spike magnitude is
+        0.15.
+        """
+        num_excitatory = 800
+        num_inhibitory = 200
+        excitatory_noise = distribution.get_standard_spike_noise()
+        inhibitory_noise = excitatory_noise
+        return NeuronWithInputSynapses(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=1000,
+            num_sub_iterations=[100],
+            cell_soma=[soma.hodgkin_huxley(
+                spike_magnitude=0.15,
+                integrator_function=integrator.midpoint
+                )],
+            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
+            inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
+            plot_files_extension=".png",
+            plot_time_step=1.0
+            )
 
+    @staticmethod
+    def wilson_reguar_spiking_input_800ex_200in_std_noise(my_precomputed_full_name):
+        """
+        A simulation of a 'wilson's regular spiking' neuron with a 800
+        excitatory and 200 inhibitory input spike trains, all with the
+        standard noise distribution. Weights of all synapses is 1. Spike
+        magnitude is 1.0.
+        """
+        num_excitatory = 800
+        num_inhibitory = 200
+        excitatory_noise = distribution.get_standard_spike_noise()
+        inhibitory_noise = excitatory_noise
+        return NeuronWithInputSynapses(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=1000,
+            num_sub_iterations=[100],
+            cell_soma=[soma.wilson.regular_spiking()],
+            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
+            inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
+            plot_files_extension=".png",
+            plot_time_step=1.0
+            )
 
-def izhikevich_chattering_input_800ex_200in_std_noise():
-    num_excitatory = 800
-    num_inhibitory = 200
-    excitatory_noise = distribution.get_standard_spike_noise()
-    inhibitory_noise = excitatory_noise
-    return configuration(
-        start_time=0.0,
-        dt=0.001,
-        nsteps=1000,
-        num_sub_iterations=[1],
-        cell_soma=[soma.izhikevich.chattering(spike_magnitude=0.15)],
-        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
-        inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
-        output_dir=os.path.join(_output_root_dir(), "izhikevich_chattering_input_800ex_200in_std_noise"),
-        plot_files_extension=".png",
-        plot_time_step=1.0,
-        description="A simulation of a 'izhikevich chattering' neuron with a 800 excitatory and 200 "
-                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
-                    "all synapses is 1. Spike magnitude is 0.15. This neuron typically creates excitatory "
-                    "synapses to other neurons."
-        )
+    @staticmethod
+    def wilson_fast_spiking_input_800ex_200in_std_noise(my_precomputed_full_name):
+        """
+        A simulation of a 'wilson's fast spiking' neuron with a 800
+        excitatory and 200 inhibitory input spike trains, all with the
+        standard noise distribution. Weights of all synapses is 1.
+        Spike magnitude is 1.0.
+        """
+        num_excitatory = 800
+        num_inhibitory = 200
+        excitatory_noise = distribution.get_standard_spike_noise()
+        inhibitory_noise = excitatory_noise
+        return NeuronWithInputSynapses(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=1000,
+            num_sub_iterations=[100],
+            cell_soma=[soma.wilson.fast_spiking()],
+            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
+            inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
+            plot_files_extension=".png",
+            plot_time_step=1.0
+            )
 
+    @staticmethod
+    def wilson_bursting_input_800ex_200in_std_noise(my_precomputed_full_name):
+        """
+        A simulation of a 'wilson's bursting' neuron with a 800
+        excitatory and 200 inhibitory input spike trains, all with
+        the standard noise distribution. Weights of all synapses is 1.
+        Spike magnitude is 1.0.
+        """
+        num_excitatory = 800
+        num_inhibitory = 200
+        excitatory_noise = distribution.get_standard_spike_noise()
+        inhibitory_noise = excitatory_noise
+        return NeuronWithInputSynapses(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=1000,
+            num_sub_iterations=[100],
+            cell_soma=[soma.wilson.bursting()],
+            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
+            inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
+            plot_files_extension=".png",
+            plot_time_step=1.0
+            )
 
-def izhikevich_fast_spiking_input_800ex_200in_std_noise():
-    num_excitatory = 800
-    num_inhibitory = 200
-    excitatory_noise = distribution.get_standard_spike_noise()
-    inhibitory_noise = excitatory_noise
-    return configuration(
-        start_time=0.0,
-        dt=0.001,
-        nsteps=1000,
-        num_sub_iterations=[1],
-        cell_soma=[soma.izhikevich.fast_spiking(spike_magnitude=0.15)],
-        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
-        inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
-        output_dir=os.path.join(_output_root_dir(), "izhikevich_fast_spiking_input_800ex_200in_std_noise"),
-        plot_files_extension=".png",
-        plot_time_step=1.0,
-        description="A simulation of a 'izhikevich fast spiking' neuron with a 800 excitatory and 200 "
-                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
-                    "all synapses is 1. Spike magnitude is 0.15. This neuron typically creates inhibitory "
-                    "synapses to other neurons."
-        )
+    @staticmethod
+    def izhikevich_hodgkin_huxley_wison_input_800ex_200in_std_noise(my_precomputed_full_name):
+        """
+        A simulation of three neurons 'izhikevich regular spiking', 'izhikevich
+        fast spiking', 'hodgkin-huxley', 'wilson regular spiking', and 'wilson
+        fast spiking', with common spike input trains 800 excitatory and 200
+        inhibitory, all with the standard noise distribution. Initial weights
+        of all synapses of all neurons are 1. Spike magnitude for all neurons
+        is 0.15, except for both wilson neurons for which it is 1.0."
+        """
+        num_excitatory = 800
+        num_inhibitory = 200
+        excitatory_noise = distribution.get_standard_spike_noise()
+        inhibitory_noise = excitatory_noise
+        return NeuronWithInputSynapses(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=1000,
+            num_sub_iterations=[1, 1, 100, 100, 100],
+            cell_soma=[
+                soma.izhikevich.regular_spiking(spike_magnitude=0.15),
+                soma.izhikevich.fast_spiking(spike_magnitude=0.15),
+                soma.hodgkin_huxley(spike_magnitude=0.15),
+                soma.wilson.regular_spiking(),
+                soma.wilson.fast_spiking(),
+                ],
+            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_synapses=[
+                [synapse.synapse.constant() for _ in range(num_excitatory)],
+                [synapse.synapse.constant() for _ in range(num_excitatory)],
+                [synapse.synapse.constant() for _ in range(num_excitatory)],
+                [synapse.synapse.constant() for _ in range(num_excitatory)],
+                [synapse.synapse.constant() for _ in range(num_excitatory)]
+                ],
+            inhibitory_synapses=[
+                [synapse.synapse.constant() for _ in range(num_inhibitory)],
+                [synapse.synapse.constant() for _ in range(num_inhibitory)],
+                [synapse.synapse.constant() for _ in range(num_inhibitory)],
+                [synapse.synapse.constant() for _ in range(num_inhibitory)],
+                [synapse.synapse.constant() for _ in range(num_inhibitory)]
+                ],
+            plot_files_extension=".png",
+            plot_time_step=1.0
+            )
 
-
-def hodgkin_huxley_input_800ex_200in_std_noise():
-    num_excitatory = 800
-    num_inhibitory = 200
-    excitatory_noise = distribution.get_standard_spike_noise()
-    inhibitory_noise = excitatory_noise
-    return configuration(
-        start_time=0.0,
-        dt=0.001,
-        nsteps=1000,
-        num_sub_iterations=[100],
-        cell_soma=[soma.hodgkin_huxley(
-            spike_magnitude=0.15,
-            integrator_function=integrator.midpoint
-            )],
-        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
-        inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
-        output_dir=os.path.join(_output_root_dir(), "hodgkin_huxley_input_800ex_200in_std_noise"),
-        plot_files_extension=".png",
-        plot_time_step=1.0,
-        description="A simulation of a 'hodgkin-huxley' neuron with a 800 excitatory and 200 "
-                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
-                    "all synapses is 1. Spike magnitude is 0.15."
-        )
-
-
-def wilson_reguar_spiking_input_800ex_200in_std_noise():
-    num_excitatory = 800
-    num_inhibitory = 200
-    excitatory_noise = distribution.get_standard_spike_noise()
-    inhibitory_noise = excitatory_noise
-    return configuration(
-        start_time=0.0,
-        dt=0.001,
-        nsteps=1000,
-        num_sub_iterations=[100],
-        cell_soma=[soma.wilson.regular_spiking()],
-        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
-        inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
-        output_dir=os.path.join(_output_root_dir(), "wilson_reguar_spiking_input_800ex_200in_std_noise"),
-        plot_files_extension=".png",
-        plot_time_step=1.0,
-        description="A simulation of a 'wilson's regular spiking' neuron with a 800 excitatory and 200 "
-                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
-                    "all synapses is 1. Spike magnitude is 1.0."
-        )
-
-
-def wilson_fast_spiking_input_800ex_200in_std_noise():
-    num_excitatory = 800
-    num_inhibitory = 200
-    excitatory_noise = distribution.get_standard_spike_noise()
-    inhibitory_noise = excitatory_noise
-    return configuration(
-        start_time=0.0,
-        dt=0.001,
-        nsteps=1000,
-        num_sub_iterations=[100],
-        cell_soma=[soma.wilson.fast_spiking()],
-        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
-        inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
-        output_dir=os.path.join(_output_root_dir(), "wilson_fast_spiking_input_800ex_200in_std_noise"),
-        plot_files_extension=".png",
-        plot_time_step=1.0,
-        description="A simulation of a 'wilson's fast spiking' neuron with a 800 excitatory and 200 "
-                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
-                    "all synapses is 1. Spike magnitude is 1.0."
-        )
-
-
-def wilson_bursting_input_800ex_200in_std_noise():
-    num_excitatory = 800
-    num_inhibitory = 200
-    excitatory_noise = distribution.get_standard_spike_noise()
-    inhibitory_noise = excitatory_noise
-    return configuration(
-        start_time=0.0,
-        dt=0.001,
-        nsteps=1000,
-        num_sub_iterations=[100],
-        cell_soma=[soma.wilson.bursting()],
-        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
-        inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
-        output_dir=os.path.join(_output_root_dir(), "wilson_bursting_input_800ex_200in_std_noise"),
-        plot_files_extension=".png",
-        plot_time_step=1.0,
-        description="A simulation of a 'wilson's bursting' neuron with a 800 excitatory and 200 "
-                    "inhibitory input spike trains, all with the standard noise distribution. Weights of "
-                    "all synapses is 1. Spike magnitude is 1.0."
-        )
-
-
-def izhikevich_hodgkin_huxley_wison_input_800ex_200in_std_noise():
-    num_excitatory = 800
-    num_inhibitory = 200
-    excitatory_noise = distribution.get_standard_spike_noise()
-    inhibitory_noise = excitatory_noise
-    return configuration(
-        start_time=0.0,
-        dt=0.001,
-        nsteps=1000,
-        num_sub_iterations=[1, 1, 100, 100, 100],
-        cell_soma=[
-            soma.izhikevich.regular_spiking(spike_magnitude=0.15),
-            soma.izhikevich.fast_spiking(spike_magnitude=0.15),
-            soma.hodgkin_huxley(spike_magnitude=0.15),
-            soma.wilson.regular_spiking(),
-            soma.wilson.fast_spiking(),
-            ],
-        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_synapses=[
-            [synapse.synapse.constant() for _ in range(num_excitatory)],
-            [synapse.synapse.constant() for _ in range(num_excitatory)],
-            [synapse.synapse.constant() for _ in range(num_excitatory)],
-            [synapse.synapse.constant() for _ in range(num_excitatory)],
-            [synapse.synapse.constant() for _ in range(num_excitatory)]
-            ],
-        inhibitory_synapses=[
-            [synapse.synapse.constant() for _ in range(num_inhibitory)],
-            [synapse.synapse.constant() for _ in range(num_inhibitory)],
-            [synapse.synapse.constant() for _ in range(num_inhibitory)],
-            [synapse.synapse.constant() for _ in range(num_inhibitory)],
-            [synapse.synapse.constant() for _ in range(num_inhibitory)]
-            ],
-        output_dir=os.path.join(_output_root_dir(), "izhikevich_hodgkin_huxley_wison_input_800ex_200in_std_noise"),
-        plot_files_extension=".png",
-        plot_time_step=1.0,
-        description="A simulation of three neurons 'izhikevich regular spiking', 'izhikevich fast spiking', "
-                    "'hodgkin-huxley', 'wilson regular spiking', and 'wilson fast spiking', with common spike "
-                    "input trains 800 excitatory and 200 inhibitory, all with the standard noise distribution. "
-                    "Initial weights of all synapses of all neurons are 1. Spike magnitude for all neurons is 0.15, "
-                    "except for both wilson neurons for which it is 1.0."
-        )
-
-
-def development():
-    num_excitatory = 800
-    num_inhibitory = 200
-    excitatory_noise = distribution.get_standard_spike_noise()
-    inhibitory_noise = excitatory_noise
-    return configuration(
-        start_time=0.0,
-        dt=0.001,
-        nsteps=1000,
-        num_sub_iterations=[1],
-        cell_soma=[soma.izhikevich.regular_spiking(spike_magnitude=0.15)],
-        excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-        inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-        excitatory_synapses=[[synapse.synapse.plastic_peek_np() for _ in range(num_excitatory)]],
-        inhibitory_synapses=[[synapse.synapse.plastic_peek_pn() for _ in range(num_inhibitory)]],
-        output_dir=os.path.join(_output_root_dir(), "development"),
-        plot_files_extension=".png",
-        plot_time_step=1.0,
-        description="This is not a genuine configuration. It serves only for development, testing, and "
-                    "bug-fixing of this evaluation system."
-        )
-
-
-def get_registered_configurations():
-    return sorted([
-        leaky_integrate_and_fire_const_input(),
-        leaky_integrate_and_fire_input_800ex_200in_std_noise(),
-        izhikevich_regular_spiking_input_800ex_200in_std_noise(),
-        izhikevich_chattering_input_800ex_200in_std_noise(),
-        izhikevich_fast_spiking_input_800ex_200in_std_noise(),
-        hodgkin_huxley_input_800ex_200in_std_noise(),
-        wilson_reguar_spiking_input_800ex_200in_std_noise(),
-        wilson_fast_spiking_input_800ex_200in_std_noise(),
-        wilson_bursting_input_800ex_200in_std_noise(),
-        izhikevich_hodgkin_huxley_wison_input_800ex_200in_std_noise(),
-        development()
-        ], key=lambda cfg: cfg.output_dir)
+    @staticmethod
+    def development(my_precomputed_full_name):
+        """
+        This is not a genuine configuration. It serves only for development,
+        testing, and bug-fixing of this evaluation system.
+        """
+        num_excitatory = 800
+        num_inhibitory = 200
+        excitatory_noise = distribution.get_standard_spike_noise()
+        inhibitory_noise = excitatory_noise
+        return NeuronWithInputSynapses(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=1000,
+            num_sub_iterations=[1],
+            cell_soma=[soma.izhikevich.regular_spiking(spike_magnitude=0.15)],
+            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
+            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_synapses=[[synapse.synapse.plastic_peek_np() for _ in range(num_excitatory)]],
+            inhibitory_synapses=[[synapse.synapse.plastic_peek_pn() for _ in range(num_inhibitory)]],
+            plot_files_extension=".png",
+            plot_time_step=1.0
+            )
 
 
 class SynapseAndSpikeNoise:
@@ -485,13 +496,13 @@ def __list_static_methods_of_local_classes(items_list):
     result = []
     for the_class in __list_local_classes(items_list):
         result += __list_static_methods_of_class(the_class)
-    return result
+    return sorted(result, key=lambda x: x["name"])
 
 
 __automatically_registered_configurations = __list_static_methods_of_local_classes(list(map(eval, dir())))
 
 
-def get_registered_configurations_2():
+def get_registered_configurations():
     return __automatically_registered_configurations
 
 
