@@ -600,19 +600,24 @@ def main(cmdline):
             if cfg.name == cmdline.evaluate:
                 evaluate(cfg)
                 return 0
-        for cfg in config.get_registered_configurations_2():
-            if cfg["name"] == cmdline.evaluate:
+    else:
+        for cfg in config.get_registered_configurations():
+            evaluate(cfg)
+
+    for cfg in config.get_registered_configurations_2():
+        if cmdline.evaluate is None or cfg["name"] == cmdline.evaluate:
+            if cfg["class_name"] == config.SynapseAndSpikeNoise.__name__:
                 evaluate_synapse_and_spike_noise(config.construct_experiment(cfg))
+            else:
+                print("ERROR: There is not defined the evaluation function for configuration class '" +
+                      cfg["class_name"] + "'.")
+                return 1
+            if cmdline.evaluate:
                 return 0
-        print("ERROR: unknown configuration '" + cmdline.evaluate + "'. Use the option "
+    if cmdline.evaluate:
+        print("ERROR: Unknown configuration '" + cmdline.evaluate + "'. Use the option "
               "'--help' to list all available configurations.")
         return 1
-
-    for cfg in config.get_registered_configurations():
-        evaluate(cfg)
-    for cfg in config.get_registered_configurations_2():
-        evaluate_synapse_and_spike_noise(config.construct_experiment(cfg))
-
     return 0
 
 
