@@ -587,48 +587,52 @@ def evaluate(cfg):
     print("  Done.")
 
 
-def main(cmdline):
-    if cmdline.configurations:
-        print("Listing available configurations:\n")
-        for cfg in config.get_registered_configurations():
-            print("* " + cfg.name + "\n\n" + cfg.description + "\n\n")
-        return 0
+def evaluate_synapse_and_spike_noise(cfg):
+    assert isinstance(cfg, config.SynapseAndSpikeNoise)
+    print("Evaluating the configuration '" + cfg.name + "'.")
+    # TODO!
+    print("  Done.")
 
-    if cmdline.eval:
+
+def main(cmdline):
+    if cmdline.evaluate:
         for cfg in config.get_registered_configurations():
-            if cfg.name == cmdline.eval:
+            if cfg.name == cmdline.evaluate:
                 evaluate(cfg)
                 return 0
-        print("ERROR: unknown configuration '" + cmdline.eval + "'. Use the option "
-              "'--configurations' to list all available configurations.")
+        for cfg in config.get_registered_configurations_2():
+            if cfg["name"] == cmdline.evaluate:
+                evaluate_synapse_and_spike_noise(config.construct_experiment(cfg))
+                return 0
+        print("ERROR: unknown configuration '" + cmdline.evaluate + "'. Use the option "
+              "'--help' to list all available configurations.")
         return 1
 
     for cfg in config.get_registered_configurations():
         evaluate(cfg)
+    for cfg in config.get_registered_configurations_2():
+        evaluate_synapse_and_spike_noise(config.construct_experiment(cfg))
 
     return 0
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="This is evaluation system of spiking models of neurons. "
-                    "Individual experiments are defined in so called 'configurations'. "
-                    "You can list all available configuration using '--configurations' "
-                    "option. Then you can pass the name of a chosen configuration to the "
-                    "system via the option '--eval' and that configuration will be evaluated. "
-                    "If no configuration is specified (i.e. the option '--eval' is not present), "
-                    "then the system evaluates all available configurations."
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description="This module provides evaluation of spiking models of neurons and synapses.\n"
+                    "Individual experiments are fully defined in so called 'configurations'.\n"
+                    "To evaluate an experiment specify the name of its configuration.",
+        epilog="Here is the list of all available configurations:\n\n" +
+               "\n\n".join(["* " + cfg.name + "\n\n" + cfg.description
+                            for cfg in config.get_registered_configurations()]) +
+               "\n\n" +
+               "\n\n".join(["* " + cfg["name"] + "\n\n" + cfg["description"]
+                            for cfg in config.get_registered_configurations_2()])
         )
     parser.add_argument(
-        "--configurations", action="store_true",
-        help="Prints names and descriptions of all all available configurations. "
-             "A configuration holds data to initialise and execute the corresponding experiment. "
-             "Use the option '--eval' with the name of one of the listed configurations to run it."
+        "--evaluate", type=str, default=None,
+        help="Evaluate the experiment defined in the configuration of the passed name. Use the option "
+             "--help to list all available configurations. If you omit this option, then all configurations "
+             "will be evaluated in a sequence."
         )
-    parser.add_argument(
-        "--eval", type=str, default=None,
-        help="The system evaluates the configuration of the passed name. Use the option "
-             "'--configurations' to list all available."
-        )
-    # config.__dbg()
     exit(main(parser.parse_args()))
