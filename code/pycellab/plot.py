@@ -63,7 +63,10 @@ def histogram(distrib, pathname, normalised=True, colours=None, title=None, xaxi
     else:
         points = distrib.get_points()
 
-    bar_width = min(map(lambda x: abs(x[1] - x[0]), zip(distrib.get_events()[:-1], distrib.get_events()[1:])))
+    if len(distrib.get_events()) < 2:
+        bar_width = 0.8
+    else:
+        bar_width = min(map(lambda x: abs(x[1] - x[0]), zip(distrib.get_events()[:-1], distrib.get_events()[1:])))
     __write_xplot(
         lambda ax, x, y: ax.bar(x, y, bar_width, color=colours, align="center"),
         points, pathname, title, xaxis_name, faxis_name)

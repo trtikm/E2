@@ -108,15 +108,17 @@ class distribution:
         return self._coefficient_of_variation
 
 
-def mkhist(events, nbins=100):
-    assert nbins > 0.00001
+def mkhist(events, nbins=100, lo=None, hi=None):
+    assert type(nbins) == int and nbins > 0
     if len(events) == 0:
-        return {}
-    lo = min(events)
-    hi = max(events)
+        return {}, 1.0
+    if lo is None:
+        lo = min(events)
+    if hi is None:
+        hi = max(events)
     dx = (hi - lo) / nbins
     if dx < 0.00001:
-        return {events[0]: len(events)}
+        return {events[0]: len(events)}, 1.0
     hist = {}
     for x in events:
         b = int((x - lo) / dx)
@@ -124,12 +126,12 @@ def mkhist(events, nbins=100):
             hist[b] += 1
         else:
             hist[b] = 1
-    return hist
+    return hist, dx
 
 
 def get_standard_spike_noise():
     s = numpy.random.exponential(1, 10000)
-    hist = mkhist(s, 500)
+    hist, _ = mkhist(s, 500)
     xhist = {}
     keys = sorted(hist.keys())
     for idx in range(0, min(300, len(keys))):
@@ -146,28 +148,10 @@ def get_standard_spike_noise():
     return distribution(xhist)
 
 
-def make_isi_histogram(time_events, minimal_time_delta, start_time=0.0):
-    assert minimal_time_delta > 0.0
-    hist = {}
-    t = start_time
-    dt = minimal_time_delta
-    for event in sorted(time_events):
-        if event > t + dt / 2.0:
-            delta = event - t
-            if delta in hist:
-                hist[delta] += 1
-            else:
-                found = False
-                for key in hist.keys():
-                    if abs(key - delta) < dt / 2.0:
-                        hist[key] += 1
-                        found = True
-                        break
-                if not found:
-                    hist[delta] = 1
-            while t < event:
-                t += dt
-    return hist
+def make_isi_histogram(time_events, nbins, start_time, end_time):
+    isi = [time_events[i] - time_events[i - 1] for i in range(1, len(time_events))]
+    raw_hist, dt = mkhist(isi, nbins, start_time, end_time)
+    return dict([(bin_index * dt, count) for bin_index, count in raw_hist.items()])
 
 
 def make_counts_histogram(time_events, start_bin=0, bin_size=1):

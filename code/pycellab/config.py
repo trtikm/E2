@@ -16,7 +16,35 @@ def _output_root_dir():
         return __get_my_dir()
 
 
-class NeuronWithInputSynapses:
+class CommonProps:
+    def __init__(self,
+                 name,
+                 start_time,
+                 dt,
+                 nsteps,
+                 plot_files_extension,
+                 plot_time_step
+                 ):
+        assert isinstance(name, str)
+        assert isinstance(start_time, float)
+        assert isinstance(dt, float)
+        assert isinstance(nsteps, int)
+        assert isinstance(plot_files_extension, str)
+        assert isinstance(plot_time_step, float)
+        assert dt > 0.0
+        assert nsteps >= 0
+        assert plot_files_extension.lower() == ".svg" or plot_files_extension.lower() == ".png"
+        assert plot_time_step > 0.0
+        self.name = name
+        self.start_time = start_time
+        self.dt = dt
+        self.nsteps = nsteps
+        self.output_dir = os.path.abspath(os.path.join(_output_root_dir(), name))
+        self.plot_files_extension = plot_files_extension.lower()
+        self.plot_time_step = plot_time_step
+
+
+class NeuronWithInputSynapses(CommonProps):
     def __init__(self,
                  name,
                  start_time,
@@ -31,8 +59,6 @@ class NeuronWithInputSynapses:
                  plot_files_extension,
                  plot_time_step
                  ):
-        assert dt > 0.0
-        assert nsteps >= 0
         assert isinstance(num_sub_iterations, list)
         assert False not in list(map(lambda x: type(x) is int and x > 0, num_sub_iterations))
         assert isinstance(cell_soma, list)
@@ -42,21 +68,13 @@ class NeuronWithInputSynapses:
         assert len(cell_soma) == len(num_sub_iterations)
         assert False not in list(map(lambda x: len(x) == len(excitatory_noise_distributions), excitatory_synapses))
         assert False not in list(map(lambda x: len(x) == len(inhibitory_noise_distributions), inhibitory_synapses))
-        assert plot_files_extension.lower() == ".svg" or plot_files_extension.lower() == ".png"
-        assert plot_time_step > 0.0
-        self.name = name
-        self.start_time = start_time
-        self.dt = dt
-        self.nsteps = nsteps
+        super(NeuronWithInputSynapses, self).__init__(name, start_time, dt, nsteps, plot_files_extension, plot_time_step)
         self.num_sub_iterations = num_sub_iterations
         self.cell_soma = cell_soma
         self.excitatory_noise_distributions = excitatory_noise_distributions
         self.inhibitory_noise_distributions = inhibitory_noise_distributions
         self.excitatory_synapses = excitatory_synapses
         self.inhibitory_synapses = inhibitory_synapses
-        self.output_dir = os.path.abspath(os.path.join(_output_root_dir(), name))
-        self.plot_files_extension = plot_files_extension.lower()
-        self.plot_time_step = plot_time_step
         self.are_equal_excitatory_noise_distributions = len(self.excitatory_noise_distributions) > 0
         for d in self.excitatory_noise_distributions:
             if d.get_histogram() != self.excitatory_noise_distributions[0].get_histogram():
@@ -412,7 +430,7 @@ class NeuronWithInputSynapses:
             )
 
 
-class SynapseAndSpikeNoise:
+class SynapseAndSpikeNoise(CommonProps):
     def __init__(self,
                  name,
                  start_time,
@@ -424,23 +442,13 @@ class SynapseAndSpikeNoise:
                  plot_files_extension,
                  plot_time_step
                  ):
-        assert dt > 0.0
-        assert nsteps >= 0
         assert isinstance(the_synapse, synapse.synapse)
         assert isinstance(pre_spikes_distributions, distribution.distribution)
         assert isinstance(post_spikes_distributions, distribution.distribution)
-        assert plot_files_extension.lower() == ".svg" or plot_files_extension.lower() == ".png"
-        assert plot_time_step > 0.0
-        self.start_time = start_time
-        self.dt = dt
-        self.nsteps = nsteps
+        super(SynapseAndSpikeNoise, self).__init__(name, start_time, dt, nsteps, plot_files_extension, plot_time_step)
         self.the_synapse = the_synapse
         self.pre_spikes_distributions = pre_spikes_distributions
         self.post_spikes_distributions = post_spikes_distributions
-        self.name = name
-        self.output_dir = os.path.abspath(os.path.join(_output_root_dir(), name))
-        self.plot_files_extension = plot_files_extension.lower()
-        self.plot_time_step = plot_time_step
 
     @staticmethod
     def development(my_precomputed_full_name):

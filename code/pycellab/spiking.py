@@ -28,6 +28,7 @@ def get_colour_soma():
 
 
 def save_pre_isi_distributions(cfg):
+    assert isinstance(cfg, config.NeuronWithInputSynapses)
     if cfg.are_equal_noise_distributions:
         pathname = os.path.join(cfg.output_dir, "pre_isi_all" + cfg.plot_files_extension)
         print("    Saving plot " + pathname)
@@ -56,10 +57,11 @@ def save_pre_isi_distributions(cfg):
 
 
 def save_post_isi_distribution(cfg, post_spikes, subdir):
+    assert isinstance(cfg, config.CommonProps)
     pathname = os.path.join(cfg.output_dir, subdir, "post_isi" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
     plot.histogram(
-        distribution.make_isi_histogram(post_spikes, cfg.dt),
+        distribution.make_isi_histogram(post_spikes, cfg.nsteps, cfg.start_time, cfg.start_time + cfg.nsteps * cfg.dt),
         pathname,
         normalised=False,
         colours=get_colour_post()
@@ -77,6 +79,7 @@ def save_spikes_board(
         sub_dir,
         suffix
         ):
+    assert isinstance(cfg, config.CommonProps)
     pathname = os.path.join(cfg.output_dir, sub_dir, "pre_spikes" + suffix + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
 
@@ -125,6 +128,7 @@ def save_spikes_board_per_partes(
         end_time,
         dt
         ):
+    assert isinstance(cfg, config.CommonProps)
     assert start_time <= end_time and dt > 0.0
     assert len(pre_spikes_excitatory) == len(pre_weights_excitatory)
     assert len(pre_spikes_inhibitory) == len(pre_weights_inhibitory)
@@ -148,14 +152,14 @@ def save_spikes_board_per_partes(
                 while j < len(spikes[i]) and spikes[i][j] < t_end:
                     if spikes[i][j] >= t_start:
                         res_spikes.append(spikes[i][j])
-                        if weights:
+                        if weights is not None:
                             res_weights.append(weights[i][j])
                     j += 1
                 spikes_slice.append(res_spikes)
-                if weights:
+                if weights is not None:
                     weights_slice.append(res_weights)
                 indices[i] = j
-            if weights:
+            if weights is not None:
                 return spikes_slice, weights_slice
             else:
                 return spikes_slice
@@ -182,6 +186,7 @@ def save_spikes_board_per_partes(
 
 
 def save_pre_spike_counts_histograms(cfg, pre_spikes_excitatory, pre_spikes_inhibitory):
+    assert isinstance(cfg, config.CommonProps)
     pathname = os.path.join(cfg.output_dir, "pre_spike_counts_histogram" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
     plot.histogram(
@@ -227,6 +232,7 @@ def save_pre_spike_counts_histograms(cfg, pre_spikes_excitatory, pre_spikes_inhi
 
 
 def save_pre_spike_counts_curves(cfg, pre_spikes_excitatory, pre_spikes_inhibitory, suffix):
+    assert isinstance(cfg, config.CommonProps)
     pathname = os.path.join(cfg.output_dir, "pre_spike_counts_curve" + suffix + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
     plot.curve(
@@ -266,6 +272,7 @@ def save_pre_spike_counts_curves_per_partes(
         end_time,
         dt
         ):
+    assert isinstance(cfg, config.CommonProps)
     assert start_time <= end_time and dt > 0.0
     idx = 0
     t = start_time
@@ -287,6 +294,7 @@ def save_pre_spike_counts_curves_per_partes(
 
 
 def save_soma_recording(cfg, data, title, subdir, suffix):
+    assert isinstance(cfg, config.CommonProps)
     for key, points in data.items():
         pathname = os.path.join(cfg.output_dir, subdir, "soma_" + key + suffix + cfg.plot_files_extension)
         print("    Saving plot " + pathname)
@@ -302,6 +310,7 @@ def save_soma_recording_per_partes(
         end_time,
         dt
         ):
+    assert isinstance(cfg, config.CommonProps)
     assert start_time <= end_time and dt > 0.0
     idx = 0
     t = start_time
@@ -329,6 +338,7 @@ def save_weights_recording_per_partes(
         weights_inhibitory,
         sub_dir
         ):
+    assert isinstance(cfg, config.CommonProps)
     indices_excitatory = [0 for _ in weights_excitatory]
     indices_inhibitory = [0 for _ in weights_inhibitory]
     idx = 0
@@ -355,6 +365,8 @@ def save_weights_recording_per_partes(
             assert all([isinstance(alist, list) for alist in lists])
             assert callable(merge_function)
             merge_result = []
+            if len(lists) == 0:
+                return []
             for i in range(max([len(x) for x in lists])):
                 value = None
                 for alist in lists:
@@ -403,6 +415,11 @@ def save_synapse_recording_per_partes(
         title,
         sub_dir
         ):
+    assert isinstance(cfg, config.CommonProps)
+    if title is not None and len(title) == 0:
+        xtitle = None
+    else:
+        xtitle = title
     idx = 0
     end_time = cfg.start_time + cfg.nsteps * cfg.dt
     t = cfg.start_time
@@ -420,7 +437,7 @@ def save_synapse_recording_per_partes(
                 colour = get_colour_pre_inhibitory()
             else:
                 colour = get_colour_pre_excitatory_and_inhibitory()
-            plot.curve(list(filter(lambda p: t <= p[0] and p[0] < end, points)), pathname, colours=colour, title=title)
+            plot.curve(list(filter(lambda p: t <= p[0] and p[0] < end, points)), pathname, colours=colour, title=xtitle)
 
         t += cfg.plot_time_step
         idx += 1
@@ -590,7 +607,60 @@ def evaluate_neuron_with_input_synapses(cfg):
 def evaluate_synapse_and_spike_noise(cfg):
     assert isinstance(cfg, config.SynapseAndSpikeNoise)
     print("Evaluating the configuration '" + cfg.name + "'.")
-    # TODO!
+
+    print("  Constructing and initialising data structures,")
+    pre_spike_train = spike_train.spike_train(cfg.pre_spikes_distributions, [], cfg.start_time)
+    post_spike_train = spike_train.spike_train(cfg.post_spikes_distributions, [], cfg.start_time)
+    synapse_recording = dict([(var, [(cfg.start_time, value)])
+                              for var, value in cfg.the_synapse.get_variables().items()])
+
+    print("  Starting simulation.")
+    t = cfg.start_time
+    for step in range(cfg.nsteps):
+        print("    " + format(100.0 * step / float(cfg.nsteps), '.1f') + "%", end='\r')
+        cfg.the_synapse.integrate(cfg.dt)
+        if pre_spike_train.on_time_step(t, cfg.dt):
+            cfg.the_synapse.on_pre_synaptic_spike()
+        if post_spike_train.on_time_step(t, cfg.dt):
+            cfg.the_synapse.on_post_synaptic_spike()
+        for key, value in cfg.the_synapse.get_variables().items():
+            synapse_recording[key].append((t + cfg.dt, value))
+        t += cfg.dt
+
+    print("  Saving results.")
+
+    os.makedirs(cfg.output_dir, exist_ok=True)
+
+    pathname = os.path.join(cfg.output_dir, "isi_pre" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plot.histogram(
+        distribution.make_isi_histogram(
+            pre_spike_train.get_spikes(),
+            cfg.nsteps,
+            cfg.start_time,
+            cfg.start_time + cfg.nsteps * cfg.dt
+            ),
+        pathname,
+        normalised=False,
+        colours=get_colour_pre_excitatory_and_inhibitory()
+        )
+
+    pathname = os.path.join(cfg.output_dir, "isi_post" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plot.histogram(
+        distribution.make_isi_histogram(
+            post_spike_train.get_spikes(),
+            cfg.nsteps,
+            cfg.start_time,
+            cfg.start_time + cfg.nsteps * cfg.dt
+            ),
+        pathname,
+        normalised=False,
+        colours=get_colour_pre_excitatory_and_inhibitory()
+        )
+
+    save_synapse_recording_per_partes(cfg, synapse_recording, "", ".")
+
     print("  Done.")
 
 
