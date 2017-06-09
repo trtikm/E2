@@ -1,10 +1,12 @@
 import numpy
+import math
+import bisect
 
 
 class distribution:
     def __init__(self, histogram):
         assert isinstance(histogram, dict)
-        if not histogram or len(histogram) == 0:
+        if histogram is None or len(histogram) == 0:
             self._histogram = {1e23: 0.0}
         else:
             self._histogram = histogram.copy()
@@ -25,7 +27,7 @@ class distribution:
         assert len(self._events_line) + 1 == len(self._bars_line)
         x = sorted(self._histogram.keys())
         for k in self._histogram.keys():
-            if type(k) not in [int, float]:
+            if not (isinstance(k, int) or isinstance(k, float)):
                 x = range(len(self._histogram.keys()))
                 break
         self._probabilities = numpy.array([float(self._histogram[k]) for k in sorted(self._histogram.keys())])
@@ -209,7 +211,129 @@ def make_max_points(pairs, dx=1.0):
     return make_fx_points(pairs, max, dx)
 
 
-def test():
+def make_points_of_normal_distribution(
+        num_points=200,
+        nu=0.0,
+        sigma=1.0,
+        epsilon=None,
+        lo=None,
+        hi=None,
+        normalise=True
+        ):
+    assert num_points > 0
+    a = 1.0 / (sigma * math.sqrt(2.0 * math.pi))
+    if epsilon is None:
+        epsilon = a / (2.0 * num_points)
+    zero_x = math.sqrt(abs(math.log(epsilon * sigma * math.sqrt(2.0 * math.pi)) * 2 * sigma**2)) + nu
+    assert zero_x >= nu
+    # f_zero_x = a * math.e**((-(zero_x - nu)**2) / (2.0 * sigma**2))
+    # print("zero_x = " + str(zero_x))
+    # print("f_zero_x = " + str(f_zero_x))
+    # print("f_max = " + str(a))
+    if lo is None:
+        lo = nu - (zero_x - nu)
+    if hi is None:
+        hi = nu + (zero_x - nu)
+    assert hi - lo > 0.001
+    dx = (hi - lo) / num_points
+    points = [(x, a * math.e**((-(x - nu)**2) / (2.0 * sigma**2))) for x in numpy.arange(lo, hi, dx, float)]
+    if normalise:
+        points = [((p[0] - lo) / (hi - lo), p[1] / a) for p in points]
+    points = sorted(points, key=lambda p: p[0])
+    points[0] = (points[0][0], 0.0)
+    points[-1] = (points[-1][0], 0.0)
+    return points
+
+
+def points_of_hermit_cubic_spline(p0, m0, p1, m1, num_points=100):
+    def h00(t):
+        return 2.0 * t**3 - 3.0 * t**2 + 1
+
+    def h10(t):
+        return t**3 - 2.0 * t**2 + t
+
+    def h01(t):
+        return -2.0 * t**3 + 3.0 * t**2
+
+    def h11(t):
+        return t**3 - t**2
+
+    def point(t):
+        return (h00(t)*p0[0] + h10(t)*m0[0] + h01(t)*p1[0] + h11(t)*m1[0],
+                h00(t)*p0[1] + h10(t)*m0[1] + h01(t)*p1[1] + h11(t)*m1[1])
+
+    assert num_points > 1
+    return [point(i / float(num_points - 1)) for i in range(num_points)]
+
+
+def make_points_of_hermit_cubic_approximation_of_normal_distribution(
+        peek_x=0.5,
+        mult_m01=1.0,
+        mult_mx=1.0,
+        num_points=200
+        ):
+    assert peek_x > 0.001 and peek_x < 0.999
+    assert mult_m01 > 0.001
+    assert mult_mx > 0.001
+    assert num_points > 0
+    k_m0 = (1.1 - 0.1) / (0.5 - 0.1)
+    k_m1 = -k_m0
+    k_mx = -(0.4 - 0.2) / (0.5 - 0.1)
+    d_05 = (0.5, 0.4, 1.1, 1.1)
+    return points_of_hermit_cubic_spline(
+                (0.0, 0.0),
+                (mult_m01 * (d_05[2] + k_m0 * (peek_x - d_05[0])), 0.0),
+                (peek_x, 1.0),
+                (mult_mx * (d_05[1] + k_mx * abs(peek_x - d_05[0])), 0.0),
+                int(num_points / 2.0)
+                )[:-1] +\
+           points_of_hermit_cubic_spline(
+                (peek_x, 1.0),
+                (mult_mx * (d_05[1] + k_mx * abs(peek_x - d_05[0])), 0.0),
+                (1.0, 0.0),
+                (mult_m01 * (d_05[3] + k_m1 * (peek_x - d_05[0])), 0.0),
+                num_points - (int(num_points / 2.0) - 1)
+                )
+
+
+def move_scale_curve_points(
+        points,
+        scale_x=1.0,
+        scale_y=1.0,
+        pow_y=1.0,
+        shift_x=0.0
+        ):
+    assert scale_x > 0.001
+    assert scale_y > 0.001
+    return [(scale_x * p[0] + shift_x, (scale_y * p[1])**pow_y) for p in points]
+
+
+def mkhist_from_curve_points(points, num_bars=100):
+    assert len(points) > 1
+    assert num_bars > 0
+    points = sorted(points, key=lambda p: p[0])
+    x = [p[0] for p in points]
+    lo = min(x)
+    hi = max(x)
+    assert hi > lo + 0.0001
+    y = [p[1] for p in points]
+    hist = {}
+    for i in range(num_bars):
+        t = i / float(num_bars - 1)
+        t = lo + t * (hi - lo)
+        assert t not in hist
+        j = bisect.bisect_left(x, t)
+        assert j < len(x)
+        if j == 0 or x[j] - x[j - 1] < 0.0001:
+            hist[t] = y[j]
+        else:
+            assert x[j - 1] < t
+            hist[t] = y[j - 1] + (t - x[j - 1]) * ((y[j] - y[j - 1]) / (x[j] - x[j - 1]))
+            assert hist[t] >= 0.0
+    return hist
+
+
+def _test_distribution():
     def doit(hist, n):
         xhist = hist.copy()
         for k in xhist.keys():
@@ -234,6 +358,7 @@ def test():
         for k in sorted(hist.keys()):
             print(str(k) + ": " + str(hist[k]) + " ; " + str(xhist[k]))
 
+    print("Starting test 'distribution._test_distribution()'")
     for hist in [
             {1: 1},
             {123: 10},
@@ -243,3 +368,61 @@ def test():
             ]:
         print("*******************************************************")
         show(hist, doit(hist, 10000))
+    print("Done.")
+
+
+def _test_hermit_adapted_historgram_of_normal_distribution():
+    import plot
+    import os
+    from config import output_root_dir
+    print("Starting test 'distribution._test_hermit_adapted_historgram_of_normal_distribution()'")
+    out_dir = os.path.join(output_root_dir(), "tests", "distribution", "normal_distribution")
+    print("  Generating graph " + os.path.join(out_dir, "ns_curve.png"))
+    plot.curve(
+        make_points_of_normal_distribution(
+            num_points=100,
+            nu=0.0,
+            sigma=1.0,
+            normalise=True
+            ),
+        os.path.join(out_dir, "ns_curve.png")
+        )
+    for peek_x in numpy.arange(0.1, 0.95, 0.1, float):
+        print("  Computing points of hermit cubic at peek " + str(peek_x) + ".")
+        points = move_scale_curve_points(
+                    make_points_of_hermit_cubic_approximation_of_normal_distribution(
+                        peek_x=peek_x,
+                        mult_m01=1.0,
+                        mult_mx=1.0,
+                        num_points=100
+                        ),
+                    scale_x=0.298,
+                    scale_y=10,
+                    pow_y=1.5,
+                    shift_x=0.002
+                    )
+        print("  Saving " + os.path.join(out_dir, "ns_curve_hermit_adapted_" + format(peek_x, ".2f") + ".png"))
+        plot.curve(
+            points,
+            os.path.join(out_dir, "ns_curve_hermit_adapted_" + format(peek_x, ".2f") + ".png")
+            )
+        print("  Computing histogram from the hermit cubic.")
+        hist = mkhist_from_curve_points(points, num_bars=300)
+        print("  Saving " + os.path.join(out_dir, "ns_hist_adapted_" + format(peek_x, ".2f") + ".png"))
+        plot.histogram(
+            hist,
+            os.path.join(out_dir, "ns_hist_adapted_" + format(peek_x, ".2f") + ".png"),
+            normalised=False
+            )
+        print("  Saving " + os.path.join(out_dir, "ns_hist_normalised_adapted_" + format(peek_x, ".2f") + ".png"))
+        plot.histogram(
+            hist,
+            os.path.join(out_dir, "ns_hist_normalised_adapted_" + format(peek_x, ".2f") + ".png"),
+            normalised=True
+            )
+    print("Done.")
+
+
+if __name__ == "__main__":
+    _test_distribution()
+    _test_hermit_adapted_historgram_of_normal_distribution()
