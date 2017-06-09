@@ -9,7 +9,7 @@ def __get_my_dir():
     return os.path.dirname(__file__)
 
 
-def _output_root_dir():
+def output_root_dir():
     if str(__get_my_dir()).replace("\\", "/").endswith("E2/code/pycellab"):
         return os.path.normpath(os.path.join(__get_my_dir(), "..", "..", "dist", "evaluation", "pycellab"))
     else:
@@ -39,7 +39,7 @@ class CommonProps:
         self.start_time = start_time
         self.dt = dt
         self.nsteps = nsteps
-        self.output_dir = os.path.abspath(os.path.join(_output_root_dir(), name))
+        self.output_dir = os.path.abspath(os.path.join(output_root_dir(), name))
         self.plot_files_extension = plot_files_extension.lower()
         self.plot_time_step = plot_time_step
 
