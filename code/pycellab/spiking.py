@@ -665,6 +665,60 @@ def evaluate_synapse_and_spike_noise(cfg):
     print("  Done.")
 
 
+def evaluate_pre_post_spike_noises_differences(cfg):
+    assert isinstance(cfg, config.PrePostSpikeNoisesDifferences)
+    print("Evaluating the configuration '" + cfg.name + "'.")
+
+    print("  Constructing and initialising data structures,")
+    pre_spike_train = spike_train.spike_train(cfg.pre_spikes_distributions, [], cfg.start_time)
+    post_spike_train = spike_train.spike_train(cfg.post_spikes_distributions, [], cfg.start_time)
+
+    print("  Starting simulation.")
+    t = cfg.start_time
+    for step in range(cfg.nsteps):
+        print("    " + format(100.0 * step / float(cfg.nsteps), '.1f') + "%", end='\r')
+        if pre_spike_train.on_time_step(t, cfg.dt):
+            pass
+        if post_spike_train.on_time_step(t, cfg.dt):
+            pass
+        t += cfg.dt
+
+    print("  Saving results.")
+
+    os.makedirs(cfg.output_dir, exist_ok=True)
+
+    pathname = os.path.join(cfg.output_dir, "isi_pre" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plot.histogram(
+        distribution.make_isi_histogram(
+            pre_spike_train.get_spikes(),
+            cfg.nsteps,
+            cfg.start_time,
+            cfg.start_time + cfg.nsteps * cfg.dt
+            ),
+        pathname,
+        normalised=False,
+        colours=get_colour_pre_excitatory_and_inhibitory()
+        )
+
+    pathname = os.path.join(cfg.output_dir, "isi_post" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plot.histogram(
+        distribution.make_isi_histogram(
+            post_spike_train.get_spikes(),
+            cfg.nsteps,
+            cfg.start_time,
+            cfg.start_time + cfg.nsteps * cfg.dt
+            ),
+        pathname,
+        normalised=False,
+        colours=get_colour_pre_excitatory_and_inhibitory()
+        )
+
+    print("  Done.")
+
+
+
 def main(cmdline):
     if cmdline.test is not None and cmdline.evaluate is None:
         for tst in tests.get_registered_tests():
@@ -680,6 +734,8 @@ def main(cmdline):
                 evaluate_neuron_with_input_synapses(config.construct_experiment(cfg))
             elif cfg["class_name"] == config.SynapseAndSpikeNoise.__name__:
                 evaluate_synapse_and_spike_noise(config.construct_experiment(cfg))
+            elif cfg["class_name"] == config.PrePostSpikeNoisesDifferences.__name__:
+                evaluate_pre_post_spike_noises_differences(config.construct_experiment(cfg))
             else:
                 print("ERROR: There is not defined the evaluation function for configuration class '" +
                       cfg["class_name"] + "'.")

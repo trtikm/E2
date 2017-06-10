@@ -469,6 +469,45 @@ class SynapseAndSpikeNoise(CommonProps):
             )
 
 
+class PrePostSpikeNoisesDifferences(CommonProps):
+    def __init__(self,
+                 name,
+                 start_time,
+                 dt,
+                 nsteps,
+                 plot_files_extension,
+                 plot_time_step,
+                 pre_spikes_distributions,
+                 post_spikes_distributions
+                 ):
+        assert isinstance(pre_spikes_distributions, distribution.distribution)
+        assert isinstance(post_spikes_distributions, distribution.distribution)
+        super(PrePostSpikeNoisesDifferences, self).__init__(
+            name, start_time, dt, nsteps, plot_files_extension, plot_time_step
+            )
+        self.pre_spikes_distributions = pre_spikes_distributions
+        self.post_spikes_distributions = post_spikes_distributions
+
+    @staticmethod
+    def same_pre_post_noise(my_precomputed_full_name):
+        """
+        The experiment generates pre- and post- spike trains for the same
+        distribution and computes statistical plots and histograms of time
+        differences between individual pre- and post- spikes. Also, ISI
+        histograms are reconstructed from spike trains.
+        """
+        return PrePostSpikeNoisesDifferences(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=1000,
+            plot_files_extension=".png",
+            plot_time_step=1.0,
+            pre_spikes_distributions=distribution.hermit_distribution(0.1),
+            post_spikes_distributions=distribution.hermit_distribution(0.1)
+            )
+
+
 ####################################################################################################
 ####################################################################################################
 ####################################################################################################
