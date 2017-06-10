@@ -1,5 +1,5 @@
-import integrator
 import numpy
+import integrator
 
 
 class leaky_integrate_and_fire:
