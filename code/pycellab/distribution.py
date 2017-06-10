@@ -28,7 +28,7 @@ class distribution:
         x = sorted(self._histogram.keys())
         for k in self._histogram.keys():
             if not (isinstance(k, int) or isinstance(k, float)):
-                x = range(len(self._histogram.keys()))
+                x = [i for i in range(len(x))]
                 break
         self._probabilities = numpy.array([float(self._histogram[k]) for k in sorted(self._histogram.keys())])
         self._probabilities *= 1.0 / (sum(self._probabilities) + 0.00001)
@@ -333,96 +333,30 @@ def mkhist_from_curve_points(points, num_bars=100):
     return hist
 
 
-def _test_distribution():
-    def doit(hist, n):
-        xhist = hist.copy()
-        for k in xhist.keys():
-            xhist[k] = 0
-        isi = distribution(hist)
-        print(isi)
-        for _ in range(n):
-            e = isi.next_event()
-            assert e in hist.keys()
-            xhist[e] += 1
-        osum = 0.0
-        xsum = 0.0
-        for k in hist.keys():
-            osum += hist[k]
-            xsum += xhist[k]
-        if xsum > 0:
-            for k in xhist.keys():
-                xhist[k] *= osum / xsum
-        return xhist
-
-    def show(hist, xhist):
-        for k in sorted(hist.keys()):
-            print(str(k) + ": " + str(hist[k]) + " ; " + str(xhist[k]))
-
-    print("Starting test 'distribution._test_distribution()'")
-    for hist in [
-            {1: 1},
-            {123: 10},
-            {1: 1, 2: 1, 3: 1, 4: 1, 5: 1},
-            {"A": 2, "B": 4, "C": 10, "D": 2, "E": 3},
-            {10: 60, 20: 100, 30: 65, 40: 35, 50: 20, 60: 10, 70: 5, 80: 3, 90: 2, 100: 1}
-            ]:
-        print("*******************************************************")
-        show(hist, doit(hist, 10000))
-    print("Done.")
-
-
-def _test_hermit_adapted_historgram_of_normal_distribution():
-    import plot
-    import os
-    from config import output_root_dir
-    print("Starting test 'distribution._test_hermit_adapted_historgram_of_normal_distribution()'")
-    out_dir = os.path.join(output_root_dir(), "tests", "distribution", "normal_distribution")
-    print("  Generating graph " + os.path.join(out_dir, "ns_curve.png"))
-    plot.curve(
-        make_points_of_normal_distribution(
-            num_points=100,
-            nu=0.0,
-            sigma=1.0,
-            normalise=True
-            ),
-        os.path.join(out_dir, "ns_curve.png")
-        )
-    for peek_x in numpy.arange(0.1, 0.95, 0.1, float):
-        print("  Computing points of hermit cubic at peek " + str(peek_x) + ".")
-        points = move_scale_curve_points(
-                    make_points_of_hermit_cubic_approximation_of_normal_distribution(
-                        peek_x=peek_x,
-                        mult_m01=1.0,
-                        mult_mx=1.0,
-                        num_points=100
+def hermit_distribution(
+        peek_x=0.5,
+        scale_x=0.298,
+        scale_y=10,
+        pow_y=1.5,
+        shift_x=0.002,
+        num_bars=300,
+        mult_m01=1.0,
+        mult_mx=1.0
+        ):
+    return __package__.distribution(
+                mkhist_from_curve_points(
+                    move_scale_curve_points(
+                        make_points_of_hermit_cubic_approximation_of_normal_distribution(
+                            peek_x=peek_x,
+                            mult_m01=mult_m01,
+                            mult_mx=mult_mx,
+                            num_points=max(2, int(num_bars / 3))
+                            ),
+                        scale_x=scale_x,
+                        scale_y=scale_y,
+                        pow_y=pow_y,
+                        shift_x=shift_x
                         ),
-                    scale_x=0.298,
-                    scale_y=10,
-                    pow_y=1.5,
-                    shift_x=0.002
+                    num_bars=num_bars
                     )
-        print("  Saving " + os.path.join(out_dir, "ns_curve_hermit_adapted_" + format(peek_x, ".2f") + ".png"))
-        plot.curve(
-            points,
-            os.path.join(out_dir, "ns_curve_hermit_adapted_" + format(peek_x, ".2f") + ".png")
-            )
-        print("  Computing histogram from the hermit cubic.")
-        hist = mkhist_from_curve_points(points, num_bars=300)
-        print("  Saving " + os.path.join(out_dir, "ns_hist_adapted_" + format(peek_x, ".2f") + ".png"))
-        plot.histogram(
-            hist,
-            os.path.join(out_dir, "ns_hist_adapted_" + format(peek_x, ".2f") + ".png"),
-            normalised=False
-            )
-        print("  Saving " + os.path.join(out_dir, "ns_hist_normalised_adapted_" + format(peek_x, ".2f") + ".png"))
-        plot.histogram(
-            hist,
-            os.path.join(out_dir, "ns_hist_normalised_adapted_" + format(peek_x, ".2f") + ".png"),
-            normalised=True
-            )
-    print("Done.")
-
-
-if __name__ == "__main__":
-    _test_distribution()
-    _test_hermit_adapted_historgram_of_normal_distribution()
+                )
