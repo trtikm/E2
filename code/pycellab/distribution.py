@@ -343,7 +343,7 @@ def hermit_distribution(
         mult_m01=1.0,
         mult_mx=1.0
         ):
-    return __package__.distribution(
+    return distribution(
                 mkhist_from_curve_points(
                     move_scale_curve_points(
                         make_points_of_hermit_cubic_approximation_of_normal_distribution(
