@@ -1,6 +1,7 @@
 import os
 import argparse
 import config
+import tests
 import neuron
 import spike_train
 import distribution
@@ -665,6 +666,14 @@ def evaluate_synapse_and_spike_noise(cfg):
 
 
 def main(cmdline):
+    if cmdline.test is not None and cmdline.evaluate is None:
+        for tst in tests.get_registered_tests():
+            if tst["name"] == cmdline.test:
+                tests.run_test(tst)
+                return 0
+        print("ERROR: There is no test of the name '" + str(cmdline.test) + "'. Use the option "
+              "'--help' to list all available tests.")
+        return 1
     for cfg in config.get_registered_configurations():
         if cmdline.evaluate is None or cfg["name"] == cmdline.evaluate:
             if cfg["class_name"] == config.NeuronWithInputSynapses.__name__:
@@ -677,8 +686,8 @@ def main(cmdline):
                 return 1
             if cmdline.evaluate:
                 return 0
-    if cmdline.evaluate:
-        print("ERROR: Unknown configuration '" + cmdline.evaluate + "'. Use the option "
+    if cmdline.evaluate is not None:
+        print("ERROR: Unknown configuration '" + str(cmdline.evaluate) + "'. Use the option "
               "'--help' to list all available configurations.")
         return 1
     return 0
@@ -692,12 +701,19 @@ if __name__ == "__main__":
                     "To evaluate an experiment specify the name of its configuration.",
         epilog="Here is the list of all available configurations:\n\n" +
                "\n\n".join(["* " + cfg["name"] + "\n\n" + cfg["description"]
-                            for cfg in config.get_registered_configurations()])
+                            for cfg in config.get_registered_configurations()]) +
+               "\n\nHere is the list of all tests:\n\n" +
+               "\n\n".join(["* " + tst["name"] + "\n\n" + tst["description"]
+                            for tst in tests.get_registered_tests()])
         )
     parser.add_argument(
         "--evaluate", type=str, default=None,
         help="Evaluate the experiment defined in the configuration of the passed name. Use the option "
              "--help to list all available configurations. If you omit this option, then all configurations "
              "will be evaluated in a sequence."
+        )
+    parser.add_argument(
+        "--test", type=str,
+        help="Runs the test of the passed name. Use the option --help to list all available tests."
         )
     exit(main(parser.parse_args()))
