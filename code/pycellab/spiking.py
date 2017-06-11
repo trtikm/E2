@@ -687,13 +687,20 @@ def evaluate_pre_post_spike_noises_differences(cfg):
     post_spike_train = spike_train.spike_train(cfg.post_spikes_distributions, [], cfg.start_time)
 
     print("  Starting simulation.")
+    delta_post_pre = []
     t = cfg.start_time
     for step in range(cfg.nsteps):
         print("    " + format(100.0 * step / float(cfg.nsteps), '.1f') + "%", end='\r')
-        if pre_spike_train.on_time_step(t, cfg.dt):
-            pass
-        if post_spike_train.on_time_step(t, cfg.dt):
-            pass
+        is_pre_spike = pre_spike_train.on_time_step(t, cfg.dt)
+        is_post_spike = post_spike_train.on_time_step(t, cfg.dt)
+        if is_pre_spike and is_post_spike:
+            delta_post_pre.append((t + cfg.dt, 0.0))
+        elif is_pre_spike:
+            if len(post_spike_train.get_spikes()) > 0:
+                delta_post_pre.append((t + cfg.dt, post_spike_train.get_spikes()[-1] - (t + cfg.dt)))
+        elif is_post_spike:
+            if len(pre_spike_train.get_spikes()) > 0:
+                delta_post_pre.append((t + cfg.dt, (t + cfg.dt) - pre_spike_train.get_spikes()[-1]))
         t += cfg.dt
 
     print("  Saving results.")
@@ -746,6 +753,17 @@ def evaluate_pre_post_spike_noises_differences(cfg):
         "",
         ""
         )
+
+    plot.curve_per_partes(
+        delta_post_pre,
+        os.path.join(cfg.output_dir, "delta_post_pre" + cfg.plot_files_extension),
+        cfg.start_time,
+        cfg.start_time + cfg.nsteps * cfg.dt,
+        cfg.plot_time_step,
+        lambda p: print("    Saving plot " + p),
+        marker="x"
+        )
+
     print("  Done.")
 
 
