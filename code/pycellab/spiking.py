@@ -700,6 +700,10 @@ def evaluate_pre_post_spike_noises_differences(cfg):
 
     os.makedirs(cfg.output_dir, exist_ok=True)
 
+    pathname = os.path.join(cfg.output_dir, "isi_pre_orig" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plot.histogram(cfg.pre_spikes_distributions, pathname)
+
     pathname = os.path.join(cfg.output_dir, "isi_pre" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
     plot.histogram(
@@ -713,6 +717,10 @@ def evaluate_pre_post_spike_noises_differences(cfg):
         normalised=False,
         colours=get_colour_pre_excitatory_and_inhibitory()
         )
+
+    pathname = os.path.join(cfg.output_dir, "isi_post_orig" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plot.histogram(cfg.pre_spikes_distributions, pathname)
 
     pathname = os.path.join(cfg.output_dir, "isi_post" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
