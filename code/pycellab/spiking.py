@@ -82,7 +82,7 @@ def save_spikes_board(
         title=None
         ):
     assert isinstance(cfg, config.CommonProps)
-    pathname = os.path.join(cfg.output_dir, sub_dir, "pre_spikes" + suffix + cfg.plot_files_extension)
+    pathname = os.path.join(cfg.output_dir, sub_dir, "spikes_board" + suffix + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
 
     if len(pre_spikes_excitatory) == 1 and len(pre_spikes_inhibitory) == 0 and len(post_spikes) == 1:
