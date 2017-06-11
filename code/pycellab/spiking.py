@@ -78,14 +78,42 @@ def save_spikes_board(
         post_spikes,
         soma_name,
         sub_dir,
-        suffix
+        suffix,
+        title=None
         ):
     assert isinstance(cfg, config.CommonProps)
     pathname = os.path.join(cfg.output_dir, sub_dir, "pre_spikes" + suffix + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
 
-    stride = -max(int((len(pre_spikes_excitatory) + len(pre_spikes_inhibitory))/100), 5)
-    base_shift = -max(int((len(pre_spikes_excitatory) + len(pre_spikes_inhibitory))/10 + stride / 2), 5)
+    if len(pre_spikes_excitatory) == 1 and len(pre_spikes_inhibitory) == 0 and len(post_spikes) == 1:
+        stride = 0
+        base_shift = -1
+        if title is None:
+            title = (
+                "pre[0]=" + str(len(pre_spikes_excitatory[0])) +
+                ", post[" + str(base_shift + stride) + "]=" + str(len(post_spikes[0]))
+                )
+        colours = ([get_colour_pre_excitatory() for _ in range(len(pre_spikes_excitatory[0]))] +
+                   [get_colour_post() for _ in range(len(post_spikes[0]))])
+    else:
+        stride = -max(int((len(pre_spikes_excitatory) + len(pre_spikes_inhibitory))/100), 5)
+        base_shift = -max(int((len(pre_spikes_excitatory) + len(pre_spikes_inhibitory))/10 + stride / 2), 5)
+        if title is None:
+            title = (
+                "pre-total=" +
+                        str(len(pre_spikes_excitatory) + len(pre_spikes_inhibitory)) +
+                ", pre-excitatory[0," +
+                        str(len(pre_spikes_excitatory)) + ")=" +
+                        str(len(pre_spikes_excitatory)) +
+                ", pre-inhibitory[" +
+                        str(len(pre_spikes_excitatory)) + "," +
+                        str(len(pre_spikes_excitatory) + len(pre_spikes_inhibitory)) + ")=" +
+                        str(len(pre_spikes_inhibitory)) +
+                ", post[" + str(base_shift + stride) + "]=" + soma_name
+                )
+        colours = ([(weight, 0.1, 1.0 - weight) for weights in pre_weights_excitatory for weight in weights] +
+                   [(0.0, weight, 1.0 - weight) for weights in pre_weights_inhibitory for weight in weights] +
+                   [(0.0, 0.0, 0.0) for spikes in post_spikes for _ in spikes])
 
     plot.scatter(
         points=[(pre_spikes_excitatory[i][j], i)
@@ -98,21 +126,8 @@ def save_spikes_board(
                 for i in range(len(post_spikes))
                 for j in range(len(post_spikes[i]))],
         pathname=pathname,
-        colours=[(weight, 0.1, 1.0 - weight) for weights in pre_weights_excitatory for weight in weights] +
-                [(0.0, weight, 1.0 - weight) for weights in pre_weights_inhibitory for weight in weights] +
-                [(0.0, 0.0, 0.0) for spikes in post_spikes for _ in spikes],
-        title=(
-            "pre-total=" +
-                    str(len(pre_spikes_excitatory) + len(pre_spikes_inhibitory)) +
-            ", pre-excitatory[0," +
-                    str(len(pre_spikes_excitatory)) + ")=" +
-                    str(len(pre_spikes_excitatory)) +
-            ", pre-inhibitory[" +
-                    str(len(pre_spikes_excitatory)) + "," +
-                    str(len(pre_spikes_excitatory) + len(pre_spikes_inhibitory)) + ")=" +
-                    str(len(pre_spikes_inhibitory)) +
-            ", post[" + str(base_shift + stride) + "]=" + soma_name
-            )
+        colours=colours,
+        title=title
         )
 
 
@@ -125,16 +140,16 @@ def save_spikes_board_per_partes(
         post_spikes,
         soma_name,
         sub_dir,
-        start_time,
-        end_time,
-        dt
+        title=None
         ):
     assert isinstance(cfg, config.CommonProps)
-    assert start_time <= end_time and dt > 0.0
     assert len(pre_spikes_excitatory) == len(pre_weights_excitatory)
     assert len(pre_spikes_inhibitory) == len(pre_weights_inhibitory)
     indices_excitatory = [0 for _ in pre_spikes_excitatory]
     indices_inhibitory = [0 for _ in pre_spikes_inhibitory]
+    start_time = cfg.start_time
+    end_time = cfg.start_time + cfg.nsteps * cfg.dt
+    dt = cfg.plot_time_step
     indices_post = [0]
     idx = 0
     t = start_time
@@ -179,7 +194,8 @@ def save_spikes_board_per_partes(
             make_slice([post_spikes], None, t, end, indices_post),
             soma_name,
             sub_dir,
-            "_" + str(idx).zfill(4) + "_" + format(t, ".4f")
+            "_" + str(idx).zfill(4) + "_" + format(t, ".4f"),
+            title
             )
 
         t += dt
@@ -596,10 +612,7 @@ def evaluate_neuron_with_input_synapses(cfg):
                 ) for i, train in enumerate(inhibitory_spike_trains)],
             cell.get_spikes(),
             cell.get_soma().get_name(),
-            sub_dir,
-            cfg.start_time,
-            cfg.start_time + cfg.nsteps * cfg.dt,
-            cfg.plot_time_step
+            sub_dir
             )
 
     print("  Done.")
@@ -715,8 +728,17 @@ def evaluate_pre_post_spike_noises_differences(cfg):
         colours=get_colour_pre_excitatory_and_inhibitory()
         )
 
+    save_spikes_board_per_partes(
+        cfg,
+        [pre_spike_train.get_spikes()],
+        [],
+        [[1.0 for _ in range(len(pre_spike_train.get_spikes()))]],
+        [],
+        post_spike_train.get_spikes(),
+        "",
+        ""
+        )
     print("  Done.")
-
 
 
 def main(cmdline):
