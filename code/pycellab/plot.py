@@ -51,6 +51,7 @@ def histogram(distrib, pathname, normalised=True, colours=None, title=None, xaxi
         else:
             title = ""
         title += (
+            "sum bars=" + format(sum([value for _, value in distrib.get_histogram().items()]), ".3f") + ", "
             "median=" + format(distrib.get_median(), ".3f") + ", "
             "mean=" + format(distrib.get_mean(), ".3f") + ", "
             "mean frequency=" + format(1.0 / (distrib.get_mean() + 0.0001), ".3f") + ", "
