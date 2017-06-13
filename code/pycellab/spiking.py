@@ -764,6 +764,18 @@ def evaluate_pre_post_spike_noises_differences(cfg):
         marker="x"
         )
 
+    pathname = os.path.join(cfg.output_dir, "delta_post_pre_hist" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plot.histogram(
+        distribution.make_counts_histogram(
+            [p[1] for p in delta_post_pre],
+            cfg.start_time,
+            cfg.dt
+            ),
+        pathname,
+        normalised=False
+        )
+
     print("  Done.")
 
 
