@@ -493,7 +493,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
         self.synaptic_input_cooler = synaptic_input_cooler
 
     @staticmethod
-    def same_pre_post_noise(my_precomputed_full_name):
+    def pre_1_post_1_clipped(my_precomputed_full_name):
         """
         The experiment generates pre- and post- spike trains for the same
         distribution and computes statistical plots and histograms of time
@@ -504,11 +504,91 @@ class PrePostSpikeNoisesDifferences(CommonProps):
             name=my_precomputed_full_name,
             start_time=0.0,
             dt=0.001,
-            nsteps=1000,
+            nsteps=60000,
             plot_files_extension=".png",
             plot_time_step=1.0,
             save_per_partes_plots=True,
             pre_spikes_distributions=distribution.hermit_distribution(0.1),
+            post_spikes_distributions=distribution.hermit_distribution(0.1),
+            synaptic_input_cooler=synapse.SynapticInputCooler.default(clip_var_to_their_ranges=True)
+            )
+
+    @staticmethod
+    def pre_1_post_2_clipped(my_precomputed_full_name):
+        """
+        The experiment generates pre- and post- spike trains for Hermit
+        distributions with peeks at 0.1 and 0.2 respectively. The synaptic
+        input variables are clipped to the range [0, spike_magnitude].
+        """
+        return PrePostSpikeNoisesDifferences(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=60000,
+            plot_files_extension=".png",
+            plot_time_step=1.0,
+            save_per_partes_plots=True,
+            pre_spikes_distributions=distribution.hermit_distribution(0.1),
+            post_spikes_distributions=distribution.hermit_distribution(0.2),
+            synaptic_input_cooler=synapse.SynapticInputCooler.default(clip_var_to_their_ranges=True)
+            )
+
+    @staticmethod
+    def pre_1_post_3_clipped(my_precomputed_full_name):
+        """
+        The experiment generates pre- and post- spike trains for Hermit
+        distributions with peeks at 0.1 and 0.3 respectively. The synaptic
+        input variables are clipped to the range [0, spike_magnitude].
+        """
+        return PrePostSpikeNoisesDifferences(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=60000,
+            plot_files_extension=".png",
+            plot_time_step=1.0,
+            save_per_partes_plots=True,
+            pre_spikes_distributions=distribution.hermit_distribution(0.1),
+            post_spikes_distributions=distribution.hermit_distribution(0.3),
+            synaptic_input_cooler=synapse.SynapticInputCooler.default(clip_var_to_their_ranges=True)
+            )
+
+    @staticmethod
+    def pre_2_post_1_clipped(my_precomputed_full_name):
+        """
+        The experiment generates pre- and post- spike trains for Hermit
+        distributions with peeks at 0.2 and 0.1 respectively. The synaptic
+        input variables are clipped to the range [0, spike_magnitude].
+        """
+        return PrePostSpikeNoisesDifferences(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=60000,
+            plot_files_extension=".png",
+            plot_time_step=1.0,
+            save_per_partes_plots=True,
+            pre_spikes_distributions=distribution.hermit_distribution(0.2),
+            post_spikes_distributions=distribution.hermit_distribution(0.1),
+            synaptic_input_cooler=synapse.SynapticInputCooler.default(clip_var_to_their_ranges=True)
+            )
+
+    @staticmethod
+    def pre_3_post_1_clipped(my_precomputed_full_name):
+        """
+        The experiment generates pre- and post- spike trains for Hermit
+        distributions with peeks at 0.3 and 0.1 respectively. The synaptic
+        input variables are clipped to the range [0, spike_magnitude].
+        """
+        return PrePostSpikeNoisesDifferences(
+            name=my_precomputed_full_name,
+            start_time=0.0,
+            dt=0.001,
+            nsteps=60000,
+            plot_files_extension=".png",
+            plot_time_step=1.0,
+            save_per_partes_plots=True,
+            pre_spikes_distributions=distribution.hermit_distribution(0.3),
             post_spikes_distributions=distribution.hermit_distribution(0.1),
             synaptic_input_cooler=synapse.SynapticInputCooler.default(clip_var_to_their_ranges=True)
             )
