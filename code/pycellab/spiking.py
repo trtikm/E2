@@ -783,11 +783,11 @@ def evaluate_pre_post_spike_noises_differences(cfg):
             [],
             post_spike_train.get_spikes(),
             "",
-            ""
+            "spikes_board"
             )
         plot.curve_per_partes(
             delta_post_pre,
-            os.path.join(cfg.output_dir, "delta_post_pre" + cfg.plot_files_extension),
+            os.path.join(cfg.output_dir, "delta_post_pre", "delta_post_pre" + cfg.plot_files_extension),
             cfg.start_time,
             cfg.start_time + cfg.nsteps * cfg.dt,
             cfg.plot_time_step,
@@ -797,7 +797,7 @@ def evaluate_pre_post_spike_noises_differences(cfg):
         for var, points in synaptic_input_vars.items():
             plot.curve_per_partes(
                 points,
-                os.path.join(cfg.output_dir, "synaptic_" + var + cfg.plot_files_extension),
+                os.path.join(cfg.output_dir, "synaptic_" + var, "synaptic_" + var + cfg.plot_files_extension),
                 cfg.start_time,
                 cfg.start_time + cfg.nsteps * cfg.dt,
                 cfg.plot_time_step,
@@ -807,7 +807,7 @@ def evaluate_pre_post_spike_noises_differences(cfg):
         if delta_input_vars is not None:
             plot.curve_per_partes(
                 delta_input_vars,
-                os.path.join(cfg.output_dir, "delta_input_vars" + cfg.plot_files_extension),
+                os.path.join(cfg.output_dir, "delta_input_vars", "delta_input_vars" + cfg.plot_files_extension),
                 cfg.start_time,
                 cfg.start_time + cfg.nsteps * cfg.dt,
                 cfg.plot_time_step,

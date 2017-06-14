@@ -40,6 +40,8 @@ def curve_per_partes(points, pathname, start, end, step, on_plot_part_callback_f
     assert start < end and step > 0.0001
     assert len(points) > 0
     assert on_plot_part_callback_fn is None or callable(on_plot_part_callback_fn)
+    if not os.path.exists(os.path.dirname(pathname)):
+        os.mkdir(os.path.dirname(pathname))
     base_pathname, extension = os.path.splitext(pathname)
     x = start
     idx = 0
