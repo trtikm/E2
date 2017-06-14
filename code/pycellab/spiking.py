@@ -750,7 +750,7 @@ def evaluate_pre_post_spike_noises_differences(cfg):
 
     pathname = os.path.join(cfg.output_dir, "isi_post_orig" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
-    plot.histogram(cfg.pre_spikes_distributions, pathname)
+    plot.histogram(cfg.post_spikes_distributions, pathname)
 
     pathname = os.path.join(cfg.output_dir, "isi_post" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
