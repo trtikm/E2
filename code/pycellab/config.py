@@ -477,16 +477,20 @@ class PrePostSpikeNoisesDifferences(CommonProps):
                  nsteps,
                  plot_files_extension,
                  plot_time_step,
+                 save_per_partes_plots,
                  pre_spikes_distributions,
-                 post_spikes_distributions
+                 post_spikes_distributions,
+                 synaptic_input_cooler
                  ):
         assert isinstance(pre_spikes_distributions, distribution.distribution)
         assert isinstance(post_spikes_distributions, distribution.distribution)
         super(PrePostSpikeNoisesDifferences, self).__init__(
             name, start_time, dt, nsteps, plot_files_extension, plot_time_step
             )
+        self.save_per_partes_plots = save_per_partes_plots
         self.pre_spikes_distributions = pre_spikes_distributions
         self.post_spikes_distributions = post_spikes_distributions
+        self.synaptic_input_cooler = synaptic_input_cooler
 
     @staticmethod
     def same_pre_post_noise(my_precomputed_full_name):
@@ -503,8 +507,10 @@ class PrePostSpikeNoisesDifferences(CommonProps):
             nsteps=1000,
             plot_files_extension=".png",
             plot_time_step=1.0,
+            save_per_partes_plots=True,
             pre_spikes_distributions=distribution.hermit_distribution(0.1),
-            post_spikes_distributions=distribution.hermit_distribution(0.1)
+            post_spikes_distributions=distribution.hermit_distribution(0.1),
+            synaptic_input_cooler=synapse.SynapticInputCooler.default(clip_var_to_their_ranges=True)
             )
 
 

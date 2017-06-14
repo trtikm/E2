@@ -1,4 +1,5 @@
 import os
+import shutil
 import argparse
 import config
 import tests
@@ -505,7 +506,10 @@ def evaluate_neuron_with_input_synapses(cfg):
 
     print("  Saving results.")
 
+    if os.path.exists(cfg.output_dir):
+        shutil.rmtree(cfg.output_dir)
     os.makedirs(cfg.output_dir, exist_ok=True)
+
     save_pre_isi_distributions(cfg)
     save_pre_spike_counts_histograms(
         cfg,
@@ -643,6 +647,8 @@ def evaluate_synapse_and_spike_noise(cfg):
 
     print("  Saving results.")
 
+    if os.path.exists(cfg.output_dir):
+        shutil.rmtree(cfg.output_dir)
     os.makedirs(cfg.output_dir, exist_ok=True)
 
     pathname = os.path.join(cfg.output_dir, "isi_pre" + cfg.plot_files_extension)
@@ -688,11 +694,26 @@ def evaluate_pre_post_spike_noises_differences(cfg):
 
     print("  Starting simulation.")
     delta_post_pre = []
+    if cfg.synaptic_input_cooler is not None:
+        synaptic_input_vars = dict([(var, [(cfg.start_time, value)])
+                                   for var, value in cfg.synaptic_input_cooler.get_variables().items()])
+        assert synaptic_input_vars.keys() == {cfg.synaptic_input_cooler.get_var_pre_name(),
+                                              cfg.synaptic_input_cooler.get_var_post_name()}
+    else:
+        synaptic_input_vars = None
     t = cfg.start_time
     for step in range(cfg.nsteps):
         print("    " + format(100.0 * step / float(cfg.nsteps), '.1f') + "%", end='\r')
         is_pre_spike = pre_spike_train.on_time_step(t, cfg.dt)
         is_post_spike = post_spike_train.on_time_step(t, cfg.dt)
+        if cfg.synaptic_input_cooler is not None:
+            cfg.synaptic_input_cooler.integrate(cfg.dt)
+            if is_pre_spike:
+                cfg.synaptic_input_cooler.on_pre_synaptic_spike()
+            if is_post_spike:
+                cfg.synaptic_input_cooler.on_post_synaptic_spike()
+            for var, value in cfg.synaptic_input_cooler.get_variables().items():
+                synaptic_input_vars[var].append((t + cfg.dt, value))
         if is_pre_spike and is_post_spike:
             delta_post_pre.append((t + cfg.dt, 0.0))
         elif is_pre_spike:
@@ -705,6 +726,8 @@ def evaluate_pre_post_spike_noises_differences(cfg):
 
     print("  Saving results.")
 
+    if os.path.exists(cfg.output_dir):
+        shutil.rmtree(cfg.output_dir)
     os.makedirs(cfg.output_dir, exist_ok=True)
 
     pathname = os.path.join(cfg.output_dir, "isi_pre_orig" + cfg.plot_files_extension)
@@ -743,38 +766,85 @@ def evaluate_pre_post_spike_noises_differences(cfg):
         colours=get_colour_pre_excitatory_and_inhibitory()
         )
 
-    save_spikes_board_per_partes(
-        cfg,
-        [pre_spike_train.get_spikes()],
-        [],
-        [[1.0 for _ in range(len(pre_spike_train.get_spikes()))]],
-        [],
-        post_spike_train.get_spikes(),
-        "",
-        ""
-        )
+    if cfg.synaptic_input_cooler is None:
+        delta_input_vars = None
+    else:
+        pre_points = synaptic_input_vars[cfg.synaptic_input_cooler.get_var_pre_name()]
+        post_points = synaptic_input_vars[cfg.synaptic_input_cooler.get_var_post_name()]
+        assert len(pre_points) == len(post_points)
+        delta_input_vars = [(pre_points[i][0], post_points[i][1] - pre_points[i][1]) for i in range(len(pre_points))]
 
-    plot.curve_per_partes(
-        delta_post_pre,
-        os.path.join(cfg.output_dir, "delta_post_pre" + cfg.plot_files_extension),
-        cfg.start_time,
-        cfg.start_time + cfg.nsteps * cfg.dt,
-        cfg.plot_time_step,
-        lambda p: print("    Saving plot " + p),
-        marker="x"
-        )
+    if cfg.save_per_partes_plots:
+        save_spikes_board_per_partes(
+            cfg,
+            [pre_spike_train.get_spikes()],
+            [],
+            [[1.0 for _ in range(len(pre_spike_train.get_spikes()))]],
+            [],
+            post_spike_train.get_spikes(),
+            "",
+            ""
+            )
+        plot.curve_per_partes(
+            delta_post_pre,
+            os.path.join(cfg.output_dir, "delta_post_pre" + cfg.plot_files_extension),
+            cfg.start_time,
+            cfg.start_time + cfg.nsteps * cfg.dt,
+            cfg.plot_time_step,
+            lambda p: print("    Saving plot " + p),
+            marker="x"
+            )
+        for var, points in synaptic_input_vars.items():
+            plot.curve_per_partes(
+                points,
+                os.path.join(cfg.output_dir, "synaptic_" + var + cfg.plot_files_extension),
+                cfg.start_time,
+                cfg.start_time + cfg.nsteps * cfg.dt,
+                cfg.plot_time_step,
+                lambda p: print("    Saving plot " + p),
+                title="VAR=" + var + ", " + cfg.synaptic_input_cooler.get_short_description()
+                )
+        if delta_input_vars is not None:
+            plot.curve_per_partes(
+                delta_input_vars,
+                os.path.join(cfg.output_dir, "delta_input_vars" + cfg.plot_files_extension),
+                cfg.start_time,
+                cfg.start_time + cfg.nsteps * cfg.dt,
+                cfg.plot_time_step,
+                lambda p: print("    Saving plot " + p),
+                title="[input_post-input_pre], " + cfg.synaptic_input_cooler.get_short_description()
+                )
 
     pathname = os.path.join(cfg.output_dir, "delta_post_pre_hist" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
+    delta_post_pre_values = [p[1] for p in delta_post_pre]
+    delta_post_pre_min = min(delta_post_pre_values)
+    delta_post_pre_max = max(delta_post_pre_values)
     plot.histogram(
         distribution.make_counts_histogram(
-            [p[1] for p in delta_post_pre],
-            cfg.start_time,
-            cfg.dt
+            delta_post_pre_values,
+            0.0,
+            (delta_post_pre_max - delta_post_pre_min) / 500.0
             ),
         pathname,
         normalised=False
         )
+
+    if delta_input_vars is not None:
+        pathname = os.path.join(cfg.output_dir, "delta_input_vars_hist" + cfg.plot_files_extension)
+        print("    Saving plot " + pathname)
+        delta_input_vars_values = [p[1] for p in delta_input_vars]
+        delta_input_vars_min = min(delta_input_vars_values)
+        delta_input_vars_max = max(delta_input_vars_values)
+        plot.histogram(
+            distribution.make_counts_histogram(
+                delta_input_vars_values,
+                0.0,
+                (delta_input_vars_max - delta_input_vars_min) / 500.0
+                ),
+            pathname,
+            normalised=False
+            )
 
     print("  Done.")
 

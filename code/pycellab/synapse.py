@@ -2,6 +2,98 @@ import math
 import integrator
 
 
+class SynapticInputCooler:
+    def __init__(
+            self,
+            initial_input_pre,
+            initial_input_post,
+            input_pre_cooling_coef,
+            input_post_cooling_coef,
+            spike_magnitude,
+            clip_var_to_their_ranges,
+            integrator_function,
+            ):
+        assert input_pre_cooling_coef <= 0.0
+        assert input_post_cooling_coef <= 0.0
+        assert spike_magnitude >= 0.0
+        self._variables = {
+            self.get_var_pre_name(): initial_input_pre,
+            self.get_var_post_name(): initial_input_post
+            }
+        self._input_pre_cooling_coef = input_pre_cooling_coef
+        self._input_post_cooling_coef = input_post_cooling_coef
+        self._spike_magnitude = spike_magnitude
+        self._clip_var_to_their_ranges = clip_var_to_their_ranges
+        self._integrator = integrator_function
+        pass
+
+    @staticmethod
+    def default(
+            initial_input_pre=0.0,
+            initial_input_post=0.0,
+            input_pre_cooling_coef=-50.0,
+            input_post_cooling_coef=-50.0,
+            spike_magnitude=1.0,
+            clip_var_to_their_ranges=False,
+            integrator_function=integrator.euler
+            ):
+        return SynapticInputCooler(
+            initial_input_pre=initial_input_pre,
+            initial_input_post=initial_input_post,
+            input_pre_cooling_coef=input_pre_cooling_coef,
+            input_post_cooling_coef=input_post_cooling_coef,
+            spike_magnitude=spike_magnitude,
+            clip_var_to_their_ranges=clip_var_to_their_ranges,
+            integrator_function=integrator_function
+            )
+
+    @staticmethod
+    def get_var_pre_name():
+        return "input_pre"
+
+    @staticmethod
+    def get_var_post_name():
+        return "input_post"
+
+    def derivatives(self, var):
+        return {
+            self.get_var_pre_name(): self._input_pre_cooling_coef * var[self.get_var_pre_name()],
+            self.get_var_post_name(): self._input_post_cooling_coef * var[self.get_var_post_name()]
+            }
+
+    def on_pre_synaptic_spike(self):
+        self._variables[self.get_var_pre_name()] += self._spike_magnitude
+        if self._clip_var_to_their_ranges:
+            self._variables[self.get_var_pre_name()] = min(self._variables[self.get_var_pre_name()],
+                                                           self.ranges_of_variables()[self.get_var_pre_name()][1])
+
+    def on_post_synaptic_spike(self):
+        self._variables[self.get_var_post_name()] += self._spike_magnitude
+        if self._clip_var_to_their_ranges:
+            self._variables[self.get_var_post_name()] = min(self._variables[self.get_var_post_name()],
+                                                            self.ranges_of_variables()[self.get_var_post_name()][1])
+
+    def integrate(self, dt):
+        self._integrator(dt, self._variables, self.derivatives)
+
+    def get_variables(self):
+        return self._variables
+
+    def ranges_of_variables(self):
+        return {self.get_var_pre_name(): (0.0, self._spike_magnitude),
+                self.get_var_post_name(): (0.0, self._spike_magnitude)}
+
+    def get_short_description(self):
+        return (
+            "cool_pre=" + str(self._input_pre_cooling_coef) +
+            ", cool_post=" + str(self._input_post_cooling_coef) +
+            ", spike magnitude=" + str(self._spike_magnitude) +
+            ", clip var=" + str(self._clip_var_to_their_ranges) +
+            ", integrator=" + str(integrator.get_name(self._integrator))
+            )
+
+
+
 class synapse:
     def __init__(self,
                  initial_input_pre,
