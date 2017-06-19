@@ -507,7 +507,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
             nsteps=60000,
             plot_files_extension=".png",
             plot_time_step=1.0,
-            save_per_partes_plots=True,
+            save_per_partes_plots=False,
             pre_spikes_distributions=distribution.hermit_distribution(0.1),
             post_spikes_distributions=distribution.hermit_distribution(0.1),
             synaptic_input_cooler=synapse.SynapticInputCooler.default(clip_var_to_their_ranges=True)
@@ -527,7 +527,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
             nsteps=60000,
             plot_files_extension=".png",
             plot_time_step=1.0,
-            save_per_partes_plots=True,
+            save_per_partes_plots=False,
             pre_spikes_distributions=distribution.hermit_distribution(0.1),
             post_spikes_distributions=distribution.hermit_distribution(0.2),
             synaptic_input_cooler=synapse.SynapticInputCooler.default(clip_var_to_their_ranges=True)
@@ -547,7 +547,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
             nsteps=60000,
             plot_files_extension=".png",
             plot_time_step=1.0,
-            save_per_partes_plots=True,
+            save_per_partes_plots=False,
             pre_spikes_distributions=distribution.hermit_distribution(0.1),
             post_spikes_distributions=distribution.hermit_distribution(0.3),
             synaptic_input_cooler=synapse.SynapticInputCooler.default(clip_var_to_their_ranges=True)
@@ -567,7 +567,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
             nsteps=60000,
             plot_files_extension=".png",
             plot_time_step=1.0,
-            save_per_partes_plots=True,
+            save_per_partes_plots=False,
             pre_spikes_distributions=distribution.hermit_distribution(0.2),
             post_spikes_distributions=distribution.hermit_distribution(0.1),
             synaptic_input_cooler=synapse.SynapticInputCooler.default(clip_var_to_their_ranges=True)
@@ -587,7 +587,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
             nsteps=60000,
             plot_files_extension=".png",
             plot_time_step=1.0,
-            save_per_partes_plots=True,
+            save_per_partes_plots=False,
             pre_spikes_distributions=distribution.hermit_distribution(0.3),
             post_spikes_distributions=distribution.hermit_distribution(0.1),
             synaptic_input_cooler=synapse.SynapticInputCooler.default(clip_var_to_their_ranges=True)
