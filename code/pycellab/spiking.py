@@ -1,6 +1,7 @@
 import os
 import shutil
 import argparse
+import math
 import config
 import tests
 import neuron
@@ -767,12 +768,20 @@ def evaluate_pre_post_spike_noises_differences(cfg):
         )
 
     if cfg.synaptic_input_cooler is None:
-        delta_input_vars = None
+        input_vars_sub = None
+        input_vars_sign_add = None
+        input_vars_sign_mul = None
     else:
         pre_points = synaptic_input_vars[cfg.synaptic_input_cooler.get_var_pre_name()]
         post_points = synaptic_input_vars[cfg.synaptic_input_cooler.get_var_post_name()]
         assert len(pre_points) == len(post_points)
-        delta_input_vars = [(pre_points[i][0], post_points[i][1] - pre_points[i][1]) for i in range(len(pre_points))]
+        input_vars_sub = [(pre_points[i][0], post_points[i][1] - pre_points[i][1]) for i in range(len(pre_points))]
+        input_vars_sign_add = [(pre_points[i][0], math.copysign(post_points[i][1] + pre_points[i][1],
+                                                                post_points[i][1] - pre_points[i][1]))
+                               for i in range(len(pre_points))]
+        input_vars_sign_mul = [(pre_points[i][0], math.copysign(post_points[i][1] * pre_points[i][1],
+                                                                post_points[i][1] - pre_points[i][1]))
+                               for i in range(len(pre_points))]
 
     if cfg.save_per_partes_plots:
         save_spikes_board_per_partes(
@@ -804,15 +813,33 @@ def evaluate_pre_post_spike_noises_differences(cfg):
                 lambda p: print("    Saving plot " + p),
                 title="VAR=" + var + ", " + cfg.synaptic_input_cooler.get_short_description()
                 )
-        if delta_input_vars is not None:
+        if cfg.synaptic_input_cooler is not None:
             plot.curve_per_partes(
-                delta_input_vars,
-                os.path.join(cfg.output_dir, "delta_input_vars", "delta_input_vars" + cfg.plot_files_extension),
+                input_vars_sub,
+                os.path.join(cfg.output_dir, "input_vars_sub", "input_vars_sub" + cfg.plot_files_extension),
                 cfg.start_time,
                 cfg.start_time + cfg.nsteps * cfg.dt,
                 cfg.plot_time_step,
                 lambda p: print("    Saving plot " + p),
                 title="[input_post-input_pre], " + cfg.synaptic_input_cooler.get_short_description()
+                )
+            plot.curve_per_partes(
+                input_vars_sign_add,
+                os.path.join(cfg.output_dir, "input_vars_sign_add", "input_vars_sign_add" + cfg.plot_files_extension),
+                cfg.start_time,
+                cfg.start_time + cfg.nsteps * cfg.dt,
+                cfg.plot_time_step,
+                lambda p: print("    Saving plot " + p),
+                title="[sgn(X-Y)*(Y+X),X=input_pre,Y=input_post], " + cfg.synaptic_input_cooler.get_short_description()
+                )
+            plot.curve_per_partes(
+                input_vars_sign_mul,
+                os.path.join(cfg.output_dir, "input_vars_sign_mul", "input_vars_sign_mul" + cfg.plot_files_extension),
+                cfg.start_time,
+                cfg.start_time + cfg.nsteps * cfg.dt,
+                cfg.plot_time_step,
+                lambda p: print("    Saving plot " + p),
+                title="[sgn(X-Y)*(Y*X),X=input_pre,Y=input_post], " + cfg.synaptic_input_cooler.get_short_description()
                 )
 
     pathname = os.path.join(cfg.output_dir, "delta_post_pre_hist" + cfg.plot_files_extension)
@@ -830,17 +857,49 @@ def evaluate_pre_post_spike_noises_differences(cfg):
         normalised=False
         )
 
-    if delta_input_vars is not None:
-        pathname = os.path.join(cfg.output_dir, "delta_input_vars_hist" + cfg.plot_files_extension)
+    if cfg.synaptic_input_cooler is not None:
+        pathname = os.path.join(cfg.output_dir, "input_vars_sub" + cfg.plot_files_extension)
         print("    Saving plot " + pathname)
-        delta_input_vars_values = [p[1] for p in delta_input_vars]
-        delta_input_vars_min = min(delta_input_vars_values)
-        delta_input_vars_max = max(delta_input_vars_values)
+        input_vars_values = [p[1] for p in input_vars_sub]
+        input_vars_min = min(input_vars_values)
+        input_vars_max = max(input_vars_values)
         plot.histogram(
             distribution.make_counts_histogram(
-                delta_input_vars_values,
+                input_vars_values,
                 0.0,
-                (delta_input_vars_max - delta_input_vars_min) / 500.0
+                (input_vars_max - input_vars_min) / 500.0
+                ),
+            pathname,
+            normalised=False
+            )
+
+        pathname = os.path.join(cfg.output_dir, "input_vars_sign_add" + cfg.plot_files_extension)
+        print("    Saving plot " + pathname)
+        input_vars_values = [p[1] for p in input_vars_sign_add]
+        input_vars_min = min(input_vars_values)
+        input_vars_max = max(input_vars_values)
+        input_vars_counts_hist =\
+            distribution.make_counts_histogram(
+                input_vars_values,
+                0.0,
+                (input_vars_max - input_vars_min) / 500.0
+                )
+        plot.histogram(input_vars_counts_hist, pathname, normalised=False)
+
+        pathname = os.path.join(cfg.output_dir, "input_vars_sign_add_times_var" + cfg.plot_files_extension)
+        print("    Saving plot " + pathname)
+        plot.curve([(v, abs(v) * input_vars_counts_hist[v]) for v in sorted(input_vars_counts_hist.keys())], pathname)
+
+        pathname = os.path.join(cfg.output_dir, "input_vars_sign_mul" + cfg.plot_files_extension)
+        print("    Saving plot " + pathname)
+        input_vars_values = [p[1] for p in input_vars_sign_mul]
+        input_vars_min = min(input_vars_values)
+        input_vars_max = max(input_vars_values)
+        plot.histogram(
+            distribution.make_counts_histogram(
+                input_vars_values,
+                0.0,
+                (input_vars_max - input_vars_min) / 500.0
                 ),
             pathname,
             normalised=False
