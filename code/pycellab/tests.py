@@ -118,8 +118,8 @@ def _test_synapse(my_precomputed_full_name):
         dt = 0.001
         nsteps = 2000
 
-        pre_spikes_train = spike_train.spike_train(distribution.get_standard_spike_noise(), [], start_time)
-        post_spikes_train = spike_train.spike_train(distribution.get_standard_spike_noise(), [], start_time)
+        pre_spikes_train = spike_train.spike_train(distribution.get_standard_spike_noise(), None, start_time)
+        post_spikes_train = spike_train.spike_train(distribution.get_standard_spike_noise(), None, start_time)
         # pre_spikes_train = spike_train.spike_train(
         #     distribution.distribution({}),
         #     [0.001],

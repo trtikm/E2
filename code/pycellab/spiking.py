@@ -468,9 +468,9 @@ def evaluate_neuron_with_input_synapses(cfg):
     print("Evaluating the configuration '" + cfg.name + "'.")
 
     print("  Constructing and initialising data structures,")
-    excitatory_spike_trains = [spike_train.spike_train(noise, [], cfg.start_time)
+    excitatory_spike_trains = [spike_train.spike_train(noise, None, cfg.start_time)
                                for noise in cfg.excitatory_noise_distributions]
-    inhibitory_spike_trains = [spike_train.spike_train(noise, [], cfg.start_time)
+    inhibitory_spike_trains = [spike_train.spike_train(noise, None, cfg.start_time)
                                for noise in cfg.inhibitory_noise_distributions]
     cells = [neuron.neuron(
                 cfg.cell_soma[i],
@@ -628,8 +628,8 @@ def evaluate_synapse_and_spike_noise(cfg):
     print("Evaluating the configuration '" + cfg.name + "'.")
 
     print("  Constructing and initialising data structures,")
-    pre_spike_train = spike_train.spike_train(cfg.pre_spikes_distributions, [], cfg.start_time)
-    post_spike_train = spike_train.spike_train(cfg.post_spikes_distributions, [], cfg.start_time)
+    pre_spike_train = spike_train.spike_train(cfg.pre_spikes_distributions, None, cfg.start_time)
+    post_spike_train = spike_train.spike_train(cfg.post_spikes_distributions, None, cfg.start_time)
     synapse_recording = dict([(var, [(cfg.start_time, value)])
                               for var, value in cfg.the_synapse.get_variables().items()])
 
@@ -690,8 +690,8 @@ def evaluate_pre_post_spike_noises_differences(cfg):
     print("Evaluating the configuration '" + cfg.name + "'.")
 
     print("  Constructing and initialising data structures,")
-    pre_spike_train = spike_train.spike_train(cfg.pre_spikes_distributions, [], cfg.start_time)
-    post_spike_train = spike_train.spike_train(cfg.post_spikes_distributions, [], cfg.start_time)
+    pre_spike_train = spike_train.spike_train(cfg.pre_spikes_distributions, None, cfg.start_time)
+    post_spike_train = spike_train.spike_train(cfg.post_spikes_distributions, None, cfg.start_time)
 
     print("  Starting simulation.")
     delta_post_pre = []
