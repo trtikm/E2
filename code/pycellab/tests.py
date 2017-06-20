@@ -4,6 +4,7 @@ from config import output_root_dir
 import plot
 import distribution
 import spike_train
+import signalling
 import synapse
 
 
@@ -33,7 +34,7 @@ def _test_distribution(my_precomputed_full_name):
         for k in sorted(hist.keys()):
             print(str(k) + ": " + str(hist[k]) + " ; " + str(xhist[k]))
 
-    print("Starting test 'distribution._test_distribution()'")
+    print("Starting test '" + my_precomputed_full_name + "':")
     for hist in [
             {1: 1},
             {123: 10},
@@ -48,7 +49,7 @@ def _test_distribution(my_precomputed_full_name):
 
 def _test_hermit_distribution(my_precomputed_full_name):
     """ The test _test_hermit_distribution """
-    print("Starting test 'distribution._test_hermit_adapted_historgram_of_normal_distribution()'")
+    print("Starting test '" + my_precomputed_full_name + "':")
     out_dir = os.path.join(output_root_dir(), my_precomputed_full_name)
     print("  Generating graph " + os.path.join(out_dir, "ns_curve.png"))
     plot.curve(
@@ -104,7 +105,7 @@ def _test_hermit_distribution(my_precomputed_full_name):
 
 def _test_synapse(my_precomputed_full_name):
     """This is test _test_synapse"""
-    print("Starting 'synapse.__test_synapse()':")
+    print("Starting test '" + my_precomputed_full_name + "':")
 
     for the_synapse in [
             synapse.synapse.plastic_peek_np(),
@@ -195,6 +196,40 @@ def _test_synapse(my_precomputed_full_name):
             xaxis_name="post_t - pre_t",
             faxis_name="weight delta"
             )
+
+    print("Done.")
+
+
+def _test_data_signal_constant_isi(my_precomputed_full_name):
+    """This is test 'data_signal_constant_isi'."""
+    print("Starting test '" + my_precomputed_full_name + "':")
+
+    start_time = 0.0
+    dt = 0.001
+    nsteps = 1000
+    train = spike_train.spike_train(distribution.distribution(None),
+                                    signalling.DataSignal.constant_isi(0.025, start_time),
+                                    start_time)
+    t = start_time
+    for step in range(nsteps):
+        print("    " + format(100.0 * step / float(nsteps), '.1f') + "%", end='\r')
+        train.on_time_step(t, dt)
+        t += dt
+
+    print("  Saving results.")
+
+    output_dir = os.path.join(output_root_dir(), my_precomputed_full_name)
+    os.makedirs(output_dir, exist_ok=True)
+
+    pathname = os.path.join(output_dir, "spikes_board.png")
+    print("    Saving plot " + pathname)
+    plot.scatter(
+        [(event, 0.0) for event in train.get_spikes()],
+        pathname,
+        ['C4' if is_data_spike else 'C0' for is_data_spike in train.get_is_data_signal_flags()],
+        )
+
+    print("Done.")
 
 
 ####################################################################################################
