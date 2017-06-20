@@ -15,6 +15,7 @@ class spike_train:
         self._data_signal = data_signal
         self._last_noise_spike_time = start_time + self._noise_isi.next_event()
         self._spikes = []
+        self._is_data_spike = []
         self.on_time_step(start_time, 0.0)
 
     def get_isi_noise_distribution(self):
@@ -26,6 +27,9 @@ class spike_train:
     def get_spikes(self):
         return self._spikes
 
+    def get_is_data_signal_flags(self):
+        return self._is_data_spike
+
     def on_time_step(self, t, dt):
         is_data_spiking = self._data_signal.on_time_step(t, dt) if self._data_signal is not None else False
         is_noise_spiking = self._last_noise_spike_time <= t + dt
@@ -34,4 +38,5 @@ class spike_train:
         if is_noise_spiking:
             self._last_noise_spike_time = t + dt + self._noise_isi.next_event()
         self._spikes.append(t + dt)
+        self._is_data_spike.append(is_data_spiking)
         return True
