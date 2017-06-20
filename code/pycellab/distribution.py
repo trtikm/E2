@@ -5,7 +5,7 @@ import bisect
 
 class distribution:
     def __init__(self, histogram):
-        assert isinstance(histogram, dict)
+        assert histogram is None or isinstance(histogram, dict)
         if histogram is None or len(histogram) == 0:
             self._histogram = {1e23: 0.0}
         else:
