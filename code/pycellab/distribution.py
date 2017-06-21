@@ -245,6 +245,20 @@ def make_points_of_normal_distribution(
     return points
 
 
+def mkhist_by_linear_interpolation(points, dx):
+    assert dx > 0.00001
+    hist = dict(points)
+    for i in range(1, len(points)):
+        a = points[i - 1]
+        b = points[i]
+        x = a[0] + dx
+        while x < b[0]:
+            assert x not in hist
+            hist[x] = a[1] + ((x - a[0]) / (b[0] - a[0])) * (b[1] - a[1])
+            x += dx
+    return hist
+
+
 def points_of_hermit_cubic_spline(p0, m0, p1, m1, num_points=100):
     def h00(t):
         return 2.0 * t**3 - 3.0 * t**2 + 1

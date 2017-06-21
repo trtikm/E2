@@ -39,6 +39,38 @@ class DataSignal:
             start_time=start_time
         )
 
+    @staticmethod
+    def default_excitatory(start_time=0.0):
+        return DataSignal(
+            phase_distribution=distribution.distribution(distribution.mkhist_by_linear_interpolation([
+                # (ISI, count)
+                (0.010, 600),
+                (0.020, 800),
+                (0.030, 600),
+                (0.040, 400),
+                (0.050, 300),
+                (0.060, 200),
+                (0.070, 100),
+                (0.080, 50),
+                (0.090, 25),
+                (0.100, 10),
+                ], 0.001)),
+            spiking_distributions=[
+                distribution.distribution(distribution.mkhist_by_linear_interpolation([
+                    # (ISI, count)
+                    (0.005, 10),
+                    (0.010, 100),
+                    ], 0.001)),
+                distribution.distribution(distribution.mkhist_by_linear_interpolation([
+                    # (ISI, count)
+                    (0.010, 100),
+                    (0.050, 10),
+                    (0.100, 0),
+                    ], 0.001)),
+                ],
+            selector_distribution=distribution.distribution(dict([(i, 1.0) for i in range(2)])),
+            start_time=start_time
+        )
 
 
 

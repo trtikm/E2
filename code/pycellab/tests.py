@@ -232,6 +232,38 @@ def _test_data_signal_constant_isi(my_precomputed_full_name):
     print("Done.")
 
 
+def _test_data_signal_default_excitatory(my_precomputed_full_name):
+    """This is test 'data_signal_default_excitatory'."""
+    print("Starting test '" + my_precomputed_full_name + "':")
+
+    start_time = 0.0
+    dt = 0.001
+    nsteps = 1000
+    train = spike_train.spike_train(distribution.distribution(None),
+                                    signalling.DataSignal.default_excitatory(start_time),
+                                    start_time)
+    t = start_time
+    for step in range(nsteps):
+        print("    " + format(100.0 * step / float(nsteps), '.1f') + "%", end='\r')
+        train.on_time_step(t, dt)
+        t += dt
+
+    print("  Saving results.")
+
+    output_dir = os.path.join(output_root_dir(), my_precomputed_full_name)
+    os.makedirs(output_dir, exist_ok=True)
+
+    pathname = os.path.join(output_dir, "spikes_board.png")
+    print("    Saving plot " + pathname)
+    plot.scatter(
+        [(event, 0.0) for event in train.get_spikes()],
+        pathname,
+        ['C4' if is_data_spike else 'C0' for is_data_spike in train.get_is_data_signal_flags()],
+        )
+
+    print("Done.")
+
+
 ####################################################################################################
 ####################################################################################################
 ####################################################################################################
