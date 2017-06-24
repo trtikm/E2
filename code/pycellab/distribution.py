@@ -123,7 +123,7 @@ def mkhist(events, nbins=100, lo=None, hi=None):
         return {events[0]: len(events)}, 1.0
     hist = {}
     for x in events:
-        b = int((x - lo) / dx)
+        b = int((x - lo) / dx + dx / 2)
         if b in hist:
             hist[b] += 1
         else:
@@ -343,6 +343,8 @@ def mkhist_from_curve_points(points, num_bars=100):
         else:
             assert x[j - 1] < t
             hist[t] = y[j - 1] + (t - x[j - 1]) * ((y[j] - y[j - 1]) / (x[j] - x[j - 1]))
+            if abs(hist[t]) < 0.00001:
+                hist[t] = 0.0
             assert hist[t] >= 0.0
     return hist
 
