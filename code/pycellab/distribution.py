@@ -33,6 +33,7 @@ class distribution:
         self._probabilities = numpy.array([float(self._histogram[k]) for k in sorted(self._histogram.keys())])
         self._probabilities *= 1.0 / (sum(self._probabilities) + 0.00001)
         assert len(x) == len(self._probabilities)
+        self._has_numeric_events = all(isinstance(x, int) or isinstance(x, float) for x in self._events_line)
         self._mean = sum([x[i]*self._probabilities[i] for i in range(len(x))])
         self._median = self.event_with_probability(0.5)
         self._variance = sum([((x[i] - self._mean)**2) * self._probabilities[i] for i in range(len(x))])
@@ -53,11 +54,27 @@ class distribution:
             "}"
             )
 
+    def has_numeric_events(self):
+        return self._has_numeric_events
+
     def get_histogram(self):
         return self._histogram
 
     def get_events(self):
         return self._events_line
+
+    def get_probability_of_event(self, event):
+        if self.has_numeric_events():
+            if event < self.get_events()[0] or event > self.get_events()[-1]:
+                return 0.0
+            idx = bisect.bisect_left(self.get_events(), event)
+        else:
+            try:
+                idx = self.get_events().index(event)
+            except ValueError:
+                return 0.0
+        assert idx in range(len(self.get_events()))
+        return self._probabilities[idx]
 
     def get_counts_of_events(self):
         return [self._histogram[k] for k in self._events_line]
