@@ -393,3 +393,11 @@ def hermit_distribution(
                     num_bars=num_bars
                     )
                 )
+
+
+def default_excitatory_isi_distribution():
+    return hermit_distribution(0.137, pow_y=2)
+
+
+def default_inhibitory_isi_distribution():
+    return hermit_distribution(0.0918, 0.08, pow_y=2)
