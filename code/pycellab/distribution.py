@@ -127,7 +127,7 @@ class distribution:
         return self._coefficient_of_variation
 
 
-def mkhist(events, nbins=100, lo=None, hi=None):
+def mkhist(events, nbins=100, lo=None, hi=None, use_bins_domain=False):
     assert type(nbins) == int and nbins > 0
     if len(events) == 0:
         return {}, 1.0
@@ -145,12 +145,14 @@ def mkhist(events, nbins=100, lo=None, hi=None):
             hist[b] += 1
         else:
             hist[b] = 1
-    return hist, dx
+    if use_bins_domain:
+        return hist, dx
+    return {lo + i * dx: c for i, c in hist.items()}, dx
 
 
 def get_standard_spike_noise():
     s = numpy.random.exponential(1, 10000)
-    hist, _ = mkhist(s, 500)
+    hist, _ = mkhist(s, 500, use_bins_domain=True)
     xhist = {}
     keys = sorted(hist.keys())
     for idx in range(0, min(300, len(keys))):
@@ -168,9 +170,8 @@ def get_standard_spike_noise():
 
 
 def make_isi_histogram(time_events, nbins, start_time, end_time):
-    isi = [time_events[i] - time_events[i - 1] for i in range(1, len(time_events))]
-    raw_hist, dt = mkhist(isi, nbins, start_time, end_time)
-    return dict([(bin_index * dt, count) for bin_index, count in raw_hist.items()])
+    return mkhist([time_events[i] - time_events[i - 1] for i in range(1, len(time_events))],
+                  nbins, start_time, end_time)[0]
 
 
 def make_counts_histogram(time_events, start_bin=0, bin_size=1):
