@@ -423,13 +423,18 @@ def _test_data_signal_fx(my_precomputed_full_name):
     dt = 0.001
     nsteps = 60000
 
-    num_spikers_per_kind = 50
+    num_spikers_per_kind = 10
 
     plot_dt = 2.0
     plot_parts = 10
     plot_stride = max(1, int((nsteps * dt / plot_dt) / plot_parts + 0.5))
 
-    data_signals = [signalling.DataSignalFX.create_excitatory() for _ in range(num_spikers_per_kind)]
+    data_signals = [signalling.DataSignalFX.create_excitatory_by_param(
+                        min(max(0.0, float(i) / float(num_spikers_per_kind - 1)), 1.0)
+                        )
+                    for i in range(num_spikers_per_kind)]
+    # exit(0)
+    # data_signals = [signalling.DataSignalFX.create_excitatory() for _ in range(num_spikers_per_kind)]
     # data_signals = [signalling.DataSignalFX.create_plain_distribution(distribution.default_excitatory_isi_distribution())
     #                 for _ in range(num_spikers_per_kind)]
     trains = [spike_train.spike_train(data_signals[i].get_spiking_distribution(), None, start_time)
@@ -452,32 +457,47 @@ def _test_data_signal_fx(my_precomputed_full_name):
         shutil.rmtree(output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
-    isi_delta_signal_0_points = [(i - 2, (spikes_of_data_signals[0][i] - spikes_of_data_signals[0][i - 1]) -
-                                         (spikes_of_data_signals[0][i - 1] - spikes_of_data_signals[0][i - 2]))
-                                 for i in range(2, len(spikes_of_data_signals[0]))]
+    for idx in range(0, num_spikers_per_kind, num_spikers_per_kind // min(plot_parts, num_spikers_per_kind)):
+        isi_delta_signal_points = [(i - 2, (spikes_of_data_signals[idx][i] - spikes_of_data_signals[idx][i - 1]) -
+                                           (spikes_of_data_signals[idx][i - 1] - spikes_of_data_signals[idx][i - 2]))
+                                   for i in range(2, len(spikes_of_data_signals[idx]))]
+
+        pathname = os.path.join(output_dir, "isi_delta_signal_" + str(idx) + "_curve",
+                                            "isi_delta_signal_" + str(idx) + ".png")
+        print("    Saving plot " + pathname)
+        plot.curve_per_partes(
+            isi_delta_signal_points,
+            pathname,
+            0,
+            len(isi_delta_signal_points),
+            1000,
+            lambda p: print("    Saving plot " + p),
+            )
+
+        pathname = os.path.join(output_dir, "isi_delta_signal_" + str(idx) + "_hist.png")
+        print("    Saving plot " + pathname)
+        plot.histogram(
+            distribution.mkhist([p[1] for p in isi_delta_signal_points], 200)[0],
+            pathname,
+            normalised=False
+            )
+
+        pathname = os.path.join(output_dir, "isi_hist_signal_" + str(idx) + ".png")
+        print("    Saving plot " + pathname)
+        plot.histogram(
+            distribution.make_isi_histogram(
+                spikes_of_data_signals[idx],
+                nsteps,
+                start_time,
+                start_time + nsteps * dt
+                ),
+            pathname,
+            normalised=False
+            )
 
     isi_delta_plain_0_points = [(i - 2, (trains[0].get_spikes()[i] - trains[0].get_spikes()[i - 1]) -
                                         (trains[0].get_spikes()[i - 1] - trains[0].get_spikes()[i - 2]))
                                 for i in range(2, len(trains[0].get_spikes()))]
-
-    pathname = os.path.join(output_dir, "isi_delta_signal_0_curve", "isi_delta_signal_0.png")
-    print("    Saving plot " + pathname)
-    plot.curve_per_partes(
-        isi_delta_signal_0_points,
-        pathname,
-        0,
-        len(spikes_of_data_signals[0][2:]),
-        1000,
-        lambda p: print("    Saving plot " + p),
-        )
-
-    pathname = os.path.join(output_dir, "isi_delta_signal_0_hist.png")
-    print("    Saving plot " + pathname)
-    plot.histogram(
-        distribution.mkhist([p[1] for p in isi_delta_signal_0_points], 200)[0],
-        pathname,
-        normalised=False
-        )
 
     pathname = os.path.join(output_dir, "isi_delta_plain_0_curve", "isi_delta_plain_0.png")
     print("    Saving plot " + pathname)
@@ -485,7 +505,7 @@ def _test_data_signal_fx(my_precomputed_full_name):
         isi_delta_plain_0_points,
         pathname,
         0,
-        len(trains[0].get_spikes()[2:]),
+        len(isi_delta_plain_0_points),
         1000,
         lambda p: print("    Saving plot " + p),
         )
@@ -511,19 +531,6 @@ def _test_data_signal_fx(my_precomputed_full_name):
     plot.histogram(
         distribution.make_isi_histogram(
             trains[0].get_spikes(),
-            nsteps,
-            start_time,
-            start_time + nsteps * dt
-            ),
-        pathname,
-        normalised=False
-        )
-
-    pathname = os.path.join(output_dir, "isi_hist_signal_0.png")
-    print("    Saving plot " + pathname)
-    plot.histogram(
-        distribution.make_isi_histogram(
-            spikes_of_data_signals[0],
             nsteps,
             start_time,
             start_time + nsteps * dt

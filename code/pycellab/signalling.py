@@ -184,10 +184,28 @@ class DataSignalFX:
         return DataSignalFX(spiking_distribution, distribution.distribution({1: 1.0}), 1)
 
     @staticmethod
-    def create_excitatory():
+    def create_excitatory(array_size=150, min_chunk_size=5, max_chunk_size=25,
+                          chunk_frequency_function=lambda size: 1.0):
+        # print("DataSignalFX.create_excitatory(\n"
+        #       "    array_size=" + str(array_size) + "\n"
+        #       "    min_chunk_size=" + str(min_chunk_size) + "\n"
+        #       "    max_chunk_size=" + str(max_chunk_size) + "\n"
+        #       ")\n")
+        assert min_chunk_size > 0 and min_chunk_size <= max_chunk_size and max_chunk_size <= array_size
         return DataSignalFX(distribution.default_excitatory_isi_distribution(),
-                            distribution.distribution(dict([(size, 1.0) for size in range(5, 25)])),
-                            150)
+                            distribution.distribution({size: chunk_frequency_function(size)
+                                                       for size in range(min_chunk_size, max_chunk_size + 1)}),
+                            array_size)
+
+    @staticmethod
+    def create_excitatory_by_param(param):
+        assert param >= 0.0 and param <= 1.0
+        return DataSignalFX.create_excitatory(
+                        array_size=1 + int(149.0 * param**2.0 + 0.5),
+                        min_chunk_size=1 + int(4.0 * param**3.0 + 0.5),
+                        max_chunk_size=1 + int(24.0 * param**2.0 + 0.5),
+                        chunk_frequency_function=lambda size: 1.0
+                        )
 
     def get_spiking_distribution(self):
         return self._spiking_distribution
