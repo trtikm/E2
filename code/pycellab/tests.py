@@ -414,33 +414,22 @@ def _test_data_signal_fx(my_precomputed_full_name):
     plot_parts = 10
     plot_stride = max(1, int((nsteps * dt / plot_dt) / plot_parts + 0.5))
 
-    data_signals = [signalling.DataSignalFX.create_excitatory_by_param(
-                        min(max(0.0, float(i) / float(num_spikers_per_kind - 1)), 1.0)
-                        )
-                    for i in range(num_spikers_per_kind)]
+    def index_to_param(i):
+        return min(max(0.0, float(i) / float(num_spikers_per_kind - 1)), 1.0) if num_spikers_per_kind > 1 else 1.0
 
-    # def interpol(i, coef=3.0):
-    #     print("i=" + str(i))
-    #     x = min(max(0.0, float(i) / float(num_spikers_per_kind - 1)), 1.0) if num_spikers_per_kind > 1 else 1.0
-    #     return x**coef
-    #
-    # data_signals = [signalling.DataSignalFX.create_inhibitory(
-    #                     array_size=1 + int(149.0 * interpol(i, 2.0) + 0.5),
-    #                     min_chunk_size=1 + int(4.0 * interpol(i, 3.0) + 0.5),
-    #                     max_chunk_size=1 + int(24.0 * interpol(i, 2.0) + 0.5),
-    #                     chunk_frequency_function=lambda size: 1.0) for i in range(num_spikers_per_kind)]
-    # exit(0)
-    # data_signals = [signalling.DataSignalFX.create_excitatory() for _ in range(num_spikers_per_kind)]
-    # data_signals = [signalling.DataSignalFX.create_plain_distribution(distribution.default_excitatory_isi_distribution())
-    #                 for _ in range(num_spikers_per_kind)]
+    data_signals = [signalling.DataSignalFX.create_excitatory_by_param(index_to_param(i))
+                    for i in range(num_spikers_per_kind)] +\
+                   [signalling.DataSignalFX.create_inhibitory_by_param(index_to_param(i))
+                    for i in range(num_spikers_per_kind)]
+    spikes_of_data_signals = [[] for _ in range(2 * num_spikers_per_kind)]
+
     trains = [spike_train.spike_train(data_signals[i].get_spiking_distribution(), None, start_time)
-              for i in range(num_spikers_per_kind)]
-    spikes_of_data_signals = [[] for _ in range(num_spikers_per_kind)]
+              for i in range(2 * num_spikers_per_kind)]
 
     t = start_time
     for step in range(nsteps):
         print("    " + format(100.0 * step / float(nsteps), '.1f') + "%", end='\r')
-        for i in range(num_spikers_per_kind):
+        for i in range(2 * num_spikers_per_kind):
             trains[i].on_time_step(t, dt)
             if data_signals[i].on_time_step(t, dt):
                 spikes_of_data_signals[i].append(t + dt)
@@ -453,77 +442,87 @@ def _test_data_signal_fx(my_precomputed_full_name):
         shutil.rmtree(output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
-    for idx in range(0, num_spikers_per_kind, num_spikers_per_kind // min(plot_parts, num_spikers_per_kind)):
-        isi_delta_signal_points = [(i - 2, (spikes_of_data_signals[idx][i] - spikes_of_data_signals[idx][i - 1]) -
-                                           (spikes_of_data_signals[idx][i - 1] - spikes_of_data_signals[idx][i - 2]))
-                                   for i in range(2, len(spikes_of_data_signals[idx]))]
+    for idx_base, typename in [(0, "excitatory"), (num_spikers_per_kind, "inhibitory")]:
+        for idx_shift in range(0, num_spikers_per_kind, num_spikers_per_kind // min(plot_parts, num_spikers_per_kind)):
+            idx = idx_base + idx_shift
+            signal = spikes_of_data_signals[idx]
 
-        pathname = os.path.join(output_dir, "isi_delta_signal_" + str(idx) + "_curve",
-                                            "isi_delta_signal_" + str(idx) + ".png")
+            isi_delta_signal_points = [(i - 2, (signal[i] - signal[i - 1]) - (signal[i - 1] - signal[i - 2]))
+                                       for i in range(2, len(signal))]
+
+            pathname = os.path.join(output_dir, "isi_delta_signal_" + typename + "_" + str(idx_shift) + "_curve",
+                                                "isi_delta_signal_" + typename + "_" + str(idx_shift) + ".png")
+            print("    Saving plot " + pathname)
+            plot.curve_per_partes(
+                isi_delta_signal_points,
+                pathname,
+                0,
+                len(isi_delta_signal_points),
+                1000,
+                lambda p: print("    Saving plot " + p),
+                )
+
+            pathname = os.path.join(output_dir, "isi_delta_signal_" + typename + "_" + str(idx_shift) + "_hist.png")
+            print("    Saving plot " + pathname)
+            plot.histogram(distribution.make_times_histogram([p[1] for p in isi_delta_signal_points], dt),
+                           pathname, normalised=False)
+
+            pathname = os.path.join(output_dir, "isi_hist_signal_" + typename + "_" + str(idx_shift) + ".png")
+            print("    Saving plot " + pathname)
+            plot.histogram(distribution.make_isi_histogram(spikes_of_data_signals[idx], dt), pathname, normalised=False)
+
+        idx = idx_base
+        signal = trains[idx].get_spikes()
+
+        isi_delta_plain_points = [(i - 2, (signal[i] - signal[i - 1]) - (signal[i - 1] - signal[i - 2]))
+                                  for i in range(2, len(signal))]
+
+        pathname = os.path.join(output_dir, "isi_delta_plain_" + typename + "_" + str(idx) + "_curve",
+                                            "isi_delta_plain_" + typename + "_" + str(idx) + ".png")
         print("    Saving plot " + pathname)
         plot.curve_per_partes(
-            isi_delta_signal_points,
+            isi_delta_plain_points,
             pathname,
             0,
-            len(isi_delta_signal_points),
+            len(isi_delta_plain_points),
             1000,
             lambda p: print("    Saving plot " + p),
             )
 
-        pathname = os.path.join(output_dir, "isi_delta_signal_" + str(idx) + "_hist.png")
+        pathname = os.path.join(output_dir, "isi_delta_plain_" + typename + "_0_hist.png")
         print("    Saving plot " + pathname)
-        plot.histogram(distribution.make_times_histogram([p[1] for p in isi_delta_signal_points], dt),
+        plot.histogram(distribution.make_times_histogram([p[1] for p in isi_delta_plain_points], dt),
                        pathname, normalised=False)
 
-        pathname = os.path.join(output_dir, "isi_hist_signal_" + str(idx) + ".png")
+        pathname = os.path.join(output_dir, "isi_hist_plain_" + typename + "_0.png")
         print("    Saving plot " + pathname)
-        plot.histogram(distribution.make_isi_histogram(spikes_of_data_signals[idx], dt), pathname, normalised=False)
+        plot.histogram(distribution.make_isi_histogram(signal, dt), pathname, normalised=False)
 
-    isi_delta_plain_0_points = [(i - 2, (trains[0].get_spikes()[i] - trains[0].get_spikes()[i - 1]) -
-                                        (trains[0].get_spikes()[i - 1] - trains[0].get_spikes()[i - 2]))
-                                for i in range(2, len(trains[0].get_spikes()))]
-
-    pathname = os.path.join(output_dir, "isi_delta_plain_0_curve", "isi_delta_plain_0.png")
-    print("    Saving plot " + pathname)
-    plot.curve_per_partes(
-        isi_delta_plain_0_points,
-        pathname,
-        0,
-        len(isi_delta_plain_0_points),
-        1000,
-        lambda p: print("    Saving plot " + p),
-        )
-
-    pathname = os.path.join(output_dir, "isi_delta_plain_0_hist.png")
-    print("    Saving plot " + pathname)
-    plot.histogram(distribution.make_times_histogram([p[1] for p in isi_delta_plain_0_points], dt),
-                   pathname, normalised=False)
-
-    pathname = os.path.join(output_dir, "isi_hist_plain_0.png")
-    print("    Saving plot " + pathname)
-    plot.histogram(distribution.make_isi_histogram(trains[0].get_spikes(), dt), pathname, normalised=False)
-
-    pathname = os.path.join(output_dir, "hist_event_dist_0.png")
-    print("    Saving plot " + pathname)
-    plot.histogram(
-        data_signals[0].get_spiking_distribution(),
-        pathname,
-        normalised=True
-        )
+        pathname = os.path.join(output_dir, "hist_event_dist_" + typename + "_0.png")
+        print("    Saving plot " + pathname)
+        plot.histogram(
+            data_signals[idx].get_spiking_distribution(),
+            pathname,
+            normalised=True
+            )
 
     pathname = os.path.join(output_dir, "spikes_board", "spikes.png")
     print("    Saving plot " + pathname)
     plot.scatter_per_partes(
-        [(event, i) for i in range(num_spikers_per_kind) for event in trains[i].get_spikes()] +
-        [(event, num_spikers_per_kind + i) for i in range(num_spikers_per_kind) for event in spikes_of_data_signals[i]],
+        [(event, i) for i in range(2 * num_spikers_per_kind)
+                    for event in trains[i].get_spikes()] +
+        [(event, 2 * num_spikers_per_kind + i) for i in range(2 * num_spikers_per_kind)
+                                               for event in spikes_of_data_signals[i]],
         pathname,
         start_time,
         start_time + nsteps * dt,
         plot_dt,
         plot_stride,
         lambda p: print("    Saving plot " + p),
-        ["C0" for i in range(num_spikers_per_kind) for _ in trains[i].get_spikes()] +
-        ["C2" for i in range(num_spikers_per_kind) for _ in spikes_of_data_signals[i]]
+        ["C1" for i in range(num_spikers_per_kind) for _ in trains[i].get_spikes()] +
+        ["C4" for i in range(num_spikers_per_kind) for _ in trains[num_spikers_per_kind + i].get_spikes()] +
+        ["C0" for i in range(num_spikers_per_kind) for _ in spikes_of_data_signals[i]] +
+        ["C2" for i in range(num_spikers_per_kind) for _ in spikes_of_data_signals[num_spikers_per_kind + i]]
         )
 
     print("Done.")

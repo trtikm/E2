@@ -221,6 +221,16 @@ class DataSignalFX:
                                                        for size in range(min_chunk_size, max_chunk_size + 1)}),
                             array_size)
 
+    @staticmethod
+    def create_inhibitory_by_param(param):
+        assert param >= 0.0 and param <= 1.0
+        return DataSignalFX.create_inhibitory(
+                        array_size=1 + int(149.0 * param**2.0 + 0.5),
+                        min_chunk_size=1 + int(4.0 * param**3.0 + 0.5),
+                        max_chunk_size=1 + int(24.0 * param**2.0 + 0.5),
+                        chunk_frequency_function=lambda size: 1.0
+                        )
+
     def get_spiking_distribution(self):
         return self._spiking_distribution
 
