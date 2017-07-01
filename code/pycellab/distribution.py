@@ -135,12 +135,12 @@ def mkhist(events, nbins=100, lo=None, hi=None, use_bins_domain=False):
         lo = min(events)
     if hi is None:
         hi = max(events)
-    dx = (hi - lo) / nbins
+    dx = float(hi - lo) / float(nbins)
     if dx < 0.00001:
         return {events[0]: len(events)}, 1.0
     hist = {}
     for x in events:
-        b = int((x - lo) / dx + dx / 2)
+        b = int((x - lo) / dx + dx / 2.0)
         if b in hist:
             hist[b] += 1
         else:
@@ -169,21 +169,35 @@ def get_standard_spike_noise():
     return distribution(xhist)
 
 
-def make_isi_histogram(time_events, nbins, start_time, end_time):
-    return mkhist([time_events[i] - time_events[i - 1] for i in range(1, len(time_events))],
-                  nbins, start_time, end_time)[0]
+def make_isi_histogram(time_events, dt=0.001):
+    assert all(isinstance(t, float) for t in time_events)
+    assert isinstance(dt, float) and dt > 0.00001
+    nbins = int(float(time_events[-1] + dt) / float(dt))
+    lo = 0.0
+    hi = nbins * dt
+    return mkhist([time_events[i] - time_events[i - 1] for i in range(1, len(time_events))], nbins, lo, hi)[0]
+
+
+def make_times_histogram(time_events, dt=0.001, start_time=None):
+    assert all(isinstance(t, float) for t in time_events)
+    assert start_time is None or isinstance(start_time, float)
+    assert isinstance(dt, float) and dt > 0.00001
+    nbins = int(float(max(time_events) + dt) / dt)
+    lo = dt * (int(float(min(time_events)) / dt) if start_time is None else int(start_time / dt))
+    hi = dt * nbins
+    return mkhist(time_events, nbins, lo, hi)[0]
 
 
 def make_counts_histogram(time_events, start_bin=0, bin_size=1):
     assert bin_size > 0.000001
     xhist = {}
     for event in time_events:
-        idx = int((event - start_bin) / bin_size)
+        idx = int(float(event - start_bin) / float(bin_size) + float(bin_size) / 2.0)
         if idx in xhist:
             xhist[idx] += 1
         else:
             xhist[idx] = 1
-    return {i * bin_size: c for i, c in xhist.items()}
+    return {start_bin + i * bin_size: c for i, c in xhist.items()}
 
 
 def make_counts_curve(time_events, dx=1.0):
@@ -397,8 +411,8 @@ def hermit_distribution(
 
 
 def default_excitatory_isi_distribution():
-    return hermit_distribution(0.137, pow_y=2)
+    return hermit_distribution(0.137, pow_y=2, num_bars=int(0.3/0.001 + 0.5))
 
 
 def default_inhibitory_isi_distribution():
-    return hermit_distribution(0.0918, 0.08, pow_y=2)
+    return hermit_distribution(0.0918, 0.08, pow_y=2, num_bars=int(0.08/0.001 + 0.5))

@@ -287,12 +287,7 @@ def _test_data_signal_default_excitatory(my_precomputed_full_name):
     pathname = os.path.join(output_dir, "isi_hist.png")
     print("    Saving plot " + pathname)
     plot.histogram(
-        distribution.make_isi_histogram(
-            train.get_spikes(),
-            nsteps,
-            start_time,
-            start_time + nsteps * dt
-            ),
+        distribution.make_isi_histogram(train.get_spikes(), dt),
         pathname,
         normalised=False
         )
@@ -377,12 +372,7 @@ def _test_data_signal_ex(my_precomputed_full_name):
     pathname = os.path.join(output_dir, "isi_hist.png")
     print("    Saving plot " + pathname)
     plot.histogram(
-        distribution.make_isi_histogram(
-            train.get_spikes(),
-            nsteps,
-            start_time,
-            start_time + nsteps * dt
-            ),
+        distribution.make_isi_histogram(train.get_spikes(), dt),
         pathname,
         normalised=False
         )
@@ -390,12 +380,7 @@ def _test_data_signal_ex(my_precomputed_full_name):
     pathname = os.path.join(output_dir, "isi_hist_ex.png")
     print("    Saving plot " + pathname)
     plot.histogram(
-        distribution.make_isi_histogram(
-            spikes_ex,
-            nsteps,
-            start_time,
-            start_time + nsteps * dt
-            ),
+        distribution.make_isi_histogram(spikes_ex, dt),
         pathname,
         normalised=False
         )
@@ -433,6 +418,17 @@ def _test_data_signal_fx(my_precomputed_full_name):
                         min(max(0.0, float(i) / float(num_spikers_per_kind - 1)), 1.0)
                         )
                     for i in range(num_spikers_per_kind)]
+
+    # def interpol(i, coef=3.0):
+    #     print("i=" + str(i))
+    #     x = min(max(0.0, float(i) / float(num_spikers_per_kind - 1)), 1.0) if num_spikers_per_kind > 1 else 1.0
+    #     return x**coef
+    #
+    # data_signals = [signalling.DataSignalFX.create_inhibitory(
+    #                     array_size=1 + int(149.0 * interpol(i, 2.0) + 0.5),
+    #                     min_chunk_size=1 + int(4.0 * interpol(i, 3.0) + 0.5),
+    #                     max_chunk_size=1 + int(24.0 * interpol(i, 2.0) + 0.5),
+    #                     chunk_frequency_function=lambda size: 1.0) for i in range(num_spikers_per_kind)]
     # exit(0)
     # data_signals = [signalling.DataSignalFX.create_excitatory() for _ in range(num_spikers_per_kind)]
     # data_signals = [signalling.DataSignalFX.create_plain_distribution(distribution.default_excitatory_isi_distribution())
@@ -476,24 +472,12 @@ def _test_data_signal_fx(my_precomputed_full_name):
 
         pathname = os.path.join(output_dir, "isi_delta_signal_" + str(idx) + "_hist.png")
         print("    Saving plot " + pathname)
-        plot.histogram(
-            distribution.mkhist([p[1] for p in isi_delta_signal_points], 200)[0],
-            pathname,
-            normalised=False
-            )
+        plot.histogram(distribution.make_times_histogram([p[1] for p in isi_delta_signal_points], dt),
+                       pathname, normalised=False)
 
         pathname = os.path.join(output_dir, "isi_hist_signal_" + str(idx) + ".png")
         print("    Saving plot " + pathname)
-        plot.histogram(
-            distribution.make_isi_histogram(
-                spikes_of_data_signals[idx],
-                nsteps,
-                start_time,
-                start_time + nsteps * dt
-                ),
-            pathname,
-            normalised=False
-            )
+        plot.histogram(distribution.make_isi_histogram(spikes_of_data_signals[idx], dt), pathname, normalised=False)
 
     isi_delta_plain_0_points = [(i - 2, (trains[0].get_spikes()[i] - trains[0].get_spikes()[i - 1]) -
                                         (trains[0].get_spikes()[i - 1] - trains[0].get_spikes()[i - 2]))
@@ -512,11 +496,12 @@ def _test_data_signal_fx(my_precomputed_full_name):
 
     pathname = os.path.join(output_dir, "isi_delta_plain_0_hist.png")
     print("    Saving plot " + pathname)
-    plot.histogram(
-        distribution.mkhist([p[1] for p in isi_delta_plain_0_points], 200)[0],
-        pathname,
-        normalised=False
-        )
+    plot.histogram(distribution.make_times_histogram([p[1] for p in isi_delta_plain_0_points], dt),
+                   pathname, normalised=False)
+
+    pathname = os.path.join(output_dir, "isi_hist_plain_0.png")
+    print("    Saving plot " + pathname)
+    plot.histogram(distribution.make_isi_histogram(trains[0].get_spikes(), dt), pathname, normalised=False)
 
     pathname = os.path.join(output_dir, "hist_event_dist_0.png")
     print("    Saving plot " + pathname)
@@ -524,19 +509,6 @@ def _test_data_signal_fx(my_precomputed_full_name):
         data_signals[0].get_spiking_distribution(),
         pathname,
         normalised=True
-        )
-
-    pathname = os.path.join(output_dir, "isi_hist_plain_0.png")
-    print("    Saving plot " + pathname)
-    plot.histogram(
-        distribution.make_isi_histogram(
-            trains[0].get_spikes(),
-            nsteps,
-            start_time,
-            start_time + nsteps * dt
-            ),
-        pathname,
-        normalised=False
         )
 
     pathname = os.path.join(output_dir, "spikes_board", "spikes.png")

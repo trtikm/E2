@@ -64,7 +64,7 @@ def save_post_isi_distribution(cfg, post_spikes, subdir):
     pathname = os.path.join(cfg.output_dir, subdir, "post_isi" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
     plot.histogram(
-        distribution.make_isi_histogram(post_spikes, cfg.nsteps, cfg.start_time, cfg.start_time + cfg.nsteps * cfg.dt),
+        distribution.make_isi_histogram(post_spikes, cfg.dt),
         pathname,
         normalised=False,
         colours=get_colour_post()
@@ -655,12 +655,7 @@ def evaluate_synapse_and_spike_noise(cfg):
     pathname = os.path.join(cfg.output_dir, "isi_pre" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
     plot.histogram(
-        distribution.make_isi_histogram(
-            pre_spike_train.get_spikes(),
-            cfg.nsteps,
-            cfg.start_time,
-            cfg.start_time + cfg.nsteps * cfg.dt
-            ),
+        distribution.make_isi_histogram(pre_spike_train.get_spikes(), cfg.dt),
         pathname,
         normalised=False,
         colours=get_colour_pre_excitatory_and_inhibitory()
@@ -669,12 +664,7 @@ def evaluate_synapse_and_spike_noise(cfg):
     pathname = os.path.join(cfg.output_dir, "isi_post" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
     plot.histogram(
-        distribution.make_isi_histogram(
-            post_spike_train.get_spikes(),
-            cfg.nsteps,
-            cfg.start_time,
-            cfg.start_time + cfg.nsteps * cfg.dt
-            ),
+        distribution.make_isi_histogram(post_spike_train.get_spikes(), cfg.dt),
         pathname,
         normalised=False,
         colours=get_colour_pre_excitatory_and_inhibitory()
@@ -738,12 +728,7 @@ def evaluate_pre_post_spike_noises_differences(cfg):
     pathname = os.path.join(cfg.output_dir, "isi_pre" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
     plot.histogram(
-        distribution.make_isi_histogram(
-            pre_spike_train.get_spikes(),
-            cfg.nsteps,
-            cfg.start_time,
-            cfg.start_time + cfg.nsteps * cfg.dt
-            ),
+        distribution.make_isi_histogram(pre_spike_train.get_spikes(), cfg.dt),
         pathname,
         normalised=False,
         colours=get_colour_pre_excitatory_and_inhibitory()
@@ -756,12 +741,7 @@ def evaluate_pre_post_spike_noises_differences(cfg):
     pathname = os.path.join(cfg.output_dir, "isi_post" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
     plot.histogram(
-        distribution.make_isi_histogram(
-            post_spike_train.get_spikes(),
-            cfg.nsteps,
-            cfg.start_time,
-            cfg.start_time + cfg.nsteps * cfg.dt
-            ),
+        distribution.make_isi_histogram(post_spike_train.get_spikes(), cfg.dt),
         pathname,
         normalised=False,
         colours=get_colour_pre_excitatory_and_inhibitory()
