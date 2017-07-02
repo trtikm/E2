@@ -415,4 +415,4 @@ def default_excitatory_isi_distribution():
 
 
 def default_inhibitory_isi_distribution():
-    return hermit_distribution(0.0918, 0.08, pow_y=2, num_bars=int(0.08/0.001 + 0.5))
+    return hermit_distribution(0.0918, 0.08, pow_y=2, num_bars=int(0.3/0.001 + 0.5))
