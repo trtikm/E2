@@ -400,8 +400,14 @@ def _test_data_signal_ex(my_precomputed_full_name):
     print("Done.")
 
 
-def _test_data_signal_fx(my_precomputed_full_name):
-    """This is test 'data_signal_fx'."""
+def _test_spike_trains(my_precomputed_full_name):
+    """
+    The test generates several excitatory and inhibitory spike strains.
+    Each excitatory/inhibitory spike train differs from another one by
+    a different level of noise in time intervals between individual
+    spikes. Nevertheless, spiking distribution is preserved for each
+    spike train for any chosen level of noise.
+    """
     print("Starting test '" + my_precomputed_full_name + "':")
 
     start_time = 0.0
@@ -417,22 +423,20 @@ def _test_data_signal_fx(my_precomputed_full_name):
     def index_to_param(i):
         return min(max(0.0, float(i) / float(num_spikers_per_kind - 1)), 1.0) if num_spikers_per_kind > 1 else 1.0
 
-    data_signals = [signalling.DataSignalFX.create_excitatory_by_param(index_to_param(i))
-                    for i in range(num_spikers_per_kind)] +\
-                   [signalling.DataSignalFX.create_inhibitory_by_param(index_to_param(i))
-                    for i in range(num_spikers_per_kind)]
-    spikes_of_data_signals = [[] for _ in range(2 * num_spikers_per_kind)]
+    trains = [spike_train.SpikeTrain.create(distribution.default_excitatory_isi_distribution(), index_to_param(i))
+              for i in range(num_spikers_per_kind)] +\
+             [spike_train.SpikeTrain.create(distribution.default_inhibitory_isi_distribution(), 1.0)# index_to_param(i))
+              for i in range(num_spikers_per_kind)]
 
-    trains = [spike_train.spike_train(data_signals[i].get_spiking_distribution(), None, start_time)
-              for i in range(2 * num_spikers_per_kind)]
+    # xtrain = spike_train.spike_train(distribution.default_inhibitory_isi_distribution(), None, start_time)
 
+    # exit(0)
     t = start_time
     for step in range(nsteps):
         print("    " + format(100.0 * step / float(nsteps), '.1f') + "%", end='\r')
         for i in range(2 * num_spikers_per_kind):
             trains[i].on_time_step(t, dt)
-            if data_signals[i].on_time_step(t, dt):
-                spikes_of_data_signals[i].append(t + dt)
+        # xtrain.on_time_step(t, dt)
         t += dt
 
     print("  Saving results.")
@@ -442,16 +446,29 @@ def _test_data_signal_fx(my_precomputed_full_name):
         shutil.rmtree(output_dir)
     os.makedirs(output_dir, exist_ok=True)
 
+    # pathname = os.path.join(output_dir, "xisi_delta_hist.png")
+    # print("    Saving plot " + pathname)
+    # plot.histogram(distribution.make_isi_histogram(xtrain.get_spikes(), dt), pathname, normalised=False)
+    #
+    # pathname = os.path.join(output_dir, "xisi_distribution_.png")
+    # print("    Saving plot " + pathname)
+    # plot.histogram(
+    #     xtrain.get_isi_noise_distribution(),
+    #     pathname,
+    #     normalised=True
+    #     )
+    # exit(0)
+
     for idx_base, typename in [(0, "excitatory"), (num_spikers_per_kind, "inhibitory")]:
         for idx_shift in range(0, num_spikers_per_kind, num_spikers_per_kind // min(plot_parts, num_spikers_per_kind)):
             idx = idx_base + idx_shift
-            signal = spikes_of_data_signals[idx]
+            signal = trains[idx].get_spikes_history()
 
             isi_delta_signal_points = [(i - 2, (signal[i] - signal[i - 1]) - (signal[i - 1] - signal[i - 2]))
                                        for i in range(2, len(signal))]
 
-            pathname = os.path.join(output_dir, "isi_delta_signal_" + typename + "_" + str(idx_shift) + "_curve",
-                                                "isi_delta_signal_" + typename + "_" + str(idx_shift) + ".png")
+            pathname = os.path.join(output_dir, "isi_delta_" + typename + "_" + str(idx_shift) + "_curve",
+                                                "isi_delta_" + typename + "_" + str(idx_shift) + ".png")
             print("    Saving plot " + pathname)
             plot.curve_per_partes(
                 isi_delta_signal_points,
@@ -462,46 +479,19 @@ def _test_data_signal_fx(my_precomputed_full_name):
                 lambda p: print("    Saving plot " + p),
                 )
 
-            pathname = os.path.join(output_dir, "isi_delta_signal_" + typename + "_" + str(idx_shift) + "_hist.png")
+            pathname = os.path.join(output_dir, "isi_delta_" + typename + "_" + str(idx_shift) + "_hist.png")
             print("    Saving plot " + pathname)
             plot.histogram(distribution.make_times_histogram([p[1] for p in isi_delta_signal_points], dt),
                            pathname, normalised=False)
 
-            pathname = os.path.join(output_dir, "isi_hist_signal_" + typename + "_" + str(idx_shift) + ".png")
+            pathname = os.path.join(output_dir, "isi_hist_" + typename + "_" + str(idx_shift) + ".png")
             print("    Saving plot " + pathname)
-            plot.histogram(distribution.make_isi_histogram(spikes_of_data_signals[idx], dt), pathname, normalised=False)
+            plot.histogram(distribution.make_isi_histogram(signal, dt), pathname, normalised=False)
 
-        idx = idx_base
-        signal = trains[idx].get_spikes()
-
-        isi_delta_plain_points = [(i - 2, (signal[i] - signal[i - 1]) - (signal[i - 1] - signal[i - 2]))
-                                  for i in range(2, len(signal))]
-
-        pathname = os.path.join(output_dir, "isi_delta_plain_" + typename + "_" + str(idx) + "_curve",
-                                            "isi_delta_plain_" + typename + "_" + str(idx) + ".png")
-        print("    Saving plot " + pathname)
-        plot.curve_per_partes(
-            isi_delta_plain_points,
-            pathname,
-            0,
-            len(isi_delta_plain_points),
-            1000,
-            lambda p: print("    Saving plot " + p),
-            )
-
-        pathname = os.path.join(output_dir, "isi_delta_plain_" + typename + "_0_hist.png")
-        print("    Saving plot " + pathname)
-        plot.histogram(distribution.make_times_histogram([p[1] for p in isi_delta_plain_points], dt),
-                       pathname, normalised=False)
-
-        pathname = os.path.join(output_dir, "isi_hist_plain_" + typename + "_0.png")
-        print("    Saving plot " + pathname)
-        plot.histogram(distribution.make_isi_histogram(signal, dt), pathname, normalised=False)
-
-        pathname = os.path.join(output_dir, "hist_event_dist_" + typename + "_0.png")
+        pathname = os.path.join(output_dir, "isi_distribution_" + typename + "_0.png")
         print("    Saving plot " + pathname)
         plot.histogram(
-            data_signals[idx].get_spiking_distribution(),
+            trains[idx_base].get_spiking_distribution(),
             pathname,
             normalised=True
             )
@@ -509,20 +499,15 @@ def _test_data_signal_fx(my_precomputed_full_name):
     pathname = os.path.join(output_dir, "spikes_board", "spikes.png")
     print("    Saving plot " + pathname)
     plot.scatter_per_partes(
-        [(event, i) for i in range(2 * num_spikers_per_kind)
-                    for event in trains[i].get_spikes()] +
-        [(event, 2 * num_spikers_per_kind + i) for i in range(2 * num_spikers_per_kind)
-                                               for event in spikes_of_data_signals[i]],
+        [(event, i) for i in range(2 * num_spikers_per_kind) for event in trains[i].get_spikes_history()],
         pathname,
         start_time,
         start_time + nsteps * dt,
         plot_dt,
         plot_stride,
         lambda p: print("    Saving plot " + p),
-        ["C1" for i in range(num_spikers_per_kind) for _ in trains[i].get_spikes()] +
-        ["C4" for i in range(num_spikers_per_kind) for _ in trains[num_spikers_per_kind + i].get_spikes()] +
-        ["C0" for i in range(num_spikers_per_kind) for _ in spikes_of_data_signals[i]] +
-        ["C2" for i in range(num_spikers_per_kind) for _ in spikes_of_data_signals[num_spikers_per_kind + i]]
+        ["C0" if i < num_spikers_per_kind else "C2"
+         for i in range(2 * num_spikers_per_kind) for _ in trains[i].get_spikes_history()]
         )
 
     print("Done.")
