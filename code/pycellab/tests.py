@@ -5,7 +5,6 @@ from config import output_root_dir
 import plot
 import distribution
 import spike_train
-import signalling
 import synapse
 
 
@@ -120,8 +119,8 @@ def _test_synapse(my_precomputed_full_name):
         dt = 0.001
         nsteps = 2000
 
-        pre_spikes_train = spike_train.spike_train(distribution.get_standard_spike_noise(), None, start_time)
-        post_spikes_train = spike_train.spike_train(distribution.get_standard_spike_noise(), None, start_time)
+        pre_spikes_train = spike_train.SpikeTrain.create(distribution.get_standard_spike_noise(), 0.0)
+        post_spikes_train = spike_train.SpikeTrain.create(distribution.get_standard_spike_noise(), 0.0)
         # pre_spikes_train = spike_train.spike_train(
         #     distribution.distribution({}),
         #     [0.001],
@@ -197,205 +196,6 @@ def _test_synapse(my_precomputed_full_name):
             xaxis_name="post_t - pre_t",
             faxis_name="weight delta"
             )
-
-    print("Done.")
-
-
-def _test_data_signal_constant_isi(my_precomputed_full_name):
-    """This is test 'data_signal_constant_isi'."""
-    print("Starting test '" + my_precomputed_full_name + "':")
-
-    start_time = 0.0
-    dt = 0.001
-    nsteps = 1000
-    train = spike_train.spike_train(distribution.distribution(None),
-                                    signalling.DataSignal.constant_isi(0.025, start_time),
-                                    start_time)
-    t = start_time
-    for step in range(nsteps):
-        print("    " + format(100.0 * step / float(nsteps), '.1f') + "%", end='\r')
-        train.on_time_step(t, dt)
-        t += dt
-
-    print("  Saving results.")
-
-    output_dir = os.path.join(output_root_dir(), my_precomputed_full_name)
-    os.makedirs(output_dir, exist_ok=True)
-
-    pathname = os.path.join(output_dir, "spikes_board.png")
-    print("    Saving plot " + pathname)
-    plot.scatter(
-        [(event, 0.0) for event in train.get_spikes()],
-        pathname,
-        ['C4' if is_data_spike else 'C0' for is_data_spike in train.get_is_data_signal_flags()],
-        )
-
-    print("Done.")
-
-
-def _test_data_signal_default_excitatory(my_precomputed_full_name):
-    """This is test 'data_signal_default_excitatory'."""
-    print("Starting test '" + my_precomputed_full_name + "':")
-
-    # output_dir = os.path.join(output_root_dir(), my_precomputed_full_name)
-    # os.makedirs(output_dir, exist_ok=True)
-    #
-    # pathname = os.path.join(output_dir, "xe_isi_hist.png")
-    # print("    Saving plot " + pathname)
-    # plot.histogram(
-    #     distribution.hermit_distribution(0.137, pow_y=2),
-    #     pathname,
-    #     normalised=True
-    #     )
-    #
-    # pathname = os.path.join(output_dir, "xi_isi_hist.png")
-    # print("    Saving plot " + pathname)
-    # plot.histogram(
-    #     distribution.hermit_distribution(0.0918, 0.08, pow_y=2),
-    #     pathname,
-    #     normalised=True
-    #     )
-    #
-    # pathname = os.path.join(output_dir, "xi_counts.png")
-    # print("    Saving plot " + pathname)
-    # plot.histogram(
-    #     dict((x, (0.08 - 0.002) / x) for x in numpy.arange(0.002, 0.08, 0.001)),
-    #     pathname,
-    #     normalised=False
-    #     )
-    #
-    # print("Done.")
-    # return
-
-    start_time = 0.0
-    dt = 0.001
-    nsteps = 60000
-    train = spike_train.spike_train(distribution.hermit_distribution(0.25),
-                                    signalling.DataSignal.default_excitatory(start_time),
-                                    start_time)
-    t = start_time
-    for step in range(nsteps):
-        print("    " + format(100.0 * step / float(nsteps), '.1f') + "%", end='\r')
-        train.on_time_step(t, dt)
-        t += dt
-
-    print("  Saving results.")
-
-    output_dir = os.path.join(output_root_dir(), my_precomputed_full_name)
-    os.makedirs(output_dir, exist_ok=True)
-
-    pathname = os.path.join(output_dir, "isi_hist.png")
-    print("    Saving plot " + pathname)
-    plot.histogram(
-        distribution.make_isi_histogram(train.get_spikes(), dt),
-        pathname,
-        normalised=False
-        )
-    if False:
-        pathname = os.path.join(output_dir, "spikes_board", "spikes.png")
-        print("    Saving plot " + pathname)
-        plot.scatter_per_partes(
-            [(event, 0.0) for event in train.get_spikes()],
-            pathname,
-            start_time,
-            start_time + nsteps * dt,
-            1.0,
-            max(1, nsteps // 10),
-            lambda p: print("    Saving plot " + p),
-            ['C4' if is_data_spike else 'C0' for is_data_spike in train.get_is_data_signal_flags()],
-            )
-
-    print("Done.")
-
-
-def _test_data_signal_ex(my_precomputed_full_name):
-    """This is test 'data_signal_ex'."""
-    print("Starting test '" + my_precomputed_full_name + "':")
-
-    start_time = 0.0
-    dt = 0.001
-    nsteps = 60000
-
-    plot_dt = 1.0
-    plot_parts = 10
-    plot_stride = max(1, int((nsteps * dt / plot_dt) / plot_parts + 0.5))
-
-    data_signal = signalling.DataSignalEx(signalling.ISIDistributionMatrix.create(0.0, 1.0))
-    train = spike_train.spike_train(data_signal.get_distribution_matrix().get_events_distribution(), None, start_time)
-    spikes_ex = []
-
-    t = start_time
-    for step in range(nsteps):
-        print("    " + format(100.0 * step / float(nsteps), '.1f') + "%", end='\r')
-        train.on_time_step(t, dt)
-        if data_signal.on_time_step(t, dt):
-            spikes_ex.append(t + dt)
-        t += dt
-
-    print("  Saving results.")
-
-    output_dir = os.path.join(output_root_dir(), my_precomputed_full_name)
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
-    os.makedirs(output_dir, exist_ok=True)
-
-    pathname = os.path.join(output_dir, "hist_matrix_event_dist.png")
-    print("    Saving plot " + pathname)
-    plot.histogram(
-        data_signal.get_distribution_matrix().get_events_distribution(),
-        pathname,
-        normalised=True
-        )
-
-    pathname = os.path.join(output_dir, "hist_matrix_distance_dist.png")
-    print("    Saving plot " + pathname)
-    plot.histogram(
-        data_signal.get_distribution_matrix().get_distances_distribution(),
-        pathname,
-        normalised=True
-        )
-
-    idx = 0
-    for event in sorted(data_signal.get_distribution_matrix().get_distributions_matrix().keys()):
-        distrib = data_signal.get_distribution_matrix().get_distributions_matrix()[event]
-        if idx % max(1, len(data_signal.get_distribution_matrix().get_distributions_matrix().keys()) / 10) == 0:
-            pathname = os.path.join(output_dir, "matrix_distributions",
-                                    "hist_matrix_hist_event_" + str(idx) + "_" + format(event, ".3f") + ".png")
-            print("    Saving plot " + pathname)
-            plot.histogram(
-                distrib,
-                pathname,
-                normalised=True
-                )
-        idx += 1
-
-    pathname = os.path.join(output_dir, "isi_hist.png")
-    print("    Saving plot " + pathname)
-    plot.histogram(
-        distribution.make_isi_histogram(train.get_spikes(), dt),
-        pathname,
-        normalised=False
-        )
-
-    pathname = os.path.join(output_dir, "isi_hist_ex.png")
-    print("    Saving plot " + pathname)
-    plot.histogram(
-        distribution.make_isi_histogram(spikes_ex, dt),
-        pathname,
-        normalised=False
-        )
-
-    pathname = os.path.join(output_dir, "spikes_board", "spikes.png")
-    print("    Saving plot " + pathname)
-    plot.scatter_per_partes(
-        [(event, 0.0) for event in train.get_spikes()] + [(event, 1.0) for event in spikes_ex],
-        pathname,
-        start_time,
-        start_time + nsteps * dt,
-        plot_dt,
-        plot_stride,
-        lambda p: print("    Saving plot " + p)
-        )
 
     print("Done.")
 

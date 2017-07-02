@@ -10,6 +10,8 @@ install(
         synapse.py
         spike_train.py
         spiking.py
+        synapse.py
+        tests.py
     DESTINATION
         "evaluation/pycellab"
     )
