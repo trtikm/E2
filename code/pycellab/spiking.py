@@ -892,8 +892,7 @@ def main(cmdline):
     if cmdline.test is not None and cmdline.evaluate is None:
         for tst in tests.get_registered_tests():
             if tst["name"] == cmdline.test:
-                tests.run_test(tst)
-                return 0
+                return tests.run_test(tst)
         print("ERROR: There is no test of the name '" + str(cmdline.test) + "'. Use the option "
               "'--help' to list all available tests.")
         return 1

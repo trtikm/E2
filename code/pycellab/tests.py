@@ -8,14 +8,28 @@ import spike_train
 import synapse
 
 
-def _test_distribution(my_precomputed_full_name):
-    """ The test _test_distribution """
-    def doit(hist, n):
+class TestInfo:
+    def __init__(self, test_name, output_dir):
+        self.test_name = test_name
+        self.output_dir = output_dir
+
+
+def _test_distribution(info):
+    """
+    The test builds 5 distributions. Four of them are with numeric events
+    and one is with string events. For each distribution there is generated
+    a sequence of events and then histogram of counts of the events is
+    build, which should match the histogram the distribution was built from.
+    """
+    assert isinstance(info, TestInfo)
+
+    def doit(hist, n, ofile):
         xhist = hist.copy()
         for k in xhist.keys():
             xhist[k] = 0
         isi = distribution.distribution(hist)
         print(isi)
+        ofile.write(str(isi) + "\n")
         for _ in range(n):
             e = isi.next_event()
             assert e in hist.keys()
@@ -30,28 +44,34 @@ def _test_distribution(my_precomputed_full_name):
                 xhist[k] *= osum / xsum
         return xhist
 
-    def show(hist, xhist):
+    def show(hist, xhist, ofile):
         for k in sorted(hist.keys()):
-            print(str(k) + ": " + str(hist[k]) + " ; " + str(xhist[k]))
+            msg = str(k) + ": " + str(hist[k]) + " ; " + str(xhist[k])
+            print(msg)
+            ofile.write(msg + "\n")
 
-    print("Starting test '" + my_precomputed_full_name + "':")
-    for hist in [
-            {1: 1},
-            {123: 10},
-            {1: 1, 2: 1, 3: 1, 4: 1, 5: 1},
-            {"A": 2, "B": 4, "C": 10, "D": 2, "E": 3},
-            {10: 60, 20: 100, 30: 65, 40: 35, 50: 20, 60: 10, 70: 5, 80: 3, 90: 2, 100: 1}
-            ]:
-        print("*******************************************************")
-        show(hist, doit(hist, 10000))
-    print("Done.")
+    with open(os.path.join(info.output_dir, "results.txt"), "w") as ofile:
+        for hist in [
+                {1: 1},
+                {123: 10},
+                {1: 1, 2: 1, 3: 1, 4: 1, 5: 1},
+                {"A": 2, "B": 4, "C": 10, "D": 2, "E": 3},
+                {10: 60, 20: 100, 30: 65, 40: 35, 50: 20, 60: 10, 70: 5, 80: 3, 90: 2, 100: 1}
+                ]:
+            print("*******************************************************")
+            ofile.write("*******************************************************\n")
+            show(hist, doit(hist, 10000, ofile), ofile)
+    return 0
 
 
-def _test_hermit_distribution(my_precomputed_full_name):
-    """ The test _test_hermit_distribution """
-    print("Starting test '" + my_precomputed_full_name + "':")
-    out_dir = os.path.join(output_root_dir(), my_precomputed_full_name)
-    print("  Generating graph " + os.path.join(out_dir, "ns_curve.png"))
+def _test_hermit_distribution(info):
+    """
+    The test build 10 hermit distributions, each for a different
+    peek. Curves and histograms and normalised histograms are build
+    and corresponding plots are saved.
+    """
+    assert isinstance(info, TestInfo)
+    print("  Generating graph " + os.path.join(info.output_dir, "ns_curve.png"))
     plot.curve(
         distribution.make_points_of_normal_distribution(
             num_points=100,
@@ -59,7 +79,7 @@ def _test_hermit_distribution(my_precomputed_full_name):
             sigma=1.0,
             normalise=True
             ),
-        os.path.join(out_dir, "ns_curve.png")
+        os.path.join(info.output_dir, "ns_curve.png")
         )
     for peek_x in numpy.arange(0.1, 0.95, 0.1, float):
         print("  Computing points of hermit cubic at peek " + str(peek_x) + ".")
@@ -75,38 +95,44 @@ def _test_hermit_distribution(my_precomputed_full_name):
                     pow_y=1.5,
                     shift_x=0.002
                     )
-        print("  Saving " + os.path.join(out_dir, "ns_curve_hermit_adapted_" + format(peek_x, ".2f") + ".png"))
+        print("  Saving " + os.path.join(info.output_dir, "ns_curve_hermit_adapted_" + format(peek_x, ".2f") + ".png"))
         plot.curve(
             points,
-            os.path.join(out_dir, "ns_curve_hermit_adapted_" + format(peek_x, ".2f") + ".png")
+            os.path.join(info.output_dir, "ns_curve_hermit_adapted_" + format(peek_x, ".2f") + ".png")
             )
         print("  Computing histogram from the hermit cubic.")
         hist = distribution.mkhist_from_curve_points(points, num_bars=300)
-        print("  Saving " + os.path.join(out_dir, "ns_hist_adapted_" + format(peek_x, ".2f") + ".png"))
+        print("  Saving " + os.path.join(info.output_dir, "ns_hist_adapted_" + format(peek_x, ".2f") + ".png"))
         plot.histogram(
             hist,
-            os.path.join(out_dir, "ns_hist_adapted_" + format(peek_x, ".2f") + ".png"),
+            os.path.join(info.output_dir, "ns_hist_adapted_" + format(peek_x, ".2f") + ".png"),
             normalised=False
             )
-        print("  Saving " + os.path.join(out_dir, "ns_hist_normalised_adapted_" + format(peek_x, ".2f") + ".png"))
+        print("  Saving " + os.path.join(info.output_dir, "ns_hist_normalised_adapted_" +
+                                         format(peek_x, ".2f") + ".png"))
         plot.histogram(
             hist,
-            os.path.join(out_dir, "ns_hist_normalised_adapted_" + format(peek_x, ".2f") + ".png"),
+            os.path.join(info.output_dir, "ns_hist_normalised_adapted_" + format(peek_x, ".2f") + ".png"),
             normalised=True
             )
-        print("  Saving " + os.path.join(out_dir, "hd_" + format(peek_x, ".2f") + ".png"))
+        print("  Saving " + os.path.join(info.output_dir, "hd_" + format(peek_x, ".2f") + ".png"))
         plot.histogram(
             distribution.hermit_distribution(peek_x),
-            os.path.join(out_dir, "hd_" + format(peek_x, ".2f") + ".png"),
+            os.path.join(info.output_dir, "hd_" + format(peek_x, ".2f") + ".png"),
             )
 
-    print("Done.")
+    return 0
 
 
-def _test_synapse(my_precomputed_full_name):
-    """This is test _test_synapse"""
-    print("Starting test '" + my_precomputed_full_name + "':")
-
+def _test_synapse(info):
+    """
+    The test checks functionality of all four supported plastic
+    synapses (namely, 'np','pn','pp', and 'nn'). For each type
+    there are generated plots of progress of input variables,
+    synaptic weights, and changes of weights w.r.t pre- and
+    post- spikes.
+    """
+    assert isinstance(info, TestInfo)
     for the_synapse in [
             synapse.synapse.plastic_peek_np(),
             synapse.synapse.plastic_peek_pn(),
@@ -162,8 +188,7 @@ def _test_synapse(my_precomputed_full_name):
 
         print("  Saving results.")
 
-        output_dir = os.path.join(output_root_dir(), my_precomputed_full_name, the_synapse.get_name())
-        os.makedirs(output_dir, exist_ok=True)
+        output_dir = os.path.join(info.output_dir, the_synapse.get_name())
 
         for var in the_synapse.get_variables().keys():
             pathname = os.path.join(output_dir, "synapse_var_" + var + ".png")
@@ -197,10 +222,10 @@ def _test_synapse(my_precomputed_full_name):
             faxis_name="weight delta"
             )
 
-    print("Done.")
+    return 0
 
 
-def _test_spike_trains(my_precomputed_full_name):
+def _test_spike_trains(info):
     """
     The test generates several excitatory and inhibitory spike strains.
     Each excitatory/inhibitory spike train differs from another one by
@@ -208,7 +233,7 @@ def _test_spike_trains(my_precomputed_full_name):
     spikes. Nevertheless, spiking distribution is preserved for each
     spike train for any chosen level of noise.
     """
-    print("Starting test '" + my_precomputed_full_name + "':")
+    assert isinstance(info, TestInfo)
 
     start_time = 0.0
     dt = 0.001
@@ -225,39 +250,17 @@ def _test_spike_trains(my_precomputed_full_name):
 
     trains = [spike_train.SpikeTrain.create(distribution.default_excitatory_isi_distribution(), index_to_param(i))
               for i in range(num_spikers_per_kind)] +\
-             [spike_train.SpikeTrain.create(distribution.default_inhibitory_isi_distribution(), 1.0)# index_to_param(i))
+             [spike_train.SpikeTrain.create(distribution.default_inhibitory_isi_distribution(), index_to_param(i))
               for i in range(num_spikers_per_kind)]
 
-    # xtrain = spike_train.spike_train(distribution.default_inhibitory_isi_distribution(), None, start_time)
-
-    # exit(0)
     t = start_time
     for step in range(nsteps):
         print("    " + format(100.0 * step / float(nsteps), '.1f') + "%", end='\r')
         for i in range(2 * num_spikers_per_kind):
             trains[i].on_time_step(t, dt)
-        # xtrain.on_time_step(t, dt)
         t += dt
 
     print("  Saving results.")
-
-    output_dir = os.path.join(output_root_dir(), my_precomputed_full_name)
-    if os.path.exists(output_dir):
-        shutil.rmtree(output_dir)
-    os.makedirs(output_dir, exist_ok=True)
-
-    # pathname = os.path.join(output_dir, "xisi_delta_hist.png")
-    # print("    Saving plot " + pathname)
-    # plot.histogram(distribution.make_isi_histogram(xtrain.get_spikes(), dt), pathname, normalised=False)
-    #
-    # pathname = os.path.join(output_dir, "xisi_distribution_.png")
-    # print("    Saving plot " + pathname)
-    # plot.histogram(
-    #     xtrain.get_isi_noise_distribution(),
-    #     pathname,
-    #     normalised=True
-    #     )
-    # exit(0)
 
     for idx_base, typename in [(0, "excitatory"), (num_spikers_per_kind, "inhibitory")]:
         for idx_shift in range(0, num_spikers_per_kind, num_spikers_per_kind // min(plot_parts, num_spikers_per_kind)):
@@ -267,8 +270,8 @@ def _test_spike_trains(my_precomputed_full_name):
             isi_delta_signal_points = [(i - 2, (signal[i] - signal[i - 1]) - (signal[i - 1] - signal[i - 2]))
                                        for i in range(2, len(signal))]
 
-            pathname = os.path.join(output_dir, "isi_delta_" + typename + "_" + str(idx_shift) + "_curve",
-                                                "isi_delta_" + typename + "_" + str(idx_shift) + ".png")
+            pathname = os.path.join(info.output_dir, "isi_delta_" + typename + "_" + str(idx_shift) + "_curve",
+                                                     "isi_delta_" + typename + "_" + str(idx_shift) + ".png")
             print("    Saving plot " + pathname)
             plot.curve_per_partes(
                 isi_delta_signal_points,
@@ -279,16 +282,16 @@ def _test_spike_trains(my_precomputed_full_name):
                 lambda p: print("    Saving plot " + p),
                 )
 
-            pathname = os.path.join(output_dir, "isi_delta_" + typename + "_" + str(idx_shift) + "_hist.png")
+            pathname = os.path.join(info.output_dir, "isi_delta_" + typename + "_" + str(idx_shift) + "_hist.png")
             print("    Saving plot " + pathname)
             plot.histogram(distribution.make_times_histogram([p[1] for p in isi_delta_signal_points], dt),
                            pathname, normalised=False)
 
-            pathname = os.path.join(output_dir, "isi_hist_" + typename + "_" + str(idx_shift) + ".png")
+            pathname = os.path.join(info.output_dir, "isi_hist_" + typename + "_" + str(idx_shift) + ".png")
             print("    Saving plot " + pathname)
             plot.histogram(distribution.make_isi_histogram(signal, dt), pathname, normalised=False)
 
-        pathname = os.path.join(output_dir, "isi_distribution_" + typename + "_0.png")
+        pathname = os.path.join(info.output_dir, "isi_distribution_" + typename + "_0.png")
         print("    Saving plot " + pathname)
         plot.histogram(
             trains[idx_base].get_spiking_distribution(),
@@ -296,7 +299,7 @@ def _test_spike_trains(my_precomputed_full_name):
             normalised=True
             )
 
-    pathname = os.path.join(output_dir, "spikes_board", "spikes.png")
+    pathname = os.path.join(info.output_dir, "spikes_board", "spikes.png")
     print("    Saving plot " + pathname)
     plot.scatter_per_partes(
         [(event, i) for i in range(2 * num_spikers_per_kind) for event in trains[i].get_spikes_history()],
@@ -310,7 +313,7 @@ def _test_spike_trains(my_precomputed_full_name):
          for i in range(2 * num_spikers_per_kind) for _ in trains[i].get_spikes_history()]
         )
 
-    print("Done.")
+    return 0
 
 
 ####################################################################################################
@@ -318,11 +321,11 @@ def _test_spike_trains(my_precomputed_full_name):
 ####################################################################################################
 
 
-_automatically_registered_tests_ = sorted([{"name": "test/" + elem.__name__[len("_test_"):],
+_automatically_registered_tests_ = sorted([{"name": elem.__name__[len("_test_"):],
                                             "function_ptr": elem,
                                             "description": str(elem.__doc__)}
-                                            for elem in list(map(eval, dir()))
-                                                if callable(elem) and elem.__name__.startswith("_test_")],
+                                           for elem in list(map(eval, dir()))
+                                           if callable(elem) and elem.__name__.startswith("_test_")],
                                           key=lambda x: x["name"])
 
 
@@ -334,4 +337,11 @@ def run_test(test_info):
     assert isinstance(test_info, dict)
     assert "function_ptr" in test_info and callable(test_info["function_ptr"])
     assert "name" in test_info
-    return test_info["function_ptr"](test_info["name"])
+    print("Starting test '" + test_info["name"] + "':")
+    out_dir = os.path.join(os.path.join(output_root_dir(), "tests", test_info["name"]))
+    if os.path.exists(out_dir):
+        shutil.rmtree(out_dir)
+    os.makedirs(out_dir)
+    retval = test_info["function_ptr"](TestInfo(test_info["name"], out_dir))
+    print("The test has finished " + ("successfully" if retval == 0 else "with an error") + ".")
+    return retval
