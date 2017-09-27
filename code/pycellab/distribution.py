@@ -172,6 +172,8 @@ def get_standard_spike_noise():
 def make_isi_histogram(time_events, dt=0.001):
     assert all(isinstance(t, float) for t in time_events)
     assert isinstance(dt, float) and dt > 0.00001
+    if len(time_events) == 0:
+        return {}
     nbins = int(float(time_events[-1] + dt) / float(dt))
     lo = 0.0
     hi = nbins * dt

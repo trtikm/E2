@@ -130,12 +130,12 @@ class NeuronWithInputSynapses(CommonProps):
         """
         A simulation of a 'leaky integrate and fire' neuron with a 800
         excitatory and 200 inhibitory input spike trains, all with the
-        standard noise distribution. Weights of all synapses is 1.
+        standard noise distributions. Weights of all synapses is 1.
         """
         num_excitatory = 800
         num_inhibitory = 200
-        excitatory_noise = distribution.get_standard_spike_noise()
-        inhibitory_noise = excitatory_noise
+        excitatory_noise = distribution.default_excitatory_isi_distribution()
+        inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
             start_time=0.0,
@@ -167,14 +167,14 @@ class NeuronWithInputSynapses(CommonProps):
         """
         A simulation of a 'izhikevich regular spiking' neuron with a 800
         excitatory and 200 inhibitory input spike trains, all with the standard
-        noise distribution. Weights of all synapses is 1. Spike magnitude is
+        noise distributions. Weights of all synapses is 1. Spike magnitude is
         0.15. This neuron typically creates excitatory synapses to other
         neurons. These neurons are the most common in the cortex.
         """
         num_excitatory = 800
         num_inhibitory = 200
-        excitatory_noise = distribution.get_standard_spike_noise()
-        inhibitory_noise = excitatory_noise
+        excitatory_noise = distribution.default_excitatory_isi_distribution()
+        inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
             start_time=0.0,
@@ -195,14 +195,14 @@ class NeuronWithInputSynapses(CommonProps):
         """
         A simulation of a 'izhikevich chattering' neuron with a 800
         excitatory and 200 inhibitory input spike trains, all with the standard
-        noise distribution. Weights of all synapses is 1. Spike magnitude is
+        noise distributions. Weights of all synapses is 1. Spike magnitude is
         0.15. This neuron typically creates excitatory synapses to other
         neurons.
         """
         num_excitatory = 800
         num_inhibitory = 200
-        excitatory_noise = distribution.get_standard_spike_noise()
-        inhibitory_noise = excitatory_noise
+        excitatory_noise = distribution.default_excitatory_isi_distribution()
+        inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
             start_time=0.0,
@@ -223,14 +223,14 @@ class NeuronWithInputSynapses(CommonProps):
         """
         A simulation of a 'izhikevich fast spiking' neuron with a 800
         excitatory and 200 inhibitory input spike trains, all with the standard
-        noise distribution. Weights of all synapses is 1. Spike magnitude is
+        noise distributions. Weights of all synapses is 1. Spike magnitude is
         0.15. This neuron typically creates inhibitory synapses to other
         neurons.
         """
         num_excitatory = 800
         num_inhibitory = 200
-        excitatory_noise = distribution.get_standard_spike_noise()
-        inhibitory_noise = excitatory_noise
+        excitatory_noise = distribution.default_excitatory_isi_distribution()
+        inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
             start_time=0.0,
@@ -251,13 +251,13 @@ class NeuronWithInputSynapses(CommonProps):
         """
         A simulation of a 'hodgkin-huxley' neuron with a 800 excitatory and
         200 inhibitory input spike trains, all with the standard noise
-        distribution. Weights of all synapses is 1. Spike magnitude is
+        distributions. Weights of all synapses is 1. Spike magnitude is
         0.15.
         """
         num_excitatory = 800
         num_inhibitory = 200
-        excitatory_noise = distribution.get_standard_spike_noise()
-        inhibitory_noise = excitatory_noise
+        excitatory_noise = distribution.default_excitatory_isi_distribution()
+        inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
             start_time=0.0,
@@ -281,13 +281,13 @@ class NeuronWithInputSynapses(CommonProps):
         """
         A simulation of a 'wilson's regular spiking' neuron with a 800
         excitatory and 200 inhibitory input spike trains, all with the
-        standard noise distribution. Weights of all synapses is 1. Spike
+        standard noise distributions. Weights of all synapses is 1. Spike
         magnitude is 1.0.
         """
         num_excitatory = 800
         num_inhibitory = 200
-        excitatory_noise = distribution.get_standard_spike_noise()
-        inhibitory_noise = excitatory_noise
+        excitatory_noise = distribution.default_excitatory_isi_distribution()
+        inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
             start_time=0.0,
@@ -308,13 +308,13 @@ class NeuronWithInputSynapses(CommonProps):
         """
         A simulation of a 'wilson's fast spiking' neuron with a 800
         excitatory and 200 inhibitory input spike trains, all with the
-        standard noise distribution. Weights of all synapses is 1.
+        standard noise distributions. Weights of all synapses is 1.
         Spike magnitude is 1.0.
         """
         num_excitatory = 800
         num_inhibitory = 200
-        excitatory_noise = distribution.get_standard_spike_noise()
-        inhibitory_noise = excitatory_noise
+        excitatory_noise = distribution.default_excitatory_isi_distribution()
+        inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
             start_time=0.0,
@@ -335,13 +335,13 @@ class NeuronWithInputSynapses(CommonProps):
         """
         A simulation of a 'wilson's bursting' neuron with a 800
         excitatory and 200 inhibitory input spike trains, all with
-        the standard noise distribution. Weights of all synapses is 1.
+        the standard noise distributions. Weights of all synapses is 1.
         Spike magnitude is 1.0.
         """
         num_excitatory = 800
         num_inhibitory = 200
-        excitatory_noise = distribution.get_standard_spike_noise()
-        inhibitory_noise = excitatory_noise
+        excitatory_noise = distribution.default_excitatory_isi_distribution()
+        inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
             start_time=0.0,
@@ -363,14 +363,14 @@ class NeuronWithInputSynapses(CommonProps):
         A simulation of three neurons 'izhikevich regular spiking', 'izhikevich
         fast spiking', 'hodgkin-huxley', 'wilson regular spiking', and 'wilson
         fast spiking', with common spike input trains 800 excitatory and 200
-        inhibitory, all with the standard noise distribution. Initial weights
+        inhibitory, all with the standard noise distributions. Initial weights
         of all synapses of all neurons are 1. Spike magnitude for all neurons
         is 0.15, except for both wilson neurons for which it is 1.0."
         """
         num_excitatory = 800
         num_inhibitory = 200
-        excitatory_noise = distribution.get_standard_spike_noise()
-        inhibitory_noise = excitatory_noise
+        excitatory_noise = distribution.default_excitatory_isi_distribution()
+        inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
             start_time=0.0,
@@ -410,10 +410,10 @@ class NeuronWithInputSynapses(CommonProps):
         This is not a genuine configuration. It serves only for development,
         testing, and bug-fixing of this evaluation system.
         """
-        num_excitatory = 800
-        num_inhibitory = 200
-        excitatory_noise = distribution.get_standard_spike_noise()
-        inhibitory_noise = excitatory_noise
+        num_excitatory = 4*200
+        num_inhibitory = 1*200
+        excitatory_noise = distribution.default_excitatory_isi_distribution()
+        inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
             start_time=0.0,
@@ -423,8 +423,8 @@ class NeuronWithInputSynapses(CommonProps):
             cell_soma=[soma.izhikevich.regular_spiking(spike_magnitude=0.15)],
             excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
             inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
-            excitatory_synapses=[[synapse.synapse.plastic_peek_np() for _ in range(num_excitatory)]],
-            inhibitory_synapses=[[synapse.synapse.plastic_peek_pn() for _ in range(num_inhibitory)]],
+            excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
+            inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
             plot_time_step=1.0
             )

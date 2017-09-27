@@ -468,9 +468,9 @@ def evaluate_neuron_with_input_synapses(cfg):
     print("Evaluating the configuration '" + cfg.name + "'.")
 
     print("  Constructing and initialising data structures,")
-    excitatory_spike_trains = [spike_train.SpikeTrain.create(noise, 0.0)
+    excitatory_spike_trains = [spike_train.SpikeTrain.create(noise, 1.0)
                                for noise in cfg.excitatory_noise_distributions]
-    inhibitory_spike_trains = [spike_train.SpikeTrain.create(noise, 0.0)
+    inhibitory_spike_trains = [spike_train.SpikeTrain.create(noise, 1.0)
                                for noise in cfg.inhibitory_noise_distributions]
     cells = [neuron.neuron(
                 cfg.cell_soma[i],
@@ -514,13 +514,13 @@ def evaluate_neuron_with_input_synapses(cfg):
     save_pre_isi_distributions(cfg)
     save_pre_spike_counts_histograms(
         cfg,
-        [train.get_spikes() for train in excitatory_spike_trains],
-        [train.get_spikes() for train in inhibitory_spike_trains]
+        [train.get_spikes_history() for train in excitatory_spike_trains],
+        [train.get_spikes_history() for train in inhibitory_spike_trains]
         )
     save_pre_spike_counts_curves_per_partes(
         cfg,
-        [train.get_spikes() for train in excitatory_spike_trains],
-        [train.get_spikes() for train in inhibitory_spike_trains],
+        [train.get_spikes_history() for train in excitatory_spike_trains],
+        [train.get_spikes_history() for train in inhibitory_spike_trains],
         cfg.start_time,
         cfg.start_time + cfg.nsteps * cfg.dt,
         cfg.plot_time_step
@@ -603,15 +603,15 @@ def evaluate_neuron_with_input_synapses(cfg):
 
         save_spikes_board_per_partes(
             cfg,
-            [train.get_spikes() for train in excitatory_spike_trains],
-            [train.get_spikes() for train in inhibitory_spike_trains],
+            [train.get_spikes_history() for train in excitatory_spike_trains],
+            [train.get_spikes_history() for train in inhibitory_spike_trains],
             [compute_normalised_weights(
-                train.get_spikes(),
+                train.get_spikes_history(),
                 cell.get_excitatory_synapses()[i],
                 cell.get_excitatory_synapses_recording()[i][cell.get_excitatory_synapses()[i].get_weight_variable_name()]
                 ) for i, train in enumerate(excitatory_spike_trains)],
             [compute_normalised_weights(
-                train.get_spikes(),
+                train.get_spikes_history(),
                 cell.get_inhibitory_synapses()[i],
                 cell.get_inhibitory_synapses_recording()[i][cell.get_inhibitory_synapses()[i].get_weight_variable_name()]
                 ) for i, train in enumerate(inhibitory_spike_trains)],
@@ -628,8 +628,8 @@ def evaluate_synapse_and_spike_noise(cfg):
     print("Evaluating the configuration '" + cfg.name + "'.")
 
     print("  Constructing and initialising data structures,")
-    pre_spike_train = spike_train.SpikeTrain.create(cfg.pre_spikes_distributions, 0.0)
-    post_spike_train = spike_train.SpikeTrain.create(cfg.post_spikes_distributions, 0.0)
+    pre_spike_train = spike_train.SpikeTrain.create(cfg.pre_spikes_distributions, 1.0)
+    post_spike_train = spike_train.SpikeTrain.create(cfg.post_spikes_distributions, 1.0)
     synapse_recording = dict([(var, [(cfg.start_time, value)])
                               for var, value in cfg.the_synapse.get_variables().items()])
 
@@ -655,7 +655,7 @@ def evaluate_synapse_and_spike_noise(cfg):
     pathname = os.path.join(cfg.output_dir, "isi_pre" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
     plot.histogram(
-        distribution.make_isi_histogram(pre_spike_train.get_spikes(), cfg.dt),
+        distribution.make_isi_histogram(pre_spike_train.get_spikes_history(), cfg.dt),
         pathname,
         normalised=False,
         colours=get_colour_pre_excitatory_and_inhibitory()
@@ -664,7 +664,7 @@ def evaluate_synapse_and_spike_noise(cfg):
     pathname = os.path.join(cfg.output_dir, "isi_post" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
     plot.histogram(
-        distribution.make_isi_histogram(post_spike_train.get_spikes(), cfg.dt),
+        distribution.make_isi_histogram(post_spike_train.get_spikes_history(), cfg.dt),
         pathname,
         normalised=False,
         colours=get_colour_pre_excitatory_and_inhibitory()
