@@ -2,8 +2,6 @@
 #   define ANGEO_COLLIDE_HPP_INCLUDED
 
 #   include <angeo/tensor_math.hpp>
-#   include <angeo/coordinate_system.hpp>
-#   include <vector>
 
 namespace angeo {
 
@@ -177,52 +175,6 @@ bool  collision_bbox_bbox(
         vector3 const&  bbox_0_high_corner,
         vector3 const&  bbox_1_low_corner,
         vector3 const&  bbox_1_high_corner
-        );
-
-
-enum struct CLIP_RESULT_TYPE : natural_8_bit
-{
-    EMPTY = 0,
-    CLIPPED = 1,
-    FULL = 2
-};
-
-
-struct clipped_polygon_description
-{
-    std::size_t  index_start;
-    std::size_t  index_end;
-
-    vector2 point_start;
-    vector2 point_end;
-
-    scalar param_start;
-    scalar param_end;
-};
-
-
-CLIP_RESULT_TYPE  clip_polygon(
-        std::vector<vector2> const&  polygon_points,
-        vector2 const&  clip_origin,
-        vector2 const&  clip_normal,
-        clipped_polygon_description* const  description
-        );
-
-
-void  instersection_of_plane_with_xy_coord_plane(
-        vector3 const&  origin,
-        vector3 const&  normal,
-        vector2&  intersection_origin,
-        vector2&  intersection_normal
-        );
-
-
-CLIP_RESULT_TYPE  clip_polygon(
-        matrix44 const&  to_polygon_space_matrix,
-        std::vector<vector2> const&  polygon_points,
-        vector3 const&  clip_origin,
-        vector3 const&  clip_normal,
-        clipped_polygon_description* const  description
         );
 
 

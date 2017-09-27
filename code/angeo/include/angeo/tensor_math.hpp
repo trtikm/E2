@@ -46,16 +46,36 @@ typedef Eigen::Matrix<float_32_bit,3,3>  matrix33;
 typedef Eigen::Matrix<float_32_bit,4,3>  matrix43;
 typedef Eigen::Matrix<float_32_bit,4,4>  matrix44;
 
+inline vector2  vector2_zero() { return vector2::Zero(); }
+inline vector2  vector2_unit_x() { return vector2::UnitX(); }
+inline vector2  vector2_unit_y() { return vector2::UnitY(); }
+inline scalar  dot_product_2d(vector2 const& u, vector2 const& v) { return u.dot(v); }
+inline scalar  length_squared_2d(vector2 const& u) { return dot_product_2d(u,u); }
+inline scalar  length_2d(vector2 const& u) { return u.norm(); }
+inline vector2  normalised_2d(vector2 const&  u) { return u.normalized(); }
+inline void  normalise_2d(vector2& u) { u.normalize(); }
+inline vector2  orthogonal(vector2 const&  u) { return { -u(1), u(0) }; }
+
+inline vector3  expand23(vector2 const& u, scalar h=scalar(1.0)) { return { u(0), u(1), h }; }
+inline vector2  contract32(vector3 const& u) { return { u(0), u(1) }; }
+
 inline vector3  vector3_zero() { return vector3::Zero(); }
 inline vector3  vector3_unit_x() { return vector3::UnitX(); }
 inline vector3  vector3_unit_y() { return vector3::UnitY(); }
 inline vector3  vector3_unit_z() { return vector3::UnitZ(); }
 inline scalar  dot_product(vector3 const& u, vector3 const& v) { return u.dot(v); }
 inline vector3  cross_product(vector3 const& u, vector3 const& v) { return u.cross(v); }
-inline scalar  length(vector3 const& u) { return u.norm(); }
 inline scalar  length_squared(vector3 const& u) { return dot_product(u,u); }
+inline scalar  length(vector3 const& u) { return u.norm(); }
 inline vector3  normalised(vector3 const&  u) { return u.normalized(); }
 inline void  normalise(vector3& u) { u.normalize(); }
+
+inline vector4  expand34(vector3 const& u, scalar h=scalar(1.0)) { return { u(0), u(1), u(2), h }; }
+inline vector3  contract43(vector4 const& u) { return { u(0), u(1), u(2) }; }
+
+inline vector3  transform_point(vector3 const& u, matrix44 const& M, scalar const h=scalar(1.0))
+{ return contract43(M * expand34(u,h)); }
+inline vector3  transform_vector(vector3 const& u, matrix44 const& M) { return transform_point(u,M,scalar(0.0)); }
 
 vector3  interpolate_linear(vector3 const&  u, vector3 const&  v, float_32_bit const  t);
 

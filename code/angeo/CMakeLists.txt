@@ -12,6 +12,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/angeo/utility.hpp
     ./src/utility.cpp
+
+    ./include/angeo/shape.hpp
+    ./src/shape.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

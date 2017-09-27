@@ -229,4 +229,232 @@ bool  collision_bbox_bbox(
 }
 
 
+CLIP_RESULT_TYPE  clip_polygon(
+        std::vector<vector2> const&  polygon_points,
+        vector2 const&  clip_origin,
+        vector2 const&  clip_normal,
+        clipped_polygon_description* const  description
+        )
+{
+    INVARIANT(polygon_points.size() >= 4UL);    // The first point and the last one are the same.
+                                                // So, at least 3 different points are required.
+
+    // clip_line_normal * (X - clip_line_origin) = 0
+    // X = A + t*(B-A)  ; A = polygon_points.at(i-1), B = polygon_points.at(i)
+    // --------------------
+    // clip_line_normal * (A + t*(B-A) - clip_line_origin) = 0
+    // t * clip_line_normal * (B-A) + clip_line_normal * (A - clip_line_origin) = 0
+    // t * (dot(normal,B) - dot(normal,A) + (dot(normal,A) - dot(normal,origin)) = 0
+
+    scalar const  dot_normal_origin = dot_product_2d(clip_normal, clip_origin);
+    scalar  dot_normal_A = dot_product_2d(clip_normal, polygon_points.at(0UL));
+    scalar  dot_normal_old_A = dot_normal_origin;
+    scalar  dot_normal_B;
+    std::size_t  i = 1UL;
+
+    if (dot_normal_A >= dot_normal_origin)
+    {
+        // The first point of the polygon is in FRONT space (i.e. not clipped away).
+
+        while (true)
+        {
+            dot_normal_B = dot_product_2d(clip_normal, polygon_points.at(i));
+
+            if (dot_normal_B < dot_normal_origin)
+                break;
+            if (dot_normal_B >= dot_normal_A && dot_normal_old_A >= dot_normal_A)
+                return CLIP_RESULT_TYPE::FULL;
+
+            ++i;
+            if (i == polygon_points.size())
+                return CLIP_RESULT_TYPE::FULL;
+
+            dot_normal_old_A = dot_normal_A;
+            dot_normal_A = dot_normal_B;
+        }
+        if (description != nullptr)
+        {
+            description->index_end = i - 1UL;
+
+            // param = (dot_normal_A - dot_normal_origin) / (dot_normal_A - dot_normal_B)
+
+            scalar const  normal_distance_between_A_and_B = dot_normal_A - dot_normal_B;
+            if (normal_distance_between_A_and_B < (scalar)1e-4) // i.e. < 0.1mm
+            {
+                description->param_start = (scalar)1.0;
+                description->point_start = polygon_points.at(i);
+            }
+            else
+            {
+                scalar const  normal_distance_between_A_and_line_origin =  dot_normal_A - dot_normal_origin;
+                description->param_start =
+                        normal_distance_between_A_and_line_origin / normal_distance_between_A_and_B;
+                description->point_start =
+                        polygon_points.at(description->index_end) + description->param_start *
+                                ( polygon_points.at(i) - polygon_points.at(description->index_end) );
+            }
+        }
+        for(++i; true; ++i)
+        {
+            dot_normal_A = dot_normal_B;
+            scalar const  dot_normal_B = dot_product_2d(clip_normal, polygon_points.at(i));
+            if (dot_normal_B >= dot_normal_origin)
+                break;
+        }
+        if (description != nullptr)
+        {
+            description->index_start = i;
+
+            // param = (dot_normal_origin - dot_normal_A) / (dot_normal_B - dot_normal_A)
+
+            scalar const  normal_distance_between_A_and_B = dot_normal_B - dot_normal_A;
+            if (normal_distance_between_A_and_B < (scalar)1e-4) // i.e. < 0.1mm
+            {
+                description->param_end = (scalar)0.0;
+                description->point_end = polygon_points.at(i - 1UL);
+            }
+            else
+            {
+                scalar const  normal_distance_between_A_and_line_origin = dot_normal_origin - dot_normal_A;
+                description->param_end =
+                        normal_distance_between_A_and_line_origin / normal_distance_between_A_and_B;
+                description->point_end =
+                        polygon_points.at(i - 1UL) + description->param_end *
+                                ( polygon_points.at(description->index_start) - polygon_points.at(i - 1UL) );
+            }
+        }
+
+        return CLIP_RESULT_TYPE::CLIPPED;
+    }
+    else
+    {
+        // The first point of the polygon is in BACK space (i.e. clipped away).
+
+        while (true)
+        {
+            dot_normal_B = dot_product_2d(clip_normal, polygon_points.at(i));
+
+            if (dot_normal_B >= dot_normal_origin)
+                break;
+            if (dot_normal_B <= dot_normal_A && dot_normal_old_A <= dot_normal_A)
+                return CLIP_RESULT_TYPE::EMPTY;
+
+            ++i;
+            if (i == polygon_points.size())
+                return CLIP_RESULT_TYPE::EMPTY;
+
+            dot_normal_old_A = dot_normal_A;
+            dot_normal_A = dot_normal_B;
+        }
+        if (description != nullptr)
+        {
+            description->index_start = i;
+
+            // param = (dot_normal_origin - dot_normal_A) / (dot_normal_B - dot_normal_A)
+
+            scalar const  normal_distance_between_A_and_B = dot_normal_B - dot_normal_A;
+            if (normal_distance_between_A_and_B < (scalar)1e-4) // i.e. < 0.1mm
+            {
+                description->param_end = (scalar)0.0;
+                description->point_end = polygon_points.at(i - 1UL);
+            }
+            else
+            {
+                scalar const  normal_distance_between_A_and_line_origin = dot_normal_origin - dot_normal_A;
+                description->param_end =
+                        normal_distance_between_A_and_line_origin / normal_distance_between_A_and_B;
+                description->point_end =
+                        polygon_points.at(i - 1UL) + description->param_end *
+                                ( polygon_points.at(description->index_start) - polygon_points.at(i - 1UL) );
+            }
+        }
+        for(++i; true; ++i)
+        {
+            dot_normal_A = dot_normal_B;
+            scalar const  dot_normal_B = dot_product_2d(clip_normal, polygon_points.at(i));
+            if (dot_normal_B < dot_normal_origin)
+                break;
+        }
+        if (description != nullptr)
+        {
+            description->index_end = i - 1UL;
+
+            // param = (dot_normal_A - dot_normal_origin) / (dot_normal_A - dot_normal_B)
+
+            scalar const  normal_distance_between_A_and_B = dot_normal_A - dot_normal_B;
+            if (normal_distance_between_A_and_B < (scalar)1e-4) // i.e. < 0.1mm
+            {
+                description->param_start = (scalar)1.0;
+                description->point_start = polygon_points.at(i);
+            }
+            else
+            {
+                scalar const  normal_distance_between_A_and_line_origin =  dot_normal_A - dot_normal_origin;
+                description->param_start =
+                        normal_distance_between_A_and_line_origin / normal_distance_between_A_and_B;
+                description->point_start =
+                        polygon_points.at(description->index_end) + description->param_start *
+                                ( polygon_points.at(i) - polygon_points.at(description->index_end) );
+            }
+        }
+
+        return CLIP_RESULT_TYPE::CLIPPED;
+    }
+}
+
+
+void  instersection_of_plane_with_xy_coord_plane(
+        vector3 const&  origin,
+        vector3 const&  normal,
+        vector2&  intersection_origin,
+        vector2&  intersection_normal
+        )
+{
+}
+
+
+
+CLIP_RESULT_TYPE  clip_polygon(
+        matrix44 const&  to_polygon_space_matrix,
+        std::vector<vector2> const&  polygon_points,
+        vector3 const&  clip_origin,
+        vector3 const&  clip_normal,
+        clipped_polygon_description* const  description
+        )
+{
+    vector3 const  transformed_clip_origin = transform_point(clip_origin, to_polygon_space_matrix);
+    vector3 const  transformed_clip_normal = transform_vector(clip_normal, to_polygon_space_matrix);
+    if (transformed_clip_normal(2) > scalar(1.0 - 1e-4))
+    {
+        if (transformed_clip_origin(2) <= scalar(0.0))
+            return CLIP_RESULT_TYPE::FULL;
+        else
+            return CLIP_RESULT_TYPE::EMPTY;
+    }
+    if (transformed_clip_normal(2) < scalar(-1.0 + 1e-4))
+    {
+        if (transformed_clip_origin(2) >= scalar(0.0))
+            return CLIP_RESULT_TYPE::FULL;
+        else
+            return CLIP_RESULT_TYPE::EMPTY;
+    }
+    vector2 origin2d;
+    vector2 normal2d;
+    instersection_of_plane_with_xy_coord_plane(
+                transformed_clip_origin,
+                transformed_clip_normal,
+                origin2d,
+                normal2d
+                );
+    return clip_polygon(polygon_points,origin2d,normal2d,description);
+}
+
+
+bool  intersection_of_covex_polytopes(
+        )
+{
+    return false;
+}
+
+
 }
