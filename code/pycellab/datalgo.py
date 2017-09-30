@@ -200,6 +200,7 @@ def compose_sorted_lists_of_points(list_of_lists_of_points, multipliers=None, ep
         if len(idx) == 0:
             break
         x, y = list_of_lists_of_points[idx[0]][indices[idx[0]]]
+        y *= 1 if multipliers is None else multipliers[idx[0]]
         for i in idx[1:]:
             y += list_of_lists_of_points[i][indices[i]][1] * (1 if multipliers is None else multipliers[i])
         assert len(result) == 0 or result[-1][0] <= x
