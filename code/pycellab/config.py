@@ -63,6 +63,7 @@ class NeuronWithInputSynapses(CommonProps):
         assert isinstance(num_sub_iterations, list)
         assert False not in list(map(lambda x: type(x) is int and x > 0, num_sub_iterations))
         assert isinstance(cell_soma, list)
+        assert len({soma.get_name() for soma in cell_soma}) == len(cell_soma)
         assert isinstance(excitatory_synapses, list)
         assert isinstance(inhibitory_synapses, list)
         assert len(cell_soma) == len(excitatory_synapses) and len(cell_soma) == len(inhibitory_synapses)
