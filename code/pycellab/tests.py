@@ -6,6 +6,7 @@ import plot
 import distribution
 import spike_train
 import synapse
+import datalgo
 
 
 class TestInfo:
@@ -27,7 +28,7 @@ def _test_distribution(info):
         xhist = hist.copy()
         for k in xhist.keys():
             xhist[k] = 0
-        isi = distribution.distribution(hist)
+        isi = distribution.Distribution(hist)
         print(isi)
         ofile.write(str(isi) + "\n")
         for _ in range(n):
@@ -83,7 +84,7 @@ def _test_hermit_distribution(info):
         )
     for peek_x in numpy.arange(0.1, 0.95, 0.1, float):
         print("  Computing points of hermit cubic at peek " + str(peek_x) + ".")
-        points = distribution.move_scale_curve_points(
+        points = datalgo.move_scale_curve_points(
                     distribution.make_points_of_hermit_cubic_approximation_of_normal_distribution(
                         peek_x=peek_x,
                         mult_m01=1.0,
@@ -101,7 +102,7 @@ def _test_hermit_distribution(info):
             os.path.join(info.output_dir, "ns_curve_hermit_adapted_" + format(peek_x, ".2f") + ".png")
             )
         print("  Computing histogram from the hermit cubic.")
-        hist = distribution.mkhist_from_curve_points(points, num_bars=300)
+        hist = datalgo.make_histogram_from_points(points, num_bins=300)
         print("  Saving " + os.path.join(info.output_dir, "ns_hist_adapted_" + format(peek_x, ".2f") + ".png"))
         plot.histogram(
             hist,
@@ -145,8 +146,8 @@ def _test_synapse(info):
         dt = 0.001
         nsteps = 2000
 
-        pre_spikes_train = spike_train.SpikeTrain.create(distribution.get_standard_spike_noise(), 0.0)
-        post_spikes_train = spike_train.SpikeTrain.create(distribution.get_standard_spike_noise(), 0.0)
+        pre_spikes_train = spike_train.SpikeTrain.create(distribution.default_excitatory_isi_distribution(), 0.0)
+        post_spikes_train = spike_train.SpikeTrain.create(distribution.default_excitatory_isi_distribution(), 0.0)
         # pre_spikes_train = spike_train.spike_train(
         #     distribution.distribution({}),
         #     [0.001],
@@ -284,12 +285,19 @@ def _test_spike_trains(info):
 
             pathname = os.path.join(info.output_dir, "isi_delta_" + typename + "_" + str(idx_shift) + "_hist.png")
             print("    Saving plot " + pathname)
-            plot.histogram(distribution.make_times_histogram([p[1] for p in isi_delta_signal_points], dt),
-                           pathname, normalised=False)
+            plot.histogram(
+                datalgo.make_histogram([p[1] for p in isi_delta_signal_points], dt),
+                pathname,
+                normalised=False
+                )
 
             pathname = os.path.join(info.output_dir, "isi_hist_" + typename + "_" + str(idx_shift) + ".png")
             print("    Saving plot " + pathname)
-            plot.histogram(distribution.make_isi_histogram(signal, dt), pathname, normalised=False)
+            plot.histogram(
+                datalgo.make_histogram(datalgo.make_difference_events(signal), dt),
+                pathname,
+                normalised=False
+                )
 
         pathname = os.path.join(info.output_dir, "isi_distribution_" + typename + "_0.png")
         print("    Saving plot " + pathname)

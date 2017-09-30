@@ -1,9 +1,10 @@
 import numpy
 import math
 import bisect
+import datalgo
 
 
-class distribution:
+class Distribution:
     def __init__(self, histogram):
         assert histogram is None or isinstance(histogram, dict)
         if histogram is None or len(histogram) == 0:
@@ -127,124 +128,6 @@ class distribution:
         return self._coefficient_of_variation
 
 
-def mkhist(events, nbins=100, lo=None, hi=None, use_bins_domain=False):
-    assert type(nbins) == int and nbins > 0
-    if len(events) == 0:
-        return {}, 1.0
-    if lo is None:
-        lo = min(events)
-    if hi is None:
-        hi = max(events)
-    dx = float(hi - lo) / float(nbins)
-    if dx < 0.00001:
-        return {events[0]: len(events)}, 1.0
-    hist = {}
-    for x in events:
-        b = int((x - lo) / dx + dx / 2.0)
-        if b in hist:
-            hist[b] += 1
-        else:
-            hist[b] = 1
-    if use_bins_domain:
-        return hist, dx
-    return {lo + i * dx: c for i, c in hist.items()}, dx
-
-
-def get_standard_spike_noise():
-    s = numpy.random.exponential(1, 10000)
-    hist, _ = mkhist(s, 500, use_bins_domain=True)
-    xhist = {}
-    keys = sorted(hist.keys())
-    for idx in range(0, min(300, len(keys))):
-        if idx < 5:
-            value = 0.0
-        elif idx < 10:
-            x = (idx - 5.0) / 10.0
-            assert x >= 0.0 and x <= 1.0
-            value = hist[keys[10]] * (3.0 * x**2 - 2.0 * x**3)
-        else:
-            value = hist[keys[idx]]
-        xhist[0.001 * (idx + 2)] = value
-        idx += 1
-    return distribution(xhist)
-
-
-def make_isi_histogram(time_events, dt=0.001):
-    assert all(isinstance(t, float) for t in time_events)
-    assert isinstance(dt, float) and dt > 0.00001
-    if len(time_events) == 0:
-        return {}
-    nbins = int(float(time_events[-1] + dt) / float(dt))
-    lo = 0.0
-    hi = nbins * dt
-    return mkhist([time_events[i] - time_events[i - 1] for i in range(1, len(time_events))], nbins, lo, hi)[0]
-
-
-def make_times_histogram(time_events, dt=0.001, start_time=None):
-    assert all(isinstance(t, float) for t in time_events)
-    assert start_time is None or isinstance(start_time, float)
-    assert isinstance(dt, float) and dt > 0.00001
-    nbins = int(float(max(time_events) + dt) / dt)
-    lo = dt * (int(float(min(time_events)) / dt) if start_time is None else int(start_time / dt))
-    hi = dt * nbins
-    return mkhist(time_events, nbins, lo, hi)[0]
-
-
-def make_counts_histogram(time_events, start_bin=0, bin_size=1):
-    assert bin_size > 0.000001
-    xhist = {}
-    for event in time_events:
-        idx = int(float(event - start_bin) / float(bin_size) + float(bin_size) / 2.0)
-        if idx in xhist:
-            xhist[idx] += 1
-        else:
-            xhist[idx] = 1
-    return {start_bin + i * bin_size: c for i, c in xhist.items()}
-
-
-def make_counts_curve(time_events, dx=1.0):
-    assert dx > 0.000001
-    if len(time_events) == 0:
-        return []
-    result = [(time_events[0], 1)]
-    for x in time_events[1:]:
-        if abs(x - result[-1][0]) < 0.5 * dx:
-            result[-1] = (result[-1][0], result[-1][1] + 1)
-        else:
-            if abs(x - result[-1][0]) >= 1.5 * dx:
-                result.append((result[-1][0]+dx, 0))
-                if x-dx > result[-1][0]+dx:
-                    result.append((x-dx, 0))
-            result.append((x, 1))
-    return result
-
-
-def make_fx_points(pairs, function, dx=1.0):
-    assert dx > 0.000001
-    assert callable(function)
-    if len(pairs) == 0:
-        return []
-    result = [pairs[0]]
-    for x, fx in pairs[1:]:
-        if abs(x - result[-1][0]) < 0.5 * dx:
-            result[-1] = (result[-1][0], function(result[-1][1], fx))
-        else:
-            result.append((x, fx))
-    return result
-
-
-def make_sum_points(pairs, dx=1.0):
-    return make_fx_points(pairs, float.__add__, dx)
-
-
-def make_min_points(pairs, dx=1.0):
-    return make_fx_points(pairs, min, dx)
-
-
-def make_max_points(pairs, dx=1.0):
-    return make_fx_points(pairs, max, dx)
-
-
 def make_points_of_normal_distribution(
         num_points=200,
         nu=0.0,
@@ -279,41 +162,6 @@ def make_points_of_normal_distribution(
     return points
 
 
-def mkhist_by_linear_interpolation(points, dx):
-    assert dx > 0.00001
-    hist = dict(points)
-    for i in range(1, len(points)):
-        a = points[i - 1]
-        b = points[i]
-        x = a[0] + dx
-        while x < b[0]:
-            assert x not in hist
-            hist[x] = a[1] + ((x - a[0]) / (b[0] - a[0])) * (b[1] - a[1])
-            x += dx
-    return hist
-
-
-def points_of_hermit_cubic_spline(p0, m0, p1, m1, num_points=100):
-    def h00(t):
-        return 2.0 * t**3 - 3.0 * t**2 + 1
-
-    def h10(t):
-        return t**3 - 2.0 * t**2 + t
-
-    def h01(t):
-        return -2.0 * t**3 + 3.0 * t**2
-
-    def h11(t):
-        return t**3 - t**2
-
-    def point(t):
-        return (h00(t)*p0[0] + h10(t)*m0[0] + h01(t)*p1[0] + h11(t)*m1[0],
-                h00(t)*p0[1] + h10(t)*m0[1] + h01(t)*p1[1] + h11(t)*m1[1])
-
-    assert num_points > 1
-    return [point(i / float(num_points - 1)) for i in range(num_points)]
-
-
 def make_points_of_hermit_cubic_approximation_of_normal_distribution(
         peek_x=0.5,
         mult_m01=1.0,
@@ -328,59 +176,20 @@ def make_points_of_hermit_cubic_approximation_of_normal_distribution(
     k_m1 = -k_m0
     k_mx = -(0.4 - 0.2) / (0.5 - 0.1)
     d_05 = (0.5, 0.4, 1.1, 1.1)
-    return points_of_hermit_cubic_spline(
+    return datalgo.make_points_of_hermit_cubic_spline(
                 (0.0, 0.0),
                 (mult_m01 * (d_05[2] + k_m0 * (peek_x - d_05[0])), 0.0),
                 (peek_x, 1.0),
                 (mult_mx * (d_05[1] + k_mx * abs(peek_x - d_05[0])), 0.0),
                 int(num_points / 2.0)
                 )[:-1] +\
-           points_of_hermit_cubic_spline(
+           datalgo.make_points_of_hermit_cubic_spline(
                 (peek_x, 1.0),
                 (mult_mx * (d_05[1] + k_mx * abs(peek_x - d_05[0])), 0.0),
                 (1.0, 0.0),
                 (mult_m01 * (d_05[3] + k_m1 * (peek_x - d_05[0])), 0.0),
                 num_points - (int(num_points / 2.0) - 1)
                 )
-
-
-def move_scale_curve_points(
-        points,
-        scale_x=1.0,
-        scale_y=1.0,
-        pow_y=1.0,
-        shift_x=0.0
-        ):
-    assert scale_x > 0.001
-    assert scale_y > 0.001
-    return [(scale_x * p[0] + shift_x, (scale_y * p[1])**pow_y) for p in points]
-
-
-def mkhist_from_curve_points(points, num_bars=100):
-    assert len(points) > 1
-    assert num_bars > 0
-    points = sorted(points, key=lambda p: p[0])
-    x = [p[0] for p in points]
-    lo = min(x)
-    hi = max(x)
-    assert hi > lo + 0.0001
-    y = [p[1] for p in points]
-    hist = {}
-    for i in range(num_bars):
-        t = i / float(num_bars - 1)
-        t = lo + t * (hi - lo)
-        assert t not in hist
-        j = bisect.bisect_left(x, t)
-        assert j < len(x)
-        if j == 0 or x[j] - x[j - 1] < 0.0001:
-            hist[t] = y[j]
-        else:
-            assert x[j - 1] < t
-            hist[t] = y[j - 1] + (t - x[j - 1]) * ((y[j] - y[j - 1]) / (x[j] - x[j - 1]))
-            if abs(hist[t]) < 0.00001:
-                hist[t] = 0.0
-            assert hist[t] >= 0.0
-    return hist
 
 
 def hermit_distribution(
@@ -393,9 +202,9 @@ def hermit_distribution(
         mult_m01=1.0,
         mult_mx=1.0
         ):
-    return distribution(
-                mkhist_from_curve_points(
-                    move_scale_curve_points(
+    return Distribution(
+                datalgo.make_histogram_from_points(
+                    datalgo.move_scale_curve_points(
                         make_points_of_hermit_cubic_approximation_of_normal_distribution(
                             peek_x=peek_x,
                             mult_m01=mult_m01,
@@ -407,7 +216,7 @@ def hermit_distribution(
                         pow_y=pow_y,
                         shift_x=shift_x
                         ),
-                    num_bars=num_bars
+                    num_bins=num_bars
                     )
                 )
 

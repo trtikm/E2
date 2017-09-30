@@ -3,6 +3,7 @@ import soma
 import synapse
 import integrator
 import distribution
+import spike_train
 
 
 def __get_my_dir():
@@ -52,8 +53,8 @@ class NeuronWithInputSynapses(CommonProps):
                  nsteps,
                  num_sub_iterations,
                  cell_soma,
-                 excitatory_noise_distributions,
-                 inhibitory_noise_distributions,
+                 excitatory_spike_trains,
+                 inhibitory_spike_trains,
                  excitatory_synapses,
                  inhibitory_synapses,
                  plot_files_extension,
@@ -66,31 +67,17 @@ class NeuronWithInputSynapses(CommonProps):
         assert isinstance(inhibitory_synapses, list)
         assert len(cell_soma) == len(excitatory_synapses) and len(cell_soma) == len(inhibitory_synapses)
         assert len(cell_soma) == len(num_sub_iterations)
-        assert False not in list(map(lambda x: len(x) == len(excitatory_noise_distributions), excitatory_synapses))
-        assert False not in list(map(lambda x: len(x) == len(inhibitory_noise_distributions), inhibitory_synapses))
+        assert False not in list(map(lambda x: len(x) == len(excitatory_spike_trains), excitatory_synapses))
+        assert False not in list(map(lambda x: len(x) == len(inhibitory_spike_trains), inhibitory_synapses))
         super(NeuronWithInputSynapses, self).__init__(name, start_time, dt, nsteps, plot_files_extension, plot_time_step)
         self.num_sub_iterations = num_sub_iterations
         self.cell_soma = cell_soma
-        self.excitatory_noise_distributions = excitatory_noise_distributions
-        self.inhibitory_noise_distributions = inhibitory_noise_distributions
+        self.excitatory_spike_trains = excitatory_spike_trains
+        self.inhibitory_spike_trains = inhibitory_spike_trains
         self.excitatory_synapses = excitatory_synapses
         self.inhibitory_synapses = inhibitory_synapses
-        self.are_equal_excitatory_noise_distributions = len(self.excitatory_noise_distributions) > 0
-        for d in self.excitatory_noise_distributions:
-            if d.get_histogram() != self.excitatory_noise_distributions[0].get_histogram():
-                self.are_equal_excitatory_noise_distributions = False
-                break
-        self.are_equal_inhibitory_noise_distributions = len(self.inhibitory_noise_distributions) > 0
-        for d in self.inhibitory_noise_distributions:
-            if d.get_histogram() != self.inhibitory_noise_distributions[0].get_histogram():
-                self.are_equal_inhibitory_noise_distributions = False
-                break
-        self.are_equal_noise_distributions = (
-            self.are_equal_excitatory_noise_distributions and
-            self.are_equal_inhibitory_noise_distributions and
-            self.excitatory_noise_distributions[0].get_histogram() ==
-                self.inhibitory_noise_distributions[0].get_histogram()
-            )
+        self.excitatory_plot_indices = list(range(0, len(excitatory_spike_trains), max(1, len(excitatory_spike_trains) // 2)))
+        self.inhibitory_plot_indices = list(range(0, len(inhibitory_spike_trains), max(1, len(inhibitory_spike_trains) // 2)))
 
     @staticmethod
     def leaky_integrate_and_fire_const_input(my_precomputed_full_name):
@@ -117,8 +104,8 @@ class NeuronWithInputSynapses(CommonProps):
                 spike_magnitude=40.0,
                 integrator_function=integrator.midpoint
                 )],
-            excitatory_noise_distributions=[distribution.distribution({1.0*dt: 1.0})],
-            inhibitory_noise_distributions=[],
+            excitatory_spike_trains=[spike_train.SpikeTrain.create(distribution.Distribution({1.0*dt: 1.0}), 1.0)],
+            inhibitory_spike_trains=[],
             excitatory_synapses=[[synapse.synapse.constant()]],
             inhibitory_synapses=[[]],
             plot_files_extension=".png",
@@ -154,8 +141,8 @@ class NeuronWithInputSynapses(CommonProps):
                 spike_magnitude=1.0,
                 integrator_function=integrator.midpoint
                 )],
-            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_spike_trains=[spike_train.SpikeTrain.create(excitatory_noise, 1.0) for _ in range(num_excitatory)],
+            inhibitory_spike_trains=[spike_train.SpikeTrain.create(inhibitory_noise, 1.0) for _ in range(num_inhibitory)],
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
@@ -182,8 +169,8 @@ class NeuronWithInputSynapses(CommonProps):
             nsteps=1000,
             num_sub_iterations=[1],
             cell_soma=[soma.izhikevich.regular_spiking(spike_magnitude=0.15)],
-            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_spike_trains=[spike_train.SpikeTrain.create(excitatory_noise, 1.0) for _ in range(num_excitatory)],
+            inhibitory_spike_trains=[spike_train.SpikeTrain.create(inhibitory_noise, 1.0) for _ in range(num_inhibitory)],
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
@@ -210,8 +197,8 @@ class NeuronWithInputSynapses(CommonProps):
             nsteps=1000,
             num_sub_iterations=[1],
             cell_soma=[soma.izhikevich.chattering(spike_magnitude=0.15)],
-            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_spike_trains=[spike_train.SpikeTrain.create(excitatory_noise, 1.0) for _ in range(num_excitatory)],
+            inhibitory_spike_trains=[spike_train.SpikeTrain.create(inhibitory_noise, 1.0) for _ in range(num_inhibitory)],
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
@@ -238,8 +225,8 @@ class NeuronWithInputSynapses(CommonProps):
             nsteps=1000,
             num_sub_iterations=[1],
             cell_soma=[soma.izhikevich.fast_spiking(spike_magnitude=0.15)],
-            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_spike_trains=[spike_train.SpikeTrain.create(excitatory_noise, 1.0) for _ in range(num_excitatory)],
+            inhibitory_spike_trains=[spike_train.SpikeTrain.create(inhibitory_noise, 1.0) for _ in range(num_inhibitory)],
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
@@ -268,8 +255,8 @@ class NeuronWithInputSynapses(CommonProps):
                 spike_magnitude=0.15,
                 integrator_function=integrator.midpoint
                 )],
-            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_spike_trains=[spike_train.SpikeTrain.create(excitatory_noise, 1.0) for _ in range(num_excitatory)],
+            inhibitory_spike_trains=[spike_train.SpikeTrain.create(inhibitory_noise, 1.0) for _ in range(num_inhibitory)],
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
@@ -295,8 +282,8 @@ class NeuronWithInputSynapses(CommonProps):
             nsteps=1000,
             num_sub_iterations=[100],
             cell_soma=[soma.wilson.regular_spiking()],
-            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_spike_trains=[spike_train.SpikeTrain.create(excitatory_noise, 1.0) for _ in range(num_excitatory)],
+            inhibitory_spike_trains=[spike_train.SpikeTrain.create(inhibitory_noise, 1.0) for _ in range(num_inhibitory)],
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
@@ -322,8 +309,8 @@ class NeuronWithInputSynapses(CommonProps):
             nsteps=1000,
             num_sub_iterations=[100],
             cell_soma=[soma.wilson.fast_spiking()],
-            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_spike_trains=[spike_train.SpikeTrain.create(excitatory_noise, 1.0) for _ in range(num_excitatory)],
+            inhibitory_spike_trains=[spike_train.SpikeTrain.create(inhibitory_noise, 1.0) for _ in range(num_inhibitory)],
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
@@ -349,8 +336,8 @@ class NeuronWithInputSynapses(CommonProps):
             nsteps=1000,
             num_sub_iterations=[100],
             cell_soma=[soma.wilson.bursting()],
-            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_spike_trains=[spike_train.SpikeTrain.create(excitatory_noise, 1.0) for _ in range(num_excitatory)],
+            inhibitory_spike_trains=[spike_train.SpikeTrain.create(inhibitory_noise, 1.0) for _ in range(num_inhibitory)],
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
@@ -384,8 +371,8 @@ class NeuronWithInputSynapses(CommonProps):
                 soma.wilson.regular_spiking(),
                 soma.wilson.fast_spiking(),
                 ],
-            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            excitatory_spike_trains=[spike_train.SpikeTrain.create(excitatory_noise, 1.0) for _ in range(num_excitatory)],
+            inhibitory_spike_trains=[spike_train.SpikeTrain.create(inhibitory_noise, 1.0) for _ in range(num_inhibitory)],
             excitatory_synapses=[
                 [synapse.synapse.constant() for _ in range(num_excitatory)],
                 [synapse.synapse.constant() for _ in range(num_excitatory)],
@@ -410,8 +397,8 @@ class NeuronWithInputSynapses(CommonProps):
         This is not a genuine configuration. It serves only for development,
         testing, and bug-fixing of this evaluation system.
         """
-        num_excitatory = 4*200
-        num_inhibitory = 1*200
+        num_excitatory = 4*100
+        num_inhibitory = 1*100
         excitatory_noise = distribution.default_excitatory_isi_distribution()
         inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
@@ -420,9 +407,12 @@ class NeuronWithInputSynapses(CommonProps):
             dt=0.001,
             nsteps=1000,
             num_sub_iterations=[1],
-            cell_soma=[soma.izhikevich.regular_spiking(spike_magnitude=0.15)],
-            excitatory_noise_distributions=[excitatory_noise for _ in range(num_excitatory)],
-            inhibitory_noise_distributions=[inhibitory_noise for _ in range(num_inhibitory)],
+            cell_soma=[soma.izhikevich.regular_spiking(
+                spike_magnitude=1.0,
+                input_cooling_coef=-0.05
+                )],
+            excitatory_spike_trains=[spike_train.SpikeTrain.create(excitatory_noise, 1.0) for _ in range(num_excitatory)],
+            inhibitory_spike_trains=[spike_train.SpikeTrain.create(inhibitory_noise, 1.0) for _ in range(num_inhibitory)],
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
@@ -443,8 +433,8 @@ class SynapseAndSpikeNoise(CommonProps):
                  plot_time_step
                  ):
         assert isinstance(the_synapse, synapse.synapse)
-        assert isinstance(pre_spikes_distributions, distribution.distribution)
-        assert isinstance(post_spikes_distributions, distribution.distribution)
+        assert isinstance(pre_spikes_distributions, distribution.Distribution)
+        assert isinstance(post_spikes_distributions, distribution.Distribution)
         super(SynapseAndSpikeNoise, self).__init__(name, start_time, dt, nsteps, plot_files_extension, plot_time_step)
         self.the_synapse = the_synapse
         self.pre_spikes_distributions = pre_spikes_distributions
@@ -462,8 +452,8 @@ class SynapseAndSpikeNoise(CommonProps):
             dt=0.001,
             nsteps=1000,
             the_synapse=synapse.synapse.plastic_peek_np(),
-            pre_spikes_distributions=distribution.get_standard_spike_noise(),
-            post_spikes_distributions=distribution.get_standard_spike_noise(),
+            pre_spikes_distributions=distribution.default_excitatory_isi_distribution(),
+            post_spikes_distributions=distribution.default_excitatory_isi_distribution(),
             plot_files_extension=".png",
             plot_time_step=1.0,
             )
@@ -482,8 +472,8 @@ class PrePostSpikeNoisesDifferences(CommonProps):
                  post_spikes_distributions,
                  synaptic_input_cooler
                  ):
-        assert isinstance(pre_spikes_distributions, distribution.distribution)
-        assert isinstance(post_spikes_distributions, distribution.distribution)
+        assert isinstance(pre_spikes_distributions, distribution.Distribution)
+        assert isinstance(post_spikes_distributions, distribution.Distribution)
         super(PrePostSpikeNoisesDifferences, self).__init__(
             name, start_time, dt, nsteps, plot_files_extension, plot_time_step
             )

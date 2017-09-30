@@ -12,8 +12,8 @@ class SpikeTrain:
     """
 
     def __init__(self, spiking_distribution, chunk_size_distribution, array_size):
-        assert isinstance(spiking_distribution, distribution.distribution)
-        assert isinstance(chunk_size_distribution, distribution.distribution)
+        assert isinstance(spiking_distribution, distribution.Distribution)
+        assert isinstance(chunk_size_distribution, distribution.Distribution)
         assert all(isinstance(event, int) and event > 0 for event in chunk_size_distribution.get_events())
         assert isinstance(array_size, int) and array_size >= chunk_size_distribution.get_events()[-1]
         self._spiking_distribution = spiking_distribution
@@ -25,14 +25,14 @@ class SpikeTrain:
 
     @staticmethod
     def create(base_spiking_distribution, noise_level):
-        assert isinstance(base_spiking_distribution, distribution.distribution)
+        assert isinstance(base_spiking_distribution, distribution.Distribution)
         assert isinstance(noise_level, float) and noise_level >= 0.0 and noise_level <= 1.0
         array_size = 1 + int(149.0 * (1.0 - noise_level)**2.0 + 0.5)
         min_chunk_size = 1 + int(4.0 * (1.0 - noise_level)**3.0 + 0.5)
         max_chunk_size = 1 + int(24.0 * (1.0 - noise_level)**2.0 + 0.5)
         chunk_frequency_function = lambda size: 1.0
         return SpikeTrain(base_spiking_distribution,
-                          distribution.distribution({
+                          distribution.Distribution({
                               size: chunk_frequency_function(size) for size in range(min_chunk_size, max_chunk_size + 1)
                               }),
                           array_size)

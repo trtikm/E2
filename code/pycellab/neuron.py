@@ -1,4 +1,4 @@
-class neuron:
+class Neuron:
     def __init__(self,
                  cell_soma,
                  excitatory_synapses,

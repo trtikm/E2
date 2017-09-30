@@ -123,8 +123,8 @@ def scatter_per_partes(points, pathname, start, end, step, stride=1, on_plot_par
 
 def histogram(distrib, pathname, normalised=True, colours=None, title=None, xaxis_name=None, faxis_name=None):
     if isinstance(distrib, dict):   # 'distrib' is a plain histogram.
-        distrib = distribution.distribution(distrib)
-    assert isinstance(distrib, distribution.distribution)
+        distrib = distribution.Distribution(distrib)
+    assert isinstance(distrib, distribution.Distribution)
     if not title:
         if normalised:
             title = "[normalised] "
