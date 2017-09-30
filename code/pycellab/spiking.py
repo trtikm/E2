@@ -521,7 +521,8 @@ def evaluate_neuron_with_input_synapses(cfg):
     os.makedirs(cfg.output_dir)
 
     for idx in cfg.excitatory_plot_indices:
-        pathname = os.path.join(cfg.output_dir, "isi_pre_excitatory[" + str(idx) + "]" + cfg.plot_files_extension)
+        file_name = "spike_trains__isi_pre_excitatory[" + str(idx) + "]"
+        pathname = os.path.join(cfg.output_dir, file_name + cfg.plot_files_extension)
         print("    Saving plot " + pathname)
         plot.histogram(
             datalgo.make_histogram(
@@ -536,7 +537,8 @@ def evaluate_neuron_with_input_synapses(cfg):
             )
 
     for idx in cfg.inhibitory_plot_indices:
-        pathname = os.path.join(cfg.output_dir, "isi_pre_inhibitory[" + str(idx) + "]" + cfg.plot_files_extension)
+        file_name = "spike_trains__isi_pre_inhibitory[" + str(idx) + "]"
+        pathname = os.path.join(cfg.output_dir, file_name + cfg.plot_files_extension)
         print("    Saving plot " + pathname)
         plot.histogram(
             datalgo.make_histogram(
@@ -550,35 +552,19 @@ def evaluate_neuron_with_input_synapses(cfg):
             normalised=False
             )
 
-    for idx in range(len(cells)):
-        pathname = os.path.join(cfg.output_dir, "isi_post_neuron[" + str(idx) + "]" + cfg.plot_files_extension)
-        print("    Saving plot " + pathname)
-        plot.histogram(
-            datalgo.make_histogram(
-                datalgo.make_difference_events(
-                    cells[idx].get_spikes()
-                    ),
-                cfg.dt
-                ),
-            pathname,
-            colours=get_colour_pre_inhibitory(),
-            normalised=False
-            )
-
     merged_excitatory_points =datalgo.reduce_gaps_between_points_along_x_axis(
         datalgo.make_weighted_events(
             datalgo.merge_sorted_lists_of_events(
-                [cfg.excitatory_spike_trains[idx].get_spikes_history() for idx in range(len(cfg.excitatory_spike_trains))]
+                [cfg.excitatory_spike_trains[idx].get_spikes_history()
+                 for idx in range(len(cfg.excitatory_spike_trains))]
                 ),
             cfg.dt
             ),
         cfg.dt
         )
-    pathname = os.path.join(cfg.output_dir, "spike_counts_excitatory" + cfg.plot_files_extension)
-    print("    Saving plot " + pathname)
     plot.curve_per_partes(
         merged_excitatory_points,
-        pathname,
+        os.path.join(cfg.output_dir, "spike_trains__counts_excitatory" + cfg.plot_files_extension),
         cfg.start_time,
         cfg.start_time + cfg.nsteps * cfg.dt,
         cfg.plot_time_step,
@@ -588,17 +574,16 @@ def evaluate_neuron_with_input_synapses(cfg):
     merged_inhibitory_points = datalgo.reduce_gaps_between_points_along_x_axis(
         datalgo.make_weighted_events(
             datalgo.merge_sorted_lists_of_events(
-                [cfg.inhibitory_spike_trains[idx].get_spikes_history() for idx in range(len(cfg.inhibitory_spike_trains))]
+                [cfg.inhibitory_spike_trains[idx].get_spikes_history()
+                 for idx in range(len(cfg.inhibitory_spike_trains))]
                 ),
             cfg.dt
             ),
         cfg.dt
         )
-    pathname = os.path.join(cfg.output_dir, "spike_counts_inhibitory" + cfg.plot_files_extension)
-    print("    Saving plot " + pathname)
     plot.curve_per_partes(
         merged_inhibitory_points,
-        pathname,
+        os.path.join(cfg.output_dir, "spike_trains__counts_inhibitory" + cfg.plot_files_extension),
         cfg.start_time,
         cfg.start_time + cfg.nsteps * cfg.dt,
         cfg.plot_time_step,
@@ -609,63 +594,69 @@ def evaluate_neuron_with_input_synapses(cfg):
         [merged_excitatory_points, merged_inhibitory_points],
         [1, -1]
         )
-    pathname = os.path.join(cfg.output_dir, "spike_counts_composed" + cfg.plot_files_extension)
-    print("    Saving plot " + pathname)
     plot.curve_per_partes(
         composed_excitatory_inhibitory_points,
-        pathname,
+        os.path.join(cfg.output_dir, "spike_trains__counts_composed" + cfg.plot_files_extension),
         cfg.start_time,
         cfg.start_time + cfg.nsteps * cfg.dt,
         cfg.plot_time_step,
         lambda p: print("    Saving plot " + p)
         )
 
+    for cell, sub_dir in list(zip(cells, map(lambda cell: cell.get_soma().get_name() * int(len(cells) > 1), cells))):
+        cell_output_dir = os.path.join(cfg.output_dir, sub_dir)
+        os.makedirs(cell_output_dir, exist_ok=True)
 
-    # pathname = os.path.join(cfg.output_dir, "pre_spike_counts_curve_excitatory" + suffix + cfg.plot_files_extension)
-    # print("    Saving plot " + pathname)
-    # plot.curve(
-    #     datalgo.reduce_gaps_between_points_along_x_axis(
-    #         datalgo.make_weighted_events(
-    #             sorted([t for spikes in pre_spikes_excitatory for t in spikes]),
-    #             cfg.dt),
-    #         cfg.dt
-    #         ),
-    #     pathname,
-    #     colours=get_colour_pre_excitatory()
-    #     )
+        file_name = "spike_trains__isi_post_" + cell.get_soma().get_name()
+        pathname = os.path.join(cfg.output_dir, file_name + cfg.plot_files_extension)
+        print("    Saving plot " + pathname)
+        plot.histogram(
+            datalgo.make_histogram(
+                datalgo.make_difference_events(
+                    cell.get_spikes()
+                    ),
+                cfg.dt
+                ),
+            pathname,
+            colours=get_colour_post(),
+            normalised=False
+            )
 
+        for var_name, points in cell.get_soma_recording().items():
+            file_name = cell.get_soma().get_name() + "__VAR[" + var_name + "]"
+            plot.curve_per_partes(
+                points,
+                os.path.join(cell_output_dir, file_name + cfg.plot_files_extension),
+                cfg.start_time,
+                cfg.start_time + cfg.nsteps * cfg.dt,
+                cfg.plot_time_step,
+                lambda p: print("    Saving plot " + p)
+                )
 
-    # if cfg.are_equal_excitatory_noise_distributions:
-    #     pathname = os.path.join(cfg.output_dir, "pre_isi_distribution_excitatory" + cfg.plot_files_extension)
-    #     print("    Saving plot " + pathname)
-    #     plot.histogram(
-    #         cfg.excitatory_noise_distributions[0],
-    #         pathname,
-    #         colours=get_colour_pre_excitatory()
-    #         )
-    # if cfg.are_equal_inhibitory_noise_distributions:
-    #     pathname = os.path.join(cfg.output_dir, "pre_isi_distribution_inhibitory" + cfg.plot_files_extension)
-    #     print("    Saving plot " + pathname)
-    #     plot.histogram(
-    #         cfg.inhibitory_noise_distributions[0],
-    #         pathname,
-    #         colours=get_colour_pre_inhibitory()
-    #         )
+        for idx in cfg.excitatory_plot_indices:
+            for var_name, points in cell.get_excitatory_synapses_recording()[idx].items():
+                file_name = cell.get_soma().get_name() + "__synapse_excitatory[" + str(idx) + "]__VAR[" + var_name + "]"
+                plot.curve_per_partes(
+                    points,
+                    os.path.join(cell_output_dir, file_name + cfg.plot_files_extension),
+                    cfg.start_time,
+                    cfg.start_time + cfg.nsteps * cfg.dt,
+                    cfg.plot_time_step,
+                    lambda p: print("    Saving plot " + p)
+                    )
 
-    # pathname = os.path.join(cfg.output_dir, "pre_isi_excitatory" + cfg.plot_files_extension)
-    # print("    Saving plot " + pathname)
-    # plot.histogram(
-    #     distribution.make_counts_histogram(
-    #         [c for t, c in
-    #             distribution.make_counts_histogram(
-    #                 sorted([t for spikes in pre_spikes_excitatory + pre_spikes_inhibitory for t in spikes]),
-    #                 bin_size=cfg.dt
-    #                 ).items()]
-    #         ),
-    #     pathname,
-    #     normalised=False,
-    #     colours=get_colour_pre_excitatory_and_inhibitory()
-    #     )
+        for idx in cfg.inhibitory_plot_indices:
+            for var_name, points in cell.get_inhibitory_synapses_recording()[idx].items():
+                file_name = cell.get_soma().get_name() + "__synapse_inhibitory[" + str(idx) + "]__VAR[" + var_name + "]"
+                plot.curve_per_partes(
+                    points,
+                    os.path.join(cell_output_dir, file_name + cfg.plot_files_extension),
+                    cfg.start_time,
+                    cfg.start_time + cfg.nsteps * cfg.dt,
+                    cfg.plot_time_step,
+                    lambda p: print("    Saving plot " + p)
+                    )
+
 
     # save_pre_spike_counts_histograms(
     #     cfg,
