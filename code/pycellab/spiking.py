@@ -565,9 +565,12 @@ def evaluate_neuron_with_input_synapses(cfg):
             normalised=False
             )
 
-    merged_excitatory_points = datalgo.make_weighted_events(
-        datalgo.merge_sorted_lists_of_events(
-            [cfg.excitatory_spike_trains[idx].get_spikes_history() for idx in range(len(cfg.excitatory_spike_trains))]
+    merged_excitatory_points =datalgo.reduce_gaps_between_points_along_x_axis(
+        datalgo.make_weighted_events(
+            datalgo.merge_sorted_lists_of_events(
+                [cfg.excitatory_spike_trains[idx].get_spikes_history() for idx in range(len(cfg.excitatory_spike_trains))]
+                ),
+            cfg.dt
             ),
         cfg.dt
         )
@@ -582,9 +585,12 @@ def evaluate_neuron_with_input_synapses(cfg):
         lambda p: print("    Saving plot " + p)
         )
 
-    merged_inhibitory_points = datalgo.make_weighted_events(
-        datalgo.merge_sorted_lists_of_events(
-            [cfg.inhibitory_spike_trains[idx].get_spikes_history() for idx in range(len(cfg.inhibitory_spike_trains))]
+    merged_inhibitory_points = datalgo.reduce_gaps_between_points_along_x_axis(
+        datalgo.make_weighted_events(
+            datalgo.merge_sorted_lists_of_events(
+                [cfg.inhibitory_spike_trains[idx].get_spikes_history() for idx in range(len(cfg.inhibitory_spike_trains))]
+                ),
+            cfg.dt
             ),
         cfg.dt
         )
