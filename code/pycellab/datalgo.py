@@ -42,7 +42,7 @@ def make_difference_events(events):
     return result
 
 
-def make_weighted_events(events, max_merge_distance, unit_weight=1, weight_function=lambda _: 1):
+def make_weighted_events(events, max_merge_distance, unit_weight=1, weight_function=lambda _: 1, epsilon=0.00001):
     assert is_list_of_events(events)
     assert is_number(max_merge_distance) and max_merge_distance > 0
     assert is_number(unit_weight)
@@ -51,7 +51,7 @@ def make_weighted_events(events, max_merge_distance, unit_weight=1, weight_funct
     if len(events) != 0:
         result = [(events[0], unit_weight)]
         for event in events[1:]:
-            if abs(event - result[-1][0]) <= max_merge_distance:
+            if abs(event - result[-1][0]) <= max_merge_distance - epsilon:
                 weight_delta = unit_weight * weight_function(event - result[-1][0] / max_merge_distance)
                 result[-1] = (result[-1][0], result[-1][1] + weight_delta)
             else:
