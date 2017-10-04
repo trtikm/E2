@@ -17,8 +17,12 @@ def is_list_of_events(events):
     return is_list_of_numbers(events)
 
 
+def is_sorted_list_of_numbers(numbers):
+    return is_list_of_events(numbers) and all(numbers[i - 1] <= numbers[i] for i in range(1, len(numbers)))
+
+
 def is_sorted_list_of_events(events):
-    return is_list_of_events(events) and all(events[i - 1] <= events[i] for i in range(1, len(events)))
+    return is_sorted_list_of_numbers(events)
 
 
 def is_list_of_points(points):
@@ -255,6 +259,41 @@ def move_scale_curve_points(
     result = [(scale_x * p[0] + shift_x, (scale_y * p[1])**pow_y) for p in points]
 
     assert is_list_of_points(result)
+    return result
+
+
+def evaluate_discrete_function_using_liner_interpolation(x_values, discrete_function, value_outside_fn_domain=0):
+    assert is_sorted_list_of_numbers(x_values)
+    assert is_sorted_list_of_points_along_x_axis(discrete_function)
+    assert is_number(value_outside_fn_domain)
+    idx = 0
+    result = []
+    for x in x_values:
+        lo = (x, value_outside_fn_domain)
+        hi = (x, value_outside_fn_domain)
+        while idx < len(discrete_function) and discrete_function[idx][0] <= x:
+            lo = discrete_function[idx]
+            idx += 1
+        if idx < len(discrete_function):
+            hi = discrete_function[idx]
+        elif idx > 0:
+            idx = len(discrete_function) - 1
+        if hi[0] - lo[0] < 0.000001:
+            y = lo[1]
+        else:
+            y = lo[1] + ((x - lo[0]) / hi[0] - lo[0]) * (hi[1] - lo[1])
+        result.append((x, y))
+    return result
+
+
+def transform_discrete_function_to_inteval_0_1_using_liner_interpolation(points, y_zero, y_one):
+    assert is_list_of_points(points)
+    assert is_number(y_zero)
+    assert is_number(y_one)
+    assert y_one - y_zero > 0.00001
+    result = []
+    for x, y in points:
+        result.append((x, min(1, max(0, (y - y_zero) / (y_one - y_zero)))))
     return result
 
 

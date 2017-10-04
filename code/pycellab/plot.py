@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 import distribution
 
 
+def get_title_placeholder():
+    return "@$@"
+
+
 def __split_points(points):
     xs = []
     ys = []
@@ -26,17 +30,39 @@ def __write_xplot(draw_fn, points, pathname, title, xaxis_name, faxis_name):
     plt.close()
 
 
+def _scale_rgb_colour(rgb, weight):
+    assert isinstance(rgb, tuple) and len(rgb) == 3 and all(isinstance(c, float) for c in rgb)
+    assert isinstance(weight, float)
+    scale = min(1.0, max(0.0, weight))
+    return rgb[0] * scale, rgb[1] * scale, rgb[2] * scale
+
+
+def get_colour_pre_excitatory(weight=1.0):
+    return _scale_rgb_colour((0.0, 0.5, 1.0), weight)
+
+
+def get_colour_pre_inhibitory(weight=1.0):
+    return _scale_rgb_colour((0.0, 1.0, 0.5), weight)
+
+
+def get_colour_post():
+    return 1.0, 0.0, 0.0
+
+
 def curve(points, pathname, colours=None, title=None, xaxis_name=None, faxis_name=None, marker="-"):
-    if not title:
-        title = (
-            "#points=" + str(len(points)) +
-            ", mean=" + format(sum([n for _, n in points]) / (len(points) + 0.000001), ".2f")
+    if title is not None:
+        title = title.replace(
+            get_title_placeholder(),
+            (
+                "#points=" + str(len(points)) +
+                ", mean=" + format(sum([n for _, n in points]) / (len(points) + 0.000001), ".2f")
             )
+        )
     __write_xplot(lambda ax, x, y: ax.plot(x, y, marker, c=colours), points, pathname, title, xaxis_name, faxis_name)
 
 
 def curve_per_partes(points, pathname, start, end, step, on_plot_part_callback_fn=None,
-                     colours=None, title=None, xaxis_name=None, faxis_name=None, marker="-"):
+                     colour=None, title=None, xaxis_name=None, faxis_name=None, marker="-"):
     assert start < end and step > 0.0001
     assert len(points) > 0
     assert on_plot_part_callback_fn is None or callable(on_plot_part_callback_fn)
@@ -48,35 +74,23 @@ def curve_per_partes(points, pathname, start, end, step, on_plot_part_callback_f
     while x < end:
         part_end = min(x + step, end)
         part_points = []
-        if colours is None:
-            part_colours = None
-        else:
-            part_colours = []
         for i, p in enumerate(points):
             if x <= p[0] and p[0] <= part_end:
                 part_points.append(p)
-                if colours is not None:
-                    if isinstance(colours, list):
-                        part_colours.append(colours[i])
-                    else:
-                        part_colours.append(colours)
         part_pathname = base_pathname + "_" + str(idx).zfill(4) + "_" + format(x, ".4f") + extension
         part_title = "[part #" + str(idx) + "] "
-        if title is None:
-            part_title += "#points=" + str(len(part_points)) +\
-                          ", mean=" + format(sum([n for _, n in part_points]) / (len(part_points) + 0.000001), ".2f")
-        else:
+        if title is not None:
             part_title += title
         if on_plot_part_callback_fn is not None:
             on_plot_part_callback_fn(part_pathname)
-        curve(part_points, part_pathname, part_colours, part_title, xaxis_name, faxis_name, marker)
+        curve(part_points, part_pathname, colour, part_title, xaxis_name, faxis_name, marker)
         x += step
         idx += 1
 
 
 def scatter(points, pathname, colours=None, title=None, xaxis_name=None, faxis_name=None):
-    if not title:
-        title = "#points=" + str(len(points))
+    if title is not None:
+        title = title.replace(get_title_placeholder(), "#points=" + str(len(points)))
     __write_xplot(lambda ax, x, y: ax.scatter(x, y, s=2, c=colours), points, pathname, title, xaxis_name, faxis_name)
 
 
@@ -109,16 +123,35 @@ def scatter_per_partes(points, pathname, start, end, step, stride=1, on_plot_par
                             part_colours.append(colours)
             part_pathname = base_pathname + "_" + str(idx).zfill(4) + "_" + format(x, ".4f") + extension
             part_title = "[part #" + str(idx) + "] "
-            if title is None:
-                part_title += "#points=" + str(len(part_points)) +\
-                              ", mean=" + format(sum([n for _, n in part_points]) / (len(part_points) + 0.000001), ".2f")
-            else:
+            if title is not None:
                 part_title += title
             if on_plot_part_callback_fn is not None:
                 on_plot_part_callback_fn(part_pathname)
             scatter(part_points, part_pathname, part_colours, part_title, xaxis_name, faxis_name)
         x += step
         idx += 1
+
+
+def event_board(events, pathname, colours=None, title=None, xaxis_name=None, faxis_name=None):
+    assert isinstance(events, list) and all(all(isinstance(e, float) or isinstance(e, int) for e in l) for l in events)
+    assert colours is None or isinstance(colours, list)
+    assert colours is None or all(all(isinstance(rgb, tuple) and
+                                  len(rgb) == 3 and
+                                  all(isinstance(e, float) or isinstance(e, int) for e in rgb)
+                                      for rgb in l)
+                                  for l in colours)
+    assert colours is None or len(events) == len(colours)
+    assert colours is None or all(len(events[i]) == len(colours[i]) for i in range(len(events)))
+    scatter(
+        [(events[i][j], i) for i in range(len(events)) for j in range(len(events[i]))],
+        pathname,
+        [colours[i][j] for i in range(len(colours)) for j in range(len(colours[i]))]
+            if colours is not None
+            else colours,
+        title,
+        xaxis_name,
+        faxis_name
+        )
 
 
 def histogram(distrib, pathname, normalised=True, colours=None, title=None, xaxis_name=None, faxis_name=None):

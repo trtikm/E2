@@ -6,7 +6,6 @@ import config
 import tests
 import neuron
 import spike_train
-import distribution
 import datalgo
 import plot
 
@@ -28,6 +27,10 @@ def get_colour_post():
 
 
 def get_colour_soma():
+    return 'k'      # black
+
+
+def get_colour_synapse():
     return 'k'      # black
 
 
@@ -515,7 +518,6 @@ def evaluate_neuron_with_input_synapses(cfg):
         t += cfg.dt
 
     print("  Saving results.")
-
     if os.path.exists(cfg.output_dir):
         shutil.rmtree(cfg.output_dir)
     os.makedirs(cfg.output_dir)
@@ -568,7 +570,9 @@ def evaluate_neuron_with_input_synapses(cfg):
         cfg.start_time,
         cfg.start_time + cfg.nsteps * cfg.dt,
         cfg.plot_time_step,
-        lambda p: print("    Saving plot " + p)
+        lambda p: print("    Saving plot " + p),
+        get_colour_pre_excitatory(),
+        plot.get_title_placeholder()
         )
 
     merged_inhibitory_points = datalgo.reduce_gaps_between_points_along_x_axis(
@@ -587,7 +591,9 @@ def evaluate_neuron_with_input_synapses(cfg):
         cfg.start_time,
         cfg.start_time + cfg.nsteps * cfg.dt,
         cfg.plot_time_step,
-        lambda p: print("    Saving plot " + p)
+        lambda p: print("    Saving plot " + p),
+        get_colour_pre_inhibitory(),
+        plot.get_title_placeholder()
         )
 
     composed_excitatory_inhibitory_points = datalgo.compose_sorted_lists_of_points(
@@ -600,9 +606,10 @@ def evaluate_neuron_with_input_synapses(cfg):
         cfg.start_time,
         cfg.start_time + cfg.nsteps * cfg.dt,
         cfg.plot_time_step,
-        lambda p: print("    Saving plot " + p)
+        lambda p: print("    Saving plot " + p),
+        get_colour_pre_excitatory_and_inhibitory(),
+        plot.get_title_placeholder()
         )
-
     for cell, sub_dir in list(zip(cells, map(lambda cell: cell.get_soma().get_name() * int(len(cells) > 1), cells))):
         cell_output_dir = os.path.join(cfg.output_dir, sub_dir)
         os.makedirs(cell_output_dir, exist_ok=True)
@@ -630,7 +637,9 @@ def evaluate_neuron_with_input_synapses(cfg):
                 cfg.start_time,
                 cfg.start_time + cfg.nsteps * cfg.dt,
                 cfg.plot_time_step,
-                lambda p: print("    Saving plot " + p)
+                lambda p: print("    Saving plot " + p),
+                get_colour_soma(),
+                cell.get_soma().get_short_description()
                 )
 
         for idx in cfg.excitatory_plot_indices:
@@ -642,7 +651,9 @@ def evaluate_neuron_with_input_synapses(cfg):
                     cfg.start_time,
                     cfg.start_time + cfg.nsteps * cfg.dt,
                     cfg.plot_time_step,
-                    lambda p: print("    Saving plot " + p)
+                    lambda p: print("    Saving plot " + p),
+                    get_colour_synapse(),
+                    cell.get_excitatory_synapses()[idx].get_short_description()
                     )
 
         for idx in cfg.inhibitory_plot_indices:
@@ -654,117 +665,39 @@ def evaluate_neuron_with_input_synapses(cfg):
                     cfg.start_time,
                     cfg.start_time + cfg.nsteps * cfg.dt,
                     cfg.plot_time_step,
-                    lambda p: print("    Saving plot " + p)
+                    lambda p: print("    Saving plot " + p),
+                    get_colour_synapse(),
+                    cell.get_excitatory_synapses()[idx].get_short_description()
                     )
 
-
-    # save_pre_spike_counts_histograms(
-    #     cfg,
-    #     [train.get_spikes_history() for train in excitatory_spike_trains],
-    #     [train.get_spikes_history() for train in inhibitory_spike_trains]
-    #     )
-    # save_pre_spike_counts_curves_per_partes(
-    #     cfg,
-    #     [train.get_spikes_history() for train in excitatory_spike_trains],
-    #     [train.get_spikes_history() for train in inhibitory_spike_trains],
-    #     cfg.start_time,
-    #     cfg.start_time + cfg.nsteps * cfg.dt,
-    #     cfg.plot_time_step
-    #     )
-    # for cell, sub_dir in list(zip(cells, map(lambda cell: cell.get_soma().get_name() * int(len(cells) > 1), cells))):
-    #     os.makedirs(os.path.join(cfg.output_dir, sub_dir), exist_ok=True)
-    #     save_post_isi_distribution(cfg, cell.get_spikes(), sub_dir)
-    #     save_soma_recording_per_partes(
-    #         cfg,
-    #         cell.get_soma_recording(),
-    #         cell.get_soma().get_short_description(),
-    #         sub_dir,
-    #         cfg.start_time,
-    #         cfg.start_time + cfg.nsteps * cfg.dt,
-    #         cfg.plot_time_step
-    #         )
-    #     save_weights_recording_per_partes(
-    #         cfg,
-    #         [recording[cell.get_excitatory_synapses()[i].get_weight_variable_name()]
-    #          for i, recording in enumerate(cell.get_excitatory_synapses_recording())],
-    #         [recording[cell.get_inhibitory_synapses()[i].get_weight_variable_name()]
-    #          for i, recording in enumerate(cell.get_inhibitory_synapses_recording())],
-    #         sub_dir
-    #         )
-        # if len(cell.get_excitatory_synapses_recording()) > 0:
-        #     save_synapse_recording_per_partes(
-        #         cfg,
-        #         cell.get_excitatory_synapses_recording()[0],
-        #         "excitatory_0",
-        #         sub_dir
-        #         )
-        # if len(cell.get_excitatory_synapses_recording()) > 1:
-        #     save_synapse_recording_per_partes(
-        #         cfg,
-        #         cell.get_excitatory_synapses_recording()[-1],
-        #         "excitatory_" + str(len(cell.get_excitatory_synapses_recording()) - 1),
-        #         sub_dir
-        #         )
-        # if len(cell.get_inhibitory_synapses_recording()) > 0:
-        #     save_synapse_recording_per_partes(
-        #         cfg,
-        #         cell.get_inhibitory_synapses_recording()[0],
-        #         "inhibitory_0",
-        #         sub_dir
-        #         )
-        # if len(cell.get_inhibitory_synapses_recording()) > 1:
-        #     save_synapse_recording_per_partes(
-        #         cfg,
-        #         cell.get_inhibitory_synapses_recording()[-1],
-        #         "inhibitory_" + str(len(cell.get_inhibitory_synapses_recording()) - 1),
-        #         sub_dir
-        #         )
-
-        # def compute_normalised_weights(spikes, syn, points):
-        #     weights = []
-        #     idx = 0
-        #     for j, event in enumerate(spikes):
-        #         start_time = event
-        #         if j + 1 < len(spikes):
-        #             end_time = spikes[j + 1]
-        #         else:
-        #             end_time = cfg.start_time + cfg.nsteps * cfg.dt
-        #         weight = 0.0
-        #         count = 0
-        #         while idx < len(points) and points[idx][0] < end_time:
-        #             if points[idx][0] >= start_time:
-        #                 weight = points[idx][1]
-        #                 count = 1
-        #                 # weight += points[idx][1]
-        #                 # count += 1
-        #             idx += 1
-        #         if count == 0:
-        #             weight = syn.get_neutral_weight()
-        #         else:
-        #             weight /= float(count)
-        #         weight = (weight - syn.get_min_weight()) / (syn.get_max_weight() - syn.get_min_weight())
-        #         weights.append(max(0.0, min(1.0, weight)))
-        #     assert len(spikes) == len(weights)
-        #     return weights
-        #
-        # save_spikes_board_per_partes(
-        #     cfg,
-        #     [train.get_spikes_history() for train in excitatory_spike_trains],
-        #     [train.get_spikes_history() for train in inhibitory_spike_trains],
-        #     [compute_normalised_weights(
-        #         train.get_spikes_history(),
-        #         cell.get_excitatory_synapses()[i],
-        #         cell.get_excitatory_synapses_recording()[i][cell.get_excitatory_synapses()[i].get_weight_variable_name()]
-        #         ) for i, train in enumerate(excitatory_spike_trains)],
-        #     [compute_normalised_weights(
-        #         train.get_spikes_history(),
-        #         cell.get_inhibitory_synapses()[i],
-        #         cell.get_inhibitory_synapses_recording()[i][cell.get_inhibitory_synapses()[i].get_weight_variable_name()]
-        #         ) for i, train in enumerate(inhibitory_spike_trains)],
-        #     cell.get_spikes(),
-        #     cell.get_soma().get_name(),
-        #     sub_dir
-        #     )
+        plot.event_board(
+            [cfg.excitatory_spike_trains[idx].get_spikes_history() for idx in range(len(cfg.excitatory_spike_trains))] +
+                [cfg.inhibitory_spike_trains[idx].get_spikes_history() for idx in range(len(cfg.inhibitory_spike_trains))] +
+                [cell.get_spikes()],
+            os.path.join(cell_output_dir, cell.get_soma().get_name() + "__spikes_board" + cfg.plot_files_extension),
+            list(map(lambda L: list(map(lambda p: plot.get_colour_pre_excitatory(p[1]), L)),
+                [datalgo.transform_discrete_function_to_inteval_0_1_using_liner_interpolation(
+                    datalgo.evaluate_discrete_function_using_liner_interpolation(
+                        cfg.excitatory_spike_trains[idx].get_spikes_history(),
+                        cell.get_excitatory_synapses_recording()[idx][cell.get_excitatory_synapses()[idx].get_weight_variable_name()],
+                        cell.get_excitatory_synapses()[idx].get_neutral_weight()
+                        ),
+                    cell.get_excitatory_synapses()[idx].get_min_weight(),
+                    cell.get_excitatory_synapses()[idx].get_max_weight()
+                    ) for idx in range(len(cfg.excitatory_spike_trains))])) +
+                list(map(lambda L: list(map(lambda p: plot.get_colour_pre_inhibitory(p[1]), L)),
+                    [datalgo.transform_discrete_function_to_inteval_0_1_using_liner_interpolation(
+                        datalgo.evaluate_discrete_function_using_liner_interpolation(
+                            cfg.inhibitory_spike_trains[idx].get_spikes_history(),
+                            cell.get_inhibitory_synapses_recording()[idx][cell.get_inhibitory_synapses()[idx].get_weight_variable_name()],
+                            cell.get_inhibitory_synapses()[idx].get_neutral_weight()
+                            ),
+                        cell.get_inhibitory_synapses()[idx].get_min_weight(),
+                        cell.get_inhibitory_synapses()[idx].get_max_weight()
+                        ) for idx in range(len(cfg.inhibitory_spike_trains))])) +
+                [[plot.get_colour_post() for _ in range(len(cell.get_spikes()))]],
+            cell.get_soma().get_name() + " SPIKING BOARD"
+            )
 
     print("  Done.")
 
