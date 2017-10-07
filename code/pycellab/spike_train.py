@@ -22,6 +22,7 @@ class SpikeTrain:
         self._array = []
         self._spikes_buffer = []
         self._spikes_history = []
+        self._start_time = None
 
     @staticmethod
     def create(base_spiking_distribution, noise_level):
@@ -49,18 +50,21 @@ class SpikeTrain:
     def get_array_size(self):
         return self._array_size
 
+    def _get_last_spike_time(self):
+        return self.get_spikes_history()[-1] if len(self.get_spikes_history()) != 0 else self._start_time
+
     def _recharge_array(self):
         while len(self._array) < self.get_array_size():
             event = self.get_spiking_distribution().next_event()
             self._array.insert(bisect.bisect_left(self._array, event), event)
 
-    def _recharge_spikes_buffer(self, t):
+    def _recharge_spikes_buffer(self):
         assert len(self._array) == self.get_array_size()
         assert len(self._spikes_buffer) == 0
         start, size = self._get_next_chunk()
         self._copy_chunk_to_buffer(start, size)
         self._random_shuffle_buffer()
-        self._concretise_spike_times_in_buffer(t)
+        self._concretise_spike_times_in_buffer()
         self._remove_chunk_from_array(start, size)
 
     def _get_next_chunk(self):
@@ -82,9 +86,9 @@ class SpikeTrain:
             self._spikes_buffer[i] = self._spikes_buffer[j]
             self._spikes_buffer[j] = tmp
 
-    def _concretise_spike_times_in_buffer(self, start_time):
+    def _concretise_spike_times_in_buffer(self):
         assert len(self._spikes_buffer) > 0
-        self._spikes_buffer[0] += start_time
+        self._spikes_buffer[0] += self._get_last_spike_time()
         for i in range(1, len(self._spikes_buffer)):
             self._spikes_buffer[i] += self._spikes_buffer[i - 1]
         self._spikes_buffer.reverse()
@@ -101,12 +105,14 @@ class SpikeTrain:
                 self._array.pop(0)
 
     def on_time_step(self, t, dt):
+        if self._start_time is None:
+            self._start_time = t
         if len(self._spikes_buffer) == 0:
             self._recharge_array()
-            self._recharge_spikes_buffer(t)
+            self._recharge_spikes_buffer()
             assert len(self._spikes_buffer) > 0
         if self._spikes_buffer[-1] > t + dt:
             return False
+        self._spikes_history.append(self._spikes_buffer[-1])
         self._spikes_buffer.pop()
-        self._spikes_history.append(t + dt)
         return True
