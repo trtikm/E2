@@ -2,12 +2,14 @@ import os
 import shutil
 import argparse
 import math
+import time
 import config
 import tests
 import neuron
 import spike_train
 import datalgo
 import plot
+import utility
 
 
 def get_colour_pre_excitatory():
@@ -70,7 +72,8 @@ def save_post_isi_distribution(cfg, post_spikes, subdir):
     plot.histogram(
         datalgo.make_histogram(
             datalgo.make_difference_events(post_spikes),
-            cfg.dt
+            cfg.dt,
+            cfg.start_time
             ),
         pathname,
         normalised=False,
@@ -483,6 +486,8 @@ def evaluate_neuron_with_input_synapses(cfg):
 
     print("Evaluating the configuration '" + cfg.name + "'.")
 
+    tmprof_begin_cells_construction = time.time()
+
     cells = [neuron.Neuron(
                 cfg.cell_soma[i],
                 cfg.excitatory_synapses[i],
@@ -493,6 +498,9 @@ def evaluate_neuron_with_input_synapses(cfg):
              for i in range(len(cfg.cell_soma))]
 
     print("  Starting simulation.")
+
+    tmprof_begin_simulation = time.time()
+
     t = cfg.start_time
     for step in range(cfg.nsteps):
         print("    " + format(100.0 * step / float(cfg.nsteps), '.1f') + "%", end='\r')
@@ -518,9 +526,52 @@ def evaluate_neuron_with_input_synapses(cfg):
         t += cfg.dt
 
     print("  Saving results.")
+
+    tmprof_begin_save = time.time()
+
     if os.path.exists(cfg.output_dir):
         shutil.rmtree(cfg.output_dir)
     os.makedirs(cfg.output_dir)
+
+    pathname = os.path.join(cfg.output_dir, "spike_trains__isi_pre_excitatory[ALL]" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plot.histogram(
+        datalgo.merge_histograms(
+            [datalgo.make_histogram(
+                datalgo.make_difference_events(
+                    cfg.excitatory_spike_trains[idx].get_spikes_history()
+                    ),
+                cfg.dt,
+                cfg.start_time
+                )
+             for idx in range(len(cfg.excitatory_spike_trains))],
+            cfg.dt,
+            cfg.start_time
+            ),
+        pathname,
+        colours=get_colour_pre_excitatory(),
+        normalised=False
+        )
+
+    pathname = os.path.join(cfg.output_dir, "spike_trains__isi_pre_inhibitory[ALL]" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plot.histogram(
+        datalgo.merge_histograms(
+            [datalgo.make_histogram(
+                datalgo.make_difference_events(
+                    cfg.inhibitory_spike_trains[idx].get_spikes_history()
+                    ),
+                cfg.dt,
+                cfg.start_time
+                )
+             for idx in range(len(cfg.inhibitory_spike_trains))],
+            cfg.dt,
+            cfg.start_time
+            ),
+        pathname,
+        colours=get_colour_pre_inhibitory(),
+        normalised=False
+        )
 
     for idx in cfg.excitatory_plot_indices:
         file_name = "spike_trains__isi_pre_excitatory[" + str(idx) + "]"
@@ -531,7 +582,8 @@ def evaluate_neuron_with_input_synapses(cfg):
                 datalgo.make_difference_events(
                     cfg.excitatory_spike_trains[idx].get_spikes_history()
                     ),
-                cfg.dt
+                cfg.dt,
+                cfg.start_time
                 ),
             pathname,
             colours=get_colour_pre_excitatory(),
@@ -547,7 +599,8 @@ def evaluate_neuron_with_input_synapses(cfg):
                 datalgo.make_difference_events(
                     cfg.inhibitory_spike_trains[idx].get_spikes_history()
                     ),
-                cfg.dt
+                cfg.dt,
+                cfg.start_time
                 ),
             pathname,
             colours=get_colour_pre_inhibitory(),
@@ -610,6 +663,7 @@ def evaluate_neuron_with_input_synapses(cfg):
         get_colour_pre_excitatory_and_inhibitory(),
         plot.get_title_placeholder()
         )
+
     for cell, sub_dir in list(zip(cells, map(lambda cell: cell.get_soma().get_name() * int(len(cells) > 1), cells))):
         cell_output_dir = os.path.join(cfg.output_dir, sub_dir)
         os.makedirs(cell_output_dir, exist_ok=True)
@@ -622,7 +676,8 @@ def evaluate_neuron_with_input_synapses(cfg):
                 datalgo.make_difference_events(
                     cell.get_spikes()
                     ),
-                cfg.dt
+                cfg.dt,
+                cfg.start_time
                 ),
             pathname,
             colours=get_colour_post(),
@@ -670,11 +725,16 @@ def evaluate_neuron_with_input_synapses(cfg):
                     cell.get_excitatory_synapses()[idx].get_short_description()
                     )
 
-        plot.event_board(
+        plot.event_board_per_partes(
             [cfg.excitatory_spike_trains[idx].get_spikes_history() for idx in range(len(cfg.excitatory_spike_trains))] +
                 [cfg.inhibitory_spike_trains[idx].get_spikes_history() for idx in range(len(cfg.inhibitory_spike_trains))] +
                 [cell.get_spikes()],
             os.path.join(cell_output_dir, cell.get_soma().get_name() + "__spikes_board" + cfg.plot_files_extension),
+            cfg.start_time,
+            cfg.start_time + cfg.nsteps * cfg.dt,
+            cfg.plot_time_step,
+            1,
+            lambda p: print("    Saving plot " + p),
             list(map(lambda L: list(map(lambda p: plot.get_colour_pre_excitatory(p[1]), L)),
                 [datalgo.transform_discrete_function_to_inteval_0_1_using_liner_interpolation(
                     datalgo.evaluate_discrete_function_using_liner_interpolation(
@@ -696,8 +756,16 @@ def evaluate_neuron_with_input_synapses(cfg):
                         cell.get_inhibitory_synapses()[idx].get_max_weight()
                         ) for idx in range(len(cfg.inhibitory_spike_trains))])) +
                 [[plot.get_colour_post() for _ in range(len(cell.get_spikes()))]],
-            cell.get_soma().get_name() + " SPIKING BOARD"
+            " " + plot.get_title_placeholder() + " " + cell.get_soma().get_name() + " SPIKING BOARD"
             )
+
+    tmprof_end = time.time()
+
+    print("  Time profile of the evaluation [in seconds]:" +
+          "\n    Construction of cells: " + utility.duration_string(tmprof_begin_cells_construction, tmprof_begin_simulation) +
+          "\n    Simulation: " + utility.duration_string(tmprof_begin_cells_construction, tmprof_begin_save) +
+          "\n    Saving results: " + utility.duration_string(tmprof_begin_save, tmprof_end) +
+          "\n    TOTAL: " + utility.duration_string(tmprof_begin_cells_construction, tmprof_end))
 
     print("  Done.")
 
@@ -736,7 +804,8 @@ def evaluate_synapse_and_spike_noise(cfg):
     plot.histogram(
         datalgo.make_histogram(
             datalgo.make_difference_events(pre_spike_train.get_spikes_history()),
-            cfg.dt
+            cfg.dt,
+            cfg.start_time
             ),
         pathname,
         normalised=False,
@@ -748,7 +817,8 @@ def evaluate_synapse_and_spike_noise(cfg):
     plot.histogram(
         datalgo.make_histogram(
             datalgo.make_difference_events(post_spike_train.get_spikes_history()),
-            cfg.dt
+            cfg.dt,
+            cfg.start_time
             ),
         pathname,
         normalised=False,
@@ -815,7 +885,8 @@ def evaluate_pre_post_spike_noises_differences(cfg):
     plot.histogram(
         datalgo.make_histogram(
             datalgo.make_difference_events(pre_spike_train.get_spikes()),
-            cfg.dt
+            cfg.dt,
+            cfg.start_time
             ),
         pathname,
         normalised=False,
@@ -831,7 +902,8 @@ def evaluate_pre_post_spike_noises_differences(cfg):
     plot.histogram(
         datalgo.make_histogram(
             datalgo.make_difference_events(post_spike_train.get_spikes()),
-            cfg.dt
+            cfg.dt,
+            cfg.start_time
             ),
         pathname,
         normalised=False,
@@ -921,7 +993,8 @@ def evaluate_pre_post_spike_noises_differences(cfg):
     plot.histogram(
         datalgo.make_histogram(
             delta_post_pre_values,
-            (delta_post_pre_max - delta_post_pre_min) / 500.0
+            (delta_post_pre_max - delta_post_pre_min) / 500.0,
+            delta_post_pre_min
             ),
         pathname,
         normalised=False
@@ -936,7 +1009,8 @@ def evaluate_pre_post_spike_noises_differences(cfg):
         plot.histogram(
             datalgo.make_histogram(
                 input_vars_values,
-                (input_vars_max - input_vars_min) / 500.0
+                (input_vars_max - input_vars_min) / 500.0,
+                input_vars_min
                 ),
             pathname,
             normalised=False
@@ -950,7 +1024,8 @@ def evaluate_pre_post_spike_noises_differences(cfg):
         input_vars_counts_hist =\
             datalgo.make_histogram(
                 input_vars_values,
-                (input_vars_max - input_vars_min) / 500.0
+                (input_vars_max - input_vars_min) / 500.0,
+                input_vars_min
                 )
         plot.histogram(input_vars_counts_hist, pathname, normalised=False)
 
@@ -966,7 +1041,8 @@ def evaluate_pre_post_spike_noises_differences(cfg):
         plot.histogram(
             datalgo.make_histogram(
                 input_vars_values,
-                (input_vars_max - input_vars_min) / 500.0
+                (input_vars_max - input_vars_min) / 500.0,
+                input_vars_min
                 ),
             pathname,
             normalised=False

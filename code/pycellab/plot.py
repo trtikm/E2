@@ -148,10 +148,71 @@ def event_board(events, pathname, colours=None, title=None, xaxis_name=None, fax
         [colours[i][j] for i in range(len(colours)) for j in range(len(colours[i]))]
             if colours is not None
             else colours,
-        title,
+        title.replace(
+            get_title_placeholder(),
+            "["
+            "rows=" + str(len(events)) + ", "
+            "events=" + str(sum([len(l) for l in events])) +
+            "]"
+            ),
         xaxis_name,
         faxis_name
         )
+
+
+def event_board_per_partes(events, pathname, start, end, step, stride=1, on_plot_part_callback_fn=None,
+                           colours=None, title=None, xaxis_name=None, faxis_name=None):
+    assert isinstance(events, list) and all(all(isinstance(e, float) or isinstance(e, int) for e in l) for l in events)
+    assert colours is None or isinstance(colours, list)
+    assert colours is None or all(all(isinstance(rgb, tuple) and
+                                  len(rgb) == 3 and
+                                  all(isinstance(e, float) or isinstance(e, int) for e in rgb)
+                                      for rgb in l)
+                                  for l in colours)
+    assert colours is None or len(events) == len(colours)
+    assert colours is None or all(len(events[i]) == len(colours[i]) for i in range(len(events)))
+    assert isinstance(start, float) or isinstance(start, int)
+    assert isinstance(end, float) or isinstance(end, int)
+    assert start < end and step > 0.0001
+    assert isinstance(stride, int) and stride > 0
+    assert on_plot_part_callback_fn is None or callable(on_plot_part_callback_fn)
+    if not os.path.exists(os.path.dirname(pathname)):
+        os.mkdir(os.path.dirname(pathname))
+    base_pathname, extension = os.path.splitext(pathname)
+    indices = [0 for _ in range(len(events))]
+    x = start
+    idx = 0
+    while x < end:
+        if idx % stride == 0:
+            part_end = min(x + step, end)
+            part_events = []
+            if colours is None:
+                part_colours = None
+            else:
+                part_colours = []
+            is_part_empty = True
+            for row_idx, row in enumerate(events):
+                while indices[row_idx] < len(row) and row[indices[row_idx]] < x:
+                    indices[row_idx] += 1
+                part_events.append([])
+                if colours is not None:
+                    part_colours.append([])
+                while indices[row_idx] < len(row) and row[indices[row_idx]] < part_end:
+                    part_events[-1].append(row[indices[row_idx]])
+                    if colours is not None:
+                        part_colours[-1].append(colours[row_idx][indices[row_idx]])
+                    is_part_empty = False
+                    indices[row_idx] += 1
+            if not is_part_empty:
+                part_pathname = base_pathname + "_" + str(idx).zfill(4) + "_" + format(x, ".4f") + extension
+                part_title = "[part #" + str(idx) + "] "
+                if title is not None:
+                    part_title += title
+                if on_plot_part_callback_fn is not None:
+                    on_plot_part_callback_fn(part_pathname)
+                event_board(part_events, part_pathname, part_colours, part_title, xaxis_name, faxis_name)
+        x += step
+        idx += 1
 
 
 def histogram(distrib, pathname, normalised=True, colours=None, title=None, xaxis_name=None, faxis_name=None):

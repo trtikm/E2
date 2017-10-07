@@ -286,7 +286,7 @@ def _test_spike_trains(info):
             pathname = os.path.join(info.output_dir, "isi_delta_" + typename + "_" + str(idx_shift) + "_hist.png")
             print("    Saving plot " + pathname)
             plot.histogram(
-                datalgo.make_histogram([p[1] for p in isi_delta_signal_points], dt),
+                datalgo.make_histogram([p[1] for p in isi_delta_signal_points], dt, start_time),
                 pathname,
                 normalised=False
                 )
@@ -294,7 +294,7 @@ def _test_spike_trains(info):
             pathname = os.path.join(info.output_dir, "isi_hist_" + typename + "_" + str(idx_shift) + ".png")
             print("    Saving plot " + pathname)
             plot.histogram(
-                datalgo.make_histogram(datalgo.make_difference_events(signal), dt),
+                datalgo.make_histogram(datalgo.make_difference_events(signal), dt, start_time),
                 pathname,
                 normalised=False
                 )

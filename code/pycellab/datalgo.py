@@ -103,16 +103,36 @@ def compute_bin_size(events, desired_bins_count):
     assert result
 
 
-def make_histogram(events, bin_size=None):
+def make_histogram(events, bin_size, reference_event, count_unit=1):
     assert is_list_of_events(events)
     assert is_number(bin_size) and bin_size > 0
+    assert is_number(reference_event)
+    assert is_number(count_unit)
+
+    if len(events) == 0:
+        return {}
+    result = {}
+    for event in events:
+        bin_idx = int(float(event - reference_event) / float(bin_size) + float(bin_size) / 2.0)
+        key = reference_event + bin_idx * bin_size
+        result[key] = count_unit if key not in result else result[key] + count_unit
+
+    assert is_histogram(result)
+    return result
+
+
+def merge_histograms(histograms, bin_size, reference_event, count_unit=1):
+    assert isinstance(histograms, list) and all(is_histogram(h) for h in histograms)
+    assert is_number(bin_size) and bin_size > 0
+    assert is_number(reference_event)
+    assert is_number(count_unit)
 
     result = {}
-    min_event = min(events)
-    for event in events:
-        bin_idx = int(float(event - min_event) / float(bin_size) + float(bin_size) / 2.0)
-        key = min_event + bin_idx * bin_size
-        result[key] = 1 if key not in result else result[key] + 1
+    for histogram in histograms:
+        for event, count in histogram.items():
+            bin_idx = int(float(event - reference_event) / float(bin_size) + float(bin_size) / 2.0)
+            key = reference_event + bin_idx * bin_size
+            result[key] = count_unit if key not in result else result[key] + count_unit * count
 
     assert is_histogram(result)
     return result
@@ -153,23 +173,10 @@ def merge_sorted_lists_of_events(list_of_lists_of_events):
     assert isinstance(list_of_lists_of_events, list)
     assert all(is_sorted_list_of_events(events) for events in list_of_lists_of_events)
 
-    def _get_index_of_list_with_minimal_pivot_element(list_of_lists_of_events, indices):
-        result = None
-        for idx in range(len(list_of_lists_of_events)):
-            if indices[idx] < len(list_of_lists_of_events[idx]):
-                value = list_of_lists_of_events[idx][indices[idx]]
-                current_min_value = list_of_lists_of_events[result][indices[result]] if result is not None else None
-                result = idx if result is None or value < current_min_value else result
-        return result
-
     result = []
-    indices = [0 for _ in range(len(list_of_lists_of_events))]
-    while True:
-        idx = _get_index_of_list_with_minimal_pivot_element(list_of_lists_of_events, indices)
-        if idx is None:
-            break
-        result.append(list_of_lists_of_events[idx][indices[idx]])
-        indices[idx] += 1
+    for events in list_of_lists_of_events:
+        for event in events:
+            bisect.insort_right(result, event)
 
     assert is_sorted_list_of_events(result)
     assert len(result) == sum(len(events) for events in list_of_lists_of_events)
@@ -181,36 +188,26 @@ def compose_sorted_lists_of_points(list_of_lists_of_points, multipliers=None, ep
     assert all(is_sorted_list_of_points_along_x_axis(points) for points in list_of_lists_of_points)
     assert multipliers is None or (is_list_of_numbers(multipliers) and len(list_of_lists_of_points) == len(multipliers))
 
-    def _get_indices_of_lists_with_minimal_pivot_element(list_of_lists_of_events, indices, epsilon):
-        result = []
-        for idx in range(len(list_of_lists_of_events)):
-            if indices[idx] < len(list_of_lists_of_events[idx]):
-                if len(result) == 0:
-                    result.append(idx)
-                else:
-                    current_min_value = list_of_lists_of_events[result[0]][indices[result[0]]][0]
-                    value = list_of_lists_of_events[idx][indices[idx]][0]
-                    if value < current_min_value - epsilon:
-                        result.clear()
-                        result.append(idx)
-                    elif value <= current_min_value + epsilon:
-                        result.append(idx)
-        return result
+    def find_insertion_index_for_point(points, point):
+        lo = 0
+        hi = len(points)
+        while lo < hi:
+            mid = (lo+hi) // 2
+            if point[0] < points[mid][0]:
+                hi = mid
+            else:
+                lo = mid+1
+        return lo
 
     result = []
-    indices = [0 for _ in range(len(list_of_lists_of_points))]
-    while True:
-        idx = _get_indices_of_lists_with_minimal_pivot_element(list_of_lists_of_points, indices, epsilon)
-        if len(idx) == 0:
-            break
-        x, y = list_of_lists_of_points[idx[0]][indices[idx[0]]]
-        y *= 1 if multipliers is None else multipliers[idx[0]]
-        for i in idx[1:]:
-            y += list_of_lists_of_points[i][indices[i]][1] * (1 if multipliers is None else multipliers[i])
-        assert len(result) == 0 or result[-1][0] <= x
-        result.append((x, y))
-        for i in idx:
-            indices[i] += 1
+    for list_idx, points in enumerate(list_of_lists_of_points):
+        mult = 1 if multipliers is None else multipliers[list_idx]
+        for point in points:
+            idx = find_insertion_index_for_point(result, point)
+            if idx > 0 and point[0] <= result[idx - 1][0] + epsilon:
+                result[idx - 1] = (result[idx - 1][0], result[idx - 1][1] + mult * point[1])
+            else:
+                result.insert(idx, (point[0], mult * point[1]))
 
     assert is_sorted_list_of_points_along_x_axis(result)
     return result
