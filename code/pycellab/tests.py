@@ -102,7 +102,7 @@ def _test_hermit_distribution(info):
             os.path.join(info.output_dir, "ns_curve_hermit_adapted_" + format(peek_x, ".2f") + ".png")
             )
         print("  Computing histogram from the hermit cubic.")
-        hist = datalgo.make_histogram_from_points(points, num_bins=300)
+        hist = datalgo.make_histogram_from_points(points)
         print("  Saving " + os.path.join(info.output_dir, "ns_hist_adapted_" + format(peek_x, ".2f") + ".png"))
         plot.histogram(
             hist,
@@ -223,6 +223,87 @@ def _test_synapse(info):
             faxis_name="weight delta"
             )
 
+    return 0
+
+
+def _test_default_excitatory_isi_distribution(info):
+    """
+    The test creates the default excitatory ISI distribution, and
+    uses it to generate 10000 events (ISIs). Then plot of the ISI
+    histogram is saved.
+    """
+    assert isinstance(info, TestInfo)
+    plot.histogram(
+        datalgo.make_histogram(
+            distribution.default_excitatory_isi_distribution().generate(100000),
+            0.001,
+            0.0,
+            ),
+        os.path.join(info.output_dir, "default_excitatory_isi_distribution.png"),
+        normalised=False,
+        title="default_excitatory_isi_distribution " + plot.get_title_placeholder()
+        )
+    return 0
+
+
+def _test_default_inhibitory_isi_distribution(info):
+    """
+    The test creates the default inhibitory ISI distribution, and
+    uses it to generate 10000 events (ISIs). Then plot of the ISI
+    histogram is saved.
+    """
+    assert isinstance(info, TestInfo)
+    plot.histogram(
+        datalgo.make_histogram(
+            distribution.default_inhibitory_isi_distribution().generate(100000),
+            0.00025,
+            0.0,
+            ),
+        os.path.join(info.output_dir, "default_inhibitory_isi_distribution.png"),
+        normalised=False,
+        title="default_inhibitory_isi_distribution " + plot.get_title_placeholder()
+        )
+    # events = distribution.default_inhibitory_isi_distribution().generate(100000)
+    # plot.histogram(
+    #     datalgo.make_histogram(
+    #         events,
+    #         0.0001,
+    #         0.0,
+    #         ),
+    #     os.path.join(info.output_dir, "default_inhibitory_isi_distribution_00010.png"),
+    #     normalised=False,
+    #     title="default_inhibitory_isi_distribution " + plot.get_title_placeholder()
+    #     )
+    # plot.histogram(
+    #     datalgo.make_histogram(
+    #         events,
+    #         0.00025,
+    #         0.0,
+    #         ),
+    #     os.path.join(info.output_dir, "default_inhibitory_isi_distribution_00025.png"),
+    #     normalised=False,
+    #     title="default_inhibitory_isi_distribution " + plot.get_title_placeholder()
+    #     )
+    # plot.histogram(
+    #     datalgo.make_histogram(
+    #         events,
+    #         0.0005,
+    #         0.0,
+    #         ),
+    #     os.path.join(info.output_dir, "default_inhibitory_isi_distribution_00050.png"),
+    #     normalised=False,
+    #     title="default_inhibitory_isi_distribution " + plot.get_title_placeholder()
+    #     )
+    # plot.histogram(
+    #     datalgo.make_histogram(
+    #         events,
+    #         0.001,
+    #         0.0,
+    #         ),
+    #     os.path.join(info.output_dir, "default_inhibitory_isi_distribution_00100.png"),
+    #     normalised=False,
+    #     title="default_inhibitory_isi_distribution " + plot.get_title_placeholder()
+    #     )
     return 0
 
 

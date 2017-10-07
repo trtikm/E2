@@ -219,21 +219,23 @@ def histogram(distrib, pathname, normalised=True, colours=None, title=None, xaxi
     if isinstance(distrib, dict):   # 'distrib' is a plain histogram.
         distrib = distribution.Distribution(distrib)
     assert isinstance(distrib, distribution.Distribution)
-    if not title:
-        if normalised:
-            title = "[normalised] "
-        else:
-            title = ""
-        title += (
-            "#bars=" + str(len(distrib.get_histogram())) + ", "
-            "sum bars=" + format(sum([value for _, value in distrib.get_histogram().items()]), ".3f") + ", "
-            "median=" + format(distrib.get_median(), ".3f") + ", "
-            "mean=" + format(distrib.get_mean(), ".3f") + ", "
-            "mean freq.=" + format(1.0 / (distrib.get_mean() + 0.0001), ".3f") + ", "
-            "variance=" + format(distrib.get_variance(), ".3f") + ", "
-            "std. deviation=" + format(distrib.get_standard_deviation(), ".3f") + ", "
-            "CV=" + format(distrib.get_coefficient_of_variation(), ".3f")
-            )
+    if title is None:
+        title = get_title_placeholder()
+    if normalised:
+        title_addon = "[normalised] "
+    else:
+        title_addon = ""
+    title_addon += (
+        "#bars=" + str(len(distrib.get_histogram())) + ", "
+        "sum bars=" + format(sum([value for _, value in distrib.get_histogram().items()]), ".3f") + ", "
+        "median=" + format(distrib.get_median(), ".3f") + ", "
+        "mean=" + format(distrib.get_mean(), ".3f") + ", "
+        "mean freq.=" + format(1.0 / (distrib.get_mean() + 0.0001), ".3f") + ", "
+        "variance=" + format(distrib.get_variance(), ".3f") + ", "
+        "std. deviation=" + format(distrib.get_standard_deviation(), ".3f") + ", "
+        "CV=" + format(distrib.get_coefficient_of_variation(), ".3f")
+        )
+    title = title.replace(get_title_placeholder(), title_addon)
     if normalised:
         points = distrib.get_probability_points()
     else:

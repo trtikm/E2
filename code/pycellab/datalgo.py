@@ -138,10 +138,11 @@ def merge_histograms(histograms, bin_size, reference_event, count_unit=1):
     return result
 
 
-def make_histogram_from_points(points, num_bins=100):
+def make_histogram_from_points(points, bin_size=None, reference_x_coord=0):
     assert is_list_of_points(points)
     assert len(points) > 1
-    assert isinstance(num_bins, int) and num_bins > 0
+    assert bin_size is None or (is_number(bin_size) and bin_size > 0)
+    assert is_number(reference_x_coord)
 
     points = sorted(points, key=lambda p: p[0])
     x = [p[0] for p in points]
@@ -149,14 +150,17 @@ def make_histogram_from_points(points, num_bins=100):
     hi = max(x)
     assert hi > lo + 0.0001
     y = [p[1] for p in points]
+    if bin_size is None:
+        bin_size = (hi - lo) / 1000
+        assert bin_size > 0.00001
+    start_bin_idx = int(float(lo - reference_x_coord) / float(bin_size) + float(bin_size) / 2.0)
+    end_bin_idx = int(float(hi - reference_x_coord) / float(bin_size) + float(bin_size) / 2.0)
     result = {}
-    for i in range(num_bins):
-        t = i / float(num_bins - 1)
-        t = lo + t * (hi - lo)
-        assert t not in result
+    for bin_idx in range(start_bin_idx, end_bin_idx + 1):
+        t = reference_x_coord + bin_idx * bin_size
         j = bisect.bisect_left(x, t)
         assert j < len(x)
-        if j == 0 or x[j] - x[j - 1] < 0.0001:
+        if j == 0 or x[j] - x[j - 1] < 0.00001:
             result[t] = y[j]
         else:
             assert x[j - 1] < t

@@ -198,10 +198,11 @@ def hermit_distribution(
         scale_y=10,
         pow_y=1.5,
         shift_x=0.002,
-        num_bars=300,
+        bin_size=0.001,
         mult_m01=1.0,
         mult_mx=1.0
         ):
+    assert isinstance(bin_size, float) and bin_size > 0.0 and bin_size < 1.0
     return Distribution(
                 datalgo.make_histogram_from_points(
                     datalgo.move_scale_curve_points(
@@ -209,21 +210,22 @@ def hermit_distribution(
                             peek_x=peek_x,
                             mult_m01=mult_m01,
                             mult_mx=mult_mx,
-                            num_points=max(2, int(num_bars / 3))
+                            num_points=max(2, int((1 / bin_size) / 3))
                             ),
                         scale_x=scale_x,
                         scale_y=scale_y,
                         pow_y=pow_y,
                         shift_x=shift_x
                         ),
-                    num_bins=num_bars
+                    bin_size,
+                    0.0
                     )
                 )
 
 
 def default_excitatory_isi_distribution():
-    return hermit_distribution(0.137, pow_y=2, num_bars=int(0.3/0.001 + 0.5))
+    return hermit_distribution(0.1372, pow_y=2)
 
 
 def default_inhibitory_isi_distribution():
-    return hermit_distribution(0.0918, 0.08, pow_y=2, num_bars=int(0.3/0.001 + 0.5))
+    return hermit_distribution(0.092, 0.08, pow_y=2)
