@@ -76,7 +76,7 @@ class SpikeTrain:
 
     def _copy_chunk_to_buffer(self, start, size):
         self._spikes_buffer = [self._array[(start + i) % self.get_array_size()] for i in range(size)]
-        assert len(self._spikes_buffer) > 0
+        assert len(self._spikes_buffer) == size
 
     def _random_shuffle_buffer(self):
         for _ in range(len(self._spikes_buffer)):
@@ -95,11 +95,13 @@ class SpikeTrain:
 
     def _remove_chunk_from_array(self, start, size):
         end = (start + size) % self.get_array_size()
-        if end >= start:
+        if start == end:
+            self._array.clear()
+        elif end > start:
             for _ in range(size):
                 self._array.pop(start)
         else:
-            while len(self._array) >= start:
+            while len(self._array) > start:
                 self._array.pop()
             for _ in range(end):
                 self._array.pop(0)
