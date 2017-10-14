@@ -1,5 +1,6 @@
 import os
 import soma
+import neuron
 import synapse
 import integrator
 import distribution
@@ -58,7 +59,8 @@ class NeuronWithInputSynapses(CommonProps):
                  excitatory_synapses,
                  inhibitory_synapses,
                  plot_files_extension,
-                 plot_time_step
+                 plot_time_step,
+                 recording_config
                  ):
         assert isinstance(num_sub_iterations, list)
         assert False not in list(map(lambda x: type(x) is int and x > 0, num_sub_iterations))
@@ -70,6 +72,7 @@ class NeuronWithInputSynapses(CommonProps):
         assert len(cell_soma) == len(num_sub_iterations)
         assert False not in list(map(lambda x: len(x) == len(excitatory_spike_trains), excitatory_synapses))
         assert False not in list(map(lambda x: len(x) == len(inhibitory_spike_trains), inhibitory_synapses))
+        assert recording_config is None or isinstance(recording_config, neuron.RecordingConfig)
         super(NeuronWithInputSynapses, self).__init__(name, start_time, dt, nsteps, plot_files_extension, plot_time_step)
         self.num_sub_iterations = num_sub_iterations
         self.cell_soma = cell_soma
@@ -79,6 +82,7 @@ class NeuronWithInputSynapses(CommonProps):
         self.inhibitory_synapses = inhibitory_synapses
         self.excitatory_plot_indices = list(range(0, len(excitatory_spike_trains), max(1, len(excitatory_spike_trains) // 2)))
         self.inhibitory_plot_indices = list(range(0, len(inhibitory_spike_trains), max(1, len(inhibitory_spike_trains) // 2)))
+        self.recording_config = recording_config
 
     @staticmethod
     def leaky_integrate_and_fire_const_input(my_precomputed_full_name):
@@ -110,7 +114,9 @@ class NeuronWithInputSynapses(CommonProps):
             excitatory_synapses=[[synapse.synapse.constant()]],
             inhibitory_synapses=[[]],
             plot_files_extension=".png",
-            plot_time_step=1.0
+            plot_time_step=1.0,
+            recording_config=neuron.RecordingConfig(
+                )
             )
 
     @staticmethod
@@ -147,7 +153,9 @@ class NeuronWithInputSynapses(CommonProps):
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
-            plot_time_step=1.0
+            plot_time_step=1.0,
+            recording_config=neuron.RecordingConfig(
+                )
             )
 
     @staticmethod
@@ -175,7 +183,9 @@ class NeuronWithInputSynapses(CommonProps):
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
-            plot_time_step=1.0
+            plot_time_step=1.0,
+            recording_config=neuron.RecordingConfig(
+                )
             )
 
     @staticmethod
@@ -203,7 +213,9 @@ class NeuronWithInputSynapses(CommonProps):
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
-            plot_time_step=1.0
+            plot_time_step=1.0,
+            recording_config=neuron.RecordingConfig(
+                )
             )
 
     @staticmethod
@@ -231,7 +243,9 @@ class NeuronWithInputSynapses(CommonProps):
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
-            plot_time_step=1.0
+            plot_time_step=1.0,
+            recording_config=neuron.RecordingConfig(
+                )
             )
 
     @staticmethod
@@ -261,7 +275,9 @@ class NeuronWithInputSynapses(CommonProps):
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
-            plot_time_step=1.0
+            plot_time_step=1.0,
+            recording_config=neuron.RecordingConfig(
+                )
             )
 
     @staticmethod
@@ -288,7 +304,9 @@ class NeuronWithInputSynapses(CommonProps):
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
-            plot_time_step=1.0
+            plot_time_step=1.0,
+            recording_config=neuron.RecordingConfig(
+                )
             )
 
     @staticmethod
@@ -315,7 +333,9 @@ class NeuronWithInputSynapses(CommonProps):
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
-            plot_time_step=1.0
+            plot_time_step=1.0,
+            recording_config=neuron.RecordingConfig(
+                )
             )
 
     @staticmethod
@@ -342,7 +362,9 @@ class NeuronWithInputSynapses(CommonProps):
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
-            plot_time_step=1.0
+            plot_time_step=1.0,
+            recording_config=neuron.RecordingConfig(
+                )
             )
 
     @staticmethod
@@ -389,7 +411,9 @@ class NeuronWithInputSynapses(CommonProps):
                 [synapse.synapse.constant() for _ in range(num_inhibitory)]
                 ],
             plot_files_extension=".png",
-            plot_time_step=1.0
+            plot_time_step=1.0,
+            recording_config=neuron.RecordingConfig(
+                )
             )
 
     @staticmethod
@@ -417,7 +441,15 @@ class NeuronWithInputSynapses(CommonProps):
             excitatory_synapses=[[synapse.synapse.constant() for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
-            plot_time_step=1.0
+            plot_time_step=1.0,
+            recording_config=neuron.RecordingConfig(
+                do_recording_of_post_synaptic_spikes=True,
+                do_recording_of_soma=False,
+                do_recording_of_excitatory_synapses=False,
+                do_recording_of_inhibitory_synapses=False,
+                do_recording_of_key_variables_only=False,
+                do_recording_controller=lambda last_recording_time, current_time, was_post_spike_generated: True
+                )
             )
 
 
