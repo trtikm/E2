@@ -11,11 +11,17 @@ class SpikeTrain:
     intervals is always preserved for any level of noise you choose.
     """
 
-    def __init__(self, spiking_distribution, chunk_size_distribution, array_size):
+    def __init__(self,
+                 spiking_distribution,
+                 chunk_size_distribution,
+                 array_size,
+                 recording_controller
+                 ):
         assert isinstance(spiking_distribution, distribution.Distribution)
         assert isinstance(chunk_size_distribution, distribution.Distribution)
         assert all(isinstance(event, int) and event > 0 for event in chunk_size_distribution.get_events())
         assert isinstance(array_size, int) and array_size >= chunk_size_distribution.get_events()[-1]
+        assert callable(recording_controller)
         self._spiking_distribution = spiking_distribution
         self._chunk_size_distribution = chunk_size_distribution
         self._array_size = array_size
@@ -24,11 +30,18 @@ class SpikeTrain:
         self._spikes_history = []
         self._start_time = None
         self._dbg_num_generated_events = 0
+        self._dbg_num_reported_events = 0
+        self._recording_controller = recording_controller
+        self._last_recording_time = None
 
     @staticmethod
-    def create(base_spiking_distribution, noise_level):
+    def create(base_spiking_distribution,
+               noise_level,
+               recording_controller=lambda last_recording_time, current_time: True
+               ):
         assert isinstance(base_spiking_distribution, distribution.Distribution)
         assert isinstance(noise_level, float) and noise_level >= 0.0 and noise_level <= 1.0
+        assert callable(recording_controller)
         array_size = 1 + int(149.0 * (1.0 - noise_level)**2.0 + 0.5)
         min_chunk_size = 1 + int(4.0 * (1.0 - noise_level)**3.0 + 0.5)
         max_chunk_size = 1 + int(24.0 * (1.0 - noise_level)**2.0 + 0.5)
@@ -37,7 +50,9 @@ class SpikeTrain:
                           distribution.Distribution({
                               size: chunk_frequency_function(size) for size in range(min_chunk_size, max_chunk_size + 1)
                               }),
-                          array_size)
+                          array_size,
+                          recording_controller
+                          )
 
     def get_spikes_history(self):
         return self._spikes_history
@@ -116,9 +131,19 @@ class SpikeTrain:
             self._recharge_array()
             self._recharge_spikes_buffer()
             assert len(self._spikes_buffer) > 0
-            assert self._dbg_num_generated_events == len(self._array) + len(self._spikes_buffer) + len(self._spikes_history)
+            assert self._dbg_num_generated_events == len(self._array) + len(self._spikes_buffer) + self._dbg_num_reported_events
         if self._spikes_buffer[-1] > t + dt:
             return False
-        self._spikes_history.append(self._spikes_buffer[-1])
-        self._spikes_buffer.pop()
+        spike_time = self._spikes_buffer.pop()
+        self._dbg_num_reported_events += 1
+        self._do_recording(t, dt, spike_time)
         return True
+
+    def _do_recording(self, t, dt, spike_time):
+        if self._last_recording_time is None:
+            self._last_recording_time = t   # We assume the initial state is available to (i.e. recorded by) the user
+        if self._recording_controller(self._last_recording_time, t + dt) is False:
+            return
+        self._last_recording_time = t + dt
+
+        self._spikes_history.append(spike_time)
