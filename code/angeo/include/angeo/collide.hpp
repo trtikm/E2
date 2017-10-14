@@ -180,10 +180,10 @@ bool  collision_bbox_bbox(
         );
 
 
-enum struct CLIP_RESULT_TYPE : natural_8_bit
+enum struct POINT_SET_TYPE : natural_8_bit
 {
     EMPTY = 0,
-    CLIPPED = 1,
+    GENERAL = 1,
     FULL = 2
 };
 
@@ -201,7 +201,7 @@ struct clipped_polygon_description
 };
 
 
-CLIP_RESULT_TYPE  clip_polygon(
+POINT_SET_TYPE  clip_polygon(
         std::vector<vector2> const&  polygon_points,
         vector2 const&  clip_origin,
         vector2 const&  clip_normal,
@@ -209,7 +209,7 @@ CLIP_RESULT_TYPE  clip_polygon(
         );
 
 
-void  instersection_of_plane_with_xy_coord_plane(
+POINT_SET_TYPE  instersection_of_plane_with_xy_coord_plane(
         vector3 const&  origin,
         vector3 const&  normal,
         vector2&  intersection_origin,
@@ -217,7 +217,7 @@ void  instersection_of_plane_with_xy_coord_plane(
         );
 
 
-CLIP_RESULT_TYPE  clip_polygon(
+POINT_SET_TYPE  clip_polygon(
         matrix44 const&  to_polygon_space_matrix,
         std::vector<vector2> const&  polygon_points,
         vector3 const&  clip_origin,

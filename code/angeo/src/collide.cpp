@@ -229,7 +229,7 @@ bool  collision_bbox_bbox(
 }
 
 
-CLIP_RESULT_TYPE  clip_polygon(
+POINT_SET_TYPE  clip_polygon(
         std::vector<vector2> const&  polygon_points,
         vector2 const&  clip_origin,
         vector2 const&  clip_normal,
@@ -263,11 +263,11 @@ CLIP_RESULT_TYPE  clip_polygon(
             if (dot_normal_B < dot_normal_origin)
                 break;
             if (dot_normal_B >= dot_normal_A && dot_normal_old_A >= dot_normal_A)
-                return CLIP_RESULT_TYPE::FULL;
+                return POINT_SET_TYPE::FULL;
 
             ++i;
             if (i == polygon_points.size())
-                return CLIP_RESULT_TYPE::FULL;
+                return POINT_SET_TYPE::FULL;
 
             dot_normal_old_A = dot_normal_A;
             dot_normal_A = dot_normal_B;
@@ -324,7 +324,7 @@ CLIP_RESULT_TYPE  clip_polygon(
             }
         }
 
-        return CLIP_RESULT_TYPE::CLIPPED;
+        return POINT_SET_TYPE::GENERAL;
     }
     else
     {
@@ -337,11 +337,11 @@ CLIP_RESULT_TYPE  clip_polygon(
             if (dot_normal_B >= dot_normal_origin)
                 break;
             if (dot_normal_B <= dot_normal_A && dot_normal_old_A <= dot_normal_A)
-                return CLIP_RESULT_TYPE::EMPTY;
+                return POINT_SET_TYPE::EMPTY;
 
             ++i;
             if (i == polygon_points.size())
-                return CLIP_RESULT_TYPE::EMPTY;
+                return POINT_SET_TYPE::EMPTY;
 
             dot_normal_old_A = dot_normal_A;
             dot_normal_A = dot_normal_B;
@@ -398,23 +398,46 @@ CLIP_RESULT_TYPE  clip_polygon(
             }
         }
 
-        return CLIP_RESULT_TYPE::CLIPPED;
+        return POINT_SET_TYPE::GENERAL;
     }
 }
 
 
-void  instersection_of_plane_with_xy_coord_plane(
+POINT_SET_TYPE  instersection_of_plane_with_xy_coord_plane(
         vector3 const&  origin,
         vector3 const&  normal,
         vector2&  intersection_origin,
         vector2&  intersection_normal
         )
 {
+    if (normal(2) > scalar(1.0 - 1e-4))
+    {
+        if (origin(2) <= scalar(0.0))
+            return POINT_SET_TYPE::FULL;
+        else
+            return POINT_SET_TYPE::EMPTY;
+    }
+    if (normal(2) < scalar(-1.0 + 1e-4))
+    {
+        if (origin(2) >= scalar(0.0))
+            return POINT_SET_TYPE::FULL;
+        else
+            return POINT_SET_TYPE::EMPTY;
+    }
+
+    vector3 const  intersection_line_vector = cross_product(normal, vector3_unit_z()); // This could be optimised, in case of performance issues.
+    vector3 const  down_hill_line_vector = cross_product(normal, intersection_line_vector); // This could be optimised, in case of performance issues.
+
+    scalar const  down_hill_param = -origin(3) / down_hill_line_vector(3);
+
+    intersection_origin = contract32(origin) + down_hill_param * contract32(down_hill_line_vector);
+    intersection_normal = normalised_2d(orthogonal(contract32(intersection_line_vector)));
+
+    return POINT_SET_TYPE::GENERAL;
 }
 
 
-
-CLIP_RESULT_TYPE  clip_polygon(
+POINT_SET_TYPE  clip_polygon(
         matrix44 const&  to_polygon_space_matrix,
         std::vector<vector2> const&  polygon_points,
         vector3 const&  clip_origin,
@@ -424,34 +447,25 @@ CLIP_RESULT_TYPE  clip_polygon(
 {
     vector3 const  transformed_clip_origin = transform_point(clip_origin, to_polygon_space_matrix);
     vector3 const  transformed_clip_normal = transform_vector(clip_normal, to_polygon_space_matrix);
-    if (transformed_clip_normal(2) > scalar(1.0 - 1e-4))
-    {
-        if (transformed_clip_origin(2) <= scalar(0.0))
-            return CLIP_RESULT_TYPE::FULL;
-        else
-            return CLIP_RESULT_TYPE::EMPTY;
-    }
-    if (transformed_clip_normal(2) < scalar(-1.0 + 1e-4))
-    {
-        if (transformed_clip_origin(2) >= scalar(0.0))
-            return CLIP_RESULT_TYPE::FULL;
-        else
-            return CLIP_RESULT_TYPE::EMPTY;
-    }
+
     vector2 origin2d;
     vector2 normal2d;
-    instersection_of_plane_with_xy_coord_plane(
+    POINT_SET_TYPE const  plane_intersection_type =
+        instersection_of_plane_with_xy_coord_plane(
                 transformed_clip_origin,
                 transformed_clip_normal,
                 origin2d,
                 normal2d
                 );
-    return clip_polygon(polygon_points,origin2d,normal2d,description);
+
+    return plane_intersection_type != POINT_SET_TYPE::GENERAL ?
+                plane_intersection_type :
+                clip_polygon(polygon_points,origin2d,normal2d,description);
 }
 
 
 bool  intersection_of_covex_polytopes(
-        )
+    )
 {
     return false;
 }
