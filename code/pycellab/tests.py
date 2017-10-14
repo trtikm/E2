@@ -135,10 +135,10 @@ def _test_synapse(info):
     """
     assert isinstance(info, TestInfo)
     for the_synapse in [
-            synapse.synapse.plastic_peek_np(),
-            synapse.synapse.plastic_peek_pn(),
-            synapse.synapse.plastic_peek_pp(),
-            synapse.synapse.plastic_peek_nn(),
+            synapse.Synapse.plastic_peek_np(),
+            synapse.Synapse.plastic_peek_pn(),
+            synapse.Synapse.plastic_peek_pp(),
+            synapse.Synapse.plastic_peek_nn(),
             ]:
         print("  Starting simulation of '" + the_synapse.get_name() + "'.")
 

@@ -93,8 +93,7 @@ class SynapticInputCooler:
             )
 
 
-
-class synapse:
+class Synapse:
     def __init__(self,
                  initial_input_pre,
                  initial_input_post,
@@ -147,7 +146,7 @@ class synapse:
     @staticmethod
     def constant(initial_weight=1.0
                  ):
-        return synapse(
+        return Synapse(
             initial_input_pre=0.0,
             initial_input_post=0.0,
             initial_weight=initial_weight,
@@ -185,7 +184,7 @@ class synapse:
             spike_magnitude=1.0,
             integrator_function=integrator.euler
             ):
-        return synapse(
+        return Synapse(
             initial_input_pre=initial_input_pre,
             initial_input_post=initial_input_post,
             initial_weight=initial_weight,
@@ -223,7 +222,7 @@ class synapse:
             spike_magnitude=1.0,
             integrator_function=integrator.euler
             ):
-        return synapse(
+        return Synapse(
             initial_input_pre=initial_input_pre,
             initial_input_post=initial_input_post,
             initial_weight=initial_weight,
@@ -261,7 +260,7 @@ class synapse:
             spike_magnitude=1.0,
             integrator_function=integrator.euler
             ):
-        return synapse(
+        return Synapse(
             initial_input_pre=initial_input_pre,
             initial_input_post=initial_input_post,
             initial_weight=initial_weight,
@@ -299,7 +298,7 @@ class synapse:
             spike_magnitude=1.0,
             integrator_function=integrator.euler
             ):
-        return synapse(
+        return Synapse(
             initial_input_pre=initial_input_pre,
             initial_input_post=initial_input_post,
             initial_weight=initial_weight,
