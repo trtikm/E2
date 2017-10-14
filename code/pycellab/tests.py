@@ -263,47 +263,6 @@ def _test_default_inhibitory_isi_distribution(info):
         normalised=False,
         title="default_inhibitory_isi_distribution " + plot.get_title_placeholder()
         )
-    # events = distribution.default_inhibitory_isi_distribution().generate(100000)
-    # plot.histogram(
-    #     datalgo.make_histogram(
-    #         events,
-    #         0.0001,
-    #         0.0,
-    #         ),
-    #     os.path.join(info.output_dir, "default_inhibitory_isi_distribution_00010.png"),
-    #     normalised=False,
-    #     title="default_inhibitory_isi_distribution " + plot.get_title_placeholder()
-    #     )
-    # plot.histogram(
-    #     datalgo.make_histogram(
-    #         events,
-    #         0.00025,
-    #         0.0,
-    #         ),
-    #     os.path.join(info.output_dir, "default_inhibitory_isi_distribution_00025.png"),
-    #     normalised=False,
-    #     title="default_inhibitory_isi_distribution " + plot.get_title_placeholder()
-    #     )
-    # plot.histogram(
-    #     datalgo.make_histogram(
-    #         events,
-    #         0.0005,
-    #         0.0,
-    #         ),
-    #     os.path.join(info.output_dir, "default_inhibitory_isi_distribution_00050.png"),
-    #     normalised=False,
-    #     title="default_inhibitory_isi_distribution " + plot.get_title_placeholder()
-    #     )
-    # plot.histogram(
-    #     datalgo.make_histogram(
-    #         events,
-    #         0.001,
-    #         0.0,
-    #         ),
-    #     os.path.join(info.output_dir, "default_inhibitory_isi_distribution_00100.png"),
-    #     normalised=False,
-    #     title="default_inhibitory_isi_distribution " + plot.get_title_placeholder()
-    #     )
     return 0
 
 
@@ -320,12 +279,7 @@ def _test_spike_trains(info):
     start_time = 0.0
     dt = 0.001
     nsteps = 60000
-
     num_spikers_per_kind = 10
-
-    plot_dt = 2.0
-    plot_parts = 10
-    plot_stride = max(1, int((nsteps * dt / plot_dt) / plot_parts + 0.5))
 
     def index_to_param(i):
         return min(max(0.0, float(i) / float(num_spikers_per_kind - 1)), 1.0) if num_spikers_per_kind > 1 else 1.0
@@ -338,69 +292,59 @@ def _test_spike_trains(info):
     t = start_time
     for step in range(nsteps):
         print("    " + format(100.0 * step / float(nsteps), '.1f') + "%", end='\r')
-        for i in range(2 * num_spikers_per_kind):
-            trains[i].on_time_step(t, dt)
+        for train in trains:
+            train.on_time_step(t, dt)
         t += dt
 
     print("  Saving results.")
 
-    for idx_base, typename in [(0, "excitatory"), (num_spikers_per_kind, "inhibitory")]:
-        for idx_shift in range(0, num_spikers_per_kind, num_spikers_per_kind // min(plot_parts, num_spikers_per_kind)):
-            idx = idx_base + idx_shift
-            signal = trains[idx].get_spikes_history()
-
-            isi_delta_signal_points = [(i - 2, (signal[i] - signal[i - 1]) - (signal[i - 1] - signal[i - 2]))
-                                       for i in range(2, len(signal))]
-
-            pathname = os.path.join(info.output_dir, "isi_delta_" + typename + "_" + str(idx_shift) + "_curve",
-                                                     "isi_delta_" + typename + "_" + str(idx_shift) + ".png")
-            print("    Saving plot " + pathname)
-            plot.curve_per_partes(
-                isi_delta_signal_points,
-                pathname,
-                0,
-                len(isi_delta_signal_points),
-                1000,
-                lambda p: print("    Saving plot " + p),
-                )
-
-            pathname = os.path.join(info.output_dir, "isi_delta_" + typename + "_" + str(idx_shift) + "_hist.png")
-            print("    Saving plot " + pathname)
-            plot.histogram(
-                datalgo.make_histogram([p[1] for p in isi_delta_signal_points], dt, start_time),
-                pathname,
-                normalised=False
-                )
-
-            pathname = os.path.join(info.output_dir, "isi_hist_" + typename + "_" + str(idx_shift) + ".png")
-            print("    Saving plot " + pathname)
-            plot.histogram(
-                datalgo.make_histogram(datalgo.make_difference_events(signal), dt, start_time),
-                pathname,
-                normalised=False
-                )
-
-        pathname = os.path.join(info.output_dir, "isi_distribution_" + typename + "_0.png")
+    for i, train in enumerate(trains):
+        if i < num_spikers_per_kind:
+            train_id = "excitatory[" + str(i) + "]"
+            colour = plot.get_colour_pre_excitatory(0.75)
+            noise_level = index_to_param(i)
+        else:
+            train_id = "inhibitory[" + str(i - num_spikers_per_kind) + "]"
+            colour = plot.get_colour_pre_inhibitory(0.75)
+            noise_level = index_to_param(i - num_spikers_per_kind)
+        file_name = "histogram_isi_" + train_id + "_noise_level_" + format(noise_level, ".2f") + ".png"
+        pathname = os.path.join(info.output_dir, file_name)
         print("    Saving plot " + pathname)
         plot.histogram(
-            trains[idx_base].get_spiking_distribution(),
+            datalgo.make_histogram(
+                datalgo.make_difference_events(
+                    train.get_spikes_history()
+                    ),
+                dt,
+                start_time
+                ),
             pathname,
-            normalised=True
+            False,
+            colour,
+            "noise=" + format(noise_level, ".2f") + ", |arr|=" + str(train.get_array_size()) + " " + plot.get_title_placeholder()
             )
 
-    pathname = os.path.join(info.output_dir, "spikes_board", "spikes.png")
-    print("    Saving plot " + pathname)
-    plot.scatter_per_partes(
-        [(event, i) for i in range(2 * num_spikers_per_kind) for event in trains[i].get_spikes_history()],
-        pathname,
-        start_time,
-        start_time + nsteps * dt,
-        plot_dt,
-        plot_stride,
-        lambda p: print("    Saving plot " + p),
-        ["C0" if i < num_spikers_per_kind else "C2"
-         for i in range(2 * num_spikers_per_kind) for _ in trains[i].get_spikes_history()]
-        )
+        file_name = "curve_isi_delta_" + train_id + "_noise_level_" + format(noise_level, ".2f") + ".png"
+        pathname = os.path.join(info.output_dir, file_name)
+        print("    Saving plot " + pathname)
+        isi_delta =\
+            datalgo.make_function_from_events(
+                datalgo.make_difference_events(
+                    datalgo.make_difference_events(
+                        train.get_spikes_history()
+                        )
+                    )
+                )
+        plot.curve_per_partes(
+            isi_delta[0:min(10000, len(isi_delta))],
+            pathname,
+            0,
+            len(isi_delta),
+            1000,
+            lambda p: print("    Saving plot " + p),
+            colour,
+            "curve_isi_delta_" + train_id + "_noise_level_" + format(noise_level, ".2f") + plot.get_title_placeholder()
+            )
 
     return 0
 
