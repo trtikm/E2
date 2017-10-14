@@ -65,6 +65,18 @@ def make_weighted_events(events, max_merge_distance, unit_weight=1, weight_funct
     return result
 
 
+def make_function_from_events(events, x_coords=None):
+    assert is_list_of_events(events)
+    assert x_coords is None or (is_list_of_numbers(x_coords) and len(events) == len(x_coords))
+
+    if x_coords is None:
+        x_coords = range(len(events))
+    result = list(zip(x_coords, events))
+
+    assert is_list_of_points(result)
+    return result
+
+
 def reduce_gaps_between_points_along_x_axis(points, max_gap_size, y_coord=0):
     assert is_list_of_points(points)
     assert is_number(max_gap_size) and max_gap_size > 0
