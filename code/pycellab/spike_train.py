@@ -23,6 +23,7 @@ class SpikeTrain:
         self._spikes_buffer = []
         self._spikes_history = []
         self._start_time = None
+        self._dbg_num_generated_events = 0
 
     @staticmethod
     def create(base_spiking_distribution, noise_level):
@@ -57,6 +58,7 @@ class SpikeTrain:
         while len(self._array) < self.get_array_size():
             event = self.get_spiking_distribution().next_event()
             self._array.insert(bisect.bisect_left(self._array, event), event)
+            self._dbg_num_generated_events += 1
 
     def _recharge_spikes_buffer(self):
         assert len(self._array) == self.get_array_size()
@@ -75,6 +77,7 @@ class SpikeTrain:
         return start, size
 
     def _copy_chunk_to_buffer(self, start, size):
+        assert size <= self.get_array_size()
         self._spikes_buffer = [self._array[(start + i) % self.get_array_size()] for i in range(size)]
         assert len(self._spikes_buffer) == size
 
@@ -113,6 +116,7 @@ class SpikeTrain:
             self._recharge_array()
             self._recharge_spikes_buffer()
             assert len(self._spikes_buffer) > 0
+            assert self._dbg_num_generated_events == len(self._array) + len(self._spikes_buffer) + len(self._spikes_history)
         if self._spikes_buffer[-1] > t + dt:
             return False
         self._spikes_history.append(self._spikes_buffer[-1])
