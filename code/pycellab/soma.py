@@ -75,6 +75,12 @@ class leaky_integrate_and_fire:
         assert weight >= 0.0
         self.variables["input"] -= weight * self.constants["spike_magnitude"]
 
+    def get_variables(self):
+        return self.variables
+
+    def get_key_variables(self):
+        return {"potential": self.get_variables()["potential"]}
+
     @staticmethod
     def get_on_spike_variable_names():
         return ["input"]
@@ -265,6 +271,12 @@ class izhikevich:
         assert weight >= 0.0
         self.variables["input"] -= weight * self.constants["spike_magnitude"]
 
+    def get_variables(self):
+        return self.variables
+
+    def get_key_variables(self):
+        return {"V": self.get_variables()["V"]}
+
     @staticmethod
     def get_on_spike_variable_names():
         return ["input"]
@@ -380,6 +392,12 @@ class hodgkin_huxley:
     def on_inhibitory_spike(self, weight):
         assert weight >= 0.0
         self.variables["input"] -= weight * self.constants["spike_magnitude"]
+
+    def get_variables(self):
+        return self.variables
+
+    def get_key_variables(self):
+        return {"V": self.get_variables()["V"]}
 
     @staticmethod
     def get_on_spike_variable_names():
@@ -621,6 +639,12 @@ class wilson:
     def on_inhibitory_spike(self, weight):
         assert weight >= 0.0
         self.variables["input"] -= weight * self._spike_magnitude
+
+    def get_variables(self):
+        return self.variables
+
+    def get_key_variables(self):
+        return {"V": self.get_variables()["V"]}
 
     @staticmethod
     def get_on_spike_variable_names():

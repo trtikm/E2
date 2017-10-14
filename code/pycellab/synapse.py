@@ -370,6 +370,9 @@ class synapse:
     def get_variables(self):
         return self._variables
 
+    def get_key_variables(self):
+        return {"weight": self.get_weight()}
+
     def ranges_of_variables(self):
         return {
             "weight":
