@@ -89,6 +89,12 @@ inline scalar  dot_product(quaternion const& u, quaternion const& v) { return u.
 quaternion  interpolate_linear(quaternion const& u, quaternion const& v, float_32_bit const  t);
 quaternion  interpolate_spherical(quaternion const& u, quaternion const& v, float_32_bit const  t);
 
+inline matrix22 matrix22_identity() { return matrix22::Identity(); }
+inline matrix32 matrix32_identity() { return matrix32::Identity(); }
+inline matrix33 matrix33_identity() { return matrix33::Identity(); }
+inline matrix43 matrix43_identity() { return matrix43::Identity(); }
+inline matrix44 matrix44_identity() { return matrix44::Identity(); }
+
 inline matrix44  inverse(matrix44 const&  M) { return M.inverse(); }
 
 inline matrix33  quaternion_to_rotation_matrix(quaternion const& q) { return q.toRotationMatrix(); }

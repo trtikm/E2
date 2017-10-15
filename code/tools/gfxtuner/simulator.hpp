@@ -1,6 +1,7 @@
 #ifndef E2_TOOL_GFXTUNER_SIMULATOR_HPP_INCLUDED
 #   define E2_TOOL_GFXTUNER_SIMULATOR_HPP_INCLUDED
 
+#   include <gfxtuner/scene.hpp>
 #   include <qtgl/real_time_simulator.hpp>
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>
@@ -43,19 +44,22 @@ private:
     qtgl::batch_ptr  m_batch_grid;
     bool  m_do_show_grid;
 
+    /// Data related to simulation
+    bool  m_paused;
+    bool  m_do_single_step;
+
+    /// Scene related data
+    scene_node_ptr  m_scene_root;
+
+    /// Other data
     //qtgl::batch_ptr  m_ske_test_batch;
     //qtgl::modelspace  m_ske_test_modelspace;
     //std::vector<qtgl::keyframe>  m_ske_test_keyframes;
     //float_32_bit  m_ske_test_time;
-
     qtgl::batch_ptr  m_barb_batch;
     qtgl::modelspace  m_barb_modelspace;
     std::vector<qtgl::keyframe>  m_barb_keyframes;
     float_32_bit  m_barb_time;
-
-    /// Data related to simulation
-    bool  m_paused;
-    bool  m_do_single_step;
 };
 
 

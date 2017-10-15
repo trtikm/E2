@@ -254,6 +254,11 @@ simulator::simulator()
             }
     , m_do_show_grid(true)
 
+    , m_paused(true)
+    , m_do_single_step(false)
+
+    , m_scene_root(new scene_node("root"))
+
     //, m_ske_test_batch{
     //        qtgl::batch::create(canonical_path(
     //                boost::filesystem::path{get_program_options()->dataRoot()} /
@@ -417,9 +422,6 @@ simulator::simulator()
             //    )},
             }
     , m_barb_time(0.0f)
-
-    , m_paused(true)
-    , m_do_single_step(false)
 {}
 
 simulator::~simulator()

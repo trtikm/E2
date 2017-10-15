@@ -15,7 +15,8 @@
 namespace tab_names { namespace {
 
 
-inline std::string  DRAW() noexcept { return "Draw"; }
+inline std::string  DRAW() { return "Draw"; }
+inline std::string  SCENE() { return "Scene"; }
 
 
 }}
@@ -61,6 +62,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
         )
 
     , m_tab_draw_widgets(this)
+    , m_tab_scene_widgets(this)
 
     , m_menu_bar(this)
     , m_status_bar(this)
@@ -78,6 +80,15 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 
     m_tabs->addTab( window_tabs::tab_draw::make_draw_tab_content(m_tab_draw_widgets),
                     QString(tab_names::DRAW().c_str()) );
+    m_tabs->addTab( window_tabs::tab_scene::make_scene_tab_content(m_tab_scene_widgets),
+                    QString(tab_names::SCENE().c_str()));
+
+    for (int i = 0; i != m_tabs->count(); ++i)
+        if (qtgl::to_string(m_tabs->tabText(i)) == ptree().get("window.active_tab", tab_names::SCENE()))
+        {
+            m_tabs->setCurrentIndex(i);
+            break;
+        }
 
     make_status_bar_content(m_status_bar);
 
@@ -130,6 +141,10 @@ void program_window::timerEvent(QTimerEvent* const event)
     {
         // Nothing to do...
     }
+    else if (qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex())) == tab_names::SCENE())
+    {
+        // Nothing to do...
+    }
 
     if (m_focus_just_received)
     {
@@ -149,6 +164,7 @@ void  program_window::closeEvent(QCloseEvent* const  event)
     }
     ptree().put("window.splitter_ratio", qtgl::get_splitter_sizes_ratio(*m_splitter));
     ptree().put("window.show_maximised", isMaximized());
+    ptree().put("window.active_tab", qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex())));
 
     m_tab_draw_widgets.save();
 
@@ -163,6 +179,10 @@ void  program_window::on_tab_changed(int const  tab_index)
 {
     std::string const  tab_name = qtgl::to_string(m_tabs->tabText(tab_index));
     if (tab_name == tab_names::DRAW())
+    {
+        // Nothing to do...
+    }
+    else if (tab_name == tab_names::SCENE())
     {
         // Nothing to do...
     }

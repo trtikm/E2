@@ -17,6 +17,9 @@ add_executable(${THIS_TARGET_NAME}
     simulator.cpp
     simulator_notifications.hpp
 
+    scene.hpp
+    scene.cpp
+    
     draw_utils.hpp
     draw_utils.cpp
 
@@ -31,6 +34,9 @@ add_executable(${THIS_TARGET_NAME}
 
     window_tabs/tab_draw.hpp
     window_tabs/tab_draw.cpp
+
+    window_tabs/tab_scene.hpp
+    window_tabs/tab_scene.cpp
     )
 
 target_link_libraries(${THIS_TARGET_NAME}

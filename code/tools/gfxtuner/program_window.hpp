@@ -3,6 +3,7 @@
 
 #   include <gfxtuner/simulator.hpp>
 #   include <gfxtuner/window_tabs/tab_draw.hpp>
+#   include <gfxtuner/window_tabs/tab_scene.hpp>
 #   include <gfxtuner/status_bar.hpp>
 #   include <gfxtuner/menu_bar.hpp>
 #   include <qtgl/window.hpp>
@@ -50,6 +51,14 @@ public slots:
     void  draw_camera_rotation_listener() { m_tab_draw_widgets.camera_rotation_listener(); }
     void  draw_update_camera_rot_widgets(quaternion const&  q) { m_tab_draw_widgets.update_camera_rot_widgets(q); }
 
+    /// Slots for SCENE tab
+    void on_scene_hierarchy_item_selected(QTreeWidgetItem* const tree_item, int const column)
+    { m_tab_scene_widgets.on_scene_hierarchy_item_selected(tree_item, column); }
+
+    void  on_scene_insert_coord_system() { m_tab_scene_widgets.on_scene_insert_coord_system(); }
+    void  on_scene_insert_batch() { m_tab_scene_widgets.on_scene_insert_batch(); }
+    void  on_scene_erase_selected() { m_tab_scene_widgets.on_scene_erase_selected(); }
+
     /// Slots for menu actions
     void  on_menu_open() { m_menu_bar.on_open(); }
 
@@ -75,6 +84,7 @@ private:
     QTabWidget*  m_tabs;
 
     window_tabs::tab_draw::widgets  m_tab_draw_widgets;
+    window_tabs::tab_scene::widgets  m_tab_scene_widgets;
 
     menu_bar  m_menu_bar;
     status_bar  m_status_bar;
