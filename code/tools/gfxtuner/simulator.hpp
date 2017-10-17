@@ -11,6 +11,7 @@
 #   include <qtgl/keyframe.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <vector>
+#   include <unordered_map>
 
 struct simulator : public qtgl::real_time_simulator
 {
@@ -33,6 +34,8 @@ struct simulator : public qtgl::real_time_simulator
 
     bool  paused() const noexcept { return m_paused; }
 
+    std::vector<scene_node_ptr> const&  get_scene() const { return m_scene; }
+
 private:
 
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
@@ -49,7 +52,8 @@ private:
     bool  m_do_single_step;
 
     /// Scene related data
-    scene_node_ptr  m_scene_root;
+    std::vector<scene_node_ptr>  m_scene;
+    std::unordered_map<std::string, scene_node_ptr>  m_names_to_nodes;
 
     /// Other data
     //qtgl::batch_ptr  m_ske_test_batch;

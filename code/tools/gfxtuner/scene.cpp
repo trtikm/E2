@@ -24,11 +24,11 @@ void  scene_node::rename(std::string const&  new_name)
     m_name = new_name;
 }
 
-void  scene_node::insert(std::vector<qtgl::batch_ptr> const&  batches)
+void  scene_node::insert(std::unordered_map<std::string, qtgl::batch_ptr> const&  batches)
 {
     TMPROF_BLOCK();
-    for (auto batch : batches)
-        m_batches.push_back(batch);
+    for (auto name_batch : batches)
+        m_batches.insert(name_batch);
 }
 
 matrix44 const&  scene_node::get_world_matrix() const
@@ -52,9 +52,21 @@ void  scene_node::invalidate_world_matrix()
     if (m_is_world_matrix_valid)
     {
         m_is_world_matrix_valid = false;
-        for (auto  child : get_children())
-            child->invalidate_world_matrix();
+        for (auto  name_child : get_children())
+            name_child.second->invalidate_world_matrix();
     }
+}
+
+bool is_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  child)
+{
+    TMPROF_BLOCK();
+
+    if (is_direct_parent_and_child(parent, child))
+        return true;
+    for (auto name_child_of_child : child->get_children())
+        if (is_parent_and_child(parent, name_child_of_child.second))
+            return true;
+    return false;
 }
 
 void  scene_node::insert_children_to_parent(
@@ -67,20 +79,8 @@ void  scene_node::insert_children_to_parent(
     for (auto child : children)
     {
         ASSUMPTION(!is_parent_and_child(child, parent));
-        parent->m_children.push_back(child);
+        parent->m_children.insert({child->get_name(), child});
         child->m_parent = parent;
         child->invalidate_world_matrix();
     }
-}
-
-bool is_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  child)
-{
-    TMPROF_BLOCK();
-
-    if (is_direct_parent_and_child(parent, child))
-        return true;
-    for (auto child_of_child : child->get_children())
-        if (is_parent_and_child(parent, child_of_child))
-            return true;
-    return false;
 }

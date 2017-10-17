@@ -257,7 +257,8 @@ simulator::simulator()
     , m_paused(true)
     , m_do_single_step(false)
 
-    , m_scene_root(new scene_node("root"))
+    , m_scene()
+    , m_names_to_nodes()
 
     //, m_ske_test_batch{
     //        qtgl::batch::create(canonical_path(

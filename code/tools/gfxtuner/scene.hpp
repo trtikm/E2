@@ -5,6 +5,7 @@
 #   include <angeo/coordinate_system.hpp>
 #   include <qtgl/batch.hpp>
 #   include <utility/assumptions.hpp>
+#   include <unordered_map>
 #   include <vector>
 #   include <string>
 #   include <memory>
@@ -27,15 +28,15 @@ struct scene_node
     std::string const&  get_name() const { return m_name; }
     angeo::coordinate_system_const_ptr  get_coord_system() const { return m_coord_system; }
 
-    std::vector<qtgl::batch_ptr> const&  get_batches() const { return m_batches; }
+    std::unordered_map<std::string, qtgl::batch_ptr> const&  get_batches() const { return m_batches; }
 
-    std::vector<scene_node_ptr> const&  get_children() const { return m_children; }
+    std::unordered_map<std::string, scene_node_ptr> const&  get_children() const { return m_children; }
     bool  has_parent() const { return !m_parent.expired(); }
     scene_node_ptr  get_parent() const { return m_parent.lock(); }
 
     void  rename(std::string const&  new_name);
 
-    void  insert(std::vector<qtgl::batch_ptr> const&  batches);
+    void  insert(std::unordered_map<std::string, qtgl::batch_ptr> const&  batches);
 
     matrix44 const&  get_world_matrix() const;
 
@@ -47,8 +48,8 @@ private:
 
     std::string  m_name;
     angeo::coordinate_system_ptr  m_coord_system;
-    std::vector<qtgl::batch_ptr>  m_batches;
-    std::vector<scene_node_ptr>  m_children;
+    std::unordered_map<std::string, qtgl::batch_ptr>  m_batches;
+    std::unordered_map<std::string, scene_node_ptr>  m_children;
     std::weak_ptr<scene_node>  m_parent;
     mutable matrix44  m_world_matrix;
     mutable bool  m_is_world_matrix_valid;
