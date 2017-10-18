@@ -13,6 +13,7 @@
 #include <utility/random.hpp>
 #include <utility/canonical_path.hpp>
 #include <utility/msgstream.hpp>
+#include <utility/development.hpp>
 
 #include <vector>
 #include <map>
@@ -521,4 +522,52 @@ void  simulator::render_simulation_state(matrix44 const&  view_projection_matrix
 
     //draw(m_ske_test_batch, m_ske_test_modelspace, m_ske_test_keyframes, m_ske_test_time, view_projection_matrix, draw_state);
     draw(m_barb_batch, m_barb_modelspace, m_barb_keyframes, m_barb_time, view_projection_matrix, draw_state);
+}
+
+
+scene_node_ptr simulator::get_scene_node(std::string const&  name) const
+{ 
+    auto const  it = m_names_to_nodes.find(name);
+    return it == m_names_to_nodes.cend() ? nullptr : it->second;
+}
+
+scene_node_ptr  simulator::insert_child_scene_node_at(
+    std::string const&  name,
+    scene_node_ptr const  parent,
+    vector3 const&  origin,
+    quaternion const&  orientation
+    )
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(get_scene_node(name) == nullptr);
+
+    scene_node_ptr const  node = scene_node::create(name, origin, orientation);
+    if (parent == nullptr)
+        m_scene.insert({name, node});
+    else
+        insert_children_to_parent({node}, parent);
+    m_names_to_nodes.insert({ name, node });
+
+    return node;
+}
+
+void  simulator::erase_scene_node(scene_node_ptr const  node)
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(node != nullptr);
+    ASSUMPTION(node->get_children().empty());
+
+    if (node->has_parent())
+    {
+        NOT_IMPLEMENTED_YET();
+    }
+    else
+    {
+        auto const  it = m_scene.find(node->get_name());
+        ASSUMPTION(it != m_scene.end());
+        m_scene.erase(it);
+        m_names_to_nodes.erase(node->get_name());
+    }
 }

@@ -15,6 +15,13 @@ struct scene_node
 {
     using scene_node_ptr = std::shared_ptr<scene_node>;
 
+    static scene_node_ptr  create(std::string const&  name);
+    static scene_node_ptr  create(
+        std::string const&  name,
+        vector3 const&  origin,
+        quaternion const&  orientation
+        );
+
     scene_node(std::string const&  name)
         : scene_node(name, vector3_zero(), quaternion_identity())
     {}

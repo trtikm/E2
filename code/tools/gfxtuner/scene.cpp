@@ -4,6 +4,20 @@
 #include <utility/development.hpp>
 
 
+scene_node_ptr  scene_node::create(std::string const&  name)
+{
+    return scene_node_ptr(new scene_node(name));
+}
+
+scene_node_ptr  scene_node::create(
+    std::string const&  name,
+    vector3 const&  origin,
+    quaternion const&  orientation
+    )
+{
+    return scene_node_ptr(new scene_node(name, origin, orientation));
+}
+
 scene_node::scene_node(
         std::string const&  name,
         vector3 const&  origin,

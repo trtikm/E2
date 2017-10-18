@@ -34,7 +34,27 @@ struct simulator : public qtgl::real_time_simulator
 
     bool  paused() const noexcept { return m_paused; }
 
-    std::vector<scene_node_ptr> const&  get_scene() const { return m_scene; }
+    std::unordered_map<std::string, scene_node_ptr> const&  get_scene() const { return m_scene; }
+    scene_node_ptr  get_scene_node(std::string const&  name) const;
+
+    scene_node_ptr  insert_scene_node(std::string const&  name)
+    { return insert_scene_node_at(name, vector3_zero(), quaternion_identity()); }
+
+    scene_node_ptr  insert_scene_node_at(std::string const&  name, vector3 const&  origin, quaternion const&  orientation)
+    { return insert_child_scene_node_at(name, nullptr, origin, orientation); }
+
+    scene_node_ptr  insert_child_scene_node(std::string const&  name, scene_node_ptr const  parent)
+    { return insert_child_scene_node_at(name, parent, vector3_zero(), quaternion_identity()); }
+
+    scene_node_ptr  insert_child_scene_node_at(
+            std::string const&  name,
+            scene_node_ptr const  parent,
+            vector3 const&  origin,
+            quaternion const&  orientation
+            );
+
+    void  erase_scene_node_of_name(std::string const&  name) { erase_scene_node(get_scene_node(name)); }
+    void  erase_scene_node(scene_node_ptr const  node);
 
 private:
 
@@ -52,7 +72,7 @@ private:
     bool  m_do_single_step;
 
     /// Scene related data
-    std::vector<scene_node_ptr>  m_scene;
+    std::unordered_map<std::string, scene_node_ptr>  m_scene;
     std::unordered_map<std::string, scene_node_ptr>  m_names_to_nodes;
 
     /// Other data

@@ -32,6 +32,7 @@ private:
     program_window*  m_wnd;
 
     QTreeWidget*  m_scene_tree;
+    QIcon  m_node_icon;
 };
 
 
