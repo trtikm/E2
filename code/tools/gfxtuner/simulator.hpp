@@ -63,14 +63,13 @@ struct simulator : public qtgl::real_time_simulator
             quaternion const&  orientation
             );
 
-    void  erase_scene_node_of_name(std::string const&  name) { erase_scene_node(get_scene_node(name)); }
-    void  erase_scene_node(scene_node_ptr const  node);
+    void  erase_scene_node(std::string const&  name);
 
-    void  insert_batches_to_scene_node(std::unordered_map<std::string, qtgl::batch_ptr> const&  batches, std::string const&  scene_node_name)
-    { get_scene_node(scene_node_name)->insert_batches(batches); }
+    void  insert_batch_to_scene_node(std::string const&  batch_name, qtgl::batch_ptr const  batch, std::string const&  scene_node_name)
+    { get_scene_node(scene_node_name)->insert_batches({{batch_name, batch}}); }
 
-    void  erase_batches_from_scene_node(std::unordered_set<std::string> const&  names_of_batches, std::string const&  scene_node_name)
-    { get_scene_node(scene_node_name)->erase_batches(names_of_batches); }
+    void  erase_batch_from_scene_node(std::string const&  batch_name, std::string const&  scene_node_name)
+    { get_scene_node(scene_node_name)->erase_batches({batch_name}); }
 
     void  translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift);
     void  rotate_scene_node(std::string const&  scene_node_name, quaternion const&  rotation);

@@ -22,6 +22,21 @@
 namespace {
 
 
+struct  tree_widget_item : public QTreeWidgetItem
+{
+    explicit tree_widget_item(bool const  represents_coord_system)
+        : QTreeWidgetItem()
+        , m_represents_coord_system(represents_coord_system)
+    {}
+
+    bool  represents_coord_system() const { return m_represents_coord_system; }
+
+private:
+    
+    bool  m_represents_coord_system;
+};
+
+
 struct  insert_name_dialog : public QDialog
 {
     insert_name_dialog(program_window* const  wnd, std::string const&  initial_name)
@@ -170,7 +185,7 @@ void  widgets::on_scene_insert_coord_system()
     {
         m_wnd->glwindow().call_now(&simulator::insert_scene_node, dlg.get_name());
 
-        QTreeWidgetItem* const  tree_node = new QTreeWidgetItem();
+        QTreeWidgetItem* const  tree_node = new tree_widget_item(true);
         tree_node->setText(0, QString(dlg.get_name().c_str()));
         tree_node->setIcon(0, m_node_icon);
         m_scene_tree->addTopLevelItem(tree_node);
@@ -184,21 +199,29 @@ void  widgets::on_scene_insert_batch()
 
 void  widgets::on_scene_erase_selected()
 {
-    foreach(QTreeWidgetItem* tree_node, m_scene_tree->selectedItems())
+    foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
     {
-        std::string const  node_name = qtgl::to_string(tree_node->text(0));
-        scene_node_ptr const  node_ptr = m_wnd->glwindow().call_now(&simulator::get_scene_node, node_name);
-        ASSUMPTION(node_ptr != nullptr);
-        if (!node_ptr->get_children().empty())
-        {
-            // TODO: show error message-box.
-            continue;
-        }
-        m_wnd->glwindow().call_now(&simulator::erase_scene_node, node_ptr);
-        if (tree_node->parent() != nullptr)
-            delete tree_node->parent()->takeChild(tree_node->parent()->indexOfChild(tree_node));
+        tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(item);
+        INVARIANT(tree_item != nullptr);
+        std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
+        if (tree_item->represents_coord_system())
+            m_wnd->glwindow().call_now(&simulator::erase_scene_node, tree_item_name);
         else
-            delete m_scene_tree->takeTopLevelItem(m_scene_tree->indexOfTopLevelItem(tree_node));
+        {
+            tree_widget_item* const  parent_tree_item = dynamic_cast<tree_widget_item*>(tree_item->parent());
+            INVARIANT(parent_tree_item != nullptr);
+            INVARIANT(parent_tree_item->represents_coord_system());
+            std::string const  parent_tree_item_name = qtgl::to_string(parent_tree_item->text(0));
+            m_wnd->glwindow().call_now(&simulator::erase_batch_from_scene_node, tree_item_name, parent_tree_item_name);
+        }
+
+        auto const  taken_item = item->parent() != nullptr ?
+            item->parent()->takeChild(item->parent()->indexOfChild(item)) :
+            m_scene_tree->takeTopLevelItem(m_scene_tree->indexOfTopLevelItem(item))
+            ;
+        INVARIANT(taken_item == tree_item); (void)taken_item;
+
+        delete tree_item;
     }
 }
 

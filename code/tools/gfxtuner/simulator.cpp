@@ -552,17 +552,16 @@ scene_node_ptr  simulator::insert_child_scene_node_at(
     return node;
 }
 
-void  simulator::erase_scene_node(scene_node_ptr const  node)
+void  simulator::erase_scene_node(std::string const&  name)
 {
     TMPROF_BLOCK();
 
+    auto const  node = get_scene_node(name);
     ASSUMPTION(node != nullptr);
     ASSUMPTION(node->get_children().empty());
 
     if (node->has_parent())
-    {
-        NOT_IMPLEMENTED_YET();
-    }
+        erase_children_from_parent({node}, node->get_parent());
     else
     {
         auto const  it = m_scene.find(node->get_name());
