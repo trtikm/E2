@@ -568,6 +568,28 @@ void  simulator::erase_scene_node(scene_node_ptr const  node)
         auto const  it = m_scene.find(node->get_name());
         ASSUMPTION(it != m_scene.end());
         m_scene.erase(it);
-        m_names_to_nodes.erase(node->get_name());
     }
+    m_names_to_nodes.erase(node->get_name());
+}
+
+void  simulator::translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift)
+{
+    get_scene_node(scene_node_name)->relocate_coordinate_system([&shift](angeo::coordinate_system&  coord_system) {
+        translate(coord_system, shift);
+        });
+}
+
+void  simulator::rotate_scene_node(std::string const&  scene_node_name, quaternion const&  rotation)
+{
+    get_scene_node(scene_node_name)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
+        rotate(coord_system, rotation);
+        });
+}
+
+void  simulator::relocate_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation)
+{
+    get_scene_node(scene_node_name)->relocate_coordinate_system([&new_origin, &new_orientation](angeo::coordinate_system&  coord_system) {
+        coord_system.set_origin(new_origin);
+        coord_system.set_orientation(new_orientation);
+        });
 }

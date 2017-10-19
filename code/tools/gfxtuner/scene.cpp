@@ -32,17 +32,32 @@ scene_node::scene_node(
     ASSUMPTION(!m_name.empty());
 }
 
-void  scene_node::rename(std::string const&  new_name)
-{
-    ASSUMPTION(!new_name.empty());
-    m_name = new_name;
-}
-
-void  scene_node::insert(std::unordered_map<std::string, qtgl::batch_ptr> const&  batches)
+void  scene_node::relocate_coordinate_system(std::function<void(angeo::coordinate_system&)> const&  relocator)
 {
     TMPROF_BLOCK();
+
+    relocator(*m_coord_system);
+    invalidate_world_matrix();
+}
+
+void  scene_node::insert_batches(std::unordered_map<std::string, qtgl::batch_ptr> const&  batches)
+{
+    TMPROF_BLOCK();
+
     for (auto name_batch : batches)
         m_batches.insert(name_batch);
+}
+
+void  scene_node::erase_batches(std::unordered_set<std::string> const&  names_of_batches)
+{
+    TMPROF_BLOCK();
+
+    for (auto const& name : names_of_batches)
+    {
+        auto const  it = m_batches.find(name);
+        ASSUMPTION(it != m_batches.end());
+        m_batches.erase(it);
+    }
 }
 
 matrix44 const&  scene_node::get_world_matrix() const
@@ -95,6 +110,23 @@ void  scene_node::insert_children_to_parent(
         ASSUMPTION(!is_parent_and_child(child, parent));
         parent->m_children.insert({child->get_name(), child});
         child->m_parent = parent;
+        child->invalidate_world_matrix();
+    }
+}
+
+void  scene_node::erase_children_from_parent(std::vector<scene_node_ptr> const&  children, scene_node_ptr const  parent)
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(parent != nullptr);
+
+    for (auto const child : children)
+    {
+        ASSUMPTION(child->get_parent() == parent);
+        auto const  it = parent->m_children.find(child->get_name());
+        ASSUMPTION(it != parent->m_children.end());
+        parent->m_children.erase(it);
+        child->m_parent.reset();
         child->invalidate_world_matrix();
     }
 }

@@ -13,18 +13,28 @@
 #   include <vector>
 #   include <unordered_map>
 
+
 struct simulator : public qtgl::real_time_simulator
 {
     simulator();
     ~simulator();
+
+    // Simulation
 
     void next_round(
             float_64_bit const  seconds_from_previous_call,
             bool const  is_this_pure_redraw_request
             ) override;
 
+    bool  paused() const noexcept { return m_paused; }
+
+    // Background and grid
+
     void  set_clear_color(vector3 const&  colour) { qtgl::glapi().glClearColor(colour(0), colour(1), colour(2), 1.0f); }
     void  set_show_grid_state(bool const  state) { m_do_show_grid = state; }
+
+    // Camera
+
     vector3 const&  get_camera_position() const { return m_camera->coordinate_system()->origin(); }
     quaternion const&  get_camera_orientation() const { return m_camera->coordinate_system()->orientation(); }
     void  set_camera_position(vector3 const&  position) { m_camera->coordinate_system()->set_origin(position); }
@@ -32,7 +42,7 @@ struct simulator : public qtgl::real_time_simulator
     void  set_camera_far_plane(float_32_bit const  far_plane) { m_camera->set_far_plane(far_plane); }
     void  set_camera_speed(float_32_bit const  speed);
 
-    bool  paused() const noexcept { return m_paused; }
+    // Scene
 
     std::unordered_map<std::string, scene_node_ptr> const&  get_scene() const { return m_scene; }
     scene_node_ptr  get_scene_node(std::string const&  name) const;
@@ -56,7 +66,19 @@ struct simulator : public qtgl::real_time_simulator
     void  erase_scene_node_of_name(std::string const&  name) { erase_scene_node(get_scene_node(name)); }
     void  erase_scene_node(scene_node_ptr const  node);
 
+    void  insert_batches_to_scene_node(std::unordered_map<std::string, qtgl::batch_ptr> const&  batches, std::string const&  scene_node_name)
+    { get_scene_node(scene_node_name)->insert_batches(batches); }
+
+    void  erase_batches_from_scene_node(std::unordered_set<std::string> const&  names_of_batches, std::string const&  scene_node_name)
+    { get_scene_node(scene_node_name)->erase_batches(names_of_batches); }
+
+    void  translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift);
+    void  rotate_scene_node(std::string const&  scene_node_name, quaternion const&  rotation);
+    void  relocate_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation);
+
 private:
+
+    // Simulation
 
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
     void  render_simulation_state(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
