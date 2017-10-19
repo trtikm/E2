@@ -194,8 +194,11 @@ void  widgets::on_scene_erase_selected()
             // TODO: show error message-box.
             continue;
         }
-        //m_wnd->glwindow().call_now(&simulator::erase_scene_node, node_ptr);
-        //m_scene_tree->item(tree_node, 0);
+        m_wnd->glwindow().call_now(&simulator::erase_scene_node, node_ptr);
+        if (tree_node->parent() != nullptr)
+            delete tree_node->parent()->takeChild(tree_node->parent()->indexOfChild(tree_node));
+        else
+            delete m_scene_tree->takeTopLevelItem(m_scene_tree->indexOfTopLevelItem(tree_node));
     }
 }
 
