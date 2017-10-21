@@ -60,6 +60,8 @@ add_library(${THIS_TARGET_NAME}
     ./include/utility/msgstream.hpp
 
     ./include/utility/dynamic_linking.hpp
+    
+    ./include/utility/std_pair_hash.hpp     
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
