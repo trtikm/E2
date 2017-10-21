@@ -260,6 +260,7 @@ simulator::simulator()
 
     , m_scene()
     , m_names_to_nodes()
+    , m_batch_coord_system(qtgl::create_basis_vectors(get_program_options()->dataRoot()))
 
     //, m_ske_test_batch{
     //        qtgl::batch::create(canonical_path(
@@ -522,8 +523,37 @@ void  simulator::render_simulation_state(matrix44 const&  view_projection_matrix
 
     //draw(m_ske_test_batch, m_ske_test_modelspace, m_ske_test_keyframes, m_ske_test_time, view_projection_matrix, draw_state);
     draw(m_barb_batch, m_barb_modelspace, m_barb_keyframes, m_barb_time, view_projection_matrix, draw_state);
+
+    render_scene_coord_systems(view_projection_matrix, draw_state);
 }
 
+void  simulator::render_scene_coord_systems(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
+{
+    TMPROF_BLOCK();
+
+    //auto const  old_depth_test_state = qtgl::glapi().glIsEnabled(GL_DEPTH_TEST);
+    //qtgl::glapi().glDisable(GL_DEPTH_TEST);
+
+    for (auto const&  name_node : m_names_to_nodes)
+    {
+        render_scene_coord_system(name_node.second, view_projection_matrix, draw_state);
+    }
+
+    //if (old_depth_test_state)
+    //    qtgl::glapi().glEnable(GL_DEPTH_TEST);
+}
+
+void  simulator::render_scene_coord_system(scene_node_ptr const  node, matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
+{
+    TMPROF_BLOCK();
+
+    if (m_batch_coord_system != nullptr && qtgl::make_current(*m_batch_coord_system, draw_state))
+    {
+        INVARIANT(m_batch_coord_system->shaders_binding().operator bool());
+        render_batch(*m_batch_coord_system, view_projection_matrix, *node->get_coord_system());
+        draw_state = m_batch_coord_system->draw_state();
+    }
+}
 
 scene_node_ptr simulator::get_scene_node(std::string const&  name) const
 { 
@@ -582,6 +612,20 @@ void  simulator::rotate_scene_node(std::string const&  scene_node_name, quaterni
 {
     get_scene_node(scene_node_name)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
         rotate(coord_system, rotation);
+        });
+}
+
+void  simulator::set_position_of_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin)
+{
+    get_scene_node(scene_node_name)->relocate_coordinate_system([&new_origin](angeo::coordinate_system&  coord_system) {
+        coord_system.set_origin(new_origin);
+        });
+}
+
+void  simulator::set_orientation_of_scene_node(std::string const&  scene_node_name, quaternion const&  new_orientation)
+{
+    get_scene_node(scene_node_name)->relocate_coordinate_system([&new_orientation](angeo::coordinate_system&  coord_system) {
+        coord_system.set_orientation(new_orientation);
         });
 }
 

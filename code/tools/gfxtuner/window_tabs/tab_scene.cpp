@@ -4,6 +4,8 @@
 #include <gfxtuner/simulator_notifications.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <utility/msgstream.hpp>
+#include <utility/assumptions.hpp>
+#include <utility/invariants.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <QLabel>
 #include <QDialog>
@@ -139,6 +141,18 @@ private:
 };
 
 
+std::string  get_name_of_selected_coord_system_in_tree_widget(QTreeWidget const&  tree_widget)
+{
+    auto const selected_items = tree_widget.selectedItems();
+    INVARIANT(selected_items.size() == 1U);
+    tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(selected_items.front());
+    INVARIANT(tree_item != nullptr);
+    INVARIANT(tree_item->represents_coord_system());
+    std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
+    return tree_item_name;
+}
+
+
 }
 
 namespace window_tabs { namespace tab_scene {
@@ -154,9 +168,9 @@ widgets::widgets(program_window* const  wnd)
                 {
                     QObject::connect(
                         this,
-                        SIGNAL(itemClicked(QTreeWidgetItem*, int)),
+                        SIGNAL(itemSelectionChanged()),
                         wnd,
-                        SLOT(on_scene_hierarchy_item_selected(QTreeWidgetItem*, int))
+                        SLOT(on_scene_hierarchy_item_selected())
                         );
                 }
             };
@@ -165,13 +179,130 @@ widgets::widgets(program_window* const  wnd)
         )
     , m_node_icon((boost::filesystem::path{ get_program_options()->dataRoot() } /
                    "shared/gfx/icons/coord_system.png").string().c_str())
+
+    , m_coord_system_pos_x(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_scene_coord_system_pos_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+    , m_coord_system_pos_y(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_scene_coord_system_pos_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+    , m_coord_system_pos_z(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_scene_coord_system_pos_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+
+    , m_coord_system_rot_w(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_scene_coord_system_rot_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+    , m_coord_system_rot_x(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_scene_coord_system_rot_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+    , m_coord_system_rot_y(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_scene_coord_system_rot_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+    , m_coord_system_rot_z(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_scene_coord_system_rot_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+
+    , m_coord_system_yaw(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_scene_coord_system_rot_tait_bryan_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+    , m_coord_system_pitch(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_scene_coord_system_rot_tait_bryan_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+    , m_coord_system_roll(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_scene_coord_system_rot_tait_bryan_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+
+    , m_pivot(vector3_zero())
 {
     m_scene_tree->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
+    update_coord_system_location_widgets();
 }
 
-void  widgets::on_scene_hierarchy_item_selected(QTreeWidgetItem* const tree_item, int const column)
+void  widgets::on_scene_hierarchy_item_selected()
 {
-    int iii = 0;
+    std::cout << "JSEM TU!!" << std::endl;
+    update_coord_system_location_widgets();
 }
 
 void  widgets::on_scene_insert_coord_system()
@@ -183,7 +314,7 @@ void  widgets::on_scene_insert_coord_system()
     dlg.exec();
     if (!dlg.get_name().empty())
     {
-        m_wnd->glwindow().call_now(&simulator::insert_scene_node, dlg.get_name());
+        m_wnd->glwindow().call_now(&simulator::insert_scene_node_at, dlg.get_name(), vector3(1,2,3), quaternion_identity());
 
         QTreeWidgetItem* const  tree_node = new tree_widget_item(true);
         tree_node->setText(0, QString(dlg.get_name().c_str()));
@@ -229,6 +360,129 @@ void  widgets::save()
 {
     //wnd()->ptree().put("draw.show_grid", m_show_grid->isChecked());
 }
+
+void  widgets::on_coord_system_pos_changed()
+{
+    vector3 const  pos(m_coord_system_pos_x->text().toFloat(),
+                       m_coord_system_pos_y->text().toFloat(),
+                       m_coord_system_pos_z->text().toFloat());
+
+    wnd()->glwindow().call_later(
+        &simulator::set_position_of_scene_node,
+        get_name_of_selected_coord_system_in_tree_widget(*m_scene_tree),
+        pos
+        );
+}
+
+void  widgets::on_coord_system_rot_changed()
+{
+    quaternion  q(m_coord_system_rot_w->text().toFloat(),
+                  m_coord_system_rot_x->text().toFloat(),
+                  m_coord_system_rot_y->text().toFloat(),
+                  m_coord_system_rot_z->text().toFloat());
+    if (length_squared(q) < 1e-5f)
+        q.z() = 1.0f;
+    normalise(q);
+
+    refresh_text_in_coord_system_rotation_widgets(q);
+
+    wnd()->glwindow().call_later(
+        &simulator::set_orientation_of_scene_node, 
+        get_name_of_selected_coord_system_in_tree_widget(*m_scene_tree), 
+        q
+        );
+}
+
+void  widgets::on_coord_system_rot_tait_bryan_changed()
+{
+    quaternion  q = rotation_matrix_to_quaternion(yaw_pitch_roll_to_rotation(
+        m_coord_system_yaw->text().toFloat() * PI() / 180.0f,
+        m_coord_system_pitch->text().toFloat() * PI() / 180.0f,
+        m_coord_system_roll->text().toFloat() * PI() / 180.0f
+        ));
+    normalise(q);
+
+    refresh_text_in_coord_system_rotation_widgets(q);
+    wnd()->glwindow().call_later(
+        &simulator::set_orientation_of_scene_node,
+        get_name_of_selected_coord_system_in_tree_widget(*m_scene_tree),
+        q
+        );
+}
+
+void  widgets::coord_system_position_listener()
+{
+    update_coord_system_location_widgets();
+}
+
+void  widgets::coord_system_rotation_listener()
+{
+    update_coord_system_location_widgets();
+}
+
+void  widgets::update_coord_system_location_widgets()
+{
+    auto const selected_items = m_scene_tree->selectedItems();
+    if (selected_items.size() != 1U)
+    {
+        enable_coord_system_location_widgets(false);
+        return;
+    }
+
+    tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(selected_items.front());
+    INVARIANT(tree_item != nullptr);
+
+    enable_coord_system_location_widgets(tree_item->represents_coord_system());
+    if (!tree_item->represents_coord_system())
+        return;
+
+    std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
+    auto const  node_ptr = m_wnd->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
+    refresh_text_in_coord_system_location_widgets(node_ptr);
+}
+
+void  widgets::enable_coord_system_location_widgets(bool const  state)
+{
+    m_coord_system_pos_x->setEnabled(state);
+    m_coord_system_pos_y->setEnabled(state);
+    m_coord_system_pos_z->setEnabled(state);
+
+    m_coord_system_rot_w->setEnabled(state);
+    m_coord_system_rot_x->setEnabled(state);
+    m_coord_system_rot_y->setEnabled(state);
+    m_coord_system_rot_z->setEnabled(state);
+
+    m_coord_system_yaw->setEnabled(state);
+    m_coord_system_pitch->setEnabled(state);
+    m_coord_system_roll->setEnabled(state);
+}
+
+void  widgets::refresh_text_in_coord_system_location_widgets(scene_node_ptr const  node_ptr)
+{
+    ASSUMPTION(node_ptr != nullptr);
+
+    auto const  coord_system_ptr = node_ptr->get_coord_system();
+    m_coord_system_pos_x->setText(QString::number(coord_system_ptr->origin()(0)));
+    m_coord_system_pos_y->setText(QString::number(coord_system_ptr->origin()(1)));
+    m_coord_system_pos_z->setText(QString::number(coord_system_ptr->origin()(2)));
+
+    refresh_text_in_coord_system_rotation_widgets(coord_system_ptr->orientation());
+}
+
+void  widgets::refresh_text_in_coord_system_rotation_widgets(quaternion const&  q)
+{
+    m_coord_system_rot_w->setText(QString::number(q.w()));
+    m_coord_system_rot_x->setText(QString::number(q.x()));
+    m_coord_system_rot_y->setText(QString::number(q.y()));
+    m_coord_system_rot_z->setText(QString::number(q.z()));
+
+    scalar  yaw, pitch, roll;
+    rotation_to_yaw_pitch_roll(quaternion_to_rotation_matrix(q), yaw, pitch, roll);
+    m_coord_system_yaw->setText(QString::number(yaw * 180.0f / PI()));
+    m_coord_system_pitch->setText(QString::number(pitch * 180.0f / PI()));
+    m_coord_system_roll->setText(QString::number(roll * 180.0f / PI()));
+}
+
 
 QWidget*  make_scene_tab_content(widgets const&  w)
 {
@@ -305,13 +559,64 @@ QWidget*  make_scene_tab_content(widgets const&  w)
             }
             scene_tab_layout->addWidget(operation_group);
 
-            QWidget* const search_group = new QGroupBox("Search");
-            {
-            }
-            scene_tab_layout->addWidget(search_group);
+            //QWidget* const search_group = new QGroupBox("Search");
+            //{
+            //}
+            //scene_tab_layout->addWidget(search_group);
 
-            QWidget* const selected_group = new QGroupBox("Selected properties");
+            QWidget* const selected_group = new QGroupBox("Properties of selection");
             {
+                QVBoxLayout* const selected_layout = new QVBoxLayout();
+                {
+                    QWidget* const position_group = new QGroupBox("Position in meters [xyz]");
+                    {
+                        QHBoxLayout* const position_layout = new QHBoxLayout;
+                        {
+                            position_layout->addWidget(w.coord_system_pos_x());
+                            position_layout->addWidget(w.coord_system_pos_y());
+                            position_layout->addWidget(w.coord_system_pos_z());
+                            w.wnd()->glwindow().register_listener(
+                                        simulator_notifications::scene_node_position_updated(),
+                                        { &program_window::scene_coord_system_position_listener, w.wnd() }
+                                        );
+                        }
+                        position_group->setLayout(position_layout);
+                    }
+                    selected_layout->addWidget(position_group);
+
+                    QWidget* const rotation_group = new QGroupBox("Rotation");
+                    {
+                        QVBoxLayout* const rotation_layout = new QVBoxLayout;
+                        {
+                            rotation_layout->addWidget(new QLabel("Quaternion [wxyz]"));
+                            QHBoxLayout* const quaternion_layout = new QHBoxLayout;
+                            {
+                                quaternion_layout->addWidget(w.coord_system_rot_w());
+                                quaternion_layout->addWidget(w.coord_system_rot_x());
+                                quaternion_layout->addWidget(w.coord_system_rot_y());
+                                quaternion_layout->addWidget(w.coord_system_rot_z());
+                            }
+                            rotation_layout->addLayout(quaternion_layout);
+
+                            rotation_layout->addWidget(new QLabel("Tait-Bryan angles in degrees [yaw(z)-pitch(y')-roll(x'')]"));
+                            QHBoxLayout* const tait_bryan_layout = new QHBoxLayout;
+                            {
+                                tait_bryan_layout->addWidget(w.coord_system_yaw());
+                                tait_bryan_layout->addWidget(w.coord_system_pitch());
+                                tait_bryan_layout->addWidget(w.coord_system_roll());
+                            }
+                            rotation_layout->addLayout(tait_bryan_layout);
+                        }
+                        rotation_group->setLayout(rotation_layout);
+
+                        w.wnd()->glwindow().register_listener(
+                                    simulator_notifications::scene_node_orientation_updated(),
+                                    { &program_window::scene_coord_system_rotation_listener, w.wnd() }
+                                    );
+                    }
+                    selected_layout->addWidget(rotation_group);
+                }
+                selected_group->setLayout(selected_layout);
             }
             scene_tab_layout->addWidget(selected_group);
 

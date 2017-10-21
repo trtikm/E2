@@ -73,6 +73,8 @@ struct simulator : public qtgl::real_time_simulator
 
     void  translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift);
     void  rotate_scene_node(std::string const&  scene_node_name, quaternion const&  rotation);
+    void  set_position_of_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin);
+    void  set_orientation_of_scene_node(std::string const&  scene_node_name, quaternion const&  new_orientation);
     void  relocate_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation);
 
 private:
@@ -81,6 +83,10 @@ private:
 
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
     void  render_simulation_state(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
+
+    void  render_scene_coord_systems(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
+    void  render_scene_coord_system(scene_node_ptr const  node, matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
+
 
     /// Data providing feedback loop between a human user and 3D scene in the tool
     qtgl::camera_perspective_ptr  m_camera;
@@ -95,6 +101,7 @@ private:
     /// Scene related data
     std::unordered_map<std::string, scene_node_ptr>  m_scene;
     std::unordered_map<std::string, scene_node_ptr>  m_names_to_nodes;
+    qtgl::batch_ptr  m_batch_coord_system;
 
     /// Other data
     //qtgl::batch_ptr  m_ske_test_batch;

@@ -52,12 +52,18 @@ public slots:
     void  draw_update_camera_rot_widgets(quaternion const&  q) { m_tab_draw_widgets.update_camera_rot_widgets(q); }
 
     /// Slots for SCENE tab
-    void on_scene_hierarchy_item_selected(QTreeWidgetItem* const tree_item, int const column)
-    { m_tab_scene_widgets.on_scene_hierarchy_item_selected(tree_item, column); }
+    void on_scene_hierarchy_item_selected() { m_tab_scene_widgets.on_scene_hierarchy_item_selected(); }
 
     void  on_scene_insert_coord_system() { m_tab_scene_widgets.on_scene_insert_coord_system(); }
     void  on_scene_insert_batch() { m_tab_scene_widgets.on_scene_insert_batch(); }
     void  on_scene_erase_selected() { m_tab_scene_widgets.on_scene_erase_selected(); }
+
+    void  on_scene_coord_system_pos_changed() { m_tab_scene_widgets.on_coord_system_pos_changed(); }
+    void  on_scene_coord_system_rot_changed() { m_tab_scene_widgets.on_coord_system_rot_changed(); }
+    void  on_scene_coord_system_rot_tait_bryan_changed() { m_tab_scene_widgets.on_coord_system_rot_tait_bryan_changed(); }
+
+    void  scene_coord_system_position_listener() { m_tab_scene_widgets.coord_system_position_listener(); }
+    void  scene_coord_system_rotation_listener() { m_tab_scene_widgets.coord_system_rotation_listener(); }
 
     /// Slots for menu actions
     void  on_menu_open() { m_menu_bar.on_open(); }
