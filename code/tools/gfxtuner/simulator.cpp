@@ -261,6 +261,7 @@ simulator::simulator()
     , m_scene()
     , m_names_to_nodes()
     , m_batch_coord_system(qtgl::create_basis_vectors(get_program_options()->dataRoot()))
+    , m_scene_edit_mode(SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
 
     //, m_ske_test_batch{
     //        qtgl::batch::create(canonical_path(
@@ -485,6 +486,9 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
             call_listeners(simulator_notifications::paused());
             m_do_single_step = false;
         }
+
+        if (paused())
+            perform_scene_update(seconds_from_previous_call);
     }
 
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -525,6 +529,102 @@ void  simulator::render_simulation_state(matrix44 const&  view_projection_matrix
     draw(m_barb_batch, m_barb_modelspace, m_barb_keyframes, m_barb_time, view_projection_matrix, draw_state);
 
     render_scene_coord_systems(view_projection_matrix, draw_state);
+}
+
+
+void  simulator::perform_scene_update(float_64_bit const  time_to_simulate_in_seconds)
+{
+    TMPROF_BLOCK();
+
+    switch (get_scene_edit_mode())
+    {
+    case SCENE_EDIT_MODE::SELECT_SCENE_OBJECT:
+        break;
+    case SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES:
+        translate_scene_selected_objects(time_to_simulate_in_seconds);
+        break;
+    case SCENE_EDIT_MODE::ROTATE_SELECTED_NODES:
+        rotate_scene_selected_objects(time_to_simulate_in_seconds);
+        break;
+    default:
+        UNREACHABLE();
+        break;
+    }
+}
+
+void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_simulate_in_seconds)
+{
+    TMPROF_BLOCK();
+
+    if (!mouse_props().is_pressed(qtgl::LEFT_MOUSE_BUTTON()))
+        return;
+
+    for (auto const& node_name : m_names_to_selected_nodes)
+        translate_scene_node(node_name, time_to_simulate_in_seconds);
+    std::unordered_set<std::string>  translated_nodes = m_names_to_selected_nodes;
+    for (auto const& node_batch_names : m_names_to_selected_batches)
+        if (translated_nodes.count(node_batch_names.first) == 0UL)
+        {
+            translate_scene_node(node_batch_names.first, time_to_simulate_in_seconds);
+            translated_nodes.insert(node_batch_names.first);
+        }
+}
+
+void  simulator::translate_scene_node(std::string const&  scene_node_name, float_64_bit const  time_to_simulate_in_seconds)
+{
+    TMPROF_BLOCK();
+
+    vector3  shift = vector3_zero();
+    auto const  node = get_scene_node(scene_node_name);
+    auto const  parent = node->get_parent();
+    if (parent == nullptr)
+    {
+        //mouse_props().x_delta()
+        //keyboard_props().was_just_released(qtgl::KEY_SPACE())
+    }
+    else
+    {
+
+    }
+    translate_scene_node(scene_node_name, shift);
+
+}
+
+void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simulate_in_seconds)
+{
+    TMPROF_BLOCK();
+
+    if (!mouse_props().is_pressed(qtgl::LEFT_MOUSE_BUTTON()))
+        return;
+
+    for (auto const& node_name : m_names_to_selected_nodes)
+        rotate_scene_node(node_name, time_to_simulate_in_seconds);
+    std::unordered_set<std::string>  translated_nodes = m_names_to_selected_nodes;
+    for (auto const& node_batch_names : m_names_to_selected_batches)
+        if (translated_nodes.count(node_batch_names.first) == 0UL)
+        {
+            rotate_scene_node(node_batch_names.first, time_to_simulate_in_seconds);
+            translated_nodes.insert(node_batch_names.first);
+        }
+}
+
+void  simulator::rotate_scene_node(std::string const&  scene_node_name, float_64_bit const  time_to_simulate_in_seconds)
+{
+    TMPROF_BLOCK();
+
+    quaternion  rotation = quaternion_identity();
+    auto const  node = get_scene_node(scene_node_name);
+    auto const  parent = node->get_parent();
+    if (parent == nullptr)
+    {
+        //mouse_props().x_delta()
+        //keyboard_props().was_just_released(qtgl::KEY_SPACE())
+    }
+    else
+    {
+
+    }
+    rotate_scene_node(scene_node_name, rotation);
 }
 
 void  simulator::render_scene_coord_systems(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
