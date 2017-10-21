@@ -535,9 +535,10 @@ void  simulator::render_scene_coord_systems(matrix44 const&  view_projection_mat
     //qtgl::glapi().glDisable(GL_DEPTH_TEST);
 
     for (auto const&  name_node : m_names_to_nodes)
-    {
-        render_scene_coord_system(name_node.second, view_projection_matrix, draw_state);
-    }
+        if (m_names_to_selected_nodes.count(name_node.first) != 0UL)
+        {
+            render_scene_coord_system(name_node.second, view_projection_matrix, draw_state);
+        }
 
     //if (old_depth_test_state)
     //    qtgl::glapi().glEnable(GL_DEPTH_TEST);
@@ -599,6 +600,16 @@ void  simulator::erase_scene_node(std::string const&  name)
         m_scene.erase(it);
     }
     m_names_to_nodes.erase(node->get_name());
+    m_names_to_selected_nodes.erase(node->get_name());
+    for (auto const&  name_batch : node->get_batches())
+        m_names_to_selected_batches.erase({ node->get_name(), name_batch.first });
+}
+
+void  simulator::erase_batch_from_scene_node(std::string const&  batch_name, std::string const&  scene_node_name)
+{
+    auto const  node = get_scene_node(scene_node_name);
+    node->erase_batches({ batch_name });
+    m_names_to_selected_batches.erase({ node->get_name(), batch_name });
 }
 
 void  simulator::translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift)
@@ -635,4 +646,25 @@ void  simulator::relocate_scene_node(std::string const&  scene_node_name, vector
         coord_system.set_origin(new_origin);
         coord_system.set_orientation(new_orientation);
         });
+}
+
+void  simulator::update_scene_selection(
+    std::unordered_set<std::string> const&  selected_scene_nodes,
+    std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
+    )
+{
+    m_names_to_selected_nodes.clear();
+    for (auto const& name : selected_scene_nodes)
+    {
+        ASSUMPTION(m_names_to_nodes.count(name) != 0UL);
+        m_names_to_selected_nodes.insert(name);
+    }
+
+    m_names_to_selected_batches.clear();
+    for (auto const& node_batch_names : selected_batches)
+    {
+        ASSUMPTION(m_names_to_nodes.count(node_batch_names.first) != 0UL);
+        ASSUMPTION(get_scene_node(node_batch_names.first)->get_batches().count(node_batch_names.second) != 0UL);
+        m_names_to_selected_batches.insert(node_batch_names);
+    }
 }

@@ -10,8 +10,10 @@
 #   include <qtgl/modelspace.hpp>
 #   include <qtgl/keyframe.hpp>
 #   include <angeo/tensor_math.hpp>
+#   include <utility/std_pair_hash.hpp>
 #   include <vector>
 #   include <unordered_map>
+#   include <unordered_set>
 
 
 struct simulator : public qtgl::real_time_simulator
@@ -68,14 +70,21 @@ struct simulator : public qtgl::real_time_simulator
     void  insert_batch_to_scene_node(std::string const&  batch_name, qtgl::batch_ptr const  batch, std::string const&  scene_node_name)
     { get_scene_node(scene_node_name)->insert_batches({{batch_name, batch}}); }
 
-    void  erase_batch_from_scene_node(std::string const&  batch_name, std::string const&  scene_node_name)
-    { get_scene_node(scene_node_name)->erase_batches({batch_name}); }
+    void  erase_batch_from_scene_node(std::string const&  batch_name, std::string const&  scene_node_name);
 
     void  translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift);
     void  rotate_scene_node(std::string const&  scene_node_name, quaternion const&  rotation);
     void  set_position_of_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin);
     void  set_orientation_of_scene_node(std::string const&  scene_node_name, quaternion const&  new_orientation);
     void  relocate_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation);
+
+    std::unordered_set<std::string> const&  get_names_to_selected_nodes() const { return m_names_to_selected_nodes; }
+    std::unordered_set<std::pair<std::string, std::string> > const&  get_names_to_selected_batches() const { return m_names_to_selected_batches; }
+
+    void  update_scene_selection(
+            std::unordered_set<std::string> const&  selected_scene_nodes,
+            std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
+            );
 
 private:
 
@@ -101,6 +110,8 @@ private:
     /// Scene related data
     std::unordered_map<std::string, scene_node_ptr>  m_scene;
     std::unordered_map<std::string, scene_node_ptr>  m_names_to_nodes;
+    std::unordered_set<std::string>  m_names_to_selected_nodes;
+    std::unordered_set<std::pair<std::string, std::string> >  m_names_to_selected_batches;
     qtgl::batch_ptr  m_batch_coord_system;
 
     /// Other data

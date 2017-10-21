@@ -6,6 +6,7 @@
 #include <utility/msgstream.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
+#include <utility/std_pair_hash.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <QLabel>
 #include <QDialog>
@@ -301,7 +302,26 @@ widgets::widgets(program_window* const  wnd)
 
 void  widgets::on_scene_hierarchy_item_selected()
 {
-    std::cout << "JSEM TU!!" << std::endl;
+    std::unordered_set<std::string>  selected_scene_nodes;
+    std::unordered_set<std::pair<std::string, std::string> >  selected_batches;
+    foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
+    {
+        tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(item);
+        INVARIANT(tree_item != nullptr);
+        std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
+        if (tree_item->represents_coord_system())
+            selected_scene_nodes.insert(tree_item_name);
+        else
+        {
+            tree_widget_item* const  parent_tree_item = dynamic_cast<tree_widget_item*>(tree_item->parent());
+            INVARIANT(parent_tree_item != nullptr);
+            INVARIANT(parent_tree_item->represents_coord_system());
+            std::string const  parent_tree_item_name = qtgl::to_string(parent_tree_item->text(0));
+            selected_batches.insert({ parent_tree_item_name, tree_item_name });
+        }
+    }
+    m_wnd->glwindow().call_now(&simulator::update_scene_selection, selected_scene_nodes, selected_batches);
+    
     update_coord_system_location_widgets();
 }
 
@@ -314,12 +334,13 @@ void  widgets::on_scene_insert_coord_system()
     dlg.exec();
     if (!dlg.get_name().empty())
     {
-        m_wnd->glwindow().call_now(&simulator::insert_scene_node_at, dlg.get_name(), vector3(1,2,3), quaternion_identity());
+        m_wnd->glwindow().call_now(&simulator::insert_scene_node_at, dlg.get_name(), m_pivot, quaternion_identity());
 
         QTreeWidgetItem* const  tree_node = new tree_widget_item(true);
         tree_node->setText(0, QString(dlg.get_name().c_str()));
         tree_node->setIcon(0, m_node_icon);
         m_scene_tree->addTopLevelItem(tree_node);
+        m_scene_tree->setCurrentItem(tree_node);
     }
 }
 
@@ -455,6 +476,22 @@ void  widgets::enable_coord_system_location_widgets(bool const  state)
     m_coord_system_yaw->setEnabled(state);
     m_coord_system_pitch->setEnabled(state);
     m_coord_system_roll->setEnabled(state);
+
+    if (state == false)
+    {
+        m_coord_system_pos_x->setText("");
+        m_coord_system_pos_y->setText("");
+        m_coord_system_pos_z->setText("");
+
+        m_coord_system_rot_w->setText("");
+        m_coord_system_rot_x->setText("");
+        m_coord_system_rot_y->setText("");
+        m_coord_system_rot_z->setText("");
+
+        m_coord_system_yaw->setText("");
+        m_coord_system_pitch->setText("");
+        m_coord_system_roll->setText("");
+    }
 }
 
 void  widgets::refresh_text_in_coord_system_location_widgets(scene_node_ptr const  node_ptr)
