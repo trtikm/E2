@@ -28,6 +28,7 @@ scene_node::scene_node(
     , m_coord_system(new angeo::coordinate_system(origin, orientation))
     , m_batches()
     , m_children()
+    , m_is_world_matrix_valid(false)
 {
     ASSUMPTION(!m_name.empty());
 }

@@ -23,7 +23,7 @@ void  cursor_line_begin(camera_perspective const&  camera, vector2 const&  mouse
 void  cursor_line_end(camera_perspective const&  camera, vector3 const&  cursor_line_begin, vector3&  output)
 {
     vector3 const  far_plane_normal = axis_z(*camera.coordinate_system());
-    vector3 const  far_plane_origin = camera.coordinate_system()->origin() + camera.far_plane() * far_plane_normal;
+    vector3 const  far_plane_origin = camera.coordinate_system()->origin() - camera.far_plane() * far_plane_normal;
     bool const  result = angeo::collision_ray_and_plane(
             cursor_line_begin,
             normalised(cursor_line_begin - camera.coordinate_system()->origin()),

@@ -92,7 +92,7 @@ bool  collision_ray_and_plane(
     if (absolute_value(cos_angle) < 1e-3f)
         return false;
 
-    float_32_bit const  intersection_ditance = normal_distance / cos_angle;
+    float_32_bit const  intersection_ditance = -normal_distance / cos_angle;
     if (output_distance_to_intersection_point != nullptr)
         *output_distance_to_intersection_point = intersection_ditance;
     if (output_intersection_point != nullptr)

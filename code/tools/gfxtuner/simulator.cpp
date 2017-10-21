@@ -2,6 +2,7 @@
 #include <gfxtuner/simulator_notifications.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <gfxtuner/draw_utils.hpp>
+#include <angeo/collide.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
 #include <qtgl/batch_generators.hpp>
@@ -261,7 +262,7 @@ simulator::simulator()
     , m_scene()
     , m_names_to_nodes()
     , m_batch_coord_system(qtgl::create_basis_vectors(get_program_options()->dataRoot()))
-    , m_scene_edit_mode(SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
+    , m_scene_edit_data(SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
 
     //, m_ske_test_batch{
     //        qtgl::batch::create(canonical_path(
@@ -558,36 +559,137 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
 
     if (!mouse_props().is_pressed(qtgl::LEFT_MOUSE_BUTTON()))
         return;
+    if (m_names_to_selected_nodes.empty() && m_names_to_selected_nodes.empty())
+        return;
+    if (get_scene_edit_data().are_data_invalidated())
+    {
+        vector3  lo, hi;
+        if (!get_bbox_of_selected_scene_nodes(lo, hi))
+            return;
+        m_scene_edit_data.initialise_translation_data({ 0.5f * (lo + hi) });
+    }
+    m_scene_edit_data.get_translation_data().update_keys(
+            keyboard_props().is_pressed(qtgl::KEY_X()),
+            keyboard_props().is_pressed(qtgl::KEY_Y()),
+            keyboard_props().is_pressed(qtgl::KEY_Z())
+            );
+    if (mouse_props().was_just_pressed(qtgl::LEFT_MOUSE_BUTTON()))
+        m_scene_edit_data.get_translation_data().invalidate_plain_point();
+    //if (!get_scene_edit_data().get_translation_data().is_plain_point_valid() || mouse_props().was_just_pressed(qtgl::LEFT_MOUSE_BUTTON()))
+    //{
+    //    vector3 ray_begin, ray_end;
+    //    cursor_line_begin(
+    //        *m_camera,
+    //        { mouse_props().x(), mouse_props().y() },
+    //        window_props(),
+    //        ray_begin
+    //        );
+    //    cursor_line_end(*m_camera, ray_begin, ray_end);
+
+    //    vector3  plane_point;
+    //    if (!angeo::collision_ray_and_plane(
+    //        ray_begin,
+    //        normalised(ray_end - ray_begin),
+    //        get_scene_edit_data().get_translation_data().get_origin(),
+    //        get_scene_edit_data().get_translation_data().get_normal(),
+    //        nullptr,
+    //        nullptr,
+    //        nullptr,
+    //        &plane_point
+    //        ))
+    //    {
+    //        m_scene_edit_data.invalidate_data();
+    //        return;
+    //    }
+    //    m_scene_edit_data.get_translation_data().set_plain_point(plane_point);
+    //}
+
+
+
+
+
+
+
+
+
+
+    //bool const  needs_validation = get_scene_edit_data().are_data_invalidated();
+    //if (needs_validation)
+    //{
+    //    vector3  lo, hi;
+    //    if (!get_bbox_of_selected_scene_nodes(lo, hi))
+    //        return;
+
+    //    m_scene_edit_data.initialise_translation_data({0.5f * (lo + hi)});
+    //}
+
+    //if (needs_validation || mouse_props().was_just_pressed(qtgl::LEFT_MOUSE_BUTTON()))
+    //{
+    //    vector3 ray_begin, ray_end;
+    //    cursor_line_begin(
+    //            *m_camera,
+    //            { mouse_props().x(), mouse_props().y() },
+    //            window_props(),
+    //            ray_begin
+    //            );
+    //    cursor_line_end(*m_camera, ray_begin, ray_end);
+
+    //    vector3  plane_point;
+    //    if (!angeo::collision_ray_and_plane(
+    //            ray_begin,
+    //            normalised(ray_end - ray_begin),
+    //            get_scene_edit_data().get_translation_data().get_origin(),
+    //            vector3_unit_z(),
+    //            nullptr,
+    //            nullptr,
+    //            nullptr,
+    //            &plane_point
+    //            ))
+    //    {
+    //        m_scene_edit_data.invalidate_data();
+    //        return;
+    //    }
+    //    m_scene_edit_data.get_translation_data().set_plain_point(plane_point);
+    //}
+
+    vector3 new_ray_begin, new_ray_end;
+    cursor_line_begin(
+            *m_camera,
+            { mouse_props().x(), mouse_props().y() },
+            window_props(),
+            new_ray_begin
+            );
+    cursor_line_end(*m_camera, new_ray_begin, new_ray_end);
+
+    vector3  new_plane_point;
+    if (!angeo::collision_ray_and_plane(
+            new_ray_begin,
+            normalised(new_ray_end - new_ray_begin),
+            get_scene_edit_data().get_translation_data().get_origin(),
+            get_scene_edit_data().get_translation_data().get_normal(),
+            nullptr,
+            nullptr,
+            nullptr,
+            &new_plane_point
+            ))
+        return;
+
+    vector3 const  shift = m_scene_edit_data.get_translation_data().get_shift(new_plane_point);
 
     for (auto const& node_name : m_names_to_selected_nodes)
-        translate_scene_node(node_name, time_to_simulate_in_seconds);
+        get_scene_node(node_name)->relocate_coordinate_system([&shift](angeo::coordinate_system&  coord_system) {
+            translate(coord_system, shift);
+            });
     std::unordered_set<std::string>  translated_nodes = m_names_to_selected_nodes;
     for (auto const& node_batch_names : m_names_to_selected_batches)
         if (translated_nodes.count(node_batch_names.first) == 0UL)
         {
-            translate_scene_node(node_batch_names.first, time_to_simulate_in_seconds);
+            get_scene_node(node_batch_names.first)->relocate_coordinate_system([&shift](angeo::coordinate_system&  coord_system) {
+                translate(coord_system, shift);
+                });
             translated_nodes.insert(node_batch_names.first);
         }
-}
-
-void  simulator::translate_scene_node(std::string const&  scene_node_name, float_64_bit const  time_to_simulate_in_seconds)
-{
-    TMPROF_BLOCK();
-
-    vector3  shift = vector3_zero();
-    auto const  node = get_scene_node(scene_node_name);
-    auto const  parent = node->get_parent();
-    if (parent == nullptr)
-    {
-        //mouse_props().x_delta()
-        //keyboard_props().was_just_released(qtgl::KEY_SPACE())
-    }
-    else
-    {
-
-    }
-    translate_scene_node(scene_node_name, shift);
-
+    call_listeners(simulator_notifications::scene_node_position_updated());
 }
 
 void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simulate_in_seconds)
@@ -596,35 +698,24 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
 
     if (!mouse_props().is_pressed(qtgl::LEFT_MOUSE_BUTTON()))
         return;
+    if (m_names_to_selected_nodes.empty() && m_names_to_selected_nodes.empty())
+        return;
 
-    for (auto const& node_name : m_names_to_selected_nodes)
-        rotate_scene_node(node_name, time_to_simulate_in_seconds);
-    std::unordered_set<std::string>  translated_nodes = m_names_to_selected_nodes;
-    for (auto const& node_batch_names : m_names_to_selected_batches)
-        if (translated_nodes.count(node_batch_names.first) == 0UL)
-        {
-            rotate_scene_node(node_batch_names.first, time_to_simulate_in_seconds);
-            translated_nodes.insert(node_batch_names.first);
-        }
+    if (get_scene_edit_data().are_data_invalidated())
+    {
+        vector3  lo, hi;
+        if (!get_bbox_of_selected_scene_nodes(lo, hi))
+            return;
+
+        // TODO!
+        //m_scene_edit_data.initialise_rotation_data({ 0.5f * (lo + hi) });
+    }
 }
 
 void  simulator::rotate_scene_node(std::string const&  scene_node_name, float_64_bit const  time_to_simulate_in_seconds)
 {
     TMPROF_BLOCK();
 
-    quaternion  rotation = quaternion_identity();
-    auto const  node = get_scene_node(scene_node_name);
-    auto const  parent = node->get_parent();
-    if (parent == nullptr)
-    {
-        //mouse_props().x_delta()
-        //keyboard_props().was_just_released(qtgl::KEY_SPACE())
-    }
-    else
-    {
-
-    }
-    rotate_scene_node(scene_node_name, rotation);
 }
 
 void  simulator::render_scene_coord_systems(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
@@ -703,6 +794,7 @@ void  simulator::erase_scene_node(std::string const&  name)
     m_names_to_selected_nodes.erase(node->get_name());
     for (auto const&  name_batch : node->get_batches())
         m_names_to_selected_batches.erase({ node->get_name(), name_batch.first });
+    m_scene_edit_data.invalidate_data();
 }
 
 void  simulator::erase_batch_from_scene_node(std::string const&  batch_name, std::string const&  scene_node_name)
@@ -717,6 +809,7 @@ void  simulator::translate_scene_node(std::string const&  scene_node_name, vecto
     get_scene_node(scene_node_name)->relocate_coordinate_system([&shift](angeo::coordinate_system&  coord_system) {
         translate(coord_system, shift);
         });
+    m_scene_edit_data.invalidate_data();
 }
 
 void  simulator::rotate_scene_node(std::string const&  scene_node_name, quaternion const&  rotation)
@@ -724,6 +817,7 @@ void  simulator::rotate_scene_node(std::string const&  scene_node_name, quaterni
     get_scene_node(scene_node_name)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
         rotate(coord_system, rotation);
         });
+    m_scene_edit_data.invalidate_data();
 }
 
 void  simulator::set_position_of_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin)
@@ -731,6 +825,7 @@ void  simulator::set_position_of_scene_node(std::string const&  scene_node_name,
     get_scene_node(scene_node_name)->relocate_coordinate_system([&new_origin](angeo::coordinate_system&  coord_system) {
         coord_system.set_origin(new_origin);
         });
+    m_scene_edit_data.invalidate_data();
 }
 
 void  simulator::set_orientation_of_scene_node(std::string const&  scene_node_name, quaternion const&  new_orientation)
@@ -738,6 +833,7 @@ void  simulator::set_orientation_of_scene_node(std::string const&  scene_node_na
     get_scene_node(scene_node_name)->relocate_coordinate_system([&new_orientation](angeo::coordinate_system&  coord_system) {
         coord_system.set_orientation(new_orientation);
         });
+    m_scene_edit_data.invalidate_data();
 }
 
 void  simulator::relocate_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation)
@@ -746,6 +842,7 @@ void  simulator::relocate_scene_node(std::string const&  scene_node_name, vector
         coord_system.set_origin(new_origin);
         coord_system.set_orientation(new_orientation);
         });
+    m_scene_edit_data.invalidate_data();
 }
 
 void  simulator::update_scene_selection(
@@ -753,6 +850,8 @@ void  simulator::update_scene_selection(
     std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
     )
 {
+    TMPROF_BLOCK();
+
     m_names_to_selected_nodes.clear();
     for (auto const& name : selected_scene_nodes)
     {
@@ -767,4 +866,34 @@ void  simulator::update_scene_selection(
         ASSUMPTION(get_scene_node(node_batch_names.first)->get_batches().count(node_batch_names.second) != 0UL);
         m_names_to_selected_batches.insert(node_batch_names);
     }
+    m_scene_edit_data.invalidate_data();
+}
+
+bool  simulator::get_bbox_of_selected_scene_nodes(vector3&  lo, vector3&  hi)
+{
+    TMPROF_BLOCK();
+
+    if (m_names_to_selected_nodes.empty() && m_names_to_selected_nodes.empty())
+        return false;
+
+    lo = vector3{ 1e20f,  1e20f,  1e20f };
+    hi = vector3{ -1e20f, -1e20f, -1e20f };
+
+    static auto const  update_lo_hi = [this, &lo, &hi](std::string const& node_name) {
+        vector3 const  node_wold_pos = transform_point(vector3_zero(), get_scene_node(node_name)->get_world_matrix());
+        for (int i = 0; i != 3; ++i)
+        {
+            if (lo(i) > node_wold_pos(i))
+                lo(i) = node_wold_pos(i);
+            if (hi(i) < node_wold_pos(i))
+                hi(i) = node_wold_pos(i);
+        }
+    };
+
+    for (auto const& node_name : m_names_to_selected_nodes)
+        update_lo_hi(node_name);
+    for (auto const& node_batch_names : m_names_to_selected_batches)
+        update_lo_hi(node_batch_names.first);
+
+    return true;
 }

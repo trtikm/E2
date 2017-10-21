@@ -2,7 +2,7 @@
 #   define E2_TOOL_GFXTUNER_SIMULATOR_HPP_INCLUDED
 
 #   include <gfxtuner/scene.hpp>
-#   include <gfxtuner/edit_mode.hpp>
+#   include <gfxtuner/scene_edit_utils.hpp>
 #   include <qtgl/real_time_simulator.hpp>
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>
@@ -87,8 +87,10 @@ struct simulator : public qtgl::real_time_simulator
             std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
             );
 
-    SCENE_EDIT_MODE  get_scene_edit_mode() const { return m_scene_edit_mode; }
-    void  set_scene_edit_mode(SCENE_EDIT_MODE const  edit_mode) { m_scene_edit_mode = edit_mode; }
+    SCENE_EDIT_MODE  get_scene_edit_mode() const { return m_scene_edit_data.get_mode(); }
+    void  set_scene_edit_mode(SCENE_EDIT_MODE const  edit_mode) { m_scene_edit_data.set_mode(edit_mode); }
+
+    scene_edit_data const&  get_scene_edit_data() const { return m_scene_edit_data; }
 
 private:
 
@@ -99,12 +101,13 @@ private:
 
     void  perform_scene_update(float_64_bit const  time_to_simulate_in_seconds);
     void  translate_scene_selected_objects(float_64_bit const  time_to_simulate_in_seconds);
-    void  translate_scene_node(std::string const&  scene_node_name, float_64_bit const  time_to_simulate_in_seconds);
     void  rotate_scene_selected_objects(float_64_bit const  time_to_simulate_in_seconds);
     void  rotate_scene_node(std::string const&  scene_node_name, float_64_bit const  time_to_simulate_in_seconds);
     void  render_scene_coord_systems(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
     void  render_scene_coord_system(scene_node_ptr const  node, matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
 
+    // Utility functions
+    bool  get_bbox_of_selected_scene_nodes(vector3&  lo, vector3&  hi);
 
     /// Data providing feedback loop between a human user and 3D scene in the tool
     qtgl::camera_perspective_ptr  m_camera;
@@ -123,7 +126,7 @@ private:
     std::unordered_set<std::pair<std::string, std::string> >  m_names_to_selected_batches;
     qtgl::batch_ptr  m_batch_coord_system;
 
-    SCENE_EDIT_MODE  m_scene_edit_mode;
+    scene_edit_data  m_scene_edit_data;
 
     /// Other data
     //qtgl::batch_ptr  m_ske_test_batch;

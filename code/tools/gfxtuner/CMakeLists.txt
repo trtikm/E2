@@ -32,7 +32,8 @@ add_executable(${THIS_TARGET_NAME}
     menu_bar.hpp
     menu_bar.cpp
     
-    edit_mode.hpp 
+    scene_edit_utils.hpp 
+    scene_edit_utils.cpp 
 
     window_tabs/tab_draw.hpp
     window_tabs/tab_draw.cpp
