@@ -34,6 +34,16 @@ void  scene_nodes_translation_data::choose_normal_and_reduction(vector3 const&  
                         vector3_unit_y();
         m_reduction = vector3_unit_z();
     }
+    else if (m_x_down && !m_y_down && m_z_down)
+    {
+        m_normal = vector3_unit_y();
+        m_reduction = vector3_unit_y();
+    }
+    else if (!m_x_down && m_y_down && m_z_down)
+    {
+        m_normal = vector3_unit_x();
+        m_reduction = vector3_unit_x();
+    }
     else
     {
         m_normal = vector3_unit_z();
