@@ -51,6 +51,21 @@ private:
 };
 
 
+struct  scene_nodes_rotation_data
+{
+    scene_nodes_rotation_data() : scene_nodes_rotation_data(vector3_zero()) {}
+    scene_nodes_rotation_data(vector3 const&  origin)
+        : m_origin(origin)
+    {}
+
+    vector3 const&  get_origin() const { return m_origin; }
+
+private:
+
+    vector3  m_origin;
+};
+
+
 struct scene_edit_data final
 {
     explicit scene_edit_data(SCENE_EDIT_MODE const initial_mode = SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
@@ -69,11 +84,16 @@ struct scene_edit_data final
     scene_nodes_translation_data const&  get_translation_data() const;
     scene_nodes_translation_data&  get_translation_data();
 
+    void  initialise_rotation_data(scene_nodes_rotation_data const&  data);
+    scene_nodes_rotation_data const&  get_rotation_data() const;
+    scene_nodes_rotation_data&  get_rotation_data();    
+
 private:
 
     SCENE_EDIT_MODE  m_mode;
     bool  m_data_invalidated;
     scene_nodes_translation_data  m_nodes_translation_data;
+    scene_nodes_rotation_data  m_nodes_rotation_data;
 };
 
 

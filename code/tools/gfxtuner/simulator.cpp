@@ -262,7 +262,8 @@ simulator::simulator()
     , m_scene()
     , m_names_to_nodes()
     , m_batch_coord_system(qtgl::create_basis_vectors(get_program_options()->dataRoot()))
-    , m_scene_edit_data(SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
+    //, m_scene_edit_data(SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
+    , m_scene_edit_data(SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
 
     //, m_ske_test_batch{
     //        qtgl::batch::create(canonical_path(
@@ -631,10 +632,58 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
         vector3  lo, hi;
         if (!get_bbox_of_selected_scene_nodes(lo, hi))
             return;
-
-        // TODO!
-        //m_scene_edit_data.initialise_rotation_data({ 0.5f * (lo + hi) });
+        m_scene_edit_data.initialise_rotation_data({ 0.5f * (lo + hi) });
     }
+
+    float_32_bit const  horisontal_full_angle_in_pixels = (3.0f / 4.0f) * window_props().width_in_pixels();
+    float_32_bit const  vertical_full_angle_in_pixels = (3.0f / 4.0f) * window_props().height_in_pixels();
+
+    float_32_bit const  horisontal_angle = (2.0f * PI()) * (mouse_props().x_delta() / horisontal_full_angle_in_pixels);
+    float_32_bit const  vertical_angle = (2.0f * PI()) * (mouse_props().y_delta() / vertical_full_angle_in_pixels);
+
+    bool const  x_down = keyboard_props().is_pressed(qtgl::KEY_X());
+    bool const  y_down = keyboard_props().is_pressed(qtgl::KEY_Y());
+    bool const  z_down = keyboard_props().is_pressed(qtgl::KEY_Z());
+    bool const  p_down = keyboard_props().is_pressed(qtgl::KEY_P());
+    bool const  r_down = keyboard_props().is_pressed(qtgl::KEY_R());
+
+    quaternion  rotation;
+    if (x_down || y_down || z_down || p_down || r_down)
+    {
+        rotation = quaternion_identity();
+        if (x_down)
+            rotation *= angle_axis_to_quaternion(vertical_angle, vector3_unit_x());
+        if (y_down)
+            rotation *= angle_axis_to_quaternion(vertical_angle, vector3_unit_y());
+        if (z_down)
+            rotation *= angle_axis_to_quaternion(horisontal_angle, vector3_unit_z());
+        if (p_down)
+        {
+            vector3 const  camera_x_axis = axis_x(*m_camera->coordinate_system());
+            rotation *= angle_axis_to_quaternion(horisontal_angle, { -camera_x_axis(1), camera_x_axis(0), 0.0f});
+        }
+        if (r_down)
+            rotation *= angle_axis_to_quaternion(vertical_angle, axis_x(*m_camera->coordinate_system()));
+    }
+    else
+        rotation = angle_axis_to_quaternion(horisontal_angle, vector3_unit_z());
+
+    for (auto const& node_name : m_names_to_selected_nodes)
+    {
+        get_scene_node(node_name)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
+            rotate(coord_system, rotation);
+            });
+    }
+    std::unordered_set<std::string>  translated_nodes = m_names_to_selected_nodes;
+    for (auto const& node_batch_names : m_names_to_selected_batches)
+        if (translated_nodes.count(node_batch_names.first) == 0UL)
+        {
+            get_scene_node(node_batch_names.first)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
+                rotate(coord_system, rotation);
+                });
+            translated_nodes.insert(node_batch_names.first);
+        }
+    call_listeners(simulator_notifications::scene_node_orientation_updated());
 }
 
 void  simulator::rotate_scene_node(std::string const&  scene_node_name, float_64_bit const  time_to_simulate_in_seconds)

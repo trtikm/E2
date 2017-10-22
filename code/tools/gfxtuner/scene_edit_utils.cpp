@@ -77,6 +77,7 @@ void  scene_edit_data::set_mode(SCENE_EDIT_MODE const  mode)
     m_mode = mode;
 }
 
+
 void  scene_edit_data::initialise_translation_data(scene_nodes_translation_data const&  data)
 {
     ASSUMPTION(get_mode() == SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES);
@@ -96,4 +97,26 @@ scene_nodes_translation_data&  scene_edit_data::get_translation_data()
     ASSUMPTION(get_mode() == SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES);
     ASSUMPTION(!are_data_invalidated());
     return m_nodes_translation_data;
+}
+
+
+void  scene_edit_data::initialise_rotation_data(scene_nodes_rotation_data const&  data)
+{
+    ASSUMPTION(get_mode() == SCENE_EDIT_MODE::ROTATE_SELECTED_NODES);
+    m_nodes_rotation_data = data;
+    m_data_invalidated = false;
+}
+
+scene_nodes_rotation_data const&  scene_edit_data::get_rotation_data() const
+{
+    ASSUMPTION(get_mode() == SCENE_EDIT_MODE::ROTATE_SELECTED_NODES);
+    ASSUMPTION(!are_data_invalidated());
+    return m_nodes_rotation_data;
+}
+
+scene_nodes_rotation_data&  scene_edit_data::get_rotation_data()
+{
+    ASSUMPTION(get_mode() == SCENE_EDIT_MODE::ROTATE_SELECTED_NODES);
+    ASSUMPTION(!are_data_invalidated());
+    return m_nodes_rotation_data;
 }
