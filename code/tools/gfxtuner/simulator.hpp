@@ -88,7 +88,7 @@ struct simulator : public qtgl::real_time_simulator
             );
 
     SCENE_EDIT_MODE  get_scene_edit_mode() const { return m_scene_edit_data.get_mode(); }
-    void  set_scene_edit_mode(SCENE_EDIT_MODE const  edit_mode) { m_scene_edit_data.set_mode(edit_mode); }
+    void  set_scene_edit_mode(SCENE_EDIT_MODE const  edit_mode);
 
     scene_edit_data const&  get_scene_edit_data() const { return m_scene_edit_data; }
 

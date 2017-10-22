@@ -14,6 +14,8 @@ inline std::string  camera_orientation_updated() { return "CAMERA_ORIENTATION_UP
 inline std::string  scene_node_position_updated() { return "SCENE_NODE_POSITION_UPDATED"; }
 inline std::string  scene_node_orientation_updated() { return "SCENE_NODE_ORIENTATION_UPDATED"; }
 
+inline std::string  scene_edit_mode_changed() { return "SCENE_EDIT_MODE_CHANGED"; }
+
 
 }
 

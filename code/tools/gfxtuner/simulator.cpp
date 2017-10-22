@@ -262,8 +262,7 @@ simulator::simulator()
     , m_scene()
     , m_names_to_nodes()
     , m_batch_coord_system(qtgl::create_basis_vectors(get_program_options()->dataRoot()))
-    //, m_scene_edit_data(SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
-    , m_scene_edit_data(SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
+    , m_scene_edit_data(SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
 
     //, m_ske_test_batch{
     //        qtgl::batch::create(canonical_path(
@@ -533,10 +532,19 @@ void  simulator::render_simulation_state(matrix44 const&  view_projection_matrix
     render_scene_coord_systems(view_projection_matrix, draw_state);
 }
 
-
 void  simulator::perform_scene_update(float_64_bit const  time_to_simulate_in_seconds)
 {
     TMPROF_BLOCK();
+
+    bool const  c_down = keyboard_props().was_just_released(qtgl::KEY_C());
+    bool const  t_down = keyboard_props().was_just_released(qtgl::KEY_T());
+    bool const  r_down = keyboard_props().was_just_released(qtgl::KEY_R());
+    if (c_down && get_scene_edit_mode() != SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
+        set_scene_edit_mode(SCENE_EDIT_MODE::SELECT_SCENE_OBJECT);
+    else if (t_down && get_scene_edit_mode() != SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
+        set_scene_edit_mode(SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES);
+    else if (r_down && get_scene_edit_mode() != SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
+        set_scene_edit_mode(SCENE_EDIT_MODE::ROTATE_SELECTED_NODES);
 
     switch (get_scene_edit_mode())
     {
@@ -674,15 +682,30 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
             rotate(coord_system, rotation);
             });
     }
-    std::unordered_set<std::string>  translated_nodes = m_names_to_selected_nodes;
+    std::unordered_set<std::string>  rotated_nodes = m_names_to_selected_nodes;
     for (auto const& node_batch_names : m_names_to_selected_batches)
-        if (translated_nodes.count(node_batch_names.first) == 0UL)
+        if (rotated_nodes.count(node_batch_names.first) == 0UL)
         {
             get_scene_node(node_batch_names.first)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
                 rotate(coord_system, rotation);
                 });
-            translated_nodes.insert(node_batch_names.first);
+            rotated_nodes.insert(node_batch_names.first);
         }
+
+    if (rotated_nodes.size() > 1UL && !keyboard_props().is_pressed(qtgl::KEY_LSHIFT()) && !keyboard_props().is_pressed(qtgl::KEY_RSHIFT()))
+    {
+        matrix33 const  rotation_matrix = quaternion_to_rotation_matrix(rotation);
+        vector3 const  rotation_centre = get_scene_edit_data().get_rotation_data().get_origin();
+        for (auto const& node_name : rotated_nodes)
+        {
+            get_scene_node(node_name)->relocate_coordinate_system([&rotation_matrix, &rotation_centre](angeo::coordinate_system&  coord_system) {
+                vector3 const position_vector = coord_system.origin() - rotation_centre;
+                vector3 const rotated_position_vector = rotation_matrix * position_vector;
+                translate(coord_system, rotated_position_vector - position_vector);
+                });
+        }
+    }
+
     call_listeners(simulator_notifications::scene_node_orientation_updated());
 }
 
@@ -843,6 +866,12 @@ void  simulator::update_scene_selection(
     m_scene_edit_data.invalidate_data();
 }
 
+void  simulator::set_scene_edit_mode(SCENE_EDIT_MODE const  edit_mode)
+{
+    m_scene_edit_data.set_mode(edit_mode);
+    call_listeners(simulator_notifications::scene_edit_mode_changed());
+}
+
 bool  simulator::get_bbox_of_selected_scene_nodes(vector3&  lo, vector3&  hi)
 {
     TMPROF_BLOCK();
@@ -853,7 +882,7 @@ bool  simulator::get_bbox_of_selected_scene_nodes(vector3&  lo, vector3&  hi)
     lo = vector3{ 1e20f,  1e20f,  1e20f };
     hi = vector3{ -1e20f, -1e20f, -1e20f };
 
-    static auto const  update_lo_hi = [this, &lo, &hi](std::string const& node_name) {
+    auto const  update_lo_hi = [this, &lo, &hi](std::string const& node_name) {
         vector3 const  node_wold_pos = transform_point(vector3_zero(), get_scene_node(node_name)->get_world_matrix());
         for (int i = 0; i != 3; ++i)
         {
