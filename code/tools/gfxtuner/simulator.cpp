@@ -568,89 +568,14 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
             return;
         m_scene_edit_data.initialise_translation_data({ 0.5f * (lo + hi) });
     }
-    m_scene_edit_data.get_translation_data().update_keys(
+    m_scene_edit_data.get_translation_data().update(
             keyboard_props().is_pressed(qtgl::KEY_X()),
             keyboard_props().is_pressed(qtgl::KEY_Y()),
-            keyboard_props().is_pressed(qtgl::KEY_Z())
+            keyboard_props().is_pressed(qtgl::KEY_Z()),
+            m_camera->coordinate_system()->origin()
             );
     if (mouse_props().was_just_pressed(qtgl::LEFT_MOUSE_BUTTON()))
         m_scene_edit_data.get_translation_data().invalidate_plain_point();
-    //if (!get_scene_edit_data().get_translation_data().is_plain_point_valid() || mouse_props().was_just_pressed(qtgl::LEFT_MOUSE_BUTTON()))
-    //{
-    //    vector3 ray_begin, ray_end;
-    //    cursor_line_begin(
-    //        *m_camera,
-    //        { mouse_props().x(), mouse_props().y() },
-    //        window_props(),
-    //        ray_begin
-    //        );
-    //    cursor_line_end(*m_camera, ray_begin, ray_end);
-
-    //    vector3  plane_point;
-    //    if (!angeo::collision_ray_and_plane(
-    //        ray_begin,
-    //        normalised(ray_end - ray_begin),
-    //        get_scene_edit_data().get_translation_data().get_origin(),
-    //        get_scene_edit_data().get_translation_data().get_normal(),
-    //        nullptr,
-    //        nullptr,
-    //        nullptr,
-    //        &plane_point
-    //        ))
-    //    {
-    //        m_scene_edit_data.invalidate_data();
-    //        return;
-    //    }
-    //    m_scene_edit_data.get_translation_data().set_plain_point(plane_point);
-    //}
-
-
-
-
-
-
-
-
-
-
-    //bool const  needs_validation = get_scene_edit_data().are_data_invalidated();
-    //if (needs_validation)
-    //{
-    //    vector3  lo, hi;
-    //    if (!get_bbox_of_selected_scene_nodes(lo, hi))
-    //        return;
-
-    //    m_scene_edit_data.initialise_translation_data({0.5f * (lo + hi)});
-    //}
-
-    //if (needs_validation || mouse_props().was_just_pressed(qtgl::LEFT_MOUSE_BUTTON()))
-    //{
-    //    vector3 ray_begin, ray_end;
-    //    cursor_line_begin(
-    //            *m_camera,
-    //            { mouse_props().x(), mouse_props().y() },
-    //            window_props(),
-    //            ray_begin
-    //            );
-    //    cursor_line_end(*m_camera, ray_begin, ray_end);
-
-    //    vector3  plane_point;
-    //    if (!angeo::collision_ray_and_plane(
-    //            ray_begin,
-    //            normalised(ray_end - ray_begin),
-    //            get_scene_edit_data().get_translation_data().get_origin(),
-    //            vector3_unit_z(),
-    //            nullptr,
-    //            nullptr,
-    //            nullptr,
-    //            &plane_point
-    //            ))
-    //    {
-    //        m_scene_edit_data.invalidate_data();
-    //        return;
-    //    }
-    //    m_scene_edit_data.get_translation_data().set_plain_point(plane_point);
-    //}
 
     vector3 new_ray_begin, new_ray_end;
     cursor_line_begin(

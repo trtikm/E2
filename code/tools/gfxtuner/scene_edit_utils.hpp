@@ -25,7 +25,7 @@ struct  scene_nodes_translation_data
         , m_plain_point(origin)
         , m_is_plain_point_valid(false)
     {}
-    void  update_keys(bool const  x_down, bool const  y_down, bool const  z_down);
+    void  update(bool const  x_down, bool const  y_down, bool const  z_down, vector3 const&  camera_origin);
     vector3 const&  get_origin() const { return m_origin; }
     vector3 const&  get_normal() const { return m_normal; }
     vector3 const&  get_reduction() const { return m_reduction; }
@@ -37,7 +37,7 @@ struct  scene_nodes_translation_data
 
 private:
 
-    void  choose_normal_and_reduction();
+    void  choose_normal_and_reduction(vector3 const&  camera_origin);
     vector3  reduce_shift_vector(vector3 const&  shift);
 
     vector3  m_origin;

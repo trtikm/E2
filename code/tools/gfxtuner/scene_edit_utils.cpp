@@ -3,7 +3,7 @@
 #include <utility/invariants.hpp>
 
 
-void  scene_nodes_translation_data::update_keys(bool const  x_down, bool const  y_down, bool const  z_down)
+void  scene_nodes_translation_data::update(bool const  x_down, bool const  y_down, bool const  z_down, vector3 const&  camera_origin)
 {
     bool const  change = m_x_down != x_down || m_y_down != y_down || m_z_down != z_down;
     if (!change)
@@ -12,16 +12,39 @@ void  scene_nodes_translation_data::update_keys(bool const  x_down, bool const  
     m_y_down = y_down;
     m_z_down = z_down;
     invalidate_plain_point();
-    choose_normal_and_reduction();
+    choose_normal_and_reduction(camera_origin);
 }
 
-void  scene_nodes_translation_data::choose_normal_and_reduction()
+void  scene_nodes_translation_data::choose_normal_and_reduction(vector3 const&  camera_origin)
 {
+    if (m_x_down && !m_y_down && !m_z_down)
+    {
+        m_normal = vector3_unit_z();
+        m_reduction = vector3_unit_x();
+    }
+    else if (!m_x_down && m_y_down && !m_z_down)
+    {
+        m_normal = vector3_unit_z();
+        m_reduction = vector3_unit_y();
+    }
+    else if (!m_x_down && !m_y_down && m_z_down)
+    {
+        m_normal = std::fabsf(dot_product(vector3_unit_x(), camera_origin)) > std::fabsf(dot_product(vector3_unit_y(), camera_origin)) ?
+                        vector3_unit_x() :
+                        vector3_unit_y();
+        m_reduction = vector3_unit_z();
+    }
+    else
+    {
+        m_normal = vector3_unit_z();
+        m_reduction = vector3_unit_z();
+    }
 }
 
 vector3  scene_nodes_translation_data::reduce_shift_vector(vector3 const&  shift)
 {
-    return shift;
+    vector3 const  component = dot_product(shift, m_reduction) * m_reduction;
+    return (m_x_down ? 1U : 0U) + (m_y_down ? 1U : 0U) + (m_z_down ? 1U : 0U) == 1 ? component : shift - component;
 }
 
 vector3  scene_nodes_translation_data::get_shift(vector3 const&  new_plane_point)
