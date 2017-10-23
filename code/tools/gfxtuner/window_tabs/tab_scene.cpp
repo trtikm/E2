@@ -297,7 +297,7 @@ widgets::widgets(program_window* const  wnd)
     , m_pivot(vector3_zero())
 {
     m_scene_tree->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
-    update_coord_system_location_widgets();
+    enable_coord_system_location_widgets(false);
 }
 
 void  widgets::on_scene_hierarchy_item_selected()
