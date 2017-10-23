@@ -22,6 +22,8 @@ struct  status_bar
     QLabel* mode() const { return m_mode; }
     QLabel* FPS() const { return m_FPS; }
 
+    void  edit_mode_listener();
+
     void  update();
 
 private:

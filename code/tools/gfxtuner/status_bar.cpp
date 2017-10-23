@@ -2,6 +2,7 @@
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/simulator.hpp>
 #include <gfxtuner/simulator_notifications.hpp>
+#include <gfxtuner/scene_edit_utils.hpp>
 #include <qtgl/window.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <qtgl/widget_base.hpp>
@@ -50,10 +51,22 @@ status_bar::status_bar(program_window* const  wnd)
 
     , m_spent_real_time(new QLabel(" RT: N/A "))
     , m_num_passed_simulation_steps(new QLabel(" #0 "))
-    , m_state(new QLabel(" IDLE "))
+    , m_state(new QLabel(" STARTING "))
     , m_mode(new QLabel(" PAUSED "))
     , m_FPS(new QLabel(" FPS: 0 "))
 {}
+
+
+void  status_bar::edit_mode_listener()
+{
+    auto const  edit_mode = m_wnd->glwindow().call_now(&simulator::get_scene_edit_mode);
+    switch (edit_mode)
+    {
+    case SCENE_EDIT_MODE::SELECT_SCENE_OBJECT: m_state->setText(" SELECT "); break;
+    case SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES: m_state->setText(" TRANSLATE "); break;
+    case SCENE_EDIT_MODE::ROTATE_SELECTED_NODES: m_state->setText(" ROTATE "); break;
+    }
+}
 
 
 void status_bar::update()
@@ -84,4 +97,10 @@ void  make_status_bar_content(status_bar const&  w)
     w.wnd()->statusBar()->addPermanentWidget(w.FPS());
 
     w.wnd()->statusBar()->showMessage("Ready", 2000);
+
+    w.wnd()->glwindow().register_listener(
+        simulator_notifications::scene_edit_mode_changed(),
+        { &program_window::status_bar_edit_mode_listener, w.wnd() }
+    );
+
 }

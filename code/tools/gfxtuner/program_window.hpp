@@ -65,6 +65,9 @@ public slots:
     void  scene_coord_system_position_listener() { m_tab_scene_widgets.coord_system_position_listener(); }
     void  scene_coord_system_rotation_listener() { m_tab_scene_widgets.coord_system_rotation_listener(); }
 
+    /// Status bar
+    void  status_bar_edit_mode_listener() { m_status_bar.edit_mode_listener(); }
+
     /// Slots for menu actions
     void  on_menu_open() { m_menu_bar.on_open(); }
 
