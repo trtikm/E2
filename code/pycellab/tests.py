@@ -1,12 +1,16 @@
+from ctypes import util
 import os
 import shutil
+import time
 import numpy
+import json
 from config import output_root_dir
 import plot
 import distribution
 import spike_train
 import synapse
 import datalgo
+import utility
 
 
 class TestInfo:
@@ -146,8 +150,8 @@ def _test_synapse(info):
         dt = 0.001
         nsteps = 2000
 
-        pre_spikes_train = spike_train.SpikeTrain.create(distribution.default_excitatory_isi_distribution(), 0.0)
-        post_spikes_train = spike_train.SpikeTrain.create(distribution.default_excitatory_isi_distribution(), 0.0)
+        pre_spikes_train = spike_train.create(distribution.default_excitatory_isi_distribution(), 0.0)
+        post_spikes_train = spike_train.create(distribution.default_excitatory_isi_distribution(), 0.0)
         # pre_spikes_train = spike_train.spike_train(
         #     distribution.distribution({}),
         #     [0.001],
@@ -278,20 +282,17 @@ def _test_spike_trains(info):
 
     start_time = 0.0
     dt = 0.001
-    nsteps = 60000
-    num_spikers_per_kind = 10
+    nsteps = 5 * 60 * 1000
+    num_spikers_per_kind = 11
 
-    def index_to_param(i):
-        return min(max(0.0, float(i) / float(num_spikers_per_kind - 1)), 1.0) if num_spikers_per_kind > 1 else 1.0
-
-    trains = [spike_train.SpikeTrain.create(distribution.default_excitatory_isi_distribution(), index_to_param(i))
+    trains = [spike_train.create(distribution.default_excitatory_isi_distribution(), 10.0 * i)
               for i in range(num_spikers_per_kind)] +\
-             [spike_train.SpikeTrain.create(distribution.default_inhibitory_isi_distribution(), index_to_param(i))
+             [spike_train.create(distribution.default_inhibitory_isi_distribution(), 10.0 * i)
               for i in range(num_spikers_per_kind)]
 
     t = start_time
     for step in range(nsteps):
-        print("    " + format(100.0 * step / float(nsteps), '.1f') + "%", end='\r')
+        utility.print_progress_string(step, nsteps)
         for train in trains:
             train.on_time_step(t, dt)
         t += dt
@@ -302,12 +303,19 @@ def _test_spike_trains(info):
         if i < num_spikers_per_kind:
             train_id = "excitatory[" + str(i) + "]"
             colour = plot.get_colour_pre_excitatory(0.75)
-            noise_level = index_to_param(i)
         else:
             train_id = "inhibitory[" + str(i - num_spikers_per_kind) + "]"
             colour = plot.get_colour_pre_inhibitory(0.75)
-            noise_level = index_to_param(i - num_spikers_per_kind)
-        file_name = "histogram_isi_" + train_id + "_noise_level_" + format(noise_level, ".2f") + ".png"
+
+        file_name = train_id + "_info.json"
+        pathname = os.path.join(info.output_dir, file_name)
+        print("    Saving info " + pathname)
+        with open(pathname, "w") as ofile:
+            ofile.write(json.dumps({"configuration": train.get_configuration(), "statistics": train.get_statistics()},
+                                   sort_keys=True,
+                                   indent=4))
+
+        file_name = train_id + "_isi_histogram.png"
         pathname = os.path.join(info.output_dir, file_name)
         print("    Saving plot " + pathname)
         plot.histogram(
@@ -321,12 +329,31 @@ def _test_spike_trains(info):
             pathname,
             False,
             colour,
-            "noise=" + format(noise_level, ".2f") + ", |arr|=" + str(train.get_array_size()) + " " + plot.get_title_placeholder()
+            plot.get_title_placeholder()
             )
 
-        file_name = "curve_isi_delta_" + train_id + "_noise_level_" + format(noise_level, ".2f") + ".png"
-        pathname = os.path.join(info.output_dir, file_name)
-        print("    Saving plot " + pathname)
+        # file_name = train_id + "_histogram_reguatory_lengths.png"
+        # pathname = os.path.join(info.output_dir, file_name)
+        # print("    Saving plot " + pathname)
+        # plot.histogram(
+        #     train.get_regularity_length_distribution(),
+        #     pathname,
+        #     False,
+        #     colour,
+        #     plot.get_title_placeholder()
+        #     )
+        #
+        # file_name = train_id + "_histogram_noise_lengths.png"
+        # pathname = os.path.join(info.output_dir, file_name)
+        # print("    Saving plot " + pathname)
+        # plot.histogram(
+        #     train.get_noise_length_distribution(),
+        #     pathname,
+        #     False,
+        #     colour,
+        #     plot.get_title_placeholder()
+        #     )
+
         isi_delta =\
             datalgo.make_function_from_events(
                 datalgo.make_difference_events(
@@ -336,14 +363,14 @@ def _test_spike_trains(info):
                     )
                 )
         plot.curve_per_partes(
-            isi_delta[0:min(10000, len(isi_delta))],
-            pathname,
+            isi_delta,
+            os.path.join(info.output_dir, train_id + "_isi_delta_curve.png"),
             0,
             len(isi_delta),
             1000,
             lambda p: print("    Saving plot " + p),
             colour,
-            "curve_isi_delta_" + train_id + "_noise_level_" + format(noise_level, ".2f") + plot.get_title_placeholder()
+            plot.get_title_placeholder()
             )
 
     return 0
@@ -375,6 +402,9 @@ def run_test(test_info):
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.makedirs(out_dir)
+    start_time = time.time()
     retval = test_info["function_ptr"](TestInfo(test_info["name"], out_dir))
-    print("The test has finished " + ("successfully" if retval == 0 else "with an error") + ".")
+    end_time = time.time()
+    print("The test has finished " + ("successfully" if retval == 0 else "with an error") +
+          " in " + utility.duration_string(start_time, end_time) + " seconds.")
     return retval

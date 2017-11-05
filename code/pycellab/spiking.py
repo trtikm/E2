@@ -784,8 +784,8 @@ def evaluate_synapse_and_spike_noise(cfg):
     print("Evaluating the configuration '" + cfg.name + "'.")
 
     print("  Constructing and initialising data structures,")
-    pre_spike_train = spike_train.SpikeTrain.create(cfg.pre_spikes_distributions, 1.0)
-    post_spike_train = spike_train.SpikeTrain.create(cfg.post_spikes_distributions, 1.0)
+    pre_spike_train = spike_train.create(cfg.pre_spikes_distributions, 0.0)
+    post_spike_train = spike_train.create(cfg.post_spikes_distributions, 0.0)
     synapse_recording = dict([(var, [(cfg.start_time, value)])
                               for var, value in cfg.the_synapse.get_variables().items()])
 
@@ -844,8 +844,8 @@ def evaluate_pre_post_spike_noises_differences(cfg):
     print("Evaluating the configuration '" + cfg.name + "'.")
 
     print("  Constructing and initialising data structures,")
-    pre_spike_train = spike_train.SpikeTrain.create(cfg.pre_spikes_distributions, 0.0)
-    post_spike_train = spike_train.SpikeTrain.create(cfg.post_spikes_distributions, 0.0)
+    pre_spike_train = spike_train.create(cfg.pre_spikes_distributions, 0.0)
+    post_spike_train = spike_train.create(cfg.post_spikes_distributions, 0.0)
 
     print("  Starting simulation.")
     delta_post_pre = []

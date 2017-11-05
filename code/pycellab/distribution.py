@@ -55,6 +55,9 @@ class Distribution:
             "}"
             )
 
+    def copy(self):
+        return Distribution(self.get_histogram())
+
     def has_numeric_events(self):
         return self._has_numeric_events
 
@@ -221,6 +224,69 @@ def hermit_distribution(
                     0.0
                     )
                 )
+
+
+_cache_of_hermit_distribution_with_desired_mean = dict()
+
+
+def hermit_distribution_with_desired_mean(
+        mean,
+        lo,
+        hi,
+        max_mean_error,
+        scale_y=10,
+        pow_y=1.5,
+        bin_size=0.001,
+        mult_m01=1.0,
+        mult_mx=1.0,
+        use_cache=True
+        ):
+    assert type(mean) in [int, float]
+    assert type(lo) in [int, float]
+    assert type(hi) in [int, float]
+    assert lo <= mean and mean <= hi
+
+    if use_cache:
+        cache_key = (
+            mean,
+            lo,
+            hi,
+            max_mean_error,
+            scale_y,
+            pow_y,
+            bin_size,
+            mult_m01,
+            mult_mx
+            )
+        if cache_key in _cache_of_hermit_distribution_with_desired_mean:
+            return _cache_of_hermit_distribution_with_desired_mean[cache_key]
+
+    if hi - lo < 0.00001:
+        return Distribution({(lo + hi) / 2.0: 1.0})
+    peek_mid = (mean - lo) / (hi - lo)
+    peek_lo = 0.001
+    peek_hi = 0.999
+    while peek_hi - peek_lo > 0.00001:
+        D = hermit_distribution(
+                peek_x=peek_mid,
+                scale_x=hi - lo,
+                shift_x=lo,
+                scale_y=scale_y,
+                pow_y=pow_y,
+                bin_size=bin_size,
+                mult_m01=mult_m01,
+                mult_mx=mult_mx
+                )
+        if D.get_mean() < mean - max_mean_error:
+            peek_lo = peek_mid
+        elif mean + max_mean_error < D.get_mean():
+            peek_hi = peek_mid
+        else:
+            if use_cache:
+                _cache_of_hermit_distribution_with_desired_mean[cache_key] = D
+            return D
+        peek_mid = (peek_hi + peek_lo) / 2.0
+    raise Exception("hermit_distribution_with_desired_mean(mean=" + str(mean) + "): The distribution does not exist.")
 
 
 def default_excitatory_isi_distribution():
