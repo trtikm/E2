@@ -618,6 +618,240 @@ class PrePostSpikeNoisesDifferences(CommonProps):
             )
 
 
+class EffectOfInputSpikeTrains:
+
+    class Configuration(CommonProps):
+        def __init__(self,
+                     name,
+                     start_time,
+                     dt,
+                     nsteps,
+                     excitatory_spike_trains,
+                     inhibitory_spike_trains,
+                     excitatory_plot_indices,
+                     inhibitory_plot_indices,
+                     plot_time_step,
+                     plot_files_extension
+                     ):
+            super(EffectOfInputSpikeTrains.Configuration, self).__init__(
+                name, start_time, dt, nsteps, plot_files_extension, plot_time_step
+                )
+            self.excitatory_spike_trains = excitatory_spike_trains
+            self.inhibitory_spike_trains = inhibitory_spike_trains
+            self.excitatory_plot_indices = excitatory_plot_indices
+            self.inhibitory_plot_indices = inhibitory_plot_indices
+
+        @staticmethod
+        def _build_spike_trains(
+                num_trains,
+                use_excitatory,
+                histogram_of_percentages_of_regularity_phases
+                ):
+            base_spikes_distribution = (distribution.default_excitatory_isi_distribution()
+                                        if use_excitatory
+                                        else distribution.default_inhibitory_isi_distribution())
+            rpd = distribution.Distribution(histogram_of_percentages_of_regularity_phases)
+            return [spike_train.create(base_spikes_distribution, rpd.next_event()) for _ in range(num_trains)]
+
+        @staticmethod
+        def create(
+                my_precomputed_full_name,
+                num_trains_excitatory,
+                histogram_of_percentages_of_excitatory_regularity_phases,
+                num_trains_inhibitory,
+                histogram_of_percentages_of_inhibitory_regularity_phases,
+                num_minutes_to_simulate=5,
+                num_plots_of_excitatory_trains=10,
+                num_plots_of_inhibitory_trains=10,
+                plot_time_step=1.0
+                ):
+            assert type(num_minutes_to_simulate) in [int, float] and num_minutes_to_simulate > 0
+            return EffectOfInputSpikeTrains.Configuration(
+                name=my_precomputed_full_name,
+                start_time=0.0,
+                dt=0.001,
+                nsteps=int(num_minutes_to_simulate * 60 * 1000 + 0.5),
+                excitatory_spike_trains=EffectOfInputSpikeTrains.Configuration._build_spike_trains(
+                    num_trains_excitatory,
+                    True,
+                    histogram_of_percentages_of_excitatory_regularity_phases
+                    ),
+                inhibitory_spike_trains=EffectOfInputSpikeTrains.Configuration._build_spike_trains(
+                    num_trains_inhibitory,
+                    False,
+                    histogram_of_percentages_of_inhibitory_regularity_phases,
+                    ),
+                excitatory_plot_indices=(
+                    list(range(0, num_trains_excitatory, max(1, num_trains_excitatory // num_plots_of_excitatory_trains)))
+                    ),
+                inhibitory_plot_indices=(
+                    list(range(0, num_trains_inhibitory, max(1, num_trains_inhibitory // num_plots_of_inhibitory_trains)))
+                    ),
+                plot_time_step=plot_time_step,
+                plot_files_extension=".png",
+                )
+
+    class ConstructionData:
+        def __init__(
+                self,
+                name,
+                sub_dir,
+                num_trains_excitatory,
+                histogram_of_percentages_of_excitatory_regularity_phases,
+                num_trains_inhibitory,
+                histogram_of_percentages_of_inhibitory_regularity_phases,
+                num_minutes_to_simulate=5,
+                num_plots_of_excitatory_trains=10,
+                num_plots_of_inhibitory_trains=10,
+                plot_time_step=1.0
+                ):
+            self._name = name
+            self._sub_dir = sub_dir
+            self._num_trains_excitatory = num_trains_excitatory
+            self._histogram_of_percentages_of_excitatory_regularity_phases = histogram_of_percentages_of_excitatory_regularity_phases
+            self._num_trains_inhibitory = num_trains_inhibitory
+            self._histogram_of_percentages_of_inhibitory_regularity_phases = histogram_of_percentages_of_inhibitory_regularity_phases
+            self._num_minutes_to_simulate = num_minutes_to_simulate
+            self._num_plots_of_excitatory_trains = num_plots_of_excitatory_trains
+            self._num_plots_of_inhibitory_trains = num_plots_of_inhibitory_trains
+            self._plot_time_step = plot_time_step
+
+        def get_name(self):
+            return os.path.join(self._name, self._sub_dir)
+
+        def apply(self):
+            return EffectOfInputSpikeTrains.Configuration.create(
+                self.get_name(),
+                self._num_trains_excitatory,
+                self._histogram_of_percentages_of_excitatory_regularity_phases,
+                self._num_trains_inhibitory,
+                self._histogram_of_percentages_of_inhibitory_regularity_phases,
+                self._num_minutes_to_simulate,
+                self._num_plots_of_excitatory_trains,
+                self._num_plots_of_inhibitory_trains,
+                self._plot_time_step
+                )
+
+    def __init__(self, list_of_construction_data):
+        assert isinstance(list_of_construction_data, list)
+        assert all(isinstance(data, EffectOfInputSpikeTrains.ConstructionData) for data in list_of_construction_data)
+        self._list_of_construction_data = list_of_construction_data
+
+    def get_list_of_construction_data(self):
+        return self._list_of_construction_data
+
+    @staticmethod
+    def all_in_one(my_precomputed_full_name):
+        """
+        A simulation of spike trains which are considers as an input
+        to a single neuron. Some of the trains are from an excitatory
+        pre-synaptic neurons and remaining from inhibitory neurons. The
+        main focus of the simulation is on the summary effect of the
+        trains on the post-synaptic neuron. This is reflected in the
+        count of plots with summary data saved on the disk.
+        This configuration consists of several sub-configurations.
+        They are completely independent and they are executed one by
+        one. Their results are saved into separate sub-directories.
+        They differ in total number of spike trains, in percentage
+        of spike trains from excitatory/inhibitory pre-synaptic
+        neurons. and in degree of spike regularities in individual
+        spike trains. NOTE: The simulation typically take several
+        hours or days to complete all the configurations (depending
+        on computer). Also note, resulting plots take several gigabytes
+        of disk space.
+        """
+        trains_counts = [
+            # 5 * 100,
+            5 * 200,
+            # 5 * 400,
+            # 5 * 800,
+            # 5 * 1600,
+            # 5 * 3200
+            ]
+        excitatory_percentages = [
+            # 89.0,
+            # 86.0,
+            # 83.0,
+            80.0,
+            # 77.0,
+            # 74.0,
+            # 71.0
+        ]
+        histograms = [
+            {0.0: 1.0},
+            # {
+            #     0.0: 10.0,
+            #     10.0: 20.0,
+            #     20.0: 30.0,
+            #     30.0: 40.0,
+            #     40.0: 50.0,
+            #     50.0: 60.0,
+            #     60.0: 50.0,
+            #     70.0: 40.0,
+            #     80.0: 30.0,
+            #     90.0: 20.0,
+            #     100.0: 10.0
+            # },
+            # {
+            #     0.0: 110.0,
+            #     10.0: 100.0,
+            #     20.0: 90.0,
+            #     30.0: 80.0,
+            #     40.0: 70.0,
+            #     50.0: 60.0,
+            #     60.0: 50.0,
+            #     70.0: 40.0,
+            #     80.0: 30.0,
+            #     90.0: 20.0,
+            #     100.0: 10.0
+            # },
+            # {
+            #     0.0: 1.0,
+            #     10.0: 1.0,
+            #     20.0: 1.0,
+            #     30.0: 1.0,
+            #     40.0: 1.0,
+            #     50.0: 1.0,
+            #     60.0: 1.0,
+            #     70.0: 1.0,
+            #     80.0: 1.0,
+            #     90.0: 1.0,
+            #     100.0: 1.0
+            # },
+        ]
+        return EffectOfInputSpikeTrains(
+            [EffectOfInputSpikeTrains.ConstructionData(
+                my_precomputed_full_name,
+                os.path.join(
+                    "num_trains_" + str(num_trains),
+                    "percentage_" + str(excitatory_percentage) + "e (" +
+                    str(int(0.01 * excitatory_percentage * num_trains)) +
+                    "e_" +
+                    str(int(0.01 * (100.0 - excitatory_percentage) * num_trains)) +
+                    "i)",
+                    "regularity_mean_" +
+                    str(distribution.Distribution(excitatory_histogram).get_mean()) + "e_" +
+                    str(distribution.Distribution(inhibitory_histogram).get_mean()) + "i_" +
+                    "max_" +
+                    str(sorted((p, e) for e, p in excitatory_histogram.items())[-1][1]) +
+                    "e_" +
+                    str(sorted((p, e) for e, p in inhibitory_histogram.items())[-1][1]) +
+                    "i"
+                    ),
+                int(0.01 * excitatory_percentage * num_trains),
+                excitatory_histogram,
+                int(0.01 * (100.0 - excitatory_percentage) * num_trains),
+                inhibitory_histogram,
+                1.0/30.0
+                )
+             for num_trains in trains_counts
+             for excitatory_percentage in excitatory_percentages
+             for excitatory_histogram in histograms
+             for inhibitory_histogram in histograms
+             ]
+            )
+
+
 ####################################################################################################
 ####################################################################################################
 ####################################################################################################

@@ -3,6 +3,7 @@ import shutil
 import argparse
 import math
 import time
+import json
 import config
 import tests
 import neuron
@@ -1060,6 +1061,300 @@ def evaluate_pre_post_spike_noises_differences(cfg):
     print("  Done.")
 
 
+def _evaluate_configuration_of_input_spike_trains(cfg):
+    assert isinstance(cfg, config.EffectOfInputSpikeTrains.Configuration)
+
+    print("  Starting simulation.")
+
+    tmprof_begin_simulation = time.time()
+
+    t = cfg.start_time
+    for step in range(cfg.nsteps):
+        utility.print_progress_string(step, cfg.nsteps)
+        for i in range(len(cfg.excitatory_spike_trains)):
+            cfg.excitatory_spike_trains[i].on_time_step(t, cfg.dt)
+        for i in range(len(cfg.inhibitory_spike_trains)):
+            cfg.inhibitory_spike_trains[i].on_time_step(t, cfg.dt)
+        t += cfg.dt
+
+    print("  Saving results.")
+
+    tmprof_begin_save = time.time()
+
+    if os.path.exists(cfg.output_dir):
+        shutil.rmtree(cfg.output_dir)
+    os.makedirs(cfg.output_dir)
+
+    summary_stats = {}
+    summary_stats_excitatory = {}
+    summary_stats_inhibitory = {}
+    for key in spike_train.SpikeTrain.get_key_of_statistics():
+        summary_stats_excitatory[key] = sum(train.get_statistics()[key] for train in cfg.excitatory_spike_trains)
+        summary_stats_inhibitory[key] = sum(train.get_statistics()[key] for train in cfg.inhibitory_spike_trains)
+        summary_stats[key] = summary_stats_excitatory[key] + summary_stats_inhibitory[key]
+    with open(os.path.join(cfg.output_dir, "summary_statistics.json"), "w") as ofile:
+        ofile.write(json.dumps({
+            "summary": summary_stats,
+            "excitatory": summary_stats_excitatory,
+            "inhibitory": summary_stats_inhibitory
+            }, sort_keys=True, indent=4))
+
+    #
+    # pathname = os.path.join(cfg.output_dir, "spike_trains__isi_pre_excitatory[ALL]" + cfg.plot_files_extension)
+    # print("    Saving plot " + pathname)
+    # plot.histogram(
+    #     datalgo.merge_histograms(
+    #         [datalgo.make_histogram(
+    #             datalgo.make_difference_events(
+    #                 cfg.excitatory_spike_trains[idx].get_spikes_history()
+    #                 ),
+    #             cfg.dt,
+    #             cfg.start_time
+    #             )
+    #          for idx in range(len(cfg.excitatory_spike_trains))],
+    #         cfg.dt,
+    #         cfg.start_time
+    #         ),
+    #     pathname,
+    #     colours=get_colour_pre_excitatory(),
+    #     normalised=False
+    #     )
+    #
+    # pathname = os.path.join(cfg.output_dir, "spike_trains__isi_pre_inhibitory[ALL]" + cfg.plot_files_extension)
+    # print("    Saving plot " + pathname)
+    # plot.histogram(
+    #     datalgo.merge_histograms(
+    #         [datalgo.make_histogram(
+    #             datalgo.make_difference_events(
+    #                 cfg.inhibitory_spike_trains[idx].get_spikes_history()
+    #                 ),
+    #             cfg.dt,
+    #             cfg.start_time
+    #             )
+    #          for idx in range(len(cfg.inhibitory_spike_trains))],
+    #         cfg.dt,
+    #         cfg.start_time
+    #         ),
+    #     pathname,
+    #     colours=get_colour_pre_inhibitory(),
+    #     normalised=False
+    #     )
+    #
+    # for idx in cfg.excitatory_plot_indices:
+    #     file_name = "spike_trains__isi_pre_excitatory[" + str(idx) + "]"
+    #     pathname = os.path.join(cfg.output_dir, file_name + cfg.plot_files_extension)
+    #     print("    Saving plot " + pathname)
+    #     plot.histogram(
+    #         datalgo.make_histogram(
+    #             datalgo.make_difference_events(
+    #                 cfg.excitatory_spike_trains[idx].get_spikes_history()
+    #                 ),
+    #             cfg.dt,
+    #             cfg.start_time
+    #             ),
+    #         pathname,
+    #         colours=get_colour_pre_excitatory(),
+    #         normalised=False
+    #         )
+    #
+    # for idx in cfg.inhibitory_plot_indices:
+    #     file_name = "spike_trains__isi_pre_inhibitory[" + str(idx) + "]"
+    #     pathname = os.path.join(cfg.output_dir, file_name + cfg.plot_files_extension)
+    #     print("    Saving plot " + pathname)
+    #     plot.histogram(
+    #         datalgo.make_histogram(
+    #             datalgo.make_difference_events(
+    #                 cfg.inhibitory_spike_trains[idx].get_spikes_history()
+    #                 ),
+    #             cfg.dt,
+    #             cfg.start_time
+    #             ),
+    #         pathname,
+    #         colours=get_colour_pre_inhibitory(),
+    #         normalised=False
+    #         )
+    #
+    # merged_excitatory_points =datalgo.reduce_gaps_between_points_along_x_axis(
+    #     datalgo.make_weighted_events(
+    #         datalgo.merge_sorted_lists_of_events(
+    #             [cfg.excitatory_spike_trains[idx].get_spikes_history()
+    #              for idx in range(len(cfg.excitatory_spike_trains))]
+    #             ),
+    #         cfg.dt
+    #         ),
+    #     cfg.dt
+    #     )
+    # plot.curve_per_partes(
+    #     merged_excitatory_points,
+    #     os.path.join(cfg.output_dir, "spike_trains__counts_excitatory" + cfg.plot_files_extension),
+    #     cfg.start_time,
+    #     cfg.start_time + cfg.nsteps * cfg.dt,
+    #     cfg.plot_time_step,
+    #     lambda p: print("    Saving plot " + p),
+    #     get_colour_pre_excitatory(),
+    #     plot.get_title_placeholder()
+    #     )
+    #
+    # merged_inhibitory_points = datalgo.reduce_gaps_between_points_along_x_axis(
+    #     datalgo.make_weighted_events(
+    #         datalgo.merge_sorted_lists_of_events(
+    #             [cfg.inhibitory_spike_trains[idx].get_spikes_history()
+    #              for idx in range(len(cfg.inhibitory_spike_trains))]
+    #             ),
+    #         cfg.dt
+    #         ),
+    #     cfg.dt
+    #     )
+    # plot.curve_per_partes(
+    #     merged_inhibitory_points,
+    #     os.path.join(cfg.output_dir, "spike_trains__counts_inhibitory" + cfg.plot_files_extension),
+    #     cfg.start_time,
+    #     cfg.start_time + cfg.nsteps * cfg.dt,
+    #     cfg.plot_time_step,
+    #     lambda p: print("    Saving plot " + p),
+    #     get_colour_pre_inhibitory(),
+    #     plot.get_title_placeholder()
+    #     )
+    #
+    # composed_excitatory_inhibitory_points = datalgo.compose_sorted_lists_of_points(
+    #     [merged_excitatory_points, merged_inhibitory_points],
+    #     [1, -1]
+    #     )
+    # plot.curve_per_partes(
+    #     composed_excitatory_inhibitory_points,
+    #     os.path.join(cfg.output_dir, "spike_trains__counts_composed" + cfg.plot_files_extension),
+    #     cfg.start_time,
+    #     cfg.start_time + cfg.nsteps * cfg.dt,
+    #     cfg.plot_time_step,
+    #     lambda p: print("    Saving plot " + p),
+    #     get_colour_pre_excitatory_and_inhibitory(),
+    #     plot.get_title_placeholder()
+    #     )
+    #
+    # for cell, sub_dir in list(zip(cells, map(lambda cell: cell.get_soma().get_name() * int(len(cells) > 1), cells))):
+    #     cell_output_dir = os.path.join(cfg.output_dir, sub_dir)
+    #     os.makedirs(cell_output_dir, exist_ok=True)
+    #
+    #     if cfg.recording_config.post_synaptic_spikes:
+    #         file_name = "spike_trains__isi_post_" + cell.get_soma().get_name()
+    #         pathname = os.path.join(cfg.output_dir, file_name + cfg.plot_files_extension)
+    #         print("    Saving plot " + pathname)
+    #         plot.histogram(
+    #             datalgo.make_histogram(
+    #                 datalgo.make_difference_events(
+    #                     cell.get_spikes()
+    #                     ),
+    #                 cfg.dt,
+    #                 cfg.start_time
+    #                 ),
+    #             pathname,
+    #             colours=get_colour_post(),
+    #             normalised=False
+    #             )
+    #
+    #     if cfg.recording_config.soma:
+    #         for var_name, points in cell.get_soma_recording().items():
+    #             if len(points) != 0:
+    #                 file_name = cell.get_soma().get_name() + "__VAR[" + var_name + "]"
+    #                 plot.curve_per_partes(
+    #                     points,
+    #                     os.path.join(cell_output_dir, file_name + cfg.plot_files_extension),
+    #                     cfg.start_time,
+    #                     cfg.start_time + cfg.nsteps * cfg.dt,
+    #                     cfg.plot_time_step,
+    #                     lambda p: print("    Saving plot " + p),
+    #                     get_colour_soma(),
+    #                     cell.get_soma().get_short_description()
+    #                     )
+    #
+    #     if cfg.recording_config.excitatory_synapses:
+    #         for idx in cfg.excitatory_plot_indices:
+    #             for var_name, points in cell.get_excitatory_synapses_recording()[idx].items():
+    #                 if len(points) != 0:
+    #                     file_name = cell.get_soma().get_name() + "__synapse_excitatory[" + str(idx) + "]__VAR[" + var_name + "]"
+    #                     plot.curve_per_partes(
+    #                         points,
+    #                         os.path.join(cell_output_dir, file_name + cfg.plot_files_extension),
+    #                         cfg.start_time,
+    #                         cfg.start_time + cfg.nsteps * cfg.dt,
+    #                         cfg.plot_time_step,
+    #                         lambda p: print("    Saving plot " + p),
+    #                         get_colour_synapse(),
+    #                         cell.get_excitatory_synapses()[idx].get_short_description()
+    #                         )
+    #
+    #     if cfg.recording_config.inhibitory_synapses:
+    #         for idx in cfg.inhibitory_plot_indices:
+    #             for var_name, points in cell.get_inhibitory_synapses_recording()[idx].items():
+    #                 if len(points) != 0:
+    #                     file_name = cell.get_soma().get_name() + "__synapse_inhibitory[" + str(idx) + "]__VAR[" + var_name + "]"
+    #                     plot.curve_per_partes(
+    #                         points,
+    #                         os.path.join(cell_output_dir, file_name + cfg.plot_files_extension),
+    #                         cfg.start_time,
+    #                         cfg.start_time + cfg.nsteps * cfg.dt,
+    #                         cfg.plot_time_step,
+    #                         lambda p: print("    Saving plot " + p),
+    #                         get_colour_synapse(),
+    #                         cell.get_excitatory_synapses()[idx].get_short_description()
+    #                         )
+    #
+    #     if cfg.recording_config.excitatory_synapses or cfg.recording_config.inhibitory_synapses:
+    #         plot.event_board_per_partes(
+    #             [cfg.excitatory_spike_trains[idx].get_spikes_history() for idx in range(len(cfg.excitatory_spike_trains))] +
+    #                 [cfg.inhibitory_spike_trains[idx].get_spikes_history() for idx in range(len(cfg.inhibitory_spike_trains))] +
+    #                 [cell.get_spikes()],
+    #             os.path.join(cell_output_dir, cell.get_soma().get_name() + "__spikes_board" + cfg.plot_files_extension),
+    #             cfg.start_time,
+    #             cfg.start_time + cfg.nsteps * cfg.dt,
+    #             cfg.plot_time_step,
+    #             1,
+    #             lambda p: print("    Saving plot " + p),
+    #             list(map(lambda L: list(map(lambda p: plot.get_colour_pre_excitatory(p[1]), L)),
+    #                 [datalgo.transform_discrete_function_to_inteval_0_1_using_liner_interpolation(
+    #                     datalgo.evaluate_discrete_function_using_liner_interpolation(
+    #                         cfg.excitatory_spike_trains[idx].get_spikes_history(),
+    #                         cell.get_excitatory_synapses_recording()[idx][cell.get_excitatory_synapses()[idx].get_weight_variable_name()],
+    #                         cell.get_excitatory_synapses()[idx].get_neutral_weight()
+    #                         ),
+    #                     cell.get_excitatory_synapses()[idx].get_min_weight(),
+    #                     cell.get_excitatory_synapses()[idx].get_max_weight()
+    #                     ) for idx in range(len(cfg.excitatory_spike_trains))])) +
+    #                 list(map(lambda L: list(map(lambda p: plot.get_colour_pre_inhibitory(p[1]), L)),
+    #                     [datalgo.transform_discrete_function_to_inteval_0_1_using_liner_interpolation(
+    #                         datalgo.evaluate_discrete_function_using_liner_interpolation(
+    #                             cfg.inhibitory_spike_trains[idx].get_spikes_history(),
+    #                             cell.get_inhibitory_synapses_recording()[idx][cell.get_inhibitory_synapses()[idx].get_weight_variable_name()],
+    #                             cell.get_inhibitory_synapses()[idx].get_neutral_weight()
+    #                             ),
+    #                         cell.get_inhibitory_synapses()[idx].get_min_weight(),
+    #                         cell.get_inhibitory_synapses()[idx].get_max_weight()
+    #                         ) for idx in range(len(cfg.inhibitory_spike_trains))])) +
+    #                 [[plot.get_colour_post() for _ in range(len(cell.get_spikes()))]],
+    #             " " + plot.get_title_placeholder() + " " + cell.get_soma().get_name() + " SPIKING BOARD"
+    #             )
+
+    tmprof_end = time.time()
+
+    print("  Time profile of the evaluation [in seconds]:" +
+          "\n    Simulation: " + utility.duration_string(tmprof_begin_simulation, tmprof_begin_save) +
+          "\n    Saving results: " + utility.duration_string(tmprof_begin_save, tmprof_end) +
+          "\n    TOTAL: " + utility.duration_string(tmprof_begin_simulation, tmprof_end))
+
+    print("  Done.")
+
+
+def evaluate_effect_of_input_spike_trains(cfg):
+    assert isinstance(cfg, config.EffectOfInputSpikeTrains)
+    start_time = time.time()
+    for construction_data in cfg.get_list_of_construction_data():
+        print("Building the configuration '" + construction_data.get_name() + "'.")
+        _evaluate_configuration_of_input_spike_trains(construction_data.apply())
+    end_time = time.time()
+    print("  The whole evaluation finished in " + utility.duration_string(start_time, end_time) + " seconds.")
+    print("  Done.")
+
+
 def main(cmdline):
     if cmdline.test is not None and cmdline.evaluate is None:
         for tst in tests.get_registered_tests():
@@ -1076,6 +1371,8 @@ def main(cmdline):
                 evaluate_synapse_and_spike_noise(config.construct_experiment(cfg))
             elif cfg["class_name"] == config.PrePostSpikeNoisesDifferences.__name__:
                 evaluate_pre_post_spike_noises_differences(config.construct_experiment(cfg))
+            elif cfg["class_name"] == config.EffectOfInputSpikeTrains.__name__:
+                evaluate_effect_of_input_spike_trains(config.construct_experiment(cfg))
             else:
                 print("ERROR: There is not defined the evaluation function for configuration class '" +
                       cfg["class_name"] + "'.")
