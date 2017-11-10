@@ -1,5 +1,6 @@
 import bisect
 import numpy
+import time
 import distribution
 
 
@@ -81,7 +82,11 @@ class SpikeTrain:
         self._last_recording_time = None
         self._spikes_history = []
         self._recording_controller = recording_controller
-        self._statistics = {
+        self._statistics = SpikeTrain.get_initial_statistics()
+
+    @staticmethod
+    def get_initial_statistics():
+        return {
             "num_generated_spike_events": 0,
             "num_calls_to_do_recording": 0,
             "num_regularity_phases": 0,
@@ -90,7 +95,15 @@ class SpikeTrain:
             "num_noise_phases": 0,
             "total_real_time_of_noise_phases": 0.0,
             "total_desired_time_of_noise_phases": 0.0,
+            "time_on_time_step": 0.0,
+            "calls_on_time_step": 0,
+            "time__recharge_spikes_buffer": 0.0,
+            "calls__recharge_spikes_buffer": 0,
         }
+
+    @staticmethod
+    def get_key_of_statistics():
+        return SpikeTrain.get_initial_statistics().keys()
 
     def get_spiking_distribution(self):
         return self._spiking_distribution
@@ -134,6 +147,8 @@ class SpikeTrain:
         }
 
     def on_time_step(self, t, dt):
+        self._statistics["calls_on_time_step"] += 1
+        start_time = time.time()
         if self._next_spike_time is None:
             self._next_spike_time = t + dt + self._get_next_noise_phase_event()
             self._phase_start_time = t + dt
@@ -141,6 +156,7 @@ class SpikeTrain:
             self._last_recording_time = t
         assert self._statistics["num_generated_spike_events"] == 1 + len(self._spikes_buffer) + self._statistics["num_calls_to_do_recording"]
         if self._next_spike_time > t + dt:
+            self._statistics["time_on_time_step"] += time.time() - start_time
             return False
         self._do_recording(t, dt, self._next_spike_time)
         if self._phase_end_time <= self._next_spike_time:
@@ -164,6 +180,7 @@ class SpikeTrain:
                                   if self._is_noise_phase_active
                                   else self._get_next_regularity_phase_event())
         assert self._next_spike_time > t + dt
+        self._statistics["time_on_time_step"] += time.time() - start_time
         return True
 
     def _get_next_regularity_phase_event(self):
@@ -195,11 +212,14 @@ class SpikeTrain:
         return self._spikes_buffer.pop(int(numpy.random.uniform(0, len(self._spikes_buffer))))
 
     def _recharge_spikes_buffer(self, desired_size):
+        start_time = time.time()
+        self._statistics["calls__recharge_spikes_buffer"] += 1
         assert isinstance(desired_size, int) and desired_size >= 1
         while len(self._spikes_buffer) < desired_size:
             event = self.get_spiking_distribution().next_event()
             self._spikes_buffer.insert(bisect.bisect_left(self._spikes_buffer, event), event)
             self._statistics["num_generated_spike_events"] += 1
+        self._statistics["time__recharge_spikes_buffer"] += time.time() - start_time
 
     def _do_recording(self, t, dt, spike_time):
         assert spike_time <= t + dt
