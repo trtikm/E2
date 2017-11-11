@@ -641,6 +641,20 @@ class EffectOfInputSpikeTrains:
             self.excitatory_plot_indices = excitatory_plot_indices
             self.inhibitory_plot_indices = inhibitory_plot_indices
 
+        def to_json(self):
+            return {
+                "name": self.name,
+                "start_time": self.start_time,
+                "dt": self.dt,
+                "nsteps": self.nsteps,
+                "excitatory_spike_trains": len(self.excitatory_spike_trains),
+                "inhibitory_spike_trains": len(self.inhibitory_spike_trains),
+                "excitatory_plot_indices": self.excitatory_plot_indices,
+                "inhibitory_plot_indices": self.inhibitory_plot_indices,
+                "plot_time_step": self.plot_time_step,
+                "plot_files_extension": self.plot_files_extension,
+            }
+
         @staticmethod
         def _build_spike_trains(
                 num_trains,
@@ -732,6 +746,22 @@ class EffectOfInputSpikeTrains:
                 self._plot_time_step
                 )
 
+        def to_json(self):
+            return {
+                "name": self._name,
+                "sub_dir": self._sub_dir,
+                "num_trains_excitatory": self._num_trains_excitatory,
+                "histogram_of_percentages_of_excitatory_regularity_phases":
+                    distribution.Distribution(self._histogram_of_percentages_of_excitatory_regularity_phases).to_json(),
+                "num_trains_inhibitory": self._num_trains_inhibitory,
+                "histogram_of_percentages_of_inhibitory_regularity_phases":
+                    distribution.Distribution(self._histogram_of_percentages_of_inhibitory_regularity_phases).to_json(),
+                "num_minutes_to_simulate": self._num_minutes_to_simulate,
+                "num_plots_of_excitatory_trains": self._num_plots_of_excitatory_trains,
+                "num_plots_of_inhibitory_trains": self._num_plots_of_inhibitory_trains,
+                "plot_time_step": self._plot_time_step,
+            }
+
     def __init__(self, list_of_construction_data):
         assert isinstance(list_of_construction_data, list)
         assert all(isinstance(data, EffectOfInputSpikeTrains.ConstructionData) for data in list_of_construction_data)
@@ -767,6 +797,7 @@ class EffectOfInputSpikeTrains:
             # 5 * 800,
             # 5 * 1600,
             # 5 * 3200
+            # 5 * 6400
             ]
         excitatory_percentages = [
             # 89.0,

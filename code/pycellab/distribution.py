@@ -54,6 +54,18 @@ class Distribution:
             "  coefficient of variation=" + str(self.get_coefficient_of_variation()) + "\n"
             "}"
             )
+    
+    def to_json(self):
+        return {
+            "events": self.get_events(),
+            "counts": self.get_counts_of_events(),
+            "probabilities": self.get_probabilities_of_events(),
+            "median": self.get_median(),
+            "mean": self.get_mean(),
+            "variance": self.get_variance(),
+            "standard_deviation": self.get_standard_deviation(),
+            "coefficient_of_variation": self.get_coefficient_of_variation()
+        }
 
     def copy(self):
         return Distribution(self.get_histogram())

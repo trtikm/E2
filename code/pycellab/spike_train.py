@@ -102,7 +102,7 @@ class SpikeTrain:
         }
 
     @staticmethod
-    def get_key_of_statistics():
+    def get_keys_of_statistics():
         return SpikeTrain.get_initial_statistics().keys()
 
     def get_spiking_distribution(self):
@@ -144,6 +144,18 @@ class SpikeTrain:
             "regularity_length_distribution_mean_duration": self.get_regularity_length_distribution().get_mean(),
             "max_spikes_buffer_size": self.get_max_spikes_buffer_size(),
             "regularity_chunk_size": self.get_regularity_chunk_size()
+        }
+
+    def to_json(self):
+        return {
+            "spiking_distribution": self.get_spiking_distribution().to_json(),
+            "phases_distribution": self.get_phases_distribution().to_json(),
+            "noise_length_distribution": self.get_noise_length_distribution().to_json(),
+            "regularity_length_distribution": self.get_regularity_length_distribution().to_json(),
+            "regularity_chunk_size": self.get_regularity_chunk_size(),
+            "max_spikes_buffer_size": self.get_max_spikes_buffer_size(),
+            "spikes_history": self.get_spikes_history(),
+            "statistics": self.get_statistics(),
         }
 
     def on_time_step(self, t, dt):

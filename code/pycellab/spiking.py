@@ -1061,7 +1061,14 @@ def evaluate_pre_post_spike_noises_differences(cfg):
     print("  Done.")
 
 
-def _evaluate_configuration_of_input_spike_trains(cfg):
+def _evaluate_configuration_of_input_spike_trains(construction_data):
+    assert isinstance(construction_data, config.EffectOfInputSpikeTrains.ConstructionData)
+
+    print("  Building spike trains.")
+
+    tmprof_begin_construction = time.time()
+
+    cfg = construction_data.apply()
     assert isinstance(cfg, config.EffectOfInputSpikeTrains.Configuration)
 
     print("  Starting simulation.")
@@ -1085,21 +1092,51 @@ def _evaluate_configuration_of_input_spike_trains(cfg):
         shutil.rmtree(cfg.output_dir)
     os.makedirs(cfg.output_dir)
 
+    pathname = os.path.join(cfg.output_dir, "construction_data.json")
+    print("    Saving construction data for spike trains to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(construction_data.to_json(), sort_keys=True, indent=4))
+
+    pathname = os.path.join(cfg.output_dir, "configuration.json")
+    print("    Saving configuration of spike trains to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(cfg.to_json(), sort_keys=True, indent=4))
+
+    pathname = os.path.join(cfg.output_dir, "summary_statistics.json")
+    print("    Saving summary statistics to " + pathname)
     summary_stats = {}
     summary_stats_excitatory = {}
     summary_stats_inhibitory = {}
-    for key in spike_train.SpikeTrain.get_key_of_statistics():
+    for key in spike_train.SpikeTrain.get_keys_of_statistics():
         summary_stats_excitatory[key] = sum(train.get_statistics()[key] for train in cfg.excitatory_spike_trains)
         summary_stats_inhibitory[key] = sum(train.get_statistics()[key] for train in cfg.inhibitory_spike_trains)
         summary_stats[key] = summary_stats_excitatory[key] + summary_stats_inhibitory[key]
-    with open(os.path.join(cfg.output_dir, "summary_statistics.json"), "w") as ofile:
+    with open(pathname, "w") as ofile:
         ofile.write(json.dumps({
             "summary": summary_stats,
             "excitatory": summary_stats_excitatory,
             "inhibitory": summary_stats_inhibitory
             }, sort_keys=True, indent=4))
 
-    #
+    spike_trains_dictionary = {}
+    for kind, trains in [("excitatory", cfg.excitatory_spike_trains), ("inhibitory", cfg.inhibitory_spike_trains)]:
+        output_dir = os.path.join(cfg.output_dir, "spike_trains", kind)
+        if os.path.exists(output_dir):
+            shutil.rmtree(output_dir)
+        os.makedirs(output_dir)
+        file_names = []
+        for i in range(len(trains)):
+            file_names.append("spike_train_excitatory_index_" + str(i) + ".json")
+            pathname = os.path.join(output_dir, file_names[-1])
+            print("    Saving " + kind + "spike train #" + str(i) + " to " + pathname)
+            with open(pathname, "w") as ofile:
+                ofile.write(json.dumps(trains[i].to_json(), sort_keys=True, indent=4))
+        spike_trains_dictionary[kind] = {"directory": output_dir, "count": len(file_names), "files": file_names}
+    pathname = os.path.join(cfg.output_dir, "spike_trains_dictionary.json")
+    print("    Saving spike trains dictionary to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(spike_trains_dictionary, sort_keys=True, indent=4))
+
     # pathname = os.path.join(cfg.output_dir, "spike_trains__isi_pre_excitatory[ALL]" + cfg.plot_files_extension)
     # print("    Saving plot " + pathname)
     # plot.histogram(
@@ -1336,10 +1373,22 @@ def _evaluate_configuration_of_input_spike_trains(cfg):
 
     tmprof_end = time.time()
 
+    time_profile = {
+        "construction": tmprof_begin_simulation - tmprof_begin_construction,
+        "simulation": tmprof_begin_save - tmprof_begin_simulation,
+        "save": tmprof_end - tmprof_begin_save,
+        "TOTAL": tmprof_end - tmprof_begin_construction
+    }
+    pathname = os.path.join(cfg.output_dir, "time_profile.json")
+    print("    Saving time profile to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(time_profile, sort_keys=True, indent=4))
+
     print("  Time profile of the evaluation [in seconds]:" +
+          "\n    Construction: " + utility.duration_string(tmprof_begin_construction, tmprof_begin_simulation) +
           "\n    Simulation: " + utility.duration_string(tmprof_begin_simulation, tmprof_begin_save) +
           "\n    Saving results: " + utility.duration_string(tmprof_begin_save, tmprof_end) +
-          "\n    TOTAL: " + utility.duration_string(tmprof_begin_simulation, tmprof_end))
+          "\n    TOTAL: " + utility.duration_string(tmprof_begin_construction, tmprof_end))
 
     print("  Done.")
 
@@ -1349,7 +1398,7 @@ def evaluate_effect_of_input_spike_trains(cfg):
     start_time = time.time()
     for construction_data in cfg.get_list_of_construction_data():
         print("Building the configuration '" + construction_data.get_name() + "'.")
-        _evaluate_configuration_of_input_spike_trains(construction_data.apply())
+        _evaluate_configuration_of_input_spike_trains(construction_data)
     end_time = time.time()
     print("  The whole evaluation finished in " + utility.duration_string(start_time, end_time) + " seconds.")
     print("  Done.")
