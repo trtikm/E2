@@ -204,24 +204,26 @@ def compose_sorted_lists_of_points(list_of_lists_of_points, multipliers=None, ep
     assert all(is_sorted_list_of_points_along_x_axis(points) for points in list_of_lists_of_points)
     assert multipliers is None or (is_list_of_numbers(multipliers) and len(list_of_lists_of_points) == len(multipliers))
 
-    def find_insertion_index_for_point(points, point):
+    def find_insertion_index_for_point(points, point, epsilon):
         lo = 0
         hi = len(points)
         while lo < hi:
             mid = (lo+hi) // 2
-            if point[0] < points[mid][0]:
+            if point[0] < points[mid][0] - epsilon:
                 hi = mid
+            elif point[0] > points[mid][0] + epsilon:
+                lo = mid + 1
             else:
-                lo = mid+1
-        return lo
+                return mid, True
+        return lo, False
 
     result = []
     for list_idx, points in enumerate(list_of_lists_of_points):
         mult = 1 if multipliers is None else multipliers[list_idx]
         for point in points:
-            idx = find_insertion_index_for_point(result, point)
-            if idx > 0 and point[0] <= result[idx - 1][0] + epsilon:
-                result[idx - 1] = (result[idx - 1][0], result[idx - 1][1] + mult * point[1])
+            idx, compose = find_insertion_index_for_point(result, point, epsilon)
+            if compose is True:
+                result[idx] = (result[idx][0], result[idx][1] + mult * point[1])
             else:
                 result.insert(idx, (point[0], mult * point[1]))
 
