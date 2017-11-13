@@ -1121,25 +1121,6 @@ def _evaluate_configuration_of_input_spike_trains(construction_data):
             "inhibitory": summary_stats_inhibitory
             }, sort_keys=True, indent=4))
 
-    spike_trains_dictionary = {}
-    for kind, trains in [("excitatory", cfg.excitatory_spike_trains), ("inhibitory", cfg.inhibitory_spike_trains)]:
-        output_dir = os.path.join(cfg.output_dir, "spike_trains", kind)
-        if os.path.exists(output_dir):
-            shutil.rmtree(output_dir)
-        os.makedirs(output_dir)
-        file_names = []
-        for i in range(len(trains)):
-            file_names.append("spike_train_excitatory_index_" + str(i) + ".json")
-            pathname = os.path.join(output_dir, file_names[-1])
-            print("    Saving " + kind + "spike train #" + str(i) + " to " + pathname)
-            with open(pathname, "w") as ofile:
-                ofile.write(json.dumps(trains[i].to_json(), sort_keys=True, indent=4))
-        spike_trains_dictionary[kind] = {"directory": output_dir, "count": len(file_names), "files": file_names}
-    pathname = os.path.join(cfg.output_dir, "spike_trains_dictionary.json")
-    print("    Saving spike trains dictionary to " + pathname)
-    with open(pathname, "w") as ofile:
-        ofile.write(json.dumps(spike_trains_dictionary, sort_keys=True, indent=4))
-
     isi_histogram = []
     for kind, trains, colour in [("excitatory", cfg.excitatory_spike_trains, get_colour_pre_excitatory()),
                                  ("inhibitory", cfg.inhibitory_spike_trains, get_colour_pre_inhibitory())]:
@@ -1214,6 +1195,10 @@ def _evaluate_configuration_of_input_spike_trains(construction_data):
                                      for idx in cfg.excitatory_plot_indices] +\
                                     [("inhibitory", idx, cfg.inhibitory_spike_trains[idx], get_colour_pre_inhibitory())
                                      for idx in cfg.inhibitory_plot_indices]:
+        pathname = os.path.join(cfg.output_dir, "spike_train_" + kind + "_index_" + str(idx) + ".json")
+        print("    Saving " + kind + "spike train #" + str(idx) + " to " + pathname)
+        with open(pathname, "w") as ofile:
+            ofile.write(json.dumps(train.to_json(), sort_keys=True, indent=4))
         difference_events = datalgo.make_difference_events(train.get_spikes_history())
         isi_histogram = datalgo.make_histogram(difference_events, cfg.dt, cfg.start_time)
         pathname = os.path.join(
