@@ -1,10 +1,8 @@
-from ctypes import util
 import os
 import shutil
 import time
 import numpy
 import json
-from config import output_root_dir
 import plot
 import distribution
 import spike_train
@@ -398,7 +396,7 @@ def run_test(test_info):
     assert "function_ptr" in test_info and callable(test_info["function_ptr"])
     assert "name" in test_info
     print("Starting test '" + test_info["name"] + "':")
-    out_dir = os.path.join(os.path.join(output_root_dir(), "tests", test_info["name"]))
+    out_dir = os.path.join(os.path.join(test_info["output_dir"], "tests", test_info["name"]))
     if os.path.exists(out_dir):
         shutil.rmtree(out_dir)
     os.makedirs(out_dir)

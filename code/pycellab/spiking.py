@@ -1291,12 +1291,14 @@ def main(cmdline):
     if cmdline.test is not None and cmdline.evaluate is None:
         for tst in tests.get_registered_tests():
             if tst["name"] == cmdline.test:
+                tst["output_dir"] = cmdline.output_dir
                 return tests.run_test(tst)
         print("ERROR: There is no test of the name '" + str(cmdline.test) + "'. Use the option "
               "'--help' to list all available tests.")
         return 1
     for cfg in config.get_registered_configurations():
         if cmdline.evaluate is None or cfg["name"] == cmdline.evaluate:
+            cfg["output_dir"] = cmdline.output_dir
             if cfg["class_name"] == config.NeuronWithInputSynapses.__name__:
                 evaluate_neuron_with_input_synapses(config.construct_experiment(cfg))
             elif cfg["class_name"] == config.SynapseAndSpikeNoise.__name__:
@@ -1318,7 +1320,7 @@ def main(cmdline):
     return 0
 
 
-if __name__ == "__main__":
+def parse_command_line_options():
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description="This module provides evaluation of spiking models of neurons and synapses.\n"
@@ -1341,4 +1343,22 @@ if __name__ == "__main__":
         "--test", type=str,
         help="Runs the test of the passed name. Use the option --help to list all available tests."
         )
-    exit(main(parser.parse_args()))
+    parser.add_argument(
+        "--output-dir", type=str,
+        help="Allows to specify a root directory under which the chosen evaluation or test will save "
+             "data, if any. When this option is omitted then the default output root directory is used, i.e. "
+             "either the path '../../dist/evaluation/pycellab' or '.', both relative to the script location. "
+             "The first relative path is used the script is located under 'E2/code/pycellab'."
+        )
+    cmdline = parser.parse_args()
+
+    if cmdline.output_dir is None:
+        my_dir = os.path.dirname(__file__)
+        cmdline.output_dir = os.path.normpath(os.path.join(my_dir, "..", "..", "dist", "evaluation", "pycellab")) \
+                             if str(my_dir).replace("\\", "/").endswith("E2/code/pycellab") else my_dir
+
+    return cmdline
+
+
+if __name__ == "__main__":
+    exit(main(parse_command_line_options()))

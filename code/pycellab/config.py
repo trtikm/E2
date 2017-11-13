@@ -7,20 +7,10 @@ import distribution
 import spike_train
 
 
-def __get_my_dir():
-    return os.path.dirname(__file__)
-
-
-def output_root_dir():
-    if str(__get_my_dir()).replace("\\", "/").endswith("E2/code/pycellab"):
-        return os.path.normpath(os.path.join(__get_my_dir(), "..", "..", "dist", "evaluation", "pycellab"))
-    else:
-        return __get_my_dir()
-
-
 class CommonProps:
     def __init__(self,
                  name,
+                 output_dir,
                  start_time,
                  dt,
                  nsteps,
@@ -41,7 +31,7 @@ class CommonProps:
         self.start_time = start_time
         self.dt = dt
         self.nsteps = nsteps
-        self.output_dir = os.path.abspath(os.path.join(output_root_dir(), name))
+        self.output_dir = os.path.abspath(os.path.join(output_dir, name))
         self.plot_files_extension = plot_files_extension.lower()
         self.plot_time_step = plot_time_step
 
@@ -49,6 +39,7 @@ class CommonProps:
 class NeuronWithInputSynapses(CommonProps):
     def __init__(self,
                  name,
+                 output_dir,
                  start_time,
                  dt,
                  nsteps,
@@ -73,7 +64,7 @@ class NeuronWithInputSynapses(CommonProps):
         assert False not in list(map(lambda x: len(x) == len(excitatory_spike_trains), excitatory_synapses))
         assert False not in list(map(lambda x: len(x) == len(inhibitory_spike_trains), inhibitory_synapses))
         assert recording_config is None or isinstance(recording_config, neuron.RecordingConfig)
-        super(NeuronWithInputSynapses, self).__init__(name, start_time, dt, nsteps, plot_files_extension, plot_time_step)
+        super(NeuronWithInputSynapses, self).__init__(name, output_dir, start_time, dt, nsteps, plot_files_extension, plot_time_step)
         self.num_sub_iterations = num_sub_iterations
         self.cell_soma = cell_soma
         self.excitatory_spike_trains = excitatory_spike_trains
@@ -85,7 +76,7 @@ class NeuronWithInputSynapses(CommonProps):
         self.recording_config = recording_config
 
     @staticmethod
-    def leaky_integrate_and_fire_const_input(my_precomputed_full_name):
+    def leaky_integrate_and_fire_const_input(my_precomputed_full_name, output_dir):
         """
         A simulation of a 'leaky integrate and fire' neuron with a constant
         input current. strong enough to trigger constant firing of the neuron.
@@ -93,6 +84,7 @@ class NeuronWithInputSynapses(CommonProps):
         dt = 0.001
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=dt,
             nsteps=1000,
@@ -120,7 +112,7 @@ class NeuronWithInputSynapses(CommonProps):
             )
 
     @staticmethod
-    def leaky_integrate_and_fire_input_800ex_200in_std_noise(my_precomputed_full_name):
+    def leaky_integrate_and_fire_input_800ex_200in_std_noise(my_precomputed_full_name, output_dir):
         """
         A simulation of a 'leaky integrate and fire' neuron with a 800
         excitatory and 200 inhibitory input spike trains, all with the
@@ -132,6 +124,7 @@ class NeuronWithInputSynapses(CommonProps):
         inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=1000,
@@ -159,7 +152,7 @@ class NeuronWithInputSynapses(CommonProps):
             )
 
     @staticmethod
-    def izhikevich_regular_spiking_input_800ex_200in_std_noise(my_precomputed_full_name):
+    def izhikevich_regular_spiking_input_800ex_200in_std_noise(my_precomputed_full_name, output_dir):
         """
         A simulation of a 'izhikevich regular spiking' neuron with a 800
         excitatory and 200 inhibitory input spike trains, all with the standard
@@ -173,6 +166,7 @@ class NeuronWithInputSynapses(CommonProps):
         inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=1000,
@@ -189,7 +183,7 @@ class NeuronWithInputSynapses(CommonProps):
             )
 
     @staticmethod
-    def izhikevich_chattering_input_800ex_200in_std_noise(my_precomputed_full_name):
+    def izhikevich_chattering_input_800ex_200in_std_noise(my_precomputed_full_name, output_dir):
         """
         A simulation of a 'izhikevich chattering' neuron with a 800
         excitatory and 200 inhibitory input spike trains, all with the standard
@@ -203,6 +197,7 @@ class NeuronWithInputSynapses(CommonProps):
         inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=1000,
@@ -219,7 +214,7 @@ class NeuronWithInputSynapses(CommonProps):
             )
 
     @staticmethod
-    def izhikevich_fast_spiking_input_800ex_200in_std_noise(my_precomputed_full_name):
+    def izhikevich_fast_spiking_input_800ex_200in_std_noise(my_precomputed_full_name, output_dir):
         """
         A simulation of a 'izhikevich fast spiking' neuron with a 800
         excitatory and 200 inhibitory input spike trains, all with the standard
@@ -233,6 +228,7 @@ class NeuronWithInputSynapses(CommonProps):
         inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=1000,
@@ -249,7 +245,7 @@ class NeuronWithInputSynapses(CommonProps):
             )
 
     @staticmethod
-    def hodgkin_huxley_input_800ex_200in_std_noise(my_precomputed_full_name):
+    def hodgkin_huxley_input_800ex_200in_std_noise(my_precomputed_full_name, output_dir):
         """
         A simulation of a 'hodgkin-huxley' neuron with a 800 excitatory and
         200 inhibitory input spike trains, all with the standard noise
@@ -262,6 +258,7 @@ class NeuronWithInputSynapses(CommonProps):
         inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=1000,
@@ -281,7 +278,7 @@ class NeuronWithInputSynapses(CommonProps):
             )
 
     @staticmethod
-    def wilson_reguar_spiking_input_800ex_200in_std_noise(my_precomputed_full_name):
+    def wilson_reguar_spiking_input_800ex_200in_std_noise(my_precomputed_full_name, output_dir):
         """
         A simulation of a 'wilson's regular spiking' neuron with a 800
         excitatory and 200 inhibitory input spike trains, all with the
@@ -294,6 +291,7 @@ class NeuronWithInputSynapses(CommonProps):
         inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=1000,
@@ -310,7 +308,7 @@ class NeuronWithInputSynapses(CommonProps):
             )
 
     @staticmethod
-    def wilson_fast_spiking_input_800ex_200in_std_noise(my_precomputed_full_name):
+    def wilson_fast_spiking_input_800ex_200in_std_noise(my_precomputed_full_name, output_dir):
         """
         A simulation of a 'wilson's fast spiking' neuron with a 800
         excitatory and 200 inhibitory input spike trains, all with the
@@ -323,6 +321,7 @@ class NeuronWithInputSynapses(CommonProps):
         inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=1000,
@@ -339,7 +338,7 @@ class NeuronWithInputSynapses(CommonProps):
             )
 
     @staticmethod
-    def wilson_bursting_input_800ex_200in_std_noise(my_precomputed_full_name):
+    def wilson_bursting_input_800ex_200in_std_noise(my_precomputed_full_name, output_dir):
         """
         A simulation of a 'wilson's bursting' neuron with a 800
         excitatory and 200 inhibitory input spike trains, all with
@@ -352,6 +351,7 @@ class NeuronWithInputSynapses(CommonProps):
         inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=1000,
@@ -368,7 +368,7 @@ class NeuronWithInputSynapses(CommonProps):
             )
 
     @staticmethod
-    def izhikevich_hodgkin_huxley_wison_input_800ex_200in_std_noise(my_precomputed_full_name):
+    def izhikevich_hodgkin_huxley_wison_input_800ex_200in_std_noise(my_precomputed_full_name, output_dir):
         """
         A simulation of three neurons 'izhikevich regular spiking', 'izhikevich
         fast spiking', 'hodgkin-huxley', 'wilson regular spiking', and 'wilson
@@ -383,6 +383,7 @@ class NeuronWithInputSynapses(CommonProps):
         inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=1000,
@@ -417,7 +418,7 @@ class NeuronWithInputSynapses(CommonProps):
             )
 
     @staticmethod
-    def development(my_precomputed_full_name):
+    def development(my_precomputed_full_name, output_dir):
         """
         This is not a genuine configuration. It serves only for development,
         testing, and bug-fixing of this evaluation system.
@@ -429,6 +430,7 @@ class NeuronWithInputSynapses(CommonProps):
         inhibitory_noise = distribution.default_inhibitory_isi_distribution()
         return NeuronWithInputSynapses(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=1*1000,
@@ -457,6 +459,7 @@ class NeuronWithInputSynapses(CommonProps):
 class SynapseAndSpikeNoise(CommonProps):
     def __init__(self,
                  name,
+                 output_dir,
                  start_time,
                  dt,
                  nsteps,
@@ -469,19 +472,20 @@ class SynapseAndSpikeNoise(CommonProps):
         assert isinstance(the_synapse, synapse.Synapse)
         assert isinstance(pre_spikes_distributions, distribution.Distribution)
         assert isinstance(post_spikes_distributions, distribution.Distribution)
-        super(SynapseAndSpikeNoise, self).__init__(name, start_time, dt, nsteps, plot_files_extension, plot_time_step)
+        super(SynapseAndSpikeNoise, self).__init__(name, output_dir, start_time, dt, nsteps, plot_files_extension, plot_time_step)
         self.the_synapse = the_synapse
         self.pre_spikes_distributions = pre_spikes_distributions
         self.post_spikes_distributions = post_spikes_distributions
 
     @staticmethod
-    def development(my_precomputed_full_name):
+    def development(my_precomputed_full_name, output_dir):
         """
         This is not a genuine configuration. It serves only for development,
         testing, and bug-fixing of this evaluation system.
         """
         return SynapseAndSpikeNoise(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=1000,
@@ -496,6 +500,7 @@ class SynapseAndSpikeNoise(CommonProps):
 class PrePostSpikeNoisesDifferences(CommonProps):
     def __init__(self,
                  name,
+                 output_dir,
                  start_time,
                  dt,
                  nsteps,
@@ -509,7 +514,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
         assert isinstance(pre_spikes_distributions, distribution.Distribution)
         assert isinstance(post_spikes_distributions, distribution.Distribution)
         super(PrePostSpikeNoisesDifferences, self).__init__(
-            name, start_time, dt, nsteps, plot_files_extension, plot_time_step
+            name, output_dir, start_time, dt, nsteps, plot_files_extension, plot_time_step
             )
         self.save_per_partes_plots = save_per_partes_plots
         self.pre_spikes_distributions = pre_spikes_distributions
@@ -517,7 +522,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
         self.synaptic_input_cooler = synaptic_input_cooler
 
     @staticmethod
-    def pre_1_post_1_clipped(my_precomputed_full_name):
+    def pre_1_post_1_clipped(my_precomputed_full_name, output_dir):
         """
         The experiment generates pre- and post- spike trains for the same
         distribution and computes statistical plots and histograms of time
@@ -526,6 +531,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
         """
         return PrePostSpikeNoisesDifferences(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=60000,
@@ -538,7 +544,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
             )
 
     @staticmethod
-    def pre_1_post_2_clipped(my_precomputed_full_name):
+    def pre_1_post_2_clipped(my_precomputed_full_name, output_dir):
         """
         The experiment generates pre- and post- spike trains for Hermit
         distributions with peeks at 0.1 and 0.2 respectively. The synaptic
@@ -546,6 +552,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
         """
         return PrePostSpikeNoisesDifferences(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=60000,
@@ -558,7 +565,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
             )
 
     @staticmethod
-    def pre_1_post_3_clipped(my_precomputed_full_name):
+    def pre_1_post_3_clipped(my_precomputed_full_name, output_dir):
         """
         The experiment generates pre- and post- spike trains for Hermit
         distributions with peeks at 0.1 and 0.3 respectively. The synaptic
@@ -566,6 +573,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
         """
         return PrePostSpikeNoisesDifferences(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=60000,
@@ -578,7 +586,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
             )
 
     @staticmethod
-    def pre_2_post_1_clipped(my_precomputed_full_name):
+    def pre_2_post_1_clipped(my_precomputed_full_name, output_dir):
         """
         The experiment generates pre- and post- spike trains for Hermit
         distributions with peeks at 0.2 and 0.1 respectively. The synaptic
@@ -586,6 +594,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
         """
         return PrePostSpikeNoisesDifferences(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=60000,
@@ -598,7 +607,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
             )
 
     @staticmethod
-    def pre_3_post_1_clipped(my_precomputed_full_name):
+    def pre_3_post_1_clipped(my_precomputed_full_name, output_dir):
         """
         The experiment generates pre- and post- spike trains for Hermit
         distributions with peeks at 0.3 and 0.1 respectively. The synaptic
@@ -606,6 +615,7 @@ class PrePostSpikeNoisesDifferences(CommonProps):
         """
         return PrePostSpikeNoisesDifferences(
             name=my_precomputed_full_name,
+            output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
             nsteps=60000,
@@ -623,6 +633,7 @@ class EffectOfInputSpikeTrains:
     class Configuration(CommonProps):
         def __init__(self,
                      name,
+                     output_dir,
                      start_time,
                      dt,
                      nsteps,
@@ -634,7 +645,7 @@ class EffectOfInputSpikeTrains:
                      plot_files_extension
                      ):
             super(EffectOfInputSpikeTrains.Configuration, self).__init__(
-                name, start_time, dt, nsteps, plot_files_extension, plot_time_step
+                name, output_dir, start_time, dt, nsteps, plot_files_extension, plot_time_step
                 )
             self.excitatory_spike_trains = excitatory_spike_trains
             self.inhibitory_spike_trains = inhibitory_spike_trains
@@ -670,6 +681,7 @@ class EffectOfInputSpikeTrains:
         @staticmethod
         def create(
                 my_precomputed_full_name,
+                output_dir,
                 num_trains_excitatory,
                 histogram_of_percentages_of_excitatory_regularity_phases,
                 num_trains_inhibitory,
@@ -682,6 +694,7 @@ class EffectOfInputSpikeTrains:
             assert type(num_minutes_to_simulate) in [int, float] and num_minutes_to_simulate > 0
             return EffectOfInputSpikeTrains.Configuration(
                 name=my_precomputed_full_name,
+                output_dir=output_dir,
                 start_time=0.0,
                 dt=0.001,
                 nsteps=int(num_minutes_to_simulate * 60 * 1000 + 0.5),
@@ -709,6 +722,7 @@ class EffectOfInputSpikeTrains:
         def __init__(
                 self,
                 name,
+                output_dir,
                 sub_dir,
                 num_trains_excitatory,
                 histogram_of_percentages_of_excitatory_regularity_phases,
@@ -720,6 +734,7 @@ class EffectOfInputSpikeTrains:
                 plot_time_step=1.0
                 ):
             self._name = name
+            self._output_dir = output_dir
             self._sub_dir = sub_dir
             self._num_trains_excitatory = num_trains_excitatory
             self._histogram_of_percentages_of_excitatory_regularity_phases = histogram_of_percentages_of_excitatory_regularity_phases
@@ -736,6 +751,7 @@ class EffectOfInputSpikeTrains:
         def apply(self):
             return EffectOfInputSpikeTrains.Configuration.create(
                 self.get_name(),
+                self._output_dir,
                 self._num_trains_excitatory,
                 self._histogram_of_percentages_of_excitatory_regularity_phases,
                 self._num_trains_inhibitory,
@@ -749,6 +765,7 @@ class EffectOfInputSpikeTrains:
         def to_json(self):
             return {
                 "name": self._name,
+                "output_dir": self._output_dir,
                 "sub_dir": self._sub_dir,
                 "num_trains_excitatory": self._num_trains_excitatory,
                 "histogram_of_percentages_of_excitatory_regularity_phases":
@@ -771,7 +788,7 @@ class EffectOfInputSpikeTrains:
         return self._list_of_construction_data
 
     @staticmethod
-    def all_in_one(my_precomputed_full_name):
+    def all_in_one(my_precomputed_full_name, output_dir):
         """
         A simulation of spike trains which are considers as an input
         to a single neuron. Some of the trains are from an excitatory
@@ -853,6 +870,7 @@ class EffectOfInputSpikeTrains:
         return EffectOfInputSpikeTrains(
             [EffectOfInputSpikeTrains.ConstructionData(
                 my_precomputed_full_name,
+                output_dir,
                 os.path.join(
                     "num_trains_" + str(num_trains),
                     "percentage_" + str(excitatory_percentage) + "e (" +
@@ -932,4 +950,5 @@ def construct_experiment(experiment_info):
     assert isinstance(experiment_info, dict)
     assert "function_ptr" in experiment_info and callable(experiment_info["function_ptr"])
     assert "name" in experiment_info
-    return experiment_info["function_ptr"](experiment_info["name"])
+    assert "output_dir" in experiment_info
+    return experiment_info["function_ptr"](experiment_info["name"], experiment_info["output_dir"])
