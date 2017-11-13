@@ -1230,7 +1230,7 @@ def _evaluate_configuration_of_input_spike_trains(construction_data):
         cfg.start_time,
         cfg.start_time + cfg.nsteps * cfg.dt,
         cfg.plot_time_step,
-        1,
+        max(1, int(((cfg.nsteps * cfg.dt) / cfg.plot_time_step) / cfg.num_plots_of_spikes_board)),
         lambda p: print("    Saving plot " + p),
         [[(0.0, 0.0, 1.0) for _ in range(len(cfg.excitatory_spike_trains[idx].get_spikes_history()))]
          for idx in range(num_board_excitatory_trains)] +
