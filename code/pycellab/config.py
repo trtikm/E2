@@ -642,10 +642,10 @@ class EffectOfInputSpikeTrains:
                      excitatory_plot_indices,
                      inhibitory_plot_indices,
                      plot_time_step,
-                     num_plots_of_spikes_board,
+                     num_plots_parts,
                      plot_files_extension
                      ):
-            assert isinstance(num_plots_of_spikes_board, int) and num_plots_of_spikes_board > 0
+            assert isinstance(num_plots_parts, int) and num_plots_parts > 0
             super(EffectOfInputSpikeTrains.Configuration, self).__init__(
                 name, output_dir, start_time, dt, nsteps, plot_files_extension, plot_time_step
                 )
@@ -653,7 +653,7 @@ class EffectOfInputSpikeTrains:
             self.inhibitory_spike_trains = inhibitory_spike_trains
             self.excitatory_plot_indices = excitatory_plot_indices
             self.inhibitory_plot_indices = inhibitory_plot_indices
-            self.num_plots_of_spikes_board = num_plots_of_spikes_board
+            self.num_plots_parts = num_plots_parts
 
         def to_json(self):
             return {
@@ -666,7 +666,7 @@ class EffectOfInputSpikeTrains:
                 "excitatory_plot_indices": self.excitatory_plot_indices,
                 "inhibitory_plot_indices": self.inhibitory_plot_indices,
                 "plot_time_step": self.plot_time_step,
-                "num_plots_of_spikes_board": self.num_plots_of_spikes_board,
+                "num_plots_parts": self.num_plots_parts,
                 "plot_files_extension": self.plot_files_extension,
             }
 
@@ -690,19 +690,19 @@ class EffectOfInputSpikeTrains:
                 histogram_of_percentages_of_excitatory_regularity_phases,
                 num_trains_inhibitory,
                 histogram_of_percentages_of_inhibitory_regularity_phases,
-                num_minutes_to_simulate=5,
+                num_seconds_to_simulate=30,
                 num_plots_of_excitatory_trains=10,
                 num_plots_of_inhibitory_trains=10,
                 plot_time_step=1.0,
-                num_plots_of_spikes_board=10
+                num_plots_parts=10
                 ):
-            assert type(num_minutes_to_simulate) in [int, float] and num_minutes_to_simulate > 0
+            assert type(num_seconds_to_simulate) in [int, float] and num_seconds_to_simulate > 0
             return EffectOfInputSpikeTrains.Configuration(
                 name=my_precomputed_full_name,
                 output_dir=output_dir,
                 start_time=0.0,
                 dt=0.001,
-                nsteps=int(num_minutes_to_simulate * 60 * 1000 + 0.5),
+                nsteps=int(num_seconds_to_simulate * 1000 + 0.5),
                 excitatory_spike_trains=EffectOfInputSpikeTrains.Configuration._build_spike_trains(
                     num_trains_excitatory,
                     True,
@@ -720,7 +720,7 @@ class EffectOfInputSpikeTrains:
                     list(range(0, num_trains_inhibitory, max(1, num_trains_inhibitory // num_plots_of_inhibitory_trains)))
                     ),
                 plot_time_step=plot_time_step,
-                num_plots_of_spikes_board=num_plots_of_spikes_board,
+                num_plots_parts=num_plots_parts,
                 plot_files_extension=".png",
                 )
 
@@ -734,11 +734,11 @@ class EffectOfInputSpikeTrains:
                 histogram_of_percentages_of_excitatory_regularity_phases,
                 num_trains_inhibitory,
                 histogram_of_percentages_of_inhibitory_regularity_phases,
-                num_minutes_to_simulate=5,
+                num_seconds_to_simulate=30,
                 num_plots_of_excitatory_trains=10,
                 num_plots_of_inhibitory_trains=10,
                 plot_time_step=1.0,
-                num_plots_of_spikes_board=10
+                num_plots_parts=10
                 ):
             self._name = name
             self._output_dir = output_dir
@@ -747,11 +747,11 @@ class EffectOfInputSpikeTrains:
             self._histogram_of_percentages_of_excitatory_regularity_phases = histogram_of_percentages_of_excitatory_regularity_phases
             self._num_trains_inhibitory = num_trains_inhibitory
             self._histogram_of_percentages_of_inhibitory_regularity_phases = histogram_of_percentages_of_inhibitory_regularity_phases
-            self._num_minutes_to_simulate = num_minutes_to_simulate
+            self._num_seconds_to_simulate = num_seconds_to_simulate
             self._num_plots_of_excitatory_trains = num_plots_of_excitatory_trains
             self._num_plots_of_inhibitory_trains = num_plots_of_inhibitory_trains
             self._plot_time_step = plot_time_step
-            self._num_plots_of_spikes_board = num_plots_of_spikes_board
+            self._num_plots_parts = num_plots_parts
 
         def get_name(self):
             return os.path.join(self._name, self._sub_dir)
@@ -764,11 +764,11 @@ class EffectOfInputSpikeTrains:
                 self._histogram_of_percentages_of_excitatory_regularity_phases,
                 self._num_trains_inhibitory,
                 self._histogram_of_percentages_of_inhibitory_regularity_phases,
-                self._num_minutes_to_simulate,
+                self._num_seconds_to_simulate,
                 self._num_plots_of_excitatory_trains,
                 self._num_plots_of_inhibitory_trains,
                 self._plot_time_step,
-                self._num_plots_of_spikes_board
+                self._num_plots_parts
                 )
 
         def to_json(self):
@@ -782,11 +782,11 @@ class EffectOfInputSpikeTrains:
                 "num_trains_inhibitory": self._num_trains_inhibitory,
                 "histogram_of_percentages_of_inhibitory_regularity_phases":
                     distribution.Distribution(self._histogram_of_percentages_of_inhibitory_regularity_phases).to_json(),
-                "num_minutes_to_simulate": self._num_minutes_to_simulate,
+                "num_seconds_to_simulate": self._num_seconds_to_simulate,
                 "num_plots_of_excitatory_trains": self._num_plots_of_excitatory_trains,
                 "num_plots_of_inhibitory_trains": self._num_plots_of_inhibitory_trains,
                 "plot_time_step": self._plot_time_step,
-                "num_plots_of_spikes_board": self._num_plots_of_spikes_board,
+                "num_plots_parts": self._num_plots_parts,
             }
 
     def __init__(self, list_of_construction_data):
@@ -819,12 +819,12 @@ class EffectOfInputSpikeTrains:
         """
         trains_counts = [
             # 5 * 100,
-            # 5 * 200,
+            5 * 200,
             # 5 * 400,
             # 5 * 800,
             # 5 * 1600,
             # 5 * 3200
-            5 * 6400
+            # 5 * 6400
             ]
         excitatory_percentages = [
             # 89.0,
@@ -901,7 +901,7 @@ class EffectOfInputSpikeTrains:
                 excitatory_histogram,
                 int(0.01 * (100.0 - excitatory_percentage) * num_trains),
                 inhibitory_histogram,
-                1
+                30
                 )
              for num_trains in trains_counts
              for excitatory_percentage in excitatory_percentages

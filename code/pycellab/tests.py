@@ -366,6 +366,7 @@ def _test_spike_trains(info):
             0,
             len(isi_delta),
             1000,
+            None,
             lambda p: print("    Saving plot " + p),
             colour,
             plot.get_title_placeholder()

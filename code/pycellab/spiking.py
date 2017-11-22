@@ -626,6 +626,7 @@ def evaluate_neuron_with_input_synapses(cfg):
         cfg.start_time,
         cfg.start_time + cfg.nsteps * cfg.dt,
         cfg.plot_time_step,
+        None,
         lambda p: print("    Saving plot " + p),
         get_colour_pre_excitatory(),
         plot.get_title_placeholder()
@@ -647,6 +648,7 @@ def evaluate_neuron_with_input_synapses(cfg):
         cfg.start_time,
         cfg.start_time + cfg.nsteps * cfg.dt,
         cfg.plot_time_step,
+        None,
         lambda p: print("    Saving plot " + p),
         get_colour_pre_inhibitory(),
         plot.get_title_placeholder()
@@ -662,6 +664,7 @@ def evaluate_neuron_with_input_synapses(cfg):
         cfg.start_time,
         cfg.start_time + cfg.nsteps * cfg.dt,
         cfg.plot_time_step,
+        None,
         lambda p: print("    Saving plot " + p),
         get_colour_pre_excitatory_and_inhibitory(),
         plot.get_title_placeholder()
@@ -698,6 +701,7 @@ def evaluate_neuron_with_input_synapses(cfg):
                         cfg.start_time,
                         cfg.start_time + cfg.nsteps * cfg.dt,
                         cfg.plot_time_step,
+                        None,
                         lambda p: print("    Saving plot " + p),
                         get_colour_soma(),
                         cell.get_soma().get_short_description()
@@ -714,6 +718,7 @@ def evaluate_neuron_with_input_synapses(cfg):
                             cfg.start_time,
                             cfg.start_time + cfg.nsteps * cfg.dt,
                             cfg.plot_time_step,
+                            None,
                             lambda p: print("    Saving plot " + p),
                             get_colour_synapse(),
                             cell.get_excitatory_synapses()[idx].get_short_description()
@@ -730,6 +735,7 @@ def evaluate_neuron_with_input_synapses(cfg):
                             cfg.start_time,
                             cfg.start_time + cfg.nsteps * cfg.dt,
                             cfg.plot_time_step,
+                            None,
                             lambda p: print("    Saving plot " + p),
                             get_colour_synapse(),
                             cell.get_excitatory_synapses()[idx].get_short_description()
@@ -744,7 +750,7 @@ def evaluate_neuron_with_input_synapses(cfg):
                 cfg.start_time,
                 cfg.start_time + cfg.nsteps * cfg.dt,
                 cfg.plot_time_step,
-                1,
+                None,
                 lambda p: print("    Saving plot " + p),
                 list(map(lambda L: list(map(lambda p: plot.get_colour_pre_excitatory(p[1]), L)),
                     [datalgo.transform_discrete_function_to_inteval_0_1_using_liner_interpolation(
@@ -954,6 +960,7 @@ def evaluate_pre_post_spike_noises_differences(cfg):
             cfg.start_time,
             cfg.start_time + cfg.nsteps * cfg.dt,
             cfg.plot_time_step,
+            None,
             lambda p: print("    Saving plot " + p),
             marker="x"
             )
@@ -964,6 +971,7 @@ def evaluate_pre_post_spike_noises_differences(cfg):
                 cfg.start_time,
                 cfg.start_time + cfg.nsteps * cfg.dt,
                 cfg.plot_time_step,
+                None,
                 lambda p: print("    Saving plot " + p),
                 title="VAR=" + var + ", " + cfg.synaptic_input_cooler.get_short_description()
                 )
@@ -974,6 +982,7 @@ def evaluate_pre_post_spike_noises_differences(cfg):
                 cfg.start_time,
                 cfg.start_time + cfg.nsteps * cfg.dt,
                 cfg.plot_time_step,
+                None,
                 lambda p: print("    Saving plot " + p),
                 title="[input_post-input_pre], " + cfg.synaptic_input_cooler.get_short_description()
                 )
@@ -983,6 +992,7 @@ def evaluate_pre_post_spike_noises_differences(cfg):
                 cfg.start_time,
                 cfg.start_time + cfg.nsteps * cfg.dt,
                 cfg.plot_time_step,
+                None,
                 lambda p: print("    Saving plot " + p),
                 title="[sgn(X-Y)*(Y+X),X=input_pre,Y=input_post], " + cfg.synaptic_input_cooler.get_short_description()
                 )
@@ -992,6 +1002,7 @@ def evaluate_pre_post_spike_noises_differences(cfg):
                 cfg.start_time,
                 cfg.start_time + cfg.nsteps * cfg.dt,
                 cfg.plot_time_step,
+                None,
                 lambda p: print("    Saving plot " + p),
                 title="[sgn(X-Y)*(Y*X),X=input_pre,Y=input_post], " + cfg.synaptic_input_cooler.get_short_description()
                 )
@@ -1076,13 +1087,31 @@ def _evaluate_configuration_of_input_spike_trains(construction_data):
 
     tmprof_begin_simulation = time.time()
 
+    voltage_curve_excitatory = []
+    voltage_curve_inhibitory = []
+    voltage_curve = []
+
     t = cfg.start_time
     for step in range(cfg.nsteps):
         utility.print_progress_string(step, cfg.nsteps)
+
+        num_excitatory_spikes = 0
         for i in range(len(cfg.excitatory_spike_trains)):
-            cfg.excitatory_spike_trains[i].on_time_step(t, cfg.dt)
+            if cfg.excitatory_spike_trains[i].on_time_step(t, cfg.dt) is True:
+                num_excitatory_spikes += 1
+        if num_excitatory_spikes > 0:
+            voltage_curve_excitatory.append((t + cfg.dt, num_excitatory_spikes))
+
+        num_inhibitory_spikes = 0
         for i in range(len(cfg.inhibitory_spike_trains)):
-            cfg.inhibitory_spike_trains[i].on_time_step(t, cfg.dt)
+            if cfg.inhibitory_spike_trains[i].on_time_step(t, cfg.dt) is True:
+                num_inhibitory_spikes += 1
+        if num_inhibitory_spikes > 0:
+            voltage_curve_inhibitory.append((t + cfg.dt, num_inhibitory_spikes))
+
+        if num_excitatory_spikes > 0 or num_inhibitory_spikes > 0:
+            voltage_curve.append((t + cfg.dt, num_excitatory_spikes - num_inhibitory_spikes))
+
         t += cfg.dt
 
     print("  Saving results.")
@@ -1148,44 +1177,34 @@ def _evaluate_configuration_of_input_spike_trains(construction_data):
     print("    Saving plot " + pathname)
     plot.histogram(isi_histogram, pathname, colours=get_colour_pre_excitatory_and_inhibitory(), normalised=False)
 
-    voltage_effect_points = []
-    for kind, trains, colour in [("excitatory", cfg.excitatory_spike_trains, get_colour_pre_excitatory()),
-                                 ("inhibitory", cfg.inhibitory_spike_trains, get_colour_pre_inhibitory())]:
-        print("    Building voltage-effect curve of " + kind + " spike strains.")
-        voltage_effect_points_of_kind = datalgo.reduce_gaps_between_points_along_x_axis(
-            datalgo.make_weighted_events(
-                datalgo.merge_sorted_lists_of_events([train.get_spikes_history() for train in trains]),
-                cfg.dt
-                ),
-            cfg.dt
-            )
+    for kind, curve, colour in [("excitatory", voltage_curve_excitatory, get_colour_pre_excitatory()),
+                                ("inhibitory", voltage_curve_inhibitory, get_colour_pre_inhibitory())]:
         pathname = os.path.join(cfg.output_dir, "voltage_effect_curve_" + kind + ".json")
         print("    Saving voltage effect curve of " + kind + " spike trains in JSON format to " + pathname)
         with open(pathname, "w") as ofile:
-            ofile.write(json.dumps(voltage_effect_points_of_kind, sort_keys=True, indent=4))
+            ofile.write(json.dumps(curve, sort_keys=True, indent=4))
         plot.curve_per_partes(
-            voltage_effect_points_of_kind,
+            datalgo.reduce_gaps_between_points_along_x_axis(curve, cfg.dt),
             os.path.join(plots_output_dir, "voltage_effect_curve_" + kind + cfg.plot_files_extension),
             cfg.start_time,
             cfg.start_time + cfg.nsteps * cfg.dt,
             cfg.plot_time_step,
+            cfg.num_plots_parts,
             lambda p: print("    Saving plot " + p),
             colour,
             plot.get_title_placeholder()
             )
-        voltage_effect_points.append(voltage_effect_points_of_kind)
-    print("    Building voltage-effect curve of all spike strains.")
-    voltage_effect_points = datalgo.compose_sorted_lists_of_points(voltage_effect_points, [1, -1])
     pathname = os.path.join(cfg.output_dir, "voltage_effect_curve" + ".json")
     print("    Saving voltage effect curve of all spike trains in JSON format to " + pathname)
     with open(pathname, "w") as ofile:
-        ofile.write(json.dumps(voltage_effect_points, sort_keys=True, indent=4))
+        ofile.write(json.dumps(voltage_curve, sort_keys=True, indent=4))
     plot.curve_per_partes(
-        voltage_effect_points,
+        datalgo.reduce_gaps_between_points_along_x_axis(voltage_curve, cfg.dt),
         os.path.join(plots_output_dir, "voltage_effect_curve" + cfg.plot_files_extension),
         cfg.start_time,
         cfg.start_time + cfg.nsteps * cfg.dt,
         cfg.plot_time_step,
+        cfg.num_plots_parts,
         lambda p: print("    Saving plot " + p),
         get_colour_pre_excitatory_and_inhibitory(),
         plot.get_title_placeholder()
@@ -1214,6 +1233,7 @@ def _evaluate_configuration_of_input_spike_trains(construction_data):
             0,
             len(isi_delta),
             1000,
+            3,
             lambda p: print("    Saving plot " + p),
             colour,
             plot.get_title_placeholder()
@@ -1230,7 +1250,7 @@ def _evaluate_configuration_of_input_spike_trains(construction_data):
         cfg.start_time,
         cfg.start_time + cfg.nsteps * cfg.dt,
         cfg.plot_time_step,
-        max(1, int(((cfg.nsteps * cfg.dt) / cfg.plot_time_step) / cfg.num_plots_of_spikes_board)),
+        cfg.num_plots_parts,
         lambda p: print("    Saving plot " + p),
         [[(0.0, 0.0, 1.0) for _ in range(len(cfg.excitatory_spike_trains[idx].get_spikes_history()))]
          for idx in range(num_board_excitatory_trains)] +

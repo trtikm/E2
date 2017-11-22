@@ -61,29 +61,32 @@ def curve(points, pathname, colours=None, title=None, xaxis_name=None, faxis_nam
     __write_xplot(lambda ax, x, y: ax.plot(x, y, marker, c=colours), points, pathname, title, xaxis_name, faxis_name)
 
 
-def curve_per_partes(points, pathname, start, end, step, on_plot_part_callback_fn=None,
+def curve_per_partes(points, pathname, start, end, step, max_num_parts=None, on_plot_part_callback_fn=None,
                      colour=None, title=None, xaxis_name=None, faxis_name=None, marker="-"):
     assert start < end and step > 0.0001
     assert len(points) > 0
+    assert max_num_parts is None or isinstance(max_num_parts, int) and max_num_parts > 0
     assert on_plot_part_callback_fn is None or callable(on_plot_part_callback_fn)
     if not os.path.exists(os.path.dirname(pathname)):
         os.mkdir(os.path.dirname(pathname))
     base_pathname, extension = os.path.splitext(pathname)
+    stride = 1 if max_num_parts is None else max(1, int(((end - start) / step) / max_num_parts))
     x = start
     idx = 0
     while x < end:
-        part_end = min(x + step, end)
-        part_points = []
-        for i, p in enumerate(points):
-            if x <= p[0] and p[0] <= part_end:
-                part_points.append(p)
-        part_pathname = base_pathname + "_" + str(idx).zfill(4) + "_" + format(x, ".4f") + extension
-        part_title = "[part #" + str(idx) + "] "
-        if title is not None:
-            part_title += title
-        if on_plot_part_callback_fn is not None:
-            on_plot_part_callback_fn(part_pathname)
-        curve(part_points, part_pathname, colour, part_title, xaxis_name, faxis_name, marker)
+        if idx % stride == 0:
+            part_end = min(x + step, end)
+            part_points = []
+            for i, p in enumerate(points):
+                if x <= p[0] and p[0] <= part_end:
+                    part_points.append(p)
+            part_pathname = base_pathname + "_" + str(idx).zfill(4) + "_" + format(x, ".4f") + extension
+            part_title = "[part #" + str(idx) + "] "
+            if title is not None:
+                part_title += title
+            if on_plot_part_callback_fn is not None:
+                on_plot_part_callback_fn(part_pathname)
+            curve(part_points, part_pathname, colour, part_title, xaxis_name, faxis_name, marker)
         x += step
         idx += 1
 
@@ -94,15 +97,16 @@ def scatter(points, pathname, colours=None, title=None, xaxis_name=None, faxis_n
     __write_xplot(lambda ax, x, y: ax.scatter(x, y, s=2, c=colours), points, pathname, title, xaxis_name, faxis_name)
 
 
-def scatter_per_partes(points, pathname, start, end, step, stride=1, on_plot_part_callback_fn=None,
+def scatter_per_partes(points, pathname, start, end, step, max_num_parts=None, on_plot_part_callback_fn=None,
                        colours=None, title=None, xaxis_name=None, faxis_name=None):
     assert start < end and step > 0.0001
-    assert isinstance(stride, int) and stride > 0
+    assert max_num_parts is None or isinstance(max_num_parts, int) and max_num_parts > 0
     assert len(points) > 0
     assert on_plot_part_callback_fn is None or callable(on_plot_part_callback_fn)
     if not os.path.exists(os.path.dirname(pathname)):
         os.mkdir(os.path.dirname(pathname))
     base_pathname, extension = os.path.splitext(pathname)
+    stride = 1 if max_num_parts is None else max(1, int(((end - start) / step) / max_num_parts))
     x = start
     idx = 0
     while x < end:
@@ -160,7 +164,7 @@ def event_board(events, pathname, colours=None, title=None, xaxis_name=None, fax
         )
 
 
-def event_board_per_partes(events, pathname, start, end, step, stride=1, on_plot_part_callback_fn=None,
+def event_board_per_partes(events, pathname, start, end, step, max_num_parts=None, on_plot_part_callback_fn=None,
                            colours=None, title=None, xaxis_name=None, faxis_name=None):
     assert isinstance(events, list) and all(all(isinstance(e, float) or isinstance(e, int) for e in l) for l in events)
     assert colours is None or isinstance(colours, list)
@@ -174,11 +178,12 @@ def event_board_per_partes(events, pathname, start, end, step, stride=1, on_plot
     assert isinstance(start, float) or isinstance(start, int)
     assert isinstance(end, float) or isinstance(end, int)
     assert start < end and step > 0.0001
-    assert isinstance(stride, int) and stride > 0
+    assert max_num_parts is None or isinstance(max_num_parts, int) and max_num_parts > 0
     assert on_plot_part_callback_fn is None or callable(on_plot_part_callback_fn)
     if not os.path.exists(os.path.dirname(pathname)):
         os.mkdir(os.path.dirname(pathname))
     base_pathname, extension = os.path.splitext(pathname)
+    stride = 1 if max_num_parts is None else max(1, int(((end - start) / step) / max_num_parts))
     indices = [0 for _ in range(len(events))]
     x = start
     idx = 0
