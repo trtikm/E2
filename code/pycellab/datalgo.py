@@ -165,13 +165,14 @@ def make_histogram_from_points(points, bin_size=None, reference_x_coord=0):
     if bin_size is None:
         bin_size = (hi - lo) / 1000
         assert bin_size > 0.00001
-    start_bin_idx = int(float(lo - reference_x_coord) / float(bin_size) + float(bin_size) / 2.0)
-    end_bin_idx = int(float(hi - reference_x_coord) / float(bin_size) + float(bin_size) / 2.0)
+    start_bin_idx = int(float(lo - reference_x_coord) / float(bin_size))
+    end_bin_idx = int(float(hi - reference_x_coord) / float(bin_size))
     result = {}
     for bin_idx in range(start_bin_idx, end_bin_idx + 1):
         t = reference_x_coord + bin_idx * bin_size
         j = bisect.bisect_left(x, t)
-        assert j < len(x)
+        if j >= len(x):
+            result[t] = y[-1]
         if j == 0 or x[j] - x[j - 1] < 0.00001:
             result[t] = y[j]
         else:
