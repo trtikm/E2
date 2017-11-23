@@ -1241,8 +1241,12 @@ def _evaluate_configuration_of_input_spike_trains(construction_data):
 
     num_all_spike_trains = len(cfg.excitatory_spike_trains) + len(cfg.inhibitory_spike_trains)
     assert num_all_spike_trains > 0
-    num_board_excitatory_trains = int(0.5 + 1000 * len(cfg.excitatory_spike_trains) / num_all_spike_trains)
-    num_board_inhibitory_trains = 1000 - num_board_excitatory_trains
+    if num_all_spike_trains <= 1000:
+        num_board_excitatory_trains = len(cfg.excitatory_spike_trains)
+        num_board_inhibitory_trains = len(cfg.inhibitory_spike_trains)
+    else:
+        num_board_excitatory_trains = int(0.5 + 1000 * len(cfg.excitatory_spike_trains) / num_all_spike_trains)
+        num_board_inhibitory_trains = 1000 - num_board_excitatory_trains
     plot.event_board_per_partes(
         [cfg.excitatory_spike_trains[idx].get_spikes_history() for idx in range(num_board_excitatory_trains)] +
             [cfg.inhibitory_spike_trains[idx].get_spikes_history() for idx in range(num_board_inhibitory_trains)],
