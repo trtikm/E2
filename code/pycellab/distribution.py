@@ -207,6 +207,34 @@ def make_points_of_hermit_cubic_approximation_of_normal_distribution(
                 )
 
 
+def hermit_distribution_histogram(
+        peek_x=0.5,
+        scale_x=0.298,
+        scale_y=10,
+        pow_y=1.5,
+        shift_x=0.002,
+        bin_size=0.001,
+        mult_m01=1.0,
+        mult_mx=1.0
+        ):
+    return datalgo.make_histogram_from_points(
+                datalgo.move_scale_curve_points(
+                    make_points_of_hermit_cubic_approximation_of_normal_distribution(
+                        peek_x=peek_x,
+                        mult_m01=mult_m01,
+                        mult_mx=mult_mx,
+                        num_points=333
+                        ),
+                    scale_x=scale_x,
+                    scale_y=scale_y,
+                    pow_y=pow_y,
+                    shift_x=shift_x
+                    ),
+                bin_size,
+                0.0
+                )
+
+
 def hermit_distribution(
         peek_x=0.5,
         scale_x=0.298,
@@ -217,25 +245,7 @@ def hermit_distribution(
         mult_m01=1.0,
         mult_mx=1.0
         ):
-    assert isinstance(bin_size, float) and bin_size > 0.0 and bin_size < 1.0
-    return Distribution(
-                datalgo.make_histogram_from_points(
-                    datalgo.move_scale_curve_points(
-                        make_points_of_hermit_cubic_approximation_of_normal_distribution(
-                            peek_x=peek_x,
-                            mult_m01=mult_m01,
-                            mult_mx=mult_mx,
-                            num_points=max(2, int((1 / bin_size) / 3))
-                            ),
-                        scale_x=scale_x,
-                        scale_y=scale_y,
-                        pow_y=pow_y,
-                        shift_x=shift_x
-                        ),
-                    bin_size,
-                    0.0
-                    )
-                )
+    return Distribution(hermit_distribution_histogram(peek_x, scale_x, scale_y, pow_y, shift_x, bin_size, mult_m01, mult_mx))
 
 
 _cache_of_hermit_distribution_with_desired_mean = dict()
