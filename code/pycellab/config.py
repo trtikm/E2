@@ -818,8 +818,8 @@ class EffectOfInputSpikeTrains:
         of disk space.
         """
         trains_counts = [
-            # 5 * 100,
-            5 * 200,
+            5 * 100,
+            # 5 * 200,
             # 5 * 400,
             # 5 * 800,
             # 5 * 1600,
@@ -836,46 +836,7 @@ class EffectOfInputSpikeTrains:
             # 71.0
         ]
         histograms = [
-            {0.0: 1.0},
-            # {
-            #     0.0: 10.0,
-            #     10.0: 20.0,
-            #     20.0: 30.0,
-            #     30.0: 40.0,
-            #     40.0: 50.0,
-            #     50.0: 60.0,
-            #     60.0: 50.0,
-            #     70.0: 40.0,
-            #     80.0: 30.0,
-            #     90.0: 20.0,
-            #     100.0: 10.0
-            # },
-            # {
-            #     0.0: 110.0,
-            #     10.0: 100.0,
-            #     20.0: 90.0,
-            #     30.0: 80.0,
-            #     40.0: 70.0,
-            #     50.0: 60.0,
-            #     60.0: 50.0,
-            #     70.0: 40.0,
-            #     80.0: 30.0,
-            #     90.0: 20.0,
-            #     100.0: 10.0
-            # },
-            # {
-            #     0.0: 1.0,
-            #     10.0: 1.0,
-            #     20.0: 1.0,
-            #     30.0: 1.0,
-            #     40.0: 1.0,
-            #     50.0: 1.0,
-            #     60.0: 1.0,
-            #     70.0: 1.0,
-            #     80.0: 1.0,
-            #     90.0: 1.0,
-            #     100.0: 1.0
-            # },
+            distribution.hermit_distribution_histogram(0.5, 100.0, 100.0, 1.0, 0.0, 1.0),
         ]
         return EffectOfInputSpikeTrains(
             [EffectOfInputSpikeTrains.ConstructionData(
@@ -883,30 +844,25 @@ class EffectOfInputSpikeTrains:
                 output_dir,
                 os.path.join(
                     "num_trains_" + str(num_trains),
-                    "percentage_" + str(excitatory_percentage) + "e (" +
-                    str(int(0.01 * excitatory_percentage * num_trains)) +
+                    "percentage_" + format(excitatory_percentage, ".2f") + "e (" +
+                    format(int(0.01 * excitatory_percentage * num_trains), ".2f") +
                     "e_" +
-                    str(int(0.01 * (100.0 - excitatory_percentage) * num_trains)) +
+                    format(int(0.01 * (100.0 - excitatory_percentage) * num_trains), ".2f") +
                     "i)",
                     "regularity_mean_" +
-                    str(distribution.Distribution(excitatory_histogram).get_mean()) + "e_" +
-                    str(distribution.Distribution(inhibitory_histogram).get_mean()) + "i_" +
-                    "max_" +
-                    str(sorted((p, e) for e, p in excitatory_histogram.items())[-1][1]) +
-                    "e_" +
-                    str(sorted((p, e) for e, p in inhibitory_histogram.items())[-1][1]) +
-                    "i"
+                    format(distribution.Distribution(histogram).get_mean(), ".2f") +
+                    "_max_" +
+                    format(sorted((p, e) for e, p in histogram.items())[-1][1], ".2f")
                     ),
                 int(0.01 * excitatory_percentage * num_trains),
-                excitatory_histogram,
+                histogram,
                 int(0.01 * (100.0 - excitatory_percentage) * num_trains),
-                inhibitory_histogram,
+                histogram,
                 30
                 )
              for num_trains in trains_counts
              for excitatory_percentage in excitatory_percentages
-             for excitatory_histogram in histograms
-             for inhibitory_histogram in histograms
+             for histogram in histograms
              ]
             )
 
