@@ -819,21 +819,21 @@ class EffectOfInputSpikeTrains:
         """
         trains_counts = [
             5 * 100,
-            # 5 * 200,
-            # 5 * 400,
-            # 5 * 800,
-            # 5 * 1600,
-            # 5 * 3200
-            # 5 * 6400
+            5 * 200,
+            5 * 400,
+            5 * 800,
+            5 * 1600,
+            5 * 3200,
+            5 * 6400
             ]
         excitatory_percentages = [
-            # 89.0,
-            # 86.0,
-            # 83.0,
+            89.0,
+            86.0,
+            83.0,
             80.0,
-            # 77.0,
-            # 74.0,
-            # 71.0
+            77.0,
+            74.0,
+            71.0
         ]
         histograms = [
             distribution.hermit_distribution_histogram(0.5, 100.0, 100.0, 1.0, 0.0, 1.0),
