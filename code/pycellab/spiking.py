@@ -483,8 +483,12 @@ def save_synapse_recording_per_partes(
         idx += 1
 
 
-def evaluate_neuron_with_input_synapses(cfg):
+def evaluate_neuron_with_input_synapses(cfg, force_recompute):
     assert isinstance(cfg, config.NeuronWithInputSynapses)
+
+    if force_recompute is False and os.path.isdir(cfg.output_dir):
+        print("Results of the configuration '" + cfg.name + "' already exit. skipping the computation.")
+        return
 
     print("Evaluating the configuration '" + cfg.name + "'.")
 
@@ -787,8 +791,13 @@ def evaluate_neuron_with_input_synapses(cfg):
     print("  Done.")
 
 
-def evaluate_synapse_and_spike_noise(cfg):
+def evaluate_synapse_and_spike_noise(cfg, force_recompute):
     assert isinstance(cfg, config.SynapseAndSpikeNoise)
+
+    if force_recompute is False and os.path.isdir(cfg.output_dir):
+        print("Results of the configuration '" + cfg.name + "' already exit. skipping the computation.")
+        return
+
     print("Evaluating the configuration '" + cfg.name + "'.")
 
     print("  Constructing and initialising data structures,")
@@ -847,8 +856,13 @@ def evaluate_synapse_and_spike_noise(cfg):
     print("  Done.")
 
 
-def evaluate_pre_post_spike_noises_differences(cfg):
+def evaluate_pre_post_spike_noises_differences(cfg, force_recompute):
     assert isinstance(cfg, config.PrePostSpikeNoisesDifferences)
+
+    if force_recompute is False and os.path.isdir(cfg.output_dir):
+        print("Results of the configuration '" + cfg.name + "' already exit. skipping the computation.")
+        return
+
     print("Evaluating the configuration '" + cfg.name + "'.")
 
     print("  Constructing and initialising data structures,")
@@ -1285,15 +1299,38 @@ def _evaluate_configuration_of_input_spike_trains(construction_data):
     print("  Done.")
 
 
-def evaluate_effect_of_input_spike_trains(cfg):
+def _compute_interconfig_summary_data(cfg):
+    assert isinstance(cfg, config.EffectOfInputSpikeTrains)
+    print("Building the inter-configuration summary data to '" + cfg.get_interconfig_output_dir() + "'.")
+    tmprof_begin = time.time()
+
+    # TODO!
+
+    tmprof_end = time.time()
+    print("  Done in " + utility.duration_string(tmprof_begin, tmprof_end) + " seconds.")
+
+
+def evaluate_effect_of_input_spike_trains(cfg, force_recompute):
     assert isinstance(cfg, config.EffectOfInputSpikeTrains)
     start_time = time.time()
     for construction_data in cfg.get_list_of_construction_data():
-        print("Building the configuration '" + construction_data.get_name() + "'.")
-        _evaluate_configuration_of_input_spike_trains(construction_data)
+        assert isinstance(construction_data, config.EffectOfInputSpikeTrains.ConstructionData)
+        if force_recompute is False and os.path.isdir(construction_data.get_output_root_dir()):
+            print("The configuration '" + construction_data.get_name() + "' already exists. Skipping its computation.")
+        else:
+            print("Building the configuration '" + construction_data.get_name() + "'.")
+            _evaluate_configuration_of_input_spike_trains(construction_data)
+    if force_recompute or not os.path.exists(cfg.get_interconfig_output_dir()):
+        if os.path.exists(cfg.get_interconfig_output_dir()):
+            shutil.rmtree(cfg.get_interconfig_output_dir())
+        os.makedirs(cfg.get_interconfig_output_dir())
+        _compute_interconfig_summary_data(cfg)
+    else:
+        print("The inter-configuration summary data '" + cfg.get_interconfig_output_dir() + "' already exist. "
+              "Skipping their computation.")
     end_time = time.time()
-    print("  The whole evaluation finished in " + utility.duration_string(start_time, end_time) + " seconds.")
-    print("  Done.")
+    print("The whole evaluation finished in " + utility.duration_string(start_time, end_time) + " seconds.")
+    print("Done.")
 
 
 def main(cmdline):
@@ -1309,13 +1346,13 @@ def main(cmdline):
         if cmdline.evaluate is None or cfg["name"] == cmdline.evaluate:
             cfg["output_dir"] = cmdline.output_dir
             if cfg["class_name"] == config.NeuronWithInputSynapses.__name__:
-                evaluate_neuron_with_input_synapses(config.construct_experiment(cfg))
+                evaluate_neuron_with_input_synapses(config.construct_experiment(cfg), cmdline.force_recompute)
             elif cfg["class_name"] == config.SynapseAndSpikeNoise.__name__:
-                evaluate_synapse_and_spike_noise(config.construct_experiment(cfg))
+                evaluate_synapse_and_spike_noise(config.construct_experiment(cfg), cmdline.force_recompute)
             elif cfg["class_name"] == config.PrePostSpikeNoisesDifferences.__name__:
-                evaluate_pre_post_spike_noises_differences(config.construct_experiment(cfg))
+                evaluate_pre_post_spike_noises_differences(config.construct_experiment(cfg), cmdline.force_recompute)
             elif cfg["class_name"] == config.EffectOfInputSpikeTrains.__name__:
-                evaluate_effect_of_input_spike_trains(config.construct_experiment(cfg))
+                evaluate_effect_of_input_spike_trains(config.construct_experiment(cfg), cmdline.force_recompute)
             else:
                 print("ERROR: There is not defined the evaluation function for configuration class '" +
                       cfg["class_name"] + "'.")
@@ -1358,6 +1395,11 @@ def parse_command_line_options():
              "data, if any. When this option is omitted then the default output root directory is used, i.e. "
              "either the path '../../dist/evaluation/pycellab' or '.', both relative to the script location. "
              "The first relative path is used the script is located under 'E2/code/pycellab'."
+        )
+    parser.add_argument(
+        "--force-recompute", action="store_true",
+        help="When specified and the output directory already exists, then the old directory will be removed "
+             "and the data will be recomputed."
         )
     cmdline = parser.parse_args()
 

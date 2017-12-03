@@ -5,6 +5,7 @@ import synapse
 import integrator
 import distribution
 import spike_train
+import utility
 
 
 class CommonProps:
@@ -756,6 +757,9 @@ class EffectOfInputSpikeTrains:
         def get_name(self):
             return os.path.join(self._name, self._sub_dir)
 
+        def get_output_root_dir(self):
+            return os.path.join(self._output_dir, self.get_name())
+
         def apply(self):
             return EffectOfInputSpikeTrains.Configuration.create(
                 self.get_name(),
@@ -793,9 +797,17 @@ class EffectOfInputSpikeTrains:
         assert isinstance(list_of_construction_data, list)
         assert all(isinstance(data, EffectOfInputSpikeTrains.ConstructionData) for data in list_of_construction_data)
         self._list_of_construction_data = list_of_construction_data
+        self._output_dirs = [os.path.abspath(cfg.get_output_root_dir()) for cfg in self.get_list_of_construction_data()]
+        self._interconfig_output_dir = os.path.join(utility.get_common_prefix_of_disk_paths(self._output_dirs), "interconfig")
 
     def get_list_of_construction_data(self):
         return self._list_of_construction_data
+
+    def get_output_dirs_of_configurations(self):
+        return self._output_dirs
+
+    def get_interconfig_output_dir(self):
+        return self._interconfig_output_dir
 
     @staticmethod
     def all_in_one(my_precomputed_full_name, output_dir):
