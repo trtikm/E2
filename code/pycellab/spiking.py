@@ -1208,6 +1208,17 @@ def _evaluate_configuration_of_input_spike_trains(construction_data):
             colour,
             plot.get_title_placeholder()
             )
+        pathname = os.path.join(cfg.output_dir, "voltage_effect_histogram" + kind + ".json")
+        print("    Saving voltage effect histogram of " + kind + " spike trains in JSON format to " + pathname)
+        voltage_histogram = datalgo.make_histogram([p[1] for p in curve], 1.0, 0.0)
+        with open(pathname, "w") as ofile:
+            ofile.write(json.dumps(voltage_histogram, sort_keys=True, indent=4))
+        plot.histogram(
+            voltage_histogram,
+            os.path.join(plots_output_dir, "voltage_effect_histogram_" + kind + cfg.plot_files_extension),
+            colours=colour,
+            normalised=False
+            )
     pathname = os.path.join(cfg.output_dir, "voltage_effect_curve" + ".json")
     print("    Saving voltage effect curve of all spike trains in JSON format to " + pathname)
     with open(pathname, "w") as ofile:
@@ -1222,6 +1233,17 @@ def _evaluate_configuration_of_input_spike_trains(construction_data):
         lambda p: print("    Saving plot " + p),
         get_colour_pre_excitatory_and_inhibitory(),
         plot.get_title_placeholder()
+        )
+    pathname = os.path.join(cfg.output_dir, "voltage_effect_histogram" + ".json")
+    print("    Saving voltage effect histogram of all spike trains in JSON format to " + pathname)
+    voltage_histogram = datalgo.make_histogram([p[1] for p in voltage_curve], 1.0, 0.0)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(voltage_histogram, sort_keys=True, indent=4))
+    plot.histogram(
+        voltage_histogram,
+        os.path.join(plots_output_dir, "voltage_effect_histogram" + cfg.plot_files_extension),
+        colours=get_colour_pre_excitatory_and_inhibitory(),
+        normalised=False
         )
 
     for kind, idx, train, colour in [("excitatory", idx, cfg.excitatory_spike_trains[idx], get_colour_pre_excitatory())
