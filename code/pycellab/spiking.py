@@ -1326,6 +1326,45 @@ def _compute_interconfig_summary_data(cfg):
     print("Building the inter-configuration summary data to '" + cfg.get_interconfig_output_dir() + "'.")
     tmprof_begin = time.time()
 
+    for cfg_dir in cfg.get_output_dirs_of_configurations():
+        for kind, colour in [("_excitatory", get_colour_pre_excitatory()),
+                             ("_inhibitory", get_colour_pre_inhibitory()),
+                             ("", get_colour_pre_excitatory_and_inhibitory())]:
+            # if kind != "":
+            #     continue
+            pathname = os.path.join(cfg_dir, "voltage_effect_curve" + kind + ".json")
+            print("    Loading voltage effect curve " + pathname)
+            with open(pathname, "r") as ifile:
+                voltage_curve = json.loads(ifile.read())
+            print("    Computing voltage effect histogram")
+            voltage_histogram = datalgo.make_histogram([p[1] for p in voltage_curve], 1.0, 0.0)
+
+            cnt = 0
+            for p in voltage_curve:
+                if p[1] >= -0.5 and p[1] <= 0.5:
+                    cnt += 1
+            print("cnt=" + str(cnt))
+            print("hcnt=" + str(0 if 0 not in voltage_histogram else voltage_histogram[0]))
+
+            pathname = os.path.join(cfg_dir, "voltage_effect_histogram" + kind + ".json")
+            print("    Saving voltage effect histogram " + pathname)
+            with open(pathname, "w") as ofile:
+                ofile.write(json.dumps(voltage_histogram, sort_keys=True, indent=4))
+
+            # pathname = os.path.join(cfg_dir, "voltage_effect_histogram" + kind + ".json")
+            # print("    Loading voltage effect histogram " + pathname)
+            # with open(pathname, "r") as ifile:
+            #     voltage_histogram = {float(k): v for k, v in json.loads(ifile.read()).items()}
+            plot.histogram(
+                voltage_histogram,
+                os.path.join(cfg_dir, "plots", "voltage_effect_histogram" + kind + ".png"),
+                colours=colour,
+                normalised=False
+                )
+
+            if os.path.isfile(os.path.join(cfg_dir, "plots", "voltage_effect_histogram_" + kind + ".png")):
+                os.remove(os.path.join(cfg_dir, "plots", "voltage_effect_histogram_" + kind + ".png"))
+
     # TODO!
 
     tmprof_end = time.time()

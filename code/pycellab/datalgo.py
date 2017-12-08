@@ -125,8 +125,11 @@ def make_histogram(events, bin_size, reference_event, count_unit=1):
         return {}
     result = {}
     for event in events:
-        bin_idx = int(float(event - reference_event) / float(bin_size) + float(bin_size) / 2.0)
+        sign = 1 if event >= 0 else -1
+        bin_idx = int(float(event - reference_event) / float(bin_size) + sign * float(bin_size) / 2.0)
         key = reference_event + bin_idx * bin_size
+        if key == 0:
+            iii = 0
         result[key] = count_unit if key not in result else result[key] + count_unit
 
     assert is_histogram(result)
@@ -142,7 +145,8 @@ def merge_histograms(histograms, bin_size, reference_event, count_unit=1):
     result = {}
     for histogram in histograms:
         for event, count in histogram.items():
-            bin_idx = int(float(event - reference_event) / float(bin_size) + float(bin_size) / 2.0)
+            sign = 1 if event >= 0 else -1
+            bin_idx = int(float(event - reference_event) / float(bin_size) + sign * float(bin_size) / 2.0)
             key = reference_event + bin_idx * bin_size
             result[key] = count_unit if key not in result else result[key] + count_unit * count
 
