@@ -13,31 +13,23 @@ class Distribution:
             self._histogram = histogram.copy()
         self._bars_line = numpy.arange(len(self._histogram) + 1, dtype=float)
         self._events_line = []
-        idx = 0
         sum_bars = 0.0
-        for event in sorted(self._histogram.keys()):
+        for idx, event in enumerate(sorted(self._histogram.keys())):
             self._bars_line[idx] = sum_bars
             self._events_line.append(event)
             bar_size = self._histogram[event]
             assert bar_size >= 0.0
             sum_bars += bar_size
-            idx += 1
         for i in range(0, len(self._histogram)):
             self._bars_line[i] /= (sum_bars + 0.00001)
         self._bars_line[-1] = 1.0
         assert len(self._events_line) + 1 == len(self._bars_line)
-        x = sorted(self._histogram.keys())
-        for k in self._histogram.keys():
-            if not (isinstance(k, int) or isinstance(k, float)):
-                x = [i for i in range(len(x))]
-                break
-        self._probabilities = numpy.array([float(self._histogram[k]) for k in sorted(self._histogram.keys())])
+        self._probabilities = numpy.array([float(self._histogram[k]) for k in self._events_line])
         self._probabilities *= 1.0 / (sum(self._probabilities) + 0.00001)
-        assert len(x) == len(self._probabilities)
         self._has_numeric_events = all(isinstance(x, int) or isinstance(x, float) for x in self._events_line)
-        self._mean = sum([x[i]*self._probabilities[i] for i in range(len(x))])
+        self._mean = sum([self._events_line[i]*self._probabilities[i] for i in range(len(self._events_line))])
         self._median = self.event_with_probability(0.5)
-        self._variance = sum([((x[i] - self._mean)**2) * self._probabilities[i] for i in range(len(x))])
+        self._variance = sum([((self._events_line[i] - self._mean)**2) * self._probabilities[i] for i in range(len(self._events_line))])
         self._standard_deviation = numpy.sqrt(self._variance)
         self._coefficient_of_variation = self._standard_deviation / (self._mean + 0.00001)
 
@@ -79,18 +71,12 @@ class Distribution:
     def get_events(self):
         return self._events_line
 
+    def get_event_index(self, event):
+        return min(bisect.bisect_left(self.get_events(), event), len(self.get_events()) - 1) if self.has_numeric_events()\
+               else self.get_events().index(event)
+
     def get_probability_of_event(self, event):
-        if self.has_numeric_events():
-            if event < self.get_events()[0] or event > self.get_events()[-1]:
-                return 0.0
-            idx = bisect.bisect_left(self.get_events(), event)
-        else:
-            try:
-                idx = self.get_events().index(event)
-            except ValueError:
-                return 0.0
-        assert idx in range(len(self.get_events()))
-        return self._probabilities[idx]
+        return self._probabilities[self.get_event_index(event)]
 
     def get_counts_of_events(self):
         return [self._histogram[k] for k in self._events_line]
@@ -141,6 +127,26 @@ class Distribution:
 
     def get_coefficient_of_variation(self):
         return self._coefficient_of_variation
+
+
+def compute_mean_range_lower_bound(disribub, max_percentage=1.0):
+    assert isinstance(disribub, Distribution)
+    assert isinstance(max_percentage, float) and max_percentage >= 0.0
+    max_probability = disribub.get_probability_of_event(disribub.get_mean()) * max_percentage / 100.0
+    for i in range(disribub.get_event_index(disribub.get_mean())):
+        if disribub.get_probability_of_event(disribub.get_events()[i]) >= max_probability:
+            return disribub.get_events()[i]
+    return disribub.get_event_index(disribub.get_mean())
+
+
+def compute_mean_range_upper_bound(disribub, max_percentage=1.0):
+    assert isinstance(disribub, Distribution)
+    assert isinstance(max_percentage, float) and max_percentage >= 0.0
+    max_probability = disribub.get_probability_of_event(disribub.get_mean()) * max_percentage / 100.0
+    for i in range(len(disribub.get_events()) - 1, disribub.get_event_index(disribub.get_mean()), -1):
+        if disribub.get_probability_of_event(disribub.get_events()[i]) >= max_probability:
+            return disribub.get_events()[i]
+    return disribub.get_event_index(disribub.get_mean())
 
 
 def make_points_of_normal_distribution(
