@@ -1,5 +1,8 @@
 import os
 import matplotlib.pyplot as plt
+import mpl_toolkits.mplot3d.axes3d as axes3d
+import argparse
+import json
 import distribution
 
 
@@ -253,3 +256,79 @@ def histogram(distrib, pathname, normalised=True, colours=None, title=None, xaxi
     __write_xplot(
         lambda ax, x, y: ax.bar(x, y, bar_width, color=colours, align="center"),
         points, pathname, title, xaxis_name, faxis_name)
+
+
+def _autodetect_plot_kind(plot_data):
+    if isinstance(plot_data, dict):
+        if "points" in plot_data and isinstance(plot_data["points"], list):
+            if "num_dimensions" in plot_data:
+                if plot_data["num_dimensions"] == 3:
+                    if len(plot_data["points"]) > 0 and "error" in plot_data["points"][0]:
+                        return "points_3d_with_error"
+    return None
+
+
+def _show_points_3d_with_error(points):
+    fig = plt.figure(dpi=100)
+    ax = fig.add_subplot(111, projection='3d')
+
+    fx = [p["x"] for p in points]
+    fy = [p["y"] for p in points]
+    fz = [p["z"] for p in points]
+
+    elo = [p["error"]["lo"] for p in points]
+    ehi = [p["error"]["hi"] for p in points]
+
+    for i in range(len(points)):
+        ax.plot([fx[i], fx[i]], [fy[i], fy[i]], [elo[i], ehi[i]], marker="_", color="red")
+    ax.plot(fx, fy, fz, linestyle="None", marker=".")
+
+    plt.show()
+
+
+def _main(cmdline):
+    with open(cmdline.input, "r") as ifile:
+        plot_data = json.load(ifile)
+    if cmdline.kind is None:
+        cmdline.kind = _autodetect_plot_kind(plot_data)
+        if cmdline.kind is None:
+            print("ERROR: The automatic detection of plot kind for the data in the passed JSON file has FAILED. "
+                  "Use the option '--kind' to supply the desired plot kind.")
+            return 3
+    if cmdline.kind == "points_3d_with_error":
+        _show_points_3d_with_error(plot_data["points"])
+    else:
+        print("ERROR: Unknown plot kind '" + cmdline.kind + "'. See option '--kind' for valid values.")
+        return 4
+    return 0
+
+
+def _parse_command_line_options():
+    parser = argparse.ArgumentParser(
+        description="The module provides view of plot data stored in JSON format.",
+        )
+    parser.add_argument(
+        "input", type=str,
+        help="A pathname of a JSON file containing plot data to be viewed."
+        )
+    parser.add_argument(
+        "--kind", type=str,
+        help="Specifies a kind of plot to be used for data in a passed JSON file. When omitted, "
+             "then the most relevant plot kind is automatically chosen. Here are available kinds: "
+             "points_3d_with_error, "
+        )
+    cmdline = parser.parse_args()
+
+    if not os.path.isfile(cmdline.input):
+        print("ERROR: The passed path '" + cmdline.input + "' does not reference a file.")
+        exit(1)
+    if os.path.splitext(cmdline.input)[1].lower() != ".json":
+        print("ERROR: The passed path '" + cmdline.input + "' does not have '.json' extension.")
+        exit(2)
+    cmdline.input = os.path.abspath(cmdline.input)
+
+    return cmdline
+
+
+if __name__ == "__main__":
+    exit(_main(_parse_command_line_options()))
