@@ -283,6 +283,15 @@ def _show_points_3d_with_error(points):
         ax.plot([fx[i], fx[i]], [fy[i], fy[i]], [elo[i], ehi[i]], marker="_", color="red")
     ax.plot(fx, fy, fz, linestyle="None", marker=".")
 
+    # region = datalgo.VoltageEffectRegion()
+    # rfz = [region.get_low_voltage(p["x"], p["y"]) for p in points]
+    # ax.plot(fx, fy, rfz, linestyle="None", marker=".", color="green")
+    #
+    # max_err = 0.0
+    # for i in range(len(points)):
+    #     max_err = max(max_err, abs(fz[i] - rfz[i]))
+    # print("max_err=" + str(max_err))
+
     plt.show()
 
 

@@ -1,4 +1,6 @@
 import bisect
+import numpy
+import math
 
 
 def is_number(instance):
@@ -315,6 +317,63 @@ def transform_discrete_function_to_inteval_0_1_using_liner_interpolation(points,
     for x, y in points:
         result.append((x, min(1, max(0, (y - y_zero) / (y_one - y_zero)))))
     return result
+
+
+class VoltageEffectRegion:
+    def __init__(self):
+        # self._origin = [12800.0, 3200.0, 3.654]
+        # self._normal = numpy.cross(numpy.subtract([25600.-0, 6400.0, 7.251], self._origin),
+        #                            numpy.subtract([11360.0, 4640.0, -105.457], self._origin))
+        # magnitude = math.sqrt(numpy.dot(self._normal, self._normal))
+        # self._normal = [c/magnitude for c in self._normal]
+        self._origin = [0.0, 0.0, 0.0]
+        self._normal = [-0.0153493403596, 0.0602754753955, 0.998063757891]
+
+        self._low_origin = [12800.0, 3200.0, -63.0]
+        self._low_normal = numpy.cross(numpy.subtract([25600.-0, 6400.0, -84.0], self._low_origin),
+                                       numpy.subtract([11360.0, 4640.0, -171.0], self._low_origin))
+        magnitude = math.sqrt(numpy.dot(self._low_normal, self._low_normal))
+        self._low_normal = [c/magnitude for c in self._low_normal]
+
+        self._high_origin = [12800.0, 3200.0, 68.0]
+        self._high_normal = numpy.cross(numpy.subtract([25600.-0, 6400.0, 116.0], self._high_origin),
+                                        numpy.subtract([11360.0, 4640.0, -37.0], self._high_origin))
+        magnitude = math.sqrt(numpy.dot(self._high_normal, self._high_normal))
+        self._high_normal = [c/magnitude for c in self._high_normal]
+
+    def get_normal(self):
+        return self._normal
+
+    def get_origin(self):
+        return self._origin
+
+    def get_low_normal(self):
+        return self._low_normal
+
+    def get_low_origin(self):
+        return self._low_origin
+
+    def get_high_normal(self):
+        return self._high_normal
+
+    def get_high_origin(self):
+        return self._high_origin
+
+    @staticmethod
+    def _get_voltage(origin, normal, num_excitatory_trains, num_inhibitory_trains):
+        assert isinstance(num_excitatory_trains, int) and num_excitatory_trains >= 0
+        assert isinstance(num_inhibitory_trains, int) and num_inhibitory_trains >= 0
+        pos = [float(num_excitatory_trains), float(num_inhibitory_trains), 0.0]
+        return (numpy.dot(normal, origin) - numpy.dot(normal, pos)) / normal[2]
+
+    def get_median_voltage(self, num_excitatory_trains, num_inhibitory_trains):
+        return self._get_voltage(self.get_origin(), self.get_normal(), num_excitatory_trains, num_inhibitory_trains)
+
+    def get_low_voltage(self, num_excitatory_trains, num_inhibitory_trains):
+        return self._get_voltage(self.get_low_origin(), self.get_low_normal(), num_excitatory_trains, num_inhibitory_trains)
+
+    def get_high_voltage(self, num_excitatory_trains, num_inhibitory_trains):
+        return self._get_voltage(self.get_high_origin(), self.get_high_normal(), num_excitatory_trains, num_inhibitory_trains)
 
 
 ########################################################################################################################
