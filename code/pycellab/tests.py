@@ -146,7 +146,7 @@ def _test_synapse(info):
 
         start_time = 0.0
         dt = 0.001
-        nsteps = 2000
+        nsteps = 20000
 
         pre_spikes_train = spike_train.create(distribution.default_excitatory_isi_distribution(), 0.0)
         post_spikes_train = spike_train.create(distribution.default_excitatory_isi_distribution(), 0.0)
@@ -219,7 +219,7 @@ def _test_synapse(info):
         pathname = os.path.join(output_dir, "plasticity.png")
         print("    Saving plot " + pathname)
         plot.scatter(
-            distribution.make_sum_points(weights_delta, dt),
+            datalgo.merge_close_points_by_add(weights_delta, dt),
             pathname,
             xaxis_name="post_t - pre_t",
             faxis_name="weight delta"

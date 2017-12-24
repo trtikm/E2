@@ -206,6 +206,36 @@ def merge_sorted_lists_of_events(list_of_lists_of_events):
     return result
 
 
+def merge_close_points(points, merge_function, dx=1.0):
+    assert is_sorted_list_of_points_along_x_axis(points)
+    assert dx > 0.000001
+    assert callable(merge_function)
+
+    result = []
+    if len(points) > 0:
+        result.append(points[0])
+        for x, fx in points[1:]:
+            if x < result[-1][0] + dx:
+                result[-1] = (result[-1][0], merge_function(result[-1][1], fx))
+            else:
+                result.append((x, fx))
+
+    assert is_sorted_list_of_points_along_x_axis(result)
+    return result
+
+
+def merge_close_points_by_add(points, dx=1.0):
+    return merge_close_points(points, float.__add__, dx)
+
+
+def merge_close_points_by_min(points, dx=1.0):
+    return merge_close_points(points, min, dx)
+
+
+def merge_close_points_by_max(points, dx=1.0):
+    return merge_close_points(points, max, dx)
+
+
 def compose_sorted_lists_of_points(list_of_lists_of_points, multipliers=None, epsilon=0.00001):
     assert isinstance(list_of_lists_of_points, list)
     assert all(is_sorted_list_of_points_along_x_axis(points) for points in list_of_lists_of_points)
@@ -420,32 +450,6 @@ class VoltageEffectRegion:
 #                 hist[t] = 0.0
 #             assert hist[t] >= 0.0
 #     return hist
-
-
-# def make_fx_points(pairs, function, dx=1.0):
-#     assert dx > 0.000001
-#     assert callable(function)
-#     if len(pairs) == 0:
-#         return []
-#     result = [pairs[0]]
-#     for x, fx in pairs[1:]:
-#         if abs(x - result[-1][0]) < 0.5 * dx:
-#             result[-1] = (result[-1][0], function(result[-1][1], fx))
-#         else:
-#             result.append((x, fx))
-#     return result
-#
-#
-# def make_sum_po1ints(pairs, dx=1.0):
-#     return make_fx_points(pairs, float.__add__, dx)
-#
-#
-# def make_min_points(pairs, dx=1.0):
-#     return make_fx_points(pairs, min, dx)
-#
-#
-# def make_max_points(pairs, dx=1.0):
-#     return make_fx_points(pairs, max, dx)
 
 
 # def mkhist(events, nbins=100, lo=None, hi=None, use_bins_domain=False):
