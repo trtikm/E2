@@ -27,9 +27,10 @@ class Distribution:
         self._probabilities = numpy.array([float(self._histogram[k]) for k in self._events_line])
         self._probabilities *= 1.0 / (sum(self._probabilities) + 0.00001)
         self._has_numeric_events = all(isinstance(x, int) or isinstance(x, float) for x in self._events_line)
-        self._mean = sum([self._events_line[i]*self._probabilities[i] for i in range(len(self._events_line))])
+        numeric_event_line = self._events_line if self._has_numeric_events else range(len(self._events_line))
+        self._mean = sum([numeric_event_line[i]*self._probabilities[i] for i in range(len(self._events_line))])
         self._median = self.event_with_probability(0.5)
-        self._variance = sum([((self._events_line[i] - self._mean)**2) * self._probabilities[i] for i in range(len(self._events_line))])
+        self._variance = sum([((numeric_event_line[i] - self._mean)**2) * self._probabilities[i] for i in range(len(self._events_line))])
         self._standard_deviation = numpy.sqrt(self._variance)
         self._coefficient_of_variation = self._standard_deviation / (self._mean + 0.00001)
 
