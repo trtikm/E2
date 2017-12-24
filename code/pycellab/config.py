@@ -879,6 +879,99 @@ class EffectOfInputSpikeTrains:
             )
 
 
+class AutoBalancedPreSynapticInput:
+
+    class Configuration(CommonProps):
+        def __init__(self,
+                     name,
+                     output_dir,
+                     start_time,
+                     dt,
+                     nsteps,
+                     num_sub_iterations,
+                     cell_soma,
+                     excitatory_spike_trains,
+                     inhibitory_spike_trains
+                     ):
+            super(AutoBalancedPreSynapticInput.Configuration, self).__init__(
+                name, output_dir, start_time, dt, nsteps, ".png", 1
+                )
+            assert isinstance(num_sub_iterations, int) and num_sub_iterations > 0
+            self.num_sub_iterations = num_sub_iterations
+            self.cell_soma = cell_soma
+            self.excitatory_spike_trains = excitatory_spike_trains
+            self.inhibitory_spike_trains = inhibitory_spike_trains
+
+        def to_json(self):
+            return {
+                "name": self.name,
+                "start_time": self.start_time,
+                "dt": self.dt,
+                "nsteps": self.nsteps,
+                "num_sub_iterations": self.num_sub_iterations,
+                "cell_soma": {
+                    "name": self.cell_soma.get_name(),
+                    "data":  self.cell_soma.get_short_description()
+                    },
+                "excitatory_spike_trains": len(self.excitatory_spike_trains),
+                "inhibitory_spike_trains": len(self.inhibitory_spike_trains),
+            }
+
+    class ConstructionData:
+        def __init__(
+                self,
+                name,
+                output_dir,
+                sub_dir,
+                num_trains_excitatory,
+                histogram_of_percentages_of_excitatory_regularity_phases,
+                num_trains_inhibitory,
+                histogram_of_percentages_of_inhibitory_regularity_phases,
+                num_seconds_to_simulate=30
+                ):
+            self._name = name
+            self._output_dir = output_dir
+            self._sub_dir = sub_dir
+            self._num_trains_excitatory = num_trains_excitatory
+            self._histogram_of_percentages_of_excitatory_regularity_phases = histogram_of_percentages_of_excitatory_regularity_phases
+            self._num_trains_inhibitory = num_trains_inhibitory
+            self._histogram_of_percentages_of_inhibitory_regularity_phases = histogram_of_percentages_of_inhibitory_regularity_phases
+            self._num_seconds_to_simulate = num_seconds_to_simulate
+
+        def get_name(self):
+            return os.path.join(self._name, self._sub_dir)
+
+        def get_output_root_dir(self):
+            return os.path.join(self._output_dir, self.get_name())
+
+        def apply(self):
+            return AutoBalancedPreSynapticInput.Configuration(
+                self.get_name(),
+                self._output_dir,
+                self._num_trains_excitatory,
+                self._histogram_of_percentages_of_excitatory_regularity_phases,
+                self._num_trains_inhibitory,
+                self._histogram_of_percentages_of_inhibitory_regularity_phases,
+                self._num_seconds_to_simulate,
+                )
+
+        def to_json(self):
+            return {
+                "name": self._name,
+                "output_dir": self._output_dir,
+                "sub_dir": self._sub_dir,
+                "num_trains_excitatory": self._num_trains_excitatory,
+                "histogram_of_percentages_of_excitatory_regularity_phases":
+                    distribution.Distribution(self._histogram_of_percentages_of_excitatory_regularity_phases).to_json(),
+                "num_trains_inhibitory": self._num_trains_inhibitory,
+                "histogram_of_percentages_of_inhibitory_regularity_phases":
+                    distribution.Distribution(self._histogram_of_percentages_of_inhibitory_regularity_phases).to_json(),
+                "num_seconds_to_simulate": self._num_seconds_to_simulate
+            }
+
+    pass
+
+
 ####################################################################################################
 ####################################################################################################
 ####################################################################################################
