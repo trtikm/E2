@@ -31,19 +31,20 @@ class Neuron:
         self._inhibitory_synapses = inhibitory_synapses
         self._spikes = []
         self._soma = cell_soma
-        self._soma_recording = {}
-        for key, value in self._soma.get_variables().items():
-            self._soma_recording[key] = [(start_time, value)]
         self._num_sub_iterations = num_sub_iterations
+        self._soma_recording = {}
+        self._recording_config = recording_config if recording_config is not None else RecordingConfig()
+        if self._recording_config.soma:
+            for key, value in (self._soma.get_key_variables() if self._recording_config.key_variables_only else self._soma.get_variables()).items():
+                self._soma_recording[key] = [(start_time, value)]
         self._excitatory_synapses_recording = [
-            dict([(var, [(start_time, value)]) for var, value in syn.get_variables().items()])
+            dict([(var, [(start_time, value)]) for var, value in (syn.get_key_variables() if self._recording_config.key_variables_only else syn.get_variables()).items()])
             for syn in self._excitatory_synapses
         ]
         self._inhibitory_synapses_recording = [
-            dict([(var, [(start_time, value)]) for var, value in syn.get_variables().items()])
+            dict([(var, [(start_time, value)]) for var, value in (syn.get_key_variables() if self._recording_config.key_variables_only else syn.get_variables()).items()])
             for syn in self._inhibitory_synapses
         ]
-        self._recording_config = recording_config if recording_config is not None else RecordingConfig()
         self._last_recording_time = None
 
     def get_excitatory_synapses(self):
