@@ -144,7 +144,7 @@ class NeuronWithInputSynapses(CommonProps):
                 )],
             excitatory_spike_trains=[spike_train.create(excitatory_noise, 0.0) for _ in range(num_excitatory)],
             inhibitory_spike_trains=[spike_train.create(inhibitory_noise, 0.0) for _ in range(num_inhibitory)],
-            excitatory_synapses=[[synapse.Synapse.constant() for _ in range(num_excitatory)]],
+            excitatory_synapses=[[synapse.Synapse.constant(1.84) for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.Synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
             plot_time_step=1.0,
@@ -175,7 +175,7 @@ class NeuronWithInputSynapses(CommonProps):
             cell_soma=[soma.izhikevich.regular_spiking(spike_magnitude=0.15)],
             excitatory_spike_trains=[spike_train.create(excitatory_noise, 0.0) for _ in range(num_excitatory)],
             inhibitory_spike_trains=[spike_train.create(inhibitory_noise, 0.0) for _ in range(num_inhibitory)],
-            excitatory_synapses=[[synapse.Synapse.constant() for _ in range(num_excitatory)]],
+            excitatory_synapses=[[synapse.Synapse.constant(1.84) for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.Synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
             plot_time_step=1.0,
@@ -206,7 +206,7 @@ class NeuronWithInputSynapses(CommonProps):
             cell_soma=[soma.izhikevich.chattering(spike_magnitude=0.15)],
             excitatory_spike_trains=[spike_train.create(excitatory_noise, 0.0) for _ in range(num_excitatory)],
             inhibitory_spike_trains=[spike_train.create(inhibitory_noise, 0.0) for _ in range(num_inhibitory)],
-            excitatory_synapses=[[synapse.Synapse.constant() for _ in range(num_excitatory)]],
+            excitatory_synapses=[[synapse.Synapse.constant(1.84) for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.Synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
             plot_time_step=1.0,
@@ -237,7 +237,7 @@ class NeuronWithInputSynapses(CommonProps):
             cell_soma=[soma.izhikevich.fast_spiking(spike_magnitude=0.15)],
             excitatory_spike_trains=[spike_train.create(excitatory_noise, 0.0) for _ in range(num_excitatory)],
             inhibitory_spike_trains=[spike_train.create(inhibitory_noise, 0.0) for _ in range(num_inhibitory)],
-            excitatory_synapses=[[synapse.Synapse.constant() for _ in range(num_excitatory)]],
+            excitatory_synapses=[[synapse.Synapse.constant(1.84) for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.Synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
             plot_time_step=1.0,
@@ -270,7 +270,7 @@ class NeuronWithInputSynapses(CommonProps):
                 )],
             excitatory_spike_trains=[spike_train.create(excitatory_noise, 0.0) for _ in range(num_excitatory)],
             inhibitory_spike_trains=[spike_train.create(inhibitory_noise, 0.0) for _ in range(num_inhibitory)],
-            excitatory_synapses=[[synapse.Synapse.constant() for _ in range(num_excitatory)]],
+            excitatory_synapses=[[synapse.Synapse.constant(1.35) for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.Synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
             plot_time_step=1.0,
@@ -300,7 +300,7 @@ class NeuronWithInputSynapses(CommonProps):
             cell_soma=[soma.wilson.regular_spiking()],
             excitatory_spike_trains=[spike_train.create(excitatory_noise, 0.0) for _ in range(num_excitatory)],
             inhibitory_spike_trains=[spike_train.create(inhibitory_noise, 0.0) for _ in range(num_inhibitory)],
-            excitatory_synapses=[[synapse.Synapse.constant() for _ in range(num_excitatory)]],
+            excitatory_synapses=[[synapse.Synapse.constant(1.84) for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.Synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
             plot_time_step=1.0,
@@ -330,7 +330,7 @@ class NeuronWithInputSynapses(CommonProps):
             cell_soma=[soma.wilson.fast_spiking()],
             excitatory_spike_trains=[spike_train.create(excitatory_noise, 0.0) for _ in range(num_excitatory)],
             inhibitory_spike_trains=[spike_train.create(inhibitory_noise, 0.0) for _ in range(num_inhibitory)],
-            excitatory_synapses=[[synapse.Synapse.constant() for _ in range(num_excitatory)]],
+            excitatory_synapses=[[synapse.Synapse.constant(1.5) for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.Synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
             plot_time_step=1.0,
@@ -360,7 +360,7 @@ class NeuronWithInputSynapses(CommonProps):
             cell_soma=[soma.wilson.bursting()],
             excitatory_spike_trains=[spike_train.create(excitatory_noise, 0.0) for _ in range(num_excitatory)],
             inhibitory_spike_trains=[spike_train.create(inhibitory_noise, 0.0) for _ in range(num_inhibitory)],
-            excitatory_synapses=[[synapse.Synapse.constant() for _ in range(num_excitatory)]],
+            excitatory_synapses=[[synapse.Synapse.constant(1.84) for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.Synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
             plot_time_step=1.0,
@@ -399,11 +399,11 @@ class NeuronWithInputSynapses(CommonProps):
             excitatory_spike_trains=[spike_train.create(excitatory_noise, 0.0) for _ in range(num_excitatory)],
             inhibitory_spike_trains=[spike_train.create(inhibitory_noise, 0.0) for _ in range(num_inhibitory)],
             excitatory_synapses=[
-                [synapse.Synapse.constant() for _ in range(num_excitatory)],
-                [synapse.Synapse.constant() for _ in range(num_excitatory)],
-                [synapse.Synapse.constant() for _ in range(num_excitatory)],
-                [synapse.Synapse.constant() for _ in range(num_excitatory)],
-                [synapse.Synapse.constant() for _ in range(num_excitatory)]
+                [synapse.Synapse.constant(1.84) for _ in range(num_excitatory)],
+                [synapse.Synapse.constant(1.84) for _ in range(num_excitatory)],
+                [synapse.Synapse.constant(1.35) for _ in range(num_excitatory)],
+                [synapse.Synapse.constant(1.84) for _ in range(num_excitatory)],
+                [synapse.Synapse.constant(1.5) for _ in range(num_excitatory)]
                 ],
             inhibitory_synapses=[
                 [synapse.Synapse.constant() for _ in range(num_inhibitory)],
@@ -424,7 +424,7 @@ class NeuronWithInputSynapses(CommonProps):
         This is not a genuine configuration. It serves only for development,
         testing, and bug-fixing of this evaluation system.
         """
-        count_base = 2000
+        count_base = 200
         num_excitatory = 4*count_base
         num_inhibitory = 1*count_base
         excitatory_noise = distribution.default_excitatory_isi_distribution()
@@ -434,24 +434,24 @@ class NeuronWithInputSynapses(CommonProps):
             output_dir=output_dir,
             start_time=0.0,
             dt=0.001,
-            nsteps=1*1000,
+            nsteps=10*1000,
             num_sub_iterations=[1],
             cell_soma=[soma.izhikevich.regular_spiking(
-                spike_magnitude=1.0,
-                input_cooling_coef=-0.05
+                spike_magnitude=0.15,
+                # input_cooling_coef=-0.05
                 )],
             excitatory_spike_trains=[spike_train.create(excitatory_noise, 0.0) for _ in range(num_excitatory)],
             inhibitory_spike_trains=[spike_train.create(inhibitory_noise, 0.0) for _ in range(num_inhibitory)],
-            excitatory_synapses=[[synapse.Synapse.constant() for _ in range(num_excitatory)]],
+            excitatory_synapses=[[synapse.Synapse.constant(1.84) for _ in range(num_excitatory)]],
             inhibitory_synapses=[[synapse.Synapse.constant() for _ in range(num_inhibitory)]],
             plot_files_extension=".png",
             plot_time_step=1.0,
             recording_config=neuron.RecordingConfig(
                 do_recording_of_post_synaptic_spikes=True,
-                do_recording_of_soma=False,
+                do_recording_of_soma=True,
                 do_recording_of_excitatory_synapses=False,
                 do_recording_of_inhibitory_synapses=False,
-                do_recording_of_key_variables_only=False,
+                do_recording_of_key_variables_only=True,
                 do_recording_controller=lambda last_recording_time, current_time, was_post_spike_generated: True
                 )
             )
