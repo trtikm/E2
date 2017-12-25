@@ -1322,7 +1322,7 @@ def _evaluate_configuration_of_input_spike_trains(construction_data):
     print("  Done.")
 
 
-def _compute_interconfig_summary_data(cfg):
+def _compute_interconfig_for_effect_of_input_spike_trains(cfg):
     assert isinstance(cfg, config.EffectOfInputSpikeTrains)
     print("Building the inter-configuration summary data to '" + cfg.get_interconfig_output_dir() + "'.")
     tmprof_begin = time.time()
@@ -1427,7 +1427,126 @@ def evaluate_effect_of_input_spike_trains(cfg, force_recompute):
         if os.path.exists(cfg.get_interconfig_output_dir()):
             shutil.rmtree(cfg.get_interconfig_output_dir())
         os.makedirs(cfg.get_interconfig_output_dir())
-        _compute_interconfig_summary_data(cfg)
+        _compute_interconfig_for_effect_of_input_spike_trains(cfg)
+    else:
+        print("The inter-configuration summary data '" + cfg.get_interconfig_output_dir() + "' already exist. "
+              "Skipping their computation.")
+    end_time = time.time()
+    print("The whole evaluation finished in " + utility.duration_string(start_time, end_time) + " seconds.")
+    print("Done.")
+
+
+def _evaluate_time_differences_between_pre_post_spikes(construction_data):
+    assert isinstance(construction_data, config.TimeDifferencesBetweenPrePostSpikes.ConstructionData)
+    print("  Building spike trains.")
+
+    tmprof_begin_construction = time.time()
+
+    cfg = construction_data.apply()
+    assert isinstance(cfg, config.TimeDifferencesBetweenPrePostSpikes.Configuration)
+
+    print("  Starting simulation.")
+
+    tmprof_begin_simulation = time.time()
+
+    post_pre_time_differences = []
+    t = cfg.start_time
+    for step in range(cfg.nsteps):
+        utility.print_progress_string(step, cfg.nsteps)
+
+        was_pre_spike = cfg.pre_spike_train.on_time_step(t, cfg.dt)
+        was_post_spike = cfg.post_spike_train.on_time_step(t, cfg.dt)
+
+        if ((was_pre_spike or was_post_spike) and
+                    len(cfg.pre_spike_train.get_spikes_history()) > 0 and
+                    len(cfg.post_spike_train.get_spikes_history()) > 0):
+            post_pre_time_differences.append(cfg.post_spike_train.get_spikes_history()[-1] - cfg.pre_spike_train.get_spikes_history()[-1])
+
+        t += cfg.dt
+
+    print("  Saving results.")
+
+    tmprof_begin_save = time.time()
+
+    if os.path.exists(cfg.output_dir):
+        shutil.rmtree(cfg.output_dir)
+    os.makedirs(cfg.output_dir)
+    plots_output_dir = os.path.join(cfg.output_dir, "plots")
+    os.makedirs(plots_output_dir)
+
+    pathname = os.path.join(cfg.output_dir, "construction_data.json")
+    print("    Saving construction data for spike trains to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(construction_data.to_json(), sort_keys=True, indent=4))
+
+    pathname = os.path.join(cfg.output_dir, "configuration.json")
+    print("    Saving configuration of spike trains to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(cfg.to_json(), sort_keys=True, indent=4))
+
+    pathname = os.path.join(cfg.output_dir, "post_pre_time_differences.json")
+    print("    Saving time differences between post- and pre- spikes to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(post_pre_time_differences, sort_keys=True, indent=4))
+
+    post_pre_time_differences_distribution = distribution.Distribution(
+        datalgo.make_histogram(post_pre_time_differences, 0.001, 0.0)
+        )
+
+    pathname = os.path.join(cfg.output_dir, "post_pre_time_differences_distribution.json")
+    print("    Saving distribution of time differences between post- and pre- spikes to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(post_pre_time_differences_distribution.to_json(), sort_keys=True, indent=4))
+
+    pathname = os.path.join(plots_output_dir, "post_pre_time_differences_distribution" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plot.histogram(post_pre_time_differences_distribution, pathname, normalised=False)
+
+    tmprof_end = time.time()
+
+    time_profile = {
+        "construction": tmprof_begin_simulation - tmprof_begin_construction,
+        "simulation": tmprof_begin_save - tmprof_begin_simulation,
+        "save": tmprof_end - tmprof_begin_save,
+        "TOTAL": tmprof_end - tmprof_begin_construction
+    }
+    pathname = os.path.join(cfg.output_dir, "time_profile.json")
+    print("    Saving time profile to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(time_profile, sort_keys=True, indent=4))
+
+    print("  Time profile of the evaluation [in seconds]:" +
+          "\n    Construction: " + utility.duration_string(tmprof_begin_construction, tmprof_begin_simulation) +
+          "\n    Simulation: " + utility.duration_string(tmprof_begin_simulation, tmprof_begin_save) +
+          "\n    Saving results: " + utility.duration_string(tmprof_begin_save, tmprof_end) +
+          "\n    TOTAL: " + utility.duration_string(tmprof_begin_construction, tmprof_end))
+
+    print("  Done.")
+
+
+def _compute_interconfig_for_time_differences_between_pre_post_spikes(cfg):
+    assert isinstance(cfg, config.TimeDifferencesBetweenPrePostSpikes)
+    print("Building the inter-configuration summary data to '" + cfg.get_interconfig_output_dir() + "'.")
+    tmprof_begin = time.time()
+    tmprof_end = time.time()
+    print("  Done in " + utility.duration_string(tmprof_begin, tmprof_end) + " seconds.")
+
+
+def evaluate_time_differences_between_pre_post_spikes(cfg, force_recompute):
+    assert isinstance(cfg, config.TimeDifferencesBetweenPrePostSpikes)
+    start_time = time.time()
+    for construction_data in cfg.get_list_of_construction_data():
+        assert isinstance(construction_data, config.TimeDifferencesBetweenPrePostSpikes.ConstructionData)
+        if force_recompute is False and os.path.isdir(construction_data.get_output_root_dir()):
+            print("The configuration '" + construction_data.get_name() + "' already exists. Skipping its computation.")
+        else:
+            print("Building the configuration '" + construction_data.get_name() + "'.")
+            _evaluate_time_differences_between_pre_post_spikes(construction_data)
+    if force_recompute or not os.path.exists(cfg.get_interconfig_output_dir()):
+        if os.path.exists(cfg.get_interconfig_output_dir()):
+            shutil.rmtree(cfg.get_interconfig_output_dir())
+        os.makedirs(cfg.get_interconfig_output_dir())
+        _compute_interconfig_for_time_differences_between_pre_post_spikes(cfg)
     else:
         print("The inter-configuration summary data '" + cfg.get_interconfig_output_dir() + "' already exist. "
               "Skipping their computation.")
@@ -1456,6 +1575,8 @@ def main(cmdline):
                 evaluate_pre_post_spike_noises_differences(config.construct_experiment(cfg), cmdline.force_recompute)
             elif cfg["class_name"] == config.EffectOfInputSpikeTrains.__name__:
                 evaluate_effect_of_input_spike_trains(config.construct_experiment(cfg), cmdline.force_recompute)
+            elif cfg["class_name"] == config.TimeDifferencesBetweenPrePostSpikes.__name__:
+                evaluate_time_differences_between_pre_post_spikes(config.construct_experiment(cfg), cmdline.force_recompute)
             else:
                 print("ERROR: There is not defined the evaluation function for configuration class '" +
                       cfg["class_name"] + "'.")

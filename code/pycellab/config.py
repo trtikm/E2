@@ -879,6 +879,143 @@ class EffectOfInputSpikeTrains:
             )
 
 
+class TimeDifferencesBetweenPrePostSpikes:
+
+    class Configuration(CommonProps):
+        def __init__(self,
+                     name,
+                     output_dir,
+                     start_time,
+                     dt,
+                     nsteps,
+                     pre_spike_train,
+                     post_spike_train
+                     ):
+            super(TimeDifferencesBetweenPrePostSpikes.Configuration, self).__init__(
+                name, output_dir, start_time, dt, nsteps, ".png", 1.0
+                )
+            self.pre_spike_train = pre_spike_train
+            self.post_spike_train = post_spike_train
+
+        def to_json(self):
+            return {
+                "name": self.name,
+                "start_time": self.start_time,
+                "dt": self.dt,
+                "nsteps": self.nsteps,
+                "pre_spike_train": self.pre_spike_train.to_json(),
+                "post_spike_train": self.post_spike_train.to_json(),
+            }
+
+    class ConstructionData:
+        def __init__(
+                self,
+                name,
+                output_dir,
+                pre_is_excitatory,
+                pre_percentage_of_regularity_phases,
+                post_is_excitatory,
+                post_percentage_of_regularity_phases,
+                num_seconds_to_simulate=30
+                ):
+            assert type(pre_is_excitatory) == bool
+            assert type(pre_percentage_of_regularity_phases) in [int, float]
+            assert pre_percentage_of_regularity_phases >= 0 and pre_percentage_of_regularity_phases <= 1
+            assert type(post_is_excitatory) == bool
+            assert type(post_percentage_of_regularity_phases) in [int, float]
+            assert post_percentage_of_regularity_phases >= 0 and post_percentage_of_regularity_phases <= 1
+            self._name = name
+            self._output_dir = output_dir
+            self._pre_is_excitatory = pre_is_excitatory
+            self._pre_percentage_of_regularity_phases = pre_percentage_of_regularity_phases
+            self._post_is_excitatory = post_is_excitatory
+            self._post_percentage_of_regularity_phases = post_percentage_of_regularity_phases
+            self._num_seconds_to_simulate = num_seconds_to_simulate
+
+        def to_json(self):
+            return {
+                "name": self._name,
+                "output_dir": self._output_dir,
+                "pre_is_excitatory": self._pre_is_excitatory,
+                "pre_percentage_of_regularity_phases": self._pre_percentage_of_regularity_phases,
+                "post_is_excitatory": self._post_is_excitatory,
+                "post_percentage_of_regularity_phases": self._post_percentage_of_regularity_phases,
+                "num_seconds_to_simulate": self._num_seconds_to_simulate
+            }
+
+        def get_name(self):
+            return self._name
+
+        def get_output_root_dir(self):
+            return os.path.join(self._output_dir, self.get_name())
+
+        def apply(self):
+            return TimeDifferencesBetweenPrePostSpikes.Configuration(
+                self._name,
+                self._output_dir,
+                0.0,
+                0.001,
+                int(self._num_seconds_to_simulate * 1000 + 0.5),
+                spike_train.create(
+                    distribution.default_excitatory_isi_distribution()
+                        if self._pre_is_excitatory
+                        else distribution.default_inhibitory_isi_distribution(),
+                    self._pre_percentage_of_regularity_phases
+                    ),
+                spike_train.create(
+                    distribution.default_excitatory_isi_distribution()
+                        if self._post_is_excitatory
+                        else distribution.default_inhibitory_isi_distribution(),
+                    self._post_percentage_of_regularity_phases
+                    )
+                )
+
+    def __init__(self, list_of_construction_data):
+        assert isinstance(list_of_construction_data, list)
+        assert all(isinstance(data, TimeDifferencesBetweenPrePostSpikes.ConstructionData) for data in list_of_construction_data)
+        self._list_of_construction_data = list_of_construction_data
+        self._output_dirs = [os.path.abspath(cfg.get_output_root_dir()) for cfg in self.get_list_of_construction_data()]
+        self._interconfig_output_dir = os.path.join(utility.get_common_prefix_of_disk_paths(self._output_dirs), "interconfig")
+
+    def get_list_of_construction_data(self):
+        return self._list_of_construction_data
+
+    def get_output_dirs_of_configurations(self):
+        return self._output_dirs
+
+    def get_interconfig_output_dir(self):
+        return self._interconfig_output_dir
+
+    @staticmethod
+    def all_in_one(my_precomputed_full_name, output_dir):
+        """
+        TODO
+        """
+        return TimeDifferencesBetweenPrePostSpikes(
+            [TimeDifferencesBetweenPrePostSpikes.ConstructionData(
+                os.path.join(
+                    my_precomputed_full_name,
+                    "pre_1" + ("e" if pre_is_excitatory else "i") + "_" +
+                        format(pre_percentage_of_regularity_phases, ".2f") + "p__" +
+                        "post_1" + ("e" if post_is_excitatory else "i") + "_" +
+                            format(post_percentage_of_regularity_phases, ".2f") + "p"
+                    ),
+                output_dir,
+                pre_is_excitatory,
+                pre_percentage_of_regularity_phases,
+                post_is_excitatory,
+                post_percentage_of_regularity_phases,
+                120
+                )
+             for pre_is_excitatory in [True, False]
+             for pre_percentage_of_regularity_phases in [0.0, 0.25, 0.5, 0.75, 1.0]
+             for post_is_excitatory in [True, False]
+             for post_percentage_of_regularity_phases in [0.0, 0.25, 0.5, 0.75, 1.0]
+             ]
+            )
+        pass
+
+
 class AutoBalancedPreSynapticInput:
 
     class Configuration(CommonProps):
