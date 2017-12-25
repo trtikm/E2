@@ -32,7 +32,7 @@ class Distribution:
         self._median = self.event_with_probability(0.5)
         self._variance = sum([((numeric_event_line[i] - self._mean)**2) * self._probabilities[i] for i in range(len(self._events_line))])
         self._standard_deviation = numpy.sqrt(self._variance)
-        self._coefficient_of_variation = self._standard_deviation / (self._mean + 0.00001)
+        self._coefficient_of_variation = self._standard_deviation / (self._mean if abs(self._mean) > 0.00001 else 0.00001)
 
     def __str__(self):
         return (
