@@ -169,7 +169,7 @@ def _test_synapse(info):
         last_post_spike_time = start_time
         t = start_time
         for step in range(nsteps):
-            print("    " + format(100.0 * step / float(nsteps), '.1f') + "%", end='\r')
+            utility.print_progress_string(step, nsteps)
 
             the_synapse.integrate(dt)
 
