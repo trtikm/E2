@@ -229,6 +229,7 @@ class SpikeTrain:
         assert isinstance(desired_size, int) and desired_size >= 1
         while len(self._spikes_buffer) < desired_size:
             event = self.get_spiking_distribution().next_event()
+            assert event > 0.00001
             self._spikes_buffer.insert(bisect.bisect_left(self._spikes_buffer, event), event)
             self._statistics["num_generated_spike_events"] += 1
         self._statistics["time__recharge_spikes_buffer"] += time.time() - start_time
