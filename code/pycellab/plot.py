@@ -435,10 +435,10 @@ def _parse_command_line_options():
             cmdline.dom_x = eval(cmdline.dom_x)
             assert isinstance(cmdline.dom_x, tuple) and len(cmdline.dom_x) == 3
             assert type(cmdline.dom_x[0]) in [int, float] and type(cmdline.dom_x[1]) in [int, float]
-            assert type(cmdline.dom_x[1]) in [int]
+            assert type(cmdline.dom_x[2]) in [int]
             assert cmdline.dom_x[0] < cmdline.dom_x[1] and cmdline.dom_x[2] >= 2
         except Exception as e:
-            print("ERROR: The conversion of the string '" + cmdline.dom_x + "' to domain has FILED! Details: " + str(e))
+            print("ERROR: The conversion of the string '" + str(cmdline.dom_x) + "' to domain has FILED! Details: " + str(e))
             exit(6)
 
     if cmdline.dom_y is not None:
@@ -446,10 +446,10 @@ def _parse_command_line_options():
             cmdline.dom_y = eval(cmdline.dom_y)
             assert isinstance(cmdline.dom_y, tuple) and len(cmdline.dom_y) == 3
             assert type(cmdline.dom_y[0]) in [int, float] and type(cmdline.dom_y[1]) in [int, float]
-            assert type(cmdline.dom_y[1]) in [int]
+            assert type(cmdline.dom_y[2]) in [int]
             assert cmdline.dom_y[0] < cmdline.dom_y[1] and cmdline.dom_y[2] >= 2
         except Exception as e:
-            print("ERROR: The conversion of the string '" + cmdline.dom_y + "' to domain has FILED! Details: " + str(e))
+            print("ERROR: The conversion of the string '" + str(cmdline.dom_y) + "' to domain has FILED! Details: " + str(e))
             exit(7)
 
     if not os.path.isfile(cmdline.input) and cmdline.function is None:
