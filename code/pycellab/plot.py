@@ -2,6 +2,7 @@ import os
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as axes3d
 import argparse
+import numpy
 import json
 import distribution
 
@@ -262,15 +263,45 @@ def _autodetect_plot_kind(plot_data):
     if isinstance(plot_data, dict):
         if "points" in plot_data and isinstance(plot_data["points"], list):
             if "num_dimensions" in plot_data:
-                if plot_data["num_dimensions"] == 3:
+                if plot_data["num_dimensions"] == 2:
+                    if len(plot_data["points"]) > 0:
+                        return "points_2d"
+                elif plot_data["num_dimensions"] == 3:
                     if len(plot_data["points"]) > 0 and "error" in plot_data["points"][0]:
                         return "points_3d_with_error"
     return None
 
 
-def _show_points_3d_with_error(points):
+def _show_points_2d_impl(plot_data, line_style, point_style):
+    fig = plt.figure(dpi=100)
+    ax = fig.gca()
+    ax.set_title(plot_data["plot_title"] if "plot_title" in plot_data else "points_2d")
+    ax.set_xlabel(plot_data["plot_x_axis_label"] if "plot_x_axis_label" in plot_data else "x")
+    ax.set_ylabel(plot_data["plot_y_axis_label"] if "plot_y_axis_label" in plot_data else "y")
+    ax.grid(plot_data["plot_show_grid"] if "plot_show_grid" in plot_data else True, linestyle='dotted')
+    fx = [p["x"] for p in plot_data["points"]]
+    fy = [p["y"] for p in plot_data["points"]]
+    ax.plot(fx, fy, linestyle=line_style, marker=point_style)
+    plt.show()
+
+
+def _show_points_2d(plot_data):
+    _show_points_2d_impl(plot_data, "None", ".")
+
+
+def _show_lines_2d(plot_data):
+    _show_points_2d_impl(plot_data, "-", "None")
+
+
+def _show_points_and_lines_2d(plot_data):
+    _show_points_2d_impl(plot_data, "-", ".")
+
+
+def _show_points_3d_with_error(plot_data):
     fig = plt.figure(dpi=100)
     ax = fig.add_subplot(111, projection='3d')
+
+    points = plot_data["points"]
 
     fx = [p["x"] for p in points]
     fy = [p["y"] for p in points]
@@ -295,20 +326,58 @@ def _show_points_3d_with_error(points):
     plt.show()
 
 
+def _compute_points_of_function_2d(user_function, dom_x):
+    result = []
+    for x in numpy.arange(dom_x[0], dom_x[1] + 0.0001, float(dom_x[1] - dom_x[0]) / (dom_x[2] - 1)):
+        try:
+            y = user_function(x)
+            result.append({"x": x, "y": y})
+        except:
+            pass
+    return {"num_dimensions": 2, "points":  result}
+
+
+def _compute_points_of_function_3d(user_function, dom_x, dom_y):
+    result = []
+    for x in numpy.arange(dom_x[0], dom_x[1] + 0.0001, float(dom_x[1] - dom_x[0]) / (dom_x[2] - 1)):
+        for y in numpy.arange(dom_y[0], dom_y[1] + 0.0001, float(dom_y[1] - dom_y[0]) / (dom_y[2] - 1)):
+            try:
+                z = user_function(x, y)
+                result.append({"x": x, "y": y, "z": z})
+            except:
+                pass
+    return {"num_dimensions": 3, "points":  result}
+
+
+def _get_plot_kinds_bindings():
+    return {
+        "points_2d": _show_points_2d,
+        "lines_2d": _show_lines_2d,
+        "points_and_lines_2d": _show_points_and_lines_2d,
+        "points_3d_with_error": _show_points_3d_with_error
+    }
+
+
 def _main(cmdline):
-    with open(cmdline.input, "r") as ifile:
-        plot_data = json.load(ifile)
+    if cmdline.function is not None:
+        plot_data = _compute_points_of_function_2d(cmdline.function, cmdline.dom_x)\
+                        if cmdline.dom_y is None\
+                        else _compute_points_of_function_3d(cmdline.function, cmdline.dom_x, cmdline.dom_y)
+        with open(cmdline.input, "w") as ofile:
+            ofile.write(json.dumps(plot_data, sort_keys=True, indent=4))
+    else:
+        with open(cmdline.input, "r") as ifile:
+            plot_data = json.load(ifile)
     if cmdline.kind is None:
         cmdline.kind = _autodetect_plot_kind(plot_data)
         if cmdline.kind is None:
             print("ERROR: The automatic detection of plot kind for the data in the passed JSON file has FAILED. "
                   "Use the option '--kind' to supply the desired plot kind.")
-            return 3
-    if cmdline.kind == "points_3d_with_error":
-        _show_points_3d_with_error(plot_data["points"])
-    else:
+            return 8
+    if cmdline.kind not in _get_plot_kinds_bindings():
         print("ERROR: Unknown plot kind '" + cmdline.kind + "'. See option '--kind' for valid values.")
-        return 4
+        return 9
+    _get_plot_kinds_bindings()[cmdline.kind](plot_data)
     return 0
 
 
@@ -323,12 +392,67 @@ def _parse_command_line_options():
     parser.add_argument(
         "--kind", type=str,
         help="Specifies a kind of plot to be used for data in a passed JSON file. When omitted, "
-             "then the most relevant plot kind is automatically chosen. Here are available kinds: "
-             "points_3d_with_error, "
+             "then the most relevant plot kind is automatically chosen. Here are available kinds: " +
+             ", ".join(_get_plot_kinds_bindings().keys())
+        )
+    parser.add_argument(
+        "--function", type=str,
+        help="Defines a function, namely some Python lambda expression, to be uses for generating content of JSON "
+             "file (whose path-name is passed to the script) which will then by plotted. For example, to plot "
+             "a quadratic function y=x^2 pass the string \"lambda x: x*x\" to this option. Note that option --kind "
+             "must be compatible with the kind and dimensionality of data produced by the passed function."
+        )
+    parser.add_argument(
+        "--dom-x", type=str,
+        help="Defines a domain of the passed function along the X axis. The domain is defined in form of a sting "
+             "containing a tuple (lo, hi, n), where [lo, hi) is the interval along the axis and n is a number of "
+             "samples in that interval to be considered. We require that lo < hi and n >= 2."
+        )
+    parser.add_argument(
+        "--dom-y", type=str,
+        help="Defines a domain of the passed function along the Y axis. The domain is defined in form of a sting "
+             "containing a tuple (lo, hi, n), where [lo, hi) is the interval along the axis and n is a number of "
+             "samples in that interval to be considered. We require that lo < hi and n >= 2."
         )
     cmdline = parser.parse_args()
 
-    if not os.path.isfile(cmdline.input):
+    if cmdline.function is not None:
+        if not cmdline.function.startswith("lambda "):
+            print("ERROR: The string '" + cmdline.function + "' passed to --function option is not a lambda expression.")
+            exit(3)
+        try:
+            cmdline.function = eval(cmdline.function)
+            assert callable(cmdline.function)
+        except Exception as e:
+            print("ERROR: The conversion of the string '" + cmdline.function + "' to callable has FILED! Details: " + str(e))
+            exit(4)
+        if cmdline.dom_x is None:
+            print("ERROR: The option --dom-x was not specified.")
+            exit(5)
+
+    if cmdline.dom_x is not None:
+        try:
+            cmdline.dom_x = eval(cmdline.dom_x)
+            assert isinstance(cmdline.dom_x, tuple) and len(cmdline.dom_x) == 3
+            assert type(cmdline.dom_x[0]) in [int, float] and type(cmdline.dom_x[1]) in [int, float]
+            assert type(cmdline.dom_x[1]) in [int]
+            assert cmdline.dom_x[0] < cmdline.dom_x[1] and cmdline.dom_x[2] >= 2
+        except Exception as e:
+            print("ERROR: The conversion of the string '" + cmdline.dom_x + "' to domain has FILED! Details: " + str(e))
+            exit(6)
+
+    if cmdline.dom_y is not None:
+        try:
+            cmdline.dom_y = eval(cmdline.dom_y)
+            assert isinstance(cmdline.dom_y, tuple) and len(cmdline.dom_y) == 3
+            assert type(cmdline.dom_y[0]) in [int, float] and type(cmdline.dom_y[1]) in [int, float]
+            assert type(cmdline.dom_y[1]) in [int]
+            assert cmdline.dom_y[0] < cmdline.dom_y[1] and cmdline.dom_y[2] >= 2
+        except Exception as e:
+            print("ERROR: The conversion of the string '" + cmdline.dom_y + "' to domain has FILED! Details: " + str(e))
+            exit(7)
+
+    if not os.path.isfile(cmdline.input) and cmdline.function is None:
         print("ERROR: The passed path '" + cmdline.input + "' does not reference a file.")
         exit(1)
     if os.path.splitext(cmdline.input)[1].lower() != ".json":
