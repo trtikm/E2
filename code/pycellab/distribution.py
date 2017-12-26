@@ -198,20 +198,30 @@ def make_points_of_hermit_cubic_approximation_of_normal_distribution(
     k_m1 = -k_m0
     k_mx = -(0.4 - 0.2) / (0.5 - 0.1)
     d_05 = (0.5, 0.4, 1.1, 1.1)
-    return datalgo.make_points_of_hermit_cubic_spline(
+    raw_curve_points =\
+        datalgo.make_points_of_hermit_cubic_spline(
                 (0.0, 0.0),
                 (mult_m01 * (d_05[2] + k_m0 * (peek_x - d_05[0])), 0.0),
                 (peek_x, 1.0),
                 (mult_mx * (d_05[1] + k_mx * abs(peek_x - d_05[0])), 0.0),
                 int(num_points / 2.0)
                 )[:-1] +\
-           datalgo.make_points_of_hermit_cubic_spline(
+        datalgo.make_points_of_hermit_cubic_spline(
                 (peek_x, 1.0),
                 (mult_mx * (d_05[1] + k_mx * abs(peek_x - d_05[0])), 0.0),
                 (1.0, 0.0),
                 (mult_m01 * (d_05[3] + k_m1 * (peek_x - d_05[0])), 0.0),
                 num_points - (int(num_points / 2.0) - 1)
                 )
+    assert len(raw_curve_points) >= 2
+    result = [raw_curve_points[0]]
+    for i in range(1, len(raw_curve_points) - 1):
+        if raw_curve_points[i][0] > result[-1][0] and raw_curve_points[i][0] < raw_curve_points[-1][0]:
+            result.append(raw_curve_points[i])
+    result.append(raw_curve_points[-1])
+    assert all(result[i][0] >= 0.0 and result[i][0] <= 1.0 for i in range(len(result)))
+    assert all(result[i-1][0] < result[i][0] for i in range(1, len(result)))
+    return result
 
 
 def hermit_distribution_histogram(
@@ -225,18 +235,18 @@ def hermit_distribution_histogram(
         mult_mx=1.0
         ):
     return datalgo.make_histogram_from_points(
-                datalgo.move_scale_curve_points(
-                    make_points_of_hermit_cubic_approximation_of_normal_distribution(
-                        peek_x=peek_x,
-                        mult_m01=mult_m01,
-                        mult_mx=mult_mx,
-                        num_points=333
-                        ),
-                    scale_x=scale_x,
-                    scale_y=scale_y,
-                    pow_y=pow_y,
-                    shift_x=shift_x
-                    ),
+                [p for p in datalgo.move_scale_curve_points(
+                                make_points_of_hermit_cubic_approximation_of_normal_distribution(
+                                    peek_x=peek_x,
+                                    mult_m01=mult_m01,
+                                    mult_mx=mult_mx,
+                                    num_points=333
+                                    ),
+                                scale_x=scale_x,
+                                scale_y=scale_y,
+                                pow_y=pow_y,
+                                shift_x=shift_x
+                                ) if abs(p[1]) > 0.00001],
                 bin_size,
                 0.0
                 )
