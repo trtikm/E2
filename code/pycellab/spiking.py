@@ -1489,6 +1489,14 @@ def _evaluate_time_differences_between_pre_post_spikes(construction_data):
     with open(pathname, "w") as ofile:
         ofile.write(json.dumps(post_pre_time_differences, sort_keys=True, indent=4))
 
+    pathname = os.path.join(plots_output_dir, "pre_spiking_distribution" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plot.histogram(cfg.pre_spike_train.get_spiking_distribution(), pathname, normalised=False)
+
+    pathname = os.path.join(plots_output_dir, "post_spiking_distribution" + cfg.plot_files_extension)
+    print("    Saving plot " + pathname)
+    plot.histogram(cfg.post_spike_train.get_spiking_distribution(), pathname, normalised=False)
+
     post_pre_time_differences_distribution = distribution.Distribution(
         datalgo.make_histogram(post_pre_time_differences, 0.001, 0.0)
         )

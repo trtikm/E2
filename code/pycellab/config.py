@@ -913,22 +913,28 @@ class TimeDifferencesBetweenPrePostSpikes:
                 name,
                 output_dir,
                 pre_is_excitatory,
+                pre_mean_frequency,
                 pre_percentage_of_regularity_phases,
                 post_is_excitatory,
+                post_mean_frequency,
                 post_percentage_of_regularity_phases,
                 num_seconds_to_simulate=30
                 ):
             assert type(pre_is_excitatory) == bool
+            assert type(pre_mean_frequency) in [int, float] and pre_mean_frequency > 0.0
             assert type(pre_percentage_of_regularity_phases) in [int, float]
             assert pre_percentage_of_regularity_phases >= 0 and pre_percentage_of_regularity_phases <= 1
             assert type(post_is_excitatory) == bool
+            assert type(post_mean_frequency) in [int, float] and post_mean_frequency > 0.0
             assert type(post_percentage_of_regularity_phases) in [int, float]
             assert post_percentage_of_regularity_phases >= 0 and post_percentage_of_regularity_phases <= 1
             self._name = name
             self._output_dir = output_dir
             self._pre_is_excitatory = pre_is_excitatory
+            self._pre_mean_frequency = pre_mean_frequency
             self._pre_percentage_of_regularity_phases = pre_percentage_of_regularity_phases
             self._post_is_excitatory = post_is_excitatory
+            self._post_mean_frequency = post_mean_frequency
             self._post_percentage_of_regularity_phases = post_percentage_of_regularity_phases
             self._num_seconds_to_simulate = num_seconds_to_simulate
 
@@ -937,8 +943,10 @@ class TimeDifferencesBetweenPrePostSpikes:
                 "name": self._name,
                 "output_dir": self._output_dir,
                 "pre_is_excitatory": self._pre_is_excitatory,
+                "pre_mean_frequency": self._pre_mean_frequency,
                 "pre_percentage_of_regularity_phases": self._pre_percentage_of_regularity_phases,
                 "post_is_excitatory": self._post_is_excitatory,
+                "post_mean_frequency": self._post_mean_frequency,
                 "post_percentage_of_regularity_phases": self._post_percentage_of_regularity_phases,
                 "num_seconds_to_simulate": self._num_seconds_to_simulate
             }
@@ -957,15 +965,15 @@ class TimeDifferencesBetweenPrePostSpikes:
                 0.001,
                 int(self._num_seconds_to_simulate * 1000 + 0.5),
                 spike_train.create(
-                    distribution.default_excitatory_isi_distribution()
+                    distribution.hermit_distribution_with_desired_mean(1.0 / self._pre_mean_frequency, 0.003, 0.3, 0.0001, pow_y=2)
                         if self._pre_is_excitatory
-                        else distribution.default_inhibitory_isi_distribution(),
+                        else distribution.hermit_distribution_with_desired_mean(1.0 / self._pre_mean_frequency, 0.001, 0.08, 0.0001, pow_y=2),
                     self._pre_percentage_of_regularity_phases
                     ),
                 spike_train.create(
-                    distribution.default_excitatory_isi_distribution()
+                    distribution.hermit_distribution_with_desired_mean(1.0 / self._post_mean_frequency, 0.003, 0.3, 0.0001, pow_y=2)
                         if self._post_is_excitatory
-                        else distribution.default_inhibitory_isi_distribution(),
+                        else distribution.hermit_distribution_with_desired_mean(1.0 / self._post_mean_frequency, 0.001, 0.08, 0.0001, pow_y=2),
                     self._post_percentage_of_regularity_phases
                     )
                 )
@@ -989,8 +997,18 @@ class TimeDifferencesBetweenPrePostSpikes:
     @staticmethod
     def all_in_one(my_precomputed_full_name, output_dir):
         """
-        TODO
+        Evaluates time differences between pre- and post- synaptic spikes.
+        Namely, for a pre- spikes train and a post- spikes train time
+        differences between post and pre spikes are collected and
+        histogram of the time differences is plotted. There are
+        considered all combinations of the following properties of
+        both spikes trains: Excitatory mean spike frequencies [12.0,
+        13.5, 15.0, 16.5, 18.0], inhibitory mean spike frequencies
+        [48.0, 54.0, 60.0, 66.0, 72.0], and these percentages of
+        regulatory phases of the trains [0.0, 0.25, 0.5, 0.75].
         """
+        excitatory_mean_frequencies = [12.0, 13.5, 15.0, 16.5, 18.0]
+        inhibitory_mean_frequencies = [48.0, 54.0, 60.0, 66.0, 72.0]
         return TimeDifferencesBetweenPrePostSpikes(
             [TimeDifferencesBetweenPrePostSpikes.ConstructionData(
                 os.path.join(
@@ -998,19 +1016,25 @@ class TimeDifferencesBetweenPrePostSpikes:
                     "pre_1" + ("e" if pre_is_excitatory else "i") + "_" +
                         format(pre_percentage_of_regularity_phases, ".2f") + "p__" +
                         "post_1" + ("e" if post_is_excitatory else "i") + "_" +
-                            format(post_percentage_of_regularity_phases, ".2f") + "p"
+                            format(post_percentage_of_regularity_phases, ".2f") + "p",
+                    "pre_mfreq_" + format(pre_mean_frequency, ".2f") + "__"
+                        "post_mfreq_" + format(post_mean_frequency, ".2f")
                     ),
                 output_dir,
                 pre_is_excitatory,
+                pre_mean_frequency,
                 pre_percentage_of_regularity_phases,
                 post_is_excitatory,
+                post_mean_frequency,
                 post_percentage_of_regularity_phases,
                 120
                 )
              for pre_is_excitatory in [True, False]
-             for pre_percentage_of_regularity_phases in [0.0, 0.25, 0.5, 0.75, 1.0]
+             for pre_percentage_of_regularity_phases in [0.0, 0.25, 0.5, 0.75]
              for post_is_excitatory in [True, False]
-             for post_percentage_of_regularity_phases in [0.0, 0.25, 0.5, 0.75, 1.0]
+             for post_percentage_of_regularity_phases in [0.0, 0.25, 0.5, 0.75]
+             for pre_mean_frequency in (excitatory_mean_frequencies if pre_is_excitatory else inhibitory_mean_frequencies)
+             for post_mean_frequency in (excitatory_mean_frequencies if post_is_excitatory else inhibitory_mean_frequencies)
              ]
             )
         pass
