@@ -238,7 +238,7 @@ def histogram(distrib, pathname, normalised=True, colours=None, title=None, xaxi
         "sum bars=" + format(sum([value for _, value in distrib.get_histogram().items()]), ".3f") + ", "
         "median=" + format(distrib.get_median(), ".3f") + ", "
         "mean=" + format(distrib.get_mean(), ".3f") + ", "
-        "mean freq.=" + format(1.0 / (distrib.get_mean() + 0.0001), ".3f") + ", "
+        "mean freq.=" + format(1.0 / (distrib.get_mean() if abs(distrib.get_mean()) > 0.00001 else 0.00001), ".3f") + ", "
         "variance=" + format(distrib.get_variance(), ".3f") + ", "
         "std. deviation=" + format(distrib.get_standard_deviation(), ".3f") + ", "
         "CV=" + format(distrib.get_coefficient_of_variation(), ".3f")
