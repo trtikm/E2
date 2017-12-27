@@ -1,6 +1,7 @@
 import os
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d.axes3d as axes3d
+from matplotlib import cm
 import argparse
 import numpy
 import json
@@ -297,9 +298,63 @@ def _show_points_and_lines_2d(plot_data):
     _show_points_2d_impl(plot_data, "-", ".")
 
 
+def _show_points_3d_impl(plot_data, line_style, point_style):
+    fig = plt.figure(dpi=100)
+    ax = fig.gca(projection='3d')
+    ax.set_title(plot_data["plot_title"] if "plot_title" in plot_data else "points_3d")
+    ax.set_xlabel(plot_data["plot_x_axis_label"] if "plot_x_axis_label" in plot_data else "x")
+    ax.set_ylabel(plot_data["plot_y_axis_label"] if "plot_y_axis_label" in plot_data else "y")
+    ax.set_zlabel(plot_data["plot_z_axis_label"] if "plot_z_axis_label" in plot_data else "z")
+
+    def _make_grid_points_3d(points):
+        def _split_by_same_coord(points, coord_name):
+            result = []
+            for p in points:
+                if len(result) == 0 or result[-1][-1][coord_name] != p[coord_name]:
+                    result.append([p])
+                else:
+                    result[-1].append(p)
+            return result
+
+        x = []
+        y = []
+        z = []
+        for grid_line in [sorted(same_x_points, key=lambda p: p["y"])
+                          for same_x_points in _split_by_same_coord(sorted(points, key=lambda p: p["x"]), "x")]:
+            x.append([p["x"] for p in grid_line])
+            y.append([p["y"] for p in grid_line])
+            z.append([p["z"] for p in grid_line])
+        return x, y, z
+
+    if line_style is "wireframe":
+        fx, fy, fz = _make_grid_points_3d(plot_data["points"])
+        ax.plot_wireframe(fx, fy, fz)
+    elif line_style is "surface":
+        fx, fy, fz = _make_grid_points_3d(plot_data["points"])
+        ax.plot_surface(fx, fy, fz, cmap=cm.coolwarm, antialiased=False)
+    else:
+        fx = [p["x"] for p in plot_data["points"]]
+        fy = [p["y"] for p in plot_data["points"]]
+        fz = [p["z"] for p in plot_data["points"]]
+        ax.plot(fx, fy, fz, linestyle="None", marker=point_style)
+    plt.show()
+
+
+def _show_points_3d(plot_data):
+    _show_points_3d_impl(plot_data, "None", ".")
+
+
+def _show_lines_3d(plot_data):
+    _show_points_3d_impl(plot_data, "wireframe", "None")
+
+
+def _show_surface_3d(plot_data):
+    _show_points_3d_impl(plot_data, "surface", ".")
+
+
 def _show_points_3d_with_error(plot_data):
     fig = plt.figure(dpi=100)
-    ax = fig.add_subplot(111, projection='3d')
+    ax = fig.gca(projection='3d')
 
     points = plot_data["points"]
 
@@ -354,6 +409,9 @@ def _get_plot_kinds_bindings():
         "points_2d": _show_points_2d,
         "lines_2d": _show_lines_2d,
         "points_and_lines_2d": _show_points_and_lines_2d,
+        "points_3d": _show_points_3d,
+        "lines_3d": _show_lines_3d,
+        "surface_3d": _show_surface_3d,
         "points_3d_with_error": _show_points_3d_with_error
     }
 
