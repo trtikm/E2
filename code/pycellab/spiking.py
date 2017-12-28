@@ -1636,13 +1636,20 @@ def evaluate_synaptic_plasticity(cfg, force_recompute, dependencies):
         with open(os.path.join(case_source_dir, "construction_data.json"), "r") as ifile:
             constuction_data = json.load(ifile)
         if "pre_is_excitatory" not in constuction_data or "post_is_excitatory" not in constuction_data:
-            print("ERROR: Unexpected content of the file '" + os.path.join(root_dir, "construction_data.json") + "'. "
+            print("ERROR: Unexpected content of the file '" + os.path.join(case_source_dir, "construction_data.json") + "'. "
                   "Skipping the computation.")
             continue
 
         with open(os.path.join(case_source_dir, "post_pre_time_differences.json"), "r") as ifile:
             post_pre_time_differences = json.load(ifile)
-        if not isinstance(post_pre_time_differences, list) or not all(type(x) in [int, float] for x in post_pre_time_differences):
+        if not isinstance(post_pre_time_differences, dict) or (
+                "post_pre_time_differences" not in post_pre_time_differences or
+                "spike_times" not in post_pre_time_differences or
+                not isinstance(post_pre_time_differences["post_pre_time_differences"], list) or
+                not isinstance(post_pre_time_differences["spike_times"], list) or
+                len(post_pre_time_differences["post_pre_time_differences"]) != len(post_pre_time_differences["spike_times"]) or
+                not all(type(x) in [int, float] for x in post_pre_time_differences["post_pre_time_differences"]) or
+                not all(type(x) in [int, float] for x in post_pre_time_differences["spike_times"])):
             print("ERROR: Unexpected content of the file '" +
                   os.path.join(case_source_dir, "post_pre_time_differences.json") + "'. "
                   "Skipping the computation.")
