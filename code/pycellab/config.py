@@ -1070,6 +1070,18 @@ class SynapticPlasticity(CommonProps):
             )
 
     @staticmethod
+    def get_weight_derivative_function(pre_is_excitatory, post_is_excitatory):
+        assert isinstance(pre_is_excitatory, bool)
+        assert isinstance(post_is_excitatory, bool)
+        if pre_is_excitatory:
+            if post_is_excitatory:
+                return lambda dt: (
+                    -0.1 * (-0.44 * dt - 0.022) / (dt - 0.022) if dt < -0.0001 else (
+                    0.1 * (-0.44 * dt + 0.022) / (dt + 0.022) if dt > 0.0001 else 0.0)
+                    )
+        return lambda dt: 0.0
+
+    @staticmethod
     def all_in_one(my_precomputed_full_name, output_dir):
         """
         TODO

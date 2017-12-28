@@ -1662,10 +1662,35 @@ def evaluate_synaptic_plasticity(cfg, force_recompute, dependencies):
 
         tmprof_computation_begin = time.time()
 
-        # TODO
+        weight_derivative_function = cfg.get_weight_derivative_function(
+            constuction_data["pre_is_excitatory"],
+            constuction_data["post_is_excitatory"]
+        )
+        weight_derivatives = [weight_derivative_function(dt) for dt in post_pre_time_differences["post_pre_time_differences"]]
 
         tmprof_computation_end = time.time()
         tmprof_computation_total += tmprof_computation_end - tmprof_computation_begin
+
+        pathname = os.path.join(case_output_dir, "weight_derivatives.json")
+        print("    Saving weight derivatives to " + pathname)
+        with open(pathname, "w") as ofile:
+            ofile.write(json.dumps({
+                "weight_derivatives": weight_derivatives,
+                "sum_of_derivatives": sum(weight_derivatives),
+            }, sort_keys=True, indent=4))
+
+        weight_derivatives_distribution = distribution.Distribution(
+            datalgo.make_histogram(weight_derivatives, 0.001, 0.0)
+            )
+
+        pathname = os.path.join(case_output_dir, "weight_derivatives_distribution.json")
+        print("    Saving distribution of weight derivatives to " + pathname)
+        with open(pathname, "w") as ofile:
+            ofile.write(json.dumps(weight_derivatives_distribution.to_json(), sort_keys=True, indent=4))
+
+        pathname = os.path.join(case_output_plots_dir, "weight_derivatives_distribution" + cfg.plot_files_extension)
+        print("    Saving plot " + pathname)
+        plot.histogram(weight_derivatives_distribution, pathname, normalised=False)
 
     tmprof_end = time.time()
 
