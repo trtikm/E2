@@ -1633,12 +1633,36 @@ def parse_command_line_options():
         help="When specified and the output directory already exists, then the old directory will be removed "
              "and the data will be recomputed."
         )
+    parser.add_argument(
+        "--dependencies", nargs='+',
+        help="When currently evaluated configuration depends on results of other configurations, then this option"
+             "allows to pass it a list of output directories of those configurations in order to find the required "
+             "data. It is explicitly stated in the description of each configuration what other configuration it "
+             "depends on (if any). NOTE: This option accepts a SPACE SEPARATED list of disk paths. If a path "
+             "comprises spaces, then enclose the path into quotes. NOTE: If the current configuration, say 'ABC',"
+             "depends on some configuration, say 'XYZ', no path ending with 'XYZ' is passed to this option, and "
+             "'some/path/ABC' is the output directory of 'ABC', then the path 'some/path/XYZ' is used in the search "
+             "for result data of 'XYZ'."
+        )
     cmdline = parser.parse_args()
 
     if cmdline.output_dir is None:
         my_dir = os.path.dirname(__file__)
         cmdline.output_dir = os.path.normpath(os.path.join(my_dir, "..", "..", "dist", "evaluation", "pycellab")) \
                              if str(my_dir).replace("\\", "/").endswith("E2/code/pycellab") else my_dir
+
+    if cmdline.dependencies is None:
+        cmdline.dependencies = []
+    else:
+        checked_dependencies = []
+        for p in cmdline.dependencies:
+            path = os.path.abspath(p)
+            if not os.path.isdir(path):
+                print("WARNING: In option --dependencies: The path '" + path + "' does not reference "
+                      "any exising directory. It will be IGNORED during the evaluation!")
+            else:
+                checked_dependencies.append(path)
+        cmdline.dependencies = checked_dependencies
 
     return cmdline
 

@@ -16,7 +16,8 @@ class CommonProps:
                  dt,
                  nsteps,
                  plot_files_extension,
-                 plot_time_step
+                 plot_time_step,
+                 dependencies=None
                  ):
         assert isinstance(name, str)
         assert isinstance(start_time, float)
@@ -28,13 +29,16 @@ class CommonProps:
         assert nsteps >= 0
         assert plot_files_extension.lower() == ".svg" or plot_files_extension.lower() == ".png"
         assert plot_time_step > 0.0
+        assert dependencies is None or (isinstance(dependencies, list) and all(isinstance(p, str) for p in dependencies))
         self.name = name
         self.start_time = start_time
         self.dt = dt
         self.nsteps = nsteps
         self.output_dir = os.path.abspath(os.path.join(output_dir, name))
+        self.default_evaluation_root_dir = os.path.abspath(output_dir)
         self.plot_files_extension = plot_files_extension.lower()
         self.plot_time_step = plot_time_step
+        self.dependencies = dependencies if dependencies is not None else []
 
 
 class NeuronWithInputSynapses(CommonProps):
