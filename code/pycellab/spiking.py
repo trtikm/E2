@@ -1450,6 +1450,7 @@ def _evaluate_time_differences_between_pre_post_spikes(construction_data):
     tmprof_begin_simulation = time.time()
 
     post_pre_time_differences = []
+    spike_times = []
     t = cfg.start_time
     for step in range(cfg.nsteps):
         utility.print_progress_string(step, cfg.nsteps)
@@ -1461,8 +1462,10 @@ def _evaluate_time_differences_between_pre_post_spikes(construction_data):
                     len(cfg.pre_spike_train.get_spikes_history()) > 0 and
                     len(cfg.post_spike_train.get_spikes_history()) > 0):
             post_pre_time_differences.append(cfg.post_spike_train.get_spikes_history()[-1] - cfg.pre_spike_train.get_spikes_history()[-1])
+            spike_times.append(t + cfg.dt)
 
         t += cfg.dt
+    assert len(post_pre_time_differences) == len(spike_times)
 
     print("  Saving results.")
 
@@ -1487,7 +1490,20 @@ def _evaluate_time_differences_between_pre_post_spikes(construction_data):
     pathname = os.path.join(cfg.output_dir, "post_pre_time_differences.json")
     print("    Saving time differences between post- and pre- spikes to " + pathname)
     with open(pathname, "w") as ofile:
-        ofile.write(json.dumps(post_pre_time_differences, sort_keys=True, indent=4))
+        ofile.write(json.dumps({
+            "post_pre_time_differences": post_pre_time_differences,
+            "spike_times": spike_times
+        }, sort_keys=True, indent=4))
+
+    pathname = os.path.join(cfg.output_dir, "pre_spikes_history.json")
+    print("    Saving pre-spikes history to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(cfg.pre_spike_train.get_spikes_history(), sort_keys=True, indent=4))
+
+    pathname = os.path.join(cfg.output_dir, "post_spikes_history.json")
+    print("    Saving post-spikes history to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(cfg.post_spike_train.get_spikes_history(), sort_keys=True, indent=4))
 
     pathname = os.path.join(plots_output_dir, "pre_spiking_distribution" + cfg.plot_files_extension)
     print("    Saving plot " + pathname)
