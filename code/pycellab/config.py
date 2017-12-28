@@ -34,11 +34,29 @@ class CommonProps:
         self.start_time = start_time
         self.dt = dt
         self.nsteps = nsteps
-        self.output_dir = os.path.abspath(os.path.join(output_dir, name))
-        self.default_evaluation_root_dir = os.path.abspath(output_dir)
+        self.output_dir = os.path.normpath(os.path.abspath(os.path.join(output_dir, name)))
+        self.default_evaluation_root_dir = os.path.normpath(os.path.abspath(output_dir))
         self.plot_files_extension = plot_files_extension.lower()
         self.plot_time_step = plot_time_step
-        self.dependencies = dependencies if dependencies is not None else []
+        self.dependencies = []
+        for config_name in (dependencies if dependencies is not None else []):
+            path = os.path.normpath(os.path.join(self.default_evaluation_root_dir, config_name))
+            if os.path.isdir(path):
+                self.dependencies.append(path)
+        self.dependencies.sort()
+
+    def to_json(self):
+        return {
+            "name": self.name,
+            "start_time": self.start_time,
+            "dt": self.dt,
+            "nsteps": self.nsteps,
+            "output_dir": self.output_dir,
+            "default_evaluation_root_dir": self.default_evaluation_root_dir,
+            "plot_files_extension": self.plot_files_extension,
+            "plot_time_step": self.plot_time_step,
+            "dependencies": self.dependencies.copy()
+        }
 
 
 class NeuronWithInputSynapses(CommonProps):
@@ -1042,6 +1060,21 @@ class TimeDifferencesBetweenPrePostSpikes:
              ]
             )
         pass
+
+
+class SynapticPlasticity(CommonProps):
+
+    def __init__(self, name, output_dir, start_time=0.0, dt=0.001, nsteps=1000):
+        super(SynapticPlasticity, self).__init__(
+            name, output_dir, start_time, dt, nsteps, ".png", 1.0, ["TimeDifferencesBetweenPrePostSpikes/all_in_one"]
+            )
+
+    @staticmethod
+    def all_in_one(my_precomputed_full_name, output_dir):
+        """
+        TODO
+        """
+        return SynapticPlasticity(my_precomputed_full_name, output_dir)
 
 
 class AutoBalancedPreSynapticInput:

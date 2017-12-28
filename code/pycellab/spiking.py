@@ -1563,6 +1563,105 @@ def evaluate_time_differences_between_pre_post_spikes(cfg, force_recompute):
     print("Done.")
 
 
+def evaluate_synaptic_plasticity(cfg, force_recompute, dependencies):
+    assert isinstance(cfg, config.SynapticPlasticity)
+
+    tmprof_begin = time.time()
+
+    source_data_root_dir = None
+    for path in dependencies + cfg.dependencies:
+        try:
+            exp_name = os.path.split(path)[1]
+            cfg_name = os.path.split(os.path.split(path)[0])[1]
+            if cfg_name == config.TimeDifferencesBetweenPrePostSpikes.__name__ and exp_name == "all_in_one":
+                source_data_root_dir = path
+                break
+        except:
+            pass
+    if source_data_root_dir is None:
+        print("ERROR: Cannot find a path to results of the dependent configuration '" +
+              config.TimeDifferencesBetweenPrePostSpikes.__name__ + "/" + "all_in_one" + "'. "
+              "Add that path to the command line option --dependencies.")
+        return
+    cfg.dependencies = [source_data_root_dir]
+
+    if force_recompute or not os.path.exists(cfg.output_dir):
+        if os.path.exists(cfg.output_dir):
+            shutil.rmtree(cfg.output_dir)
+        os.makedirs(cfg.output_dir)
+
+    pathname = os.path.join(cfg.output_dir, "configuration.json")
+    print("    Saving configuration to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(cfg.to_json(), sort_keys=True, indent=4))
+
+    tmprof_computation_total = 0.0
+
+    for case_source_dir, _, files in os.walk(source_data_root_dir):
+        if "construction_data.json" not in files or "post_pre_time_differences.json" not in files:
+            continue
+
+        case_output_dir = os.path.join(cfg.output_dir, os.path.relpath(case_source_dir, source_data_root_dir))
+        case_output_plots_dir = os.path.join(case_output_dir, "plots")
+        if force_recompute or not os.path.exists(case_output_dir):
+            if os.path.exists(case_output_dir):
+                shutil.rmtree(case_output_dir)
+            os.makedirs(case_output_dir)
+            if os.path.exists(case_output_plots_dir):
+                shutil.rmtree(case_output_plots_dir)
+            os.makedirs(case_output_plots_dir)
+        else:
+            print("The results for time difference data in '" + case_source_dir + "' already exist "
+                  "(" + case_output_dir + "). Skipping their re-computation.")
+            continue
+
+        print("    Processing time difference data in " + case_source_dir)
+
+        with open(os.path.join(case_source_dir, "construction_data.json"), "r") as ifile:
+            constuction_data = json.load(ifile)
+        if "pre_is_excitatory" not in constuction_data or "post_is_excitatory" not in constuction_data:
+            print("ERROR: Unexpected content of the file '" + os.path.join(root_dir, "construction_data.json") + "'. "
+                  "Skipping the computation.")
+            continue
+
+        with open(os.path.join(case_source_dir, "post_pre_time_differences.json"), "r") as ifile:
+            post_pre_time_differences = json.load(ifile)
+        if not isinstance(post_pre_time_differences, list) or not all(type(x) in [int, float] for x in post_pre_time_differences):
+            print("ERROR: Unexpected content of the file '" +
+                  os.path.join(case_source_dir, "post_pre_time_differences.json") + "'. "
+                  "Skipping the computation.")
+            continue
+
+        pathname = os.path.join(case_output_dir, "source_data_info.json")
+        print("    Saving source data info to " + pathname)
+        with open(pathname, "w") as ofile:
+            ofile.write(json.dumps({"source_data_dir": case_source_dir}, sort_keys=True, indent=4))
+
+        tmprof_computation_begin = time.time()
+
+        # TODO
+
+        tmprof_computation_end = time.time()
+        tmprof_computation_total += tmprof_computation_end - tmprof_computation_begin
+
+    tmprof_end = time.time()
+
+    time_profile = {
+        "computation": tmprof_computation_total,
+        "TOTAL": tmprof_end - tmprof_begin
+    }
+    pathname = os.path.join(cfg.output_dir, "time_profile.json")
+    print("    Saving time profile to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(time_profile, sort_keys=True, indent=4))
+
+    print("  Time profile of the evaluation [in seconds]:" +
+          "\n    Computation: " + format(tmprof_computation_total, ".2f") +
+          "\n    TOTAL: " + utility.duration_string(tmprof_begin, tmprof_end))
+
+    print("  Done.")
+
+
 def main(cmdline):
     if cmdline.test is not None and cmdline.evaluate is None:
         for tst in tests.get_registered_tests():
@@ -1585,6 +1684,8 @@ def main(cmdline):
                 evaluate_effect_of_input_spike_trains(config.construct_experiment(cfg), cmdline.force_recompute)
             elif cfg["class_name"] == config.TimeDifferencesBetweenPrePostSpikes.__name__:
                 evaluate_time_differences_between_pre_post_spikes(config.construct_experiment(cfg), cmdline.force_recompute)
+            elif cfg["class_name"] == config.SynapticPlasticity.__name__:
+                evaluate_synaptic_plasticity(config.construct_experiment(cfg), cmdline.force_recompute, cmdline.dependencies)
             else:
                 print("ERROR: There is not defined the evaluation function for configuration class '" +
                       cfg["class_name"] + "'.")
