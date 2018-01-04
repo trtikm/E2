@@ -1677,10 +1677,11 @@ def evaluate_synaptic_plasticity(cfg, force_recompute, dependencies):
             ofile.write(json.dumps({
                 "weight_derivatives": weight_derivatives,
                 "sum_of_derivatives": sum(weight_derivatives),
+                "sum_of_time_differences": sum(post_pre_time_differences["post_pre_time_differences"]),
             }, sort_keys=True, indent=4))
 
         weight_derivatives_distribution = distribution.Distribution(
-            datalgo.make_histogram(weight_derivatives, 0.001, 0.0)
+            datalgo.make_histogram(weight_derivatives, 0.0001, 0.0)
             )
 
         pathname = os.path.join(case_output_dir, "weight_derivatives_distribution.json")
