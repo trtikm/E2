@@ -1,6 +1,31 @@
 import os
 
 
+def compute_root_of_function_using_newton_method(fx, x0, dfdx, maxiters=50000):
+    assert callable(fx)
+    assert callable(dfdx)
+    assert type(x0) in [int, float]
+    assert isinstance(maxiters, int) and maxiters > 0
+    x = x0
+    num_iterations = 0
+    while num_iterations < maxiters:
+        y = fx(x)
+        if abs(y) < 0.001:
+            return x
+        dy = dfdx(x)
+        if abs(dy) < 0.00001:
+            raise Exception("Initial value " + str(x0) + " leads to a zero derivative at " + str(x) + ".")
+        x -= y/dy
+        num_iterations += 1
+    raise Exception("No root found within " + str(maxiters) + " iterations.")
+
+
+def merge_dictionaries(left, right):
+    result = left.copy()
+    result.update(right)
+    return result
+
+
 def duration_string(start_time, end_time=None, num_decimal_digits=2):
     assert isinstance(start_time, float)
     assert end_time is None or isinstance(end_time, float)
