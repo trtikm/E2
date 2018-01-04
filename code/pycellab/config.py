@@ -1,4 +1,5 @@
 import os
+import numpy
 import soma
 import neuron
 import synapse
@@ -1064,22 +1065,123 @@ class TimeDifferencesBetweenPrePostSpikes:
 
 class SynapticPlasticity(CommonProps):
 
+    class WeightDerivativeProps:
+        def __init__(self, kind, y0, x1, x2, M
+                     # , gamma_root_hint
+                     ):
+            self.kind = kind
+            self.y0 = y0
+            self.x1 = x1
+            self.x2 = x2
+            self.M = M
+            # self.gamma_root_hint = gamma_root_hint
+            # self.gamma_root = utility.compute_root_of_function_using_newton_method(
+            #     self._get_surface_equality_function(),
+            #     self.gamma_root_hint,
+            #     self._get_surface_equality_function_derivative()
+            #     )
+            # self.y2_mult = (self.gamma_root*self.x2 - self.gamma_root*self.x1)/(self.x2 - self.gamma_root*self.x1)
+            self.y2_mult = -abs(self.x1)/(2.0*abs(self.x2 - self.x1))
+            self.y2 = self.y0 * self.y2_mult
+            self.gamma = (self.x2*self.y2)/(self.x1*self.y2 + self.x2*self.y0 - self.x1*self.y0)
+            # self.surface_difference = self.y0*self.gamma*(self.x1 + self.x2 + self.x1*(self.gamma - 1.0)*numpy.log(abs(self.x1 - self.x1*self.gamma)*abs(self.x2 - self.x1*self.gamma)))
+
+        def get_weight_derivative_function(self):
+            return lambda dt: self.y0*(self.gamma*(dt - self.M) - self.x1*self.gamma)/((dt - self.M) - self.x1*self.gamma)
+
+        def _get_surface_equality_function(self):
+            return lambda g: self.x1*self.x1*(1.0 - g)*(self.x2/self.x1 - g) - numpy.exp(-(self.x1 + self.x2)/(self.x1*(g - 1.0)))
+
+        def _get_surface_equality_function_derivative(self):
+            return lambda g: -self.x1*self.x2 - 1.0 + 2.0*g + (self.x1 + self.x2)/(self.x1*((g - 1.0)**2))*numpy.exp(-(self.x1 + self.x2)/(self.x1*(g - 1)))
+
+        def to_json(self):
+            return {
+                "kind": self.kind,
+                "y0": self.y0,
+                "x1": self.x1,
+                "x2": self.x2,
+                "y2": self.y2,
+                "M": self.M,
+                "y2_mult": self.y2_mult,
+                "gamma": self.gamma,
+                # "gamma_root": self.gamma_root,
+                # "gamma_root_hint": self.gamma_root_hint,
+                # "surface_difference": self.surface_difference,
+                "weight_derivative_function": "lambda dt: " + str(self.y0) + "*(" + str(self.gamma) + "*(dt - " + str(self.M) + ") - " + str(self.x1*self.gamma) + ") / ((dt - " + str(self.M) + ") - " + str(self.x1*self.gamma) + ")",
+                # "surface_equality_function": "lambda g: " + str(self.x1*self.x1) + "*(1.0 - g)*(" + str(self.x2/self.x1) + " - g) - numpy.exp(-(" + str(self.x1 + self.x2) + ")/(" + str(self.x1) + "*(g - 1.0)))",
+                # "surface_equality_function_derivative": "lambda g: -" + str(self.x1*self.x2) + " - 1.0 + 2.0*g + (" + str(self.x1 + self.x2) + ")/(" + str(self.x1) + "*((g - 1.0)**2))*numpy.exp(-(" + str(self.x1 + self.x2) + ")/(" + str(self.x1) + "*(g - 1)))",
+            }
+
     def __init__(self, name, output_dir, start_time=0.0, dt=0.001, nsteps=1000):
         super(SynapticPlasticity, self).__init__(
             name, output_dir, start_time, dt, nsteps, ".png", 1.0, ["TimeDifferencesBetweenPrePostSpikes/all_in_one"]
             )
+        self.weight_derivative_props = {
+            "pre_excitatory_post_excitatory": (
+                SynapticPlasticity.WeightDerivativeProps(
+                    "pre_excitatory_post_excitatory_part_left",
+                    -0.1, -0.005, -0.2, 0.0     # , 201.9
+                    ),
+                SynapticPlasticity.WeightDerivativeProps(
+                    "pre_excitatory_post_excitatory_part_right",
+                    0.1, 0.005, 0.2, 0.0        # , -201.5
+                    )
+                ),
+            "pre_excitatory_post_inhibitory": (
+                SynapticPlasticity.WeightDerivativeProps(
+                    "pre_excitatory_post_inhibitory_part_left",
+                    -0.1, -0.005, -0.05, 0.01     # , ?
+                    ),
+                SynapticPlasticity.WeightDerivativeProps(
+                    "pre_excitatory_post_inhibitory_part_right",
+                    0.1, 0.005, 0.2, 0.01        # , ?
+                    )
+                ),
+            "pre_inhibitory_post_excitatory": (
+                SynapticPlasticity.WeightDerivativeProps(
+                    "pre_inhibitory_post_excitatory_part_left",
+                    -0.1, -0.005, -0.2, -0.01     # , ?
+                    ),
+                SynapticPlasticity.WeightDerivativeProps(
+                    "pre_inhibitory_post_excitatory_part_right",
+                    0.1, 0.005, 0.05, -0.01        # , ?
+                    )
+                ),
+            "pre_inhibitory_post_inhibitory": (
+                SynapticPlasticity.WeightDerivativeProps(
+                    "pre_inhibitory_post_inhibitory_part_left",
+                    -0.1, -0.002, -0.05, 0.0     # , ?
+                    ),
+                SynapticPlasticity.WeightDerivativeProps(
+                    "pre_inhibitory_post_inhibitory_part_right",
+                    0.1, 0.002, 0.05, 0.0        # , ?
+                    )
+                )
+        }
 
-    @staticmethod
-    def get_weight_derivative_function(pre_is_excitatory, post_is_excitatory):
+    def to_json(self):
+        return utility.merge_dictionaries(
+            super(SynapticPlasticity, self).to_json(),
+            {key: [props[0].to_json(), props[1].to_json()] for key, props in self.weight_derivative_props.items()}
+            )
+
+    def get_weight_derivative_function(self, pre_is_excitatory, post_is_excitatory):
         assert isinstance(pre_is_excitatory, bool)
         assert isinstance(post_is_excitatory, bool)
-        if pre_is_excitatory:
-            if post_is_excitatory:
-                return lambda dt: (
-                    -0.1 * (-0.44 * dt - 0.022) / (dt - 0.022) if dt < -0.0001 else (
-                    0.1 * (-0.44 * dt + 0.022) / (dt + 0.022) if dt > 0.0001 else 0.0)
-                    )
-        return lambda dt: 0.0
+        kind = "pre_excitatory" if pre_is_excitatory else "pre_inhibitory"
+        kind += "_"
+        kind += "post_excitatory" if post_is_excitatory else "post_inhibitory"
+        if kind not in self.weight_derivative_props:
+            return lambda dt: 0.0
+        props = self.weight_derivative_props[kind]
+        assert isinstance(props, tuple) and len(props) == 2
+        assert props[0].M == props[1].M
+        M = props[0].M
+        left_fn = props[0].get_weight_derivative_function()
+        right_fn = props[1].get_weight_derivative_function()
+        return lambda dt: left_fn(dt) if dt < M - 0.0001 else (right_fn(dt) if dt > M + 0.0001 else 0.0)
+
 
     @staticmethod
     def all_in_one(my_precomputed_full_name, output_dir):
