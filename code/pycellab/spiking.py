@@ -1681,7 +1681,7 @@ def evaluate_synaptic_plasticity(cfg, force_recompute, dependencies):
             }, sort_keys=True, indent=4))
 
         weight_derivatives_distribution = distribution.Distribution(
-            datalgo.make_histogram(weight_derivatives, 0.0001, 0.0)
+            datalgo.make_histogram(weight_derivatives, 0.00001, 0.0)
             )
 
         pathname = os.path.join(case_output_dir, "weight_derivatives_distribution.json")
