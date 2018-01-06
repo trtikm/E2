@@ -20,6 +20,26 @@ def compute_root_of_function_using_newton_method(fx, x0, dfdx, maxiters=50000):
     raise Exception("No root found within " + str(maxiters) + " iterations.")
 
 
+def compute_surface_under_function(func, x_lo, x_hi, num_samples=100, delta_x=None):
+    assert callable(func)
+    assert type(x_lo) in [int, float]
+    assert type(x_hi) in [int, float]
+    assert x_lo <= x_hi
+    assert num_samples is None or (type(num_samples) in [int] and num_samples > 0)
+    assert delta_x is None or (type(delta_x) in [int, float] and delta_x > 0)
+    assert not((num_samples is None and delta_x is None) or (num_samples is not None and delta_x is not None))
+    if delta_x is None:
+        delta_x = (x_hi - x_lo) / num_samples
+    result = 0.0
+    x = x_lo
+    while True:
+        y = func(x)
+        result += y*delta_x
+        x += delta_x
+        if abs(x - x_hi) < delta_x / 10:
+            return result
+
+
 def merge_dictionaries(left, right):
     result = left.copy()
     result.update(right)

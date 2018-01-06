@@ -375,6 +375,33 @@ def _test_spike_trains(info):
     return 0
 
 
+def _test_surface_under_function(info):
+    """
+    Test of the function 'utility.compute_surface_under_function'
+    on constant, linear, and quadratic functions.
+    """
+    assert isinstance(info, TestInfo)
+    data = [
+        # Each element is a tuple (function, x_lo, x_hi, delta_x, correct_result, func_text)
+        (lambda x: 2.0, -1.0, 2.0, 0.01, 6.0, "lambda x: 2.0"),
+        (lambda x: 3 - x, 0.0, 3.0, 0.0005, 4.5, "lambda x: 3 - x"),
+        (lambda x: x**2 - 1, -2.0, 2.0, 0.001, 2.0*(-2.0/3.0 + 4.0/3.0), "lambda x: x**2 - 1")
+        ]
+    num_failures = 0
+    for func, x_lo, x_hi, delta_x, correct_result, func_text in data:
+        result = utility.compute_surface_under_function(func, x_lo, x_hi, None, delta_x)
+        if abs(result - correct_result) > 0.001:
+            print("FAILURE: func=" + func_text +
+                  ", x_lo=" + str(x_lo) +
+                  ", x_hi=" + str(x_hi) +
+                  ", delta_x=" + str(delta_x) +
+                  ", correct_result=" + str(correct_result) +
+                  ", computed_result=" + str(result)
+                  )
+            num_failures += 1
+    return num_failures
+
+
 ####################################################################################################
 ####################################################################################################
 ####################################################################################################
