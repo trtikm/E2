@@ -946,11 +946,11 @@ class TimeDifferencesBetweenPrePostSpikes:
             assert type(pre_is_excitatory) == bool
             assert type(pre_mean_frequency) in [int, float] and pre_mean_frequency > 0.0
             assert type(pre_percentage_of_regularity_phases) in [int, float]
-            assert pre_percentage_of_regularity_phases >= 0 and pre_percentage_of_regularity_phases <= 1
+            assert pre_percentage_of_regularity_phases >= 0 and pre_percentage_of_regularity_phases <= 100
             assert type(post_is_excitatory) == bool
             assert type(post_mean_frequency) in [int, float] and post_mean_frequency > 0.0
             assert type(post_percentage_of_regularity_phases) in [int, float]
-            assert post_percentage_of_regularity_phases >= 0 and post_percentage_of_regularity_phases <= 1
+            assert post_percentage_of_regularity_phases >= 0 and post_percentage_of_regularity_phases <= 100
             self._name = name
             self._output_dir = output_dir
             self._pre_is_excitatory = pre_is_excitatory
@@ -1053,9 +1053,9 @@ class TimeDifferencesBetweenPrePostSpikes:
                 120
                 )
              for pre_is_excitatory in [True, False]
-             for pre_percentage_of_regularity_phases in [0.0, 0.25, 0.5, 0.75]
+             for pre_percentage_of_regularity_phases in [0.0, 25.0, 50.0, 75.0]
              for post_is_excitatory in [True, False]
-             for post_percentage_of_regularity_phases in [0.0, 0.25, 0.5, 0.75]
+             for post_percentage_of_regularity_phases in [0.0, 25.0, 50.0, 75.0]
              for pre_mean_frequency in (excitatory_mean_frequencies if pre_is_excitatory else inhibitory_mean_frequencies)
              for post_mean_frequency in (excitatory_mean_frequencies if post_is_excitatory else inhibitory_mean_frequencies)
              ]
