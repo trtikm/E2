@@ -270,6 +270,8 @@ def _autodetect_plot_kind(plot_data):
                 elif plot_data["num_dimensions"] == 3:
                     if len(plot_data["points"]) > 0 and "error" in plot_data["points"][0]:
                         return "points_3d_with_error"
+                    else:
+                        return "points_3d"
     return None
 
 
@@ -336,7 +338,12 @@ def _show_points_3d_impl(plot_data, line_style, point_style):
         fx = [p["x"] for p in plot_data["points"]]
         fy = [p["y"] for p in plot_data["points"]]
         fz = [p["z"] for p in plot_data["points"]]
-        ax.plot(fx, fy, fz, linestyle="None", marker=point_style)
+        if "rgb" in plot_data:
+            colours = [(rgb["r"], rgb["g"], rgb["b"]) for rgb in plot_data["rgb"]]
+            assert len(colours) == len(fz)
+            ax.scatter(fx, fy, fz, c=colours, s=1)
+        else:
+            ax.plot(fx, fy, fz, linestyle="None", marker=point_style)
     plt.show()
 
 
