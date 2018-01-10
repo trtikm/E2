@@ -1579,6 +1579,71 @@ def evaluate_time_differences_between_pre_post_spikes(cfg, force_recompute):
     print("Done.")
 
 
+def _compute_interconfig_for_evaluate_synaptic_plasticity(cfg):
+    assert isinstance(cfg, config.SynapticPlasticity)
+    points = []
+    rgb = []
+    for case_source_dir, _, files in os.walk(cfg.output_dir):
+        if "weight_derivatives.json" not in files or "source_data_info.json" not in files:
+            continue
+        with open(os.path.join(case_source_dir, "weight_derivatives.json"), "r") as ifile:
+            weight_derivatives = json.load(ifile)
+        if "sum_of_derivatives" not in weight_derivatives:
+            print("ERROR: Wrong format of the json file " + os.path.join(case_source_dir, "weight_derivatives.json") + ".")
+            continue
+        with open(os.path.join(case_source_dir, "source_data_info.json"), "r") as ifile:
+            source_data_info = json.load(ifile)
+        if not isinstance(source_data_info, dict) or "source_data_dir" not in source_data_info:
+            print("ERROR: Wrong format of the json file " + os.path.join(case_source_dir, "source_data_info.json") + ".")
+            continue
+        pathname = os.path.join(source_data_info["source_data_dir"], "construction_data.json")
+        if not os.path.isfile(pathname):
+            print("ERROR: Cannot find the file " + pathname)
+            continue
+        with open(pathname, "r") as ifile:
+            source_data = json.load(ifile)
+        if not isinstance(source_data, dict) or not all(x in source_data for x in ["post_is_excitatory",
+                                                                                   "post_mean_frequency",
+                                                                                   "post_percentage_of_regularity_phases",
+                                                                                   "pre_is_excitatory",
+                                                                                   "pre_mean_frequency",
+                                                                                   "pre_percentage_of_regularity_phases"]):
+            print("ERROR: Wrong format of the json file " + pathname + ".")
+            continue
+        points.append({
+            "x": source_data["pre_mean_frequency"],
+            "y": source_data["post_mean_frequency"],
+            "z": weight_derivatives["sum_of_derivatives"]
+            })
+        rgb.append({
+            "r": source_data["pre_percentage_of_regularity_phases"] / 100.0,
+            "g": 0.0,
+            "b": source_data["post_percentage_of_regularity_phases"] / 100.0
+            })
+
+    pathname = os.path.join(cfg.get_interconfig_output_dir(), "weight_derivatives.json")
+    print("    Saving weight derivatives to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps({
+            "description": {
+                "brief": "Progress of weight derivatives of a synapse w.r.t. mean frequencies of pre- and post- "
+                         "synaptic spike trains.",
+                "details": "The pre- spike train is excitatory; the post- spike train is excitatory. "
+                           "For each pre- and post- frequency we have 4*4 values of sums of weight derivatives; "
+                           "each such value corresponds to a certain levels of noise for pre- and post- spike trains. "
+                           "These values are distinguished by their colour: red component is the noise level for "
+                           "pre- spike train, green is always 0, and blue component is is the noise level for post- "
+                           "spike train.",
+                "x": "pre mean frequency",
+                "y": "post mean frequency",
+                "z": "sum of weight derivatives"
+            },
+            "num_dimensions": 3,
+            "points": points,
+            "rgb": rgb
+        }, sort_keys=True, indent=4))
+
+
 def evaluate_synaptic_plasticity(cfg, force_recompute, dependencies):
     assert isinstance(cfg, config.SynapticPlasticity)
 
@@ -1612,6 +1677,10 @@ def evaluate_synaptic_plasticity(cfg, force_recompute, dependencies):
         ofile.write(json.dumps(cfg.to_json(), sort_keys=True, indent=4))
 
     tmprof_computation_total = 0.0
+    tmprof_save_total = 0.0
+    num_computed_cases = 0
+    num_skipped_cases = 0
+    num_errored_cases = 0
 
     for case_source_dir, _, files in os.walk(source_data_root_dir):
         if "construction_data.json" not in files or "post_pre_time_differences.json" not in files:
@@ -1629,6 +1698,7 @@ def evaluate_synaptic_plasticity(cfg, force_recompute, dependencies):
         else:
             print("The results for time difference data in '" + case_source_dir + "' already exist "
                   "(" + case_output_dir + "). Skipping their re-computation.")
+            num_skipped_cases += 1
             continue
 
         print("    Processing time difference data in " + case_source_dir)
@@ -1638,6 +1708,7 @@ def evaluate_synaptic_plasticity(cfg, force_recompute, dependencies):
         if "pre_is_excitatory" not in constuction_data or "post_is_excitatory" not in constuction_data:
             print("ERROR: Unexpected content of the file '" + os.path.join(case_source_dir, "construction_data.json") + "'. "
                   "Skipping the computation.")
+            num_errored_cases += 1
             continue
 
         with open(os.path.join(case_source_dir, "post_pre_time_differences.json"), "r") as ifile:
@@ -1653,6 +1724,7 @@ def evaluate_synaptic_plasticity(cfg, force_recompute, dependencies):
             print("ERROR: Unexpected content of the file '" +
                   os.path.join(case_source_dir, "post_pre_time_differences.json") + "'. "
                   "Skipping the computation.")
+            num_errored_cases += 1
             continue
 
         pathname = os.path.join(case_output_dir, "source_data_info.json")
@@ -1670,6 +1742,9 @@ def evaluate_synaptic_plasticity(cfg, force_recompute, dependencies):
 
         tmprof_computation_end = time.time()
         tmprof_computation_total += tmprof_computation_end - tmprof_computation_begin
+        num_computed_cases += 1
+
+        tmprof_save_begin = time.time()
 
         pathname = os.path.join(case_output_dir, "weight_derivatives.json")
         print("    Saving weight derivatives to " + pathname)
@@ -1693,11 +1768,28 @@ def evaluate_synaptic_plasticity(cfg, force_recompute, dependencies):
         print("    Saving plot " + pathname)
         plot.histogram(weight_derivatives_distribution, pathname, normalised=False)
 
+        tmprof_save_end = time.time()
+        tmprof_save_total += tmprof_save_end - tmprof_save_begin
+
+    tmprof_interconfig_begin = time.time()
+    if force_recompute or not os.path.exists(cfg.get_interconfig_output_dir()):
+        if os.path.exists(cfg.get_interconfig_output_dir()):
+            shutil.rmtree(cfg.get_interconfig_output_dir())
+        os.makedirs(cfg.get_interconfig_output_dir())
+        _compute_interconfig_for_evaluate_synaptic_plasticity(cfg)
+    else:
+        print("The inter-configuration summary data '" + cfg.get_interconfig_output_dir() + "' already exist. "
+              "Skipping their computation.")
     tmprof_end = time.time()
 
     time_profile = {
-        "computation": tmprof_computation_total,
-        "TOTAL": tmprof_end - tmprof_begin
+        "total_cases_computation": tmprof_computation_total,
+        "total_cases_save": tmprof_save_total,
+        "total_interconfig": tmprof_end - tmprof_interconfig_begin,
+        "TOTAL": tmprof_end - tmprof_begin,
+        "num_computed_cases": num_computed_cases,
+        "num_skipped_cases": num_skipped_cases,
+        "num_errored_cases": num_errored_cases
     }
     pathname = os.path.join(cfg.output_dir, "time_profile.json")
     print("    Saving time profile to " + pathname)
