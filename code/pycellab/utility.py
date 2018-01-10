@@ -46,6 +46,13 @@ def merge_dictionaries(left, right):
     return result
 
 
+def merge_list_of_dictionaries(list_of_dicts):
+    result = {}
+    for d in list_of_dicts:
+        result.update(d)
+    return result
+
+
 def duration_string(start_time, end_time=None, num_decimal_digits=2):
     assert isinstance(start_time, float)
     assert end_time is None or isinstance(end_time, float)
