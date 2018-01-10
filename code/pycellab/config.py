@@ -1123,6 +1123,7 @@ class SynapticPlasticity(CommonProps):
         super(SynapticPlasticity, self).__init__(
             name, output_dir, start_time, dt, nsteps, ".png", 1.0, ["TimeDifferencesBetweenPrePostSpikes/all_in_one"]
             )
+        self.interconfig_output_dir = os.path.join(self.output_dir, "interconfig")
         self.weight_derivative_props = {
             "pre_excitatory_post_excitatory": (
                 SynapticPlasticity.WeightDerivativeProps(
@@ -1166,11 +1167,18 @@ class SynapticPlasticity(CommonProps):
                 )
         }
 
+    def get_interconfig_output_dir(self):
+        return self.interconfig_output_dir
+
     def to_json(self):
         return utility.merge_dictionaries(
             super(SynapticPlasticity, self).to_json(),
-            {key: [props[0].to_json(), props[1].to_json()] for key, props in self.weight_derivative_props.items()}
-            )
+            # {key: [props[0].to_json(), props[1].to_json()] for key, props in self.weight_derivative_props.items()},
+            {
+                "weight_derivative_props": {key: [props[0].to_json(), props[1].to_json()] for key, props in self.weight_derivative_props.items()},
+                "interconfig_output_dir": self.interconfig_output_dir
+            }
+        )
 
     def get_weight_derivative_function(self, pre_is_excitatory, post_is_excitatory):
         assert isinstance(pre_is_excitatory, bool)
