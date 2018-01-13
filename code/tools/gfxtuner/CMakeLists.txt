@@ -20,6 +20,12 @@ add_executable(${THIS_TARGET_NAME}
     scene.hpp
     scene.cpp
     
+    scene_selection.hpp 
+    scene_selection.cpp 
+
+    scene_edit_utils.hpp 
+    scene_edit_utils.cpp 
+
     draw_utils.hpp
     draw_utils.cpp
 
@@ -32,9 +38,6 @@ add_executable(${THIS_TARGET_NAME}
     menu_bar.hpp
     menu_bar.cpp
     
-    scene_edit_utils.hpp 
-    scene_edit_utils.cpp 
-
     window_tabs/tab_draw.hpp
     window_tabs/tab_draw.cpp
 

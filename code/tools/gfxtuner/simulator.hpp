@@ -2,6 +2,7 @@
 #   define E2_TOOL_GFXTUNER_SIMULATOR_HPP_INCLUDED
 
 #   include <gfxtuner/scene.hpp>
+#   include <gfxtuner/scene_selection.hpp>
 #   include <gfxtuner/scene_edit_utils.hpp>
 #   include <qtgl/real_time_simulator.hpp>
 #   include <qtgl/camera.hpp>
@@ -47,8 +48,8 @@ struct simulator : public qtgl::real_time_simulator
 
     // Scene
 
-    scene const&  get_scene() const { return m_scene; }
-    scene&  get_scene() { return m_scene; }
+    scene const&  get_scene() const { return *m_scene; }
+    scene&  get_scene() { return *m_scene; }
 
     scene_node_ptr  get_scene_node(std::string const&  name) const
     { return get_scene().get_scene_node(name); }
@@ -82,9 +83,6 @@ struct simulator : public qtgl::real_time_simulator
     void  set_position_of_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin);
     void  set_orientation_of_scene_node(std::string const&  scene_node_name, quaternion const&  new_orientation);
     void  relocate_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation);
-
-    std::unordered_set<std::string> const&  get_names_to_selected_nodes() const { return m_names_to_selected_nodes; }
-    std::unordered_set<std::pair<std::string, std::string> > const&  get_names_to_selected_batches() const { return m_names_to_selected_batches; }
 
     void  update_scene_selection(
             std::unordered_set<std::string> const&  selected_scene_nodes,
@@ -124,9 +122,8 @@ private:
     bool  m_do_single_step;
 
     /// Scene related data
-    scene  m_scene;
-    std::unordered_set<std::string>  m_names_to_selected_nodes;
-    std::unordered_set<std::pair<std::string, std::string> >  m_names_to_selected_batches;
+    scene_ptr  m_scene;
+    scene_selection  m_scene_selection;
     qtgl::batch_ptr  m_batch_coord_system;
     scene_edit_data  m_scene_edit_data;
 

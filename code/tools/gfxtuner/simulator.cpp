@@ -259,9 +259,8 @@ simulator::simulator()
     , m_paused(true)
     , m_do_single_step(false)
 
-    , m_scene()
-    , m_names_to_selected_nodes()
-    , m_names_to_selected_batches()
+    , m_scene(new scene)
+    , m_scene_selection(m_scene)
     , m_batch_coord_system(qtgl::create_basis_vectors(get_program_options()->dataRoot()))
     , m_scene_edit_data(SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
 
@@ -569,7 +568,7 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
 
     if (!mouse_props().is_pressed(qtgl::LEFT_MOUSE_BUTTON()))
         return;
-    if (m_names_to_selected_nodes.empty() && m_names_to_selected_nodes.empty())
+    if (m_scene_selection.empty())
         return;
     if (get_scene_edit_data().are_data_invalidated())
     {
@@ -611,12 +610,12 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
 
     vector3 const  shift = m_scene_edit_data.get_translation_data().get_shift(new_plane_point);
 
-    for (auto const& node_name : m_names_to_selected_nodes)
+    for (auto const& node_name : m_scene_selection.get_nodes())
         get_scene_node(node_name)->relocate_coordinate_system([&shift](angeo::coordinate_system&  coord_system) {
             translate(coord_system, shift);
             });
-    std::unordered_set<std::string>  translated_nodes = m_names_to_selected_nodes;
-    for (auto const& node_batch_names : m_names_to_selected_batches)
+    std::unordered_set<std::string>  translated_nodes = m_scene_selection.get_nodes();
+    for (auto const& node_batch_names : m_scene_selection.get_batches())
         if (translated_nodes.count(node_batch_names.first) == 0UL)
         {
             get_scene_node(node_batch_names.first)->relocate_coordinate_system([&shift](angeo::coordinate_system&  coord_system) {
@@ -633,7 +632,7 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
 
     if (!mouse_props().is_pressed(qtgl::LEFT_MOUSE_BUTTON()))
         return;
-    if (m_names_to_selected_nodes.empty() && m_names_to_selected_nodes.empty())
+    if (m_scene_selection.empty())
         return;
 
     if (get_scene_edit_data().are_data_invalidated())
@@ -677,14 +676,14 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
     else
         rotation = angle_axis_to_quaternion(horisontal_angle, vector3_unit_z());
 
-    for (auto const& node_name : m_names_to_selected_nodes)
+    for (auto const& node_name : m_scene_selection.get_nodes())
     {
         get_scene_node(node_name)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
             rotate(coord_system, rotation);
             });
     }
-    std::unordered_set<std::string>  rotated_nodes = m_names_to_selected_nodes;
-    for (auto const& node_batch_names : m_names_to_selected_batches)
+    std::unordered_set<std::string>  rotated_nodes = m_scene_selection.get_nodes();
+    for (auto const& node_batch_names : m_scene_selection.get_batches())
         if (rotated_nodes.count(node_batch_names.first) == 0UL)
         {
             get_scene_node(node_batch_names.first)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
@@ -724,7 +723,7 @@ void  simulator::render_scene_coord_systems(matrix44 const&  view_projection_mat
     //qtgl::glapi().glDisable(GL_DEPTH_TEST);
 
     for (auto const&  name_node : get_scene().get_all_scene_nodes())
-        if (m_names_to_selected_nodes.count(name_node.first) != 0UL)
+        if (m_scene_selection.is_node_selected(name_node.first))
         {
             render_scene_coord_system(name_node.second, view_projection_matrix, draw_state);
         }
@@ -749,9 +748,9 @@ void  simulator::erase_scene_node(std::string const&  name)
 {
     TMPROF_BLOCK();
 
-    m_names_to_selected_nodes.erase(name);
-    for (auto const&  name_batch : get_scene_node(name)->get_batches())
-        m_names_to_selected_batches.erase({ name, name_batch.first });
+    m_scene_selection.erase_node(name);
+    m_scene_selection.erase_batches_of_node(name);
+
     m_scene_edit_data.invalidate_data();
 
     get_scene().erase_scene_node(name);
@@ -762,7 +761,7 @@ void  simulator::erase_batch_from_scene_node(std::string const&  batch_name, std
 {
     auto const  node = get_scene_node(scene_node_name);
     node->erase_batches({ batch_name });
-    m_names_to_selected_batches.erase({ node->get_name(), batch_name });
+    m_scene_selection.erase_batch({ scene_node_name, batch_name });
 }
 
 void  simulator::translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift)
@@ -813,20 +812,12 @@ void  simulator::update_scene_selection(
 {
     TMPROF_BLOCK();
 
-    m_names_to_selected_nodes.clear();
+    m_scene_selection.clear();
     for (auto const& name : selected_scene_nodes)
-    {
-        ASSUMPTION(get_scene().has_scene_node(name) != 0UL);
-        m_names_to_selected_nodes.insert(name);
-    }
-
-    m_names_to_selected_batches.clear();
+        m_scene_selection.insert_node(name);
     for (auto const& node_batch_names : selected_batches)
-    {
-        ASSUMPTION(get_scene().has_scene_node(node_batch_names.first) != 0UL);
-        ASSUMPTION(get_scene_node(node_batch_names.first)->get_batches().count(node_batch_names.second) != 0UL);
-        m_names_to_selected_batches.insert(node_batch_names);
-    }
+        m_scene_selection.insert_batch(node_batch_names);
+
     m_scene_edit_data.invalidate_data();
 }
 
@@ -840,7 +831,7 @@ bool  simulator::get_bbox_of_selected_scene_nodes(vector3&  lo, vector3&  hi)
 {
     TMPROF_BLOCK();
 
-    if (m_names_to_selected_nodes.empty() && m_names_to_selected_nodes.empty())
+    if (m_scene_selection.empty())
         return false;
 
     lo = vector3{ 1e20f,  1e20f,  1e20f };
@@ -857,9 +848,9 @@ bool  simulator::get_bbox_of_selected_scene_nodes(vector3&  lo, vector3&  hi)
         }
     };
 
-    for (auto const& node_name : m_names_to_selected_nodes)
+    for (auto const& node_name : m_scene_selection.get_nodes())
         update_lo_hi(node_name);
-    for (auto const& node_batch_names : m_names_to_selected_batches)
+    for (auto const& node_batch_names : m_scene_selection.get_batches())
         update_lo_hi(node_batch_names.first);
 
     return true;

@@ -109,5 +109,7 @@ private:
     std::unordered_map<std::string, scene_node_ptr>  m_names_to_nodes;
 };
 
+using scene_ptr = std::shared_ptr<scene>;
+
 
 #endif
