@@ -91,10 +91,8 @@ bool is_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  chi
 {
     TMPROF_BLOCK();
 
-    if (is_direct_parent_and_child(parent, child))
-        return true;
-    for (auto name_child_of_child : child->get_children())
-        if (is_parent_and_child(parent, name_child_of_child.second))
+    for (auto node = child; node->has_parent(); node = node->get_parent())
+        if (is_direct_parent_and_child(parent, node))
             return true;
     return false;
 }
