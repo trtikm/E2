@@ -3,11 +3,28 @@
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
 
+namespace detail { namespace {
 
-scene_node_ptr  scene_node::create(std::string const&  name)
+
+bool is_direct_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  child)
 {
-    return scene_node_ptr(new scene_node(name));
+    return child->get_parent() == parent;
 }
+
+
+bool is_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  child)
+{
+    TMPROF_BLOCK();
+
+    for (auto node = child; node->has_parent(); node = node->get_parent())
+        if (detail::is_direct_parent_and_child(parent, node))
+            return true;
+    return false;
+}
+
+
+}}
+
 
 scene_node_ptr  scene_node::create(
     std::string const&  name,
@@ -33,12 +50,10 @@ scene_node::scene_node(
     ASSUMPTION(!m_name.empty());
 }
 
-void  scene_node::relocate_coordinate_system(std::function<void(angeo::coordinate_system&)> const&  relocator)
+qtgl::batch_ptr  scene_node::get_batch(std::string const&  name) const
 {
-    TMPROF_BLOCK();
-
-    relocator(*m_coord_system);
-    invalidate_world_matrix();
+    auto const  it = get_batches().find(name);
+    return it == get_batches().cend() ? nullptr : it->second;
 }
 
 void  scene_node::insert_batches(std::unordered_map<std::string, qtgl::batch_ptr> const&  batches)
@@ -59,6 +74,14 @@ void  scene_node::erase_batches(std::unordered_set<std::string> const&  names_of
         ASSUMPTION(it != m_batches.end());
         m_batches.erase(it);
     }
+}
+
+void  scene_node::relocate_coordinate_system(std::function<void(angeo::coordinate_system&)> const&  relocator)
+{
+    TMPROF_BLOCK();
+
+    relocator(*m_coord_system);
+    invalidate_world_matrix();
 }
 
 matrix44 const&  scene_node::get_world_matrix() const
@@ -87,16 +110,6 @@ void  scene_node::invalidate_world_matrix()
     }
 }
 
-bool is_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  child)
-{
-    TMPROF_BLOCK();
-
-    for (auto node = child; node->has_parent(); node = node->get_parent())
-        if (is_direct_parent_and_child(parent, node))
-            return true;
-    return false;
-}
-
 void  scene_node::insert_children_to_parent(
     std::vector<scene_node_ptr> const&  children,
     scene_node_ptr const  parent
@@ -106,7 +119,7 @@ void  scene_node::insert_children_to_parent(
 
     for (auto child : children)
     {
-        ASSUMPTION(!is_parent_and_child(child, parent));
+        ASSUMPTION(!detail::is_parent_and_child(child, parent));
         parent->m_children.insert({child->get_name(), child});
         child->m_parent = parent;
         child->invalidate_world_matrix();
@@ -128,4 +141,72 @@ void  scene_node::erase_children_from_parent(std::vector<scene_node_ptr> const& 
         child->m_parent.reset();
         child->invalidate_world_matrix();
     }
+}
+
+
+scene_node_ptr scene::get_scene_node(std::string const&  name) const
+{
+    auto const  it = m_names_to_nodes.find(name);
+    return it == m_names_to_nodes.cend() ? nullptr : it->second;
+}
+
+scene_node_ptr  scene::insert_scene_node(
+    std::string const&  name,
+    vector3 const&  origin,
+    quaternion const&  orientation,
+    scene_node_ptr const  parent
+    )
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(get_scene_node(name) == nullptr);
+
+    scene_node_ptr const  node = scene_node::create(name, origin, orientation);
+    if (parent == nullptr)
+        m_scene.insert({ name, node });
+    else
+        insert_children_to_parent({ node }, parent);
+    m_names_to_nodes.insert({ name, node });
+
+    return node;
+}
+
+void  scene::erase_scene_node(std::string const&  name)
+{
+    TMPROF_BLOCK();
+
+    auto const  node = get_scene_node(name);
+    ASSUMPTION(node != nullptr);
+    ASSUMPTION(node->get_children().empty());
+
+    if (node->has_parent())
+        erase_children_from_parent({ node }, node->get_parent());
+    else
+    {
+        auto const  it = m_scene.find(node->get_name());
+        ASSUMPTION(it != m_scene.end());
+        m_scene.erase(it);
+    }
+    m_names_to_nodes.erase(node->get_name());
+}
+
+//void  scene::erase_batch_from_scene_node(std::string const&  batch_name, std::string const&  scene_node_name)
+//{
+//    auto const  node = get_scene_node(scene_node_name);
+//    node->erase_batches({ batch_name });
+//    m_names_to_selected_batches.erase({ node->get_name(), batch_name });
+//}
+
+bool scene::is_direct_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  child)
+{
+    ASSUMPTION(get_scene_node(parent->get_name()) == parent);
+    ASSUMPTION(get_scene_node(child->get_name()) == child);
+    return detail::is_direct_parent_and_child(parent, child);
+}
+
+bool scene::is_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  child)
+{
+    ASSUMPTION(get_scene_node(parent->get_name()) == parent);
+    ASSUMPTION(get_scene_node(child->get_name()) == child);
+    return detail::is_parent_and_child(parent, child);
 }

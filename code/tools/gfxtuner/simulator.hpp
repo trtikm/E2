@@ -47,8 +47,11 @@ struct simulator : public qtgl::real_time_simulator
 
     // Scene
 
-    std::unordered_map<std::string, scene_node_ptr> const&  get_scene() const { return m_scene; }
-    scene_node_ptr  get_scene_node(std::string const&  name) const;
+    scene const&  get_scene() const { return m_scene; }
+    scene&  get_scene() { return m_scene; }
+
+    scene_node_ptr  get_scene_node(std::string const&  name) const
+    { return get_scene().get_scene_node(name); }
 
     scene_node_ptr  insert_scene_node(std::string const&  name)
     { return insert_scene_node_at(name, vector3_zero(), quaternion_identity()); }
@@ -64,7 +67,8 @@ struct simulator : public qtgl::real_time_simulator
             scene_node_ptr const  parent,
             vector3 const&  origin,
             quaternion const&  orientation
-            );
+            )
+    { return get_scene().insert_scene_node(name, origin, orientation, parent); }
 
     void  erase_scene_node(std::string const&  name);
 
@@ -120,12 +124,10 @@ private:
     bool  m_do_single_step;
 
     /// Scene related data
-    std::unordered_map<std::string, scene_node_ptr>  m_scene;
-    std::unordered_map<std::string, scene_node_ptr>  m_names_to_nodes;
+    scene  m_scene;
     std::unordered_set<std::string>  m_names_to_selected_nodes;
     std::unordered_set<std::pair<std::string, std::string> >  m_names_to_selected_batches;
     qtgl::batch_ptr  m_batch_coord_system;
-
     scene_edit_data  m_scene_edit_data;
 
     /// Other data

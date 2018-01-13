@@ -260,7 +260,8 @@ simulator::simulator()
     , m_do_single_step(false)
 
     , m_scene()
-    , m_names_to_nodes()
+    , m_names_to_selected_nodes()
+    , m_names_to_selected_batches()
     , m_batch_coord_system(qtgl::create_basis_vectors(get_program_options()->dataRoot()))
     , m_scene_edit_data(SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
 
@@ -722,7 +723,7 @@ void  simulator::render_scene_coord_systems(matrix44 const&  view_projection_mat
     //auto const  old_depth_test_state = qtgl::glapi().glIsEnabled(GL_DEPTH_TEST);
     //qtgl::glapi().glDisable(GL_DEPTH_TEST);
 
-    for (auto const&  name_node : m_names_to_nodes)
+    for (auto const&  name_node : get_scene().get_all_scene_nodes())
         if (m_names_to_selected_nodes.count(name_node.first) != 0UL)
         {
             render_scene_coord_system(name_node.second, view_projection_matrix, draw_state);
@@ -744,54 +745,17 @@ void  simulator::render_scene_coord_system(scene_node_ptr const  node, matrix44 
     }
 }
 
-scene_node_ptr simulator::get_scene_node(std::string const&  name) const
-{ 
-    auto const  it = m_names_to_nodes.find(name);
-    return it == m_names_to_nodes.cend() ? nullptr : it->second;
-}
-
-scene_node_ptr  simulator::insert_child_scene_node_at(
-    std::string const&  name,
-    scene_node_ptr const  parent,
-    vector3 const&  origin,
-    quaternion const&  orientation
-    )
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(get_scene_node(name) == nullptr);
-
-    scene_node_ptr const  node = scene_node::create(name, origin, orientation);
-    if (parent == nullptr)
-        m_scene.insert({name, node});
-    else
-        insert_children_to_parent({node}, parent);
-    m_names_to_nodes.insert({ name, node });
-
-    return node;
-}
-
 void  simulator::erase_scene_node(std::string const&  name)
 {
     TMPROF_BLOCK();
 
-    auto const  node = get_scene_node(name);
-    ASSUMPTION(node != nullptr);
-    ASSUMPTION(node->get_children().empty());
-
-    if (node->has_parent())
-        erase_children_from_parent({node}, node->get_parent());
-    else
-    {
-        auto const  it = m_scene.find(node->get_name());
-        ASSUMPTION(it != m_scene.end());
-        m_scene.erase(it);
-    }
-    m_names_to_nodes.erase(node->get_name());
-    m_names_to_selected_nodes.erase(node->get_name());
-    for (auto const&  name_batch : node->get_batches())
-        m_names_to_selected_batches.erase({ node->get_name(), name_batch.first });
+    m_names_to_selected_nodes.erase(name);
+    for (auto const&  name_batch : get_scene_node(name)->get_batches())
+        m_names_to_selected_batches.erase({ name, name_batch.first });
     m_scene_edit_data.invalidate_data();
+
+    get_scene().erase_scene_node(name);
+
 }
 
 void  simulator::erase_batch_from_scene_node(std::string const&  batch_name, std::string const&  scene_node_name)
@@ -852,14 +816,14 @@ void  simulator::update_scene_selection(
     m_names_to_selected_nodes.clear();
     for (auto const& name : selected_scene_nodes)
     {
-        ASSUMPTION(m_names_to_nodes.count(name) != 0UL);
+        ASSUMPTION(get_scene().has_scene_node(name) != 0UL);
         m_names_to_selected_nodes.insert(name);
     }
 
     m_names_to_selected_batches.clear();
     for (auto const& node_batch_names : selected_batches)
     {
-        ASSUMPTION(m_names_to_nodes.count(node_batch_names.first) != 0UL);
+        ASSUMPTION(get_scene().has_scene_node(node_batch_names.first) != 0UL);
         ASSUMPTION(get_scene_node(node_batch_names.first)->get_batches().count(node_batch_names.second) != 0UL);
         m_names_to_selected_batches.insert(node_batch_names);
     }
