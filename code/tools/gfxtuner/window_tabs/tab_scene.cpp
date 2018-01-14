@@ -3,10 +3,11 @@
 #include <gfxtuner/program_options.hpp>
 #include <gfxtuner/simulator_notifications.hpp>
 #include <qtgl/gui_utils.hpp>
+#include <utility/std_pair_hash.hpp>
 #include <utility/msgstream.hpp>
+#include <utility/canonical_path.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
-#include <utility/std_pair_hash.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <QLabel>
 #include <QDialog>
@@ -19,6 +20,7 @@
 #include <QString>
 #include <QIntValidator>
 #include <QDoubleValidator>
+#include <QFileDialog>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
 
@@ -42,7 +44,9 @@ private:
 
 struct  insert_name_dialog : public QDialog
 {
-    insert_name_dialog(program_window* const  wnd, std::string const&  initial_name)
+    insert_name_dialog(program_window* const  wnd,
+                       std::string const&  initial_name,
+                       std::function<bool(std::string const&)> const&  is_name_valid)
         : QDialog(wnd)
         , m_wnd(wnd)
         , m_name_edit(
@@ -71,6 +75,7 @@ struct  insert_name_dialog : public QDialog
                 return new Open(wnd);
             }(this)
             )
+        , m_is_name_valid_function(is_name_valid)
         , m_name()
     {
         QVBoxLayout* const dlg_layout = new QVBoxLayout;
@@ -107,7 +112,7 @@ struct  insert_name_dialog : public QDialog
 
     void  on_name_changed(QString const&  qname)
     {
-        if (m_wnd->glwindow().call_now(&simulator::get_scene_node, qtgl::to_string(qname)) != nullptr)
+        if (!m_is_name_valid_function(qtgl::to_string(qname)))
         {
             m_name_taken_indicator->setText(QString("WARNING: the name is already in use."));
             m_OK_button->setEnabled(false);
@@ -137,7 +142,7 @@ private:
     QLineEdit*  m_name_edit;
     QLabel*  m_name_taken_indicator;
     QPushButton*  m_OK_button;
-
+    std::function<bool(std::string const&)>  m_is_name_valid_function;
     std::string  m_name;
 };
 
@@ -180,6 +185,8 @@ widgets::widgets(program_window* const  wnd)
         )
     , m_node_icon((boost::filesystem::path{ get_program_options()->dataRoot() } /
                    "shared/gfx/icons/coord_system.png").string().c_str())
+    , m_batch_icon((boost::filesystem::path{ get_program_options()->dataRoot() } /
+                   "shared/gfx/icons/batch.png").string().c_str())
 
     , m_coord_system_pos_x(
         [](program_window* wnd) {
@@ -330,7 +337,10 @@ void  widgets::on_scene_insert_coord_system()
     static natural_64_bit  counter = 0ULL;
     std::string const  name = msgstream() << "coord_system_" << counter;
     ++counter;
-    insert_name_dialog  dlg(wnd(), name);
+    insert_name_dialog  dlg(wnd(), name,
+        [this](std::string const&  name) {
+            return m_wnd->glwindow().call_now(&simulator::get_scene_node, name) == nullptr;
+        });
     dlg.exec();
     if (!dlg.get_name().empty())
     {
@@ -346,7 +356,73 @@ void  widgets::on_scene_insert_coord_system()
 
 void  widgets::on_scene_insert_batch()
 {
-    int iii = 0;
+    std::unordered_set<tree_widget_item*>  nodes;
+    std::unordered_set<std::string>  used_names;
+    foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
+    {
+        tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(item);
+        INVARIANT(tree_item != nullptr);
+        std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
+        if (tree_item->represents_coord_system())
+        {
+            nodes.insert(tree_item);
+            auto const  node = m_wnd->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
+            INVARIANT(node != nullptr);
+            for (auto const&  name_batch : node->get_batches())
+                used_names.insert(name_batch.first);
+        }
+    }
+    if (nodes.empty())
+    {
+        m_wnd->print_status_message("ERROR: No coordinate system is selected.", 10000);
+        return;
+    }
+
+    boost::filesystem::path const  batches_root_dir = canonical_path(boost::filesystem::absolute(
+            boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "models"
+            ));
+
+    QFileDialog  dialog(m_wnd);
+    dialog.setDirectory(batches_root_dir.string().c_str());
+    //dialog.setFileMode(QFileDialog::DirectoryOnly);
+    if (!dialog.exec())
+        return;
+    QStringList const  selected = dialog.selectedFiles();
+    if (selected.size() != 1)
+    {
+        m_wnd->print_status_message("ERROR: No coordinate system is selected.", 10000);
+        return;
+    }
+    boost::filesystem::path const  batch_pathname = qtgl::to_string(selected.at(0));
+    boost::filesystem::path const  batch_dir = batch_pathname.parent_path().filename();
+    boost::filesystem::path  batch_name = batch_pathname.filename();
+    if (batch_name.has_extension())
+        batch_name.replace_extension("");
+    std::string const  raw_name = batch_dir.string() + "/" + batch_name.string();
+    static natural_64_bit  counter = 0ULL;
+    std::string  name = raw_name;
+    while (used_names.count(name) != 0UL)
+    {
+        name = msgstream() << raw_name << "_" << counter;
+        ++counter;
+    }
+    insert_name_dialog  dlg(wnd(), name,
+        [&used_names](std::string const&  name) {
+        return used_names.count(name) == 0UL;
+    });
+    dlg.exec();
+    if (!dlg.get_name().empty())
+    {
+        for (auto const&  tree_item : nodes)
+        {
+            std::string const  node_name = qtgl::to_string(tree_item->text(0));
+            m_wnd->glwindow().call_now(&simulator::insert_batch_to_scene_node, dlg.get_name(), batch_pathname, node_name);
+            QTreeWidgetItem* const  tree_node = new tree_widget_item(false);
+            tree_node->setText(0, QString(dlg.get_name().c_str()));
+            tree_node->setIcon(0, m_batch_icon);
+            tree_item->addChild(tree_node);
+        }
+    }
 }
 
 void  widgets::on_scene_erase_selected()

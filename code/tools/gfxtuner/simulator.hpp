@@ -73,8 +73,7 @@ struct simulator : public qtgl::real_time_simulator
 
     void  erase_scene_node(std::string const&  name);
 
-    void  insert_batch_to_scene_node(std::string const&  batch_name, qtgl::batch_ptr const  batch, std::string const&  scene_node_name)
-    { get_scene_node(scene_node_name)->insert_batches({{batch_name, batch}}); }
+    void  insert_batch_to_scene_node(std::string const&  batch_name, boost::filesystem::path const&  batch_pathname, std::string const&  scene_node_name);
 
     void  erase_batch_from_scene_node(std::string const&  batch_name, std::string const&  scene_node_name);
 
@@ -105,6 +104,8 @@ private:
     void  translate_scene_selected_objects(float_64_bit const  time_to_simulate_in_seconds);
     void  rotate_scene_selected_objects(float_64_bit const  time_to_simulate_in_seconds);
     void  rotate_scene_node(std::string const&  scene_node_name, float_64_bit const  time_to_simulate_in_seconds);
+
+    void  render_scene_batches(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
     void  render_scene_coord_systems(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
     void  render_scene_coord_system(scene_node_ptr const  node, matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
 

@@ -28,6 +28,9 @@ struct program_window : public QMainWindow
     boost::property_tree::ptree&  ptree() { return *m_ptree; }
     qtgl::window<simulator>&  glwindow() noexcept { return m_glwindow; }
 
+    void print_status_message(std::string const&  msg, natural_32_bit const  num_miliseconds_to_show=2000)
+    { m_status_bar.print_status_message(msg, num_miliseconds_to_show); }
+
 public slots:
 
     void  on_tab_changed(int const  tab_index);

@@ -26,6 +26,8 @@ struct  status_bar
 
     void  update();
 
+    void print_status_message(std::string const&  msg, natural_32_bit const  num_miliseconds_to_show = 2000);
+
 private:
     program_window*  m_wnd;
 

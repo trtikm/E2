@@ -63,6 +63,7 @@ private:
 
     QTreeWidget*  m_scene_tree;
     QIcon  m_node_icon;
+    QIcon  m_batch_icon;
 
     QLineEdit*  m_coord_system_pos_x;
     QLineEdit*  m_coord_system_pos_y;

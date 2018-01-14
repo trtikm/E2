@@ -509,6 +509,9 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
     render_simulation_state(view_projection_matrix,draw_state);
 
+    render_scene_batches(view_projection_matrix, draw_state);
+    render_scene_coord_systems(view_projection_matrix, draw_state);
+
     qtgl::swap_buffers();
 }
 
@@ -528,8 +531,6 @@ void  simulator::render_simulation_state(matrix44 const&  view_projection_matrix
 
     //draw(m_ske_test_batch, m_ske_test_modelspace, m_ske_test_keyframes, m_ske_test_time, view_projection_matrix, draw_state);
     draw(m_barb_batch, m_barb_modelspace, m_barb_keyframes, m_barb_time, view_projection_matrix, draw_state);
-
-    render_scene_coord_systems(view_projection_matrix, draw_state);
 }
 
 void  simulator::perform_scene_update(float_64_bit const  time_to_simulate_in_seconds)
@@ -715,6 +716,22 @@ void  simulator::rotate_scene_node(std::string const&  scene_node_name, float_64
 
 }
 
+void  simulator::render_scene_batches(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
+{
+    TMPROF_BLOCK();
+
+    for (auto const& node_batch : m_scene_selection.get_batches())
+    {
+        auto const  node = get_scene_node(node_batch.first);
+        auto const  batch = node->get_batch(node_batch.second);
+        if (qtgl::make_current(*batch, draw_state))
+        {
+            render_batch(*batch, view_projection_matrix * node->get_world_matrix());
+            draw_state = batch->draw_state();
+        }
+    }
+}
+
 void  simulator::render_scene_coord_systems(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
 {
     TMPROF_BLOCK();
@@ -757,11 +774,21 @@ void  simulator::erase_scene_node(std::string const&  name)
 
 }
 
+void  simulator::insert_batch_to_scene_node(std::string const&  batch_name, boost::filesystem::path const&  batch_pathname, std::string const&  scene_node_name)
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(get_scene().has_scene_node(scene_node_name));
+    auto const  batch = qtgl::batch::create(canonical_path(batch_pathname));
+    ASSUMPTION(batch != nullptr);
+    get_scene_node(scene_node_name)->insert_batches({ { batch_name, batch } });
+}
+
 void  simulator::erase_batch_from_scene_node(std::string const&  batch_name, std::string const&  scene_node_name)
 {
+    m_scene_selection.erase_batch({ scene_node_name, batch_name });
     auto const  node = get_scene_node(scene_node_name);
     node->erase_batches({ batch_name });
-    m_scene_selection.erase_batch({ scene_node_name, batch_name });
 }
 
 void  simulator::translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift)

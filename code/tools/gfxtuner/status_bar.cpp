@@ -88,6 +88,12 @@ void status_bar::update()
     }
 }
 
+void status_bar::print_status_message(std::string const&  msg, natural_32_bit const  num_miliseconds_to_show)
+{
+    m_wnd->statusBar()->showMessage(QString(msg.c_str()), num_miliseconds_to_show);
+}
+
+
 void  make_status_bar_content(status_bar const&  w)
 {
     w.wnd()->statusBar()->addPermanentWidget(w.spent_real_time());
