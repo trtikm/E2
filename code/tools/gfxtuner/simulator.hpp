@@ -77,12 +77,18 @@ struct simulator : public qtgl::real_time_simulator
 
     void  erase_batch_from_scene_node(std::string const&  batch_name, std::string const&  scene_node_name);
 
+    void  clear_scene();
+    void  save_scene(boost::filesystem::path const&  scene_root_dir) const;
+    void  load_scene(boost::filesystem::path const&  scene_root_dir);
+
     void  translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift);
     void  rotate_scene_node(std::string const&  scene_node_name, quaternion const&  rotation);
     void  set_position_of_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin);
     void  set_orientation_of_scene_node(std::string const&  scene_node_name, quaternion const&  new_orientation);
     void  relocate_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation);
 
+    scene_selection const&  get_scene_selection() const { return m_scene_selection; }
+    scene_selection&  get_scene_selection() { return m_scene_selection; }
     void  update_scene_selection(
             std::unordered_set<std::string> const&  selected_scene_nodes,
             std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches

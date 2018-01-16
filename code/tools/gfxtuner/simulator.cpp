@@ -791,6 +791,22 @@ void  simulator::erase_batch_from_scene_node(std::string const&  batch_name, std
     node->erase_batches({ batch_name });
 }
 
+
+void  simulator::clear_scene()
+{
+    get_scene_selection().clear();
+    get_scene().clear();
+}
+
+void  simulator::save_scene(boost::filesystem::path const&  scene_root_dir) const
+{
+}
+
+void  simulator::load_scene(boost::filesystem::path const&  scene_root_dir)
+{
+}
+
+
 void  simulator::translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift)
 {
     get_scene_node(scene_node_name)->relocate_coordinate_system([&shift](angeo::coordinate_system&  coord_system) {

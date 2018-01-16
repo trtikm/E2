@@ -453,6 +453,27 @@ void  widgets::on_scene_erase_selected()
     }
 }
 
+void  widgets::clear_scene()
+{
+    m_scene_tree->clear();
+    wnd()->glwindow().call_later(&simulator::clear_scene);
+}
+
+void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
+{
+    clear_scene();
+    //wnd()->glwindow().call_later(&simulator::load_scene, scene_root_dir);
+    //{
+    //    wnd()->print_status_message("ERROR: Load of the scene has FAILED!");
+    //    wnd()->on_menu_new_scene();
+    //}
+}
+
+void  widgets::save_scene(boost::filesystem::path const&  scene_root_dir)
+{
+    //wnd()->glwindow().call_later(&simulator::save_scene, scene_root_dir);
+}
+
 void  widgets::save()
 {
     //wnd()->ptree().put("draw.show_grid", m_show_grid->isChecked());

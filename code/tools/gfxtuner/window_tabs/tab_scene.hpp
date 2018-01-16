@@ -3,6 +3,7 @@
 
 #   include <angeo/tensor_math.hpp>
 #   include <gfxtuner/scene.hpp>
+#   include <boost/filesystem.hpp>
 #   include <QWidget>
 #   include <QTreeWidget>
 #   include <QColor>
@@ -49,6 +50,9 @@ struct  widgets
     void  coord_system_position_listener();
     void  coord_system_rotation_listener();
 
+    void  clear_scene();
+    void  open_scene(boost::filesystem::path const&  scene_root_dir);
+    void  save_scene(boost::filesystem::path const&  scene_root_dir);
 
     void  save();
 

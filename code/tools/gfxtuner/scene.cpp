@@ -210,3 +210,9 @@ bool scene::is_parent_and_child(scene_node_ptr const  parent, scene_node_ptr con
     ASSUMPTION(get_scene_node(child->get_name()) == child);
     return detail::is_parent_and_child(parent, child);
 }
+
+void  scene::clear()
+{
+    m_scene.clear();
+    m_names_to_nodes.clear();
+}

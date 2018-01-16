@@ -104,6 +104,8 @@ struct scene
     bool is_direct_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  child);
     bool is_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  child);
 
+    void  clear();
+
 private:
     std::unordered_map<std::string, scene_node_ptr>  m_scene;
     std::unordered_map<std::string, scene_node_ptr>  m_names_to_nodes;
