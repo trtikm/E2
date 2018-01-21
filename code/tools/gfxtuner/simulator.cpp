@@ -576,7 +576,7 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
         vector3  lo, hi;
         if (!get_bbox_of_selected_scene_nodes(lo, hi))
             return;
-        m_scene_edit_data.initialise_translation_data({ 0.5f * (lo + hi) });
+        m_scene_edit_data.initialise_translation_data({ 0.5f * (lo + hi), false });
     }
     m_scene_edit_data.get_translation_data().update(
             keyboard_props().is_pressed(qtgl::KEY_X()),
@@ -611,19 +611,21 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
 
     vector3 const  shift = m_scene_edit_data.get_translation_data().get_shift(new_plane_point);
 
-    for (auto const& node_name : m_scene_selection.get_nodes())
-        get_scene_node(node_name)->relocate_coordinate_system([&shift](angeo::coordinate_system&  coord_system) {
-            translate(coord_system, shift);
-            });
-    std::unordered_set<std::string>  translated_nodes = m_scene_selection.get_nodes();
+    std::unordered_set<std::string> nodes_to_translate = m_scene_selection.get_nodes();
     for (auto const& node_batch_names : m_scene_selection.get_batches())
-        if (translated_nodes.count(node_batch_names.first) == 0UL)
-        {
-            get_scene_node(node_batch_names.first)->relocate_coordinate_system([&shift](angeo::coordinate_system&  coord_system) {
-                translate(coord_system, shift);
-                });
-            translated_nodes.insert(node_batch_names.first);
-        }
+        nodes_to_translate.insert(node_batch_names.first);
+    for (auto const& node_name : nodes_to_translate)
+    {
+        scene_node_ptr const  node = get_scene_node(node_name);
+        vector3 const  node_shift =
+            m_scene_edit_data.get_translation_data().use_axes_of_parent_coord_system() || !node->has_parent() ?
+                shift :
+                contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(shift, 0.0f)) ;
+        node->relocate_coordinate_system([&node_shift](angeo::coordinate_system&  coord_system) {
+            translate(coord_system, node_shift);
+            });
+    }
+
     call_listeners(simulator_notifications::scene_node_position_updated());
 }
 
@@ -641,7 +643,7 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
         vector3  lo, hi;
         if (!get_bbox_of_selected_scene_nodes(lo, hi))
             return;
-        m_scene_edit_data.initialise_rotation_data({ 0.5f * (lo + hi) });
+        m_scene_edit_data.initialise_rotation_data({ 0.5f * (lo + hi), false });
     }
 
     float_32_bit const  horisontal_full_angle_in_pixels = (3.0f / 4.0f) * window_props().width_in_pixels();
@@ -677,35 +679,57 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
     else
         rotation = angle_axis_to_quaternion(horisontal_angle, vector3_unit_z());
 
-    for (auto const& node_name : m_scene_selection.get_nodes())
-    {
-        get_scene_node(node_name)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
-            rotate(coord_system, rotation);
-            });
-    }
-    std::unordered_set<std::string>  rotated_nodes = m_scene_selection.get_nodes();
-    for (auto const& node_batch_names : m_scene_selection.get_batches())
-        if (rotated_nodes.count(node_batch_names.first) == 0UL)
-        {
-            get_scene_node(node_batch_names.first)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
-                rotate(coord_system, rotation);
-                });
-            rotated_nodes.insert(node_batch_names.first);
-        }
+    vector3  axis;
+    scalar const  angle = quaternion_to_angle_axis(rotation, axis);
 
-    if (rotated_nodes.size() > 1UL && !keyboard_props().is_pressed(qtgl::KEY_LSHIFT()) && !keyboard_props().is_pressed(qtgl::KEY_RSHIFT()))
+    std::unordered_set<std::string> nodes_to_rotate = m_scene_selection.get_nodes();
+    for (auto const& node_batch_names : m_scene_selection.get_batches())
+        nodes_to_rotate.insert(node_batch_names.first);
+    for (auto const& node_name : nodes_to_rotate)
     {
-        matrix33 const  rotation_matrix = quaternion_to_rotation_matrix(rotation);
-        vector3 const  rotation_centre = get_scene_edit_data().get_rotation_data().get_origin();
-        for (auto const& node_name : rotated_nodes)
-        {
-            get_scene_node(node_name)->relocate_coordinate_system([&rotation_matrix, &rotation_centre](angeo::coordinate_system&  coord_system) {
-                vector3 const position_vector = coord_system.origin() - rotation_centre;
-                vector3 const rotated_position_vector = rotation_matrix * position_vector;
-                translate(coord_system, rotated_position_vector - position_vector);
-                });
-        }
+        scene_node_ptr const  node = get_scene_node(node_name);
+        quaternion const  node_rotation =
+            m_scene_edit_data.get_rotation_data().use_axes_of_parent_coord_system() || !node->has_parent() ?
+                rotation :
+                angle_axis_to_quaternion(angle, contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(axis, 0.0f)));
+        //vector3 const  node_translation =
+        //    m_scene_edit_data.get_translation_data().use_axes_of_parent_coord_system() || !node->has_parent() ?
+        //        vector3_zero() :
+        //        angle_axis_to_quaternion(angle, contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(axis, 0.0f)));
+        node->relocate_coordinate_system([&node_rotation](angeo::coordinate_system&  coord_system) {
+            rotate(coord_system, node_rotation);
+        });
     }
+
+    //for (auto const& node_name : m_scene_selection.get_nodes())
+    //{
+    //    get_scene_node(node_name)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
+    //        rotate(coord_system, rotation);
+    //        });
+    //}
+    //std::unordered_set<std::string>  rotated_nodes = m_scene_selection.get_nodes();
+    //for (auto const& node_batch_names : m_scene_selection.get_batches())
+    //    if (rotated_nodes.count(node_batch_names.first) == 0UL)
+    //    {
+    //        get_scene_node(node_batch_names.first)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
+    //            rotate(coord_system, rotation);
+    //            });
+    //        rotated_nodes.insert(node_batch_names.first);
+    //    }
+
+    //if (rotated_nodes.size() > 1UL && !keyboard_props().is_pressed(qtgl::KEY_LSHIFT()) && !keyboard_props().is_pressed(qtgl::KEY_RSHIFT()))
+    //{
+    //    matrix33 const  rotation_matrix = quaternion_to_rotation_matrix(rotation);
+    //    vector3 const  rotation_centre = get_scene_edit_data().get_rotation_data().get_origin();
+    //    for (auto const& node_name : rotated_nodes)
+    //    {
+    //        get_scene_node(node_name)->relocate_coordinate_system([&rotation_matrix, &rotation_centre](angeo::coordinate_system&  coord_system) {
+    //            vector3 const position_vector = coord_system.origin() - rotation_centre;
+    //            vector3 const rotated_position_vector = rotation_matrix * position_vector;
+    //            translate(coord_system, rotated_position_vector - position_vector);
+    //            });
+    //    }
+    //}
 
     call_listeners(simulator_notifications::scene_node_orientation_updated());
 }

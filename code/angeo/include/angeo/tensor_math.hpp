@@ -110,6 +110,11 @@ void  basis_to_rotation_matrix(vector3 const&  x_axis_unit_vector,
 inline quaternion  angle_axis_to_quaternion(scalar const  angle, vector3 const&  axis) {
     return quaternion(Eigen::AngleAxis<scalar>(angle,axis));
 }
+inline scalar quaternion_to_angle_axis(quaternion const& q, vector3&  axis) {
+    Eigen::AngleAxis<scalar> tmp(q);
+    axis = tmp.axis();
+    return tmp.angle();
+}
 matrix33  yaw_pitch_roll_to_rotation(scalar const  yaw, scalar const  pitch, scalar const  roll);
 void  rotation_to_yaw_pitch_roll(matrix33 const&  R, scalar&  yaw, scalar&  pitch, scalar&  roll);
 
