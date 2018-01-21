@@ -2,6 +2,7 @@
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <gfxtuner/simulator_notifications.hpp>
+#include <gfxtuner/scene_utils.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <utility/std_pair_hash.hpp>
 #include <utility/msgstream.hpp>
@@ -299,8 +300,6 @@ widgets::widgets(program_window* const  wnd)
             return new s(wnd);
         }(m_wnd)
         )
-
-    , m_pivot(vector3_zero())
 {
     m_scene_tree->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
     enable_coord_system_location_widgets(false);
@@ -326,7 +325,7 @@ void  widgets::on_scene_hierarchy_item_selected()
             selected_batches.insert({ parent_tree_item_name, tree_item_name });
         }
     }
-    m_wnd->glwindow().call_now(&simulator::update_scene_selection, selected_scene_nodes, selected_batches);
+    wnd()->glwindow().call_now(&simulator::update_scene_selection, selected_scene_nodes, selected_batches);
     
     update_coord_system_location_widgets();
 }
@@ -364,16 +363,59 @@ QTreeWidgetItem*  widgets::insert_coord_system(
 
 void  widgets::on_scene_insert_coord_system()
 {
+    bool  use_pivot = false;
+    QTreeWidgetItem*  parent_tree_item = nullptr;
+    std::string  parent_tree_item_name;
+    foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
+    {
+        tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(item);
+        INVARIANT(tree_item != nullptr);
+        if (!tree_item->represents_coord_system())
+        {
+            wnd()->print_status_message("ERROR: Insertion has FAILED. A batch is selected.", 10000);
+            return;
+        }
+        std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
+        if (tree_item_name == get_pivot_node_name())
+            use_pivot = true;
+        else
+        {
+            if (parent_tree_item != nullptr)
+            {
+                wnd()->print_status_message("ERROR: Insertion has FAILED. At most one non-pivot coord system can be selected.", 10000);
+                return;
+            }
+            parent_tree_item = tree_item;
+            parent_tree_item_name = tree_item_name;
+        }
+    }
+
     static natural_64_bit  counter = 0ULL;
     std::string const  name = msgstream() << "coord_system_" << counter;
     ++counter;
     insert_name_dialog  dlg(wnd(), name,
         [this](std::string const&  name) {
-            return m_wnd->glwindow().call_now(&simulator::get_scene_node, name) == nullptr;
+            return wnd()->glwindow().call_now(&simulator::get_scene_node, name) == nullptr;
         });
     dlg.exec();
     if (!dlg.get_name().empty())
-        insert_coord_system(dlg.get_name(), m_pivot, quaternion_identity(), nullptr);
+    {
+        vector3  origin = vector3_zero();
+        quaternion  orientation = quaternion_identity();
+        if (use_pivot)
+        {
+            scene_node_ptr const  pivot = wnd()->glwindow().call_now(&simulator::get_scene_node, get_pivot_node_name());
+            origin = pivot->get_coord_system()->origin();
+            orientation = pivot->get_coord_system()->orientation();
+            if (parent_tree_item != nullptr)
+                transform_origin_and_orientation_from_world_to_scene_node(
+                        wnd()->glwindow().call_now(&simulator::get_scene_node, qtgl::to_string(parent_tree_item->text(0))),
+                        origin,
+                        orientation
+                        );
+        }
+        insert_coord_system(dlg.get_name(), origin, orientation, parent_tree_item);
+    }
 }
 
 
@@ -405,7 +447,7 @@ void  widgets::on_scene_insert_batch()
         if (tree_item->represents_coord_system())
         {
             nodes.insert(tree_item);
-            auto const  node = m_wnd->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
+            auto const  node = wnd()->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
             INVARIANT(node != nullptr);
             for (auto const&  name_batch : node->get_batches())
                 used_names.insert(name_batch.first);
@@ -413,7 +455,7 @@ void  widgets::on_scene_insert_batch()
     }
     if (nodes.empty())
     {
-        m_wnd->print_status_message("ERROR: No coordinate system is selected.", 10000);
+        wnd()->print_status_message("ERROR: No coordinate system is selected.", 10000);
         return;
     }
 
@@ -421,7 +463,7 @@ void  widgets::on_scene_insert_batch()
             boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "models"
             ));
 
-    QFileDialog  dialog(m_wnd);
+    QFileDialog  dialog(wnd());
     dialog.setDirectory(batches_root_dir.string().c_str());
     //dialog.setFileMode(QFileDialog::DirectoryOnly);
     if (!dialog.exec())
@@ -429,7 +471,7 @@ void  widgets::on_scene_insert_batch()
     QStringList const  selected = dialog.selectedFiles();
     if (selected.size() != 1)
     {
-        m_wnd->print_status_message("ERROR: No coordinate system is selected.", 10000);
+        wnd()->print_status_message("ERROR: No coordinate system is selected.", 10000);
         return;
     }
     boost::filesystem::path const  batch_pathname = qtgl::to_string(selected.at(0));
@@ -463,14 +505,14 @@ void  widgets::on_scene_erase_selected()
         INVARIANT(tree_item != nullptr);
         std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
         if (tree_item->represents_coord_system())
-            m_wnd->glwindow().call_now(&simulator::erase_scene_node, tree_item_name);
+            wnd()->glwindow().call_now(&simulator::erase_scene_node, tree_item_name);
         else
         {
             tree_widget_item* const  parent_tree_item = dynamic_cast<tree_widget_item*>(tree_item->parent());
             INVARIANT(parent_tree_item != nullptr);
             INVARIANT(parent_tree_item->represents_coord_system());
             std::string const  parent_tree_item_name = qtgl::to_string(parent_tree_item->text(0));
-            m_wnd->glwindow().call_now(&simulator::erase_batch_from_scene_node, tree_item_name, parent_tree_item_name);
+            wnd()->glwindow().call_now(&simulator::erase_batch_from_scene_node, tree_item_name, parent_tree_item_name);
         }
 
         auto const  taken_item = item->parent() != nullptr ?
@@ -487,6 +529,8 @@ void  widgets::clear_scene()
 {
     m_scene_tree->clear();
     wnd()->glwindow().call_now(&simulator::clear_scene);
+
+    insert_coord_system(get_pivot_node_name(), vector3_zero(), quaternion_identity(), nullptr);
 }
 
 
@@ -513,6 +557,13 @@ static tree_widget_item*  load_scene_node(
             orientation_tree.get<scalar>("z"),
             orientation_tree.get<scalar>("w")
             );
+
+    if (node_name == get_pivot_node_name())
+    {
+        scene_node_ptr const  pivot = glwindow.call_now(&simulator::get_scene_node, get_pivot_node_name());
+        glwindow.call_now(&simulator::relocate_scene_node, get_pivot_node_name(), origin, orientation);
+        return nullptr;
+    }
 
     tree_widget_item* const  current_node_item = dynamic_cast<tree_widget_item*>(
             node_inserter(node_name, origin, orientation, parent_item)
@@ -560,15 +611,16 @@ void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
                     ),
                 nullptr
                 );
+        wnd()->print_status_message(std::string("SUCCESS: Scene loaded from: ") + scene_root_dir.string(), 5000);
     }
     catch (boost::property_tree::ptree_error const&  e)
     {
-        m_wnd->print_status_message(std::string("ERROR: Load of scene has FAILED. ") + e.what(), 10000);
+        wnd()->print_status_message(std::string("ERROR: Load of scene has FAILED. ") + e.what(), 10000);
         clear_scene();
     }
     catch (...)
     {
-        m_wnd->print_status_message("ERROR: Load of scene has FAILED. Reason is unknown.", 10000);
+        wnd()->print_status_message("ERROR: Load of scene has FAILED. Reason is unknown.", 10000);
         clear_scene();
     }
 }
@@ -628,6 +680,7 @@ void  widgets::save_scene(boost::filesystem::path const&  scene_root_dir)
                 );
     boost::filesystem::create_directories(scene_root_dir);
     boost::property_tree::write_info((scene_root_dir / "hierarchy.info").string(), save_tree);
+    wnd()->print_status_message(std::string("SUCCESS: Scene saved to: ") + scene_root_dir.string(), 5000);
 }
 
 void  widgets::save()
@@ -711,7 +764,7 @@ void  widgets::update_coord_system_location_widgets()
         return;
 
     std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
-    auto const  node_ptr = m_wnd->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
+    auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
     refresh_text_in_coord_system_location_widgets(node_ptr);
 }
 

@@ -131,6 +131,12 @@ void program_window::timerEvent(QTimerEvent* const event)
         if (ptree().get("window.show_maximised", false))
             this->showMaximized();
         m_is_this_first_timer_event = false;
+
+        // Below put calls to methods 'on_simulator_started' of those widgets 
+        // requiring synchronisation with the simulator to complete their
+        // initialisation.
+
+        m_tab_scene_widgets.on_simulator_started();
     }
 
     // Here put time-dependent updates...

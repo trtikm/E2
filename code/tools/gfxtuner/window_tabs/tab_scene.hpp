@@ -38,7 +38,7 @@ struct  widgets
     QLineEdit* coord_system_pitch() const { return m_coord_system_pitch; }
     QLineEdit* coord_system_roll() const { return m_coord_system_roll; }
 
-    vector3 const& get_pivot() const { return m_pivot; }
+    void  on_simulator_started() { clear_scene(); }
 
     void  on_scene_hierarchy_item_selected();
     void  on_scene_insert_coord_system();
@@ -94,12 +94,12 @@ private:
     QLineEdit*  m_coord_system_yaw;
     QLineEdit*  m_coord_system_pitch;
     QLineEdit*  m_coord_system_roll;
-
-    vector3  m_pivot;
 };
 
 
 QWidget*  make_scene_tab_content(widgets const&  w);
+
+inline std::string get_pivot_node_name() { return "@pivot"; }
 
 
 }}
