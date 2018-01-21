@@ -16,6 +16,7 @@
 #   include <vector>
 #   include <unordered_map>
 #   include <unordered_set>
+#   include <string>
 
 
 struct simulator : public qtgl::real_time_simulator
@@ -58,18 +59,18 @@ struct simulator : public qtgl::real_time_simulator
     { return insert_scene_node_at(name, vector3_zero(), quaternion_identity()); }
 
     scene_node_ptr  insert_scene_node_at(std::string const&  name, vector3 const&  origin, quaternion const&  orientation)
-    { return insert_child_scene_node_at(name, nullptr, origin, orientation); }
+    { return get_scene().insert_scene_node(name, origin, orientation, nullptr); }
 
-    scene_node_ptr  insert_child_scene_node(std::string const&  name, scene_node_ptr const  parent)
-    { return insert_child_scene_node_at(name, parent, vector3_zero(), quaternion_identity()); }
+    scene_node_ptr  insert_child_scene_node(std::string const&  name, std::string const&  parent_name)
+    { return insert_child_scene_node_at(name, vector3_zero(), quaternion_identity(), parent_name); }
 
     scene_node_ptr  insert_child_scene_node_at(
             std::string const&  name,
-            scene_node_ptr const  parent,
             vector3 const&  origin,
-            quaternion const&  orientation
+            quaternion const&  orientation,
+            std::string const&  parent_name
             )
-    { return get_scene().insert_scene_node(name, origin, orientation, parent); }
+    { return get_scene().insert_scene_node(name, origin, orientation, get_scene_node(parent_name)); }
 
     void  erase_scene_node(std::string const&  name);
 
@@ -78,8 +79,6 @@ struct simulator : public qtgl::real_time_simulator
     void  erase_batch_from_scene_node(std::string const&  batch_name, std::string const&  scene_node_name);
 
     void  clear_scene();
-    void  save_scene(boost::filesystem::path const&  scene_root_dir) const;
-    void  load_scene(boost::filesystem::path const&  scene_root_dir);
 
     void  translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift);
     void  rotate_scene_node(std::string const&  scene_node_name, quaternion const&  rotation);

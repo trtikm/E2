@@ -9,6 +9,7 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/info_parser.hpp>
 #include <QLabel>
 #include <QDialog>
 #include <QLineEdit>
@@ -21,8 +22,6 @@
 #include <QIntValidator>
 #include <QDoubleValidator>
 #include <QFileDialog>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/path.hpp>
 
 namespace {
 
@@ -332,6 +331,37 @@ void  widgets::on_scene_hierarchy_item_selected()
     update_coord_system_location_widgets();
 }
 
+
+QTreeWidgetItem*  widgets::insert_coord_system(
+            std::string const&  name,
+            vector3 const&  origin,
+            quaternion const&  orientation,
+            QTreeWidgetItem* const  parent_tree_item
+            )
+{
+    std::unique_ptr<tree_widget_item>  tree_node(new tree_widget_item(true));
+    tree_node->setText(0, QString(name.c_str()));
+    tree_node->setIcon(0, m_node_icon);
+    if (parent_tree_item == nullptr)
+    {
+        wnd()->glwindow().call_now(&simulator::insert_scene_node_at, name, origin, orientation);
+        m_scene_tree->addTopLevelItem(tree_node.get());
+        m_scene_tree->setCurrentItem(tree_node.get());
+    }
+    else
+    {
+        wnd()->glwindow().call_now(
+                &simulator::insert_child_scene_node_at,
+                name,
+                origin,
+                orientation,
+                qtgl::to_string(parent_tree_item->text(0))
+                );
+        parent_tree_item->addChild(tree_node.get());
+    }
+    return tree_node.release();
+}
+
 void  widgets::on_scene_insert_coord_system()
 {
     static natural_64_bit  counter = 0ULL;
@@ -343,15 +373,24 @@ void  widgets::on_scene_insert_coord_system()
         });
     dlg.exec();
     if (!dlg.get_name().empty())
-    {
-        m_wnd->glwindow().call_now(&simulator::insert_scene_node_at, dlg.get_name(), m_pivot, quaternion_identity());
+        insert_coord_system(dlg.get_name(), m_pivot, quaternion_identity(), nullptr);
+}
 
-        QTreeWidgetItem* const  tree_node = new tree_widget_item(true);
-        tree_node->setText(0, QString(dlg.get_name().c_str()));
-        tree_node->setIcon(0, m_node_icon);
-        m_scene_tree->addTopLevelItem(tree_node);
-        m_scene_tree->setCurrentItem(tree_node);
-    }
+
+QTreeWidgetItem*  widgets::insert_batch(
+            QTreeWidgetItem* const  node_item,
+            std::string const&  batch_name,
+            boost::filesystem::path const  batch_pathname
+            )
+{
+    std::string const  node_name = qtgl::to_string(node_item->text(0));
+    wnd()->glwindow().call_now(&simulator::insert_batch_to_scene_node, batch_name, batch_pathname, node_name);
+    std::unique_ptr<tree_widget_item>  tree_node(new tree_widget_item(false));
+    tree_node->setText(0, QString(batch_name.c_str()));
+    tree_node->setIcon(0, m_batch_icon);
+    node_item->addChild(tree_node.get());
+    m_scene_tree->setCurrentItem(tree_node.get());
+    return tree_node.release();
 }
 
 void  widgets::on_scene_insert_batch()
@@ -412,17 +451,8 @@ void  widgets::on_scene_insert_batch()
     });
     dlg.exec();
     if (!dlg.get_name().empty())
-    {
         for (auto const&  tree_item : nodes)
-        {
-            std::string const  node_name = qtgl::to_string(tree_item->text(0));
-            m_wnd->glwindow().call_now(&simulator::insert_batch_to_scene_node, dlg.get_name(), batch_pathname, node_name);
-            QTreeWidgetItem* const  tree_node = new tree_widget_item(false);
-            tree_node->setText(0, QString(dlg.get_name().c_str()));
-            tree_node->setIcon(0, m_batch_icon);
-            tree_item->addChild(tree_node);
-        }
-    }
+            insert_batch(tree_item, dlg.get_name(), batch_pathname);
 }
 
 void  widgets::on_scene_erase_selected()
@@ -456,22 +486,148 @@ void  widgets::on_scene_erase_selected()
 void  widgets::clear_scene()
 {
     m_scene_tree->clear();
-    wnd()->glwindow().call_later(&simulator::clear_scene);
+    wnd()->glwindow().call_now(&simulator::clear_scene);
+}
+
+
+static tree_widget_item*  load_scene_node(
+        std::string const&  node_name,
+        boost::property_tree::ptree const&  node_tree,
+        qtgl::window<simulator>& glwindow,
+        std::function<QTreeWidgetItem*(std::string const&, vector3 const&, quaternion const&, QTreeWidgetItem*)> const&  node_inserter,
+        std::function<QTreeWidgetItem*(QTreeWidgetItem* const, std::string const&, boost::filesystem::path)> const&  batch_inserter,
+        tree_widget_item*  parent_item
+        )
+{
+    boost::property_tree::ptree const&  origin_tree = node_tree.find("origin")->second;
+    vector3 const  origin(
+            origin_tree.get<scalar>("x"),
+            origin_tree.get<scalar>("y"),
+            origin_tree.get<scalar>("z")
+            );
+
+    boost::property_tree::ptree const&  orientation_tree = node_tree.find("orientation")->second;
+    quaternion const  orientation = make_quaternion_xyzw(
+            orientation_tree.get<scalar>("x"),
+            orientation_tree.get<scalar>("y"),
+            orientation_tree.get<scalar>("z"),
+            orientation_tree.get<scalar>("w")
+            );
+
+    tree_widget_item* const  current_node_item = dynamic_cast<tree_widget_item*>(
+            node_inserter(node_name, origin, orientation, parent_item)
+            );
+
+    boost::property_tree::ptree const&  batches = node_tree.find("batches")->second;
+    for (auto it = batches.begin(); it != batches.end(); ++it)
+        batch_inserter(current_node_item, it->first, it->second.data());
+
+    boost::property_tree::ptree const&  children = node_tree.find("children")->second;
+    for (auto it = children.begin(); it != children.end(); ++it)
+        load_scene_node(it->first, it->second, glwindow, node_inserter, batch_inserter, current_node_item);
+
+    return current_node_item;
 }
 
 void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
 {
     clear_scene();
-    //wnd()->glwindow().call_later(&simulator::load_scene, scene_root_dir);
-    //{
-    //    wnd()->print_status_message("ERROR: Load of the scene has FAILED!");
-    //    wnd()->on_menu_new_scene();
-    //}
+
+    try
+    {
+        boost::property_tree::ptree  load_tree;
+        boost::property_tree::read_info((scene_root_dir / "hierarchy.info").string(), load_tree);
+
+        for (auto  it = load_tree.begin(); it != load_tree.end(); ++it)
+            load_scene_node(
+                it->first,
+                it->second,
+                wnd()->glwindow(),
+                std::bind(
+                    &window_tabs::tab_scene::widgets::insert_coord_system,
+                    this,
+                    std::placeholders::_1,
+                    std::placeholders::_2,
+                    std::placeholders::_3,
+                    std::placeholders::_4
+                    ),
+                std::bind(
+                    &window_tabs::tab_scene::widgets::insert_batch,
+                    this,
+                    std::placeholders::_1,
+                    std::placeholders::_2,
+                    std::placeholders::_3
+                    ),
+                nullptr
+                );
+    }
+    catch (boost::property_tree::ptree_error const&  e)
+    {
+        m_wnd->print_status_message(std::string("ERROR: Load of scene has FAILED. ") + e.what(), 10000);
+        clear_scene();
+    }
+    catch (...)
+    {
+        m_wnd->print_status_message("ERROR: Load of scene has FAILED. Reason is unknown.", 10000);
+        clear_scene();
+    }
+}
+
+static void  save_scene_item(
+        tree_widget_item* const  item_ptr,
+        qtgl::window<simulator>& glwindow,
+        boost::property_tree::ptree& save_tree
+        )
+{
+    ASSUMPTION(item_ptr != nullptr);
+
+    std::string const  item_name = qtgl::to_string(item_ptr->text(0));
+    scene_node_ptr const  node_ptr = glwindow.call_now(&simulator::get_scene_node, item_name);
+    
+    {
+        boost::property_tree::ptree  origin_tree;
+        vector3 const&  origin = node_ptr->get_coord_system()->origin();
+        origin_tree.put("x", origin(0));
+        origin_tree.put("y", origin(1));
+        origin_tree.put("z", origin(2));
+        save_tree.put_child(item_name + ".origin", origin_tree);
+    }
+    {
+        boost::property_tree::ptree  orientation_tree;
+        vector4 const&  orientation = quaternion_coefficients_xyzw(node_ptr->get_coord_system()->orientation());
+        orientation_tree.put("x", orientation(0));
+        orientation_tree.put("y", orientation(1));
+        orientation_tree.put("z", orientation(2));
+        orientation_tree.put("w", orientation(3));
+        save_tree.put_child(item_name + ".orientation", orientation_tree);
+    }
+
+    boost::property_tree::ptree  batches;
+    for (auto const& name_batch : node_ptr->get_batches())
+        batches.put(name_batch.first, name_batch.second->path().string());
+    save_tree.put_child(item_name + ".batches", batches);
+
+    boost::property_tree::ptree  children;
+    for (int i = 0, n = item_ptr->childCount(); i != n; ++i)
+    {
+        tree_widget_item* const  child = dynamic_cast<tree_widget_item*>(item_ptr->child(i));
+        if (child->represents_coord_system())
+            save_scene_item(child, glwindow, children);
+    }
+    save_tree.put_child(item_name + ".children", children);
 }
 
 void  widgets::save_scene(boost::filesystem::path const&  scene_root_dir)
 {
-    //wnd()->glwindow().call_later(&simulator::save_scene, scene_root_dir);
+    boost::property_tree::ptree save_tree;
+    for (int i = 0, n = m_scene_tree->topLevelItemCount(); i != n; ++i)
+        save_scene_item(
+                dynamic_cast<tree_widget_item*>(m_scene_tree->topLevelItem(i)),
+                wnd()->glwindow(),
+                save_tree
+                );
+    boost::filesystem::create_directories(scene_root_dir);
+    boost::property_tree::write_info((scene_root_dir / "hierarchy.info").string(), save_tree);
 }
 
 void  widgets::save()

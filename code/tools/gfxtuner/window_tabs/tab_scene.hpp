@@ -4,9 +4,11 @@
 #   include <angeo/tensor_math.hpp>
 #   include <gfxtuner/scene.hpp>
 #   include <boost/filesystem.hpp>
+#   include <boost/filesystem/path.hpp>
 #   include <QWidget>
 #   include <QTreeWidget>
 #   include <QColor>
+#   include <string>
 
 
 struct  program_window;
@@ -57,6 +59,17 @@ struct  widgets
     void  save();
 
 private:
+
+    QTreeWidgetItem*  insert_coord_system(
+                std::string const&  name,
+                vector3 const&  origin,
+                quaternion const&  orientation,
+                QTreeWidgetItem* const  parent_tree_item);
+    QTreeWidgetItem*  insert_batch(
+                QTreeWidgetItem* const  node_item,
+                std::string const&  batch_name,
+                boost::filesystem::path const  batch_pathname
+                );
 
     void  update_coord_system_location_widgets();
     void  enable_coord_system_location_widgets(bool const  state);

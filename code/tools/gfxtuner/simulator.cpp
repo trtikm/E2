@@ -720,16 +720,23 @@ void  simulator::render_scene_batches(matrix44 const&  view_projection_matrix, q
 {
     TMPROF_BLOCK();
 
-    for (auto const& node_batch : m_scene_selection.get_batches())
-    {
-        auto const  node = get_scene_node(node_batch.first);
-        auto const  batch = node->get_batch(node_batch.second);
-        if (qtgl::make_current(*batch, draw_state))
-        {
-            render_batch(*batch, view_projection_matrix * node->get_world_matrix());
-            draw_state = batch->draw_state();
-        }
-    }
+    for (auto const& name_node : get_scene().get_all_scene_nodes())
+        for (auto const& name_batch : name_node.second->get_batches())
+            if (qtgl::make_current(*name_batch.second, draw_state))
+            {
+                render_batch(*name_batch.second, view_projection_matrix * name_node.second->get_world_matrix());
+                draw_state = name_batch.second->draw_state();
+            }
+    //for (auto const& node_batch : m_scene_selection.get_batches())
+    //{
+    //    //qtgl::spatial_boundary const  boundary =
+    //    //    m_batch_spiker->buffers_binding()->find_vertex_buffer_properties()->boundary();
+
+    //    //m_batch_spiker_bbox = qtgl::create_wireframe_box(boundary.lo_corner(), boundary.hi_corner(),
+    //    //    get_program_options()->dataRoot(), "/netviewer/spiker_bbox");
+    //    //m_batch_spiker_bsphere = qtgl::create_wireframe_sphere(boundary.radius(), 5U,
+    //    //    get_program_options()->dataRoot(), "/netviewer/spiker_bsphere");
+    //}
 }
 
 void  simulator::render_scene_coord_systems(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
@@ -739,11 +746,8 @@ void  simulator::render_scene_coord_systems(matrix44 const&  view_projection_mat
     //auto const  old_depth_test_state = qtgl::glapi().glIsEnabled(GL_DEPTH_TEST);
     //qtgl::glapi().glDisable(GL_DEPTH_TEST);
 
-    for (auto const&  name_node : get_scene().get_all_scene_nodes())
-        if (m_scene_selection.is_node_selected(name_node.first))
-        {
-            render_scene_coord_system(name_node.second, view_projection_matrix, draw_state);
-        }
+    for (auto const& node_name : m_scene_selection.get_nodes())
+        render_scene_coord_system(get_scene().get_scene_node(node_name), view_projection_matrix, draw_state);
 
     //if (old_depth_test_state)
     //    qtgl::glapi().glEnable(GL_DEPTH_TEST);
@@ -756,7 +760,7 @@ void  simulator::render_scene_coord_system(scene_node_ptr const  node, matrix44 
     if (m_batch_coord_system != nullptr && qtgl::make_current(*m_batch_coord_system, draw_state))
     {
         INVARIANT(m_batch_coord_system->shaders_binding().operator bool());
-        render_batch(*m_batch_coord_system, view_projection_matrix, *node->get_coord_system());
+        render_batch(*m_batch_coord_system, view_projection_matrix * node->get_world_matrix());
         draw_state = m_batch_coord_system->draw_state();
     }
 }
@@ -796,14 +800,6 @@ void  simulator::clear_scene()
 {
     get_scene_selection().clear();
     get_scene().clear();
-}
-
-void  simulator::save_scene(boost::filesystem::path const&  scene_root_dir) const
-{
-}
-
-void  simulator::load_scene(boost::filesystem::path const&  scene_root_dir)
-{
 }
 
 
