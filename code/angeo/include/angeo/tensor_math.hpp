@@ -103,6 +103,18 @@ inline matrix44  inverse(matrix44 const&  M) { return M.inverse(); }
 
 inline matrix33  quaternion_to_rotation_matrix(quaternion const& q) { return q.toRotationMatrix(); }
 inline quaternion  rotation_matrix_to_quaternion(matrix33 const&  R) { return quaternion(R); }
+inline quaternion  rotation_matrix_to_basis(
+            matrix33 const&  R,
+            vector3&  x_axis_unit_vector,
+            vector3&  y_axis_unit_vector,
+            vector3&  z_axis_unit_vector
+            )
+{
+    x_axis_unit_vector(0) = R(0,0); x_axis_unit_vector(1) = R(1,0); x_axis_unit_vector(2) = R(2,0);
+    y_axis_unit_vector(0) = R(0,1); y_axis_unit_vector(1) = R(1,1); y_axis_unit_vector(2) = R(2,1);
+    z_axis_unit_vector(0) = R(0,2); z_axis_unit_vector(1) = R(1,2); z_axis_unit_vector(2) = R(2,2);
+    return quaternion(R);
+}
 void  basis_to_rotation_matrix(vector3 const&  x_axis_unit_vector,
                                vector3 const&  y_axis_unit_vector,
                                vector3 const&  z_axis_unit_vector,

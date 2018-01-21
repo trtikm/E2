@@ -42,6 +42,8 @@ vector3  axis(coordinate_system const&  coord_system, natural_8_bit const  axis_
 vector3  axis_x(coordinate_system const&  coord_system);
 vector3  axis_y(coordinate_system const&  coord_system);
 vector3  axis_z(coordinate_system const&  coord_system);
+inline void  get_basis_vectors(coordinate_system const&  coord_system, vector3&  x, vector3&  y, vector3&  z)
+{ rotation_matrix_to_basis(quaternion_to_rotation_matrix(coord_system.orientation()), x, y, z); }
 
 void  interpolate_linear(
         coordinate_system const&  head,
