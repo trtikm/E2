@@ -80,11 +80,15 @@ inline vector3  transform_vector(vector3 const& u, matrix44 const& M) { return t
 vector3  interpolate_linear(vector3 const&  u, vector3 const&  v, float_32_bit const  t);
 
 inline quaternion  quaternion_identity() { return quaternion::Identity(); }
+inline quaternion  make_quaternion_wxyz(scalar const w, scalar const x, scalar const y, scalar const z) { return quaternion(w,x,y,z); }
+inline quaternion  make_quaternion_xyzw(scalar const x, scalar const y, scalar const z, scalar const w) { return quaternion(w,x,y,z); }
 inline scalar  length_squared(quaternion const& q) { return q.squaredNorm(); }
 inline scalar  length(quaternion const& q) { return q.norm(); }
 inline quaternion  normalised(quaternion const& q) { return q.normalized(); }
 inline void  normalise(quaternion& q) { q.normalize(); }
 inline scalar  dot_product(quaternion const& u, quaternion const& v) { return u.dot(v); }
+inline vector4 const&  quaternion_coefficients_wxyz(quaternion const& q) { return { q.coeffs()(3), q.coeffs()(0), q.coeffs()(1), q.coeffs()(2) }; }
+inline vector4 const&  quaternion_coefficients_xyzw(quaternion const& q) { return q.coeffs(); }
 
 quaternion  interpolate_linear(quaternion const& u, quaternion const& v, float_32_bit const  t);
 quaternion  interpolate_spherical(quaternion const& u, quaternion const& v, float_32_bit const  t);
