@@ -722,10 +722,9 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
 
         if (is_alternative_rotation_enabled)
         {
-            vector3 const  node_origin_in_world = node->has_parent() ?
-                    contract43(node->get_parent()->get_world_matrix() * expand34(vector3_zero())) :
-                    node->get_coord_system()->origin();
-            vector3 const  original_radius_vector = node_origin_in_world - get_scene_edit_data().get_rotation_data().get_origin();
+            vector3 const  original_radius_vector = 
+                    contract43(node->get_world_matrix() * expand34(vector3_zero())) -
+                    get_scene_edit_data().get_rotation_data().get_origin();
             vector3 const  rotated_radius_vector = radius_vector_rotation_matrix * original_radius_vector;
             vector3 const  raw_shift = rotated_radius_vector - original_radius_vector;
             vector3 const  shift = node->has_parent() ?
