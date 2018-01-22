@@ -76,14 +76,6 @@ void  scene_node::erase_batches(std::unordered_set<std::string> const&  names_of
     }
 }
 
-void  scene_node::relocate_coordinate_system(std::function<void(angeo::coordinate_system&)> const&  relocator)
-{
-    TMPROF_BLOCK();
-
-    relocator(*m_coord_system);
-    invalidate_world_matrix();
-}
-
 matrix44 const&  scene_node::get_world_matrix() const
 {
     TMPROF_BLOCK();

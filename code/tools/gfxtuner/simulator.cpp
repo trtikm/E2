@@ -580,7 +580,7 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
         else
         {
             vector3  lo, hi;
-            if (!get_bbox_of_selected_scene_nodes(lo, hi))
+            if (!get_bbox_of_selected_scene_nodes(m_scene_selection, m_scene, lo, hi))
                 return;
             m_scene_edit_data.initialise_translation_data({ 0.5f * (lo + hi) });
         }
@@ -632,9 +632,7 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
         vector3 const  node_shift = node->has_parent() ?
             contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(shift, 0.0f)) :
             shift;
-        node->relocate_coordinate_system([&node_shift](angeo::coordinate_system&  coord_system) {
-            translate(coord_system, node_shift);
-            });
+        node->translate(node_shift);
     }
 
     call_listeners(simulator_notifications::scene_node_position_updated());
@@ -644,7 +642,7 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
 {
     TMPROF_BLOCK();
 
-    if (!mouse_props().is_pressed(qtgl::LEFT_MOUSE_BUTTON()))
+    if (mouse_props().is_pressed(qtgl::LEFT_MOUSE_BUTTON()) == mouse_props().is_pressed(qtgl::RIGHT_MOUSE_BUTTON()))
         return;
     if (m_scene_selection.empty())
         return;
@@ -658,7 +656,7 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
         else
         {
             vector3  lo, hi;
-            if (!get_bbox_of_selected_scene_nodes(lo, hi))
+            if (!get_bbox_of_selected_scene_nodes(m_scene_selection, m_scene, lo, hi))
                 return;
             m_scene_edit_data.initialise_rotation_data({ 0.5f * (lo + hi) });
         }
@@ -705,34 +703,37 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
         nodes_to_rotate.insert(node_batch_names.first);
     if (nodes_to_rotate.size() > 1UL)
         nodes_to_rotate.erase(get_pivot_node_name());
-    vector3 const  axis = m_scene_selection.is_node_selected(get_pivot_node_name()) && nodes_to_rotate.count(get_pivot_node_name()) == 0UL ?
+    bool const  rotate_around_pivot = m_scene_selection.is_node_selected(get_pivot_node_name()) && nodes_to_rotate.count(get_pivot_node_name()) == 0UL;
+    bool const  is_alternative_rotation_enabled = nodes_to_rotate.size() > 1UL && mouse_props().is_pressed(qtgl::RIGHT_MOUSE_BUTTON());
+    vector3 const  axis = rotate_around_pivot ?
         contract43(get_scene().get_scene_node(get_pivot_node_name())->get_world_matrix() * expand34(raw_axis, 0.0f)) :
         raw_axis;
+    matrix33 const  radius_vector_rotation_matrix = is_alternative_rotation_enabled ?
+        quaternion_to_rotation_matrix(angle_axis_to_quaternion(angle, axis)) :
+        matrix33_identity();
     for (auto const& node_name : nodes_to_rotate)
     {
         scene_node_ptr const  node = get_scene_node(node_name);
         vector3 const  rotation_axis = node->has_parent() ?
-            contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(axis, 0.0f)) :
-            axis ;
+                contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(axis, 0.0f)) :
+                axis ;
         quaternion const  rotation = angle_axis_to_quaternion(angle, rotation_axis);
-        node->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
-            rotate(coord_system, rotation);
-        });
-    }
+        node->rotate(rotation);
 
-    //if (rotated_nodes.size() > 1UL && !keyboard_props().is_pressed(qtgl::KEY_LSHIFT()) && !keyboard_props().is_pressed(qtgl::KEY_RSHIFT()))
-    //{
-    //    matrix33 const  rotation_matrix = quaternion_to_rotation_matrix(rotation);
-    //    vector3 const  rotation_centre = get_scene_edit_data().get_rotation_data().get_origin();
-    //    for (auto const& node_name : rotated_nodes)
-    //    {
-    //        get_scene_node(node_name)->relocate_coordinate_system([&rotation_matrix, &rotation_centre](angeo::coordinate_system&  coord_system) {
-    //            vector3 const position_vector = coord_system.origin() - rotation_centre;
-    //            vector3 const rotated_position_vector = rotation_matrix * position_vector;
-    //            translate(coord_system, rotated_position_vector - position_vector);
-    //            });
-    //    }
-    //}
+        if (is_alternative_rotation_enabled)
+        {
+            vector3 const  node_origin_in_world = node->has_parent() ?
+                    contract43(node->get_parent()->get_world_matrix() * expand34(vector3_zero())) :
+                    node->get_coord_system()->origin();
+            vector3 const  original_radius_vector = node_origin_in_world - get_scene_edit_data().get_rotation_data().get_origin();
+            vector3 const  rotated_radius_vector = radius_vector_rotation_matrix * original_radius_vector;
+            vector3 const  raw_shift = rotated_radius_vector - original_radius_vector;
+            vector3 const  shift = node->has_parent() ?
+                    contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(raw_shift, 0.0f)) :
+                    raw_shift;
+            node->translate(shift);
+        }
+    }
 
     call_listeners(simulator_notifications::scene_node_orientation_updated());
 }
@@ -834,42 +835,31 @@ void  simulator::clear_scene()
 
 void  simulator::translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift)
 {
-    get_scene_node(scene_node_name)->relocate_coordinate_system([&shift](angeo::coordinate_system&  coord_system) {
-        translate(coord_system, shift);
-        });
+    get_scene_node(scene_node_name)->translate(shift);
     m_scene_edit_data.invalidate_data();
 }
 
 void  simulator::rotate_scene_node(std::string const&  scene_node_name, quaternion const&  rotation)
 {
-    get_scene_node(scene_node_name)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
-        rotate(coord_system, rotation);
-        });
+    get_scene_node(scene_node_name)->rotate(rotation);
     m_scene_edit_data.invalidate_data();
 }
 
 void  simulator::set_position_of_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin)
 {
-    get_scene_node(scene_node_name)->relocate_coordinate_system([&new_origin](angeo::coordinate_system&  coord_system) {
-        coord_system.set_origin(new_origin);
-        });
+    get_scene_node(scene_node_name)->set_origin(new_origin);
     m_scene_edit_data.invalidate_data();
 }
 
 void  simulator::set_orientation_of_scene_node(std::string const&  scene_node_name, quaternion const&  new_orientation)
 {
-    get_scene_node(scene_node_name)->relocate_coordinate_system([&new_orientation](angeo::coordinate_system&  coord_system) {
-        coord_system.set_orientation(new_orientation);
-        });
+    get_scene_node(scene_node_name)->set_orientation(new_orientation);
     m_scene_edit_data.invalidate_data();
 }
 
 void  simulator::relocate_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation)
 {
-    get_scene_node(scene_node_name)->relocate_coordinate_system([&new_origin, &new_orientation](angeo::coordinate_system&  coord_system) {
-        coord_system.set_origin(new_origin);
-        coord_system.set_orientation(new_orientation);
-        });
+    get_scene_node(scene_node_name)->relocate(new_origin, new_orientation);
     m_scene_edit_data.invalidate_data();
 }
 
@@ -893,33 +883,4 @@ void  simulator::set_scene_edit_mode(SCENE_EDIT_MODE const  edit_mode)
 {
     m_scene_edit_data.set_mode(edit_mode);
     call_listeners(simulator_notifications::scene_edit_mode_changed());
-}
-
-bool  simulator::get_bbox_of_selected_scene_nodes(vector3&  lo, vector3&  hi)
-{
-    TMPROF_BLOCK();
-
-    if (m_scene_selection.empty())
-        return false;
-
-    lo = vector3{ 1e20f,  1e20f,  1e20f };
-    hi = vector3{ -1e20f, -1e20f, -1e20f };
-
-    auto const  update_lo_hi = [this, &lo, &hi](std::string const& node_name) {
-        vector3 const  node_wold_pos = transform_point(vector3_zero(), get_scene_node(node_name)->get_world_matrix());
-        for (int i = 0; i != 3; ++i)
-        {
-            if (lo(i) > node_wold_pos(i))
-                lo(i) = node_wold_pos(i);
-            if (hi(i) < node_wold_pos(i))
-                hi(i) = node_wold_pos(i);
-        }
-    };
-
-    for (auto const& node_name : m_scene_selection.get_nodes())
-        update_lo_hi(node_name);
-    for (auto const& node_batch_names : m_scene_selection.get_batches())
-        update_lo_hi(node_batch_names.first);
-
-    return true;
 }

@@ -115,7 +115,6 @@ private:
     void  render_scene_coord_system(scene_node_ptr const  node, matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
 
     // Utility functions
-    bool  get_bbox_of_selected_scene_nodes(vector3&  lo, vector3&  hi);
 
     /// Data providing feedback loop between a human user and 3D scene in the tool
     qtgl::camera_perspective_ptr  m_camera;

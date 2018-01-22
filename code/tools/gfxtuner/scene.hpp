@@ -47,7 +47,12 @@ struct scene_node
     void  erase_batches(std::unordered_set<std::string> const&  names_of_batches);
 
     angeo::coordinate_system_const_ptr  get_coord_system() const { return m_coord_system; }
-    void  relocate_coordinate_system(std::function<void(angeo::coordinate_system&)> const&  relocator);
+    void  translate(vector3 const&  shift) { angeo::translate(*m_coord_system, shift); invalidate_world_matrix(); }
+    void  rotate(quaternion const&  rotation) { angeo::rotate(*m_coord_system, rotation); invalidate_world_matrix(); }
+    void  set_origin(vector3 const&  new_origin) { m_coord_system->set_origin(new_origin); invalidate_world_matrix(); }
+    void  set_orientation(quaternion const&  new_orientation) { m_coord_system->set_orientation(new_orientation); invalidate_world_matrix(); }
+    void  relocate(vector3 const&  new_origin, quaternion const&  new_orientation)
+    { m_coord_system->set_origin(new_origin); m_coord_system->set_orientation(new_orientation); invalidate_world_matrix(); }
 
     matrix44 const&  get_world_matrix() const;
 

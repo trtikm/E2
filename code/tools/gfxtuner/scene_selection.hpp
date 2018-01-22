@@ -40,4 +40,9 @@ private:
     scene_ptr  m_scene;
 };
 
+
+bool  get_bbox_of_selected_scene_nodes(scene_selection const&  selection, scene_ptr const  scene, vector3&  lo, vector3&  hi);
+
+
+
 #endif
