@@ -573,10 +573,17 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
         return;
     if (get_scene_edit_data().are_data_invalidated())
     {
-        vector3  lo, hi;
-        if (!get_bbox_of_selected_scene_nodes(lo, hi))
-            return;
-        m_scene_edit_data.initialise_translation_data({ 0.5f * (lo + hi), false });
+        if (m_scene_selection.is_node_selected(get_pivot_node_name()))
+            m_scene_edit_data.initialise_translation_data({ 
+                get_scene().get_scene_node(get_pivot_node_name())->get_coord_system()->origin()
+                });
+        else
+        {
+            vector3  lo, hi;
+            if (!get_bbox_of_selected_scene_nodes(lo, hi))
+                return;
+            m_scene_edit_data.initialise_translation_data({ 0.5f * (lo + hi) });
+        }
     }
     m_scene_edit_data.get_translation_data().update(
             keyboard_props().is_pressed(qtgl::KEY_X()),
@@ -609,18 +616,22 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
             ))
         return;
 
-    vector3 const  shift = m_scene_edit_data.get_translation_data().get_shift(new_plane_point);
+    vector3 const  raw_shift = m_scene_edit_data.get_translation_data().get_shift(new_plane_point);
 
     std::unordered_set<std::string> nodes_to_translate = m_scene_selection.get_nodes();
     for (auto const& node_batch_names : m_scene_selection.get_batches())
         nodes_to_translate.insert(node_batch_names.first);
+    if (nodes_to_translate.size() > 1UL)
+        nodes_to_translate.erase(get_pivot_node_name());
+    vector3 const  shift = m_scene_selection.is_node_selected(get_pivot_node_name()) && nodes_to_translate.count(get_pivot_node_name()) == 0UL ?
+        contract43(get_scene().get_scene_node(get_pivot_node_name())->get_world_matrix() * expand34(raw_shift, 0.0f)) :
+        raw_shift;
     for (auto const& node_name : nodes_to_translate)
     {
         scene_node_ptr const  node = get_scene_node(node_name);
-        vector3 const  node_shift =
-            m_scene_edit_data.get_translation_data().use_axes_of_parent_coord_system() || !node->has_parent() ?
-                shift :
-                contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(shift, 0.0f)) ;
+        vector3 const  node_shift = node->has_parent() ?
+            contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(shift, 0.0f)) :
+            shift;
         node->relocate_coordinate_system([&node_shift](angeo::coordinate_system&  coord_system) {
             translate(coord_system, node_shift);
             });
@@ -640,10 +651,17 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
 
     if (get_scene_edit_data().are_data_invalidated())
     {
-        vector3  lo, hi;
-        if (!get_bbox_of_selected_scene_nodes(lo, hi))
-            return;
-        m_scene_edit_data.initialise_rotation_data({ 0.5f * (lo + hi), false });
+        if (m_scene_selection.is_node_selected(get_pivot_node_name()))
+            m_scene_edit_data.initialise_rotation_data({
+                get_scene().get_scene_node(get_pivot_node_name())->get_coord_system()->origin()
+                });
+        else
+        {
+            vector3  lo, hi;
+            if (!get_bbox_of_selected_scene_nodes(lo, hi))
+                return;
+            m_scene_edit_data.initialise_rotation_data({ 0.5f * (lo + hi) });
+        }
     }
 
     float_32_bit const  horisontal_full_angle_in_pixels = (3.0f / 4.0f) * window_props().width_in_pixels();
@@ -658,64 +676,49 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
     bool const  p_down = keyboard_props().is_pressed(qtgl::KEY_P());
     bool const  r_down = keyboard_props().is_pressed(qtgl::KEY_R());
 
-    quaternion  rotation;
+    quaternion  raw_rotation;
     if (x_down || y_down || z_down || p_down || r_down)
     {
-        rotation = quaternion_identity();
+        raw_rotation = quaternion_identity();
         if (x_down)
-            rotation *= angle_axis_to_quaternion(vertical_angle, vector3_unit_x());
+            raw_rotation *= angle_axis_to_quaternion(vertical_angle, vector3_unit_x());
         if (y_down)
-            rotation *= angle_axis_to_quaternion(vertical_angle, vector3_unit_y());
+            raw_rotation *= angle_axis_to_quaternion(vertical_angle, vector3_unit_y());
         if (z_down)
-            rotation *= angle_axis_to_quaternion(horisontal_angle, vector3_unit_z());
+            raw_rotation *= angle_axis_to_quaternion(horisontal_angle, vector3_unit_z());
         if (p_down)
         {
             vector3 const  camera_x_axis = axis_x(*m_camera->coordinate_system());
-            rotation *= angle_axis_to_quaternion(horisontal_angle, { -camera_x_axis(1), camera_x_axis(0), 0.0f});
+            raw_rotation *= angle_axis_to_quaternion(horisontal_angle, { -camera_x_axis(1), camera_x_axis(0), 0.0f});
         }
         if (r_down)
-            rotation *= angle_axis_to_quaternion(vertical_angle, axis_x(*m_camera->coordinate_system()));
+            raw_rotation *= angle_axis_to_quaternion(vertical_angle, axis_x(*m_camera->coordinate_system()));
     }
     else
-        rotation = angle_axis_to_quaternion(horisontal_angle, vector3_unit_z());
+        raw_rotation = angle_axis_to_quaternion(horisontal_angle, vector3_unit_z());
 
-    vector3  axis;
-    scalar const  angle = quaternion_to_angle_axis(rotation, axis);
+    vector3  raw_axis;
+    scalar const  angle = quaternion_to_angle_axis(raw_rotation, raw_axis);
 
     std::unordered_set<std::string> nodes_to_rotate = m_scene_selection.get_nodes();
     for (auto const& node_batch_names : m_scene_selection.get_batches())
         nodes_to_rotate.insert(node_batch_names.first);
+    if (nodes_to_rotate.size() > 1UL)
+        nodes_to_rotate.erase(get_pivot_node_name());
+    vector3 const  axis = m_scene_selection.is_node_selected(get_pivot_node_name()) && nodes_to_rotate.count(get_pivot_node_name()) == 0UL ?
+        contract43(get_scene().get_scene_node(get_pivot_node_name())->get_world_matrix() * expand34(raw_axis, 0.0f)) :
+        raw_axis;
     for (auto const& node_name : nodes_to_rotate)
     {
         scene_node_ptr const  node = get_scene_node(node_name);
-        quaternion const  node_rotation =
-            m_scene_edit_data.get_rotation_data().use_axes_of_parent_coord_system() || !node->has_parent() ?
-                rotation :
-                angle_axis_to_quaternion(angle, contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(axis, 0.0f)));
-        //vector3 const  node_translation =
-        //    m_scene_edit_data.get_translation_data().use_axes_of_parent_coord_system() || !node->has_parent() ?
-        //        vector3_zero() :
-        //        angle_axis_to_quaternion(angle, contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(axis, 0.0f)));
-        node->relocate_coordinate_system([&node_rotation](angeo::coordinate_system&  coord_system) {
-            rotate(coord_system, node_rotation);
+        vector3 const  rotation_axis = node->has_parent() ?
+            contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(axis, 0.0f)) :
+            axis ;
+        quaternion const  rotation = angle_axis_to_quaternion(angle, rotation_axis);
+        node->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
+            rotate(coord_system, rotation);
         });
     }
-
-    //for (auto const& node_name : m_scene_selection.get_nodes())
-    //{
-    //    get_scene_node(node_name)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
-    //        rotate(coord_system, rotation);
-    //        });
-    //}
-    //std::unordered_set<std::string>  rotated_nodes = m_scene_selection.get_nodes();
-    //for (auto const& node_batch_names : m_scene_selection.get_batches())
-    //    if (rotated_nodes.count(node_batch_names.first) == 0UL)
-    //    {
-    //        get_scene_node(node_batch_names.first)->relocate_coordinate_system([&rotation](angeo::coordinate_system&  coord_system) {
-    //            rotate(coord_system, rotation);
-    //            });
-    //        rotated_nodes.insert(node_batch_names.first);
-    //    }
 
     //if (rotated_nodes.size() > 1UL && !keyboard_props().is_pressed(qtgl::KEY_LSHIFT()) && !keyboard_props().is_pressed(qtgl::KEY_RSHIFT()))
     //{
@@ -772,6 +775,8 @@ void  simulator::render_scene_coord_systems(matrix44 const&  view_projection_mat
 
     for (auto const& node_name : m_scene_selection.get_nodes())
         render_scene_coord_system(get_scene().get_scene_node(node_name), view_projection_matrix, draw_state);
+    if (!m_scene_selection.is_node_selected(get_pivot_node_name()) && get_scene().has_scene_node(get_pivot_node_name()))
+        render_scene_coord_system(get_scene().get_scene_node(get_pivot_node_name()), view_projection_matrix, draw_state);
 
     //if (old_depth_test_state)
     //    qtgl::glapi().glEnable(GL_DEPTH_TEST);

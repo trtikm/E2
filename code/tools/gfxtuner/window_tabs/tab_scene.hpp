@@ -99,8 +99,6 @@ private:
 
 QWidget*  make_scene_tab_content(widgets const&  w);
 
-inline std::string get_pivot_node_name() { return "@pivot"; }
-
 
 }}
 

@@ -2,6 +2,7 @@
 #   define E2_TOOL_GFXTUNER_SCENE_EDIT_UTILS_HPP_INCLUDED
 
 #   include <angeo/tensor_math.hpp>
+#   include <string>
 
 
 enum struct SCENE_EDIT_MODE : natural_8_bit
@@ -14,8 +15,8 @@ enum struct SCENE_EDIT_MODE : natural_8_bit
 
 struct  scene_nodes_translation_data
 {
-    scene_nodes_translation_data() : scene_nodes_translation_data(vector3_zero(), false) {}
-    scene_nodes_translation_data(vector3 const&  origin, bool const  use_axes_of_parent_coord_system)
+    scene_nodes_translation_data() : scene_nodes_translation_data(vector3_zero()) {}
+    scene_nodes_translation_data(vector3 const&  origin)
         : m_origin(origin)
         , m_normal(vector3_unit_z())
         , m_reduction(vector3_unit_z())
@@ -24,7 +25,6 @@ struct  scene_nodes_translation_data
         , m_z_down(false)
         , m_plain_point(origin)
         , m_is_plain_point_valid(false)
-        , m_use_axes_of_parent_coord_system(use_axes_of_parent_coord_system)
     {}
     void  update(bool const  x_down, bool const  y_down, bool const  z_down, vector3 const&  camera_origin);
     vector3 const&  get_origin() const { return m_origin; }
@@ -35,7 +35,6 @@ struct  scene_nodes_translation_data
     void  invalidate_plain_point() { m_is_plain_point_valid = false; }
     void  set_plain_point(vector3 const&  plain_point) { m_plain_point = plain_point; m_is_plain_point_valid = true; }
     vector3  get_shift(vector3 const&  new_plane_point);
-    bool  use_axes_of_parent_coord_system() const { return m_use_axes_of_parent_coord_system; }
 
 private:
 
@@ -50,25 +49,21 @@ private:
     bool  m_z_down;
     vector3  m_plain_point;
     bool  m_is_plain_point_valid;
-    bool  m_use_axes_of_parent_coord_system;
 };
 
 
 struct  scene_nodes_rotation_data
 {
-    scene_nodes_rotation_data() : scene_nodes_rotation_data(vector3_zero(), false) {}
-    scene_nodes_rotation_data(vector3 const&  origin, bool const  use_axes_of_parent_coord_system)
+    scene_nodes_rotation_data() : scene_nodes_rotation_data(vector3_zero()) {}
+    scene_nodes_rotation_data(vector3 const&  origin)
         : m_origin(origin)
-        , m_use_axes_of_parent_coord_system(use_axes_of_parent_coord_system)
     {}
 
     vector3 const&  get_origin() const { return m_origin; }
-    bool  use_axes_of_parent_coord_system() const { return m_use_axes_of_parent_coord_system; }
 
 private:
 
     vector3  m_origin;
-    bool  m_use_axes_of_parent_coord_system;
 };
 
 
@@ -101,6 +96,9 @@ private:
     scene_nodes_translation_data  m_nodes_translation_data;
     scene_nodes_rotation_data  m_nodes_rotation_data;
 };
+
+
+inline std::string get_pivot_node_name() { return "@pivot"; }
 
 
 #endif

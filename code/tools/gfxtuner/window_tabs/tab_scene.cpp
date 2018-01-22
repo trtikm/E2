@@ -3,6 +3,7 @@
 #include <gfxtuner/program_options.hpp>
 #include <gfxtuner/simulator_notifications.hpp>
 #include <gfxtuner/scene_utils.hpp>
+#include <gfxtuner/scene_edit_utils.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <utility/std_pair_hash.hpp>
 #include <utility/msgstream.hpp>
