@@ -51,6 +51,7 @@ struct  widgets
 
     void  coord_system_position_listener();
     void  coord_system_rotation_listener();
+    void  selection_changed_listener();
 
     void  clear_scene();
     void  open_scene(boost::filesystem::path const&  scene_root_dir);

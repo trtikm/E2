@@ -1,6 +1,30 @@
 #include <gfxtuner/scene_edit_utils.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
+#include <algorithm>
+
+
+std::string  scene_nodes_selection_data::choose_best_selection(std::vector<std::string> const&  nodes_on_line)
+{
+    std::vector<std::string>  suppressed_nodes;
+    for (auto const&  name : nodes_on_line)
+        if (std::find(nodes_on_line.cbegin(), nodes_on_line.cend(), name) != nodes_on_line.cend())
+            suppressed_nodes.push_back(name);
+    for (auto const& name : m_suppressed_nodes)
+        if (std::find(suppressed_nodes.cbegin(), suppressed_nodes.cend(), name) == suppressed_nodes.cend())
+        {
+            m_suppressed_nodes = suppressed_nodes;
+            m_suppressed_nodes.push_back(name);
+            return name;
+        }
+    INVARIANT(!suppressed_nodes.empty());
+    auto const  name = suppressed_nodes.front();
+    m_suppressed_nodes.clear();
+    for (auto  it = std::next(suppressed_nodes.cbegin()); it != suppressed_nodes.cend(); ++it)
+        m_suppressed_nodes.push_back(*it);
+    m_suppressed_nodes.push_back(name);
+    return name;
+}
 
 
 void  scene_nodes_translation_data::update(bool const  x_down, bool const  y_down, bool const  z_down, vector3 const&  camera_origin)
@@ -75,6 +99,28 @@ void  scene_edit_data::set_mode(SCENE_EDIT_MODE const  mode)
     if (mode != m_mode)
         invalidate_data();
     m_mode = mode;
+}
+
+
+void  scene_edit_data::initialise_selection_data(scene_nodes_selection_data const&  data)
+{
+    ASSUMPTION(get_mode() == SCENE_EDIT_MODE::SELECT_SCENE_OBJECT);
+    m_nodes_selection_data = data;
+    m_data_invalidated = false;
+}
+
+scene_nodes_selection_data const&  scene_edit_data::get_selection_data() const
+{
+    ASSUMPTION(get_mode() == SCENE_EDIT_MODE::SELECT_SCENE_OBJECT);
+    ASSUMPTION(!are_data_invalidated());
+    return m_nodes_selection_data;
+}
+
+scene_nodes_selection_data&  scene_edit_data::get_selection_data()
+{
+    ASSUMPTION(get_mode() == SCENE_EDIT_MODE::SELECT_SCENE_OBJECT);
+    ASSUMPTION(!are_data_invalidated());
+    return m_nodes_selection_data;
 }
 
 

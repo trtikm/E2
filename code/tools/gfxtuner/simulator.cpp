@@ -2,6 +2,7 @@
 #include <gfxtuner/simulator_notifications.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <gfxtuner/draw_utils.hpp>
+#include <gfxtuner/scene_utils.hpp>
 #include <angeo/collide.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
@@ -550,6 +551,7 @@ void  simulator::perform_scene_update(float_64_bit const  time_to_simulate_in_se
     switch (get_scene_edit_mode())
     {
     case SCENE_EDIT_MODE::SELECT_SCENE_OBJECT:
+        select_scene_objects(time_to_simulate_in_seconds);
         break;
     case SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES:
         translate_scene_selected_objects(time_to_simulate_in_seconds);
@@ -561,6 +563,89 @@ void  simulator::perform_scene_update(float_64_bit const  time_to_simulate_in_se
         UNREACHABLE();
         break;
     }
+}
+
+void  simulator::select_scene_objects(float_64_bit const  time_to_simulate_in_seconds)
+{
+    TMPROF_BLOCK();
+
+    if (mouse_props().is_pressed(qtgl::LEFT_MOUSE_BUTTON()) == mouse_props().is_pressed(qtgl::RIGHT_MOUSE_BUTTON()))
+        return;
+
+    if (get_scene_edit_data().are_data_invalidated())
+        m_scene_edit_data.initialise_selection_data({});
+
+    vector3 ray_begin, ray_end;
+    cursor_line_begin(
+        *m_camera,
+        { mouse_props().x(), mouse_props().y() },
+        window_props(),
+        ray_begin
+        );
+    cursor_line_end(*m_camera, ray_begin, ray_end);
+
+    std::map<scalar, std::string>  nodes_on_line;
+    find_scene_nodes_on_line(get_scene(), ray_begin, ray_end, nodes_on_line);
+
+    if (mouse_props().is_pressed(qtgl::RIGHT_MOUSE_BUTTON()) ||
+        keyboard_props().is_pressed(qtgl::KEY_LCTRL()) ||
+        keyboard_props().is_pressed(qtgl::KEY_RCTRL()))
+    {
+        if (nodes_on_line.empty())
+            return;
+
+        bool  erased = false;
+
+        std::string const&  chosen_node_name = nodes_on_line.begin()->second;
+        if (m_scene_selection.is_node_selected(chosen_node_name))
+        {
+            m_scene_selection.erase_node(chosen_node_name);
+            erased = true;
+        }
+        std::unordered_set<std::string>  nodes_of_selected_batches;
+        get_nodes_of_selected_batches(m_scene_selection, nodes_of_selected_batches);
+        if (nodes_of_selected_batches.count(chosen_node_name) != 0UL)
+        {
+            m_scene_selection.erase_batches_of_node(chosen_node_name);
+            erased = true;
+        }
+        if (erased == false)
+        {
+            if (!get_scene().get_scene_node(chosen_node_name)->get_batches().empty())
+                m_scene_selection.insert_batches_of_node(chosen_node_name);
+            else
+                m_scene_selection.insert_node(chosen_node_name);
+        }
+    }
+    else
+    {
+        m_scene_selection.clear();
+
+        if (!nodes_on_line.empty())
+        {
+            std::vector<std::string>  candidate_nodes_on_line;
+            {
+                scalar const  max_candidate_distance = 0.25f;
+                scalar const  line_length = length(ray_end - ray_begin);
+                scalar const  max_param_value =
+                    nodes_on_line.cbegin()->first + (line_length < max_candidate_distance ? 1.0 : max_candidate_distance / line_length);
+                for (auto const&  param_and_name : nodes_on_line)
+                {
+                    if (param_and_name.first > max_param_value)
+                        break;
+                    candidate_nodes_on_line.push_back(param_and_name.second);
+                }
+                INVARIANT(!candidate_nodes_on_line.empty());
+            }
+            std::string const  chosen_node_name = m_scene_edit_data.get_selection_data().choose_best_selection(candidate_nodes_on_line);
+            if (!get_scene().get_scene_node(chosen_node_name)->get_batches().empty())
+                m_scene_selection.insert_batches_of_node(chosen_node_name);
+            else
+                m_scene_selection.insert_node(chosen_node_name);
+        }
+    }
+
+    call_listeners(simulator_notifications::scene_scene_selection_changed());
 }
 
 void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_simulate_in_seconds)
@@ -863,9 +948,9 @@ void  simulator::relocate_scene_node(std::string const&  scene_node_name, vector
 }
 
 void  simulator::update_scene_selection(
-    std::unordered_set<std::string> const&  selected_scene_nodes,
-    std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
-    )
+        std::unordered_set<std::string> const&  selected_scene_nodes,
+        std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
+        )
 {
     TMPROF_BLOCK();
 
@@ -877,6 +962,18 @@ void  simulator::update_scene_selection(
 
     m_scene_edit_data.invalidate_data();
 }
+
+void  simulator::get_scene_selection_data(
+        std::unordered_set<std::string>&  selected_scene_nodes,
+        std::unordered_set<std::pair<std::string, std::string> >&  selected_batches
+        )
+{
+    TMPROF_BLOCK();
+
+    selected_scene_nodes = m_scene_selection.get_nodes();
+    selected_batches = m_scene_selection.get_batches();
+}
+
 
 void  simulator::set_scene_edit_mode(SCENE_EDIT_MODE const  edit_mode)
 {

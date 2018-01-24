@@ -15,6 +15,7 @@ inline std::string  scene_node_position_updated() { return "SCENE_NODE_POSITION_
 inline std::string  scene_node_orientation_updated() { return "SCENE_NODE_ORIENTATION_UPDATED"; }
 
 inline std::string  scene_edit_mode_changed() { return "SCENE_EDIT_MODE_CHANGED"; }
+inline std::string  scene_scene_selection_changed() { return "SCENE_SELECTION_CHANGED"; }
 
 
 }

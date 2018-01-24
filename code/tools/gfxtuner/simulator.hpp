@@ -92,6 +92,10 @@ struct simulator : public qtgl::real_time_simulator
             std::unordered_set<std::string> const&  selected_scene_nodes,
             std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
             );
+    void  get_scene_selection_data(
+        std::unordered_set<std::string>&  selected_scene_nodes,
+        std::unordered_set<std::pair<std::string, std::string> >&  selected_batches
+        );
 
     SCENE_EDIT_MODE  get_scene_edit_mode() const { return m_scene_edit_data.get_mode(); }
     void  set_scene_edit_mode(SCENE_EDIT_MODE const  edit_mode);
@@ -106,6 +110,7 @@ private:
     void  render_simulation_state(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
 
     void  perform_scene_update(float_64_bit const  time_to_simulate_in_seconds);
+    void  select_scene_objects(float_64_bit const  time_to_simulate_in_seconds);
     void  translate_scene_selected_objects(float_64_bit const  time_to_simulate_in_seconds);
     void  rotate_scene_selected_objects(float_64_bit const  time_to_simulate_in_seconds);
     void  rotate_scene_node(std::string const&  scene_node_name, float_64_bit const  time_to_simulate_in_seconds);

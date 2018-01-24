@@ -75,6 +75,7 @@ private:
 };
 
 using scene_node_ptr = scene_node::scene_node_ptr;
+using scene_node_const_ptr = std::shared_ptr<scene_node const>;
 
 
 struct scene
@@ -117,6 +118,7 @@ private:
 };
 
 using scene_ptr = std::shared_ptr<scene>;
+using scene_const_ptr = std::shared_ptr<scene const>;
 
 
 #endif

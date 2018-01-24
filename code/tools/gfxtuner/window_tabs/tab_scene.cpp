@@ -331,6 +331,67 @@ void  widgets::on_scene_hierarchy_item_selected()
     update_coord_system_location_widgets();
 }
 
+void  widgets::selection_changed_listener()
+{
+    std::unordered_set<std::string>  selected_scene_nodes;
+    std::unordered_set<std::pair<std::string, std::string> >  selected_batches;
+    wnd()->glwindow().call_now(&simulator::get_scene_selection_data, std::ref(selected_scene_nodes), std::ref(selected_batches));
+
+    auto const  recover_from_failure = [this]() -> void {
+        m_scene_tree->clearSelection();
+        wnd()->glwindow().call_now(
+                &simulator::update_scene_selection,
+                std::unordered_set<std::string>(),
+                std::unordered_set<std::pair<std::string, std::string> >()
+                );
+        wnd()->print_status_message("ERROR: Detected inconsistency between the simulator and GUI in selection. "
+                                    "Clearing the selection.", 10000);
+    };
+    auto const  is_coord_system_node = [](QTreeWidgetItem* const  item) -> bool {
+        if (auto const ptr = dynamic_cast<tree_widget_item*>(item))
+            return ptr->represents_coord_system();
+        return false;
+    };
+
+    m_scene_tree->clearSelection();
+    for (auto const&  node_name : selected_scene_nodes)
+    {
+        auto const  items_list = m_scene_tree->findItems(QString(node_name.c_str()), Qt::MatchFlag::MatchExactly, 0);
+        if (items_list.size() != 1 || !is_coord_system_node(items_list.front()))
+        {
+            recover_from_failure();
+            return;
+        }
+        m_scene_tree->setItemSelected(items_list.front(), true);
+    }
+    for (auto const& node_and_batch : selected_batches)
+    {
+        auto const  items_list = m_scene_tree->findItems(QString(node_and_batch.first.c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
+        if (items_list.size() != 1 || !is_coord_system_node(items_list.front()))
+        {
+            recover_from_failure();
+            return;
+        }
+        bool  batch_found = false;
+        for (int i = 0, n = items_list.front()->childCount(); i != n; ++i)
+        {
+            auto const  item = dynamic_cast<tree_widget_item*>(items_list.front()->child(i));
+            INVARIANT(item != nullptr);
+            if (!item->represents_coord_system() && qtgl::to_string(item->text(0)) == node_and_batch.second)
+            {
+                m_scene_tree->setItemSelected(items_list.front(), true);
+                batch_found = true;
+                break;
+            }
+        }
+        if (batch_found == false)
+        {
+            recover_from_failure();
+            return;
+        }
+    }
+}
+
 
 QTreeWidgetItem*  widgets::insert_coord_system(
             std::string const&  name,
@@ -838,6 +899,10 @@ QWidget*  make_scene_tab_content(widgets const&  w)
                 QTreeWidgetItem* headerItem = new QTreeWidgetItem();
                 headerItem->setText(0, QString("Hierarchy"));
                 w.scene_tree()->setHeaderItem(headerItem);
+                w.wnd()->glwindow().register_listener(
+                        simulator_notifications::scene_scene_selection_changed(),
+                        { &program_window::scene_selection_listener, w.wnd() }
+                        );
             }
             scene_tab_layout->addWidget(w.scene_tree());
 

@@ -2,6 +2,7 @@
 #   define E2_TOOL_GFXTUNER_SCENE_SELECTION_HPP_INCLUDED
 
 #   include <gfxtuner/scene.hpp>
+#   include <angeo/tensor_math.hpp>
 #   include <utility/std_pair_hash.hpp>
 #   include <unordered_set>
 #   include <string>
@@ -25,6 +26,7 @@ struct scene_selection
 
     void  insert_node(std::string const&  name);
     void  insert_batch(std::pair<std::string, std::string> const&  name);
+    void  insert_batches_of_node(std::string const&  name);
 
     void  erase_node(std::string const&  name);
     void  erase_batch(std::pair<std::string, std::string> const&  name);
@@ -33,6 +35,7 @@ struct scene_selection
     void  clear() { clear_nodes();  clear_batches(); }
     void  clear_nodes() { m_nodes.clear(); }
     void  clear_batches() { m_batches.clear(); }
+    void  clear_batches_of_node(std::string const&  node_name);
 
 private:
     std::unordered_set<std::string>  m_nodes;
@@ -42,7 +45,9 @@ private:
 
 
 bool  get_bbox_of_selected_scene_nodes(scene_selection const&  selection, scene_ptr const  scene, vector3&  lo, vector3&  hi);
+void  get_nodes_of_selected_batches(scene_selection const&  selection, std::unordered_set<std::string>&  nodes);
 
+inline scalar  get_selection_radius_of_bounding_sphere_of_scene_node() { return 0.25f; }
 
 
 #endif

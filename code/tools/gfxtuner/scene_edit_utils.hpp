@@ -2,7 +2,9 @@
 #   define E2_TOOL_GFXTUNER_SCENE_EDIT_UTILS_HPP_INCLUDED
 
 #   include <angeo/tensor_math.hpp>
+#   include <unordered_set>
 #   include <string>
+#   include <vector>
 
 
 enum struct SCENE_EDIT_MODE : natural_8_bit
@@ -10,6 +12,19 @@ enum struct SCENE_EDIT_MODE : natural_8_bit
     SELECT_SCENE_OBJECT = 0,
     TRANSLATE_SELECTED_NODES = 1,
     ROTATE_SELECTED_NODES = 2,
+};
+
+
+struct  scene_nodes_selection_data
+{
+    scene_nodes_selection_data()
+        : m_suppressed_nodes()
+    {}
+
+    std::string  choose_best_selection(std::vector<std::string> const&  nodes_on_line);
+
+private:
+    std::vector<std::string>  m_suppressed_nodes;
 };
 
 
@@ -69,7 +84,7 @@ private:
 
 struct scene_edit_data final
 {
-    explicit scene_edit_data(SCENE_EDIT_MODE const initial_mode = SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
+    scene_edit_data(SCENE_EDIT_MODE const initial_mode = SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
         : m_mode(initial_mode)
         , m_data_invalidated(true)
         , m_nodes_translation_data()
@@ -80,6 +95,10 @@ struct scene_edit_data final
 
     bool  are_data_invalidated() const { return m_data_invalidated; }
     void  invalidate_data() { m_data_invalidated = true; }
+
+    void  initialise_selection_data(scene_nodes_selection_data const&  data);
+    scene_nodes_selection_data const&  get_selection_data() const;
+    scene_nodes_selection_data&  get_selection_data();
 
     void  initialise_translation_data(scene_nodes_translation_data const&  data);
     scene_nodes_translation_data const&  get_translation_data() const;
@@ -93,6 +112,7 @@ private:
 
     SCENE_EDIT_MODE  m_mode;
     bool  m_data_invalidated;
+    scene_nodes_selection_data  m_nodes_selection_data;
     scene_nodes_translation_data  m_nodes_translation_data;
     scene_nodes_rotation_data  m_nodes_rotation_data;
 };
