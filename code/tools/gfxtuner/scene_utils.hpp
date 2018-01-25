@@ -33,6 +33,9 @@ inline void  transform_origin_and_orientation_from_scene_node_to_world(
 }
 
 
+scalar  compute_bounding_sphere_radius_of_scene_node(scene_node const&  node);
+
+
 bool  compute_collision_of_scene_node_and_line(
         scene_node const&  node,
         vector3 const&  line_begin,

@@ -26,6 +26,21 @@ void  transform_origin_and_orientation(
 }
 
 
+scalar  compute_bounding_sphere_radius_of_scene_node(scene_node const&  node)
+{
+    scalar  max_radius = get_selection_radius_of_bounding_sphere_of_scene_node();
+    for (auto const& name_and_batch : node.get_batches())
+        if (auto const  binding_ptr = name_and_batch.second->buffers_binding())
+            if (auto const  buffer_props_ptr = binding_ptr->find_vertex_buffer_properties())
+            {
+                qtgl::spatial_boundary const&  boundary = buffer_props_ptr->boundary();
+                if (boundary.radius() > max_radius)
+                    max_radius = boundary.radius();
+            }
+    return max_radius;
+}
+
+
 bool  compute_collision_of_scene_node_and_line(
         scene_node const&  node,
         vector3 const&  line_begin,

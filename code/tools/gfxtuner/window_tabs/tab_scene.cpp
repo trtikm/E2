@@ -189,6 +189,8 @@ widgets::widgets(program_window* const  wnd)
     , m_batch_icon((boost::filesystem::path{ get_program_options()->dataRoot() } /
                    "shared/gfx/icons/batch.png").string().c_str())
 
+    , m_processing_selection_change(false)
+
     , m_coord_system_pos_x(
         [](program_window* wnd) {
             struct s : public QLineEdit {
@@ -308,6 +310,9 @@ widgets::widgets(program_window* const  wnd)
 
 void  widgets::on_scene_hierarchy_item_selected()
 {
+    if (processing_selection_change())
+        return;
+
     std::unordered_set<std::string>  selected_scene_nodes;
     std::unordered_set<std::pair<std::string, std::string> >  selected_batches;
     foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
@@ -333,6 +338,14 @@ void  widgets::on_scene_hierarchy_item_selected()
 
 void  widgets::selection_changed_listener()
 {
+    struct  lock_selection
+    {
+        lock_selection(bool* ptr) : m_ptr(ptr) { *m_ptr = true; }
+        ~lock_selection() { *m_ptr = false; }
+    private:
+        bool* m_ptr;
+    } lock(&m_processing_selection_change);
+
     std::unordered_set<std::string>  selected_scene_nodes;
     std::unordered_set<std::pair<std::string, std::string> >  selected_batches;
     wnd()->glwindow().call_now(&simulator::get_scene_selection_data, std::ref(selected_scene_nodes), std::ref(selected_batches));
@@ -356,13 +369,14 @@ void  widgets::selection_changed_listener()
     m_scene_tree->clearSelection();
     for (auto const&  node_name : selected_scene_nodes)
     {
-        auto const  items_list = m_scene_tree->findItems(QString(node_name.c_str()), Qt::MatchFlag::MatchExactly, 0);
+        auto const  items_list = m_scene_tree->findItems(QString(node_name.c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
         if (items_list.size() != 1 || !is_coord_system_node(items_list.front()))
         {
             recover_from_failure();
             return;
         }
         m_scene_tree->setItemSelected(items_list.front(), true);
+        m_scene_tree->scrollToItem(items_list.front());
     }
     for (auto const& node_and_batch : selected_batches)
     {
@@ -379,7 +393,8 @@ void  widgets::selection_changed_listener()
             INVARIANT(item != nullptr);
             if (!item->represents_coord_system() && qtgl::to_string(item->text(0)) == node_and_batch.second)
             {
-                m_scene_tree->setItemSelected(items_list.front(), true);
+                m_scene_tree->setItemSelected(item, true);
+                m_scene_tree->scrollToItem(item);
                 batch_found = true;
                 break;
             }

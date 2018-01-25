@@ -7,10 +7,10 @@
 std::string  scene_nodes_selection_data::choose_best_selection(std::vector<std::string> const&  nodes_on_line)
 {
     std::vector<std::string>  suppressed_nodes;
-    for (auto const&  name : nodes_on_line)
+    for (auto const&  name : m_suppressed_nodes)
         if (std::find(nodes_on_line.cbegin(), nodes_on_line.cend(), name) != nodes_on_line.cend())
             suppressed_nodes.push_back(name);
-    for (auto const& name : m_suppressed_nodes)
+    for (auto const& name : nodes_on_line)
         if (std::find(suppressed_nodes.cbegin(), suppressed_nodes.cend(), name) == suppressed_nodes.cend())
         {
             m_suppressed_nodes = suppressed_nodes;

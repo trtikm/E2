@@ -52,6 +52,7 @@ struct  widgets
     void  coord_system_position_listener();
     void  coord_system_rotation_listener();
     void  selection_changed_listener();
+    bool  processing_selection_change() const { return m_processing_selection_change; }
 
     void  clear_scene();
     void  open_scene(boost::filesystem::path const&  scene_root_dir);
@@ -82,6 +83,8 @@ private:
     QTreeWidget*  m_scene_tree;
     QIcon  m_node_icon;
     QIcon  m_batch_icon;
+
+    bool  m_processing_selection_change;
 
     QLineEdit*  m_coord_system_pos_x;
     QLineEdit*  m_coord_system_pos_y;

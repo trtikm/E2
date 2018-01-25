@@ -569,7 +569,7 @@ void  simulator::select_scene_objects(float_64_bit const  time_to_simulate_in_se
 {
     TMPROF_BLOCK();
 
-    if (mouse_props().is_pressed(qtgl::LEFT_MOUSE_BUTTON()) == mouse_props().is_pressed(qtgl::RIGHT_MOUSE_BUTTON()))
+    if (mouse_props().was_just_released(qtgl::LEFT_MOUSE_BUTTON()) == mouse_props().was_just_released(qtgl::RIGHT_MOUSE_BUTTON()))
         return;
 
     if (get_scene_edit_data().are_data_invalidated())
@@ -587,35 +587,27 @@ void  simulator::select_scene_objects(float_64_bit const  time_to_simulate_in_se
     std::map<scalar, std::string>  nodes_on_line;
     find_scene_nodes_on_line(get_scene(), ray_begin, ray_end, nodes_on_line);
 
-    if (mouse_props().is_pressed(qtgl::RIGHT_MOUSE_BUTTON()) ||
+    if (mouse_props().was_just_released(qtgl::RIGHT_MOUSE_BUTTON()) ||
         keyboard_props().is_pressed(qtgl::KEY_LCTRL()) ||
         keyboard_props().is_pressed(qtgl::KEY_RCTRL()))
     {
         if (nodes_on_line.empty())
             return;
 
-        bool  erased = false;
-
         std::string const&  chosen_node_name = nodes_on_line.begin()->second;
-        if (m_scene_selection.is_node_selected(chosen_node_name))
-        {
-            m_scene_selection.erase_node(chosen_node_name);
-            erased = true;
-        }
+
         std::unordered_set<std::string>  nodes_of_selected_batches;
         get_nodes_of_selected_batches(m_scene_selection, nodes_of_selected_batches);
-        if (nodes_of_selected_batches.count(chosen_node_name) != 0UL)
+        if (m_scene_selection.is_node_selected(chosen_node_name) ||
+            nodes_of_selected_batches.count(chosen_node_name) != 0UL)
         {
+            m_scene_selection.erase_node(chosen_node_name);
             m_scene_selection.erase_batches_of_node(chosen_node_name);
-            erased = true;
         }
-        if (erased == false)
-        {
-            if (!get_scene().get_scene_node(chosen_node_name)->get_batches().empty())
-                m_scene_selection.insert_batches_of_node(chosen_node_name);
-            else
-                m_scene_selection.insert_node(chosen_node_name);
-        }
+        else if (get_scene().get_scene_node(chosen_node_name)->get_batches().empty())
+            m_scene_selection.insert_node(chosen_node_name);
+        else
+            m_scene_selection.insert_batches_of_node(chosen_node_name);
     }
     else
     {
@@ -625,7 +617,8 @@ void  simulator::select_scene_objects(float_64_bit const  time_to_simulate_in_se
         {
             std::vector<std::string>  candidate_nodes_on_line;
             {
-                scalar const  max_candidate_distance = 0.25f;
+                scalar const  max_candidate_distance = 2.0f;
+                    //compute_bounding_sphere_radius_of_scene_node(*get_scene().get_scene_node(nodes_on_line.cbegin()->second));
                 scalar const  line_length = length(ray_end - ray_begin);
                 scalar const  max_param_value =
                     nodes_on_line.cbegin()->first + (line_length < max_candidate_distance ? 1.0 : max_candidate_distance / line_length);
@@ -858,10 +851,12 @@ void  simulator::render_scene_coord_systems(matrix44 const&  view_projection_mat
     //auto const  old_depth_test_state = qtgl::glapi().glIsEnabled(GL_DEPTH_TEST);
     //qtgl::glapi().glDisable(GL_DEPTH_TEST);
 
-    for (auto const& node_name : m_scene_selection.get_nodes())
+    std::unordered_set<std::string>  nodes_to_draw = m_scene_selection.get_nodes();
+    get_nodes_of_selected_batches(m_scene_selection, nodes_to_draw);
+    if (get_scene().has_scene_node(get_pivot_node_name())) // The pivot may be missing, if the scene is not completely initialised yet.
+        nodes_to_draw.insert(get_pivot_node_name());
+    for (auto const& node_name : nodes_to_draw)
         render_scene_coord_system(get_scene().get_scene_node(node_name), view_projection_matrix, draw_state);
-    if (!m_scene_selection.is_node_selected(get_pivot_node_name()) && get_scene().has_scene_node(get_pivot_node_name()))
-        render_scene_coord_system(get_scene().get_scene_node(get_pivot_node_name()), view_projection_matrix, draw_state);
 
     //if (old_depth_test_state)
     //    qtgl::glapi().glEnable(GL_DEPTH_TEST);
