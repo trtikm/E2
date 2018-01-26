@@ -157,15 +157,22 @@ private:
 };
 
 
-std::string  get_name_of_selected_coord_system_in_tree_widget(QTreeWidget const&  tree_widget)
+tree_widget_item*  get_active_coord_system_item_in_tree_widget(QTreeWidget const&  tree_widget)
 {
     auto const selected_items = tree_widget.selectedItems();
     INVARIANT(selected_items.size() == 1U);
     tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(selected_items.front());
     INVARIANT(tree_item != nullptr);
-    INVARIANT(tree_item->represents_coord_system());
-    std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
-    return tree_item_name;
+    if (tree_item->represents_coord_system())
+        return tree_item;
+    tree_widget_item* const  parent_tree_item = dynamic_cast<tree_widget_item*>(tree_item->parent());
+    INVARIANT(parent_tree_item != nullptr && parent_tree_item->represents_coord_system());
+    return parent_tree_item;
+}
+
+std::string  get_name_of_active_coord_system_in_tree_widget(QTreeWidget const&  tree_widget)
+{
+    return qtgl::to_string(get_active_coord_system_item_in_tree_widget(tree_widget)->text(0));
 }
 
 
@@ -320,7 +327,6 @@ widgets::widgets(program_window* const  wnd)
 
 void  widgets::add_tree_item_to_selection(QTreeWidgetItem* const  item)
 {
-    m_scene_tree->setCurrentItem(item);
     m_scene_tree->setItemSelected(item, true);
     m_scene_tree->scrollToItem(item);
 }
@@ -369,6 +375,7 @@ void  widgets::selection_changed_listener()
                 std::unordered_set<std::string>(),
                 std::unordered_set<std::pair<std::string, std::string> >()
                 );
+        update_coord_system_location_widgets();
         wnd()->print_status_message("ERROR: Detected inconsistency between the simulator and GUI in selection. "
                                     "Clearing the selection.", 10000);
     };
@@ -415,6 +422,7 @@ void  widgets::selection_changed_listener()
             return;
         }
     }
+    update_coord_system_location_widgets();
 }
 
 
@@ -787,7 +795,7 @@ void  widgets::on_coord_system_pos_changed()
 
     wnd()->glwindow().call_later(
         &simulator::set_position_of_scene_node,
-        get_name_of_selected_coord_system_in_tree_widget(*m_scene_tree),
+        get_name_of_active_coord_system_in_tree_widget(*m_scene_tree),
         pos
         );
 }
@@ -806,7 +814,7 @@ void  widgets::on_coord_system_rot_changed()
 
     wnd()->glwindow().call_later(
         &simulator::set_orientation_of_scene_node, 
-        get_name_of_selected_coord_system_in_tree_widget(*m_scene_tree), 
+        get_name_of_active_coord_system_in_tree_widget(*m_scene_tree),
         q
         );
 }
@@ -823,7 +831,7 @@ void  widgets::on_coord_system_rot_tait_bryan_changed()
     refresh_text_in_coord_system_rotation_widgets(q);
     wnd()->glwindow().call_later(
         &simulator::set_orientation_of_scene_node,
-        get_name_of_selected_coord_system_in_tree_widget(*m_scene_tree),
+        get_name_of_active_coord_system_in_tree_widget(*m_scene_tree),
         q
         );
 }
@@ -850,11 +858,8 @@ void  widgets::update_coord_system_location_widgets()
     tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(selected_items.front());
     INVARIANT(tree_item != nullptr);
 
-    enable_coord_system_location_widgets(tree_item->represents_coord_system());
-    if (!tree_item->represents_coord_system())
-        return;
-
-    std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
+    enable_coord_system_location_widgets(true);
+    std::string const  tree_item_name = get_name_of_active_coord_system_in_tree_widget(*m_scene_tree);
     auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
     refresh_text_in_coord_system_location_widgets(node_ptr);
 }
