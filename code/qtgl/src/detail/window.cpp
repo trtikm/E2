@@ -178,6 +178,7 @@ window::window(std::function<std::shared_ptr<real_time_simulator>()> const  crea
     , m_initialised(false)
 
     , m_just_resized(false)
+    , m_just_focus_changed(false)
     , m_has_focus(false)
     , m_idleTimerId(-1)
 
@@ -323,6 +324,31 @@ void window::render_now(bool const  is_this_pure_redraw_request)
             m_just_resized
     };
 
+    if (m_just_focus_changed)
+    {
+        m_keyboard_text.clear();
+        m_keyboard_pressed.clear();
+        m_keyboard_just_pressed.clear();
+        m_keyboard_just_released.clear();
+        
+        m_is_mouse_set = false;
+        m_mouse_x = 0.0f;
+        m_mouse_y = 0.0f;
+        m_mouse_previous_x = m_mouse_x;
+        m_mouse_previous_y = m_mouse_y;
+        m_mouse_wheel_delta_x = 0.0f;
+        m_mouse_wheel_delta_y = 0.0f;
+        m_mouse_lbutton_down = false;
+        m_mouse_lbutton_just_pressed = false;
+        m_mouse_lbutton_just_released = false;
+        m_mouse_rbutton_down = false;
+        m_mouse_rbutton_just_pressed = false;
+        m_mouse_rbutton_just_released = false;
+        m_mouse_mbutton_down = false;
+        m_mouse_mbutton_just_pressed = false;
+        m_mouse_mbutton_just_released = false;
+    }
+
     m_keyboard_props = qtgl::keyboard_props {
             m_keyboard_text,
             m_keyboard_pressed,
@@ -411,6 +437,7 @@ void window::render_now(bool const  is_this_pure_redraw_request)
     }
 
     m_just_resized = false;
+    m_just_focus_changed = false;
 
     m_keyboard_text.clear();
     m_keyboard_just_pressed.clear();
@@ -445,9 +472,11 @@ bool window::event(QEvent* const event)
             return true;
         case QEvent::FocusIn:
             m_has_focus = true;
+            m_just_focus_changed = true;
             return QWindow::event(event);
         case QEvent::FocusOut:
             m_has_focus = false;
+            m_just_focus_changed = true;
             return QWindow::event(event);
         default:
             return QWindow::event(event);

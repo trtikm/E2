@@ -123,6 +123,7 @@ private:
     bool  m_initialised;
 
     bool  m_just_resized;
+    bool  m_just_focus_changed;
     bool  m_has_focus;
     int  m_idleTimerId;
 
