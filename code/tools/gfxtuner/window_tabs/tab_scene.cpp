@@ -176,6 +176,9 @@ std::string  get_name_of_active_coord_system_in_tree_widget(QTreeWidget const&  
 }
 
 
+natural_64_bit  g_new_coord_system_id_counter = 0ULL;
+
+
 }
 
 namespace window_tabs { namespace tab_scene {
@@ -484,9 +487,15 @@ void  widgets::on_scene_insert_coord_system()
         }
     }
 
-    static natural_64_bit  counter = 0ULL;
-    std::string const  name = msgstream() << "coord_system_" << counter;
-    ++counter;
+    natural_64_bit  old_counter;
+    std::string  name;
+    do
+    {
+        name = msgstream() << "coord_system_" << g_new_coord_system_id_counter;
+        old_counter = g_new_coord_system_id_counter;
+        ++g_new_coord_system_id_counter;
+    }
+    while (wnd()->glwindow().call_now(&simulator::get_scene_node, name) != nullptr);
     insert_name_dialog  dlg(wnd(), name,
         [this](std::string const&  name) {
             return wnd()->glwindow().call_now(&simulator::get_scene_node, name) == nullptr;
@@ -510,8 +519,9 @@ void  widgets::on_scene_insert_coord_system()
         }
         auto const  tree_item = insert_coord_system(dlg.get_name(), origin, orientation, parent_tree_item);
         add_tree_item_to_selection(tree_item);
-
     }
+    else
+        g_new_coord_system_id_counter = old_counter;
 }
 
 
@@ -629,6 +639,8 @@ void  widgets::clear_scene()
     wnd()->glwindow().call_now(&simulator::clear_scene);
 
     insert_coord_system(get_pivot_node_name(), vector3_zero(), quaternion_identity(), nullptr);
+
+    g_new_coord_system_id_counter = 0UL;
 }
 
 
