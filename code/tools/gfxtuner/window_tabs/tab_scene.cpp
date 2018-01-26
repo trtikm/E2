@@ -28,6 +28,15 @@
 namespace {
 
 
+struct  lock_bool
+{
+    lock_bool(bool* ptr) : m_ptr(ptr) { if (m_ptr != nullptr) *m_ptr = true; }
+    ~lock_bool() { if (m_ptr != nullptr) *m_ptr = false; }
+private:
+    bool* m_ptr;
+};
+
+
 struct  tree_widget_item : public QTreeWidgetItem
 {
     explicit tree_widget_item(bool const  represents_coord_system)
@@ -308,6 +317,15 @@ widgets::widgets(program_window* const  wnd)
     enable_coord_system_location_widgets(false);
 }
 
+
+void  widgets::add_tree_item_to_selection(QTreeWidgetItem* const  item)
+{
+    m_scene_tree->setCurrentItem(item);
+    m_scene_tree->setItemSelected(item, true);
+    m_scene_tree->scrollToItem(item);
+}
+
+
 void  widgets::on_scene_hierarchy_item_selected()
 {
     if (processing_selection_change())
@@ -338,13 +356,7 @@ void  widgets::on_scene_hierarchy_item_selected()
 
 void  widgets::selection_changed_listener()
 {
-    struct  lock_selection
-    {
-        lock_selection(bool* ptr) : m_ptr(ptr) { *m_ptr = true; }
-        ~lock_selection() { *m_ptr = false; }
-    private:
-        bool* m_ptr;
-    } lock(&m_processing_selection_change);
+    lock_bool const  _(&m_processing_selection_change);
 
     std::unordered_set<std::string>  selected_scene_nodes;
     std::unordered_set<std::pair<std::string, std::string> >  selected_batches;
@@ -375,8 +387,7 @@ void  widgets::selection_changed_listener()
             recover_from_failure();
             return;
         }
-        m_scene_tree->setItemSelected(items_list.front(), true);
-        m_scene_tree->scrollToItem(items_list.front());
+        add_tree_item_to_selection(items_list.front());
     }
     for (auto const& node_and_batch : selected_batches)
     {
@@ -393,8 +404,7 @@ void  widgets::selection_changed_listener()
             INVARIANT(item != nullptr);
             if (!item->represents_coord_system() && qtgl::to_string(item->text(0)) == node_and_batch.second)
             {
-                m_scene_tree->setItemSelected(item, true);
-                m_scene_tree->scrollToItem(item);
+                add_tree_item_to_selection(item);
                 batch_found = true;
                 break;
             }
@@ -422,7 +432,6 @@ QTreeWidgetItem*  widgets::insert_coord_system(
     {
         wnd()->glwindow().call_now(&simulator::insert_scene_node_at, name, origin, orientation);
         m_scene_tree->addTopLevelItem(tree_node.get());
-        m_scene_tree->setCurrentItem(tree_node.get());
     }
     else
     {
@@ -491,7 +500,9 @@ void  widgets::on_scene_insert_coord_system()
                         orientation
                         );
         }
-        insert_coord_system(dlg.get_name(), origin, orientation, parent_tree_item);
+        auto const  tree_item = insert_coord_system(dlg.get_name(), origin, orientation, parent_tree_item);
+        add_tree_item_to_selection(tree_item);
+
     }
 }
 
@@ -508,7 +519,6 @@ QTreeWidgetItem*  widgets::insert_batch(
     tree_node->setText(0, QString(batch_name.c_str()));
     tree_node->setIcon(0, m_batch_icon);
     node_item->addChild(tree_node.get());
-    m_scene_tree->setCurrentItem(tree_node.get());
     return tree_node.release();
 }
 
@@ -571,7 +581,10 @@ void  widgets::on_scene_insert_batch()
     dlg.exec();
     if (!dlg.get_name().empty())
         for (auto const&  tree_item : nodes)
-            insert_batch(tree_item, dlg.get_name(), batch_pathname);
+        {
+            auto const  batch_item = insert_batch(tree_item, dlg.get_name(), batch_pathname);
+            add_tree_item_to_selection(batch_item);
+        }
 }
 
 void  widgets::on_scene_erase_selected()
@@ -688,6 +701,7 @@ void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
                     ),
                 nullptr
                 );
+        m_scene_tree->expandAll();
         wnd()->print_status_message(std::string("SUCCESS: Scene loaded from: ") + scene_root_dir.string(), 5000);
     }
     catch (boost::property_tree::ptree_error const&  e)

@@ -73,6 +73,8 @@ private:
                 boost::filesystem::path const  batch_pathname
                 );
 
+    void  add_tree_item_to_selection(QTreeWidgetItem* const  item);
+
     void  update_coord_system_location_widgets();
     void  enable_coord_system_location_widgets(bool const  state);
     void  refresh_text_in_coord_system_location_widgets(scene_node_ptr const  node_ptr);
