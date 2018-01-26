@@ -160,7 +160,15 @@ private:
 tree_widget_item*  get_active_coord_system_item_in_tree_widget(QTreeWidget const&  tree_widget)
 {
     auto const selected_items = tree_widget.selectedItems();
-    INVARIANT(selected_items.size() == 1U);
+    INVARIANT(
+        !selected_items.empty() &&
+        [&selected_items]() -> bool {
+            foreach(QTreeWidgetItem* const  item, selected_items)
+                if (item->parent() != selected_items.front()->parent())
+                    return false;
+                return true;
+            }()
+        );
     tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(selected_items.front());
     INVARIANT(tree_item != nullptr);
     if (tree_item->represents_coord_system())
@@ -861,7 +869,14 @@ void  widgets::coord_system_rotation_listener()
 void  widgets::update_coord_system_location_widgets()
 {
     auto const selected_items = m_scene_tree->selectedItems();
-    if (selected_items.size() != 1U)
+    if (![&selected_items]() -> bool {
+            if (selected_items.empty())
+                return false;
+            foreach(QTreeWidgetItem* const  item, selected_items)
+                if (item->parent() != selected_items.front()->parent())
+                    return false;
+            return true;
+            }())
     {
         enable_coord_system_location_widgets(false);
         return;
