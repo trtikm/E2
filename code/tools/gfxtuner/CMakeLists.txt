@@ -26,6 +26,9 @@ add_executable(${THIS_TARGET_NAME}
     scene_edit_utils.hpp 
     scene_edit_utils.cpp 
 
+    scene_history.hpp 
+    scene_history.cpp 
+
     scene_utils.hpp
     scene_utils.cpp
 

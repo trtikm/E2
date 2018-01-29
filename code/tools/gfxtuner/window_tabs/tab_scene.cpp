@@ -4,6 +4,7 @@
 #include <gfxtuner/simulator_notifications.hpp>
 #include <gfxtuner/scene_utils.hpp>
 #include <gfxtuner/scene_edit_utils.hpp>
+#include <gfxtuner/scene_history.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <utility/std_pair_hash.hpp>
 #include <utility/msgstream.hpp>
@@ -333,6 +334,41 @@ widgets::widgets(program_window* const  wnd)
 {
     m_scene_tree->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
     enable_coord_system_location_widgets(false);
+
+    scene_history_coord_system_insert::set_undo_processor(
+        [this](scene_history_coord_system_insert const&  history_node) {
+            auto const  items_list = m_scene_tree->findItems(QString(history_node.get_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
+            ASSUMPTION(items_list.size() == 1UL);
+            tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(items_list.front());
+            ASSUMPTION(!tree_item->isSelected());
+            ASSUMPTION(tree_item->represents_coord_system());
+            ASSUMPTION((tree_item->parent() == nullptr) == history_node.get_parent_name().empty());
+            ASSUMPTION(tree_item->parent() == nullptr ||
+                       qtgl::to_string(tree_item->parent()->text(0)) == history_node.get_parent_name());
+            std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
+            m_wnd->glwindow().call_now(&simulator::erase_scene_node, tree_item_name);
+            auto const  taken_item = tree_item->parent() != nullptr ?
+                tree_item->parent()->takeChild(tree_item->parent()->indexOfChild(tree_item)) :
+                m_scene_tree->takeTopLevelItem(m_scene_tree->indexOfTopLevelItem(tree_item))
+                ;
+            INVARIANT(taken_item == tree_item); (void)taken_item;
+            delete tree_item;
+        });
+    scene_history_coord_system_insert::set_redo_processor(
+        [this](scene_history_coord_system_insert const& history_node) {
+            ASSUMPTION(m_scene_tree->findItems(QString(history_node.get_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0).empty());
+            auto const items_list = m_scene_tree->findItems(QString(history_node.get_parent_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
+            ASSUMPTION(items_list.size() == 1UL);
+            tree_widget_item* const  parent_tree_item = dynamic_cast<tree_widget_item*>(items_list.front());
+            ASSUMPTION(parent_tree_item->represents_coord_system());
+            insert_coord_system(
+                    history_node.get_name(),
+                    history_node.get_origin(),
+                    history_node.get_orientation(),
+                    parent_tree_item
+                    );
+    });
+
 }
 
 
