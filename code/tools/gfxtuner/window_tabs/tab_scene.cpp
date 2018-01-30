@@ -185,6 +185,21 @@ std::string  get_name_of_active_coord_system_in_tree_widget(QTreeWidget const&  
 }
 
 
+bool  is_active_coord_system_in_tree_widget(QTreeWidget const&  tree_widget, std::string const&  name)
+{
+    auto const selected_items = tree_widget.selectedItems();
+    if (selected_items.size() != 1)
+        return false;
+    tree_widget_item*  tree_item = dynamic_cast<tree_widget_item*>(selected_items.front());
+    INVARIANT(tree_item != nullptr);
+    if (!tree_item->represents_coord_system())
+        tree_item = dynamic_cast<tree_widget_item*>(tree_item->parent());
+    INVARIANT(tree_item != nullptr && tree_item->represents_coord_system());
+    std::string const  active_name = qtgl::to_string(tree_item->text(0));
+    return name == active_name;
+}
+
+
 natural_64_bit  g_new_coord_system_id_counter = 0ULL;
 
 
@@ -369,6 +384,70 @@ widgets::widgets(program_window* const  wnd)
                     );
     });
 
+    scene_history_coord_system_relocate::set_undo_processor(
+        [this](scene_history_coord_system_relocate const&  history_node) {
+            m_wnd->glwindow().call_later(
+                    &simulator::relocate_scene_node,
+                    history_node.get_name(),
+                    history_node.get_old_origin(),
+                    history_node.get_old_orientation()
+                    );
+            if (is_active_coord_system_in_tree_widget(*m_scene_tree, history_node.get_name()))
+                update_coord_system_location_widgets();
+        });
+    scene_history_coord_system_relocate::set_redo_processor(
+        [this](scene_history_coord_system_relocate const&  history_node) {
+            m_wnd->glwindow().call_later(
+                    &simulator::relocate_scene_node,
+                    history_node.get_name(),
+                    history_node.get_new_origin(),
+                    history_node.get_new_orientation()
+                    );
+            if (is_active_coord_system_in_tree_widget(*m_scene_tree, history_node.get_name()))
+                update_coord_system_location_widgets();
+        });
+
+    scene_history_coord_system_insert_to_selection::set_undo_processor(
+        [this](scene_history_coord_system_insert_to_selection const&  history_node) {
+            auto const items_list = m_scene_tree->findItems(QString(history_node.get_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
+            ASSUMPTION(items_list.size() == 1UL);
+            tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(items_list.front());
+            ASSUMPTION(tree_item->represents_coord_system());
+            ASSUMPTION(tree_item->isSelected());
+            tree_item->setSelected(false);
+            bool const old_processing_selection_change = m_processing_selection_change;
+            m_processing_selection_change = false;
+            on_scene_hierarchy_item_selected();
+            m_processing_selection_change = old_processing_selection_change;
+        });
+    scene_history_coord_system_insert_to_selection::set_redo_processor(
+        [this](scene_history_coord_system_insert_to_selection const&  history_node) {
+            auto const items_list = m_scene_tree->findItems(QString(history_node.get_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
+            ASSUMPTION(items_list.size() == 1UL);
+            tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(items_list.front());
+            ASSUMPTION(tree_item->represents_coord_system());
+            ASSUMPTION(!tree_item->isSelected());
+            tree_item->setSelected(true);
+            bool const old_processing_selection_change = m_processing_selection_change;
+            m_processing_selection_change = false;
+            on_scene_hierarchy_item_selected();
+            m_processing_selection_change = old_processing_selection_change;
+        });
+
+
+    scene_history_batch_insert::set_undo_processor(
+        [this](scene_history_batch_insert const&  history_node) {
+        });
+    scene_history_batch_insert::set_redo_processor(
+        [this](scene_history_batch_insert const&  history_node) {
+        });
+
+    scene_history_batch_insert_to_selection::set_undo_processor(
+        [this](scene_history_batch_insert_to_selection const&  history_node) {
+        });
+    scene_history_batch_insert_to_selection::set_redo_processor(
+        [this](scene_history_batch_insert_to_selection const&  history_node) {
+        });
 }
 
 

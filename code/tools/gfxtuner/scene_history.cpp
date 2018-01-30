@@ -7,7 +7,7 @@
 namespace { namespace detail {
 
 
-struct scene_history_commit : public scene_history_node
+struct  scene_history_commit final : public scene_history_node
 {
     void  undo() const override { UNREACHABLE(); }
     void  redo() const override { UNREACHABLE(); }
@@ -85,6 +85,7 @@ void foo()
         "HOLA",
         vector3_zero(),
         quaternion_identity(),
-        ""
+        "",
+        false
         );
 }
