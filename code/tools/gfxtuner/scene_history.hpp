@@ -219,6 +219,8 @@ struct  scene_history final
     void  undo();
     void  redo();
 
+    void  clear();
+
 private:
     scene_history();
 

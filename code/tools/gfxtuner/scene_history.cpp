@@ -30,11 +30,9 @@ scene_history&  scene_history::get_instance()
 
 
 scene_history::scene_history()
-    : m_history()
-    , m_active_commit()
-{
-    commit();
-}
+    : m_history({ scene_history_node_ptr(new detail::scene_history_commit) })
+    , m_active_commit(0UL)
+{}
 
 
 void  scene_history::insert(scene_history_node_ptr const  node_ptr)
@@ -76,16 +74,8 @@ void  scene_history::redo()
     INVARIANT(detail::is_commit_node(m_history.at(m_active_commit)));
 }
 
-
-void foo()
+void  scene_history::clear()
 {
-    scene_history_coord_system_insert::set_undo_processor([](scene_history_coord_system_insert const& x){});
-    scene_history_coord_system_insert::set_redo_processor([](scene_history_coord_system_insert const& x) {});
-    get_scene_history().insert<scene_history_coord_system_insert>(
-        "HOLA",
-        vector3_zero(),
-        quaternion_identity(),
-        "",
-        false
-        );
+    m_history.resize(1UL);
+    m_active_commit = 0UL;
 }
