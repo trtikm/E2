@@ -840,7 +840,14 @@ void  widgets::on_scene_erase_selected()
 {
     std::unordered_set<QTreeWidgetItem*>  to_erase_items;
     foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
+    {
+        if (item->parent() == nullptr && qtgl::to_string(item->text(0)) == get_pivot_node_name())
+        {
+            wnd()->print_status_message("ERROR: Cannot erase 'pivot' coordinate system.", 10000);
+            return;
+        }
         to_erase_items.insert(item);
+    }
     std::unordered_set<QTreeWidgetItem*>  erased_items;
     for (auto const  item : to_erase_items)
         if (erased_items.count(item) == 0UL)
