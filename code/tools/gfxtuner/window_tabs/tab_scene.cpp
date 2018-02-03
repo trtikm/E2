@@ -1150,11 +1150,18 @@ void  widgets::on_coord_system_pos_changed()
                        m_coord_system_pos_y->text().toFloat(),
                        m_coord_system_pos_z->text().toFloat());
 
-    wnd()->glwindow().call_later(
-        &simulator::set_position_of_scene_node,
-        get_name_of_active_coord_system_in_tree_widget(*m_scene_tree),
-        pos
-        );
+    std::string const&  name = get_name_of_active_coord_system_in_tree_widget(*m_scene_tree);
+    wnd()->glwindow().call_later(&simulator::set_position_of_scene_node, name, pos);
+
+    auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, name);
+    get_scene_history().insert<scene_history_coord_system_relocate>(
+            name,
+            node_ptr->get_coord_system()->origin(),
+            node_ptr->get_coord_system()->orientation(),
+            pos,
+            node_ptr->get_coord_system()->orientation()
+            );
+    get_scene_history().commit();
 }
 
 void  widgets::on_coord_system_rot_changed()
@@ -1169,11 +1176,18 @@ void  widgets::on_coord_system_rot_changed()
 
     refresh_text_in_coord_system_rotation_widgets(q);
 
-    wnd()->glwindow().call_later(
-        &simulator::set_orientation_of_scene_node, 
-        get_name_of_active_coord_system_in_tree_widget(*m_scene_tree),
-        q
-        );
+    std::string const&  name = get_name_of_active_coord_system_in_tree_widget(*m_scene_tree);
+    wnd()->glwindow().call_later(&simulator::set_orientation_of_scene_node, name, q);
+
+    auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, name);
+    get_scene_history().insert<scene_history_coord_system_relocate>(
+            name,
+            node_ptr->get_coord_system()->origin(),
+            node_ptr->get_coord_system()->orientation(),
+            node_ptr->get_coord_system()->origin(),
+            q
+            );
+    get_scene_history().commit();
 }
 
 void  widgets::on_coord_system_rot_tait_bryan_changed()
@@ -1186,11 +1200,19 @@ void  widgets::on_coord_system_rot_tait_bryan_changed()
     normalise(q);
 
     refresh_text_in_coord_system_rotation_widgets(q);
-    wnd()->glwindow().call_later(
-        &simulator::set_orientation_of_scene_node,
-        get_name_of_active_coord_system_in_tree_widget(*m_scene_tree),
-        q
-        );
+
+    std::string const&  name = get_name_of_active_coord_system_in_tree_widget(*m_scene_tree);
+    wnd()->glwindow().call_later(&simulator::set_orientation_of_scene_node, name, q);
+
+    auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, name);
+    get_scene_history().insert<scene_history_coord_system_relocate>(
+            name,
+            node_ptr->get_coord_system()->origin(),
+            node_ptr->get_coord_system()->orientation(),
+            node_ptr->get_coord_system()->origin(),
+            q
+            );
+    get_scene_history().commit();
 }
 
 void  widgets::coord_system_position_listener()
