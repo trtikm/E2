@@ -200,6 +200,61 @@ bool  is_active_coord_system_in_tree_widget(QTreeWidget const&  tree_widget, std
 }
 
 
+void  update_history_according_to_change_in_selection(
+    QList<QTreeWidgetItem*> const&  old_selection,
+    QList<QTreeWidgetItem*> const&  new_selection
+    )
+{
+    std::unordered_set<QTreeWidgetItem*> const  old_set(old_selection.cbegin(), old_selection.cend());
+    std::unordered_set<QTreeWidgetItem*> const  new_set(new_selection.cbegin(), new_selection.cend());
+    bool  change = false;
+    for (auto const  item_ptr : old_set)
+        if (new_set.count(item_ptr) == 0UL)
+        {
+            change = true;
+            tree_widget_item* const  item = dynamic_cast<tree_widget_item*>(item_ptr);
+            INVARIANT(item != nullptr);
+            std::string const  item_name = qtgl::to_string(item->text(0));
+            if (item->represents_coord_system())
+                get_scene_history().insert<scene_history_coord_system_insert_to_selection>(item_name,true);
+            else
+            {
+                tree_widget_item* const  parent_item = dynamic_cast<tree_widget_item*>(item->parent());
+                INVARIANT(parent_item != nullptr);
+                INVARIANT(parent_item->represents_coord_system());
+                std::string const  parent_item_name = qtgl::to_string(parent_item->text(0));
+                get_scene_history().insert<scene_history_batch_insert_to_selection>(
+                    std::pair<std::string, std::string>{ parent_item_name, item_name },
+                    true
+                    );
+            }
+        }
+    for (auto const item_ptr : new_set)
+        if (old_set.count(item_ptr) == 0UL)
+        {
+            change = true;
+            tree_widget_item* const  item = dynamic_cast<tree_widget_item*>(item_ptr);
+            INVARIANT(item != nullptr);
+            std::string const  item_name = qtgl::to_string(item->text(0));
+            if (item->represents_coord_system())
+                get_scene_history().insert<scene_history_coord_system_insert_to_selection>(item_name, false);
+            else
+            {
+                tree_widget_item* const  parent_item = dynamic_cast<tree_widget_item*>(item->parent());
+                INVARIANT(parent_item != nullptr);
+                INVARIANT(parent_item->represents_coord_system());
+                std::string const  parent_item_name = qtgl::to_string(parent_item->text(0));
+                get_scene_history().insert<scene_history_batch_insert_to_selection>(
+                    std::pair<std::string, std::string>{ parent_item_name, item_name },
+                    false
+                    );
+            }
+        }
+    if (change == true)
+        get_scene_history().commit();
+}
+
+
 natural_64_bit  g_new_coord_system_id_counter = 0ULL;
 
 
@@ -551,6 +606,8 @@ void  widgets::on_scene_hierarchy_item_selected()
     if (processing_selection_change())
         return;
 
+    QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
+
     std::unordered_set<std::string>  selected_scene_nodes;
     std::unordered_set<std::pair<std::string, std::string> >  selected_batches;
     foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
@@ -572,11 +629,16 @@ void  widgets::on_scene_hierarchy_item_selected()
     wnd()->glwindow().call_now(&simulator::update_scene_selection, selected_scene_nodes, selected_batches);
     
     update_coord_system_location_widgets();
+
+    QList<QTreeWidgetItem*> const  new_selection = m_scene_tree->selectedItems();
+    update_history_according_to_change_in_selection(old_selection, new_selection);
 }
 
 void  widgets::selection_changed_listener()
 {
     lock_bool const  _(&m_processing_selection_change);
+
+    QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
 
     std::unordered_set<std::string>  selected_scene_nodes;
     std::unordered_set<std::pair<std::string, std::string> >  selected_batches;
@@ -637,6 +699,9 @@ void  widgets::selection_changed_listener()
         }
     }
     update_coord_system_location_widgets();
+
+    QList<QTreeWidgetItem*> const  new_selection = m_scene_tree->selectedItems();
+    update_history_according_to_change_in_selection(old_selection, new_selection);
 }
 
 
@@ -741,6 +806,7 @@ void  widgets::on_scene_insert_coord_system()
                 dlg.get_name(),
                 false
                 );
+        get_scene_history().commit();
     }
     else
         g_new_coord_system_id_counter = old_counter;
@@ -820,6 +886,7 @@ void  widgets::on_scene_insert_batch()
     });
     dlg.exec();
     if (!dlg.get_name().empty())
+    {
         for (auto const&  tree_item : nodes)
         {
             auto const  batch_item = insert_batch(tree_item, dlg.get_name(), batch_pathname);
@@ -834,6 +901,8 @@ void  widgets::on_scene_insert_batch()
                     false
                     );
         }
+        get_scene_history().commit();
+    }
 }
 
 void  widgets::on_scene_erase_selected()
@@ -852,6 +921,8 @@ void  widgets::on_scene_erase_selected()
     for (auto const  item : to_erase_items)
         if (erased_items.count(item) == 0UL)
             erase_subtree_at_root_item(item, erased_items);
+    if (!erased_items.empty())
+        get_scene_history().commit();
 }
 
 void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std::unordered_set<QTreeWidgetItem*>&  erased_items)
@@ -861,8 +932,8 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
     std::string const  item_name = qtgl::to_string(item->text(0));
     if (item->represents_coord_system())
     {
-        for (int i = 0, n = item->childCount(); i != n; ++i)
-            erase_subtree_at_root_item(item->child(i), erased_items);
+        while (item->childCount() > 0)
+            erase_subtree_at_root_item(item->child(0), erased_items);
 
         get_scene_history().insert<scene_history_coord_system_insert_to_selection>(item_name, true);
         scene_node_ptr const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, item_name);
