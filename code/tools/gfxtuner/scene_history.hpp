@@ -4,6 +4,7 @@
 #   include <gfxtuner/scene.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <utility/std_pair_hash.hpp>
+#   include <boost/filesystem/path.hpp>
 #   include <memory>
 #   include <string>
 #   include <vector>
@@ -156,10 +157,12 @@ struct  scene_history_batch_insert final :
 
     scene_history_batch_insert(
             std::pair<std::string, std::string> const&  name,
+            boost::filesystem::path const&  batch_pathname,
             bool const  as_inverse_operation    // pass 'true', if the operation should represent 'erase'
             )
         : super_type(as_inverse_operation)
         , m_name(name)
+        , m_batch_pathname(batch_pathname)
     {
         ASSUMPTION(!name.first.empty() && !name.second.empty());
     }
@@ -167,9 +170,11 @@ struct  scene_history_batch_insert final :
     std::pair<std::string, std::string> const&  get_name() const { return m_name; }
     std::string const&  get_coord_system_name() const { return m_name.first; }
     std::string const&  get_batch_name() const { return m_name.second; }
+    boost::filesystem::path const&  get_batch_pathname() const { return m_batch_pathname; }
 
 private:
     std::pair<std::string, std::string>  m_name;
+    boost::filesystem::path  m_batch_pathname;
 };
 
 

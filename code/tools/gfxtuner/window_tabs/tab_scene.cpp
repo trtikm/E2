@@ -437,16 +437,104 @@ widgets::widgets(program_window* const  wnd)
 
     scene_history_batch_insert::set_undo_processor(
         [this](scene_history_batch_insert const&  history_node) {
+            auto const  items_list = m_scene_tree->findItems(QString(history_node.get_coord_system_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
+            ASSUMPTION(items_list.size() == 1UL);
+            auto const  parent_item = dynamic_cast<tree_widget_item*>(items_list.front());
+            ASSUMPTION(parent_item != nullptr && parent_item->represents_coord_system());
+            for (int i = 0, n = parent_item->childCount(); i != n; ++i)
+            {
+                auto const  item = dynamic_cast<tree_widget_item*>(parent_item->child(i));
+                INVARIANT(item != nullptr);
+                std::string const  item_name = qtgl::to_string(item->text(0));
+                if (!item->represents_coord_system() && item_name == history_node.get_batch_name())
+                {
+                    std::string const  parent_name = qtgl::to_string(parent_item->text(0));
+                    m_wnd->glwindow().call_now(&simulator::erase_batch_from_scene_node, item_name, parent_name);
+                    auto const taken_item = parent_item->takeChild(i);
+                    INVARIANT(taken_item == item); (void)taken_item;
+                    delete item;
+                    return;
+                }
+            }
+            UNREACHABLE();
         });
     scene_history_batch_insert::set_redo_processor(
         [this](scene_history_batch_insert const&  history_node) {
+            auto const  items_list = m_scene_tree->findItems(QString(history_node.get_coord_system_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
+            ASSUMPTION(items_list.size() == 1UL);
+            auto const  parent_item = dynamic_cast<tree_widget_item*>(items_list.front());
+            ASSUMPTION(parent_item != nullptr && parent_item->represents_coord_system());
+            ASSUMPTION((
+                [parent_item, &history_node]() -> bool {
+                    for (int i = 0, n = parent_item->childCount(); i != n; ++i)
+                    {
+                        auto const  item = dynamic_cast<tree_widget_item*>(parent_item->child(i));
+                        INVARIANT(item != nullptr);
+                        std::string const  item_name = qtgl::to_string(item->text(0));
+                        if (!item->represents_coord_system() && item_name == history_node.get_batch_name())
+                            return false;
+                    }
+                    return true;
+                }
+            ()));
+            std::string const  parent_name = qtgl::to_string(parent_item->text(0));
+            m_wnd->glwindow().call_now(&simulator::insert_batch_to_scene_node, history_node.get_batch_name(), history_node.get_batch_pathname(), parent_name);
+            std::unique_ptr<tree_widget_item>  tree_node(new tree_widget_item(false));
+            tree_node->setText(0, QString(history_node.get_batch_name().c_str()));
+            tree_node->setIcon(0, m_batch_icon);
+            parent_item->addChild(tree_node.get());
+            tree_node.release();
         });
 
     scene_history_batch_insert_to_selection::set_undo_processor(
         [this](scene_history_batch_insert_to_selection const&  history_node) {
+            auto const  items_list = m_scene_tree->findItems(QString(history_node.get_coord_system_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
+            ASSUMPTION(items_list.size() == 1UL);
+            auto const  parent_item = dynamic_cast<tree_widget_item*>(items_list.front());
+            ASSUMPTION(parent_item != nullptr && parent_item->represents_coord_system());
+            std::string const  parent_name = qtgl::to_string(parent_item->text(0));
+            for (int i = 0, n = parent_item->childCount(); i != n; ++i)
+            {
+                auto const  item = dynamic_cast<tree_widget_item*>(parent_item->child(i));
+                INVARIANT(item != nullptr);
+                std::string const  item_name = qtgl::to_string(item->text(0));
+                if (!item->represents_coord_system() && item_name == history_node.get_batch_name())
+                {
+                    ASSUMPTION(item->isSelected());
+                    item->setSelected(false);
+                    bool const old_processing_selection_change = m_processing_selection_change;
+                    m_processing_selection_change = false;
+                    on_scene_hierarchy_item_selected();
+                    m_processing_selection_change = old_processing_selection_change;
+                    return;
+                }
+            }
+            UNREACHABLE();
         });
     scene_history_batch_insert_to_selection::set_redo_processor(
         [this](scene_history_batch_insert_to_selection const&  history_node) {
+            auto const  items_list = m_scene_tree->findItems(QString(history_node.get_coord_system_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
+            ASSUMPTION(items_list.size() == 1UL);
+            auto const  parent_item = dynamic_cast<tree_widget_item*>(items_list.front());
+            ASSUMPTION(parent_item != nullptr && parent_item->represents_coord_system());
+            std::string const  parent_name = qtgl::to_string(parent_item->text(0));
+            for (int i = 0, n = parent_item->childCount(); i != n; ++i)
+            {
+                auto const  item = dynamic_cast<tree_widget_item*>(parent_item->child(i));
+                INVARIANT(item != nullptr);
+                std::string const  item_name = qtgl::to_string(item->text(0));
+                if (!item->represents_coord_system() && item_name == history_node.get_batch_name())
+                {
+                    ASSUMPTION(!item->isSelected());
+                    item->setSelected(true);
+                    bool const old_processing_selection_change = m_processing_selection_change;
+                    m_processing_selection_change = false;
+                    on_scene_hierarchy_item_selected();
+                    m_processing_selection_change = old_processing_selection_change;
+                    return;
+                }
+            }
+            UNREACHABLE();
         });
 }
 
