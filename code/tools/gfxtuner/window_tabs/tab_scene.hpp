@@ -9,6 +9,7 @@
 #   include <QTreeWidget>
 #   include <QColor>
 #   include <string>
+#   include <unordered_set>
 
 
 struct  program_window;
@@ -74,6 +75,8 @@ private:
                 );
 
     void  add_tree_item_to_selection(QTreeWidgetItem* const  item);
+
+    void  erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std::unordered_set<QTreeWidgetItem*>&  erased_items);
 
     void  update_coord_system_location_widgets();
     void  enable_coord_system_location_widgets(bool const  state);

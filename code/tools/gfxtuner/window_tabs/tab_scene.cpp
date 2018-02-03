@@ -730,6 +730,17 @@ void  widgets::on_scene_insert_coord_system()
         }
         auto const  tree_item = insert_coord_system(dlg.get_name(), origin, orientation, parent_tree_item);
         add_tree_item_to_selection(tree_item);
+        get_scene_history().insert<scene_history_coord_system_insert>(
+                dlg.get_name(),
+                origin,
+                orientation,
+                parent_tree_item == nullptr ? "" : qtgl::to_string(parent_tree_item->text(0)),
+                false
+                );
+        get_scene_history().insert<scene_history_coord_system_insert_to_selection>(
+                dlg.get_name(),
+                false
+                );
     }
     else
         g_new_coord_system_id_counter = old_counter;
@@ -813,41 +824,86 @@ void  widgets::on_scene_insert_batch()
         {
             auto const  batch_item = insert_batch(tree_item, dlg.get_name(), batch_pathname);
             add_tree_item_to_selection(batch_item);
+            get_scene_history().insert<scene_history_batch_insert>(
+                    std::pair<std::string, std::string>{ qtgl::to_string(tree_item->text(0)), dlg.get_name() },
+                    batch_pathname,
+                    false
+                    );
+            get_scene_history().insert<scene_history_batch_insert_to_selection>(
+                    std::pair<std::string, std::string>{ qtgl::to_string(tree_item->text(0)), dlg.get_name() },
+                    false
+                    );
         }
 }
 
 void  widgets::on_scene_erase_selected()
 {
+    std::unordered_set<QTreeWidgetItem*>  to_erase_items;
     foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
+        to_erase_items.insert(item);
+    std::unordered_set<QTreeWidgetItem*>  erased_items;
+    for (auto const  item : to_erase_items)
+        if (erased_items.count(item) == 0UL)
+            erase_subtree_at_root_item(item, erased_items);
+}
+
+void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std::unordered_set<QTreeWidgetItem*>&  erased_items)
+{
+    tree_widget_item* const  item = dynamic_cast<tree_widget_item*>(root_item);
+    INVARIANT(item != nullptr);
+    std::string const  item_name = qtgl::to_string(item->text(0));
+    if (item->represents_coord_system())
     {
-        tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(item);
-        INVARIANT(tree_item != nullptr);
-        std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
-        if (tree_item->represents_coord_system())
-            wnd()->glwindow().call_now(&simulator::erase_scene_node, tree_item_name);
-        else
-        {
-            tree_widget_item* const  parent_tree_item = dynamic_cast<tree_widget_item*>(tree_item->parent());
-            INVARIANT(parent_tree_item != nullptr);
-            INVARIANT(parent_tree_item->represents_coord_system());
-            std::string const  parent_tree_item_name = qtgl::to_string(parent_tree_item->text(0));
-            wnd()->glwindow().call_now(&simulator::erase_batch_from_scene_node, tree_item_name, parent_tree_item_name);
-        }
+        for (int i = 0, n = item->childCount(); i != n; ++i)
+            erase_subtree_at_root_item(item->child(i), erased_items);
 
-        auto const  taken_item = item->parent() != nullptr ?
-            item->parent()->takeChild(item->parent()->indexOfChild(item)) :
-            m_scene_tree->takeTopLevelItem(m_scene_tree->indexOfTopLevelItem(item))
-            ;
-        INVARIANT(taken_item == tree_item); (void)taken_item;
+        get_scene_history().insert<scene_history_coord_system_insert_to_selection>(item_name, true);
+        scene_node_ptr const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, item_name);
+        INVARIANT(node_ptr != nullptr);
+        get_scene_history().insert<scene_history_coord_system_insert>(
+                item_name,
+                node_ptr->get_coord_system()->origin(),
+                node_ptr->get_coord_system()->orientation(),
+                item->parent() == nullptr ? "" : qtgl::to_string(item->parent()->text(0)),
+                true
+                );
 
-        delete tree_item;
+        wnd()->glwindow().call_now(&simulator::erase_scene_node, item_name);
     }
+    else
+    {
+        tree_widget_item* const  parent_item = dynamic_cast<tree_widget_item*>(item->parent());
+        INVARIANT(parent_item != nullptr);
+        INVARIANT(parent_item->represents_coord_system());
+        std::string const  parent_item_name = qtgl::to_string(parent_item->text(0));
+
+        std::pair<std::string, std::string> const  name{ parent_item_name, item_name };
+        get_scene_history().insert<scene_history_batch_insert_to_selection>(name, true);
+        scene_node_ptr const  parent_node_ptr =
+            wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_name);
+        INVARIANT(parent_node_ptr != nullptr);
+        qtgl::batch_ptr const  batch_ptr = parent_node_ptr->get_batch(item_name);
+        INVARIANT(batch_ptr != nullptr);
+        get_scene_history().insert<scene_history_batch_insert>(name, batch_ptr->path(), true);
+
+        wnd()->glwindow().call_now(&simulator::erase_batch_from_scene_node, item_name, parent_item_name);
+    }
+
+    auto const  taken_item = item->parent() != nullptr ?
+        item->parent()->takeChild(item->parent()->indexOfChild(item)) :
+        m_scene_tree->takeTopLevelItem(m_scene_tree->indexOfTopLevelItem(item))
+        ;
+    INVARIANT(taken_item == item); (void)taken_item;
+
+    delete item;
+    erased_items.insert(item);
 }
 
 void  widgets::clear_scene()
 {
     m_scene_tree->clear();
     wnd()->glwindow().call_now(&simulator::clear_scene);
+    get_scene_history().clear();
 
     insert_coord_system(get_pivot_node_name(), vector3_zero(), quaternion_identity(), nullptr);
 
