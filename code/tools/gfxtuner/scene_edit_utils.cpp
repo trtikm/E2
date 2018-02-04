@@ -97,8 +97,10 @@ vector3  scene_nodes_translation_data::get_shift(vector3 const&  new_plane_point
 void  scene_edit_data::set_mode(SCENE_EDIT_MODE const  mode)
 {
     if (mode != m_mode)
+    {
         invalidate_data();
-    m_mode = mode;
+        m_mode = mode;
+    }
 }
 
 

@@ -59,6 +59,13 @@ struct  widgets
     void  coord_system_rotation_listener();
     void  on_coord_system_rotation_finished();
 
+    void  on_scene_mode_selection();
+    void  on_scene_mode_translation();
+    void  on_scene_mode_rotation();
+
+    void  on_scene_undo();
+    void  on_scene_redo();
+
     void  selection_changed_listener();
     bool  processing_selection_change() const { return m_processing_selection_change; }
 

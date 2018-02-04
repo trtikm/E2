@@ -1282,6 +1282,32 @@ void  widgets::on_coord_system_rotation_finished()
     on_coord_system_position_finished();
 }
 
+void  widgets::on_scene_mode_selection()
+{
+    wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, SCENE_EDIT_MODE::SELECT_SCENE_OBJECT);
+}
+
+void  widgets::on_scene_mode_translation()
+{
+    wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES);
+}
+
+void  widgets::on_scene_mode_rotation()
+{
+    wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, SCENE_EDIT_MODE::ROTATE_SELECTED_NODES);
+}
+
+void  widgets::on_scene_undo()
+{
+
+}
+
+void  widgets::on_scene_redo()
+{
+
+}
+
+
 void  widgets::update_coord_system_location_widgets()
 {
     auto const selected_items = m_scene_tree->selectedItems();

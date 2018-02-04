@@ -85,6 +85,15 @@ public slots:
     void  on_menu_save_as_scene() { if (m_menu_bar.on_save_as_scene()) m_tab_scene_widgets.save_scene(m_menu_bar.get_current_scene_dir()); }
     void  on_menu_exit() { if (m_menu_bar.on_exit()) PostQuitMessage(0); }
 
+    void  on_menu_edit_insert_coord_system() { m_tab_scene_widgets.on_scene_insert_coord_system(); }
+    void  on_menu_edit_insert_batch() { m_tab_scene_widgets.on_scene_insert_batch(); }
+    void  on_menu_edit_erase_selected() { m_tab_scene_widgets.on_scene_erase_selected(); }
+    void  on_menu_edit_mode_selection() { m_tab_scene_widgets.on_scene_mode_selection(); }
+    void  on_menu_edit_mode_translation() { m_tab_scene_widgets.on_scene_mode_translation(); }
+    void  on_menu_edit_mode_rotation() { m_tab_scene_widgets.on_scene_mode_rotation(); }
+    void  on_menu_edit_undo() { m_tab_scene_widgets.on_scene_undo(); }
+    void  on_menu_edit_redo() { m_tab_scene_widgets.on_scene_redo(); }
+
 private:
 
     Q_OBJECT

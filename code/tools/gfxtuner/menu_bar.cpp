@@ -28,6 +28,17 @@ menu_bar::menu_bar(program_window* const  wnd)
     , m_default_scene_root_dir(boost::filesystem::absolute(get_program_options()->dataRoot()) / get_program_name())
     , m_recent_scenes()
     , m_current_scene_dir()
+
+    , m_menu_edit(new QMenu("&Edit", wnd))
+    , m_action_edit_insert_coord_system(new QAction(QString("&Insert &coord system"), wnd))
+    , m_action_edit_insert_batch(new QAction(QString("Insert &batch"), wnd))
+    , m_action_edit_erase_selected(new QAction(QString("&Erase selected"), wnd))
+    , m_action_edit_mode_select(new QAction(QString("&Selection"), wnd))
+    , m_action_edit_mode_translate(new QAction(QString("&Translation"), wnd))
+    , m_action_edit_mode_rotate(new QAction(QString("&Rotation"), wnd))
+    , m_action_edit_undo(new QAction(QString("&Undo"), wnd))
+    , m_action_edit_redo(new QAction(QString("Red&o"), wnd))
+
 {
     if(!boost::filesystem::is_directory(m_default_scene_root_dir))
         boost::filesystem::create_directories(m_default_scene_root_dir);
@@ -107,11 +118,15 @@ void  make_menu_bar_content(menu_bar const&  w)
     w.get_action_new_scene()->setShortcuts(QKeySequence::New);
     QObject::connect(w.get_action_new_scene(), &QAction::triggered, w.wnd(), &program_window::on_menu_new_scene);
 
+    w.get_menu_file()->addSeparator();
+
     w.get_menu_file()->addAction(w.get_action_open_scene());
     w.get_action_open_scene()->setShortcuts(QKeySequence::Open);
     QObject::connect(w.get_action_open_scene(), &QAction::triggered, w.wnd(),&program_window::on_menu_open_scene);
 
     w.get_menu_file()->addMenu(w.get_menu_open_recent_scene());
+
+    w.get_menu_file()->addSeparator();
 
     w.get_menu_file()->addAction(w.get_action_save_scene());
     w.get_action_save_scene()->setShortcuts(QKeySequence::Save);
@@ -128,6 +143,53 @@ void  make_menu_bar_content(menu_bar const&  w)
     QObject::connect(w.get_action_exit(), &QAction::triggered, w.wnd(), &program_window::on_menu_exit);
 
     w.get_menu_bar()->addMenu(w.get_menu_file());
+
+    // "Edit" menu
+
+    w.get_menu_edit()->addAction(w.get_action_edit_insert_coord_system());
+    w.get_action_edit_insert_coord_system()->setWhatsThis("TODO");
+    QObject::connect(w.get_action_edit_insert_coord_system(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_insert_coord_system);
+
+    w.get_menu_edit()->addAction(w.get_action_edit_insert_batch());
+    w.get_action_edit_insert_batch()->setStatusTip("TODO");
+    QObject::connect(w.get_action_edit_insert_batch(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_insert_batch);
+
+    w.get_menu_edit()->addSeparator();
+
+    w.get_menu_edit()->addAction(w.get_action_edit_erase_selected());
+    w.get_action_edit_erase_selected()->setToolTip("TODO");
+    QObject::connect(w.get_action_edit_erase_selected(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_erase_selected);
+
+    w.get_menu_edit()->addSeparator();
+
+    w.get_menu_edit()->addAction(w.get_action_edit_mode_select());
+    w.get_action_edit_mode_select()->setShortcut(Qt::Key::Key_C);
+    w.get_action_edit_mode_select()->setToolTip("TODO");
+    QObject::connect(w.get_action_edit_mode_select(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_mode_selection);
+
+    w.get_menu_edit()->addAction(w.get_action_edit_mode_translate());
+    w.get_action_edit_mode_translate()->setShortcut(Qt::Key::Key_T);
+    w.get_action_edit_mode_translate()->setToolTip("TODO");
+    QObject::connect(w.get_action_edit_mode_translate(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_mode_translation);
+
+    w.get_menu_edit()->addAction(w.get_action_edit_mode_rotate());
+    w.get_action_edit_mode_rotate()->setShortcut(Qt::Key::Key_R);
+    w.get_action_edit_mode_rotate()->setToolTip("TODO");
+    QObject::connect(w.get_action_edit_mode_rotate(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_mode_rotation);
+
+    w.get_menu_edit()->addSeparator();
+
+    w.get_menu_edit()->addAction(w.get_action_edit_undo());
+    w.get_action_edit_undo()->setShortcut(QKeySequence::Undo);
+    w.get_action_edit_undo()->setToolTip("TODO");
+    QObject::connect(w.get_action_edit_undo(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_undo);
+
+    w.get_menu_edit()->addAction(w.get_action_edit_redo());
+    w.get_action_edit_redo()->setShortcut(QKeySequence::Redo);
+    w.get_action_edit_redo()->setToolTip("TODO");
+    QObject::connect(w.get_action_edit_redo(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_redo);
+
+    w.get_menu_bar()->addMenu(w.get_menu_edit());
 
     // And finally attach the menu to the program window.
 

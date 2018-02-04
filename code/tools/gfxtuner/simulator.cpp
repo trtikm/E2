@@ -538,16 +538,6 @@ void  simulator::perform_scene_update(float_64_bit const  time_to_simulate_in_se
 {
     TMPROF_BLOCK();
 
-    bool const  c_down = keyboard_props().was_just_released(qtgl::KEY_C());
-    bool const  t_down = keyboard_props().was_just_released(qtgl::KEY_T());
-    bool const  r_down = keyboard_props().was_just_released(qtgl::KEY_R());
-    if (c_down && get_scene_edit_mode() != SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
-        set_scene_edit_mode(SCENE_EDIT_MODE::SELECT_SCENE_OBJECT);
-    else if (t_down && get_scene_edit_mode() != SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
-        set_scene_edit_mode(SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES);
-    else if (r_down && get_scene_edit_mode() != SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
-        set_scene_edit_mode(SCENE_EDIT_MODE::ROTATE_SELECTED_NODES);
-
     switch (get_scene_edit_mode())
     {
     case SCENE_EDIT_MODE::SELECT_SCENE_OBJECT:
@@ -922,7 +912,6 @@ void  simulator::clear_scene()
     get_scene().clear();
 }
 
-
 void  simulator::translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift)
 {
     get_scene_node(scene_node_name)->translate(shift);
@@ -983,6 +972,9 @@ void  simulator::get_scene_selection_data(
 
 void  simulator::set_scene_edit_mode(SCENE_EDIT_MODE const  edit_mode)
 {
-    m_scene_edit_data.set_mode(edit_mode);
-    call_listeners(simulator_notifications::scene_edit_mode_changed());
+    if (m_scene_edit_data.get_mode() != edit_mode)
+    {
+        m_scene_edit_data.set_mode(edit_mode);
+        call_listeners(simulator_notifications::scene_edit_mode_changed());
+    }
 }

@@ -19,13 +19,23 @@ struct  menu_bar
 
     QMenuBar*  get_menu_bar() const noexcept { return m_menu_bar; }
 
-    QMenu*  get_menu_file() const noexcept { return m_menu_file; }
-    QAction*  get_action_new_scene() const noexcept { return m_action_new_scene; }
-    QAction*  get_action_open_scene() const noexcept { return m_action_open_scene; }
-    QMenu*    get_menu_open_recent_scene() const noexcept { return m_menu_open_recent_scene; }
-    QAction*  get_action_save_scene() const noexcept { return m_action_save_scene; }
-    QAction*  get_action_save_as_scene() const noexcept { return m_action_save_as_scene; }
-    QAction*  get_action_exit() const noexcept { return m_action_exit; }
+    QMenu*  get_menu_file() const { return m_menu_file; }
+    QAction*  get_action_new_scene() const { return m_action_new_scene; }
+    QAction*  get_action_open_scene() const { return m_action_open_scene; }
+    QMenu*    get_menu_open_recent_scene() const { return m_menu_open_recent_scene; }
+    QAction*  get_action_save_scene() const { return m_action_save_scene; }
+    QAction*  get_action_save_as_scene() const { return m_action_save_as_scene; }
+    QAction*  get_action_exit() const { return m_action_exit; }
+
+    QMenu*  get_menu_edit() const noexcept { return m_menu_edit; }
+    QAction*  get_action_edit_insert_coord_system() const { return m_action_edit_insert_coord_system; }
+    QAction*  get_action_edit_insert_batch() const { return m_action_edit_insert_batch; }
+    QAction*  get_action_edit_erase_selected() const { return m_action_edit_erase_selected; }
+    QAction*  get_action_edit_mode_select() const { return m_action_edit_mode_select; }
+    QAction*  get_action_edit_mode_translate() const { return m_action_edit_mode_translate; }
+    QAction*  get_action_edit_mode_rotate() const { return m_action_edit_mode_rotate; }
+    QAction*  get_action_edit_undo() const { return m_action_edit_undo; }
+    QAction*  get_action_edit_redo() const { return m_action_edit_redo; }
 
     // "File" actions
     void  on_new_scene();
@@ -59,6 +69,16 @@ private:
     boost::filesystem::path  m_default_scene_root_dir;
     std::vector<boost::filesystem::path>  m_recent_scenes;
     boost::filesystem::path  m_current_scene_dir;
+
+    QMenu*  m_menu_edit;
+    QAction*  m_action_edit_insert_coord_system;
+    QAction*  m_action_edit_insert_batch;
+    QAction*  m_action_edit_erase_selected;
+    QAction*  m_action_edit_mode_select;
+    QAction*  m_action_edit_mode_translate;
+    QAction*  m_action_edit_mode_rotate;
+    QAction*  m_action_edit_undo;
+    QAction*  m_action_edit_redo;
 };
 
 
