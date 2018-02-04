@@ -65,8 +65,14 @@ public slots:
     void  on_scene_coord_system_rot_changed() { m_tab_scene_widgets.on_coord_system_rot_changed(); }
     void  on_scene_coord_system_rot_tait_bryan_changed() { m_tab_scene_widgets.on_coord_system_rot_tait_bryan_changed(); }
 
+    void  on_scene_coord_system_position_started() { m_tab_scene_widgets.on_coord_system_position_started(); }
     void  scene_coord_system_position_listener() { m_tab_scene_widgets.coord_system_position_listener(); }
+    void  on_scene_coord_system_position_finished() { m_tab_scene_widgets.on_coord_system_position_finished(); }
+
+    void  on_scene_coord_system_rotation_started() { m_tab_scene_widgets.on_coord_system_rotation_started(); }
     void  scene_coord_system_rotation_listener() { m_tab_scene_widgets.coord_system_rotation_listener(); }
+    void  on_scene_coord_system_rotation_finished() { m_tab_scene_widgets.on_coord_system_rotation_finished(); }
+
     void  scene_selection_listener() { m_tab_scene_widgets.selection_changed_listener(); }
 
     /// Status bar

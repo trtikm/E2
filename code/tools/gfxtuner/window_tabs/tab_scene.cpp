@@ -401,6 +401,8 @@ widgets::widgets(program_window* const  wnd)
             return new s(wnd);
         }(m_wnd)
         )
+
+    , m_coord_system_location_backup_buffer()
 {
     m_scene_tree->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
     enable_coord_system_location_widgets(false);
@@ -1215,14 +1217,69 @@ void  widgets::on_coord_system_rot_tait_bryan_changed()
     get_scene_history().commit();
 }
 
+
+void  widgets::on_coord_system_position_started()
+{
+    m_coord_system_location_backup_buffer.clear();
+    foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
+    {
+        tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(item);
+        INVARIANT(tree_item != nullptr);
+        std::string  node_name;
+        {
+            if (tree_item->represents_coord_system())
+                node_name = qtgl::to_string(tree_item->text(0));
+            else
+            {
+                tree_widget_item* const  parent_item = dynamic_cast<tree_widget_item*>(item->parent());
+                INVARIANT(parent_item != nullptr);
+                INVARIANT(parent_item->represents_coord_system());
+                node_name = qtgl::to_string(parent_item->text(0));
+            }
+        }
+        auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, node_name);
+        INVARIANT(node_ptr != nullptr);
+        m_coord_system_location_backup_buffer.insert({ node_name, *node_ptr->get_coord_system() });
+    }
+}
+
 void  widgets::coord_system_position_listener()
 {
     update_coord_system_location_widgets();
 }
 
+void  widgets::on_coord_system_position_finished()
+{
+    for (auto const&  name_and_system : m_coord_system_location_backup_buffer)
+    {
+        auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, name_and_system.first);
+        INVARIANT(node_ptr != nullptr);
+        get_scene_history().insert<scene_history_coord_system_relocate>(
+                name_and_system.first,
+                name_and_system.second.origin(),
+                name_and_system.second.orientation(),
+                node_ptr->get_coord_system()->origin(),
+                node_ptr->get_coord_system()->orientation()
+                );
+    }
+    if (!m_coord_system_location_backup_buffer.empty())
+        get_scene_history().commit();
+}
+
+
+void  widgets::on_coord_system_rotation_started()
+{
+    on_coord_system_position_started();
+}
+
 void  widgets::coord_system_rotation_listener()
 {
     update_coord_system_location_widgets();
+}
+
+void  widgets::on_coord_system_rotation_finished()
+{
+    on_coord_system_position_finished();
 }
 
 void  widgets::update_coord_system_location_widgets()
@@ -1404,9 +1461,18 @@ QWidget*  make_scene_tab_content(widgets const&  w)
                             position_layout->addWidget(w.coord_system_pos_x());
                             position_layout->addWidget(w.coord_system_pos_y());
                             position_layout->addWidget(w.coord_system_pos_z());
+
+                            w.wnd()->glwindow().register_listener(
+                                        simulator_notifications::scene_node_position_update_started(),
+                                        { &program_window::on_scene_coord_system_position_started, w.wnd() }
+                                        );
                             w.wnd()->glwindow().register_listener(
                                         simulator_notifications::scene_node_position_updated(),
                                         { &program_window::scene_coord_system_position_listener, w.wnd() }
+                                        );
+                            w.wnd()->glwindow().register_listener(
+                                        simulator_notifications::scene_node_position_update_finished(),
+                                        { &program_window::on_scene_coord_system_position_finished, w.wnd() }
                                         );
                         }
                         position_group->setLayout(position_layout);
@@ -1439,8 +1505,16 @@ QWidget*  make_scene_tab_content(widgets const&  w)
                         rotation_group->setLayout(rotation_layout);
 
                         w.wnd()->glwindow().register_listener(
+                                    simulator_notifications::scene_node_orientation_update_started(),
+                                    { &program_window::on_scene_coord_system_rotation_started, w.wnd() }
+                                    );
+                        w.wnd()->glwindow().register_listener(
                                     simulator_notifications::scene_node_orientation_updated(),
                                     { &program_window::scene_coord_system_rotation_listener, w.wnd() }
+                                    );
+                        w.wnd()->glwindow().register_listener(
+                                    simulator_notifications::scene_node_orientation_update_finished(),
+                                    { &program_window::on_scene_coord_system_rotation_finished, w.wnd() }
                                     );
                     }
                     selected_layout->addWidget(rotation_group);

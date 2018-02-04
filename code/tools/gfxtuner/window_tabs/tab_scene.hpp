@@ -10,6 +10,7 @@
 #   include <QColor>
 #   include <string>
 #   include <unordered_set>
+#   include <unordered_map>
 
 
 struct  program_window;
@@ -50,8 +51,14 @@ struct  widgets
     void  on_coord_system_rot_changed();
     void  on_coord_system_rot_tait_bryan_changed();
 
+    void  on_coord_system_position_started();
     void  coord_system_position_listener();
+    void  on_coord_system_position_finished();
+
+    void  on_coord_system_rotation_started();
     void  coord_system_rotation_listener();
+    void  on_coord_system_rotation_finished();
+
     void  selection_changed_listener();
     bool  processing_selection_change() const { return m_processing_selection_change; }
 
@@ -103,6 +110,8 @@ private:
     QLineEdit*  m_coord_system_yaw;
     QLineEdit*  m_coord_system_pitch;
     QLineEdit*  m_coord_system_roll;
+
+    std::unordered_map<std::string, angeo::coordinate_system>  m_coord_system_location_backup_buffer;
 };
 
 

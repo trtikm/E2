@@ -646,7 +646,11 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
     TMPROF_BLOCK();
 
     if (!mouse_props().is_pressed(qtgl::LEFT_MOUSE_BUTTON()))
+    {
+        if (m_scene_edit_data.was_operation_started() && mouse_props().was_just_released(qtgl::LEFT_MOUSE_BUTTON()))
+            call_listeners(simulator_notifications::scene_node_position_update_finished());
         return;
+    }
     if (m_scene_selection.empty())
         return;
     if (get_scene_edit_data().are_data_invalidated())
@@ -662,6 +666,7 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
                 return;
             m_scene_edit_data.initialise_translation_data({ 0.5f * (lo + hi) });
         }
+        call_listeners(simulator_notifications::scene_node_position_update_started());
     }
     m_scene_edit_data.get_translation_data().update(
             keyboard_props().is_pressed(qtgl::KEY_X()),
@@ -721,7 +726,12 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
     TMPROF_BLOCK();
 
     if (mouse_props().is_pressed(qtgl::LEFT_MOUSE_BUTTON()) == mouse_props().is_pressed(qtgl::RIGHT_MOUSE_BUTTON()))
+    {
+        if (m_scene_edit_data.was_operation_started() && (mouse_props().was_just_released(qtgl::LEFT_MOUSE_BUTTON()) ||
+                                                          mouse_props().was_just_released(qtgl::RIGHT_MOUSE_BUTTON())))
+            call_listeners(simulator_notifications::scene_node_orientation_update_finished());
         return;
+    }
     if (m_scene_selection.empty())
         return;
 
@@ -738,6 +748,7 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
                 return;
             m_scene_edit_data.initialise_rotation_data({ 0.5f * (lo + hi) });
         }
+        call_listeners(simulator_notifications::scene_node_orientation_update_started());
     }
 
     float_32_bit const  horisontal_full_angle_in_pixels = (3.0f / 4.0f) * window_props().width_in_pixels();

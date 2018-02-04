@@ -107,6 +107,7 @@ void  scene_edit_data::initialise_selection_data(scene_nodes_selection_data cons
     ASSUMPTION(get_mode() == SCENE_EDIT_MODE::SELECT_SCENE_OBJECT);
     m_nodes_selection_data = data;
     m_data_invalidated = false;
+    m_operation_started = true;
 }
 
 scene_nodes_selection_data const&  scene_edit_data::get_selection_data() const
@@ -129,6 +130,7 @@ void  scene_edit_data::initialise_translation_data(scene_nodes_translation_data 
     ASSUMPTION(get_mode() == SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES);
     m_nodes_translation_data = data;
     m_data_invalidated = false;
+    m_operation_started = true;
 }
 
 scene_nodes_translation_data const&  scene_edit_data::get_translation_data() const
@@ -151,6 +153,7 @@ void  scene_edit_data::initialise_rotation_data(scene_nodes_rotation_data const&
     ASSUMPTION(get_mode() == SCENE_EDIT_MODE::ROTATE_SELECTED_NODES);
     m_nodes_rotation_data = data;
     m_data_invalidated = false;
+    m_operation_started = true;
 }
 
 scene_nodes_rotation_data const&  scene_edit_data::get_rotation_data() const

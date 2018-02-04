@@ -87,6 +87,7 @@ struct scene_edit_data final
     scene_edit_data(SCENE_EDIT_MODE const initial_mode = SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
         : m_mode(initial_mode)
         , m_data_invalidated(true)
+        , m_operation_started(false)
         , m_nodes_translation_data()
     {}
 
@@ -94,7 +95,9 @@ struct scene_edit_data final
     void  set_mode(SCENE_EDIT_MODE const  mode);
 
     bool  are_data_invalidated() const { return m_data_invalidated; }
-    void  invalidate_data() { m_data_invalidated = true; }
+    void  invalidate_data() { m_data_invalidated = true; m_operation_started = false; }
+
+    bool  was_operation_started() const { return m_operation_started; }
 
     void  initialise_selection_data(scene_nodes_selection_data const&  data);
     scene_nodes_selection_data const&  get_selection_data() const;
@@ -112,6 +115,7 @@ private:
 
     SCENE_EDIT_MODE  m_mode;
     bool  m_data_invalidated;
+    bool  m_operation_started;
     scene_nodes_selection_data  m_nodes_selection_data;
     scene_nodes_translation_data  m_nodes_translation_data;
     scene_nodes_rotation_data  m_nodes_rotation_data;
