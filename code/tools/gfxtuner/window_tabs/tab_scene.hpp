@@ -97,6 +97,8 @@ private:
     void  refresh_text_in_coord_system_location_widgets(scene_node_ptr const  node_ptr);
     void  refresh_text_in_coord_system_rotation_widgets(quaternion const&  q);
 
+    void  set_window_title();
+
     program_window*  m_wnd;
 
     QTreeWidget*  m_scene_tree;
@@ -104,6 +106,8 @@ private:
     QIcon  m_batch_icon;
 
     bool  m_processing_selection_change;
+
+    natural_64_bit  m_save_commit_id;
 
     QLineEdit*  m_coord_system_pos_x;
     QLineEdit*  m_coord_system_pos_y;

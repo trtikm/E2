@@ -17,6 +17,8 @@ struct  scene_history_node
 
     virtual void  undo() const = 0;
     virtual void  redo() const = 0;
+
+    virtual bool  is_mutator() const { return true; }
 };
 
 using  scene_history_node_ptr = std::shared_ptr<scene_history_node const>;
@@ -145,6 +147,8 @@ struct  scene_history_coord_system_insert_to_selection final :
 
     std::string const&  get_name() const { return m_name; }
 
+    bool  is_mutator() const override { return false; }
+
 private:
     std::string  m_name;
 };
@@ -197,6 +201,8 @@ struct  scene_history_batch_insert_to_selection final :
     std::string const&  get_coord_system_name() const { return m_name.first; }
     std::string const&  get_batch_name() const { return m_name.second; }
 
+    bool  is_mutator() const override { return false; }
+
 private:
     std::pair<std::string, std::string>  m_name;
 };
@@ -215,11 +221,14 @@ struct  scene_history final
     }
 
     void  commit();
+    natural_64_bit  get_active_commit_id() const;
+    bool  was_applied_mutator_since_commit(natural_64_bit const  commit_id) const;
 
     void  undo();
     void  redo();
 
     void  clear();
+    bool  empty() const { return m_active_commit == 0UL; }
 
 private:
     scene_history();

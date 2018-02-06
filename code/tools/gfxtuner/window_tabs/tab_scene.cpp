@@ -292,6 +292,8 @@ widgets::widgets(program_window* const  wnd)
 
     , m_processing_selection_change(false)
 
+    , m_save_commit_id(get_scene_history().get_active_commit_id())
+
     , m_coord_system_pos_x(
         [](program_window* wnd) {
             struct s : public QLineEdit {
@@ -637,6 +639,7 @@ void  widgets::on_scene_hierarchy_item_selected()
 
     QList<QTreeWidgetItem*> const  new_selection = m_scene_tree->selectedItems();
     update_history_according_to_change_in_selection(old_selection, new_selection);
+    set_window_title();
 }
 
 void  widgets::selection_changed_listener()
@@ -707,6 +710,7 @@ void  widgets::selection_changed_listener()
 
     QList<QTreeWidgetItem*> const  new_selection = m_scene_tree->selectedItems();
     update_history_according_to_change_in_selection(old_selection, new_selection);
+    set_window_title();
 }
 
 
@@ -814,6 +818,7 @@ void  widgets::on_scene_insert_coord_system()
         QList<QTreeWidgetItem*> const  new_selection = m_scene_tree->selectedItems();
         update_history_according_to_change_in_selection(old_selection, new_selection, false);
         get_scene_history().commit();
+        set_window_title();
     }
     else
         g_new_coord_system_id_counter = old_counter;
@@ -912,6 +917,7 @@ void  widgets::on_scene_insert_batch()
         update_history_according_to_change_in_selection(old_selection, new_selection, false);
 
         get_scene_history().commit();
+        set_window_title();
     }
 }
 
@@ -943,6 +949,7 @@ void  widgets::on_scene_erase_selected()
 
     INVARIANT(!erased_items.empty());
     get_scene_history().commit();
+    set_window_title();
 }
 
 void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std::unordered_set<QTreeWidgetItem*>&  erased_items)
@@ -1002,6 +1009,8 @@ void  widgets::clear_scene()
     m_scene_tree->clear();
     wnd()->glwindow().call_now(&simulator::clear_scene);
     get_scene_history().clear();
+    m_save_commit_id = get_scene_history().get_active_commit_id();
+    set_window_title();
 
     insert_coord_system(get_pivot_node_name(), vector3_zero(), quaternion_identity(), nullptr);
 
@@ -1088,6 +1097,7 @@ void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
                 );
         m_scene_tree->expandAll();
         wnd()->print_status_message(std::string("SUCCESS: Scene loaded from: ") + scene_root_dir.string(), 5000);
+        wnd()->set_title(scene_root_dir.string());
     }
     catch (boost::property_tree::ptree_error const&  e)
     {
@@ -1157,6 +1167,9 @@ void  widgets::save_scene(boost::filesystem::path const&  scene_root_dir)
     boost::filesystem::create_directories(scene_root_dir);
     boost::property_tree::write_info((scene_root_dir / "hierarchy.info").string(), save_tree);
     wnd()->print_status_message(std::string("SUCCESS: Scene saved to: ") + scene_root_dir.string(), 5000);
+    wnd()->set_title(scene_root_dir.string());
+    m_save_commit_id = get_scene_history().get_active_commit_id();
+    set_window_title();
 }
 
 void  widgets::save()
@@ -1182,6 +1195,7 @@ void  widgets::on_coord_system_pos_changed()
             node_ptr->get_coord_system()->orientation()
             );
     get_scene_history().commit();
+    set_window_title();
 }
 
 void  widgets::on_coord_system_rot_changed()
@@ -1208,6 +1222,7 @@ void  widgets::on_coord_system_rot_changed()
             q
             );
     get_scene_history().commit();
+    set_window_title();
 }
 
 void  widgets::on_coord_system_rot_tait_bryan_changed()
@@ -1233,6 +1248,7 @@ void  widgets::on_coord_system_rot_tait_bryan_changed()
             q
             );
     get_scene_history().commit();
+    set_window_title();
 }
 
 
@@ -1281,7 +1297,10 @@ void  widgets::on_coord_system_position_finished()
                 );
     }
     if (!m_coord_system_location_backup_buffer.empty())
+    {
         get_scene_history().commit();
+        set_window_title();
+    }
 }
 
 
@@ -1407,6 +1426,15 @@ void  widgets::refresh_text_in_coord_system_rotation_widgets(quaternion const&  
     m_coord_system_yaw->setText(QString::number(yaw * 180.0f / PI()));
     m_coord_system_pitch->setText(QString::number(pitch * 180.0f / PI()));
     m_coord_system_roll->setText(QString::number(roll * 180.0f / PI()));
+}
+
+
+void  widgets::set_window_title()
+{
+    wnd()->set_title(
+        (get_scene_history().was_applied_mutator_since_commit(m_save_commit_id) ? "* " : "") +
+        (wnd()->get_current_scene_dir().empty() ? "New scene" : wnd()->get_current_scene_dir().string())
+        );
 }
 
 

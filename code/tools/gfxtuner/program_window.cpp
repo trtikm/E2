@@ -10,6 +10,7 @@
 #include <boost/property_tree/info_parser.hpp>
 #include <QString>
 #include <QIcon>
+#include <sstream>
 
 
 namespace tab_names { namespace {
@@ -67,7 +68,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     , m_menu_bar(this)
     , m_status_bar(this)
 {
-    this->setWindowTitle(get_program_name().c_str());
+    set_title();
     this->setWindowIcon(QIcon((get_program_options()->dataRoot() + "/shared/gfx/icons/E2_icon.png").c_str()));
     this->move({ ptree().get("window.pos.x",0),ptree().get("window.pos.y",0) });
     this->resize(ptree().get("window.width", 1024), ptree().get("window.height", 768));
@@ -192,4 +193,13 @@ void  program_window::on_tab_changed(int const  tab_index)
     {
         // Nothing to do...
     }
+}
+
+void  program_window::set_title(std::string const&  text)
+{
+    std::stringstream  sstr;
+    sstr << get_program_name();
+    if (!text.empty())
+        sstr << " [" << text << "]";
+    this->setWindowTitle(sstr.str().c_str());
 }

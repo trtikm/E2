@@ -28,8 +28,10 @@ struct program_window : public QMainWindow
     boost::property_tree::ptree&  ptree() { return *m_ptree; }
     qtgl::window<simulator>&  glwindow() noexcept { return m_glwindow; }
 
-    void print_status_message(std::string const&  msg, natural_32_bit const  num_miliseconds_to_show=2000)
+    void  print_status_message(std::string const&  msg, natural_32_bit const  num_miliseconds_to_show=2000)
     { m_status_bar.print_status_message(msg, num_miliseconds_to_show); }
+
+    void  set_title(std::string const&  text = "");
 
 public slots:
 
@@ -80,9 +82,9 @@ public slots:
 
     /// Slots for menu actions
     void  on_menu_new_scene() { m_menu_bar.on_new_scene(); m_tab_scene_widgets.clear_scene(); }
-    void  on_menu_open_scene() { if (m_menu_bar.on_open_scene()) m_tab_scene_widgets.open_scene(m_menu_bar.get_current_scene_dir()); }
-    void  on_menu_save_scene() { if (m_menu_bar.on_save_scene()) m_tab_scene_widgets.save_scene(m_menu_bar.get_current_scene_dir()); }
-    void  on_menu_save_as_scene() { if (m_menu_bar.on_save_as_scene()) m_tab_scene_widgets.save_scene(m_menu_bar.get_current_scene_dir()); }
+    void  on_menu_open_scene() { if (m_menu_bar.on_open_scene()) m_tab_scene_widgets.open_scene(get_current_scene_dir()); }
+    void  on_menu_save_scene() { if (m_menu_bar.on_save_scene()) m_tab_scene_widgets.save_scene(get_current_scene_dir()); }
+    void  on_menu_save_as_scene() { if (m_menu_bar.on_save_as_scene()) m_tab_scene_widgets.save_scene(get_current_scene_dir()); }
     void  on_menu_exit() { if (m_menu_bar.on_exit()) PostQuitMessage(0); }
 
     void  on_menu_edit_insert_coord_system() { m_tab_scene_widgets.on_scene_insert_coord_system(); }
@@ -93,6 +95,9 @@ public slots:
     void  on_menu_edit_mode_rotation() { m_tab_scene_widgets.on_scene_mode_rotation(); }
     void  on_menu_edit_undo() { m_tab_scene_widgets.on_scene_undo(); }
     void  on_menu_edit_redo() { m_tab_scene_widgets.on_scene_redo(); }
+
+    boost::filesystem::path&  get_current_scene_dir() { return m_menu_bar.get_current_scene_dir(); }
+
 
 private:
 
