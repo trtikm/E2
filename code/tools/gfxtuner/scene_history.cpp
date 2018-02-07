@@ -88,7 +88,7 @@ void  scene_history::redo()
     ASSUMPTION(m_active_commit < m_history.size());
     ASSUMPTION(detail::is_commit_node(m_history.at(m_active_commit)));
     if (m_active_commit < m_history.size() - 1UL)
-        for (++m_active_commit; detail::is_commit_node(m_history.at(m_active_commit)); ++m_active_commit)
+        for (++m_active_commit; !detail::is_commit_node(m_history.at(m_active_commit)); ++m_active_commit)
             m_history.at(m_active_commit)->redo();
     INVARIANT(detail::is_commit_node(m_history.at(m_active_commit)));
 }
@@ -106,25 +106,24 @@ natural_64_bit  scene_history::get_active_commit_id() const
     return detail::get_commit_node_id(m_history.at(m_active_commit));
 }
 
+std::size_t  scene_history::find_commit(natural_64_bit const  commit_id) const
+{
+    std::size_t  commit_index = 0UL;
+    for (; commit_index != m_history.size(); commit_index)
+        if (detail::is_commit_node(m_history.at(commit_index)) &&
+            detail::get_commit_node_id(m_history.at(commit_index)) == commit_id)
+            break;
+    ASSUMPTION(commit_index < m_history.size());
+    return commit_index;
+}
+
 bool  scene_history::was_applied_mutator_since_commit(natural_64_bit const  commit_id) const
 {
-    if (m_active_commit > 0UL)
-        for (std::size_t  i = m_active_commit - 1UL; i != 0UL; --i)
-            if (detail::is_commit_node(m_history.at(i)))
-            {
-                if (detail::get_commit_node_id(m_history.at(i)) == commit_id)
-                    break;
-            }
-            else if (m_history.at(i)->is_mutator())
-                return true;
-    if (m_active_commit < m_history.size() - 1UL)
-        for (std::size_t i = m_active_commit + 1UL; i != m_history.size(); ++i)
-            if (detail::is_commit_node(m_history.at(i)))
-            {
-                if (detail::get_commit_node_id(m_history.at(i)) == commit_id)
-                    break;
-            }
-            else if (m_history.at(i)->is_mutator())
-                return true;
+    std::size_t const  commit_index = find_commit(commit_id);
+    std::size_t const  start_index = std::min(commit_index, m_active_commit);
+    std::size_t const  end_index = std::max(commit_index, m_active_commit);
+    for (std::size_t i = start_index; i != end_index; ++i)
+        if (m_history.at(i)->is_mutator())
+            return true;
     return false;
 }

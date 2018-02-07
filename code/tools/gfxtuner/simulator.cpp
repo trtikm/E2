@@ -908,7 +908,7 @@ void  simulator::erase_batch_from_scene_node(std::string const&  batch_name, std
 
 void  simulator::clear_scene()
 {
-    get_scene_selection().clear();
+    m_scene_selection.clear();
     get_scene().clear();
 }
 
@@ -942,7 +942,7 @@ void  simulator::relocate_scene_node(std::string const&  scene_node_name, vector
     m_scene_edit_data.invalidate_data();
 }
 
-void  simulator::update_scene_selection(
+void  simulator::set_scene_selection(
         std::unordered_set<std::string> const&  selected_scene_nodes,
         std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
         )
@@ -950,6 +950,16 @@ void  simulator::update_scene_selection(
     TMPROF_BLOCK();
 
     m_scene_selection.clear();
+    insert_to_scene_selection(selected_scene_nodes, selected_batches);
+}
+
+void  simulator::insert_to_scene_selection(
+        std::unordered_set<std::string> const&  selected_scene_nodes,
+        std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
+        )
+{
+    TMPROF_BLOCK();
+
     for (auto const& name : selected_scene_nodes)
         m_scene_selection.insert_node(name);
     for (auto const& node_batch_names : selected_batches)
@@ -958,10 +968,25 @@ void  simulator::update_scene_selection(
     m_scene_edit_data.invalidate_data();
 }
 
-void  simulator::get_scene_selection_data(
+void  simulator::erase_from_scene_selection(
+        std::unordered_set<std::string> const&  selected_scene_nodes,
+        std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
+        )
+{
+    TMPROF_BLOCK();
+
+    for (auto const& name : selected_scene_nodes)
+        m_scene_selection.erase_node(name);
+    for (auto const& node_batch_names : selected_batches)
+        m_scene_selection.erase_batch(node_batch_names);
+
+    m_scene_edit_data.invalidate_data();
+}
+
+void  simulator::get_scene_selection(
         std::unordered_set<std::string>&  selected_scene_nodes,
         std::unordered_set<std::pair<std::string, std::string> >&  selected_batches
-        )
+        ) const
 {
     TMPROF_BLOCK();
 

@@ -86,16 +86,22 @@ struct simulator : public qtgl::real_time_simulator
     void  set_orientation_of_scene_node(std::string const&  scene_node_name, quaternion const&  new_orientation);
     void  relocate_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation);
 
-    scene_selection const&  get_scene_selection() const { return m_scene_selection; }
-    scene_selection&  get_scene_selection() { return m_scene_selection; }
-    void  update_scene_selection(
+    void  set_scene_selection(
             std::unordered_set<std::string> const&  selected_scene_nodes,
             std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
             );
-    void  get_scene_selection_data(
+    void  insert_to_scene_selection(
+            std::unordered_set<std::string> const&  selected_scene_nodes,
+            std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
+            );
+    void  erase_from_scene_selection(
+            std::unordered_set<std::string> const&  selected_scene_nodes,
+            std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
+            );
+    void  get_scene_selection(
         std::unordered_set<std::string>&  selected_scene_nodes,
         std::unordered_set<std::pair<std::string, std::string> >&  selected_batches
-        );
+        ) const;
 
     SCENE_EDIT_MODE  get_scene_edit_mode() const { return m_scene_edit_data.get_mode(); }
     void  set_scene_edit_mode(SCENE_EDIT_MODE const  edit_mode);

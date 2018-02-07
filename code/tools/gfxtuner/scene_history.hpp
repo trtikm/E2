@@ -233,6 +233,9 @@ struct  scene_history final
 private:
     scene_history();
 
+    /// Returns the index of the commit in 'm_history' vector.
+    std::size_t  find_commit(natural_64_bit const  commit_id) const;
+
     std::vector<scene_history_node_ptr>  m_history;
     std::size_t  m_active_commit;
 };
