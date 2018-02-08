@@ -72,6 +72,7 @@ inline void  normalise(vector3& u) { u.normalize(); }
 
 inline vector4  expand34(vector3 const& u, scalar h=scalar(1.0)) { return { u(0), u(1), u(2), h }; }
 inline vector3  contract43(vector4 const& u) { return { u(0), u(1), u(2) }; }
+inline scalar  length_4d(vector4 const& u) { return u.norm(); }
 
 inline vector3  transform_point(vector3 const& u, matrix44 const& M, scalar const h=scalar(1.0))
 { return contract43(M * expand34(u,h)); }
