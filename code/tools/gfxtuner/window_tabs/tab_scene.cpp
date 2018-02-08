@@ -500,6 +500,7 @@ widgets::widgets(program_window* const  wnd)
             std::unordered_set<std::string>  selected_scene_nodes{ history_node.get_name() };
             std::unordered_set<std::pair<std::string, std::string> >  selected_batches;
             m_wnd->glwindow().call_now(&simulator::erase_from_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_batches));
+            update_coord_system_location_widgets();
         });
     scene_history_coord_system_insert_to_selection::set_redo_processor(
         [this](scene_history_coord_system_insert_to_selection const&  history_node) {
@@ -513,6 +514,7 @@ widgets::widgets(program_window* const  wnd)
             std::unordered_set<std::string>  selected_scene_nodes{ history_node.get_name() };
             std::unordered_set<std::pair<std::string, std::string> >  selected_batches;
             m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_batches));
+            update_coord_system_location_widgets();
         });
 
 
@@ -587,6 +589,7 @@ widgets::widgets(program_window* const  wnd)
                     std::unordered_set<std::string>  selected_scene_nodes;
                     std::unordered_set<std::pair<std::string, std::string> >  selected_batches{ history_node.get_name() };
                     m_wnd->glwindow().call_now(&simulator::erase_from_scene_selection, std::ref(selected_scene_nodes), std::ref(selected_batches));
+                    update_coord_system_location_widgets();
                     return;
                 }
             }
@@ -612,6 +615,7 @@ widgets::widgets(program_window* const  wnd)
                     std::unordered_set<std::string>  selected_scene_nodes;
                     std::unordered_set<std::pair<std::string, std::string> >  selected_batches{ history_node.get_name() };
                     m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::ref(selected_scene_nodes), std::ref(selected_batches));
+                    update_coord_system_location_widgets();
                     return;
                 }
             }
@@ -1256,9 +1260,13 @@ void  widgets::on_coord_system_pos_changed()
                        m_coord_system_pos_z->text().toFloat());
 
     std::string const&  name = get_name_of_active_coord_system_in_tree_widget(*m_scene_tree);
+    auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, name);
+    INVARIANT(node_ptr != nullptr);
+    if(length(pos - node_ptr->get_coord_system()->origin()) < 1e-4f)
+        return;
+
     wnd()->glwindow().call_later(&simulator::set_position_of_scene_node, name, pos);
 
-    auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, name);
     get_scene_history().insert<scene_history_coord_system_relocate>(
             name,
             node_ptr->get_coord_system()->origin(),
@@ -1283,9 +1291,14 @@ void  widgets::on_coord_system_rot_changed()
     refresh_text_in_coord_system_rotation_widgets(q);
 
     std::string const&  name = get_name_of_active_coord_system_in_tree_widget(*m_scene_tree);
+    auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, name);
+    INVARIANT(node_ptr != nullptr);
+    if (length_4d(quaternion_coefficients_xyzw(q) -
+                  quaternion_coefficients_xyzw(node_ptr->get_coord_system()->orientation())) < 1e-4f)
+        return;
+
     wnd()->glwindow().call_later(&simulator::set_orientation_of_scene_node, name, q);
 
-    auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, name);
     get_scene_history().insert<scene_history_coord_system_relocate>(
             name,
             node_ptr->get_coord_system()->origin(),
@@ -1309,9 +1322,14 @@ void  widgets::on_coord_system_rot_tait_bryan_changed()
     refresh_text_in_coord_system_rotation_widgets(q);
 
     std::string const&  name = get_name_of_active_coord_system_in_tree_widget(*m_scene_tree);
+    auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, name);
+    INVARIANT(node_ptr != nullptr);
+    if (length_4d(quaternion_coefficients_xyzw(q) -
+                  quaternion_coefficients_xyzw(node_ptr->get_coord_system()->orientation())) < 1e-4f)
+        return;
+
     wnd()->glwindow().call_later(&simulator::set_orientation_of_scene_node, name, q);
 
-    auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, name);
     get_scene_history().insert<scene_history_coord_system_relocate>(
             name,
             node_ptr->get_coord_system()->origin(),
