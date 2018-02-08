@@ -457,12 +457,13 @@ widgets::widgets(program_window* const  wnd)
                 parent_tree_item = dynamic_cast<tree_widget_item*>(items_list.front());
                 ASSUMPTION(parent_tree_item->represents_coord_system());
             }
-            insert_coord_system(
+            auto const  tree_node = insert_coord_system(
                     history_node.get_name(),
                     history_node.get_origin(),
                     history_node.get_orientation(),
                     parent_tree_item
                     );
+            INVARIANT(tree_node->isSelected() == false);
     });
 
     scene_history_coord_system_relocate::set_undo_processor(
@@ -562,6 +563,7 @@ widgets::widgets(program_window* const  wnd)
             tree_node->setText(0, QString(history_node.get_batch_name().c_str()));
             tree_node->setIcon(0, m_batch_icon);
             parent_item->addChild(tree_node.get());
+            INVARIANT(tree_node->isSelected() == false);
             tree_node.release();
         });
 
@@ -1002,10 +1004,7 @@ void  widgets::on_scene_erase_selected()
         to_erase_items.insert(item);
     }
 
-    QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
     m_scene_tree->clearSelection();
-    QList<QTreeWidgetItem*> const  new_selection = m_scene_tree->selectedItems();
-    update_history_according_to_change_in_selection(old_selection, new_selection, false);
 
     std::unordered_set<QTreeWidgetItem*>  erased_items;
     for (auto const  item : to_erase_items)
