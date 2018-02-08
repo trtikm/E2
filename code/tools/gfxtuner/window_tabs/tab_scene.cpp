@@ -509,6 +509,7 @@ widgets::widgets(program_window* const  wnd)
             ASSUMPTION(tree_item->represents_coord_system());
             ASSUMPTION(!tree_item->isSelected());
             tree_item->setSelected(true);
+            m_scene_tree->scrollToItem(tree_item);
             std::unordered_set<std::string>  selected_scene_nodes{ history_node.get_name() };
             std::unordered_set<std::pair<std::string, std::string> >  selected_batches;
             m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_batches));
@@ -607,6 +608,7 @@ widgets::widgets(program_window* const  wnd)
                 {
                     ASSUMPTION(!item->isSelected());
                     item->setSelected(true);
+                    m_scene_tree->scrollToItem(item);
                     std::unordered_set<std::string>  selected_scene_nodes;
                     std::unordered_set<std::pair<std::string, std::string> >  selected_batches{ history_node.get_name() };
                     m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::ref(selected_scene_nodes), std::ref(selected_batches));
