@@ -406,6 +406,58 @@ class VoltageEffectRegion:
         return self._get_voltage(self.get_high_origin(), self.get_high_normal(), num_excitatory_trains, num_inhibitory_trains)
 
 
+def approximate_discrete_function(points, num_final_points=None):
+    assert is_sorted_list_of_points_along_x_axis(points)
+    assert num_final_points is None or (isinstance(num_final_points, int) and num_final_points > 1 and len(points) > num_final_points)
+    if len(points) < 2:
+        return points.copy()
+    if num_final_points is None:
+        num_final_points = max(2, len(points) // 10)
+    x = [p[0] for p in points]
+    min_x = min(x)
+    max_x = max(x)
+    dx = (max_x - min_x) / float(num_final_points - 1)
+    di = (max_x - min_x) / float(len(points))
+    assert dx - di > 1e-4
+    min_cluster_size = 1 if di < 1e-4 else max(1, int(dx/di))
+
+    def append_approximate_point(current_x, idx, output):
+        j = bisect.bisect_left(x, current_x + dx, idx)
+        cluster = [p[1] for p in points[idx:j]]
+        output.append((current_x, 0.0 if len(cluster) == 0 else sum(cluster) / max(min_cluster_size, len(cluster))))
+        return j
+
+    result = []
+    append_approximate_point(min_x, 0, result)
+    i = 0
+    curr_x = min_x + dx
+    while i < len(points) and curr_x <= max_x - dx*0.75:
+        end = append_approximate_point(curr_x, i, result)
+        i = bisect.bisect_left(x, curr_x, i, end)
+        curr_x += dx
+    append_approximate_point(max_x, bisect.bisect_left(x, max_x - dx), result)
+    return result
+
+
+def interpolate_discrete_function(points, num_segment_inner_points=None):
+    assert is_sorted_list_of_points_along_x_axis(points)
+    assert num_segment_inner_points is None or (isinstance(num_segment_inner_points, int) and num_segment_inner_points >= 0)
+    if len(points) < 2:
+        return points.copy()
+    if num_segment_inner_points is None:
+        num_segment_inner_points = 5
+    tangents = [(0.0, 0.0)]
+    for i in range(1, len(points) - 1):
+        tangent = 0.5 * numpy.subtract(points[i + 1], points[i - 1])
+        tangents.append((tangent[0], tangent[1]))
+    tangents.append((0.0, 0.0))
+    assert len(points) == len(tangents)
+    result = []
+    for i in range(len(points) - 1):
+        result += make_points_of_hermit_cubic_spline(points[i], tangents[i], points[i + 1], tangents[i + 1], 2 + num_segment_inner_points)
+    return result
+
+
 ########################################################################################################################
 ########################################################################################################################
 ########################################################################################################################
