@@ -50,6 +50,7 @@ class Distribution:
     
     def to_json(self):
         return {
+            "histogram": self._histogram.copy(),
             "events": self.get_events(),
             "counts": self.get_counts_of_events(),
             "probabilities": self.get_probabilities_of_events(),
@@ -59,6 +60,19 @@ class Distribution:
             "standard_deviation": self.get_standard_deviation(),
             "coefficient_of_variation": self.get_coefficient_of_variation()
         }
+
+    @staticmethod
+    def from_json(data_in_json):
+        """
+        Constructs a distribution instance for the data in JSON format as produced from the function 'to_json' above.
+        """
+        assert isinstance(data_in_json, dict)
+        assert "histogram" in data_in_json or ("events" in data_in_json and "probabilities" in data_in_json)
+        if "histogram" in data_in_json:
+            return Distribution(data_in_json["histogram"])
+        else:
+            assert len(data_in_json["events"]) == len(data_in_json["probabilities"])
+            return Distribution(dict(zip(data_in_json["events"], data_in_json["probabilities"])))
 
     def copy(self):
         return Distribution(self.get_histogram())
