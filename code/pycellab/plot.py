@@ -12,7 +12,7 @@ def get_title_placeholder():
     return "@$@"
 
 
-def __split_points(points):
+def _split_points(points):
     xs = []
     ys = []
     for x, y in points:
@@ -21,18 +21,95 @@ def __split_points(points):
     return xs, ys
 
 
+def get_predefined_colour_abbreviations():
+    return [
+        'b',         # blue
+        'g',         # green
+        'r',         # red
+        'c',         # cyan
+        'm',         # magenta
+        'y',         # yellow
+        'k',         # black
+        'w',         # white
+        ]
+
+
+class Plot:
+    def __init__(self, pathname, title=None, xaxis_name=None, faxis_name=None, size_xy=None, dpi=None):
+        assert isinstance(pathname, str) and len(pathname) > 0
+        assert title is None or isinstance(title, str)
+        assert xaxis_name is None or isinstance(xaxis_name, str)
+        assert faxis_name is None or isinstance(faxis_name, str)
+        assert size_xy is None or (isinstance(size_xy, tuple) and len(size_xy) == 2)
+        assert dpi is None or isinstance(dpi, int)
+        if size_xy is None:
+            size_xy = (19, 9)
+        if dpi is None:
+            dpi = 100
+        self._pathname = pathname
+        os.makedirs(os.path.dirname(self._pathname), exist_ok=True)
+        self._fig = plt.figure(figsize=size_xy, dpi=dpi)
+        self._ax = self._fig.gca()
+        if title:
+            self._ax.set_title(title)
+        if xaxis_name:
+            self._ax.set_xlabel(xaxis_name)
+        if faxis_name:
+            self._ax.set_ylabel(faxis_name)
+        self._ax.grid(True, linestyle='dotted')
+        self._auto_colour_index = 0
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._fig.savefig(self._pathname, bbox_inches='tight')
+        plt.close()
+
+    def make_plot(self, draw_fn, points):
+        assert callable(draw_fn)
+        assert isinstance(points, list) and all(isinstance(p, tuple) and len(p) == 2 for p in points)
+        x, y = _split_points(points)
+        draw_fn(self._ax, x, y)
+
+    def _choose_colours(self, colours):
+        if colours is not None:
+            return colours
+        if self._auto_colour_index < len(get_predefined_colour_abbreviations()):
+            self._auto_colour_index += 1
+            return get_predefined_colour_abbreviations()[self._auto_colour_index - 1]
+        return (
+            "(" +
+            numpy.random.uniform(0.3, 0.7) + "," +
+            numpy.random.uniform(0.3, 0.7) + "," +
+            numpy.random.uniform(0.3, 0.7) + ")"
+            )
+
+    def curve(self, points, colours=None, marker="-"):
+        self.make_plot(lambda ax, x, y: ax.plot(x, y, marker, c=self._choose_colours(colours)), points)
+
+    def scatter(self, points, colours=None):
+        self.make_plot(lambda ax, x, y: ax.scatter(x, y, s=2, c=self._choose_colours(colours)), points)
+
+    def histogram(self, distrib, colours=None, normalised=None):
+        if isinstance(distrib, dict):   # 'distrib' is a plain histogram.
+            distrib = distribution.Distribution(distrib)
+        assert isinstance(distrib, distribution.Distribution)
+        if normalised:
+            points = distrib.get_probability_points()
+        else:
+            points = distrib.get_points()
+
+        if len(distrib.get_events()) < 2:
+            bar_width = 0.8
+        else:
+            bar_width = min(map(lambda x: abs(x[1] - x[0]), zip(distrib.get_events()[:-1], distrib.get_events()[1:])))
+        self.make_plot(lambda ax, x, y: ax.bar(x, y, bar_width, color=self._choose_colours(colours), align="center"), points)
+
+
 def __write_xplot(draw_fn, points, pathname, title, xaxis_name, faxis_name):
-    os.makedirs(os.path.dirname(pathname), exist_ok=True)
-    fig = plt.figure(figsize=(19, 9), dpi=100)
-    ax = fig.gca()
-    if title: ax.set_title(title)
-    if xaxis_name: ax.set_xlabel(xaxis_name)
-    if faxis_name: ax.set_ylabel(faxis_name)
-    ax.grid(True, linestyle='dotted')
-    x, y = __split_points(points)
-    draw_fn(ax, x, y)
-    fig.savefig(pathname, bbox_inches='tight')
-    plt.close()
+    with Plot(pathname, title, xaxis_name, faxis_name) as the_plot:
+        the_plot.make_plot(draw_fn, points)
 
 
 def _scale_rgb_colour(rgb, weight):
