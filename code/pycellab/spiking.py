@@ -1623,54 +1623,6 @@ def _compute_interconfig_for_time_differences_between_pre_post_spikes(cfg):
                                 )
                             )
 
-
-            # src_plot = os.path.join(case_output_dir, "plots", "post_pre_time_differences_distribution.png")
-            # if not os.path.isfile(src_plot):
-            #     continue
-            # dst_plot = os.path.join(output_root_dir, "post_pre_time_differences_distribution.png")
-            # shutil.copy(src_plot, dst_plot)
-            # with open(os.path.join(case_output_dir, "post_pre_time_differences_distribution.json"), "r") as ifile:
-            #     differences_distribution_in_json = json.load(ifile)
-            # differences_distribution = distribution.Distribution.from_json(differences_distribution_in_json)
-            # plot.histogram(
-            #     differences_distribution,
-            #     os.path.join(output_root_dir, "post_pre_time_differences_distribution_X.png")
-            #     )
-            # points = differences_distribution.get_probability_points()
-            # plot.curve(
-            #     points,
-            #     os.path.join(output_root_dir, "post_pre_time_differences_distribution_X_points.png"),
-            #     title="points",
-            #     marker="."
-            #     )
-            # approximated_points = datalgo.approximate_discrete_function(points)
-            # interpolated_approximated_points = datalgo.interpolate_discrete_function(approximated_points)
-            # plot.curve(
-            #     approximated_points,
-            #     os.path.join(output_root_dir, "post_pre_time_differences_distribution_Y_points.png"),
-            #     title="approximated points",
-            #     marker="."
-            #     )
-            #
-            # print("BEFORE!!")
-            # with plot.Plot(
-            #         os.path.join(output_root_dir, "post_pre_time_differences_distribution_Z_points.png"),
-            #         "points and approximated points"
-            #         ) as plt:
-            #     print("INSIDE!!")
-            #     plt.histogram(differences_distribution, legend="histogram")
-            #     plt.curve(points, legend="points")
-            #     plt.curve(approximated_points, legend="approximated_points")
-            #     plt.curve(interpolated_approximated_points, legend="interpolated_approximated_points")
-            # print("AFTER!!")
-            #
-            # break
-
-        # print("Tasks collection done,")
-
-
-
-
     make_comparison_plots_of_pre_post_difference_distributions(cfg)
 
     tmprof_end = time.time()
@@ -1687,7 +1639,7 @@ def evaluate_time_differences_between_pre_post_spikes(cfg, force_recompute):
         else:
             print("Building the configuration '" + construction_data.get_name() + "'.")
             _evaluate_time_differences_between_pre_post_spikes(construction_data)
-    if True:#force_recompute or not os.path.exists(cfg.get_interconfig_output_dir()):
+    if force_recompute or not os.path.exists(cfg.get_interconfig_output_dir()):
         if os.path.exists(cfg.get_interconfig_output_dir()):
             shutil.rmtree(cfg.get_interconfig_output_dir())
         os.makedirs(cfg.get_interconfig_output_dir())
