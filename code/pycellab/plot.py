@@ -30,7 +30,7 @@ def get_predefined_colour_abbreviations():
         'm',         # magenta
         'y',         # yellow
         'k',         # black
-        'w',         # white
+        # 'w',         # white
         ]
 
 
@@ -58,19 +58,23 @@ class Plot:
             self._ax.set_ylabel(faxis_name)
         self._ax.grid(True, linestyle='dotted')
         self._auto_colour_index = 0
+        self._show_legend = False
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._show_legend is True:
+            self._ax.legend()
         self._fig.savefig(self._pathname, bbox_inches='tight')
         plt.close()
 
-    def make_plot(self, draw_fn, points):
+    def make_plot(self, draw_fn, points, has_legend=False):
         assert callable(draw_fn)
         assert isinstance(points, list) and all(isinstance(p, tuple) and len(p) == 2 for p in points)
         x, y = _split_points(points)
         draw_fn(self._ax, x, y)
+        self._show_legend = self._show_legend or has_legend is True
 
     def _choose_colours(self, colours):
         if colours is not None:
@@ -78,20 +82,23 @@ class Plot:
         if self._auto_colour_index < len(get_predefined_colour_abbreviations()):
             self._auto_colour_index += 1
             return get_predefined_colour_abbreviations()[self._auto_colour_index - 1]
-        return (
-            "(" +
-            numpy.random.uniform(0.3, 0.7) + "," +
-            numpy.random.uniform(0.3, 0.7) + "," +
-            numpy.random.uniform(0.3, 0.7) + ")"
+        return (numpy.random.uniform(0.0, 0.75), numpy.random.uniform(0.0, 0.75), numpy.random.uniform(0.0, 0.75))
+
+    def curve(self, points, colours=None, marker=None, legend=None):
+        self.make_plot(
+            lambda ax, x, y: ax.plot(x, y, "-" if marker is None else marker, c=self._choose_colours(colours), label=legend),
+            points,
+            legend is not None
             )
 
-    def curve(self, points, colours=None, marker="-"):
-        self.make_plot(lambda ax, x, y: ax.plot(x, y, marker, c=self._choose_colours(colours)), points)
+    def scatter(self, points, colours=None, legend=None):
+        self.make_plot(
+            lambda ax, x, y: ax.scatter(x, y, s=2, c=self._choose_colours(colours), label=legend),
+            points,
+            legend is not None
+            )
 
-    def scatter(self, points, colours=None):
-        self.make_plot(lambda ax, x, y: ax.scatter(x, y, s=2, c=self._choose_colours(colours)), points)
-
-    def histogram(self, distrib, colours=None, normalised=None):
+    def histogram(self, distrib, colours=None, normalised=None, legend=None):
         if isinstance(distrib, dict):   # 'distrib' is a plain histogram.
             distrib = distribution.Distribution(distrib)
         assert isinstance(distrib, distribution.Distribution)
@@ -104,7 +111,11 @@ class Plot:
             bar_width = 0.8
         else:
             bar_width = min(map(lambda x: abs(x[1] - x[0]), zip(distrib.get_events()[:-1], distrib.get_events()[1:])))
-        self.make_plot(lambda ax, x, y: ax.bar(x, y, bar_width, color=self._choose_colours(colours), align="center"), points)
+        self.make_plot(
+            lambda ax, x, y: ax.bar(x, y, bar_width, color=self._choose_colours(colours), align="center", label=legend),
+            points,
+            legend is not None
+            )
 
 
 def __write_xplot(draw_fn, points, pathname, title, xaxis_name, faxis_name):
