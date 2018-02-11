@@ -1552,6 +1552,127 @@ def _compute_interconfig_for_time_differences_between_pre_post_spikes(cfg):
     assert isinstance(cfg, config.TimeDifferencesBetweenPrePostSpikes)
     print("Building the inter-configuration summary data to '" + cfg.get_interconfig_output_dir() + "'.")
     tmprof_begin = time.time()
+
+    def make_comparison_plots_of_pre_post_difference_distributions(cfg):
+        print("    Building comparison plots of pre- and post- difference distributions.")
+        output_root_dir = os.path.join(cfg.get_interconfig_output_dir(), "compare_distribution_plots")
+        os.makedirs(output_root_dir, exist_ok=True)
+
+        considered_percentages_of_regularity_phases = [25.0, 50.0, 75.0]
+        considered_mean_frequencies = [12.0, 15.0, 18.0, 48.0, 60.0, 72.0]
+
+        print("        - collecting source distributions.")
+        tasks = dict()
+        for case_output_dir in cfg.get_output_dirs_of_configurations():
+            files = [x for x in os.listdir(case_output_dir) if os.path.isfile(os.path.join(case_output_dir, x))]
+            if "construction_data.json" not in files or "post_pre_time_differences_distribution.json" not in files:
+                continue
+            with open(os.path.join(case_output_dir, "construction_data.json"), "r") as ifile:
+                construction_data = json.load(ifile)
+            if all(abs(construction_data["pre_percentage_of_regularity_phases"] - p) > 0.001 for p in considered_percentages_of_regularity_phases):
+                continue
+            if all(abs(construction_data["post_percentage_of_regularity_phases"] - p) > 0.001 for p in considered_percentages_of_regularity_phases):
+                continue
+            if all(abs(construction_data["pre_mean_frequency"] - f) > 0.001 for f in considered_mean_frequencies):
+                continue
+            if all(abs(construction_data["post_mean_frequency"] - f) > 0.001 for f in considered_mean_frequencies):
+                continue
+
+            task_type = (
+                "pre_"  + ("e" if construction_data["pre_is_excitatory"]  is True else "i") + "_"
+                "post_" + ("e" if construction_data["post_is_excitatory"] is True else "i")
+                )
+
+            task_subtype = (
+                "regulatory_" +
+                "pre_"  + format(construction_data["pre_percentage_of_regularity_phases"], ".2f") + "_" +
+                "post_" + format(construction_data["post_percentage_of_regularity_phases"], ".2f")
+                )
+
+            record = {
+                "dir": case_output_dir,
+                "pre_mean_frequency": construction_data["pre_mean_frequency"],
+                "post_mean_frequency": construction_data["post_mean_frequency"],
+            }
+
+            if task_type in tasks:
+                if task_subtype in tasks[task_type]:
+                    tasks[task_type][task_subtype].append(record)
+                else:
+                    tasks[task_type][task_subtype] = [record]
+            else:
+                tasks[task_type] = {task_subtype: [record]}
+        assert len(tasks) == 4 and all(len(sub) == 9 and all(len(dirs) == 9 for _, dirs in sub.items()) for _, sub in tasks.items())
+        print("        - generating plots.")
+        for task_name, subtasks in tasks.items():
+            for subtask_name, records in subtasks.items():
+                full_name = task_name + "__" + subtask_name
+                with plot.Plot(os.path.join(output_root_dir, full_name + ".png"), full_name) as plt:
+                    for record in records:
+                        print("            " + full_name)
+                        with open(os.path.join(record["dir"], "post_pre_time_differences_distribution.json"), "r") as ifile:
+                            differences_distribution_in_json = json.load(ifile)
+                        differences_distribution = distribution.Distribution.from_json(differences_distribution_in_json)
+                        plt.curve(
+                            datalgo.interpolate_discrete_function(
+                                datalgo.approximate_discrete_function(differences_distribution.get_probability_points())
+                                ),
+                            legend=(
+                                "pre " + format(record["pre_mean_frequency"], ".2f") +
+                                ", post " + format(record["post_mean_frequency"], ".2f")
+                                )
+                            )
+
+
+            # src_plot = os.path.join(case_output_dir, "plots", "post_pre_time_differences_distribution.png")
+            # if not os.path.isfile(src_plot):
+            #     continue
+            # dst_plot = os.path.join(output_root_dir, "post_pre_time_differences_distribution.png")
+            # shutil.copy(src_plot, dst_plot)
+            # with open(os.path.join(case_output_dir, "post_pre_time_differences_distribution.json"), "r") as ifile:
+            #     differences_distribution_in_json = json.load(ifile)
+            # differences_distribution = distribution.Distribution.from_json(differences_distribution_in_json)
+            # plot.histogram(
+            #     differences_distribution,
+            #     os.path.join(output_root_dir, "post_pre_time_differences_distribution_X.png")
+            #     )
+            # points = differences_distribution.get_probability_points()
+            # plot.curve(
+            #     points,
+            #     os.path.join(output_root_dir, "post_pre_time_differences_distribution_X_points.png"),
+            #     title="points",
+            #     marker="."
+            #     )
+            # approximated_points = datalgo.approximate_discrete_function(points)
+            # interpolated_approximated_points = datalgo.interpolate_discrete_function(approximated_points)
+            # plot.curve(
+            #     approximated_points,
+            #     os.path.join(output_root_dir, "post_pre_time_differences_distribution_Y_points.png"),
+            #     title="approximated points",
+            #     marker="."
+            #     )
+            #
+            # print("BEFORE!!")
+            # with plot.Plot(
+            #         os.path.join(output_root_dir, "post_pre_time_differences_distribution_Z_points.png"),
+            #         "points and approximated points"
+            #         ) as plt:
+            #     print("INSIDE!!")
+            #     plt.histogram(differences_distribution, legend="histogram")
+            #     plt.curve(points, legend="points")
+            #     plt.curve(approximated_points, legend="approximated_points")
+            #     plt.curve(interpolated_approximated_points, legend="interpolated_approximated_points")
+            # print("AFTER!!")
+            #
+            # break
+
+        # print("Tasks collection done,")
+
+
+
+
+    make_comparison_plots_of_pre_post_difference_distributions(cfg)
+
     tmprof_end = time.time()
     print("  Done in " + utility.duration_string(tmprof_begin, tmprof_end) + " seconds.")
 
@@ -1566,7 +1687,7 @@ def evaluate_time_differences_between_pre_post_spikes(cfg, force_recompute):
         else:
             print("Building the configuration '" + construction_data.get_name() + "'.")
             _evaluate_time_differences_between_pre_post_spikes(construction_data)
-    if force_recompute or not os.path.exists(cfg.get_interconfig_output_dir()):
+    if True:#force_recompute or not os.path.exists(cfg.get_interconfig_output_dir()):
         if os.path.exists(cfg.get_interconfig_output_dir()):
             shutil.rmtree(cfg.get_interconfig_output_dir())
         os.makedirs(cfg.get_interconfig_output_dir())
