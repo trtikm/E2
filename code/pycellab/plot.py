@@ -21,16 +21,24 @@ def _split_points(points):
     return xs, ys
 
 
-def get_predefined_colour_abbreviations():
+def get_predefined_colour_names():
     return [
-        'b',         # blue
-        'g',         # green
-        'r',         # red
-        'c',         # cyan
-        'm',         # magenta
-        'y',         # yellow
-        'k',         # black
-        # 'w',         # white
+        "blue",
+        "green",
+        "red",
+        "cyan",
+        "magenta",
+        "orange",
+        "black",
+        "brown",
+        "navy",
+        "khaki",
+        "olive",
+        "pink",
+        "violet",
+        "purple",
+        "yellow",
+        "salmon",
         ]
 
 
@@ -79,9 +87,9 @@ class Plot:
     def _choose_colours(self, colours):
         if colours is not None:
             return colours
-        if self._auto_colour_index < len(get_predefined_colour_abbreviations()):
+        if self._auto_colour_index < len(get_predefined_colour_names()):
             self._auto_colour_index += 1
-            return get_predefined_colour_abbreviations()[self._auto_colour_index - 1]
+            return get_predefined_colour_names()[self._auto_colour_index - 1]
         return (numpy.random.uniform(0.0, 0.75), numpy.random.uniform(0.0, 0.75), numpy.random.uniform(0.0, 0.75))
 
     def curve(self, points, colours=None, marker=None, legend=None):
