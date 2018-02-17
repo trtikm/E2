@@ -912,7 +912,7 @@ void  widgets::on_scene_insert_batch()
         tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(item);
         INVARIANT(tree_item != nullptr);
         std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
-        if (tree_item->represents_coord_system())
+        if (tree_item->represents_coord_system() &&  qtgl::to_string(tree_item->text(0)) != get_pivot_node_name())
         {
             nodes.insert(tree_item);
             auto const  node = wnd()->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
@@ -923,7 +923,7 @@ void  widgets::on_scene_insert_batch()
     }
     if (nodes.empty())
     {
-        wnd()->print_status_message("ERROR: No coordinate system is selected.", 10000);
+        wnd()->print_status_message("ERROR: No coordinate system is selected ('@pivot' is ignored).", 10000);
         return;
     }
 
