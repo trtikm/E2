@@ -66,6 +66,10 @@ struct  widgets
     void  on_scene_undo();
     void  on_scene_redo();
 
+    void  on_pause();
+
+    bool  is_editing_enabled() const;
+
     void  selection_changed_listener();
     bool  processing_selection_change() const { return m_processing_selection_change; }
 
@@ -93,7 +97,7 @@ private:
     void  erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std::unordered_set<QTreeWidgetItem*>&  erased_items);
 
     void  update_coord_system_location_widgets();
-    void  enable_coord_system_location_widgets(bool const  state);
+    void  enable_coord_system_location_widgets(bool const  state, bool const  read_only);
     void  refresh_text_in_coord_system_location_widgets(scene_node_ptr const  node_ptr);
     void  refresh_text_in_coord_system_rotation_widgets(quaternion const&  q);
 

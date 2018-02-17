@@ -425,7 +425,7 @@ widgets::widgets(program_window* const  wnd)
     , m_coord_system_location_backup_buffer()
 {
     m_scene_tree->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
-    enable_coord_system_location_widgets(false);
+    enable_coord_system_location_widgets(false, false);
 
     scene_history_coord_system_insert::set_undo_processor(
         [this](scene_history_coord_system_insert const&  history_node) {
@@ -803,6 +803,12 @@ void  widgets::on_scene_insert_coord_system()
 {
     lock_bool const  _(&m_processing_selection_change);
 
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Scene editing is disabled.", 10000);
+        return;
+    }
+
     bool  use_pivot = false;
     QTreeWidgetItem*  parent_tree_item = nullptr;
     std::string  parent_tree_item_name;
@@ -905,6 +911,12 @@ void  widgets::on_scene_insert_batch()
 {
     lock_bool const  _(&m_processing_selection_change);
 
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Scene editing is disabled.", 10000);
+        return;
+    }
+
     std::unordered_set<tree_widget_item*>  nodes;
     std::unordered_set<std::string>  used_names;
     foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
@@ -999,6 +1011,12 @@ void  widgets::on_scene_erase_selected()
 
     lock_bool const  _(&m_processing_selection_change);
 
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Scene editing is disabled.", 10000);
+        return;
+    }
+
     std::unordered_set<QTreeWidgetItem*>  to_erase_items;
     foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
     {
@@ -1082,6 +1100,12 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
 
 void  widgets::clear_scene()
 {
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Scene editing is disabled.", 10000);
+        return;
+    }
+
     m_scene_tree->clear();
     wnd()->glwindow().call_now(&simulator::clear_scene);
     get_scene_history().clear();
@@ -1142,6 +1166,12 @@ static tree_widget_item*  load_scene_node(
 
 void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
 {
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Scene load is disabled.", 10000);
+        return;
+    }
+
     clear_scene();
 
     try
@@ -1233,6 +1263,12 @@ static void  save_scene_item(
 
 void  widgets::save_scene(boost::filesystem::path const&  scene_root_dir)
 {
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Scene save is disabled.", 10000);
+        return;
+    }
+
     boost::property_tree::ptree save_tree;
     for (int i = 0, n = m_scene_tree->topLevelItemCount(); i != n; ++i)
         save_scene_item(
@@ -1411,22 +1447,30 @@ void  widgets::on_coord_system_rotation_finished()
 
 void  widgets::on_scene_mode_selection()
 {
-    wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, SCENE_EDIT_MODE::SELECT_SCENE_OBJECT);
+    if (is_editing_enabled())
+        wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, SCENE_EDIT_MODE::SELECT_SCENE_OBJECT);
 }
 
 void  widgets::on_scene_mode_translation()
 {
-    wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES);
+    if (is_editing_enabled())
+        wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES);
 }
 
 void  widgets::on_scene_mode_rotation()
 {
-    wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, SCENE_EDIT_MODE::ROTATE_SELECTED_NODES);
+    if (is_editing_enabled())
+        wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, SCENE_EDIT_MODE::ROTATE_SELECTED_NODES);
 }
 
 void  widgets::on_scene_undo()
 {
     lock_bool const  _(&m_processing_selection_change);
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Scene editing is disabled.", 10000);
+        return;
+    }
     get_scene_history().undo();
     set_window_title();
 }
@@ -1434,8 +1478,25 @@ void  widgets::on_scene_undo()
 void  widgets::on_scene_redo()
 {
     lock_bool const  _(&m_processing_selection_change);
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Scene editing is disabled.", 10000);
+        return;
+    }
     get_scene_history().redo();
     set_window_title();
+}
+
+
+void  widgets::on_pause()
+{
+    update_coord_system_location_widgets();
+}
+
+
+bool  widgets::is_editing_enabled() const
+{
+    return wnd()->glwindow().call_now(&simulator::paused);
 }
 
 
@@ -1451,20 +1512,20 @@ void  widgets::update_coord_system_location_widgets()
             return true;
             }())
     {
-        enable_coord_system_location_widgets(false);
+        enable_coord_system_location_widgets(false, false);
         return;
     }
 
     tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(selected_items.front());
     INVARIANT(tree_item != nullptr);
 
-    enable_coord_system_location_widgets(true);
+    enable_coord_system_location_widgets(true, !is_editing_enabled());
     std::string const  tree_item_name = get_name_of_active_coord_system_in_tree_widget(*m_scene_tree);
     auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
     refresh_text_in_coord_system_location_widgets(node_ptr);
 }
 
-void  widgets::enable_coord_system_location_widgets(bool const  state)
+void  widgets::enable_coord_system_location_widgets(bool const  state, bool const  read_only)
 {
     m_coord_system_pos_x->setEnabled(state);
     m_coord_system_pos_y->setEnabled(state);
@@ -1493,6 +1554,21 @@ void  widgets::enable_coord_system_location_widgets(bool const  state)
         m_coord_system_yaw->setText("");
         m_coord_system_pitch->setText("");
         m_coord_system_roll->setText("");
+    }
+    else
+    {
+        m_coord_system_pos_x->setReadOnly(read_only);
+        m_coord_system_pos_y->setReadOnly(read_only);
+        m_coord_system_pos_z->setReadOnly(read_only);
+
+        m_coord_system_rot_w->setReadOnly(read_only);
+        m_coord_system_rot_x->setReadOnly(read_only);
+        m_coord_system_rot_y->setReadOnly(read_only);
+        m_coord_system_rot_z->setReadOnly(read_only);
+
+        m_coord_system_yaw->setReadOnly(read_only);
+        m_coord_system_pitch->setReadOnly(read_only);
+        m_coord_system_roll->setReadOnly(read_only);
     }
 }
 
@@ -1538,6 +1614,11 @@ QWidget*  make_scene_tab_content(widgets const&  w)
     {
         QVBoxLayout* const scene_tab_layout = new QVBoxLayout;
         {
+            w.wnd()->glwindow().register_listener(
+                        simulator_notifications::paused(),
+                        { &program_window::scene_pause_listener, w.wnd() }
+                        );
+
             {
                 QTreeWidgetItem* headerItem = new QTreeWidgetItem();
                 headerItem->setText(0, QString("Hierarchy"));

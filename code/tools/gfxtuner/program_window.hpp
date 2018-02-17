@@ -76,6 +76,7 @@ public slots:
     void  on_scene_coord_system_rotation_finished() { m_tab_scene_widgets.on_coord_system_rotation_finished(); }
 
     void  scene_selection_listener() { m_tab_scene_widgets.selection_changed_listener(); }
+    void  scene_pause_listener() { m_tab_scene_widgets.on_pause(); }
 
     /// Status bar
     void  status_bar_edit_mode_listener() { m_status_bar.edit_mode_listener(); }
