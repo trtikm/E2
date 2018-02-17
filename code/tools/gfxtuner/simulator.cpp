@@ -22,53 +22,6 @@
 #include <algorithm>
 
 
-static  void update(
-    qtgl::keyframes const&  keyframes,
-    float_64_bit const  time_to_simulate_in_seconds,
-    float_32_bit&  time
-    )
-{
-    TMPROF_BLOCK();
-
-    if (!keyframes.loaded_successfully())
-        return;
-
-    time = qtgl::update_animation_time(
-                time,
-                time_to_simulate_in_seconds,
-                keyframes.start_time_point(),
-                keyframes.end_time_point()
-                );
-}
-
-
-static void  draw(
-    qtgl::batch_ptr const  batch,
-    qtgl::keyframes const&  keyframes,
-    float_32_bit const  time,
-    matrix44 const&  view_projection_matrix,
-    qtgl::draw_state_ptr&  draw_state
-    )
-{
-    TMPROF_BLOCK();
-
-    if (!keyframes.loaded_successfully() || batch == nullptr || !qtgl::make_current(*batch, draw_state))
-        return;
-    INVARIANT(batch->shaders_binding().operator bool());
-
-    std::vector<matrix44> transform_matrices;
-    compute_frame_of_keyframe_animation(
-            keyframes,
-            view_projection_matrix,
-            keyframes.start_time_point() + time,
-            transform_matrices
-            );
-
-    render_batch(*batch,transform_matrices,{1.0f,0.0f,0.0f,0.0f});
-    draw_state = batch->draw_state();
-}
-
-
 simulator::simulator()
     : qtgl::real_time_simulator()
 
@@ -179,71 +132,7 @@ simulator::simulator()
     , m_batch_coord_system(qtgl::create_basis_vectors(get_program_options()->dataRoot()))
     , m_scene_edit_data(SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
 
-    //, m_ske_test_batch{
-    //        qtgl::batch::create(canonical_path(
-    //                boost::filesystem::path{get_program_options()->dataRoot()} /
-    //                "shared/gfx/models/ske_box/ske_box.txt"
-    //                ))
-    //        }
-    //, m_ske_test_modelspace{
-    //        canonical_path(
-    //            boost::filesystem::path{get_program_options()->dataRoot()} /
-    //            "shared/gfx/animation/ske_box/ske_box/coord_systems.txt"
-    //            )
-    //        }
-    //, m_ske_test_keyframes{
-    //        qtgl::keyframe{canonical_path(
-    //            boost::filesystem::path{get_program_options()->dataRoot()} /
-    //            "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_0.txt"
-    //            )},
-    //        qtgl::keyframe{canonical_path(
-    //            boost::filesystem::path{get_program_options()->dataRoot()} /
-    //            "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_1.txt"
-    //            )},
-    //        qtgl::keyframe{canonical_path(
-    //            boost::filesystem::path{get_program_options()->dataRoot()} /
-    //            "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_2.txt"
-    //            )},
-    //        qtgl::keyframe{canonical_path(
-    //            boost::filesystem::path{get_program_options()->dataRoot()} /
-    //            "shared/gfx/animation/ske_box/ske_box/ske_box_animation/keyframe_3.txt"
-    //            )},
-    //        }
-    //, m_ske_test_time(0.0f)
-
-    , m_barb_batch{
-            qtgl::batch::create(canonical_path(
-                    boost::filesystem::path{get_program_options()->dataRoot()} /
-                    "shared/gfx/models/barbarian_female/body.txt"
-                    //"shared/gfx/models/barbarian_female_ow/body.txt"
-                    ))
-            }
-    , m_barb_keyframes({
-            canonical_path(
-                boost::filesystem::path{get_program_options()->dataRoot()} /
-                "shared/gfx/animation/barbarian_female/body/walk/keyframe_0.txt"
-                ),
-            canonical_path(
-                boost::filesystem::path{get_program_options()->dataRoot()} /
-                "shared/gfx/animation/barbarian_female/body/walk/keyframe_1.txt"
-                ),
-            canonical_path(
-                boost::filesystem::path{get_program_options()->dataRoot()} /
-                "shared/gfx/animation/barbarian_female/body/walk/keyframe_2.txt"
-                ),
-            canonical_path(
-                boost::filesystem::path{get_program_options()->dataRoot()} /
-                "shared/gfx/animation/barbarian_female/body/walk/keyframe_3.txt"
-                ),
-            canonical_path(
-                boost::filesystem::path{get_program_options()->dataRoot()} /
-                "shared/gfx/animation/barbarian_female/body/walk/keyframe_4.txt"
-                ),
-            })
-    , m_barb_time(0.0f)
-{
-    int iii = 0;    
-}
+{}
 
 simulator::~simulator()
 {
@@ -296,6 +185,8 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
         if (!paused())
             perform_simulation_step(seconds_from_previous_call);
+        else
+            perform_scene_update(seconds_from_previous_call);
 
         if (m_do_single_step)
         {
@@ -303,9 +194,6 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
             call_listeners(simulator_notifications::paused());
             m_do_single_step = false;
         }
-
-        if (paused())
-            perform_scene_update(seconds_from_previous_call);
     }
 
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -336,17 +224,13 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
 {
     TMPROF_BLOCK();
 
-    //update(m_ske_test_modelspace, m_ske_test_keyframes, time_to_simulate_in_seconds, m_ske_test_time);
-    update(m_barb_keyframes, time_to_simulate_in_seconds, m_barb_time);
 }
 
 
-void  simulator::render_simulation_state(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
+void  simulator::render_simulation_state(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state)
 {
     TMPROF_BLOCK();
 
-    //draw(m_ske_test_batch, m_ske_test_modelspace, m_ske_test_keyframes, m_ske_test_time, view_projection_matrix, draw_state);
-    draw(m_barb_batch, m_barb_keyframes, m_barb_time, view_projection_matrix, draw_state);
 }
 
 void  simulator::perform_scene_update(float_64_bit const  time_to_simulate_in_seconds)
@@ -637,7 +521,7 @@ void  simulator::rotate_scene_node(std::string const&  scene_node_name, float_64
 
 }
 
-void  simulator::render_scene_batches(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
+void  simulator::render_scene_batches(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state)
 {
     TMPROF_BLOCK();
 
@@ -648,19 +532,12 @@ void  simulator::render_scene_batches(matrix44 const&  view_projection_matrix, q
                 render_batch(*name_batch.second, view_projection_matrix * name_node.second->get_world_matrix());
                 draw_state = name_batch.second->draw_state();
             }
-    //for (auto const& node_batch : m_scene_selection.get_batches())
-    //{
-    //    //qtgl::spatial_boundary const  boundary =
-    //    //    m_batch_spiker->buffers_binding()->find_vertex_buffer_properties()->boundary();
-
-    //    //m_batch_spiker_bbox = qtgl::create_wireframe_box(boundary.lo_corner(), boundary.hi_corner(),
-    //    //    get_program_options()->dataRoot(), "/netviewer/spiker_bbox");
-    //    //m_batch_spiker_bsphere = qtgl::create_wireframe_sphere(boundary.radius(), 5U,
-    //    //    get_program_options()->dataRoot(), "/netviewer/spiker_bsphere");
-    //}
 }
 
-void  simulator::render_scene_coord_systems(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
+void  simulator::render_scene_coord_systems(
+        matrix44 const&  view_projection_matrix,
+        qtgl::draw_state_ptr&  draw_state
+        )
 {
     TMPROF_BLOCK();
 
@@ -678,7 +555,11 @@ void  simulator::render_scene_coord_systems(matrix44 const&  view_projection_mat
     //    qtgl::glapi().glEnable(GL_DEPTH_TEST);
 }
 
-void  simulator::render_scene_coord_system(scene_node_ptr const  node, matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
+void  simulator::render_scene_coord_system(
+        scene_node_ptr const  node,
+        matrix44 const&  view_projection_matrix,
+        qtgl::draw_state_ptr&  draw_state
+        )
 {
     TMPROF_BLOCK();
 
