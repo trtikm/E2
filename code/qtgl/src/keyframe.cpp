@@ -144,25 +144,37 @@ void  compute_frame_of_keyframe_animation(
 }
 
 
+template<typename T>
+static void  _compute_frame_of_keyframe_animation(
+    keyframes const&  keyframes,
+    float_32_bit const  time_point,
+    std::vector<T>&  output
+    )
+{
+    std::pair<std::size_t, std::size_t> const  indices_of_keyframe_to_interpolate =
+        find_indices_of_keyframes_to_interpolate_for_time(keyframes, time_point);
+    float_32_bit const  interpolation_param = qtgl::compute_interpolation_parameter(
+        time_point,
+        keyframes.time_point_at(indices_of_keyframe_to_interpolate.first),
+        keyframes.time_point_at(indices_of_keyframe_to_interpolate.second)
+        );
+    compute_frame_of_keyframe_animation(
+        keyframes,
+        indices_of_keyframe_to_interpolate,
+        interpolation_param,
+        output
+        );
+}
+
+
+
 void  compute_frame_of_keyframe_animation(
         keyframes const&  keyframes,
         float_32_bit const  time_point,
         std::vector<angeo::coordinate_system>&  output
         )
 {
-    std::pair<std::size_t, std::size_t> const  indices_of_keyframe_to_interpolate =
-            find_indices_of_keyframes_to_interpolate_for_time(keyframes, time_point);
-    float_32_bit const  interpolation_param = qtgl::compute_interpolation_parameter(
-            time_point,
-            keyframes.time_point_at(indices_of_keyframe_to_interpolate.first),
-            keyframes.time_point_at(indices_of_keyframe_to_interpolate.second)
-            );
-    compute_frame_of_keyframe_animation(
-            keyframes,
-            indices_of_keyframe_to_interpolate,
-            interpolation_param,
-            output
-            );
+    _compute_frame_of_keyframe_animation<angeo::coordinate_system>(keyframes, time_point, output);
 }
 
 
@@ -172,52 +184,19 @@ void  compute_frame_of_keyframe_animation(
         std::vector<matrix44>&  output
         )
 {
-    ASSUMPTION(output.size() == keyframes.num_coord_systems_per_keyframe());
-    std::pair<std::size_t, std::size_t> const  indices_of_keyframe_to_interpolate =
-            find_indices_of_keyframes_to_interpolate_for_time(keyframes, time_point);
-    float_32_bit const  interpolation_param = qtgl::compute_interpolation_parameter(
-            time_point,
-            keyframes.time_point_at(indices_of_keyframe_to_interpolate.first),
-            keyframes.time_point_at(indices_of_keyframe_to_interpolate.second)
-            );
-    compute_frame_of_keyframe_animation(
-            keyframes,
-            indices_of_keyframe_to_interpolate,
-            interpolation_param,
-            output
-            );
+    _compute_frame_of_keyframe_animation<matrix44>(keyframes, time_point, output);
 }
 
 
 void  compute_frame_of_keyframe_animation(
         keyframes const&  keyframes,
-        qtgl::modelspace const&  modelspace,
-        float_32_bit const  time_point,
-        std::vector<matrix44>&  output  // the results will be composed with the current data.
-        )
-{
-    ASSUMPTION(keyframes.num_coord_systems_per_keyframe() == modelspace.get_coord_systems().size());
-    ASSUMPTION(output.size() == modelspace.get_coord_systems().size());
-    compute_frame_of_keyframe_animation(keyframes, time_point, output);
-    for (std::size_t  i = 0UL; i != modelspace.get_coord_systems().size(); ++i)
-    {
-        matrix44 M;
-        angeo::to_base_matrix(modelspace.get_coord_systems().at(i), M);
-        output.at(i) *= M;
-    }
-}
-
-
-void  compute_frame_of_keyframe_animation(
-        keyframes const&  keyframes,
-        qtgl::modelspace const&  modelspace,
         matrix44 const&  target_space, // typically, the target space is a camera space, i.e. view_projection_matrix
         float_32_bit const  time_point,
         std::vector<matrix44>&  output // old content won't be used and it will be owerwritten by the computed data.
         )
 {
-    std::vector<matrix44>  transform_matrices(modelspace.get_coord_systems().size(), target_space);
-    compute_frame_of_keyframe_animation(keyframes, modelspace, time_point, transform_matrices);
+    std::vector<matrix44>  transform_matrices(keyframes.num_coord_systems_per_keyframe(), target_space);
+    compute_frame_of_keyframe_animation(keyframes, time_point, transform_matrices);
     using std::swap;
     swap(transform_matrices, output);
 }

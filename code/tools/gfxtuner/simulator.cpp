@@ -59,7 +59,6 @@ static void  draw(
     std::vector<matrix44> transform_matrices;
     compute_frame_of_keyframe_animation(
             keyframes,
-            *batch->get_modelspace(),
             view_projection_matrix,
             keyframes.start_time_point() + time,
             transform_matrices

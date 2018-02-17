@@ -27,6 +27,12 @@ struct  modelspace : public detail::async_resource_accessor_base<detail::modelsp
 using  modelspace_ptr = modelspace::modelspace_ptr;
 
 
+void  apply_modelspace_to_frame_of_keyframe_animation(
+        modelspace const&  modelspace,
+        std::vector<matrix44>&  frame  // the results will be composed with the current data.
+        );
+
+
 }
 
 #endif

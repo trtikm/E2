@@ -2,7 +2,6 @@
 #   define QTGL_DETAIL_KEYFRAME_HPP_INCLUDED
 
 #   include <qtgl/detail/keyframe_cache.hpp>
-#   include <qtgl/modelspace.hpp>
 #   include <utility/assumptions.hpp>
 #   include <vector>
 #   include <algorithm>
@@ -124,21 +123,12 @@ void  compute_frame_of_keyframe_animation(
 void  compute_frame_of_keyframe_animation(
         keyframes const&  keyframes,
         float_32_bit const  time_point,
-        std::vector<matrix44>&  output
-        );
-
-
-void  compute_frame_of_keyframe_animation(
-        keyframes const&  keyframes,
-        qtgl::modelspace const&  modelspace,
-        float_32_bit const  time_point,
         std::vector<matrix44>&  output  // the results will be composed with the current data.
         );
 
 
 void  compute_frame_of_keyframe_animation(
         keyframes const&  keyframes,
-        qtgl::modelspace const&  modelspace,
         matrix44 const&  target_space, // typically, the target space is a camera space, i.e. view_projection_matrix
         float_32_bit const  time_point,
         std::vector<matrix44>&  output // old content won't be used and it will be owerwritten by the computed data.
