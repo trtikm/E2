@@ -55,6 +55,7 @@ batch::batch(boost::filesystem::path const&  path)
     , m_shaders_binding()
     , m_textures_binding()
     , m_draw_state()
+    , m_modelspace()
 {
     ASSUMPTION(!m_path.empty());
     insert_load_request(*this);
@@ -122,6 +123,17 @@ draw_state_ptr  batch::draw_state() const
             m_draw_state = pbatch->m_draw_state;
     }
     return m_draw_state;
+}
+
+modelspace_ptr  batch::get_modelspace() const
+{
+    if (!m_modelspace.operator bool())
+    {
+        batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
+        if (pbatch.operator bool() && this != pbatch.get())
+            m_modelspace = pbatch->get_modelspace();
+    }
+    return m_modelspace;
 }
 
 std::unordered_set<vertex_shader_uniform_symbolic_name> const&  batch::symbolic_names_of_used_uniforms() const
@@ -311,6 +323,21 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
         }
         while (detail::read_line(istr,line));
 
+        boost::filesystem::path  modelspace_pathname;
+        if (line != "NONE" && line != "BACK" && line != "FRONT_AND_BACK")
+        {
+            boost::filesystem::path const  pathname = canonical_path(batch_file.parent_path() / line);
+            if (boost::filesystem::is_regular_file(pathname))
+                modelspace_pathname = pathname;
+            else
+            {
+                error_message = msgstream() << "Cannot find batch's model-space coord. systems file '" << pathname << "'.";
+                return{};
+            }
+
+            detail::read_line(istr, line);
+        }
+
         natural_32_bit  cull_face_mode;
         if (line == "NONE")
             cull_face_mode = GL_NONE;
@@ -405,7 +432,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                     shaders_binding::create(vertex_shader,fragment_shader),
                     textures_binding::create(texture_paths),
                     draw_state::create(cull_face_mode,use_alpha_blending,alpha_blending_src_function,alpha_blending_dst_function),
-                    nullptr
+                    modelspace_pathname.empty() ? nullptr : modelspace::create(modelspace_pathname)
                     );
     }
     else if (file_type == "E2::qtgl/batch/vertices/text")
@@ -473,6 +500,9 @@ bool  make_current(batch const&  binding, draw_state const* const  previous_stat
         else
             result = false;
     }
+
+    if (binding.get_modelspace().operator bool() && !binding.get_modelspace()->loaded_successfully())
+        result = false;
 
     if (!result)
         insert_load_request(binding);

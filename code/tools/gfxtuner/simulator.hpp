@@ -149,7 +149,6 @@ private:
     //std::vector<qtgl::keyframe>  m_ske_test_keyframes;
     //float_32_bit  m_ske_test_time;
     qtgl::batch_ptr  m_barb_batch;
-    qtgl::modelspace  m_barb_modelspace;
     qtgl::keyframes  m_barb_keyframes;
     float_32_bit  m_barb_time;
 };

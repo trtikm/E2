@@ -10,5 +10,6 @@ BINDING_IN_WEIGHTS_OF_MATRICES
 ..\..\meshes\ske_box\ske_box\weights_of_matrices.txt
 BINDING_IN_COLOUR
 ..\..\meshes\ske_box\ske_box\diffuse_colours.txt
+..\..\animation\ske_box\ske_box\coord_systems.txt
 BACK
 false

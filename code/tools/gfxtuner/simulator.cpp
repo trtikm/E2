@@ -23,7 +23,6 @@
 
 
 static  void update(
-    qtgl::modelspace const&  modelspace,
     qtgl::keyframes const&  keyframes,
     float_64_bit const  time_to_simulate_in_seconds,
     float_32_bit&  time
@@ -31,7 +30,7 @@ static  void update(
 {
     TMPROF_BLOCK();
 
-    if (!modelspace.loaded_successfully() || !keyframes.loaded_successfully())
+    if (!keyframes.loaded_successfully())
         return;
 
     time = qtgl::update_animation_time(
@@ -45,7 +44,6 @@ static  void update(
 
 static void  draw(
     qtgl::batch_ptr const  batch,
-    qtgl::modelspace const&  modelspace,
     qtgl::keyframes const&  keyframes,
     float_32_bit const  time,
     matrix44 const&  view_projection_matrix,
@@ -54,16 +52,14 @@ static void  draw(
 {
     TMPROF_BLOCK();
 
-    if (!modelspace.loaded_successfully() || !keyframes.loaded_successfully())
-        return;
-    if (batch == nullptr || !qtgl::make_current(*batch, draw_state))
+    if (!keyframes.loaded_successfully() || batch == nullptr || !qtgl::make_current(*batch, draw_state))
         return;
     INVARIANT(batch->shaders_binding().operator bool());
 
     std::vector<matrix44> transform_matrices;
     compute_frame_of_keyframe_animation(
             keyframes,
-            modelspace,
+            *batch->get_modelspace(),
             view_projection_matrix,
             keyframes.start_time_point() + time,
             transform_matrices
@@ -223,13 +219,6 @@ simulator::simulator()
                     //"shared/gfx/models/barbarian_female_ow/body.txt"
                     ))
             }
-    , m_barb_modelspace{
-            canonical_path(
-                boost::filesystem::path{get_program_options()->dataRoot()} /
-                "shared/gfx/animation/barbarian_female/body/coord_systems.txt"
-                //"shared/gfx/animation/barbarian_female_ow/body/coord_systems.txt"
-                )
-            }
     , m_barb_keyframes({
             canonical_path(
                 boost::filesystem::path{get_program_options()->dataRoot()} /
@@ -253,7 +242,9 @@ simulator::simulator()
                 ),
             })
     , m_barb_time(0.0f)
-{}
+{
+    int iii = 0;    
+}
 
 simulator::~simulator()
 {
@@ -347,7 +338,7 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
     TMPROF_BLOCK();
 
     //update(m_ske_test_modelspace, m_ske_test_keyframes, time_to_simulate_in_seconds, m_ske_test_time);
-    update(m_barb_modelspace, m_barb_keyframes, time_to_simulate_in_seconds, m_barb_time);
+    update(m_barb_keyframes, time_to_simulate_in_seconds, m_barb_time);
 }
 
 
@@ -356,7 +347,7 @@ void  simulator::render_simulation_state(matrix44 const&  view_projection_matrix
     TMPROF_BLOCK();
 
     //draw(m_ske_test_batch, m_ske_test_modelspace, m_ske_test_keyframes, m_ske_test_time, view_projection_matrix, draw_state);
-    draw(m_barb_batch, m_barb_modelspace, m_barb_keyframes, m_barb_time, view_projection_matrix, draw_state);
+    draw(m_barb_batch, m_barb_keyframes, m_barb_time, view_projection_matrix, draw_state);
 }
 
 void  simulator::perform_scene_update(float_64_bit const  time_to_simulate_in_seconds)
