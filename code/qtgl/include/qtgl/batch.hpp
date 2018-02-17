@@ -5,6 +5,7 @@
 #   include <qtgl/buffer.hpp>
 #   include <qtgl/shader.hpp>
 #   include <qtgl/texture.hpp>
+#   include <qtgl/modelspace.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <unordered_set>
 #   include <memory>
@@ -22,7 +23,8 @@ struct batch
             buffers_binding_ptr const  buffers_binding,
             shaders_binding_ptr const  shaders_binding,
             textures_binding_ptr const  textures_binding,
-            draw_state_ptr const  draw_state
+            draw_state_ptr const  draw_state,
+            modelspace_ptr const modelspace
             );
 
     batch(boost::filesystem::path const&  path);
@@ -31,7 +33,8 @@ struct batch
           buffers_binding_ptr const  buffers_binding,
           shaders_binding_ptr const  shaders_binding,
           textures_binding_ptr const  textures_binding,
-          draw_state_ptr const  draw_state
+          draw_state_ptr const  draw_state,
+          modelspace_ptr const modelspace
           );
 
     boost::filesystem::path const&  path() const noexcept { return m_path; }
@@ -44,6 +47,9 @@ struct batch
     std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms() const;
     natural_32_bit  num_matrices_per_vertex() const;
 
+    bool  has_modelspace() const { return m_modelspace.operator bool(); }
+    modelspace_ptr  get_modelspace() const { return m_modelspace; }
+
 private:
 
     boost::filesystem::path  m_path;
@@ -51,6 +57,7 @@ private:
     mutable shaders_binding_ptr  m_shaders_binding;
     mutable textures_binding_ptr  m_textures_binding;
     mutable draw_state_ptr  m_draw_state;
+    modelspace_ptr  m_modelspace;
 
     static std::unordered_set<vertex_shader_uniform_symbolic_name>  s_empty_uniforms;
 };

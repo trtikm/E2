@@ -34,10 +34,18 @@ std::shared_ptr<batch const>  batch::create(
         buffers_binding_ptr const  buffers_binding,
         shaders_binding_ptr const  shaders_binding,
         textures_binding_ptr const  textures_binding,
-        draw_state_ptr const  draw_state
+        draw_state_ptr const  draw_state,
+        modelspace_ptr const modelspace
         )
 {
-    return std::make_shared<batch const>(path,buffers_binding,shaders_binding,textures_binding,draw_state);
+    return std::make_shared<batch const>(
+                path,
+                buffers_binding,
+                shaders_binding,
+                textures_binding,
+                draw_state,
+                modelspace
+                );
 }
 
 
@@ -56,13 +64,15 @@ batch::batch(boost::filesystem::path const&  path,
              buffers_binding_ptr const  buffers_binding,
              shaders_binding_ptr const  shaders_binding,
              textures_binding_ptr const  textures_binding,
-             draw_state_ptr const  draw_state
+             draw_state_ptr const  draw_state,
+             modelspace_ptr const modelspace
              )
     : m_path(path)
     , m_buffers_binding(buffers_binding)
     , m_shaders_binding(shaders_binding)
     , m_textures_binding(textures_binding)
     , m_draw_state(draw_state)
+    , m_modelspace(modelspace)
 {
     ASSUMPTION(m_buffers_binding.operator bool());
     ASSUMPTION(m_shaders_binding.operator bool());
@@ -394,7 +404,8 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                     buffers_binding::create(index_buffer,buffer_paths),
                     shaders_binding::create(vertex_shader,fragment_shader),
                     textures_binding::create(texture_paths),
-                    draw_state::create(cull_face_mode,use_alpha_blending,alpha_blending_src_function,alpha_blending_dst_function)
+                    draw_state::create(cull_face_mode,use_alpha_blending,alpha_blending_src_function,alpha_blending_dst_function),
+                    nullptr
                     );
     }
     else if (file_type == "E2::qtgl/batch/vertices/text")

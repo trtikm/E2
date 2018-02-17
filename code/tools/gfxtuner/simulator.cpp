@@ -23,51 +23,30 @@
 
 
 static  void update(
-    qtgl::modelspace const  modelspace,
-    std::vector<qtgl::keyframe>&  keyframes,
+    qtgl::modelspace const&  modelspace,
+    qtgl::keyframes const&  keyframes,
     float_64_bit const  time_to_simulate_in_seconds,
     float_32_bit&  time
     )
 {
     TMPROF_BLOCK();
 
-    if (modelspace.data() == nullptr)
+    if (!modelspace.loaded_successfully() || !keyframes.loaded_successfully())
         return;
-    for (natural_64_bit  i = 0ULL; i != keyframes.size(); ++i)
-    {
-        if (keyframes.at(i).data() == nullptr)
-        {
-            std::string const* const  error =  keyframes.at(i).error_message();
-            return;
-        }
-        if (keyframes.at(i).data()->coord_systems().size() !=
-            modelspace.data()->coord_systems().size())
-            return;
-    }
-    std::sort(
-        keyframes.begin(),keyframes.end(),
-        [](qtgl::keyframe const& left, qtgl::keyframe const& right) -> bool {
-            return left.data()->time_point() < right.data()->time_point();
-        });
 
-    float_32_bit const  animation_length =
-            keyframes.back().data()->time_point() - keyframes.front().data()->time_point();
-    if (time_to_simulate_in_seconds >= animation_length)
-        time = 0.0f;
-    else
-    {
-        ASSUMPTION(time_to_simulate_in_seconds >= 0.0f && animation_length > 0.001f);
-        time += time_to_simulate_in_seconds;
-        while (time >= animation_length)
-            time -= animation_length;
-    }
+    time = qtgl::update_animation_time(
+                time,
+                time_to_simulate_in_seconds,
+                keyframes.start_time_point(),
+                keyframes.end_time_point()
+                );
 }
 
 
 static void  draw(
     qtgl::batch_ptr const  batch,
-    qtgl::modelspace const  modelspace,
-    std::vector<qtgl::keyframe>&  keyframes,
+    qtgl::modelspace const&  modelspace,
+    qtgl::keyframes const&  keyframes,
     float_32_bit const  time,
     matrix44 const&  view_projection_matrix,
     qtgl::draw_state_ptr&  draw_state
@@ -75,82 +54,23 @@ static void  draw(
 {
     TMPROF_BLOCK();
 
-    if (modelspace.data() == nullptr)
+    if (!modelspace.loaded_successfully() || !keyframes.loaded_successfully())
         return;
-    for (natural_64_bit  i = 0ULL; i != keyframes.size(); ++i)
-    {
-        if (keyframes.at(i).data() == nullptr)
-        {
-            std::string const* const  error =  keyframes.at(i).error_message();
-            return;
-        }
-        if (keyframes.at(i).data()->coord_systems().size() !=
-            modelspace.data()->coord_systems().size())
-            return;
-    }
-    std::sort(
-        keyframes.begin(),keyframes.end(),
-        [](qtgl::keyframe const& left, qtgl::keyframe const& right) -> bool {
-            return left.data()->time_point() < right.data()->time_point();
-        });
+    if (batch == nullptr || !qtgl::make_current(*batch, draw_state))
+        return;
+    INVARIANT(batch->shaders_binding().operator bool());
 
-    if (batch != nullptr && qtgl::make_current(*batch, draw_state))
-    {
-        INVARIANT(batch->shaders_binding().operator bool());
-        std::vector<matrix44> transform_matrices(modelspace.data()->coord_systems().size(),view_projection_matrix);
-        {
-            float_32_bit const  time_point = keyframes.front().data()->time_point() + time;
-            natural_64_bit  keyframe_index = 0ULL;
-            while (keyframe_index + 1ULL < keyframes.size() &&
-                   time_point >= keyframes.at(keyframe_index + 1ULL).data()->time_point())
-                ++keyframe_index;
-            natural_64_bit const  keyframe_succ_index = keyframe_index + (keyframes.size() < 2ULL ? 0ULL : 1ULL);
-            INVARIANT(keyframe_succ_index < keyframes.size());
-            INVARIANT(time_point >= keyframes.at(keyframe_index).data()->time_point());
-            INVARIANT(keyframe_index == keyframe_succ_index || time_point < keyframes.at(keyframe_succ_index).data()->time_point());
+    std::vector<matrix44> transform_matrices;
+    compute_frame_of_keyframe_animation(
+            keyframes,
+            modelspace,
+            view_projection_matrix,
+            keyframes.start_time_point() + time,
+            transform_matrices
+            );
 
-            float_32_bit  interpolation_param;
-            {
-                float_32_bit const  dt =
-                        keyframes.at(keyframe_succ_index).data()->time_point() -
-                        keyframes.at(keyframe_index).data()->time_point()
-                        ;
-                if (dt < 0.001f)
-                    interpolation_param = 0.0f;
-                else
-                    interpolation_param = (time_point - keyframes.at(keyframe_index).data()->time_point()) / dt;
-                interpolation_param = std::max(0.0f,std::min(interpolation_param,1.0f));
-            }
-
-//keyframe_index = 0ULL;
-//interpolation_param = 0.0f;
-
-            for (natural_64_bit  i = 0; i != modelspace.data()->coord_systems().size(); ++i)
-            {
-                matrix44 M;
-                {
-                    angeo::coordinate_system  S;
-                    angeo::interpolate_spherical(
-                                keyframes.at(keyframe_index).data()->coord_systems().at(i),
-                                keyframes.at(keyframe_succ_index).data()->coord_systems().at(i),
-                                interpolation_param,
-                                S
-                                );
-                    angeo::from_base_matrix(S,M);
-                }
-                transform_matrices.at(i) *= M;
-            }
-
-            for (natural_64_bit  i = 0; i != modelspace.data()->coord_systems().size(); ++i)
-            {
-                matrix44 M;
-                angeo::to_base_matrix(modelspace.data()->coord_systems().at(i),M);
-                transform_matrices.at(i) *= M;
-            }
-        }
-        render_batch(*batch,transform_matrices,{1.0f,0.0f,0.0f,0.0f});
-        draw_state = batch->draw_state();
-    }
+    render_batch(*batch,transform_matrices,{1.0f,0.0f,0.0f,0.0f});
+    draw_state = batch->draw_state();
 }
 
 
@@ -310,122 +230,28 @@ simulator::simulator()
                 //"shared/gfx/animation/barbarian_female_ow/body/coord_systems.txt"
                 )
             }
-    , m_barb_keyframes{
-            qtgl::keyframe{canonical_path(
+    , m_barb_keyframes({
+            canonical_path(
                 boost::filesystem::path{get_program_options()->dataRoot()} /
                 "shared/gfx/animation/barbarian_female/body/walk/keyframe_0.txt"
-                )},
-            qtgl::keyframe{canonical_path(
+                ),
+            canonical_path(
                 boost::filesystem::path{get_program_options()->dataRoot()} /
                 "shared/gfx/animation/barbarian_female/body/walk/keyframe_1.txt"
-                )},
-            qtgl::keyframe{canonical_path(
+                ),
+            canonical_path(
                 boost::filesystem::path{get_program_options()->dataRoot()} /
                 "shared/gfx/animation/barbarian_female/body/walk/keyframe_2.txt"
-                )},
-            qtgl::keyframe{canonical_path(
+                ),
+            canonical_path(
                 boost::filesystem::path{get_program_options()->dataRoot()} /
                 "shared/gfx/animation/barbarian_female/body/walk/keyframe_3.txt"
-                )},
-            qtgl::keyframe{canonical_path(
+                ),
+            canonical_path(
                 boost::filesystem::path{get_program_options()->dataRoot()} /
                 "shared/gfx/animation/barbarian_female/body/walk/keyframe_4.txt"
-                )},
-
-        
-        
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female/body/stand_straight/keyframe_0.txt"
-            //    )},
-
-
-
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_0.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_1.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_2.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_3.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_4.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_5.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_6.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_7.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_8.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_9.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_10.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_11.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_12.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_13.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_14.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_15.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_16.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_17.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_18.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_19.txt"
-            //    )},
-            //qtgl::keyframe{canonical_path(
-            //    boost::filesystem::path{get_program_options()->dataRoot()} /
-            //    "shared/gfx/animation/barbarian_female_ow/body/walk-cycle/keyframe_20.txt"
-            //    )},
-            }
+                ),
+            })
     , m_barb_time(0.0f)
 {}
 

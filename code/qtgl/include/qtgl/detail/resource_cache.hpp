@@ -18,6 +18,9 @@
 namespace qtgl { namespace detail {
 
 
+using  async_load_resuorce_priority_type = natural_32_bit;
+
+
 struct  resource_load_planner  final
 {
     using  pointer_to_resource_type = void*;
@@ -31,20 +34,25 @@ struct  resource_load_planner  final
 
     void  insert_load_request(
             boost::filesystem::path const&  path,
-            pointer_to_resource_type* const  pointer_to_resource,
+            pointer_to_resource_type const  pointer_to_resource,
             loader_type const&  loader,
-            natural_32_bit const  priority
+            async_load_resuorce_priority_type const  priority
             );
 
-    void  invalidate_load_request(pointer_to_resource_type* const  pointer_to_resource);
+    void  invalidate_load_request(pointer_to_resource_type const  pointer_to_resource);
 
     std::mutex&  mutex_to_resources() { return m_mutex_to_resources; }
 
-    void*  pointer_to_resource_just_being_loaded() { return m_pointer_to_resource_just_being_loaded; }
+    pointer_to_resource_type  pointer_to_resource_just_being_loaded() { return m_pointer_to_resource_just_being_loaded; }
 
 private:
 
-    using  queue_value_type = std::tuple<natural_32_bit,boost::filesystem::path,pointer_to_resource_type,loader_type>;
+    using  queue_value_type =
+                std::tuple<
+                    async_load_resuorce_priority_type,
+                    boost::filesystem::path,
+                    pointer_to_resource_type,loader_type
+                    >;
     using  queue_storage_type = std::vector<queue_value_type>;
     using  queus_less_than_type = std::function<bool(queue_value_type const&, queue_value_type const&)>;
 
@@ -73,7 +81,7 @@ private:
 
     queue_type  m_queue;
     std::mutex  m_mutex_to_resources;
-    void*  m_pointer_to_resource_just_being_loaded;
+    std::atomic<pointer_to_resource_type>  m_pointer_to_resource_just_being_loaded;
     std::thread  m_worker_thread;
     std::atomic<bool>  m_worker_finished;
 };
@@ -102,6 +110,7 @@ struct  resource_cache  final
         void  inc_ref_count()
         {
             ++m_ref_count;
+            ASSUMPTION(m_ref_count != 0ULL);
         }
 
         void  dec_ref_count()
@@ -132,7 +141,8 @@ struct  resource_cache  final
         bool  is_load_finished() const
         {
             std::lock_guard<std::mutex> const  lock(resource_load_planner::instance().mutex_to_resources());
-            return (void*)this != resource_load_planner::instance().pointer_to_resource_just_being_loaded() &&
+            return (resource_load_planner::pointer_to_resource_type)this != 
+                    resource_load_planner::instance().pointer_to_resource_just_being_loaded() &&
                    (m_wrapped_resource.is_constructed() || !m_error_message.empty());
         }
 
@@ -204,7 +214,7 @@ struct  resource_cache  final
             return m_data_ptr->second.resource_ptr();
         }
 
-        std::string const*  error_message() const
+        std::string const*  error_message_ptr() const
         {
             return m_data_ptr->second.error_message_ptr();
         }
@@ -218,7 +228,7 @@ struct  resource_cache  final
 
     void clear();
 
-    resource_handle  insert_load_request(key_type const&  key, natural_32_bit const  priority);
+    resource_handle  insert_load_request(key_type const&  key, async_load_resuorce_priority_type const  priority);
 
 private:
 
@@ -263,7 +273,7 @@ void resource_cache<resource_type__>::clear()
 template<typename resource_type__>
 typename resource_cache<resource_type__>::resource_handle  resource_cache<resource_type__>::insert_load_request(
     key_type const&  key,
-    natural_32_bit const  priority)
+    async_load_resuorce_priority_type const  priority)
 {
     TMPROF_BLOCK();
 
@@ -279,7 +289,7 @@ typename resource_cache<resource_type__>::resource_handle  resource_cache<resour
 
     resource_load_planner::instance().insert_load_request(
             key,
-            reinterpret_cast<resource_load_planner::pointer_to_resource_type*>(value_ptr->second.wrapped_resource_ptr()),
+            reinterpret_cast<resource_load_planner::pointer_to_resource_type>(wrapped_resource_ptr),
             std::bind(mapped_type::loader,&value_ptr->second,std::placeholders::_1,std::placeholders::_2),
             priority
             );
@@ -297,6 +307,64 @@ void  resource_cache<resource_type__>::on_unreferenced_resource(key_type const& 
     if (it->second.wrapped_resource_ptr() != resource_load_planner::instance().pointer_to_resource_just_being_loaded())
         m_cache.erase(it);
 }
+
+
+enum struct ASYNC_LOAD_STATE
+{
+    IN_PROGRESS,
+    FINISHED_SUCCESSFULLY,
+    FINISHED_WITH_ERROR,
+};
+
+
+template<typename resource_type__>
+struct  async_resource_accessor
+{
+    using  resource_type = resource_type__;
+    using  resource_cache_type = resource_cache<resource_type>;
+    using  key_type = typename resource_cache_type::key_type;
+
+    explicit async_resource_accessor(key_type const&  key, async_load_resuorce_priority_type const  priority)
+        : m_handle(resource_cache_type::instance().insert_load_request(key, priority))
+    {}
+
+    bool  loaded_successfully() const { return get_load_state() == ASYNC_LOAD_STATE::FINISHED_SUCCESSFULLY; }
+    bool  load_failed() const { return get_load_state() == ASYNC_LOAD_STATE::FINISHED_WITH_ERROR; }
+
+    key_type const&  key() const { return m_handle.key(); }
+
+    ASYNC_LOAD_STATE  get_load_state() const
+    {
+        return !m_handle.is_load_finished() ? ASYNC_LOAD_STATE::IN_PROGRESS :
+            resource_ptr() != nullptr ? ASYNC_LOAD_STATE::FINISHED_SUCCESSFULLY :
+            ASYNC_LOAD_STATE::FINISHED_WITH_ERROR;
+    }
+
+    resource_type const*  resource_ptr() const { return m_handle.resource_ptr(); }
+
+    std::string const*  error_message_ptr() const { return m_handle.error_message_ptr(); }
+
+private:
+
+    typename resource_cache_type::resource_handle  m_handle;
+};
+
+
+template<typename resource_type__>
+struct  async_resource_accessor_base : public async_resource_accessor<resource_type__>
+{
+    explicit async_resource_accessor_base(key_type const&  key, async_load_resuorce_priority_type const  priority)
+        : async_resource_accessor(key, priority)
+    {}
+
+    boost::filesystem::path  path() const { return boost::filesystem::path(key()); }
+    std::string const&  get_load_fail_message() const { return *error_message_ptr(); }
+
+protected:
+    using  async_resource_accessor<resource_type>::key;
+    using  async_resource_accessor<resource_type>::resource_ptr;
+    using  async_resource_accessor<resource_type>::error_message_ptr;
+};
 
 
 }}

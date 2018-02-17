@@ -31,7 +31,7 @@ void  resource_load_planner::clear()
 
 void  resource_load_planner::insert_load_request(
         boost::filesystem::path const&  path,
-        pointer_to_resource_type* const  pointer_to_resource,
+        pointer_to_resource_type const  pointer_to_resource,
         loader_type const&  loader,
         natural_32_bit const  priority
         )
@@ -47,7 +47,7 @@ void  resource_load_planner::insert_load_request(
 }
 
 
-void  resource_load_planner::invalidate_load_request(pointer_to_resource_type* const  pointer_to_resource)
+void  resource_load_planner::invalidate_load_request(pointer_to_resource_type const  pointer_to_resource)
 {
     TMPROF_BLOCK();
 

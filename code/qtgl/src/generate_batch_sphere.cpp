@@ -32,7 +32,8 @@ batch_ptr  create_wireframe_sphere(
             canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt")
             ),
         qtgl::textures_binding::create(textures_binding::texture_files_map{}),
-        qtgl::draw_state::create()
+        qtgl::draw_state::create(),
+        nullptr
         );
     return pbatch;
 }

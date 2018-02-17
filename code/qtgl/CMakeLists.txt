@@ -59,7 +59,9 @@ add_library(${THIS_TARGET_NAME}
     ./src/mouse_props.cpp
 
     ./include/qtgl/modelspace.hpp
+
     ./include/qtgl/keyframe.hpp
+    ./src/keyframe.cpp
 
     ./include/qtgl/batch_generators.hpp
     ./src/generate_batch_grid.cpp

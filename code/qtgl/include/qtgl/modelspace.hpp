@@ -2,27 +2,23 @@
 #   define QTGL_DETAIL_MODELSPACE_HPP_INCLUDED
 
 #   include <qtgl/detail/modelspace_cache.hpp>
+#   include <memory>
 
 namespace qtgl {
 
 
-struct  modelspace
+struct  modelspace : public detail::async_resource_accessor_base<detail::modelspace_data>
 {
-    using  data_ptr = detail::modelspace_data;
-
-    modelspace(boost::filesystem::path const&  path)
-        : m_handle(detail::modelspace_cache::instance().insert_load_request(path,1U))
+    explicit modelspace(boost::filesystem::path const&  path)
+        : detail::async_resource_accessor_base<detail::modelspace_data>(path,1U)
     {}
 
-    boost::filesystem::path const&  path() const { return m_handle.key(); }
-    bool  is_load_finished() const { return m_handle.is_load_finished(); }
-
-    data_ptr const*  data() const { return m_handle.resource_ptr(); }
-
-private:
-
-    detail::modelspace_cache::resource_handle  m_handle;
+    std::vector<angeo::coordinate_system> const&  get_coord_systems() const
+    { return resource_ptr()->coord_systems(); }
 };
+
+
+using  modelspace_ptr = std::shared_ptr<modelspace const>;
 
 
 }
