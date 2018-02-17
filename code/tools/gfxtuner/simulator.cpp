@@ -101,7 +101,7 @@ static void  draw(
         {
             float_32_bit const  time_point = keyframes.front().data()->time_point() + time;
             natural_64_bit  keyframe_index = 0ULL;
-            while (keyframe_index + 2ULL < keyframes.size() &&
+            while (keyframe_index + 1ULL < keyframes.size() &&
                    time_point >= keyframes.at(keyframe_index + 1ULL).data()->time_point())
                 ++keyframe_index;
             natural_64_bit const  keyframe_succ_index = keyframe_index + (keyframes.size() < 2ULL ? 0ULL : 1ULL);
@@ -119,7 +119,7 @@ static void  draw(
                     interpolation_param = 0.0f;
                 else
                     interpolation_param = (time_point - keyframes.at(keyframe_index).data()->time_point()) / dt;
-                interpolation_param = std::max(-1.0f,std::min(interpolation_param,1.0f));
+                interpolation_param = std::max(0.0f,std::min(interpolation_param,1.0f));
             }
 
 //keyframe_index = 0ULL;
@@ -130,7 +130,6 @@ static void  draw(
                 matrix44 M;
                 {
                     angeo::coordinate_system  S;
-                    S = keyframes.at(keyframe_index).data()->coord_systems().at(i);
                     angeo::interpolate_spherical(
                                 keyframes.at(keyframe_index).data()->coord_systems().at(i),
                                 keyframes.at(keyframe_succ_index).data()->coord_systems().at(i),
