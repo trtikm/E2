@@ -955,6 +955,9 @@ def save_batch_files(
                     f.write("BINDING_TEXTURE_??\n")
                 f.write(os.path.relpath(textures_export_info[i],batch_root_dir) + "\n")
 
+            if "coord_systems" in export_info:
+                f.write(os.path.relpath(export_info["coord_systems"],batch_root_dir) + "\n")
+
             f.write("BACK\n")
             f.write("false\n")
 
