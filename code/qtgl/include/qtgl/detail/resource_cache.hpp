@@ -301,6 +301,8 @@ typename resource_cache<resource_type__>::resource_handle  resource_cache<resour
 template<typename resource_type__>
 void  resource_cache<resource_type__>::on_unreferenced_resource(key_type const&  key)
 {
+    TMPROF_BLOCK();
+
     auto const  it = m_cache.find(key);
     INVARIANT(it != m_cache.end());
     std::lock_guard<std::mutex> const  lock(resource_load_planner::instance().mutex_to_resources());
