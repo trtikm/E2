@@ -56,6 +56,11 @@ batch::batch(boost::filesystem::path const&  path)
     , m_textures_binding()
     , m_draw_state()
     , m_modelspace()
+    , m_batch_found_in_cache__buffers(false)
+    , m_batch_found_in_cache__shaders(false)
+    , m_batch_found_in_cache__textures(false)
+    , m_batch_found_in_cache__state(false)
+    , m_batch_found_in_cache__modelspace(false)
 {
     ASSUMPTION(!m_path.empty());
     insert_load_request(*this);
@@ -74,6 +79,11 @@ batch::batch(boost::filesystem::path const&  path,
     , m_textures_binding(textures_binding)
     , m_draw_state(draw_state)
     , m_modelspace(modelspace)
+    , m_batch_found_in_cache__buffers(false)
+    , m_batch_found_in_cache__shaders(false)
+    , m_batch_found_in_cache__textures(false)
+    , m_batch_found_in_cache__state(false)
+    , m_batch_found_in_cache__modelspace(false)
 {
     ASSUMPTION(m_buffers_binding.operator bool());
     ASSUMPTION(m_shaders_binding.operator bool());
@@ -83,55 +93,70 @@ batch::batch(boost::filesystem::path const&  path,
 
 buffers_binding_ptr  batch::buffers_binding() const
 {
-    if (!m_buffers_binding.operator bool())
+    if (!m_batch_found_in_cache__buffers && !m_buffers_binding.operator bool())
     {
         batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
         if (pbatch.operator bool())
+        {
             m_buffers_binding = pbatch->m_buffers_binding;
+            m_batch_found_in_cache__buffers = true;
+        }
     }
     return m_buffers_binding;
 }
 
 shaders_binding_ptr  batch::shaders_binding() const
 {
-    if (!m_shaders_binding.operator bool())
+    if (!m_batch_found_in_cache__shaders && !m_shaders_binding.operator bool())
     {
         batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
         if (pbatch.operator bool())
+        {
             m_shaders_binding =  pbatch->m_shaders_binding;
+            m_batch_found_in_cache__shaders = true;
+        }
     }
     return m_shaders_binding;
 }
 
 textures_binding_ptr  batch::textures_binding() const
 {
-    if (!m_textures_binding.operator bool())
+    if (!m_batch_found_in_cache__textures && !m_textures_binding.operator bool())
     {
         batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
         if (pbatch.operator bool())
+        {
             m_textures_binding = pbatch->m_textures_binding;
+            m_batch_found_in_cache__textures = true;
+        }
     }
     return m_textures_binding;
 }
 
 draw_state_ptr  batch::draw_state() const
 {
-    if (!m_draw_state.operator bool())
+    if (!m_batch_found_in_cache__state && !m_draw_state.operator bool())
     {
         batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
         if (pbatch.operator bool())
+        {
             m_draw_state = pbatch->m_draw_state;
+            m_batch_found_in_cache__state = true;
+        }
     }
     return m_draw_state;
 }
 
 modelspace_ptr  batch::get_modelspace() const
 {
-    if (!m_modelspace.operator bool())
+    if (!m_batch_found_in_cache__modelspace && !m_modelspace.operator bool())
     {
         batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
         if (pbatch.operator bool() && this != pbatch.get())
+        {
             m_modelspace = pbatch->get_modelspace();
+            m_batch_found_in_cache__modelspace = true;
+        }
     }
     return m_modelspace;
 }
@@ -461,6 +486,8 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
 
 void  insert_load_request(batch const&  batch_ref)
 {
+    TMPROF_BLOCK();
+
     if (batch_ref.path().string().find("generic/") != 0UL &&
         !detail::batch_cache::instance().find(batch_ref.path()).operator bool())
         detail::batch_cache::instance().insert_load_request(batch_ref.path());

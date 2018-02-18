@@ -57,6 +57,12 @@ private:
     mutable draw_state_ptr  m_draw_state;
     mutable modelspace_ptr  m_modelspace;
 
+    mutable bool  m_batch_found_in_cache__buffers;
+    mutable bool  m_batch_found_in_cache__shaders;
+    mutable bool  m_batch_found_in_cache__textures;
+    mutable bool  m_batch_found_in_cache__state;
+    mutable bool  m_batch_found_in_cache__modelspace;
+
     static std::unordered_set<vertex_shader_uniform_symbolic_name>  s_empty_uniforms;
 };
 
