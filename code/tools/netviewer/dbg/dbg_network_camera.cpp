@@ -1,7 +1,7 @@
 #include <netviewer/dbg/dbg_network_camera.hpp>
 #include <netviewer/program_options.hpp>
-#include <netviewer/draw_utils.hpp>
 #include <qtgl/batch_generators.hpp>
+#include <qtgl/draw.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -97,7 +97,7 @@ void  dbg_network_camera::render_camera_frustum(matrix44 const&  view_projection
     if (qtgl::make_current(*m_batch_basis, *draw_state))
     {
         INVARIANT(m_batch_basis->shaders_binding().operator bool());
-        render_batch(*m_batch_basis,view_projection_matrix,*m_camera->coordinate_system());
+        qtgl::render_batch(*m_batch_basis,view_projection_matrix,*m_camera->coordinate_system());
         draw_state = m_batch_basis->draw_state();
     }
 
@@ -107,7 +107,7 @@ void  dbg_network_camera::render_camera_frustum(matrix44 const&  view_projection
 
         float_32_bit const  param = -0.5f * (m_camera->near_plane() + m_camera->far_plane());
 
-        render_batch(
+        qtgl::render_batch(
             *m_batch_camera_frustum,
             view_projection_matrix,
             angeo::coordinate_system(

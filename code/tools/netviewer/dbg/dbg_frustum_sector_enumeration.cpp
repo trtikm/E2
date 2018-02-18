@@ -1,5 +1,4 @@
 #include <netviewer/dbg/dbg_frustum_sector_enumeration.hpp>
-#include <netviewer/draw_utils.hpp>
 #include <netviewer/program_options.hpp>
 #include <netview/enumerate.hpp>
 #include <qtgl/batch_generators.hpp>
@@ -91,7 +90,7 @@ void  dbg_frustum_sector_enumeration::render(matrix44 const&  view_projection_ma
         {
             INVARIANT(pos_batch.second->shaders_binding().operator bool());
 
-            render_batch(
+            qtgl::render_batch(
                 *pos_batch.second,
                 view_projection_matrix,
                 angeo::coordinate_system(pos_batch.first,quaternion_identity()),

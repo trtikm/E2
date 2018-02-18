@@ -1,8 +1,8 @@
 #include <netviewer/dbg/dbg_raycast_sector_enumeration.hpp>
-#include <netviewer/draw_utils.hpp>
 #include <netviewer/program_options.hpp>
 #include <netview/enumerate.hpp>
 #include <qtgl/batch_generators.hpp>
+#include <qtgl/draw.hpp>
 #include <utility/msgstream.hpp>
 
 
@@ -125,7 +125,7 @@ void  dbg_raycast_sector_enumeration::render(matrix44 const&  view_projection_ma
         if (qtgl::make_current(*m_batch_line, *draw_state))
         {
             INVARIANT(m_batch_line->shaders_binding().operator bool());
-            render_batch(*m_batch_line,view_projection_matrix);
+            qtgl::render_batch(*m_batch_line,view_projection_matrix);
             draw_state = m_batch_line->draw_state();
         }
 
@@ -134,7 +134,7 @@ void  dbg_raycast_sector_enumeration::render(matrix44 const&  view_projection_ma
         {
             INVARIANT(pos_batch.second->shaders_binding().operator bool());
 
-            render_batch(
+            qtgl::render_batch(
                 *pos_batch.second,
                 view_projection_matrix,
                 angeo::coordinate_system(pos_batch.first,quaternion_identity()),

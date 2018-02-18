@@ -32,9 +32,6 @@ add_executable(${THIS_TARGET_NAME}
     scene_utils.hpp
     scene_utils.cpp
 
-    draw_utils.hpp
-    draw_utils.cpp
-
     program_window.hpp
     program_window.cpp
     

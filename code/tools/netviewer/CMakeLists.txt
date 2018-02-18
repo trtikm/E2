@@ -17,9 +17,6 @@ add_executable(${THIS_TARGET_NAME}
     simulator.cpp
     simulator_notifications.hpp
 
-    draw_utils.hpp
-    draw_utils.cpp
-
     program_window.hpp
     program_window.cpp
     
@@ -52,8 +49,8 @@ target_link_libraries(${THIS_TARGET_NAME}
     netlab
     netexp
     netview
-    qtgl
     angeo
+    qtgl
     utility
     ${QT5_LIST_OF_LIBRARIES_TO_LINK_WITH}
     ${OPENGL_LIST_OF_LIBRARIES_TO_LINK_WITH}

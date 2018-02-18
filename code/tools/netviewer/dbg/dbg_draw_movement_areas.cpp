@@ -1,8 +1,8 @@
 #include <netviewer/dbg/dbg_draw_movement_areas.hpp>
-#include <netviewer/draw_utils.hpp>
 #include <netviewer/program_options.hpp>
 #include <netview/utility.hpp>
 #include <qtgl/batch_generators.hpp>
+#include <qtgl/draw.hpp>
 #include <utility/msgstream.hpp>
 
 
@@ -82,7 +82,7 @@ void  dbg_draw_movement_areas::render(matrix44 const&  view_projection_matrix, q
         {
             INVARIANT(pos_batch.second->shaders_binding().operator bool());
 
-            render_batch(
+            qtgl::render_batch(
                 *pos_batch.second,
                 view_projection_matrix,
                 angeo::coordinate_system(pos_batch.first,quaternion_identity()),

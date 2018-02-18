@@ -1,7 +1,6 @@
 #include <netviewer/simulator.hpp>
 #include <netviewer/simulator_notifications.hpp>
 #include <netviewer/program_options.hpp>
-#include <netviewer/draw_utils.hpp>
 #include <netlab/utility.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
@@ -411,10 +410,10 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
     qtgl::draw_state_ptr  draw_state;
     if (m_do_show_grid)
-        if (qtgl::make_current(*m_batch_grid, *m_batch_grid->draw_state()))
+        if (qtgl::make_current(*m_batch_grid, draw_state))
         {
             INVARIANT(m_batch_grid->shaders_binding().operator bool());
-            render_batch(*m_batch_grid,view_projection_matrix);
+            qtgl::render_batch(*m_batch_grid,view_projection_matrix);
             draw_state = m_batch_grid->draw_state();
         }
 
@@ -686,7 +685,7 @@ void  simulator::render_network_spikers(
                         vector3 const&  spiker_position
                         )
             {
-                render_batch(
+                qtgl::render_batch(
                     *batch_spiker,
                     view_projection_matrix,
                     angeo::coordinate_system(spiker_position,quaternion_identity())
@@ -740,7 +739,7 @@ void  simulator::render_network_docks(
                         vector3 const&  dock_position
                         )
             {
-                render_batch(
+                qtgl::render_batch(
                     *batch_dock,
                     view_projection_matrix,
                     angeo::coordinate_system(dock_position,quaternion_identity())
@@ -795,7 +794,7 @@ void  simulator::render_network_ships(
                         vector3 const&  ship_position
                         )
             {
-                render_batch(
+                qtgl::render_batch(
                     *batch_ship,
                     view_projection_matrix,
                     angeo::coordinate_system(ship_position,quaternion_identity())
@@ -834,7 +833,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                 netlab::sector_coordinate_type  x, y, c;
                 props.spiker_sector_coordinates(m_selected_object_stats->indices().object_index(), x, y, c);
                 vector3 const&  pos = props.spiker_sector_centre(x, y, c);
-                render_batch(
+                qtgl::render_batch(
                     *m_batch_spiker_bsphere,
                     view_projection_matrix,
                     angeo::coordinate_system(pos, quaternion_identity()),
@@ -904,7 +903,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
         {
             if (qtgl::make_current(*m_batches_selection.at(i), *draw_state))
             {
-                render_batch(
+                qtgl::render_batch(
                     *m_batches_selection.at(i),
                     view_projection_matrix,
                     angeo::coordinate_system(vector3_zero(), quaternion_identity()),
@@ -931,7 +930,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                                          "/netviewer/selected_spiker_lines_to_ships");
             if (qtgl::make_current(*batch, *draw_state))
             {
-                render_batch(
+                qtgl::render_batch(
                     *batch,
                     view_projection_matrix,
                     angeo::coordinate_system(vector3_zero(), quaternion_identity())
@@ -953,7 +952,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                 netlab::sector_coordinate_type  x,y,c;
                 props.dock_sector_coordinates(m_selected_object_stats->indices().object_index(),x,y,c);
                 vector3 const&  pos = props.dock_sector_centre(x,y,c);
-                render_batch(
+                qtgl::render_batch(
                     *m_batch_dock_bsphere,
                     view_projection_matrix,
                     angeo::coordinate_system(pos,quaternion_identity()),
@@ -1010,7 +1009,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
         {
             if (qtgl::make_current(*m_batches_selection.at(i), *draw_state))
             {
-                render_batch(
+                qtgl::render_batch(
                     *m_batches_selection.at(i),
                     view_projection_matrix,
                     angeo::coordinate_system(vector3_zero(), quaternion_identity()),
@@ -1031,7 +1030,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                 vector3 const&  pos =
                     network()->get_layer_of_ships(m_selected_object_stats->indices().layer_index())
                               .position(m_selected_object_stats->indices().object_index());
-                render_batch(
+                qtgl::render_batch(
                     *m_batch_ship_bsphere,
                     view_projection_matrix,
                     angeo::coordinate_system(pos,quaternion_identity()),
@@ -1058,7 +1057,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                         );
             if (qtgl::make_current(*batch, *draw_state))
             {
-                render_batch(
+                qtgl::render_batch(
                     *batch,
                     view_projection_matrix,
                     angeo::coordinate_system(vector3_zero(), quaternion_identity())
@@ -1113,7 +1112,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
         {
             if (qtgl::make_current(*m_batches_selection.at(i), *draw_state))
             {
-                render_batch(
+                qtgl::render_batch(
                     *m_batches_selection.at(i),
                     view_projection_matrix,
                     angeo::coordinate_system(vector3_zero(), quaternion_identity()),
@@ -1288,7 +1287,7 @@ void  simulator::render_spikers_of_constructed_network(
                         vector3 const&  spiker_position
                         )
             {
-                render_batch(
+                qtgl::render_batch(
                     *batch_spiker,
                     view_projection_matrix,
                     angeo::coordinate_system(spiker_position,quaternion_identity())
