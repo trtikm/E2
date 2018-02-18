@@ -490,6 +490,9 @@ bool  make_current(batch const&  binding, draw_state const* const  previous_stat
     if (!binding.textures_binding().operator bool() || !make_current(*binding.textures_binding()))
         result = false;
 
+    if (binding.get_modelspace().operator bool() && !binding.get_modelspace()->loaded_successfully())
+        result = false;
+
     if (result)
     {
         if (binding.draw_state().operator bool())
@@ -500,9 +503,6 @@ bool  make_current(batch const&  binding, draw_state const* const  previous_stat
         else
             result = false;
     }
-
-    if (binding.get_modelspace().operator bool() && !binding.get_modelspace()->loaded_successfully())
-        result = false;
 
     if (!result)
         insert_load_request(binding);

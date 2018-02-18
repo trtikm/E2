@@ -204,12 +204,7 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
     qtgl::draw_state_ptr  draw_state;
     if (m_do_show_grid)
-        if (qtgl::make_current(*m_batch_grid, *m_batch_grid->draw_state()))
-        {
-            INVARIANT(m_batch_grid->shaders_binding().operator bool());
-            render_batch(*m_batch_grid,view_projection_matrix);
-            draw_state = m_batch_grid->draw_state();
-        }
+        render_batch(*m_batch_grid,view_projection_matrix,draw_state);
 
     render_simulation_state(view_projection_matrix,draw_state);
 
@@ -527,11 +522,11 @@ void  simulator::render_scene_batches(matrix44 const&  view_projection_matrix, q
 
     for (auto const& name_node : get_scene().get_all_scene_nodes())
         for (auto const& name_batch : name_node.second->get_batches())
-            if (qtgl::make_current(*name_batch.second, draw_state))
-            {
-                render_batch(*name_batch.second, view_projection_matrix * name_node.second->get_world_matrix());
-                draw_state = name_batch.second->draw_state();
-            }
+            render_batch(
+                    *name_batch.second,
+                    view_projection_matrix * name_node.second->get_world_matrix(),
+                    draw_state
+                    );
 }
 
 void  simulator::render_scene_coord_systems(
@@ -563,12 +558,8 @@ void  simulator::render_scene_coord_system(
 {
     TMPROF_BLOCK();
 
-    if (m_batch_coord_system != nullptr && qtgl::make_current(*m_batch_coord_system, draw_state))
-    {
-        INVARIANT(m_batch_coord_system->shaders_binding().operator bool());
-        render_batch(*m_batch_coord_system, view_projection_matrix * node->get_world_matrix());
-        draw_state = m_batch_coord_system->draw_state();
-    }
+    if (m_batch_coord_system != nullptr)
+        render_batch(*m_batch_coord_system, view_projection_matrix * node->get_world_matrix(), draw_state);
 }
 
 void  simulator::erase_scene_node(std::string const&  name)

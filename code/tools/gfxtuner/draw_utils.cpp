@@ -3,13 +3,18 @@
 #include <utility/assumptions.hpp>
 
 
-void  render_batch(
+bool  render_batch(
         qtgl::batch const&  batch,
         std::vector<matrix44>&  transform_matrices,
+        qtgl::draw_state_ptr&  old_draw_state,
         vector4 const&  diffuse_colour,
         bool  apply_modelspace_of_batch
         )
 {
+    if (!qtgl::make_current(batch, *old_draw_state))
+        return false;
+    INVARIANT(batch.shaders_binding().operator bool());
+
     for (qtgl::vertex_shader_uniform_symbolic_name const uniform : batch.symbolic_names_of_used_uniforms())
         switch (uniform)
         {
@@ -38,25 +43,31 @@ void  render_batch(
         }
 
     qtgl::draw();
+
+    old_draw_state = batch.draw_state();
+
+    return true;
 }
 
 
-void  render_batch(
+bool  render_batch(
         qtgl::batch const&  batch,
         std::vector<matrix44> const&  transform_matrices,
+        qtgl::draw_state_ptr&  old_draw_state,
         vector4 const&  diffuse_colour,
-        bool  apply_modelspace_of_batch
+        bool const  apply_modelspace_of_batch
         )
 {
     if (apply_modelspace_of_batch)
     {
         std::vector<matrix44>  temp(transform_matrices);
-        render_batch(batch, temp, diffuse_colour, apply_modelspace_of_batch);
+        return render_batch(batch, temp, old_draw_state, diffuse_colour, apply_modelspace_of_batch);
     }
     else
-        render_batch(
+        return render_batch(
                 batch,
                 const_cast<std::vector<matrix44>&>(transform_matrices), // but, won't be modified.
+                old_draw_state,
                 diffuse_colour,
                 false
                 );
@@ -71,22 +82,24 @@ static std::size_t  get_modelspace_size(
 }
 
 
-void  render_batch(
+bool  render_batch(
         qtgl::batch const&  batch,
         matrix44 const&  transform_matrix,
+        qtgl::draw_state_ptr&  old_draw_state,
         vector4 const&  diffuse_colour,
-        bool  apply_modelspace_of_batch
+        bool const  apply_modelspace_of_batch
         )
 {
     std::vector<matrix44>  temp(get_modelspace_size(batch.get_modelspace()), transform_matrix );
-    render_batch(batch, temp, diffuse_colour, apply_modelspace_of_batch);
+    return render_batch(batch, temp, old_draw_state, diffuse_colour, apply_modelspace_of_batch);
 }
 
 
-void  render_batch(
+bool  render_batch(
         qtgl::batch const&  batch,
         matrix44 const&  view_projection_matrix,
         angeo::coordinate_system const&  coord_system,
+        qtgl::draw_state_ptr&  old_draw_state,
         vector4 const&  diffuse_colour
         )
 {
@@ -94,5 +107,5 @@ void  render_batch(
     angeo::from_base_matrix(coord_system, world_transformation);
     std::vector<matrix44>  temp(get_modelspace_size(batch.get_modelspace()),
                                 view_projection_matrix * world_transformation );
-    render_batch(batch, temp, diffuse_colour, false);
+    return render_batch(batch, temp, old_draw_state, diffuse_colour, false);
 }
