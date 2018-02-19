@@ -10,16 +10,16 @@
 namespace qtgl {
 
 
-struct  keyframe : public detail::async_resource_accessor_base<detail::keyframe_data>
+struct  keyframe : public async_resource_accessor_base<detail::keyframe_data>
 {
     explicit keyframe(boost::filesystem::path const&  path)
-        : detail::async_resource_accessor_base<detail::keyframe_data>(path,1U)
+        : async_resource_accessor_base<detail::keyframe_data>(path,1U)
     {}
 
-    float_32_bit  get_time_point() const { return resource_ptr()->time_point(); }
+    float_32_bit  get_time_point() const { return resource().time_point(); }
 
     std::vector<angeo::coordinate_system> const&  get_coord_systems() const
-    { return resource_ptr()->coord_systems(); }
+    { return resource().coord_systems(); }
 };
 
 
@@ -27,7 +27,7 @@ struct keyframes
 {
     keyframes(std::vector<boost::filesystem::path> const  paths)
         : m_keyframes(paths.cbegin(), paths.cend())
-        , m_load_state(detail::ASYNC_LOAD_STATE::IN_PROGRESS)
+        , m_load_state(ASYNC_LOAD_STATE::IN_PROGRESS)
     {
         ASSUMPTION(!m_keyframes.empty());
     }
@@ -41,7 +41,7 @@ struct keyframes
     bool  load_failed() const
     {
         update_load_state();
-        return m_load_state == detail::ASYNC_LOAD_STATE::FINISHED_WITH_ERROR;
+        return m_load_state == ASYNC_LOAD_STATE::FINISHED_WITH_ERROR;
     }
 
     std::vector<qtgl::keyframe> const&  get_keyframes() const { return m_keyframes; }
@@ -64,14 +64,14 @@ private:
 
     bool  _loaded_successfully() const
     {
-        return m_load_state == detail::ASYNC_LOAD_STATE::FINISHED_SUCCESSFULLY;
+        return m_load_state == ASYNC_LOAD_STATE::FINISHED_SUCCESSFULLY;
     }
 
     void  update_load_state() const { const_cast<keyframes*>(this)->_update_load_state(); }
     void  _update_load_state();
 
     std::vector<qtgl::keyframe>  m_keyframes;
-    detail::ASYNC_LOAD_STATE  m_load_state;
+    ASYNC_LOAD_STATE  m_load_state;
 };
 
 

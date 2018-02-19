@@ -5,14 +5,14 @@ namespace qtgl {
 
 void  keyframes::_update_load_state()
 {
-    if (m_load_state != detail::ASYNC_LOAD_STATE::IN_PROGRESS)
+    if (m_load_state != ASYNC_LOAD_STATE::IN_PROGRESS)
         return;
 
     for (std::size_t  i = 0ULL; i != num_keyframes(); ++i)
     {
         if (keyframe_at(i).load_failed())
         {
-            m_load_state = detail::ASYNC_LOAD_STATE::FINISHED_WITH_ERROR;
+            m_load_state = ASYNC_LOAD_STATE::FINISHED_WITH_ERROR;
             return;
         }
         if (!keyframe_at(i).loaded_successfully())
@@ -35,7 +35,7 @@ void  keyframes::_update_load_state()
             return left.get_time_point() < right.get_time_point();
             }
         );
-    m_load_state = detail::ASYNC_LOAD_STATE::FINISHED_SUCCESSFULLY;
+    m_load_state = ASYNC_LOAD_STATE::FINISHED_SUCCESSFULLY;
 }
 
 

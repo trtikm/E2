@@ -22,9 +22,6 @@ private:
 };
 
 
-using  keyframe_cache = resource_cache<keyframe_data>;
-
-
 }}
 
 #endif

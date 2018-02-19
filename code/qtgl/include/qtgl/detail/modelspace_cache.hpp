@@ -20,9 +20,6 @@ private:
 };
 
 
-using  modelspace_cache = resource_cache<modelspace_data>;
-
-
 }}
 
 #endif
