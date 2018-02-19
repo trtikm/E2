@@ -10,6 +10,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/utility/array_of_derived.hpp
 
+    ./include/utility/async_resource_load.hpp
+    ./src/async_resource_load.cpp
+    
     ./include/utility/type_envelope.hpp
     
     ./src/bits_reference.cpp

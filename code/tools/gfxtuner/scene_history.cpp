@@ -4,7 +4,7 @@
 #include <utility/timeprof.hpp>
 
 
-namespace { namespace detail {
+namespace detail {
 
 
 struct  scene_history_commit final : public scene_history_node
@@ -27,18 +27,18 @@ private:
 
 natural_64_bit  scene_history_commit::s_id_counter = 0ULL;
 
-inline bool  is_commit_node(scene_history_node_ptr const  node_ptr)
+static inline bool  is_commit_node(scene_history_node_ptr const  node_ptr)
 {
     return std::dynamic_pointer_cast<scene_history_commit const>(node_ptr) != nullptr;
 }
 
-inline natural_64_bit  get_commit_node_id(scene_history_node_ptr const  node_ptr)
+static inline natural_64_bit  get_commit_node_id(scene_history_node_ptr const  node_ptr)
 {
     return std::dynamic_pointer_cast<scene_history_commit const>(node_ptr)->id();
 }
 
 
-}}
+}
 
 
 scene_history&  scene_history::get_instance()

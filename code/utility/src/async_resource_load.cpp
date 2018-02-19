@@ -1,6 +1,6 @@
-#include <qtgl/detail/resource_cache.hpp>
+#include <utility/async_resource_load.hpp>
 
-namespace qtgl { namespace detail { namespace async {
+namespace detail { namespace async {
 
 
 resource_load_planner&  resource_load_planner::instance()
@@ -176,4 +176,4 @@ resource_handle::resource_handle(resources_cache_type::value_type* const  data_p
 }
 
 
-}}}
+}}

@@ -1,11 +1,32 @@
 #ifndef QTGL_DETAIL_KEYFRAME_HPP_INCLUDED
 #   define QTGL_DETAIL_KEYFRAME_HPP_INCLUDED
 
-#   include <qtgl/detail/keyframe_cache.hpp>
+#   include <utility/async_resource_load.hpp>
+#   include <angeo/coordinate_system.hpp>
 #   include <utility/assumptions.hpp>
+#   include <boost/filesystem/path.hpp>
 #   include <vector>
 #   include <algorithm>
 #   include <utility>
+
+namespace qtgl { namespace detail {
+
+
+struct  keyframe_data
+{
+    keyframe_data(boost::filesystem::path const&  pathname);
+
+    float_32_bit  time_point() const { return m_time_point; }
+    std::vector<angeo::coordinate_system> const&  coord_systems() const { return m_coord_systems; }
+
+private:
+
+    float_32_bit  m_time_point;
+    std::vector<angeo::coordinate_system>  m_coord_systems;
+};
+
+
+}}
 
 namespace qtgl {
 
@@ -44,7 +65,7 @@ struct keyframes
         return m_load_state == ASYNC_LOAD_STATE::FINISHED_WITH_ERROR;
     }
 
-    std::vector<qtgl::keyframe> const&  get_keyframes() const { return m_keyframes; }
+    std::vector<keyframe> const&  get_keyframes() const { return m_keyframes; }
 
     float_32_bit  start_time_point() const { return m_keyframes.front().get_time_point(); }
     float_32_bit  end_time_point() const { return m_keyframes.back().get_time_point(); }
@@ -70,7 +91,7 @@ private:
     void  update_load_state() const { const_cast<keyframes*>(this)->_update_load_state(); }
     void  _update_load_state();
 
-    std::vector<qtgl::keyframe>  m_keyframes;
+    std::vector<keyframe>  m_keyframes;
     ASYNC_LOAD_STATE  m_load_state;
 };
 

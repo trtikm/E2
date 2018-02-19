@@ -14,10 +14,10 @@
 #include <QToolTip>
 #include <sstream>
 
-namespace { namespace detail {
+namespace detail {
 
 
-char const*  get_none_tooltip_string() { return "<<NONE>>"; }
+static char const*  get_none_tooltip_string() { return "<<NONE>>"; }
 
 
 struct  menu : public QMenu
@@ -40,7 +40,7 @@ public:
 };
 
 
-}}
+}
 
 
 menu_bar::menu_bar(program_window* const  wnd)

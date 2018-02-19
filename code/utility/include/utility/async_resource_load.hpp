@@ -1,7 +1,7 @@
-#ifndef QTGL_DETAIL_RESOURCE_CACHE_HPP_INCLUDED
-#   define QTGL_DETAIL_RESOURCE_CACHE_HPP_INCLUDED
+#ifndef UTILITY_ASYNC_RESOURCE_LOAD_HPP_INCLUDED
+#   define UTILITY_ASYNC_RESOURCE_LOAD_HPP_INCLUDED
 
-#   include <utility/instance_wrapper.hpp>
+#   include <utility/basic_numeric_types.hpp>
 #   include <utility/assumptions.hpp>
 #   include <utility/invariants.hpp>
 #   include <utility/timeprof.hpp>
@@ -15,8 +15,6 @@
 #   include <atomic>
 #   include <exception>
 
-namespace qtgl {
-
 
 enum struct ASYNC_LOAD_STATE
 {
@@ -26,9 +24,7 @@ enum struct ASYNC_LOAD_STATE
 };
 
 
-}
-
-namespace qtgl { namespace detail { namespace async {
+namespace detail { namespace async {
 
 
 using  key_type = std::string;
@@ -304,9 +300,7 @@ void  resource_handle::destroy()
 }
 
 
-}}}
-
-namespace qtgl {
+}}
 
 
 template<typename resource_type__>
@@ -367,7 +361,5 @@ protected:
     using  async_resource_accessor<resource_type>::resource;
 };
 
-
-}
 
 #endif
