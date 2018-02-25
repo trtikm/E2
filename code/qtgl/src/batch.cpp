@@ -35,7 +35,7 @@ std::shared_ptr<batch const>  batch::create(
         shaders_binding_ptr const  shaders_binding,
         textures_binding_ptr const  textures_binding,
         draw_state_ptr const  draw_state,
-        modelspace_ptr const modelspace
+        modelspace const modelspace
         )
 {
     return std::make_shared<batch const>(
@@ -71,7 +71,7 @@ batch::batch(boost::filesystem::path const&  path,
              shaders_binding_ptr const  shaders_binding,
              textures_binding_ptr const  textures_binding,
              draw_state_ptr const  draw_state,
-             modelspace_ptr const modelspace
+             modelspace const modelspace
              )
     : m_path(path)
     , m_buffers_binding(buffers_binding)
@@ -147,9 +147,9 @@ draw_state_ptr  batch::draw_state() const
     return m_draw_state;
 }
 
-modelspace_ptr  batch::get_modelspace() const
+modelspace  batch::get_modelspace() const
 {
-    if (!m_batch_found_in_cache__modelspace && !m_modelspace.operator bool())
+    if (!m_batch_found_in_cache__modelspace && !m_modelspace.loaded_successfully())
     {
         batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
         if (pbatch.operator bool() && this != pbatch.get())
@@ -457,7 +457,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                     shaders_binding::create(vertex_shader,fragment_shader),
                     textures_binding::create(texture_paths),
                     draw_state::create(cull_face_mode,use_alpha_blending,alpha_blending_src_function,alpha_blending_dst_function),
-                    modelspace_pathname.empty() ? nullptr : modelspace::create(modelspace_pathname)
+                    modelspace_pathname.empty() ? modelspace() : modelspace(modelspace_pathname)
                     );
     }
     else if (file_type == "E2::qtgl/batch/vertices/text")
@@ -517,7 +517,7 @@ bool  make_current(batch const&  binding, draw_state const* const  previous_stat
     if (!binding.textures_binding().operator bool() || !make_current(*binding.textures_binding()))
         result = false;
 
-    if (binding.get_modelspace().operator bool() && !binding.get_modelspace()->loaded_successfully())
+    if (!binding.get_modelspace().empty() && !binding.get_modelspace().loaded_successfully())
         result = false;
 
     if (result)

@@ -24,7 +24,7 @@ struct batch
             shaders_binding_ptr const  shaders_binding,
             textures_binding_ptr const  textures_binding,
             draw_state_ptr const  draw_state,
-            modelspace_ptr const modelspace
+            modelspace const modelspace
             );
 
     batch(boost::filesystem::path const&  path);
@@ -34,7 +34,7 @@ struct batch
           shaders_binding_ptr const  shaders_binding,
           textures_binding_ptr const  textures_binding,
           draw_state_ptr const  draw_state,
-          modelspace_ptr const modelspace
+          modelspace const modelspace
           );
 
     boost::filesystem::path const&  path() const noexcept { return m_path; }
@@ -43,7 +43,7 @@ struct batch
     shaders_binding_ptr  shaders_binding() const;
     textures_binding_ptr  textures_binding() const;
     draw_state_ptr  draw_state() const;
-    modelspace_ptr  get_modelspace() const;
+    modelspace  get_modelspace() const;
 
     std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms() const;
     natural_32_bit  num_matrices_per_vertex() const;
@@ -55,7 +55,7 @@ private:
     mutable shaders_binding_ptr  m_shaders_binding;
     mutable textures_binding_ptr  m_textures_binding;
     mutable draw_state_ptr  m_draw_state;
-    mutable modelspace_ptr  m_modelspace;
+    mutable modelspace  m_modelspace;
 
     mutable bool  m_batch_found_in_cache__buffers;
     mutable bool  m_batch_found_in_cache__shaders;

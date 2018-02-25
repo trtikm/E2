@@ -98,10 +98,10 @@ void  render_batch(
             break;
         case vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
             ASSUMPTION(!transform_matrices.empty());
-            if (apply_modelspace_of_batch && batch.get_modelspace().operator bool())
+            if (apply_modelspace_of_batch && batch.get_modelspace().loaded_successfully())
             {
                 apply_modelspace_to_frame_of_keyframe_animation(
-                        *batch.get_modelspace(),
+                        batch.get_modelspace(),
                         transform_matrices
                         );
                 apply_modelspace_of_batch = false;
@@ -157,10 +157,10 @@ void  render_batch(
 
 
 static std::size_t  get_modelspace_size(
-        modelspace_ptr const  modelspace_ptr,
+        modelspace const  modelspace,
         std::size_t const  value_when_nullptr = 1UL)
 {
-    return modelspace_ptr == nullptr ? value_when_nullptr : modelspace_ptr->get_coord_systems().size();
+    return modelspace.loaded_successfully() ? modelspace.get_coord_systems().size() : value_when_nullptr;
 }
 
 

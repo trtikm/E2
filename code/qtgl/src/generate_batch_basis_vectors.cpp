@@ -29,7 +29,7 @@ batch_ptr  create_basis_vectors(boost::filesystem::path const&  data_root_dir)
                 ),
             qtgl::textures_binding::create(textures_binding::texture_files_map{}),
             qtgl::draw_state::create(),
-            nullptr
+            modelspace()
             );
 
     return pbatch;

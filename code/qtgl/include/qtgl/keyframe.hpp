@@ -33,13 +33,6 @@ namespace qtgl {
 
 struct  keyframe : public async::resource_accessor<detail::keyframe_data>
 {
-    using  keyframe_ptr = std::shared_ptr<keyframe const>;
-
-    static keyframe_ptr  create(boost::filesystem::path const&  path)
-    {
-        return keyframe_ptr(new keyframe(path));
-    }
-
     keyframe()
         : async::resource_accessor<detail::keyframe_data>()
     {}
@@ -53,9 +46,6 @@ struct  keyframe : public async::resource_accessor<detail::keyframe_data>
     std::vector<angeo::coordinate_system> const&  get_coord_systems() const
     { return resource().coord_systems(); }
 };
-
-
-using  keyframe_ptr = keyframe::keyframe_ptr;
 
 
 }
@@ -82,13 +72,6 @@ namespace qtgl {
 
 struct  keyframes : public async::resource_accessor<detail::keyframes_data>
 {
-    using  keyframes_ptr = std::shared_ptr<keyframes const>;
-
-    static keyframes_ptr  create(boost::filesystem::path const&  keyframes_dir)
-    {
-        return keyframes_ptr(new keyframes(keyframes_dir));
-    }
-
     explicit keyframes(boost::filesystem::path const&  keyframes_dir)
         : async::resource_accessor<detail::keyframes_data>(keyframes_dir.string(),1U)
     {}
@@ -111,9 +94,6 @@ struct  keyframes : public async::resource_accessor<detail::keyframes_data>
         return keyframe_at(keyframe_index).get_coord_systems().at(coord_system_index);
     }
 };
-
-
-using  keyframes_ptr = keyframes::keyframes_ptr;
 
 
 std::pair<std::size_t, std::size_t>  find_indices_of_keyframes_to_interpolate_for_time(

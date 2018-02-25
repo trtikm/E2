@@ -33,7 +33,7 @@ batch_ptr  create_wireframe_box(
             ),
         qtgl::textures_binding::create(textures_binding::texture_files_map{}),
         qtgl::draw_state::create(),
-        nullptr
+        modelspace()
         );
     return pbatch;
 }

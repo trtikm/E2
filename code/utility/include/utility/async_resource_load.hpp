@@ -217,7 +217,7 @@ void  resource_holder_type::resource_constructor(
     try
     {
         std::unique_ptr<resource_type> resource_ptr(
-                new resource_type(args_for_constructor_of_the_resource..., load_finaliser)
+                new resource_type(load_finaliser, args_for_constructor_of_the_resource...)
                 );
         resource_holder.m_resource_ptr = resource_ptr.release();
     }
@@ -368,11 +368,7 @@ resources_cache_type::value_type*  resource_cache::insert_resource(
 
     resource_holder_type::resource_constructor<resource_type>(
             *iter_and_bool.first->second,
-            std::bind(
-                &resource_cache::on_load_complete,
-                std::cref(key),
-                finalise_load_on_destroy_ptr(new finalise_load_on_destroy(key))
-                ),
+            finalise_load_on_destroy_ptr(new finalise_load_on_destroy(key)),
             args_for_constructor_of_the_resource...
             );
 }
@@ -448,26 +444,26 @@ struct  resource_accessor
     template<typename... arg_types>
     explicit resource_accessor(
             key_type const&  key,
-            arg_types... args_for_constructor_of_the_resource,
-            notification_callback_type const& notification_callback = notification_callback_type()
+            notification_callback_type const& notification_callback,
+            arg_types... args_for_constructor_of_the_resource
             )
         : m_data_ptr(nullptr)
     {
-        insert_resource(key, args_for_constructor_of_the_resource..., notification_callback);
+        insert_resource(key, notification_callback, args_for_constructor_of_the_resource...);
     }
 
     template<typename... arg_types>
     void  insert_resource(
             key_type const&  key,
-            arg_types... args_for_constructor_of_the_resource,
-            notification_callback_type const& notification_callback = notification_callback_type()
+            notification_callback_type const& notification_callback,
+            arg_types... args_for_constructor_of_the_resource
             )
     {
         ASSUMPTION(m_data_ptr == nullptr);
         m_data_ptr = detail::resource_cache::instance().insert_resource<resource_type>(
                             key,
-                            args_for_constructor_of_the_resource...,
-                            notification_callback
+                            notification_callback,
+                            args_for_constructor_of_the_resource...
                             );
         m_data_ptr->second->inc_ref_count();
         if (m_data_ptr->second->get_load_state() != LOAD_STATE::IN_PROGRESS && notification_callback.operator bool())
@@ -508,9 +504,11 @@ struct  resource_accessor
         }
     }
 
+    bool  empty() const { return m_data_ptr == nullptr; }
+
     LOAD_STATE  get_load_state() const
     {
-        return m_data_ptr == nullptr ? LOAD_STATE::IN_PROGRESS : m_data_ptr->second->get_load_state();
+        return empty() ? LOAD_STATE::IN_PROGRESS : m_data_ptr->second->get_load_state();
     }
 
     bool  is_load_finished() const

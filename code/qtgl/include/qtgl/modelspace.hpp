@@ -29,10 +29,9 @@ namespace qtgl {
 
 struct  modelspace : public async::resource_accessor<detail::modelspace_data>
 {
-    using  modelspace_ptr = std::shared_ptr<modelspace const>;
-
-    static modelspace_ptr  create(boost::filesystem::path const&  path)
-    { return modelspace_ptr(new modelspace(path)); }
+    modelspace()
+        : async::resource_accessor<detail::modelspace_data>()
+    {}
 
     explicit modelspace(boost::filesystem::path const&  path)
         : async::resource_accessor<detail::modelspace_data>(path.string(),1U)
@@ -41,9 +40,6 @@ struct  modelspace : public async::resource_accessor<detail::modelspace_data>
     std::vector<angeo::coordinate_system> const&  get_coord_systems() const
     { return resource().coord_systems(); }
 };
-
-
-using  modelspace_ptr = modelspace::modelspace_ptr;
 
 
 void  apply_modelspace_to_frame_of_keyframe_animation(
