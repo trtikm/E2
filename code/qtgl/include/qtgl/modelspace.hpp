@@ -12,7 +12,7 @@ namespace qtgl { namespace detail {
 
 struct  modelspace_data
 {
-    modelspace_data(boost::filesystem::path const&  path);
+    modelspace_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr);
 
     std::vector<angeo::coordinate_system> const&  coord_systems() const { return m_coord_systems; }
 
@@ -27,7 +27,7 @@ private:
 namespace qtgl {
 
 
-struct  modelspace : public async_resource_accessor_base<detail::modelspace_data>
+struct  modelspace : public async::resource_accessor<detail::modelspace_data>
 {
     using  modelspace_ptr = std::shared_ptr<modelspace const>;
 
@@ -35,7 +35,7 @@ struct  modelspace : public async_resource_accessor_base<detail::modelspace_data
     { return modelspace_ptr(new modelspace(path)); }
 
     explicit modelspace(boost::filesystem::path const&  path)
-        : async_resource_accessor_base<detail::modelspace_data>(path,1U)
+        : async::resource_accessor<detail::modelspace_data>(path.string(),1U)
     {}
 
     std::vector<angeo::coordinate_system> const&  get_coord_systems() const

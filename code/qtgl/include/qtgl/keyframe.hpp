@@ -14,7 +14,7 @@ namespace qtgl { namespace detail {
 
 struct  keyframe_data
 {
-    keyframe_data(boost::filesystem::path const&  pathname);
+    keyframe_data(boost::filesystem::path const&  pathname, async::finalise_load_on_destroy_ptr);
 
     float_32_bit  time_point() const { return m_time_point; }
     std::vector<angeo::coordinate_system> const&  coord_systems() const { return m_coord_systems; }
@@ -31,10 +31,21 @@ private:
 namespace qtgl {
 
 
-struct  keyframe : public async_resource_accessor_base<detail::keyframe_data>
+struct  keyframe : public async::resource_accessor<detail::keyframe_data>
 {
+    using  keyframe_ptr = std::shared_ptr<keyframe const>;
+
+    static keyframe_ptr  create(boost::filesystem::path const&  path)
+    {
+        return keyframe_ptr(new keyframe(path));
+    }
+
+    keyframe()
+        : async::resource_accessor<detail::keyframe_data>()
+    {}
+
     explicit keyframe(boost::filesystem::path const&  path)
-        : async_resource_accessor_base<detail::keyframe_data>(path,1U)
+        : async::resource_accessor<detail::keyframe_data>(path.string(),1U)
     {}
 
     float_32_bit  get_time_point() const { return resource().time_point(); }
@@ -44,56 +55,65 @@ struct  keyframe : public async_resource_accessor_base<detail::keyframe_data>
 };
 
 
-struct keyframes
+using  keyframe_ptr = keyframe::keyframe_ptr;
+
+
+}
+
+namespace qtgl { namespace detail {
+
+
+struct  keyframes_data
 {
-    keyframes(std::vector<boost::filesystem::path> const  paths)
-        : m_keyframes(paths.cbegin(), paths.cend())
-        , m_load_state(ASYNC_LOAD_STATE::IN_PROGRESS)
-    {
-        ASSUMPTION(!m_keyframes.empty());
-    }
+    keyframes_data(boost::filesystem::path const&  pathname, async::finalise_load_on_destroy_ptr  finaliser);
 
-    bool  loaded_successfully() const
-    {
-        update_load_state();
-        return _loaded_successfully();
-    }
-    
-    bool  load_failed() const
-    {
-        update_load_state();
-        return m_load_state == ASYNC_LOAD_STATE::FINISHED_WITH_ERROR;
-    }
-
-    std::vector<keyframe> const&  get_keyframes() const { return m_keyframes; }
-
-    float_32_bit  start_time_point() const { return m_keyframes.front().get_time_point(); }
-    float_32_bit  end_time_point() const { return m_keyframes.back().get_time_point(); }
-    float_32_bit  duration() const { return end_time_point() - start_time_point(); }
-
-    std::size_t  num_keyframes() const { return m_keyframes.size(); }
-    keyframe const&  keyframe_at(std::size_t const  index) const { return m_keyframes.at(index); }
-
-    float_32_bit  time_point_at(std::size_t const  index) const { return keyframe_at(index).get_time_point(); }
-    std::size_t  num_coord_systems_per_keyframe() const { return m_keyframes.front().get_coord_systems().size(); }
-    angeo::coordinate_system const&  coord_system_at(
-            std::size_t const  keyframe_index,
-            std::size_t const  coord_system_index) const
-    { return keyframe_at(keyframe_index).get_coord_systems().at(coord_system_index); }
+    std::vector<keyframe> const&  keyframes() const { return m_keyframes; }
 
 private:
 
-    bool  _loaded_successfully() const
+    std::vector<keyframe>  m_keyframes;
+};
+
+
+}}
+
+namespace qtgl {
+
+
+struct  keyframes : public async::resource_accessor<detail::keyframes_data>
+{
+    using  keyframes_ptr = std::shared_ptr<keyframes const>;
+
+    static keyframes_ptr  create(boost::filesystem::path const&  keyframes_dir)
     {
-        return m_load_state == ASYNC_LOAD_STATE::FINISHED_SUCCESSFULLY;
+        return keyframes_ptr(new keyframes(keyframes_dir));
     }
 
-    void  update_load_state() const { const_cast<keyframes*>(this)->_update_load_state(); }
-    void  _update_load_state();
+    explicit keyframes(boost::filesystem::path const&  keyframes_dir)
+        : async::resource_accessor<detail::keyframes_data>(keyframes_dir.string(),1U)
+    {}
 
-    std::vector<keyframe>  m_keyframes;
-    ASYNC_LOAD_STATE  m_load_state;
+    std::vector<keyframe> const&  get_keyframes() const { return resource().keyframes(); }
+
+    float_32_bit  start_time_point() const { return get_keyframes().front().get_time_point(); }
+    float_32_bit  end_time_point() const { return get_keyframes().back().get_time_point(); }
+    float_32_bit  duration() const { return end_time_point() - start_time_point(); }
+
+    std::size_t  num_keyframes() const { return get_keyframes().size(); }
+    keyframe const&  keyframe_at(std::size_t const  index) const { return get_keyframes().at(index); }
+
+    float_32_bit  time_point_at(std::size_t const  index) const { return keyframe_at(index).get_time_point(); }
+    std::size_t  num_coord_systems_per_keyframe() const { return get_keyframes().front().get_coord_systems().size(); }
+    angeo::coordinate_system const&  coord_system_at(
+        std::size_t const  keyframe_index,
+        std::size_t const  coord_system_index) const
+    {
+        return keyframe_at(keyframe_index).get_coord_systems().at(coord_system_index);
+    }
 };
+
+
+using  keyframes_ptr = keyframes::keyframes_ptr;
 
 
 std::pair<std::size_t, std::size_t>  find_indices_of_keyframes_to_interpolate_for_time(

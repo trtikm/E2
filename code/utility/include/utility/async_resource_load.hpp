@@ -13,10 +13,14 @@
 #   include <mutex>
 #   include <queue>
 #   include <atomic>
+#   include <memory>
 #   include <exception>
 
 
-enum struct ASYNC_LOAD_STATE
+namespace  async {
+
+
+enum struct LOAD_STATE
 {
     IN_PROGRESS,
     FINISHED_SUCCESSFULLY,
@@ -24,7 +28,9 @@ enum struct ASYNC_LOAD_STATE
 };
 
 
-namespace detail { namespace async {
+}
+
+namespace async { namespace detail {
 
 
 using  key_type = std::string;
@@ -94,6 +100,30 @@ private:
 
 
 using  pointer_to_resource_type = void*;
+using  notification_callback_type = std::function<void()>;
+
+
+struct  finalise_load_on_destroy
+{
+    explicit finalise_load_on_destroy(key_type const&  key)
+        : m_key(key)
+        , m_error_message()
+    {}
+
+    void  force_finalisation_as_failure(std::string const&  force_error_message)
+    {
+        m_error_message = force_error_message;
+    }
+
+    ~finalise_load_on_destroy();
+
+private:
+    key_type  m_key;
+    std::string  m_error_message;
+};
+
+
+using  finalise_load_on_destroy_ptr = std::shared_ptr<finalise_load_on_destroy>;
 
 
 struct  resource_holder_type  final
@@ -117,6 +147,8 @@ struct  resource_holder_type  final
         --m_ref_count;
     }
 
+    LOAD_STATE  get_load_state() const { return m_load_state; }
+
     pointer_to_resource_type  resource_ptr() const
     {
         return m_resource_ptr;
@@ -127,35 +159,66 @@ struct  resource_holder_type  final
         return m_error_message;
     }
 
-    ASYNC_LOAD_STATE  get_load_state(key_type const&  key) const;
-
     template<typename resource_type>
     static void  resource_loader(
-            key_type const&  path,
-            resource_holder_type&  resource_holder
+            key_type const&  key,
+            resource_holder_type&  resource_holder,
+            finalise_load_on_destroy_ptr const  load_finaliser
             );
+
+    template<typename resource_type, typename... arg_types>
+    static void  resource_constructor(
+            resource_holder_type&  resource_holder,
+            finalise_load_on_destroy_ptr const  load_finaliser,
+            arg_types... args_for_constructor_of_the_resource
+            );
+
+    void  finalise_load(std::string const&  force_error_message);
 
     template<typename resource_type>
     void  destroy_resource();
 
 private:
 
-    natural_64_bit  m_ref_count;
+    std::atomic<natural_64_bit>  m_ref_count;
     pointer_to_resource_type  m_resource_ptr;
     std::string  m_error_message;
-    mutable ASYNC_LOAD_STATE  m_load_state;
+    std::atomic<LOAD_STATE>  m_load_state;
 };
 
 
 template<typename resource_type>
 void  resource_holder_type::resource_loader(
         key_type const&  key,
-        resource_holder_type&  resource_holder
+        resource_holder_type&  resource_holder,
+        finalise_load_on_destroy_ptr const  load_finaliser
         )
 {
     try
     {
-        std::unique_ptr<resource_type> resource_ptr(new resource_type(key));
+        std::unique_ptr<resource_type> resource_ptr(new resource_type(key, load_finaliser));
+        resource_holder.m_resource_ptr = resource_ptr.release();
+    }
+    catch (std::exception const&  e)
+    {
+        resource_holder.m_error_message = msgstream() << "ERROR: " << e.what();
+    }
+    if (!resource_holder.m_error_message.empty())
+        LOG(error, resource_holder.m_error_message);
+}
+
+
+template<typename resource_type, typename... arg_types>
+void  resource_holder_type::resource_constructor(
+        resource_holder_type&  resource_holder,
+        finalise_load_on_destroy_ptr const  load_finaliser,
+        arg_types... args_for_constructor_of_the_resource)
+{
+    try
+    {
+        std::unique_ptr<resource_type> resource_ptr(
+                new resource_type(args_for_constructor_of_the_resource..., load_finaliser)
+                );
         resource_holder.m_resource_ptr = resource_ptr.release();
     }
     catch (std::exception const&  e)
@@ -175,8 +238,8 @@ void  resource_holder_type::destroy_resource()
     m_resource_ptr = nullptr;
 }
 
-
-using  resources_cache_type = std::unordered_map<key_type, resource_holder_type>;
+using  resources_holder_unique_ptr = std::unique_ptr<resource_holder_type>;
+using  resources_cache_type = std::unordered_map<key_type, resources_holder_unique_ptr>;
 
 
 struct  resource_cache  final
@@ -186,10 +249,27 @@ struct  resource_cache  final
     template<typename resource_type>
     resources_cache_type::value_type*  insert_load_request(
             key_type const&  key,
-            resource_load_priority_type const  priority
+            resource_load_priority_type const  priority,
+            notification_callback_type const&  parent_notification_callback
             );
 
+    template<typename resource_type, typename... arg_types>
+    resources_cache_type::value_type*  insert_resource(
+            key_type  key,
+            notification_callback_type const&  parent_notification_callback,
+            arg_types... args_for_constructor_of_the_resource
+            );
+
+    resources_cache_type::value_type*  find_resource(key_type const&  key);
+
+    void  finalise_load(key_type const&  key, std::string const&  force_error_message);
+
+    void  process_notification_callbacks(key_type const&  key);
+
+    template<typename resource_type>
     void  erase_resource(key_type const&  key);
+
+    std::mutex&  mutex() { return m_mutex; }
 
 private:
 
@@ -201,30 +281,50 @@ private:
 
     ~resource_cache() = default;
 
+    static key_type  generate_fresh_key();
+
+    static natural_64_bit  s_fresh_key_id;
+
     resources_cache_type  m_cache;
+    std::unordered_map<key_type, std::vector<notification_callback_type> >  m_notification_callbacks;
+    std::mutex  m_mutex;
 };
 
 
 template<typename resource_type>
 resources_cache_type::value_type*  resource_cache::insert_load_request(
         key_type const&  key,
-        resource_load_priority_type const  priority)
+        resource_load_priority_type const  priority,
+        notification_callback_type const&  parent_notification_callback)
 {
     TMPROF_BLOCK();
 
-    resources_cache_type::iterator const  it = m_cache.find(key);
-    if (it != m_cache.end())
-        return &*it;
+    std::lock_guard<std::mutex> const  lock(mutex());
+    resources_cache_type::value_type* const  resource_ptr = find_resource(key);
+    if (resource_ptr != nullptr)
+    {
+        if (resource_ptr->second->get_load_state() == LOAD_STATE::IN_PROGRESS &&
+                parent_notification_callback.operator bool())
+            m_notification_callbacks[key].push_back(parent_notification_callback);
+        return resource_ptr;
+    }
 
-    auto const  iter_and_bool = m_cache.insert({ key,resource_holder_type() });
+    auto const  iter_and_bool = m_cache.insert({
+            key,
+            resources_holder_unique_ptr(new resource_holder_type)
+            });
     INVARIANT(iter_and_bool.second);
+
+    if (parent_notification_callback.operator bool())
+        m_notification_callbacks[key].push_back(parent_notification_callback);
 
     resource_load_planner::instance().insert_load_request(
             key,
             std::bind(
                 &resource_holder_type::resource_loader<resource_type>,
                 key,
-                std::ref(iter_and_bool.first->second)
+                std::ref(*iter_and_bool.first->second),
+                finalise_load_on_destroy_ptr(new finalise_load_on_destroy(key))
                 ),
             priority
             );
@@ -233,133 +333,251 @@ resources_cache_type::value_type*  resource_cache::insert_load_request(
 }
 
 
-struct  resource_handle  final
+template<typename resource_type, typename... arg_types>
+resources_cache_type::value_type*  resource_cache::insert_resource(
+        key_type  key,
+        notification_callback_type const&  parent_notification_callback,
+        arg_types... args_for_constructor_of_the_resource
+        )
 {
-    explicit resource_handle(resources_cache_type::value_type* const  data_ptr);
+    TMPROF_BLOCK();
 
-    template<typename resource_type>
-    void  destroy();
-
-    resource_handle(resource_handle const&  other)
-        : m_data_ptr(other.m_data_ptr)
+    std::lock_guard<std::mutex> const  lock(mutex());
+    if (key.empty())
+        key = generate_fresh_key();
+    else
     {
-        m_data_ptr->second.inc_ref_count();
+        resources_cache_type::value_type* const  resource_ptr = find_resource(key);
+        if (resource_ptr != nullptr)
+        {
+            if (resource_ptr->second->get_load_state() == LOAD_STATE::IN_PROGRESS &&
+                    parent_notification_callback.operator bool())
+                m_notification_callbacks[key].push_back(parent_notification_callback);
+            return resource_ptr;
+        }
     }
 
-    resource_handle& operator=(resource_handle const&  other)
-    {
-        m_data_ptr = other.m_data_ptr;
-        m_data_ptr->second.inc_ref_count();
-        return *this;
-    }
+    auto const  iter_and_bool = m_cache.insert({
+            key,
+            resources_holder_unique_ptr(new resource_holder_type)
+            });
+    INVARIANT(iter_and_bool.second);
 
-    key_type const&  key() const
-    {
-        return m_data_ptr->first;
-    }
+    if (parent_notification_callback.operator bool())
+        m_notification_callbacks[key].push_back(parent_notification_callback);
 
-    ASYNC_LOAD_STATE  get_load_state() const
-    {
-        return m_data_ptr->second.get_load_state(m_data_ptr->first);
-    }
-
-    bool  is_load_finished() const
-    {
-        return get_load_state() != ASYNC_LOAD_STATE::IN_PROGRESS;
-    }
-
-    pointer_to_resource_type  resource_ptr() const
-    {
-        ASSUMPTION(is_load_finished());
-        return m_data_ptr->second.resource_ptr();
-    }
-
-    std::string const&  error_message() const
-    {
-        ASSUMPTION(is_load_finished());
-        return m_data_ptr->second.error_message();
-    }
-
-private:
-
-    resources_cache_type::value_type*  m_data_ptr;
-};
+    resource_holder_type::resource_constructor<resource_type>(
+            *iter_and_bool.first->second,
+            std::bind(
+                &resource_cache::on_load_complete,
+                std::cref(key),
+                finalise_load_on_destroy_ptr(new finalise_load_on_destroy(key))
+                ),
+            args_for_constructor_of_the_resource...
+            );
+}
 
 
 template<typename resource_type>
-void  resource_handle::destroy()
+void  resource_cache::erase_resource(key_type const&  key)
 {
-    m_data_ptr->second.dec_ref_count();
-    if (m_data_ptr->second.ref_count() == 0ULL)
-    {
-        resource_load_planner::instance().cancel_load_request(key());
-        m_data_ptr->second.destroy_resource<resource_type>();
-        resource_cache::instance().erase_resource(key());
-        m_data_ptr = nullptr;
-    }
+    TMPROF_BLOCK();
+
+    std::lock_guard<std::mutex> const  lock(mutex());
+    auto const  it = m_cache.find(key);
+    if (it == m_cache.end())
+        return;
+
+    resource_load_planner::instance().cancel_load_request(key);
+    it->second->destroy_resource<resource_type>();
+
+    auto const  callbacks_it = m_notification_callbacks.find(key);
+    if (callbacks_it != m_notification_callbacks.end())
+        callbacks_it->second.clear();
+
+    m_cache.erase(it);
 }
 
 
 }}
 
+namespace async {
+
+
+using  key_type = detail::key_type;
+using  load_priority_type = detail::resource_load_priority_type;
+using  notification_callback_type = detail::notification_callback_type;
+using  finalise_load_on_destroy_ptr = detail::finalise_load_on_destroy_ptr;
+
 
 template<typename resource_type__>
-struct  async_resource_accessor
+struct  resource_accessor
 {
-    using  key_type = detail::async::key_type;
     using  resource_type = resource_type__;
-    using  resource_load_priority_type = detail::async::resource_load_priority_type;
 
-    explicit async_resource_accessor(
-            boost::filesystem::path const&  path,
-            resource_load_priority_type const  priority
-            )
-        : m_handle(
-            detail::async::resource_cache::instance().insert_load_request<resource_type>(
-                    path.string(),
-                    priority
-                    )
-            )
+    resource_accessor()
+        : m_data_ptr(nullptr)
     {}
 
-    ~async_resource_accessor()
+    explicit resource_accessor(
+            key_type const&  key,
+            load_priority_type const  priority,
+            notification_callback_type const& notification_callback = notification_callback_type())
+        : m_data_ptr(nullptr)
     {
-        m_handle.destroy<resource_type>();
+        insert_load_request(key, priority, notification_callback);
     }
 
-    boost::filesystem::path  path() const { return boost::filesystem::path(key()); }
+    void  insert_load_request(
+            key_type const&  key,
+            load_priority_type const  priority,
+            notification_callback_type const& notification_callback = notification_callback_type()
+            )
+    {
+        ASSUMPTION(m_data_ptr == nullptr);
+        m_data_ptr = detail::resource_cache::instance().insert_load_request<resource_type>(
+                            key,
+                            priority,
+                            notification_callback
+                            );
+        m_data_ptr->second->inc_ref_count();
+        if (m_data_ptr->second->get_load_state() != LOAD_STATE::IN_PROGRESS && notification_callback.operator bool())
+            notification_callback();
+    }
 
-    bool  loaded_successfully() const { return get_load_state() == ASYNC_LOAD_STATE::FINISHED_SUCCESSFULLY; }
-    bool  load_failed() const { return get_load_state() == ASYNC_LOAD_STATE::FINISHED_WITH_ERROR; }
+    template<typename... arg_types>
+    explicit resource_accessor(
+            key_type const&  key,
+            arg_types... args_for_constructor_of_the_resource,
+            notification_callback_type const& notification_callback = notification_callback_type()
+            )
+        : m_data_ptr(nullptr)
+    {
+        insert_resource(key, args_for_constructor_of_the_resource..., notification_callback);
+    }
 
-    key_type const&  key() const { return m_handle.key(); }
+    template<typename... arg_types>
+    void  insert_resource(
+            key_type const&  key,
+            arg_types... args_for_constructor_of_the_resource,
+            notification_callback_type const& notification_callback = notification_callback_type()
+            )
+    {
+        ASSUMPTION(m_data_ptr == nullptr);
+        m_data_ptr = detail::resource_cache::instance().insert_resource<resource_type>(
+                            key,
+                            args_for_constructor_of_the_resource...,
+                            notification_callback
+                            );
+        m_data_ptr->second->inc_ref_count();
+        if (m_data_ptr->second->get_load_state() != LOAD_STATE::IN_PROGRESS && notification_callback.operator bool())
+            notification_callback();
+    }
 
-    ASYNC_LOAD_STATE  get_load_state() const { return m_handle.get_load_state(); }
+    resource_accessor(resource_accessor<resource_type> const&  other)
+        : m_data_ptr(other.m_data_ptr)
+    {
+        if (m_data_ptr != nullptr)
+            m_data_ptr->second->inc_ref_count();
+    }
 
-    resource_type&  resource() const { return *reinterpret_cast<resource_type*>(m_handle.resource_ptr()); }
+    resource_accessor<resource_type>& operator=(resource_accessor<resource_type> const&  other)
+    {
+        release();
+        m_data_ptr = other.m_data_ptr;
+        if (m_data_ptr != nullptr)
+            m_data_ptr->second->inc_ref_count();
+        return *this;
+    }
 
-    std::string const&  load_fail_message() const { return m_handle.error_message(); }
+    ~resource_accessor()
+    {
+        release();
+    }
+
+    void  release()
+    {
+        if (m_data_ptr != nullptr)
+        {
+            m_data_ptr->second->dec_ref_count();
+            if (m_data_ptr->second->ref_count() == 0ULL)
+            {
+                detail::resource_cache::instance().erase_resource<resource_type>(key());
+                m_data_ptr = nullptr;
+            }
+        }
+    }
+
+    LOAD_STATE  get_load_state() const
+    {
+        return m_data_ptr == nullptr ? LOAD_STATE::IN_PROGRESS : m_data_ptr->second->get_load_state();
+    }
+
+    bool  is_load_finished() const
+    {
+        return get_load_state() != LOAD_STATE::IN_PROGRESS;
+    }
+
+    bool  loaded_successfully() const
+    {
+        return get_load_state() == LOAD_STATE::FINISHED_SUCCESSFULLY;
+    }
+
+    bool  load_failed() const
+    {
+        return get_load_state() == LOAD_STATE::FINISHED_WITH_ERROR;
+    }
+
+    key_type const&  key() const
+    {
+        ASSUMPTION(m_data_ptr != nullptr);
+        return m_data_ptr->first;
+    }
+
+    resource_type&  resource() const
+    {
+        ASSUMPTION(is_load_finished());
+        return *reinterpret_cast<resource_type*>(m_data_ptr->second->resource_ptr());
+    }
+
+    std::string const&  error_message() const
+    {
+        ASSUMPTION(is_load_finished());
+        return m_data_ptr->second->error_message();
+    }
 
 private:
 
-    detail::async::resource_handle  m_handle;
+    detail::resources_cache_type::value_type*  m_data_ptr;
 };
 
 
 template<typename resource_type__>
-struct  async_resource_accessor_base : public async_resource_accessor<resource_type__>
+resource_accessor<resource_type__>  insert_load_request(
+        key_type const&  key,
+        load_priority_type const  priority,
+        notification_callback_type const& notification_callback = notification_callback_type()
+        )
 {
-    explicit async_resource_accessor_base(
-            boost::filesystem::path const&  path,
-            resource_load_priority_type const  priority
-            )
-        : async_resource_accessor<resource_type__>(path, priority)
-    {}
+    resource_accessor<resource_type__>  accessor;
+    accessor.insert_load_request(key, priority, notification_callback);
+    return accessor;
+}
 
-protected:
-    using  async_resource_accessor<resource_type>::key;
-    using  async_resource_accessor<resource_type>::resource;
-};
 
+template<typename resource_type__, typename... arg_types>
+resource_accessor<resource_type__>  insert_resource(
+        key_type const&  key,
+        arg_types... args_for_constructor_of_the_resource,
+        notification_callback_type const& notification_callback = notification_callback_type()
+        )
+{
+    resource_accessor<resource_type__>  accessor;
+    accessor.insert_resource(key, args_for_constructor_of_the_resource..., notification_callback);
+    return accessor;
+}
+
+
+}
 
 #endif

@@ -1,6 +1,6 @@
 #include <utility/async_resource_load.hpp>
 
-namespace detail { namespace async {
+namespace async { namespace detail {
 
 
 resource_load_planner&  resource_load_planner::instance()
@@ -125,28 +125,40 @@ void  resource_load_planner::worker()
 }
 
 
+finalise_load_on_destroy::~finalise_load_on_destroy()
+{
+    resource_cache::instance().finalise_load(m_key, m_error_message);
+}
+
+
 resource_holder_type::resource_holder_type()
     : m_ref_count(0ULL)
     , m_resource_ptr(nullptr)
     , m_error_message()
-    , m_load_state(ASYNC_LOAD_STATE::IN_PROGRESS)
+    , m_load_state(LOAD_STATE::IN_PROGRESS)
 {}
 
 
-ASYNC_LOAD_STATE  resource_holder_type::get_load_state(key_type const&  key) const
+void  resource_holder_type::finalise_load(std::string const&  force_error_message)
 {
-    if (m_load_state == ASYNC_LOAD_STATE::IN_PROGRESS)
+    if (m_load_state != LOAD_STATE::IN_PROGRESS)
     {
-        std::lock_guard<std::mutex> const  lock(resource_load_planner::instance().mutex());
-        if (resource_load_planner::instance().resource_just_being_loaded() != key)
-        {
-            if (resource_ptr() != nullptr)
-                m_load_state = ASYNC_LOAD_STATE::FINISHED_SUCCESSFULLY;
-            else if (!m_error_message.empty())
-                m_load_state = ASYNC_LOAD_STATE::FINISHED_WITH_ERROR;
-        }
+        ASSUMPTION(m_error_message == force_error_message);
+        return;
     }
-    return m_load_state;
+
+    ASSUMPTION(m_error_message.empty() || m_error_message == force_error_message);
+
+    if (!force_error_message.empty())
+        m_error_message = force_error_message;
+
+    if (!m_error_message.empty())
+        m_load_state = LOAD_STATE::FINISHED_WITH_ERROR;
+    else
+    {
+        ASSUMPTION(resource_ptr() != nullptr);
+        m_load_state = LOAD_STATE::FINISHED_SUCCESSFULLY;
+    }
 }
 
 
@@ -157,22 +169,51 @@ resource_cache&  resource_cache::instance()
 }
 
 
-void  resource_cache::erase_resource(key_type const&  key)
+resources_cache_type::value_type*  resource_cache::find_resource(key_type const&  key)
 {
-    TMPROF_BLOCK();
-
-    auto const  it = m_cache.find(key);
-    if (it == m_cache.end())
-        return;
-    m_cache.erase(it);
+    resources_cache_type::iterator const  it = m_cache.find(key);
+    if (it != m_cache.end())
+        return &*it;
+    return nullptr;
 }
 
 
-resource_handle::resource_handle(resources_cache_type::value_type* const  data_ptr)
-    : m_data_ptr(data_ptr)
+void  resource_cache::finalise_load(key_type const&  key, std::string const&  force_error_message)
 {
-    ASSUMPTION(m_data_ptr != nullptr);
-    m_data_ptr->second.inc_ref_count();
+    {
+        std::lock_guard<std::mutex> const  lock(mutex());
+        resources_cache_type::value_type* const  resource_ptr = find_resource(key);
+        if (resource_ptr == nullptr)
+            return;
+        resource_ptr->second->finalise_load(force_error_message);
+    }
+    process_notification_callbacks(key);
+}
+
+
+void  resource_cache::process_notification_callbacks(key_type const&  key)
+{
+    std::vector<notification_callback_type>  to_process;
+    {
+        std::lock_guard<std::mutex> const  lock(mutex());
+        auto const  it = m_notification_callbacks.find(key);
+        if (it != m_notification_callbacks.end())
+        {
+            to_process = it->second;
+            it->second.clear();
+        }
+    }
+    for (auto const&  callback : to_process)
+        callback();
+}
+
+
+natural_64_bit  resource_cache::s_fresh_key_id = 0ULL;
+
+
+key_type  resource_cache::generate_fresh_key()
+{
+    return msgstream() << "@generic> " << ++s_fresh_key_id;
 }
 
 

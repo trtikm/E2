@@ -13,7 +13,7 @@
 namespace qtgl { namespace detail {
 
 
-modelspace_data::modelspace_data(boost::filesystem::path const&  pathname)
+modelspace_data::modelspace_data(boost::filesystem::path const&  pathname, async::finalise_load_on_destroy_ptr)
     : m_coord_systems()
 {
     TMPROF_BLOCK();

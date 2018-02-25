@@ -2,6 +2,7 @@
 #include <qtgl/detail/read_line.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
+#include <utility/canonical_path.hpp>
 #include <utility/msgstream.hpp>
 #include <boost/filesystem.hpp>
 #include <sstream>
@@ -12,7 +13,7 @@
 namespace qtgl { namespace detail {
 
 
-keyframe_data::keyframe_data(boost::filesystem::path const&  pathname)
+keyframe_data::keyframe_data(boost::filesystem::path const&  pathname, async::finalise_load_on_destroy_ptr)
     : m_time_point(0.0)
     , m_coord_systems()
 {
@@ -98,45 +99,113 @@ keyframe_data::keyframe_data(boost::filesystem::path const&  pathname)
 }
 
 
+keyframes_data::keyframes_data(
+        boost::filesystem::path const&  keyframes_dir,
+        async::finalise_load_on_destroy_ptr  finaliser)
+    : m_keyframes()
+{
+    TMPROF_BLOCK();
+
+    if (boost::filesystem::is_directory(keyframes_dir))
+        throw std::runtime_error("Cannot access the directory of keyframes: " + keyframes_dir.string());
+
+    std::shared_ptr< std::vector<boost::filesystem::path> >  keyframe_pathnames(
+            new std::vector<boost::filesystem::path>()
+            );
+    for (boost::filesystem::directory_entry const&  entry : boost::filesystem::directory_iterator(keyframes_dir))
+    {
+        std::string const  filename = entry.path().filename().string();
+        std::string const  extension = entry.path().filename().extension().string();
+        if (filename.find("keyframe_") == 0UL && extension == ".txt")
+            keyframe_pathnames->push_back(canonical_path(entry.path()));
+    }
+
+    if (keyframe_pathnames->empty())
+        throw std::runtime_error("There is no keyframe file in the directory: " + keyframes_dir.string());
+
+    m_keyframes.resize(keyframe_pathnames->size());
+
+    struct local
+    {
+        static void  on_keyframe_loaded(
+                std::shared_ptr< std::vector<boost::filesystem::path> > const  keyframe_pathnames,
+                natural_64_bit  index,
+                async::finalise_load_on_destroy_ptr  finaliser,
+                std::vector<keyframe>&  keyframes
+                )
+        {
+            ASSUMPTION(index < keyframes.size());
+            ASSUMPTION(keyframes.at(index).is_load_finished());
+
+            if (keyframes.at(index).get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
+            {
+                // Oh no! We failed to load the keyframe at index 'index'!
+                // So, let's also fail the load of the whole 'keyframe_data' resource.
+
+                finaliser->force_finalisation_as_failure(
+                        "Load of keyframe '" + keyframe_pathnames->at(index).string() + "' has FAILED!"
+                        );
+                return;
+            }
+
+            // Let's load the next keyframe (if any remains)
+
+            ++index;
+            if (index == keyframes.size())
+            {
+                // All keyframes are loaded! So, let's check for their consystency and sort them by time.
+
+                if (![&keyframes]() -> bool {
+                        auto const  num_coord_systems_per_keyframe = keyframes.front().get_coord_systems().size();
+                        for (std::size_t i = 0ULL; i != keyframes.size(); ++i)
+                            if (keyframes.at(i).get_coord_systems().size() != num_coord_systems_per_keyframe)
+                                return false;
+                        return true;
+                        }())
+                {
+                    finaliser->force_finalisation_as_failure(
+                        "Loaded of keyframes have different counts of coordinate systems (inconsystent animation)."
+                        );
+                    return;
+                }
+
+                std::sort(
+                    keyframes.begin(),
+                    keyframes.end(),
+                    [](keyframe const& left, keyframe const& right) -> bool {
+                        return left.get_time_point() < right.get_time_point();
+                        }
+                    );
+
+                return;
+            }
+    
+            ASSUMPTION(keyframe_pathnames->size() == keyframes.size());
+
+            // Let's load the next keyframe.
+
+            keyframes.at(index).insert_load_request(
+                    keyframe_pathnames->at(index).string(),
+                    1UL,
+                    std::bind(&on_keyframe_loaded, keyframe_pathnames, index, finaliser, std::ref(keyframes))
+                    );
+        }
+    };
+
+    // We load individual keyframes one by one, starting from the first one in the array (at index 0).
+    // NOTE: All remaining keyframes (at remaining indices) are loaded in function 'local::on_keyframe_loaded'.
+
+    m_keyframes.at(0UL).insert_load_request(
+            keyframe_pathnames->at(0UL).string(),
+            1UL,
+            std::bind(&local::on_keyframe_loaded, keyframe_pathnames, 0UL, finaliser, std::ref(m_keyframes))
+            );
+}
+
+
 }}
 
 namespace qtgl {
-
-
-void  keyframes::_update_load_state()
-{
-    if (m_load_state != ASYNC_LOAD_STATE::IN_PROGRESS)
-        return;
-
-    for (std::size_t  i = 0ULL; i != num_keyframes(); ++i)
-    {
-        if (keyframe_at(i).load_failed())
-        {
-            m_load_state = ASYNC_LOAD_STATE::FINISHED_WITH_ERROR;
-            return;
-        }
-        if (!keyframe_at(i).loaded_successfully())
-            return;
-    }
-
-    ASSUMPTION(
-        [this]() -> bool {
-            for (std::size_t i = 0ULL; i != num_keyframes(); ++i)
-                if (keyframe_at(i).get_coord_systems().size() != num_coord_systems_per_keyframe())
-                    return false;
-            return true;
-            }()
-        );
-
-    std::sort(
-        m_keyframes.begin(),
-        m_keyframes.end(),
-        [](keyframe const& left, keyframe const& right) -> bool {
-            return left.get_time_point() < right.get_time_point();
-            }
-        );
-    m_load_state = ASYNC_LOAD_STATE::FINISHED_SUCCESSFULLY;
-}
 
 
 std::pair<std::size_t, std::size_t>  find_indices_of_keyframes_to_interpolate_for_time(
