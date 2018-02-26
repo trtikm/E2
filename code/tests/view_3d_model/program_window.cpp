@@ -1260,28 +1260,28 @@ void  program_window::on_textures_refresh_lists()
 
     QDir const  dir(textures_root_dir().string().c_str());
 
-    std::vector< std::pair<boost::filesystem::path,qtgl::texture_properties_ptr> >  cached_texture_props;
-    qtgl::get_properties_of_cached_textures(cached_texture_props);
-    {
-        QStringList values;
-        for (auto const  props : cached_texture_props)
-            if (props.first.empty())
-                values.push_back(dir.relativeFilePath(QString(props.second->image_file().string().c_str())));
-            else
-                values.push_back(dir.relativeFilePath(QString(props.first.string().c_str())));
-        m_textures_cached_list->setStringList(values);
-        m_textures_cached_list->sort(0);
-    }
+    //std::vector< std::pair<boost::filesystem::path,qtgl::texture_properties_ptr> >  cached_texture_props;
+    //qtgl::get_properties_of_cached_textures(cached_texture_props);
+    //{
+    //    QStringList values;
+    //    for (auto const  props : cached_texture_props)
+    //        if (props.first.empty())
+    //            values.push_back(dir.relativeFilePath(QString(props.second->image_file().string().c_str())));
+    //        else
+    //            values.push_back(dir.relativeFilePath(QString(props.first.string().c_str())));
+    //    m_textures_cached_list->setStringList(values);
+    //    m_textures_cached_list->sort(0);
+    //}
 
-    std::vector< std::pair<boost::filesystem::path,std::string> >  failed_textures_info;
-    qtgl::get_properties_of_failed_textures(failed_textures_info);
-    {
-        QStringList values;
-        for (auto const  props_error : failed_textures_info)
-            values.push_back(dir.relativeFilePath(QString(props_error.first.string().c_str())) +
-                             QString(" : ") +
-                             QString(props_error.second.c_str()));
-        m_textures_failed_list->setStringList(values);
-        m_textures_failed_list->sort(0);
-    }
+    //std::vector< std::pair<boost::filesystem::path,std::string> >  failed_textures_info;
+    //qtgl::get_properties_of_failed_textures(failed_textures_info);
+    //{
+    //    QStringList values;
+    //    for (auto const  props_error : failed_textures_info)
+    //        values.push_back(dir.relativeFilePath(QString(props_error.first.string().c_str())) +
+    //                         QString(" : ") +
+    //                         QString(props_error.second.c_str()));
+    //    m_textures_failed_list->setStringList(values);
+    //    m_textures_failed_list->sort(0);
+    //}
 }

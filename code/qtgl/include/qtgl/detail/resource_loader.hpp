@@ -22,15 +22,6 @@ struct resource_loader
 
     void clear();
 
-    using  texture_props_receiver_fn = std::function<void(boost::filesystem::path const&,   //!< Pathname of a texture file
-                                                          texture_properties_ptr,   //!< The loaded data from the texture file
-                                                          std::string const&    //!< Error message. Empty string means no error.
-                                                          )>;
-    void  insert_texture_request(boost::filesystem::path const&  texture_file, texture_props_receiver_fn const&  receiver);
-
-    using  texture_receiver_fn = std::function<void(texture_image_properties&,texture_properties_ptr)>;
-    void  insert_texture_request(texture_properties_ptr const  props, texture_receiver_fn const&  receiver);
-
     using  vertex_program_receiver_fn =
             std::function<void(boost::filesystem::path const&,  //!< Shader file path-name.
                                std::shared_ptr<std::vector<std::string> const>, //!< Lines of the shader's code.
@@ -69,8 +60,6 @@ private:
     resource_loader(resource_loader const&) = delete;
     resource_loader& operator=(resource_loader const&) = delete;
 
-    bool  fetch_texture_request(boost::filesystem::path&  textute_file, texture_props_receiver_fn&  output_receiver);
-    bool  fetch_texture_request(texture_properties_ptr&  output_props, texture_receiver_fn&  output_receiver);
     bool  fetch_vertex_program_request(boost::filesystem::path&  shader_file,
                                        vertex_program_receiver_fn&  output_receiver);
     bool  fetch_fragment_program_request(boost::filesystem::path&  shader_file,
@@ -85,8 +74,6 @@ private:
     std::atomic<bool>  m_worker_finished;
     mutable std::mutex  m_mutex;
 
-    std::deque< std::pair<boost::filesystem::path,texture_props_receiver_fn> >  m_texture_props_requests;
-    std::deque< std::pair<texture_properties_ptr,texture_receiver_fn> >  m_texture_requests;
     std::deque< std::pair<boost::filesystem::path,vertex_program_receiver_fn> >  m_vertex_program_requests;
     std::deque< std::pair<boost::filesystem::path,fragment_program_receiver_fn> >  m_fragment_program_requests;
     std::deque< std::pair<boost::filesystem::path,buffer_receiver_fn> >  m_buffer_requests;

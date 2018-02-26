@@ -5,21 +5,22 @@
 #   include <qtgl/glapi.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <boost/filesystem/path.hpp>
+#   include <string>
 
 namespace qtgl {
 
 
-boost::filesystem::path  chessboard_texture_imaginary_image_path() noexcept;
+boost::filesystem::path  chessboard_texture_file_path();
+boost::filesystem::path  chessboard_texture_image_path();
+std::string  chessboard_texture_id();
 
-texture_properties  make_chessboard_texture_properties(
-                            natural_32_bit const  texture_pixel_format = GL_COMPRESSED_RGBA,
-                            natural_32_bit const  texture_x_wrapping_type = GL_REPEAT,
-                            natural_32_bit const  texture_y_wrapping_type = GL_REPEAT,
-                            natural_32_bit const  texture_min_filtering_type = GL_LINEAR_MIPMAP_LINEAR
-                            );
 
-texture_ptr  create_chessboard_texture(texture_properties_ptr const  props);
-texture_ptr  create_chessboard_texture(texture_properties const&  texture_props = make_chessboard_texture_properties());
+texture  make_chessboard_texture(
+            natural_32_bit const  pixel_format = GL_COMPRESSED_RGBA,
+            natural_32_bit const  x_wrapping_type = GL_REPEAT,
+            natural_32_bit const  y_wrapping_type = GL_REPEAT,
+            natural_32_bit const  min_filtering_type = GL_LINEAR_MIPMAP_LINEAR
+            );
 
 
 }

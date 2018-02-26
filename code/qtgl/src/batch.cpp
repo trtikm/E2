@@ -33,7 +33,7 @@ std::shared_ptr<batch const>  batch::create(
         boost::filesystem::path const&  path,
         buffers_binding_ptr const  buffers_binding,
         shaders_binding_ptr const  shaders_binding,
-        textures_binding_ptr const  textures_binding,
+        qtgl::textures_binding const  textures_binding,
         draw_state_ptr const  draw_state,
         modelspace const modelspace
         )
@@ -53,7 +53,7 @@ batch::batch(boost::filesystem::path const&  path)
     : m_path(path)
     , m_buffers_binding()
     , m_shaders_binding()
-    , m_textures_binding()
+    , m_textures_binding(false)
     , m_draw_state()
     , m_modelspace()
     , m_batch_found_in_cache__buffers(false)
@@ -69,7 +69,7 @@ batch::batch(boost::filesystem::path const&  path)
 batch::batch(boost::filesystem::path const&  path,
              buffers_binding_ptr const  buffers_binding,
              shaders_binding_ptr const  shaders_binding,
-             textures_binding_ptr const  textures_binding,
+             qtgl::textures_binding const  textures_binding,
              draw_state_ptr const  draw_state,
              modelspace const modelspace
              )
@@ -87,7 +87,6 @@ batch::batch(boost::filesystem::path const&  path,
 {
     ASSUMPTION(m_buffers_binding.operator bool());
     ASSUMPTION(m_shaders_binding.operator bool());
-    ASSUMPTION(m_textures_binding.operator bool());
     ASSUMPTION(m_draw_state.operator bool());
 }
 
@@ -119,9 +118,9 @@ shaders_binding_ptr  batch::shaders_binding() const
     return m_shaders_binding;
 }
 
-textures_binding_ptr  batch::textures_binding() const
+textures_binding  batch::textures_binding() const
 {
-    if (!m_batch_found_in_cache__textures && !m_textures_binding.operator bool())
+    if (!m_batch_found_in_cache__textures && !m_textures_binding.ready())
     {
         batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
         if (pbatch.operator bool())
@@ -306,7 +305,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
             buffer_paths.insert({bind_location,buffer_file});
         }
 
-        std::unordered_map<fragment_shader_texture_sampler_binding,boost::filesystem::path>  texture_paths;
+        textures_binding_map_type  textures_binding_map;
         do
         {
             natural_8_bit  location = value(min_fragment_shader_texture_sampler_binding());
@@ -321,7 +320,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                 break;
 
             fragment_shader_texture_sampler_binding const  bind_location = fragment_shader_texture_sampler_binding(location);
-            if (texture_paths.count(bind_location) != 0ULL)
+            if (textures_binding_map.count(bind_location) != 0ULL)
             {
                 error_message = msgstream() << "Fragment shader texture sampler binding '" << line
                                             << "' appears more than once in the file '" << batch_file << "'.";
@@ -344,7 +343,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
             }
             texture_file = canonical_path(texture_file);
 
-            texture_paths.insert({bind_location,texture_file});
+            textures_binding_map.insert({bind_location,texture(texture_file)});
         }
         while (detail::read_line(istr,line));
 
@@ -455,7 +454,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                     batch_file,
                     buffers_binding::create(index_buffer,buffer_paths),
                     shaders_binding::create(vertex_shader,fragment_shader),
-                    textures_binding::create(texture_paths),
+                    textures_binding(textures_binding_map),
                     draw_state::create(cull_face_mode,use_alpha_blending,alpha_blending_src_function,alpha_blending_dst_function),
                     modelspace_pathname.empty() ? modelspace() : modelspace(modelspace_pathname)
                     );
@@ -497,8 +496,6 @@ void  insert_load_request(batch const&  batch_ref)
 //            insert_load_request(*batch_ref.buffers_binding());
         if (batch_ref.shaders_binding().operator bool())
             insert_load_request(*batch_ref.shaders_binding());
-        if (batch_ref.textures_binding().operator bool())
-            insert_load_request(*batch_ref.textures_binding());
     }
 }
 
@@ -514,7 +511,7 @@ bool  make_current(batch const&  binding, draw_state const* const  previous_stat
         result = false;
     if (!binding.buffers_binding().operator bool() || !make_current(*binding.buffers_binding()))
         result = false;
-    if (!binding.textures_binding().operator bool() || !make_current(*binding.textures_binding()))
+    if (!make_current(binding.textures_binding()))
         result = false;
 
     if (!binding.get_modelspace().empty() && !binding.get_modelspace().loaded_successfully())

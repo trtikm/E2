@@ -1,5 +1,4 @@
 #include <qtgl/texture.hpp>
-#include <qtgl/detail/texture_cache.hpp>
 #include <qtgl/detail/read_line.hpp>
 #include <qtgl/glapi.hpp>
 #include <utility/msgstream.hpp>
@@ -9,120 +8,199 @@
 #include <utility/canonical_path.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <boost/functional/hash.hpp>
 #include <QImage>
 #include <stdexcept>
 
-namespace qtgl {
+namespace qtgl { namespace detail {
 
 
-texture_properties_ptr  texture_properties::create(
-        boost::filesystem::path const&  image_file,
-        natural_32_bit const  pixel_format,
-        natural_32_bit const  x_wrapping_type,
-        natural_32_bit const  y_wrapping_type,
-        natural_32_bit const  min_filtering_type,
-        natural_32_bit const  mag_filtering_type
-        )
-{
-    return std::make_shared<texture_properties>(image_file,
-                                                pixel_format,
-                                                x_wrapping_type,
-                                                y_wrapping_type,
-                                                min_filtering_type,
-                                                mag_filtering_type);
-}
-
-texture_properties::texture_properties(
-        boost::filesystem::path const&  image_file,
-        natural_32_bit const  pixel_format,
-        natural_32_bit const  x_wrapping_type,
-        natural_32_bit const  y_wrapping_type,
-        natural_32_bit const  min_filtering_type,
-        natural_32_bit const  mag_filtering_type
-        )
-    : m_image_file(image_file)
-    , m_pixel_format(pixel_format)
-    , m_x_wrapping_type(x_wrapping_type)
-    , m_y_wrapping_type(y_wrapping_type)
-    , m_min_filtering_type(min_filtering_type)
-    , m_mag_filtering_type(mag_filtering_type)
-{}
-
-bool  operator==(texture_properties const&  props0, texture_properties const&  props1)
-{
-    return props0.image_file() == props1.image_file() &&
-           props0.pixel_format() == props1.pixel_format() &&
-           props0.x_wrapping_type() == props1.x_wrapping_type() &&
-           props0.y_wrapping_type() == props1.y_wrapping_type() &&
-           props0.min_filtering_type() == props1.min_filtering_type() &&
-           props0.mag_filtering_type() == props1.mag_filtering_type()
-           ;
-}
-
-size_t  hasher_of_texture_properties(texture_properties const&  props)
-{
-    std::size_t seed = 0ULL;
-    boost::hash_combine(seed,props.image_file().string());
-    boost::hash_combine(seed,props.pixel_format());
-    boost::hash_combine(seed,props.x_wrapping_type());
-    boost::hash_combine(seed,props.y_wrapping_type());
-    boost::hash_combine(seed,props.min_filtering_type());
-    boost::hash_combine(seed,props.mag_filtering_type());
-
-    return seed;
-}
-
-
-}
-
-namespace qtgl {
-
-
-texture_image_properties::texture_image_properties(
-        natural_32_bit const  width,
-        natural_32_bit const  height,
-        natural_8_bit const* const  data_begin,
-        natural_8_bit const* const  data_end,
-        natural_32_bit const  pixel_components = GL_RGBA,
-        natural_32_bit const  pixel_components_type = GL_UNSIGNED_INT_8_8_8_8
-        )
-    : m_width(width)
-    , m_height(height)
-    , m_data{new std::vector<natural_8_bit>(data_begin,data_end)}
-    , m_pixel_components(pixel_components)
-    , m_pixel_components_type(pixel_components_type)
-{
-    ASSUMPTION(m_width > 0U && m_height > 0U);
-    ASSUMPTION(m_data->size() % ((natural_64_bit)m_width * (natural_64_bit)m_height) == 0ULL);
-    ASSUMPTION(m_data->size() / ((natural_64_bit)m_width * (natural_64_bit)m_height) > 0ULL &&
-               m_data->size() / ((natural_64_bit)m_width * (natural_64_bit)m_height) < 17ULL );
-}
-
-
-texture_image_properties  load_texture_image_file(boost::filesystem::path const&  image_file)
+texture_file_data::texture_file_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr)
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(boost::filesystem::exists(image_file));
-    ASSUMPTION(boost::filesystem::is_regular_file(image_file));
+    ASSUMPTION(boost::filesystem::exists(path));
+    ASSUMPTION(boost::filesystem::is_regular_file(path));
+
+    if (boost::filesystem::file_size(path) < 4ULL)
+        throw std::runtime_error(msgstream() << "The passed file '" << path
+                                             << "' is not a qtgl file (wrong size).");
+
+    std::ifstream  istr(path.string(),std::ios_base::binary);
+    if (!istr.good())
+        throw std::runtime_error(msgstream() << "Cannot open the texture file '" << path << "'.");
+
+    std::string  file_type;
+    if (!detail::read_line(istr,file_type))
+        throw std::runtime_error(msgstream() << "The passed file '" << path
+                                             << "' is not a qtgl file (cannot read its type string).");
+
+    if (file_type == "E2::qtgl/texture/text")
+    {
+        std::string  line;
+
+        if (!detail::read_line(istr,line))
+            throw std::runtime_error(msgstream() << "Cannot read a path to an image file in the file '"
+                                                 << path << "'.");
+
+        boost::filesystem::path const  image_file = canonical_path(path.parent_path() / line);
+
+        if (!detail::read_line(istr,line))
+            throw std::runtime_error(
+                    msgstream() << "Cannot read 'pixel format' in the texture file '" << path << "'."
+                    );
+        natural_32_bit  pixel_format;
+        if (line == "COMPRESSED_RGB")
+            pixel_format = GL_COMPRESSED_RGB;
+        else if (line == "COMPRESSED_RGBA")
+            pixel_format = GL_COMPRESSED_RGBA;
+        else
+            throw std::runtime_error(
+                    msgstream() << "Unknown pixel format '" << line << "' in the texture file '" << path << "'."
+                    );
+
+        if (!detail::read_line(istr,line))
+            throw std::runtime_error(
+                    msgstream() << "Cannot read 'x-wrapping type' in the texture file '" << path << "'."
+                    );
+        natural_32_bit  x_wrapping_type;
+        if (line == "REPEAT")
+            x_wrapping_type= GL_REPEAT;
+        else if (line == "CLAMP")
+            x_wrapping_type= GL_CLAMP;
+        else
+            throw std::runtime_error(
+                    msgstream() << "Unknown x-wrapping type '" << line << "' in the texture file '" << path << "'."
+                    );
+
+        if (!detail::read_line(istr,line))
+            throw std::runtime_error(
+                    msgstream() << "Cannot read 'y-wrapping type' in the texture file '" << path << "'."
+                    );
+        natural_32_bit  y_wrapping_type;
+        if (line == "REPEAT")
+            y_wrapping_type= GL_REPEAT;
+        else if (line == "CLAMP")
+            y_wrapping_type= GL_CLAMP;
+        else
+            throw std::runtime_error(
+                    msgstream() << "Unknown y-wrapping type '" << line << "' in the texture file '" << path << "'."
+                    );
+
+        if (!detail::read_line(istr,line))
+            throw std::runtime_error(
+                    msgstream() << "Cannot read 'min filtering type' in the texture file '" << path << "'."
+                    );
+        natural_32_bit  min_filtering_type;
+        if (line == "NEAREST_MIPMAP_NEAREST")
+            min_filtering_type= GL_NEAREST_MIPMAP_NEAREST;
+        else if (line == "NEAREST_MIPMAP_LINEAR")
+            min_filtering_type= GL_NEAREST_MIPMAP_LINEAR;
+        else if (line == "LINEAR_MIPMAP_NEAREST")
+            min_filtering_type= GL_LINEAR_MIPMAP_NEAREST;
+        else if (line == "LINEAR_MIPMAP_LINEAR")
+            min_filtering_type= GL_LINEAR_MIPMAP_LINEAR;
+        else
+            throw std::runtime_error(
+                    msgstream() << "Unknown min filtering type '" << line << "' in the texture file '"
+                                << path << "'."
+                    );
+
+        if (!detail::read_line(istr,line))
+            throw std::runtime_error(
+                    msgstream() << "Cannot read 'mag filtering type' in the texture file '" << path << "'."
+                    );
+        natural_32_bit  mag_filtering_type;
+        if (line == "NEAREST")
+            mag_filtering_type= GL_NEAREST;
+        else if (line == "LINEAR")
+            mag_filtering_type= GL_LINEAR;
+        else
+            throw std::runtime_error(
+                    msgstream() << "Unknown mag filtering type '" << line << "' in the texture file '"
+                                << path << "'."
+                    );
+
+        initialise(
+                image_file,
+                pixel_format,
+                x_wrapping_type,
+                y_wrapping_type,
+                min_filtering_type,
+                mag_filtering_type
+                );
+    }
+    else
+        throw std::runtime_error(
+                msgstream() << "The passed texture file '" << path
+                            << "' is of an unknown type '" << file_type << "'."
+                );
+}
+
+void  texture_file_data::initialise(
+        boost::filesystem::path const&  image_pathname,
+        natural_32_bit const  pixel_format,
+        natural_32_bit const  x_wrapping_type,
+        natural_32_bit const  y_wrapping_type,
+        natural_32_bit const  min_filtering_type,
+        natural_32_bit const  mag_filtering_type
+        )
+{
+    TMPROF_BLOCK();
+
+    if (!boost::filesystem::exists(image_pathname) || !boost::filesystem::is_regular_file(image_pathname))
+        throw std::runtime_error(msgstream() << "The image file '" << image_pathname << "' does not exist.");
+    if (pixel_format != GL_COMPRESSED_RGB && pixel_format != GL_COMPRESSED_RGBA)
+        throw std::runtime_error(msgstream() << "Unknown pixel format '" << pixel_format << "'.");
+    if (x_wrapping_type != GL_REPEAT && x_wrapping_type != GL_CLAMP)
+        throw std::runtime_error(msgstream() << "Unknown x-wrapping type '" << x_wrapping_type << "'.");
+    if (y_wrapping_type != GL_REPEAT && y_wrapping_type != GL_CLAMP)
+        throw std::runtime_error(msgstream() << "Unknown y-wrapping type '" << y_wrapping_type << "'.");
+    if (min_filtering_type != GL_NEAREST_MIPMAP_NEAREST &&
+            min_filtering_type != GL_NEAREST_MIPMAP_LINEAR &&
+            min_filtering_type != GL_LINEAR_MIPMAP_NEAREST &&
+            min_filtering_type != GL_LINEAR_MIPMAP_LINEAR
+            )
+        throw std::runtime_error(msgstream() << "Unknown min filtering type '" << min_filtering_type << "'.");
+    if (mag_filtering_type != GL_NEAREST && mag_filtering_type != GL_LINEAR)
+        throw std::runtime_error(msgstream() << "Unknown mag filtering type '" << mag_filtering_type << "'.");
+
+    m_image_pathname = image_pathname;
+    m_pixel_format = pixel_format;
+    m_x_wrapping_type = x_wrapping_type;
+    m_y_wrapping_type = y_wrapping_type;
+    m_min_filtering_type = min_filtering_type;
+    m_mag_filtering_type = mag_filtering_type;
+}
+
+
+}}
+
+namespace qtgl { namespace detail {
+
+
+texture_image_data::texture_image_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr)
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(boost::filesystem::exists(path));
+    ASSUMPTION(boost::filesystem::is_regular_file(path));
 
     QImage  qimage;
     {
         QImage  qtmp_image;
         {
-            std::vector<natural_8_bit> buffer(boost::filesystem::file_size(image_file),0U);
+            std::vector<natural_8_bit> buffer(boost::filesystem::file_size(path),0U);
             {
-                boost::filesystem::ifstream  istr(image_file,std::ios_base::binary);
+                boost::filesystem::ifstream  istr(path,std::ios_base::binary);
                 if (!istr.good())
-                    throw std::runtime_error(msgstream() << "Cannot open the passed image file: " << image_file);
+                    throw std::runtime_error(msgstream() << "Cannot open the passed image file: " << path);
                 istr.read((char*)&buffer.at(0U),buffer.size());
                 if (istr.bad())
-                    throw std::runtime_error(msgstream() << "Cannot read the passed image file: " << image_file);
+                    throw std::runtime_error(msgstream() << "Cannot read the passed image file: " << path);
             }
             if (!qtmp_image.loadFromData(&buffer.at(0),(int)buffer.size()))
                 throw std::runtime_error(msgstream() << "Qt function QImage::loadFromData() has failed for "
-                                                               "the passed image file: " << image_file);
+                                                        "the passed image file: " << path);
         }
         if (qtmp_image.format() != QImage::Format_RGBA8888)
         {
@@ -141,370 +219,198 @@ texture_image_properties  load_texture_image_file(boost::filesystem::path const&
         qimage = qtmp_image.transformed(QMatrix().scale(1,-1));
     }
 
-    return texture_image_properties(
-                qimage.width(),
-                qimage.height(),
-                qimage.bits(),
-                qimage.bits()+qimage.byteCount(),
-                GL_RGBA,
-                GL_UNSIGNED_BYTE
-                );
+    initialise(
+        qimage.width(),
+        qimage.height(),
+        qimage.bits(),
+        qimage.bits()+qimage.byteCount(),
+        GL_RGBA,
+        GL_UNSIGNED_BYTE
+        );
 }
 
-
-}
-
-namespace qtgl {
-
-
-texture::texture(texture_image_properties const&  image_props, texture_properties_ptr const  texture_props)
-    : m_id(0U)
-    , m_width(image_props.width())
-    , m_height(image_props.height())
-    , m_texture_props(texture_props)
+void  texture_image_data::initialise(
+        natural_32_bit const  width,
+        natural_32_bit const  height,
+        natural_8_bit const* const  data_begin,
+        natural_8_bit const* const  data_end,
+        natural_32_bit const  pixel_components,
+        natural_32_bit const  pixel_components_type
+        )
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(m_texture_props.operator bool());
+    ASSUMPTION(width > 0U && height > 0U);
+    ASSUMPTION(data_begin != nullptr && data_end != nullptr);
+    ASSUMPTION((
+        [width, height, data_begin, data_end]() -> bool {
+            integer_64_bit  size = data_end - data_begin;
+            return size % ((natural_64_bit)width * (natural_64_bit)height) == 0ULL &&
+                   size / ((natural_64_bit)width * (natural_64_bit)height) > 0ULL &&
+                   size / ((natural_64_bit)width * (natural_64_bit)height) < 17ULL;
+            }()
+        ));
 
-    glapi().glGenTextures(1,&m_id);
+    m_width = width;
+    m_height = height;
+    m_data = std::unique_ptr< std::vector<natural_8_bit> >(new std::vector<natural_8_bit>(data_begin, data_end));
+    m_pixel_components = pixel_components;
+    m_pixel_components_type = pixel_components_type;
+}
+
+
+}}
+
+namespace qtgl { namespace detail {
+
+
+texture_data::texture_data(std::string const&  key, async::finalise_load_on_destroy_ptr  finaliser)
+    : m_id(0U)
+    , m_texture_props()
+    , m_image_props()
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(key.find("[texture]:") == 0UL);
+
+    std::string const  texture_file_pathname = key.substr(std::string("[texture]:").size());
+    m_texture_props.insert_load_request(
+            texture_file_pathname,
+            1U,
+            [this, texture_file_pathname, finaliser]() -> void {
+                    if (m_texture_props.get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
+                    {
+                        finaliser->force_finalisation_as_failure(
+                                "Load of texture file '" + texture_file_pathname + "' has FAILED!"
+                                );
+                        return;
+                    }
+                    std::string const  image_file_pathname = m_texture_props.image_pathname().string();
+                    m_image_props.insert_load_request(
+                        image_file_pathname,
+                        1U,
+                        [this, image_file_pathname, finaliser]() -> void {
+                                if (m_image_props.get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
+                                {
+                                    finaliser->force_finalisation_as_failure(
+                                            "Load of texture image file '" + image_file_pathname + "' has FAILED!"
+                                            );
+                                    return;
+                                }
+                            }
+                        );
+
+                }
+            );
+}
+
+
+texture_data::texture_data(
+        async::finalise_load_on_destroy_ptr  finaliser,
+        GLuint const  id,
+        texture_file const  texture_props,
+        texture_image const  image_props
+        )
+    : m_id(id)
+    , m_texture_props(texture_props)
+    , m_image_props(image_props)
+{
+    ASSUMPTION(m_texture_props.loaded_successfully() && m_image_props.loaded_successfully());
+}
+
+
+void  texture_data::create_gl_image()
+{
+    if (m_id != 0U)
+        return;
+
+    TMPROF_BLOCK();
+
+    ASSUMPTION(m_texture_props.loaded_successfully() && m_image_props.loaded_successfully());
+
+    glapi().glGenTextures(1, &m_id);
     ASSUMPTION(m_id != 0U);
 
-    glapi().glBindTexture(GL_TEXTURE_2D,m_id);
+    glapi().glBindTexture(GL_TEXTURE_2D, m_id);
     glapi().glTexImage2D(GL_TEXTURE_2D, 0,
-                         m_texture_props->pixel_format(),
-                         m_width, m_height,
-                         0,
-                         image_props.pixel_components(), image_props.pixel_components_type(),
-                         (GLvoid const*)image_props.data().data()
-                         );
+        pixel_format(),
+        width(), height(),
+        0,
+        m_image_props.pixel_components(), m_image_props.pixel_components_type(),
+        (GLvoid const*)m_image_props.data().data()
+        );
     glapi().glGenerateMipmap(GL_TEXTURE_2D);
-    glapi().glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,m_texture_props->x_wrapping_type());
-    glapi().glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,m_texture_props->y_wrapping_type());
-    glapi().glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,m_texture_props->min_filtering_type());
-    glapi().glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,m_texture_props->mag_filtering_type());
+    glapi().glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, x_wrapping_type());
+    glapi().glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, y_wrapping_type());
+    glapi().glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filtering_type());
+    glapi().glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filtering_type());
 }
 
-texture::~texture()
+
+texture_data::~texture_data()
 {
-    glapi().glDeleteTextures(1U,&m_id);
+    if (m_id != 0U)
+        glapi().glDeleteTextures(1U, &m_id);
 }
 
 
-texture_ptr  texture::create(
-        texture_image_properties const&  image_props,
-        texture_properties_ptr const  texture_props
-        )
-{
-    return texture_ptr{ new texture{image_props,texture_props} };
-}
-
-
-}
+}}
 
 namespace qtgl {
 
 
-texture_properties_ptr  load_texture_file(boost::filesystem::path const&  texture_file, std::string&  error_message)
-{
-    ASSUMPTION(error_message.empty());
+textures_binding::textures_binding(bool const  make_ready)
+    : m_bindings()
+    , m_ready(make_ready)
+{}
 
-    if (!boost::filesystem::exists(texture_file))
+
+textures_binding::textures_binding(binding_map_type const&  bindings)
+    : m_bindings(bindings)
+    , m_ready(bindings.empty())
+{
+    ASSUMPTION(
+        [this]() -> bool {
+                for (auto const& sampler_and_texture : m_bindings)
+                {
+                    if (value(sampler_and_texture.first) >= GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS)
+                        return false;
+                    if (sampler_and_texture.second.empty())
+                        return false;
+                }
+                return true;
+            }()
+        );
+}
+
+
+bool  textures_binding::make_current() const
+{
+    if (!m_ready)
     {
-        error_message = msgstream() << "The texture file '" << texture_file << "' does not exist.";
-        return {};
+        for (auto const& sampler_and_texture : bindings_map())
+        {
+            ASSUMPTION(value(sampler_and_texture.first) < GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+            if (!sampler_and_texture.second.loaded_successfully())
+                return false;
+            sampler_and_texture.second.create_gl_image();
+            if (sampler_and_texture.second.id() == 0U)
+                return false;
+        }
+        m_ready = true;
     }
-    if (!boost::filesystem::is_regular_file(texture_file))
+    for (auto const&  sampler_and_texture : bindings_map())
     {
-        error_message = msgstream() << "The texture path '" << texture_file << "' does not reference a regular file.";
-        return {};
+        glapi().glActiveTexture(GL_TEXTURE0 + value(sampler_and_texture.first));
+        glapi().glBindTexture(GL_TEXTURE_2D, sampler_and_texture.second.id());
     }
-
-    if (boost::filesystem::file_size(texture_file) < 4ULL)
-    {
-        error_message = msgstream() << "The passed file '" << texture_file << "' is not a qtgl file (wrong size).";
-        return {};
-    }
-
-    std::ifstream  istr(texture_file.string(),std::ios_base::binary);
-    if (!istr.good())
-    {
-        error_message = msgstream() << "Cannot open the texture file '" << texture_file << "'.";
-        return {};
-    }
-
-    std::string  file_type;
-    if (!detail::read_line(istr,file_type))
-    {
-        error_message = msgstream() << "The passed file '" << texture_file << "' is not a qtgl file (cannot read its type string).";
-        return {};
-    }
-
-    if (file_type == "E2::qtgl/texture/text")
-    {
-        std::string  line;
-
-        if (!detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "Cannot read a path to an image file in the file '" << texture_file << "'.";
-            return {};
-        }
-        boost::filesystem::path  image_file = boost::filesystem::absolute(texture_file.parent_path() / line);
-        if (!boost::filesystem::exists(image_file) || !boost::filesystem::is_regular_file(image_file))
-        {
-            error_message = msgstream() << "The image file '" << image_file.string()
-                                        << "' referenced from the texture file '" << texture_file << "' does not exist.";
-            return {};
-        }
-        image_file = canonical_path(image_file);
-
-        if (!detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "Cannot read 'pixel format' in the texture file '" << texture_file << "'.";
-            return {};
-        }
-        natural_32_bit  pixel_format;
-        if (line == "COMPRESSED_RGB")
-            pixel_format= GL_COMPRESSED_RGB;
-        else if (line == "COMPRESSED_RGBA")
-            pixel_format= GL_COMPRESSED_RGBA;
-        else
-        {
-            error_message = msgstream() << "Unknown pixel format '" << line << "' in the texture file '" << texture_file << "'.";
-            return {};
-        }
-
-        if (!detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "Cannot read 'x-wrapping type' in the texture file '" << texture_file << "'.";
-            return {};
-        }
-        natural_32_bit  x_wrapping_type;
-        if (line == "REPEAT")
-            x_wrapping_type= GL_REPEAT;
-        else if (line == "CLAMP")
-            x_wrapping_type= GL_CLAMP;
-        else
-        {
-            error_message = msgstream() << "Unknown x-wrapping type '" << line << "' in the texture file '" << texture_file << "'.";
-            return {};
-        }
-
-        if (!detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "Cannot read 'y-wrapping type' in the texture file '" << texture_file << "'.";
-            return {};
-        }
-        natural_32_bit  y_wrapping_type;
-        if (line == "REPEAT")
-            y_wrapping_type= GL_REPEAT;
-        else if (line == "CLAMP")
-            y_wrapping_type= GL_CLAMP;
-        else
-        {
-            error_message = msgstream() << "Unknown y-wrapping type '" << line << "' in the texture file '" << texture_file << "'.";
-            return {};
-        }
-
-        if (!detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "Cannot read 'min filtering type' in the texture file '" << texture_file << "'.";
-            return {};
-        }
-        natural_32_bit  min_filtering_type;
-        if (line == "NEAREST_MIPMAP_NEAREST")
-            min_filtering_type= GL_NEAREST_MIPMAP_NEAREST;
-        else if (line == "NEAREST_MIPMAP_LINEAR")
-            min_filtering_type= GL_NEAREST_MIPMAP_LINEAR;
-        else if (line == "LINEAR_MIPMAP_NEAREST")
-            min_filtering_type= GL_LINEAR_MIPMAP_NEAREST;
-        else if (line == "LINEAR_MIPMAP_LINEAR")
-            min_filtering_type= GL_LINEAR_MIPMAP_LINEAR;
-        else
-        {
-            error_message = msgstream() << "Unknown min filtering type '" << line << "' in the texture file '" << texture_file << "'.";
-            return {};
-        }
-
-        if (!detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "Cannot read 'mag filtering type' in the texture file '" << texture_file << "'.";
-            return {};
-        }
-        natural_32_bit  mag_filtering_type;
-        if (line == "NEAREST")
-            mag_filtering_type= GL_NEAREST;
-        else if (line == "LINEAR")
-            mag_filtering_type= GL_LINEAR;
-        else
-        {
-            error_message = msgstream() << "Unknown mag filtering type '" << line << "' in the texture file '" << texture_file << "'.";
-            return {};
-        }
-
-        return texture_properties::create(image_file,
-                                          pixel_format,
-                                          x_wrapping_type,
-                                          y_wrapping_type,
-                                          min_filtering_type,
-                                          mag_filtering_type
-                                          );
-    }
-    else
-    {
-        error_message = msgstream() << "The passed texture file '" << texture_file
-                                    << "' is of an unknown type '" << file_type << "'.";
-        return {};
-    }
+    return true;
 }
 
 
-void  insert_load_request(boost::filesystem::path const&  texture_file)
+bool  make_current(textures_binding const&  binding)
 {
-    detail::texture_cache::instance().insert_load_request(texture_file);
-}
-
-void  insert_load_request(texture_properties_ptr const  props)
-{
-    detail::texture_cache::instance().insert_load_request(props);
-}
-
-std::weak_ptr<texture const>  find_texture(texture_properties_ptr const  props)
-{
-    return detail::texture_cache::instance().find(props);
-}
-
-bool  make_current(fragment_shader_texture_sampler_binding const  binding,
-                   texture_properties_ptr const  props,
-                   bool const  use_dummy_texture_if_requested_one_is_not_loaded_yet)
-{
-    std::weak_ptr<texture const> const  wptr = detail::texture_cache::instance().find(props);
-    std::shared_ptr<texture const>  ptr = wptr.lock();
-    bool  result = true;
-    if (!ptr.operator bool())
-    {
-        detail::texture_cache::instance().insert_load_request(props);
-        if (!use_dummy_texture_if_requested_one_is_not_loaded_yet)
-            return false;
-        ptr = detail::texture_cache::instance().get_dummy_texture().lock();
-        INVARIANT(ptr.operator bool());
-        result = false;
-    }
-    make_current(binding,ptr);
-    return result;
-}
-
-void  make_current(fragment_shader_texture_sampler_binding const  binding, texture_ptr const  texture)
-{
-    ASSUMPTION(value(binding) < GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS);
-    glapi().glActiveTexture(GL_TEXTURE0 + value(binding));
-    glapi().glBindTexture(GL_TEXTURE_2D,texture->id());
-}
-
-
-void  get_properties_of_cached_textures(std::vector< std::pair<boost::filesystem::path,texture_properties_ptr> >&  output)
-{
-    detail::texture_cache::instance().cached(output);
-}
-
-void  get_properties_of_failed_textures(std::vector< std::pair<boost::filesystem::path,std::string> >&  output)
-{
-    detail::texture_cache::instance().failed(output);
-}
-
-
-}
-
-namespace qtgl {
-
-
-textures_binding_ptr  textures_binding::create(texture_files_map const&  files)
-{
-    return std::make_shared<textures_binding const>(files);
-}
-
-textures_binding_ptr  textures_binding::create(
-        std::unordered_map<fragment_shader_texture_sampler_binding,texture_properties> const&  data
-        )
-{
-    return std::make_shared<textures_binding const>(data);
-}
-
-textures_binding::textures_binding(texture_files_map const&  files)
-    : m_texture_files(files)
-    , m_data()
-{
-    TMPROF_BLOCK();
-
-//    ASSUMPTION(!m_texture_files.empty());
-    insert_load_request(*this);
-}
-
-textures_binding::textures_binding(data_type const&  data)
-    : m_texture_files()
-    , m_data(data)
-{
-    TMPROF_BLOCK();
-    ASSUMPTION(!m_data.empty());
-    insert_load_request(*this);
-}
-
-textures_binding::textures_binding(
-        std::unordered_map<fragment_shader_texture_sampler_binding,texture_properties> const&  data)
-    : m_texture_files()
-    , m_data()
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(!data.empty());
-    for (auto const& elem : data)
-        m_data.insert({elem.first,std::make_shared<texture_properties const>(elem.second)});
-    INVARIANT(m_data.size() == data.size());
-    insert_load_request(*this);
-}
-
-void  insert_load_request(textures_binding const&  binding)
-{
-    TMPROF_BLOCK();
-
-    for (auto const& elem : binding.texture_files())
-        qtgl::insert_load_request(elem.second);
-    for (auto const& elem : binding.data())
-        qtgl::insert_load_request(elem.second);
-}
-
-texture_properties_ptr  find_properties_of_texture_file(boost::filesystem::path const&  texture_file)
-{
-    return detail::texture_cache::instance().find(texture_file);
-}
-
-bool  make_current(textures_binding const&  binding,
-                   bool const  use_dummy_texture_if_requested_one_is_not_loaded_yet)
-{
-    TMPROF_BLOCK();
-
-    detail::texture_cache::instance().process_pending_textures();
-
-    bool result = true;
-    for (auto const&  elem : binding.texture_files())
-    {
-        texture_properties_ptr const  props = find_properties_of_texture_file(elem.second);
-        if (!props.operator bool())
-        {
-            qtgl::insert_load_request(elem.second);
-            if (use_dummy_texture_if_requested_one_is_not_loaded_yet == false)
-                result = false;
-        }
-        else if (!qtgl::make_current(elem.first,props,use_dummy_texture_if_requested_one_is_not_loaded_yet))
-            result = false;
-    }
-    for (auto const&  elem : binding.data())
-        if (!qtgl::make_current(elem.first,elem.second,use_dummy_texture_if_requested_one_is_not_loaded_yet))
-        {
-            qtgl::insert_load_request(elem.second);
-            result = false;
-        }
-    return result;
+    return binding.make_current();
 }
 
 

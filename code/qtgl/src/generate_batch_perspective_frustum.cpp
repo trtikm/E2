@@ -44,7 +44,7 @@ batch_ptr  create_wireframe_perspective_frustum(
             canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpUmcOpcF.txt"),
             canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt")
             ),
-        qtgl::textures_binding::create(textures_binding::texture_files_map{}),
+        qtgl::textures_binding(true),
         qtgl::draw_state::create(),
         modelspace()
         );

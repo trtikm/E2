@@ -176,7 +176,7 @@ struct  resource_holder_type  final
     void  finalise_load(std::string const&  force_error_message);
 
     template<typename resource_type>
-    void  destroy_resource();
+    static void  destroy_resource(pointer_to_resource_type const  resource_ptr);
 
 private:
 
@@ -231,11 +231,9 @@ void  resource_holder_type::resource_constructor(
 
 
 template<typename resource_type>
-void  resource_holder_type::destroy_resource()
+void  resource_holder_type::destroy_resource(pointer_to_resource_type const  resource_ptr)
 {
-    ASSUMPTION(m_ref_count == 0ULL);
-    delete reinterpret_cast<resource_type*>(resource_ptr());
-    m_resource_ptr = nullptr;
+    delete reinterpret_cast<resource_type*>(resource_ptr);
 }
 
 using  resources_holder_unique_ptr = std::unique_ptr<resource_holder_type>;
@@ -371,6 +369,8 @@ resources_cache_type::value_type*  resource_cache::insert_resource(
             finalise_load_on_destroy_ptr(new finalise_load_on_destroy(key)),
             args_for_constructor_of_the_resource...
             );
+
+    return &*iter_and_bool.first;
 }
 
 
@@ -379,19 +379,26 @@ void  resource_cache::erase_resource(key_type const&  key)
 {
     TMPROF_BLOCK();
 
-    std::lock_guard<std::mutex> const  lock(mutex());
-    auto const  it = m_cache.find(key);
-    if (it == m_cache.end())
-        return;
+    pointer_to_resource_type  destroy_resource_ptr = nullptr;
+    {
+        std::lock_guard<std::mutex> const  lock(mutex());
+        auto const  it = m_cache.find(key);
+        if (it == m_cache.end())
+            return;
 
-    resource_load_planner::instance().cancel_load_request(key);
-    it->second->destroy_resource<resource_type>();
+        resource_load_planner::instance().cancel_load_request(key);
 
-    auto const  callbacks_it = m_notification_callbacks.find(key);
-    if (callbacks_it != m_notification_callbacks.end())
-        callbacks_it->second.clear();
+        ASSUMPTION(it->second->ref_count() == 0UL);
+        destroy_resource_ptr = it->second->resource_ptr();
 
-    m_cache.erase(it);
+        auto const  callbacks_it = m_notification_callbacks.find(key);
+        if (callbacks_it != m_notification_callbacks.end())
+            callbacks_it->second.clear();
+
+        m_cache.erase(it);
+    }
+    if (destroy_resource_ptr != nullptr)
+        resource_holder_type::destroy_resource<resource_type>(destroy_resource_ptr);
 }
 
 

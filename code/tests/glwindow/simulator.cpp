@@ -171,21 +171,14 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
         texture_swap_timer -= 5.0L;
         use_chessboard_texture = !use_chessboard_texture;
     }
-    qtgl::textures_binding_ptr const  object_textures_binding{
-            qtgl::textures_binding::create({
+    qtgl::textures_binding const  object_textures_binding({
                     {
                         qtgl::fragment_shader_texture_sampler_binding::BINDING_TEXTURE_DIFFUSE,
                         use_chessboard_texture ?
-                                qtgl::make_chessboard_texture_properties() :
-                                qtgl::texture_properties("../data/shared/gfx/textures/ruler.png")
+                                qtgl::make_chessboard_texture() :
+                                qtgl::texture("../data/shared/gfx/textures/ruler.txt")
                     }
-                    })
-            };
-    if (!object_textures_binding.operator bool())
-    {
-        std::cout << "ERROR: Cannot create texture binding object.\n";
-        return;
-    }
+            });
 
 
     /////////////////////////////////////////////////////////////////////////////////////
@@ -324,7 +317,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                                        0.5f);
         }
         qtgl::make_current(*object_buffers_binding);
-        qtgl::make_current(*object_textures_binding);
+        qtgl::make_current(object_textures_binding);
         qtgl::draw();
     }
     {

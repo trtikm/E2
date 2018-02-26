@@ -1,5 +1,4 @@
 #include <qtgl/detail/resource_loader.hpp>
-#include <qtgl/detail/texture_cache.hpp>
 #include <qtgl/detail/buffer_cache.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -42,8 +41,6 @@ resource_loader::resource_loader()
     : m_worker_thread()
     , m_worker_finished(true)
     , m_mutex()
-    , m_texture_props_requests()
-    , m_texture_requests()
     , m_vertex_program_requests()
     , m_fragment_program_requests()
     , m_buffer_requests()
@@ -68,8 +65,6 @@ void  resource_loader::clear()
     TMPROF_BLOCK();
     {
         std::lock_guard<std::mutex> const  lock(m_mutex);
-        m_texture_props_requests.clear();
-        m_texture_requests.clear();
         m_vertex_program_requests.clear();
         m_fragment_program_requests.clear();
         m_buffer_requests.clear();
@@ -77,31 +72,6 @@ void  resource_loader::clear()
     }
     if (m_worker_thread.joinable())
         m_worker_thread.join();
-}
-
-void  resource_loader::insert_texture_request(boost::filesystem::path const&  texture_file, texture_props_receiver_fn const&  receiver)
-{
-    TMPROF_BLOCK();
-
-    std::lock_guard<std::mutex> const  lock(m_mutex);
-    if (qtgl::detail::contains(m_texture_props_requests, texture_file))
-        return;
-    m_texture_props_requests.push_back({texture_file,receiver});
-    start_worker_if_not_running();
-}
-
-void  resource_loader::insert_texture_request(texture_properties_ptr const  props, texture_receiver_fn const&  receiver)
-{
-    TMPROF_BLOCK();
-
-    std::lock_guard<std::mutex> const  lock(m_mutex);
-    if (qtgl::detail::contains(m_texture_requests, props,
-                               [](texture_properties_ptr const  a, texture_properties_ptr const  b) {
-                                    return *a == *b;
-                                    }))
-        return;
-    m_texture_requests.push_back({props,receiver});
-    start_worker_if_not_running();
 }
 
 void  resource_loader::insert_vertex_program_request(boost::filesystem::path const&  shader_file,
@@ -148,30 +118,6 @@ void  resource_loader::insert_batch_request(boost::filesystem::path const&  batc
         return;
     m_batch_requests.push_back({batch_file,receiver});
     start_worker_if_not_running();
-}
-
-bool  resource_loader::fetch_texture_request(boost::filesystem::path&  texture_file, texture_props_receiver_fn&  output_receiver)
-{
-    TMPROF_BLOCK();
-
-    std::lock_guard<std::mutex> const  lock(m_mutex);
-    if (m_texture_props_requests.empty())
-        return false;
-    std::tie(texture_file,output_receiver) = m_texture_props_requests.front();
-    m_texture_props_requests.pop_front();
-    return true;
-}
-
-bool  resource_loader::fetch_texture_request(texture_properties_ptr&  output_props, texture_receiver_fn&  output_receiver)
-{
-    TMPROF_BLOCK();
-
-    std::lock_guard<std::mutex> const  lock(m_mutex);
-    if (m_texture_requests.empty())
-        return false;
-    std::tie(output_props,output_receiver) = m_texture_requests.front();
-    m_texture_requests.pop_front();
-    return true;
 }
 
 bool  resource_loader::fetch_vertex_program_request(boost::filesystem::path&  shader_file,
@@ -293,34 +239,6 @@ void  resource_loader::worker()
                 LOG(error,"Load of fragment shader file '" << shader_file << "' has failed. " << error_message);
             receiver(shader_file,lines,error_message);
             done = false;
-        }
-
-        // Loading texture files
-        for (int i = 0; i < 1; ++i)
-        {
-            boost::filesystem::path  texture_file;
-            texture_props_receiver_fn  receiver;
-            if (fetch_texture_request(texture_file,receiver))
-            {
-                std::string  error_message;
-                texture_properties_ptr const  props = load_texture_file(texture_file,error_message);
-                if (props == nullptr || !error_message.empty())
-                    LOG(error,"Load of texture file '" << texture_file << "' has failed. " << error_message);
-                receiver(texture_file,props,error_message);
-                done = false;
-            }
-        }
-
-        // Loading textures
-        for (int i = 0; i < 1; ++i)
-        {
-            texture_properties_ptr  props;
-            texture_receiver_fn  receiver;
-            if (fetch_texture_request(props,receiver))
-            {
-                receiver(load_texture_image_file(props->image_file()),props);
-                done = false;
-            }
         }
 
         if (done)
