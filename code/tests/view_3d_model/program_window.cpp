@@ -819,9 +819,10 @@ void  program_window::closeEvent(QCloseEvent* const  event)
 void  program_window::on_tab_changed(int const  tab_index)
 {
     std::string const  tab_name = qtgl::to_string(m_tabs->tabText(tab_index));
-    if (tab_name == tab_names::BUFFER())
-        on_buffers_refresh_lists();
-    else if (tab_name == tab_names::SHADER())
+    //if (tab_name == tab_names::BUFFER())
+    //    on_buffers_refresh_lists();
+    //else
+    if (tab_name == tab_names::SHADER())
         on_shaders_refresh_lists();
     else if (tab_name == tab_names::TEXTURE())
         on_textures_refresh_lists();
@@ -1102,34 +1103,34 @@ void  program_window::on_buffers_select_root_dir()
     }
 }
 
-void  program_window::on_buffers_refresh_lists()
-{
-    qtgl::make_current_window_guard const  guard(m_glwindow.make_me_current());
-
-    QDir const  dir(buffers_root_dir().string().c_str());
-
-    std::vector<qtgl::buffer_properties_ptr>  cached_buffer_props;
-    qtgl::get_properties_of_cached_buffers(cached_buffer_props);
-    {
-        QStringList values;
-        for (auto const  props : cached_buffer_props)
-            values.push_back(dir.relativeFilePath(QString(props->buffer_file().string().c_str())));
-        m_buffers_cached_list->setStringList(values);
-        m_buffers_cached_list->sort(0);
-    }
-
-    std::vector< std::pair<qtgl::buffer_properties_ptr,std::string> >  failed_buffers_info;
-    qtgl::get_properties_of_failed_buffers(failed_buffers_info);
-    {
-        QStringList values;
-        for (auto const  props_error : failed_buffers_info)
-            values.push_back(dir.relativeFilePath(QString(props_error.first->buffer_file().string().c_str())) +
-                             QString(" : ") +
-                             QString(props_error.second.c_str()));
-        m_buffers_failed_list->setStringList(values);
-        m_buffers_failed_list->sort(0);
-    }
-}
+//void  program_window::on_buffers_refresh_lists()
+//{
+//    qtgl::make_current_window_guard const  guard(m_glwindow.make_me_current());
+//
+//    QDir const  dir(buffers_root_dir().string().c_str());
+//
+//    std::vector<qtgl::buffer_properties_ptr>  cached_buffer_props;
+//    qtgl::get_properties_of_cached_buffers(cached_buffer_props);
+//    {
+//        QStringList values;
+//        for (auto const  props : cached_buffer_props)
+//            values.push_back(dir.relativeFilePath(QString(props->buffer_file().string().c_str())));
+//        m_buffers_cached_list->setStringList(values);
+//        m_buffers_cached_list->sort(0);
+//    }
+//
+//    std::vector< std::pair<qtgl::buffer_properties_ptr,std::string> >  failed_buffers_info;
+//    qtgl::get_properties_of_failed_buffers(failed_buffers_info);
+//    {
+//        QStringList values;
+//        for (auto const  props_error : failed_buffers_info)
+//            values.push_back(dir.relativeFilePath(QString(props_error.first->buffer_file().string().c_str())) +
+//                             QString(" : ") +
+//                             QString(props_error.second.c_str()));
+//        m_buffers_failed_list->setStringList(values);
+//        m_buffers_failed_list->sort(0);
+//    }
+//}
 
 
 void  program_window::on_shaders_root_dir_changed()

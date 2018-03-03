@@ -6,8 +6,8 @@ namespace qtgl {
 
 
 void  create_basis_vectors_vertex_and_colour_buffers(
-        buffer_ptr&  output_vertex_buffer,
-        buffer_ptr&  output_colour_buffer
+        buffer&  output_vertex_buffer,
+        buffer&  output_colour_buffer
         )
 {
     TMPROF_BLOCK();
@@ -23,8 +23,8 @@ void  create_basis_vectors_vertex_and_colour_buffers(
             { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f, 1.0f },
             };
 
-    output_vertex_buffer = buffer::create(vertices,"basis/vertices","",true);
-    output_colour_buffer = buffer::create(colours,"basis/colours");
+    output_vertex_buffer = buffer(vertices, true, "/generic/buffer/vertices/basis_vectors");
+    output_colour_buffer = buffer(colours, false, "/generic/buffer/colours/basis_vectors");
 }
 
 

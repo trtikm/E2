@@ -21,15 +21,17 @@ batch_ptr  create_lines3d(
     ASSUMPTION(vertices.size() == colours.size());
 
     batch_ptr const  pbatch = batch::create(
-        msgstream() << "generic/batch/lines3d" << (id.empty() ? "" : "/") << id << msgstream::end(),
-        qtgl::buffers_binding::create(
-            2U, {},
+        id.empty() ? id : "/generic/batch/lines3d_with_colours/" + id,
+        qtgl::buffers_binding(
+            0U,
+            2U,
             {
                 { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION,
-                  buffer::create(vertices, msgstream() << "generic/lines3d/vertices" << id << msgstream::end()) },
+                  buffer(vertices, true, (id.empty() ? id : "/generic/buffer/vertices/lines3d_with_colours/" + id)) },
                 { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR,
-                  buffer::create(colours, msgstream() << "generic/lines3d/colours" << id << msgstream::end()) },
-            }
+                  buffer(colours, false, id.empty() ? id : "/generic/buffer/colours/lines3d_with_colours/" + id) },
+            },
+            id.empty() ? id : "/generic/buffers_binding/lines3d_with_colours/" + id
             ),
         qtgl::shaders_binding::create(
             canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpcUmOpcFc.a=1.txt"),

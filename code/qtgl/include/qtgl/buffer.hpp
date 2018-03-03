@@ -5,6 +5,7 @@
 #   include <qtgl/glapi.hpp>
 #   include <qtgl/spatial_boundary.hpp>
 #   include <utility/basic_numeric_types.hpp>
+#   include <utility/async_resource_load.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <array>
 #   include <vector>
@@ -12,236 +13,370 @@
 #   include <memory>
 #   include <utility>
 
-namespace qtgl {
+
+namespace qtgl { namespace detail {
 
 
-struct buffer_properties;
-using  buffer_properties_ptr = std::shared_ptr<buffer_properties const>;
-
-
-struct buffer_properties
+struct  buffer_file_data
 {
-    static buffer_properties_ptr  create(
-            boost::filesystem::path const&  buffer_file,
+    buffer_file_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr);
+
+    buffer_file_data(
+            async::finalise_load_on_destroy_ptr,
+            GLuint const  id, 
             natural_8_bit const  num_components_per_primitive,
             natural_32_bit const  num_primitives,
             natural_8_bit const  num_bytes_per_component,
-            bool const   has_integral_components
+            bool const   has_integral_components,
+            natural_8_bit const* const  data_begin,
+            natural_8_bit const* const  data_end,
+            spatial_boundary const* const  boundary = nullptr
             );
 
-    buffer_properties(
-            boost::filesystem::path const&  buffer_file,
-            natural_8_bit const  num_components_per_primitive,
-            natural_32_bit const  num_primitives,
-            natural_8_bit const  num_bytes_per_component,
-            bool const   has_integral_components
+    buffer_file_data(
+            async::finalise_load_on_destroy_ptr,
+            std::vector< std::array<float_32_bit,2> > const&  data
+            );
+    buffer_file_data(
+            async::finalise_load_on_destroy_ptr,
+            std::vector< std::array<float_32_bit,3> > const&  data,
+            bool const  do_compute_boundary = false
+            );
+    buffer_file_data(
+            async::finalise_load_on_destroy_ptr,
+            std::vector< std::array<float_32_bit,4> > const&  data
             );
 
-    virtual ~buffer_properties() {}
+    buffer_file_data(
+            async::finalise_load_on_destroy_ptr,
+            std::vector< natural_32_bit > const&  data
+            );
+    buffer_file_data(
+            async::finalise_load_on_destroy_ptr,
+            std::vector< std::array<natural_32_bit,2> > const&  data
+            );
+    buffer_file_data(
+            async::finalise_load_on_destroy_ptr,
+            std::vector< std::array<natural_32_bit,3> > const&  data
+            );
 
-    virtual bool  operator==(buffer_properties const&  other) const;
-    virtual size_t  hash() const;
+    ~buffer_file_data();
 
-    boost::filesystem::path const&  buffer_file() const noexcept { return m_buffer_file; }
-    natural_32_bit  num_primitives() const noexcept { return m_num_primitives; }
-    natural_8_bit  num_components_per_primitive() const noexcept { return m_num_components_per_primitive; }
-    natural_8_bit  num_bytes_per_component() const noexcept { return m_num_bytes_per_component; }
-    bool  has_integral_components() const noexcept { return m_has_integral_components; }
+    GLuint  id() const { return m_id; }
+    natural_32_bit  num_primitives() const { return m_num_primitives; }
+    natural_8_bit  num_components_per_primitive() const { return m_num_components_per_primitive; }
+    natural_8_bit  num_bytes_per_component() const { return m_num_bytes_per_component; }
+    bool  has_integral_components() const { return m_has_integral_components; }
+    std::vector<natural_8_bit> const&  data() const { return *m_data_ptr; }
+    bool  has_boundary() const { return m_boundary.operator bool(); }
+    spatial_boundary const&  boundary() const { return *m_boundary; }
+
+    void  create_gl_buffer();
+    void  destroy_gl_buffer();
 
 private:
-    boost::filesystem::path  m_buffer_file;
+    void  initialise(
+            GLuint const  id, 
+            natural_8_bit const  num_components_per_primitive,
+            natural_32_bit const  num_primitives,
+            natural_8_bit const  num_bytes_per_component,
+            bool const   has_integral_components,
+            natural_8_bit const* const  data_begin,
+            natural_8_bit const* const  data_end,
+            spatial_boundary const* const  boundary
+            );
+
+    GLuint  m_id;
     natural_32_bit  m_num_primitives;
     natural_8_bit  m_num_components_per_primitive;
     natural_8_bit  m_num_bytes_per_component;
     bool  m_has_integral_components;
+    std::unique_ptr< std::vector<natural_8_bit> >  m_data_ptr;
+    std::unique_ptr<spatial_boundary>  m_boundary;
 };
 
 
-inline bool  operator!=(buffer_properties const&  props0, buffer_properties const&  props1) { return !(props0 == props1); }
-inline size_t  hasher_of_buffer_properties(buffer_properties const&  props) { return props.hash(); }
+}}
+
+namespace qtgl {
 
 
-struct  vertex_buffer_properties : public buffer_properties
+struct buffer : public async::resource_accessor<detail::buffer_file_data>
 {
-    vertex_buffer_properties(
-            boost::filesystem::path const&  buffer_file,
+    buffer()
+        : async::resource_accessor<detail::buffer_file_data>()
+    {}
+
+    explicit buffer(boost::filesystem::path const&  path)
+        : async::resource_accessor<detail::buffer_file_data>(path.string(), 1U)
+    {}
+
+    buffer( GLuint const  id, 
             natural_8_bit const  num_components_per_primitive,
             natural_32_bit const  num_primitives,
-            spatial_boundary const&  boundary
-            );
+            natural_8_bit const  num_bytes_per_component,
+            bool const   has_integral_components,
+            natural_8_bit const* const  data_begin,
+            natural_8_bit const* const  data_end,
+            spatial_boundary const* const  boundary,
+            boost::filesystem::path const&  path = ""
+            )
+        : async::resource_accessor<detail::buffer_file_data>(
+                path.string(),
+                async::notification_callback_type(),
+                id,
+                num_components_per_primitive, num_primitives, num_bytes_per_component, has_integral_components,
+                data_begin, data_end,
+                boundary
+                )
+    {}
 
-    spatial_boundary const&  boundary() const noexcept { return m_boundary; }
+    buffer(std::vector< std::array<float_32_bit,2> > const&  data, boost::filesystem::path const&  path = "")
+        : async::resource_accessor<detail::buffer_file_data>(
+                path.string(),
+                async::notification_callback_type(),
+                data
+                )
+    {}
 
-private:
-    spatial_boundary  m_boundary;
+    buffer( std::vector< std::array<float_32_bit,3> > const&  data,
+            bool const  do_compute_boundary = false,
+            boost::filesystem::path const&  path = ""
+            )
+        : async::resource_accessor<detail::buffer_file_data>(
+                path.string(),
+                async::notification_callback_type(),
+                data,
+                do_compute_boundary
+                )
+    {}
+
+    buffer(std::vector< std::array<float_32_bit,4> > const&  data, boost::filesystem::path const&  path = "")
+        : async::resource_accessor<detail::buffer_file_data>(
+                path.string(),
+                async::notification_callback_type(),
+                data
+                )
+    {}
+
+    buffer(std::vector< natural_32_bit > const&  data, boost::filesystem::path const&  path = "")
+        : async::resource_accessor<detail::buffer_file_data>(
+                path.string(),
+                async::notification_callback_type(),
+                data
+                )
+    {}
+
+    buffer(std::vector< std::array<natural_32_bit,2> > const&  data, boost::filesystem::path const&  path = "")
+        : async::resource_accessor<detail::buffer_file_data>(
+                path.string(),
+                async::notification_callback_type(),
+                data
+                )
+    {}
+
+    buffer(std::vector< std::array<natural_32_bit,3> > const&  data, boost::filesystem::path const&  path = "")
+        : async::resource_accessor<detail::buffer_file_data>(
+                path.string(),
+                async::notification_callback_type(),
+                data
+                )
+    {}
+
+    GLuint  id() const { return resource().id(); }
+    natural_32_bit  num_primitives() const { return resource().num_primitives(); }
+    natural_8_bit  num_components_per_primitive() const { return resource().num_components_per_primitive(); }
+    natural_8_bit  num_bytes_per_component() const { return resource().num_bytes_per_component(); }
+    bool  has_integral_components() const { return resource().has_integral_components(); }
+    std::vector<natural_8_bit> const&  data() const { return resource().data(); }
+    bool  has_boundary() const { return resource().has_boundary(); }
+    spatial_boundary const&  boundary() const { return resource().boundary(); }
+
+    void  create_gl_buffer() const { resource().create_gl_buffer(); }
+    void  destroy_gl_buffer() const { resource().destroy_gl_buffer(); }
 };
-
-using  vertex_buffer_properties_ptr = std::shared_ptr<vertex_buffer_properties const>;
 
 
 }
 
-namespace qtgl {
+namespace qtgl { namespace detail {
 
 
-struct buffer;
-using  buffer_ptr = std::shared_ptr<buffer const>;
-
-
-struct buffer
+struct buffers_binding_data
 {
-    static buffer_ptr  create(std::vector< std::array<float_32_bit,2> > const&  data,
-                              std::string const&  buffer_name, std::string const&  uid = "");
-    static buffer_ptr  create(std::vector< std::array<float_32_bit,3> > const&  data,
-                              std::string const&  buffer_name, std::string const&  uid = "",
-                              bool const  do_compute_boundary = false);
-    static buffer_ptr  create(std::vector< std::array<float_32_bit,4> > const&  data,
-                              std::string const&  buffer_name, std::string const&  uid = "");
+    using  buffers_map_type = std::unordered_map<vertex_shader_input_buffer_binding_location, buffer>;
 
-    static buffer_ptr  create(std::vector< natural_32_bit > const&  data,
-                              std::string const&  buffer_name, std::string const&  uid = "");
-    static buffer_ptr  create(std::vector< std::array<natural_32_bit,2> > const&  data,
-                              std::string const&  buffer_name, std::string const&  uid = "");
-    static buffer_ptr  create(std::vector< std::array<natural_32_bit,3> > const&  data,
-                              std::string const&  buffer_name, std::string const&  uid = "");
+    buffers_binding_data(
+            async::finalise_load_on_destroy_ptr  finaliser,
+            GLuint const  id,
+            buffer const  index_buffer,
+            buffers_map_type const&  buffers
+            )
+    {
+        initialise(id, index_buffer, 0U, buffers);
+    }
 
-    static buffer_ptr  create(GLuint const  id, buffer_properties const&  buffer_props);
-    static buffer_ptr  create(GLuint const  id, buffer_properties_ptr const  buffer_props);
+    buffers_binding_data(
+            async::finalise_load_on_destroy_ptr  finaliser,
+            GLuint const  id,
+            natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
+            buffers_map_type const&  buffers
+            )
+    {
+        initialise(id, buffer(), num_indices_per_primitive, buffers);
+    }
 
-    static buffer_ptr  create(std::vector<natural_8_bit> const&  data,
-                              buffer_properties_ptr const  buffer_props,
-                              std::string& error_message);
+    buffers_binding_data(
+            async::finalise_load_on_destroy_ptr  finaliser,
+            boost::filesystem::path const&  index_buffer_path,
+            std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths
+            );
 
-    ~buffer();
+    buffers_binding_data(
+            async::finalise_load_on_destroy_ptr  finaliser,
+            natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
+            std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths
+            );
+
+    ~buffers_binding_data();
 
     GLuint  id() const { return m_id; }
-    buffer_properties_ptr  properties() const noexcept { return m_buffer_props; }
+    buffer  get_index_buffer() const { return m_index_buffer; }    
+    natural_8_bit  get_num_indices_per_primitive() const { return m_num_indices_per_primitive; }
+    buffers_map_type const& get_buffers() const { return m_buffers; }
+
+    spatial_boundary const& get_boundary() const
+    {
+        return get_buffers().at(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION).boundary();
+    }
+
+    bool  ready() const { return m_ready; }
+    void  set_ready() { m_ready = true; }
+
+    void  create_gl_binding();
+    void  destroy_gl_binding();
 
 private:
-    buffer(GLuint const  id, buffer_properties_ptr const  buffer_props);
 
-    buffer(buffer const&) = delete;
-    buffer& operator=(buffer const&) = delete;
+    void  initialise(
+            GLuint const  id,
+            buffer const  index_buffer,
+            natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
+            buffers_map_type const&  buffers
+            );
 
     GLuint  m_id;
-    buffer_properties_ptr  m_buffer_props;
+    buffer  m_index_buffer;
+    natural_8_bit  m_num_indices_per_primitive; // 1 (points), 2 (lines), or 3 (triangles);
+                                                // it is used, only if 'm_index_buffer.empty()'.
+    buffers_map_type  m_buffers;
+    bool  m_ready;
 };
 
 
-buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_file,
-                                        std::vector<natural_8_bit>&  buffer_data,
-                                        std::string&  error_message);
-
-void  send_buffer_load_request(boost::filesystem::path const&  buffer_file);
-void  get_properties_of_cached_buffers(std::vector<buffer_properties_ptr>&  output);
-void  get_properties_of_failed_buffers(std::vector< std::pair<buffer_properties_ptr,std::string> >&  output);
-
-
-}
+}}
 
 namespace qtgl {
 
 
-struct buffers_binding;
-using  buffers_binding_ptr = std::shared_ptr<buffers_binding const>;
-
-
-struct buffers_binding
+struct  buffers_binding : public async::resource_accessor<detail::buffers_binding_data>
 {
-    static buffers_binding_ptr  create(
+    using  buffers_map_type = detail::buffers_binding_data::buffers_map_type;
+
+    buffers_binding()
+        : async::resource_accessor<detail::buffers_binding_data>()
+    {}
+
+    buffers_binding(
+            GLuint const  id,
+            buffer const  index_buffer,
+            buffers_map_type const&  buffers,
+            async::key_type const&  key = ""
+            )
+        : async::resource_accessor<detail::buffers_binding_data>(
+                key,
+                async::notification_callback_type(),
+                id,
+                index_buffer,
+                buffers
+                )
+    {}
+
+    buffers_binding(
+            GLuint const  id,
+            natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
+            buffers_map_type const&  buffers,
+            async::key_type const&  key = ""
+            )
+        : async::resource_accessor<detail::buffers_binding_data>(
+                key,
+                async::notification_callback_type(),
+                id,
+                num_indices_per_primitive,
+                buffers
+                )
+    {}
+
+    buffers_binding(
             boost::filesystem::path const&  index_buffer_path,
-            std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const&  buffer_paths,
-            std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings = {}
-            );
+            std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths,
+            async::key_type const&  key = ""
+            )
+        : async::resource_accessor<detail::buffers_binding_data>(
+            key,
+            async::notification_callback_type(),
+            index_buffer_path,
+            paths
+            )
+    {}
 
-    static buffers_binding_ptr  create(
-            buffer_ptr const  index_buffer,
-            std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const&  buffer_paths,
-            std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings = {}
-            );
+    buffers_binding(
+            natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
+            std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths,
+            async::key_type const&  key = ""
+            )
+        : async::resource_accessor<detail::buffers_binding_data>(
+            key,
+            async::notification_callback_type(),
+            num_indices_per_primitive,
+            paths
+            )
+    {}
 
-    static buffers_binding_ptr  create(
-            natural_8_bit const  num_indices_per_primitive,  // 1 (points), 2 (lines), or 3 (triangles)
-            std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const&  buffer_paths,
-            std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings = {}
-            );
+    GLuint  id() const { return resource().id(); }
+    buffer  get_index_buffer() const { return resource().get_index_buffer(); }
 
-    boost::filesystem::path const&  index_buffer_path() const noexcept { return m_index_buffer_path; }
-    std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const& buffer_paths() const noexcept
-    { return m_buffer_paths; }
+    natural_8_bit  get_num_indices_per_primitive() const
+    {
+        return get_index_buffer().loaded_successfully() ? get_index_buffer().num_components_per_primitive() :
+                                                          resource().get_num_indices_per_primitive();
+    }
 
-    buffer_ptr  direct_index_buffer() const noexcept { return m_direct_index_buffer; }
-    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings() const noexcept
-    { return m_direct_bindings; }
+    buffers_map_type const& get_buffers() const { return resource().get_buffers(); }
 
-    natural_8_bit  num_indices_per_primitive() const noexcept { return m_num_indices_per_primitive; }
+    natural_32_bit  num_matrices_per_vertex() const
+    {
+        auto const  it = get_buffers().find(vertex_shader_input_buffer_binding_location::BINDING_IN_INDICES_OF_MATRICES);
+        return it == get_buffers().cend() ? 0U : it->second.num_components_per_primitive();
+    }
 
-    GLuint  id() const noexcept { return m_binding_data->id(); }
-    GLuint  index_buffer_id() const noexcept { return m_binding_data->index_buffer_id(); }
-    std::unordered_map<vertex_shader_input_buffer_binding_location,GLuint> const&  bindings() const noexcept
-    { return m_binding_data->bindings(); }
+    spatial_boundary const& get_boundary() const { return resource().get_boundary(); }
 
-    vertex_buffer_properties_ptr  find_vertex_buffer_properties() const;
-    natural_32_bit  num_matrices_per_vertex() const;
-
+    bool  ready() const { return !loaded_successfully() ? false : resource().ready(); }
     bool  make_current() const;
 
 private:
 
-    buffers_binding(boost::filesystem::path const&  index_buffer_path,
-                    buffer_ptr const  direct_index_buffer,
-                    natural_8_bit const  num_indices_per_primitive,
-                    std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const&  buffer_paths,
-                    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings);
-
-    buffers_binding(buffers_binding const&) = delete;
-    buffers_binding& operator=(buffers_binding const&) = delete;
-
-    struct  binding_data_type
-    {
-        binding_data_type()
-            : m_id(0U)
-            , m_index_buffer_id(0U)
-            , m_bindings()
-        {}
-
-        ~binding_data_type()
-        {
-            destroy_ID();
-        }
-
-        GLuint  id() const noexcept { return m_id; }
-        GLuint  index_buffer_id() const noexcept { return m_index_buffer_id; }
-        std::unordered_map<vertex_shader_input_buffer_binding_location,GLuint> const&  bindings() const noexcept
-        { return m_bindings; }
-
-        bool  reset(GLuint const  index_buffer_id,
-                    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings,
-                    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings);
-
-    private:
-        void  destroy_ID();
-
-        GLuint  m_id;
-        GLuint  m_index_buffer_id;
-        std::unordered_map<vertex_shader_input_buffer_binding_location,GLuint>  m_bindings;
-    };
-
-    using  binding_data_ptr = std::unique_ptr<binding_data_type>;
-
-    boost::filesystem::path  m_index_buffer_path;
-    std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path>  m_buffer_paths;
-
-    buffer_ptr  m_direct_index_buffer;
-    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr>  m_direct_bindings;
-
-    natural_8_bit  m_num_indices_per_primitive;
-
-    binding_data_ptr  m_binding_data;
+    void  set_ready() { resource().set_ready(); }
+    void  create_gl_binding() { return resource().create_gl_binding(); }
+    void  destroy_gl_binding() { return resource().destroy_gl_binding(); }
 };
 
 
-inline bool  make_current(buffers_binding const&  binding) { return binding.make_current(); }
+using  buffers_binding_map_type = buffers_binding::buffers_map_type;
+
+
+bool  make_current(buffers_binding const&  binding);
 
 
 }

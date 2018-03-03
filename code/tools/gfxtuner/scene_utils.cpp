@@ -30,13 +30,15 @@ scalar  compute_bounding_sphere_radius_of_scene_node(scene_node const&  node)
 {
     scalar  max_radius = get_selection_radius_of_bounding_sphere_of_scene_node();
     for (auto const& name_and_batch : node.get_batches())
-        if (auto const  binding_ptr = name_and_batch.second->buffers_binding())
-            if (auto const  buffer_props_ptr = binding_ptr->find_vertex_buffer_properties())
-            {
-                qtgl::spatial_boundary const&  boundary = buffer_props_ptr->boundary();
-                if (boundary.radius() > max_radius)
-                    max_radius = boundary.radius();
-            }
+    {
+        auto const  binding = name_and_batch.second->buffers_binding();
+        if (binding.loaded_successfully())
+        {
+            qtgl::spatial_boundary const&  boundary = binding.get_boundary();
+            if (boundary.radius() > max_radius)
+                max_radius = boundary.radius();
+        }
+    }
     return max_radius;
 }
 
@@ -97,26 +99,25 @@ bool  compute_collision_of_scene_node_and_line(
 
     scalar  min_param = 2.0f;
     for (auto const& name_and_batch : node.get_batches())
-        if (auto const  binding_ptr = name_and_batch.second->buffers_binding())
-            if (auto const  buffer_props_ptr = binding_ptr->find_vertex_buffer_properties())
+        if (name_and_batch.second->buffers_binding().loaded_successfully())
+        {
+            qtgl::spatial_boundary const&  boundary = name_and_batch.second->buffers_binding().get_boundary();
+
+            scalar  sphere_param;
+            scalar  sphere_distance_to_origin;
+            bool const  sphere_collision = collide_with_bounding_sphere(boundary.radius(), &sphere_param, &sphere_distance_to_origin);
+
+            scalar  bbox_param;
+            scalar  bbox_distance_to_origin;
+            bool const  bbox_collision = collide_with_bounding_box(boundary.lo_corner(), boundary.hi_corner(), &bbox_param, &bbox_distance_to_origin);
+
+            if (sphere_collision && bbox_collision)
             {
-                qtgl::spatial_boundary const&  boundary = buffer_props_ptr->boundary();
-
-                scalar  sphere_param;
-                scalar  sphere_distance_to_origin;
-                bool const  sphere_collision = collide_with_bounding_sphere(boundary.radius(), &sphere_param, &sphere_distance_to_origin);
-
-                scalar  bbox_param;
-                scalar  bbox_distance_to_origin;
-                bool const  bbox_collision = collide_with_bounding_box(boundary.lo_corner(), boundary.hi_corner(), &bbox_param, &bbox_distance_to_origin);
-
-                if (sphere_collision && bbox_collision)
-                {
-                    scalar const  param = sphere_distance_to_origin < bbox_distance_to_origin ? sphere_param : bbox_param;
-                    if (param < min_param)
-                        min_param = param;
-                }
+                scalar const  param = sphere_distance_to_origin < bbox_distance_to_origin ? sphere_param : bbox_param;
+                if (param < min_param)
+                    min_param = param;
             }
+        }
 
     if (min_param > 1.0f)
         return false;

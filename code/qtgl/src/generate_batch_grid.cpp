@@ -29,8 +29,8 @@ batch_ptr  create_grid(
 {
     TMPROF_BLOCK();
 
-    buffer_ptr  grid_vertex_buffer;
-    buffer_ptr  grid_colour_buffer;
+    buffer  grid_vertex_buffer;
+    buffer  grid_colour_buffer;
     create_grid_vertex_and_colour_buffers(
             max_x_coordinate,
             max_y_coordinate,
@@ -50,13 +50,15 @@ batch_ptr  create_grid(
             grid_colour_buffer
             );
     batch_ptr const  pbatch = batch::create(
-            msgstream() << "generic/batch/grid" << (id.empty() ? "" : "/") << id << msgstream::end(),
-            qtgl::buffers_binding::create(
-                2U, {},
+            id.empty() ? id : "generic/batch/grid/" + id,
+            qtgl::buffers_binding(
+                0U,
+                2U,
                 {
                     { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION, grid_vertex_buffer },
                     { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR, grid_colour_buffer },
-                }
+                },
+                id.empty() ? id : "/generic/buffers_binding/grid/" + id
                 ),
             qtgl::shaders_binding::create(
                 canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpcUmOpcFc.a=1.txt"),

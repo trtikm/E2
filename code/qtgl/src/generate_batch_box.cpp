@@ -16,16 +16,18 @@ batch_ptr  create_wireframe_box(
 {
     TMPROF_BLOCK();
 
-    buffer_ptr  box_vertex_buffer;
+    buffer  box_vertex_buffer;
     create_wireframe_box_vertex_buffer(lo_corner,hi_corner,box_vertex_buffer,id);
 
     batch_ptr const  pbatch = batch::create(
-        msgstream() << "generic/batch/box" << (id.empty() ? "" : "/") << id << msgstream::end(),
-        qtgl::buffers_binding::create(
-            2U, {},
+        id.empty() ? id : "/generic/batch/wireframe_box/" + id,
+        qtgl::buffers_binding(
+            0U,
+            2U,
             {
                 { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION, box_vertex_buffer },
-            }
+            },
+            id.empty() ? id : "/generic/buffers_binding/wireframe_box/" + id
             ),
         qtgl::shaders_binding::create(
             canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpUmcOpcF.txt"),

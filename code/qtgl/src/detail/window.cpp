@@ -2,7 +2,6 @@
 #include <qtgl/detail/resource_loader.hpp>
 #include <qtgl/detail/vertex_program_cache.hpp>
 #include <qtgl/detail/fragment_program_cache.hpp>
-#include <qtgl/detail/buffer_cache.hpp>
 #include <qtgl/detail/batch_cache.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <angeo/tensor_math.hpp>
@@ -30,7 +29,6 @@ void  initialise_caches()
     detail::resource_loader::instance();
     detail::vertex_program_cache::instance();
     detail::fragment_program_cache::instance();
-    detail::buffer_cache::instance();
     detail::batch_cache::instance();
 }
 
@@ -39,7 +37,6 @@ void  clear_caches()
     detail::resource_loader::instance().clear();
     detail::vertex_program_cache::instance().clear(true,true);
     detail::fragment_program_cache::instance().clear(true,true);
-    detail::buffer_cache::instance().clear();
     detail::batch_cache::instance().clear();
 }
 

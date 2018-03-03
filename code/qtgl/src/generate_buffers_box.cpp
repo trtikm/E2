@@ -8,7 +8,7 @@ namespace qtgl {
 void  create_wireframe_box_vertex_buffer(
         vector3 const&  lo_corner,
         vector3 const&  hi_corner,
-        buffer_ptr&  output_vertex_buffer,
+        buffer&  output_vertex_buffer,
         std::string const&  id
         )
 {
@@ -30,7 +30,7 @@ void  create_wireframe_box_vertex_buffer(
         { hi_corner(0), hi_corner(1), lo_corner(2) }, { hi_corner(0), hi_corner(1), hi_corner(2) },
         { lo_corner(0), hi_corner(1), lo_corner(2) }, { lo_corner(0), hi_corner(1), hi_corner(2) },
     };
-    output_vertex_buffer = buffer::create(vertices,"box/vertices",id,true);
+    output_vertex_buffer = buffer(vertices, true, id.empty() ? id : "/generic/buffer/vertices/wireframe_box/" + id);
 }
 
 

@@ -31,7 +31,7 @@ std::shared_ptr<batch const>  batch::create(boost::filesystem::path const&  path
 
 std::shared_ptr<batch const>  batch::create(
         boost::filesystem::path const&  path,
-        buffers_binding_ptr const  buffers_binding,
+        qtgl::buffers_binding const  buffers_binding,
         shaders_binding_ptr const  shaders_binding,
         qtgl::textures_binding const  textures_binding,
         draw_state_ptr const  draw_state,
@@ -67,7 +67,7 @@ batch::batch(boost::filesystem::path const&  path)
 }
 
 batch::batch(boost::filesystem::path const&  path,
-             buffers_binding_ptr const  buffers_binding,
+             qtgl::buffers_binding const  buffers_binding,
              shaders_binding_ptr const  shaders_binding,
              qtgl::textures_binding const  textures_binding,
              draw_state_ptr const  draw_state,
@@ -85,14 +85,14 @@ batch::batch(boost::filesystem::path const&  path,
     , m_batch_found_in_cache__state(false)
     , m_batch_found_in_cache__modelspace(false)
 {
-    ASSUMPTION(m_buffers_binding.operator bool());
+    ASSUMPTION(!m_buffers_binding.empty());
     ASSUMPTION(m_shaders_binding.operator bool());
     ASSUMPTION(m_draw_state.operator bool());
 }
 
-buffers_binding_ptr  batch::buffers_binding() const
+qtgl::buffers_binding  batch::buffers_binding() const
 {
-    if (!m_batch_found_in_cache__buffers && !m_buffers_binding.operator bool())
+    if (!m_batch_found_in_cache__buffers && !m_buffers_binding.ready())
     {
         batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
         if (pbatch.operator bool())
@@ -169,7 +169,7 @@ std::unordered_set<vertex_shader_uniform_symbolic_name> const&  batch::symbolic_
 
 natural_32_bit  batch::num_matrices_per_vertex() const
 {
-    return buffers_binding() == nullptr ? 0 : buffers_binding()->num_matrices_per_vertex();
+    return buffers_binding().num_matrices_per_vertex();
 }
 
 
@@ -452,7 +452,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
 
         return std::make_shared<batch const>(
                     batch_file,
-                    buffers_binding::create(index_buffer,buffer_paths),
+                    buffers_binding(index_buffer,buffer_paths,"[buffers_binding]:" + batch_file.string()),
                     shaders_binding::create(vertex_shader,fragment_shader),
                     textures_binding(textures_binding_map),
                     draw_state::create(cull_face_mode,use_alpha_blending,alpha_blending_src_function,alpha_blending_dst_function),
@@ -509,7 +509,7 @@ bool  make_current(batch const&  binding, draw_state const* const  previous_stat
     bool result = true;
     if (!binding.shaders_binding().operator bool() || !make_current(*binding.shaders_binding()))
         result = false;
-    if (!binding.buffers_binding().operator bool() || !make_current(*binding.buffers_binding()))
+    if (!binding.buffers_binding().loaded_successfully() || !make_current(binding.buffers_binding()))
         result = false;
     if (!make_current(binding.textures_binding()))
         result = false;

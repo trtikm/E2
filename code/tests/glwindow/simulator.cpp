@@ -120,39 +120,36 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
             angeo::coordinate_system::create(vector3_zero(),quaternion_identity())
             };
 
-    qtgl::buffer_ptr const  object_vertex_buffer =
-            qtgl::buffer::create({
-                    std::array<float_32_bit,3>
+    qtgl::buffer const  object_vertex_buffer =
+            qtgl::buffer(std::vector< std::array<float_32_bit, 3> >{
                     { -50.0f, -50.0f, 0.0f },
                     {  50.0f, -50.0f, 0.0f },
                     {  50.0f,  50.0f, 0.0f },
                     { -50.0f,  50.0f, 0.0f }
-                    },"object/vertices");
-    qtgl::buffer_ptr const  object_colour_buffer =
-            qtgl::buffer::create({
-                    std::array<float_32_bit,3>
+                    },true);
+    qtgl::buffer const  object_colour_buffer =
+            qtgl::buffer(std::vector< std::array<float_32_bit, 3> >{
                     { 0.0f, 1.0f, 1.0f },
                     { 1.0f, 0.0f, 1.0f },
                     { 1.0f, 1.0f, 0.0f },
                     { 1.0f, 1.0f, 1.0f }
-                    },"object/colours");
-    qtgl::buffer_ptr const  object_texcoord_buffer =
-            qtgl::buffer::create({
-                    std::array<float_32_bit,2>
+                    });
+    qtgl::buffer const  object_texcoord_buffer =
+            qtgl::buffer(std::vector< std::array<float_32_bit, 2> >{
                     {   0.0f,    0.0f },
                     { 100.0f,    0.0f },
                     { 100.0f,  100.0f },
                     {   0.0f,  100.0f }
-                    },"object/texcoords");
-    qtgl::buffer_ptr const  object_index_buffer =
-            qtgl::buffer::create({
-                    std::array<natural_32_bit,3>
+                    });
+    qtgl::buffer const  object_index_buffer =
+            qtgl::buffer(std::vector< std::array<natural_32_bit, 3> >{
                     { 0U, 1U, 2U },
                     { 0U, 2U, 3U },
-                    },"object/indices");
-    qtgl::buffers_binding_ptr const  object_buffers_binding =
-            qtgl::buffers_binding::create(
-                    object_index_buffer,{},
+                    });
+    qtgl::buffers_binding const  object_buffers_binding =
+            qtgl::buffers_binding(
+                    0U,
+                    object_index_buffer,
                     {
                         { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION, object_vertex_buffer },
                         { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR, object_colour_buffer },
@@ -190,8 +187,8 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
             angeo::coordinate_system::create(vector3_zero(),quaternion_identity())
             };
 
-    qtgl::buffer_ptr  grid_vertex_buffer;
-    qtgl::buffer_ptr  grid_colour_buffer;
+    qtgl::buffer  grid_vertex_buffer;
+    qtgl::buffer  grid_colour_buffer;
     qtgl::create_grid_vertex_and_colour_buffers(
                 50.0f,
                 50.0f,
@@ -210,9 +207,10 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                 grid_vertex_buffer,
                 grid_colour_buffer
                 );
-    qtgl::buffers_binding_ptr const  grid_buffers_binding {
-                qtgl::buffers_binding::create(
-                        2U,{},
+    qtgl::buffers_binding const  grid_buffers_binding {
+                qtgl::buffers_binding(
+                        0U,
+                        2U,
                         {
                             { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION, grid_vertex_buffer },
                             { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR, grid_colour_buffer },
@@ -316,7 +314,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                                        qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA,
                                        0.5f);
         }
-        qtgl::make_current(*object_buffers_binding);
+        qtgl::make_current(object_buffers_binding);
         qtgl::make_current(object_textures_binding);
         qtgl::draw();
     }
@@ -331,7 +329,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                                        qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED,
                                        grid_transform_matrix);
         }
-        qtgl::make_current(*grid_buffers_binding);
+        qtgl::make_current(grid_buffers_binding);
         qtgl::draw();
     }
 

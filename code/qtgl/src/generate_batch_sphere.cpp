@@ -16,16 +16,18 @@ batch_ptr  create_wireframe_sphere(
 {
     TMPROF_BLOCK();
 
-    buffer_ptr  sphere_vertex_buffer;
+    buffer  sphere_vertex_buffer;
     create_wireframe_sphere_vertex_buffer(radius,num_lines_per_quarter_of_circle,sphere_vertex_buffer,id);
 
     batch_ptr const  pbatch = batch::create(
-        msgstream() << "generic/batch/sphere" << (id.empty() ? "" : "/") << id << msgstream::end(),
-        qtgl::buffers_binding::create(
-            2U, {},
+        id.empty() ? id : "/generic/batch/wireframe_sphere/" + id,
+        qtgl::buffers_binding(
+            0U,
+            2U,
             {
                 { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION, sphere_vertex_buffer },
-            }
+            },
+            id.empty() ? id : "/generic/buffers_binding/wireframe_sphere/" + id
             ),
         qtgl::shaders_binding::create(
             canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpUmcOpcF.txt"),

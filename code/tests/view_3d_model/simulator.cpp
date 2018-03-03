@@ -194,8 +194,9 @@ simulator::simulator(vector3 const&  initial_clear_colour)
                 m_grid_colour_buffer
                 );
     m_grid_buffers_binding =
-                qtgl::buffers_binding::create(
-                        2U,{},
+                qtgl::buffers_binding(
+                        0U,
+                        2U,
                         {
                             { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION, m_grid_vertex_buffer },
                             { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR, m_grid_colour_buffer },
@@ -242,7 +243,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
         angeo::from_base_matrix(*m_grid_space,grid_world_transformation);
         matrix44 const  grid_transform_matrix = view_projection_matrix * grid_world_transformation;
 
-        if (qtgl::make_current(*m_grid_shaders_binding) && qtgl::make_current(*m_grid_buffers_binding))
+        if (qtgl::make_current(*m_grid_shaders_binding) && qtgl::make_current(m_grid_buffers_binding))
         {
             qtgl::make_current(*m_grid_draw_state, *draw_state);
 

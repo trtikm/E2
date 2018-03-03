@@ -20,9 +20,10 @@ void  create_grid_vertex_and_colour_buffers(
         std::array<float_32_bit,3> const&  colour_for_central_z_line,
         natural_32_bit const  highlight_every,
         bool const  generate_triangle_at_origin,
-        buffer_ptr&  output_vertex_buffer,
-        buffer_ptr&  output_colour_buffer,
-        std::string const&  id
+        buffer&  output_vertex_buffer,
+        buffer&  output_colour_buffer,
+        std::string const&  id_vertices,
+        std::string const&  id_indices
         )
 {
     TMPROF_BLOCK();
@@ -106,8 +107,10 @@ void  create_grid_vertex_and_colour_buffers(
             colours.push_back(colour_for_central_x_line);
         }
     }
-    output_vertex_buffer = buffer::create(vertices,"grid/vertices",id,true);
-    output_colour_buffer = buffer::create(colours,"grid/colours",id);
+    output_vertex_buffer =
+        buffer(vertices, true, id_vertices.empty() ? id_vertices : "/generic/buffer/vertices/grid/" + id_vertices);
+    output_colour_buffer =
+        buffer(colours, false, id_indices.empty() ? id_indices : "/generic/buffer/colour/grid/" + id_indices);
 }
 
 

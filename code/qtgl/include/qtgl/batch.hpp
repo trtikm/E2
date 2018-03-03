@@ -20,7 +20,7 @@ struct batch
 
     static std::shared_ptr<batch const>  create(
             boost::filesystem::path const&  path,
-            buffers_binding_ptr const  buffers_binding,
+            qtgl::buffers_binding const  buffers_binding,
             shaders_binding_ptr const  shaders_binding,
             textures_binding const  textures_binding,
             draw_state_ptr const  draw_state,
@@ -30,7 +30,7 @@ struct batch
     batch(boost::filesystem::path const&  path);
 
     batch(boost::filesystem::path const&  path,
-          buffers_binding_ptr const  buffers_binding,
+          qtgl::buffers_binding const  buffers_binding,
           shaders_binding_ptr const  shaders_binding,
           textures_binding const  textures_binding,
           draw_state_ptr const  draw_state,
@@ -39,7 +39,7 @@ struct batch
 
     boost::filesystem::path const&  path() const noexcept { return m_path; }
 
-    buffers_binding_ptr  buffers_binding() const;
+    qtgl::buffers_binding  buffers_binding() const;
     shaders_binding_ptr  shaders_binding() const;
     textures_binding  textures_binding() const;
     draw_state_ptr  draw_state() const;
@@ -51,7 +51,7 @@ struct batch
 private:
 
     boost::filesystem::path  m_path;
-    mutable buffers_binding_ptr  m_buffers_binding;
+    mutable qtgl::buffers_binding  m_buffers_binding;
     mutable shaders_binding_ptr  m_shaders_binding;
     mutable qtgl::textures_binding  m_textures_binding;
     mutable draw_state_ptr  m_draw_state;

@@ -498,11 +498,9 @@ void  simulator::update_selection_of_network_objects(float_64_bit const  seconds
         {
             float_32_bit  ray_param = 1.0f;
 
-            if (m_batch_spiker->buffers_binding().operator bool() &&
-                m_batch_spiker->buffers_binding()->find_vertex_buffer_properties().operator bool())
+            if (m_batch_spiker->buffers_binding().loaded_successfully())
             {
-                qtgl::spatial_boundary const  boundary =
-                    m_batch_spiker->buffers_binding()->find_vertex_buffer_properties()->boundary();
+                qtgl::spatial_boundary const  boundary = m_batch_spiker->buffers_binding().get_boundary();
 
                 netlab::compressed_layer_and_object_indices  spiker_indices(0U, 0ULL);
                 float_32_bit const  ray_spiker_param =
@@ -521,11 +519,9 @@ void  simulator::update_selection_of_network_objects(float_64_bit const  seconds
                 }
             }
 
-            if (m_batch_dock->buffers_binding().operator bool() &&
-                m_batch_dock->buffers_binding()->find_vertex_buffer_properties().operator bool())
+            if (m_batch_dock->buffers_binding().loaded_successfully())
             {
-                qtgl::spatial_boundary const  boundary =
-                    m_batch_dock->buffers_binding()->find_vertex_buffer_properties()->boundary();
+                qtgl::spatial_boundary const  boundary = m_batch_dock->buffers_binding().get_boundary();
 
                 netlab::compressed_layer_and_object_indices  dock_indices(0U, 0ULL);
                 float_32_bit const  ray_dock_param =
@@ -544,11 +540,9 @@ void  simulator::update_selection_of_network_objects(float_64_bit const  seconds
                 }
             }
 
-            if (m_batch_ship->buffers_binding().operator bool() &&
-                m_batch_ship->buffers_binding()->find_vertex_buffer_properties().operator bool())
+            if (m_batch_ship->buffers_binding().loaded_successfully())
             {
-                qtgl::spatial_boundary const  boundary =
-                    m_batch_ship->buffers_binding()->find_vertex_buffer_properties()->boundary();
+                qtgl::spatial_boundary const  boundary = m_batch_ship->buffers_binding().get_boundary();
 
                 netlab::compressed_layer_and_object_indices  ship_indices(0U, 0ULL);
                 float_32_bit const  ray_ship_param =
@@ -668,8 +662,7 @@ void  simulator::render_network_spikers(
         if (!m_batch_spiker_bbox.operator bool())
         {
             INVARIANT(!m_batch_spiker_bsphere.operator bool());
-            qtgl::spatial_boundary const  boundary =
-                    m_batch_spiker->buffers_binding()->find_vertex_buffer_properties()->boundary();
+            qtgl::spatial_boundary const  boundary = m_batch_spiker->buffers_binding().get_boundary();
 
             m_batch_spiker_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
                                                              get_program_options()->dataRoot(),"/netviewer/spiker_bbox");
@@ -722,8 +715,7 @@ void  simulator::render_network_docks(
         if (!m_batch_dock_bbox.operator bool())
         {
             INVARIANT(!m_batch_dock_bsphere.operator bool());
-            qtgl::spatial_boundary const  boundary =
-                    m_batch_dock->buffers_binding()->find_vertex_buffer_properties()->boundary();
+            qtgl::spatial_boundary const  boundary = m_batch_dock->buffers_binding().get_boundary();
 
             m_batch_dock_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
                                                            get_program_options()->dataRoot(),"/netviewer/dock_bbox");
@@ -777,8 +769,7 @@ void  simulator::render_network_ships(
         if (!m_batch_ship_bbox.operator bool())
         {
             INVARIANT(!m_batch_ship_bsphere.operator bool());
-            qtgl::spatial_boundary const  boundary =
-                    m_batch_ship->buffers_binding()->find_vertex_buffer_properties()->boundary();
+            qtgl::spatial_boundary const  boundary = m_batch_ship->buffers_binding().get_boundary();
 
             m_batch_ship_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
                                                            get_program_options()->dataRoot(),"/netviewer/ship_bbox");
@@ -1270,8 +1261,7 @@ void  simulator::render_spikers_of_constructed_network(
         if (!m_batch_spiker_bbox.operator bool())
         {
             INVARIANT(!m_batch_spiker_bsphere.operator bool());
-            qtgl::spatial_boundary const  boundary =
-                    m_batch_spiker->buffers_binding()->find_vertex_buffer_properties()->boundary();
+            qtgl::spatial_boundary const  boundary = m_batch_spiker->buffers_binding().get_boundary();
 
             m_batch_spiker_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
                                                              get_program_options()->dataRoot(),"/netviewer/spiker_bbox");

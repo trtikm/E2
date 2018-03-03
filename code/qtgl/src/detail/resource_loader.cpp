@@ -1,5 +1,4 @@
 #include <qtgl/detail/resource_loader.hpp>
-#include <qtgl/detail/buffer_cache.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
@@ -43,7 +42,6 @@ resource_loader::resource_loader()
     , m_mutex()
     , m_vertex_program_requests()
     , m_fragment_program_requests()
-    , m_buffer_requests()
     , m_batch_requests()
 {}
 
@@ -67,7 +65,6 @@ void  resource_loader::clear()
         std::lock_guard<std::mutex> const  lock(m_mutex);
         m_vertex_program_requests.clear();
         m_fragment_program_requests.clear();
-        m_buffer_requests.clear();
         m_batch_requests.clear();
     }
     if (m_worker_thread.joinable())
@@ -95,17 +92,6 @@ void  resource_loader::insert_fragment_program_request(boost::filesystem::path c
     if (qtgl::detail::contains(m_fragment_program_requests, shader_file))
         return;
     m_fragment_program_requests.push_back({shader_file,receiver});
-    start_worker_if_not_running();
-}
-
-void  resource_loader::insert_buffer_request(boost::filesystem::path const&  buffer_file, buffer_receiver_fn const&  receiver)
-{
-    TMPROF_BLOCK();
-
-    std::lock_guard<std::mutex> const  lock(m_mutex);
-    if (qtgl::detail::contains(m_buffer_requests, buffer_file))
-        return;
-    m_buffer_requests.push_back({buffer_file,receiver});
     start_worker_if_not_running();
 }
 
@@ -146,18 +132,6 @@ bool  resource_loader::fetch_fragment_program_request(boost::filesystem::path&  
     return true;
 }
 
-bool  resource_loader::fetch_buffer_request(boost::filesystem::path&  buffer_file, buffer_receiver_fn&  output_receiver)
-{
-    TMPROF_BLOCK();
-
-    std::lock_guard<std::mutex> const  lock(m_mutex);
-    if (m_buffer_requests.empty())
-        return false;
-    std::tie(buffer_file,output_receiver) = m_buffer_requests.front();
-    m_buffer_requests.pop_front();
-    return true;
-}
-
 bool  resource_loader::fetch_batch_request(boost::filesystem::path&  batch_file, batch_receiver_fn&  output_receiver)
 {
     TMPROF_BLOCK();
@@ -190,23 +164,6 @@ void  resource_loader::worker()
                 if (props == nullptr || !error_message.empty())
                     LOG(error,"Load of batch file '" << batch_file << "' has failed. " << error_message);
                 receiver(batch_file,props,error_message);
-                done = false;
-            }
-        }
-
-        // Loading buffers
-        for (int i = 0; i < 1; ++i)
-        {
-            boost::filesystem::path  buffer_file;
-            buffer_receiver_fn  receiver;
-            if (fetch_buffer_request(buffer_file,receiver))
-            {
-                std::shared_ptr< std::vector<natural_8_bit> > const  data = std::make_shared< std::vector<natural_8_bit> >();
-                std::string  error_message;
-                buffer_properties_ptr const  props = load_buffer_file(buffer_file,*data,error_message);
-                if (props == nullptr || !error_message.empty())
-                    LOG(error,"Load of buffer file '" << buffer_file << "' has failed. " << error_message);
-                receiver(props,data,buffer_file,error_message);
                 done = false;
             }
         }

@@ -65,7 +65,7 @@ public slots:
 
     void  on_buffers_root_dir_changed();
     void  on_buffers_select_root_dir();
-    void  on_buffers_refresh_lists();
+    //void  on_buffers_refresh_lists();
 
     void  on_shaders_root_dir_changed();
     void  on_shaders_select_root_dir();

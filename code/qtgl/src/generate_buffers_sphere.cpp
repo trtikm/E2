@@ -9,7 +9,7 @@ namespace qtgl {
 void  create_wireframe_sphere_vertex_buffer(
         float_32_bit const  radius,
         natural_8_bit const  num_lines_per_quarter_of_circle,
-        buffer_ptr&  output_vertex_buffer,
+        buffer&  output_vertex_buffer,
         std::string const&  id
         )
 {
@@ -57,7 +57,7 @@ void  create_wireframe_sphere_vertex_buffer(
         vertices.push_back({ 0.0f, v[0], v[1] });
     }
 
-    output_vertex_buffer = buffer::create(vertices,"sphere/vertices",id,true);
+    output_vertex_buffer = buffer(vertices, true, id.empty() ? id : "/generic/buffer/vertices/wireframe_sphere/" + id);
 }
 
 

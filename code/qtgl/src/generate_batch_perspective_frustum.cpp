@@ -20,7 +20,7 @@ batch_ptr  create_wireframe_perspective_frustum(
 {
     TMPROF_BLOCK();
 
-    buffer_ptr  frustum_vertex_buffer;
+    buffer  frustum_vertex_buffer;
     create_wireframe_perspective_frustum_vertex_buffer(
             near_plane,
             far_plane,
@@ -33,12 +33,14 @@ batch_ptr  create_wireframe_perspective_frustum(
             );
 
     batch_ptr const  pbatch = batch::create(
-        msgstream() << "generic/batch/perspective_frustum" << (id.empty() ? "" : "/") << id << msgstream::end(),
-        qtgl::buffers_binding::create(
-            2U, {},
+        id.empty() ? id : "/generic/batch/perspective_frustum/" + id,
+        qtgl::buffers_binding(
+            0U,
+            2U,
             {
                 { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION, frustum_vertex_buffer },
-            }
+            },
+            id.empty() ? id : "/generic/buffers_binding/perspective_frustum/" + id
             ),
         qtgl::shaders_binding::create(
             canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpUmcOpcF.txt"),

@@ -12,7 +12,7 @@ void  create_wireframe_perspective_frustum_vertex_buffer(
         float_32_bit const  right_plane,
         float_32_bit const  top_plane,
         float_32_bit const  bottom_plane,
-        buffer_ptr&  output_vertex_buffer,
+        buffer&  output_vertex_buffer,
         std::string const&  id
         )
 {
@@ -54,7 +54,7 @@ void  create_wireframe_perspective_frustum_vertex_buffer(
         corners.at(3U), corners.at(7U),
     };
 
-    output_vertex_buffer = buffer::create(vertices,"perspective_frustum/vertices",id,true);
+    output_vertex_buffer = buffer(vertices, true, id.empty() ? id : "/generic/buffer/vertices/perspective_frustum/" + id);
 }
 
 

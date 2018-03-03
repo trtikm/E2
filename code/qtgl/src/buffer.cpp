@@ -1,5 +1,4 @@
 #include <qtgl/buffer.hpp>
-#include <qtgl/detail/buffer_cache.hpp>
 #include <qtgl/detail/read_line.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -8,13 +7,14 @@
 #include <utility/msgstream.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/functional/hash.hpp>
-#include <limits>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
 #include <algorithm>
 #include <iterator>
 #include <unordered_set>
+#include <functional>
+#include <stdexcept>
 
 namespace qtgl { namespace detail { namespace current_draw {
 
@@ -27,541 +27,77 @@ void  set_num_primitives(natural_32_bit const  num_primitives);
 
 }}}
 
+namespace qtgl { namespace detail {
 
-namespace qtgl { namespace {
 
-
-GLuint  create_glbuffer(GLenum const  target, GLvoid const* data, natural_64_bit const size)
+buffer_file_data::buffer_file_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr)
 {
     TMPROF_BLOCK();
 
-    if (size == 0ULL || size > (natural_64_bit)std::numeric_limits<natural_32_bit>::max())
-        return 0U;
-
-    GLuint  id = 0U;
-    glapi().glGenBuffers(1U,&id);
-    if (id == 0U)
-        return 0U;
-    glapi().glBindBuffer(target,id);
-    glapi().glBufferData(target,(GLsizeiptr)size,data,GL_STATIC_DRAW);
-    return id;
-}
-
-GLuint  create_vertex_arrays()
-{
-    TMPROF_BLOCK();
-
-    GLuint  id;
-    glapi().glGenVertexArrays(1U,&id);
-    if (id == 0U)
-        return 0U;
-    glapi().glBindVertexArray(id);
-    return id;
-}
-
-void  fill_vertex_arrays(std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings)
-{
-    TMPROF_BLOCK();
-
-    for (auto const& elem : bindings)
-    {
-        glapi().glBindBuffer(GL_ARRAY_BUFFER,elem.second->id());
-        glapi().glEnableVertexAttribArray(value(elem.first));
-        glapi().glVertexAttribPointer(value(elem.first),
-                                      elem.second->properties()->num_components_per_primitive(),
-                                      GL_FLOAT,
-                                      GL_FALSE,
-                                      0U,
-                                      nullptr);
-    }
-}
-
-bool  check_consistency(std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings)
-{
-    for (auto const&  elem : direct_bindings)
-    {
-        if (!elem.second.operator bool())
-            return false;
-        if (elem.second->properties()->num_primitives() != direct_bindings.cbegin()->second->properties()->num_primitives())
-            return false;
-    }
-    return true;
-}
-
-bool  check_consistency(
-        std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const&  buffer_paths,
-        std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings
-        )
-{
-    if (buffer_paths.size() + direct_bindings.size() == 0U ||
-        buffer_paths.size() + direct_bindings.size() > (natural_64_bit)GL_MAX_VERTEX_ATTRIBS)
-        return false;
-
-    if (buffer_paths.count(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION) == 0ULL &&
-        direct_bindings.count(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION) == 0ULL)
-        return false;
-
-    for (auto const&  elem : buffer_paths)
-    {
-        if (elem.second.empty())
-            return false;
-        if (direct_bindings.count(elem.first) != 0ULL)
-            return false;
-    }
-
-    return check_consistency(direct_bindings);
-}
-
-
-}}
-
-namespace qtgl {
-
-
-buffer_properties_ptr  buffer_properties::create(
-        boost::filesystem::path const&  buffer_file,
-        natural_8_bit const  num_components_per_primitive,
-        natural_32_bit const  num_primitives,
-        natural_8_bit const  num_bytes_per_component,
-        bool const   has_integral_components
-        )
-{
-    return std::make_shared<buffer_properties>(buffer_file,num_components_per_primitive,num_primitives,
-                                               num_bytes_per_component,has_integral_components);
-}
-
-buffer_properties::buffer_properties(
-        boost::filesystem::path const&  buffer_file,
-        natural_8_bit const  num_components_per_primitive,
-        natural_32_bit const  num_primitives,
-        natural_8_bit const  num_bytes_per_component,
-        bool const   has_integral_components
-        )
-    : m_buffer_file(buffer_file)
-    , m_num_primitives(num_primitives)
-    , m_num_components_per_primitive(num_components_per_primitive)
-    , m_num_bytes_per_component(num_bytes_per_component)
-    , m_has_integral_components(has_integral_components)
-{
-    ASSUMPTION(m_num_components_per_primitive != 0U);
-    ASSUMPTION(m_num_primitives > 0U);
-    ASSUMPTION((m_has_integral_components && m_num_bytes_per_component == (natural_8_bit)sizeof(natural_32_bit)) ||
-               (!m_has_integral_components && m_num_bytes_per_component == sizeof(float_32_bit)));
-}
-
-bool  buffer_properties::operator==(buffer_properties const&  other) const
-{
-    return  buffer_file() == other.buffer_file() &&
-            num_components_per_primitive() == other.num_components_per_primitive() &&
-            num_primitives() == other.num_primitives() &&
-            num_bytes_per_component() == other.num_bytes_per_component() &&
-            has_integral_components() == other.has_integral_components()
-            ;
-}
-
-size_t  buffer_properties::hash() const
-{
-    std::size_t seed = 0ULL;
-    boost::hash_combine(seed,buffer_file().string());
-    boost::hash_combine(seed,num_components_per_primitive());
-    boost::hash_combine(seed,num_primitives());
-    boost::hash_combine(seed,num_bytes_per_component());
-    boost::hash_combine(seed,has_integral_components() ? 1U : 0U);
-    return seed;
-}
-
-
-vertex_buffer_properties::vertex_buffer_properties(
-        boost::filesystem::path const&  buffer_file,
-        natural_8_bit const  num_components_per_primitive,
-        natural_32_bit const  num_primitives,
-        spatial_boundary const&  boundary
-        )
-    : buffer_properties(
-          buffer_file,
-          num_components_per_primitive,
-          num_primitives,
-          sizeof(float_32_bit),
-          false
-          )
-    , m_boundary(boundary)
-{}
-
-
-}
-
-namespace qtgl {
-
-
-buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,2> > const&  data,
-                           std::string const&  buffer_name, std::string const&  uid)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(2ULL * data.size() <= (natural_64_bit)std::numeric_limits<natural_32_bit>::max());
-
-    GLuint const  id =
-            create_glbuffer(GL_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 2ULL * sizeof(float_32_bit));
-    if (id == 0U)
-        return buffer_ptr{};
-
-    std::size_t  seed = 0ULL;
-    for (auto const&  elem : data)
-    {
-        boost::hash_combine(seed,elem.at(0ULL));
-        boost::hash_combine(seed,elem.at(1ULL));
-    }
-    boost::filesystem::path  buffer_path =
-            msgstream() << "/generic/buffer"
-                        << (buffer_name.empty() ? "" : "/") << buffer_name
-                        << (uid.empty() ? "" : "/") << uid
-                        << msgstream::end();
-    if (uid.empty())
-    {
-        std::size_t  seed = 0ULL;
-        for (auto const&  elem : data)
-        {
-            boost::hash_combine(seed,elem.at(0ULL));
-            boost::hash_combine(seed,elem.at(1ULL));
-        }
-        buffer_path /= msgstream() << "/hash_" << seed << msgstream::end();
-    }
-
-    return create(id,std::make_shared<buffer_properties>(buffer_path,2U,(natural_32_bit)data.size(),
-                                                         (natural_8_bit)sizeof(float_32_bit),false));
-}
-
-buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,3> > const&  data,
-                           std::string const&  buffer_name, std::string const&  uid,
-                           bool const  do_compute_boundary)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(3ULL * data.size() <= (natural_64_bit)std::numeric_limits<natural_32_bit>::max());
-
-    GLuint const  id =
-            create_glbuffer(GL_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 3ULL * sizeof(float_32_bit));
-    if (id == 0U)
-        return buffer_ptr{};
-
-    boost::filesystem::path  buffer_path =
-        msgstream() << "/generic/buffer"
-                    << (buffer_name.empty() ? "" : "/") << buffer_name
-                    << (uid.empty() ? "" : "/") << uid
-                    << msgstream::end();
-    if (uid.empty())
-    {
-        std::size_t  seed = 0ULL;
-        for (auto const&  elem : data)
-        {
-            boost::hash_combine(seed,elem.at(0ULL));
-            boost::hash_combine(seed,elem.at(1ULL));
-            boost::hash_combine(seed,elem.at(2ULL));
-        }
-        buffer_path /= msgstream() << "/hash_" << seed << msgstream::end();
-    }
-
-    if (!do_compute_boundary)
-        return create(id,std::make_shared<buffer_properties>(buffer_path,3U,(natural_32_bit)data.size(),
-                                                             (natural_8_bit)sizeof(float_32_bit),false));
-
-    float_32_bit  radius_squared = 0.0f;
-    vector3  lo_corner{ 0.0f, 0.0f, 0.0f };
-    vector3  hi_corner{ 0.0f, 0.0f, 0.0f };
-    for (auto const&  point : data)
-    {
-        for (natural_32_bit j = 0U; j < 3U; ++j)
-        {
-            if (point.at(j) < lo_corner(j))
-                lo_corner(j) = point.at(j);
-            if (point.at(j) > hi_corner(j))
-                hi_corner(j) = point.at(j);
-        }
-        float_32_bit const  len2 = point.at(0U) * point.at(0U) +
-                                   point.at(1U) * point.at(1U) +
-                                   point.at(2U) * point.at(2U) ;
-        if (len2 > radius_squared)
-            radius_squared = len2;
-    }
-    return create(
-                id,
-                std::make_shared<vertex_buffer_properties const>(
-                    buffer_path,
-                    3U,
-                    (natural_32_bit)data.size(),
-                    spatial_boundary{ std::sqrtf(radius_squared),lo_corner,hi_corner }
-                    )
-                );
-}
-
-buffer_ptr  buffer::create(std::vector< std::array<float_32_bit,4> > const&  data,
-                           std::string const&  buffer_name, std::string const&  uid)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(4ULL * data.size() <= (natural_64_bit)std::numeric_limits<natural_32_bit>::max());
-
-    GLuint const  id =
-            create_glbuffer(GL_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 4ULL * sizeof(float_32_bit));
-    if (id == 0U)
-        return buffer_ptr{};
-
-    boost::filesystem::path  buffer_path =
-        msgstream() << "/generic/buffer"
-        << (buffer_name.empty() ? "" : "/") << buffer_name
-        << (uid.empty() ? "" : "/") << uid
-        << msgstream::end();
-    if (uid.empty())
-    {
-        std::size_t  seed = 0ULL;
-        for (auto const& elem : data)
-        {
-            boost::hash_combine(seed, elem.at(0ULL));
-            boost::hash_combine(seed, elem.at(1ULL));
-            boost::hash_combine(seed, elem.at(2ULL));
-            boost::hash_combine(seed, elem.at(3ULL));
-        }
-        buffer_path /= msgstream() << "/hash_" << seed << msgstream::end();
-    }
-
-    return create(id,std::make_shared<buffer_properties>(buffer_path,4U,(natural_32_bit)data.size(),
-                                                         (natural_8_bit)sizeof(float_32_bit),false));
-}
-
-buffer_ptr  buffer::create(std::vector< natural_32_bit > const&  data,
-                           std::string const&  buffer_name, std::string const&  uid)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(data.size() <= (natural_64_bit)std::numeric_limits<natural_32_bit>::max());
-
-    GLuint const  id =
-            create_glbuffer(GL_ELEMENT_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 1ULL * sizeof(natural_32_bit));
-    if (id == 0U)
-        return buffer_ptr{};
-
-    boost::filesystem::path  buffer_path =
-        msgstream() << "/generic/buffer"
-        << (buffer_name.empty() ? "" : "/") << buffer_name
-        << (uid.empty() ? "" : "/") << uid
-        << msgstream::end();
-    if (uid.empty())
-    {
-        std::size_t  seed = 0ULL;
-        for (auto const& elem : data)
-            boost::hash_combine(seed, elem);
-        buffer_path /= msgstream() << "/hash_" << seed << msgstream::end();
-    }
-
-    return create(id,std::make_shared<buffer_properties>(buffer_path,1U,(natural_32_bit)data.size(),
-                                                         (natural_8_bit)sizeof(natural_32_bit),true));
-}
-
-buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,2> > const&  data,
-                           std::string const&  buffer_name, std::string const&  uid)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(2ULL * data.size() <= (natural_64_bit)std::numeric_limits<natural_32_bit>::max());
-
-    GLuint const  id =
-            create_glbuffer(GL_ELEMENT_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 2ULL * sizeof(natural_32_bit));
-    if (id == 0U)
-        return buffer_ptr{};
-
-    boost::filesystem::path  buffer_path =
-        msgstream() << "/generic/buffer"
-        << (buffer_name.empty() ? "" : "/") << buffer_name
-        << (uid.empty() ? "" : "/") << uid
-        << msgstream::end();
-    if (uid.empty())
-    {
-        std::size_t  seed = 0ULL;
-        for (auto const& elem : data)
-        {
-            boost::hash_combine(seed, elem.at(0ULL));
-            boost::hash_combine(seed, elem.at(1ULL));
-        }
-        buffer_path /= msgstream() << "/hash_" << seed << msgstream::end();
-    }
-
-    return create(id,std::make_shared<buffer_properties>(buffer_path,2U,(natural_32_bit)data.size(),
-                                                         (natural_8_bit)sizeof(natural_32_bit),true));
-}
-
-buffer_ptr  buffer::create(std::vector< std::array<natural_32_bit,3> > const&  data,
-                           std::string const&  buffer_name, std::string const&  uid)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(3ULL * data.size() <= (natural_64_bit)std::numeric_limits<natural_32_bit>::max());
-
-    GLuint const  id =
-            create_glbuffer(GL_ELEMENT_ARRAY_BUFFER,(GLvoid const*)&data.at(0),data.size() * 3ULL * sizeof(natural_32_bit));
-    if (id == 0U)
-        return buffer_ptr{};
-
-    boost::filesystem::path  buffer_path =
-        msgstream() << "/generic/buffer"
-        << (buffer_name.empty() ? "" : "/") << buffer_name
-        << (uid.empty() ? "" : "/") << uid
-        << msgstream::end();
-    if (uid.empty())
-    {
-        std::size_t  seed = 0ULL;
-        for (auto const& elem : data)
-        {
-            boost::hash_combine(seed, elem.at(0ULL));
-            boost::hash_combine(seed, elem.at(1ULL));
-            boost::hash_combine(seed, elem.at(2ULL));
-        }
-        buffer_path /= msgstream() << "/hash_" << seed << msgstream::end();
-    }
-
-    return create(id,std::make_shared<buffer_properties>(buffer_path,3U,(natural_32_bit)data.size(),
-                                                         (natural_8_bit)sizeof(natural_32_bit),true));
-}
-
-buffer_ptr  buffer::create(GLuint const  id, buffer_properties const&  buffer_props)
-{
-    return create(id,std::make_shared<buffer_properties>(buffer_props));
-}
-
-buffer_ptr  buffer::create(GLuint const  id, buffer_properties_ptr const  buffer_props)
-{
-    return buffer_ptr(new buffer(id,buffer_props));
-}
-
-buffer::buffer(GLuint const  id, buffer_properties_ptr const  buffer_props)
-    : m_id(id)
-    , m_buffer_props(buffer_props)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(m_id != 0U);
-    ASSUMPTION(m_buffer_props.operator bool());
-}
-
-buffer_ptr  buffer::create(std::vector<natural_8_bit> const&  data,
-                           buffer_properties_ptr const  buffer_props,
-                           std::string& error_message)
-{
-    ASSUMPTION(buffer_props.operator bool());
-    ASSUMPTION(error_message.empty());
-    ASSUMPTION(data.size() <= (natural_64_bit)std::numeric_limits<natural_32_bit>::max());
-    ASSUMPTION(data.size() == buffer_props->num_bytes_per_component() * buffer_props->num_components_per_primitive()
-                                                                      * buffer_props->num_primitives());
-
-    GLuint const  id =
-            create_glbuffer(buffer_props->has_integral_components() ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER,
-                            (GLvoid const*)data.data(),data.size());
-    if (id == 0U)
-    {
-        error_message = "Construction of the buffer in function 'qtgl::create_glbuffer' has failed.";
-        return buffer_ptr{};
-    }
-    return create(id,buffer_props);
-
-
-}
-
-buffer::~buffer()
-{
-    TMPROF_BLOCK();
-
-    if (id() != 0U)
-        glapi().glDeleteBuffers(1U,&m_id);
-}
-
-
-buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_file,
-                                        std::vector<natural_8_bit>&  buffer_data,
-                                        std::string&  error_message)
-{
-    ASSUMPTION(buffer_data.empty());
-    ASSUMPTION(error_message.empty());
-
-    if (!boost::filesystem::exists(buffer_file))
-    {
-        error_message = msgstream() << "The buffer file '" << buffer_file << "' does not exists.";
-        return buffer_properties_ptr();
-    }
-    if (!boost::filesystem::is_regular_file(buffer_file))
-    {
-        error_message = msgstream() << "The buffer path '" << buffer_file << "' does not reference a regular file.";
-        return buffer_properties_ptr();
-    }
-
-    if (boost::filesystem::file_size(buffer_file) < 4ULL)
-    {
-        error_message = msgstream() << "The passed file '" << buffer_file << "' is not a qtgl file (wrong size).";
-        return buffer_properties_ptr();
-    }
-
-    std::ifstream  istr(buffer_file.string(),std::ios_base::binary);
+    if (!boost::filesystem::exists(path))
+        throw std::runtime_error(msgstream() << "The buffer file '" << path << "' does not exists.");
+    if (!boost::filesystem::is_regular_file(path))
+        throw std::runtime_error(msgstream() << "The buffer path '" << path
+                                             << "' does not reference a regular file.");
+
+    if (boost::filesystem::file_size(path) < 4ULL)
+        throw std::runtime_error(msgstream() << "The passed file '" << path
+                                             << "' is not a qtgl file (wrong size).");
+
+    std::ifstream  istr(path.string(),std::ios_base::binary);
     if (!istr.good())
-    {
-        error_message = msgstream() << "Cannot open the buffer file '" << buffer_file << "'.";
-        return buffer_properties_ptr();
-    }
+        throw std::runtime_error(msgstream() << "Cannot open the buffer file '" << path << "'.");
 
     std::string  file_type;
     if (!detail::read_line(istr,file_type))
-    {
-        error_message = msgstream() << "The passed file '" << buffer_file << "' is not a qtgl file (cannot read its type string).";
-        return buffer_properties_ptr();
-    }
+        throw std::runtime_error(msgstream() << "The passed file '" << path
+                                             << "' is not a qtgl file (cannot read its type string).");
+
+    std::vector<natural_8_bit>  buffer_data;
 
     if (file_type == "E2::qtgl/buffer/indices/triangles/text")
     {
         std::string  line;
         if (!detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "Cannot read number of triangles in the file '" << buffer_file << "'.";
-            return buffer_properties_ptr();
-        }
+            throw std::runtime_error(msgstream() << "Cannot read number of triangles in the file '" << path
+                                                 << "'.");
         natural_32_bit const  num_triangles = std::stoul(line);
         if (num_triangles == 0U)
-        {
-            error_message = msgstream() << "The triangle index buffer file '" << buffer_file << "' contains zero triangles.";
-            return buffer_properties_ptr();
-        }
+            throw std::runtime_error(msgstream() << "The triangle index buffer file '" << path
+                                                 << "' contains zero triangles.");
         for (natural_32_bit  i = 0U; i < num_triangles; ++i)
             for (natural_32_bit  j = 0U; j < 3U; ++j)
             {
                 if (!detail::read_line(istr,line))
-                {
-                    error_message = msgstream() << "Cannot read the index no." << j << " of the triangle no." << i
-                                                << " in the file '" << buffer_file << "'.";
-                    return buffer_properties_ptr();
-                }
+                    throw std::runtime_error(
+                        msgstream() << "Cannot read the index no." << j << " of the triangle no." << i
+                                    << " in the file '" << path << "'.");
                 natural_32_bit const index = std::stoul(line);
                 std::copy(reinterpret_cast<natural_8_bit const*>(&index),
                           reinterpret_cast<natural_8_bit const*>(&index) + sizeof(index),
                           std::back_inserter(buffer_data));
             }
         if (detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "The file '" << buffer_file << "' contains more indices than "
-                                        << 3U * num_triangles <<" indices.";
-            return buffer_properties_ptr();
-        }
-        return buffer_properties::create(buffer_file,3U,num_triangles,sizeof(natural_32_bit),true);
+            throw std::runtime_error(msgstream() << "The file '" << path << "' contains more indices than "
+                                                 << 3U * num_triangles <<" indices.");
+
+        initialise(
+                0U,
+                3U, num_triangles, sizeof(natural_32_bit), true,
+                buffer_data.data(), buffer_data.data() + buffer_data.size(),
+                nullptr
+                );
     }
     else if (file_type == "E2::qtgl/buffer/vertices/3d/text")
     {
         std::string  line;
         if (!detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "Cannot read number of vertices in the file '" << buffer_file << "'.";
-            return buffer_properties_ptr();
-        }
+            throw std::runtime_error(msgstream() << "Cannot read number of vertices in the file '" << path
+                                                 << "'.");
         natural_32_bit const  num_vertices = std::stoul(line);
         if (num_vertices == 0U)
-        {
-            error_message = msgstream() << "The vertex buffer file '" << buffer_file << "' contains zero vertices.";
-            return buffer_properties_ptr();
-        }
+            throw std::runtime_error(msgstream() << "The vertex buffer file '" << path
+                                                 << "' contains zero vertices.");
         float_32_bit  radius_squared = 0.0f;
         vector3  lo_corner{ 0.0f, 0.0f, 0.0f };
         vector3  hi_corner{ 0.0f, 0.0f, 0.0f };
@@ -571,11 +107,9 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
             for (natural_32_bit j = 0U; j < 3U; ++j)
             {
                 if (!detail::read_line(istr,line))
-                {
-                    error_message = msgstream() << "Cannot read the coordinate no." << j << " of the vertex no." << i
-                                                << " in the file '" << buffer_file << "'.";
-                    return buffer_properties_ptr();
-                }
+                    throw std::runtime_error(msgstream() << "Cannot read the coordinate no." << j
+                                                         << " of the vertex no." << i
+                                                         << " in the file '" << path << "'.");
                 float_32_bit const coord = std::stof(line);
                 std::copy(reinterpret_cast<natural_8_bit const*>(&coord),
                           reinterpret_cast<natural_8_bit const*>(&coord) + sizeof(coord),
@@ -591,51 +125,49 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
                 radius_squared = len2;
         }
         if (detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "The file '" << buffer_file << "' contains more than "
-                << 3U * num_vertices << " coordinates.";
-            return buffer_properties_ptr();
-        }
-        return std::make_shared<vertex_buffer_properties const>(
-                    buffer_file,3U,num_vertices,
-                    spatial_boundary{ std::sqrtf(radius_squared),lo_corner,hi_corner }
-                    );
+            throw std::runtime_error(msgstream() << "The file '" << path << "' contains more than "
+                                                 << 3U * num_vertices << " coordinates.");
+        spatial_boundary const  boundary{ std::sqrtf(radius_squared),lo_corner,hi_corner };
+
+        initialise(
+                0U,
+                3U, num_vertices, sizeof(float_32_bit), false,
+                buffer_data.data(), buffer_data.data() + buffer_data.size(),
+                &boundary
+                );
     }
     else if (file_type == "E2::qtgl/buffer/diffuse_colours/text")
     {
         std::string  line;
         if (!detail::read_line(istr, line))
-        {
-            error_message = msgstream() << "Cannot read number of diffuse colours in the file '" << buffer_file << "'.";
-            return buffer_properties_ptr();
-        }
+            throw std::runtime_error(msgstream() << "Cannot read number of diffuse colours in the file '"
+                                                 << path << "'.");
         natural_32_bit const  num_colours = std::stoul(line);
         if (num_colours == 0U)
-        {
-            error_message = msgstream() << "The diffuse colours buffer file '" << buffer_file << "' contains zero diffuse colours.";
-            return buffer_properties_ptr();
-        }
+            throw std::runtime_error(msgstream() << "The diffuse colours buffer file '" << path
+                                                 << "' contains zero diffuse colours.");
         for (natural_32_bit i = 0U; i < num_colours; ++i)
             for (natural_32_bit j = 0U; j < 4U; ++j)
             {
                 if (!detail::read_line(istr, line))
-                {
-                    error_message = msgstream() << "Cannot read the colour component no." << j << " of the diffuse colour no." << i
-                        << " in the file '" << buffer_file << "'.";
-                    return buffer_properties_ptr();
-                }
+                    throw std::runtime_error(msgstream() << "Cannot read the colour component no." << j
+                                                         << " of the diffuse colour no." << i
+                                                         << " in the file '" << path << "'.");
                 float_32_bit const coord = std::stof(line);
                 std::copy(reinterpret_cast<natural_8_bit const*>(&coord),
                     reinterpret_cast<natural_8_bit const*>(&coord) + sizeof(coord),
                     std::back_inserter(buffer_data));
             }
         if (detail::read_line(istr, line))
-        {
-            error_message = msgstream() << "The file '" << buffer_file << "' contains more than "
-                << 4U * num_colours << " colour components.";
-            return buffer_properties_ptr();
-        }
-        return buffer_properties::create(buffer_file, 4U, num_colours, sizeof(float_32_bit), false);
+            throw std::runtime_error(msgstream() << "The file '" << path << "' contains more than "
+                                                 << 4U * num_colours << " colour components.");
+
+        initialise(
+                0U,
+                4U, num_colours, sizeof(float_32_bit), false,
+                buffer_data.data(), buffer_data.data() + buffer_data.size(),
+                nullptr
+                );
     }
     else if (file_type == "E2::qtgl/buffer/specular_colours/text")
     {
@@ -656,44 +188,39 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
                 break;
             }
         if (!found)
-        {
-            error_message = msgstream() << "Unknown bind location in the file type string of the file '" << buffer_file << "'.";
-            return buffer_properties_ptr();
-        }
+            throw std::runtime_error(msgstream() << "Unknown bind location in the file type string of the file '" 
+                                                 << path << "'.");
 
         std::string  line;
         if (!detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "Cannot read number of texture coordinatres in the file '" << buffer_file << "'.";
-            return buffer_properties_ptr();
-        }
+            throw std::runtime_error(msgstream() << "Cannot read number of texture coordinatres in the file '"
+                                                 << path << "'.");
         natural_32_bit const  num_vertices = std::stoul(line);
         if (num_vertices == 0U)
-        {
-            error_message = msgstream() << "The texture coordinates buffer file '" << buffer_file << "' is empty.";
-            return buffer_properties_ptr();
-        }
+            throw std::runtime_error(msgstream() << "The texture coordinates buffer file '" << path
+                                                 << "' is empty.");
         for (natural_32_bit i = 0U; i < num_vertices; ++i)
             for (natural_32_bit j = 0U; j < 2U; ++j)
             {
                 if (!detail::read_line(istr,line))
-                {
-                    error_message = msgstream() << "Cannot read the coordinate no." << j << " of the texture vertex no." << i
-                                                << " in the file '" << buffer_file << "'.";
-                    return buffer_properties_ptr();
-                }
+                    throw std::runtime_error(msgstream() << "Cannot read the coordinate no." << j
+                                                         << " of the texture vertex no." << i
+                                                         << " in the file '" << path << "'.");
                 float_32_bit const coord = std::stof(line);
                 std::copy(reinterpret_cast<natural_8_bit const*>(&coord),
                           reinterpret_cast<natural_8_bit const*>(&coord) + sizeof(coord),
                           std::back_inserter(buffer_data));
             }
         if (detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "The file '" << buffer_file << "' contains more than "
-                << 2U * num_vertices << " coordinates.";
-            return buffer_properties_ptr();
-        }
-        return buffer_properties::create(buffer_file,2U,num_vertices,sizeof(float_32_bit),false);
+            throw std::runtime_error(msgstream() << "The file '" << path << "' contains more than "
+                                                 << 2U * num_vertices << " coordinates.");
+
+        initialise(
+                0U,
+                2U, num_vertices, sizeof(float_32_bit), false,
+                buffer_data.data(), buffer_data.data() + buffer_data.size(),
+                nullptr
+                );
     }
     else if (file_type == "E2::qtgl/buffer/indices_of_matrices/2/text" ||
              file_type == "E2::qtgl/buffer/indices_of_matrices/3/text" ||
@@ -706,37 +233,34 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
 
         std::string  line;
         if (!detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "Cannot read indices of matrices in the file '" << buffer_file << "'.";
-            return buffer_properties_ptr();
-        }
+            throw std::runtime_error(msgstream() << "Cannot read indices of matrices in the file '" << path
+                                                 << "'.");
         natural_32_bit const  num_elements = std::stoul(line);
         if (num_elements == 0U)
-        {
-            error_message = msgstream() << "The buffer file '" << buffer_file << "' contains zero indices of matrices.";
-            return buffer_properties_ptr();
-        }
+            throw std::runtime_error(msgstream() << "The buffer file '" << path
+                                                 << "' contains zero indices of matrices.");
         for (natural_32_bit  i = 0U; i < num_elements; ++i)
             for (natural_32_bit  j = 0U; j < num_matrices_per_vertex; ++j)
             {
                 if (!detail::read_line(istr,line))
-                {
-                    error_message = msgstream() << "Cannot read the index no." << j << " of the element no." << i
-                                                << " in the file '" << buffer_file << "'.";
-                    return buffer_properties_ptr();
-                }
+                    throw std::runtime_error(msgstream() << "Cannot read the index no." << j
+                                                         << " of the element no." << i
+                                                         << " in the file '" << path << "'.");
                 natural_32_bit const index = std::stoul(line);
                 std::copy(reinterpret_cast<natural_8_bit const*>(&index),
                           reinterpret_cast<natural_8_bit const*>(&index) + sizeof(index),
                           std::back_inserter(buffer_data));
             }
         if (detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "The file '" << buffer_file << "' contains more indices than "
-                                        << num_matrices_per_vertex * num_elements <<" indices.";
-            return buffer_properties_ptr();
-        }
-        return buffer_properties::create(buffer_file,num_matrices_per_vertex,num_elements,sizeof(natural_32_bit),true);
+            throw std::runtime_error(msgstream() << "The file '" << path << "' contains more indices than "
+                                                 << num_matrices_per_vertex * num_elements <<" indices.");
+
+        initialise(
+                0U,
+                num_matrices_per_vertex, num_elements, sizeof(natural_32_bit), true,
+                buffer_data.data(), buffer_data.data() + buffer_data.size(),
+                nullptr
+                );
     }
     else if (file_type == "E2::qtgl/buffer/weights_of_matrices/2/text" ||
              file_type == "E2::qtgl/buffer/weights_of_matrices/3/text" ||
@@ -749,36 +273,32 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
 
         std::string  line;
         if (!detail::read_line(istr, line))
-        {
-            error_message = msgstream() << "Cannot read number of weights in the file '" << buffer_file << "'.";
-            return buffer_properties_ptr();
-        }
+            throw std::runtime_error(msgstream() << "Cannot read number of weights in the file '" << path << "'.");
         natural_32_bit const  num_weights = std::stoul(line);
         if (num_weights == 0U)
-        {
-            error_message = msgstream() << "The buffer file '" << buffer_file << "' contains zero weights of matrices.";
-            return buffer_properties_ptr();
-        }
+            throw std::runtime_error(msgstream() << "The buffer file '" << path
+                                                 << "' contains zero weights of matrices.");
         for (natural_32_bit i = 0U; i < num_weights; ++i)
             for (natural_32_bit j = 0U; j < num_matrices_per_vertex; ++j)
             {
                 if (!detail::read_line(istr, line))
-                {
-                    error_message = msgstream() << "Cannot read the weight no." << i+j << " in the file '" << buffer_file << "'.";
-                    return buffer_properties_ptr();
-                }
+                    throw std::runtime_error(msgstream() << "Cannot read the weight no." << i+j
+                                                         << " in the file '" << path << "'.");
                 float_32_bit const coord = std::stof(line);
                 std::copy(reinterpret_cast<natural_8_bit const*>(&coord),
                     reinterpret_cast<natural_8_bit const*>(&coord) + sizeof(coord),
                     std::back_inserter(buffer_data));
             }
         if (detail::read_line(istr, line))
-        {
-            error_message = msgstream() << "The file '" << buffer_file << "' contains more than "
-                << 1U * num_weights << " weights of matrices.";
-            return buffer_properties_ptr();
-        }
-        return buffer_properties::create(buffer_file, num_matrices_per_vertex, num_weights, sizeof(float_32_bit), false);
+            throw std::runtime_error(msgstream() << "The file '" << path << "' contains more than "
+                                                 << 1U * num_weights << " weights of matrices.");
+
+        initialise(
+                0U,
+                num_matrices_per_vertex, num_weights, sizeof(float_32_bit), false,
+                buffer_data.data(), buffer_data.data() + buffer_data.size(),
+                nullptr
+                );
     }
     else if (file_type == "E2::qtgl/buffer/texcoords/2d/1/text")
     {
@@ -818,269 +338,475 @@ buffer_properties_ptr  load_buffer_file(boost::filesystem::path const&  buffer_f
     }
     else
     {
-        error_message = msgstream() << "The passed file '" << buffer_file
-                                    << "' is a qtgl file of unknown type '" << file_type << "'.";
-        return buffer_properties_ptr();
+        throw std::runtime_error(msgstream() << "The passed file '" << path
+                                             << "' is a qtgl file of unknown type '" << file_type << "'.");
     }
 }
 
-void  send_buffer_load_request(boost::filesystem::path const&  buffer_file)
+
+buffer_file_data::buffer_file_data(
+        async::finalise_load_on_destroy_ptr,
+        GLuint const  id, 
+        natural_8_bit const  num_components_per_primitive,
+        natural_32_bit const  num_primitives,
+        natural_8_bit const  num_bytes_per_component,
+        bool const   has_integral_components,
+        natural_8_bit const* const  data_begin,
+        natural_8_bit const* const  data_end,
+        spatial_boundary const* const  boundary
+        )
 {
-    detail::buffer_cache::instance().insert_load_request(buffer_file);
+    initialise(
+        id,
+        num_components_per_primitive, num_primitives, num_bytes_per_component, has_integral_components,
+        data_begin, data_end,
+        boundary
+        );
 }
 
-void  get_properties_of_cached_buffers(std::vector<buffer_properties_ptr>&  output)
+
+buffer_file_data::buffer_file_data(
+        async::finalise_load_on_destroy_ptr,
+        std::vector< std::array<float_32_bit,2> > const&  data
+        )
 {
-    detail::buffer_cache::instance().cached(output);
+    initialise(
+        0U,
+        2U, (natural_32_bit)data.size(), (natural_8_bit)sizeof(float_32_bit), false,
+        (natural_8_bit const*)data.data(), (natural_8_bit const*)data.data() + data.size() * sizeof(data.at(0)),
+        nullptr
+        );
 }
 
-void  get_properties_of_failed_buffers(std::vector< std::pair<buffer_properties_ptr,std::string> >&  output)
+
+buffer_file_data::buffer_file_data(
+        async::finalise_load_on_destroy_ptr,
+        std::vector< std::array<float_32_bit,3> > const&  data,
+        bool const  do_compute_boundary
+        )
 {
-    detail::buffer_cache::instance().failed(output);
+    float_32_bit  radius_squared = 0.0f;
+    vector3  lo_corner{ 0.0f, 0.0f, 0.0f };
+    vector3  hi_corner{ 0.0f, 0.0f, 0.0f };
+    if (do_compute_boundary)
+        for (auto const& point : data)
+        {
+            for (natural_32_bit j = 0U; j < 3U; ++j)
+            {
+                if (point.at(j) < lo_corner(j))
+                    lo_corner(j) = point.at(j);
+                if (point.at(j) > hi_corner(j))
+                    hi_corner(j) = point.at(j);
+            }
+            float_32_bit const  len2 = point.at(0U) * point.at(0U) +
+                                       point.at(1U) * point.at(1U) +
+                                       point.at(2U) * point.at(2U);
+            if (len2 > radius_squared)
+                radius_squared = len2;
+        }
+    spatial_boundary const  boundary{ std::sqrtf(radius_squared),lo_corner,hi_corner };
+    initialise(
+        0U,
+        3U, (natural_32_bit)data.size(), sizeof(float_32_bit), false,
+        (natural_8_bit const*)data.data(), (natural_8_bit const*)data.data() + data.size() * sizeof(data.at(0)),
+        do_compute_boundary ? &boundary : nullptr
+        );
 }
 
 
+buffer_file_data::buffer_file_data(
+        async::finalise_load_on_destroy_ptr,
+        std::vector< std::array<float_32_bit,4> > const&  data
+        )
+{
+    initialise(
+        0U,
+        4U, (natural_32_bit)data.size(), (natural_8_bit)sizeof(float_32_bit), false,
+        (natural_8_bit const*)data.data(), (natural_8_bit const*)data.data() + data.size() * sizeof(data.at(0)),
+        nullptr
+        );
 }
+
+
+buffer_file_data::buffer_file_data(
+        async::finalise_load_on_destroy_ptr,
+        std::vector< natural_32_bit > const&  data
+        )
+{
+    initialise(
+        0U,
+        1U, (natural_32_bit)data.size(), (natural_8_bit)sizeof(natural_32_bit), true,
+        (natural_8_bit const*)data.data(), (natural_8_bit const*)data.data() + data.size() * sizeof(data.at(0)),
+        nullptr
+        );
+}
+
+
+buffer_file_data::buffer_file_data(
+        async::finalise_load_on_destroy_ptr,
+        std::vector< std::array<natural_32_bit,2> > const&  data
+        )
+{
+    initialise(
+        0U,
+        2U, (natural_32_bit)data.size(), (natural_8_bit)sizeof(natural_32_bit), true,
+        (natural_8_bit const*)data.data(), (natural_8_bit const*)data.data() + data.size() * sizeof(data.at(0)),
+        nullptr
+        );
+}
+
+
+buffer_file_data::buffer_file_data(
+        async::finalise_load_on_destroy_ptr,
+        std::vector< std::array<natural_32_bit,3> > const&  data
+        )
+{
+    initialise(
+        0U,
+        3U, (natural_32_bit)data.size(), (natural_8_bit)sizeof(natural_32_bit), true,
+        (natural_8_bit const*)data.data(), (natural_8_bit const*)data.data() + data.size() * sizeof(data.at(0)),
+        nullptr
+        );
+}
+
+
+buffer_file_data::~buffer_file_data()
+{
+    TMPROF_BLOCK();
+
+    destroy_gl_buffer();
+}
+
+
+
+void  buffer_file_data::initialise(
+        GLuint const  id,
+        natural_8_bit const  num_components_per_primitive,
+        natural_32_bit const  num_primitives,
+        natural_8_bit const  num_bytes_per_component,
+        bool const   has_integral_components,
+        natural_8_bit const* const  data_begin,
+        natural_8_bit const* const  data_end,
+        spatial_boundary const* const  boundary
+        )
+{
+    ASSUMPTION(
+        (data_begin == nullptr && data_end == nullptr && id != 0U) ||
+        (data_begin != nullptr && data_end != nullptr && data_begin < data_end)
+        );
+
+    m_id = id;
+    m_num_primitives = num_primitives;
+    m_num_components_per_primitive = num_components_per_primitive;
+    m_num_bytes_per_component = num_bytes_per_component;
+    m_has_integral_components = has_integral_components;
+    m_data_ptr = data_begin == nullptr ? nullptr :
+                                         std::unique_ptr< std::vector<natural_8_bit> >(
+                                                new std::vector<natural_8_bit>(data_begin, data_end)
+                                                );
+    m_boundary = boundary == nullptr ? nullptr :
+                                       std::unique_ptr<spatial_boundary>(new spatial_boundary(*boundary));
+
+    ASSUMPTION(m_num_components_per_primitive != 0U);
+    ASSUMPTION(m_num_primitives > 0U);
+    ASSUMPTION((m_has_integral_components && m_num_bytes_per_component == (natural_8_bit)sizeof(natural_32_bit)) ||
+               (!m_has_integral_components && m_num_bytes_per_component == sizeof(float_32_bit)));
+    ASSUMPTION(m_data_ptr->size() == m_num_bytes_per_component * m_num_components_per_primitive * m_num_primitives);
+}
+
+
+void  buffer_file_data::create_gl_buffer()
+{
+    if (id() != 0U)
+        return;
+
+    TMPROF_BLOCK();
+
+    glapi().glGenBuffers(1U, &m_id);
+    ASSUMPTION(m_id != 0U);
+
+    GLenum const  target = has_integral_components() ? GL_ELEMENT_ARRAY_BUFFER : GL_ARRAY_BUFFER;
+    glapi().glBindBuffer(target, m_id);
+    glapi().glBufferData(
+            target,
+            (GLsizeiptr)m_data_ptr->size(),
+            (GLvoid const*)m_data_ptr->data(),
+            GL_STATIC_DRAW
+            );
+}
+
+
+void  buffer_file_data::destroy_gl_buffer()
+{
+    if (id() == 0U)
+        return;
+
+    TMPROF_BLOCK();
+
+    glapi().glDeleteBuffers(1U, &m_id);
+}
+
+
+
+}}
+
+namespace qtgl { namespace detail {
+
+
+static void  load_buffers_map(
+        std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths,
+        buffers_binding_data::buffers_map_type&  buffers,
+        std::function<void()> const&  initialiser,
+        async::finalise_load_on_destroy_ptr  finaliser
+        )
+{
+    TMPROF_BLOCK();
+
+    struct local
+    {
+        static void  on_buffer_loaded(
+                std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths,
+                buffers_binding_data::buffers_map_type::iterator  it,
+                buffers_binding_data::buffers_map_type&  buffers,
+                std::function<void()> const&  initialiser,
+                async::finalise_load_on_destroy_ptr  finaliser
+                )
+        {
+            ASSUMPTION(it != buffers.end());
+
+            if (it->second.get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
+            {
+                // Oh no! We failed to load the buffer at position 'it'!
+                // So, let's also fail the load of the whole 'buffers_binding_data' resource.
+
+                finaliser->force_finalisation_as_failure(
+                        "Load of buffer '" + paths.at(it->first).string() + "' has FAILED!"
+                        );
+                return;
+            }
+
+            // Let's load the next buffer (if any remains)
+
+            ++it;
+            if (it == buffers.end())
+            {
+                // All buffers are loaded! So, let's initialise the 'buffers_binding_data' structure.
+                initialiser();
+                return;
+            }
+    
+            // Let's load the next buffer.
+
+            it->second.insert_load_request(
+                    paths.at(it->first).string(),
+                    1UL,
+                    std::bind(&local::on_buffer_loaded, paths, it, std::ref(buffers), initialiser, finaliser)
+                    );
+        }
+    };
+
+    ASSUMPTION(!paths.empty());
+    ASSUMPTION(buffers.empty());
+    for (auto const& elem : paths)
+        buffers.insert({ elem.first, buffer() });
+
+    // We load individual buffers one by one, starting from the first one in the map (at cbegin()).
+    // NOTE: All remaining buffers are loaded in function 'local::on_buffer_loaded'.
+
+    auto const  it = buffers.begin();
+
+    it->second.insert_load_request(
+            paths.at(it->first).string(),
+            1UL,
+            std::bind(&local::on_buffer_loaded, paths, it, std::ref(buffers), initialiser, finaliser)
+            );
+}
+
+
+buffers_binding_data::buffers_binding_data(
+        async::finalise_load_on_destroy_ptr  finaliser,
+        boost::filesystem::path const&  index_buffer_path,
+        std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths
+        )
+    : m_id(0U)
+    , m_index_buffer()
+    , m_num_indices_per_primitive(0U)
+    , m_buffers()
+    , m_ready(false)
+{
+    m_index_buffer.insert_load_request(
+        index_buffer_path.string(),
+        1UL,
+        std::bind(
+            &load_buffers_map,
+            paths,
+            std::ref(m_buffers),
+            [this]() { initialise( 0U, m_index_buffer, 0U, m_buffers); },
+            finaliser
+            )
+        );
+}
+
+
+buffers_binding_data::buffers_binding_data(
+        async::finalise_load_on_destroy_ptr  finaliser,
+        natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
+        std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths
+        )
+    : m_id(0U)
+    , m_index_buffer()
+    , m_num_indices_per_primitive(0U)
+    , m_buffers()
+    , m_ready(false)
+{
+    load_buffers_map(
+        paths,
+        m_buffers,
+        [this, num_indices_per_primitive]() { initialise(0U, buffer(), num_indices_per_primitive, m_buffers); },
+        finaliser
+        );
+}
+
+
+buffers_binding_data::~buffers_binding_data()
+{
+    TMPROF_BLOCK();
+
+    destroy_gl_binding();
+}
+
+
+void  buffers_binding_data::initialise(
+        GLuint const  id,
+        buffer const  index_buffer,
+        natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
+        buffers_map_type const&  buffers
+        )
+{
+    TMPROF_BLOCK();
+
+    m_id = id;
+    m_index_buffer = index_buffer;
+    m_num_indices_per_primitive = num_indices_per_primitive;
+    m_buffers = buffers;
+    m_ready = false;
+
+    ASSUMPTION(m_num_indices_per_primitive < 4);
+    ASSUMPTION(
+        (m_index_buffer.empty() && m_num_indices_per_primitive != 0U) ||
+        (!m_index_buffer.empty() && m_num_indices_per_primitive == 0U)
+        );
+    ASSUMPTION(m_buffers.size() <= (natural_64_bit)GL_MAX_VERTEX_ATTRIBS);
+    ASSUMPTION(m_buffers.count(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION) == 1UL);
+    ASSUMPTION(m_buffers.at(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION).has_boundary());
+    ASSUMPTION(
+        [this]() -> bool {
+                for (auto const& elem : m_buffers)
+                {
+                    if (!elem.second.loaded_successfully())
+                        return false;
+                    if (elem.second.num_primitives() != m_buffers.cbegin()->second.num_primitives())
+                        return false;
+                }
+                return true;
+            }()
+        );
+}
+
+
+void  buffers_binding_data::create_gl_binding()
+{
+    if (id() != 0U)
+        return;
+
+    TMPROF_BLOCK();
+
+    glapi().glGenVertexArrays(1U, &m_id);
+    ASSUMPTION(m_id != 0U);
+}
+
+
+void  buffers_binding_data::destroy_gl_binding()
+{
+    if (id() == 0U)
+        return;
+
+    TMPROF_BLOCK();
+
+    glapi().glDeleteVertexArrays(1U, &m_id);
+}
+
+
+}}
 
 namespace qtgl {
-
-
-buffers_binding_ptr  buffers_binding::create(
-        boost::filesystem::path const&  index_buffer_path,
-        std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const&  buffer_paths,
-        std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings
-        )
-{
-    ASSUMPTION(!index_buffer_path.empty());
-    return buffers_binding_ptr(new buffers_binding(index_buffer_path,buffer_ptr(),0U,buffer_paths,direct_bindings));
-}
-
-buffers_binding_ptr  buffers_binding::create(
-        buffer_ptr const  index_buffer,
-        std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const&  buffer_paths,
-        std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings
-        )
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(index_buffer.operator bool() && index_buffer->properties()->has_integral_components());
-    return buffers_binding_ptr(new buffers_binding(boost::filesystem::path(),index_buffer,
-                                                   index_buffer->properties()->num_components_per_primitive(),
-                                                   buffer_paths,direct_bindings));
-}
-
-buffers_binding_ptr  buffers_binding::create(
-        natural_8_bit const  num_indices_per_primitive,
-        std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const&  buffer_paths,
-        std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings
-        )
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(num_indices_per_primitive == 1U || num_indices_per_primitive == 2U || num_indices_per_primitive == 3U);
-    return buffers_binding_ptr(new buffers_binding(boost::filesystem::path(),buffer_ptr(),
-                                                   num_indices_per_primitive,
-                                                   buffer_paths,direct_bindings));
-}
-
-buffers_binding::buffers_binding(
-        boost::filesystem::path const&  index_buffer_path,
-        buffer_ptr const  direct_index_buffer,
-        natural_8_bit const  num_indices_per_primitive,
-        std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path> const&  buffer_paths,
-        std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings)
-    : m_index_buffer_path(index_buffer_path)
-    , m_buffer_paths(buffer_paths)
-    , m_direct_index_buffer(direct_index_buffer)
-    , m_direct_bindings(direct_bindings)
-    , m_num_indices_per_primitive(num_indices_per_primitive)
-    , m_binding_data(new binding_data_type)
-{
-    ASSUMPTION(check_consistency(buffer_paths,direct_bindings));
-
-    if (!m_index_buffer_path.empty())
-        detail::buffer_cache::instance().insert_load_request(m_index_buffer_path);
-    for (auto const&  location_path : buffer_paths)
-        detail::buffer_cache::instance().insert_load_request(location_path.second);
-}
-
-
-vertex_buffer_properties_ptr  buffers_binding::find_vertex_buffer_properties() const
-{
-    auto const  path_it = m_buffer_paths.find(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION);
-    if (path_it != m_buffer_paths.cend())
-    {
-        std::weak_ptr<buffer const> const  wptr = detail::buffer_cache::instance().find(path_it->second);
-        buffer_ptr const  ptr = wptr.lock();
-        if (ptr.operator bool())
-            return std::dynamic_pointer_cast<vertex_buffer_properties const>(ptr->properties());
-    }
-    else
-    {
-        auto const  buf_it = m_direct_bindings.find(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION);
-        if (buf_it != m_direct_bindings.cend())
-            return std::dynamic_pointer_cast<vertex_buffer_properties const>(buf_it->second->properties());
-    }
-    return vertex_buffer_properties_ptr{};
-}
-
-
-natural_32_bit  buffers_binding::num_matrices_per_vertex() const
-{
-    auto const  path_it = m_buffer_paths.find(vertex_shader_input_buffer_binding_location::BINDING_IN_INDICES_OF_MATRICES);
-    if (path_it != m_buffer_paths.cend())
-    {
-        std::weak_ptr<buffer const> const  wptr = detail::buffer_cache::instance().find(path_it->second);
-        buffer_ptr const  ptr = wptr.lock();
-        if (ptr.operator bool())
-            return ptr->properties()->num_components_per_primitive();
-    }
-    else
-    {
-        auto const  buf_it = m_direct_bindings.find(vertex_shader_input_buffer_binding_location::BINDING_IN_INDICES_OF_MATRICES);
-        if (buf_it != m_direct_bindings.cend())
-            return buf_it->second->properties()->num_components_per_primitive();
-    }
-    return 0U;
-}
 
 
 bool  buffers_binding::make_current() const
 {
     TMPROF_BLOCK();
 
-    detail::buffer_cache::instance().process_pending_buffers();
-
-    bool  is_ready = true;
-    bool  need_num_primitives = false;
-    natural_8_bit  num_indices_per_primitive = 0U;
-    natural_32_bit  num_primitives = 0U;
-    GLuint  index_buffer_id = 0U;
-    std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr>   bindings;
-
-    if (m_direct_index_buffer.operator bool())
+    if (!ready())
     {
-        num_indices_per_primitive = m_direct_index_buffer->properties()->num_components_per_primitive();
-        num_primitives = m_direct_index_buffer->properties()->num_primitives();
-        index_buffer_id = m_direct_index_buffer->id();
+        detail::current_draw::set_are_buffers_ready(false);
+        if (!get_index_buffer().empty() && !get_index_buffer().loaded_successfully())
+            return false;
+        for (auto const& location_and_buffer : get_buffers())
+            if (!location_and_buffer.second.loaded_successfully())
+                return false;
+
+        buffers_binding* const  mutable_this = const_cast<buffers_binding*>(this);
+
+        mutable_this->create_gl_binding();
+        glapi().glBindVertexArray(id());
+
+        if (get_index_buffer().loaded_successfully())
+            get_index_buffer().create_gl_buffer();
+
+        for (auto const& location_and_buffer : get_buffers())
+        {
+            location_and_buffer.second.create_gl_buffer();
+
+            glapi().glBindBuffer(GL_ARRAY_BUFFER, location_and_buffer.second.id());
+            glapi().glEnableVertexAttribArray(value(location_and_buffer.first));
+            glapi().glVertexAttribPointer(
+                        value(location_and_buffer.first),
+                        location_and_buffer.second.num_components_per_primitive(),
+                        GL_FLOAT,
+                        GL_FALSE,
+                        0U,
+                        nullptr
+                        );
+        }
+
+        mutable_this->set_ready();
     }
-    else if (!m_index_buffer_path.empty())
+    else
+        glapi().glBindVertexArray(id());
+
+    if (get_index_buffer().empty())
     {
-        std::weak_ptr<buffer const> const  wptr = detail::buffer_cache::instance().find(m_index_buffer_path);
-        buffer_ptr const  ptr = wptr.lock();
-        if (ptr.operator bool())
-        {
-            num_indices_per_primitive = ptr->properties()->num_components_per_primitive();
-            num_primitives = ptr->properties()->num_primitives();
-            index_buffer_id = ptr->id();
-        }
-        else
-        {
-            detail::buffer_cache::instance().insert_load_request(m_index_buffer_path);
-            is_ready = false;
-        }
+        detail::current_draw::set_index_buffer_id(0U);
+        detail::current_draw::set_num_components_per_primitive(get_num_indices_per_primitive());
+        detail::current_draw::set_num_primitives(
+            get_buffers().at(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION).num_primitives()
+            );
     }
     else
     {
-        num_indices_per_primitive = m_num_indices_per_primitive;
-        auto const  it = m_direct_bindings.find(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION);
-        if (it != m_direct_bindings.cend())
-            num_primitives = it->second->properties()->num_primitives();
-        else
-            need_num_primitives = true;
+        detail::current_draw::set_index_buffer_id(get_index_buffer().id());
+        detail::current_draw::set_num_components_per_primitive(get_index_buffer().num_components_per_primitive());
+        detail::current_draw::set_num_primitives(get_index_buffer().num_primitives());
     }
+    detail::current_draw::set_are_buffers_ready(true);
 
-    for (auto const&  location_path : m_buffer_paths)
-    {
-        std::weak_ptr<buffer const> const  wptr = detail::buffer_cache::instance().find(location_path.second);
-        buffer_ptr const  ptr = wptr.lock();
-        if (ptr.operator bool())
-        {
-            bindings.insert({location_path.first,ptr});
-            if (need_num_primitives && location_path.first == vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION)
-            {
-                num_primitives = ptr->properties()->num_primitives();
-                need_num_primitives = false;
-            }
-        }
-        else
-        {
-            detail::buffer_cache::instance().insert_load_request(location_path.second);
-            is_ready = false;
-        }
-    }
-
-    if (is_ready)
-    {
-        INVARIANT(num_primitives > 0U);
-        INVARIANT(need_num_primitives == false);
-        INVARIANT(bindings.size() == m_buffer_paths.size());
-
-        bool  recreate_id = false;
-        if (id() == 0U)
-            recreate_id = true;
-        else
-        {
-            for (auto const&  location_buffer : bindings)
-            {
-                INVARIANT(m_binding_data->bindings().count(location_buffer.first) != 0ULL);
-                if (location_buffer.second->id() != m_binding_data->bindings().at(location_buffer.first))
-                {
-                    recreate_id = true;
-                    break;
-                }
-            }
-        }
-        if (recreate_id)
-            is_ready = m_binding_data->reset(index_buffer_id,bindings,m_direct_bindings);
-
-        if (is_ready)
-        {
-            INVARIANT(id() != 0U);
-
-            glapi().glBindVertexArray(id());
-
-            detail::current_draw::set_index_buffer_id(index_buffer_id);
-            detail::current_draw::set_num_components_per_primitive(num_indices_per_primitive);
-            detail::current_draw::set_num_primitives(num_primitives);
-        }
-    }
-
-    detail::current_draw::set_are_buffers_ready(is_ready);
-    return is_ready;
-}
-
-
-bool  buffers_binding::binding_data_type::reset(
-        GLuint const  index_buffer_id,
-        std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  bindings,
-        std::unordered_map<vertex_shader_input_buffer_binding_location,buffer_ptr> const&  direct_bindings)
-{
-    TMPROF_BLOCK();
-
-    destroy_ID();
-    m_id = create_vertex_arrays();
-    if (m_id == 0U)
-        return false;
-    fill_vertex_arrays(bindings);
-    fill_vertex_arrays(direct_bindings);
-    m_index_buffer_id = index_buffer_id;
-    for (auto const&  location_buffer : bindings)
-        m_bindings.insert({location_buffer.first,location_buffer.second->id()});
     return true;
 }
 
-void  buffers_binding::binding_data_type::destroy_ID()
-{
-    TMPROF_BLOCK();
 
-    if (m_id != 0U)
-    {
-        glapi().glDeleteVertexArrays(1U,&m_id);
-        m_id = 0U;
-        m_index_buffer_id = 0U;
-        m_bindings.clear();
-    }
+bool  make_current(buffers_binding const&  binding)
+{
+    return binding.make_current();
 }
 
 

@@ -34,9 +34,9 @@ private:
     qtgl::free_fly_config  m_free_fly_config;
 
     angeo::coordinate_system_ptr  m_grid_space;
-    qtgl::buffer_ptr  m_grid_vertex_buffer;
-    qtgl::buffer_ptr  m_grid_colour_buffer;
-    qtgl::buffers_binding_ptr  m_grid_buffers_binding;
+    qtgl::buffer  m_grid_vertex_buffer;
+    qtgl::buffer  m_grid_colour_buffer;
+    qtgl::buffers_binding  m_grid_buffers_binding;
     qtgl::shaders_binding_ptr  m_grid_shaders_binding;
     qtgl::draw_state_ptr  m_grid_draw_state;
 
