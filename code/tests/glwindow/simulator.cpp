@@ -156,9 +156,9 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                         { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD0, object_texcoord_buffer },
                     }
                     );
-    qtgl::shaders_binding_ptr const  object_shaders_binding =
-            qtgl::shaders_binding::create("../data/shared/gfx/shaders/vertex/vs_IpctUamOpctFc.a=Ua.txt",
-                                          "../data/shared/gfx/shaders/fragment/fs_IctUdFmix(c,d).txt");
+    qtgl::shaders_binding const  object_shaders_binding =
+            qtgl::shaders_binding("../data/shared/gfx/shaders/vertex/vs_IpctUamOpctFc.a=Ua.txt",
+                                  "../data/shared/gfx/shaders/fragment/fs_IctUdFmix(c,d).txt");
 
     static bool  use_chessboard_texture = true;
     static float_64_bit  texture_swap_timer = 0.0L;
@@ -219,75 +219,10 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                 };
 
 
-    std::string  error_message;
-    qtgl::vertex_program_ptr const  grid_vertex_program =
-        qtgl::vertex_program::create(
-            std::stringstream(
-                "#version 420\n"
-                "layout(location=0) in vec3  in_position;\n"
-                "layout(location=1) in vec3  in_colour;\n"
-                "layout(location=1) out vec4  out_colour;\n"
-                "uniform mat4  UNIFORM_TRANSFORM_MATRIX_TRANSPOSED;\n"
-                "void main() {\n"
-                "    gl_Position = vec4(in_position,1.0f) * UNIFORM_TRANSFORM_MATRIX_TRANSPOSED;\n"
-                "    out_colour = vec4(in_colour,1.0f);\n"
-                "}\n"
-                ),
-            {
-                {
-                    qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION,
-                    qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR,
-                },
-                {
-                    qtgl::vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION,
-                    qtgl::vertex_shader_output_buffer_binding_location::BINDING_OUT_COLOUR,
-                },
-                {
-                    qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED,
-                },
-            },
-            error_message
+    qtgl::shaders_binding const  grid_shaders_binding(
+            canonical_path("../data/shared/gfx/shaders/vertex/vs_IpcUmOpcFc.a=1.txt"),
+            canonical_path("../data/shared/gfx/shaders/fragment/fs_IcFc.txt")
             );
-    if (!grid_vertex_program || !error_message.empty())
-    {
-        std::cout << error_message << "\n";
-        return;
-    }
-    INVARIANT(error_message.empty());
-
-    qtgl::fragment_program_ptr const  grid_fragment_program =
-        qtgl::fragment_program::create(
-            std::stringstream(
-                "#version 420\n"
-                "layout(location=1) in vec4  in_colour;\n"
-                "layout(location=0) out vec4  out_colour;\n"
-                "void main() {\n"
-                "    out_colour = in_colour;\n"
-                "}\n"
-                ),
-            {
-                {
-                    qtgl::fragment_shader_input_buffer_binding_location::BINDING_IN_POSITION,
-                    qtgl::fragment_shader_input_buffer_binding_location::BINDING_IN_COLOUR,
-                },
-                {
-                    qtgl::fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR,
-                },
-                {},
-            },
-            error_message
-            );
-    if (!grid_fragment_program || !error_message.empty())
-    {
-        std::cout << error_message << "\n";
-        return;
-    }
-    INVARIANT(error_message.empty());
-
-    qtgl::shaders_binding_ptr const  grid_shaders_binding =
-            qtgl::shaders_binding::create(grid_vertex_program,grid_fragment_program);
-    //qtgl::shaders_binding::create(canonical_path("../data/shared/gfx/shaders/vertex/vs_IpcUmOpcFc.a=1.txt"),
-    //                              canonical_path("../data/shared/gfx/shaders/fragment/fs_IcFc.txt"));
 
 
     /////////////////////////////////////////////////////////////////////////////////////
@@ -305,12 +240,12 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
         angeo::from_base_matrix(*object_space,object_world_transformation);
         matrix44 const  object_transform_matrix = view_projection_matrix * object_world_transformation;
 
-        if (qtgl::make_current(*object_shaders_binding))
+        if (qtgl::make_current(object_shaders_binding))
         {
-            qtgl::set_uniform_variable(object_shaders_binding->uniform_variable_accessor(),
+            object_shaders_binding.get_vertex_shader().set_uniform_variable(
                                        qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED,
                                        object_transform_matrix);
-            qtgl::set_uniform_variable(object_shaders_binding->uniform_variable_accessor(),
+            object_shaders_binding.get_vertex_shader().set_uniform_variable(
                                        qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA,
                                        0.5f);
         }
@@ -323,9 +258,9 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
         angeo::from_base_matrix(*grid_space,grid_world_transformation);
         matrix44 const  grid_transform_matrix = view_projection_matrix * grid_world_transformation;
 
-        if (qtgl::make_current(*grid_shaders_binding))
+        if (qtgl::make_current(grid_shaders_binding))
         {
-            qtgl::set_uniform_variable(grid_shaders_binding->uniform_variable_accessor(),
+            grid_shaders_binding.get_vertex_shader().set_uniform_variable(
                                        qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED,
                                        grid_transform_matrix);
         }

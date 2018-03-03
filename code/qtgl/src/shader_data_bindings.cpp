@@ -72,6 +72,23 @@ std::string  uniform_name(vertex_shader_uniform_symbolic_name const  symbolic_na
     }
 }
 
+vertex_shader_uniform_symbolic_name  to_symbolic_uniform_name(std::string  name)
+{
+    if (name.find("UNIFORM_") == 0UL)
+        name = name.substr(std::strlen("UNIFORM_"));
+
+    if (name == "COLOUR_ALPHA")
+        return vertex_shader_uniform_symbolic_name::COLOUR_ALPHA;
+    if (name == "DIFFUSE_COLOUR")
+        return vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR;
+    if (name == "TRANSFORM_MATRIX_TRANSPOSED")
+        return vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED;
+    if (name == "NUM_MATRICES_PER_VERTEX")
+        return vertex_shader_uniform_symbolic_name::NUM_MATRICES_PER_VERTEX;
+
+    UNREACHABLE();
+}
+
 std::string  binding_location_name(fragment_shader_input_buffer_binding_location const  location)
 {
     switch (location)

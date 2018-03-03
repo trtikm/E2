@@ -37,7 +37,7 @@ private:
     qtgl::buffer  m_grid_vertex_buffer;
     qtgl::buffer  m_grid_colour_buffer;
     qtgl::buffers_binding  m_grid_buffers_binding;
-    qtgl::shaders_binding_ptr  m_grid_shaders_binding;
+    qtgl::shaders_binding  m_grid_shaders_binding;
     qtgl::draw_state_ptr  m_grid_draw_state;
 
     angeo::coordinate_system_ptr  m_batch_space;

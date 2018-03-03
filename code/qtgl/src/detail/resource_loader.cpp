@@ -40,8 +40,6 @@ resource_loader::resource_loader()
     : m_worker_thread()
     , m_worker_finished(true)
     , m_mutex()
-    , m_vertex_program_requests()
-    , m_fragment_program_requests()
     , m_batch_requests()
 {}
 
@@ -63,36 +61,10 @@ void  resource_loader::clear()
     TMPROF_BLOCK();
     {
         std::lock_guard<std::mutex> const  lock(m_mutex);
-        m_vertex_program_requests.clear();
-        m_fragment_program_requests.clear();
         m_batch_requests.clear();
     }
     if (m_worker_thread.joinable())
         m_worker_thread.join();
-}
-
-void  resource_loader::insert_vertex_program_request(boost::filesystem::path const&  shader_file,
-                                                     vertex_program_receiver_fn const&  receiver)
-{
-    TMPROF_BLOCK();
-
-    std::lock_guard<std::mutex> const  lock(m_mutex);
-    if (qtgl::detail::contains(m_vertex_program_requests,shader_file))
-        return;
-    m_vertex_program_requests.push_back({shader_file,receiver});
-    start_worker_if_not_running();
-}
-
-void  resource_loader::insert_fragment_program_request(boost::filesystem::path const&  shader_file,
-                                                       fragment_program_receiver_fn const&  receiver)
-{
-    TMPROF_BLOCK();
-
-    std::lock_guard<std::mutex> const  lock(m_mutex);
-    if (qtgl::detail::contains(m_fragment_program_requests, shader_file))
-        return;
-    m_fragment_program_requests.push_back({shader_file,receiver});
-    start_worker_if_not_running();
 }
 
 void  resource_loader::insert_batch_request(boost::filesystem::path const&  batch_file, batch_receiver_fn const&  receiver)
@@ -104,32 +76,6 @@ void  resource_loader::insert_batch_request(boost::filesystem::path const&  batc
         return;
     m_batch_requests.push_back({batch_file,receiver});
     start_worker_if_not_running();
-}
-
-bool  resource_loader::fetch_vertex_program_request(boost::filesystem::path&  shader_file,
-                                                    vertex_program_receiver_fn&  output_receiver)
-{
-    TMPROF_BLOCK();
-
-    std::lock_guard<std::mutex> const  lock(m_mutex);
-    if (m_vertex_program_requests.empty())
-        return false;
-    std::tie(shader_file,output_receiver) = m_vertex_program_requests.front();
-    m_vertex_program_requests.pop_front();
-    return true;
-}
-
-bool  resource_loader::fetch_fragment_program_request(boost::filesystem::path&  shader_file,
-                                                      fragment_program_receiver_fn&  output_receiver)
-{
-    TMPROF_BLOCK();
-
-    std::lock_guard<std::mutex> const  lock(m_mutex);
-    if (m_fragment_program_requests.empty())
-        return false;
-    std::tie(shader_file,output_receiver) = m_fragment_program_requests.front();
-    m_fragment_program_requests.pop_front();
-    return true;
 }
 
 bool  resource_loader::fetch_batch_request(boost::filesystem::path&  batch_file, batch_receiver_fn&  output_receiver)
@@ -166,36 +112,6 @@ void  resource_loader::worker()
                 receiver(batch_file,props,error_message);
                 done = false;
             }
-        }
-
-        // Loading vertex programs
-        for (int i = 0; i < 1; ++i)
-        {
-            boost::filesystem::path  shader_file;
-            vertex_program_receiver_fn  receiver;
-            if (!fetch_vertex_program_request(shader_file,receiver))
-                break;
-            std::shared_ptr<std::vector<std::string> >  lines = std::make_shared< std::vector<std::string> >();
-            std::string const  error_message = load_vertex_program_file(shader_file,*lines);
-            if (!error_message.empty())
-                LOG(error,"Load of vertex shader file '" << shader_file << "' has failed. " << error_message);
-            receiver(shader_file,lines,error_message);
-            done = false;
-        }
-
-        // Loading fragment programs
-        for (int i = 0; i < 1; ++i)
-        {
-            boost::filesystem::path  shader_file;
-            fragment_program_receiver_fn  receiver;
-            if (!fetch_fragment_program_request(shader_file,receiver))
-                break;
-            std::shared_ptr<std::vector<std::string> >  lines = std::make_shared< std::vector<std::string> >();
-            std::string const  error_message = load_fragment_program_file(shader_file,*lines);
-            if (!error_message.empty())
-                LOG(error,"Load of fragment shader file '" << shader_file << "' has failed. " << error_message);
-            receiver(shader_file,lines,error_message);
-            done = false;
         }
 
         if (done)

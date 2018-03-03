@@ -90,11 +90,7 @@ void  render_batch(
         case vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
             break;
         case vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
-            set_uniform_variable(
-                    batch.shaders_binding()->uniform_variable_accessor(),
-                    uniform,
-                    diffuse_colour
-                    );
+            batch.shaders_binding().get_vertex_shader().set_uniform_variable(uniform,diffuse_colour);
             break;
         case vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
             ASSUMPTION(!transform_matrices.empty());
@@ -107,26 +103,14 @@ void  render_batch(
                 apply_modelspace_of_batch = false;
             }
             if (transform_matrices.size() == 1UL)
-                set_uniform_variable(
-                        batch.shaders_binding()->uniform_variable_accessor(),
-                        uniform,
-                        transform_matrices.front()
-                        );
+                batch.shaders_binding().get_vertex_shader().set_uniform_variable(uniform,transform_matrices.front());
             else
-                set_uniform_variable(
-                        batch.shaders_binding()->uniform_variable_accessor(),
-                        uniform,
-                        transform_matrices
-                        );
+                batch.shaders_binding().get_vertex_shader().set_uniform_variable(uniform, transform_matrices);
             break;
         case vertex_shader_uniform_symbolic_name::NUM_MATRICES_PER_VERTEX:
             ASSUMPTION(transform_matrices.size() >= batch.num_matrices_per_vertex());
             ASSUMPTION(transform_matrices.size() != 1UL || batch.num_matrices_per_vertex() == 1U);
-            set_uniform_variable(
-                    batch.shaders_binding()->uniform_variable_accessor(),
-                    uniform,
-                    batch.num_matrices_per_vertex()
-                    );
+            batch.shaders_binding().get_vertex_shader().set_uniform_variable(uniform, batch.num_matrices_per_vertex());
             break;
         }
 

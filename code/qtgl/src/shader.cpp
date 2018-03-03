@@ -1,6 +1,6 @@
 #include <qtgl/shader.hpp>
-#include <qtgl/detail/vertex_program_cache.hpp>
-#include <qtgl/detail/fragment_program_cache.hpp>
+//#include <qtgl/detail/vertex_program_cache.hpp>
+//#include <qtgl/detail/fragment_program_cache.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -18,7 +18,7 @@
 #include <limits>
 #include <algorithm>
 
-namespace qtgl { namespace detail {
+namespace qtgl { namespace detail { namespace {
 
 
 void  add_macro_definitions_after_version(std::vector<std::string>&  lines,
@@ -258,41 +258,41 @@ GLuint  create_opengl_shader_program(GLenum shader_type,
     return shader_program;
 }
 
-vertex_program_ptr  create_vertex_program(std::vector<std::string> const&  lines,
-                                          vertex_program_properties_ptr const  properties,
-                                          std::string&  error_message)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(error_message.empty());
-    std::vector<GLchar const*>  line_pointers;
-    for (std::string const& line : lines)
-        if (!line.empty())
-            line_pointers.push_back((GLchar const*)&line.at(0));
-    ASSUMPTION(!line_pointers.empty());
-    GLuint const  id = detail::create_opengl_shader_program(GL_VERTEX_SHADER,line_pointers,error_message);
-    if (id == 0 || !error_message.empty())
-        return vertex_program_ptr();
-    return vertex_program::create(id,properties.operator bool() ? properties : std::make_shared<vertex_program_properties>(lines));
-}
-
-fragment_program_ptr  create_fragment_program(std::vector<std::string> const&  lines,
-                                              fragment_program_properties_ptr const  properties,
-                                              std::string&  error_message)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(error_message.empty());
-    std::vector<GLchar const*>  line_pointers;
-    for (std::string const& line : lines)
-        if (!line.empty())
-            line_pointers.push_back((GLchar const*)&line.at(0));
-    ASSUMPTION(!line_pointers.empty());
-    GLuint const  id = detail::create_opengl_shader_program(GL_FRAGMENT_SHADER,line_pointers,error_message);
-    if (id == 0 || !error_message.empty())
-        return fragment_program_ptr();
-    return fragment_program::create(id,properties.operator bool() ? properties : std::make_shared<fragment_program_properties>(lines));
-}
+//vertex_program_ptr  create_vertex_program(std::vector<std::string> const&  lines,
+//                                          vertex_program_properties_ptr const  properties,
+//                                          std::string&  error_message)
+//{
+//    TMPROF_BLOCK();
+//
+//    ASSUMPTION(error_message.empty());
+//    std::vector<GLchar const*>  line_pointers;
+//    for (std::string const& line : lines)
+//        if (!line.empty())
+//            line_pointers.push_back((GLchar const*)&line.at(0));
+//    ASSUMPTION(!line_pointers.empty());
+//    GLuint const  id = detail::create_opengl_shader_program(GL_VERTEX_SHADER,line_pointers,error_message);
+//    if (id == 0 || !error_message.empty())
+//        return vertex_program_ptr();
+//    return vertex_program::create(id,properties.operator bool() ? properties : std::make_shared<vertex_program_properties>(lines));
+//}
+//
+//fragment_program_ptr  create_fragment_program(std::vector<std::string> const&  lines,
+//                                              fragment_program_properties_ptr const  properties,
+//                                              std::string&  error_message)
+//{
+//    TMPROF_BLOCK();
+//
+//    ASSUMPTION(error_message.empty());
+//    std::vector<GLchar const*>  line_pointers;
+//    for (std::string const& line : lines)
+//        if (!line.empty())
+//            line_pointers.push_back((GLchar const*)&line.at(0));
+//    ASSUMPTION(!line_pointers.empty());
+//    GLuint const  id = detail::create_opengl_shader_program(GL_FRAGMENT_SHADER,line_pointers,error_message);
+//    if (id == 0 || !error_message.empty())
+//        return fragment_program_ptr();
+//    return fragment_program::create(id,properties.operator bool() ? properties : std::make_shared<fragment_program_properties>(lines));
+//}
 
 
 struct text_stream
@@ -537,49 +537,12 @@ void  get_tokens_in_shader_code(
 }
 
 
-}}
-
-namespace qtgl {
-
-
-vertex_program_properties_ptr  vertex_program_properties::create(
-        std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings,
-        std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings,
-        std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms
+void  parse_properties_from_vertex_shader_code(
+        std::vector<std::string> const&  lines_of_shader_code,
+        std::unordered_set<vertex_shader_input_buffer_binding_location>&  input_buffer_bindings,
+        std::unordered_set<vertex_shader_output_buffer_binding_location>&  output_buffer_bindings,
+        std::unordered_set<vertex_shader_uniform_symbolic_name>&  symbolic_names_of_used_uniforms
         )
-{
-    return std::make_shared<vertex_program_properties>(input_buffer_bindings,
-                                                       output_buffer_bindings,
-                                                       symbolic_names_of_used_uniforms);
-}
-
-vertex_program_properties_ptr  vertex_program_properties::create(std::vector<std::string> const&  lines_of_shader_code)
-{
-    return std::make_shared<vertex_program_properties>(lines_of_shader_code);
-}
-
-vertex_program_properties::vertex_program_properties(
-        std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings,
-        std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings,
-        std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms
-        )
-    : m_input_buffer_bindings(input_buffer_bindings)
-    , m_output_buffer_bindings(output_buffer_bindings)
-    , m_symbolic_names_of_used_uniforms(symbolic_names_of_used_uniforms)
-{
-    ASSUMPTION(m_input_buffer_bindings.count(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION) != 0U);
-    ASSUMPTION(
-        [](std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings) {
-                for (auto const  location : input_buffer_bindings)
-                    if (value(location) > (natural_32_bit)GL_MAX_VERTEX_ATTRIBS)
-                        return false;
-                return true;
-                }(m_input_buffer_bindings)
-        );
-    ASSUMPTION(m_output_buffer_bindings.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION) != 0U);
-}
-
-vertex_program_properties::vertex_program_properties(std::vector<std::string> const&  lines_of_shader_code)
 {
     TMPROF_BLOCK();
 
@@ -603,10 +566,10 @@ vertex_program_properties::vertex_program_properties(std::vector<std::string> co
         if (tokens.count(binding_location_name(location)) != 0ULL)
         {
             ASSUMPTION(value(location) <= (natural_32_bit)GL_MAX_VERTEX_ATTRIBS);
-            m_input_buffer_bindings.insert(location);
+            input_buffer_bindings.insert(location);
         }
 
-    ASSUMPTION(m_input_buffer_bindings.count(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION) != 0U);
+    ASSUMPTION(input_buffer_bindings.count(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION) != 0U);
 
     for (auto const  location : std::vector<vertex_shader_output_buffer_binding_location>{
             vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION ,
@@ -624,9 +587,9 @@ vertex_program_properties::vertex_program_properties(std::vector<std::string> co
             vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD9,
             })
         if (tokens.count(binding_location_name(location)) != 0ULL)
-            m_output_buffer_bindings.insert(location);
+            output_buffer_bindings.insert(location);
 
-    //ASSUMPTION(m_output_buffer_bindings.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION) != 0U);
+    //ASSUMPTION(output_buffer_bindings.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION) != 0U);
 
     for (auto const  symbolic_name : std::vector<vertex_shader_uniform_symbolic_name>{
             vertex_shader_uniform_symbolic_name::COLOUR_ALPHA               ,
@@ -636,302 +599,17 @@ vertex_program_properties::vertex_program_properties(std::vector<std::string> co
             })
     {
         if (tokens.count(uniform_name(symbolic_name)) != 0ULL || tokens.count(uniform_symbolic_name(symbolic_name)) != 0ULL)
-            m_symbolic_names_of_used_uniforms.insert(symbolic_name);
+            symbolic_names_of_used_uniforms.insert(symbolic_name);
     }
 }
 
-bool  operator==(vertex_program_properties const&  props0, vertex_program_properties const&  props1)
-{
-    return props0.input_buffer_bindings() == props1.input_buffer_bindings() &&
-           props0.output_buffer_bindings() == props1.output_buffer_bindings() &&
-           props0.symbolic_names_of_used_uniforms() == props1.symbolic_names_of_used_uniforms()
-           ;
-}
 
-size_t  hasher_of_vertex_program_properties(vertex_program_properties const&  props)
-{
-    std::size_t seed = 0ULL;
-    for (auto const  location : props.input_buffer_bindings())
-        boost::hash_combine(seed,value(location));
-    for (auto const  location : props.output_buffer_bindings())
-        boost::hash_combine(seed,value(location));
-    for (auto const  name : props.symbolic_names_of_used_uniforms())
-        boost::hash_combine(seed,value(name));
-    return seed;
-}
-
-
-}
-
-namespace qtgl {
-
-
-vertex_program_ptr  vertex_program::create(std::istream&  source_code, std::string&  error_message)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(error_message.empty());
-    std::vector<std::string>  lines;
-    error_message = detail::parse_lines(source_code,GL_VERTEX_SHADER,lines);
-    if (!error_message.empty())
-        return vertex_program_ptr{};
-    return detail::create_vertex_program(lines,vertex_program_properties_ptr(),error_message);
-}
-
-vertex_program_ptr  vertex_program::create(std::istream&  source_code,
-                                           vertex_program_properties const&  properties,
-                                           std::string&  error_message)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(error_message.empty());
-    std::vector<std::string>  lines;
-    error_message = detail::parse_lines(source_code,GL_VERTEX_SHADER,lines);
-    if (!error_message.empty())
-        return vertex_program_ptr{};
-    return detail::create_vertex_program(lines,std::make_shared<vertex_program_properties>(properties),error_message);
-}
-
-vertex_program_ptr  vertex_program::create(boost::filesystem::path const&  shader_source_file, std::string&  error_message)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(error_message.empty());
-    std::vector<std::string>  lines;
-    error_message = detail::parse_lines(shader_source_file,GL_VERTEX_SHADER,lines);
-    if (!error_message.empty())
-        return vertex_program_ptr{};
-    return detail::create_vertex_program(lines,vertex_program_properties_ptr(),error_message);
-}
-
-vertex_program_ptr  vertex_program::create(std::vector<std::string> const& source_code_lines, std::string&  error_message)
-{
-    TMPROF_BLOCK();
-
-    return detail::create_vertex_program(source_code_lines,vertex_program_properties_ptr(),error_message);
-}
-
-vertex_program_ptr  vertex_program::create(std::vector<std::string> const& source_code_lines,
-                                           vertex_program_properties const&  properties,
-                                           std::string&  error_message)
-{
-    TMPROF_BLOCK();
-
-    return detail::create_vertex_program(source_code_lines,std::make_shared<vertex_program_properties>(properties),error_message);
-}
-
-vertex_program_ptr  vertex_program::create(GLuint const  id, vertex_program_properties_ptr const  properties)
-{
-    TMPROF_BLOCK();
-
-    return vertex_program_ptr{new vertex_program(id,properties)};
-}
-
-
-vertex_program::~vertex_program()
-{
-    TMPROF_BLOCK();
-
-    glapi().glDeleteProgram(id());
-}
-
-
-bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
-                           std::string const&  variable_name,
-                           natural_32_bit const  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    GLint const  layout_location = glapi().glGetUniformLocation(accessor.first,variable_name.c_str());
-    if (layout_location == -1)
-    {
-        for (auto sname : accessor.second->symbolic_names_of_used_uniforms())
-            if (variable_name == uniform_name(sname))
-            {
-                UNREACHABLE();
-            }
-        return false;
-    }
-    glapi().glProgramUniform1ui(accessor.first,layout_location,value_to_store);
-    return true;
-}
-
-bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
-                           std::string const&  variable_name,
-                           float_32_bit const  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    GLint const  layout_location = glapi().glGetUniformLocation(accessor.first,variable_name.c_str());
-    if (layout_location == -1)
-    {
-        for (auto sname : accessor.second->symbolic_names_of_used_uniforms())
-            if (variable_name == uniform_name(sname))
-            {
-                UNREACHABLE();
-            }
-        return false;
-    }
-    glapi().glProgramUniform1f(accessor.first,layout_location,value_to_store);
-    return true;
-}
-
-bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
-    std::string const&  variable_name,
-    vector4 const&  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    GLint const  layout_location = glapi().glGetUniformLocation(accessor.first, variable_name.c_str());
-    if (layout_location == -1)
-    {
-        for (auto sname : accessor.second->symbolic_names_of_used_uniforms())
-            if (variable_name == uniform_name(sname))
-            {
-                UNREACHABLE();
-            }
-        return false;
-    }
-    glapi().glProgramUniform4fv(accessor.first, layout_location, 1U, value_to_store.data());
-    return true;
-}
-
-bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
-                           std::string const&  variable_name,
-                           matrix44 const&  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
-
-    GLint const  layout_location = glapi().glGetUniformLocation(accessor.first,variable_name.c_str());
-    if (layout_location == -1)
-    {
-        for (auto sname : accessor.second->symbolic_names_of_used_uniforms())
-            if (variable_name == uniform_name(sname))
-            {
-                UNREACHABLE();
-            }
-        return false;
-    }
-    glapi().glProgramUniformMatrix4fv(accessor.first,layout_location,1U,GL_TRUE,value_to_store.data());
-    return true;
-}
-
-
-bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
-                           std::string const&  variable_name,
-                           std::vector<matrix44> const&  value_to_store)
-{
-    TMPROF_BLOCK();
-
-    static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
-    ASSUMPTION(value_to_store.size() <= uniform_max_transform_matrices());
-
-    GLint const  layout_location = glapi().glGetUniformLocation(accessor.first,variable_name.c_str());
-    if (layout_location == -1)
-    {
-        for (auto sname : accessor.second->symbolic_names_of_used_uniforms())
-            if (variable_name == uniform_name(sname))
-            {
-                UNREACHABLE();
-            }
-        return false;
-    }
-    glapi().glProgramUniformMatrix4fv(accessor.first,layout_location,(GLsizei)value_to_store.size(),GL_TRUE,value_to_store.data()->data());
-    return true;
-}
-
-
-std::string  load_vertex_program_file(boost::filesystem::path const&  filename,
-                                      std::vector<std::string>& output_lines)
-{
-    return detail::parse_lines(filename,GL_VERTEX_SHADER,output_lines);
-}
-
-void  insert_vertex_program_load_request(boost::filesystem::path const&  shader_file)
-{
-    detail::vertex_program_cache::instance().insert_load_request(shader_file);
-}
-
-bool  insert_vertex_program_load_request(vertex_program_properties_ptr const  props)
-{
-    return detail::vertex_program_cache::instance().insert_load_request(props);
-}
-
-std::weak_ptr<vertex_program const>  find_vertex_program(boost::filesystem::path const&  shader_file)
-{
-    return detail::vertex_program_cache::instance().find(shader_file);
-}
-
-std::weak_ptr<vertex_program const>  find_vertex_program(vertex_program_properties_ptr const  props)
-{
-    return detail::vertex_program_cache::instance().find(props);
-}
-
-bool  associate_vertex_program_properties_with_shader_file(
-        vertex_program_properties_ptr const  props, boost::filesystem::path const&  shader_file
+void  parse_properties_from_fragment_shader_code(
+        std::vector<std::string> const&  lines_of_shader_code,
+        std::unordered_set<fragment_shader_input_buffer_binding_location>&  input_buffer_bindings,
+        std::unordered_set<fragment_shader_output_buffer_binding_location>&  output_buffer_bindings,
+        std::unordered_set<fragment_shader_texture_sampler_binding>&  texture_sampler_bindings
         )
-{
-    return detail::vertex_program_cache::instance().associate_properties_with_pathname(props,shader_file);
-}
-
-boost::filesystem::path  find_vertex_program_file(vertex_program_properties_ptr const  props)
-{
-    return detail::vertex_program_cache::instance().find_shader_file(props);
-}
-
-
-void  get_properties_of_cached_vertex_programs(
-        std::vector< std::pair<boost::filesystem::path,vertex_program_properties_ptr> >&  output
-        )
-{
-    detail::vertex_program_cache::instance().cached(output);
-}
-
-void  get_properties_of_failed_vertex_programs(
-        std::vector< std::pair<boost::filesystem::path,std::string> >&  output
-        )
-{
-    detail::vertex_program_cache::instance().failed(
-                output);
-}
-
-
-}
-
-namespace qtgl {
-
-
-fragment_program_properties_ptr  fragment_program_properties::create(
-        std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
-        std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
-        std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings
-        )
-{
-    return std::make_shared<fragment_program_properties>(input_buffer_bindings,
-                                                         output_buffer_bindings,
-                                                         texture_sampler_bindings);
-}
-
-fragment_program_properties_ptr  fragment_program_properties::create(std::vector<std::string> const&  lines_of_shader_code)
-{
-    return std::make_shared<fragment_program_properties>(lines_of_shader_code);
-}
-
-fragment_program_properties::fragment_program_properties(
-        std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
-        std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
-        std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings
-        )
-    : m_input_buffer_bindings(input_buffer_bindings)
-    , m_output_buffer_bindings(output_buffer_bindings)
-    , m_texture_sampler_bindings(texture_sampler_bindings)
-{
-    ASSUMPTION(m_output_buffer_bindings.count(fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR) != 0U);
-}
-
-fragment_program_properties::fragment_program_properties(std::vector<std::string> const&  lines_of_shader_code)
 {
     TMPROF_BLOCK();
 
@@ -953,390 +631,447 @@ fragment_program_properties::fragment_program_properties(std::vector<std::string
             fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD9,
             })
         if (tokens.count(binding_location_name(location)) != 0ULL)
-            m_input_buffer_bindings.insert(location);
+            input_buffer_bindings.insert(location);
 
     for (auto const  location : std::vector<fragment_shader_output_buffer_binding_location>{
             fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR,
             })
         if (tokens.count(binding_location_name(location)) != 0ULL)
-            m_output_buffer_bindings.insert(location);
+            output_buffer_bindings.insert(location);
 
-    ASSUMPTION(m_output_buffer_bindings.count(fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR) != 0U);
+    ASSUMPTION(output_buffer_bindings.count(fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR) != 0U);
 
     for (auto const  sampler_binding : std::vector<fragment_shader_texture_sampler_binding>{
             fragment_shader_texture_sampler_binding::BINDING_TEXTURE_DIFFUSE,
             })
     {
         if (tokens.count(sampler_binding_name(sampler_binding)) != 0ULL)
-            m_texture_sampler_bindings.insert(sampler_binding);
+            texture_sampler_bindings.insert(sampler_binding);
     }
 }
 
-bool  operator==(fragment_program_properties const&  props0, fragment_program_properties const&  props1)
-{
-    return props0.input_buffer_bindings() == props1.input_buffer_bindings() &&
-           props0.output_buffer_bindings() == props1.output_buffer_bindings() &&
-           props0.texture_sampler_bindings() == props1.texture_sampler_bindings()
-           ;
-}
 
-size_t  hasher_of_fragment_program_properties(fragment_program_properties const&  props)
-{
-    std::size_t seed = 0ULL;
-    for (auto const  location : props.input_buffer_bindings())
-        boost::hash_combine(seed,value(location));
-    for (auto const  location : props.output_buffer_bindings())
-        boost::hash_combine(seed,value(location));
-    for (auto const  sampler_binding : props.texture_sampler_bindings())
-        boost::hash_combine(seed,value(sampler_binding));
-    return seed;
-}
+}}}
+
+namespace qtgl { namespace detail {
 
 
-}
-
-namespace qtgl {
-
-
-fragment_program_ptr  fragment_program::create(std::istream&  source_code, std::string&  error_message)
+vertex_shader_data::vertex_shader_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr)
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(error_message.empty());
-    std::vector<std::string>  lines;
-    error_message = detail::parse_lines(source_code,GL_FRAGMENT_SHADER,lines);
+    std::vector<std::string>  lines_of_shader_code;
+    std::string const  error_message = detail::parse_lines(path,GL_VERTEX_SHADER,lines_of_shader_code);
     if (!error_message.empty())
-        return fragment_program_ptr{};
-    return detail::create_fragment_program(lines,fragment_program_properties_ptr(),error_message);
+        throw std::runtime_error(error_message);
+    initialise(lines_of_shader_code);
 }
 
-fragment_program_ptr  fragment_program::create(std::istream&  source_code,
-                                               fragment_program_properties const&  properties,
-                                               std::string&  error_message)
+
+vertex_shader_data::~vertex_shader_data()
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(error_message.empty());
-    std::vector<std::string>  lines;
-    error_message = detail::parse_lines(source_code,GL_FRAGMENT_SHADER,lines);
-    if (!error_message.empty())
-        return fragment_program_ptr{};
-    return detail::create_fragment_program(lines,std::make_shared<fragment_program_properties>(properties),error_message);
+    destroy_gl_shader();
 }
 
-fragment_program_ptr  fragment_program::create(boost::filesystem::path const&  shader_source_file,
-                                               std::string&  error_message)
+
+bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store)
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(error_message.empty());
-    std::vector<std::string>  lines;
-    error_message = detail::parse_lines(shader_source_file,GL_FRAGMENT_SHADER,lines);
-    if (!error_message.empty())
-        return fragment_program_ptr{};
-    return detail::create_fragment_program(lines,fragment_program_properties_ptr(),error_message);
+    GLint const  layout_location = glapi().glGetUniformLocation(id(),variable_name.c_str());
+    if (layout_location == -1)
+    {
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name(variable_name)) == 1UL);
+        return false;
+    }
+    glapi().glProgramUniform1ui(id(),layout_location,value_to_store);
+    return true;
 }
 
-fragment_program_ptr  fragment_program::create(std::vector<std::string> const& source_code_lines,
-                                               std::string&  error_message)
+
+bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store)
 {
     TMPROF_BLOCK();
 
-    return detail::create_fragment_program(source_code_lines,fragment_program_properties_ptr(),error_message);
+    GLint const  layout_location = glapi().glGetUniformLocation(id(),variable_name.c_str());
+    if (layout_location == -1)
+    {
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name(variable_name)) == 1UL);
+        return false;
+    }
+    glapi().glProgramUniform1f(id(),layout_location,value_to_store);
+    return true;
 }
 
-fragment_program_ptr  fragment_program::create(std::vector<std::string> const& source_code_lines,
-                                               fragment_program_properties const&  properties,
-                                               std::string&  error_message)
+bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store)
 {
     TMPROF_BLOCK();
 
-    return detail::create_fragment_program(source_code_lines,std::make_shared<fragment_program_properties>(properties),error_message);
+    GLint const  layout_location = glapi().glGetUniformLocation(id(), variable_name.c_str());
+    if (layout_location == -1)
+    {
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name(variable_name)) == 1UL);
+        return false;
+    }
+    glapi().glProgramUniform4fv(id(), layout_location, 1U, value_to_store.data());
+    return true;
 }
 
-fragment_program_ptr  fragment_program::create(GLuint const  id, fragment_program_properties_ptr const  properties)
+bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store)
 {
     TMPROF_BLOCK();
 
-    return fragment_program_ptr{new fragment_program(id,properties)};
+    static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
+
+    GLint const  layout_location = glapi().glGetUniformLocation(id(),variable_name.c_str());
+    if (layout_location == -1)
+    {
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name(variable_name)) == 1UL);
+        return false;
+    }
+    glapi().glProgramUniformMatrix4fv(id(),layout_location,1U,GL_TRUE,value_to_store.data());
+    return true;
 }
 
-fragment_program::~fragment_program()
+
+bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store)
 {
+    TMPROF_BLOCK();
+
+    static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
+    ASSUMPTION(value_to_store.size() <= uniform_max_transform_matrices());
+
+    GLint const  layout_location = glapi().glGetUniformLocation(id(),variable_name.c_str());
+    if (layout_location == -1)
+    {
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name(variable_name)) == 1UL);
+        return false;
+    }
+    glapi().glProgramUniformMatrix4fv(id(),layout_location,(GLsizei)value_to_store.size(),GL_TRUE,value_to_store.data()->data());
+    return true;
+}
+
+
+std::string  vertex_shader_data::create_gl_shader()
+{
+    if (id() != 0U)
+        return "";
+
+    TMPROF_BLOCK();
+
+    std::vector<GLchar const*>  line_pointers;
+    for (std::string const& line : get_lines_of_shader_code())
+        line_pointers.push_back((GLchar const*)line.data());
+    ASSUMPTION(!line_pointers.empty());
+    std::string  error_message;
+    m_id = detail::create_opengl_shader_program(GL_VERTEX_SHADER,line_pointers,error_message);
+    INVARIANT((id() != 0U && error_message.empty()) || (id() == 0U && !error_message.empty()));
+    return error_message;
+}
+
+
+void  vertex_shader_data::destroy_gl_shader()
+{
+    if (id() != 0U)
+        return;
+
     TMPROF_BLOCK();
 
     glapi().glDeleteProgram(id());
 }
 
 
-std::string  load_fragment_program_file(boost::filesystem::path const&  shader_source_file,
-                                        std::vector<std::string>& output_lines)
+void  vertex_shader_data::initialise(std::vector<std::string> const&  lines_of_shader_code)
 {
-    return detail::parse_lines(shader_source_file,GL_FRAGMENT_SHADER,output_lines);
+    TMPROF_BLOCK();
+
+    std::unordered_set<vertex_shader_input_buffer_binding_location>  input_buffer_bindings;
+    std::unordered_set<vertex_shader_output_buffer_binding_location>  output_buffer_bindings;
+    std::unordered_set<vertex_shader_uniform_symbolic_name>  symbolic_names_of_used_uniforms;
+    detail::parse_properties_from_vertex_shader_code(
+            lines_of_shader_code,
+            input_buffer_bindings,
+            output_buffer_bindings,
+            symbolic_names_of_used_uniforms
+            );
+    initialise(
+            0U,
+            input_buffer_bindings,
+            output_buffer_bindings,
+            symbolic_names_of_used_uniforms,
+            lines_of_shader_code
+            );
 }
 
-void  insert_fragment_program_load_request(boost::filesystem::path const&  shader_file)
-{
-    detail::fragment_program_cache::instance().insert_load_request(shader_file);
-}
 
-bool  insert_fragment_program_load_request(fragment_program_properties_ptr const  props)
-{
-    return detail::fragment_program_cache::instance().insert_load_request(props);
-}
-
-std::weak_ptr<fragment_program const>  find_fragment_program(boost::filesystem::path const&  shader_file)
-{
-    return detail::fragment_program_cache::instance().find(shader_file);
-}
-
-std::weak_ptr<fragment_program const>  find_fragment_program(fragment_program_properties_ptr const  props)
-{
-    return detail::fragment_program_cache::instance().find(props);
-}
-
-bool  associate_fragment_program_properties_with_shader_file(
-        fragment_program_properties_ptr const  props, boost::filesystem::path const&  shader_file
+void  vertex_shader_data::initialise(
+        GLuint const  id, 
+        std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings,
+        std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+        std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms,
+        std::vector<std::string> const&  lines_of_shader_code
         )
 {
-    return detail::fragment_program_cache::instance().associate_properties_with_pathname(props,shader_file);
+    TMPROF_BLOCK();
+
+    m_id = id;
+    m_input_buffer_bindings = input_buffer_bindings;
+    m_output_buffer_bindings = output_buffer_bindings;
+    m_symbolic_names_of_used_uniforms = symbolic_names_of_used_uniforms;
+    m_lines_of_shader_code = lines_of_shader_code;
 }
 
-boost::filesystem::path  find_fragment_program_file(fragment_program_properties_ptr const  props)
+
+}}
+
+namespace qtgl { namespace detail {
+
+
+fragment_shader_data::fragment_shader_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr)
 {
-    return detail::fragment_program_cache::instance().find_shader_file(props);
+    TMPROF_BLOCK();
+
+    std::vector<std::string>  lines_of_shader_code;
+    std::string const  error_message = detail::parse_lines(path,GL_FRAGMENT_SHADER,lines_of_shader_code);
+    if (!error_message.empty())
+        throw std::runtime_error(error_message);
+    initialise(lines_of_shader_code);
 }
 
 
-void  get_properties_of_cached_fragment_programs(
-        std::vector< std::pair<boost::filesystem::path,fragment_program_properties_ptr> >&  output
+fragment_shader_data::~fragment_shader_data()
+{
+    TMPROF_BLOCK();
+
+    destroy_gl_shader();
+}
+
+
+std::string  fragment_shader_data::create_gl_shader()
+{
+    if (id() != 0U)
+        return "";
+
+    TMPROF_BLOCK();
+
+    std::vector<GLchar const*>  line_pointers;
+    for (std::string const& line : get_lines_of_shader_code())
+        line_pointers.push_back((GLchar const*)line.data());
+    ASSUMPTION(!line_pointers.empty());
+    std::string  error_message;
+    m_id = detail::create_opengl_shader_program(GL_FRAGMENT_SHADER,line_pointers,error_message);
+    INVARIANT((id() != 0U && error_message.empty()) || (id() == 0U && !error_message.empty()));
+    return error_message;
+}
+
+
+void  fragment_shader_data::destroy_gl_shader()
+{
+    if (id() != 0U)
+        return;
+
+    TMPROF_BLOCK();
+
+    glapi().glDeleteProgram(id());
+}
+
+
+void  fragment_shader_data::initialise(std::vector<std::string> const&  lines_of_shader_code)
+{
+    TMPROF_BLOCK();
+
+    std::unordered_set<fragment_shader_input_buffer_binding_location>  input_buffer_bindings;
+    std::unordered_set<fragment_shader_output_buffer_binding_location>  output_buffer_bindings;
+    std::unordered_set<fragment_shader_texture_sampler_binding>  texture_sampler_bindings;
+    detail::parse_properties_from_fragment_shader_code(
+            lines_of_shader_code,
+            input_buffer_bindings,
+            output_buffer_bindings,
+            texture_sampler_bindings
+            );
+    initialise(
+            0U,
+            input_buffer_bindings,
+            output_buffer_bindings,
+            texture_sampler_bindings,
+            lines_of_shader_code
+            );
+}
+
+
+void  fragment_shader_data::initialise(
+        GLuint const  id, 
+        std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
+        std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+        std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings,
+        std::vector<std::string> const&  lines_of_shader_code
         )
 {
-    detail::fragment_program_cache::instance().cached(output);
+    TMPROF_BLOCK();
+
+    m_id = id;
+    m_input_buffer_bindings = input_buffer_bindings;
+    m_output_buffer_bindings = output_buffer_bindings;
+    m_texture_sampler_bindings = texture_sampler_bindings;
+    m_lines_of_shader_code = lines_of_shader_code;
 }
 
-void  get_properties_of_failed_fragment_programs(
-        std::vector< std::pair<boost::filesystem::path,std::string> >&  output
+
+}}
+
+namespace qtgl { namespace detail {
+
+
+shaders_binding_data::shaders_binding_data(
+        async::finalise_load_on_destroy_ptr  finaliser,
+        boost::filesystem::path const&  vertex_shader_path,
+        boost::filesystem::path const&  fragment_shader_path
+        )
+    : m_id(0U)
+    , m_vertex_shader()
+    , m_fragment_shader()
+    , m_ready(false)
+{
+    TMPROF_BLOCK();
+
+    auto const  on_shaders_load_finished = 
+        std::bind(
+            &shaders_binding_data::on_shaders_load_finished,
+            this,
+            finaliser,
+            vertex_shader_path,
+            fragment_shader_path,
+            std::shared_ptr<bool>(new bool(false))
+            );
+
+    m_vertex_shader.insert_load_request(vertex_shader_path.string(), 1UL, on_shaders_load_finished);
+    m_fragment_shader.insert_load_request(fragment_shader_path.string(), 1UL, on_shaders_load_finished);
+}
+
+
+shaders_binding_data::~shaders_binding_data()
+{
+    TMPROF_BLOCK();
+
+    destroy_gl_binding();
+}
+
+void  shaders_binding_data::create_gl_binding()
+{
+    if (id() != 0U)
+        return;
+
+    TMPROF_BLOCK();
+
+    glapi().glGenProgramPipelines(1U,&m_id);
+    INVARIANT(id() != 0U);
+}
+
+
+void  shaders_binding_data::destroy_gl_binding()
+{
+    if (id() == 0U)
+        return;
+
+    TMPROF_BLOCK();
+
+    glapi().glDeleteProgramPipelines(1,&m_id);
+}
+
+
+void  shaders_binding_data::on_shaders_load_finished(
+        async::finalise_load_on_destroy_ptr  finaliser,
+        boost::filesystem::path const&  vertex_shader_path,
+        boost::filesystem::path const&  fragment_shader_path,
+        std::shared_ptr<bool>  visited
         )
 {
-    detail::fragment_program_cache::instance().failed(
-                output);
+    TMPROF_BLOCK();
+
+    if (!*visited)
+    {
+        *visited = true;
+        return;
+    }
+
+    if (get_vertex_shader().get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
+    {
+        // Oh no! We failed to load the vertex shader!
+        // So, let's also fail the load of the whole 'shaders_binding_data' resource.
+
+        finaliser->force_finalisation_as_failure(
+            "Load of vertex shader '" + vertex_shader_path.string() + "' has FAILED!"
+            );
+        return;
+    }
+    if (get_fragment_shader().get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
+    {
+        // Oh no! We failed to load the fragment shader!
+        // So, let's also fail the load of the whole 'shaders_binding_data' resource.
+
+        finaliser->force_finalisation_as_failure(
+            "Load of fragment shader '" + fragment_shader_path.string() + "' has FAILED!"
+            );
+        return;
+    }
+
+    initialise(0U, get_vertex_shader(), get_fragment_shader());
 }
 
 
+void  shaders_binding_data::initialise(
+        GLuint const  id,
+        vertex_shader const  vertex_shader,
+        fragment_shader const  fragment_shader
+        )
+{
+    TMPROF_BLOCK();
+
+    m_id = id;
+    m_vertex_shader = vertex_shader;
+    m_fragment_shader = fragment_shader;
+    m_ready = false;
+
+    ASSUMPTION(compatible(get_vertex_shader().get_output_buffer_bindings(),get_fragment_shader().get_input_buffer_bindings()));
 }
+
+
+}}
 
 namespace qtgl {
 
 
-shaders_binding_ptr  shaders_binding::create(boost::filesystem::path const&  vertex_shader_file,
-                                             boost::filesystem::path const&  fragment_shader_file)
-{
-    return shaders_binding_ptr(new shaders_binding(vertex_shader_file,fragment_shader_file,
-                                                   vertex_program_properties_ptr(),fragment_program_properties_ptr()));
-}
-
-shaders_binding_ptr  shaders_binding::create(boost::filesystem::path const&  vertex_shader_file,
-                                             fragment_program_properties_ptr const  fragment_program_props)
-{
-    return shaders_binding_ptr(new shaders_binding(vertex_shader_file,boost::filesystem::path(),
-                                                   vertex_program_properties_ptr(),fragment_program_props));
-}
-
-shaders_binding_ptr  shaders_binding::create(vertex_program_properties_ptr const  vertex_program_props,
-                                             boost::filesystem::path const&  fragment_shader_file)
-{
-    return shaders_binding_ptr(new shaders_binding(boost::filesystem::path(),fragment_shader_file,
-                                                   vertex_program_props,fragment_program_properties_ptr()));
-}
-
-shaders_binding_ptr  shaders_binding::create(vertex_program_properties_ptr const  vertex_program_props,
-                                             fragment_program_properties_ptr const  fragment_program_props)
-{
-    return shaders_binding_ptr(new shaders_binding(boost::filesystem::path(),boost::filesystem::path(),
-                                                   vertex_program_props,fragment_program_props));
-}
-
-shaders_binding_ptr  shaders_binding::create(vertex_program_ptr const  vertex_program,
-                                             fragment_program_ptr const  fragment_program)
-{
-    TMPROF_BLOCK();
-
-    return shaders_binding_ptr( new shaders_binding(vertex_program,fragment_program) );
-}
-
-shaders_binding::shaders_binding(boost::filesystem::path const&  vertex_shader_file,
-                                 boost::filesystem::path const&  fragment_shader_file,
-                                 vertex_program_properties_ptr const  vertex_program_props,
-                                 fragment_program_properties_ptr const  fragment_program_props)
-    : m_vertex_shader_file(vertex_shader_file)
-    , m_fragment_shader_file(fragment_shader_file)
-    , m_vertex_program_props(vertex_program_props)
-    , m_fragment_program_props(fragment_program_props)
-    , m_vertex_program()
-    , m_fragment_program()
-    , m_binding_data(new binding_data_type)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(!m_vertex_shader_file.empty() || m_vertex_program_props.operator bool());
-    ASSUMPTION(!m_fragment_shader_file.empty() || m_fragment_program_props.operator bool());
-    ASSUMPTION(m_binding_data.operator bool());
-
-    if (!m_vertex_shader_file.empty())
-        detail::vertex_program_cache::instance().insert_load_request(m_vertex_shader_file);
-    else
-        detail::vertex_program_cache::instance().insert_load_request(m_vertex_program_props);
-
-    if (!m_fragment_shader_file.empty())
-        detail::fragment_program_cache::instance().insert_load_request(m_fragment_shader_file);
-    else
-        detail::fragment_program_cache::instance().insert_load_request(m_fragment_program_props);
-}
-
-shaders_binding::shaders_binding(vertex_program_ptr const  vertex_program,
-                                 fragment_program_ptr const  fragment_program)
-    : m_vertex_shader_file()
-    , m_fragment_shader_file()
-    , m_vertex_program_props()
-    , m_fragment_program_props()
-    , m_vertex_program(vertex_program)
-    , m_fragment_program(fragment_program)
-    , m_binding_data(new binding_data_type)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(m_vertex_program.operator bool());
-    ASSUMPTION(m_fragment_program.operator bool());
-    ASSUMPTION(m_binding_data.operator bool());
-}
-
 bool  shaders_binding::make_current() const
 {
-    TMPROF_BLOCK();
-
-    detail::vertex_program_cache::instance().process_pending_programs();
-    detail::fragment_program_cache::instance().process_pending_programs();
-
-    bool  bind_ok = true;
-
-    vertex_program_ptr  vertex_program;
-    if (!m_vertex_shader_file.empty())
+    if (!ready())
     {
-        std::weak_ptr<qtgl::vertex_program const> const  wptr =
-                detail::vertex_program_cache::instance().find(m_vertex_shader_file);
-        vertex_program_ptr const  ptr = wptr.lock();
-        if (ptr.operator bool())
-            vertex_program = ptr;
-        else
-        {
-            detail::vertex_program_cache::instance().insert_load_request(m_vertex_shader_file);
-            bind_ok = false;
-        }
-    }
-    else if (m_vertex_program_props.operator bool())
-    {
-        std::weak_ptr<qtgl::vertex_program const> const  wptr =
-                detail::vertex_program_cache::instance().find(m_vertex_program_props);
-        vertex_program_ptr const  ptr = wptr.lock();
-        if (ptr.operator bool())
-            vertex_program = ptr;
-        else
-        {
-            detail::vertex_program_cache::instance().insert_load_request(m_vertex_program_props);
-            bind_ok = false;
-        }
-    }
-    else
-        vertex_program = m_vertex_program;
-
-    fragment_program_ptr  fragment_program;
-    if (!m_fragment_shader_file.empty())
-    {
-        std::weak_ptr<qtgl::fragment_program const> const  wptr =
-                detail::fragment_program_cache::instance().find(m_fragment_shader_file);
-        fragment_program_ptr const  ptr = wptr.lock();
-        if (ptr.operator bool())
-            fragment_program = ptr;
-        else
-        {
-            detail::fragment_program_cache::instance().insert_load_request(m_fragment_shader_file);
-            bind_ok = false;
-        }
-    }
-    else if (m_fragment_program_props.operator bool())
-    {
-        std::weak_ptr<qtgl::fragment_program const> const  wptr =
-                detail::fragment_program_cache::instance().find(m_fragment_program_props);
-        fragment_program_ptr const  ptr = wptr.lock();
-        if (ptr.operator bool())
-            fragment_program = ptr;
-        else
-        {
-            detail::fragment_program_cache::instance().insert_load_request(m_fragment_program_props);
-            bind_ok = false;
-        }
-    }
-    else
-        fragment_program = m_fragment_program;
-
-    if (!bind_ok)
-        return false;
-
-    INVARIANT(vertex_program.operator bool() && fragment_program.operator bool());
-
-    if (id() == 0U || vertex_program_id() != vertex_program->id() || fragment_program_id() != fragment_program->id())
-        if (!m_binding_data->reset(vertex_program,fragment_program))
+        if (!get_vertex_shader().loaded_successfully() || !get_fragment_shader().loaded_successfully())
+            return false;
+        if (!get_vertex_shader().create_gl_shader().empty() || !get_fragment_shader().create_gl_shader().empty())
             return false;
 
-    INVARIANT(id() != 0U);
+        shaders_binding* const  mutable_this = const_cast<shaders_binding*>(this);
 
-    glapi().glBindProgramPipeline(id());
+        mutable_this->create_gl_binding();
+        glapi().glBindProgramPipeline(id());
 
-    return true;
-}
+        glapi().glUseProgramStages(id(), GL_VERTEX_SHADER_BIT, get_vertex_shader().id());
+        glapi().glUseProgramStages(id(), GL_FRAGMENT_SHADER_BIT, get_fragment_shader().id());
 
-bool  shaders_binding::binding_data_type::reset(vertex_program_ptr const  vertex_program,
-                                                fragment_program_ptr const  fragment_program)
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(vertex_program.operator bool() && fragment_program.operator bool());
-    ASSUMPTION(compatible(vertex_program->properties()->output_buffer_bindings(),
-                          fragment_program->properties()->input_buffer_bindings()));
-
-    destroy_ID();
-    glapi().glGenProgramPipelines(1U,&m_id);
-    if (id() == 0U)
-        return false;
-    m_vertex_program_id = vertex_program->id();
-    m_fragment_program_id = fragment_program->id();
-    m_vertex_program_props = vertex_program->properties();
-    m_fragment_program_props = fragment_program->properties();
-    glapi().glUseProgramStages(m_id,GL_VERTEX_SHADER_BIT,m_vertex_program_id);
-    glapi().glUseProgramStages(m_id,GL_FRAGMENT_SHADER_BIT,m_fragment_program_id);
-    return true;
-}
-
-void  shaders_binding::binding_data_type::destroy_ID()
-{
-    TMPROF_BLOCK();
-
-    if (m_id != 0U)
-    {
-        qtgl::glapi().glDeleteProgramPipelines(1,&m_id);
-        m_id = 0U;
-        m_vertex_program_id = 0U;
-        m_fragment_program_id = 0U;
-        m_vertex_program_props.reset();
-        m_fragment_program_props.reset();
+        mutable_this->set_ready();
     }
+    else
+        glapi().glBindProgramPipeline(id());
+
+    return true;
 }
 
-void  insert_load_request(shaders_binding const&  binding)
+
+bool  make_current(shaders_binding const&  binding)
 {
-    detail::vertex_program_cache::instance().insert_load_request(binding.vertex_shader_file());
-    detail::fragment_program_cache::instance().insert_load_request(binding.fragment_shader_file());
+    return binding.make_current();
 }
 
 

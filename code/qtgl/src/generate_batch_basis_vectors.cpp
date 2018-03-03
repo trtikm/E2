@@ -25,9 +25,10 @@ batch_ptr  create_basis_vectors(boost::filesystem::path const&  data_root_dir)
                 },
                 "/generic/buffers_binding/basis_vectors"
                 ),
-            qtgl::shaders_binding::create(
+            qtgl::shaders_binding(
                 canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpcUmOpcFc.a=1.txt"),
-                canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt")
+                canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt"),
+                "/generic/shaders_binding/basis_vectors"
                 ),
             qtgl::textures_binding(true),
             qtgl::draw_state::create(),

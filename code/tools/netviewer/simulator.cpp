@@ -412,7 +412,6 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     if (m_do_show_grid)
         if (qtgl::make_current(*m_batch_grid, draw_state))
         {
-            INVARIANT(m_batch_grid->shaders_binding().operator bool());
             qtgl::render_batch(*m_batch_grid,view_projection_matrix);
             draw_state = m_batch_grid->draw_state();
         }
@@ -657,8 +656,6 @@ void  simulator::render_network_spikers(
 
     if (qtgl::make_current(*m_batch_spiker, draw_state))
     {
-        INVARIANT(m_batch_spiker->shaders_binding().operator bool());
-
         if (!m_batch_spiker_bbox.operator bool())
         {
             INVARIANT(!m_batch_spiker_bsphere.operator bool());
@@ -710,8 +707,6 @@ void  simulator::render_network_docks(
 
     if (qtgl::make_current(*m_batch_dock, draw_state))
     {
-        INVARIANT(m_batch_dock->shaders_binding().operator bool());
-
         if (!m_batch_dock_bbox.operator bool())
         {
             INVARIANT(!m_batch_dock_bsphere.operator bool());
@@ -764,8 +759,6 @@ void  simulator::render_network_ships(
 
     if (qtgl::make_current(*m_batch_ship, draw_state))
     {
-        INVARIANT(m_batch_ship->shaders_binding().operator bool());
-
         if (!m_batch_ship_bbox.operator bool())
         {
             INVARIANT(!m_batch_ship_bsphere.operator bool());
@@ -817,8 +810,6 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
         {
             if (qtgl::make_current(*m_batch_spiker_bsphere, *draw_state))
             {
-                INVARIANT(m_batch_spiker_bsphere->shaders_binding().operator bool());
-
                 netlab::network_layer_props const&  props =
                     network()->properties()->layer_props().at(m_selected_object_stats->indices().layer_index());
                 netlab::sector_coordinate_type  x, y, c;
@@ -936,8 +927,6 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
         {
             if (qtgl::make_current(*m_batch_dock_bsphere, *draw_state))
             {
-                INVARIANT(m_batch_dock_bsphere->shaders_binding().operator bool());
-
                 netlab::network_layer_props const&  props =
                     network()->properties()->layer_props().at(m_selected_object_stats->indices().layer_index());
                 netlab::sector_coordinate_type  x,y,c;
@@ -1016,8 +1005,6 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
         {
             if (qtgl::make_current(*m_batch_ship_bsphere, *draw_state))
             {
-                INVARIANT(m_batch_ship_bsphere->shaders_binding().operator bool());
-
                 vector3 const&  pos =
                     network()->get_layer_of_ships(m_selected_object_stats->indices().layer_index())
                               .position(m_selected_object_stats->indices().object_index());
@@ -1256,8 +1243,6 @@ void  simulator::render_spikers_of_constructed_network(
 
     if (qtgl::make_current(*m_batch_spiker, draw_state))
     {
-        INVARIANT(m_batch_spiker->shaders_binding().operator bool());
-
         if (!m_batch_spiker_bbox.operator bool())
         {
             INVARIANT(!m_batch_spiker_bsphere.operator bool());

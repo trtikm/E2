@@ -822,9 +822,10 @@ void  program_window::on_tab_changed(int const  tab_index)
     //if (tab_name == tab_names::BUFFER())
     //    on_buffers_refresh_lists();
     //else
-    if (tab_name == tab_names::SHADER())
-        on_shaders_refresh_lists();
-    else if (tab_name == tab_names::TEXTURE())
+    //if (tab_name == tab_names::SHADER())
+    //    on_shaders_refresh_lists();
+    //else
+    if (tab_name == tab_names::TEXTURE())
         on_textures_refresh_lists();
 }
 
@@ -1168,56 +1169,56 @@ void  program_window::on_shaders_select_root_dir()
     }
 }
 
-void  program_window::on_shaders_refresh_lists()
-{
-    qtgl::make_current_window_guard const  guard(m_glwindow.make_me_current());
-
-    QDir const  dir(shaders_root_dir().string().c_str());
-
-    QStringList cached_values;
-    QStringList failed_values;
-    {
-        std::vector< std::pair<boost::filesystem::path,qtgl::vertex_program_properties_ptr> >  cached_props;
-        qtgl::get_properties_of_cached_vertex_programs(cached_props);
-        {
-            for (auto const  props : cached_props)
-                cached_values.push_back(dir.relativeFilePath(QString(props.first.string().c_str())));
-        }
-        std::vector< std::pair<boost::filesystem::path,std::string> > failed_props;
-        qtgl::get_properties_of_failed_vertex_programs(failed_props);
-        {
-            QStringList values;
-            for (auto const  props : failed_props)
-                failed_values.push_back(dir.relativeFilePath(QString(props.first.string().c_str())) +
-                                        QString(" : ") +
-                                        QString(props.second.c_str()));
-        }
-    }
-    {
-        std::vector< std::pair<boost::filesystem::path,qtgl::fragment_program_properties_ptr> >  cached_props;
-        qtgl::get_properties_of_cached_fragment_programs(cached_props);
-        {
-            QStringList values;
-            for (auto const  props : cached_props)
-                cached_values.push_back(dir.relativeFilePath(QString(props.first.string().c_str())));
-        }
-        std::vector< std::pair<boost::filesystem::path,std::string> > failed_props;
-        qtgl::get_properties_of_failed_fragment_programs(failed_props);
-        {
-            QStringList values;
-            for (auto const  props : failed_props)
-                failed_values.push_back(dir.relativeFilePath(QString(props.first.string().c_str())) +
-                                        QString(" : ") +
-                                        QString(props.second.c_str()));
-        }
-    }
-
-    m_shaders_cached_list->setStringList(cached_values);
-    m_shaders_cached_list->sort(0);
-
-    m_shaders_failed_list->setStringList(failed_values);
-    m_shaders_failed_list->sort(0);
-}
+//void  program_window::on_shaders_refresh_lists()
+//{
+//    qtgl::make_current_window_guard const  guard(m_glwindow.make_me_current());
+//
+//    QDir const  dir(shaders_root_dir().string().c_str());
+//
+//    QStringList cached_values;
+//    QStringList failed_values;
+//    {
+//        std::vector< std::pair<boost::filesystem::path,qtgl::vertex_program_properties_ptr> >  cached_props;
+//        qtgl::get_properties_of_cached_vertex_programs(cached_props);
+//        {
+//            for (auto const  props : cached_props)
+//                cached_values.push_back(dir.relativeFilePath(QString(props.first.string().c_str())));
+//        }
+//        std::vector< std::pair<boost::filesystem::path,std::string> > failed_props;
+//        qtgl::get_properties_of_failed_vertex_programs(failed_props);
+//        {
+//            QStringList values;
+//            for (auto const  props : failed_props)
+//                failed_values.push_back(dir.relativeFilePath(QString(props.first.string().c_str())) +
+//                                        QString(" : ") +
+//                                        QString(props.second.c_str()));
+//        }
+//    }
+//    {
+//        std::vector< std::pair<boost::filesystem::path,qtgl::fragment_program_properties_ptr> >  cached_props;
+//        qtgl::get_properties_of_cached_fragment_programs(cached_props);
+//        {
+//            QStringList values;
+//            for (auto const  props : cached_props)
+//                cached_values.push_back(dir.relativeFilePath(QString(props.first.string().c_str())));
+//        }
+//        std::vector< std::pair<boost::filesystem::path,std::string> > failed_props;
+//        qtgl::get_properties_of_failed_fragment_programs(failed_props);
+//        {
+//            QStringList values;
+//            for (auto const  props : failed_props)
+//                failed_values.push_back(dir.relativeFilePath(QString(props.first.string().c_str())) +
+//                                        QString(" : ") +
+//                                        QString(props.second.c_str()));
+//        }
+//    }
+//
+//    m_shaders_cached_list->setStringList(cached_values);
+//    m_shaders_cached_list->sort(0);
+//
+//    m_shaders_failed_list->setStringList(failed_values);
+//    m_shaders_failed_list->sort(0);
+//}
 
 
 void  program_window::on_textures_root_dir_changed()

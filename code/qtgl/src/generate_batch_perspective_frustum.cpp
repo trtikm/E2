@@ -42,9 +42,10 @@ batch_ptr  create_wireframe_perspective_frustum(
             },
             id.empty() ? id : "/generic/buffers_binding/perspective_frustum/" + id
             ),
-        qtgl::shaders_binding::create(
+        qtgl::shaders_binding(
             canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpUmcOpcF.txt"),
-            canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt")
+            canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt"),
+            id.empty() ? id : "/generic/shaders_binding/perspective_frustum/" + id
             ),
         qtgl::textures_binding(true),
         qtgl::draw_state::create(),

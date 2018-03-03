@@ -22,23 +22,6 @@ struct resource_loader
 
     void clear();
 
-    using  vertex_program_receiver_fn =
-            std::function<void(boost::filesystem::path const&,  //!< Shader file path-name.
-                               std::shared_ptr<std::vector<std::string> const>, //!< Lines of the shader's code.
-                               std::string const&               //!< Error message. Empty string means no error.
-                               )>;
-    void  insert_vertex_program_request(boost::filesystem::path const&  shader_file,
-                                          vertex_program_receiver_fn const&  receiver);
-
-    using  fragment_program_receiver_fn =
-            std::function<void(boost::filesystem::path const&,  //!< Shader file path-name.
-                               std::shared_ptr<std::vector<std::string> const>, //!< Lines of the shader's code.
-                               std::string const&               //!< Error message. Empty string means no error.
-                               )>;
-    void  insert_fragment_program_request(boost::filesystem::path const&  shader_file,
-                                          fragment_program_receiver_fn const&  receiver);
-
-
     using  batch_receiver_fn =
             std::function<void(boost::filesystem::path const&,  //!< Batch file path-name.
                                std::shared_ptr<batch const>,    //!< The loaded data of the batch
@@ -52,10 +35,6 @@ private:
     resource_loader(resource_loader const&) = delete;
     resource_loader& operator=(resource_loader const&) = delete;
 
-    bool  fetch_vertex_program_request(boost::filesystem::path&  shader_file,
-                                       vertex_program_receiver_fn&  output_receiver);
-    bool  fetch_fragment_program_request(boost::filesystem::path&  shader_file,
-                                         fragment_program_receiver_fn&  output_receiver);
     bool  fetch_batch_request(boost::filesystem::path&  batch_file, batch_receiver_fn&  output_receiver);
 
     void  start_worker_if_not_running();
@@ -65,8 +44,6 @@ private:
     std::atomic<bool>  m_worker_finished;
     mutable std::mutex  m_mutex;
 
-    std::deque< std::pair<boost::filesystem::path,vertex_program_receiver_fn> >  m_vertex_program_requests;
-    std::deque< std::pair<boost::filesystem::path,fragment_program_receiver_fn> >  m_fragment_program_requests;
     std::deque< std::pair<boost::filesystem::path,batch_receiver_fn> >  m_batch_requests;
 };
 

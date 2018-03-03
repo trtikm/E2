@@ -96,15 +96,12 @@ void  dbg_network_camera::render_camera_frustum(matrix44 const&  view_projection
 
     if (qtgl::make_current(*m_batch_basis, *draw_state))
     {
-        INVARIANT(m_batch_basis->shaders_binding().operator bool());
         qtgl::render_batch(*m_batch_basis,view_projection_matrix,*m_camera->coordinate_system());
         draw_state = m_batch_basis->draw_state();
     }
 
     if (qtgl::make_current(*m_batch_camera_frustum, *draw_state))
     {
-        INVARIANT(m_batch_camera_frustum->shaders_binding().operator bool());
-
         float_32_bit const  param = -0.5f * (m_camera->near_plane() + m_camera->far_plane());
 
         qtgl::render_batch(

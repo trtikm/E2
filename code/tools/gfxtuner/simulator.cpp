@@ -205,7 +205,6 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
     if (m_do_show_grid)
         if (qtgl::make_current(*m_batch_grid, draw_state))
         {
-            INVARIANT(m_batch_grid->shaders_binding().operator bool());
             render_batch(*m_batch_grid,view_projection_matrix);
             draw_state = m_batch_grid->draw_state();
         }
@@ -550,7 +549,6 @@ void  simulator::render_scene_coord_systems(
 
     if (m_batch_coord_system == nullptr || !qtgl::make_current(*m_batch_coord_system, draw_state))
         return;
-    INVARIANT(m_batch_coord_system->shaders_binding().operator bool());
 
     //auto const  old_depth_test_state = qtgl::glapi().glIsEnabled(GL_DEPTH_TEST);
     //qtgl::glapi().glDisable(GL_DEPTH_TEST);

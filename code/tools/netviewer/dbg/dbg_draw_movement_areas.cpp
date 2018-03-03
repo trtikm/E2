@@ -80,8 +80,6 @@ void  dbg_draw_movement_areas::render(matrix44 const&  view_projection_matrix, q
     for (auto const&  pos_batch : m_batches)
         if (qtgl::make_current(*pos_batch.second, *draw_state))
         {
-            INVARIANT(pos_batch.second->shaders_binding().operator bool());
-
             qtgl::render_batch(
                 *pos_batch.second,
                 view_projection_matrix,

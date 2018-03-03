@@ -33,9 +33,10 @@ batch_ptr  create_lines3d(
             },
             id.empty() ? id : "/generic/buffers_binding/lines3d_with_colours/" + id
             ),
-        qtgl::shaders_binding::create(
+        qtgl::shaders_binding(
             canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpcUmOpcFc.a=1.txt"),
-            canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt")
+            canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt"),
+            id.empty() ? id : "/generic/shaders_binding/lines3d_with_colours/" + id
             ),
         qtgl::textures_binding(true),
         qtgl::draw_state::create(),

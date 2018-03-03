@@ -69,7 +69,7 @@ public slots:
 
     void  on_shaders_root_dir_changed();
     void  on_shaders_select_root_dir();
-    void  on_shaders_refresh_lists();
+    //void  on_shaders_refresh_lists();
 
     void  on_textures_root_dir_changed();
     void  on_textures_select_root_dir();

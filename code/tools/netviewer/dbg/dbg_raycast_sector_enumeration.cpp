@@ -124,7 +124,6 @@ void  dbg_raycast_sector_enumeration::render(matrix44 const&  view_projection_ma
     if (m_batch_line.operator bool())
         if (qtgl::make_current(*m_batch_line, *draw_state))
         {
-            INVARIANT(m_batch_line->shaders_binding().operator bool());
             qtgl::render_batch(*m_batch_line,view_projection_matrix);
             draw_state = m_batch_line->draw_state();
         }
@@ -132,8 +131,6 @@ void  dbg_raycast_sector_enumeration::render(matrix44 const&  view_projection_ma
     for (auto const&  pos_batch : m_batches)
         if (qtgl::make_current(*pos_batch.second, *draw_state))
         {
-            INVARIANT(pos_batch.second->shaders_binding().operator bool());
-
             qtgl::render_batch(
                 *pos_batch.second,
                 view_projection_matrix,

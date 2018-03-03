@@ -50,7 +50,7 @@ batch_ptr  create_grid(
             grid_colour_buffer
             );
     batch_ptr const  pbatch = batch::create(
-            id.empty() ? id : "generic/batch/grid/" + id,
+            "generic/batch/grid/" + id, // id.empty() ? id : "generic/batch/grid/" + id,
             qtgl::buffers_binding(
                 0U,
                 2U,
@@ -60,9 +60,10 @@ batch_ptr  create_grid(
                 },
                 id.empty() ? id : "/generic/buffers_binding/grid/" + id
                 ),
-            qtgl::shaders_binding::create(
+            qtgl::shaders_binding(
                 canonical_path(data_root_dir / "shared/gfx/shaders/vertex/vs_IpcUmOpcFc.a=1.txt"),
-                canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt")
+                canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt"),
+                id.empty() ? id : "/generic/shaders_binding/grid/" + id
                 ),
             qtgl::textures_binding(true),
             qtgl::draw_state::create(),

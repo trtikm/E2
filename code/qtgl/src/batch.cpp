@@ -32,7 +32,7 @@ std::shared_ptr<batch const>  batch::create(boost::filesystem::path const&  path
 std::shared_ptr<batch const>  batch::create(
         boost::filesystem::path const&  path,
         qtgl::buffers_binding const  buffers_binding,
-        shaders_binding_ptr const  shaders_binding,
+        qtgl::shaders_binding const  shaders_binding,
         qtgl::textures_binding const  textures_binding,
         draw_state_ptr const  draw_state,
         modelspace const modelspace
@@ -68,7 +68,7 @@ batch::batch(boost::filesystem::path const&  path)
 
 batch::batch(boost::filesystem::path const&  path,
              qtgl::buffers_binding const  buffers_binding,
-             shaders_binding_ptr const  shaders_binding,
+             qtgl::shaders_binding const  shaders_binding,
              qtgl::textures_binding const  textures_binding,
              draw_state_ptr const  draw_state,
              modelspace const modelspace
@@ -86,7 +86,6 @@ batch::batch(boost::filesystem::path const&  path,
     , m_batch_found_in_cache__modelspace(false)
 {
     ASSUMPTION(!m_buffers_binding.empty());
-    ASSUMPTION(m_shaders_binding.operator bool());
     ASSUMPTION(m_draw_state.operator bool());
 }
 
@@ -104,9 +103,9 @@ qtgl::buffers_binding  batch::buffers_binding() const
     return m_buffers_binding;
 }
 
-shaders_binding_ptr  batch::shaders_binding() const
+shaders_binding  batch::shaders_binding() const
 {
-    if (!m_batch_found_in_cache__shaders && !m_shaders_binding.operator bool())
+    if (!m_batch_found_in_cache__shaders && !m_shaders_binding.ready())
     {
         batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
         if (pbatch.operator bool())
@@ -162,8 +161,8 @@ modelspace  batch::get_modelspace() const
 
 std::unordered_set<vertex_shader_uniform_symbolic_name> const&  batch::symbolic_names_of_used_uniforms() const
 {
-    return shaders_binding().operator bool() && shaders_binding()->binding_vertex_program_props().operator bool() ?
-                shaders_binding()->binding_vertex_program_props()->symbolic_names_of_used_uniforms() :
+    return shaders_binding().loaded_successfully() ?
+                shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms() :
                 s_empty_uniforms ;
 }
 
@@ -453,7 +452,7 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
         return std::make_shared<batch const>(
                     batch_file,
                     buffers_binding(index_buffer,buffer_paths,"[buffers_binding]:" + batch_file.string()),
-                    shaders_binding::create(vertex_shader,fragment_shader),
+                    shaders_binding(vertex_shader,fragment_shader, "[shaders_binding]:" + batch_file.string()),
                     textures_binding(textures_binding_map),
                     draw_state::create(cull_face_mode,use_alpha_blending,alpha_blending_src_function,alpha_blending_dst_function),
                     modelspace_pathname.empty() ? modelspace() : modelspace(modelspace_pathname)
@@ -494,8 +493,8 @@ void  insert_load_request(batch const&  batch_ref)
     {
 //        if (batch_ref.buffers_binding().operator bool())
 //            insert_load_request(*batch_ref.buffers_binding());
-        if (batch_ref.shaders_binding().operator bool())
-            insert_load_request(*batch_ref.shaders_binding());
+        //if (batch_ref.shaders_binding().operator bool())
+        //    insert_load_request(*batch_ref.shaders_binding());
     }
 }
 
@@ -507,7 +506,7 @@ bool  make_current(batch const&  binding, draw_state const* const  previous_stat
     detail::batch_cache::instance().process_pending_batches();
 
     bool result = true;
-    if (!binding.shaders_binding().operator bool() || !make_current(*binding.shaders_binding()))
+    if (!binding.shaders_binding().loaded_successfully() || !make_current(binding.shaders_binding()))
         result = false;
     if (!binding.buffers_binding().loaded_successfully() || !make_current(binding.buffers_binding()))
         result = false;

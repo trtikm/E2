@@ -3,8 +3,8 @@
 
 #   include <qtgl/shader_data_bindings.hpp>
 #   include <qtgl/glapi.hpp>
-#   include <utility/basic_numeric_types.hpp>
 #   include <angeo/tensor_math.hpp>
+#   include <utility/async_resource_load.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <unordered_set>
 #   include <istream>
@@ -12,383 +12,380 @@
 #   include <vector>
 #   include <memory>
 
-namespace qtgl {
+namespace qtgl { namespace detail {
 
 
-struct vertex_program_properties;
-using  vertex_program_properties_ptr = std::shared_ptr<vertex_program_properties const>;
-
-
-struct vertex_program_properties
+struct  vertex_shader_data
 {
-    static vertex_program_properties_ptr  create(
+    vertex_shader_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr);
+
+    vertex_shader_data(async::finalise_load_on_destroy_ptr, std::vector<std::string> const&  lines_of_shader_code)
+    {
+        initialise(lines_of_shader_code);
+    }
+
+    vertex_shader_data(
+            async::finalise_load_on_destroy_ptr,
+            GLuint const  id, 
             std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings,
             std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings,
-            std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms
-            );
+            std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms,
+            std::vector<std::string> const&  lines_of_shader_code
+            )
+    {
+        initialise(id, input_buffer_bindings, output_buffer_bindings, symbolic_names_of_used_uniforms, lines_of_shader_code);
+    }
 
-    static vertex_program_properties_ptr  create(std::vector<std::string> const&  lines_of_shader_code);
+    ~vertex_shader_data();
 
-    vertex_program_properties(
-            std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings,
-            std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings,
-            std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms
-            );
-
-    vertex_program_properties(std::vector<std::string> const&  lines_of_shader_code);
-
-    std::unordered_set<vertex_shader_input_buffer_binding_location> const& input_buffer_bindings() const noexcept
+    GLuint  id() const { return m_id; }
+    std::unordered_set<vertex_shader_input_buffer_binding_location> const&  get_input_buffer_bindings() const
     { return m_input_buffer_bindings; }
-    std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings() const noexcept
+    std::unordered_set<vertex_shader_output_buffer_binding_location> const&  get_output_buffer_bindings() const
     { return m_output_buffer_bindings; }
-
-    std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms() const noexcept
+    std::unordered_set<vertex_shader_uniform_symbolic_name> const&  get_symbolic_names_of_used_uniforms() const
     { return m_symbolic_names_of_used_uniforms; }
+    std::vector<std::string> const&  get_lines_of_shader_code() const
+    { return m_lines_of_shader_code; }
+
+    bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store);
+
+    std::string  create_gl_shader();
+    void  destroy_gl_shader();
 
 private:
+    void  initialise(std::vector<std::string> const&  lines_of_shader_code);
+    void  initialise(
+            GLuint const  id, 
+            std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings,
+            std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+            std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms,
+            std::vector<std::string> const&  lines_of_shader_code
+            );
+
+    GLuint  m_id;
     std::unordered_set<vertex_shader_input_buffer_binding_location>  m_input_buffer_bindings;
     std::unordered_set<vertex_shader_output_buffer_binding_location>  m_output_buffer_bindings;
     std::unordered_set<vertex_shader_uniform_symbolic_name>  m_symbolic_names_of_used_uniforms;
+    std::vector<std::string>  m_lines_of_shader_code;
 };
 
 
-bool  operator==(vertex_program_properties const&  props0, vertex_program_properties const&  props1);
-inline bool  operator!=(vertex_program_properties const&  props0, vertex_program_properties const&  props1)
-{ return !(props0 == props1); }
-
-size_t  hasher_of_vertex_program_properties(vertex_program_properties const&  props);
-
-
-}
+}}
 
 namespace qtgl {
 
 
-using  uniform_variable_accessor_type = std::pair<GLuint,vertex_program_properties_ptr>;
-
-
-}
-
-namespace qtgl {
-
-struct vertex_program;
-typedef std::shared_ptr<vertex_program const>  vertex_program_ptr;
-
-
-struct vertex_program
+struct  vertex_shader : public async::resource_accessor<detail::vertex_shader_data>
 {
-    static vertex_program_ptr  create(std::istream&  source_code, std::string&  error_message);
-    static vertex_program_ptr  create(std::istream&  source_code,
-                                      vertex_program_properties const&  properties,
-                                      std::string&  error_message);
-    static vertex_program_ptr  create(boost::filesystem::path const&  shader_source_file, std::string&  error_message);
-    static vertex_program_ptr  create(std::vector<std::string> const& source_code_lines, std::string&  error_message);
-    static vertex_program_ptr  create(std::vector<std::string> const& source_code_lines,
-                                      vertex_program_properties const&  properties,
-                                      std::string&  error_message);
-    static vertex_program_ptr  create(GLuint const  id, vertex_program_properties_ptr const  properties);
-
-    ~vertex_program();
-
-    GLuint  id() const noexcept { return m_id; }
-    vertex_program_properties_ptr  properties() const noexcept { return m_properties; }
-
-    uniform_variable_accessor_type  uniform_variable_accessor() const noexcept { return std::make_pair(id(),properties()); }
-
-private:
-    vertex_program(GLuint const  id, vertex_program_properties_ptr const  properties)
-        : m_id(id)
-        , m_properties(properties)
+    vertex_shader()
+        : async::resource_accessor<detail::vertex_shader_data>()
     {}
 
-    vertex_program(vertex_program const&) = delete;
-    vertex_program& operator=(vertex_program const&) = delete;
+    explicit vertex_shader(boost::filesystem::path const&  path)
+        : async::resource_accessor<detail::vertex_shader_data>(path.string(), 1U)
+    {}
 
-    GLuint  m_id;
-    vertex_program_properties_ptr  m_properties;
+    vertex_shader(std::vector<std::string> const&  lines_of_shader_code, boost::filesystem::path const&  path = "")
+        : async::resource_accessor<detail::vertex_shader_data>(
+                path.string(),
+                async::notification_callback_type(),
+                lines_of_shader_code
+                )
+    {}
+
+    vertex_shader(
+            GLuint const  id, 
+            std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings,
+            std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+            std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms,
+            std::vector<std::string> const&  lines_of_shader_code,
+            boost::filesystem::path const&  path = ""
+            )
+        : async::resource_accessor<detail::vertex_shader_data>(
+                path.string(),
+                async::notification_callback_type(),
+                id,
+                input_buffer_bindings,
+                output_buffer_bindings,
+                symbolic_names_of_used_uniforms,
+                lines_of_shader_code
+                )
+    {}
+
+    GLuint  id() const { return resource().id(); }
+
+    std::unordered_set<vertex_shader_input_buffer_binding_location> const&  get_input_buffer_bindings() const
+    { return resource().get_input_buffer_bindings(); }
+    
+    std::unordered_set<vertex_shader_output_buffer_binding_location> const&  get_output_buffer_bindings() const
+    { return resource().get_output_buffer_bindings(); }
+    
+    std::unordered_set<vertex_shader_uniform_symbolic_name> const&  get_symbolic_names_of_used_uniforms() const
+    { return resource().get_symbolic_names_of_used_uniforms(); }
+    
+    std::vector<std::string> const&  get_lines_of_shader_code() const
+    { return resource().get_lines_of_shader_code(); }
+
+    template<typename value_type>
+    bool  set_uniform_variable(vertex_shader_uniform_symbolic_name const  symbolic_name, value_type const&  value_to_store)
+    {
+        return set_uniform_variable(uniform_name(symbolic_name), value_to_store);
+    }
+
+    bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
+    bool  set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
+    bool  set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
+    bool  set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
+    bool  set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+
+    std::string  create_gl_shader() { return resource().create_gl_shader(); }
+    void  destroy_gl_shader() { resource().destroy_gl_shader(); }
 };
 
 
-template<typename value_type>
-bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
-                           vertex_shader_uniform_symbolic_name const  symbolic_name,
-                           value_type const&  value_to_store)
-{
-    return set_uniform_variable(accessor,uniform_name(symbolic_name),value_to_store);
 }
 
-bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
-                           std::string const&  variable_name,
-                           natural_32_bit const  value_to_store);
-bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
-                           std::string const&  variable_name,
-                           float_32_bit const  value_to_store);
-bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
-                           std::string const&  variable_name,
-                           vector4 const&  value_to_store);
-bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
-                           std::string const&  variable_name,
-                           matrix44 const&  value_to_store);
-bool  set_uniform_variable(uniform_variable_accessor_type const&  accessor,
-                           std::string const&  variable_name,
-                           std::vector<matrix44> const&  value_to_store);
+namespace qtgl { namespace detail {
 
 
-std::string  load_vertex_program_file(boost::filesystem::path const&  shader_file,
-                                      std::vector<std::string>& output_lines);
-
-void  insert_vertex_program_load_request(boost::filesystem::path const&  shader_file);
-bool  insert_vertex_program_load_request(vertex_program_properties_ptr const  props);
-inline bool  insert_vertex_program_load_request(vertex_program_properties const&  props)
-{ return insert_vertex_program_load_request(std::make_shared<vertex_program_properties>(props)); }
-
-std::weak_ptr<vertex_program const>  find_vertex_program(boost::filesystem::path const&  shader_file);
-std::weak_ptr<vertex_program const>  find_vertex_program(vertex_program_properties_ptr const  props);
-
-inline std::weak_ptr<vertex_program const>  find_vertex_program(vertex_program_properties const&  props)
-{ return find_vertex_program(std::make_shared<vertex_program_properties>(props)); }
-
-bool  associate_vertex_program_properties_with_shader_file(
-        vertex_program_properties_ptr const  props, boost::filesystem::path const&  shader_file
-        );
-boost::filesystem::path  find_vertex_program_file(vertex_program_properties_ptr const  props);
-inline boost::filesystem::path  find_vertex_program_file(vertex_program_properties const&  props)
-{ return find_vertex_program_file(std::make_shared<vertex_program_properties>(props)); }
-
-
-void  get_properties_of_cached_vertex_programs(
-        std::vector< std::pair<boost::filesystem::path,vertex_program_properties_ptr> >&  output
-        );
-void  get_properties_of_failed_vertex_programs(
-        std::vector< std::pair<boost::filesystem::path,std::string> >&  output
-        );
-
-
-}
-
-namespace qtgl {
-
-
-struct fragment_program_properties;
-using  fragment_program_properties_ptr = std::shared_ptr<fragment_program_properties const>;
-
-
-struct fragment_program_properties
+struct  fragment_shader_data
 {
-    static fragment_program_properties_ptr  create(
+    fragment_shader_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr);
+
+    fragment_shader_data(async::finalise_load_on_destroy_ptr, std::vector<std::string> const&  lines_of_shader_code)
+    {
+        initialise(lines_of_shader_code);
+    }
+
+    fragment_shader_data(
+            async::finalise_load_on_destroy_ptr,
+            GLuint const  id, 
             std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
             std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
-            std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings
-            );
+            std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings,
+            std::vector<std::string> const&  lines_of_shader_code
+            )
+    {
+        initialise(id, input_buffer_bindings, output_buffer_bindings, texture_sampler_bindings, lines_of_shader_code);
+    }
 
-    static fragment_program_properties_ptr  create(std::vector<std::string> const&  lines_of_shader_code);
+    ~fragment_shader_data();
 
-    fragment_program_properties(
-            std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
-            std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
-            std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings
-            );
-
-    fragment_program_properties(std::vector<std::string> const&  lines_of_shader_code);
-
-    std::unordered_set<fragment_shader_input_buffer_binding_location> const& input_buffer_bindings() const noexcept
+    GLuint  id() const { return m_id; }
+    std::unordered_set<fragment_shader_input_buffer_binding_location> const&  get_input_buffer_bindings() const
     { return m_input_buffer_bindings; }
-    std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings() const noexcept
+    std::unordered_set<fragment_shader_output_buffer_binding_location> const&  get_output_buffer_bindings() const
     { return m_output_buffer_bindings; }
-
-    std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings() const noexcept
+    std::unordered_set<fragment_shader_texture_sampler_binding> const&  get_texture_sampler_bindings() const
     { return m_texture_sampler_bindings; }
+    std::vector<std::string> const&  get_lines_of_shader_code() const
+    { return m_lines_of_shader_code; }
+
+    std::string  create_gl_shader();
+    void  destroy_gl_shader();
 
 private:
+    void  initialise(std::vector<std::string> const&  lines_of_shader_code);
+    void  initialise(
+            GLuint const  id, 
+            std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
+            std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+            std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings,
+            std::vector<std::string> const&  lines_of_shader_code
+            );
+
+    GLuint  m_id;
     std::unordered_set<fragment_shader_input_buffer_binding_location>  m_input_buffer_bindings;
     std::unordered_set<fragment_shader_output_buffer_binding_location>  m_output_buffer_bindings;
     std::unordered_set<fragment_shader_texture_sampler_binding>  m_texture_sampler_bindings;
+    std::vector<std::string>  m_lines_of_shader_code;
 };
 
 
-bool  operator==(fragment_program_properties const&  props0, fragment_program_properties const&  props1);
-inline bool  operator!=(fragment_program_properties const&  props0, fragment_program_properties const&  props1)
-{ return !(props0 == props1); }
-
-size_t  hasher_of_fragment_program_properties(fragment_program_properties const&  props);
-
-
-}
+}}
 
 namespace qtgl {
 
 
-struct fragment_program;
-typedef std::shared_ptr<fragment_program const>  fragment_program_ptr;
-
-
-struct fragment_program
+struct  fragment_shader : public async::resource_accessor<detail::fragment_shader_data>
 {
-    static fragment_program_ptr  create(std::istream&  source_code, std::string&  error_message);
-    static fragment_program_ptr  create(std::istream&  source_code,
-                                        fragment_program_properties const&  properties,
-                                        std::string&  error_message);
-    static fragment_program_ptr  create(boost::filesystem::path const&  shader_source_file, std::string&  error_message);
-    static fragment_program_ptr  create(std::vector<std::string> const& source_code_lines, std::string&  error_message);
-    static fragment_program_ptr  create(std::vector<std::string> const& source_code_lines,
-                                        fragment_program_properties const&  properties,
-                                        std::string&  error_message);
-    static fragment_program_ptr  create(GLuint const  id, fragment_program_properties_ptr const  properties);
-
-    ~fragment_program();
-
-    GLuint  id() const { return m_id; }
-    fragment_program_properties_ptr  properties() const noexcept { return m_properties; }
-
-private:
-    fragment_program(GLuint const  id, fragment_program_properties_ptr const  properties)
-        : m_id(id)
-        , m_properties(properties)
+    fragment_shader()
+        : async::resource_accessor<detail::fragment_shader_data>()
     {}
 
-    fragment_program(fragment_program const&) = delete;
-    fragment_program& operator=(fragment_program const&) = delete;
+    explicit fragment_shader(boost::filesystem::path const&  path)
+        : async::resource_accessor<detail::fragment_shader_data>(path.string(), 1U)
+    {}
 
-    GLuint  m_id;
-    fragment_program_properties_ptr  m_properties;
+    fragment_shader(std::vector<std::string> const&  lines_of_shader_code, boost::filesystem::path const&  path = "")
+        : async::resource_accessor<detail::fragment_shader_data>(
+                path.string(),
+                async::notification_callback_type(),
+                lines_of_shader_code
+                )
+    {}
+
+    fragment_shader(
+            GLuint const  id, 
+            std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
+            std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+            std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings,
+            std::vector<std::string> const&  lines_of_shader_code,
+            boost::filesystem::path const&  path = ""
+            )
+        : async::resource_accessor<detail::fragment_shader_data>(
+                path.string(),
+                async::notification_callback_type(),
+                id,
+                input_buffer_bindings,
+                output_buffer_bindings,
+                texture_sampler_bindings,
+                lines_of_shader_code
+                )
+    {}
+
+    GLuint  id() const { return resource().id(); }
+    std::unordered_set<fragment_shader_input_buffer_binding_location> const&  get_input_buffer_bindings() const
+    { return resource().get_input_buffer_bindings(); }
+    std::unordered_set<fragment_shader_output_buffer_binding_location> const&  get_output_buffer_bindings() const
+    { return resource().get_output_buffer_bindings(); }
+    std::unordered_set<fragment_shader_texture_sampler_binding> const&  get_texture_sampler_bindings() const
+    { return resource().get_texture_sampler_bindings(); }
+    std::vector<std::string> const&  get_lines_of_shader_code() const
+    { return resource().get_lines_of_shader_code(); }
+
+    std::string  create_gl_shader() { return resource().create_gl_shader(); }
+    void  destroy_gl_shader() { resource().destroy_gl_shader(); }
 };
-
-
-std::string  load_fragment_program_file(boost::filesystem::path const&  shader_source_file,
-                                        std::vector<std::string>& output_lines);
-
-void  insert_fragment_program_load_request(boost::filesystem::path const&  shader_file);
-bool  insert_fragment_program_load_request(fragment_program_properties_ptr const  props);
-inline bool  insert_fragment_program_load_request(fragment_program_properties const&  props)
-{ return insert_fragment_program_load_request(std::make_shared<fragment_program_properties>(props)); }
-
-std::weak_ptr<fragment_program const>  find_fragment_program(boost::filesystem::path const&  shader_file);
-std::weak_ptr<fragment_program const>  find_fragment_program(fragment_program_properties_ptr const  props);
-
-inline std::weak_ptr<fragment_program const>  find_fragment_program(fragment_program_properties const&  props)
-{ return find_fragment_program(std::make_shared<fragment_program_properties>(props)); }
-
-bool  associate_fragment_program_properties_with_shader_file(
-        fragment_program_properties_ptr const  props, boost::filesystem::path const&  shader_file
-        );
-boost::filesystem::path  find_fragment_program_file(fragment_program_properties_ptr const  props);
-inline boost::filesystem::path  find_fragment_program_file(fragment_program_properties const&  props)
-{ return find_fragment_program_file(std::make_shared<fragment_program_properties>(props)); }
-
-
-void  get_properties_of_cached_fragment_programs(
-        std::vector< std::pair<boost::filesystem::path,fragment_program_properties_ptr> >&  output
-        );
-void  get_properties_of_failed_fragment_programs(
-        std::vector< std::pair<boost::filesystem::path,std::string> >&  output
-        );
 
 
 }
 
+namespace qtgl { namespace detail {
+
+
+struct shaders_binding_data
+{
+    shaders_binding_data(
+            async::finalise_load_on_destroy_ptr  finaliser,
+            boost::filesystem::path const&  vertex_shader_path,
+            boost::filesystem::path const&  fragment_shader_path
+            );
+
+    shaders_binding_data(
+            async::finalise_load_on_destroy_ptr,
+            GLuint const  id,
+            vertex_shader const  vertex_shader,
+            fragment_shader const  fragment_shader
+            )
+    {
+        initialise(id, vertex_shader, fragment_shader);
+    }
+
+    ~shaders_binding_data();
+
+    GLuint  id() const { return m_id; }
+    vertex_shader  get_vertex_shader() const { return m_vertex_shader; }
+    fragment_shader  get_fragment_shader() const { return m_fragment_shader; }
+
+    bool  ready() const { return m_ready; }
+    void  set_ready() { m_ready = true; }
+
+    void  create_gl_binding();
+    void  destroy_gl_binding();
+
+private:
+
+    void  on_shaders_load_finished(
+            async::finalise_load_on_destroy_ptr  finaliser,
+            boost::filesystem::path const&  vertex_shader_path,
+            boost::filesystem::path const&  fragment_shader_path,
+            std::shared_ptr<bool>  visited
+            );
+
+    void  initialise(
+            GLuint const  id,
+            vertex_shader const  vertex_shader,
+            fragment_shader const  fragment_shader
+            );
+
+    GLuint  m_id;
+    vertex_shader  m_vertex_shader;
+    fragment_shader  m_fragment_shader;
+
+    bool  m_ready;
+};
+
+
+}}
+
 namespace qtgl {
 
 
-struct shaders_binding;
-typedef std::shared_ptr<shaders_binding const>  shaders_binding_ptr;
-
-
-struct shaders_binding
+struct  shaders_binding : public async::resource_accessor<detail::shaders_binding_data>
 {
-    static shaders_binding_ptr  create(boost::filesystem::path const&  vertex_shader_file,
-                                       boost::filesystem::path const&  fragment_shader_file);
+    shaders_binding()
+        : async::resource_accessor<detail::shaders_binding_data>()
+    {}
 
-    static shaders_binding_ptr  create(boost::filesystem::path const&  vertex_shader_file,
-                                       fragment_program_properties_ptr const  fragment_program_props);
+    shaders_binding(
+            boost::filesystem::path const&  vertex_shader_path,
+            boost::filesystem::path const&  fragment_shader_path,
+            async::key_type const&  key = ""
+            )
+        : async::resource_accessor<detail::shaders_binding_data>(
+            key,
+            async::notification_callback_type(),
+            vertex_shader_path,
+            fragment_shader_path
+            )
+    {}
 
-    static shaders_binding_ptr  create(vertex_program_properties_ptr const  vertex_program_props,
-                                       boost::filesystem::path const&  fragment_shader_file);
+    shaders_binding(
+            GLuint const  id,
+            vertex_shader const  vertex_shader,
+            fragment_shader const  fragment_shader,
+            async::key_type const&  key = ""
+            )
+        : async::resource_accessor<detail::shaders_binding_data>(
+                key,
+                async::notification_callback_type(),
+                id,
+                vertex_shader,
+                fragment_shader
+                )
+    {}
 
-    static shaders_binding_ptr  create(vertex_program_properties_ptr const  vertex_program_props,
-                                       fragment_program_properties_ptr const  fragment_program_props);
+    GLuint  id() const { return resource().id(); }
+    vertex_shader  get_vertex_shader() const { return resource().get_vertex_shader(); }
+    fragment_shader  get_fragment_shader() const { return resource().get_fragment_shader(); }
 
-    static shaders_binding_ptr  create(vertex_program_ptr const  vertex_program,
-                                       fragment_program_ptr const  fragment_program);
-
-    boost::filesystem::path const&  vertex_shader_file() const noexcept { return m_vertex_shader_file; }
-    boost::filesystem::path const&  fragment_shader_file() const noexcept { return m_fragment_shader_file; }
-    vertex_program_properties_ptr  vertex_program_props() const noexcept { return m_vertex_program_props; }
-    fragment_program_properties_ptr  fragment_program_props() const noexcept { return m_fragment_program_props; }
-    vertex_program_ptr  vertex_program() const noexcept { return m_vertex_program; }
-    fragment_program_ptr  fragment_program() const noexcept { return m_fragment_program; }
-
-    GLuint  id() const noexcept { return m_binding_data->id(); }
-    GLuint  vertex_program_id() const noexcept { return m_binding_data->vertex_program_id(); }
-    GLuint  fragment_program_id() const noexcept { return m_binding_data->fragment_program_id(); }
-    vertex_program_properties_ptr  binding_vertex_program_props() const noexcept { return m_binding_data->vertex_program_props(); }
-    fragment_program_properties_ptr  binding_fragment_program_props() const noexcept { return m_binding_data->fragment_program_props(); }
-
-    uniform_variable_accessor_type  uniform_variable_accessor() const noexcept
-    { return std::make_pair(vertex_program_id(), m_binding_data->vertex_program_props()); }
-
+    bool  ready() const { return !loaded_successfully() ? false : resource().ready(); }
     bool  make_current() const;
 
 private:
-    shaders_binding(boost::filesystem::path const&  vertex_shader_file,
-                    boost::filesystem::path const&  fragment_shader_file,
-                    vertex_program_properties_ptr const  vertex_program_props,
-                    fragment_program_properties_ptr const  fragment_program_props);
-    shaders_binding(vertex_program_ptr const  vertex_program,
-                    fragment_program_ptr const  fragment_program);
 
-    shaders_binding(shaders_binding const&) = delete;
-    shaders_binding& operator=(shaders_binding const&) = delete;
-
-    struct  binding_data_type
-    {
-        binding_data_type()
-            : m_id(0U)
-            , m_vertex_program_id(0U)
-            , m_fragment_program_id(0U)
-            , m_vertex_program_props()
-            , m_fragment_program_props()
-        {}
-
-        ~binding_data_type()
-        {
-            destroy_ID();
-        }
-
-        GLuint  id() const noexcept { return m_id; }
-        GLuint  vertex_program_id() const noexcept { return m_vertex_program_id; }
-        GLuint  fragment_program_id() const noexcept { return m_fragment_program_id; }
-
-        vertex_program_properties_ptr  vertex_program_props() const noexcept { return m_vertex_program_props; }
-        fragment_program_properties_ptr  fragment_program_props() const noexcept { return m_fragment_program_props; }
-
-        bool  reset(vertex_program_ptr const  vertex_program, fragment_program_ptr const  fragment_program);
-
-    private:
-        void  destroy_ID();
-
-        GLuint  m_id;
-        GLuint  m_vertex_program_id;
-        GLuint  m_fragment_program_id;
-        vertex_program_properties_ptr  m_vertex_program_props;
-        fragment_program_properties_ptr  m_fragment_program_props;
-    };
-
-    using  binding_data_ptr = std::unique_ptr<binding_data_type>;
-
-    boost::filesystem::path  m_vertex_shader_file;
-    boost::filesystem::path  m_fragment_shader_file;
-    vertex_program_properties_ptr  m_vertex_program_props;
-    fragment_program_properties_ptr  m_fragment_program_props;
-    vertex_program_ptr  m_vertex_program;
-    fragment_program_ptr  m_fragment_program;
-    binding_data_ptr  m_binding_data;
+    void  set_ready() { resource().set_ready(); }
+    void  create_gl_binding() { return resource().create_gl_binding(); }
+    void  destroy_gl_binding() { return resource().destroy_gl_binding(); }
 };
 
 
-void  insert_load_request(shaders_binding const&  binding);
-
-inline bool make_current(shaders_binding const&  binding)
-{ return binding.make_current(); }
+bool  make_current(shaders_binding const&  binding);
 
 
 }

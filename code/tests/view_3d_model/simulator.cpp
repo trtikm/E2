@@ -203,7 +203,7 @@ simulator::simulator(vector3 const&  initial_clear_colour)
                         }
                         );
 
-    m_grid_shaders_binding = qtgl::shaders_binding::create(
+    m_grid_shaders_binding = qtgl::shaders_binding(
                 canonical_path("../data/shared/gfx/shaders/vertex/vs_IpcUmOpcFc.a=1.txt"),
                 canonical_path("../data/shared/gfx/shaders/fragment/fs_IcFc.txt")
                 );
@@ -243,11 +243,11 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
         angeo::from_base_matrix(*m_grid_space,grid_world_transformation);
         matrix44 const  grid_transform_matrix = view_projection_matrix * grid_world_transformation;
 
-        if (qtgl::make_current(*m_grid_shaders_binding) && qtgl::make_current(m_grid_buffers_binding))
+        if (qtgl::make_current(m_grid_shaders_binding) && qtgl::make_current(m_grid_buffers_binding))
         {
             qtgl::make_current(*m_grid_draw_state, *draw_state);
 
-            qtgl::set_uniform_variable(m_grid_shaders_binding->uniform_variable_accessor(),
+            m_grid_shaders_binding.get_vertex_shader().set_uniform_variable(
                                        qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED,
                                        grid_transform_matrix);
             qtgl::draw();
@@ -264,7 +264,6 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
         for (qtgl::batch_ptr const  batch : m_batches)
             if (qtgl::make_current(*batch,*draw_state))
             {
-                INVARIANT(batch->shaders_binding().operator bool());
                 for (qtgl::vertex_shader_uniform_symbolic_name const  uniform : batch->symbolic_names_of_used_uniforms())
                     switch (uniform)
                     {
@@ -273,8 +272,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                         case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
                             break;
                         case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
-                            qtgl::set_uniform_variable(batch->shaders_binding()->uniform_variable_accessor(),
-                                                       uniform,batch_transform_matrix);
+                            batch->shaders_binding().get_vertex_shader().set_uniform_variable(uniform,batch_transform_matrix);
                             break;
                     }
 
