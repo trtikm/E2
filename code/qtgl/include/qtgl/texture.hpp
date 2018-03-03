@@ -16,6 +16,7 @@ namespace qtgl { namespace detail {
 struct texture_file_data
 {
     texture_file_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr);
+    ~texture_file_data();
 
     texture_file_data(
             async::finalise_load_on_destroy_ptr,
@@ -128,6 +129,8 @@ struct texture_image_data
             )
     { initialise(width, height, data_begin, data_end, pixel_components, pixel_components_type); }
 
+    ~texture_image_data();
+
     natural_32_bit  width() const { return m_width; }
     natural_32_bit  height() const { return m_height; }
     std::vector<natural_8_bit> const&  data() const { return *m_data; }
@@ -218,6 +221,7 @@ struct texture_data
     natural_32_bit  mag_filtering_type() const { return m_texture_props.mag_filtering_type(); }
 
     void  create_gl_image();
+    void  destroy_gl_image();
 
 private:
 
@@ -266,6 +270,7 @@ struct texture : public async::resource_accessor<detail::texture_data>
     natural_32_bit  mag_filtering_type() const { return resource().mag_filtering_type(); }
 
     void  create_gl_image() const { resource().create_gl_image(); }
+    void  destroy_gl_image() const { resource().destroy_gl_image(); }
 };
 
 
@@ -282,8 +287,8 @@ struct textures_binding
     explicit textures_binding(binding_map_type const&  bindings);
 
     binding_map_type const&  bindings_map() const { return m_bindings; }
-    bool  ready() const { return m_ready; }
 
+    bool  ready() const { return m_ready; }
     bool  make_current() const;
 
 private:

@@ -136,6 +136,13 @@ texture_file_data::texture_file_data(boost::filesystem::path const&  path, async
                 );
 }
 
+
+texture_file_data::~texture_file_data()
+{
+    TMPROF_BLOCK();
+}
+
+
 void  texture_file_data::initialise(
         boost::filesystem::path const&  image_pathname,
         natural_32_bit const  pixel_format,
@@ -228,6 +235,13 @@ texture_image_data::texture_image_data(boost::filesystem::path const&  path, asy
         GL_UNSIGNED_BYTE
         );
 }
+
+
+texture_image_data::~texture_image_data()
+{
+    TMPROF_BLOCK();
+}
+
 
 void  texture_image_data::initialise(
         natural_32_bit const  width,
@@ -347,10 +361,22 @@ void  texture_data::create_gl_image()
 }
 
 
+void  texture_data::destroy_gl_image()
+{
+    if (m_id == 0U)
+        return;
+
+    TMPROF_BLOCK();
+
+    glapi().glDeleteTextures(1U, &m_id);
+}
+
+
 texture_data::~texture_data()
 {
-    if (m_id != 0U)
-        glapi().glDeleteTextures(1U, &m_id);
+    TMPROF_BLOCK();
+
+    destroy_gl_image();
 }
 
 
