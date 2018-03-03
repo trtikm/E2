@@ -194,6 +194,8 @@ void  resource_holder_type::resource_loader(
         finalise_load_on_destroy_ptr const  load_finaliser
         )
 {
+    TMPROF_BLOCK();
+
     try
     {
         std::unique_ptr<resource_type> resource_ptr(new resource_type(key, load_finaliser));
@@ -214,6 +216,8 @@ void  resource_holder_type::resource_constructor(
         finalise_load_on_destroy_ptr const  load_finaliser,
         arg_types... args_for_constructor_of_the_resource)
 {
+    TMPROF_BLOCK();
+
     try
     {
         std::unique_ptr<resource_type> resource_ptr(
@@ -233,6 +237,8 @@ void  resource_holder_type::resource_constructor(
 template<typename resource_type>
 void  resource_holder_type::destroy_resource(pointer_to_resource_type const  resource_ptr)
 {
+    TMPROF_BLOCK();
+
     delete reinterpret_cast<resource_type*>(resource_ptr);
 }
 
@@ -245,16 +251,18 @@ struct  resource_cache  final
     static resource_cache&  instance();
 
     template<typename resource_type>
-    resources_cache_type::value_type*  insert_load_request(
+    void  insert_load_request(
             key_type const&  key,
             resource_load_priority_type const  priority,
-            notification_callback_type const&  parent_notification_callback
+            notification_callback_type const&  parent_notification_callback,
+            resources_cache_type::value_type*&  output
             );
 
     template<typename resource_type, typename... arg_types>
-    resources_cache_type::value_type*  insert_resource(
+    void  insert_resource(
             key_type  key,
             notification_callback_type const&  parent_notification_callback,
+            resources_cache_type::value_type*&  output,
             arg_types... args_for_constructor_of_the_resource
             );
 
@@ -290,87 +298,100 @@ private:
 
 
 template<typename resource_type>
-resources_cache_type::value_type*  resource_cache::insert_load_request(
+void  resource_cache::insert_load_request(
         key_type const&  key,
         resource_load_priority_type const  priority,
-        notification_callback_type const&  parent_notification_callback)
-{
-    TMPROF_BLOCK();
-
-    std::lock_guard<std::mutex> const  lock(mutex());
-    resources_cache_type::value_type* const  resource_ptr = find_resource(key);
-    if (resource_ptr != nullptr)
-    {
-        if (resource_ptr->second->get_load_state() == LOAD_STATE::IN_PROGRESS &&
-                parent_notification_callback.operator bool())
-            m_notification_callbacks[key].push_back(parent_notification_callback);
-        return resource_ptr;
-    }
-
-    auto const  iter_and_bool = m_cache.insert({
-            key,
-            resources_holder_unique_ptr(new resource_holder_type)
-            });
-    INVARIANT(iter_and_bool.second);
-
-    if (parent_notification_callback.operator bool())
-        m_notification_callbacks[key].push_back(parent_notification_callback);
-
-    resource_load_planner::instance().insert_load_request(
-            key,
-            std::bind(
-                &resource_holder_type::resource_loader<resource_type>,
-                key,
-                std::ref(*iter_and_bool.first->second),
-                finalise_load_on_destroy_ptr(new finalise_load_on_destroy(key))
-                ),
-            priority
-            );
-
-    return &*iter_and_bool.first;
-}
-
-
-template<typename resource_type, typename... arg_types>
-resources_cache_type::value_type*  resource_cache::insert_resource(
-        key_type  key,
         notification_callback_type const&  parent_notification_callback,
-        arg_types... args_for_constructor_of_the_resource
+        resources_cache_type::value_type*&  output
         )
 {
     TMPROF_BLOCK();
 
-    std::lock_guard<std::mutex> const  lock(mutex());
-    if (key.empty())
-        key = generate_fresh_key();
-    else
     {
+        std::lock_guard<std::mutex> const  lock(mutex());
         resources_cache_type::value_type* const  resource_ptr = find_resource(key);
         if (resource_ptr != nullptr)
         {
             if (resource_ptr->second->get_load_state() == LOAD_STATE::IN_PROGRESS &&
                     parent_notification_callback.operator bool())
                 m_notification_callbacks[key].push_back(parent_notification_callback);
-            return resource_ptr;
+            output = resource_ptr;
+            output->second->inc_ref_count();
+            return;
         }
+
+        auto const  iter_and_bool = m_cache.insert({
+                key,
+                resources_holder_unique_ptr(new resource_holder_type)
+                });
+        INVARIANT(iter_and_bool.second);
+
+        if (parent_notification_callback.operator bool())
+            m_notification_callbacks[key].push_back(parent_notification_callback);
+
+        output = &*iter_and_bool.first;
+        output->second->inc_ref_count();
     }
 
-    auto const  iter_and_bool = m_cache.insert({
+    resource_load_planner::instance().insert_load_request(
+        key,
+        std::bind(
+            &resource_holder_type::resource_loader<resource_type>,
             key,
-            resources_holder_unique_ptr(new resource_holder_type)
-            });
-    INVARIANT(iter_and_bool.second);
+            std::ref(*output->second),
+            finalise_load_on_destroy_ptr(new finalise_load_on_destroy(key))
+            ),
+        priority
+        );
+}
 
-    if (parent_notification_callback.operator bool())
-        m_notification_callbacks[key].push_back(parent_notification_callback);
+
+template<typename resource_type, typename... arg_types>
+void  resource_cache::insert_resource(
+        key_type  key,
+        notification_callback_type const&  parent_notification_callback,
+        resources_cache_type::value_type*&  output,
+        arg_types... args_for_constructor_of_the_resource
+        )
+{
+    TMPROF_BLOCK();
+
+    {
+        std::lock_guard<std::mutex> const  lock(mutex());
+        if (key.empty())
+            key = generate_fresh_key();
+        else
+        {
+            resources_cache_type::value_type* const  resource_ptr = find_resource(key);
+            if (resource_ptr != nullptr)
+            {
+                if (resource_ptr->second->get_load_state() == LOAD_STATE::IN_PROGRESS &&
+                        parent_notification_callback.operator bool())
+                    m_notification_callbacks[key].push_back(parent_notification_callback);
+                output = resource_ptr;
+                output->second->inc_ref_count();
+                return;
+            }
+        }
+
+        auto const  iter_and_bool = m_cache.insert({
+                key,
+                resources_holder_unique_ptr(new resource_holder_type)
+                });
+        INVARIANT(iter_and_bool.second);
+
+        if (parent_notification_callback.operator bool())
+            m_notification_callbacks[key].push_back(parent_notification_callback);
+
+        output = &*iter_and_bool.first;
+        output->second->inc_ref_count();
+    }
 
     resource_holder_type::resource_constructor<resource_type>(
-            *iter_and_bool.first->second,
-            finalise_load_on_destroy_ptr(new finalise_load_on_destroy(key)),
-            args_for_constructor_of_the_resource...
-            );
-
-    return &*iter_and_bool.first;
+        *output->second,
+        finalise_load_on_destroy_ptr(new finalise_load_on_destroy(key)),
+        args_for_constructor_of_the_resource...
+        );
 }
 
 
@@ -438,12 +459,12 @@ struct  resource_accessor
             )
     {
         ASSUMPTION(m_data_ptr == nullptr);
-        m_data_ptr = detail::resource_cache::instance().insert_load_request<resource_type>(
+        detail::resource_cache::instance().insert_load_request<resource_type>(
                             key,
                             priority,
-                            notification_callback
+                            notification_callback,
+                            m_data_ptr
                             );
-        m_data_ptr->second->inc_ref_count();
         if (m_data_ptr->second->get_load_state() != LOAD_STATE::IN_PROGRESS && notification_callback.operator bool())
             notification_callback();
     }
@@ -467,12 +488,12 @@ struct  resource_accessor
             )
     {
         ASSUMPTION(m_data_ptr == nullptr);
-        m_data_ptr = detail::resource_cache::instance().insert_resource<resource_type>(
+        detail::resource_cache::instance().insert_resource<resource_type>(
                             key,
                             notification_callback,
+                            m_data_ptr,
                             args_for_constructor_of_the_resource...
                             );
-        m_data_ptr->second->inc_ref_count();
         if (m_data_ptr->second->get_load_state() != LOAD_STATE::IN_PROGRESS && notification_callback.operator bool())
             notification_callback();
     }
