@@ -88,6 +88,12 @@ modelspace_data::modelspace_data(boost::filesystem::path const&  pathname, async
 }
 
 
+modelspace_data::~modelspace_data()
+{
+    TMPROF_BLOCK();
+}
+
+
 }}
 
 namespace qtgl {

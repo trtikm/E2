@@ -13,6 +13,7 @@ namespace qtgl { namespace detail {
 struct  modelspace_data
 {
     modelspace_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr);
+    ~modelspace_data();
 
     std::vector<angeo::coordinate_system> const&  coord_systems() const { return m_coord_systems; }
 
