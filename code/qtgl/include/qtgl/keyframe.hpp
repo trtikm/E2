@@ -15,6 +15,7 @@ namespace qtgl { namespace detail {
 struct  keyframe_data
 {
     keyframe_data(boost::filesystem::path const&  pathname, async::finalise_load_on_destroy_ptr);
+    ~keyframe_data();
 
     float_32_bit  time_point() const { return m_time_point; }
     std::vector<angeo::coordinate_system> const&  coord_systems() const { return m_coord_systems; }
@@ -56,6 +57,7 @@ namespace qtgl { namespace detail {
 struct  keyframes_data
 {
     keyframes_data(boost::filesystem::path const&  pathname, async::finalise_load_on_destroy_ptr  finaliser);
+    ~keyframes_data();
 
     std::vector<keyframe> const&  keyframes() const { return m_keyframes; }
 

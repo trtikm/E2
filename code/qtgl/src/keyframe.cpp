@@ -99,6 +99,17 @@ keyframe_data::keyframe_data(boost::filesystem::path const&  pathname, async::fi
 }
 
 
+keyframe_data::~keyframe_data()
+{
+    TMPROF_BLOCK();
+}
+
+
+}}
+
+namespace qtgl { namespace detail {
+
+
 keyframes_data::keyframes_data(
         boost::filesystem::path const&  keyframes_dir,
         async::finalise_load_on_destroy_ptr  finaliser)
@@ -200,6 +211,12 @@ keyframes_data::keyframes_data(
             1UL,
             std::bind(&local::on_keyframe_loaded, keyframe_pathnames, 0UL, finaliser, std::ref(m_keyframes))
             );
+}
+
+
+keyframes_data::~keyframes_data()
+{
+    TMPROF_BLOCK();
 }
 
 
