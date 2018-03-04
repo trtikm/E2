@@ -12,7 +12,12 @@ resource_load_planner&  resource_load_planner::instance()
 
 resource_load_planner::~resource_load_planner()
 {
-    clear();
+    assert(m_worker_finished == true);
+    assert(m_resource_just_being_loaded.empty());
+    assert(m_queue.empty());
+
+    if (m_worker_thread.joinable()) // This must be here, because although the worker can be terminated
+        m_worker_thread.join();     // we still need to join with it.
 }
 
 
@@ -180,6 +185,8 @@ resources_cache_type::value_type*  resource_cache::find_resource(key_type const&
 
 void  resource_cache::finalise_load(key_type const&  key, std::string const&  force_error_message)
 {
+    TMPROF_BLOCK();
+
     {
         std::lock_guard<std::mutex> const  lock(mutex());
         resources_cache_type::value_type* const  resource_ptr = find_resource(key);
@@ -193,6 +200,8 @@ void  resource_cache::finalise_load(key_type const&  key, std::string const&  fo
 
 void  resource_cache::process_notification_callbacks(key_type const&  key)
 {
+    TMPROF_BLOCK();
+
     std::vector<notification_callback_type>  to_process;
     {
         std::lock_guard<std::mutex> const  lock(mutex());
@@ -200,7 +209,7 @@ void  resource_cache::process_notification_callbacks(key_type const&  key)
         if (it != m_notification_callbacks.end())
         {
             to_process = it->second;
-            it->second.clear();
+            m_notification_callbacks.erase(it);
         }
     }
     for (auto const&  callback : to_process)
@@ -214,6 +223,13 @@ natural_64_bit  resource_cache::s_fresh_key_id = 0ULL;
 key_type  resource_cache::generate_fresh_key()
 {
     return msgstream() << "@generic> " << ++s_fresh_key_id;
+}
+
+
+resource_cache::~resource_cache()
+{
+    assert(m_cache.empty());
+    assert(m_notification_callbacks.empty());
 }
 
 

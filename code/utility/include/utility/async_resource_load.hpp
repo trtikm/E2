@@ -285,7 +285,7 @@ private:
     resource_cache& operator=(resource_cache const&) = delete;
     resource_cache(resource_cache&&) = delete;
 
-    ~resource_cache() = default;
+    ~resource_cache();
 
     static key_type  generate_fresh_key();
 
@@ -412,10 +412,7 @@ void  resource_cache::erase_resource(key_type const&  key)
         ASSUMPTION(it->second->ref_count() == 0UL);
         destroy_resource_ptr = it->second->resource_ptr();
 
-        auto const  callbacks_it = m_notification_callbacks.find(key);
-        if (callbacks_it != m_notification_callbacks.end())
-            callbacks_it->second.clear();
-
+        m_notification_callbacks.erase(key);
         m_cache.erase(it);
     }
     if (destroy_resource_ptr != nullptr)
