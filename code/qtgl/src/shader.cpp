@@ -772,7 +772,7 @@ std::string  vertex_shader_data::create_gl_shader()
 
 void  vertex_shader_data::destroy_gl_shader()
 {
-    if (id() != 0U)
+    if (id() == 0U)
         return;
 
     TMPROF_BLOCK();
@@ -867,7 +867,7 @@ std::string  fragment_shader_data::create_gl_shader()
 
 void  fragment_shader_data::destroy_gl_shader()
 {
-    if (id() != 0U)
+    if (id() == 0U)
         return;
 
     TMPROF_BLOCK();
@@ -941,7 +941,8 @@ shaders_binding_data::shaders_binding_data(
             finaliser,
             vertex_shader_path,
             fragment_shader_path,
-            std::shared_ptr<bool>(new bool(false))
+            std::shared_ptr<bool>(new bool(false))  // See comment in shaders_binding_data::on_shaders_load_finished
+                                                    // to see why we need this shared variable.
             );
 
     m_vertex_shader.insert_load_request(vertex_shader_path.string(), 1UL, on_shaders_load_finished);
@@ -988,6 +989,12 @@ void  shaders_binding_data::on_shaders_load_finished(
 {
     TMPROF_BLOCK();
 
+    // The load is finished when both vertex and fragment shaders are loaded.
+    // Due to async load, any of the two can finish first. So, we have boolean
+    // shared variable 'visited', which tells us whether we already processed
+    // the first of the two shaders. Namely, for the first shader we only mark
+    // the variable and terminate (i.e. we wait till the second is loaded).
+    // And we do the proper load-finishing-work once the second shader is loaded.
     if (!*visited)
     {
         *visited = true;
