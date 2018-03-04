@@ -27,7 +27,7 @@ struct  dbg_frustum_sector_enumeration
 private:
     bool  m_enabled;
     bool  m_invalidated;
-    std::vector< std::pair<vector3,qtgl::batch_ptr> >  m_batches;
+    std::vector< std::pair<vector3,qtgl::batch> >  m_batches;
 };
 
 

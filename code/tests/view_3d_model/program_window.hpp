@@ -81,7 +81,7 @@ private:
     void  timerEvent(QTimerEvent* const event);
     void  closeEvent(QCloseEvent* const  event);
 
-    void  on_batch_process_newly_inserted();
+    //void  on_batch_process_newly_inserted();
 
     Q_OBJECT
 

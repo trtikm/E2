@@ -99,13 +99,13 @@ private:
     qtgl::camera_perspective_ptr  m_camera;
     qtgl::free_fly_config  m_free_fly_config;
 
-    qtgl::batch_ptr  m_batch_grid;
-    qtgl::batch_ptr  m_batch_cell;
-    qtgl::batch_ptr  m_batch_input_spot;
-    qtgl::batch_ptr  m_batch_output_terminal;
+    qtgl::batch  m_batch_grid;
+    qtgl::batch  m_batch_cell;
+    qtgl::batch  m_batch_input_spot;
+    qtgl::batch  m_batch_output_terminal;
 
-    qtgl::batch_ptr  m_selected_cell_input_spot_lines;
-    qtgl::batch_ptr  m_selected_cell_output_terminal_lines;
+    qtgl::batch  m_selected_cell_input_spot_lines;
+    qtgl::batch  m_selected_cell_output_terminal_lines;
 };
 
 namespace notifications {

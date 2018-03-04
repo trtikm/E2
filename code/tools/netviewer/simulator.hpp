@@ -129,7 +129,7 @@ private:
     /// Network independed data providing feedback loop between a human user and 3D scene in the tool
     qtgl::camera_perspective_ptr  m_camera;
     qtgl::free_fly_config  m_free_fly_config;
-    qtgl::batch_ptr  m_batch_grid;
+    qtgl::batch  m_batch_grid;
     bool  m_do_show_grid;
 
     /// THE NETWORK!
@@ -147,19 +147,19 @@ private:
     std::shared_ptr<netlab::tracked_network_object_stats>  m_selected_object_stats;
 
     /// Data for rendering of entities in the network and selection related stuff
-    qtgl::batch_ptr  m_batch_spiker;
-    qtgl::batch_ptr  m_batch_dock;
-    qtgl::batch_ptr  m_batch_ship;
+    qtgl::batch  m_batch_spiker;
+    qtgl::batch  m_batch_dock;
+    qtgl::batch  m_batch_ship;
 
-    qtgl::batch_ptr  m_batch_spiker_bbox;
-    qtgl::batch_ptr  m_batch_dock_bbox;
-    qtgl::batch_ptr  m_batch_ship_bbox;
+    qtgl::batch  m_batch_spiker_bbox;
+    qtgl::batch  m_batch_dock_bbox;
+    qtgl::batch  m_batch_ship_bbox;
 
-    qtgl::batch_ptr  m_batch_spiker_bsphere;
-    qtgl::batch_ptr  m_batch_dock_bsphere;
-    qtgl::batch_ptr  m_batch_ship_bsphere;
+    qtgl::batch  m_batch_spiker_bsphere;
+    qtgl::batch  m_batch_dock_bsphere;
+    qtgl::batch  m_batch_ship_bsphere;
 
-    std::vector<qtgl::batch_ptr>  m_batches_selection;
+    std::vector<qtgl::batch>  m_batches_selection;
 
     bool m_render_only_chosen_layer;
     netlab::layer_index_type  m_layer_index_of_chosen_layer_to_render;

@@ -50,13 +50,13 @@ scene_node::scene_node(
     ASSUMPTION(!m_name.empty());
 }
 
-qtgl::batch_ptr  scene_node::get_batch(std::string const&  name) const
+qtgl::batch  scene_node::get_batch(std::string const&  name) const
 {
     auto const  it = get_batches().find(name);
-    return it == get_batches().cend() ? nullptr : it->second;
+    return it == get_batches().cend() ? qtgl::batch() : it->second;
 }
 
-void  scene_node::insert_batches(std::unordered_map<std::string, qtgl::batch_ptr> const&  batches)
+void  scene_node::insert_batches(std::unordered_map<std::string, qtgl::batch> const&  batches)
 {
     TMPROF_BLOCK();
 

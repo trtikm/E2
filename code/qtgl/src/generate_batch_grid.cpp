@@ -8,7 +8,7 @@
 namespace qtgl {
 
 
-batch_ptr  create_grid(
+batch  create_grid(
         float_32_bit const  max_x_coordinate,
         float_32_bit const  max_y_coordinate,
         float_32_bit const  max_z_coordinate,
@@ -49,8 +49,8 @@ batch_ptr  create_grid(
             grid_vertex_buffer,
             grid_colour_buffer
             );
-    batch_ptr const  pbatch = batch::create(
-            "generic/batch/grid/" + id, // id.empty() ? id : "generic/batch/grid/" + id,
+    batch const  pbatch = batch(
+            id.empty() ? id : "generic/batch/grid/" + id,
             qtgl::buffers_binding(
                 0U,
                 2U,
@@ -65,7 +65,7 @@ batch_ptr  create_grid(
                 canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt"),
                 id.empty() ? id : "/generic/shaders_binding/grid/" + id
                 ),
-            qtgl::textures_binding(true),
+            qtgl::textures_binding(),
             qtgl::draw_state::create(),
             modelspace()
             );

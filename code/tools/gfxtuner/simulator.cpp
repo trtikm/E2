@@ -203,10 +203,10 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
     qtgl::draw_state_ptr  draw_state;
     if (m_do_show_grid)
-        if (qtgl::make_current(*m_batch_grid, draw_state))
+        if (qtgl::make_current(m_batch_grid, *draw_state))
         {
-            render_batch(*m_batch_grid,view_projection_matrix);
-            draw_state = m_batch_grid->draw_state();
+            render_batch(m_batch_grid,view_projection_matrix);
+            draw_state = m_batch_grid.get_draw_state();
         }
 
     render_simulation_state(view_projection_matrix,draw_state);
@@ -523,20 +523,20 @@ void  simulator::render_scene_batches(matrix44 const&  view_projection_matrix, q
 {
     TMPROF_BLOCK();
 
-    std::unordered_map<std::string, std::vector<std::pair<qtgl::batch_ptr,scene_node_const_ptr> > >
+    std::unordered_map<std::string, std::vector<std::pair<qtgl::batch,scene_node_const_ptr> > >
             batches;
     for (auto const& name_node : get_scene().get_all_scene_nodes())
         for (auto const& name_batch : name_node.second->get_batches())
-            batches[name_batch.second->path().string()].push_back({name_batch.second, name_node.second});
+            batches[name_batch.second.key()].push_back({name_batch.second, name_node.second});
     for (auto const& path_and_pairs : batches)
-        if (qtgl::make_current(*path_and_pairs.second.front().first, draw_state))
+        if (qtgl::make_current(path_and_pairs.second.front().first, *draw_state))
         {
             for (auto const& batch_and_node : path_and_pairs.second)
                 qtgl::render_batch(
-                        *batch_and_node.first,
+                        batch_and_node.first,
                         view_projection_matrix * batch_and_node.second->get_world_matrix()
                         );
-            draw_state = path_and_pairs.second.front().first->draw_state();
+            draw_state = path_and_pairs.second.front().first.get_draw_state();
         }
 }
 
@@ -547,7 +547,7 @@ void  simulator::render_scene_coord_systems(
 {
     TMPROF_BLOCK();
 
-    if (m_batch_coord_system == nullptr || !qtgl::make_current(*m_batch_coord_system, draw_state))
+    if (!qtgl::make_current(m_batch_coord_system, *draw_state))
         return;
 
     //auto const  old_depth_test_state = qtgl::glapi().glIsEnabled(GL_DEPTH_TEST);
@@ -559,14 +559,14 @@ void  simulator::render_scene_coord_systems(
         nodes_to_draw.insert(get_pivot_node_name());
     for (auto const& node_name : nodes_to_draw)
         qtgl::render_batch(
-            *m_batch_coord_system,
+            m_batch_coord_system,
             view_projection_matrix * get_scene().get_scene_node(node_name)->get_world_matrix()
             );
 
     //if (old_depth_test_state)
     //    qtgl::glapi().glEnable(GL_DEPTH_TEST);
 
-    draw_state = m_batch_coord_system->draw_state();
+    draw_state = m_batch_coord_system.get_draw_state();
 }
 
 void  simulator::erase_scene_node(std::string const&  name)
@@ -587,8 +587,7 @@ void  simulator::insert_batch_to_scene_node(std::string const&  batch_name, boos
     TMPROF_BLOCK();
 
     ASSUMPTION(get_scene().has_scene_node(scene_node_name));
-    auto const  batch = qtgl::batch::create(canonical_path(batch_pathname));
-    ASSUMPTION(batch != nullptr);
+    auto const  batch = qtgl::batch(canonical_path(batch_pathname));
     get_scene_node(scene_node_name)->insert_batches({ { batch_name, batch } });
 }
 

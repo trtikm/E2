@@ -1,6 +1,4 @@
 #include <qtgl/detail/window.hpp>
-#include <qtgl/detail/resource_loader.hpp>
-#include <qtgl/detail/batch_cache.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <angeo/tensor_math.hpp>
 #include <utility/invariants.hpp>
@@ -22,18 +20,6 @@ namespace qtgl { namespace detail { namespace {
 natural_32_bit  s_windows_counter = 0U;
 std::mutex  s_windows_counter_mutex;
 
-void  initialise_caches()
-{
-    detail::resource_loader::instance();
-    detail::batch_cache::instance();
-}
-
-void  clear_caches()
-{
-    detail::resource_loader::instance().clear();
-    detail::batch_cache::instance().clear();
-}
-
 void  on_window_create()
 {
     std::lock_guard<std::mutex> const  lock(s_windows_counter_mutex);
@@ -46,8 +32,6 @@ void  on_window_destroy()
     std::lock_guard<std::mutex> const  lock(s_windows_counter_mutex);
     ASSUMPTION(s_windows_counter > 0U);
     --s_windows_counter;
-    if (s_windows_counter == 0U)
-        clear_caches();
 }
 
 
@@ -386,8 +370,6 @@ void window::render_now(bool const  is_this_pure_redraw_request)
         glapi().glDisable(GL_BLEND);
         glapi().glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
         glapi().glDepthRangef(0.0f,1.0f);
-
-        initialise_caches();
 
         INVARIANT(!m_simulator.operator bool());
         m_simulator = m_create_simulator_fn();

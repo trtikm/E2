@@ -39,11 +39,11 @@ struct scene_node
     bool  has_parent() const { return !m_parent.expired(); }
     scene_node_ptr  get_parent() const { return m_parent.lock(); }
 
-    std::unordered_map<std::string, qtgl::batch_ptr> const&  get_batches() const { return m_batches; }
+    std::unordered_map<std::string, qtgl::batch> const&  get_batches() const { return m_batches; }
     bool  has_batch(std::string const&  name) const { return get_batches().count(name) != 0U; }
-    qtgl::batch_ptr  get_batch(std::string const&  name) const;
+    qtgl::batch  get_batch(std::string const&  name) const;
 
-    void  insert_batches(std::unordered_map<std::string, qtgl::batch_ptr> const&  batches);
+    void  insert_batches(std::unordered_map<std::string, qtgl::batch> const&  batches);
     void  erase_batches(std::unordered_set<std::string> const&  names_of_batches);
 
     angeo::coordinate_system_const_ptr  get_coord_system() const { return m_coord_system; }
@@ -65,7 +65,7 @@ private:
 
     std::string  m_name;
     angeo::coordinate_system_ptr  m_coord_system;
-    std::unordered_map<std::string, qtgl::batch_ptr>  m_batches;
+    std::unordered_map<std::string, qtgl::batch>  m_batches;
     std::unordered_map<std::string, scene_node_ptr>  m_children;
     std::weak_ptr<scene_node>  m_parent;
     mutable matrix44  m_world_matrix;

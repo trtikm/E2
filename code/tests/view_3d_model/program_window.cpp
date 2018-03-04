@@ -769,7 +769,7 @@ void program_window::timerEvent(QTimerEvent* const event)
     if (event->timerId() != m_idleTimerId)
         return;
 
-    on_batch_process_newly_inserted();
+    //on_batch_process_newly_inserted();
 }
 
 void  program_window::closeEvent(QCloseEvent* const  event)
@@ -1008,65 +1008,65 @@ void  program_window::on_batch_remove()
     m_batches_list->sort(0);
 }
 
-void  program_window::on_batch_process_newly_inserted()
-{
-    if (m_new_batches_chache.empty())
-        return;
-
-    qtgl::make_current_window_guard const  guard(m_glwindow.make_me_current());
-
-    std::vector<boost::filesystem::path>  successes;
-    std::vector<boost::filesystem::path>  failures;
-    for (natural_64_bit  i = 0U; i < m_new_batches_chache.size(); )
-    {
-        auto const  state = qtgl::get_batch_chache_state(m_new_batches_chache.at(i));
-        INVARIANT(!state.first || !state.second);
-
-        if (state.first)
-        {
-            successes.push_back(m_new_batches_chache.at(i));
-            std::swap(m_new_batches_chache.at(i),m_new_batches_chache.back());
-            m_new_batches_chache.pop_back();
-        }
-        else if (state.second)
-        {
-            failures.push_back(m_new_batches_chache.at(i));
-            std::swap(m_new_batches_chache.at(i),m_new_batches_chache.back());
-            m_new_batches_chache.pop_back();
-        }
-        else
-            ++i;
-    }
-
-    QDir const  dir(batches_root_dir().string().c_str());
-
-    if (!successes.empty())
-    {
-        QStringList  paths = m_batches_list->stringList();
-        for (auto const&  path : successes)
-        {
-            QString const  relative_pathname = dir.relativeFilePath(path.string().c_str());
-            if (!paths.contains(relative_pathname))
-                paths.push_back(relative_pathname);
-        }
-        m_batches_list->setStringList(paths);
-        m_batches_list->sort(0);
-    }
-
-    if (!failures.empty())
-    {
-        std::vector< std::pair<boost::filesystem::path,std::string> >  failed;
-        qtgl::get_failed_batches(failed);
-        QStringList  paths;
-        for (auto const&  path_error : failed)
-        {
-            QString const  relative_pathname = dir.relativeFilePath(path_error.first.string().c_str());
-            paths.push_back(relative_pathname + QString(" : ") + QString(path_error.second.c_str()));
-        }
-        m_batches_failed_list->setStringList(paths);
-        m_batches_failed_list->sort(0);
-    }
-}
+//void  program_window::on_batch_process_newly_inserted()
+//{
+//    if (m_new_batches_chache.empty())
+//        return;
+//
+//    qtgl::make_current_window_guard const  guard(m_glwindow.make_me_current());
+//
+//    std::vector<boost::filesystem::path>  successes;
+//    std::vector<boost::filesystem::path>  failures;
+//    for (natural_64_bit  i = 0U; i < m_new_batches_chache.size(); )
+//    {
+//        auto const  state = qtgl::get_batch_chache_state(m_new_batches_chache.at(i));
+//        INVARIANT(!state.first || !state.second);
+//
+//        if (state.first)
+//        {
+//            successes.push_back(m_new_batches_chache.at(i));
+//            std::swap(m_new_batches_chache.at(i),m_new_batches_chache.back());
+//            m_new_batches_chache.pop_back();
+//        }
+//        else if (state.second)
+//        {
+//            failures.push_back(m_new_batches_chache.at(i));
+//            std::swap(m_new_batches_chache.at(i),m_new_batches_chache.back());
+//            m_new_batches_chache.pop_back();
+//        }
+//        else
+//            ++i;
+//    }
+//
+//    QDir const  dir(batches_root_dir().string().c_str());
+//
+//    if (!successes.empty())
+//    {
+//        QStringList  paths = m_batches_list->stringList();
+//        for (auto const&  path : successes)
+//        {
+//            QString const  relative_pathname = dir.relativeFilePath(path.string().c_str());
+//            if (!paths.contains(relative_pathname))
+//                paths.push_back(relative_pathname);
+//        }
+//        m_batches_list->setStringList(paths);
+//        m_batches_list->sort(0);
+//    }
+//
+//    if (!failures.empty())
+//    {
+//        std::vector< std::pair<boost::filesystem::path,std::string> >  failed;
+//        qtgl::get_failed_batches(failed);
+//        QStringList  paths;
+//        for (auto const&  path_error : failed)
+//        {
+//            QString const  relative_pathname = dir.relativeFilePath(path_error.first.string().c_str());
+//            paths.push_back(relative_pathname + QString(" : ") + QString(path_error.second.c_str()));
+//        }
+//        m_batches_failed_list->setStringList(paths);
+//        m_batches_failed_list->sort(0);
+//    }
+//}
 
 
 void  program_window::on_buffers_root_dir_changed()

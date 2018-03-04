@@ -89,10 +89,6 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/qtgl/detail/window.hpp
     ./src/detail/window.cpp
-    ./include/qtgl/detail/batch_cache.hpp
-    ./src/detail/batch_cache.cpp
-    ./include/qtgl/detail/resource_loader.hpp
-    ./src/detail/resource_loader.cpp
     ./include/qtgl/detail/read_line.hpp
     ./src/detail/read_line.cpp
     )

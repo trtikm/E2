@@ -261,10 +261,10 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
         angeo::from_base_matrix(*m_batch_space, batch_world_transformation);
         matrix44 const  batch_transform_matrix = view_projection_matrix * batch_world_transformation;
 
-        for (qtgl::batch_ptr const  batch : m_batches)
-            if (qtgl::make_current(*batch,*draw_state))
+        for (qtgl::batch const  batch : m_batches)
+            if (qtgl::make_current(batch,*draw_state))
             {
-                for (qtgl::vertex_shader_uniform_symbolic_name const  uniform : batch->symbolic_names_of_used_uniforms())
+                for (qtgl::vertex_shader_uniform_symbolic_name const  uniform : batch.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                     switch (uniform)
                     {
                         case qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
@@ -272,13 +272,13 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                         case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
                             break;
                         case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
-                            batch->shaders_binding().get_vertex_shader().set_uniform_variable(uniform,batch_transform_matrix);
+                            batch.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform,batch_transform_matrix);
                             break;
                     }
 
                 qtgl::draw();
 
-                draw_state = batch->draw_state();
+                draw_state = batch.get_draw_state();
             }
     }
 
@@ -287,15 +287,16 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
 
 void  simulator::insert_batch(boost::filesystem::path const&  batch_pathname)
 {
-    qtgl::batch_ptr const  ptr = qtgl::batch::create(batch_pathname);
-    if (std::find(m_batches.cbegin(),m_batches.cend(),ptr) == m_batches.cend())
-        m_batches.push_back(ptr);
+    if (std::find_if(m_batches.cbegin(),m_batches.cend(),
+                     [&batch_pathname](qtgl::batch const  ptr) { return ptr.key() == batch_pathname; })
+            == m_batches.cend())
+        m_batches.push_back(qtgl::batch(batch_pathname));
 }
 
 void  simulator::erase_batch(boost::filesystem::path const&  batch_pathname)
 {
     auto const  it = std::remove_if(m_batches.begin(),m_batches.end(),
-                                    [&batch_pathname](qtgl::batch_ptr const  ptr){ return ptr->path() == batch_pathname; });
+                                    [&batch_pathname](qtgl::batch const  ptr){ return ptr.key() == batch_pathname; });
     if (it != m_batches.cend())
         m_batches.erase(it);
 }

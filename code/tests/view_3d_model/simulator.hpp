@@ -41,7 +41,7 @@ private:
     qtgl::draw_state_ptr  m_grid_draw_state;
 
     angeo::coordinate_system_ptr  m_batch_space;
-    std::vector<qtgl::batch_ptr>  m_batches;
+    std::vector<qtgl::batch>  m_batches;
 };
 
 typedef std::shared_ptr<simulator>  simulator_ptr;

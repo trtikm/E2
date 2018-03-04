@@ -7,7 +7,7 @@
 namespace qtgl {
 
 
-batch_ptr  create_wireframe_perspective_frustum(
+batch  create_wireframe_perspective_frustum(
         float_32_bit const  near_plane,
         float_32_bit const  far_plane,
         float_32_bit const  left_plane,
@@ -32,7 +32,7 @@ batch_ptr  create_wireframe_perspective_frustum(
             id
             );
 
-    batch_ptr const  pbatch = batch::create(
+    batch const  pbatch = batch(
         id.empty() ? id : "/generic/batch/perspective_frustum/" + id,
         qtgl::buffers_binding(
             0U,
@@ -47,7 +47,7 @@ batch_ptr  create_wireframe_perspective_frustum(
             canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt"),
             id.empty() ? id : "/generic/shaders_binding/perspective_frustum/" + id
             ),
-        qtgl::textures_binding(true),
+        qtgl::textures_binding(),
         qtgl::draw_state::create(),
         modelspace()
         );

@@ -8,7 +8,7 @@
 namespace qtgl {
 
 
-batch_ptr  create_lines3d(
+batch  create_lines3d(
         std::vector< std::array<float_32_bit, 3> >  vertices,
         std::vector< std::array<float_32_bit, 3> >  colours,
         boost::filesystem::path const&  data_root_dir,
@@ -20,7 +20,7 @@ batch_ptr  create_lines3d(
     ASSUMPTION(!vertices.empty() && vertices.size() % 2ULL == 0ULL);
     ASSUMPTION(vertices.size() == colours.size());
 
-    batch_ptr const  pbatch = batch::create(
+    batch const  pbatch = batch(
         id.empty() ? id : "/generic/batch/lines3d_with_colours/" + id,
         qtgl::buffers_binding(
             0U,
@@ -38,14 +38,14 @@ batch_ptr  create_lines3d(
             canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt"),
             id.empty() ? id : "/generic/shaders_binding/lines3d_with_colours/" + id
             ),
-        qtgl::textures_binding(true),
+        qtgl::textures_binding(),
         qtgl::draw_state::create(),
         modelspace()
         );
     return pbatch;
 }
 
-batch_ptr  create_lines3d(
+batch  create_lines3d(
     std::vector< std::pair<vector3, vector3> > const&  lines,
     vector3 const&  common_colour,
     boost::filesystem::path const&  data_root_dir,

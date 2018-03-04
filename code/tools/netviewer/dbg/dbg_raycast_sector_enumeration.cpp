@@ -18,10 +18,10 @@ void  enumerate_sectors(
         float_32_bit const  sector_size_x,
         float_32_bit const  sector_size_y,
         float_32_bit const  sector_size_c,
-        std::vector< std::pair<vector3,qtgl::batch_ptr> >&  batches
+        std::vector< std::pair<vector3,qtgl::batch> >&  batches
         )
 {
-    qtgl::batch_ptr const  batch =
+    qtgl::batch const  batch =
             qtgl::create_wireframe_box(
                     -0.5f * vector3{ sector_size_x, sector_size_y, sector_size_c },
                     +0.5f * vector3{ sector_size_x, sector_size_y, sector_size_c },
@@ -67,7 +67,7 @@ dbg_raycast_sector_enumeration::dbg_raycast_sector_enumeration()
 void  dbg_raycast_sector_enumeration::disable()
 {
     m_enabled = false;
-    m_batch_line.reset();
+    m_batch_line.release();
     m_batches.clear();
 }
 
@@ -121,23 +121,23 @@ void  dbg_raycast_sector_enumeration::render(matrix44 const&  view_projection_ma
     if (!is_enabled())
         return;
 
-    if (m_batch_line.operator bool())
-        if (qtgl::make_current(*m_batch_line, *draw_state))
+    if (!m_batch_line.empty())
+        if (qtgl::make_current(m_batch_line, *draw_state))
         {
-            qtgl::render_batch(*m_batch_line,view_projection_matrix);
-            draw_state = m_batch_line->draw_state();
+            qtgl::render_batch(m_batch_line,view_projection_matrix);
+            draw_state = m_batch_line.get_draw_state();
         }
 
     for (auto const&  pos_batch : m_batches)
-        if (qtgl::make_current(*pos_batch.second, *draw_state))
+        if (qtgl::make_current(pos_batch.second, *draw_state))
         {
             qtgl::render_batch(
-                *pos_batch.second,
+                pos_batch.second,
                 view_projection_matrix,
                 angeo::coordinate_system(pos_batch.first,quaternion_identity()),
                 vector4(0.5f, 0.5f, 0.5f, 1.0f)
                 );
 
-            draw_state = pos_batch.second->draw_state();
+            draw_state = pos_batch.second.get_draw_state();
         }
 }

@@ -1,6 +1,4 @@
 #include <qtgl/shader.hpp>
-//#include <qtgl/detail/vertex_program_cache.hpp>
-//#include <qtgl/detail/fragment_program_cache.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -1043,9 +1041,12 @@ void  shaders_binding_data::initialise(
 namespace qtgl {
 
 
-bool  shaders_binding::make_current() const
+bool  shaders_binding::ready() const
 {
-    if (!ready())
+    if (!loaded_successfully())
+        return false;
+
+    if (!resource().ready())
     {
         if (!get_vertex_shader().loaded_successfully() || !get_fragment_shader().loaded_successfully())
             return false;
@@ -1062,8 +1063,19 @@ bool  shaders_binding::make_current() const
 
         mutable_this->set_ready();
     }
-    else
-        glapi().glBindProgramPipeline(id());
+
+    return true;
+}
+
+
+bool  shaders_binding::make_current() const
+{
+    TMPROF_BLOCK();
+
+    if (!ready())
+        return false;
+
+    glapi().glBindProgramPipeline(id());
 
     return true;
 }

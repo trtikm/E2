@@ -7,7 +7,7 @@
 namespace qtgl {
 
 
-batch_ptr  create_wireframe_box(
+batch  create_wireframe_box(
         vector3 const&  lo_corner,
         vector3 const&  hi_corner,
         boost::filesystem::path const&  data_root_dir,
@@ -19,7 +19,7 @@ batch_ptr  create_wireframe_box(
     buffer  box_vertex_buffer;
     create_wireframe_box_vertex_buffer(lo_corner,hi_corner,box_vertex_buffer,id);
 
-    batch_ptr const  pbatch = batch::create(
+    batch const  pbatch = batch(
         id.empty() ? id : "/generic/batch/wireframe_box/" + id,
         qtgl::buffers_binding(
             0U,
@@ -34,7 +34,7 @@ batch_ptr  create_wireframe_box(
             canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt"),
             id.empty() ? id : "/generic/shaders_binding/wireframe_box/" + id
             ),
-        qtgl::textures_binding(true),
+        qtgl::textures_binding(),
         qtgl::draw_state::create(),
         modelspace()
         );

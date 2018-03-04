@@ -6,7 +6,7 @@
 namespace qtgl {
 
 
-batch_ptr  create_basis_vectors(boost::filesystem::path const&  data_root_dir)
+batch  create_basis_vectors(boost::filesystem::path const&  data_root_dir)
 {
     TMPROF_BLOCK();
 
@@ -14,7 +14,7 @@ batch_ptr  create_basis_vectors(boost::filesystem::path const&  data_root_dir)
     buffer  basis_colour_buffer;
     create_basis_vectors_vertex_and_colour_buffers(basis_vertex_buffer,basis_colour_buffer);
 
-    batch_ptr const  pbatch = batch::create(
+    batch const  pbatch = batch(
             "generic/batch/basis_vectors",
             qtgl::buffers_binding(
                 0U,
@@ -30,7 +30,7 @@ batch_ptr  create_basis_vectors(boost::filesystem::path const&  data_root_dir)
                 canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt"),
                 "/generic/shaders_binding/basis_vectors"
                 ),
-            qtgl::textures_binding(true),
+            qtgl::textures_binding(),
             qtgl::draw_state::create(),
             modelspace()
             );

@@ -374,7 +374,7 @@ struct  shaders_binding : public async::resource_accessor<detail::shaders_bindin
     vertex_shader  get_vertex_shader() const { return resource().get_vertex_shader(); }
     fragment_shader  get_fragment_shader() const { return resource().get_fragment_shader(); }
 
-    bool  ready() const { return !loaded_successfully() ? false : resource().ready(); }
+    bool  ready() const;
     bool  make_current() const;
 
 private:

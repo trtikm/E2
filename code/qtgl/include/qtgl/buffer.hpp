@@ -362,7 +362,7 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
 
     spatial_boundary const& get_boundary() const { return resource().get_boundary(); }
 
-    bool  ready() const { return !loaded_successfully() ? false : resource().ready(); }
+    bool  ready() const;
     bool  make_current() const;
 
 private:

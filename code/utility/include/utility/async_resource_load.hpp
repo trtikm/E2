@@ -507,6 +507,8 @@ struct  resource_accessor
 
     resource_accessor<resource_type>& operator=(resource_accessor<resource_type> const&  other)
     {
+        if (this == &other)
+            return *this;
         release();
         m_data_ptr = other.m_data_ptr;
         if (m_data_ptr != nullptr)
@@ -525,10 +527,8 @@ struct  resource_accessor
         {
             m_data_ptr->second->dec_ref_count();
             if (m_data_ptr->second->ref_count() == 0ULL)
-            {
                 detail::resource_cache::instance().erase_resource<resource_type>(key());
-                m_data_ptr = nullptr;
-            }
+            m_data_ptr = nullptr;
         }
     }
 

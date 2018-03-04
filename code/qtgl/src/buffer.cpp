@@ -742,11 +742,11 @@ void  buffers_binding_data::destroy_gl_binding()
 namespace qtgl {
 
 
-bool  buffers_binding::make_current() const
+bool  buffers_binding::ready() const
 {
-    TMPROF_BLOCK();
-
-    if (!ready())
+    if (!loaded_successfully())
+        return false;
+    if (!resource().ready())
     {
         detail::current_draw::set_are_buffers_ready(false);
         if (!get_index_buffer().empty() && !get_index_buffer().loaded_successfully())
@@ -781,8 +781,19 @@ bool  buffers_binding::make_current() const
 
         mutable_this->set_ready();
     }
-    else
-        glapi().glBindVertexArray(id());
+
+    return true;
+}
+
+
+bool  buffers_binding::make_current() const
+{
+    TMPROF_BLOCK();
+
+    if (!ready())
+        return false;
+
+    glapi().glBindVertexArray(id());
 
     if (get_index_buffer().empty())
     {

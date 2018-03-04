@@ -44,8 +44,8 @@ void  dbg_network_camera::enable(qtgl::camera_perspective_ptr const  camera)
 void  dbg_network_camera::disable()
 {
     m_camera.reset();
-    m_batch_basis.reset();
-    m_batch_camera_frustum.reset();
+    m_batch_basis.release();
+    m_batch_camera_frustum.release();
 }
 
 
@@ -94,18 +94,18 @@ void  dbg_network_camera::render_camera_frustum(matrix44 const&  view_projection
     if (!is_enabled())
         return;
 
-    if (qtgl::make_current(*m_batch_basis, *draw_state))
+    if (qtgl::make_current(m_batch_basis, *draw_state))
     {
-        qtgl::render_batch(*m_batch_basis,view_projection_matrix,*m_camera->coordinate_system());
-        draw_state = m_batch_basis->draw_state();
+        qtgl::render_batch(m_batch_basis,view_projection_matrix,*m_camera->coordinate_system());
+        draw_state = m_batch_basis.get_draw_state();
     }
 
-    if (qtgl::make_current(*m_batch_camera_frustum, *draw_state))
+    if (qtgl::make_current(m_batch_camera_frustum, *draw_state))
     {
         float_32_bit const  param = -0.5f * (m_camera->near_plane() + m_camera->far_plane());
 
         qtgl::render_batch(
-            *m_batch_camera_frustum,
+            m_batch_camera_frustum,
             view_projection_matrix,
             angeo::coordinate_system(
                 m_camera->coordinate_system()->origin() + param * angeo::axis_z(*m_camera->coordinate_system()),
@@ -114,6 +114,6 @@ void  dbg_network_camera::render_camera_frustum(matrix44 const&  view_projection
             vector4(1.0f, 1.0f, 1.0f, 1.0f)
             );
 
-        draw_state = m_batch_camera_frustum->draw_state();
+        draw_state = m_batch_camera_frustum.get_draw_state();
     }
 }

@@ -385,34 +385,13 @@ texture_data::~texture_data()
 namespace qtgl {
 
 
-textures_binding::textures_binding(bool const  make_ready)
-    : m_bindings()
-    , m_ready(make_ready)
-{}
-
-
-textures_binding::textures_binding(binding_map_type const&  bindings)
-    : m_bindings(bindings)
-    , m_ready(bindings.empty())
+bool  textures_binding::ready() const
 {
-    ASSUMPTION(
-        [this]() -> bool {
-                for (auto const& sampler_and_texture : m_bindings)
-                {
-                    if (value(sampler_and_texture.first) >= GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS)
-                        return false;
-                    if (sampler_and_texture.second.empty())
-                        return false;
-                }
-                return true;
-            }()
-        );
-}
-
-
-bool  textures_binding::make_current() const
-{
-    if (!m_ready)
+    if (empty())
+        return true;
+    if (!loaded_successfully())
+        return false;
+    if (!resource().ready())
     {
         for (auto const& sampler_and_texture : bindings_map())
         {
@@ -423,13 +402,24 @@ bool  textures_binding::make_current() const
             if (sampler_and_texture.second.id() == 0U)
                 return false;
         }
-        m_ready = true;
+
+        const_cast<textures_binding*>(this)->set_ready();
     }
-    for (auto const&  sampler_and_texture : bindings_map())
-    {
-        glapi().glActiveTexture(GL_TEXTURE0 + value(sampler_and_texture.first));
-        glapi().glBindTexture(GL_TEXTURE_2D, sampler_and_texture.second.id());
-    }
+
+    return true;
+}
+
+
+bool  textures_binding::make_current() const
+{
+    if (!ready())
+        return false;
+    if (!empty())
+        for (auto const&  sampler_and_texture : bindings_map())
+        {
+            glapi().glActiveTexture(GL_TEXTURE0 + value(sampler_and_texture.first));
+            glapi().glBindTexture(GL_TEXTURE_2D, sampler_and_texture.second.id());
+        }
     return true;
 }
 

@@ -7,7 +7,7 @@
 namespace qtgl {
 
 
-batch_ptr  create_wireframe_sphere(
+batch  create_wireframe_sphere(
         float_32_bit const  radius,
         natural_8_bit const  num_lines_per_quarter_of_circle,
         boost::filesystem::path const&  data_root_dir,
@@ -19,7 +19,7 @@ batch_ptr  create_wireframe_sphere(
     buffer  sphere_vertex_buffer;
     create_wireframe_sphere_vertex_buffer(radius,num_lines_per_quarter_of_circle,sphere_vertex_buffer,id);
 
-    batch_ptr const  pbatch = batch::create(
+    batch const  pbatch = batch(
         id.empty() ? id : "/generic/batch/wireframe_sphere/" + id,
         qtgl::buffers_binding(
             0U,
@@ -34,7 +34,7 @@ batch_ptr  create_wireframe_sphere(
             canonical_path(data_root_dir / "shared/gfx/shaders/fragment/fs_IcFc.txt"),
             id.empty() ? id : "/generic/shaders_binding/wireframe_sphere/" + id
             ),
-        qtgl::textures_binding(true),
+        qtgl::textures_binding(),
         qtgl::draw_state::create(),
         modelspace()
         );

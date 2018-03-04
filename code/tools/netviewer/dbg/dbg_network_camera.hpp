@@ -23,8 +23,8 @@ struct  dbg_network_camera
 private:
     float_32_bit  m_far_plane;
     qtgl::camera_perspective_ptr  m_camera;
-    qtgl::batch_ptr  m_batch_basis;
-    qtgl::batch_ptr  m_batch_camera_frustum;
+    qtgl::batch  m_batch_basis;
+    qtgl::batch  m_batch_camera_frustum;
 };
 
 

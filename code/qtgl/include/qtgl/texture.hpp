@@ -276,25 +276,78 @@ struct texture : public async::resource_accessor<detail::texture_data>
 
 }
 
-namespace qtgl {
+namespace qtgl { namespace detail {
 
 
-struct textures_binding
+struct textures_binding_data
 {
     using  binding_map_type = std::unordered_map<fragment_shader_texture_sampler_binding, texture>;
 
-    explicit textures_binding(bool const  make_ready);
-    explicit textures_binding(binding_map_type const&  bindings);
+    textures_binding_data(
+            async::finalise_load_on_destroy_ptr,
+            binding_map_type const&  bindings
+            )
+        : m_bindings(bindings)
+        , m_ready(false)
+    {
+        ASSUMPTION(
+            [this]() -> bool {
+                    for (auto const& sampler_and_texture : m_bindings)
+                    {
+                        if (value(sampler_and_texture.first) >= GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS)
+                            return false;
+                        if (sampler_and_texture.second.empty())
+                            return false;
+                    }
+                    return true;
+                }()
+            );    
+    }
 
     binding_map_type const&  bindings_map() const { return m_bindings; }
 
     bool  ready() const { return m_ready; }
-    bool  make_current() const;
+    void  set_ready() { m_ready = true; }
 
 private:
 
     binding_map_type  m_bindings;
-    mutable bool  m_ready;
+    bool  m_ready;
+};
+
+
+}}
+
+namespace qtgl {
+
+
+struct textures_binding : public async::resource_accessor<detail::textures_binding_data>
+{
+    using  binding_map_type = detail::textures_binding_data::binding_map_type;
+
+    textures_binding()
+        : async::resource_accessor<detail::textures_binding_data>()
+    {}
+
+    textures_binding(
+            binding_map_type const&  bindings,
+            async::key_type const&  key = ""
+            )
+        : async::resource_accessor<detail::textures_binding_data>(
+                key,
+                async::notification_callback_type(),
+                bindings
+                )
+    {}
+
+    binding_map_type const&  bindings_map() const { return resource().bindings_map(); }
+
+    bool  ready() const;
+    bool  make_current() const;
+
+private:
+
+    void  set_ready() { resource().set_ready(); }
 };
 
 

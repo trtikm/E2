@@ -10,7 +10,7 @@
 namespace qtgl {
 
 
-batch_ptr  create_grid(
+batch  create_grid(
         float_32_bit const  max_x_coordinate,
         float_32_bit const  max_y_coordinate,
         float_32_bit const  max_z_coordinate,
@@ -30,14 +30,14 @@ batch_ptr  create_grid(
         );
 
 
-batch_ptr  create_lines3d(
+batch  create_lines3d(
         std::vector< std::array<float_32_bit, 3> >  vertices,
         std::vector< std::array<float_32_bit, 3> >  colours,
         boost::filesystem::path const&  data_root_dir,
         std::string const&  id = ""
         );
 
-batch_ptr  create_lines3d(
+batch  create_lines3d(
         std::vector< std::pair<vector3,vector3> > const&  lines,
         vector3 const&  common_colour,
         boost::filesystem::path const&  data_root_dir,
@@ -45,10 +45,10 @@ batch_ptr  create_lines3d(
         );
 
 
-batch_ptr  create_basis_vectors(boost::filesystem::path const&  data_root_dir);
+batch  create_basis_vectors(boost::filesystem::path const&  data_root_dir);
 
 
-batch_ptr  create_wireframe_box(
+batch  create_wireframe_box(
         vector3 const&  lo_corner,
         vector3 const&  hi_corner,
         boost::filesystem::path const&  data_root_dir,
@@ -56,7 +56,7 @@ batch_ptr  create_wireframe_box(
         );
 
 
-batch_ptr  create_wireframe_sphere(
+batch  create_wireframe_sphere(
         float_32_bit const  radius,
         natural_8_bit const  num_lines_per_quarter_of_circle,
         boost::filesystem::path const&  data_root_dir,
@@ -64,7 +64,7 @@ batch_ptr  create_wireframe_sphere(
         );
 
 
-batch_ptr  create_wireframe_perspective_frustum(
+batch  create_wireframe_perspective_frustum(
         float_32_bit const  near_plane,
         float_32_bit const  far_plane,
         float_32_bit const  left_plane,

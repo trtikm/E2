@@ -31,7 +31,7 @@ scalar  compute_bounding_sphere_radius_of_scene_node(scene_node const&  node)
     scalar  max_radius = get_selection_radius_of_bounding_sphere_of_scene_node();
     for (auto const& name_and_batch : node.get_batches())
     {
-        auto const  binding = name_and_batch.second->buffers_binding();
+        auto const  binding = name_and_batch.second.get_buffers_binding();
         if (binding.loaded_successfully())
         {
             qtgl::spatial_boundary const&  boundary = binding.get_boundary();
@@ -99,9 +99,9 @@ bool  compute_collision_of_scene_node_and_line(
 
     scalar  min_param = 2.0f;
     for (auto const& name_and_batch : node.get_batches())
-        if (name_and_batch.second->buffers_binding().loaded_successfully())
+        if (name_and_batch.second.get_buffers_binding().loaded_successfully())
         {
-            qtgl::spatial_boundary const&  boundary = name_and_batch.second->buffers_binding().get_boundary();
+            qtgl::spatial_boundary const&  boundary = name_and_batch.second.get_buffers_binding().get_boundary();
 
             scalar  sphere_param;
             scalar  sphere_distance_to_origin;

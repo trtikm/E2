@@ -129,7 +129,7 @@ private:
     /// Data providing feedback loop between a human user and 3D scene in the tool
     qtgl::camera_perspective_ptr  m_camera;
     qtgl::free_fly_config  m_free_fly_config;
-    qtgl::batch_ptr  m_batch_grid;
+    qtgl::batch  m_batch_grid;
     bool  m_do_show_grid;
 
     /// Data related to simulation
@@ -139,7 +139,7 @@ private:
     /// Scene related data
     scene_ptr  m_scene;
     scene_selection  m_scene_selection;
-    qtgl::batch_ptr  m_batch_coord_system;
+    qtgl::batch  m_batch_coord_system;
     scene_edit_data  m_scene_edit_data;
 
     /// Other data

@@ -23,8 +23,8 @@ struct  dbg_raycast_sector_enumeration
 
 private:
     bool  m_enabled;
-    qtgl::batch_ptr  m_batch_line;
-    std::vector< std::pair<vector3,qtgl::batch_ptr> >  m_batches;
+    qtgl::batch  m_batch_line;
+    std::vector< std::pair<vector3,qtgl::batch> >  m_batches;
 };
 
 

@@ -1078,9 +1078,8 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
         scene_node_ptr const  parent_node_ptr =
             wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_name);
         INVARIANT(parent_node_ptr != nullptr);
-        qtgl::batch_ptr const  batch_ptr = parent_node_ptr->get_batch(item_name);
-        INVARIANT(batch_ptr != nullptr);
-        get_scene_history().insert<scene_history_batch_insert>(name, batch_ptr->path(), true);
+        qtgl::batch const  batch = parent_node_ptr->get_batch(item_name);
+        get_scene_history().insert<scene_history_batch_insert>(name, batch.key(), true);
 
         std::unordered_set<std::string>  selected_scene_nodes;
         std::unordered_set<std::pair<std::string, std::string> >  selected_batches{ { parent_item_name, item_name  } };
@@ -1248,7 +1247,7 @@ static void  save_scene_item(
 
     boost::property_tree::ptree  batches;
     for (auto const& name_batch : node_ptr->get_batches())
-        batches.put(name_batch.first, name_batch.second->path().string());
+        batches.put(name_batch.first, name_batch.second.key());
     save_tree.put_child(item_name + ".batches", batches);
 
     boost::property_tree::ptree  children;

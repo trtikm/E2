@@ -1,6 +1,5 @@
 #include <qtgl/batch.hpp>
 #include <qtgl/shader_data_bindings.hpp>
-#include <qtgl/detail/batch_cache.hpp>
 #include <qtgl/detail/read_line.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -19,241 +18,56 @@
 #include <unordered_set>
 #include <unordered_map>
 
-namespace qtgl {
+namespace qtgl { namespace detail {
 
 
-std::unordered_set<vertex_shader_uniform_symbolic_name>  batch::s_empty_uniforms;
-
-std::shared_ptr<batch const>  batch::create(boost::filesystem::path const&  path)
-{
-    return std::make_shared<batch const>(path);
-}
-
-std::shared_ptr<batch const>  batch::create(
-        boost::filesystem::path const&  path,
-        qtgl::buffers_binding const  buffers_binding,
-        qtgl::shaders_binding const  shaders_binding,
-        qtgl::textures_binding const  textures_binding,
-        draw_state_ptr const  draw_state,
-        modelspace const modelspace
-        )
-{
-    return std::make_shared<batch const>(
-                path,
-                buffers_binding,
-                shaders_binding,
-                textures_binding,
-                draw_state,
-                modelspace
-                );
-}
-
-
-batch::batch(boost::filesystem::path const&  path)
-    : m_path(path)
-    , m_buffers_binding()
-    , m_shaders_binding()
-    , m_textures_binding(false)
-    , m_draw_state()
-    , m_modelspace()
-    , m_batch_found_in_cache__buffers(false)
-    , m_batch_found_in_cache__shaders(false)
-    , m_batch_found_in_cache__textures(false)
-    , m_batch_found_in_cache__state(false)
-    , m_batch_found_in_cache__modelspace(false)
-{
-    ASSUMPTION(!m_path.empty());
-    insert_load_request(*this);
-}
-
-batch::batch(boost::filesystem::path const&  path,
-             qtgl::buffers_binding const  buffers_binding,
-             qtgl::shaders_binding const  shaders_binding,
-             qtgl::textures_binding const  textures_binding,
-             draw_state_ptr const  draw_state,
-             modelspace const modelspace
-             )
-    : m_path(path)
-    , m_buffers_binding(buffers_binding)
-    , m_shaders_binding(shaders_binding)
-    , m_textures_binding(textures_binding)
-    , m_draw_state(draw_state)
-    , m_modelspace(modelspace)
-    , m_batch_found_in_cache__buffers(false)
-    , m_batch_found_in_cache__shaders(false)
-    , m_batch_found_in_cache__textures(false)
-    , m_batch_found_in_cache__state(false)
-    , m_batch_found_in_cache__modelspace(false)
-{
-    ASSUMPTION(!m_buffers_binding.empty());
-    ASSUMPTION(m_draw_state.operator bool());
-}
-
-qtgl::buffers_binding  batch::buffers_binding() const
-{
-    if (!m_batch_found_in_cache__buffers && !m_buffers_binding.ready())
-    {
-        batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
-        if (pbatch.operator bool())
-        {
-            m_buffers_binding = pbatch->m_buffers_binding;
-            m_batch_found_in_cache__buffers = true;
-        }
-    }
-    return m_buffers_binding;
-}
-
-shaders_binding  batch::shaders_binding() const
-{
-    if (!m_batch_found_in_cache__shaders && !m_shaders_binding.ready())
-    {
-        batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
-        if (pbatch.operator bool())
-        {
-            m_shaders_binding =  pbatch->m_shaders_binding;
-            m_batch_found_in_cache__shaders = true;
-        }
-    }
-    return m_shaders_binding;
-}
-
-textures_binding  batch::textures_binding() const
-{
-    if (!m_batch_found_in_cache__textures && !m_textures_binding.ready())
-    {
-        batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
-        if (pbatch.operator bool())
-        {
-            m_textures_binding = pbatch->m_textures_binding;
-            m_batch_found_in_cache__textures = true;
-        }
-    }
-    return m_textures_binding;
-}
-
-draw_state_ptr  batch::draw_state() const
-{
-    if (!m_batch_found_in_cache__state && !m_draw_state.operator bool())
-    {
-        batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
-        if (pbatch.operator bool())
-        {
-            m_draw_state = pbatch->m_draw_state;
-            m_batch_found_in_cache__state = true;
-        }
-    }
-    return m_draw_state;
-}
-
-modelspace  batch::get_modelspace() const
-{
-    if (!m_batch_found_in_cache__modelspace && !m_modelspace.loaded_successfully())
-    {
-        batch_ptr const  pbatch = detail::batch_cache::instance().find(path());
-        if (pbatch.operator bool() && this != pbatch.get())
-        {
-            m_modelspace = pbatch->get_modelspace();
-            m_batch_found_in_cache__modelspace = true;
-        }
-    }
-    return m_modelspace;
-}
-
-std::unordered_set<vertex_shader_uniform_symbolic_name> const&  batch::symbolic_names_of_used_uniforms() const
-{
-    return shaders_binding().loaded_successfully() ?
-                shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms() :
-                s_empty_uniforms ;
-}
-
-natural_32_bit  batch::num_matrices_per_vertex() const
-{
-    return buffers_binding().num_matrices_per_vertex();
-}
-
-
-batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::string&  error_message)
+batch_data::batch_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr)
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(error_message.empty());
+    if (!boost::filesystem::exists(path))
+        throw std::runtime_error(msgstream() << "The batch file '" << path << "' does not exist.");
+    if (!boost::filesystem::is_regular_file(path))
+        throw std::runtime_error(msgstream() << "The batch path '" << path << "' does not reference a regular file.");
+    if (boost::filesystem::file_size(path) < 4ULL)
+        throw std::runtime_error(msgstream() << "The passed file '" << path << "' is not a qtgl file (wrong size).");
 
-    if (!boost::filesystem::exists(batch_file))
-    {
-        error_message = msgstream() << "The batch file '" << batch_file << "' does not exist.";
-        return {};
-    }
-    if (!boost::filesystem::is_regular_file(batch_file))
-    {
-        error_message = msgstream() << "The batch path '" << batch_file << "' does not reference a regular file.";
-        return {};
-    }
-
-    if (boost::filesystem::file_size(batch_file) < 4ULL)
-    {
-        error_message = msgstream() << "The passed file '" << batch_file << "' is not a qtgl file (wrong size).";
-        return {};
-    }
-
-    std::ifstream  istr(batch_file.string(),std::ios_base::binary);
+    std::ifstream  istr(path.string(),std::ios_base::binary);
     if (!istr.good())
-    {
-        error_message = msgstream() << "Cannot open the batch file '" << batch_file << "'.";
-        return {};
-    }
+        throw std::runtime_error(msgstream() << "Cannot open the batch file '" << path << "'.");
 
     std::string  file_type;
     if (!detail::read_line(istr,file_type))
-    {
-        error_message = msgstream() << "The passed file '" << batch_file << "' is not a qtgl file (cannot read its type string).";
-        return {};
-    }
+        throw std::runtime_error(msgstream() << "The passed file '" << path
+                                             << "' is not a qtgl file (cannot read its type string).");
 
     if (file_type == "E2::qtgl/batch/indexed/text")
     {
         std::string  line;
 
         if (!detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "Cannot read a path to vertex shader file in the file '" << batch_file << "'.";
-            return {};
-        }
-        boost::filesystem::path  vertex_shader = boost::filesystem::absolute(batch_file.parent_path() / line);
-        if (!boost::filesystem::exists(vertex_shader) || !boost::filesystem::is_regular_file(vertex_shader))
-        {
-            error_message = msgstream() << "The vertex shader file '" << vertex_shader.string()
-                                        << "' referenced from the batch file '" << batch_file << "' does not exist.";
-            return {};
-        }
-        vertex_shader = canonical_path(vertex_shader);
+            throw std::runtime_error(msgstream() << "Cannot read a path to vertex shader file in the file '" << path << "'.");
+        boost::filesystem::path  vertex_shader_path = boost::filesystem::absolute(path.parent_path() / line);
+        if (!boost::filesystem::exists(vertex_shader_path) || !boost::filesystem::is_regular_file(vertex_shader_path))
+            throw std::runtime_error(msgstream() << "The vertex shader file '" << vertex_shader_path.string()
+                                                 << "' referenced from the batch file '" << path << "' does not exist.");
+        vertex_shader_path = canonical_path(vertex_shader_path);
 
         if (!detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "Cannot read a path to fragment shader file in the file '" << batch_file << "'.";
-            return {};
-        }
-        boost::filesystem::path  fragment_shader = boost::filesystem::absolute(batch_file.parent_path() / line);
-        if (!boost::filesystem::exists(fragment_shader) || !boost::filesystem::is_regular_file(fragment_shader))
-        {
-            error_message = msgstream() << "The fragment shader file '" << fragment_shader.string()
-                                        << "' referenced from the batch file '" << batch_file << "' does not exist.";
-            return {};
-        }
-        fragment_shader = canonical_path(fragment_shader);
+            throw std::runtime_error(msgstream() << "Cannot read a path to fragment shader file in the file '" << path << "'.");
+        boost::filesystem::path  fragment_shader_path = boost::filesystem::absolute(path.parent_path() / line);
+        if (!boost::filesystem::exists(fragment_shader_path) || !boost::filesystem::is_regular_file(fragment_shader_path))
+            throw std::runtime_error(msgstream() << "The fragment shader file '" << fragment_shader_path.string()
+                                                 << "' referenced from the batch file '" << path << "' does not exist.");
+        fragment_shader_path = canonical_path(fragment_shader_path);
 
         if (!detail::read_line(istr,line))
-        {
-            error_message = msgstream() << "Cannot read a path to the index buffer file in the file '" << batch_file << "'.";
-            return {};
-        }
-        boost::filesystem::path  index_buffer = boost::filesystem::absolute(batch_file.parent_path() / line);
-        if (!boost::filesystem::exists(index_buffer) || !boost::filesystem::is_regular_file(index_buffer))
-        {
-            error_message = msgstream() << "The fragment shader file '" << fragment_shader.string()
-                                        << "' referenced from the batch file '" << batch_file << "' does not exist.";
-            return {};
-        }
-        index_buffer = canonical_path(index_buffer);
+            throw std::runtime_error(msgstream() << "Cannot read a path to the index buffer file in the file '" << path << "'.");
+        boost::filesystem::path  index_buffer_path = boost::filesystem::absolute(path.parent_path() / line);
+        if (!boost::filesystem::exists(index_buffer_path) || !boost::filesystem::is_regular_file(index_buffer_path))
+            throw std::runtime_error(msgstream() << "The index buffer file '" << index_buffer_path.string()
+                                                 << "' referenced from the batch file '" << path << "' does not exist.");
+        index_buffer_path = canonical_path(index_buffer_path);
 
         std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path>  buffer_paths;
         while (true)
@@ -273,32 +87,22 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
                 if (line.find("BINDING_") != 0ULL || line.find("BINDING_TEXTURE_") == 0ULL)
                     break;
 
-                error_message = msgstream() << "Unknown vertex shader input buffer binding location '" << line
-                                            << "' in the file '" << batch_file << "'.";
-                return {};
+                throw std::runtime_error(msgstream() << "Unknown vertex shader input buffer binding location '" << line
+                                                     << "' in the file '" << path << "'.");
             }
             vertex_shader_input_buffer_binding_location const  bind_location = vertex_shader_input_buffer_binding_location(location);
             if (buffer_paths.count(bind_location) != 0ULL)
-            {
-                error_message = msgstream() << "Vertex shader input buffer binding location '" << line
-                                            << "' appears more than once in the file '" << batch_file << "'.";
-                return {};
-            }
+                throw std::runtime_error(msgstream() << "Vertex shader input buffer binding location '" << line
+                                                     << "' appears more than once in the file '" << path << "'.");
 
             if (!detail::read_line(istr,line))
-            {
-                error_message = msgstream() << "Cannot read a path to a buffer file to be bound at location '" << line
-                                            << "' in the file '" << batch_file << "'.";
-                return {};
-            }
-            boost::filesystem::path  buffer_file = boost::filesystem::absolute(batch_file.parent_path() / line);
+                throw std::runtime_error(msgstream() << "Cannot read a path to a buffer file to be bound at location '" << line
+                                                     << "' in the file '" << path << "'.");
+            boost::filesystem::path  buffer_file = boost::filesystem::absolute(path.parent_path() / line);
             if (!boost::filesystem::exists(buffer_file) || !boost::filesystem::is_regular_file(buffer_file))
-            {
-                error_message = msgstream() << "The buffer file '" << buffer_file.string()
-                                            << "' to be bound to location '" << binding_location_name(bind_location)
-                                            << "' referenced from the batch file '" << batch_file << "' does not exist.";
-                return {};
-            }
+                throw std::runtime_error(msgstream() << "The buffer file '" << buffer_file.string()
+                                                     << "' to be bound to location '" << binding_location_name(bind_location)
+                                                     << "' referenced from the batch file '" << path << "' does not exist.");
             buffer_file = canonical_path(buffer_file);
 
             buffer_paths.insert({bind_location,buffer_file});
@@ -320,26 +124,17 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
 
             fragment_shader_texture_sampler_binding const  bind_location = fragment_shader_texture_sampler_binding(location);
             if (textures_binding_map.count(bind_location) != 0ULL)
-            {
-                error_message = msgstream() << "Fragment shader texture sampler binding '" << line
-                                            << "' appears more than once in the file '" << batch_file << "'.";
-                return {};
-            }
+                throw std::runtime_error(msgstream() << "Fragment shader texture sampler binding '" << line
+                                                     << "' appears more than once in the file '" << path << "'.");
 
             if (!detail::read_line(istr,line))
-            {
-                error_message = msgstream() << "Cannot read a path to a texture file to be bound to location '" << line
-                                            << "' in the file '" << batch_file << "'.";
-                return {};
-            }
-            boost::filesystem::path  texture_file = boost::filesystem::absolute(batch_file.parent_path() / line);
+                throw std::runtime_error(msgstream() << "Cannot read a path to a texture file to be bound to location '" << line
+                                                     << "' in the file '" << path << "'.");
+            boost::filesystem::path  texture_file = boost::filesystem::absolute(path.parent_path() / line);
             if (!boost::filesystem::exists(texture_file) || !boost::filesystem::is_regular_file(texture_file))
-            {
-                error_message = msgstream() << "The texture file '" << texture_file.string()
-                                            << "' to be bound to location '" << sampler_binding_name(bind_location)
-                                            << "' referenced from the batch file '" << batch_file << "' does not exist.";
-                return {};
-            }
+                throw std::runtime_error(msgstream() << "The texture file '" << texture_file.string()
+                                                     << "' to be bound to location '" << sampler_binding_name(bind_location)
+                                                     << "' referenced from the batch file '" << path << "' does not exist.");
             texture_file = canonical_path(texture_file);
 
             textures_binding_map.insert({bind_location,texture(texture_file)});
@@ -349,14 +144,12 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
         boost::filesystem::path  modelspace_pathname;
         if (line != "NONE" && line != "BACK" && line != "FRONT_AND_BACK")
         {
-            boost::filesystem::path const  pathname = canonical_path(batch_file.parent_path() / line);
+            boost::filesystem::path const  pathname = canonical_path(path.parent_path() / line);
             if (boost::filesystem::is_regular_file(pathname))
                 modelspace_pathname = pathname;
             else
-            {
-                error_message = msgstream() << "Cannot find batch's model-space coord. systems file '" << pathname << "'.";
-                return{};
-            }
+                throw std::runtime_error(msgstream() << "Cannot find batch's model-space coord. systems file '"
+                                                     << pathname << "'.");
 
             detail::read_line(istr, line);
         }
@@ -371,11 +164,8 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
         else if (line == "FRONT_AND_BACK")
             cull_face_mode = GL_FRONT_AND_BACK;
         else
-        {
-            error_message = msgstream() << "Unknown cull face mode '" << line
-                                        << "' in the file '" << batch_file << "'.";
-            return {};
-        }
+            throw std::runtime_error(msgstream() << "Unknown cull face mode '" << line
+                                                 << "' in the file '" << path << "'.");
 
         detail::read_line(istr,line);
         bool  use_alpha_blending;
@@ -384,14 +174,11 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
         else if (line == "false")
             use_alpha_blending = false;
         else
-        {
-            error_message = msgstream() << "In the file '" << batch_file
-                                        << "' there is expected 'true'/'false' "
-                                           "for enabling/disabling alpha blending"
-                                        << (line.empty() ? "." : ", but received: ")
-                                        << line;
-            return {};
-        }
+            throw std::runtime_error(msgstream() << "In the file '" << path
+                                                 << "' there is expected 'true'/'false' "
+                                                    "for enabling/disabling alpha blending"
+                                                 << (line.empty() ? "." : ", but received: ")
+                                                 << line);
 
         detail::read_line(istr,line);
         natural_32_bit  alpha_blending_src_function = 0U;
@@ -412,12 +199,11 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
             else
             {
                 if (line.empty())
-                    error_message = msgstream() << "There is missing alpha blending source function in the file '"
-                                                << batch_file << "'.";
+                    throw std::runtime_error(msgstream() << "There is missing alpha blending source function in the file '"
+                                                         << path << "'.");
                 else
-                    error_message = msgstream() << "Unknown alpha blending source function '" << line << "' in the file '"
-                                                << batch_file << "'.";
-                return {};
+                    throw std::runtime_error(msgstream() << "Unknown alpha blending source function '"
+                                                         << line << "' in the file '" << path << "'.");
             }
         }
 
@@ -440,23 +226,21 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
             else
             {
                 if (line.empty())
-                    error_message = msgstream() << "There is missing alpha blending destination function in the file '"
-                                                << batch_file << "'.";
+                    throw std::runtime_error(msgstream() << "There is missing alpha blending destination function in the file '"
+                                                         << path << "'.");
                 else
-                    error_message = msgstream() << "Unknown alpha blending destination function '" << line << "' in the file '"
-                                                << batch_file << "'.";
-                return {};
+                    throw std::runtime_error(msgstream() << "Unknown alpha blending destination function '" << line
+                                                         << "' in the file '" << path << "'.");
             }
         }
 
-        return std::make_shared<batch const>(
-                    batch_file,
-                    buffers_binding(index_buffer,buffer_paths,"[buffers_binding]:" + batch_file.string()),
-                    shaders_binding(vertex_shader,fragment_shader, "[shaders_binding]:" + batch_file.string()),
-                    textures_binding(textures_binding_map),
-                    draw_state::create(cull_face_mode,use_alpha_blending,alpha_blending_src_function,alpha_blending_dst_function),
-                    modelspace_pathname.empty() ? modelspace() : modelspace(modelspace_pathname)
-                    );
+        initialise(
+            buffers_binding(index_buffer_path, buffer_paths, "[buffers_binding]:" + path.string()),
+            shaders_binding(vertex_shader_path, fragment_shader_path, "[shaders_binding]:" + path.string()),
+            textures_binding(textures_binding_map),
+            draw_state::create(cull_face_mode, use_alpha_blending, alpha_blending_src_function, alpha_blending_dst_function),
+            modelspace_pathname.empty() ? modelspace() : modelspace(modelspace_pathname)
+            );
     }
     else if (file_type == "E2::qtgl/batch/vertices/text")
     {
@@ -475,97 +259,95 @@ batch_ptr  load_batch_file(boost::filesystem::path const&  batch_file, std::stri
         NOT_IMPLEMENTED_YET();
     }
     else
-    {
-        error_message = msgstream() << "The passed batch file '" << batch_file
-                                    << "' is of an unknown type '" << file_type << "'.";
-        return {};
-    }
+        throw std::runtime_error(msgstream() << "The passed batch file '" << path
+                                             << "' is of an unknown type '" << file_type << "'.");
 }
 
-void  insert_load_request(batch const&  batch_ref)
+
+batch_data::~batch_data()
+{
+    TMPROF_BLOCK();
+}
+
+
+void  batch_data::initialise(
+        buffers_binding const  buffers_binding,
+        shaders_binding const  shaders_binding,
+        textures_binding const  textures_binding,
+        draw_state_ptr const  draw_state,
+        modelspace const  modelspace
+        )
 {
     TMPROF_BLOCK();
 
-    if (batch_ref.path().string().find("generic/") != 0UL &&
-        !detail::batch_cache::instance().find(batch_ref.path()).operator bool())
-        detail::batch_cache::instance().insert_load_request(batch_ref.path());
-    else
-    {
-//        if (batch_ref.buffers_binding().operator bool())
-//            insert_load_request(*batch_ref.buffers_binding());
-        //if (batch_ref.shaders_binding().operator bool())
-        //    insert_load_request(*batch_ref.shaders_binding());
-    }
+    m_buffers_binding = buffers_binding;
+    m_shaders_binding = shaders_binding;
+    m_textures_binding = textures_binding;
+    m_draw_state = draw_state;
+    m_modelspace = modelspace;
+    m_ready = false;
 }
 
 
-bool  make_current(batch const&  binding, draw_state const* const  previous_state)
+}}
+
+namespace qtgl {
+
+
+bool  batch::ready() const
+{
+    if (!loaded_successfully())
+        return false;
+    if (!resource().ready())
+    {
+        if (!get_buffers_binding().ready() ||
+            !get_shaders_binding().ready() ||
+            !get_textures_binding().ready() ||
+            (!get_modelspace().empty() && !get_modelspace().loaded_successfully()))
+            return false;
+
+        const_cast<batch*>(this)->set_ready();
+    }
+
+    return true;
+}
+
+
+bool  batch::make_current(draw_state const* const  previous_state) const
 {
     TMPROF_BLOCK();
 
-    detail::batch_cache::instance().process_pending_batches();
+    if (!ready())
+        return false;
 
-    bool result = true;
-    if (!binding.shaders_binding().loaded_successfully() || !make_current(binding.shaders_binding()))
-        result = false;
-    if (!binding.buffers_binding().loaded_successfully() || !make_current(binding.buffers_binding()))
-        result = false;
-    if (!make_current(binding.textures_binding()))
-        result = false;
+    bool  result;
 
-    if (!binding.get_modelspace().empty() && !binding.get_modelspace().loaded_successfully())
-        result = false;
+    result = get_buffers_binding().make_current();
+    INVARIANT(result == true);
 
-    if (result)
-    {
-        if (binding.draw_state().operator bool())
-            if (previous_state != nullptr)
-                make_current(*binding.draw_state(),*previous_state);
-            else
-                make_current(*binding.draw_state());
-        else
-            result = false;
-    }
+    result = get_shaders_binding().make_current();
+    INVARIANT(result == true);
 
-    if (!result)
-        insert_load_request(binding);
+    result = get_textures_binding().make_current();
+    INVARIANT(result == true);
 
-    return result;
-}
-
-bool  make_current(batch const&  binding)
-{
-    return make_current(binding,nullptr);
-}
-
-bool  make_current(batch const&  binding, draw_state const&  previous_state)
-{
-    return make_current(binding,&previous_state);
-}
-
-bool  make_current(batch const&  binding, draw_state_ptr const  previous_state)
-{
-    if (previous_state.operator bool())
-        return make_current(binding, *previous_state);
+    if (previous_state != nullptr)
+        qtgl::make_current(*get_draw_state(), *previous_state);
     else
-        return make_current(binding);
+        qtgl::make_current(*get_draw_state());
+
+    return true;
 }
 
 
-std::pair<bool,bool>  get_batch_chache_state(boost::filesystem::path const&  batch_file)
+bool  make_current(batch const&  batch)
 {
-    return { detail::batch_cache::instance().find(batch_file).operator bool(),
-             !detail::batch_cache::instance().fail_message(batch_file).empty() };
+    return batch.make_current(nullptr);
 }
 
-void  get_cached_batches(std::vector< std::pair<boost::filesystem::path,batch_ptr> >&  output)
+bool  make_current(batch const&  batch, draw_state const&  previous_state)
 {
-    detail::batch_cache::instance().cached(output);
-}
-
-void  get_failed_batches(std::vector< std::pair<boost::filesystem::path,std::string> >&  output)
-{
-    detail::batch_cache::instance().failed(output);
+    return batch.make_current(&previous_state);
 }
 
 
