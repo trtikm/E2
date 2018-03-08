@@ -912,7 +912,14 @@ def save_batch_files(
 
     export_info["batch_files"] = []
     for material_idx in range(0,len(export_info["render_buffers"])):
-        export_info["batch_files"].append(os.path.join(batch_root_dir,export_info["mesh_name"] + ".txt"))
+        fname = export_info["mesh_name"]
+        if len(export_info["render_buffers"]) > 0:
+            if material_idx < len(export_info["material_names"]):
+                fname += "_" + export_info["material_names"][material_idx]
+            else:
+                fname += "_" + str(material_idx)
+        fname += ".txt"
+        export_info["batch_files"].append(os.path.join(batch_root_dir,fname))
         with open(export_info["batch_files"][-1],"w") as f:
             print("    Saving batch: " +
                   os.path.relpath(export_info["batch_files"][-1],export_info["root_dir"]))
@@ -1024,14 +1031,18 @@ def export_selected_meshes(
             export_info = {
                 "model_name": model_name,
                 "mesh_name": mesh_name,
-                "root_dir": export_dir
+                "root_dir": export_dir,
+                "material_names": [mtl.name for mtl in mesh.materials]
             }
 
             buffers_list = build_render_buffers(obj, armature)
             for idx in range(0,len(buffers_list)):
                 sub_directory = ""
                 if len(buffers_list) > 1:
-                    sub_directory = sub_directory + str(idx)
+                    if idx < len(export_info["material_names"]):
+                        sub_directory += export_info["material_names"][idx]
+                    else:
+                        sub_directory += str(idx)
                 save_render_buffers(buffers_list[idx],sub_directory,export_info)
 
             save_textures(mesh.materials,export_info)
