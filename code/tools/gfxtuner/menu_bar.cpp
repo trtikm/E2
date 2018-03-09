@@ -181,6 +181,7 @@ void  make_menu_bar_content(menu_bar const&  w)
     // "Edit" menu
 
     w.get_menu_edit()->addAction(w.get_action_edit_insert_coord_system());
+    w.get_action_edit_insert_coord_system()->setShortcut(QString("Ctrl+Alt+I"));
     w.get_action_edit_insert_coord_system()->setToolTip(
         "A coordinate system represent a model space for graphical batches. The new coord. system is placed either to '@pivot' coord.\n"
         "system, if '@pivot' is selected, or to another selected coord. sytem, if any is selected, or to the 'world' system, if no\n"
@@ -192,6 +193,7 @@ void  make_menu_bar_content(menu_bar const&  w)
     QObject::connect(w.get_action_edit_insert_coord_system(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_insert_coord_system);
 
     w.get_menu_edit()->addAction(w.get_action_edit_insert_batch());
+    w.get_action_edit_insert_batch()->setShortcut(QString("Ctrl+Alt+B"));
     w.get_action_edit_insert_batch()->setToolTip(
         "A batch is an atomic block of grahical data. It can only be placed under a coordinate system. It means that at least one\n"
         "non-'@pivot' coord. system must be selected. Otherwise the operation will fail (with an error message to the status bar).\n"
@@ -204,6 +206,7 @@ void  make_menu_bar_content(menu_bar const&  w)
     w.get_menu_edit()->addSeparator();
 
     w.get_menu_edit()->addAction(w.get_action_edit_erase_selected());
+    w.get_action_edit_erase_selected()->setShortcut(QKeySequence::Delete);
     w.get_action_edit_erase_selected()->setToolTip(
         "Erases all selected objects from the scene. If a selected object has children, then they are all erased as well.\n"
         "The '@pivot' coord. system cannot be erased. It presence in the selection will lead to failure of the operation."
