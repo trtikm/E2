@@ -921,8 +921,13 @@ void  widgets::on_scene_insert_batch()
     std::unordered_set<std::string>  used_names;
     foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
     {
-        tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(item);
+        tree_widget_item*  tree_item = dynamic_cast<tree_widget_item*>(item);
         INVARIANT(tree_item != nullptr);
+        if (!tree_item->represents_coord_system())
+        {
+            tree_item = dynamic_cast<tree_widget_item*>(tree_item->parent());
+            INVARIANT(tree_item != nullptr && tree_item->represents_coord_system());
+        }
         std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
         if (tree_item->represents_coord_system() &&  qtgl::to_string(tree_item->text(0)) != get_pivot_node_name())
         {
