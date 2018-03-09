@@ -1078,8 +1078,7 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
         scene_node_ptr const  parent_node_ptr =
             wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_name);
         INVARIANT(parent_node_ptr != nullptr);
-        qtgl::batch const  batch = parent_node_ptr->get_batch(item_name);
-        get_scene_history().insert<scene_history_batch_insert>(name, batch.key(), true);
+        get_scene_history().insert<scene_history_batch_insert>(name, parent_node_ptr->get_batch(item_name).key(), true);
 
         std::unordered_set<std::string>  selected_scene_nodes;
         std::unordered_set<std::pair<std::string, std::string> >  selected_batches{ { parent_item_name, item_name  } };
