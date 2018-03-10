@@ -21,8 +21,62 @@ bl_info = {
 
 import bpy
 import mathutils
+import time
 import os
 import shutil
+import json
+
+
+class TimeProf:
+    _instance = None
+
+    @staticmethod
+    def instance():
+        if TimeProf._instance is None:
+            TimeProf._instance = TimeProf()
+        return TimeProf._instance
+
+    def __init__(self):
+        self._statistics = {}
+        self._mesh_name = None
+        self._stack = []
+
+    def set_mesh_name(self, mesh_name):
+        assert isinstance(mesh_name, str) and len(mesh_name) > 0
+        self._mesh_name = mesh_name
+        if self._mesh_name not in self._statistics:
+            self._statistics[self._mesh_name] = {}
+
+    def start(self, measured_block_id):
+        assert self._mesh_name is not None
+        assert isinstance(measured_block_id, str) and len(measured_block_id) > 0
+        self._stack.append((measured_block_id, time.time()))
+        return self
+
+    def stop(self):
+        assert self._mesh_name is not None
+        assert len(self._stack) > 0
+        duration = time.time() - self._stack[-1][1]
+        if self._stack[-1][0] not in self._statistics[self._mesh_name]:
+            self._statistics[self._mesh_name][self._stack[-1][0]] = {
+                "total_time": 0.0,
+                "hit_count": 0,
+                "max_time": 0.0
+            }
+        record = self._statistics[self._mesh_name][self._stack[-1][0]]
+        record["total_time"] += duration
+        record["hit_count"] += 1
+        record["max_time"] = duration if duration > record["max_time"] else record["max_time"]
+        self._stack.pop()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.stop()
+
+    def to_json(self):
+        return json.dumps(self._statistics, indent=4, sort_keys=True)
 
 
 def from_base_matrix(
@@ -48,7 +102,8 @@ def to_base_matrix(
     :return: An instance of 'mathutils.Matrix' (4x4 matrix) representing a transformation from a parent
              coordinate system (like world coordinate system) into this coordinate system.
     """
-    return orientation.to_matrix().transposed().to_4x4() * mathutils.Matrix.Translation(-position)
+    with TimeProf.instance().start("to_base_matrix"):
+        return orientation.to_matrix().transposed().to_4x4() * mathutils.Matrix.Translation(-position)
 
 
 def get_object_rotation_quaternion(obj):
@@ -57,18 +112,19 @@ def get_object_rotation_quaternion(obj):
     :return: A quaternion representing rotation of the passed object. If the object uses some other kind of
              rotation representation, then there is applied a conversion.
     """
-    if obj.rotation_mode == 'QUATERNION':
-        return obj.rotation_quaternion
-    elif obj.rotation_mode == "AXIS_ANGLE":
-        return mathutils.Quaternion(
-            (obj.rotation_axis_angle[0], obj.rotation_axis_angle[1], obj.rotation_axis_angle[2]),
-            obj.rotation_axis_angle[3]
-            )
-    else:
-        return mathutils.Euler(
-            (obj.rotation_euler[0], obj.rotation_euler[1], obj.rotation_euler[2]),
-            obj.rotation_mode
-            ).to_quaternion()
+    with TimeProf.instance().start("get_object_rotation_quaternion"):
+        if obj.rotation_mode == 'QUATERNION':
+            return obj.rotation_quaternion
+        elif obj.rotation_mode == "AXIS_ANGLE":
+            return mathutils.Quaternion(
+                (obj.rotation_axis_angle[0], obj.rotation_axis_angle[1], obj.rotation_axis_angle[2]),
+                obj.rotation_axis_angle[3]
+                )
+        else:
+            return mathutils.Euler(
+                (obj.rotation_euler[0], obj.rotation_euler[1], obj.rotation_euler[2]),
+                obj.rotation_mode
+                ).to_quaternion()
 
 
 
@@ -98,21 +154,23 @@ def does_selected_mesh_object_have_correct_scales(
     """
 
     assert obj.type == 'MESH'
-    if not is_correct_scale_vector(obj.scale):
-        print("  ERROR: Mesh '" + obj.name + "' is scaled: " + str(obj.scale) + ".")
-        return False
-    for mod in obj.modifiers:
-        if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
-            armature = mod.object
-            if not is_correct_scale_vector(armature.scale):
-                print("  ERROR: Armature '" + armature.name + "' is scaled: " + str(armature.scale) + ".")
-                return False
-            # Only pose bones have scale (i.e. bones of the armarute "armature.data.bones" do not have scale)
-            for bone in armature.pose.bones:
-                if not is_correct_scale_vector(bone.scale):
-                    print("  ERROR: Pose bone '" + bone.name + "' of armature '" + armature.name + "' is scaled: " + str(bone.scale) + ".")
+
+    with TimeProf.instance().start("does_selected_mesh_object_have_correct_scales"):
+        if not is_correct_scale_vector(obj.scale):
+            print("  ERROR: Mesh '" + obj.name + "' is scaled: " + str(obj.scale) + ".")
+            return False
+        for mod in obj.modifiers:
+            if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
+                armature = mod.object
+                if not is_correct_scale_vector(armature.scale):
+                    print("  ERROR: Armature '" + armature.name + "' is scaled: " + str(armature.scale) + ".")
                     return False
-    return True
+                # Only pose bones have scale (i.e. bones of the armarute "armature.data.bones" do not have scale)
+                for bone in armature.pose.bones:
+                    if not is_correct_scale_vector(bone.scale):
+                        print("  ERROR: Pose bone '" + bone.name + "' of armature '" + armature.name + "' is scaled: " + str(bone.scale) + ".")
+                        return False
+        return True
 
 
 def does_selected_mesh_object_have_correct_weights(
@@ -126,27 +184,29 @@ def does_selected_mesh_object_have_correct_weights(
     """
 
     assert obj.type == 'MESH'
-    mesh = obj.data
-    for idx in range(0, len(mesh.vertices)):
-        num_weights = len(mesh.vertices[idx].groups)
-        if num_weights > 4:
-            print("ERROR: The vertex no." + str(idx) + " of the mesh object '" + obj.name + "' has more than 4 weights "
-                  ", namely " + str(num_weights) + ". You can fix the issue by 1. switching to 'Wight Paint' mode "
-                  "(select armature, then mesh, and press Ctrl+TAB), 2. Select menu option 'Weights/Limit Total'.")
-            return False
-    for idx in range(0, len(mesh.vertices)):
-        num_weights = len(mesh.vertices[idx].groups)
-        if num_weights > 1:
-            sum_of_weights = 0
-            for i in range(0, num_weights):
-                sum_of_weights += mesh.vertices[idx].groups[i].weight
-            if abs(sum_of_weights - 1.0) > 0.001:
-                print("ERROR: Sum of weights of vertex " + str(idx) + " of the mesh object '" + obj.name + "' is " +
-                      str(sum_of_weights) + ". To normalise the weights (so that the sum is 1) do this: 1. switching "
-                      "to 'Wight Paint' mode (select armature, then mesh, and press Ctrl+TAB), 2. Select "
-                      "menu option 'Weights/Normalize All'.")
+
+    with TimeProf.instance().start("does_selected_mesh_object_have_correct_weights"):
+        mesh = obj.data
+        for idx in range(0, len(mesh.vertices)):
+            num_weights = len(mesh.vertices[idx].groups)
+            if num_weights > 4:
+                print("ERROR: The vertex no." + str(idx) + " of the mesh object '" + obj.name + "' has more than 4 weights "
+                      ", namely " + str(num_weights) + ". You can fix the issue by 1. switching to 'Wight Paint' mode "
+                      "(select armature, then mesh, and press Ctrl+TAB), 2. Select menu option 'Weights/Limit Total'.")
                 return False
-    return True
+        for idx in range(0, len(mesh.vertices)):
+            num_weights = len(mesh.vertices[idx].groups)
+            if num_weights > 1:
+                sum_of_weights = 0
+                for i in range(0, num_weights):
+                    sum_of_weights += mesh.vertices[idx].groups[i].weight
+                if abs(sum_of_weights - 1.0) > 0.001:
+                    print("ERROR: Sum of weights of vertex " + str(idx) + " of the mesh object '" + obj.name + "' is " +
+                          str(sum_of_weights) + ". To normalise the weights (so that the sum is 1) do this: 1. switching "
+                          "to 'Wight Paint' mode (select armature, then mesh, and press Ctrl+TAB), 2. Select "
+                          "menu option 'Weights/Normalize All'.")
+                    return False
+        return True
 
 
 def does_vertex_groups_names_match_names_of_bones(
@@ -155,19 +215,20 @@ def does_vertex_groups_names_match_names_of_bones(
         armature
         ):
 
-    if not armature:
-        return True
+    with TimeProf.instance().start("does_vertex_groups_names_match_names_of_bones"):
+        if not armature:
+            return True
 
-    bone_names = set()
-    for bone in armature.data.bones:
-        if bone.use_deform:
-            bone_names.add(bone.name)
-    for grp in obj.vertex_groups:
-        if grp.name not in bone_names:
-            print("ERROR: The name '" + grp.name + "' of vertex group does not match the name of any bone. NOTE: "
-                  "We assume that names of vertex groups match the names of the corresponding bones. ")
-            return False
-    return True
+        bone_names = set()
+        for bone in armature.data.bones:
+            if bone.use_deform:
+                bone_names.add(bone.name)
+        for grp in obj.vertex_groups:
+            if grp.name not in bone_names:
+                print("ERROR: The name '" + grp.name + "' of vertex group does not match the name of any bone. NOTE: "
+                      "We assume that names of vertex groups match the names of the corresponding bones. ")
+                return False
+        return True
 
 
 class render_element:
@@ -233,37 +294,39 @@ class render_element:
         return self._indices_of_matrices[index]
 
     def __eq__(self,other):
-        if (self.vertex_coords() != other.vertex_coords()
-            or self.normal_coords() != other.normal_coords()
-            or self.diffuse_colour() != other.diffuse_colour()
-            or self.specular_colour() != other.specular_colour()
-            or self.num_texture_coords() != other.num_texture_coords()
-            or self.num_weights_of_matrices() != other.num_weights_of_matrices()
-            or self.num_indices_of_matrices() != other.num_indices_of_matrices()):
-            return False
-        for i in range(0,self.num_texture_coords()):
-            if self.texture_coords(i) != other.texture_coords(i):
+        with TimeProf.instance().start("render_element.__eq__"):
+            if (self.vertex_coords() != other.vertex_coords()
+                or self.normal_coords() != other.normal_coords()
+                or self.diffuse_colour() != other.diffuse_colour()
+                or self.specular_colour() != other.specular_colour()
+                or self.num_texture_coords() != other.num_texture_coords()
+                or self.num_weights_of_matrices() != other.num_weights_of_matrices()
+                or self.num_indices_of_matrices() != other.num_indices_of_matrices()):
                 return False
-        for i in range(0,self.num_weights_of_matrices()):
-            if self.weight_of_matrix(i) != other.weight_of_matrix(i):
-                return False
-        for i in range(0,self.num_indices_of_matrices()):
-            if self.index_of_matrix(i) != other.index_of_matrix(i):
-                return False
-        return True
+            for i in range(0,self.num_texture_coords()):
+                if self.texture_coords(i) != other.texture_coords(i):
+                    return False
+            for i in range(0,self.num_weights_of_matrices()):
+                if self.weight_of_matrix(i) != other.weight_of_matrix(i):
+                    return False
+            for i in range(0,self.num_indices_of_matrices()):
+                if self.index_of_matrix(i) != other.index_of_matrix(i):
+                    return False
+            return True
 
     def __hash__(self):
-        result = (hash(self.vertex_coords())
-                  +  7 * hash(self.normal_coords())
-                  + 17 * hash(self.diffuse_colour())
-                  + 29 * hash(self.specular_colour()))
-        for i in range(0,self.num_texture_coords()):
-            result = result + 101 * hash(self.texture_coords(i))
-        for i in range(0,self.num_weights_of_matrices()):
-            result = result + 101 * hash(self.weight_of_matrix(i))
-        for i in range(0,self.num_indices_of_matrices()):
-            result = result + 101 * hash(self.index_of_matrix(i))
-        return result
+        with TimeProf.instance().start("render_element.__hash__"):
+            result = (hash(self.vertex_coords())
+                      +  7 * hash(self.normal_coords())
+                      + 17 * hash(self.diffuse_colour())
+                      + 29 * hash(self.specular_colour()))
+            for i in range(0,self.num_texture_coords()):
+                result = result + 101 * hash(self.texture_coords(i))
+            for i in range(0,self.num_weights_of_matrices()):
+                result = result + 101 * hash(self.weight_of_matrix(i))
+            for i in range(0,self.num_indices_of_matrices()):
+                result = result + 101 * hash(self.index_of_matrix(i))
+            return result
 
 
 class render_buffers:
@@ -322,46 +385,30 @@ class render_buffers:
             return 0
         return self.element_at_index(0).num_indices_of_matrices()
 
-    def add_triangle(
-            self,
-            A,  # An instance of class 'render_element' representing the first vertex.
-            B,  # An instance of class 'render_element' representing the second vertex.
-            C   # An instance of class 'render_element' representing the third vertex.
-            ):
-        self._add_element_if_not_present(A)
-        self._add_element_if_not_present(B)
-        self._add_element_if_not_present(C)
-        self._triangles.append((self._index_of_element(A),
-                                self._index_of_element(B),
-                                self._index_of_element(C)))
-
     def add_polygon(
             self,
             polygon     # A list of at least three instances of class 'render_element'.
             ):
         assert len(polygon) >= 3
-        for i in range(2,len(polygon)):
-            self.add_triangle(polygon[0],polygon[i-1],polygon[i])
+        indices = [self._add_element_if_not_present(E) for E in polygon]
+        for i in range(2,len(indices)):
+            self._triangles.append((indices[0], indices[i-1], indices[i]))
 
     def _add_element_if_not_present(
             self,
             E       # An instance of class 'render_element'.
             ):
-        if E not in self._elements_to_indices:
+        index = self._elements_to_indices.get(E)
+        if index is None:
             if self._counter == 0:
                 self._num_texture_coordinates = E.num_texture_coords()
             else:
                 assert self._num_texture_coordinates == E.num_texture_coords()
             self._elements_to_indices[E] = self._counter
             self._indices_to_elements[self._counter] = E
-            self._counter = self._counter + 1
-
-    def _index_of_element(
-            self,
-            E       # An instance of class 'render_element'.
-            ):
-        assert E in self._elements_to_indices
-        return self._elements_to_indices[E]
+            index = self._counter
+            self._counter += 1
+        return index
 
 
 def build_render_buffers(
@@ -381,103 +428,104 @@ def build_render_buffers(
     :return: The constructed instance of the class 'render_buffers'
     """
 
-    mesh = obj.data
+    with TimeProf.instance().start("build_render_buffers"):
+        mesh = obj.data
 
-    if not armature:
-        deform_bone_index = None
-    else:
-        deform_bone_index = {}
-        deform_bones_counter = 0
-        for idx in range(0, len(armature.data.bones)):
-            bone = armature.data.bones[idx]
-            if bone.use_deform:
-                deform_bone_index[bone.name] = deform_bones_counter
-                deform_bones_counter += 1
-
-    num_weights_per_vertex = 0
-    for idx in range(0,len(mesh.vertices)):
-        num_weights_per_vertex = max(num_weights_per_vertex,len(mesh.vertices[idx].groups))
-
-    buffers = []
-    if len(mesh.materials) == 0:
-        buffers.append(render_buffers())
-    else:
-        for i in range(0,len(mesh.materials)):
-            buffers.append(render_buffers())
-
-    for i in range(0,len(mesh.polygons)):
-        if len(mesh.materials) == 0:
-            mtl_index = 0
+        if not armature:
+            deform_bone_index = None
         else:
-            mtl_index = mesh.polygons[i].material_index
-            assert mtl_index < len(mesh.materials)
-        polygon = []
-        for j in mesh.polygons[i].loop_indices:
-            if len(mesh.vertex_colors) > 0:
-                colours = []
-                for k in range(0,min(2,len(mesh.vertex_colors))):
-                    colours.append((
-                        mesh.vertex_colors[k].data[j].color[0],
-                        mesh.vertex_colors[k].data[j].color[1],
-                        mesh.vertex_colors[k].data[j].color[2],
-                        1.0
-                        ))
-                assert len(colours) > 0
-                diffuse_colour = colours[0]
-                if len(colours) > 1:
-                    specular_colour = colours[1]
-                else:
-                    specular_colour = (0.0, 0.0, 0.0, 1.0)
-            elif len(mesh.materials) > 0:
-                diffuse_colour = (
-                    mesh.materials[mtl_index].diffuse_color[0],
-                    mesh.materials[mtl_index].diffuse_color[1],
-                    mesh.materials[mtl_index].diffuse_color[2],
-                    mesh.materials[mtl_index].alpha
-                    )
-                specular_colour = (
-                    mesh.materials[mtl_index].specular_color[0],
-                    mesh.materials[mtl_index].specular_color[1],
-                    mesh.materials[mtl_index].specular_color[2],
-                    mesh.materials[mtl_index].specular_alpha
-                    )
+            deform_bone_index = {}
+            deform_bones_counter = 0
+            for idx in range(0, len(armature.data.bones)):
+                bone = armature.data.bones[idx]
+                if bone.use_deform:
+                    deform_bone_index[bone.name] = deform_bones_counter
+                    deform_bones_counter += 1
+
+        num_weights_per_vertex = 0
+        for idx in range(0,len(mesh.vertices)):
+            num_weights_per_vertex = max(num_weights_per_vertex,len(mesh.vertices[idx].groups))
+
+        buffers = []
+        if len(mesh.materials) == 0:
+            buffers.append(render_buffers())
+        else:
+            for i in range(0,len(mesh.materials)):
+                buffers.append(render_buffers())
+
+        for i in range(0,len(mesh.polygons)):
+            if len(mesh.materials) == 0:
+                mtl_index = 0
             else:
-                diffuse_colour = (0.8, 0.8, 0.8, 1.0)
-                specular_colour = (0.0, 0.0, 0.0, 1.0)
+                mtl_index = mesh.polygons[i].material_index
+                assert mtl_index < len(mesh.materials)
+            polygon = []
+            for j in mesh.polygons[i].loop_indices:
+                if len(mesh.vertex_colors) > 0:
+                    colours = []
+                    for k in range(0,min(2,len(mesh.vertex_colors))):
+                        colours.append((
+                            mesh.vertex_colors[k].data[j].color[0],
+                            mesh.vertex_colors[k].data[j].color[1],
+                            mesh.vertex_colors[k].data[j].color[2],
+                            1.0
+                            ))
+                    assert len(colours) > 0
+                    diffuse_colour = colours[0]
+                    if len(colours) > 1:
+                        specular_colour = colours[1]
+                    else:
+                        specular_colour = (0.0, 0.0, 0.0, 1.0)
+                elif len(mesh.materials) > 0:
+                    diffuse_colour = (
+                        mesh.materials[mtl_index].diffuse_color[0],
+                        mesh.materials[mtl_index].diffuse_color[1],
+                        mesh.materials[mtl_index].diffuse_color[2],
+                        mesh.materials[mtl_index].alpha
+                        )
+                    specular_colour = (
+                        mesh.materials[mtl_index].specular_color[0],
+                        mesh.materials[mtl_index].specular_color[1],
+                        mesh.materials[mtl_index].specular_color[2],
+                        mesh.materials[mtl_index].specular_alpha
+                        )
+                else:
+                    diffuse_colour = (0.8, 0.8, 0.8, 1.0)
+                    specular_colour = (0.0, 0.0, 0.0, 1.0)
 
-            texcoords = []
-            for k in range(0,len(mesh.uv_layers)):
-                texcoords.append(mesh.uv_layers[k].data[j].uv)
+                texcoords = []
+                for k in range(0,len(mesh.uv_layers)):
+                    texcoords.append(mesh.uv_layers[k].data[j].uv)
 
-            vtx = mesh.vertices[mesh.loops[j].vertex_index]
+                vtx = mesh.vertices[mesh.loops[j].vertex_index]
 
-            assert len(vtx.groups) == 0 or deform_bone_index is not None
+                assert len(vtx.groups) == 0 or deform_bone_index is not None
 
-            weights_of_matrices = []
-            indices_of_matrices = []
-            for _ in range(0, num_weights_per_vertex):
-                weights_of_matrices.append(0.0)
-                indices_of_matrices.append(0)
-            for grp_idx in range(0, len(vtx.groups)):
-                weights_of_matrices[grp_idx] = vtx.groups[grp_idx].weight
-                indices_of_matrices[grp_idx] = deform_bone_index[obj.vertex_groups[vtx.groups[grp_idx].group].name]
-            if num_weights_per_vertex > 1 and abs(sum(weights_of_matrices) - 1.0) > 0.001:
-                print("  WARNING: Sum of weights of vertex " + str(mesh.loops[j].vertex_index) + " is " +
-                      str(sum(weights_of_matrices)))
+                weights_of_matrices = []
+                indices_of_matrices = []
+                for _ in range(0, num_weights_per_vertex):
+                    weights_of_matrices.append(0.0)
+                    indices_of_matrices.append(0)
+                for grp_idx in range(0, len(vtx.groups)):
+                    weights_of_matrices[grp_idx] = vtx.groups[grp_idx].weight
+                    indices_of_matrices[grp_idx] = deform_bone_index[obj.vertex_groups[vtx.groups[grp_idx].group].name]
+                if num_weights_per_vertex > 1 and abs(sum(weights_of_matrices) - 1.0) > 0.001:
+                    print("  WARNING: Sum of weights of vertex " + str(mesh.loops[j].vertex_index) + " is " +
+                          str(sum(weights_of_matrices)))
 
-            E = render_element(
-                    mesh.vertices[mesh.loops[j].vertex_index].co,
-                    mesh.vertices[mesh.loops[j].vertex_index].normal,
-                    diffuse_colour,
-                    specular_colour,
-                    texcoords,
-                    weights_of_matrices,
-                    indices_of_matrices
-                    )
-            polygon.append(E)
-        buffers[mtl_index].add_polygon(polygon)
+                E = render_element(
+                        mesh.vertices[mesh.loops[j].vertex_index].co,
+                        mesh.vertices[mesh.loops[j].vertex_index].normal,
+                        diffuse_colour,
+                        specular_colour,
+                        texcoords,
+                        weights_of_matrices,
+                        indices_of_matrices
+                        )
+                polygon.append(E)
+            buffers[mtl_index].add_polygon(polygon)
 
-    return buffers
+        return buffers
 
 
 def save_render_buffers(
@@ -502,125 +550,126 @@ def save_render_buffers(
     :return: None
     """
 
-    precision_str = "%.6f"
+    with TimeProf.instance().start("save_render_buffers"):
+        precision_str = "%.6f"
 
-    mesh_root_dir = os.path.join(
-            export_info["root_dir"],
-            "meshes",
-            export_info["model_name"],
-            export_info["mesh_name"],
-            output_sub_directory
-            )
-    os.makedirs(mesh_root_dir, exist_ok=True)
+        mesh_root_dir = os.path.join(
+                export_info["root_dir"],
+                "meshes",
+                export_info["model_name"],
+                export_info["mesh_name"],
+                output_sub_directory
+                )
+        os.makedirs(mesh_root_dir, exist_ok=True)
 
-    if "render_buffers" in export_info:
-        export_info["render_buffers"].append( {} )
-    else:
-        export_info["render_buffers"] = [ {} ]
+        if "render_buffers" in export_info:
+            export_info["render_buffers"].append( {} )
+        else:
+            export_info["render_buffers"] = [ {} ]
 
-    buffers_export_info = export_info["render_buffers"][-1]
+        buffers_export_info = export_info["render_buffers"][-1]
 
-    buffers_export_info["index_buffer"] = os.path.join(mesh_root_dir,"indices.txt")
-    with open(buffers_export_info["index_buffer"],"w") as f:
-        print("    Saving index buffer: " +
-              os.path.relpath(buffers_export_info["index_buffer"],export_info["root_dir"]))
-        f.write("E2::qtgl/buffer/indices/triangles/text\n")
-        f.write(str(buffers.num_triangles()) + "\n")
-        for i in range(0,buffers.num_triangles()):
-            t = buffers.triangle_at_index(i)
-            for j in range(0,3):
-                assert t[j] >= 0 and t[j] < buffers.num_elements()
-                f.write(str(t[j]) + "\n")
+        buffers_export_info["index_buffer"] = os.path.join(mesh_root_dir,"indices.txt")
+        with open(buffers_export_info["index_buffer"],"w") as f:
+            print("    Saving index buffer: " +
+                  os.path.relpath(buffers_export_info["index_buffer"],export_info["root_dir"]))
+            f.write("E2::qtgl/buffer/indices/triangles/text\n")
+            f.write(str(buffers.num_triangles()) + "\n")
+            for i in range(0,buffers.num_triangles()):
+                t = buffers.triangle_at_index(i)
+                for j in range(0,3):
+                    assert t[j] >= 0 and t[j] < buffers.num_elements()
+                    f.write(str(t[j]) + "\n")
 
-    buffers_export_info["vertex_buffer"] = os.path.join(mesh_root_dir,"vertices.txt")
-    with open(buffers_export_info["vertex_buffer"],"w") as f:
-        print("    Saving vertex buffer: " +
-              os.path.relpath(buffers_export_info["vertex_buffer"],export_info["root_dir"]))
-        f.write("E2::qtgl/buffer/vertices/3d/text\n")
-        f.write(str(buffers.num_elements()) + "\n")
-        for i in range(0,buffers.num_elements()):
-            c = buffers.element_at_index(i).vertex_coords()
-            f.write((precision_str % c[0]) + "\n")
-            f.write((precision_str % c[1]) + "\n")
-            f.write((precision_str % c[2]) + "\n")
-
-    buffers_export_info["normal_buffer"] = os.path.join(mesh_root_dir,"normals.txt")
-    with open(buffers_export_info["normal_buffer"],"w") as f:
-        print("    Saving normal buffer: " +
-              os.path.relpath(buffers_export_info["normal_buffer"],export_info["root_dir"]))
-        f.write("E2::qtgl/buffer/normals/3d/text\n")
-        f.write(str(buffers.num_elements()) + "\n")
-        for i in range(0,buffers.num_elements()):
-            c = buffers.element_at_index(i).normal_coords()
-            f.write((precision_str % c[0]) + "\n")
-            f.write((precision_str % c[1]) + "\n")
-            f.write((precision_str % c[2]) + "\n")
-
-    buffers_export_info["diffuse_buffer"] = os.path.join(mesh_root_dir,"diffuse_colours.txt")
-    with open(buffers_export_info["diffuse_buffer"],"w") as f:
-        print("    Saving diffuse buffer: " +
-              os.path.relpath(buffers_export_info["diffuse_buffer"],export_info["root_dir"]))
-        f.write("E2::qtgl/buffer/diffuse_colours/text\n")
-        f.write(str(buffers.num_elements()) + "\n")
-        for i in range(0,buffers.num_elements()):
-            c = buffers.element_at_index(i).diffuse_colour()
-            f.write((precision_str % c[0]) + "\n")
-            f.write((precision_str % c[1]) + "\n")
-            f.write((precision_str % c[2]) + "\n")
-            f.write((precision_str % c[3]) + "\n")
-
-    buffers_export_info["specular_buffer"] = os.path.join(mesh_root_dir,"specular_colours.txt")
-    with open(buffers_export_info["specular_buffer"],"w") as f:
-        print("    Saving specular buffer: " +
-              os.path.relpath(buffers_export_info["specular_buffer"],export_info["root_dir"]))
-        f.write("E2::qtgl/buffer/specular_colours/text\n")
-        f.write(str(buffers.num_elements()) + "\n")
-        for i in range(0,buffers.num_elements()):
-            c = buffers.element_at_index(i).specular_colour()
-            f.write((precision_str % c[0]) + "\n")
-            f.write((precision_str % c[1]) + "\n")
-            f.write((precision_str % c[2]) + "\n")
-            f.write((precision_str % c[3]) + "\n")
-
-    buffers_export_info["texcoord_buffers"] = []
-    for i in range(0,buffers.num_texture_coords()):
-        buffers_export_info["texcoord_buffers"].append(os.path.join(mesh_root_dir,"texcoords" + str(i) + ".txt"))
-        with open(buffers_export_info["texcoord_buffers"][-1],"w") as f:
-            print("    Saving uv buffer of texture #" + str(i) + ": " +
-                  os.path.relpath(buffers_export_info["texcoord_buffers"][-1],export_info["root_dir"]))
-            f.write("E2::qtgl/buffer/texcoords/2d/" + str(i) + "/text\n")
+        buffers_export_info["vertex_buffer"] = os.path.join(mesh_root_dir,"vertices.txt")
+        with open(buffers_export_info["vertex_buffer"],"w") as f:
+            print("    Saving vertex buffer: " +
+                  os.path.relpath(buffers_export_info["vertex_buffer"],export_info["root_dir"]))
+            f.write("E2::qtgl/buffer/vertices/3d/text\n")
             f.write(str(buffers.num_elements()) + "\n")
-            for j in range(0,buffers.num_elements()):
-                assert buffers.element_at_index(j).num_texture_coords() > i
-                c = buffers.element_at_index(j).texture_coords(i)
+            for i in range(0,buffers.num_elements()):
+                c = buffers.element_at_index(i).vertex_coords()
                 f.write((precision_str % c[0]) + "\n")
                 f.write((precision_str % c[1]) + "\n")
+                f.write((precision_str % c[2]) + "\n")
 
-    assert buffers.num_weights_of_matrices_per_vertex() == buffers.num_indices_of_matrices_per_vertex()
-    if buffers.num_weights_of_matrices_per_vertex() > 0:
-        buffers_export_info["matrix_weight_buffer"] = os.path.join(mesh_root_dir,"weights_of_matrices.txt")
-        with open(buffers_export_info["matrix_weight_buffer"],"w") as f:
-            print("    Saving matrix weight buffer: " +
-                  os.path.relpath(buffers_export_info["matrix_weight_buffer"],export_info["root_dir"]))
-            f.write("E2::qtgl/buffer/weights_of_matrices/" +
-                    str(buffers.num_weights_of_matrices_per_vertex()) +
-                    "/text\n")
+        buffers_export_info["normal_buffer"] = os.path.join(mesh_root_dir,"normals.txt")
+        with open(buffers_export_info["normal_buffer"],"w") as f:
+            print("    Saving normal buffer: " +
+                  os.path.relpath(buffers_export_info["normal_buffer"],export_info["root_dir"]))
+            f.write("E2::qtgl/buffer/normals/3d/text\n")
             f.write(str(buffers.num_elements()) + "\n")
-            for elem_idx in range(0,buffers.num_elements()):
-                elem = buffers.element_at_index(elem_idx)
-                for weight_idx in range(0,elem.num_weights_of_matrices()):
-                    f.write(str(elem.weight_of_matrix(weight_idx)) + "\n")
+            for i in range(0,buffers.num_elements()):
+                c = buffers.element_at_index(i).normal_coords()
+                f.write((precision_str % c[0]) + "\n")
+                f.write((precision_str % c[1]) + "\n")
+                f.write((precision_str % c[2]) + "\n")
 
-        buffers_export_info["matrix_index_buffer"] = os.path.join(mesh_root_dir,"indices_of_matrices.txt")
-        with open(buffers_export_info["matrix_index_buffer"],"w") as f:
-            print("    Saving matrix index buffer: " +
-                  os.path.relpath(buffers_export_info["matrix_index_buffer"],export_info["root_dir"]))
-            f.write("E2::qtgl/buffer/indices_of_matrices/" + str(buffers.num_indices_of_matrices_per_vertex()) + "/text\n")
+        buffers_export_info["diffuse_buffer"] = os.path.join(mesh_root_dir,"diffuse_colours.txt")
+        with open(buffers_export_info["diffuse_buffer"],"w") as f:
+            print("    Saving diffuse buffer: " +
+                  os.path.relpath(buffers_export_info["diffuse_buffer"],export_info["root_dir"]))
+            f.write("E2::qtgl/buffer/diffuse_colours/text\n")
             f.write(str(buffers.num_elements()) + "\n")
-            for elem_idx in range(0,buffers.num_elements()):
-                elem = buffers.element_at_index(elem_idx)
-                for index_idx in range(0,elem.num_indices_of_matrices()):
-                    f.write(str(elem.index_of_matrix(index_idx)) + "\n")
+            for i in range(0,buffers.num_elements()):
+                c = buffers.element_at_index(i).diffuse_colour()
+                f.write((precision_str % c[0]) + "\n")
+                f.write((precision_str % c[1]) + "\n")
+                f.write((precision_str % c[2]) + "\n")
+                f.write((precision_str % c[3]) + "\n")
+
+        buffers_export_info["specular_buffer"] = os.path.join(mesh_root_dir,"specular_colours.txt")
+        with open(buffers_export_info["specular_buffer"],"w") as f:
+            print("    Saving specular buffer: " +
+                  os.path.relpath(buffers_export_info["specular_buffer"],export_info["root_dir"]))
+            f.write("E2::qtgl/buffer/specular_colours/text\n")
+            f.write(str(buffers.num_elements()) + "\n")
+            for i in range(0,buffers.num_elements()):
+                c = buffers.element_at_index(i).specular_colour()
+                f.write((precision_str % c[0]) + "\n")
+                f.write((precision_str % c[1]) + "\n")
+                f.write((precision_str % c[2]) + "\n")
+                f.write((precision_str % c[3]) + "\n")
+
+        buffers_export_info["texcoord_buffers"] = []
+        for i in range(0,buffers.num_texture_coords()):
+            buffers_export_info["texcoord_buffers"].append(os.path.join(mesh_root_dir,"texcoords" + str(i) + ".txt"))
+            with open(buffers_export_info["texcoord_buffers"][-1],"w") as f:
+                print("    Saving uv buffer of texture #" + str(i) + ": " +
+                      os.path.relpath(buffers_export_info["texcoord_buffers"][-1],export_info["root_dir"]))
+                f.write("E2::qtgl/buffer/texcoords/2d/" + str(i) + "/text\n")
+                f.write(str(buffers.num_elements()) + "\n")
+                for j in range(0,buffers.num_elements()):
+                    assert buffers.element_at_index(j).num_texture_coords() > i
+                    c = buffers.element_at_index(j).texture_coords(i)
+                    f.write((precision_str % c[0]) + "\n")
+                    f.write((precision_str % c[1]) + "\n")
+
+        assert buffers.num_weights_of_matrices_per_vertex() == buffers.num_indices_of_matrices_per_vertex()
+        if buffers.num_weights_of_matrices_per_vertex() > 0:
+            buffers_export_info["matrix_weight_buffer"] = os.path.join(mesh_root_dir,"weights_of_matrices.txt")
+            with open(buffers_export_info["matrix_weight_buffer"],"w") as f:
+                print("    Saving matrix weight buffer: " +
+                      os.path.relpath(buffers_export_info["matrix_weight_buffer"],export_info["root_dir"]))
+                f.write("E2::qtgl/buffer/weights_of_matrices/" +
+                        str(buffers.num_weights_of_matrices_per_vertex()) +
+                        "/text\n")
+                f.write(str(buffers.num_elements()) + "\n")
+                for elem_idx in range(0,buffers.num_elements()):
+                    elem = buffers.element_at_index(elem_idx)
+                    for weight_idx in range(0,elem.num_weights_of_matrices()):
+                        f.write(str(elem.weight_of_matrix(weight_idx)) + "\n")
+
+            buffers_export_info["matrix_index_buffer"] = os.path.join(mesh_root_dir,"indices_of_matrices.txt")
+            with open(buffers_export_info["matrix_index_buffer"],"w") as f:
+                print("    Saving matrix index buffer: " +
+                      os.path.relpath(buffers_export_info["matrix_index_buffer"],export_info["root_dir"]))
+                f.write("E2::qtgl/buffer/indices_of_matrices/" + str(buffers.num_indices_of_matrices_per_vertex()) + "/text\n")
+                f.write(str(buffers.num_elements()) + "\n")
+                for elem_idx in range(0,buffers.num_elements()):
+                    elem = buffers.element_at_index(elem_idx)
+                    for index_idx in range(0,elem.num_indices_of_matrices()):
+                        f.write(str(elem.index_of_matrix(index_idx)) + "\n")
 
 
 def save_textures(
@@ -634,56 +683,57 @@ def save_textures(
     :return: None
     """
 
-    textures_root_dir = os.path.join(export_info["root_dir"],"textures",export_info["model_name"])
-    os.makedirs(textures_root_dir, exist_ok=True)
+    with TimeProf.instance().start("save_textures"):
+        textures_root_dir = os.path.join(export_info["root_dir"],"textures",export_info["model_name"])
+        os.makedirs(textures_root_dir, exist_ok=True)
 
-    export_info["images"] = []
-    export_info["textures"] = []
-    for material in materials:
-        images = []
-        if material:
-            for mtex_slot_index in range(0,len(material.texture_slots)):
-                mtex_slot = material.texture_slots[mtex_slot_index]
-                if mtex_slot is not None:
-                    texture = mtex_slot.texture
-                    if hasattr(texture,"image"):
-                        image = texture.image
-                        images.append(image)
+        export_info["images"] = []
+        export_info["textures"] = []
+        for material in materials:
+            images = []
+            if material:
+                for mtex_slot_index in range(0,len(material.texture_slots)):
+                    mtex_slot = material.texture_slots[mtex_slot_index]
+                    if mtex_slot is not None:
+                        texture = mtex_slot.texture
+                        if hasattr(texture,"image"):
+                            image = texture.image
+                            images.append(image)
 
-        export_info["images"].append( [] )
-        export_info["textures"].append( [] )
-        for i in range(0,len(images)):
-            image = images[i]
-            if os.path.exists(bpy.path.abspath(image.filepath)):
-                src_image_pathname = bpy.path.abspath(image.filepath)
-            else:
-                image.unpack(method="USE_LOCAL")
-                src_image_pathname = bpy.path.abspath("//textures/" + image.name)
-                assert os.path.exists(src_image_pathname)
+            export_info["images"].append( [] )
+            export_info["textures"].append( [] )
+            for i in range(0,len(images)):
+                image = images[i]
+                if os.path.exists(bpy.path.abspath(image.filepath)):
+                    src_image_pathname = bpy.path.abspath(image.filepath)
+                else:
+                    image.unpack(method="USE_LOCAL")
+                    src_image_pathname = bpy.path.abspath("//textures/" + image.name)
+                    assert os.path.exists(src_image_pathname)
 
-            dst_image_name = os.path.splitext(os.path.basename(src_image_pathname))[0]
-            dst_image_extension = os.path.splitext(os.path.basename(src_image_pathname))[1]
+                dst_image_name = os.path.splitext(os.path.basename(src_image_pathname))[0]
+                dst_image_extension = os.path.splitext(os.path.basename(src_image_pathname))[1]
 
-            images_export_info = export_info["images"][-1]
-            images_export_info.append(os.path.join(textures_root_dir,dst_image_name + dst_image_extension))
-            print("    Copying image #" + str(i) + ": " +
-                  os.path.relpath(images_export_info[-1],export_info["root_dir"]))
-            shutil.copyfile(src_image_pathname,images_export_info[-1])
+                images_export_info = export_info["images"][-1]
+                images_export_info.append(os.path.join(textures_root_dir,dst_image_name + dst_image_extension))
+                print("    Copying image #" + str(i) + ": " +
+                      os.path.relpath(images_export_info[-1],export_info["root_dir"]))
+                shutil.copyfile(src_image_pathname,images_export_info[-1])
 
-            textures_export_info = export_info["textures"][-1]
-            textures_export_info.append(os.path.join(textures_root_dir,dst_image_name + ".txt"))
-            with open(textures_export_info[-1],"w") as f:
-                print("    Saving texture #" + str(i) + ": " +
-                      os.path.relpath(textures_export_info[-1],export_info["root_dir"]))
-                f.write("E2::qtgl/texture/text\n")
-                f.write("./" + dst_image_name + dst_image_extension + "\n")
-                f.write("COMPRESSED_RGBA\n")
-                f.write("REPEAT\n")
-                f.write("REPEAT\n")
-                f.write("LINEAR_MIPMAP_LINEAR\n")
-                f.write("LINEAR\n")
+                textures_export_info = export_info["textures"][-1]
+                textures_export_info.append(os.path.join(textures_root_dir,dst_image_name + ".txt"))
+                with open(textures_export_info[-1],"w") as f:
+                    print("    Saving texture #" + str(i) + ": " +
+                          os.path.relpath(textures_export_info[-1],export_info["root_dir"]))
+                    f.write("E2::qtgl/texture/text\n")
+                    f.write("./" + dst_image_name + dst_image_extension + "\n")
+                    f.write("COMPRESSED_RGBA\n")
+                    f.write("REPEAT\n")
+                    f.write("REPEAT\n")
+                    f.write("LINEAR_MIPMAP_LINEAR\n")
+                    f.write("LINEAR\n")
 
-        assert len(export_info["images"][-1]) == len(export_info["textures"][-1])
+            assert len(export_info["images"][-1]) == len(export_info["textures"][-1])
 
 
 def save_coord_systems_of_bones(
@@ -704,75 +754,76 @@ def save_coord_systems_of_bones(
 
     assert obj.type == 'MESH'
 
-    # We first find an armature applied to the mesh object. It might also be the case there is none.
-    armature = None
-    for mod in obj.modifiers:
-        if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
-            armature = mod.object
-            break
-    if not armature:
-        return
+    with TimeProf.instance().start("save_coord_systems_of_bones"):
+        # We first find an armature applied to the mesh object. It might also be the case there is none.
+        armature = None
+        for mod in obj.modifiers:
+            if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
+                armature = mod.object
+                break
+        if not armature:
+            return
 
-    # This is the list into which we store coordinate systems of all bones in the armature
-    # in the order as they are listed in the armature (to match their indices in vertex groups).
-    coord_systems = []
+        # This is the list into which we store coordinate systems of all bones in the armature
+        # in the order as they are listed in the armature (to match their indices in vertex groups).
+        coord_systems = []
 
-    # So, let's compute coordinate systems of individual bones.
-    for bone in armature.data.bones:
+        # So, let's compute coordinate systems of individual bones.
+        for bone in armature.data.bones:
 
-        if not bone.use_deform:
-            # The bone is not used for deformation of the child mesh object. It means, that the bone
-            # is some "helper" bone, like inverse kinematic bone, so we have to skip it from the export.
-            continue
+            if not bone.use_deform:
+                # The bone is not used for deformation of the child mesh object. It means, that the bone
+                # is some "helper" bone, like inverse kinematic bone, so we have to skip it from the export.
+                continue
 
-        # First we collect the whole chain of parent bones from the root one to this bone.
-        bones_list = []
-        xbone = bone
-        while xbone:
-            bones_list.append(xbone)
-            xbone = xbone.parent
-        bones_list.reverse()
+            # First we collect the whole chain of parent bones from the root one to this bone.
+            bones_list = []
+            xbone = bone
+            while xbone:
+                bones_list.append(xbone)
+                xbone = xbone.parent
+            bones_list.reverse()
 
-        # Now we compute "to-space" transformation matrix of the bone.
-        # We have to do so by composition with same matrices of all parent bones.
-        # And lastly we have to also include the transformation of the mesh into
-        # the parent armature.
-        transform_matrix = mathutils.Matrix()
-        transform_matrix.identity()
-        parent_tail = mathutils.Vector((0.0, 0.0, 0.0))
-        for xbone in bones_list:
-            bone_to_base_matrix = to_base_matrix(parent_tail + xbone.head, xbone.matrix.to_quaternion())
-            transform_matrix = bone_to_base_matrix * transform_matrix
-            parent_tail = bone_to_base_matrix * (parent_tail + xbone.tail).to_4d()
-            parent_tail.resize_3d()
-        transform_matrix = transform_matrix * from_base_matrix(obj.location, get_object_rotation_quaternion(obj))
+            # Now we compute "to-space" transformation matrix of the bone.
+            # We have to do so by composition with same matrices of all parent bones.
+            # And lastly we have to also include the transformation of the mesh into
+            # the parent armature.
+            transform_matrix = mathutils.Matrix()
+            transform_matrix.identity()
+            parent_tail = mathutils.Vector((0.0, 0.0, 0.0))
+            for xbone in bones_list:
+                bone_to_base_matrix = to_base_matrix(parent_tail + xbone.head, xbone.matrix.to_quaternion())
+                transform_matrix = bone_to_base_matrix * transform_matrix
+                parent_tail = bone_to_base_matrix * (parent_tail + xbone.tail).to_4d()
+                parent_tail.resize_3d()
+            transform_matrix = transform_matrix * from_base_matrix(obj.location, get_object_rotation_quaternion(obj))
 
-        # Finally we compute the position (origin) and rotation (orientation) of the
-        # coordinate system of the bone.
-        pos = transform_matrix.inverted() * mathutils.Vector((0.0, 0.0, 0.0, 1.0))
-        pos.resize_3d()
-        rot = transform_matrix.to_3x3().transposed().to_quaternion().normalized()
+            # Finally we compute the position (origin) and rotation (orientation) of the
+            # coordinate system of the bone.
+            pos = transform_matrix.inverted() * mathutils.Vector((0.0, 0.0, 0.0, 1.0))
+            pos.resize_3d()
+            rot = transform_matrix.to_3x3().transposed().to_quaternion().normalized()
 
-        # And we store the computed data (i.e. the coordinate system).
-        coord_systems.append({ "position": pos, "orientation": rot })
+            # And we store the computed data (i.e. the coordinate system).
+            coord_systems.append({ "position": pos, "orientation": rot })
 
-    export_info["coord_systems"] = os.path.join(
-        export_info["root_dir"],
-        "animation",
-        export_info["model_name"],
-        export_info["mesh_name"],
-        "coord_systems.txt"
-        )
-    os.makedirs(os.path.dirname(export_info["coord_systems"]), exist_ok=True)
-    with open(export_info["coord_systems"],"w") as f:
-        print("    Saving coordinate systems: " + os.path.relpath(export_info["coord_systems"],export_info["root_dir"]))
-        f.write("E2::qtgl/coordsystems/text\n")
-        f.write(str(len(coord_systems)) + "\n")
-        for system in coord_systems:
-            for i in range(0,3):
-                f.write(str(system["position"][i]) + "\n")
-            for i in range(0,4):
-                f.write(str(system["orientation"][i]) + "\n")
+        export_info["coord_systems"] = os.path.join(
+            export_info["root_dir"],
+            "animation",
+            export_info["model_name"],
+            export_info["mesh_name"],
+            "coord_systems.txt"
+            )
+        os.makedirs(os.path.dirname(export_info["coord_systems"]), exist_ok=True)
+        with open(export_info["coord_systems"],"w") as f:
+            print("    Saving coordinate systems: " + os.path.relpath(export_info["coord_systems"],export_info["root_dir"]))
+            f.write("E2::qtgl/coordsystems/text\n")
+            f.write(str(len(coord_systems)) + "\n")
+            for system in coord_systems:
+                for i in range(0,3):
+                    f.write(str(system["position"][i]) + "\n")
+                for i in range(0,4):
+                    f.write(str(system["orientation"][i]) + "\n")
 
 
 def save_keyframe_coord_systems_of_bones(
@@ -793,77 +844,78 @@ def save_keyframe_coord_systems_of_bones(
     """
     assert obj.type == 'MESH'
 
-    coord_systems_of_frames = {}
+    with TimeProf.instance().start("save_keyframe_coord_systems_of_bones"):
+        coord_systems_of_frames = {}
 
-    # We first find an armature applied to the mesh object. It might also be the case there is none.
-    armature = None
-    for mod in obj.modifiers:
-        if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
-            armature = mod.object
-            break
-    if not armature:
-        return
-    if not armature.animation_data:
-        return
-    if not armature.animation_data.action:
-        return
+        # We first find an armature applied to the mesh object. It might also be the case there is none.
+        armature = None
+        for mod in obj.modifiers:
+            if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
+                armature = mod.object
+                break
+        if not armature:
+            return
+        if not armature.animation_data:
+            return
+        if not armature.animation_data.action:
+            return
 
-    scene = bpy.context.scene
+        scene = bpy.context.scene
 
-    keyframes = set()
-    action = armature.animation_data.action
-    for fcurve in action.fcurves:
-        for point in fcurve.keyframe_points:
-            keyframes.add(round(point.co[0]))
-    start_frame = min(keyframes)
+        keyframes = set()
+        action = armature.animation_data.action
+        for fcurve in action.fcurves:
+            for point in fcurve.keyframe_points:
+                keyframes.add(round(point.co[0]))
+        start_frame = min(keyframes)
 
-    frame_current_backup = scene.frame_current
+        frame_current_backup = scene.frame_current
 
-    for frame in keyframes:
-        scene.frame_set(frame)
-        coord_systems = []
-        for armature_bone in armature.data.bones:
-            if not armature_bone.use_deform:
-                continue
-            bone = armature.pose.bones[armature_bone.name]
-            coord_systems.append({
-                "position": bone.matrix * mathutils.Vector((0.0, 0.0, 0.0, 1.0)),
-                "orientation": bone.matrix.to_quaternion()
-                })
-        coord_systems_of_frames[(frame - start_frame) * 0.041666666] = coord_systems
+        for frame in keyframes:
+            scene.frame_set(frame)
+            coord_systems = []
+            for armature_bone in armature.data.bones:
+                if not armature_bone.use_deform:
+                    continue
+                bone = armature.pose.bones[armature_bone.name]
+                coord_systems.append({
+                    "position": bone.matrix * mathutils.Vector((0.0, 0.0, 0.0, 1.0)),
+                    "orientation": bone.matrix.to_quaternion()
+                    })
+            coord_systems_of_frames[(frame - start_frame) * 0.041666666] = coord_systems
 
-    scene.frame_set(frame_current_backup)
+        scene.frame_set(frame_current_backup)
 
-    # It remains to save the computed coordinate systems of bones in individual frames to disc.
-    # We store each frame into a separate file. But all files will be written into the same output directory:
+        # It remains to save the computed coordinate systems of bones in individual frames to disc.
+        # We store each frame into a separate file. But all files will be written into the same output directory:
 
-    keyframes_output_dir = os.path.join(
-        export_info["root_dir"],
-        "animation",
-        export_info["model_name"],
-        export_info["mesh_name"],
-        action.name
-        )
-    os.makedirs(keyframes_output_dir, exist_ok=True)
-
-    export_info["keyframe_coord_systems"] = []  # Here we store pathnames of all saved files.
-    frame_idx = 0
-    for time_stamp in sorted(coord_systems_of_frames.keys()):
-        export_info["keyframe_coord_systems"].append(
-            os.path.join(keyframes_output_dir,"keyframe_" + str(frame_idx) + ".txt")
+        keyframes_output_dir = os.path.join(
+            export_info["root_dir"],
+            "animation",
+            export_info["model_name"],
+            export_info["mesh_name"],
+            action.name
             )
-        with open(export_info["keyframe_coord_systems"][-1],"w") as f:
-            print("    Saving keyframe " + str(frame_idx + 1) + "/" + str(len(coord_systems_of_frames))  + ": " +
-                  os.path.relpath(export_info["keyframe_coord_systems"][-1],export_info["root_dir"]))
-            f.write("E2::qtgl/keyframe/text\n")
-            f.write(str(time_stamp) + "\n")
-            f.write(str(len(coord_systems_of_frames[time_stamp])) + "\n")
-            for system in coord_systems_of_frames[time_stamp]:
-                for i in range(0,3):
-                    f.write(str(system["position"][i]) + "\n")
-                for i in range(0,4):
-                    f.write(str(system["orientation"][i]) + "\n")
-        frame_idx += 1
+        os.makedirs(keyframes_output_dir, exist_ok=True)
+
+        export_info["keyframe_coord_systems"] = []  # Here we store pathnames of all saved files.
+        frame_idx = 0
+        for time_stamp in sorted(coord_systems_of_frames.keys()):
+            export_info["keyframe_coord_systems"].append(
+                os.path.join(keyframes_output_dir,"keyframe_" + str(frame_idx) + ".txt")
+                )
+            with open(export_info["keyframe_coord_systems"][-1],"w") as f:
+                print("    Saving keyframe " + str(frame_idx + 1) + "/" + str(len(coord_systems_of_frames))  + ": " +
+                      os.path.relpath(export_info["keyframe_coord_systems"][-1],export_info["root_dir"]))
+                f.write("E2::qtgl/keyframe/text\n")
+                f.write(str(time_stamp) + "\n")
+                f.write(str(len(coord_systems_of_frames[time_stamp])) + "\n")
+                for system in coord_systems_of_frames[time_stamp]:
+                    for i in range(0,3):
+                        f.write(str(system["position"][i]) + "\n")
+                    for i in range(0,4):
+                        f.write(str(system["orientation"][i]) + "\n")
+            frame_idx += 1
 
 
 def select_best_shaders(
@@ -881,21 +933,22 @@ def select_best_shaders(
              These names do not comprise path on the disc; they are just plain names of shader files.
     """
 
-    buffers_export_info = export_info["render_buffers"][material_idx]
-    textures_export_info = export_info["textures"][material_idx]
+    with TimeProf.instance().start("select_best_shaders"):
+        buffers_export_info = export_info["render_buffers"][material_idx]
+        textures_export_info = export_info["textures"][material_idx]
 
-    if "matrix_weight_buffer" in buffers_export_info:
-        if len(textures_export_info) == 0:
-            return "vs_IpUmcOpcFX.txt", "fs_IcFc.txt"
-        elif len(textures_export_info) == 1:
-            return "vs_IptUmOptFX.txt", "fs_ItUdFd.txt"
-    else:
-        if len(textures_export_info) == 0:
-            return "vs_IpcUmOpcFc.a=1.txt", "fs_IcFc.txt"
-        elif len(textures_export_info) == 1:
-            return "vs_IptUmOptF.txt", "fs_ItUdFd.txt"
+        if "matrix_weight_buffer" in buffers_export_info:
+            if len(textures_export_info) == 0:
+                return "vs_IpUmcOpcFX.txt", "fs_IcFc.txt"
+            elif len(textures_export_info) == 1:
+                return "vs_IptUmOptFX.txt", "fs_ItUdFd.txt"
+        else:
+            if len(textures_export_info) == 0:
+                return "vs_IpcUmOpcFc.a=1.txt", "fs_IcFc.txt"
+            elif len(textures_export_info) == 1:
+                return "vs_IptUmOptF.txt", "fs_ItUdFd.txt"
 
-    return "??", "??" # TODO: Do not know yet :-(
+        return "??", "??" # TODO: Do not know yet :-(
 
 
 def save_batch_files(
@@ -907,66 +960,67 @@ def save_batch_files(
     :return: None
     """
 
-    batch_root_dir = os.path.join(export_info["root_dir"],"models",export_info["model_name"])
-    os.makedirs(batch_root_dir, exist_ok=True)
+    with TimeProf.instance().start("save_batch_files"):
+        batch_root_dir = os.path.join(export_info["root_dir"],"models",export_info["model_name"])
+        os.makedirs(batch_root_dir, exist_ok=True)
 
-    export_info["batch_files"] = []
-    for material_idx in range(0,len(export_info["render_buffers"])):
-        fname = export_info["mesh_name"]
-        if len(export_info["render_buffers"]) > 0:
-            if material_idx < len(export_info["material_names"]):
-                fname += "_" + export_info["material_names"][material_idx]
-            else:
-                fname += "_" + str(material_idx)
-        fname += ".txt"
-        export_info["batch_files"].append(os.path.join(batch_root_dir,fname))
-        with open(export_info["batch_files"][-1],"w") as f:
-            print("    Saving batch: " +
-                  os.path.relpath(export_info["batch_files"][-1],export_info["root_dir"]))
-            f.write("E2::qtgl/batch/indexed/text\n")
-
-            buffers_export_info = export_info["render_buffers"][material_idx]
-            textures_export_info = export_info["textures"][material_idx]
-
-            vertex_shader, fragment_shader = select_best_shaders(material_idx,export_info)
-            f.write(os.path.join("..","..","shaders","vertex",vertex_shader) + "\n")
-            f.write(os.path.join("..","..","shaders","fragment",fragment_shader) + "\n")
-
-            f.write(os.path.relpath(buffers_export_info["index_buffer"],batch_root_dir) + "\n")
-            f.write("BINDING_IN_POSITION\n")
-            f.write(os.path.relpath(buffers_export_info["vertex_buffer"],batch_root_dir) + "\n")
-
-            if "matrix_weight_buffer" in buffers_export_info:
-                assert "matrix_index_buffer" in buffers_export_info
-                f.write("BINDING_IN_INDICES_OF_MATRICES\n")
-                f.write(os.path.relpath(buffers_export_info["matrix_index_buffer"],batch_root_dir) + "\n")
-                f.write("BINDING_IN_WEIGHTS_OF_MATRICES\n")
-                f.write(os.path.relpath(buffers_export_info["matrix_weight_buffer"],batch_root_dir) + "\n")
-
-            for texcoords_idx in range(0,len(buffers_export_info["texcoord_buffers"])):
-                f.write("BINDING_IN_TEXCOORD" + str(texcoords_idx) + "\n")
-                f.write(os.path.relpath(buffers_export_info["texcoord_buffers"][texcoords_idx],batch_root_dir) + "\n")
-
-            if len(buffers_export_info["texcoord_buffers"]) == 0:
-                f.write("BINDING_IN_COLOUR\n")
-                f.write(os.path.relpath(buffers_export_info["diffuse_buffer"],batch_root_dir) + "\n")
-
-            texture_binding_names = [
-                "BINDING_TEXTURE_DIFFUSE",
-                "BINDING_TEXTURE_NORMALS"
-                ]
-            for i in range(0,len(textures_export_info)):
-                if i < len(texture_binding_names):
-                    f.write(texture_binding_names[i] + "\n")
+        export_info["batch_files"] = []
+        for material_idx in range(0,len(export_info["render_buffers"])):
+            fname = export_info["mesh_name"]
+            if len(export_info["render_buffers"]) > 0:
+                if material_idx < len(export_info["material_names"]):
+                    fname += "_" + export_info["material_names"][material_idx]
                 else:
-                    f.write("BINDING_TEXTURE_??\n")
-                f.write(os.path.relpath(textures_export_info[i],batch_root_dir) + "\n")
+                    fname += "_" + str(material_idx)
+            fname += ".txt"
+            export_info["batch_files"].append(os.path.join(batch_root_dir,fname))
+            with open(export_info["batch_files"][-1],"w") as f:
+                print("    Saving batch: " +
+                      os.path.relpath(export_info["batch_files"][-1],export_info["root_dir"]))
+                f.write("E2::qtgl/batch/indexed/text\n")
 
-            if "coord_systems" in export_info:
-                f.write(os.path.relpath(export_info["coord_systems"],batch_root_dir) + "\n")
+                buffers_export_info = export_info["render_buffers"][material_idx]
+                textures_export_info = export_info["textures"][material_idx]
 
-            f.write("BACK\n")
-            f.write("false\n")
+                vertex_shader, fragment_shader = select_best_shaders(material_idx,export_info)
+                f.write(os.path.join("..","..","shaders","vertex",vertex_shader) + "\n")
+                f.write(os.path.join("..","..","shaders","fragment",fragment_shader) + "\n")
+
+                f.write(os.path.relpath(buffers_export_info["index_buffer"],batch_root_dir) + "\n")
+                f.write("BINDING_IN_POSITION\n")
+                f.write(os.path.relpath(buffers_export_info["vertex_buffer"],batch_root_dir) + "\n")
+
+                if "matrix_weight_buffer" in buffers_export_info:
+                    assert "matrix_index_buffer" in buffers_export_info
+                    f.write("BINDING_IN_INDICES_OF_MATRICES\n")
+                    f.write(os.path.relpath(buffers_export_info["matrix_index_buffer"],batch_root_dir) + "\n")
+                    f.write("BINDING_IN_WEIGHTS_OF_MATRICES\n")
+                    f.write(os.path.relpath(buffers_export_info["matrix_weight_buffer"],batch_root_dir) + "\n")
+
+                for texcoords_idx in range(0,len(buffers_export_info["texcoord_buffers"])):
+                    f.write("BINDING_IN_TEXCOORD" + str(texcoords_idx) + "\n")
+                    f.write(os.path.relpath(buffers_export_info["texcoord_buffers"][texcoords_idx],batch_root_dir) + "\n")
+
+                if len(buffers_export_info["texcoord_buffers"]) == 0:
+                    f.write("BINDING_IN_COLOUR\n")
+                    f.write(os.path.relpath(buffers_export_info["diffuse_buffer"],batch_root_dir) + "\n")
+
+                texture_binding_names = [
+                    "BINDING_TEXTURE_DIFFUSE",
+                    "BINDING_TEXTURE_NORMALS"
+                    ]
+                for i in range(0,len(textures_export_info)):
+                    if i < len(texture_binding_names):
+                        f.write(texture_binding_names[i] + "\n")
+                    else:
+                        f.write("BINDING_TEXTURE_??\n")
+                    f.write(os.path.relpath(textures_export_info[i],batch_root_dir) + "\n")
+
+                if "coord_systems" in export_info:
+                    f.write(os.path.relpath(export_info["coord_systems"],batch_root_dir) + "\n")
+
+                f.write("BACK\n")
+                f.write("false\n")
 
 
 def export_selected_meshes(
@@ -992,14 +1046,21 @@ def export_selected_meshes(
             if obj.type != 'MESH':
                 print("  ERROR: Object '" + obj.name + "' is not a MESH. Skipping it...")
                 continue
-            if obj.data.name is None or len(obj.data.name) == 0:
-                print("  ERROR: The selected mesh object has invalid name '" + obj.data.name + "'. Skipping it...")
+
+            mesh = obj.data
+            mesh_name = mesh.name
+
+            if mesh_name is None or len(mesh_name) == 0:
+                print("  ERROR: The selected mesh object has invalid name '" + mesh_name + "'. Skipping it...")
                 continue
+
+            TimeProf.instance().set_mesh_name(mesh_name)
+
             if not does_selected_mesh_object_have_correct_scales(obj):
                 continue
             if not does_selected_mesh_object_have_correct_weights(obj):
                 continue
-            if len(obj.data.vertex_colors) > 2:
+            if len(mesh.vertex_colors) > 2:
                 print("  ERROR: The mesh object '" + obj.name + "' has more than 2 colours per vertex. "
                       "Skipping it...")
                 continue
@@ -1019,41 +1080,41 @@ def export_selected_meshes(
             if not does_vertex_groups_names_match_names_of_bones(obj, armature):
                 continue
 
-            mesh = obj.data
-
             print("  Exporting mesh: " + mesh.name)
 
-            mesh_name = mesh.name
-            while mesh_name in mesh_names:
-                mesh_name = mesh_name + str(i)
-            mesh_names.add(mesh_name)
+            with TimeProf.instance().start("export_selected_meshes [for mesh.name == " + mesh.name + "]"):
+                while mesh_name in mesh_names:
+                    mesh_name = mesh_name + str(i)
+                mesh_names.add(mesh_name)
 
-            export_info = {
-                "model_name": model_name,
-                "mesh_name": mesh_name,
-                "root_dir": export_dir,
-                "material_names": [mtl.name for mtl in mesh.materials]
-            }
+                export_info = {
+                    "model_name": model_name,
+                    "mesh_name": mesh_name,
+                    "root_dir": export_dir,
+                    "material_names": [mtl.name for mtl in mesh.materials]
+                }
 
-            buffers_list = build_render_buffers(obj, armature)
-            for idx in range(0,len(buffers_list)):
-                sub_directory = ""
-                if len(buffers_list) > 1:
-                    if idx < len(export_info["material_names"]):
-                        sub_directory += export_info["material_names"][idx]
-                    else:
-                        sub_directory += str(idx)
-                save_render_buffers(buffers_list[idx],sub_directory,export_info)
+                buffers_list = build_render_buffers(obj, armature)
+                for idx in range(0,len(buffers_list)):
+                    sub_directory = ""
+                    if len(buffers_list) > 1:
+                        if idx < len(export_info["material_names"]):
+                            sub_directory += export_info["material_names"][idx]
+                        else:
+                            sub_directory += str(idx)
+                    save_render_buffers(buffers_list[idx],sub_directory,export_info)
 
-            save_textures(mesh.materials,export_info)
+                save_textures(mesh.materials,export_info)
 
-            assert len(export_info["render_buffers"]) == len(export_info["images"])
-            assert len(export_info["render_buffers"]) == len(export_info["textures"])
+                assert len(export_info["render_buffers"]) == len(export_info["images"])
+                assert len(export_info["render_buffers"]) == len(export_info["textures"])
 
-            save_coord_systems_of_bones(obj,export_info)
-            save_keyframe_coord_systems_of_bones(obj,export_info)
+                save_coord_systems_of_bones(obj,export_info)
+                save_keyframe_coord_systems_of_bones(obj,export_info)
 
-            save_batch_files(export_info)
+                save_batch_files(export_info)
+        print("Time profile of the export:")
+        print(TimeProf.instance().to_json())
     else:
         print("  ERROR: Cannot deduce model name from the passed export directory '" + export_dir + "'.")
 
