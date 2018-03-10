@@ -82,11 +82,11 @@ public slots:
     void  status_bar_edit_mode_listener() { m_status_bar.edit_mode_listener(); }
 
     /// Slots for menu actions
-    void  on_menu_new_scene() { m_menu_bar.on_new_scene(); m_tab_scene_widgets.clear_scene(); }
-    void  on_menu_open_scene() { if (m_menu_bar.on_open_scene()) m_tab_scene_widgets.open_scene(get_current_scene_dir()); }
-    void  on_menu_save_scene() { if (m_menu_bar.on_save_scene()) m_tab_scene_widgets.save_scene(get_current_scene_dir()); }
-    void  on_menu_save_as_scene() { if (m_menu_bar.on_save_as_scene()) m_tab_scene_widgets.save_scene(get_current_scene_dir()); }
-    void  on_menu_exit() { if (m_menu_bar.on_exit()) PostQuitMessage(0); }
+    void  on_menu_new_scene() { m_menu_bar.on_file_action_new_scene(); m_tab_scene_widgets.clear_scene(); }
+    void  on_menu_open_scene() { if (m_menu_bar.on_file_action_open_scene()) m_tab_scene_widgets.open_scene(get_current_scene_dir()); }
+    void  on_menu_save_scene() { if (m_menu_bar.on_file_action_save_scene()) m_tab_scene_widgets.save_scene(get_current_scene_dir()); }
+    void  on_menu_save_as_scene() { if (m_menu_bar.on_file_action_save_as_scene()) m_tab_scene_widgets.save_scene(get_current_scene_dir()); }
+    void  on_menu_exit() { if (m_menu_bar.on_file_action_exit()) PostQuitMessage(0); }
 
     void  on_menu_edit_insert_coord_system() { m_tab_scene_widgets.on_scene_insert_coord_system(); }
     void  on_menu_edit_insert_batch() { m_tab_scene_widgets.on_scene_insert_batch(); }

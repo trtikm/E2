@@ -20,33 +20,33 @@ struct  menu_bar
     QMenuBar*  get_menu_bar() const noexcept { return m_menu_bar; }
 
     QMenu*  get_menu_file() const { return m_menu_file; }
-    QAction*  get_action_new_scene() const { return m_action_new_scene; }
-    QAction*  get_action_open_scene() const { return m_action_open_scene; }
-    QMenu*    get_menu_open_recent_scene() const { return m_menu_open_recent_scene; }
-    QAction*  get_action_save_scene() const { return m_action_save_scene; }
-    QAction*  get_action_save_as_scene() const { return m_action_save_as_scene; }
-    QAction*  get_action_exit() const { return m_action_exit; }
+    QAction*  get_file_action_new_scene() const { return m_file_action_new_scene; }
+    QAction*  get_file_action_open_scene() const { return m_file_action_open_scene; }
+    QMenu*    get_file_submenu_open_recent_scene() const { return m_file_submenu_open_recent_scene; }
+    QAction*  get_file_action_save_scene() const { return m_file_action_save_scene; }
+    QAction*  get_file_action_save_as_scene() const { return m_file_action_save_as_scene; }
+    QAction*  get_file_action_exit() const { return m_file_action_exit; }
 
     QMenu*  get_menu_edit() const noexcept { return m_menu_edit; }
-    QAction*  get_action_edit_insert_coord_system() const { return m_action_edit_insert_coord_system; }
-    QAction*  get_action_edit_insert_batch() const { return m_action_edit_insert_batch; }
-    QAction*  get_action_edit_erase_selected() const { return m_action_edit_erase_selected; }
-    QAction*  get_action_edit_mode_select() const { return m_action_edit_mode_select; }
-    QAction*  get_action_edit_mode_translate() const { return m_action_edit_mode_translate; }
-    QAction*  get_action_edit_mode_rotate() const { return m_action_edit_mode_rotate; }
-    QAction*  get_action_toggle_pivot_selection() const { return m_action_toggle_pivot_selection; }
-    QAction*  get_action_move_selection_to_pivot() const { return m_action_move_selection_to_pivot; }
-    QAction*  get_action_move_pivot_to_selection() const { return m_action_move_pivot_to_selection; }
-    QAction*  get_action_edit_undo() const { return m_action_edit_undo; }
-    QAction*  get_action_edit_redo() const { return m_action_edit_redo; }
+    QAction*  get_edit_action_insert_coord_system() const { return m_edit_action_insert_coord_system; }
+    QAction*  get_edit_action_insert_batch() const { return m_edit_action_insert_batch; }
+    QAction*  get_edit_action_erase_selected() const { return m_edit_action_erase_selected; }
+    QAction*  get_edit_action_mode_select() const { return m_edit_action_mode_select; }
+    QAction*  get_edit_action_mode_translate() const { return m_edit_action_mode_translate; }
+    QAction*  get_edit_action_mode_rotate() const { return m_edit_action_mode_rotate; }
+    QAction*  get_edit_action_toggle_pivot_selection() const { return m_edit_action_toggle_pivot_selection; }
+    QAction*  get_edit_action_move_selection_to_pivot() const { return m_edit_action_move_selection_to_pivot; }
+    QAction*  get_edit_action_move_pivot_to_selection() const { return m_edit_action_move_pivot_to_selection; }
+    QAction*  get_edit_action_undo() const { return m_edit_action_undo; }
+    QAction*  get_edit_action_redo() const { return m_edit_action_redo; }
 
     // "File" actions
-    void  on_new_scene();
-    bool  on_open_scene();
-    void  on_open_recent_scene();
-    bool  on_save_scene();
-    bool  on_save_as_scene();
-    bool  on_exit();
+    void  on_file_action_new_scene();
+    bool  on_file_action_open_scene();
+    void  on_file_action_open_recent_scene();
+    bool  on_file_action_save_scene();
+    bool  on_file_action_save_as_scene();
+    bool  on_file_action_exit();
 
     boost::filesystem::path const&  get_default_scene_root_dir() const { return m_default_scene_root_dir; }
     std::vector<boost::filesystem::path> const&  get_recent_scenes() const { return m_recent_scenes; }
@@ -63,28 +63,28 @@ private:
     QMenuBar*  m_menu_bar;
 
     QMenu*  m_menu_file;
-    QAction*  m_action_new_scene;
-    QAction*  m_action_open_scene;
-    QMenu*  m_menu_open_recent_scene;
-    QAction*  m_action_save_scene;
-    QAction*  m_action_save_as_scene;
-    QAction*  m_action_exit;
+    QAction*  m_file_action_new_scene;
+    QAction*  m_file_action_open_scene;
+    QMenu*  m_file_submenu_open_recent_scene;
+    QAction*  m_file_action_save_scene;
+    QAction*  m_file_action_save_as_scene;
+    QAction*  m_file_action_exit;
     boost::filesystem::path  m_default_scene_root_dir;
     std::vector<boost::filesystem::path>  m_recent_scenes;
     boost::filesystem::path  m_current_scene_dir;
 
     QMenu*  m_menu_edit;
-    QAction*  m_action_edit_insert_coord_system;
-    QAction*  m_action_edit_insert_batch;
-    QAction*  m_action_edit_erase_selected;
-    QAction*  m_action_edit_mode_select;
-    QAction*  m_action_edit_mode_translate;
-    QAction*  m_action_edit_mode_rotate;
-    QAction*  m_action_toggle_pivot_selection;
-    QAction*  m_action_move_selection_to_pivot;
-    QAction*  m_action_move_pivot_to_selection;
-    QAction*  m_action_edit_undo;
-    QAction*  m_action_edit_redo;
+    QAction*  m_edit_action_insert_coord_system;
+    QAction*  m_edit_action_insert_batch;
+    QAction*  m_edit_action_erase_selected;
+    QAction*  m_edit_action_mode_select;
+    QAction*  m_edit_action_mode_translate;
+    QAction*  m_edit_action_mode_rotate;
+    QAction*  m_edit_action_toggle_pivot_selection;
+    QAction*  m_edit_action_move_selection_to_pivot;
+    QAction*  m_edit_action_move_pivot_to_selection;
+    QAction*  m_edit_action_undo;
+    QAction*  m_edit_action_redo;
 };
 
 
