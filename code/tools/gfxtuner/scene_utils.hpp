@@ -51,4 +51,18 @@ void  find_scene_nodes_on_line(
         );
 
 
+void  get_bbox_of_selected_scene_nodes(
+        std::unordered_set<scene_node_ptr> const&  nodes,
+        vector3&  lo,
+        vector3&  hi
+        );
+
+void  get_bbox_of_selected_scene_nodes(
+        scene const&  scene,
+        std::unordered_set<std::string> const&  node_names,
+        vector3&  lo,
+        vector3&  hi
+        );
+
+
 #endif

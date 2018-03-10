@@ -140,3 +140,38 @@ void  find_scene_nodes_on_line(
             result.insert({param, name_and_node.first});
     }
 }
+
+
+void  get_bbox_of_selected_scene_nodes(
+        std::unordered_set<scene_node_ptr> const&  nodes,
+        vector3&  lo,
+        vector3&  hi
+        )
+{
+    lo = vector3{ 1e20f,  1e20f,  1e20f };
+    hi = vector3{ -1e20f, -1e20f, -1e20f };
+    for (auto const& node : nodes)
+    {
+        vector3 const  node_wold_pos = transform_point(vector3_zero(), node->get_world_matrix());
+        for (int i = 0; i != 3; ++i)
+        {
+            if (lo(i) > node_wold_pos(i))
+                lo(i) = node_wold_pos(i);
+            if (hi(i) < node_wold_pos(i))
+                hi(i) = node_wold_pos(i);
+        }
+    }
+}
+
+void  get_bbox_of_selected_scene_nodes(
+        scene const&  scene,
+        std::unordered_set<std::string> const&  node_names,
+        vector3&  lo,
+        vector3&  hi
+        )
+{
+    std::unordered_set<scene_node_ptr>  nodes;
+    for (auto const& node_name : node_names)
+        nodes.insert(scene.get_scene_node(node_name));
+    get_bbox_of_selected_scene_nodes(nodes, lo, hi);
+}

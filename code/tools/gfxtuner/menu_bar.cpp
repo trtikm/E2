@@ -65,6 +65,9 @@ menu_bar::menu_bar(program_window* const  wnd)
     , m_action_edit_mode_select(new QAction(QString("&Selection"), wnd))
     , m_action_edit_mode_translate(new QAction(QString("&Translation"), wnd))
     , m_action_edit_mode_rotate(new QAction(QString("&Rotation"), wnd))
+    , m_action_toggle_pivot_selection(new QAction(QString("To&ggle pivot selection"), wnd))
+    , m_action_move_selection_to_pivot(new QAction(QString("Move se&lection to pivot"), wnd))
+    , m_action_move_pivot_to_selection(new QAction(QString("Move &pivot to selection"), wnd))
     , m_action_edit_undo(new QAction(QString("&Undo"), wnd))
     , m_action_edit_redo(new QAction(QString("Red&o"), wnd))
 
@@ -247,6 +250,38 @@ void  make_menu_bar_content(menu_bar const&  w)
         "rotated around their common geometrical center (and along an axis of your choice, as described above)."
         );
     QObject::connect(w.get_action_edit_mode_rotate(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_mode_rotation);
+
+    w.get_menu_edit()->addSeparator();
+
+    w.get_menu_edit()->addAction(w.get_action_toggle_pivot_selection());
+    w.get_action_toggle_pivot_selection()->setShortcut(QString(Qt::Key::Key_P));
+    w.get_action_toggle_pivot_selection()->setToolTip(
+        "Toggles the presence of the '@pivot' coordinate system in the list of selected scene objects."
+        );
+    QObject::connect(w.get_action_toggle_pivot_selection(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_toggle_pivot_selection);
+
+    w.get_menu_edit()->addAction(w.get_action_move_selection_to_pivot());
+    w.get_action_move_selection_to_pivot()->setShortcut(QString("Ctrl+P"));
+    w.get_action_move_selection_to_pivot()->setToolTip(
+        "If the edit mode is 'Translation' and there is selected at least one non-'@pivot' coordinate system (including those of\n"
+        "selected batches), then the operation translates the common centre of all selected non-'@pivot' coordinate systems to the\n"
+        "origin of the '@pivot' coord. system. If the edit mode is 'Rotation' and there is selected at least one non-'@pivot'\n"
+        "coordinate system (including those of selected batches), then the operation rotates axis vectors of all selected non-'@pivot'\n"
+        "coord. systems so that they all equals to the corresponding axis vectors of the '@pivot' coord. system. It does not matter\n"
+        "whether '@pivot' is selected or not."
+        );
+    QObject::connect(w.get_action_move_selection_to_pivot(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_move_selection_to_pivot);
+
+    w.get_menu_edit()->addAction(w.get_action_move_pivot_to_selection());
+    w.get_action_move_pivot_to_selection()->setShortcut(QString("Ctrl+Shift+P"));
+    w.get_action_move_pivot_to_selection()->setToolTip(
+        "If the edit mode is 'Translation' and there is selected at least one non-'@pivot' coordinate system (including those of\n"
+        "selected batches), then the operation translates the '@pivot' coord. system to the common centre of all selected non-'@pivot'\n"
+        "coordinate systems. If the edit mode is 'Rotation' and there is selected exactly one non-'@pivot' coordinate system (including\n"
+        "those of selected batches), then the operation rotates the '@pivot' coord. system so that its axis vectors equals to the\n"
+        "corresponding axis vectors of the selected non-'@pivot' coord. system. It does not matter, whether '@pivot' is selected or not."
+        );
+    QObject::connect(w.get_action_move_pivot_to_selection(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_move_pivot_to_selection);
 
     w.get_menu_edit()->addSeparator();
 

@@ -1466,6 +1466,216 @@ void  widgets::on_scene_mode_rotation()
         wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, SCENE_EDIT_MODE::ROTATE_SELECTED_NODES);
 }
 
+void  widgets::on_scene_toggle_pivot_selection()
+{
+    lock_bool const  _(&m_processing_selection_change);
+
+    QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
+
+    auto const items_list = m_scene_tree->findItems(QString(get_pivot_node_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
+    ASSUMPTION(items_list.size() == 1UL);
+    tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(items_list.front());
+    ASSUMPTION(tree_item->represents_coord_system());
+    std::unordered_set<std::string>  selected_scene_nodes{ get_pivot_node_name() };
+    std::unordered_set<std::pair<std::string, std::string> >  selected_batches;
+    if (tree_item->isSelected())
+    {
+        m_wnd->glwindow().call_now(&simulator::erase_from_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_batches));
+        tree_item->setSelected(false);
+    }
+    else
+    {
+        m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_batches));
+        tree_item->setSelected(true);
+
+    }
+    update_coord_system_location_widgets();
+
+    QList<QTreeWidgetItem*> const  new_selection = m_scene_tree->selectedItems();
+    update_history_according_to_change_in_selection(old_selection, new_selection);
+    set_window_title();
+}
+
+void  widgets::on_scene_move_selection_to_pivot()
+{
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Scene editing is disabled.", 10000);
+        return;
+    }
+
+    std::unordered_set<scene_node_ptr>  nodes;
+    foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
+    {
+        tree_widget_item*  tree_item = dynamic_cast<tree_widget_item*>(item);
+        INVARIANT(tree_item != nullptr);
+        if (!tree_item->represents_coord_system())
+        {
+            tree_item = dynamic_cast<tree_widget_item*>(tree_item->parent());
+            INVARIANT(tree_item != nullptr && tree_item->represents_coord_system());
+        }
+        std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
+        if (tree_item->represents_coord_system() && qtgl::to_string(tree_item->text(0)) != get_pivot_node_name())
+        {
+            auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
+            INVARIANT(node_ptr != nullptr);
+            nodes.insert(node_ptr);
+        }
+    }
+    if (nodes.empty())
+    {
+        wnd()->print_status_message("ERROR: There is nothing selected to be translated to the '@pivot' origin.", 10000);
+        return;
+    }
+
+    auto const  pivot_node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, get_pivot_node_name());
+    INVARIANT(pivot_node_ptr != nullptr);
+
+    SCENE_EDIT_MODE const  edit_mode = wnd()->glwindow().call_now(&simulator::get_scene_edit_mode);
+
+    if (edit_mode == SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
+    {
+        vector3  shift_vector;
+        {
+            vector3  source_position;
+            {
+                if (nodes.size() == 1UL)
+                    source_position = (*nodes.cbegin())->get_coord_system()->origin();
+                else
+                {
+                    vector3  lo, hi;
+                    get_bbox_of_selected_scene_nodes(nodes, lo, hi);
+                    source_position = 0.5f * (lo + hi);
+                }
+            }
+
+            shift_vector = pivot_node_ptr->get_coord_system()->origin() - source_position;
+        }
+
+        for (auto  node_ptr : nodes)
+        {
+            get_scene_history().insert<scene_history_coord_system_relocate>(
+                    node_ptr->get_name(),
+                    node_ptr->get_coord_system()->origin(),
+                    node_ptr->get_coord_system()->orientation(),
+                    node_ptr->get_coord_system()->origin() + shift_vector,
+                    node_ptr->get_coord_system()->orientation()
+                    );
+            node_ptr->translate(shift_vector);
+        }
+    }
+    else if (edit_mode == SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
+        for (auto node_ptr : nodes)
+        {
+            get_scene_history().insert<scene_history_coord_system_relocate>(
+                node_ptr->get_name(),
+                node_ptr->get_coord_system()->origin(),
+                node_ptr->get_coord_system()->orientation(),
+                node_ptr->get_coord_system()->origin(),
+                pivot_node_ptr->get_coord_system()->orientation()
+                );
+            node_ptr->set_orientation(pivot_node_ptr->get_coord_system()->orientation());
+        }
+    else
+    {
+        wnd()->print_status_message("ERROR: The '@pivot' can only be relocated to selection, when edit mode is "
+                                    "either 'Translation' or 'Rotation'.", 10000);
+        return;
+    }
+
+    get_scene_history().commit();
+    update_coord_system_location_widgets();
+}
+
+void  widgets::on_scene_move_pivot_to_selection()
+{
+    if (!is_editing_enabled())
+        return;
+
+    std::unordered_set<scene_node_ptr>  nodes;
+    foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
+    {
+        tree_widget_item*  tree_item = dynamic_cast<tree_widget_item*>(item);
+        INVARIANT(tree_item != nullptr);
+        if (!tree_item->represents_coord_system())
+        {
+            tree_item = dynamic_cast<tree_widget_item*>(tree_item->parent());
+            INVARIANT(tree_item != nullptr && tree_item->represents_coord_system());
+        }
+        std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
+        if (tree_item->represents_coord_system() && qtgl::to_string(tree_item->text(0)) != get_pivot_node_name())
+        {
+            auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
+            INVARIANT(node_ptr != nullptr);
+            nodes.insert(node_ptr);
+        }
+    }
+    if (nodes.empty())
+    {
+        wnd()->print_status_message("ERROR: There is nothing selected to be translated to the '@pivot' origin.", 10000);
+        return;
+    }
+
+    auto const  pivot_node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, get_pivot_node_name());
+    INVARIANT(pivot_node_ptr != nullptr);
+
+    SCENE_EDIT_MODE const  edit_mode = wnd()->glwindow().call_now(&simulator::get_scene_edit_mode);
+
+    if (edit_mode == SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
+    {
+        vector3  target_position;
+        {
+            if (nodes.size() == 1UL)
+                target_position = (*nodes.cbegin())->get_coord_system()->origin();
+            else
+            {
+                vector3  lo, hi;
+                get_bbox_of_selected_scene_nodes(nodes, lo, hi);
+                target_position = 0.5f * (lo + hi);
+            }
+        }
+
+        get_scene_history().insert<scene_history_coord_system_relocate>(
+                pivot_node_ptr->get_name(),
+                pivot_node_ptr->get_coord_system()->origin(),
+                pivot_node_ptr->get_coord_system()->orientation(),
+                target_position,
+                pivot_node_ptr->get_coord_system()->orientation()
+                );
+        pivot_node_ptr->set_origin(target_position);
+    }
+    else if (edit_mode == SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
+    {
+        if (nodes.size() == 1UL)
+        {
+            auto const&  new_orientation = (*nodes.cbegin())->get_coord_system()->orientation();
+            get_scene_history().insert<scene_history_coord_system_relocate>(
+                    pivot_node_ptr->get_name(),
+                    pivot_node_ptr->get_coord_system()->origin(),
+                    pivot_node_ptr->get_coord_system()->orientation(),
+                    pivot_node_ptr->get_coord_system()->origin(),
+                    new_orientation
+                    );
+            pivot_node_ptr->set_orientation(new_orientation);
+        }
+        else
+        {
+            wnd()->print_status_message("ERROR: Multiple coord. systems are selected, i.e. ambiguous target axis vectors "
+                                        "the '@pivot' orienation should be set to.", 10000);
+            return;
+        }
+    }
+    else
+    {
+        wnd()->print_status_message("ERROR: The '@pivot' can only be relocated to selection, when edit mode is "
+                                    "either 'Translation' or 'Rotation'.", 10000);
+        return;
+    }
+
+    get_scene_history().commit();
+    update_coord_system_location_widgets();
+}
+
 void  widgets::on_scene_undo()
 {
     lock_bool const  _(&m_processing_selection_change);

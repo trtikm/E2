@@ -63,6 +63,10 @@ struct  widgets
     void  on_scene_mode_translation();
     void  on_scene_mode_rotation();
 
+    void  on_scene_toggle_pivot_selection();
+    void  on_scene_move_selection_to_pivot();
+    void  on_scene_move_pivot_to_selection();
+
     void  on_scene_undo();
     void  on_scene_redo();
 

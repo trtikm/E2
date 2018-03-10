@@ -1,4 +1,5 @@
 #include <gfxtuner/scene_selection.hpp>
+#include <gfxtuner/scene_utils.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
@@ -58,24 +59,13 @@ bool  get_bbox_of_selected_scene_nodes(scene_selection const&  selection, scene_
     if (selection.empty())
         return false;
 
-    lo = vector3{ 1e20f,  1e20f,  1e20f };
-    hi = vector3{ -1e20f, -1e20f, -1e20f };
+    std::unordered_set<std::string>  nodes(selection.get_nodes());
+    get_nodes_of_selected_batches(selection, nodes);
 
-    auto const  update_lo_hi = [scene, &lo, &hi](std::string const& node_name) {
-        vector3 const  node_wold_pos = transform_point(vector3_zero(), scene->get_scene_node(node_name)->get_world_matrix());
-        for (int i = 0; i != 3; ++i)
-        {
-            if (lo(i) > node_wold_pos(i))
-                lo(i) = node_wold_pos(i);
-            if (hi(i) < node_wold_pos(i))
-                hi(i) = node_wold_pos(i);
-        }
-    };
+    if (nodes.empty())
+        return false;
 
-    for (auto const& node_name : selection.get_nodes())
-        update_lo_hi(node_name);
-    for (auto const& node_batch_names : selection.get_batches())
-        update_lo_hi(node_batch_names.first);
+    get_bbox_of_selected_scene_nodes(*scene, nodes, lo, hi);
 
     return true;
 }

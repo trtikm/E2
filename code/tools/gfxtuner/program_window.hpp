@@ -94,6 +94,9 @@ public slots:
     void  on_menu_edit_mode_selection() { m_tab_scene_widgets.on_scene_mode_selection(); }
     void  on_menu_edit_mode_translation() { m_tab_scene_widgets.on_scene_mode_translation(); }
     void  on_menu_edit_mode_rotation() { m_tab_scene_widgets.on_scene_mode_rotation(); }
+    void  on_menu_edit_toggle_pivot_selection() { m_tab_scene_widgets.on_scene_toggle_pivot_selection(); }
+    void  on_menu_edit_move_selection_to_pivot() { m_tab_scene_widgets.on_scene_move_selection_to_pivot(); }
+    void  on_menu_edit_move_pivot_to_selection() { m_tab_scene_widgets.on_scene_move_pivot_to_selection(); }
     void  on_menu_edit_undo() { m_tab_scene_widgets.on_scene_undo(); }
     void  on_menu_edit_redo() { m_tab_scene_widgets.on_scene_redo(); }
 
