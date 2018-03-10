@@ -296,6 +296,8 @@ namespace qtgl {
 
 bool  batch::ready() const
 {
+    TMPROF_BLOCK();
+
     if (!loaded_successfully())
         return false;
     if (!resource().ready())

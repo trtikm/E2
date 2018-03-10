@@ -1050,6 +1050,8 @@ namespace qtgl {
 
 bool  shaders_binding::ready() const
 {
+    TMPROF_BLOCK();
+
     if (!loaded_successfully())
         return false;
 

@@ -100,6 +100,8 @@ void  resource_load_planner::worker()
 
     while (true)
     {
+        TMPROF_BLOCK();
+
         bool  done;
         queue_value_type  task;
         {
@@ -120,7 +122,10 @@ void  resource_load_planner::worker()
             break;
 
         if (!std::get<1>(task).empty())
+        {
+            TMPROF_BLOCK();
             std::get<2>(task)();
+        }
 
         std::lock_guard<std::mutex> const  lock(mutex());
         m_resource_just_being_loaded.clear();

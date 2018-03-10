@@ -744,6 +744,8 @@ namespace qtgl {
 
 bool  buffers_binding::ready() const
 {
+    TMPROF_BLOCK();
+
     if (!loaded_successfully())
         return false;
     if (!resource().ready())

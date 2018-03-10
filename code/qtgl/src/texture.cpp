@@ -387,6 +387,8 @@ namespace qtgl {
 
 bool  textures_binding::ready() const
 {
+    TMPROF_BLOCK();
+
     if (empty())
         return true;
     if (!loaded_successfully())
@@ -412,6 +414,8 @@ bool  textures_binding::ready() const
 
 bool  textures_binding::make_current() const
 {
+    TMPROF_BLOCK();
+
     if (!ready())
         return false;
     if (!empty())
