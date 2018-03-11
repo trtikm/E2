@@ -1639,7 +1639,7 @@ void  widgets::on_scene_move_pivot_to_selection()
         vector3  target_position;
         {
             if (nodes.size() == 1UL)
-                target_position = (*nodes.cbegin())->get_coord_system()->origin();
+                target_position = transform_point_from_scene_node_to_world(**nodes.cbegin(), vector3_zero());
             else
             {
                 vector3  lo, hi;
@@ -1661,7 +1661,14 @@ void  widgets::on_scene_move_pivot_to_selection()
     {
         if (nodes.size() == 1UL)
         {
-            auto const&  new_orientation = (*nodes.cbegin())->get_coord_system()->orientation();
+            quaternion const  new_orientation =
+                (*nodes.cbegin())->has_parent() ?
+                    transform_orientation_from_scene_node_to_world(
+                            *(*nodes.cbegin())->get_parent(),
+                            (*nodes.cbegin())->get_coord_system()->orientation()
+                            ) :
+                    (*nodes.cbegin())->get_coord_system()->orientation()
+                    ;
             get_scene_history().insert<scene_history_coord_system_relocate>(
                     pivot_node_ptr->get_name(),
                     pivot_node_ptr->get_coord_system()->origin(),
