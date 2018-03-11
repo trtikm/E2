@@ -138,6 +138,20 @@ simulator::~simulator()
 }
 
 
+float_32_bit  simulator::get_camera_side_plane_minimal_distance() const
+{
+    return std::max(
+                0.01f,
+                std::min({
+                        std::fabs(m_camera->left()),
+                        std::fabs(m_camera->right()),
+                        std::fabs(m_camera->top()),
+                        std::fabs(m_camera->bottom())
+                        })
+                );
+}
+
+
 void  simulator::set_camera_speed(float_32_bit const  speed)
 {
     ASSUMPTION(speed > 0.001f);

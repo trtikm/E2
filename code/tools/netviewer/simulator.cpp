@@ -1322,7 +1322,7 @@ void  simulator::on_look_at_selected()
             return;
     }
 
-    qtgl::look_at(m_camera->coordinate_system(),pos,2.5f);
+    qtgl::look_at(*m_camera->coordinate_system(),pos,2.5f);
 }
 
 std::string const&  simulator::get_experiment_name() const

@@ -42,6 +42,9 @@ struct simulator : public qtgl::real_time_simulator
 
     vector3 const&  get_camera_position() const { return m_camera->coordinate_system()->origin(); }
     quaternion const&  get_camera_orientation() const { return m_camera->coordinate_system()->orientation(); }
+    float_32_bit  get_camera_near_plane_distance() const { return m_camera->near_plane(); }
+    float_32_bit  get_camera_far_plane_distance() const { return m_camera->far_plane(); }
+    float_32_bit  get_camera_side_plane_minimal_distance() const;
     void  set_camera_position(vector3 const&  position) { m_camera->coordinate_system()->set_origin(position); }
     void  set_camera_orientation(quaternion const&  orientation) { m_camera->coordinate_system()->set_orientation(orientation); }
     void  set_camera_far_plane(float_32_bit const  far_plane) { m_camera->set_far_plane(far_plane); }

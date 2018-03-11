@@ -71,6 +71,10 @@ menu_bar::menu_bar(program_window* const  wnd)
     , m_edit_action_undo(new QAction(QString("&Undo"), wnd))
     , m_edit_action_redo(new QAction(QString("Red&o"), wnd))
 
+    , m_menu_view(new detail::menu("&View", wnd))
+    , m_view_action_double_camera_speed(new QAction(QString("&Double camera speed"), wnd))
+    , m_view_action_half_camera_speed(new QAction(QString("&Half camera speed"), wnd))
+    , m_view_action_look_at_selection(new QAction(QString("&Look at selection"), wnd))
 {
     if(!boost::filesystem::is_directory(m_default_scene_root_dir))
         boost::filesystem::create_directories(m_default_scene_root_dir);
@@ -296,6 +300,35 @@ void  make_menu_bar_content(menu_bar const&  w)
     QObject::connect(w.get_edit_action_redo(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_redo);
 
     w.get_menu_bar()->addMenu(w.get_menu_edit());
+
+    // "Edit" menu
+
+    w.get_menu_view()->addAction(w.get_view_action_double_camera_speed());
+    w.get_view_action_double_camera_speed()->setShortcut(QString("Ctrl++"));
+    w.get_view_action_double_camera_speed()->setToolTip(
+        "Makes the camera movement two times faster. You can also set exact camera speed in the tab 'Draw'."
+        );
+    QObject::connect(w.get_view_action_double_camera_speed(), &QAction::triggered, w.wnd(), &program_window::on_menu_view_double_camera_speed);
+
+    w.get_menu_view()->addAction(w.get_view_action_half_camera_speed());
+    w.get_view_action_half_camera_speed()->setShortcut(QString("Ctrl+-"));
+    w.get_view_action_half_camera_speed()->setToolTip(
+        "Makes the camera movement two times slower. You can also set exact camera speed in the tab 'Draw'."
+        );
+    QObject::connect(w.get_view_action_half_camera_speed(), &QAction::triggered, w.wnd(), &program_window::on_menu_view_half_camera_speed);
+
+    w.get_menu_view()->addSeparator();
+
+    w.get_menu_view()->addAction(w.get_view_action_look_at_selection());
+    w.get_view_action_look_at_selection()->setShortcut(QString("Ctrl+L"));
+    w.get_view_action_look_at_selection()->setToolTip(
+        "In edit mode 'Translation' the operation rotates and moves the camera so that selected scene coordinate\n"
+        "systems and batches are visible. In edit mode 'Rotation' the operation rotates the camera so that it\n"
+        "looks at the selected scene coordinate systems and batches (but it stays at the current position)."
+        );
+    QObject::connect(w.get_view_action_look_at_selection(), &QAction::triggered, w.wnd(), &program_window::on_menu_view_look_at_selection);
+
+    w.get_menu_bar()->addMenu(w.get_menu_view());
 
     // And finally attach the menu to the program window.
 

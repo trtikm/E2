@@ -1700,6 +1700,96 @@ void  widgets::on_scene_redo()
     set_window_title();
 }
 
+void  widgets::on_look_at_selection(std::function<void(vector3 const&, float_32_bit const*)> const&  solver)
+{
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Look at operation is available only in scene editing mode.", 10000);
+        return;
+    }
+
+    std::vector<std::pair<vector3, float_32_bit> > selection;
+    foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
+    {
+        tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(item);
+        INVARIANT(tree_item != nullptr);
+        std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
+        if (tree_item->represents_coord_system())
+        {
+            auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
+            INVARIANT(node_ptr != nullptr);
+            selection.push_back({
+                transform_point_from_scene_node_to_world(*node_ptr, node_ptr->get_coord_system()->origin()),
+                0.0f
+                });
+            continue;
+        }
+
+        tree_widget_item* const  parent_tree_item = dynamic_cast<tree_widget_item*>(tree_item->parent());
+        INVARIANT(parent_tree_item != nullptr && parent_tree_item->represents_coord_system());
+        std::string const  parent_tree_item_name = qtgl::to_string(parent_tree_item->text(0));
+
+        auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, parent_tree_item_name);
+        INVARIANT(node_ptr != nullptr);
+
+        vector3  centre;
+        scalar  radius = compute_bounding_sphere_of_batch_of_scene_node(*node_ptr, tree_item_name, centre);
+        selection.push_back({ transform_point_from_scene_node_to_world(*node_ptr, centre), radius });
+    }
+
+    if (selection.empty())
+    {
+        wnd()->print_status_message("ERROR: There is nothing selected to be looked at.", 10000);
+        return;
+    }
+
+    vector3  centre;
+    {
+        vector3  lo = selection.front().first;
+        vector3  hi = selection.front().first;
+        for (std::size_t i = 1UL; i != selection.size(); ++i)
+            for (std::size_t j = 0UL; j != 3UL; ++j)
+            {
+                if (selection.at(i).first(j) - selection.at(i).second < lo(j))
+                    lo(j) = selection.at(i).first(j) - selection.at(i).second;
+                if (hi(j) < selection.at(i).first(j) + selection.at(i).second)
+                    hi(j) = selection.at(i).first(j) + selection.at(i).second;
+            }
+        centre = 0.5f * (lo + hi);
+    }
+
+    SCENE_EDIT_MODE const  edit_mode = wnd()->glwindow().call_now(&simulator::get_scene_edit_mode);
+    if (edit_mode == SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
+    {
+        float_32_bit  distance;
+        {
+            float_32_bit  radius = 0.01f;
+            for (std::size_t i = 0UL; i != selection.size(); ++i)
+            {
+                float_32_bit const  dist = length(selection.at(i).first - centre) + selection.at(i).second;
+                if (radius < dist)
+                    radius = dist;
+            }
+
+            float_32_bit const  camera_near = wnd()->glwindow().call_now(&simulator::get_camera_near_plane_distance);
+            float_32_bit const  camera_side = wnd()->glwindow().call_now(&simulator::get_camera_side_plane_minimal_distance);
+            distance = std::max(
+                radius + camera_near,
+                (radius / camera_side) * std::sqrt(camera_near*camera_near + camera_side*camera_side)
+                );
+        }
+        solver(centre, &distance);
+    }
+    else if (edit_mode == SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
+    {
+        solver(centre, nullptr);
+    }
+    else
+    {
+        wnd()->print_status_message("ERROR: The 'look at' operations works only at 'Translation' or 'Rotation' mode.", 10000);
+        return;
+    }
+}
 
 void  widgets::on_pause()
 {

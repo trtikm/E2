@@ -100,6 +100,20 @@ public slots:
     void  on_menu_edit_undo() { m_tab_scene_widgets.on_scene_undo(); }
     void  on_menu_edit_redo() { m_tab_scene_widgets.on_scene_redo(); }
 
+    void  on_menu_view_double_camera_speed() { m_tab_draw_widgets.on_double_camera_speed(); }
+    void  on_menu_view_half_camera_speed() { m_tab_draw_widgets.on_half_camera_speed(); }
+    void  on_menu_view_look_at_selection()
+    {
+        m_tab_scene_widgets.on_look_at_selection(
+            std::bind(
+                &window_tabs::tab_draw::widgets::on_look_at,
+                &m_tab_draw_widgets,
+                std::placeholders::_1,
+                std::placeholders::_2
+                )
+            );
+    }
+
     boost::filesystem::path&  get_current_scene_dir() { return m_menu_bar.get_current_scene_dir(); }
 
 

@@ -33,6 +33,48 @@ inline void  transform_origin_and_orientation_from_scene_node_to_world(
 }
 
 
+inline vector3  transform_point_from_scene_node_to_world(
+        scene_node const&  node,
+        vector3 const&  point
+        )
+{
+    return contract43(node.get_world_matrix() * expand34(point));
+}
+
+
+inline vector3  transform_vector_from_scene_node_to_world(
+        scene_node const&  node,
+        vector3 const&  vector
+        )
+{
+    return contract43(node.get_world_matrix() * expand34(vector, 0.0f));
+}
+
+
+inline vector3  transform_point_from_world_to_scene_node(
+        scene_node const&  node,
+        vector3 const&  point
+        )
+{
+    return contract43(inverse(node.get_world_matrix()) * expand34(point));
+}
+
+
+inline vector3  transform_vector_from_world_to_scene_node(
+        scene_node const&  node,
+        vector3 const&  vector
+        )
+{
+    return contract43(inverse(node.get_world_matrix()) * expand34(vector, 0.0f));
+}
+
+
+scalar  compute_bounding_sphere_of_batch_of_scene_node(
+        scene_node const&  node,
+        std::string const&  batch_name,
+        vector3&  centre
+        );
+
 scalar  compute_bounding_sphere_radius_of_scene_node(scene_node const&  node);
 
 

@@ -1,6 +1,7 @@
 #include <gfxtuner/window_tabs/tab_draw.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/simulator_notifications.hpp>
+#include <qtgl/camera_utils.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <QLabel>
 #include <QVBoxLayout>
@@ -235,10 +236,16 @@ void  widgets::on_camera_pos_changed()
 void  widgets::camera_position_listener()
 {
     vector3 const pos = wnd()->glwindow().call_now(&simulator::get_camera_position);
+    update_camera_pos_widgets(pos);
+}
+
+void  widgets::update_camera_pos_widgets(vector3 const&  pos)
+{
     m_camera_pos_x->setText(QString::number(pos(0)));
     m_camera_pos_y->setText(QString::number(pos(1)));
     m_camera_pos_z->setText(QString::number(pos(2)));
 }
+
 
 void  widgets::on_camera_rot_changed()
 {
@@ -303,18 +310,7 @@ void  widgets::on_camera_far_changed()
 
 void  widgets::on_camera_speed_changed()
 {
-    float_32_bit  speed = m_camera_speed->text().toFloat();
-    if (speed < 0.1f)
-    {
-        speed = 0.1f;
-        m_camera_speed->setText(QString("0.1"));
-    }
-    else if (speed > 500.0f)
-    {
-        speed = 500.0f;
-        m_camera_speed->setText(QString("500"));
-    }
-    wnd()->glwindow().call_later(&simulator::set_camera_speed, speed);
+    set_camera_speed(m_camera_speed->text().toFloat());
 }
 
 void widgets::on_clear_colour_changed()
@@ -354,6 +350,49 @@ void widgets::on_clear_colour_reset()
 void widgets::on_show_grid_changed(int const  value)
 {
     wnd()->glwindow().call_later(&simulator::set_show_grid_state, m_show_grid->isChecked());
+}
+
+void  widgets::on_double_camera_speed()
+{
+    set_camera_speed(m_camera_speed->text().toFloat() * 2.0f);
+}
+
+void  widgets::on_half_camera_speed()
+{
+    set_camera_speed(m_camera_speed->text().toFloat() / 2.0f);
+}
+
+void  widgets::on_look_at(vector3 const&  target, float_32_bit const* const  distance_ptr)
+{
+    angeo::coordinate_system  coord_system{
+        wnd()->glwindow().call_now(&simulator::get_camera_position),
+        wnd()->glwindow().call_now(&simulator::get_camera_orientation)
+    };
+
+    qtgl::look_at(coord_system, target, distance_ptr == nullptr ? length(target - coord_system.origin()) : *distance_ptr);
+
+    wnd()->glwindow().call_later(&simulator::set_camera_position, coord_system.origin());
+    wnd()->glwindow().call_later(&simulator::set_camera_orientation, coord_system.orientation());
+
+    update_camera_pos_widgets(coord_system.origin());
+    update_camera_rot_widgets(coord_system.orientation());
+}
+
+void  widgets::set_camera_speed(float_32_bit  speed)
+{
+    if (speed < 0.1f)
+        speed = 0.1f;
+    else if (speed > 500.0f)
+        speed = 500.0f;
+
+    //if (std::fabs(speed - m_camera_speed->text().toFloat()) > 1e-4f)
+    {
+        std::stringstream  sstr;
+        sstr << speed;
+        m_camera_speed->setText(QString(sstr.str().c_str()));
+    }
+
+    wnd()->glwindow().call_later(&simulator::set_camera_speed, speed);
 }
 
 

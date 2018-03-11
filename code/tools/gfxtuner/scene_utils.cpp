@@ -26,6 +26,25 @@ void  transform_origin_and_orientation(
 }
 
 
+scalar  compute_bounding_sphere_of_batch_of_scene_node(
+        scene_node const&  node,
+        std::string const&  batch_name,
+        vector3&  centre
+        )
+{
+    centre = vector3_zero();
+    auto const  batch = node.get_batch(batch_name);
+    if (batch.empty())
+        return 0.0f;
+    auto const  binding = batch.get_buffers_binding();
+    if (!binding.loaded_successfully())
+        return 0.0f;
+    auto const&  boundary = binding.get_boundary();
+    centre = 0.5f * (boundary.lo_corner() + boundary.hi_corner());
+    return std::max(length(boundary.lo_corner() - centre), length(boundary.hi_corner() - centre));
+}
+
+
 scalar  compute_bounding_sphere_radius_of_scene_node(scene_node const&  node)
 {
     scalar  max_radius = get_selection_radius_of_bounding_sphere_of_scene_node();

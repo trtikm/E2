@@ -40,6 +40,11 @@ struct  menu_bar
     QAction*  get_edit_action_undo() const { return m_edit_action_undo; }
     QAction*  get_edit_action_redo() const { return m_edit_action_redo; }
 
+    QMenu*  get_menu_view() const noexcept { return m_menu_view; }
+    QAction*  get_view_action_double_camera_speed() const { return m_view_action_double_camera_speed; }
+    QAction*  get_view_action_half_camera_speed() const { return m_view_action_half_camera_speed; }
+    QAction*  get_view_action_look_at_selection() const { return m_view_action_look_at_selection; }
+
     // "File" actions
     void  on_file_action_new_scene();
     bool  on_file_action_open_scene();
@@ -85,6 +90,11 @@ private:
     QAction*  m_edit_action_move_pivot_to_selection;
     QAction*  m_edit_action_undo;
     QAction*  m_edit_action_redo;
+
+    QMenu*  m_menu_view;
+    QAction*  m_view_action_double_camera_speed;
+    QAction*  m_view_action_half_camera_speed;
+    QAction*  m_view_action_look_at_selection;
 };
 
 

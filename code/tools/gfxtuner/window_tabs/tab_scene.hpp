@@ -11,6 +11,7 @@
 #   include <string>
 #   include <unordered_set>
 #   include <unordered_map>
+#   include <functional>
 
 
 struct  program_window;
@@ -69,6 +70,8 @@ struct  widgets
 
     void  on_scene_undo();
     void  on_scene_redo();
+
+    void  on_look_at_selection(std::function<void(vector3 const&, float_32_bit const*)> const&  solver);
 
     void  on_pause();
 

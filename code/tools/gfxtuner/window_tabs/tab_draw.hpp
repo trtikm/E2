@@ -46,6 +46,7 @@ struct  widgets
 
     void  on_camera_pos_changed();
     void  camera_position_listener();
+    void  update_camera_pos_widgets(vector3 const&  pos);
 
     void  on_camera_rot_changed();
     void  on_camera_rot_tait_bryan_changed();
@@ -62,9 +63,15 @@ struct  widgets
 
     void  on_show_grid_changed(int const  value);
 
+    void  on_double_camera_speed();
+    void  on_half_camera_speed();
+    void  on_look_at(vector3 const&  target, float_32_bit const* const  distance_ptr = nullptr);
+
     void  save();
 
 private:
+    void  set_camera_speed(float_32_bit  speed);
+
     program_window*  m_wnd;
 
     QLineEdit*  m_camera_pos_x;
