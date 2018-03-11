@@ -6,13 +6,18 @@
 #include <utility/development.hpp>
 
 
-void  transform_origin_and_orientation(
-        matrix44 const  transformation,
-        vector3&  origin,
-        quaternion&  orientation
-        )
+vector3  transform_point(matrix44 const  transformation, vector3 const&  point)
 {
-    origin = contract43(transformation * expand34(origin));
+    return contract43(transformation * expand34(point));
+}
+
+vector3  transform_vector(matrix44 const  transformation, vector3 const&  vector)
+{
+    return contract43(transformation * expand34(vector, 0.0f));
+}
+
+quaternion  transform_orientation(matrix44 const  transformation, quaternion const&  orientation) 
+{
     vector3  x, y, z;
     rotation_matrix_to_basis(quaternion_to_rotation_matrix(orientation), x, y, z);
     matrix33 rotation;
@@ -22,7 +27,17 @@ void  transform_origin_and_orientation(
         contract43(transformation * expand34(z, 0.0f)),
         rotation
         );
-    orientation = rotation_matrix_to_quaternion(rotation);
+    return rotation_matrix_to_quaternion(rotation);
+}
+
+void  transform_origin_and_orientation(
+        matrix44 const  transformation,
+        vector3&  origin,
+        quaternion&  orientation
+        )
+{
+    origin = transform_point(transformation, origin);
+    orientation = transform_orientation(transformation, orientation);
 }
 
 

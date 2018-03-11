@@ -1540,7 +1540,7 @@ void  widgets::on_scene_move_selection_to_pivot()
             vector3  source_position;
             {
                 if (nodes.size() == 1UL)
-                    source_position = (*nodes.cbegin())->get_coord_system()->origin();
+                    source_position = transform_point_from_scene_node_to_world(**nodes.cbegin(), vector3_zero());
                 else
                 {
                     vector3  lo, hi;
@@ -1554,27 +1554,40 @@ void  widgets::on_scene_move_selection_to_pivot()
 
         for (auto  node_ptr : nodes)
         {
+            vector3 const  local_shift_vector =
+                node_ptr->has_parent() ?
+                    transform_vector_from_world_to_scene_node(*node_ptr->get_parent(), shift_vector) :
+                    shift_vector
+                    ;
             get_scene_history().insert<scene_history_coord_system_relocate>(
                     node_ptr->get_name(),
                     node_ptr->get_coord_system()->origin(),
                     node_ptr->get_coord_system()->orientation(),
-                    node_ptr->get_coord_system()->origin() + shift_vector,
+                    node_ptr->get_coord_system()->origin() + local_shift_vector,
                     node_ptr->get_coord_system()->orientation()
                     );
-            node_ptr->translate(shift_vector);
+            node_ptr->translate(local_shift_vector);
         }
     }
     else if (edit_mode == SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
         for (auto node_ptr : nodes)
         {
+            quaternion const  local_orientation =
+                node_ptr->has_parent() ? 
+                    transform_orientation_from_world_to_scene_node(
+                            *node_ptr->get_parent(),
+                            pivot_node_ptr->get_coord_system()->orientation()
+                            ) :
+                    pivot_node_ptr->get_coord_system()->orientation()
+                    ;
             get_scene_history().insert<scene_history_coord_system_relocate>(
                 node_ptr->get_name(),
                 node_ptr->get_coord_system()->origin(),
                 node_ptr->get_coord_system()->orientation(),
                 node_ptr->get_coord_system()->origin(),
-                pivot_node_ptr->get_coord_system()->orientation()
+                local_orientation
                 );
-            node_ptr->set_orientation(pivot_node_ptr->get_coord_system()->orientation());
+            node_ptr->set_orientation(local_orientation);
         }
     else
     {

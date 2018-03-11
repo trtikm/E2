@@ -7,6 +7,10 @@
 #   include <map>
 
 
+vector3  transform_point(matrix44 const  transformation, vector3 const&  point);
+vector3  transform_vector(matrix44 const  transformation, vector3 const&  vector);
+quaternion  transform_orientation(matrix44 const  transformation, quaternion const&  orientation);
+
 void  transform_origin_and_orientation(
         matrix44 const  transformation,
         vector3&  origin,
@@ -38,7 +42,7 @@ inline vector3  transform_point_from_scene_node_to_world(
         vector3 const&  point
         )
 {
-    return contract43(node.get_world_matrix() * expand34(point));
+    return transform_point(node.get_world_matrix(), point);
 }
 
 
@@ -47,7 +51,7 @@ inline vector3  transform_vector_from_scene_node_to_world(
         vector3 const&  vector
         )
 {
-    return contract43(node.get_world_matrix() * expand34(vector, 0.0f));
+    return transform_vector(node.get_world_matrix(), vector);
 }
 
 
@@ -56,7 +60,7 @@ inline vector3  transform_point_from_world_to_scene_node(
         vector3 const&  point
         )
 {
-    return contract43(inverse(node.get_world_matrix()) * expand34(point));
+    return transform_point(inverse(node.get_world_matrix()), point);
 }
 
 
@@ -65,7 +69,25 @@ inline vector3  transform_vector_from_world_to_scene_node(
         vector3 const&  vector
         )
 {
-    return contract43(inverse(node.get_world_matrix()) * expand34(vector, 0.0f));
+    return transform_vector(inverse(node.get_world_matrix()), vector);
+}
+
+
+inline quaternion  transform_orientation_from_scene_node_to_world(
+        scene_node const&  node,
+        quaternion const&  orientation
+        )
+{
+    return transform_orientation(node.get_world_matrix(), orientation);
+}
+
+
+inline quaternion  transform_orientation_from_world_to_scene_node(
+        scene_node const&  node,
+        quaternion const&  orientation
+        )
+{
+    return transform_orientation(inverse(node.get_world_matrix()), orientation);
 }
 
 
