@@ -361,7 +361,16 @@ void widgets::on_clear_colour_choose()
     QColor const  colour = QColorDialog::getColor(init_colour, wnd(), "Choose clear colour");
     if (!colour.isValid())
         return;
-    on_clear_colour_set(colour);
+    m_clear_colour_component_red->setText(QString::number(colour.red()));
+    m_clear_colour_component_green->setText(QString::number(colour.green()));
+    m_clear_colour_component_blue->setText(QString::number(colour.blue()));
+    vector3 const  normalised_colour(
+        (float_32_bit)m_clear_colour_component_red->text().toInt() / 255.0f,
+        (float_32_bit)m_clear_colour_component_green->text().toInt() / 255.0f,
+        (float_32_bit)m_clear_colour_component_blue->text().toInt() / 255.0f
+        );
+    wnd()->glwindow().call_later(&simulator::set_clear_color, normalised_colour);
+    wnd()->set_focus_to_glwindow(false);
 }
 
 void widgets::on_clear_colour_reset()

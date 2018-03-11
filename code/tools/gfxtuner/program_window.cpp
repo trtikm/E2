@@ -158,7 +158,8 @@ void program_window::timerEvent(QTimerEvent* const event)
     if (m_focus_just_received)
     {
         m_focus_just_received = false;
-        set_focus_to_glwindow();
+        m_gl_window_widget->activateWindow();
+        m_gl_window_widget->setFocus();
     }
 }
 

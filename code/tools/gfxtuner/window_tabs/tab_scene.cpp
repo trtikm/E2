@@ -696,6 +696,7 @@ void  widgets::on_scene_hierarchy_item_selected()
     QList<QTreeWidgetItem*> const  new_selection = m_scene_tree->selectedItems();
     update_history_according_to_change_in_selection(old_selection, new_selection);
     set_window_title();
+    wnd()->set_focus_to_glwindow(false);
 }
 
 void  widgets::selection_changed_listener()
@@ -1304,7 +1305,10 @@ void  widgets::on_coord_system_pos_changed()
     auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, name);
     INVARIANT(node_ptr != nullptr);
     if(length(pos - node_ptr->get_coord_system()->origin()) < 1e-4f)
+    {
+        wnd()->set_focus_to_glwindow();
         return;
+    }
 
     wnd()->glwindow().call_later(&simulator::set_position_of_scene_node, name, pos);
 
@@ -1317,6 +1321,7 @@ void  widgets::on_coord_system_pos_changed()
             );
     get_scene_history().commit();
     set_window_title();
+    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::on_coord_system_rot_changed()
@@ -1336,7 +1341,10 @@ void  widgets::on_coord_system_rot_changed()
     INVARIANT(node_ptr != nullptr);
     if (length_4d(quaternion_coefficients_xyzw(q) -
                   quaternion_coefficients_xyzw(node_ptr->get_coord_system()->orientation())) < 1e-4f)
+    {
+        wnd()->set_focus_to_glwindow();
         return;
+    }
 
     wnd()->glwindow().call_later(&simulator::set_orientation_of_scene_node, name, q);
 
@@ -1349,6 +1357,7 @@ void  widgets::on_coord_system_rot_changed()
             );
     get_scene_history().commit();
     set_window_title();
+    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::on_coord_system_rot_tait_bryan_changed()
@@ -1367,7 +1376,10 @@ void  widgets::on_coord_system_rot_tait_bryan_changed()
     INVARIANT(node_ptr != nullptr);
     if (length_4d(quaternion_coefficients_xyzw(q) -
                   quaternion_coefficients_xyzw(node_ptr->get_coord_system()->orientation())) < 1e-4f)
+    {
+        wnd()->set_focus_to_glwindow();
         return;
+    }
 
     wnd()->glwindow().call_later(&simulator::set_orientation_of_scene_node, name, q);
 
@@ -1380,6 +1392,7 @@ void  widgets::on_coord_system_rot_tait_bryan_changed()
             );
     get_scene_history().commit();
     set_window_title();
+    wnd()->set_focus_to_glwindow();
 }
 
 

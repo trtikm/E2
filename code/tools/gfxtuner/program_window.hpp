@@ -32,10 +32,15 @@ struct program_window : public QMainWindow
     { m_status_bar.print_status_message(msg, num_miliseconds_to_show); }
 
     void  set_title(std::string const&  text = "");
-    void  set_focus_to_glwindow()
+    void  set_focus_to_glwindow(bool const  immediatelly = true)
     {
-        if (!m_gl_window_widget->hasFocus())
-            m_gl_window_widget->setFocus();
+        if (immediatelly)
+        {
+            if (!m_gl_window_widget->hasFocus())
+                m_gl_window_widget->setFocus();
+        }
+        else
+            m_focus_just_received = true;
     }
 
 public slots:
