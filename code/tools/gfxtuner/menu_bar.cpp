@@ -30,7 +30,7 @@ public:
     {
         QHelpEvent const* help_event = static_cast<QHelpEvent*>(e);
         if (help_event->type() == QEvent::ToolTip &&
-            activeAction() != 0 &&
+            activeAction() != nullptr &&
             activeAction()->toolTip() != detail::get_none_tooltip_string())
             QToolTip::showText(help_event->globalPos(), activeAction()->toolTip());
         else

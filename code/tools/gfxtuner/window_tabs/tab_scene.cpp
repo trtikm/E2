@@ -1211,11 +1211,13 @@ void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
     catch (boost::property_tree::ptree_error const&  e)
     {
         wnd()->print_status_message(std::string("ERROR: Load of scene has FAILED. ") + e.what(), 10000);
+        wnd()->get_current_scene_dir().clear();
         clear_scene();
     }
     catch (...)
     {
         wnd()->print_status_message("ERROR: Load of scene has FAILED. Reason is unknown.", 10000);
+        wnd()->get_current_scene_dir().clear();
         clear_scene();
     }
 }
