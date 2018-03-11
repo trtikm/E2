@@ -62,6 +62,7 @@ struct  widgets
     void  on_clear_colour_reset();
 
     void  on_show_grid_changed(int const  value);
+    void  on_save_pos_rot_changed(int const  value);
 
     void  on_double_camera_speed();
     void  on_half_camera_speed();

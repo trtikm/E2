@@ -32,6 +32,11 @@ struct program_window : public QMainWindow
     { m_status_bar.print_status_message(msg, num_miliseconds_to_show); }
 
     void  set_title(std::string const&  text = "");
+    void  set_focus_to_glwindow()
+    {
+        if (!m_gl_window_widget->hasFocus())
+            m_gl_window_widget->setFocus();
+    }
 
 public slots:
 
@@ -51,6 +56,7 @@ public slots:
     void  on_draw_clear_colour_reset() { m_tab_draw_widgets.on_clear_colour_reset(); }
 
     void  on_draw_show_grid_changed(int const  value) { m_tab_draw_widgets.on_show_grid_changed(value); }
+    void  on_draw_save_pos_rot_changed(int const  value) { m_tab_draw_widgets.on_save_pos_rot_changed(value); }
 
     void  draw_camera_position_listener() { m_tab_draw_widgets.camera_position_listener(); }
     void  draw_camera_rotation_listener() { m_tab_draw_widgets.camera_rotation_listener(); }

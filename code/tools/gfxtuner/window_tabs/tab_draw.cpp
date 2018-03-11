@@ -139,7 +139,18 @@ widgets::widgets(program_window* const  wnd)
         }(m_wnd)
         )
 
-    , m_camera_save_pos_rot(new QCheckBox("Save position and rotation"))
+    , m_camera_save_pos_rot(
+        [](program_window* wnd) {
+            struct s : public QCheckBox {
+                s(program_window* wnd) : QCheckBox("Save position and rotation")
+                {
+                    setChecked(wnd->ptree().get("camera.save_pos_rot", true));
+                    QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(on_draw_save_pos_rot_changed(int)));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
 
     , m_camera_far_plane(
         [](program_window* wnd) {
@@ -222,6 +233,11 @@ widgets::widgets(program_window* const  wnd)
         }(m_wnd)
         )
 {
+    m_camera_rot_w->setEnabled(false);
+    m_camera_rot_x->setEnabled(false);
+    m_camera_rot_y->setEnabled(false);
+    m_camera_rot_z->setEnabled(false);
+    m_camera_pitch->setEnabled(false);
 }
 
 
@@ -231,6 +247,7 @@ void  widgets::on_camera_pos_changed()
         m_camera_pos_y->text().toFloat(),
         m_camera_pos_z->text().toFloat());
     wnd()->glwindow().call_later(&simulator::set_camera_position, pos);
+    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::camera_position_listener()
@@ -259,6 +276,7 @@ void  widgets::on_camera_rot_changed()
 
     update_camera_rot_widgets(q);
     wnd()->glwindow().call_later(&simulator::set_camera_orientation, q);
+    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::on_camera_rot_tait_bryan_changed()
@@ -271,6 +289,7 @@ void  widgets::on_camera_rot_tait_bryan_changed()
     normalise(q);
     update_camera_rot_widgets(q);
     wnd()->glwindow().call_later(&simulator::set_camera_orientation, q);
+    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::camera_rotation_listener()
@@ -306,11 +325,13 @@ void  widgets::on_camera_far_changed()
         m_camera_far_plane->setText(QString("5000"));
     }
     wnd()->glwindow().call_later(&simulator::set_camera_far_plane, far_plane);
+    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::on_camera_speed_changed()
 {
     set_camera_speed(m_camera_speed->text().toFloat());
+    wnd()->set_focus_to_glwindow();
 }
 
 void widgets::on_clear_colour_changed()
@@ -321,6 +342,7 @@ void widgets::on_clear_colour_changed()
         (float_32_bit)m_clear_colour_component_blue->text().toInt() / 255.0f
         );
     wnd()->glwindow().call_later(&simulator::set_clear_color, colour);
+    wnd()->set_focus_to_glwindow();
 }
 
 void widgets::on_clear_colour_set(QColor const&  colour)
@@ -350,6 +372,12 @@ void widgets::on_clear_colour_reset()
 void widgets::on_show_grid_changed(int const  value)
 {
     wnd()->glwindow().call_later(&simulator::set_show_grid_state, m_show_grid->isChecked());
+    wnd()->set_focus_to_glwindow();
+}
+
+void  widgets::on_save_pos_rot_changed(int const  value)
+{
+    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::on_double_camera_speed()

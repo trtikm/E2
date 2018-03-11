@@ -97,6 +97,8 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 
     qtgl::set_splitter_sizes(*m_splitter, ptree().get("window.splitter_ratio", 3.0f / 4.0f));
 
+    this->setFocus();
+
     m_idleTimerId = startTimer(100); // In milliseconds.
 }
 
@@ -156,7 +158,7 @@ void program_window::timerEvent(QTimerEvent* const event)
     if (m_focus_just_received)
     {
         m_focus_just_received = false;
-        m_gl_window_widget->setFocus();
+        set_focus_to_glwindow();
     }
 }
 
