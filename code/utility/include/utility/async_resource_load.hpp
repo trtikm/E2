@@ -513,7 +513,12 @@ struct  resource_accessor
         return *this;
     }
 
-    ~resource_accessor()
+    virtual bool  operator==(resource_accessor<resource_type> const&  other) const
+    {
+        return m_data_ptr == other.m_data_ptr;
+    }
+
+    virtual ~resource_accessor()
     {
         release();
     }
