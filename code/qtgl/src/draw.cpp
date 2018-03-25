@@ -84,37 +84,52 @@ void  render_batch(
 {
     TMPROF_BLOCK();
 
-    vertex_shader  vertex_shader = batch.get_shaders_binding().get_vertex_shader();
-    for (vertex_shader_uniform_symbolic_name const uniform : vertex_shader.get_symbolic_names_of_used_uniforms())
-        switch (uniform)
-        {
-        case vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
-            break;
-        case vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
-            vertex_shader.set_uniform_variable(uniform,diffuse_colour);
-            break;
-        case vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
-            ASSUMPTION(!transform_matrices.empty());
-            if (apply_modelspace_of_batch && batch.get_modelspace().loaded_successfully())
+    {
+        vertex_shader  shader = batch.get_shaders_binding().get_vertex_shader();
+        for (vertex_shader_uniform_symbolic_name const uniform : shader.get_symbolic_names_of_used_uniforms())
+            switch (uniform)
             {
-                apply_modelspace_to_frame_of_keyframe_animation(
-                        batch.get_modelspace(),
-                        transform_matrices
-                        );
-                apply_modelspace_of_batch = false;
+            case vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
+                break;
+            case vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
+                shader.set_uniform_variable(uniform,diffuse_colour);
+                break;
+            case vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
+                ASSUMPTION(!transform_matrices.empty());
+                if (apply_modelspace_of_batch && batch.get_modelspace().loaded_successfully())
+                {
+                    apply_modelspace_to_frame_of_keyframe_animation(
+                            batch.get_modelspace(),
+                            transform_matrices
+                            );
+                    apply_modelspace_of_batch = false;
+                }
+                if (transform_matrices.size() == 1UL)
+                    shader.set_uniform_variable(uniform,transform_matrices.front());
+                else
+                    shader.set_uniform_variable(uniform, transform_matrices);
+                break;
+            case vertex_shader_uniform_symbolic_name::NUM_MATRICES_PER_VERTEX:
+                ASSUMPTION(transform_matrices.size() >= batch.get_buffers_binding().num_matrices_per_vertex());
+                ASSUMPTION(transform_matrices.size() != 1UL || batch.get_buffers_binding().num_matrices_per_vertex() == 1U);
+                shader.set_uniform_variable(uniform, batch.get_buffers_binding().num_matrices_per_vertex());
+                break;
             }
-            if (transform_matrices.size() == 1UL)
-                vertex_shader.set_uniform_variable(uniform,transform_matrices.front());
-            else
-                vertex_shader.set_uniform_variable(uniform, transform_matrices);
-            break;
-        case vertex_shader_uniform_symbolic_name::NUM_MATRICES_PER_VERTEX:
-            ASSUMPTION(transform_matrices.size() >= batch.get_buffers_binding().num_matrices_per_vertex());
-            ASSUMPTION(transform_matrices.size() != 1UL || batch.get_buffers_binding().num_matrices_per_vertex() == 1U);
-            vertex_shader.set_uniform_variable(uniform, batch.get_buffers_binding().num_matrices_per_vertex());
-            break;
-        }
+    }
 
+    {
+        fragment_shader  shader = batch.get_shaders_binding().get_fragment_shader();
+        for (fragment_shader_uniform_symbolic_name const uniform : shader.get_symbolic_names_of_used_uniforms())
+            switch (uniform)
+            {
+            case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_DIFFUSE:
+            case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_SPECULAR:
+            case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_NORMAL:
+            case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_POSITION:
+                shader.set_uniform_variable(uniform, value(uniform));
+                break;
+            }
+    }
     draw();
 }
 

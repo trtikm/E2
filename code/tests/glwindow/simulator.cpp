@@ -170,7 +170,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
     }
     qtgl::textures_binding const  object_textures_binding({
                     {
-                        qtgl::fragment_shader_texture_sampler_binding::BINDING_TEXTURE_DIFFUSE,
+                        qtgl::fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_DIFFUSE,
                         use_chessboard_texture ?
                                 qtgl::make_chessboard_texture() :
                                 qtgl::texture("../data/shared/gfx/textures/ruler.txt")

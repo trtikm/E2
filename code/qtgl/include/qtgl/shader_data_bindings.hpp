@@ -27,7 +27,7 @@ enum struct vertex_shader_input_buffer_binding_location : natural_8_bit
     BINDING_IN_WEIGHTS_OF_MATRICES  = 14
 };
 
-inline natural_8_bit  value(vertex_shader_input_buffer_binding_location const  location)
+inline natural_32_bit  value(vertex_shader_input_buffer_binding_location const  location)
 { return static_cast<natural_8_bit>(location); }
 std::string  binding_location_name(vertex_shader_input_buffer_binding_location const  location);
 
@@ -57,7 +57,7 @@ enum struct vertex_shader_output_buffer_binding_location : natural_8_bit
     BINDING_OUT_TEXCOORD9           = 12,
 };
 
-inline natural_8_bit  value(vertex_shader_output_buffer_binding_location const  location)
+inline natural_32_bit  value(vertex_shader_output_buffer_binding_location const  location)
 { return static_cast<natural_8_bit>(location); }
 std::string  binding_location_name(vertex_shader_output_buffer_binding_location const  location);
 
@@ -70,12 +70,22 @@ enum struct vertex_shader_uniform_symbolic_name : natural_8_bit
     NUM_MATRICES_PER_VERTEX         = 3,
 };
 
-inline natural_8_bit  value(vertex_shader_uniform_symbolic_name const  name)
+inline natural_32_bit  value(vertex_shader_uniform_symbolic_name const  name)
 { return static_cast<natural_8_bit>(name); }
 std::string  uniform_symbolic_name(vertex_shader_uniform_symbolic_name const  symbolic_name);
 std::string  uniform_name(vertex_shader_uniform_symbolic_name const  symbolic_name);
-vertex_shader_uniform_symbolic_name  to_symbolic_uniform_name(std::string  name);
+vertex_shader_uniform_symbolic_name  to_symbolic_uniform_name_of_vertex_shader(std::string  name);
 inline constexpr natural_32_bit  uniform_max_transform_matrices() { return 64U; }
+
+inline constexpr vertex_shader_uniform_symbolic_name  min_vertex_shader_uniform_symbolic_name()
+{ return vertex_shader_uniform_symbolic_name::COLOUR_ALPHA; }
+inline constexpr vertex_shader_uniform_symbolic_name  max_vertex_shader_uniform_symbolic_name()
+{ return vertex_shader_uniform_symbolic_name::NUM_MATRICES_PER_VERTEX; }
+inline constexpr natural_8_bit  num_vertex_shader_uniform_symbolic_names()
+{ return static_cast<natural_8_bit>(max_vertex_shader_uniform_symbolic_name()) -
+         static_cast<natural_8_bit>(min_vertex_shader_uniform_symbolic_name()) +
+         1U; }
+
 
 enum struct fragment_shader_input_buffer_binding_location : natural_8_bit
 {
@@ -94,7 +104,7 @@ enum struct fragment_shader_input_buffer_binding_location : natural_8_bit
     BINDING_IN_TEXCOORD9            = 12,
 };
 
-inline natural_8_bit  value(fragment_shader_input_buffer_binding_location const  location)
+inline natural_32_bit  value(fragment_shader_input_buffer_binding_location const  location)
 { return static_cast<natural_8_bit>(location); }
 std::string  binding_location_name(fragment_shader_input_buffer_binding_location const  location);
 
@@ -102,29 +112,47 @@ std::string  binding_location_name(fragment_shader_input_buffer_binding_location
 enum struct fragment_shader_output_buffer_binding_location : natural_8_bit
 {
     BINDING_OUT_COLOUR              = 0,
+    BINDING_OUT_TEXTURE_POSITION    = 1,
+    BINDING_OUT_TEXTURE_NORMAL      = 2,
+    BINDING_OUT_TEXTURE_DIFFUSE     = 3,
+    BINDING_OUT_TEXTURE_SPECULAR    = 4,
 };
 
-inline natural_8_bit  value(fragment_shader_output_buffer_binding_location const  location)
+inline natural_32_bit  value(fragment_shader_output_buffer_binding_location const  location)
 { return static_cast<natural_8_bit>(location); }
 std::string  binding_location_name(fragment_shader_output_buffer_binding_location const  location);
 
 
-enum struct fragment_shader_texture_sampler_binding : natural_8_bit
+enum struct fragment_shader_uniform_symbolic_name : natural_8_bit
 {
-    BINDING_TEXTURE_DIFFUSE         = 0,
+    TEXTURE_SAMPLER_DIFFUSE         = 0,
+    TEXTURE_SAMPLER_SPECULAR        = 1,
+    TEXTURE_SAMPLER_NORMAL          = 2,
+    TEXTURE_SAMPLER_POSITION        = 3,
+
+    FOG_COLOUR                      = 4,
+    AMBIENT_COLOUR                  = 5,
+    DIFFUSE_COLOUR                  = 6,
+    SPECULAR_COLOUR                 = 7,
+
+    DIRECTIONAL_LIGHT_POSITION      = 8,
+    DIRECTIONAL_LIGHT_COLOUR        = 9,
 };
 
-inline natural_8_bit  value(fragment_shader_texture_sampler_binding const  binding)
+inline natural_32_bit  value(fragment_shader_uniform_symbolic_name const  binding)
 { return static_cast<natural_8_bit>(binding); }
-std::string  sampler_binding_name(fragment_shader_texture_sampler_binding const  texture_binding);
+std::string  uniform_name_symbolic(fragment_shader_uniform_symbolic_name const  uniform_symbolic_name);
+std::string  uniform_name(fragment_shader_uniform_symbolic_name const  uniform_symbolic_name);
+bool  is_texture_sampler(fragment_shader_uniform_symbolic_name const  uniform_symbolic_name);
+fragment_shader_uniform_symbolic_name  to_symbolic_uniform_name_of_fragment_shader(std::string  name);
 
-inline constexpr fragment_shader_texture_sampler_binding  min_fragment_shader_texture_sampler_binding() noexcept
-{ return fragment_shader_texture_sampler_binding::BINDING_TEXTURE_DIFFUSE; }
-inline constexpr fragment_shader_texture_sampler_binding  max_fragment_shader_texture_sampler_binding() noexcept
-{ return fragment_shader_texture_sampler_binding::BINDING_TEXTURE_DIFFUSE; }
-inline constexpr natural_8_bit  num_fragment_shader_texture_sampler_bindings() noexcept
-{ return static_cast<natural_8_bit>(max_fragment_shader_texture_sampler_binding()) -
-         static_cast<natural_8_bit>(min_fragment_shader_texture_sampler_binding()) +
+inline constexpr fragment_shader_uniform_symbolic_name  min_fragment_shader_uniform_symbolic_name()
+{ return fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_DIFFUSE; }
+inline constexpr fragment_shader_uniform_symbolic_name  max_fragment_shader_uniform_symbolic_name()
+{ return fragment_shader_uniform_symbolic_name::DIRECTIONAL_LIGHT_COLOUR; }
+inline constexpr natural_8_bit  num_fragment_shader_uniform_symbolic_names() noexcept
+{ return static_cast<natural_8_bit>(max_fragment_shader_uniform_symbolic_name()) -
+         static_cast<natural_8_bit>(min_fragment_shader_uniform_symbolic_name()) +
          1U; }
 
 

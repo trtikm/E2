@@ -84,7 +84,7 @@ batch_data::batch_data(boost::filesystem::path const&  path, async::finalise_loa
                 }
             if (!found)
             {
-                if (line.find("BINDING_") != 0ULL || line.find("BINDING_TEXTURE_") == 0ULL)
+                if (line.find("BINDING_") != 0ULL || line.find("TEXTURE_SAMPLER_") == 0ULL)
                     break;
 
                 throw std::runtime_error(msgstream() << "Unknown vertex shader input buffer binding location '" << line
@@ -111,10 +111,10 @@ batch_data::batch_data(boost::filesystem::path const&  path, async::finalise_loa
         textures_binding_map_type  textures_binding_map;
         do
         {
-            natural_8_bit  location = value(min_fragment_shader_texture_sampler_binding());
+            natural_8_bit  location = value(min_fragment_shader_uniform_symbolic_name());
             bool  found = false;
-            for ( ; location <= value(max_fragment_shader_texture_sampler_binding()); ++location)
-                if (line == sampler_binding_name(fragment_shader_texture_sampler_binding(location)))
+            for ( ; location <= value(max_fragment_shader_uniform_symbolic_name()); ++location)
+                if (line == uniform_name_symbolic(fragment_shader_uniform_symbolic_name(location)))
                 {
                     found = true;
                     break;
@@ -122,7 +122,7 @@ batch_data::batch_data(boost::filesystem::path const&  path, async::finalise_loa
             if (!found)
                 break;
 
-            fragment_shader_texture_sampler_binding const  bind_location = fragment_shader_texture_sampler_binding(location);
+            fragment_shader_uniform_symbolic_name const  bind_location = fragment_shader_uniform_symbolic_name(location);
             if (textures_binding_map.count(bind_location) != 0ULL)
                 throw std::runtime_error(msgstream() << "Fragment shader texture sampler binding '" << line
                                                      << "' appears more than once in the file '" << path << "'.");
@@ -133,7 +133,7 @@ batch_data::batch_data(boost::filesystem::path const&  path, async::finalise_loa
             boost::filesystem::path  texture_file = boost::filesystem::absolute(path.parent_path() / line);
             if (!boost::filesystem::exists(texture_file) || !boost::filesystem::is_regular_file(texture_file))
                 throw std::runtime_error(msgstream() << "The texture file '" << texture_file.string()
-                                                     << "' to be bound to location '" << sampler_binding_name(bind_location)
+                                                     << "' to be bound to location '" << uniform_name(bind_location)
                                                      << "' referenced from the batch file '" << path << "' does not exist.");
             texture_file = canonical_path(texture_file);
 

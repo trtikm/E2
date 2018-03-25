@@ -281,7 +281,7 @@ namespace qtgl { namespace detail {
 
 struct textures_binding_data
 {
-    using  binding_map_type = std::unordered_map<fragment_shader_texture_sampler_binding, texture>;
+    using  binding_map_type = std::unordered_map<fragment_shader_uniform_symbolic_name, texture>;
 
     textures_binding_data(
             async::finalise_load_on_destroy_ptr,
@@ -294,6 +294,8 @@ struct textures_binding_data
             [this]() -> bool {
                     for (auto const& sampler_and_texture : m_bindings)
                     {
+                        if (!is_texture_sampler(sampler_and_texture.first))
+                            return false;
                         if (value(sampler_and_texture.first) >= GL_MAX_COMBINED_TEXTURE_IMAGE_UNITS)
                             return false;
                         if (sampler_and_texture.second.empty())

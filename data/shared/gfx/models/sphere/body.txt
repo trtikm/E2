@@ -6,7 +6,7 @@ BINDING_IN_POSITION
 ../../meshes/sphere\body\vertices.txt
 BINDING_IN_TEXCOORD0
 ../../meshes/sphere\body\texcoords0.txt
-BINDING_TEXTURE_DIFFUSE
+TEXTURE_SAMPLER_DIFFUSE
 ../../textures\sphere\shere_image.txt
 BACK
 false

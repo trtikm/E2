@@ -176,11 +176,11 @@ struct  fragment_shader_data
             GLuint const  id, 
             std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
             std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
-            std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings,
+            std::unordered_set<fragment_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms,
             std::vector<std::string> const&  lines_of_shader_code
             )
     {
-        initialise(id, input_buffer_bindings, output_buffer_bindings, texture_sampler_bindings, lines_of_shader_code);
+        initialise(id, input_buffer_bindings, output_buffer_bindings, symbolic_names_of_used_uniforms, lines_of_shader_code);
     }
 
     ~fragment_shader_data();
@@ -190,10 +190,16 @@ struct  fragment_shader_data
     { return m_input_buffer_bindings; }
     std::unordered_set<fragment_shader_output_buffer_binding_location> const&  get_output_buffer_bindings() const
     { return m_output_buffer_bindings; }
-    std::unordered_set<fragment_shader_texture_sampler_binding> const&  get_texture_sampler_bindings() const
-    { return m_texture_sampler_bindings; }
+    std::unordered_set<fragment_shader_uniform_symbolic_name> const&  get_symbolic_names_of_used_uniforms() const
+    { return m_symbolic_names_of_used_uniforms; }
     std::vector<std::string> const&  get_lines_of_shader_code() const
     { return m_lines_of_shader_code; }
+
+    bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store);
 
     std::string  create_gl_shader();
     void  destroy_gl_shader();
@@ -204,14 +210,14 @@ private:
             GLuint const  id, 
             std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
             std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
-            std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings,
+            std::unordered_set<fragment_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms,
             std::vector<std::string> const&  lines_of_shader_code
             );
 
     GLuint  m_id;
     std::unordered_set<fragment_shader_input_buffer_binding_location>  m_input_buffer_bindings;
     std::unordered_set<fragment_shader_output_buffer_binding_location>  m_output_buffer_bindings;
-    std::unordered_set<fragment_shader_texture_sampler_binding>  m_texture_sampler_bindings;
+    std::unordered_set<fragment_shader_uniform_symbolic_name>  m_symbolic_names_of_used_uniforms;
     std::vector<std::string>  m_lines_of_shader_code;
 };
 
@@ -243,7 +249,7 @@ struct  fragment_shader : public async::resource_accessor<detail::fragment_shade
             GLuint const  id, 
             std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
             std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
-            std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings,
+            std::unordered_set<fragment_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms,
             std::vector<std::string> const&  lines_of_shader_code,
             boost::filesystem::path const&  path = ""
             )
@@ -253,7 +259,7 @@ struct  fragment_shader : public async::resource_accessor<detail::fragment_shade
                 id,
                 input_buffer_bindings,
                 output_buffer_bindings,
-                texture_sampler_bindings,
+                symbolic_names_of_used_uniforms,
                 lines_of_shader_code
                 )
     {}
@@ -263,10 +269,31 @@ struct  fragment_shader : public async::resource_accessor<detail::fragment_shade
     { return resource().get_input_buffer_bindings(); }
     std::unordered_set<fragment_shader_output_buffer_binding_location> const&  get_output_buffer_bindings() const
     { return resource().get_output_buffer_bindings(); }
-    std::unordered_set<fragment_shader_texture_sampler_binding> const&  get_texture_sampler_bindings() const
-    { return resource().get_texture_sampler_bindings(); }
+    std::unordered_set<fragment_shader_uniform_symbolic_name> const&  get_symbolic_names_of_used_uniforms() const
+    { return resource().get_symbolic_names_of_used_uniforms(); }
     std::vector<std::string> const&  get_lines_of_shader_code() const
     { return resource().get_lines_of_shader_code(); }
+
+    template<typename value_type>
+    bool  set_uniform_variable(fragment_shader_uniform_symbolic_name const  symbolic_name, value_type const&  value_to_store)
+    {
+        return set_uniform_variable(uniform_name(symbolic_name), value_to_store);
+    }
+
+    bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
+    bool  set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
+    bool  set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
+    bool  set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
+    bool  set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
 
     std::string  create_gl_shader() { return resource().create_gl_shader(); }
     void  destroy_gl_shader() { resource().destroy_gl_shader(); }

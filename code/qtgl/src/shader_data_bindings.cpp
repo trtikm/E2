@@ -1,5 +1,7 @@
 #include <qtgl/shader_data_bindings.hpp>
 #include <utility/invariants.hpp>
+#include <utility/assumptions.hpp>
+#include <unordered_map>
 
 namespace qtgl {
 
@@ -72,7 +74,7 @@ std::string  uniform_name(vertex_shader_uniform_symbolic_name const  symbolic_na
     }
 }
 
-vertex_shader_uniform_symbolic_name  to_symbolic_uniform_name(std::string  name)
+vertex_shader_uniform_symbolic_name  to_symbolic_uniform_name_of_vertex_shader(std::string  name)
 {
     if (name.find("UNIFORM_") == 0UL)
         name = name.substr(std::strlen("UNIFORM_"));
@@ -119,14 +121,93 @@ std::string  binding_location_name(fragment_shader_output_buffer_binding_locatio
     }
 }
 
-std::string  sampler_binding_name(fragment_shader_texture_sampler_binding const  texture_binding)
+std::string  uniform_name_symbolic(fragment_shader_uniform_symbolic_name const  uniform_symbolic_name)
 {
-    switch (texture_binding)
+    switch (uniform_symbolic_name)
     {
-    case fragment_shader_texture_sampler_binding::BINDING_TEXTURE_DIFFUSE: return "BINDING_TEXTURE_DIFFUSE";
+    case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_DIFFUSE: return "TEXTURE_SAMPLER_DIFFUSE";
+    case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_SPECULAR: return "TEXTURE_SAMPLER_SPECULAR";
+    case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_NORMAL: return "TEXTURE_SAMPLER_NORMAL";
+    case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_POSITION: return "TEXTURE_SAMPLER_POSITION";
+
+    case fragment_shader_uniform_symbolic_name::FOG_COLOUR: return "FOG_COLOUR";
+    case fragment_shader_uniform_symbolic_name::AMBIENT_COLOUR: return "AMBIENT_COLOUR";
+    case fragment_shader_uniform_symbolic_name::DIFFUSE_COLOUR: return "DIFFUSE_COLOUR";
+    case fragment_shader_uniform_symbolic_name::SPECULAR_COLOUR: return "SPECULAR_COLOUR";
+
+    case fragment_shader_uniform_symbolic_name::DIRECTIONAL_LIGHT_POSITION: return "DIRECTIONAL_LIGHT_POSITION";
+    case fragment_shader_uniform_symbolic_name::DIRECTIONAL_LIGHT_COLOUR: return "DIRECTIONAL_LIGHT_COLOUR";
+
     default: UNREACHABLE();
     }
 }
+
+std::string  uniform_name(fragment_shader_uniform_symbolic_name const  uniform_symbolic_name)
+{
+    return "UNIFORM_" + uniform_name_symbolic(uniform_symbolic_name);
+}
+
+bool  is_texture_sampler(fragment_shader_uniform_symbolic_name const  uniform_symbolic_name)
+{
+    switch (uniform_symbolic_name)
+    {
+    case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_DIFFUSE:
+    case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_SPECULAR:
+    case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_NORMAL:
+    case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_POSITION:
+        return true;
+    default:
+        return false;
+    }
+}
+
+fragment_shader_uniform_symbolic_name  to_symbolic_uniform_name_of_fragment_shader(std::string  name)
+{
+    if (name.find("UNIFORM_") == 0UL)
+        name = name.substr(std::strlen("UNIFORM_"));
+
+    static std::unordered_map<std::string, fragment_shader_uniform_symbolic_name> const  map =
+        []() -> std::unordered_map<std::string, fragment_shader_uniform_symbolic_name> {
+            std::unordered_map<std::string, fragment_shader_uniform_symbolic_name> map;
+            for (natural_32_bit i = 0U; i < num_fragment_shader_uniform_symbolic_names(); ++i)
+                map.insert({
+                    uniform_name_symbolic(fragment_shader_uniform_symbolic_name(i)),
+                    fragment_shader_uniform_symbolic_name(i)
+                    });
+            return map;
+        }();
+
+    auto const  it = map.find(name);
+    ASSUMPTION(it != map.cend());
+    return it->second;
+
+    //{
+    //    { "TEXTURE_SAMPLER_DIFFUSE",
+    //    { "TEXTURE_SAMPLER_SPECULAR",
+    //    { "TEXTURE_SAMPLER_NORMAL",
+    //    { "TEXTURE_SAMPLER_POSITION",
+
+    //    { "FOG_COLOUR",
+    //    { "AMBIENT_COLOUR",
+    //    { "DIFFUSE_COLOUR",
+    //    { "SPECULAR_COLOUR",
+
+    //    { "DIRECTIONAL_LIGHT_POSITION",
+    //    { "DIRECTIONAL_LIGHT_COLOUR",
+    //};
+
+    //if (name == "COLOUR_ALPHA")
+    //    return vertex_shader_uniform_symbolic_name::COLOUR_ALPHA;
+    //if (name == "DIFFUSE_COLOUR")
+    //    return vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR;
+    //if (name == "TRANSFORM_MATRIX_TRANSPOSED")
+    //    return vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED;
+    //if (name == "NUM_MATRICES_PER_VERTEX")
+    //    return vertex_shader_uniform_symbolic_name::NUM_MATRICES_PER_VERTEX;
+
+    UNREACHABLE();
+}
+
 
 bool  compatible(std::unordered_set<vertex_shader_output_buffer_binding_location> const& vertex_program_output,
                  std::unordered_set<fragment_shader_input_buffer_binding_location> const& fragment_program_input)

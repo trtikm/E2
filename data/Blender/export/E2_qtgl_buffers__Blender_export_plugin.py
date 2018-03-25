@@ -1006,14 +1006,14 @@ def save_batch_files(
                     f.write(os.path.relpath(buffers_export_info["diffuse_buffer"],batch_root_dir) + "\n")
 
                 texture_binding_names = [
-                    "BINDING_TEXTURE_DIFFUSE",
-                    "BINDING_TEXTURE_NORMALS"
+                    "TEXTURE_SAMPLER_DIFFUSE",
+                    "TEXTURE_SAMPLER_NORMAL"
                     ]
                 for i in range(0,len(textures_export_info)):
                     if i < len(texture_binding_names):
                         f.write(texture_binding_names[i] + "\n")
                     else:
-                        f.write("BINDING_TEXTURE_??\n")
+                        f.write("TEXTURE_SAMPLER_??\n")
                     f.write(os.path.relpath(textures_export_info[i],batch_root_dir) + "\n")
 
                 if "coord_systems" in export_info:

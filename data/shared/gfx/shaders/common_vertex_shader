@@ -1,0 +1,56 @@
+#if SHADER_TYPE != VERTEX_SHADER_TYPE
+#   error "Wrong shader type! Must be vertex shader."
+#endif
+
+//  These must match the corresponding values of
+//  enum 'vertex_shader_input_buffer_binding_location'
+//  in the file 'qtgl/shader_data_binding.hpp'.
+
+// Location specifiers for input 'in' variables, i.e. values X in layout(location=X)
+#define BINDING_IN_POSITION                 0
+#define BINDING_IN_COLOUR                   1
+#define BINDING_IN_NORMAL                   2
+#define BINDING_IN_TEXCOORD0                3
+#define BINDING_IN_TEXCOORD1                4
+#define BINDING_IN_TEXCOORD2                5
+#define BINDING_IN_TEXCOORD3                6
+#define BINDING_IN_TEXCOORD4                7
+#define BINDING_IN_TEXCOORD5                8
+#define BINDING_IN_TEXCOORD6                9
+#define BINDING_IN_TEXCOORD7                10
+#define BINDING_IN_TEXCOORD8                11
+#define BINDING_IN_TEXCOORD9                12
+#define BINDING_IN_INDICES_OF_MATRICES      13
+#define BINDING_IN_WEIGHTS_OF_MATRICES      14
+
+// Location specifiers for output 'out' variables, i.e. values X in layout(location=X)
+#define BINDING_OUT_POSITION                0
+#define BINDING_OUT_COLOUR                  1
+#define BINDING_OUT_NORMAL                  2
+#define BINDING_OUT_TEXCOORD0               3
+#define BINDING_OUT_TEXCOORD1               4
+#define BINDING_OUT_TEXCOORD2               5
+#define BINDING_OUT_TEXCOORD3               6
+#define BINDING_OUT_TEXCOORD4               7
+#define BINDING_OUT_TEXCOORD5               8
+#define BINDING_OUT_TEXCOORD6               9
+#define BINDING_OUT_TEXCOORD7               10
+#define BINDING_OUT_TEXCOORD8               11
+#define BINDING_OUT_TEXCOORD9               12
+                                            
+// Names of special uniform 'uniform' var   iables.
+// These values must match return values of
+// enum 'vertex_shader_uniform_symbolic_name'
+// in the file 'qtgl/shader_data_binding.hpp' and
+// the functions 'qtgl::uniform_name' and 'qtgl::uniform_symbolic_name'
+// in the file 'qtgl/shader_data_binding.cpp' must
+// return names defined here.
+#define COLOUR_ALPHA                        UNIFORM_COLOUR_ALPHA
+#define DIFFUSE_COLOUR                      UNIFORM_DIFFUSE_COLOUR
+#define TRANSFORM_MATRIX_TRANSPOSED         UNIFORM_TRANSFORM_MATRIX_TRANSPOSED
+#define NUM_MATRICES_PER_VERTEX             UNIFORM_NUM_MATRICES_PER_VERTEX
+
+// This constant must match the value returned
+// from the function 'uniform_max_transform_matrices'
+// defined in the file 'qtgl/shader_data_binding.hpp'.
+const int  MAX_TRANSFORM_MATRICES           = 64;

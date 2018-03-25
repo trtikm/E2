@@ -6,7 +6,7 @@ BINDING_IN_POSITION
 ../../meshes/output_terminal\output_terminal\vertices.txt
 BINDING_IN_TEXCOORD0
 ../../meshes/output_terminal\output_terminal\texcoords0.txt
-BINDING_TEXTURE_DIFFUSE
+TEXTURE_SAMPLER_DIFFUSE
 ../../textures\output_terminal\output_terminal_diffuse.txt
 BACK
 false

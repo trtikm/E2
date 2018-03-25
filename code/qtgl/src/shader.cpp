@@ -606,7 +606,7 @@ void  parse_properties_from_fragment_shader_code(
         std::vector<std::string> const&  lines_of_shader_code,
         std::unordered_set<fragment_shader_input_buffer_binding_location>&  input_buffer_bindings,
         std::unordered_set<fragment_shader_output_buffer_binding_location>&  output_buffer_bindings,
-        std::unordered_set<fragment_shader_texture_sampler_binding>&  texture_sampler_bindings
+        std::unordered_set<fragment_shader_uniform_symbolic_name>&  texture_sampler_bindings
         )
 {
     TMPROF_BLOCK();
@@ -639,11 +639,11 @@ void  parse_properties_from_fragment_shader_code(
 
     ASSUMPTION(output_buffer_bindings.count(fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR) != 0U);
 
-    for (auto const  sampler_binding : std::vector<fragment_shader_texture_sampler_binding>{
-            fragment_shader_texture_sampler_binding::BINDING_TEXTURE_DIFFUSE,
+    for (auto const  sampler_binding : std::vector<fragment_shader_uniform_symbolic_name>{
+            fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_DIFFUSE,
             })
     {
-        if (tokens.count(sampler_binding_name(sampler_binding)) != 0ULL)
+        if (tokens.count(uniform_name(sampler_binding)) != 0ULL)
             texture_sampler_bindings.insert(sampler_binding);
     }
 }
@@ -681,7 +681,7 @@ bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name
     GLint const  layout_location = glapi().glGetUniformLocation(id(),variable_name.c_str());
     if (layout_location == -1)
     {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name(variable_name)) == 1UL);
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
         return false;
     }
     glapi().glProgramUniform1ui(id(),layout_location,value_to_store);
@@ -696,7 +696,7 @@ bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name
     GLint const  layout_location = glapi().glGetUniformLocation(id(),variable_name.c_str());
     if (layout_location == -1)
     {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name(variable_name)) == 1UL);
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
         return false;
     }
     glapi().glProgramUniform1f(id(),layout_location,value_to_store);
@@ -710,7 +710,7 @@ bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name
     GLint const  layout_location = glapi().glGetUniformLocation(id(), variable_name.c_str());
     if (layout_location == -1)
     {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name(variable_name)) == 1UL);
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
         return false;
     }
     glapi().glProgramUniform4fv(id(), layout_location, 1U, value_to_store.data());
@@ -726,7 +726,7 @@ bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name
     GLint const  layout_location = glapi().glGetUniformLocation(id(),variable_name.c_str());
     if (layout_location == -1)
     {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name(variable_name)) == 1UL);
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
         return false;
     }
     glapi().glProgramUniformMatrix4fv(id(),layout_location,1U,GL_TRUE,value_to_store.data());
@@ -744,7 +744,7 @@ bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name
     GLint const  layout_location = glapi().glGetUniformLocation(id(),variable_name.c_str());
     if (layout_location == -1)
     {
-        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name(variable_name)) == 1UL);
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
         return false;
     }
     glapi().glProgramUniformMatrix4fv(id(),layout_location,(GLsizei)value_to_store.size(),GL_TRUE,value_to_store.data()->data());
@@ -847,6 +847,84 @@ fragment_shader_data::~fragment_shader_data()
 }
 
 
+bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    GLint const  layout_location = glapi().glGetUniformLocation(id(),variable_name.c_str());
+    if (layout_location == -1)
+    {
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
+        return false;
+    }
+    glapi().glProgramUniform1ui(id(),layout_location,value_to_store);
+    return true;
+}
+
+
+bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    GLint const  layout_location = glapi().glGetUniformLocation(id(),variable_name.c_str());
+    if (layout_location == -1)
+    {
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
+        return false;
+    }
+    glapi().glProgramUniform1f(id(),layout_location,value_to_store);
+    return true;
+}
+
+bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    GLint const  layout_location = glapi().glGetUniformLocation(id(), variable_name.c_str());
+    if (layout_location == -1)
+    {
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
+        return false;
+    }
+    glapi().glProgramUniform4fv(id(), layout_location, 1U, value_to_store.data());
+    return true;
+}
+
+bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
+
+    GLint const  layout_location = glapi().glGetUniformLocation(id(),variable_name.c_str());
+    if (layout_location == -1)
+    {
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
+        return false;
+    }
+    glapi().glProgramUniformMatrix4fv(id(),layout_location,1U,GL_TRUE,value_to_store.data());
+    return true;
+}
+
+
+bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
+    ASSUMPTION(value_to_store.size() <= uniform_max_transform_matrices());
+
+    GLint const  layout_location = glapi().glGetUniformLocation(id(),variable_name.c_str());
+    if (layout_location == -1)
+    {
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
+        return false;
+    }
+    glapi().glProgramUniformMatrix4fv(id(),layout_location,(GLsizei)value_to_store.size(),GL_TRUE,value_to_store.data()->data());
+    return true;
+}
+
+
 std::string  fragment_shader_data::create_gl_shader()
 {
     if (id() != 0U)
@@ -882,18 +960,18 @@ void  fragment_shader_data::initialise(std::vector<std::string> const&  lines_of
 
     std::unordered_set<fragment_shader_input_buffer_binding_location>  input_buffer_bindings;
     std::unordered_set<fragment_shader_output_buffer_binding_location>  output_buffer_bindings;
-    std::unordered_set<fragment_shader_texture_sampler_binding>  texture_sampler_bindings;
+    std::unordered_set<fragment_shader_uniform_symbolic_name>  symbolic_names_of_used_uniforms;
     detail::parse_properties_from_fragment_shader_code(
             lines_of_shader_code,
             input_buffer_bindings,
             output_buffer_bindings,
-            texture_sampler_bindings
+            symbolic_names_of_used_uniforms
             );
     initialise(
             0U,
             input_buffer_bindings,
             output_buffer_bindings,
-            texture_sampler_bindings,
+            symbolic_names_of_used_uniforms,
             lines_of_shader_code
             );
 }
@@ -903,7 +981,7 @@ void  fragment_shader_data::initialise(
         GLuint const  id, 
         std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
         std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
-        std::unordered_set<fragment_shader_texture_sampler_binding> const&  texture_sampler_bindings,
+        std::unordered_set<fragment_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms,
         std::vector<std::string> const&  lines_of_shader_code
         )
 {
@@ -912,7 +990,7 @@ void  fragment_shader_data::initialise(
     m_id = id;
     m_input_buffer_bindings = input_buffer_bindings;
     m_output_buffer_bindings = output_buffer_bindings;
-    m_texture_sampler_bindings = texture_sampler_bindings;
+    m_symbolic_names_of_used_uniforms = symbolic_names_of_used_uniforms;
     m_lines_of_shader_code = lines_of_shader_code;
 }
 

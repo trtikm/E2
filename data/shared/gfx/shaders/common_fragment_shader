@@ -1,0 +1,46 @@
+#if SHADER_TYPE != FRAGMENT_SHADER_TYPE
+#   error "Wrong shader type! Must be fragment shader."
+#endif
+
+//  These must match the corresponding values of
+//  enum 'fragment_shader_input_buffer_binding_location'
+//  in the file 'qtgl/shader_data_binding.hpp'.
+
+// Location specifiers for input 'in' variables, i.e. values X in layout(location=X)
+#define BINDING_IN_POSITION                 0
+#define BINDING_IN_COLOUR                   1
+#define BINDING_IN_NORMAL                   2
+#define BINDING_IN_TEXCOORD0                3
+#define BINDING_IN_TEXCOORD1                4
+#define BINDING_IN_TEXCOORD2                5
+#define BINDING_IN_TEXCOORD3                6
+#define BINDING_IN_TEXCOORD4                7
+#define BINDING_IN_TEXCOORD5                8
+#define BINDING_IN_TEXCOORD6                9
+#define BINDING_IN_TEXCOORD7                10
+#define BINDING_IN_TEXCOORD8                11
+#define BINDING_IN_TEXCOORD9                12
+
+// Location specifiers for output 'out' variables, i.e. values X in layout(location=X)
+#define BINDING_OUT_COLOUR                  0
+#define BINDING_OUT_TEXTURE_POSITION        1
+#define BINDING_OUT_TEXTURE_NORMAL          2
+#define BINDING_OUT_TEXTURE_DIFFUSE         3
+#define BINDING_OUT_TEXTURE_SPECULAR        4
+
+// Names of special uniform 'uniform' variables.
+// These values must match return values of
+// enum 'fragment_shader_uniform_symbolic_name'
+// in the file 'qtgl/shader_data_binding.hpp'.
+// Important examples of uniform variables
+// are texture samplers
+#define TEXTURE_SAMPLER_DIFFUSE             UNIFORM_TEXTURE_SAMPLER_DIFFUSE
+#define TEXTURE_SAMPLER_SPECULAR            UNIFORM_TEXTURE_SAMPLER_SPECULAR
+#define TEXTURE_SAMPLER_NORMAL              UNIFORM_TEXTURE_SAMPLER_NORMAL
+#define TEXTURE_SAMPLER_POSITION            UNIFORM_TEXTURE_SAMPLER_POSITION
+#define FOG_COLOUR                          UNIFORM_FOG_COLOUR
+#define AMBIENT_COLOUR                      UNIFORM_AMBIENT_COLOUR
+#define DIFFUSE_COLOUR                      UNIFORM_DIFFUSE_COLOUR
+#define SPECULAR_COLOUR                     UNIFORM_SPECULAR_COLOUR
+#define DIRECTIONAL_LIGHT_POSITION          UNIFORM_DIRECTIONAL_LIGHT_POSITION
+#define DIRECTIONAL_LIGHT_COLOUR            UNIFORM_DIRECTIONAL_LIGHT_COLOUR

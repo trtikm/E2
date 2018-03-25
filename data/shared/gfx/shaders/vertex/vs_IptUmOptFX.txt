@@ -1,5 +1,5 @@
 #include ../version
-#include ../bindings
+#include ../common_vertex_shader
 layout(location=BINDING_IN_POSITION) in vec3  in_position;
 layout(location=BINDING_IN_TEXCOORD0) in vec2  in_texture_coords;
 layout(location=BINDING_IN_INDICES_OF_MATRICES) in ivec4  in_indices_of_matrices;
