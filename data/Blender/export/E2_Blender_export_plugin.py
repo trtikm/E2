@@ -1,17 +1,13 @@
 # This is module registration info for Blender.
 bl_info = {
-    "name": "E2::qtgl model exporter",
+    "name": "E2 exporter",
     "author": "E2",
     "version": (1, 0, 0),
     "blender": (2, 76, 0),
     "location": "File > Import-Export",
-    "description": "E2::qtgl model exporter. It allows for export of all selected MESH objects "
-                   "(bpy.types.Mesh) in the E2::qtgl model format. Exported buffers include: index, "
-                   "vertex, normal, colours (diffuse and specular), texture UVs, and bone weights "
-                   "(vertex groups). User specifies a root export directory. The base name of the directory "
-                   "(i.e. the last part of the pathname) is considered as the model name of the exported "
-                   "meshes. All exported buffers are save under that root directory into proper sub-directories "
-                   "and files. Each buffer is stored into a separate file. All data are exported in the text mode.",
+    "description": "Exports a selected object, like mesh or armature, in E2 format - a hierarchy of "
+                   "directories and files under a given root output directory. Names of created "
+                   "files and directories define semantics of the exported data.",
     "warning": "",
     "wiki_url": "",
     "support": 'COMMUNITY',
@@ -25,9 +21,14 @@ import time
 import os
 import shutil
 import json
+import traceback
 
 
 class TimeProf:
+    """
+    This is a time profiler. Singleton.
+    """
+
     _instance = None
 
     @staticmethod
@@ -38,32 +39,23 @@ class TimeProf:
 
     def __init__(self):
         self._statistics = {}
-        self._mesh_name = None
         self._stack = []
 
-    def set_mesh_name(self, mesh_name):
-        assert isinstance(mesh_name, str) and len(mesh_name) > 0
-        self._mesh_name = mesh_name
-        if self._mesh_name not in self._statistics:
-            self._statistics[self._mesh_name] = {}
-
     def start(self, measured_block_id):
-        assert self._mesh_name is not None
         assert isinstance(measured_block_id, str) and len(measured_block_id) > 0
         self._stack.append((measured_block_id, time.time()))
         return self
 
     def stop(self):
-        assert self._mesh_name is not None
         assert len(self._stack) > 0
         duration = time.time() - self._stack[-1][1]
-        if self._stack[-1][0] not in self._statistics[self._mesh_name]:
-            self._statistics[self._mesh_name][self._stack[-1][0]] = {
+        if self._stack[-1][0] not in self._statistics:
+            self._statistics[self._stack[-1][0]] = {
                 "total_time": 0.0,
                 "hit_count": 0,
                 "max_time": 0.0
             }
-        record = self._statistics[self._mesh_name][self._stack[-1][0]]
+        record = self._statistics[self._stack[-1][0]]
         record["total_time"] += duration
         record["hit_count"] += 1
         record["max_time"] = duration if duration > record["max_time"] else record["max_time"]
@@ -77,6 +69,15 @@ class TimeProf:
 
     def to_json(self):
         return json.dumps(self._statistics, indent=4, sort_keys=True)
+
+
+def get_number_precision_string():
+    return ".6f"
+
+
+def float_to_string(number):
+    assert isinstance(number, float)
+    return format(number, get_number_precision_string())
 
 
 def from_base_matrix(
@@ -127,7 +128,6 @@ def get_object_rotation_quaternion(obj):
                 ).to_quaternion()
 
 
-
 def is_correct_scale_vector(
         scale_vector    # An instance of 'mathutils.Vector'; i.e. a 3d vector whose coord define scales along axes
         ):
@@ -140,70 +140,59 @@ def is_correct_scale_vector(
            abs(1.0 - scale_vector[2]) < 0.001
 
 
-def does_selected_mesh_object_have_correct_scales(
-        obj     # An instance of 'bpy.types.Mesh'
+def armature_has_correct_scales(
+        armature    # An instance of 'bpy.types.Armature'
         ):
     """
-    This function checks whether none of the exported meshes (and corresponding armatures and bones, if any)
-    are without scale (i.e. with scale 1.0 in each axis). This check is necessary,  because the disc format of
-    E2::qtgl model do not allow for scale. So, a user must first apply scales to vertices of all exported meshes
-    before the exporter can be called.
-    :param obj: An instance of 'bpy.types.Mesh'
-    :return: The function returns True, if the scale is 1.0 for all three coordinate axes for the passed mesh, and
-             related armature and bone objects (if present). Otherwise False is returned.
+    This function checks whether the passed armatue or its pose bones are without scale (i.e. with scale 1.0 in each
+    axis). This check is necessary,  because the E2 format does not allow for scale. So, a user must first apply scales
+    to vertices of all exported meshes before the exporter can be called.
+    :param obj: An instance of 'bpy.types.Armature'
+    :return: The function returns True, if the scale is 1.0 for all three coordinate axes for the passed armature and
+             all its pose bones. Otherwise False is returned.
     """
 
-    assert obj.type == 'MESH'
+    assert armature.type == "ARMATURE"
 
-    with TimeProf.instance().start("does_selected_mesh_object_have_correct_scales"):
-        if not is_correct_scale_vector(obj.scale):
-            print("  ERROR: Mesh '" + obj.name + "' is scaled: " + str(obj.scale) + ".")
+    with TimeProf.instance().start("armature_has_correct_scales"):
+        if not is_correct_scale_vector(armature.scale):
+            print("ERROR: The armature is scaled: " + str(armature.scale) + ".")
             return False
-        for mod in obj.modifiers:
-            if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
-                armature = mod.object
-                if not is_correct_scale_vector(armature.scale):
-                    print("  ERROR: Armature '" + armature.name + "' is scaled: " + str(armature.scale) + ".")
-                    return False
-                # Only pose bones have scale (i.e. bones of the armarute "armature.data.bones" do not have scale)
-                for bone in armature.pose.bones:
-                    if not is_correct_scale_vector(bone.scale):
-                        print("  ERROR: Pose bone '" + bone.name + "' of armature '" + armature.name + "' is scaled: " + str(bone.scale) + ".")
-                        return False
+        # Only pose bones have scale (i.e. bones of the armature "armature.data.bones" do not have scale)
+        for bone in armature.pose.bones:
+            if not is_correct_scale_vector(bone.scale):
+                print("  ERROR: Pose bone '" + bone.name + "' of the armature is scaled: " + str(bone.scale) + ".")
+                return False
         return True
 
 
-def does_selected_mesh_object_have_correct_weights(
-        obj     # An instance of 'bpy.types.Mesh'
+def vertices_have_correct_weights(
+        vertices     # A list of vertices obtained from a 'bpy.types.Mesh' instance
         ):
     """
-    This function checks whether vertices of the passed object have correct number of wights, i.e. at most 4.
+    This function checks whether all vertices have correct number of wights, i.e. at most 4.
     It also checks whether the weights are normalised. i.e. their sum is equal to 1, for each vertex.
     :param obj: An instance of 'bpy.types.Mesh'
-    :return: The function returns True, if both check succeed for each vertex. Otherwise False is returned.
+    :return: The function returns True, if each vertex has correct at most 4 normalised weights.
+             Otherwise False is returned.
     """
 
-    assert obj.type == 'MESH'
-
-    with TimeProf.instance().start("does_selected_mesh_object_have_correct_weights"):
-        mesh = obj.data
-        for idx in range(0, len(mesh.vertices)):
-            num_weights = len(mesh.vertices[idx].groups)
+    with TimeProf.instance().start("vertices_have_correct_weights"):
+        for idx in range(0, len(vertices)):
+            num_weights = len(vertices[idx].groups)
             if num_weights > 4:
-                print("ERROR: The vertex no." + str(idx) + " of the mesh object '" + obj.name + "' has more than 4 weights "
-                      ", namely " + str(num_weights) + ". You can fix the issue by 1. switching to 'Wight Paint' mode "
-                      "(select armature, then mesh, and press Ctrl+TAB), 2. Select menu option 'Weights/Limit Total'.")
+                print("ERROR: The vertex no." + str(idx) + " of the mesh has more than 4 weights, namely " +
+                      str(num_weights) + ". You can fix the issue by 1. switching to 'Wight Paint' mode "
+                     "(select armature, then mesh, and press Ctrl+TAB), 2. Select menu option 'Weights/Limit Total'.")
                 return False
-        for idx in range(0, len(mesh.vertices)):
-            num_weights = len(mesh.vertices[idx].groups)
             if num_weights > 1:
                 sum_of_weights = 0
                 for i in range(0, num_weights):
-                    sum_of_weights += mesh.vertices[idx].groups[i].weight
+                    sum_of_weights += vertices[idx].groups[i].weight
                 if abs(sum_of_weights - 1.0) > 0.001:
-                    print("ERROR: Sum of weights of vertex " + str(idx) + " of the mesh object '" + obj.name + "' is " +
-                          str(sum_of_weights) + ". To normalise the weights (so that the sum is 1) do this: 1. switching "
-                          "to 'Wight Paint' mode (select armature, then mesh, and press Ctrl+TAB), 2. Select "
+                    print("ERROR: Sum of weights of vertex " + str(idx) + " of the mesh is " +
+                          str(sum_of_weights) + ". To normalise the weights (so that the sum is 1) do this: 1. "
+                          "switching to 'Wight Paint' mode (select armature, then mesh, and press Ctrl+TAB), 2. Select "
                           "menu option 'Weights/Normalize All'.")
                     return False
         return True
@@ -436,24 +425,24 @@ def build_render_buffers(
         else:
             deform_bone_index = {}
             deform_bones_counter = 0
-            for idx in range(0, len(armature.data.bones)):
+            for idx in range(len(armature.data.bones)):
                 bone = armature.data.bones[idx]
                 if bone.use_deform:
                     deform_bone_index[bone.name] = deform_bones_counter
                     deform_bones_counter += 1
 
         num_weights_per_vertex = 0
-        for idx in range(0,len(mesh.vertices)):
+        for idx in range(len(mesh.vertices)):
             num_weights_per_vertex = max(num_weights_per_vertex,len(mesh.vertices[idx].groups))
 
         buffers = []
         if len(mesh.materials) == 0:
             buffers.append(render_buffers())
         else:
-            for i in range(0,len(mesh.materials)):
+            for i in range(len(mesh.materials)):
                 buffers.append(render_buffers())
 
-        for i in range(0,len(mesh.polygons)):
+        for i in range(len(mesh.polygons)):
             if len(mesh.materials) == 0:
                 mtl_index = 0
             else:
@@ -463,7 +452,7 @@ def build_render_buffers(
             for j in mesh.polygons[i].loop_indices:
                 if len(mesh.vertex_colors) > 0:
                     colours = []
-                    for k in range(0,min(2,len(mesh.vertex_colors))):
+                    for k in range(min(2, len(mesh.vertex_colors))):
                         colours.append((
                             mesh.vertex_colors[k].data[j].color[0],
                             mesh.vertex_colors[k].data[j].color[1],
@@ -494,7 +483,7 @@ def build_render_buffers(
                     specular_colour = (0.0, 0.0, 0.0, 1.0)
 
                 texcoords = []
-                for k in range(0,len(mesh.uv_layers)):
+                for k in range(len(mesh.uv_layers)):
                     texcoords.append(mesh.uv_layers[k].data[j].uv)
 
                 vtx = mesh.vertices[mesh.loops[j].vertex_index]
@@ -503,10 +492,10 @@ def build_render_buffers(
 
                 weights_of_matrices = []
                 indices_of_matrices = []
-                for _ in range(0, num_weights_per_vertex):
+                for _ in range(num_weights_per_vertex):
                     weights_of_matrices.append(0.0)
                     indices_of_matrices.append(0)
-                for grp_idx in range(0, len(vtx.groups)):
+                for grp_idx in range(len(vtx.groups)):
                     weights_of_matrices[grp_idx] = vtx.groups[grp_idx].weight
                     indices_of_matrices[grp_idx] = deform_bone_index[obj.vertex_groups[vtx.groups[grp_idx].group].name]
                 if num_weights_per_vertex > 1 and abs(sum(weights_of_matrices) - 1.0) > 0.001:
@@ -529,152 +518,197 @@ def build_render_buffers(
 
 
 def save_render_buffers(
-        buffers,    # An instance of the class 'render_buffers'.
-        output_sub_directory,   # A name of the sub-directory (can be empty) into which all buffers will be saved.
-                                # This directory is supposed to distinguish individual 'render_buffers' of one mesh.
-                                # It is recommended to pass empty string if the mesh has only one instance of
-                                # render_buffers.
-        export_info # A dictionary holding properties related to the exported mesh. Both keys and values are strings.
+        buffers,        # An instance of the class 'render_buffers'.
+        material_name,  # Material name of that part of the exported mash having the material.
+        armature_name,  # Name of the armature deforming the mesh. It can be None (when no armature exists).
+        export_info     # A dictionary holding properties related to the export.
         ):
     """
-    The function saves buffers in the passed instance "buffers" of the class 'render_buffers' into disc. Each buffer
-    is saved into a separate text file (indeed, we export all data in the textual version of E2::qtgl format).
-    The function also extends the passed dictionary "export_info" by the information of saved data - what kind of
-    buffers were saved into what files.
-    :param buffers: # An instance of the class 'render_buffers'. Its buffers will be saved to the disc.
-    :param output_sub_directory: A name of the sub-directory (can be empty) into which all buffers will be saved.
-                                 This directory is supposed to distinguish individual 'render_buffers' of one mesh.
-                                 It is recommended to pass empty string if the mesh has only one instance of
-                                 render_buffers.
-    :param export_info: A dictionary holding properties related to the exported mesh. Both keys and values are strings.
+    The function saves buffers in the passed instance "buffers" of the class 'render_buffers' to disk. Each buffer
+    is saved into a separate E2 text file. The function also extends the passed dictionary 'export_info' by the
+    information of saved data - what kind of buffers were saved into what files.
+    :param buffers: # An instance of the class 'render_buffers'. Its buffers will be saved to the disk.
+    :param material_name: Material name of that part of the exported mash having the material.
+    :param export_info: A dictionary holding properties related to the export.
     :return: None
     """
 
-    with TimeProf.instance().start("save_render_buffers"):
-        precision_str = "%.6f"
+    assert material_name is None or (isinstance(material_name, str) and len(material_name) > 0)
 
+    with TimeProf.instance().start("save_render_buffers"):
         mesh_root_dir = os.path.join(
-                export_info["root_dir"],
-                "meshes",
-                export_info["model_name"],
-                export_info["mesh_name"],
-                output_sub_directory
-                )
+            export_info["root_dir"],
+            "meshes",
+            export_info["mesh_name"],
+            material_name if material_name is not None else ""
+            )
         os.makedirs(mesh_root_dir, exist_ok=True)
 
         if "render_buffers" in export_info:
-            export_info["render_buffers"].append( {} )
+            export_info["render_buffers"].append({})
         else:
-            export_info["render_buffers"] = [ {} ]
+            export_info["render_buffers"] = [{}]
 
         buffers_export_info = export_info["render_buffers"][-1]
 
-        buffers_export_info["index_buffer"] = os.path.join(mesh_root_dir,"indices.txt")
-        with open(buffers_export_info["index_buffer"],"w") as f:
-            print("    Saving index buffer: " +
-                  os.path.relpath(buffers_export_info["index_buffer"],export_info["root_dir"]))
-            f.write("E2::qtgl/buffer/indices/triangles/text\n")
+        buffers_root_dir = os.path.join(mesh_root_dir, "buffers")
+        os.makedirs(buffers_root_dir, exist_ok=True)
+
+        buffers_export_info["root_dir"] = buffers_root_dir
+        buffers_export_info["mesh_root_dir"] = mesh_root_dir
+
+        buffers_export_info["index_buffer"] = os.path.join(buffers_root_dir, "indices.txt")
+        with open(buffers_export_info["index_buffer"], "w") as f:
+            print("Saving index buffer: " +
+                  os.path.relpath(buffers_export_info["index_buffer"], export_info["root_dir"]))
+            f.write("3\n")
             f.write(str(buffers.num_triangles()) + "\n")
-            for i in range(0,buffers.num_triangles()):
+            for i in range(buffers.num_triangles()):
                 t = buffers.triangle_at_index(i)
-                for j in range(0,3):
+                for j in range(3):
                     assert t[j] >= 0 and t[j] < buffers.num_elements()
                     f.write(str(t[j]) + "\n")
 
-        buffers_export_info["vertex_buffer"] = os.path.join(mesh_root_dir,"vertices.txt")
-        with open(buffers_export_info["vertex_buffer"],"w") as f:
-            print("    Saving vertex buffer: " +
-                  os.path.relpath(buffers_export_info["vertex_buffer"],export_info["root_dir"]))
-            f.write("E2::qtgl/buffer/vertices/3d/text\n")
+        buffers_export_info["vertex_buffer"] = os.path.join(buffers_root_dir, "vertices.txt")
+        with open(buffers_export_info["vertex_buffer"], "w") as f:
+            print("Saving vertex buffer: " +
+                  os.path.relpath(buffers_export_info["vertex_buffer"], export_info["root_dir"]))
             f.write(str(buffers.num_elements()) + "\n")
-            for i in range(0,buffers.num_elements()):
+            for i in range(buffers.num_elements()):
                 c = buffers.element_at_index(i).vertex_coords()
-                f.write((precision_str % c[0]) + "\n")
-                f.write((precision_str % c[1]) + "\n")
-                f.write((precision_str % c[2]) + "\n")
+                f.write(float_to_string(c[0]) + "\n")
+                f.write(float_to_string(c[1]) + "\n")
+                f.write(float_to_string(c[2]) + "\n")
 
-        buffers_export_info["normal_buffer"] = os.path.join(mesh_root_dir,"normals.txt")
-        with open(buffers_export_info["normal_buffer"],"w") as f:
-            print("    Saving normal buffer: " +
-                  os.path.relpath(buffers_export_info["normal_buffer"],export_info["root_dir"]))
-            f.write("E2::qtgl/buffer/normals/3d/text\n")
+        buffers_export_info["normal_buffer"] = os.path.join(buffers_root_dir, "normals.txt")
+        with open(buffers_export_info["normal_buffer"], "w") as f:
+            print("Saving normal buffer: " +
+                  os.path.relpath(buffers_export_info["normal_buffer"], export_info["root_dir"]))
             f.write(str(buffers.num_elements()) + "\n")
-            for i in range(0,buffers.num_elements()):
+            for i in range(buffers.num_elements()):
                 c = buffers.element_at_index(i).normal_coords()
-                f.write((precision_str % c[0]) + "\n")
-                f.write((precision_str % c[1]) + "\n")
-                f.write((precision_str % c[2]) + "\n")
+                f.write(float_to_string(c[0]) + "\n")
+                f.write(float_to_string(c[1]) + "\n")
+                f.write(float_to_string(c[2]) + "\n")
 
-        buffers_export_info["diffuse_buffer"] = os.path.join(mesh_root_dir,"diffuse_colours.txt")
-        with open(buffers_export_info["diffuse_buffer"],"w") as f:
-            print("    Saving diffuse buffer: " +
-                  os.path.relpath(buffers_export_info["diffuse_buffer"],export_info["root_dir"]))
-            f.write("E2::qtgl/buffer/diffuse_colours/text\n")
+        buffers_export_info["diffuse_buffer"] = os.path.join(buffers_root_dir, "diffuse.txt")
+        with open(buffers_export_info["diffuse_buffer"], "w") as f:
+            print("Saving diffuse buffer: " +
+                  os.path.relpath(buffers_export_info["diffuse_buffer"], export_info["root_dir"]))
+            f.write("4\n")
             f.write(str(buffers.num_elements()) + "\n")
-            for i in range(0,buffers.num_elements()):
+            for i in range(buffers.num_elements()):
                 c = buffers.element_at_index(i).diffuse_colour()
-                f.write((precision_str % c[0]) + "\n")
-                f.write((precision_str % c[1]) + "\n")
-                f.write((precision_str % c[2]) + "\n")
-                f.write((precision_str % c[3]) + "\n")
+                f.write(float_to_string(c[0]) + "\n")
+                f.write(float_to_string(c[1]) + "\n")
+                f.write(float_to_string(c[2]) + "\n")
+                f.write(float_to_string(c[3]) + "\n")
 
-        buffers_export_info["specular_buffer"] = os.path.join(mesh_root_dir,"specular_colours.txt")
-        with open(buffers_export_info["specular_buffer"],"w") as f:
-            print("    Saving specular buffer: " +
-                  os.path.relpath(buffers_export_info["specular_buffer"],export_info["root_dir"]))
-            f.write("E2::qtgl/buffer/specular_colours/text\n")
+        buffers_export_info["specular_buffer"] = os.path.join(buffers_root_dir, "specular.txt")
+        with open(buffers_export_info["specular_buffer"], "w") as f:
+            print("Saving specular buffer: " +
+                  os.path.relpath(buffers_export_info["specular_buffer"], export_info["root_dir"]))
+            f.write("4\n")
             f.write(str(buffers.num_elements()) + "\n")
-            for i in range(0,buffers.num_elements()):
+            for i in range(buffers.num_elements()):
                 c = buffers.element_at_index(i).specular_colour()
-                f.write((precision_str % c[0]) + "\n")
-                f.write((precision_str % c[1]) + "\n")
-                f.write((precision_str % c[2]) + "\n")
-                f.write((precision_str % c[3]) + "\n")
+                f.write(float_to_string(c[0]) + "\n")
+                f.write(float_to_string(c[1]) + "\n")
+                f.write(float_to_string(c[2]) + "\n")
+                f.write(float_to_string(c[3]) + "\n")
 
         buffers_export_info["texcoord_buffers"] = []
-        for i in range(0,buffers.num_texture_coords()):
-            buffers_export_info["texcoord_buffers"].append(os.path.join(mesh_root_dir,"texcoords" + str(i) + ".txt"))
+        for i in range(buffers.num_texture_coords()):
+            buffers_export_info["texcoord_buffers"].append(os.path.join(buffers_root_dir, "texcoords" + str(i) + ".txt"))
             with open(buffers_export_info["texcoord_buffers"][-1],"w") as f:
-                print("    Saving uv buffer of texture #" + str(i) + ": " +
-                      os.path.relpath(buffers_export_info["texcoord_buffers"][-1],export_info["root_dir"]))
-                f.write("E2::qtgl/buffer/texcoords/2d/" + str(i) + "/text\n")
+                print("Saving uv buffer of texture #" + str(i) + ": " +
+                      os.path.relpath(buffers_export_info["texcoord_buffers"][-1], export_info["root_dir"]))
                 f.write(str(buffers.num_elements()) + "\n")
-                for j in range(0,buffers.num_elements()):
+                for j in range(buffers.num_elements()):
                     assert buffers.element_at_index(j).num_texture_coords() > i
                     c = buffers.element_at_index(j).texture_coords(i)
-                    f.write((precision_str % c[0]) + "\n")
-                    f.write((precision_str % c[1]) + "\n")
+                    f.write(float_to_string(c[0]) + "\n")
+                    f.write(float_to_string(c[1]) + "\n")
 
         assert buffers.num_weights_of_matrices_per_vertex() == buffers.num_indices_of_matrices_per_vertex()
         if buffers.num_weights_of_matrices_per_vertex() > 0:
-            buffers_export_info["matrix_weight_buffer"] = os.path.join(mesh_root_dir,"weights_of_matrices.txt")
-            with open(buffers_export_info["matrix_weight_buffer"],"w") as f:
-                print("    Saving matrix weight buffer: " +
-                      os.path.relpath(buffers_export_info["matrix_weight_buffer"],export_info["root_dir"]))
-                f.write("E2::qtgl/buffer/weights_of_matrices/" +
-                        str(buffers.num_weights_of_matrices_per_vertex()) +
-                        "/text\n")
-                f.write(str(buffers.num_elements()) + "\n")
-                for elem_idx in range(0,buffers.num_elements()):
-                    elem = buffers.element_at_index(elem_idx)
-                    for weight_idx in range(0,elem.num_weights_of_matrices()):
-                        f.write(str(elem.weight_of_matrix(weight_idx)) + "\n")
+            assert armature_name is not None and isinstance(armature_name, str) and len(armature_name) > 0
 
-            buffers_export_info["matrix_index_buffer"] = os.path.join(mesh_root_dir,"indices_of_matrices.txt")
-            with open(buffers_export_info["matrix_index_buffer"],"w") as f:
-                print("    Saving matrix index buffer: " +
-                      os.path.relpath(buffers_export_info["matrix_index_buffer"],export_info["root_dir"]))
-                f.write("E2::qtgl/buffer/indices_of_matrices/" + str(buffers.num_indices_of_matrices_per_vertex()) + "/text\n")
+            skeletal_root_dir = os.path.join(mesh_root_dir, "skeletal", armature_name)
+            os.makedirs(skeletal_root_dir, exist_ok=True)
+
+            buffers_export_info["skeletal_root_dir"] = skeletal_root_dir
+
+            buffers_export_info["matrix_weight_buffer"] = os.path.join(skeletal_root_dir, "weights.txt")
+            with open(buffers_export_info["matrix_weight_buffer"], "w") as f:
+                print("Saving matrix weight buffer: " +
+                      os.path.relpath(buffers_export_info["matrix_weight_buffer"], export_info["root_dir"]))
+                f.write(str(buffers.num_weights_of_matrices_per_vertex()) + "\n")
                 f.write(str(buffers.num_elements()) + "\n")
-                for elem_idx in range(0,buffers.num_elements()):
+                for elem_idx in range(buffers.num_elements()):
                     elem = buffers.element_at_index(elem_idx)
-                    for index_idx in range(0,elem.num_indices_of_matrices()):
+                    for weight_idx in range(elem.num_weights_of_matrices()):
+                        f.write(float_to_string(elem.weight_of_matrix(weight_idx)) + "\n")
+
+            buffers_export_info["matrix_index_buffer"] = os.path.join(skeletal_root_dir, "indices.txt")
+            with open(buffers_export_info["matrix_index_buffer"], "w") as f:
+                print("Saving matrix index buffer: " +
+                      os.path.relpath(buffers_export_info["matrix_index_buffer"], export_info["root_dir"]))
+                f.write(str(buffers.num_indices_of_matrices_per_vertex()) + " \n")
+                f.write(str(buffers.num_elements()) + "\n")
+                for elem_idx in range(buffers.num_elements()):
+                    elem = buffers.element_at_index(elem_idx)
+                    for index_idx in range(elem.num_indices_of_matrices()):
                         f.write(str(elem.index_of_matrix(index_idx)) + "\n")
 
 
+def save_mesh_spatial_alignment_to_armature(
+        obj,                    # An instance of 'bpy.types.Object' with "obj.data" being of type 'bpy.type.Mesh'.
+        buffers_export_info,    # A dictionary holding properties related to the buffers export.
+        root_dir                # The root dir of the whole export.
+        ):
+    buffers_export_info["alignment_to_skeleton"] = os.path.join(buffers_export_info["skeletal_root_dir"], "alignment.txt")
+    with open(buffers_export_info["alignment_to_skeleton"], "w") as f:
+        print("Saving alignment-to-skeleton coord. system: " +
+              os.path.relpath(buffers_export_info["alignment_to_skeleton"], root_dir))
+        for i in range(3):
+            f.write(float_to_string(obj.location[i]) + "\n")
+        orientation = get_object_rotation_quaternion(obj)
+        for i in range(4):
+            f.write(float_to_string(orientation[i]) + "\n")
+
+
+def save_mesh_links_to_textures(
+        mtl_index,              # Index of material for which the links should be generated.
+        buffers_export_info,    # A dictionary holding properties related to the buffers export.
+        export_info             # A dictionary holding properties related to the export.
+        ):
+    texture_links_output_dir = os.path.join(buffers_export_info["mesh_root_dir"], "textures")
+
+    texture_file_name = ["diffuse", "specular", "normal"]
+    if len(buffers_export_info["texcoord_buffers"]) > len(texture_file_name):
+        print("WARNING: The mesh uses too many texture coordinates. So, only first " + str(len(texture_file_name)) +
+              "will be used.")
+    buffers_export_info["texture_links"] = []
+    for tex_idx in range(len(texture_file_name)):
+        key = (mtl_index, tex_idx)
+        if key not in export_info["textures"]:
+            continue
+        buffers_export_info["texture_links"].append(
+            os.path.join(texture_links_output_dir, texture_file_name[tex_idx] + ".txt")
+            )
+        os.makedirs(texture_links_output_dir, exist_ok=True)
+        with open(buffers_export_info["texture_links"][-1], "w") as f:
+            print("Saving texture link: " +
+                  os.path.relpath(buffers_export_info["texture_links"][-1], export_info["root_dir"]))
+            f.write(texture_file_name[tex_idx].upper() + "\n")
+            f.write(str(tex_idx if tex_idx < len(buffers_export_info["texcoord_buffers"]) else 0) + "\n")
+            f.write(os.path.relpath(export_info["textures"][key], export_info["root_dir"]) + "\n")
+
+
 def save_textures(
-        materials,  # A list of all materials used in an exported mesh
-        export_info # A dictionary holding properties related to the exported mesh. Both keys and values are strings.
+        materials,      # A list of all materials used in an exported mesh
+        export_info     # A dictionary holding properties related to the export.
         ):
     """
     Returns a map from indices of processed materials to a list of path-names of texture files used in the material.
@@ -684,26 +718,24 @@ def save_textures(
     """
 
     with TimeProf.instance().start("save_textures"):
-        textures_root_dir = os.path.join(export_info["root_dir"],"textures",export_info["model_name"])
-        os.makedirs(textures_root_dir, exist_ok=True)
+        textures_root_dir = os.path.join(export_info["root_dir"], "textures", export_info["mesh_name"])
 
-        export_info["images"] = []
-        export_info["textures"] = []
-        for material in materials:
-            images = []
-            if material:
-                for mtex_slot_index in range(0,len(material.texture_slots)):
-                    mtex_slot = material.texture_slots[mtex_slot_index]
-                    if mtex_slot is not None:
-                        texture = mtex_slot.texture
-                        if hasattr(texture,"image"):
-                            image = texture.image
-                            images.append(image)
+        export_info["textures"] = {}
+        for mat_idx in range(len(materials)):
+            if materials[mat_idx] is None:
+                continue
+            tex_idx = 0
+            for slot_idx in range(len(materials[mat_idx].texture_slots)):
+                slot = materials[mat_idx].texture_slots[slot_idx]
+                if slot is None:
+                    continue
+                texture = slot.texture
+                if not hasattr(texture, "image"):
+                    continue
+                image = texture.image
 
-            export_info["images"].append( [] )
-            export_info["textures"].append( [] )
-            for i in range(0,len(images)):
-                image = images[i]
+                os.makedirs(textures_root_dir, exist_ok=True)
+
                 if os.path.exists(bpy.path.abspath(image.filepath)):
                     src_image_pathname = bpy.path.abspath(image.filepath)
                 else:
@@ -713,57 +745,89 @@ def save_textures(
 
                 dst_image_name = os.path.splitext(os.path.basename(src_image_pathname))[0]
                 dst_image_extension = os.path.splitext(os.path.basename(src_image_pathname))[1]
+                dst_image_pathname = os.path.join(textures_root_dir, dst_image_name + dst_image_extension)
 
-                images_export_info = export_info["images"][-1]
-                images_export_info.append(os.path.join(textures_root_dir,dst_image_name + dst_image_extension))
-                print("    Copying image #" + str(i) + ": " +
-                      os.path.relpath(images_export_info[-1],export_info["root_dir"]))
-                shutil.copyfile(src_image_pathname,images_export_info[-1])
+                print("Copying image in slot #" + str(slot_idx) + " of material " + materials[mat_idx].name + ": " +
+                      os.path.relpath(dst_image_pathname, export_info["root_dir"]))
+                shutil.copyfile(src_image_pathname, dst_image_pathname)
 
-                textures_export_info = export_info["textures"][-1]
-                textures_export_info.append(os.path.join(textures_root_dir,dst_image_name + ".txt"))
-                with open(textures_export_info[-1],"w") as f:
-                    print("    Saving texture #" + str(i) + ": " +
-                          os.path.relpath(textures_export_info[-1],export_info["root_dir"]))
-                    f.write("E2::qtgl/texture/text\n")
+                dst_texture_pathname = os.path.join(textures_root_dir, dst_image_name + ".txt")
+                with open(dst_texture_pathname, "w") as f:
+                    print("Saving texture in slot #" + str(slot_idx) + " of material " + materials[mat_idx].name +
+                          ": " + os.path.relpath(dst_texture_pathname, export_info["root_dir"]))
                     f.write("./" + dst_image_name + dst_image_extension + "\n")
                     f.write("COMPRESSED_RGBA\n")
                     f.write("REPEAT\n")
                     f.write("REPEAT\n")
                     f.write("LINEAR_MIPMAP_LINEAR\n")
                     f.write("LINEAR\n")
+                if slot_idx != tex_idx:
+                    print("WARNING: Inconsistency in texture slots detected! So, papping the slot #" + str(slot_idx) +
+                          " to #" + str(tex_idx) + ".")
+                export_info["textures"][(mat_idx, tex_idx)] = dst_texture_pathname
+                tex_idx += 1
 
-            assert len(export_info["images"][-1]) == len(export_info["textures"][-1])
+        # export_info["images"] = []
+        # export_info["textures"] = []
+        # for material in materials:
+        #     images = []
+        #     if material is not None:
+        #         for mtex_slot_index in range(len(material.texture_slots)):
+        #             mtex_slot = material.texture_slots[mtex_slot_index]
+        #             if mtex_slot is not None:
+        #                 texture = mtex_slot.texture
+        #                 if hasattr(texture, "image"):
+        #                     image = texture.image
+        #                     images.append(image)
+        #
+        #     export_info["images"].append([])
+        #     export_info["textures"].append([])
+        #     for i in range(len(images)):
+        #         image = images[i]
+        #         if os.path.exists(bpy.path.abspath(image.filepath)):
+        #             src_image_pathname = bpy.path.abspath(image.filepath)
+        #         else:
+        #             image.unpack(method="USE_LOCAL")
+        #             src_image_pathname = bpy.path.abspath("//textures/" + image.name)
+        #             assert os.path.exists(src_image_pathname)
+        #
+        #         dst_image_name = os.path.splitext(os.path.basename(src_image_pathname))[0]
+        #         dst_image_extension = os.path.splitext(os.path.basename(src_image_pathname))[1]
+        #
+        #         images_export_info = export_info["images"][-1]
+        #         images_export_info.append(os.path.join(textures_root_dir, dst_image_name + dst_image_extension))
+        #         print("    Copying image #" + str(i) + ": " +
+        #               os.path.relpath(images_export_info[-1], export_info["root_dir"]))
+        #         shutil.copyfile(src_image_pathname, images_export_info[-1])
+        #
+        #         textures_export_info = export_info["textures"][-1]
+        #         textures_export_info.append(os.path.join(textures_root_dir, dst_image_name + ".txt"))
+        #         with open(textures_export_info[-1],"w") as f:
+        #             print("    Saving texture #" + str(i) + ": " +
+        #                   os.path.relpath(textures_export_info[-1],export_info["root_dir"]))
+        #             f.write("E2::qtgl/texture/text\n")
+        #             f.write("./" + dst_image_name + dst_image_extension + "\n")
+        #             f.write("COMPRESSED_RGBA\n")
+        #             f.write("REPEAT\n")
+        #             f.write("REPEAT\n")
+        #             f.write("LINEAR_MIPMAP_LINEAR\n")
+        #             f.write("LINEAR\n")
+        #
+        #     assert len(export_info["images"][-1]) == len(export_info["textures"][-1])
 
 
 def save_coord_systems_of_bones(
-        obj,        # An instance of "bpy.types.Object" with "obj.type == 'MESH'" and "obj.data" being of type
-                    # "bpy.type.Mesh".
-        export_info # A dictionary holding properties related to the exported mesh. Both keys and values are strings.
+        armature,       # An instance of "bpy.types.Armature"
+        export_info     # A dictionary holding properties of the export. Both keys and values are strings.
         ):
     """
-    This function exports coordinate systems of all bones of the armature applied to the passed mesh object "obj".
-    The function also updates "export_info" so that "export_info["coord_systems"]" is the pathname of the exported
-    file. In case there is no armature applied to the mesh object, this function does nothing (i.e. nothing is exported
-    and "export_info" is not modified).
-    :param obj: An instance of "bpy.types.Object" with "obj.type == 'MESH'" and "obj.data" being of type
-                "bpy.type.Mesh".
-    :param export_info: A dictionary holding properties related to the exported mesh. Both keys and values are strings.
+    This function exports coordinate systems of all bones of the passed armature. The function also updates
+    'export_info' so that 'export_info["coord_systems"]' is the pathname of the exported file.
+    :param armature: An instance of 'bpy.types.Armature'.
+    :param export_info: A dictionary holding properties of the export.
     :return: None
     """
-
-    assert obj.type == 'MESH'
-
     with TimeProf.instance().start("save_coord_systems_of_bones"):
-        # We first find an armature applied to the mesh object. It might also be the case there is none.
-        armature = None
-        for mod in obj.modifiers:
-            if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
-                armature = mod.object
-                break
-        if not armature:
-            return
-
         # This is the list into which we store coordinate systems of all bones in the armature
         # in the order as they are listed in the armature (to match their indices in vertex groups).
         coord_systems = []
@@ -796,7 +860,6 @@ def save_coord_systems_of_bones(
                 transform_matrix = bone_to_base_matrix * transform_matrix
                 parent_tail = bone_to_base_matrix * (parent_tail + xbone.tail).to_4d()
                 parent_tail.resize_3d()
-            transform_matrix = transform_matrix * from_base_matrix(obj.location, get_object_rotation_quaternion(obj))
 
             # Finally we compute the position (origin) and rotation (orientation) of the
             # coordinate system of the bone.
@@ -807,54 +870,40 @@ def save_coord_systems_of_bones(
             # And we store the computed data (i.e. the coordinate system).
             coord_systems.append({ "position": pos, "orientation": rot })
 
-        export_info["coord_systems"] = os.path.join(
+        export_info["pose"] = os.path.join(
             export_info["root_dir"],
-            "animation",
-            export_info["model_name"],
-            export_info["mesh_name"],
-            "coord_systems.txt"
+            "animations",
+            "skeletal",
+            armature.name,
+            "pose.txt"
             )
-        os.makedirs(os.path.dirname(export_info["coord_systems"]), exist_ok=True)
-        with open(export_info["coord_systems"],"w") as f:
-            print("    Saving coordinate systems: " + os.path.relpath(export_info["coord_systems"],export_info["root_dir"]))
-            f.write("E2::qtgl/coordsystems/text\n")
+        os.makedirs(os.path.dirname(export_info["pose"]), exist_ok=True)
+        with open(export_info["pose"], "w") as f:
+            print("Saving pose coordinate systems: " +
+                  os.path.relpath(export_info["pose"], export_info["root_dir"]))
             f.write(str(len(coord_systems)) + "\n")
             for system in coord_systems:
-                for i in range(0,3):
-                    f.write(str(system["position"][i]) + "\n")
-                for i in range(0,4):
-                    f.write(str(system["orientation"][i]) + "\n")
+                for i in range(3):
+                    f.write(float_to_string(system["position"][i]) + "\n")
+                for i in range(4):
+                    f.write(float_to_string(system["orientation"][i]) + "\n")
 
 
 def save_keyframe_coord_systems_of_bones(
-        obj,        # An instance of "bpy.types.Object" with "obj.type == 'MESH'" and "obj.data" being of type
-                    # "bpy.type.Mesh".
-        export_info # A dictionary holding properties related to the exported mesh. Both keys and values are strings.
+        armature,       # An instance of "bpy.types.Armature".
+        export_info     # A dictionary holding properties related to the export.
         ):
     """
-    This function exports coordinate systems of all keyframes of an animation of the bones of the armature applied to
-    the passed mesh object "obj". The function also updates "export_info" so that
-    "export_info["keyframe_coord_systems"]" is a list of the pathnames of the exported files (one file per keyframe).
-    In case there is no armature or animation applied to the mesh object, this function does nothing (i.e. nothing
-    is exported and "export_info" is not modified).
-    :param obj: An instance of "bpy.types.Object" with "obj.type == 'MESH'" and "obj.data" being of type
-                "bpy.type.Mesh".
-    :param export_info: A dictionary holding properties related to the exported mesh. Both keys and values are strings.
+    This function exports coordinate systems of all keyframes of an animation of the bones of the passed armature.
+    The function also updates "export_info" so that 'export_info["keyframe_coord_systems"]' is a list of the pathnames
+    of the exported files (one file per keyframe).
+    :param obj: An instance of "bpy.types.Armature".
+    :param export_info: A dictionary holding properties related to the export.
     :return: None
     """
-    assert obj.type == 'MESH'
-
     with TimeProf.instance().start("save_keyframe_coord_systems_of_bones"):
         coord_systems_of_frames = {}
 
-        # We first find an armature applied to the mesh object. It might also be the case there is none.
-        armature = None
-        for mod in obj.modifiers:
-            if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
-                armature = mod.object
-                break
-        if not armature:
-            return
         if not armature.animation_data:
             return
         if not armature.animation_data.action:
@@ -891,30 +940,29 @@ def save_keyframe_coord_systems_of_bones(
 
         keyframes_output_dir = os.path.join(
             export_info["root_dir"],
-            "animation",
-            export_info["model_name"],
-            export_info["mesh_name"],
+            "animations",
+            "skeletal",
+            armature.name,
             action.name
             )
         os.makedirs(keyframes_output_dir, exist_ok=True)
 
-        export_info["keyframe_coord_systems"] = []  # Here we store pathnames of all saved files.
+        export_info["keyframes"] = []  # Here we store pathnames of all saved files.
         frame_idx = 0
         for time_stamp in sorted(coord_systems_of_frames.keys()):
-            export_info["keyframe_coord_systems"].append(
-                os.path.join(keyframes_output_dir,"keyframe_" + str(frame_idx) + ".txt")
+            export_info["keyframes"].append(
+                os.path.join(keyframes_output_dir, "keyframe" + str(frame_idx) + ".txt")
                 )
-            with open(export_info["keyframe_coord_systems"][-1],"w") as f:
-                print("    Saving keyframe " + str(frame_idx + 1) + "/" + str(len(coord_systems_of_frames))  + ": " +
-                      os.path.relpath(export_info["keyframe_coord_systems"][-1],export_info["root_dir"]))
-                f.write("E2::qtgl/keyframe/text\n")
-                f.write(str(time_stamp) + "\n")
+            with open(export_info["keyframes"][-1], "w") as f:
+                print("Saving keyframe " + str(frame_idx + 1) + "/" + str(len(coord_systems_of_frames)) + ": " +
+                      os.path.relpath(export_info["keyframes"][-1], export_info["root_dir"]))
+                f.write(float_to_string(time_stamp) + "\n")
                 f.write(str(len(coord_systems_of_frames[time_stamp])) + "\n")
                 for system in coord_systems_of_frames[time_stamp]:
-                    for i in range(0,3):
-                        f.write(str(system["position"][i]) + "\n")
-                    for i in range(0,4):
-                        f.write(str(system["orientation"][i]) + "\n")
+                    for i in range(3):
+                        f.write(float_to_string(system["position"][i]) + "\n")
+                    for i in range(4):
+                        f.write(float_to_string(system["orientation"][i]) + "\n")
             frame_idx += 1
 
 
@@ -1023,128 +1071,244 @@ def save_batch_files(
                 f.write("false\n")
 
 
-def export_selected_meshes(
+def export_object_mesh(
+        obj,            # A selected object with MESH data to be exported
+        export_dir      # A directory under which all exported files will be saved.
+        ):
+    assert obj.type == "MESH"
+    with TimeProf.instance().start("export_object_armature"):
+        print("Exporting MESH: " + obj.name)
+
+        mesh = obj.data
+        mesh_name = mesh.name
+
+        num_armatures = 0
+        armature = None
+        for mod in obj.modifiers:
+            if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
+                armature = mod.object
+                num_armatures += 1
+
+        with TimeProf.instance().start("export_object_armature [consistency checks]"):
+            if mesh_name is None or len(mesh_name) == 0:
+                print("ERROR: The mesh has invalid name.")
+                return
+            if not is_correct_scale_vector(obj.scale):
+                print("ERROR: The mesh is scaled: " + str(obj.scale) + ".")
+                return
+            if not vertices_have_correct_weights(mesh.vertices):
+                return
+            if len(mesh.vertex_colors) > 2:
+                print("ERROR: The mesh has more than 2 colours per vertex.")
+                return
+
+            if num_armatures > 1:
+                print("ERROR: The mesh has more than one armature.")
+                return
+            if armature is not None and len(armature.data.bones) == 0:
+                print("ERROR: The armature '" + armature.name + "' of the mesh has no bone.")
+                return
+            if armature is not None and not does_vertex_groups_names_match_names_of_bones(obj, armature):
+                return
+
+        export_info = {
+            "root_dir": export_dir,
+            "mesh_name": mesh_name
+        }
+
+        save_textures(mesh.materials, export_info)
+        if len(mesh.uv_layers) > len(export_info["textures"]):
+            print("ERROR: len(mesh.uv_layers) > texture slots in materials.")
+            return
+
+        buffers_list = build_render_buffers(obj, armature)
+        assert len(buffers_list) <= 1 or len(buffers_list) <= len(mesh.materials)
+        for idx in range(len(buffers_list)):
+            save_render_buffers(
+                buffers_list[idx],
+                mesh.materials[idx].name if len(buffers_list) > 1 else None,
+                armature.name if armature is not None else None,
+                export_info
+                )
+            buffers_export_info = export_info["render_buffers"][-1]
+            if armature is not None:
+                save_mesh_spatial_alignment_to_armature(obj, buffers_export_info, export_info["root_dir"])
+            if buffers_list[idx].num_texture_coords() > 0:
+                save_mesh_links_to_textures(idx, buffers_export_info, export_info)
+
+
+def export_object_armature(
+        obj,            # A selected object with ARMATURE data to be exported
+        export_dir      # A directory under which all exported files will be saved.
+        ):
+    assert obj.type == "ARMATURE"
+    with TimeProf.instance().start("export_object_armature"):
+        print("Exporting ARMATURE: " + obj.name)
+
+        if len(obj.data.bones) == 0:
+            print("ERROR: The armature has no bone.")
+            return
+        if not armature_has_correct_scales(obj):
+            return
+
+        export_info = {"root_dir": export_dir}
+
+        save_coord_systems_of_bones(obj, export_info)
+        save_keyframe_coord_systems_of_bones(obj, export_info)
+
+
+def export_selected_object(
         export_dir      # A directory under which all exported files will be saved.
         ):
     """
-    This is the root function of the whole export. Its purpose is to check whether data to be exported satisfies
-    requirement (like no-scale rule), and then manages the export process for each selected mesh object.
+    This is the root function of the actual export. Its purpose is to check whether data to be exported satisfies
+    requirement (like no-scale rule), and then manages the export process for the selected object.
     :param export_dir: A directory under which all exported files will be saved.
     :return: None
     """
-    print("Starting E2::qtgl model exporter.")
 
-    os.makedirs(export_dir, exist_ok=True)
+    assert len(bpy.context.selected_objects) in [1, 2]
 
-    model_name = os.path.basename(export_dir)
-    if len(model_name) > 0:
-        print("  Model name for the selected meshes: " + model_name)
-        print("  Root output directory: " + export_dir)
-        mesh_names = set()
-        for i in range(0,len(bpy.context.selected_objects)):
-            obj = bpy.context.selected_objects[i]
-            if obj.type != 'MESH':
-                print("  ERROR: Object '" + obj.name + "' is not a MESH. Skipping it...")
-                continue
+    with TimeProf.instance().start("export_selected_object"):
+        print("*** E2 exporter started ***")
+        for obj in bpy.context.selected_objects:
+            if obj.type == "MESH":
+                export_object_mesh(obj, export_dir)
+            elif obj.type == "ARMATURE":
+                export_object_armature(obj, export_dir)
+            else:
+                print("ERROR: Unsupported object type: " + str(obj.type) + " not in [MESH, ARMATURE]")
+                break
+        print("*** E2 exporter terminated ***")
 
-            mesh = obj.data
-            mesh_name = mesh.name
+    # os.makedirs(export_dir, exist_ok=True)
+    #
+    # model_name = os.path.basename(export_dir)
+    # if len(model_name) > 0:
+    #     print("  Model name for the selected meshes: " + model_name)
+    #     print("  Root output directory: " + export_dir)
+    #     mesh_names = set()
+    #     for i in range(0,len(bpy.context.selected_objects)):
+    #         obj = bpy.context.selected_objects[i]
+    #         if obj.type != 'MESH':
+    #             print("  ERROR: Object '" + obj.name + "' is not a MESH. Skipping it...")
+    #             continue
+    #
+    #         mesh = obj.data
+    #         mesh_name = mesh.name
+    #
+    #         if mesh_name is None or len(mesh_name) == 0:
+    #             print("  ERROR: The selected mesh object has invalid name '" + mesh_name + "'. Skipping it...")
+    #             continue
+    #
+    #         TimeProf.instance().set_mesh_name(mesh_name)
+    #
+    #         if not does_selected_mesh_object_have_correct_scales(obj):
+    #             continue
+    #         if not does_selected_mesh_object_have_correct_weights(obj):
+    #             continue
+    #         if len(mesh.vertex_colors) > 2:
+    #             print("  ERROR: The mesh object '" + obj.name + "' has more than 2 colours per vertex. "
+    #                   "Skipping it...")
+    #             continue
+    #         num_armatures = 0
+    #         armature = None
+    #         for mod in obj.modifiers:
+    #             if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
+    #                 armature = mod.object
+    #                 num_armatures += 1
+    #         if num_armatures > 1:
+    #             print("  ERROR: The mesh object '" + obj.name + "' has more than one armature. Skipping it...")
+    #             continue
+    #         if num_armatures == 1 and len(armature.data.bones) == 0:
+    #             print("  ERROR: The armature '" + armature.name + "' of the object '" + obj.name + "'has no bone."
+    #                   " Skipping the object...")
+    #             continue
+    #         if not does_vertex_groups_names_match_names_of_bones(obj, armature):
+    #             continue
+    #
+    #         print("  Exporting mesh: " + mesh.name)
+    #
+    #         with TimeProf.instance().start("export_selected_meshes [for mesh.name == " + mesh.name + "]"):
+    #             while mesh_name in mesh_names:
+    #                 mesh_name = mesh_name + str(i)
+    #             mesh_names.add(mesh_name)
+    #
+    #             export_info = {
+    #                 "model_name": model_name,
+    #                 "mesh_name": mesh_name,
+    #                 "root_dir": export_dir,
+    #                 "material_names": [mtl.name for mtl in mesh.materials]
+    #             }
+    #
+    #             buffers_list = build_render_buffers(obj, armature)
+    #             for idx in range(0,len(buffers_list)):
+    #                 sub_directory = ""
+    #                 if len(buffers_list) > 1:
+    #                     if idx < len(export_info["material_names"]):
+    #                         sub_directory += export_info["material_names"][idx]
+    #                     else:
+    #                         sub_directory += str(idx)
+    #                 save_render_buffers(buffers_list[idx],sub_directory,export_info)
+    #
+    #             save_textures(mesh.materials,export_info)
+    #
+    #             assert len(export_info["render_buffers"]) == len(export_info["images"])
+    #             assert len(export_info["render_buffers"]) == len(export_info["textures"])
+    #
+    #             save_coord_systems_of_bones(obj,export_info)
+    #             save_keyframe_coord_systems_of_bones(obj,export_info)
+    #
+    #             save_batch_files(export_info)
+    #     print("Time profile of the export:")
+    #     print(TimeProf.instance().to_json())
+    # else:
+    #     print("  ERROR: Cannot deduce model name from the passed export directory '" + export_dir + "'.")
+    #
+    # print("Terminating E2 exporter.")
 
-            if mesh_name is None or len(mesh_name) == 0:
-                print("  ERROR: The selected mesh object has invalid name '" + mesh_name + "'. Skipping it...")
-                continue
 
-            TimeProf.instance().set_mesh_name(mesh_name)
-
-            if not does_selected_mesh_object_have_correct_scales(obj):
-                continue
-            if not does_selected_mesh_object_have_correct_weights(obj):
-                continue
-            if len(mesh.vertex_colors) > 2:
-                print("  ERROR: The mesh object '" + obj.name + "' has more than 2 colours per vertex. "
-                      "Skipping it...")
-                continue
-            num_armatures = 0
-            armature = None
-            for mod in obj.modifiers:
-                if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
-                    armature = mod.object
-                    num_armatures += 1
-            if num_armatures > 1:
-                print("  ERROR: The mesh object '" + obj.name + "' has more than one armature. Skipping it...")
-                continue
-            if num_armatures == 1 and len(armature.data.bones) == 0:
-                print("  ERROR: The armature '" + armature.name + "' of the object '" + obj.name + "'has no bone."
-                      " Skipping the object...")
-                continue
-            if not does_vertex_groups_names_match_names_of_bones(obj, armature):
-                continue
-
-            print("  Exporting mesh: " + mesh.name)
-
-            with TimeProf.instance().start("export_selected_meshes [for mesh.name == " + mesh.name + "]"):
-                while mesh_name in mesh_names:
-                    mesh_name = mesh_name + str(i)
-                mesh_names.add(mesh_name)
-
-                export_info = {
-                    "model_name": model_name,
-                    "mesh_name": mesh_name,
-                    "root_dir": export_dir,
-                    "material_names": [mtl.name for mtl in mesh.materials]
-                }
-
-                buffers_list = build_render_buffers(obj, armature)
-                for idx in range(0,len(buffers_list)):
-                    sub_directory = ""
-                    if len(buffers_list) > 1:
-                        if idx < len(export_info["material_names"]):
-                            sub_directory += export_info["material_names"][idx]
-                        else:
-                            sub_directory += str(idx)
-                    save_render_buffers(buffers_list[idx],sub_directory,export_info)
-
-                save_textures(mesh.materials,export_info)
-
-                assert len(export_info["render_buffers"]) == len(export_info["images"])
-                assert len(export_info["render_buffers"]) == len(export_info["textures"])
-
-                save_coord_systems_of_bones(obj,export_info)
-                save_keyframe_coord_systems_of_bones(obj,export_info)
-
-                save_batch_files(export_info)
-        print("Time profile of the export:")
-        print(TimeProf.instance().to_json())
-    else:
-        print("  ERROR: Cannot deduce model name from the passed export directory '" + export_dir + "'.")
-
-    print("Terminating E2::qtgl model exporter.")
-
-
-class E2_model_exporter(bpy.types.Operator):
-    """
-    This class defines behaviour of this plug in the export menu of Blender.
-    It means that it enables the export, if one or more mesh objects are selected.
-    Then, if the export is enabled, it asks a user to provide an export root directory
-    under which all data files in E2::qtgl format will be stored, and then calls the
-    function 'export_selected_meshes()' with that directory. The function then does the
-    whole export.
-    """
-    bl_idname = "export.e2_qtgl_model_exporter"
-    bl_label = "E2::qtgl model exporter"
+class E2_exporter(bpy.types.Operator):
+    """Save in E2 format (a hierarchy of directories and files; path-names define meaning of saved data)."""
+    bl_idname = "export.e2_exporter"
+    bl_label = "E2 exporter"
     directory = bpy.props.StringProperty(
-                    name="An output directory",
-                    description="A root directory into which all data will be exported.",
+                    name="Output root directory",
+                    description="A root directory under which all data will be saved.",
                     subtype="DIR_PATH",
-                    maxlen= 1024,
-                    default= "")
+                    maxlen=1024,
+                    default="")
 
     @classmethod
     def poll(cls, context):
-        if len(bpy.context.selected_objects) < 1:
+        num_meshes = 0
+        num_armatures = 0
+        for idx in range(len(bpy.context.selected_objects)):
+            obj = bpy.context.selected_objects[idx]
+            if obj.type == "MESH":
+                num_meshes += 1
+            elif obj.type == "ARMATURE":
+                num_armatures += 1
+            else:
+                return False
+            if num_meshes > 1 or num_armatures > 1:
+                return False
+        if num_meshes + num_armatures not in [1, 2]:
             return False
-        for i in range(0,len(bpy.context.selected_objects)):
-            if bpy.context.selected_objects[i].type != "MESH":
+        if num_meshes + num_armatures == 2:
+            if bpy.context.selected_objects[0].type == "MESH":
+                obj_mesh = bpy.context.selected_objects[0]
+                obj_armature = bpy.context.selected_objects[1]
+            else:
+                obj_mesh = bpy.context.selected_objects[1]
+                obj_armature = bpy.context.selected_objects[0]
+            match = False
+            for mod in obj_mesh.modifiers:
+                if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
+                    if mod.object == obj_armature:
+                        match = True
+                    break
+            if match is False:
                 return False
         return True
 
@@ -1153,24 +1317,27 @@ class E2_model_exporter(bpy.types.Operator):
         return {'RUNNING_MODAL'}
 
     def execute(self, context):
-        export_selected_meshes(os.path.normpath(self.directory))
+        try:
+            export_selected_object(os.path.normpath(self.directory))
+        except Exception as e:
+            print("EXCEPTION (unhandled): " + str(e))
+            print(traceback.format_exc())
         return{'FINISHED'}
 
 
 def menu_func_export(self, context):
-    self.layout.operator(E2_model_exporter.bl_idname, text="E2::qtgl model exporter")
+    self.layout.operator(E2_exporter.bl_idname, text="E2 exporter")
 
 
 def register():
-    bpy.utils.register_class(E2_model_exporter)
+    bpy.utils.register_class(E2_exporter)
     bpy.types.INFO_MT_file_export.append(menu_func_export)
 
 
 def unregister():
-    bpy.utils.unregister_class(E2_model_exporter)
+    bpy.utils.unregister_class(E2_exporter)
     bpy.types.INFO_MT_file_export.remove(menu_func_export)
 
 
 if __name__ == "__main__":
-    #export_selected_meshes("c:/Users/Marek/root/E2/temp/!MODELS/barbarian_female/barbarian_female")
     register()
