@@ -701,7 +701,6 @@ def save_mesh_links_to_textures(
         with open(buffers_export_info["texture_links"][-1], "w") as f:
             print("Saving texture link: " +
                   os.path.relpath(buffers_export_info["texture_links"][-1], export_info["root_dir"]))
-            f.write(texture_file_name[tex_idx].upper() + "\n")
             f.write(str(tex_idx if tex_idx < len(buffers_export_info["texcoord_buffers"]) else 0) + "\n")
             f.write(os.path.relpath(export_info["textures"][key], export_info["root_dir"]) + "\n")
 
