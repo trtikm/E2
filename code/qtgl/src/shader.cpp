@@ -605,7 +605,7 @@ void  parse_properties_from_vertex_shader_code(
 void  parse_properties_from_fragment_shader_code(
         std::vector<std::string> const&  lines_of_shader_code,
         std::unordered_set<fragment_shader_input_buffer_binding_location>&  input_buffer_bindings,
-        std::unordered_set<fragment_shader_output_buffer_binding_location>&  output_buffer_bindings,
+        std::unordered_set<fragment_shader_output_binding_location>&  output_buffer_bindings,
         std::unordered_set<fragment_shader_uniform_symbolic_name>&  texture_sampler_bindings
         )
 {
@@ -631,13 +631,13 @@ void  parse_properties_from_fragment_shader_code(
         if (tokens.count(binding_location_name(location)) != 0ULL)
             input_buffer_bindings.insert(location);
 
-    for (auto const  location : std::vector<fragment_shader_output_buffer_binding_location>{
-            fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR,
+    for (auto const  location : std::vector<fragment_shader_output_binding_location>{
+            fragment_shader_output_binding_location::BINDING_OUT_COLOUR,
             })
         if (tokens.count(binding_location_name(location)) != 0ULL)
             output_buffer_bindings.insert(location);
 
-    ASSUMPTION(output_buffer_bindings.count(fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR) != 0U);
+    ASSUMPTION(output_buffer_bindings.count(fragment_shader_output_binding_location::BINDING_OUT_COLOUR) != 0U);
 
     for (auto const  sampler_binding : std::vector<fragment_shader_uniform_symbolic_name>{
             fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_DIFFUSE,
@@ -959,7 +959,7 @@ void  fragment_shader_data::initialise(std::vector<std::string> const&  lines_of
     TMPROF_BLOCK();
 
     std::unordered_set<fragment_shader_input_buffer_binding_location>  input_buffer_bindings;
-    std::unordered_set<fragment_shader_output_buffer_binding_location>  output_buffer_bindings;
+    std::unordered_set<fragment_shader_output_binding_location>  output_buffer_bindings;
     std::unordered_set<fragment_shader_uniform_symbolic_name>  symbolic_names_of_used_uniforms;
     detail::parse_properties_from_fragment_shader_code(
             lines_of_shader_code,
@@ -980,7 +980,7 @@ void  fragment_shader_data::initialise(std::vector<std::string> const&  lines_of
 void  fragment_shader_data::initialise(
         GLuint const  id, 
         std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
-        std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+        std::unordered_set<fragment_shader_output_binding_location> const&  output_buffer_bindings,
         std::unordered_set<fragment_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms,
         std::vector<std::string> const&  lines_of_shader_code
         )

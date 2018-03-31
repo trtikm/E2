@@ -112,11 +112,15 @@ std::string  binding_location_name(fragment_shader_input_buffer_binding_location
     }
 }
 
-std::string  binding_location_name(fragment_shader_output_buffer_binding_location const  location)
+std::string  binding_location_name(fragment_shader_output_binding_location const  location)
 {
     switch (location)
     {
-    case fragment_shader_output_buffer_binding_location::BINDING_OUT_COLOUR: return "BINDING_OUT_COLOUR";
+    case fragment_shader_output_binding_location::BINDING_OUT_COLOUR: return "BINDING_OUT_COLOUR";
+    case fragment_shader_output_binding_location::BINDING_OUT_TEXTURE_POSITION: return "BINDING_OUT_TEXTURE_POSITION";
+    case fragment_shader_output_binding_location::BINDING_OUT_TEXTURE_NORMAL: return "BINDING_OUT_TEXTURE_NORMAL";
+    case fragment_shader_output_binding_location::BINDING_OUT_TEXTURE_DIFFUSE: return "BINDING_OUT_TEXTURE_DIFFUSE";
+    case fragment_shader_output_binding_location::BINDING_OUT_TEXTURE_SPECULAR: return "BINDING_OUT_TEXTURE_SPECULAR";
     default: UNREACHABLE();
     }
 }

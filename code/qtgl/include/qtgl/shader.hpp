@@ -175,7 +175,7 @@ struct  fragment_shader_data
             async::finalise_load_on_destroy_ptr,
             GLuint const  id, 
             std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
-            std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+            std::unordered_set<fragment_shader_output_binding_location> const&  output_buffer_bindings,
             std::unordered_set<fragment_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms,
             std::vector<std::string> const&  lines_of_shader_code
             )
@@ -188,7 +188,7 @@ struct  fragment_shader_data
     GLuint  id() const { return m_id; }
     std::unordered_set<fragment_shader_input_buffer_binding_location> const&  get_input_buffer_bindings() const
     { return m_input_buffer_bindings; }
-    std::unordered_set<fragment_shader_output_buffer_binding_location> const&  get_output_buffer_bindings() const
+    std::unordered_set<fragment_shader_output_binding_location> const&  get_output_buffer_bindings() const
     { return m_output_buffer_bindings; }
     std::unordered_set<fragment_shader_uniform_symbolic_name> const&  get_symbolic_names_of_used_uniforms() const
     { return m_symbolic_names_of_used_uniforms; }
@@ -209,14 +209,14 @@ private:
     void  initialise(
             GLuint const  id, 
             std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
-            std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+            std::unordered_set<fragment_shader_output_binding_location> const&  output_buffer_bindings,
             std::unordered_set<fragment_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms,
             std::vector<std::string> const&  lines_of_shader_code
             );
 
     GLuint  m_id;
     std::unordered_set<fragment_shader_input_buffer_binding_location>  m_input_buffer_bindings;
-    std::unordered_set<fragment_shader_output_buffer_binding_location>  m_output_buffer_bindings;
+    std::unordered_set<fragment_shader_output_binding_location>  m_output_buffer_bindings;
     std::unordered_set<fragment_shader_uniform_symbolic_name>  m_symbolic_names_of_used_uniforms;
     std::vector<std::string>  m_lines_of_shader_code;
 };
@@ -248,7 +248,7 @@ struct  fragment_shader : public async::resource_accessor<detail::fragment_shade
     fragment_shader(
             GLuint const  id, 
             std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
-            std::unordered_set<fragment_shader_output_buffer_binding_location> const&  output_buffer_bindings,
+            std::unordered_set<fragment_shader_output_binding_location> const&  output_buffer_bindings,
             std::unordered_set<fragment_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms,
             std::vector<std::string> const&  lines_of_shader_code,
             boost::filesystem::path const&  path = ""
@@ -267,7 +267,7 @@ struct  fragment_shader : public async::resource_accessor<detail::fragment_shade
     GLuint  id() const { return resource().id(); }
     std::unordered_set<fragment_shader_input_buffer_binding_location> const&  get_input_buffer_bindings() const
     { return resource().get_input_buffer_bindings(); }
-    std::unordered_set<fragment_shader_output_buffer_binding_location> const&  get_output_buffer_bindings() const
+    std::unordered_set<fragment_shader_output_binding_location> const&  get_output_buffer_bindings() const
     { return resource().get_output_buffer_bindings(); }
     std::unordered_set<fragment_shader_uniform_symbolic_name> const&  get_symbolic_names_of_used_uniforms() const
     { return resource().get_symbolic_names_of_used_uniforms(); }

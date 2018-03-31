@@ -109,7 +109,7 @@ inline natural_32_bit  value(fragment_shader_input_buffer_binding_location const
 std::string  binding_location_name(fragment_shader_input_buffer_binding_location const  location);
 
 
-enum struct fragment_shader_output_buffer_binding_location : natural_8_bit
+enum struct fragment_shader_output_binding_location : natural_8_bit
 {
     BINDING_OUT_COLOUR              = 0,
     BINDING_OUT_TEXTURE_POSITION    = 1,
@@ -118,9 +118,9 @@ enum struct fragment_shader_output_buffer_binding_location : natural_8_bit
     BINDING_OUT_TEXTURE_SPECULAR    = 4,
 };
 
-inline natural_32_bit  value(fragment_shader_output_buffer_binding_location const  location)
+inline natural_32_bit  value(fragment_shader_output_binding_location const  location)
 { return static_cast<natural_8_bit>(location); }
-std::string  binding_location_name(fragment_shader_output_buffer_binding_location const  location);
+std::string  binding_location_name(fragment_shader_output_binding_location const  location);
 
 
 enum struct fragment_shader_uniform_symbolic_name : natural_8_bit
