@@ -19,7 +19,7 @@ void  create_grid_vertex_and_colour_buffers(
         std::array<float_32_bit,3> const&  colour_for_central_y_line,
         std::array<float_32_bit,3> const&  colour_for_central_z_line,
         natural_32_bit const  highlight_every,
-        bool const  generate_triangle_at_origin,
+        GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE const  main_exes_orientation_marker_type,
         buffer&  output_vertex_buffer,
         buffer&  output_colour_buffer,
         std::string const&  id_vertices,
@@ -89,7 +89,7 @@ void  create_grid_vertex_and_colour_buffers(
         colours.push_back(colour_for_central_z_line);
         colours.push_back(colour_for_central_z_line);
 
-        if (generate_triangle_at_origin)
+        if (main_exes_orientation_marker_type == GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE)
         {
             vertices.push_back({ 1.0f, 0.0f, 0.0f });
             vertices.push_back({ 0.0f, 1.0f, 0.0f });
@@ -105,6 +105,58 @@ void  create_grid_vertex_and_colour_buffers(
             vertices.push_back({ 1.0f, 0.0f, 0.0f });
             colours.push_back(colour_for_central_z_line);
             colours.push_back(colour_for_central_x_line);
+        }
+        else if (main_exes_orientation_marker_type != GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::NONE)
+        {
+            if (main_exes_orientation_marker_type == GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::RIGHT_ANGLES_TO_ALL_AXES)
+            {
+                std::array<float_32_bit, 3> const  colour_for_central_xy_line{
+                    0.5f * (colour_for_central_x_line[0] + colour_for_central_y_line[0]),
+                    0.5f * (colour_for_central_x_line[1] + colour_for_central_y_line[1]),
+                    0.5f * (colour_for_central_x_line[2] + colour_for_central_y_line[2]),
+                };
+
+                vertices.push_back({ 1.0f, 0.0f, 0.0f });
+                vertices.push_back({ 1.0f, 1.0f, 0.0f });
+                colours.push_back(colour_for_central_x_line);
+                colours.push_back(colour_for_central_xy_line);
+
+                vertices.push_back({ 1.0f, 1.0f, 0.0f });
+                vertices.push_back({ 0.0f, 1.0f, 0.0f });
+                colours.push_back(colour_for_central_xy_line);
+                colours.push_back(colour_for_central_y_line);
+            }
+
+            std::array<float_32_bit, 3> const  colour_for_central_xz_line{
+                0.5f * (colour_for_central_x_line[0] + colour_for_central_z_line[0]),
+                0.5f * (colour_for_central_x_line[1] + colour_for_central_z_line[1]),
+                0.5f * (colour_for_central_x_line[2] + colour_for_central_z_line[2]),
+            };
+            std::array<float_32_bit, 3> const  colour_for_central_yz_line{
+                0.5f * (colour_for_central_y_line[0] + colour_for_central_z_line[0]),
+                0.5f * (colour_for_central_y_line[1] + colour_for_central_z_line[1]),
+                0.5f * (colour_for_central_y_line[2] + colour_for_central_z_line[2]),
+            };
+
+            vertices.push_back({ 1.0f, 0.0f, 0.0f });
+            vertices.push_back({ 1.0f, 0.0f, 1.0f });
+            colours.push_back(colour_for_central_x_line);
+            colours.push_back(colour_for_central_xz_line);
+
+            vertices.push_back({ 1.0f, 0.0f, 1.0f });
+            vertices.push_back({ 0.0f, 0.0f, 1.0f });
+            colours.push_back(colour_for_central_xz_line);
+            colours.push_back(colour_for_central_z_line);
+
+            vertices.push_back({ 0.0f, 1.0f, 0.0f });
+            vertices.push_back({ 0.0f, 1.0f, 1.0f });
+            colours.push_back(colour_for_central_y_line);
+            colours.push_back(colour_for_central_yz_line);
+
+            vertices.push_back({ 0.0f, 1.0f, 1.0f });
+            vertices.push_back({ 0.0f, 0.0f, 1.0f });
+            colours.push_back(colour_for_central_yz_line);
+            colours.push_back(colour_for_central_z_line);
         }
     }
     output_vertex_buffer =

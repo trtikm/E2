@@ -10,6 +10,14 @@
 namespace qtgl {
 
 
+enum struct  GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE : natural_8_bit
+{
+    NONE                        = 0,
+    TRIANGLE                    = 1,
+    RIGHT_ANGLES_TO_Z_AXIS      = 2,
+    RIGHT_ANGLES_TO_ALL_AXES    = 3,
+};
+
 void  create_grid_vertex_and_colour_buffers(
         float_32_bit const  max_x_coordinate,
         float_32_bit const  max_y_coordinate,
@@ -24,7 +32,7 @@ void  create_grid_vertex_and_colour_buffers(
         std::array<float_32_bit,3> const&  colour_for_central_y_line,
         std::array<float_32_bit,3> const&  colour_for_central_z_line,
         natural_32_bit const  highlight_every,
-        bool const  generate_triangle_at_origin,
+        GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE const  main_exes_orientation_marker_type,
         buffer&  output_vertex_buffer,
         buffer&  output_colour_buffer,
         std::string const&  id_vertices = "",

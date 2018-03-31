@@ -203,7 +203,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                 { 0.0f, 1.0f, 0.0f },
                 { 0.0f, 0.0f, 1.0f },
                 10U,
-                true,
+                qtgl::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE,
                 grid_vertex_buffer,
                 grid_colour_buffer
                 );

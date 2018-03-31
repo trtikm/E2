@@ -1,6 +1,7 @@
 #ifndef QTGL_BATCH_GENERATORS_HPP_INCLUDED
 #   define QTGL_BATCH_GENERATORS_HPP_INCLUDED
 
+#   include <qtgl/buffer_generators.hpp>
 #   include <qtgl/batch.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <boost/filesystem/path.hpp>
@@ -24,7 +25,7 @@ batch  create_grid(
         std::array<float_32_bit, 3> const&  colour_for_central_y_line,
         std::array<float_32_bit, 3> const&  colour_for_central_z_line,
         natural_32_bit const  highlight_every,
-        bool const  generate_triangle_at_origin,
+        GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE const  main_exes_orientation_marker_type,
         boost::filesystem::path const&  data_root_dir,
         std::string const&  id = ""
         );

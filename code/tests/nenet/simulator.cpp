@@ -136,7 +136,7 @@ simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused, n
                     { 0.0f, 1.0f, 0.0f },
                     { 0.0f, 0.0f, 1.0f },
                     10U,
-                    true,
+                    qtgl::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE,
                     "../data"
                     )
             }
