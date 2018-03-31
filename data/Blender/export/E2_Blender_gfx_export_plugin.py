@@ -80,9 +80,30 @@ def float_to_string(number):
     return format(number, get_number_precision_string())
 
 
-def remove_ignored_part_of_name(name):
+def remove_ignored_part_of_name(name, phase=None):
     assert isinstance(name, str)
-    return name[:name.find("{IGNOREME")] if "{IGNOREME" in name and name.endswith("}") else name
+    assert phase is None or isinstance(phase, str)
+
+    def process_name(name, phase):
+        if "${" not in name:
+            return [name]
+        prefix = name[:name.find("${")]
+        rest = name[name.find("${") + 2:]
+        if "}" not in rest:
+            return [name]
+        command = rest[:rest.find("}")]
+        if command == "IGNOREME":
+            command = "IGNOREME:"
+        suffix = rest[rest.find("}") + 1:]
+        if ":" not in command:
+            return [name]
+        where_use = command[:rest.find(":")]
+        what_use = command[rest.find(":") + 1:]
+        if where_use == "IGNOREME" or phase is None or phase not in where_use:
+            what_use = ""
+        return [prefix] + [what_use] + process_name(suffix, phase)
+
+    return "".join(process_name(name, phase))
 
 
 def from_base_matrix(
@@ -740,7 +761,7 @@ def save_textures(
 
                 texture_output_dir = os.path.join(
                     textures_root_dir,
-                    remove_ignored_part_of_name(materials[mat_idx].name)
+                    remove_ignored_part_of_name(materials[mat_idx].name, "TEXTURES")
                     )
 
                 os.makedirs(texture_output_dir, exist_ok=True)
@@ -835,7 +856,7 @@ def save_coord_systems_of_bones(
             export_info["root_dir"],
             "animations",
             "skeletal",
-            remove_ignored_part_of_name(armature.name),
+            remove_ignored_part_of_name(armature.name, "SKELETAL"),
             "pose.txt"
             )
         os.makedirs(os.path.dirname(export_info["pose"]), exist_ok=True)
@@ -903,8 +924,8 @@ def save_keyframe_coord_systems_of_bones(
             export_info["root_dir"],
             "animations",
             "skeletal",
-            remove_ignored_part_of_name(armature.name),
-            remove_ignored_part_of_name(action.name)
+            remove_ignored_part_of_name(armature.name, "SKELETAL"),
+            remove_ignored_part_of_name(action.name, "SKELETAL")
             )
         os.makedirs(keyframes_output_dir, exist_ok=True)
 
@@ -936,7 +957,7 @@ def export_object_mesh(
         print("Exporting MESH: " + obj.name)
 
         mesh = obj.data
-        mesh_name = remove_ignored_part_of_name(mesh.name)
+        mesh_name = remove_ignored_part_of_name(mesh.name, "BUFFERS")
 
         num_armatures = 0
         armature = None
@@ -984,8 +1005,8 @@ def export_object_mesh(
                 print("--- Exporting a batch for material '" + mesh.materials[idx].name + "' ---")
             save_render_buffers(
                 buffers_list[idx],
-                remove_ignored_part_of_name(mesh.materials[idx].name) if len(buffers_list) > 1 else None,
-                remove_ignored_part_of_name(armature.name) if armature is not None else None,
+                remove_ignored_part_of_name(mesh.materials[idx].name, "BUFFERS") if len(buffers_list) > 1 else None,
+                remove_ignored_part_of_name(armature.name, "BUFFERS") if armature is not None else None,
                 export_info
                 )
             buffers_export_info = export_info["render_buffers"][-1]
@@ -1056,7 +1077,7 @@ class E2_gfx_exporter(bpy.types.Operator):
         for obj in bpy.context.selected_objects:
             if obj.type not in ["MESH", "ARMATURE"]:
                 return False
-        return True
+        return len(bpy.context.selected_objects) > 0
 
     def invoke(self, context, event):
         context.window_manager.fileselect_add(self)
