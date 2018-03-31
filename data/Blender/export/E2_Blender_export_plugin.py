@@ -80,6 +80,11 @@ def float_to_string(number):
     return format(number, get_number_precision_string())
 
 
+def remove_ignored_part_of_name(name):
+    assert isinstance(name, str)
+    return name[:name.find("{IGNOREME")] if "{IGNOREME" in name and name.endswith("}") else name
+
+
 def from_base_matrix(
         position,       # An instance of 'mathutils.Vector'; i.e. a 3d vector
         orientation     # An instance of 'mathutils.Quaternion'; it must be unit (normalised) quaternion
@@ -825,7 +830,7 @@ def save_coord_systems_of_bones(
             export_info["root_dir"],
             "animations",
             "skeletal",
-            armature.name,
+            remove_ignored_part_of_name(armature.name),
             "pose.txt"
             )
         os.makedirs(os.path.dirname(export_info["pose"]), exist_ok=True)
@@ -893,8 +898,8 @@ def save_keyframe_coord_systems_of_bones(
             export_info["root_dir"],
             "animations",
             "skeletal",
-            armature.name,
-            action.name
+            remove_ignored_part_of_name(armature.name),
+            remove_ignored_part_of_name(action.name)
             )
         os.makedirs(keyframes_output_dir, exist_ok=True)
 
@@ -926,7 +931,7 @@ def export_object_mesh(
         print("Exporting MESH: " + obj.name)
 
         mesh = obj.data
-        mesh_name = mesh.name
+        mesh_name = remove_ignored_part_of_name(mesh.name)
 
         num_armatures = 0
         armature = None
@@ -972,8 +977,8 @@ def export_object_mesh(
         for idx in range(len(buffers_list)):
             save_render_buffers(
                 buffers_list[idx],
-                mesh.materials[idx].name if len(buffers_list) > 1 else None,
-                armature.name if armature is not None else None,
+                remove_ignored_part_of_name(mesh.materials[idx].name) if len(buffers_list) > 1 else None,
+                remove_ignored_part_of_name(armature.name) if armature is not None else None,
                 export_info
                 )
             buffers_export_info = export_info["render_buffers"][-1]
