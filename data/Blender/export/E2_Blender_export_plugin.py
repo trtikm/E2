@@ -1,11 +1,11 @@
 # This is module registration info for Blender.
 bl_info = {
-    "name": "E2 exporter",
+    "name": "E2 gfx exporter",
     "author": "E2",
     "version": (1, 0, 0),
     "blender": (2, 76, 0),
     "location": "File > Import-Export",
-    "description": "Exports a selected object, like mesh or armature, in E2 format - a hierarchy of "
+    "description": "Exports gfx data of a selected objects, like mesh or armature, in E2 gfx format - a hierarchy of "
                    "directories and files under a given root output directory. Names of created "
                    "files and directories define semantics of the exported data.",
     "warning": "",
@@ -722,7 +722,7 @@ def save_textures(
     """
 
     with TimeProf.instance().start("save_textures"):
-        textures_root_dir = os.path.join(export_info["root_dir"], "textures", export_info["mesh_name"])
+        textures_root_dir = os.path.join(export_info["root_dir"], "textures")
 
         export_info["textures"] = {}
         for mat_idx in range(len(materials)):
@@ -738,7 +738,12 @@ def save_textures(
                     continue
                 image = texture.image
 
-                os.makedirs(textures_root_dir, exist_ok=True)
+                texture_output_dir = os.path.join(
+                    textures_root_dir,
+                    remove_ignored_part_of_name(materials[mat_idx].name)
+                    )
+
+                os.makedirs(texture_output_dir, exist_ok=True)
 
                 if os.path.exists(bpy.path.abspath(image.filepath)):
                     src_image_pathname = bpy.path.abspath(image.filepath)
@@ -749,13 +754,13 @@ def save_textures(
 
                 dst_image_name = os.path.splitext(os.path.basename(src_image_pathname))[0]
                 dst_image_extension = os.path.splitext(os.path.basename(src_image_pathname))[1]
-                dst_image_pathname = os.path.join(textures_root_dir, dst_image_name + dst_image_extension)
+                dst_image_pathname = os.path.join(texture_output_dir, dst_image_name + dst_image_extension)
 
                 print("Copying image in slot #" + str(slot_idx) + " of material " + materials[mat_idx].name + ": " +
                       os.path.relpath(dst_image_pathname, export_info["root_dir"]))
                 shutil.copyfile(src_image_pathname, dst_image_pathname)
 
-                dst_texture_pathname = os.path.join(textures_root_dir, dst_image_name + ".txt")
+                dst_texture_pathname = os.path.join(texture_output_dir, dst_image_name + ".txt")
                 with open(dst_texture_pathname, "w") as f:
                     print("Saving texture in slot #" + str(slot_idx) + " of material " + materials[mat_idx].name +
                           ": " + os.path.relpath(dst_texture_pathname, export_info["root_dir"]))
@@ -975,6 +980,8 @@ def export_object_mesh(
         buffers_list = build_render_buffers(obj, armature)
         assert len(buffers_list) <= 1 or len(buffers_list) <= len(mesh.materials)
         for idx in range(len(buffers_list)):
+            if len(buffers_list) > 1:
+                print("--- Exporting a batch for material '" + mesh.materials[idx].name + "' ---")
             save_render_buffers(
                 buffers_list[idx],
                 remove_ignored_part_of_name(mesh.materials[idx].name) if len(buffers_list) > 1 else None,
@@ -1008,72 +1015,46 @@ def export_object_armature(
         save_keyframe_coord_systems_of_bones(obj, export_info)
 
 
-def export_selected_object(
+def export_object(
+        obj,            # The object to be exported (either MESH or ARMATURE)
         export_dir      # A directory under which all exported files will be saved.
         ):
     """
     This is the root function of the actual export. Its purpose is to check whether data to be exported satisfies
     requirement (like no-scale rule), and then manages the export process for the selected object.
     :param export_dir: A directory under which all exported files will be saved.
-    :return: None
+    :return: True or False indicating success or failure.
     """
 
-    assert len(bpy.context.selected_objects) in [1, 2]
-
+    assert obj.type in ["MESH", "ARMATURE"]
     with TimeProf.instance().start("export_selected_object"):
-        print("*** E2 exporter started ***")
-        for obj in bpy.context.selected_objects:
-            if obj.type == "MESH":
-                export_object_mesh(obj, export_dir)
-            elif obj.type == "ARMATURE":
-                export_object_armature(obj, export_dir)
-            else:
-                print("ERROR: Unsupported object type: " + str(obj.type) + " not in [MESH, ARMATURE]")
-                break
-        print("*** E2 exporter terminated ***")
+        print("*** E2 gfx exporter started ***")
+        if obj.type == "MESH":
+            export_object_mesh(obj, export_dir)
+        elif obj.type == "ARMATURE":
+            export_object_armature(obj, export_dir)
+        else:
+            print("ERROR: Unsupported object type: " + str(obj.type) + " not in [MESH, ARMATURE]")
+            return False
+        print("*** E2 gfx exporter terminated ***")
+        return True
 
 
-class E2_exporter(bpy.types.Operator):
-    """Save in E2 format (a hierarchy of directories and files; path-names define meaning of saved data)."""
-    bl_idname = "export.e2_exporter"
-    bl_label = "E2 exporter"
+class E2_gfx_exporter(bpy.types.Operator):
+    """Save gfx data in E2 gfx format (hierarchy of directories and files; path-names define meaning of data)."""
+    bl_idname = "export.e2_gfx_exporter"
+    bl_label = "E2 gfx exporter"
     directory = bpy.props.StringProperty(
                     name="Output root directory",
-                    description="A root directory under which all data will be saved.",
+                    description="A root directory under which all gfx data will be saved.",
                     subtype="DIR_PATH",
                     maxlen=1024,
                     default="")
 
     @classmethod
     def poll(cls, context):
-        num_meshes = 0
-        num_armatures = 0
-        for idx in range(len(bpy.context.selected_objects)):
-            obj = bpy.context.selected_objects[idx]
-            if obj.type == "MESH":
-                num_meshes += 1
-            elif obj.type == "ARMATURE":
-                num_armatures += 1
-            else:
-                return False
-            if num_meshes > 1 or num_armatures > 1:
-                return False
-        if num_meshes + num_armatures not in [1, 2]:
-            return False
-        if num_meshes + num_armatures == 2:
-            if bpy.context.selected_objects[0].type == "MESH":
-                obj_mesh = bpy.context.selected_objects[0]
-                obj_armature = bpy.context.selected_objects[1]
-            else:
-                obj_mesh = bpy.context.selected_objects[1]
-                obj_armature = bpy.context.selected_objects[0]
-            match = False
-            for mod in obj_mesh.modifiers:
-                if mod.type == 'ARMATURE' and mod.object.type == 'ARMATURE':
-                    if mod.object == obj_armature:
-                        match = True
-                    break
-            if match is False:
+        for obj in bpy.context.selected_objects:
+            if obj.type not in ["MESH", "ARMATURE"]:
                 return False
         return True
 
@@ -1083,7 +1064,12 @@ class E2_exporter(bpy.types.Operator):
 
     def execute(self, context):
         try:
-            export_selected_object(os.path.normpath(self.directory))
+            for obj in bpy.context.selected_objects:
+                if obj.type not in ["MESH", "ARMATURE"]:
+                    print("ERROR: The object '" + obj.name + "' is of an unsupported type '" + str(obj.type) + "'.")
+                    break
+                if export_object(obj, os.path.normpath(self.directory)) is False:
+                    break
         except Exception as e:
             print("EXCEPTION (unhandled): " + str(e))
             print(traceback.format_exc())
@@ -1091,16 +1077,16 @@ class E2_exporter(bpy.types.Operator):
 
 
 def menu_func_export(self, context):
-    self.layout.operator(E2_exporter.bl_idname, text="E2 exporter")
+    self.layout.operator(E2_gfx_exporter.bl_idname, text="E2 gfx exporter")
 
 
 def register():
-    bpy.utils.register_class(E2_exporter)
+    bpy.utils.register_class(E2_gfx_exporter)
     bpy.types.INFO_MT_file_export.append(menu_func_export)
 
 
 def unregister():
-    bpy.utils.unregister_class(E2_exporter)
+    bpy.utils.unregister_class(E2_gfx_exporter)
     bpy.types.INFO_MT_file_export.remove(menu_func_export)
 
 
