@@ -1,6 +1,6 @@
 #include ../version
 #include ../common_fragment_shader
-layout(location=BINDING_IN_COLOUR) in vec4  in_colour;
+layout(location=BINDING_IN_DIFFUSE) in vec4  in_colour;
 layout(location=BINDING_IN_TEXCOORD0) in vec2  in_texture_coords;
 layout(location=BINDING_OUT_COLOUR) out vec4  out_colour;
 uniform sampler2D TEXTURE_SAMPLER_DIFFUSE;

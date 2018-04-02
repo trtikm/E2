@@ -198,8 +198,8 @@ simulator::simulator(vector3 const&  initial_clear_colour)
                         0U,
                         2U,
                         {
-                            { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION, m_grid_vertex_buffer },
-                            { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR, m_grid_colour_buffer },
+                            { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION, m_grid_vertex_buffer },
+                            { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE, m_grid_colour_buffer },
                         }
                         );
 
@@ -248,7 +248,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
             qtgl::make_current(*m_grid_draw_state, *draw_state);
 
             m_grid_shaders_binding.get_vertex_shader().set_uniform_variable(
-                                       qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED,
+                                       qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED,
                                        grid_transform_matrix);
             qtgl::draw();
 
@@ -264,14 +264,14 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
         for (qtgl::batch const  batch : m_batches)
             if (qtgl::make_current(batch,*draw_state))
             {
-                for (qtgl::vertex_shader_uniform_symbolic_name const  uniform : batch.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
+                for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform : batch.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                     switch (uniform)
                     {
-                        case qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
+                        case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA:
                             break;
-                        case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
+                        case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                             break;
-                        case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
+                        case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
                             batch.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform,batch_transform_matrix);
                             break;
                     }

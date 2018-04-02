@@ -69,15 +69,15 @@ batch_data::batch_data(boost::filesystem::path const&  path, async::finalise_loa
                                                  << "' referenced from the batch file '" << path << "' does not exist.");
         index_buffer_path = canonical_path(index_buffer_path);
 
-        std::unordered_map<vertex_shader_input_buffer_binding_location,boost::filesystem::path>  buffer_paths;
+        std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION,boost::filesystem::path>  buffer_paths;
         while (true)
         {
             if (!detail::read_line(istr,line))
                 break;
-            natural_8_bit  location = value(min_vertex_shader_input_buffer_binding_location());
+            natural_8_bit  location = value(min_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION());
             bool  found = false;
-            for ( ; location <= value(max_vertex_shader_input_buffer_binding_location()); ++location)
-                if (line == binding_location_name(vertex_shader_input_buffer_binding_location(location)))
+            for ( ; location <= value(max_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION()); ++location)
+                if (line == name(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION(location)))
                 {
                     found = true;
                     break;
@@ -90,7 +90,7 @@ batch_data::batch_data(boost::filesystem::path const&  path, async::finalise_loa
                 throw std::runtime_error(msgstream() << "Unknown vertex shader input buffer binding location '" << line
                                                      << "' in the file '" << path << "'.");
             }
-            vertex_shader_input_buffer_binding_location const  bind_location = vertex_shader_input_buffer_binding_location(location);
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  bind_location = VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION(location);
             if (buffer_paths.count(bind_location) != 0ULL)
                 throw std::runtime_error(msgstream() << "Vertex shader input buffer binding location '" << line
                                                      << "' appears more than once in the file '" << path << "'.");
@@ -101,7 +101,7 @@ batch_data::batch_data(boost::filesystem::path const&  path, async::finalise_loa
             boost::filesystem::path  buffer_file = boost::filesystem::absolute(path.parent_path() / line);
             if (!boost::filesystem::exists(buffer_file) || !boost::filesystem::is_regular_file(buffer_file))
                 throw std::runtime_error(msgstream() << "The buffer file '" << buffer_file.string()
-                                                     << "' to be bound to location '" << binding_location_name(bind_location)
+                                                     << "' to be bound to location '" << name(bind_location)
                                                      << "' referenced from the batch file '" << path << "' does not exist.");
             buffer_file = canonical_path(buffer_file);
 
@@ -111,10 +111,10 @@ batch_data::batch_data(boost::filesystem::path const&  path, async::finalise_loa
         textures_binding_map_type  textures_binding_map;
         do
         {
-            natural_8_bit  location = value(min_fragment_shader_uniform_symbolic_name());
+            natural_8_bit  location = value(min_FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME());
             bool  found = false;
-            for ( ; location <= value(max_fragment_shader_uniform_symbolic_name()); ++location)
-                if (line == uniform_name_symbolic(fragment_shader_uniform_symbolic_name(location)))
+            for ( ; location <= value(max_FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME()); ++location)
+                if (line == uniform_name_symbolic(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME(location)))
                 {
                     found = true;
                     break;
@@ -122,7 +122,7 @@ batch_data::batch_data(boost::filesystem::path const&  path, async::finalise_loa
             if (!found)
                 break;
 
-            fragment_shader_uniform_symbolic_name const  bind_location = fragment_shader_uniform_symbolic_name(location);
+            FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  bind_location = FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME(location);
             if (textures_binding_map.count(bind_location) != 0ULL)
                 throw std::runtime_error(msgstream() << "Fragment shader texture sampler binding '" << line
                                                      << "' appears more than once in the file '" << path << "'.");

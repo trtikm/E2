@@ -4,7 +4,7 @@ layout(location=BINDING_IN_POSITION) in vec3  in_position;
 layout(location=BINDING_IN_TEXCOORD0) in vec2  in_texture_coords;
 //layout(location=BINDING_OUT_POSITION) out vec4  out_position;
 layout(location=BINDING_OUT_TEXCOORD0) out vec2  out_texture_coords;
-layout(location=BINDING_OUT_COLOUR) out vec4  out_colour;
+layout(location=BINDING_OUT_DIFFUSE) out vec4  out_colour;
 uniform mat4  TRANSFORM_MATRIX_TRANSPOSED;
 uniform vec4  DIFFUSE_COLOUR;
 void main() {

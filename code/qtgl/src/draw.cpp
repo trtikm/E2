@@ -86,15 +86,15 @@ void  render_batch(
 
     {
         vertex_shader  shader = batch.get_shaders_binding().get_vertex_shader();
-        for (vertex_shader_uniform_symbolic_name const uniform : shader.get_symbolic_names_of_used_uniforms())
+        for (VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : shader.get_symbolic_names_of_used_uniforms())
             switch (uniform)
             {
-            case vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA:
                 break;
-            case vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                 shader.set_uniform_variable(uniform,diffuse_colour);
                 break;
-            case vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
                 ASSUMPTION(!transform_matrices.empty());
                 if (apply_modelspace_of_batch && batch.get_modelspace().loaded_successfully())
                 {
@@ -109,7 +109,7 @@ void  render_batch(
                 else
                     shader.set_uniform_variable(uniform, transform_matrices);
                 break;
-            case vertex_shader_uniform_symbolic_name::NUM_MATRICES_PER_VERTEX:
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX:
                 ASSUMPTION(transform_matrices.size() >= batch.get_buffers_binding().num_matrices_per_vertex());
                 ASSUMPTION(transform_matrices.size() != 1UL || batch.get_buffers_binding().num_matrices_per_vertex() == 1U);
                 shader.set_uniform_variable(uniform, batch.get_buffers_binding().num_matrices_per_vertex());
@@ -119,13 +119,13 @@ void  render_batch(
 
     {
         fragment_shader  shader = batch.get_shaders_binding().get_fragment_shader();
-        for (fragment_shader_uniform_symbolic_name const uniform : shader.get_symbolic_names_of_used_uniforms())
+        for (FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : shader.get_symbolic_names_of_used_uniforms())
             switch (uniform)
             {
-            case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_DIFFUSE:
-            case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_SPECULAR:
-            case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_NORMAL:
-            case fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_POSITION:
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE:
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_SPECULAR:
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_NORMAL:
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_POSITION:
                 shader.set_uniform_variable(uniform, value(uniform));
                 break;
             }

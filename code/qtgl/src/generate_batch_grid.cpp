@@ -55,8 +55,8 @@ batch  create_grid(
                 0U,
                 2U,
                 {
-                    { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION, grid_vertex_buffer },
-                    { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR, grid_colour_buffer },
+                    { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION, grid_vertex_buffer },
+                    { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE, grid_colour_buffer },
                 },
                 id.empty() ? id : "/generic/buffers_binding/grid/" + id
                 ),

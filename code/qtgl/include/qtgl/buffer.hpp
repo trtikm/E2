@@ -204,7 +204,7 @@ namespace qtgl { namespace detail {
 
 struct buffers_binding_data
 {
-    using  buffers_map_type = std::unordered_map<vertex_shader_input_buffer_binding_location, buffer>;
+    using  buffers_map_type = std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, buffer>;
 
     buffers_binding_data(
             async::finalise_load_on_destroy_ptr  finaliser,
@@ -229,13 +229,13 @@ struct buffers_binding_data
     buffers_binding_data(
             async::finalise_load_on_destroy_ptr  finaliser,
             boost::filesystem::path const&  index_buffer_path,
-            std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths
+            std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths
             );
 
     buffers_binding_data(
             async::finalise_load_on_destroy_ptr  finaliser,
             natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
-            std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths
+            std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths
             );
 
     ~buffers_binding_data();
@@ -247,7 +247,7 @@ struct buffers_binding_data
 
     spatial_boundary const& get_boundary() const
     {
-        return get_buffers().at(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION).boundary();
+        return get_buffers().at(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION).boundary();
     }
 
     bool  ready() const { return m_ready; }
@@ -319,7 +319,7 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
 
     buffers_binding(
             boost::filesystem::path const&  index_buffer_path,
-            std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths,
+            std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths,
             async::key_type const&  key = ""
             )
         : async::resource_accessor<detail::buffers_binding_data>(
@@ -332,7 +332,7 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
 
     buffers_binding(
             natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
-            std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths,
+            std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths,
             async::key_type const&  key = ""
             )
         : async::resource_accessor<detail::buffers_binding_data>(
@@ -356,7 +356,7 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
 
     natural_32_bit  num_matrices_per_vertex() const
     {
-        auto const  it = get_buffers().find(vertex_shader_input_buffer_binding_location::BINDING_IN_INDICES_OF_MATRICES);
+        auto const  it = get_buffers().find(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INDICES_OF_MATRICES);
         return it == get_buffers().cend() ? 0U : it->second.num_components_per_primitive();
     }
 

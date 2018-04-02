@@ -26,9 +26,9 @@ batch  create_lines3d(
             0U,
             2U,
             {
-                { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION,
+                { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
                   buffer(vertices, true, (id.empty() ? id : "/generic/buffer/vertices/lines3d_with_colours/" + id)) },
-                { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR,
+                { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE,
                   buffer(colours, false, id.empty() ? id : "/generic/buffer/colours/lines3d_with_colours/" + id) },
             },
             id.empty() ? id : "/generic/buffers_binding/lines3d_with_colours/" + id

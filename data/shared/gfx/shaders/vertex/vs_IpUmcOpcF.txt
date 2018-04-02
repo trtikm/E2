@@ -1,7 +1,7 @@
 #include ../version
 #include ../common_vertex_shader
 layout(location=BINDING_IN_POSITION) in vec3  in_position;
-layout(location=BINDING_OUT_COLOUR) out vec4  out_colour;
+layout(location=BINDING_OUT_DIFFUSE) out vec4  out_colour;
 uniform vec4  DIFFUSE_COLOUR;
 uniform mat4  TRANSFORM_MATRIX_TRANSPOSED;
 void main() {

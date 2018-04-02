@@ -20,8 +20,8 @@ batch  create_basis_vectors(boost::filesystem::path const&  data_root_dir)
                 0U,
                 2U,
                 {
-                    { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION, basis_vertex_buffer },
-                    { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR, basis_colour_buffer },
+                    { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION, basis_vertex_buffer },
+                    { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE, basis_colour_buffer },
                 },
                 "/generic/buffers_binding/basis_vectors"
                 ),

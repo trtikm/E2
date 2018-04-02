@@ -537,63 +537,65 @@ void  get_tokens_in_shader_code(
 
 void  parse_properties_from_vertex_shader_code(
         std::vector<std::string> const&  lines_of_shader_code,
-        std::unordered_set<vertex_shader_input_buffer_binding_location>&  input_buffer_bindings,
-        std::unordered_set<vertex_shader_output_buffer_binding_location>&  output_buffer_bindings,
-        std::unordered_set<vertex_shader_uniform_symbolic_name>&  symbolic_names_of_used_uniforms
+        std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>&  input_buffer_bindings,
+        std::unordered_set<VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION>&  output_buffer_bindings,
+        std::unordered_set<VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME>&  symbolic_names_of_used_uniforms
         )
 {
     TMPROF_BLOCK();
 
     std::unordered_set<std::string>  tokens;
     detail::get_tokens_in_shader_code(lines_of_shader_code,tokens);
-    for (auto const  location : std::vector<vertex_shader_input_buffer_binding_location>{
-            vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION ,
-            vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR   ,
-            vertex_shader_input_buffer_binding_location::BINDING_IN_NORMAL   ,
-            vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD0,
-            vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD1,
-            vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD2,
-            vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD3,
-            vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD4,
-            vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD5,
-            vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD6,
-            vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD7,
-            vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD8,
-            vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD9,
+    for (auto const  location : std::vector<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>{
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION ,
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE  ,
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_SPECULAR ,
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_NORMAL   ,
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0,
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD1,
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD2,
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD3,
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD4,
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD5,
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD6,
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD7,
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD8,
+            VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD9,
             })
-        if (tokens.count(binding_location_name(location)) != 0ULL)
+        if (tokens.count(name(location)) != 0ULL)
         {
             ASSUMPTION(value(location) <= (natural_32_bit)GL_MAX_VERTEX_ATTRIBS);
             input_buffer_bindings.insert(location);
         }
 
-    ASSUMPTION(input_buffer_bindings.count(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION) != 0U);
+    ASSUMPTION(input_buffer_bindings.count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION) != 0U);
 
-    for (auto const  location : std::vector<vertex_shader_output_buffer_binding_location>{
-            vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION ,
-            vertex_shader_output_buffer_binding_location::BINDING_OUT_COLOUR   ,
-            vertex_shader_output_buffer_binding_location::BINDING_OUT_NORMAL   ,
-            vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD0,
-            vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD1,
-            vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD2,
-            vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD3,
-            vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD4,
-            vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD5,
-            vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD6,
-            vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD7,
-            vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD8,
-            vertex_shader_output_buffer_binding_location::BINDING_OUT_TEXCOORD9,
+    for (auto const  location : std::vector<VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION>{
+            VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_POSITION ,
+            VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_DIFFUSE  ,
+            VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_SPECULAR ,
+            VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_NORMAL   ,
+            VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_TEXCOORD0,
+            VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_TEXCOORD1,
+            VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_TEXCOORD2,
+            VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_TEXCOORD3,
+            VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_TEXCOORD4,
+            VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_TEXCOORD5,
+            VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_TEXCOORD6,
+            VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_TEXCOORD7,
+            VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_TEXCOORD8,
+            VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_TEXCOORD9,
             })
-        if (tokens.count(binding_location_name(location)) != 0ULL)
+        if (tokens.count(name(location)) != 0ULL)
             output_buffer_bindings.insert(location);
 
-    //ASSUMPTION(output_buffer_bindings.count(vertex_shader_output_buffer_binding_location::BINDING_OUT_POSITION) != 0U);
+    //ASSUMPTION(output_buffer_bindings.count(VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_POSITION) != 0U);
 
-    for (auto const  symbolic_name : std::vector<vertex_shader_uniform_symbolic_name>{
-            vertex_shader_uniform_symbolic_name::COLOUR_ALPHA               ,
-            vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR             ,
-            vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED,
-            vertex_shader_uniform_symbolic_name::NUM_MATRICES_PER_VERTEX    ,
+    for (auto const  symbolic_name : std::vector<VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME>{
+            VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA               ,
+            VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR             ,
+            VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED,
+            VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX    ,
             })
     {
         if (tokens.count(uniform_name(symbolic_name)) != 0ULL || tokens.count(uniform_symbolic_name(symbolic_name)) != 0ULL)
@@ -604,43 +606,44 @@ void  parse_properties_from_vertex_shader_code(
 
 void  parse_properties_from_fragment_shader_code(
         std::vector<std::string> const&  lines_of_shader_code,
-        std::unordered_set<fragment_shader_input_buffer_binding_location>&  input_buffer_bindings,
-        std::unordered_set<fragment_shader_output_binding_location>&  output_buffer_bindings,
-        std::unordered_set<fragment_shader_uniform_symbolic_name>&  texture_sampler_bindings
+        std::unordered_set<FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION>&  input_buffer_bindings,
+        std::unordered_set<FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION>&  output_buffer_bindings,
+        std::unordered_set<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME>&  texture_sampler_bindings
         )
 {
     TMPROF_BLOCK();
 
     std::unordered_set<std::string>  tokens;
     detail::get_tokens_in_shader_code(lines_of_shader_code,tokens);
-    for (auto const  location : std::vector<fragment_shader_input_buffer_binding_location>{
-            fragment_shader_input_buffer_binding_location::BINDING_IN_POSITION ,
-            fragment_shader_input_buffer_binding_location::BINDING_IN_COLOUR   ,
-            fragment_shader_input_buffer_binding_location::BINDING_IN_NORMAL   ,
-            fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD0,
-            fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD1,
-            fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD2,
-            fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD3,
-            fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD4,
-            fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD5,
-            fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD6,
-            fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD7,
-            fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD8,
-            fragment_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD9,
+    for (auto const  location : std::vector<FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION>{
+            FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION ,
+            FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE  ,
+            FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_SPECULAR ,
+            FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_NORMAL   ,
+            FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0,
+            FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD1,
+            FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD2,
+            FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD3,
+            FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD4,
+            FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD5,
+            FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD6,
+            FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD7,
+            FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD8,
+            FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD9,
             })
-        if (tokens.count(binding_location_name(location)) != 0ULL)
+        if (tokens.count(name(location)) != 0ULL)
             input_buffer_bindings.insert(location);
 
-    for (auto const  location : std::vector<fragment_shader_output_binding_location>{
-            fragment_shader_output_binding_location::BINDING_OUT_COLOUR,
+    for (auto const  location : std::vector<FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION>{
+            FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION::BINDING_OUT_COLOUR,
             })
-        if (tokens.count(binding_location_name(location)) != 0ULL)
+        if (tokens.count(name(location)) != 0ULL)
             output_buffer_bindings.insert(location);
 
-    ASSUMPTION(output_buffer_bindings.count(fragment_shader_output_binding_location::BINDING_OUT_COLOUR) != 0U);
+    ASSUMPTION(output_buffer_bindings.count(FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION::BINDING_OUT_COLOUR) != 0U);
 
-    for (auto const  sampler_binding : std::vector<fragment_shader_uniform_symbolic_name>{
-            fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_DIFFUSE,
+    for (auto const  sampler_binding : std::vector<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME>{
+            FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE,
             })
     {
         if (tokens.count(uniform_name(sampler_binding)) != 0ULL)
@@ -785,9 +788,9 @@ void  vertex_shader_data::initialise(std::vector<std::string> const&  lines_of_s
 {
     TMPROF_BLOCK();
 
-    std::unordered_set<vertex_shader_input_buffer_binding_location>  input_buffer_bindings;
-    std::unordered_set<vertex_shader_output_buffer_binding_location>  output_buffer_bindings;
-    std::unordered_set<vertex_shader_uniform_symbolic_name>  symbolic_names_of_used_uniforms;
+    std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>  input_buffer_bindings;
+    std::unordered_set<VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION>  output_buffer_bindings;
+    std::unordered_set<VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME>  symbolic_names_of_used_uniforms;
     detail::parse_properties_from_vertex_shader_code(
             lines_of_shader_code,
             input_buffer_bindings,
@@ -806,9 +809,9 @@ void  vertex_shader_data::initialise(std::vector<std::string> const&  lines_of_s
 
 void  vertex_shader_data::initialise(
         GLuint const  id, 
-        std::unordered_set<vertex_shader_input_buffer_binding_location> const&  input_buffer_bindings,
-        std::unordered_set<vertex_shader_output_buffer_binding_location> const&  output_buffer_bindings,
-        std::unordered_set<vertex_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms,
+        std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  input_buffer_bindings,
+        std::unordered_set<VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION> const&  output_buffer_bindings,
+        std::unordered_set<VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME> const&  symbolic_names_of_used_uniforms,
         std::vector<std::string> const&  lines_of_shader_code
         )
 {
@@ -958,9 +961,9 @@ void  fragment_shader_data::initialise(std::vector<std::string> const&  lines_of
 {
     TMPROF_BLOCK();
 
-    std::unordered_set<fragment_shader_input_buffer_binding_location>  input_buffer_bindings;
-    std::unordered_set<fragment_shader_output_binding_location>  output_buffer_bindings;
-    std::unordered_set<fragment_shader_uniform_symbolic_name>  symbolic_names_of_used_uniforms;
+    std::unordered_set<FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION>  input_buffer_bindings;
+    std::unordered_set<FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION>  output_buffer_bindings;
+    std::unordered_set<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME>  symbolic_names_of_used_uniforms;
     detail::parse_properties_from_fragment_shader_code(
             lines_of_shader_code,
             input_buffer_bindings,
@@ -979,9 +982,9 @@ void  fragment_shader_data::initialise(std::vector<std::string> const&  lines_of
 
 void  fragment_shader_data::initialise(
         GLuint const  id, 
-        std::unordered_set<fragment_shader_input_buffer_binding_location> const&  input_buffer_bindings,
-        std::unordered_set<fragment_shader_output_binding_location> const&  output_buffer_bindings,
-        std::unordered_set<fragment_shader_uniform_symbolic_name> const&  symbolic_names_of_used_uniforms,
+        std::unordered_set<FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  input_buffer_bindings,
+        std::unordered_set<FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION> const&  output_buffer_bindings,
+        std::unordered_set<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME> const&  symbolic_names_of_used_uniforms,
         std::vector<std::string> const&  lines_of_shader_code
         )
 {

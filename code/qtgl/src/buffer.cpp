@@ -554,7 +554,7 @@ namespace qtgl { namespace detail {
 
 
 static void  load_buffers_map(
-        std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths,
+        std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths,
         buffers_binding_data::buffers_map_type&  buffers,
         std::function<void()> const&  initialiser,
         async::finalise_load_on_destroy_ptr  finaliser
@@ -565,7 +565,7 @@ static void  load_buffers_map(
     struct local
     {
         static void  on_buffer_loaded(
-                std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths,
+                std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths,
                 buffers_binding_data::buffers_map_type::iterator  it,
                 buffers_binding_data::buffers_map_type&  buffers,
                 std::function<void()> const&  initialiser,
@@ -626,7 +626,7 @@ static void  load_buffers_map(
 buffers_binding_data::buffers_binding_data(
         async::finalise_load_on_destroy_ptr  finaliser,
         boost::filesystem::path const&  index_buffer_path,
-        std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths
+        std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths
         )
     : m_id(0U)
     , m_index_buffer()
@@ -651,7 +651,7 @@ buffers_binding_data::buffers_binding_data(
 buffers_binding_data::buffers_binding_data(
         async::finalise_load_on_destroy_ptr  finaliser,
         natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
-        std::unordered_map<vertex_shader_input_buffer_binding_location, boost::filesystem::path> const&  paths
+        std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths
         )
     : m_id(0U)
     , m_index_buffer()
@@ -697,8 +697,8 @@ void  buffers_binding_data::initialise(
         (!m_index_buffer.empty() && m_num_indices_per_primitive == 0U)
         );
     ASSUMPTION(m_buffers.size() <= (natural_64_bit)GL_MAX_VERTEX_ATTRIBS);
-    ASSUMPTION(m_buffers.count(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION) == 1UL);
-    ASSUMPTION(m_buffers.at(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION).has_boundary());
+    ASSUMPTION(m_buffers.count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION) == 1UL);
+    ASSUMPTION(m_buffers.at(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION).has_boundary());
     ASSUMPTION(
         [this]() -> bool {
                 for (auto const& elem : m_buffers)
@@ -802,7 +802,7 @@ bool  buffers_binding::make_current() const
         detail::current_draw::set_index_buffer_id(0U);
         detail::current_draw::set_num_components_per_primitive(get_num_indices_per_primitive());
         detail::current_draw::set_num_primitives(
-            get_buffers().at(vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION).num_primitives()
+            get_buffers().at(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION).num_primitives()
             );
     }
     else

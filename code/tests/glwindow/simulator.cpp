@@ -151,9 +151,9 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                     0U,
                     object_index_buffer,
                     {
-                        { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION, object_vertex_buffer },
-                        { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR, object_colour_buffer },
-                        { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_TEXCOORD0, object_texcoord_buffer },
+                        { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION, object_vertex_buffer },
+                        { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE, object_colour_buffer },
+                        { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0, object_texcoord_buffer },
                     }
                     );
     qtgl::shaders_binding const  object_shaders_binding =
@@ -170,7 +170,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
     }
     qtgl::textures_binding const  object_textures_binding({
                     {
-                        qtgl::fragment_shader_uniform_symbolic_name::TEXTURE_SAMPLER_DIFFUSE,
+                        qtgl::FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE,
                         use_chessboard_texture ?
                                 qtgl::make_chessboard_texture() :
                                 qtgl::texture("../data/shared/gfx/textures/ruler.txt")
@@ -212,8 +212,8 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                         0U,
                         2U,
                         {
-                            { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_POSITION, grid_vertex_buffer },
-                            { qtgl::vertex_shader_input_buffer_binding_location::BINDING_IN_COLOUR, grid_colour_buffer },
+                            { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION, grid_vertex_buffer },
+                            { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE, grid_colour_buffer },
                         }
                         )
                 };
@@ -243,10 +243,10 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
         if (qtgl::make_current(object_shaders_binding))
         {
             object_shaders_binding.get_vertex_shader().set_uniform_variable(
-                                       qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED,
+                                       qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED,
                                        object_transform_matrix);
             object_shaders_binding.get_vertex_shader().set_uniform_variable(
-                                       qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA,
+                                       qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA,
                                        0.5f);
         }
         qtgl::make_current(object_buffers_binding);
@@ -261,7 +261,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
         if (qtgl::make_current(grid_shaders_binding))
         {
             grid_shaders_binding.get_vertex_shader().set_uniform_variable(
-                                       qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED,
+                                       qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED,
                                        grid_transform_matrix);
         }
         qtgl::make_current(grid_buffers_binding);

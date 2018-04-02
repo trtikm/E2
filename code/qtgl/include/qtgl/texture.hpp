@@ -281,7 +281,7 @@ namespace qtgl { namespace detail {
 
 struct textures_binding_data
 {
-    using  binding_map_type = std::unordered_map<fragment_shader_uniform_symbolic_name, texture>;
+    using  binding_map_type = std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, texture>;
 
     textures_binding_data(
             async::finalise_load_on_destroy_ptr,

@@ -296,14 +296,14 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
         if (qtgl::make_current(m_batch_grid, *draw_state))
         {
             matrix44 const  transform_matrix = view_projection_matrix;
-            for (qtgl::vertex_shader_uniform_symbolic_name const uniform : m_batch_grid.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
+            for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : m_batch_grid.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                 switch (uniform)
                 {
-                case qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA:
                     break;
-                case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                     break;
-                case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
                     m_batch_grid.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, transform_matrix);
                     break;
                 }
@@ -332,15 +332,15 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                         std::min(std::abs(it->second.spiking_potential()),1.0f)
                         );
 
-                for (qtgl::vertex_shader_uniform_symbolic_name const uniform : m_batch_cell.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
+                for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : m_batch_cell.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                     switch (uniform)
                     {
-                    case qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA:
                         break;
-                    case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                         m_batch_cell.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, diffuse_colour);
                         break;
-                    case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
                         m_batch_cell.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform,transform_matrix);
                         break;
                     }
@@ -381,15 +381,15 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                 angeo::from_base_matrix(angeo::coordinate_system(it->first, orientation), world_transformation);
                 matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
 
-                for (qtgl::vertex_shader_uniform_symbolic_name const uniform : m_batch_input_spot.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
+                for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : m_batch_input_spot.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                     switch (uniform)
                     {
-                    case qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA:
                         break;
-                    case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                         m_batch_input_spot.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, vector4(1.0f, 1.0f, 1.0f, 0.0f));
                         break;
-                    case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
                         m_batch_input_spot.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, transform_matrix);
                         break;
                     }
@@ -423,15 +423,15 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                 angeo::from_base_matrix(angeo::coordinate_system(oterm.pos(), orientation), world_transformation);
                 matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
 
-                for (qtgl::vertex_shader_uniform_symbolic_name const uniform : m_batch_output_terminal.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
+                for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : m_batch_output_terminal.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                     switch (uniform)
                     {
-                    case qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA:
                         break;
-                    case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                         m_batch_output_terminal.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, vector4(1.0f, 1.0f, 1.0f, 0.0f));
                         break;
-                    case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
                         m_batch_output_terminal.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, transform_matrix);
                         break;
                     }
@@ -457,14 +457,14 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
         if (qtgl::make_current(m_selected_cell_input_spot_lines, *draw_state))
         {
             matrix44 const  transform_matrix = view_projection_matrix;
-            for (qtgl::vertex_shader_uniform_symbolic_name const uniform : m_selected_cell_input_spot_lines.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
+            for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : m_selected_cell_input_spot_lines.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                 switch (uniform)
                 {
-                case qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA:
                     break;
-                case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                     break;
-                case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
                     m_selected_cell_input_spot_lines.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, transform_matrix);
                     break;
                 }
@@ -480,14 +480,14 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
         if (qtgl::make_current(m_selected_cell_output_terminal_lines, *draw_state))
         {
             matrix44 const  transform_matrix = view_projection_matrix;
-            for (qtgl::vertex_shader_uniform_symbolic_name const uniform : m_selected_cell_output_terminal_lines.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
+            for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : m_selected_cell_output_terminal_lines.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                 switch (uniform)
                 {
-                case qtgl::vertex_shader_uniform_symbolic_name::COLOUR_ALPHA:
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA:
                     break;
-                case qtgl::vertex_shader_uniform_symbolic_name::DIFFUSE_COLOUR:
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                     break;
-                case qtgl::vertex_shader_uniform_symbolic_name::TRANSFORM_MATRIX_TRANSPOSED:
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
                     m_selected_cell_output_terminal_lines.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, transform_matrix);
                     break;
                 }

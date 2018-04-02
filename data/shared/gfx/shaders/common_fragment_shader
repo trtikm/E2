@@ -3,23 +3,24 @@
 #endif
 
 //  These must match the corresponding values of
-//  enum 'fragment_shader_input_buffer_binding_location'
+//  enum 'FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION'
 //  in the file 'qtgl/shader_data_binding.hpp'.
 
 // Location specifiers for input 'in' variables, i.e. values X in layout(location=X)
 #define BINDING_IN_POSITION                 0
-#define BINDING_IN_COLOUR                   1
-#define BINDING_IN_NORMAL                   2
-#define BINDING_IN_TEXCOORD0                3
-#define BINDING_IN_TEXCOORD1                4
-#define BINDING_IN_TEXCOORD2                5
-#define BINDING_IN_TEXCOORD3                6
-#define BINDING_IN_TEXCOORD4                7
-#define BINDING_IN_TEXCOORD5                8
-#define BINDING_IN_TEXCOORD6                9
-#define BINDING_IN_TEXCOORD7                10
-#define BINDING_IN_TEXCOORD8                11
-#define BINDING_IN_TEXCOORD9                12
+#define BINDING_IN_DIFFUSE                  1
+#define BINDING_IN_SPECULAR                 2
+#define BINDING_IN_NORMAL                   3
+#define BINDING_IN_TEXCOORD0                4
+#define BINDING_IN_TEXCOORD1                5
+#define BINDING_IN_TEXCOORD2                6
+#define BINDING_IN_TEXCOORD3                7
+#define BINDING_IN_TEXCOORD4                8
+#define BINDING_IN_TEXCOORD5                9
+#define BINDING_IN_TEXCOORD6                10
+#define BINDING_IN_TEXCOORD7                11
+#define BINDING_IN_TEXCOORD8                12
+#define BINDING_IN_TEXCOORD9                13
 
 // Location specifiers for output 'out' variables, i.e. values X in layout(location=X)
 #define BINDING_OUT_COLOUR                  0
@@ -30,7 +31,7 @@
 
 // Names of special uniform 'uniform' variables.
 // These values must match return values of
-// enum 'fragment_shader_uniform_symbolic_name'
+// enum 'FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME'
 // in the file 'qtgl/shader_data_binding.hpp'.
 // Important examples of uniform variables
 // are texture samplers
