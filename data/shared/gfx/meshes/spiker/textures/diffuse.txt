@@ -1,0 +1,2 @@
+0
+textures\spiker\spiker_diffuse.txt
