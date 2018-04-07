@@ -20,8 +20,6 @@ struct  batch_available_resources_data  final
                             //        BINDING_IN_DIFFUSE
                             //        BINDING_IN_SPECULAR
                             //        BINDING_IN_NORMAL
-                            //        BINDING_IN_INDICES_OF_MATRICES
-                            //        BINDING_IN_WEIGHTS_OF_MATRICES
                         std::string
                             // Full path-name of the corresponding resource file on the disk, or any other string
                             // (typically "") in case of generated buffer (e.g. for grid, lines, sphere, box)
@@ -53,21 +51,59 @@ struct  batch_available_resources_data  final
                                 >
                         >;
 
+    // Stores pathnames of all 3 files defining the skeletal data of the batch
+    struct  skeletal_info
+    {
+        skeletal_info(
+                std::string const&  alignment_,     // Pathname of the spatial alignment file.
+                std::string const&  indices_,       // Pathname of the indices of matrices file.
+                std::string const&  weights_        // Pathname of the weights of matrices file.
+                )
+            : m_alignment(alignment_)
+            , m_indices(indices_)
+            , m_weights(weights_)
+        {}
+
+        std::string const&  alignment() const { return m_alignment; }
+        std::string const&  indices() const { return m_indices; }
+        std::string const&  weights() const { return  m_weights; }
+
+    private:
+        std::string  m_alignment;
+        std::string  m_indices;
+        std::string  m_weights;
+    };
+
+    using  skeletal_dictionary_type =
+                std::unordered_map<
+                    std::string,
+                        // A full pathname of a directory under which is a skeleton and its animations.
+                        // Typically, the directory is of the form '<some-path>/animation/skeletal/<skeleton-name>'.
+                    skeletal_info
+                        // Holds pathnames of files containing batch-specific data related to the skeleton above.
+                    >;
+
     batch_available_resources_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr);
 
     batch_available_resources_data(
             async::finalise_load_on_destroy_ptr,
             buffers_dictionaty_type const&  buffers_,
-            textures_dictionary_type const&  textures_
+            textures_dictionary_type const&  textures_,
+            skeletal_dictionary_type const&  skeletal_,
+            std::string const&  index_buffer
             );
 
     buffers_dictionaty_type const&  buffers() const { return m_buffers; }
     textures_dictionary_type const&  textures() const { return m_textures; }
+    skeletal_dictionary_type const&  skeletal() const { return m_skeletal; }
+    std::string const&  index_buffer() const { return m_index_buffer; }
 
 private:
 
     buffers_dictionaty_type  m_buffers;
     textures_dictionary_type  m_textures;
+    skeletal_dictionary_type  m_skeletal;
+    std::string  m_index_buffer;
 };
 
 
@@ -80,6 +116,8 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
 {
     using  buffers_dictionaty_type = detail::batch_available_resources_data::buffers_dictionaty_type;
     using  textures_dictionary_type = detail::batch_available_resources_data::textures_dictionary_type;
+    using  skeletal_info = detail::batch_available_resources_data::skeletal_info;
+    using  skeletal_dictionary_type = detail::batch_available_resources_data::skeletal_dictionary_type;
 
     batch_available_resources() : async::resource_accessor<detail::batch_available_resources_data>()
     {}
@@ -91,13 +129,17 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
     batch_available_resources(
             buffers_dictionaty_type const&  buffers_,
             textures_dictionary_type const&  textures_,
+            skeletal_dictionary_type const&  skeletal_,
+            std::string const&  index_buffer,
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::batch_available_resources_data>(
                 key,
                 async::notification_callback_type(),
                 buffers_,
-                textures_
+                textures_,
+                skeletal_,
+                index_buffer
                 )
     {}
 
@@ -126,12 +168,16 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
                             result.insert({elem.first, {it->second,""}});
                         }
                         return result;
-                    }()
+                    }(),
+                skeletal_dictionary_type{},
+                std::string()
                 )
     {}
 
     buffers_dictionaty_type const&  buffers() const { return resource().buffers(); }
     textures_dictionary_type const&  textures() const { return resource().textures(); }
+    skeletal_dictionary_type const&  skeletal() const { return resource().skeletal(); }
+    std::string const&  index_buffer() const { return resource().index_buffer(); }
 };
 
 

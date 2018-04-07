@@ -33,6 +33,12 @@ inline natural_32_bit  value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  
 { return static_cast<natural_8_bit>(location); }
 std::string  name(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  location);
 
+inline natural_8_bit  get_num_texcoord_binding_locations()
+{
+    return value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD9) -
+           value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0) + 1U;
+}
+
 inline VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION  get_texcoord_binding_location(natural_8_bit const  texcood_index)
 {
     return VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION(

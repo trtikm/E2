@@ -65,6 +65,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/utility/dynamic_linking.hpp
     
     ./include/utility/std_pair_hash.hpp     
+
+    ./include/utility/read_line.hpp
+    ./src/read_line.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
