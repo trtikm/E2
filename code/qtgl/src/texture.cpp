@@ -358,6 +358,7 @@ void  texture_data::create_gl_image()
     glapi().glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, y_wrapping_type());
     glapi().glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filtering_type());
     glapi().glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mag_filtering_type());
+    INVARIANT(glapi().glGetError() == 0U);
 }
 
 
@@ -369,6 +370,7 @@ void  texture_data::destroy_gl_image()
     TMPROF_BLOCK();
 
     glapi().glDeleteTextures(1U, &m_id);
+    INVARIANT(glapi().glGetError() == 0U);
 }
 
 

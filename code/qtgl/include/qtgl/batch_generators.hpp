@@ -1,15 +1,52 @@
 #ifndef QTGL_BATCH_GENERATORS_HPP_INCLUDED
 #   define QTGL_BATCH_GENERATORS_HPP_INCLUDED
 
-#   include <qtgl/buffer_generators.hpp>
 #   include <qtgl/batch.hpp>
 #   include <angeo/tensor_math.hpp>
-#   include <boost/filesystem/path.hpp>
 #   include <array>
 #   include <vector>
 
 namespace qtgl {
 
+
+batch  create_lines3d(
+        std::vector< std::array<float_32_bit, 3> > const&  vertices,
+        std::vector< std::array<float_32_bit, 4> > const&  colours,
+        std::string const&  id = ""
+        );
+
+batch  create_lines3d(
+        std::vector< std::array<float_32_bit, 3> > const&  vertices,
+        std::array<float_32_bit, 4> const&  common_colour,
+        std::string const&  id = ""
+        );
+
+batch  create_lines3d(
+        std::vector< std::array<float_32_bit, 3> > const&  vertices,
+        vector4 const&  common_colour,
+        std::string const&  id = ""
+        );
+
+batch  create_lines3d(
+        std::vector< std::pair<vector3,vector3> > const&  lines,
+        std::vector< vector4 > const&  colours_of_lines,
+        std::string const&  id = ""
+        );
+
+batch  create_lines3d(
+        std::vector< std::pair<vector3,vector3> > const&  lines,
+        vector4 const&  common_colour,
+        std::string const&  id = ""
+        );
+
+
+enum struct  GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE : natural_8_bit
+{
+    NONE                        = 0,
+    TRIANGLE                    = 1,
+    RIGHT_ANGLES_TO_Z_AXIS      = 2,
+    RIGHT_ANGLES_TO_ALL_AXES    = 3,
+};
 
 batch  create_grid(
         float_32_bit const  max_x_coordinate,
@@ -17,42 +54,26 @@ batch  create_grid(
         float_32_bit const  max_z_coordinate,
         float_32_bit const  step_along_x_axis,
         float_32_bit const  step_along_y_axis,
-        std::array<float_32_bit, 3> const&  colour_for_x_lines,
-        std::array<float_32_bit, 3> const&  colour_for_y_lines,
-        std::array<float_32_bit, 3> const&  colour_for_highlighted_x_lines,
-        std::array<float_32_bit, 3> const&  colour_for_highlighted_y_lines,
-        std::array<float_32_bit, 3> const&  colour_for_central_x_line,
-        std::array<float_32_bit, 3> const&  colour_for_central_y_line,
-        std::array<float_32_bit, 3> const&  colour_for_central_z_line,
+        std::array<float_32_bit, 4> const&  colour_for_x_lines,
+        std::array<float_32_bit, 4> const&  colour_for_y_lines,
+        std::array<float_32_bit, 4> const&  colour_for_highlighted_x_lines,
+        std::array<float_32_bit, 4> const&  colour_for_highlighted_y_lines,
+        std::array<float_32_bit, 4> const&  colour_for_central_x_line,
+        std::array<float_32_bit, 4> const&  colour_for_central_y_line,
+        std::array<float_32_bit, 4> const&  colour_for_central_z_line,
         natural_32_bit const  highlight_every,
         GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE const  main_exes_orientation_marker_type,
-        boost::filesystem::path const&  data_root_dir,
         std::string const&  id = ""
         );
 
 
-batch  create_lines3d(
-        std::vector< std::array<float_32_bit, 3> >  vertices,
-        std::vector< std::array<float_32_bit, 3> >  colours,
-        boost::filesystem::path const&  data_root_dir,
-        std::string const&  id = ""
-        );
-
-batch  create_lines3d(
-        std::vector< std::pair<vector3,vector3> > const&  lines,
-        vector3 const&  common_colour,
-        boost::filesystem::path const&  data_root_dir,
-        std::string const&  id = ""
-        );
-
-
-batch  create_basis_vectors(boost::filesystem::path const&  data_root_dir);
+batch  create_basis_vectors();
 
 
 batch  create_wireframe_box(
         vector3 const&  lo_corner,
         vector3 const&  hi_corner,
-        boost::filesystem::path const&  data_root_dir,
+        vector4 const&  colour,
         std::string const&  id = ""
         );
 
@@ -60,7 +81,7 @@ batch  create_wireframe_box(
 batch  create_wireframe_sphere(
         float_32_bit const  radius,
         natural_8_bit const  num_lines_per_quarter_of_circle,
-        boost::filesystem::path const&  data_root_dir,
+        vector4 const&  colour,
         std::string const&  id = ""
         );
 
@@ -72,7 +93,7 @@ batch  create_wireframe_perspective_frustum(
         float_32_bit const  right_plane,
         float_32_bit const  top_plane,
         float_32_bit const  bottom_plane,
-        boost::filesystem::path const&  data_root_dir,
+        vector4 const&  colour,
         std::string const&  id = ""
         );
 

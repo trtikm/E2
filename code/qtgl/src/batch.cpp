@@ -1,5 +1,6 @@
 #include <qtgl/batch.hpp>
 #include <qtgl/shader_data_bindings.hpp>
+#include <qtgl/shader_compose.hpp>
 #include <qtgl/detail/read_line.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -114,7 +115,7 @@ batch_data::batch_data(boost::filesystem::path const&  path, async::finalise_loa
             natural_8_bit  location = value(min_FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME());
             bool  found = false;
             for ( ; location <= value(max_FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME()); ++location)
-                if (line == uniform_name_symbolic(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME(location)))
+                if (line == name(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME(location)))
                 {
                     found = true;
                     break;
@@ -264,6 +265,72 @@ batch_data::batch_data(boost::filesystem::path const&  path, async::finalise_loa
 }
 
 
+batch_data::batch_data(
+        async::finalise_load_on_destroy_ptr,
+        buffers_binding const  buffers_binding_,
+        textures_binding const  textures_binding_,
+        texcoord_binding const&  texcoord_binding_,
+        effects_config const&  effects,
+        draw_state_ptr const  draw_state_,
+        modelspace const  modelspace_
+        )
+{
+    batch_available_resources const  resources(
+            buffers_binding_.get_buffers(),
+            textures_binding_.empty() ? textures_binding::binding_map_type{} : textures_binding_.bindings_map(),
+            texcoord_binding_
+            );
+    std::vector<std::string>  vs_source;
+    std::string  vs_uid;
+    std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>  vs_input;
+    std::unordered_set<VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION>  vs_output;
+    std::unordered_set<VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME>  vs_uniforms;
+    std::vector<std::string>  fs_source;
+    std::string  fs_uid;
+    std::unordered_set<FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION>  fs_input;
+    std::unordered_set<FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION>  fs_output;
+    std::unordered_set<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME>  fs_uniforms;
+    shader_compose_result_type  result{"", effects};
+    while (true)
+    {
+        effects_config const  old_effects = result.second;
+        result = compose_vertex_and_fragment_shader(
+                        resources,
+                        old_effects,
+                        vs_source,
+                        vs_uid,
+                        vs_input,
+                        vs_output,
+                        vs_uniforms,
+                        fs_source,
+                        fs_uid,
+                        fs_input,
+                        fs_output,
+                        fs_uniforms
+                        );
+        if (old_effects == result.second)   // Was the current configuration successfull? I.e., was it not necessary
+                                            // to generate another to result.second?
+        {
+            if (!result.first.empty())
+            {
+                UNREACHABLE();  // We got to some errorneour effects configuration from which we cannot recover.
+                                // That should never happen.
+            }
+            break;
+        }
+        INVARIANT(!result.first.empty());   // The current configuration failed, so new one was proposed (to result.second)
+                                            // and the error message (in result.first) must have been produced.
+        result.first.clear();
+    }
+    shaders_binding const  shaders_binding_{
+        vertex_shader{vs_input, vs_output, vs_uniforms, vs_source, vs_uid},
+        fragment_shader{fs_input, fs_output, fs_uniforms, fs_source, fs_uid},
+        "shaders_binding{" + vs_uid + "," + vs_uid + "}"
+    };
+    initialise(buffers_binding_,shaders_binding_,textures_binding_,draw_state_,modelspace_);
+}
+
+
 batch_data::~batch_data()
 {
     TMPROF_BLOCK();
@@ -271,20 +338,20 @@ batch_data::~batch_data()
 
 
 void  batch_data::initialise(
-        buffers_binding const  buffers_binding,
-        shaders_binding const  shaders_binding,
-        textures_binding const  textures_binding,
-        draw_state_ptr const  draw_state,
-        modelspace const  modelspace
+        buffers_binding const  buffers_binding_,
+        shaders_binding const  shaders_binding_,
+        textures_binding const  textures_binding_,
+        draw_state_ptr const  draw_state_,
+        modelspace const  modelspace_
         )
 {
     TMPROF_BLOCK();
 
-    m_buffers_binding = buffers_binding;
-    m_shaders_binding = shaders_binding;
-    m_textures_binding = textures_binding;
-    m_draw_state = draw_state;
-    m_modelspace = modelspace;
+    m_buffers_binding = buffers_binding_;
+    m_shaders_binding = shaders_binding_;
+    m_textures_binding = textures_binding_;
+    m_draw_state = draw_state_;
+    m_modelspace = modelspace_;
     m_ready = false;
 }
 

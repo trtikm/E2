@@ -26,7 +26,7 @@ void  dbg_network_camera::enable(qtgl::camera_perspective_ptr const  camera)
     m_camera->set_far_plane(m_far_plane);
     m_camera->set_coordinate_system(*camera->coordinate_system());
 
-    m_batch_basis = qtgl::create_basis_vectors(get_program_options()->dataRoot());
+    m_batch_basis = qtgl::create_basis_vectors();
 
     m_batch_camera_frustum =
         qtgl::create_wireframe_perspective_frustum(
@@ -36,7 +36,7 @@ void  dbg_network_camera::enable(qtgl::camera_perspective_ptr const  camera)
                 m_camera->right(),
                 m_camera->top(),
                 m_camera->bottom(),
-                get_program_options()->dataRoot()
+                vector4(1.0f, 1.0f, 1.0f, 1.0f)
                 );
 }
 
@@ -64,7 +64,7 @@ void  dbg_network_camera::set_far_plane(float_32_bit const  value)
                     m_camera->right(),
                     m_camera->top(),
                     m_camera->bottom(),
-                    get_program_options()->dataRoot()
+                    vector4(1.0f, 1.0f, 1.0f, 1.0f)
                     );
     }
 }
@@ -82,7 +82,7 @@ void  dbg_network_camera::on_window_resized(qtgl::window_props const&  window_pr
                 m_camera->right(),
                 m_camera->top(),
                 m_camera->bottom(),
-                get_program_options()->dataRoot()
+                vector4(1.0f, 1.0f, 1.0f, 1.0f)
                 );
 }
 

@@ -52,7 +52,7 @@ std::string  name(VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION const  location)
     }
 }
 
-std::string  uniform_symbolic_name(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name)
+std::string  name(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name)
 {
     switch (symbolic_name)
     {
@@ -128,7 +128,7 @@ std::string  name(FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION const  location)
     }
 }
 
-std::string  uniform_name_symbolic(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform_symbolic_name)
+std::string  name(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform_symbolic_name)
 {
     switch (uniform_symbolic_name)
     {
@@ -151,7 +151,7 @@ std::string  uniform_name_symbolic(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  
 
 std::string  uniform_name(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform_symbolic_name)
 {
-    return "UNIFORM_" + uniform_name_symbolic(uniform_symbolic_name);
+    return "UNIFORM_" + name(uniform_symbolic_name);
 }
 
 bool  is_texture_sampler(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform_symbolic_name)
@@ -178,8 +178,8 @@ FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME  to_symbolic_uniform_name_of_fragment_shad
             std::unordered_map<std::string, FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME> map;
             for (natural_32_bit i = 0U; i < num_FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAMEs(); ++i)
                 map.insert({
-                    uniform_name_symbolic(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME(i)),
-                    FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME(i)
+                    qtgl::name(static_cast<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME>(i)),
+                    static_cast<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME>(i)
                     });
             return map;
         }();

@@ -1,14 +1,13 @@
-#include <qtgl/buffer_generators.hpp>
-#include <utility/assumptions.hpp>
+#include <qtgl/batch_generators.hpp>
 #include <utility/timeprof.hpp>
 
 namespace qtgl {
 
 
-void  create_wireframe_box_vertex_buffer(
+batch  create_wireframe_box(
         vector3 const&  lo_corner,
         vector3 const&  hi_corner,
-        buffer&  output_vertex_buffer,
+        vector4 const&  colour,
         std::string const&  id
         )
 {
@@ -30,7 +29,8 @@ void  create_wireframe_box_vertex_buffer(
         { hi_corner(0), hi_corner(1), lo_corner(2) }, { hi_corner(0), hi_corner(1), hi_corner(2) },
         { lo_corner(0), hi_corner(1), lo_corner(2) }, { lo_corner(0), hi_corner(1), hi_corner(2) },
     };
-    output_vertex_buffer = buffer(vertices, true, id.empty() ? id : "/generic/buffer/vertices/wireframe_box/" + id);
+
+    return create_lines3d(vertices, colour, id);
 }
 
 

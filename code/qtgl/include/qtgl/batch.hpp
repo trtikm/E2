@@ -1,11 +1,13 @@
 #ifndef QTGL_BATCH_HPP_INCLUDED
 #   define QTGL_BATCH_HPP_INCLUDED
 
-#   include <qtgl/draw_state.hpp>
+#   include <qtgl/batch_available_resources.hpp>
 #   include <qtgl/buffer.hpp>
 #   include <qtgl/shader.hpp>
 #   include <qtgl/texture.hpp>
+#   include <qtgl/effects_config.hpp>
 #   include <qtgl/modelspace.hpp>
+#   include <qtgl/draw_state.hpp>
 #   include <utility/async_resource_load.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <unordered_set>
@@ -21,15 +23,25 @@ struct batch_data
 
     batch_data(
             async::finalise_load_on_destroy_ptr,
-            buffers_binding const  buffers_binding,
-            shaders_binding const  shaders_binding,
-            textures_binding const  textures_binding,
-            draw_state_ptr const  draw_state,
-            modelspace const  modelspace
+            buffers_binding const  buffers_binding_,
+            shaders_binding const  shaders_binding_,
+            textures_binding const  textures_binding_,
+            draw_state_ptr const  draw_state_,
+            modelspace const  modelspace_
             )
     {
-        initialise(buffers_binding, shaders_binding, textures_binding, draw_state, modelspace);
+        initialise(buffers_binding_, shaders_binding_, textures_binding_, draw_state_, modelspace_);
     }
+
+    batch_data(
+            async::finalise_load_on_destroy_ptr,
+            buffers_binding const  buffers_binding_,
+            textures_binding const  textures_binding_,
+            texcoord_binding const&  texcoord_binding_,
+            effects_config const&  effects,
+            draw_state_ptr const  draw_state_,
+            modelspace const  modelspace_
+            );
 
     ~batch_data();
 
@@ -45,11 +57,11 @@ struct batch_data
 private:
 
     void  initialise(
-            buffers_binding const  buffers_binding,
-            shaders_binding const  shaders_binding,
-            textures_binding const  textures_binding,
-            draw_state_ptr const  draw_state,
-            modelspace const  modelspace
+            buffers_binding const  buffers_binding_,
+            shaders_binding const  shaders_binding_,
+            textures_binding const  textures_binding_,
+            draw_state_ptr const  draw_state_,
+            modelspace const  modelspace_
             );
 
     buffers_binding  m_buffers_binding;
@@ -76,20 +88,40 @@ struct batch : public async::resource_accessor<detail::batch_data>
     {}
 
     batch(  boost::filesystem::path const&  path,
-            buffers_binding const  buffers_binding,
-            shaders_binding const  shaders_binding,
-            textures_binding const  textures_binding,
-            draw_state_ptr const  draw_state,
-            modelspace const  modelspace
+            buffers_binding const  buffers_binding_,
+            shaders_binding const  shaders_binding_,
+            textures_binding const  textures_binding_,
+            draw_state_ptr const  draw_state_,
+            modelspace const  modelspace_
             )
         : async::resource_accessor<detail::batch_data>(
             path.string(),
             async::notification_callback_type(),
-            buffers_binding,
-            shaders_binding,
-            textures_binding,
-            draw_state,
-            modelspace
+            buffers_binding_,
+            shaders_binding_,
+            textures_binding_,
+            draw_state_,
+            modelspace_
+            )
+    {}
+
+    batch(  boost::filesystem::path const&  path,
+            buffers_binding const  buffers_binding_,
+            textures_binding const  textures_binding_,
+            texcoord_binding const&  texcoord_binding_,
+            effects_config const&  effects,
+            draw_state_ptr const  draw_state_,
+            modelspace const  modelspace_
+            )
+        : async::resource_accessor<detail::batch_data>(
+            path.string(),
+            async::notification_callback_type(),
+            buffers_binding_,
+            textures_binding_,
+            texcoord_binding_,
+            effects,
+            draw_state_,
+            modelspace_
             )
     {}
 

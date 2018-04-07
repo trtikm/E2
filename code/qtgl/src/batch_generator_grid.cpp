@@ -1,29 +1,26 @@
-#include <qtgl/buffer_generators.hpp>
+#include <qtgl/batch_generators.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/timeprof.hpp>
 
 namespace qtgl {
 
 
-void  create_grid_vertex_and_colour_buffers(
+batch  create_grid(
         float_32_bit const  max_x_coordinate,
         float_32_bit const  max_y_coordinate,
         float_32_bit const  max_z_coordinate,
         float_32_bit const  step_along_x_axis,
         float_32_bit const  step_along_y_axis,
-        std::array<float_32_bit,3> const&  colour_for_x_lines,
-        std::array<float_32_bit,3> const&  colour_for_y_lines,
-        std::array<float_32_bit,3> const&  colour_for_highlighted_x_lines,
-        std::array<float_32_bit,3> const&  colour_for_highlighted_y_lines,
-        std::array<float_32_bit,3> const&  colour_for_central_x_line,
-        std::array<float_32_bit,3> const&  colour_for_central_y_line,
-        std::array<float_32_bit,3> const&  colour_for_central_z_line,
+        std::array<float_32_bit, 4> const&  colour_for_x_lines,
+        std::array<float_32_bit, 4> const&  colour_for_y_lines,
+        std::array<float_32_bit, 4> const&  colour_for_highlighted_x_lines,
+        std::array<float_32_bit, 4> const&  colour_for_highlighted_y_lines,
+        std::array<float_32_bit, 4> const&  colour_for_central_x_line,
+        std::array<float_32_bit, 4> const&  colour_for_central_y_line,
+        std::array<float_32_bit, 4> const&  colour_for_central_z_line,
         natural_32_bit const  highlight_every,
         GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE const  main_exes_orientation_marker_type,
-        buffer&  output_vertex_buffer,
-        buffer&  output_colour_buffer,
-        std::string const&  id_vertices,
-        std::string const&  id_indices
+        std::string const&  id
         )
 {
     TMPROF_BLOCK();
@@ -36,7 +33,7 @@ void  create_grid_vertex_and_colour_buffers(
     ASSUMPTION(highlight_every > 0U);
 
     std::vector< std::array<float_32_bit,3> >  vertices;
-    std::vector< std::array<float_32_bit,3> >  colours;
+    std::vector< std::array<float_32_bit,4> >  colours;
     {
         natural_32_bit  num_steps = 0U;
         for (float_32_bit  coord_x = 0.0f; coord_x <= max_x_coordinate; coord_x += step_along_x_axis, ++num_steps)
@@ -110,10 +107,11 @@ void  create_grid_vertex_and_colour_buffers(
         {
             if (main_exes_orientation_marker_type == GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::RIGHT_ANGLES_TO_ALL_AXES)
             {
-                std::array<float_32_bit, 3> const  colour_for_central_xy_line{
+                std::array<float_32_bit, 4> const  colour_for_central_xy_line{
                     0.5f * (colour_for_central_x_line[0] + colour_for_central_y_line[0]),
                     0.5f * (colour_for_central_x_line[1] + colour_for_central_y_line[1]),
                     0.5f * (colour_for_central_x_line[2] + colour_for_central_y_line[2]),
+                    0.5f * (colour_for_central_x_line[3] + colour_for_central_y_line[3]),
                 };
 
                 vertices.push_back({ 1.0f, 0.0f, 0.0f });
@@ -127,15 +125,17 @@ void  create_grid_vertex_and_colour_buffers(
                 colours.push_back(colour_for_central_y_line);
             }
 
-            std::array<float_32_bit, 3> const  colour_for_central_xz_line{
+            std::array<float_32_bit, 4> const  colour_for_central_xz_line{
                 0.5f * (colour_for_central_x_line[0] + colour_for_central_z_line[0]),
                 0.5f * (colour_for_central_x_line[1] + colour_for_central_z_line[1]),
                 0.5f * (colour_for_central_x_line[2] + colour_for_central_z_line[2]),
+                0.5f * (colour_for_central_x_line[3] + colour_for_central_z_line[3]),
             };
-            std::array<float_32_bit, 3> const  colour_for_central_yz_line{
+            std::array<float_32_bit, 4> const  colour_for_central_yz_line{
                 0.5f * (colour_for_central_y_line[0] + colour_for_central_z_line[0]),
                 0.5f * (colour_for_central_y_line[1] + colour_for_central_z_line[1]),
                 0.5f * (colour_for_central_y_line[2] + colour_for_central_z_line[2]),
+                0.5f * (colour_for_central_y_line[3] + colour_for_central_z_line[3]),
             };
 
             vertices.push_back({ 1.0f, 0.0f, 0.0f });
@@ -159,10 +159,8 @@ void  create_grid_vertex_and_colour_buffers(
             colours.push_back(colour_for_central_z_line);
         }
     }
-    output_vertex_buffer =
-        buffer(vertices, true, id_vertices.empty() ? id_vertices : "/generic/buffer/vertices/grid/" + id_vertices);
-    output_colour_buffer =
-        buffer(colours, false, id_indices.empty() ? id_indices : "/generic/buffer/colour/grid/" + id_indices);
+
+    return create_lines3d(vertices, colours, id);
 }
 
 

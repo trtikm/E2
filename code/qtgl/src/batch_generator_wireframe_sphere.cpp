@@ -1,4 +1,4 @@
-#include <qtgl/buffer_generators.hpp>
+#include <qtgl/batch_generators.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
@@ -6,10 +6,10 @@
 namespace qtgl {
 
 
-void  create_wireframe_sphere_vertex_buffer(
+batch  create_wireframe_sphere(
         float_32_bit const  radius,
         natural_8_bit const  num_lines_per_quarter_of_circle,
-        buffer&  output_vertex_buffer,
+        vector4 const&  colour,
         std::string const&  id
         )
 {
@@ -57,9 +57,8 @@ void  create_wireframe_sphere_vertex_buffer(
         vertices.push_back({ 0.0f, v[0], v[1] });
     }
 
-    output_vertex_buffer = buffer(vertices, true, id.empty() ? id : "/generic/buffer/vertices/wireframe_sphere/" + id);
+    return create_lines3d(vertices, colour, id);
 }
-
 
 
 }

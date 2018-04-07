@@ -34,11 +34,7 @@ private:
     qtgl::free_fly_config  m_free_fly_config;
 
     angeo::coordinate_system_ptr  m_grid_space;
-    qtgl::buffer  m_grid_vertex_buffer;
-    qtgl::buffer  m_grid_colour_buffer;
-    qtgl::buffers_binding  m_grid_buffers_binding;
-    qtgl::shaders_binding  m_grid_shaders_binding;
-    qtgl::draw_state_ptr  m_grid_draw_state;
+    qtgl::batch  m_grid_batch;
 
     angeo::coordinate_system_ptr  m_batch_space;
     std::vector<qtgl::batch>  m_batches;

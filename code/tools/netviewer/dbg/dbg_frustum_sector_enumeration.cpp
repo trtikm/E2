@@ -44,7 +44,7 @@ void  dbg_frustum_sector_enumeration::enumerate(
                         +0.5f * vector3{ props.distance_of_spikers_along_x_axis_in_meters(),
                                          props.distance_of_spikers_along_y_axis_in_meters(),
                                          props.distance_of_spikers_along_c_axis_in_meters() },
-                        get_program_options()->dataRoot(),
+                        vector4(0.5f, 0.5f, 0.5f, 1.0f),
                         msgstream() << "netviewer/spiker_sector_of_layer_" << layer_index
                         );
         netview::enumerate_spiker_positions(
@@ -64,7 +64,7 @@ void  dbg_frustum_sector_enumeration::enumerate(
                         +0.5f * vector3{ props.distance_of_docks_in_meters(),
                                          props.distance_of_docks_in_meters(),
                                          props.distance_of_docks_in_meters() },
-                        get_program_options()->dataRoot(),
+                        vector4(0.5f, 0.5f, 0.5f, 1.0f),
                         msgstream() << "netviewer/dock_sector_of_layer_" << layer_index
                         );
         netview::enumerate_dock_positions(

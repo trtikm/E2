@@ -1,7 +1,7 @@
 #include "./simulator.hpp"
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
-#include <qtgl/buffer_generators.hpp>
+#include <qtgl/batch_generators.hpp>
 #include <angeo/tensor_math.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/assumptions.hpp>
@@ -154,11 +154,24 @@ simulator::simulator(vector3 const&  initial_clear_colour)
             }
 
     , m_grid_space{ angeo::coordinate_system::create(vector3_zero(),quaternion_identity()) }
-    , m_grid_vertex_buffer()
-    , m_grid_colour_buffer()
-    , m_grid_buffers_binding()
-    , m_grid_shaders_binding()
-    , m_grid_draw_state(qtgl::draw_state::create())
+    , m_grid_batch(
+            qtgl::create_grid(
+                50.0f,
+                50.0f,
+                50.0f,
+                1.0f,
+                1.0f,
+                { 0.4f, 0.4f, 0.4f },
+                { 0.4f, 0.4f, 0.4f },
+                { 0.5f, 0.5f, 0.5f },
+                { 0.5f, 0.5f, 0.5f },
+                { 1.0f, 0.0f, 0.0f },
+                { 0.0f, 1.0f, 0.0f },
+                { 0.0f, 0.0f, 1.0f },
+                10U,
+                qtgl::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE
+                )
+            )
 
     , m_batch_space{ angeo::coordinate_system::create(vector3_zero(),quaternion_identity()) }
     , m_batches{
@@ -174,39 +187,6 @@ simulator::simulator(vector3 const&  initial_clear_colour)
     LOG(debug,"simulator::simulator()");
 
     set_clear_color(initial_clear_colour);
-
-    qtgl::create_grid_vertex_and_colour_buffers(
-                50.0f,
-                50.0f,
-                50.0f,
-                1.0f,
-                1.0f,
-                { 0.4f, 0.4f, 0.4f },
-                { 0.4f, 0.4f, 0.4f },
-                { 0.5f, 0.5f, 0.5f },
-                { 0.5f, 0.5f, 0.5f },
-                { 1.0f, 0.0f, 0.0f },
-                { 0.0f, 1.0f, 0.0f },
-                { 0.0f, 0.0f, 1.0f },
-                10U,
-                qtgl::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE,
-                m_grid_vertex_buffer,
-                m_grid_colour_buffer
-                );
-    m_grid_buffers_binding =
-                qtgl::buffers_binding(
-                        0U,
-                        2U,
-                        {
-                            { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION, m_grid_vertex_buffer },
-                            { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE, m_grid_colour_buffer },
-                        }
-                        );
-
-    m_grid_shaders_binding = qtgl::shaders_binding(
-                canonical_path("../data/shared/gfx/shaders/vertex/vs_IpcUmOpcFc.a=1.txt"),
-                canonical_path("../data/shared/gfx/shaders/fragment/fs_IcFc.txt")
-                );
 }
 
 simulator::~simulator()
@@ -235,24 +215,17 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
     matrix44  view_projection_matrix;
     qtgl::view_projection_matrix(*m_camera,view_projection_matrix);
 
-    qtgl::draw_state_ptr  draw_state = m_grid_draw_state;
-    qtgl::make_current(*draw_state);
+    qtgl::draw_state_ptr  draw_state;
 
     {
         matrix44  grid_world_transformation;
         angeo::from_base_matrix(*m_grid_space,grid_world_transformation);
         matrix44 const  grid_transform_matrix = view_projection_matrix * grid_world_transformation;
 
-        if (qtgl::make_current(m_grid_shaders_binding) && qtgl::make_current(m_grid_buffers_binding))
+        if (qtgl::make_current(m_grid_batch, *draw_state))
         {
-            qtgl::make_current(*m_grid_draw_state, *draw_state);
-
-            m_grid_shaders_binding.get_vertex_shader().set_uniform_variable(
-                                       qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED,
-                                       grid_transform_matrix);
-            qtgl::draw();
-
-            draw_state = m_grid_draw_state;
+            qtgl::render_batch(m_grid_batch, grid_transform_matrix);
+            draw_state = m_grid_batch.get_draw_state();
         }
     }
 

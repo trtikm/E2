@@ -1,7 +1,7 @@
 #include "./simulator.hpp"
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
-#include <qtgl/buffer_generators.hpp>
+#include <qtgl/batch_generators.hpp>
 #include <qtgl/texture_generators.hpp>
 #include <angeo/tensor_math.hpp>
 #include <utility/timeprof.hpp>
@@ -187,9 +187,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
             angeo::coordinate_system::create(vector3_zero(),quaternion_identity())
             };
 
-    qtgl::buffer  grid_vertex_buffer;
-    qtgl::buffer  grid_colour_buffer;
-    qtgl::create_grid_vertex_and_colour_buffers(
+    qtgl::batch  grid_batch = qtgl::create_grid(
                 50.0f,
                 50.0f,
                 50.0f,
@@ -203,27 +201,8 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                 { 0.0f, 1.0f, 0.0f },
                 { 0.0f, 0.0f, 1.0f },
                 10U,
-                qtgl::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE,
-                grid_vertex_buffer,
-                grid_colour_buffer
+                qtgl::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE
                 );
-    qtgl::buffers_binding const  grid_buffers_binding {
-                qtgl::buffers_binding(
-                        0U,
-                        2U,
-                        {
-                            { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION, grid_vertex_buffer },
-                            { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE, grid_colour_buffer },
-                        }
-                        )
-                };
-
-
-    qtgl::shaders_binding const  grid_shaders_binding(
-            canonical_path("../data/shared/gfx/shaders/vertex/vs_IpcUmOpcFc.a=1.txt"),
-            canonical_path("../data/shared/gfx/shaders/fragment/fs_IcFc.txt")
-            );
-
 
     /////////////////////////////////////////////////////////////////////////////////////
     // Rendering
@@ -258,14 +237,8 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
         angeo::from_base_matrix(*grid_space,grid_world_transformation);
         matrix44 const  grid_transform_matrix = view_projection_matrix * grid_world_transformation;
 
-        if (qtgl::make_current(grid_shaders_binding))
-        {
-            grid_shaders_binding.get_vertex_shader().set_uniform_variable(
-                                       qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED,
-                                       grid_transform_matrix);
-        }
-        qtgl::make_current(grid_buffers_binding);
-        qtgl::draw();
+        if (qtgl::make_current(grid_batch))
+            qtgl::render_batch(grid_batch, grid_transform_matrix);
     }
 
     qtgl::swap_buffers();

@@ -99,15 +99,15 @@ struct  vertex_shader : public async::resource_accessor<detail::vertex_shader_da
     {}
 
     vertex_shader(
-            GLuint const  id, 
             std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  input_buffer_bindings,
             std::unordered_set<VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION> const&  output_buffer_bindings,
             std::unordered_set<VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME> const&  symbolic_names_of_used_uniforms,
             std::vector<std::string> const&  lines_of_shader_code,
-            boost::filesystem::path const&  path = ""
+            std::string const&  uid = "",
+            GLuint const  id = 0U
             )
         : async::resource_accessor<detail::vertex_shader_data>(
-                path.string(),
+                uid,
                 async::notification_callback_type(),
                 id,
                 input_buffer_bindings,
@@ -134,7 +134,7 @@ struct  vertex_shader : public async::resource_accessor<detail::vertex_shader_da
     template<typename value_type>
     bool  set_uniform_variable(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name, value_type const&  value_to_store)
     {
-        return set_uniform_variable(uniform_name(symbolic_name), value_to_store);
+        return set_uniform_variable(name(symbolic_name), value_to_store);
     }
 
     bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store)
@@ -246,15 +246,15 @@ struct  fragment_shader : public async::resource_accessor<detail::fragment_shade
     {}
 
     fragment_shader(
-            GLuint const  id, 
             std::unordered_set<FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  input_buffer_bindings,
             std::unordered_set<FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION> const&  output_buffer_bindings,
             std::unordered_set<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME> const&  symbolic_names_of_used_uniforms,
             std::vector<std::string> const&  lines_of_shader_code,
-            boost::filesystem::path const&  path = ""
+            std::string const&  uid = "",
+            GLuint const  id = 0U 
             )
         : async::resource_accessor<detail::fragment_shader_data>(
-                path.string(),
+                uid,
                 async::notification_callback_type(),
                 id,
                 input_buffer_bindings,
@@ -277,7 +277,7 @@ struct  fragment_shader : public async::resource_accessor<detail::fragment_shade
     template<typename value_type>
     bool  set_uniform_variable(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name, value_type const&  value_to_store)
     {
-        return set_uniform_variable(uniform_name(symbolic_name), value_to_store);
+        return set_uniform_variable(name(symbolic_name), value_to_store);
     }
 
     bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store)
@@ -383,10 +383,10 @@ struct  shaders_binding : public async::resource_accessor<detail::shaders_bindin
     {}
 
     shaders_binding(
-            GLuint const  id,
             vertex_shader const  vertex_shader,
             fragment_shader const  fragment_shader,
-            async::key_type const&  key = ""
+            async::key_type const&  key = "",
+            GLuint const  id = 0U
             )
         : async::resource_accessor<detail::shaders_binding_data>(
                 key,

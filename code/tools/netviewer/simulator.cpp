@@ -264,13 +264,13 @@ simulator::simulator(
                     50.0f,
                     1.0f,
                     1.0f,
-                    { 0.4f, 0.4f, 0.4f },
-                    { 0.4f, 0.4f, 0.4f },
-                    { 0.5f, 0.5f, 0.5f },
-                    { 0.5f, 0.5f, 0.5f },
-                    { 1.0f, 0.0f, 0.0f },
-                    { 0.0f, 1.0f, 0.0f },
-                    { 0.0f, 0.0f, 1.0f },
+                    { 0.4f, 0.4f, 0.4f, 1.0f },
+                    { 0.4f, 0.4f, 0.4f, 1.0f },
+                    { 0.5f, 0.5f, 0.5f, 1.0f },
+                    { 0.5f, 0.5f, 0.5f, 1.0f },
+                    { 1.0f, 0.0f, 0.0f, 1.0f },
+                    { 0.0f, 1.0f, 0.0f, 1.0f },
+                    { 0.0f, 0.0f, 1.0f, 1.0f },
                     10U,
                     qtgl::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE,
                     get_program_options()->dataRoot()
@@ -662,9 +662,9 @@ void  simulator::render_network_spikers(
             qtgl::spatial_boundary const  boundary = m_batch_spiker.get_buffers_binding().get_boundary();
 
             m_batch_spiker_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
-                                                             get_program_options()->dataRoot(),"/netviewer/spiker_bbox");
+                                                             vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/spiker_bbox");
             m_batch_spiker_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,
-                                                                   get_program_options()->dataRoot(),"/netviewer/spiker_bsphere");
+                                                                   vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/spiker_bsphere");
         }
 
         struct  local
@@ -713,9 +713,9 @@ void  simulator::render_network_docks(
             qtgl::spatial_boundary const  boundary = m_batch_dock.get_buffers_binding().get_boundary();
 
             m_batch_dock_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
-                                                           get_program_options()->dataRoot(),"/netviewer/dock_bbox");
+                                                           vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/dock_bbox");
             m_batch_dock_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,
-                                                                 get_program_options()->dataRoot(),"/netviewer/dock_bsphere");
+                                                                 vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/dock_bsphere");
         }
 
         struct  local
@@ -765,9 +765,9 @@ void  simulator::render_network_ships(
             qtgl::spatial_boundary const  boundary = m_batch_ship.get_buffers_binding().get_boundary();
 
             m_batch_ship_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
-                                                           get_program_options()->dataRoot(),"/netviewer/ship_bbox");
+                                                           vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/ship_bbox");
             m_batch_ship_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,
-                                                                 get_program_options()->dataRoot(),"/netviewer/ship_bsphere");
+                                                                 vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/ship_bsphere");
         }
 
         struct  local
@@ -834,7 +834,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                                                         m_selected_object_stats->indices());
                 m_batches_selection.push_back(
                         qtgl::create_wireframe_box(sector_center - sector_shift,sector_center + sector_shift,
-                                                   get_program_options()->dataRoot(),
+                                                   vector4(0.5f, 0.5f, 0.5f, 1.0f),
                                                    "/netviewer/selected_spiker_sector_bbox")
                         );
             }
@@ -849,7 +849,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                                                                      .size_of_ship_movement_area_in_meters(area_layer_index);
                 m_batches_selection.push_back(
                         qtgl::create_wireframe_box(area_center - area_shift,area_center + area_shift,
-                                                   get_program_options()->dataRoot(),
+                                                   vector4(0.5f, 0.5f, 0.5f, 1.0f),
                                                    "/netviewer/selected_spiker_ship_movement_area")
                         );
                 m_batches_selection.push_back(
@@ -868,8 +868,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                                         area_center + vector3{0.0f,0.0f, 1.0f}
                                         )
                                 },
-                                vector3{ 0.5f, 0.25f, 0.5f },
-                                get_program_options()->dataRoot(),
+                                vector4{ 0.5f, 0.25f, 0.5f, 1.0f },
                                 "/netviewer/selected_spiker_ship_movement_area_center"
                                 )
                         );
@@ -908,7 +907,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                         network()->get_layer_of_ships(m_selected_object_stats->indices().layer_index()).position(ships_begin_index + i)
                         });
             qtgl::batch const  batch =
-                    qtgl::create_lines3d(lines, { 0.5f, 0.5f, 0.5f }, get_program_options()->dataRoot(),
+                    qtgl::create_lines3d(lines, { 0.5f, 0.5f, 0.5f, 1.0f },
                                          "/netviewer/selected_spiker_lines_to_ships");
             if (qtgl::make_current(batch, *draw_state))
             {
@@ -951,7 +950,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                                                         m_selected_object_stats->indices());
                 m_batches_selection.push_back(
                         qtgl::create_wireframe_box(sector_center - sector_shift,sector_center + sector_shift,
-                                                   get_program_options()->dataRoot(),
+                                                   vector4(0.5f, 0.5f, 0.5f, 1.0f),
                                                    "/netviewer/selected_dock_sector_bbox")
                         );
             }
@@ -966,14 +965,13 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                 vector3 const  sector_shift = netlab::shift_from_low_corner_of_spiker_sector_to_center(props);
                 m_batches_selection.push_back(
                     qtgl::create_wireframe_box(sector_center - sector_shift, sector_center + sector_shift,
-                                               get_program_options()->dataRoot(),
+                                               vector4(0.5f, 0.5f, 0.5f, 1.0f),
                                                "/netviewer/selected_spiker_sector_bbox")
                                                );
                 m_batches_selection.push_back(
                         qtgl::create_lines3d(
                                 { { sector_center, netlab::dock_sector_centre(props,m_selected_object_stats->indices().object_index()) } },
-                                { 0.5f, 0.5f, 0.5f },
-                                get_program_options()->dataRoot(),
+                                { 0.5f, 0.5f, 0.5f, 1.0f },
                                 "/netviewer/selected_dock_line_to_spiker"
                                 )
                         );
@@ -1029,8 +1027,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                                       .position(m_selected_object_stats->indices().object_index()),
                             netlab::spiker_sector_centre(props,spiker_index)
                         }},
-                        { 0.5f, 0.5f, 0.5f },
-                        get_program_options()->dataRoot(),
+                        { 0.5f, 0.5f, 0.5f, 1.0f },
                         "/netviewer/selected_ship_line_to_spiker"
                         );
             if (qtgl::make_current(batch, *draw_state))
@@ -1056,7 +1053,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
             vector3 const  area_shift = 0.5f * props.size_of_ship_movement_area_in_meters(area_layer_index);
             m_batches_selection.push_back(
                     qtgl::create_wireframe_box(area_center - area_shift,area_center + area_shift,
-                                               get_program_options()->dataRoot(),
+                                               vector4(0.5f, 0.5f, 0.5f, 1.0f),
                                                "/netviewer/selected_ship_movement_area")
                     );
             m_batches_selection.push_back(
@@ -1075,8 +1072,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                                     area_center + vector3{0.0f,0.0f, 1.0f}
                                     )
                             },
-                            vector3{ 0.5f, 0.25f, 0.5f },
-                            get_program_options()->dataRoot(),
+                            vector4{ 0.5f, 0.25f, 0.5f, 1.0f },
                             "/netviewer/selected_ship_movement_area_center"
                             )
                     );
@@ -1249,9 +1245,9 @@ void  simulator::render_spikers_of_constructed_network(
             qtgl::spatial_boundary const  boundary = m_batch_spiker.get_buffers_binding().get_boundary();
 
             m_batch_spiker_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
-                                                             get_program_options()->dataRoot(),"/netviewer/spiker_bbox");
+                                                             vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/spiker_bbox");
             m_batch_spiker_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,
-                                                                   get_program_options()->dataRoot(),"/netviewer/spiker_bsphere");
+                                                                   vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/spiker_bsphere");
         }
 
         struct  local

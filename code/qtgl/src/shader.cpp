@@ -598,7 +598,7 @@ void  parse_properties_from_vertex_shader_code(
             VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX    ,
             })
     {
-        if (tokens.count(uniform_name(symbolic_name)) != 0ULL || tokens.count(uniform_symbolic_name(symbolic_name)) != 0ULL)
+        if (tokens.count(uniform_name(symbolic_name)) != 0ULL || tokens.count(name(symbolic_name)) != 0ULL)
             symbolic_names_of_used_uniforms.insert(symbolic_name);
     }
 }
@@ -768,6 +768,7 @@ std::string  vertex_shader_data::create_gl_shader()
     ASSUMPTION(!line_pointers.empty());
     std::string  error_message;
     m_id = detail::create_opengl_shader_program(GL_VERTEX_SHADER,line_pointers,error_message);
+    INVARIANT(glapi().glGetError() == 0U);
     INVARIANT((id() != 0U && error_message.empty()) || (id() == 0U && !error_message.empty()));
     return error_message;
 }
@@ -781,6 +782,7 @@ void  vertex_shader_data::destroy_gl_shader()
     TMPROF_BLOCK();
 
     glapi().glDeleteProgram(id());
+    INVARIANT(glapi().glGetError() == 0U);
 }
 
 
@@ -942,6 +944,7 @@ std::string  fragment_shader_data::create_gl_shader()
     std::string  error_message;
     m_id = detail::create_opengl_shader_program(GL_FRAGMENT_SHADER,line_pointers,error_message);
     INVARIANT((id() != 0U && error_message.empty()) || (id() == 0U && !error_message.empty()));
+    INVARIANT(glapi().glGetError() == 0U);
     return error_message;
 }
 
@@ -954,6 +957,7 @@ void  fragment_shader_data::destroy_gl_shader()
     TMPROF_BLOCK();
 
     glapi().glDeleteProgram(id());
+    INVARIANT(glapi().glGetError() == 0U);
 }
 
 
@@ -1047,6 +1051,7 @@ void  shaders_binding_data::create_gl_binding()
 
     glapi().glGenProgramPipelines(1U,&m_id);
     INVARIANT(id() != 0U);
+    INVARIANT(glapi().glGetError() == 0U);
 }
 
 
@@ -1058,6 +1063,7 @@ void  shaders_binding_data::destroy_gl_binding()
     TMPROF_BLOCK();
 
     glapi().glDeleteProgramPipelines(1,&m_id);
+    INVARIANT(glapi().glGetError() == 0U);
 }
 
 

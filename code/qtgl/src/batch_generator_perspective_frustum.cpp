@@ -1,18 +1,18 @@
-#include <qtgl/buffer_generators.hpp>
+#include <qtgl/batch_generators.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/timeprof.hpp>
 
 namespace qtgl {
 
 
-void  create_wireframe_perspective_frustum_vertex_buffer(
+batch  create_wireframe_perspective_frustum(
         float_32_bit const  near_plane,
         float_32_bit const  far_plane,
         float_32_bit const  left_plane,
         float_32_bit const  right_plane,
         float_32_bit const  top_plane,
         float_32_bit const  bottom_plane,
-        buffer&  output_vertex_buffer,
+        vector4 const&  colour,
         std::string const&  id
         )
 {
@@ -54,7 +54,7 @@ void  create_wireframe_perspective_frustum_vertex_buffer(
         corners.at(3U), corners.at(7U),
     };
 
-    output_vertex_buffer = buffer(vertices, true, id.empty() ? id : "/generic/buffer/vertices/perspective_frustum/" + id);
+    return create_lines3d(vertices, colour, id);
 }
 
 

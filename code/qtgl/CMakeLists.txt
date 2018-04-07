@@ -31,14 +31,34 @@ add_library(${THIS_TARGET_NAME}
     ./include/qtgl/shader_data_bindings.hpp
     ./src/shader_data_bindings.cpp
 
+    ./include/qtgl/shader_compose.hpp
+    ./src/shader_compose.cpp
+    
+    ./include/qtgl/effects_config.hpp
+    ./src/effects_config.cpp
+
     ./include/qtgl/buffer.hpp
     ./src/buffer.cpp
 
     ./include/qtgl/texture.hpp
     ./src/texture.cpp
 
+    ./include/qtgl/texture_generators.hpp
+    ./src/texture_generator_chessboard.cpp
+
     ./include/qtgl/batch.hpp
     ./src/batch.cpp
+
+    ./include/qtgl/batch_available_resources.hpp
+    ./src/batch_available_resources.cpp
+
+    ./include/qtgl/batch_generators.hpp
+    ./src/batch_generator_grid.cpp
+    ./src/batch_generator_lines3d.cpp
+    ./src/batch_generator_basis_vectors.cpp
+    ./src/batch_generator_wireframe_box.cpp
+    ./src/batch_generator_wireframe_sphere.cpp
+    ./src/batch_generator_perspective_frustum.cpp
 
     ./include/qtgl/camera.hpp
     ./src/camera.cpp
@@ -63,24 +83,6 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/qtgl/keyframe.hpp
     ./src/keyframe.cpp
-
-    ./include/qtgl/batch_generators.hpp
-    ./src/generate_batch_grid.cpp
-    ./src/generate_batch_lines.cpp
-    ./src/generate_batch_basis_vectors.cpp
-    ./src/generate_batch_box.cpp
-    ./src/generate_batch_sphere.cpp
-    ./src/generate_batch_perspective_frustum.cpp
-
-    ./include/qtgl/buffer_generators.hpp
-    ./src/generate_buffers_grid.cpp
-    ./src/generate_buffers_basis.cpp
-    ./src/generate_buffers_box.cpp
-    ./src/generate_buffers_sphere.cpp
-    ./src/generate_buffers_perspective_frustum.cpp
-
-    ./include/qtgl/texture_generators.hpp
-    ./src/create_chessboard_texture.cpp
 
     ./include/qtgl/gui_utils.hpp
     ./src/gui_utils.cpp

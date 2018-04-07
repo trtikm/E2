@@ -25,7 +25,7 @@ void  enumerate_sectors(
             qtgl::create_wireframe_box(
                     -0.5f * vector3{ sector_size_x, sector_size_y, sector_size_c },
                     +0.5f * vector3{ sector_size_x, sector_size_y, sector_size_c },
-                    get_program_options()->dataRoot(),
+                    vector4(0.5f, 0.5f, 0.5f, 1.0f),
                     id
                     );
     netview::enumerate_sectors_intersecting_line(
@@ -80,11 +80,7 @@ void  dbg_raycast_sector_enumeration::enumerate(
     if (!is_enabled())
         return;
 
-    m_batch_line = qtgl::create_lines3d({{line_begin,line_end}},
-                                        {0.0f,0.8f,0.9f},
-                                        get_program_options()->dataRoot(),
-                                        "netviewer/dbg_raycast_line"
-                                        );
+    m_batch_line = qtgl::create_lines3d({{line_begin,line_end}},{0.0f,0.8f,0.9f,1.0f});
 
     m_batches.clear();
     for (netlab::layer_index_type  layer_index = 0U; layer_index != layer_props.size(); ++layer_index)

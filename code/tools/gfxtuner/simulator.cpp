@@ -109,13 +109,13 @@ simulator::simulator()
                     50.0f,
                     1.0f,
                     1.0f,
-                    { 0.4f, 0.4f, 0.4f },
-                    { 0.4f, 0.4f, 0.4f },
-                    { 0.5f, 0.5f, 0.5f },
-                    { 0.5f, 0.5f, 0.5f },
-                    { 1.0f, 0.0f, 0.0f },
-                    { 0.0f, 1.0f, 0.0f },
-                    { 0.0f, 0.0f, 1.0f },
+                    { 0.4f, 0.4f, 0.4f, 1.0f },
+                    { 0.4f, 0.4f, 0.4f, 1.0f },
+                    { 0.5f, 0.5f, 0.5f, 1.0f },
+                    { 0.5f, 0.5f, 0.5f, 1.0f },
+                    { 1.0f, 0.0f, 0.0f, 1.0f },
+                    { 0.0f, 1.0f, 0.0f, 1.0f },
+                    { 0.0f, 0.0f, 1.0f, 1.0f },
                     10U,
                     qtgl::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE,
                     get_program_options()->dataRoot()
@@ -128,7 +128,7 @@ simulator::simulator()
 
     , m_scene(new scene)
     , m_scene_selection(m_scene)
-    , m_batch_coord_system(qtgl::create_basis_vectors(get_program_options()->dataRoot()))
+    , m_batch_coord_system(qtgl::create_basis_vectors())
     , m_scene_edit_data(SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
 
 {}

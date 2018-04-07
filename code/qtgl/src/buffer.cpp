@@ -533,6 +533,7 @@ void  buffer_file_data::create_gl_buffer()
             (GLvoid const*)m_data_ptr->data(),
             GL_STATIC_DRAW
             );
+    INVARIANT(glapi().glGetError() == 0U);
 }
 
 
@@ -544,6 +545,7 @@ void  buffer_file_data::destroy_gl_buffer()
     TMPROF_BLOCK();
 
     glapi().glDeleteBuffers(1U, &m_id);
+    INVARIANT(glapi().glGetError() == 0U);
 }
 
 
@@ -723,6 +725,7 @@ void  buffers_binding_data::create_gl_binding()
 
     glapi().glGenVertexArrays(1U, &m_id);
     ASSUMPTION(m_id != 0U);
+    INVARIANT(glapi().glGetError() == 0U);
 }
 
 
@@ -734,6 +737,7 @@ void  buffers_binding_data::destroy_gl_binding()
     TMPROF_BLOCK();
 
     glapi().glDeleteVertexArrays(1U, &m_id);
+    INVARIANT(glapi().glGetError() == 0U);
 }
 
 
