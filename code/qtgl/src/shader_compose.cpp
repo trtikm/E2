@@ -328,12 +328,40 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                     }
                     break;
                 case SHADER_DATA_INPUT_TYPE::TEXTURE:
+                    if (resources.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE) == 0UL)
                     {
-                        result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "The diffuse texture is not the supported yet.";
-                        result.second.get_lighting_data_types() = {
-                            {LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::BUFFER}
+                        result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Diffuse texture is not available.";
+                        result.second.get_lighting_data_types().begin()->second = SHADER_DATA_INPUT_TYPE::BUFFER;
+                    }
+                    else
+                    {
+                        vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                            "#version 420",
+
+                            varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                            varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+                            varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
+
+                            uniform(VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED, vs_uniforms),
+
+                            "void main() {",
+                            "    gl_Position = vec4(in_position,1.0f) * TRANSFORM_MATRIX_TRANSPOSED;",
+                            "    out_texture_coords = in_texture_coords;",
+                            "}",
                         };
-                }
+                        fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                            "#version 420",
+
+                            varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
+                            varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                            uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
+
+                            "void main() {",
+                            "    out_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
+                            "}",
+                        };
+                    }
                     break;
                 }
             }
