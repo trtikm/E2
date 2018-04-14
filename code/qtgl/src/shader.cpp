@@ -141,9 +141,11 @@ bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name
     if (layout_location == -1)
     {
         ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
+        INVARIANT(glapi().glGetError() == 0U);
         return false;
     }
     glapi().glProgramUniform1ui(id(),layout_location,value_to_store);
+    INVARIANT(glapi().glGetError() == 0U);
     return true;
 }
 
@@ -156,9 +158,11 @@ bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name
     if (layout_location == -1)
     {
         ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
+        INVARIANT(glapi().glGetError() == 0U);
         return false;
     }
     glapi().glProgramUniform1f(id(),layout_location,value_to_store);
+    INVARIANT(glapi().glGetError() == 0U);
     return true;
 }
 
@@ -170,9 +174,11 @@ bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name
     if (layout_location == -1)
     {
         ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
+        INVARIANT(glapi().glGetError() == 0U);
         return false;
     }
     glapi().glProgramUniform4fv(id(), layout_location, 1U, value_to_store.data());
+    INVARIANT(glapi().glGetError() == 0U);
     return true;
 }
 
@@ -186,9 +192,11 @@ bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name
     if (layout_location == -1)
     {
         ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
+        INVARIANT(glapi().glGetError() == 0U);
         return false;
     }
     glapi().glProgramUniformMatrix4fv(id(),layout_location,1U,GL_TRUE,value_to_store.data());
+    INVARIANT(glapi().glGetError() == 0U);
     return true;
 }
 
@@ -204,9 +212,11 @@ bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name
     if (layout_location == -1)
     {
         ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
+        INVARIANT(glapi().glGetError() == 0U);
         return false;
     }
     glapi().glProgramUniformMatrix4fv(id(),layout_location,(GLsizei)value_to_store.size(),GL_TRUE,value_to_store.data()->data());
+    INVARIANT(glapi().glGetError() == 0U);
     return true;
 }
 
@@ -280,9 +290,11 @@ bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_na
     if (layout_location == -1)
     {
         ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
+        INVARIANT(glapi().glGetError() == 0U);
         return false;
     }
     glapi().glProgramUniform1ui(id(),layout_location,value_to_store);
+    INVARIANT(glapi().glGetError() == 0U);
     return true;
 }
 
@@ -295,9 +307,11 @@ bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_na
     if (layout_location == -1)
     {
         ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
+        INVARIANT(glapi().glGetError() == 0U);
         return false;
     }
     glapi().glProgramUniform1f(id(),layout_location,value_to_store);
+    INVARIANT(glapi().glGetError() == 0U);
     return true;
 }
 
@@ -309,9 +323,11 @@ bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_na
     if (layout_location == -1)
     {
         ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
+        INVARIANT(glapi().glGetError() == 0U);
         return false;
     }
     glapi().glProgramUniform4fv(id(), layout_location, 1U, value_to_store.data());
+    INVARIANT(glapi().glGetError() == 0U);
     return true;
 }
 
@@ -325,9 +341,11 @@ bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_na
     if (layout_location == -1)
     {
         ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
+        INVARIANT(glapi().glGetError() == 0U);
         return false;
     }
     glapi().glProgramUniformMatrix4fv(id(),layout_location,1U,GL_TRUE,value_to_store.data());
+    INVARIANT(glapi().glGetError() == 0U);
     return true;
 }
 
@@ -343,9 +361,11 @@ bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_na
     if (layout_location == -1)
     {
         ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
+        INVARIANT(glapi().glGetError() == 0U);
         return false;
     }
     glapi().glProgramUniformMatrix4fv(id(),layout_location,(GLsizei)value_to_store.size(),GL_TRUE,value_to_store.data()->data());
+    INVARIANT(glapi().glGetError() == 0U);
     return true;
 }
 
