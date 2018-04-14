@@ -183,6 +183,14 @@ simulator::simulator(vector3 const&  initial_clear_colour)
 
             //qtgl::batch::create(canonical_path("../data/shared/gfx/models/miss_fortune_road_wrarior/body.txt")),
             }
+
+    , m_effects_config(
+            qtgl::effects_config::light_types{},
+            qtgl::effects_config::lighting_data_types{
+                { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE }
+                },
+            qtgl::effects_config::shader_output_types{ qtgl::SHADER_DATA_OUTPUT_TYPE::DEFAULT }
+            )
 {
     LOG(debug,"simulator::simulator()");
 
@@ -261,15 +269,15 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
 void  simulator::insert_batch(boost::filesystem::path const&  batch_pathname)
 {
     if (std::find_if(m_batches.cbegin(),m_batches.cend(),
-                     [&batch_pathname](qtgl::batch const  ptr) { return ptr.key() == batch_pathname; })
+                     [&batch_pathname](qtgl::batch const  ptr) { return ptr.path_component_of_uid() == batch_pathname; })
             == m_batches.cend())
-        m_batches.push_back(qtgl::batch(batch_pathname));
+        m_batches.push_back(qtgl::batch(batch_pathname, get_effects_config()));
 }
 
 void  simulator::erase_batch(boost::filesystem::path const&  batch_pathname)
 {
     auto const  it = std::remove_if(m_batches.begin(),m_batches.end(),
-                                    [&batch_pathname](qtgl::batch const  ptr){ return ptr.key() == batch_pathname; });
+                                    [&batch_pathname](qtgl::batch const  ptr){ return ptr.path_component_of_uid() == batch_pathname; });
     if (it != m_batches.cend())
         m_batches.erase(it);
 }

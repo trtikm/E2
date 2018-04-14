@@ -946,12 +946,12 @@ void  widgets::on_scene_insert_batch()
     }
 
     boost::filesystem::path const  batches_root_dir = canonical_path(boost::filesystem::absolute(
-            boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "models"
+            boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "meshes"
             ));
 
     QFileDialog  dialog(wnd());
     dialog.setDirectory(batches_root_dir.string().c_str());
-    //dialog.setFileMode(QFileDialog::DirectoryOnly);
+    dialog.setFileMode(QFileDialog::DirectoryOnly);
     if (!dialog.exec())
         return;
     QStringList const  selected = dialog.selectedFiles();
@@ -1084,7 +1084,11 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
         scene_node_ptr const  parent_node_ptr =
             wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_name);
         INVARIANT(parent_node_ptr != nullptr);
-        get_scene_history().insert<scene_history_batch_insert>(name, parent_node_ptr->get_batch(item_name).key(), true);
+        get_scene_history().insert<scene_history_batch_insert>(
+            name,
+            parent_node_ptr->get_batch(item_name).path_component_of_uid(),
+            true
+            );
 
         std::unordered_set<std::string>  selected_scene_nodes;
         std::unordered_set<std::pair<std::string, std::string> >  selected_batches{ { parent_item_name, item_name  } };
@@ -1254,7 +1258,7 @@ static void  save_scene_item(
 
     boost::property_tree::ptree  batches;
     for (auto const& name_batch : node_ptr->get_batches())
-        batches.put(name_batch.first, name_batch.second.key());
+        batches.put(name_batch.first, name_batch.second.path_component_of_uid());
     save_tree.put_child(item_name + ".batches", batches);
 
     boost::property_tree::ptree  children;

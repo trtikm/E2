@@ -1,5 +1,5 @@
 #include <qtgl/buffer.hpp>
-#include <qtgl/detail/read_line.hpp>
+#include <utility/read_line.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -30,9 +30,11 @@ void  set_num_primitives(natural_32_bit const  num_primitives);
 namespace qtgl { namespace detail {
 
 
-buffer_file_data::buffer_file_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr)
+buffer_file_data::buffer_file_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr)
 {
     TMPROF_BLOCK();
+
+    boost::filesystem::path const  path = key.second;
 
     if (!boost::filesystem::exists(path))
         throw std::runtime_error(msgstream() << "The buffer file '" << path << "' does not exists.");
@@ -40,307 +42,117 @@ buffer_file_data::buffer_file_data(boost::filesystem::path const&  path, async::
         throw std::runtime_error(msgstream() << "The buffer path '" << path
                                              << "' does not reference a regular file.");
 
-    if (boost::filesystem::file_size(path) < 4ULL)
-        throw std::runtime_error(msgstream() << "The passed file '" << path
-                                             << "' is not a qtgl file (wrong size).");
-
     std::ifstream  istr(path.string(),std::ios_base::binary);
     if (!istr.good())
         throw std::runtime_error(msgstream() << "Cannot open the buffer file '" << path << "'.");
 
-    std::string  file_type;
-    if (!detail::read_line(istr,file_type))
-        throw std::runtime_error(msgstream() << "The passed file '" << path
-                                             << "' is not a qtgl file (cannot read its type string).");
+    auto const  read_string = [&istr, &path](std::string const&  kind_message) -> std::string {
+        std::string  line = read_line(istr);
+        if (line.empty())
+            throw std::runtime_error(msgstream() << "Failed to read " << kind_message << " in the file: " << path);
+        return line;
+    };
+
+    natural_8_bit  num_components = 0U;
+    natural_32_bit  num_elements = 0U;
+    bool  has_integer_components = false;
+    bool  compute_boundary = false;
+    {
+        if (path.filename() == "indices.txt")
+        {
+            num_components = std::stoul(read_string("number of components"));
+            num_elements = std::stoul(read_string("number of elements"));
+            has_integer_components = true;
+            compute_boundary = false;
+        }
+        else if (path.filename() == "diffuse.txt" || path.filename() == "specular.txt" || path.filename() == "weights.txt")
+        {
+            num_components = std::stoul(read_string("number of components"));
+            num_elements = std::stoul(read_string("number of elements"));
+            has_integer_components = false;
+            compute_boundary = false;
+        }
+        else if (path.filename() == "vertices.txt")
+        {
+            num_components = 3U;
+            num_elements = std::stoul(read_string("number of elements"));
+            has_integer_components = false;
+            compute_boundary = true;
+        }
+        else if (path.filename() == "normals.txt")
+        {
+            num_components = 3U;
+            num_elements = std::stoul(read_string("number of elements"));
+            has_integer_components = false;
+            compute_boundary = false;
+        }
+        else if (path.filename().string().find("texcoords") == 0UL && path.extension() == ".txt")
+        {
+            num_components = 2U;
+            num_elements = std::stoul(read_string("number of elements"));
+            has_integer_components = false;
+            compute_boundary = false;
+        }
+        else
+            throw std::runtime_error(msgstream() << "The passed file '" << path << "' is not of any known buffer type.");
+    }
 
     std::vector<natural_8_bit>  buffer_data;
-
-    if (file_type == "E2::qtgl/buffer/indices/triangles/text")
+    float_32_bit  radius_squared = 0.0f;
+    vector3  lo_corner{ 0.0f, 0.0f, 0.0f };
+    vector3  hi_corner{ 0.0f, 0.0f, 0.0f };
     {
-        std::string  line;
-        if (!detail::read_line(istr,line))
-            throw std::runtime_error(msgstream() << "Cannot read number of triangles in the file '" << path
-                                                 << "'.");
-        natural_32_bit const  num_triangles = std::stoul(line);
-        if (num_triangles == 0U)
-            throw std::runtime_error(msgstream() << "The triangle index buffer file '" << path
-                                                 << "' contains zero triangles.");
-        for (natural_32_bit  i = 0U; i < num_triangles; ++i)
-            for (natural_32_bit  j = 0U; j < 3U; ++j)
-            {
-                if (!detail::read_line(istr,line))
-                    throw std::runtime_error(
-                        msgstream() << "Cannot read the index no." << j << " of the triangle no." << i
-                                    << " in the file '" << path << "'.");
-                natural_32_bit const index = std::stoul(line);
-                std::copy(reinterpret_cast<natural_8_bit const*>(&index),
-                          reinterpret_cast<natural_8_bit const*>(&index) + sizeof(index),
-                          std::back_inserter(buffer_data));
-            }
-        if (detail::read_line(istr,line))
-            throw std::runtime_error(msgstream() << "The file '" << path << "' contains more indices than "
-                                                 << 3U * num_triangles <<" indices.");
-
-        initialise(
-                0U,
-                3U, num_triangles, sizeof(natural_32_bit), true,
-                buffer_data.data(), buffer_data.data() + buffer_data.size(),
-                nullptr
-                );
-    }
-    else if (file_type == "E2::qtgl/buffer/vertices/3d/text")
-    {
-        std::string  line;
-        if (!detail::read_line(istr,line))
-            throw std::runtime_error(msgstream() << "Cannot read number of vertices in the file '" << path
-                                                 << "'.");
-        natural_32_bit const  num_vertices = std::stoul(line);
-        if (num_vertices == 0U)
-            throw std::runtime_error(msgstream() << "The vertex buffer file '" << path
-                                                 << "' contains zero vertices.");
-        float_32_bit  radius_squared = 0.0f;
-        vector3  lo_corner{ 0.0f, 0.0f, 0.0f };
-        vector3  hi_corner{ 0.0f, 0.0f, 0.0f };
-        for (natural_32_bit i = 0U; i < num_vertices; ++i)
+        for (natural_32_bit  i = 0U; i < num_elements; ++i)
         {
             vector3  point;
-            for (natural_32_bit j = 0U; j < 3U; ++j)
+            for (natural_8_bit  j = 0U; j < num_components; ++j)
             {
-                if (!detail::read_line(istr,line))
-                    throw std::runtime_error(msgstream() << "Cannot read the coordinate no." << j
-                                                         << " of the vertex no." << i
-                                                         << " in the file '" << path << "'.");
-                float_32_bit const coord = std::stof(line);
-                std::copy(reinterpret_cast<natural_8_bit const*>(&coord),
-                          reinterpret_cast<natural_8_bit const*>(&coord) + sizeof(coord),
-                          std::back_inserter(buffer_data));
-                point(j) = coord;
-                if (coord < lo_corner(j))
-                    lo_corner(j) = coord;
-                if (coord > hi_corner(j))
-                    hi_corner(j) = coord;
+                std::string const  line = read_string(msgstream() << "component " << (int)j << " of element " << i);
+                if (has_integer_components)
+                {
+                    natural_32_bit const  value = std::stoul(line);
+                    std::copy(reinterpret_cast<natural_8_bit const*>(&value),
+                              reinterpret_cast<natural_8_bit const*>(&value) + sizeof(value),
+                              std::back_inserter(buffer_data));
+                }
+                else
+                {
+                    float_32_bit const  value = std::stof(line);
+                    std::copy(reinterpret_cast<natural_8_bit const*>(&value),
+                              reinterpret_cast<natural_8_bit const*>(&value) + sizeof(value),
+                              std::back_inserter(buffer_data));
+                    if (compute_boundary)
+                    {
+                        point(j) = value;
+                        if (value < lo_corner(j))
+                            lo_corner(j) = value;
+                        if (value > hi_corner(j))
+                            hi_corner(j) = value;
+
+                    }
+                }
             }
-            float_32_bit const  len2 = length_squared(point);
-            if (len2 > radius_squared)
-                radius_squared = len2;
+            if (compute_boundary)
+            {
+                float_32_bit const  len2 = length_squared(point);
+                if (len2 > radius_squared)
+                    radius_squared = len2;
+            }
         }
-        if (detail::read_line(istr,line))
-            throw std::runtime_error(msgstream() << "The file '" << path << "' contains more than "
-                                                 << 3U * num_vertices << " coordinates.");
-        spatial_boundary const  boundary{ std::sqrtf(radius_squared),lo_corner,hi_corner };
+    }
 
-        initialise(
-                0U,
-                3U, num_vertices, sizeof(float_32_bit), false,
-                buffer_data.data(), buffer_data.data() + buffer_data.size(),
-                &boundary
-                );
-    }
-    else if (file_type == "E2::qtgl/buffer/diffuse_colours/text")
-    {
-        std::string  line;
-        if (!detail::read_line(istr, line))
-            throw std::runtime_error(msgstream() << "Cannot read number of diffuse colours in the file '"
-                                                 << path << "'.");
-        natural_32_bit const  num_colours = std::stoul(line);
-        if (num_colours == 0U)
-            throw std::runtime_error(msgstream() << "The diffuse colours buffer file '" << path
-                                                 << "' contains zero diffuse colours.");
-        for (natural_32_bit i = 0U; i < num_colours; ++i)
-            for (natural_32_bit j = 0U; j < 4U; ++j)
-            {
-                if (!detail::read_line(istr, line))
-                    throw std::runtime_error(msgstream() << "Cannot read the colour component no." << j
-                                                         << " of the diffuse colour no." << i
-                                                         << " in the file '" << path << "'.");
-                float_32_bit const coord = std::stof(line);
-                std::copy(reinterpret_cast<natural_8_bit const*>(&coord),
-                    reinterpret_cast<natural_8_bit const*>(&coord) + sizeof(coord),
-                    std::back_inserter(buffer_data));
-            }
-        if (detail::read_line(istr, line))
-            throw std::runtime_error(msgstream() << "The file '" << path << "' contains more than "
-                                                 << 4U * num_colours << " colour components.");
+    spatial_boundary const  boundary{ std::sqrtf(radius_squared), lo_corner, hi_corner };
 
-        initialise(
-                0U,
-                4U, num_colours, sizeof(float_32_bit), false,
-                buffer_data.data(), buffer_data.data() + buffer_data.size(),
-                nullptr
-                );
-    }
-    else if (file_type == "E2::qtgl/buffer/specular_colours/text")
-    {
-        NOT_IMPLEMENTED_YET();
-    }
-    else if (file_type == "E2::qtgl/buffer/normals/3d/text")
-    {
-        NOT_IMPLEMENTED_YET();
-    }
-    else if (file_type.find("E2::qtgl/buffer/texcoords/2d/") == 0ULL)
-    {
-        natural_8_bit  location = 0U;
-        bool  found = true;
-        for ( ; location < 10U; ++location)
-            if (file_type == (msgstream() << "E2::qtgl/buffer/texcoords/2d/" << (int)location << "/text").get())
-            {
-                found = true;
-                break;
-            }
-        if (!found)
-            throw std::runtime_error(msgstream() << "Unknown bind location in the file type string of the file '" 
-                                                 << path << "'.");
-
-        std::string  line;
-        if (!detail::read_line(istr,line))
-            throw std::runtime_error(msgstream() << "Cannot read number of texture coordinatres in the file '"
-                                                 << path << "'.");
-        natural_32_bit const  num_vertices = std::stoul(line);
-        if (num_vertices == 0U)
-            throw std::runtime_error(msgstream() << "The texture coordinates buffer file '" << path
-                                                 << "' is empty.");
-        for (natural_32_bit i = 0U; i < num_vertices; ++i)
-            for (natural_32_bit j = 0U; j < 2U; ++j)
-            {
-                if (!detail::read_line(istr,line))
-                    throw std::runtime_error(msgstream() << "Cannot read the coordinate no." << j
-                                                         << " of the texture vertex no." << i
-                                                         << " in the file '" << path << "'.");
-                float_32_bit const coord = std::stof(line);
-                std::copy(reinterpret_cast<natural_8_bit const*>(&coord),
-                          reinterpret_cast<natural_8_bit const*>(&coord) + sizeof(coord),
-                          std::back_inserter(buffer_data));
-            }
-        if (detail::read_line(istr,line))
-            throw std::runtime_error(msgstream() << "The file '" << path << "' contains more than "
-                                                 << 2U * num_vertices << " coordinates.");
-
-        initialise(
-                0U,
-                2U, num_vertices, sizeof(float_32_bit), false,
-                buffer_data.data(), buffer_data.data() + buffer_data.size(),
-                nullptr
-                );
-    }
-    else if (file_type == "E2::qtgl/buffer/indices_of_matrices/2/text" ||
-             file_type == "E2::qtgl/buffer/indices_of_matrices/3/text" ||
-             file_type == "E2::qtgl/buffer/indices_of_matrices/4/text" )
-    {
-        natural_32_bit const  num_matrices_per_vertex =
-                file_type == "E2::qtgl/buffer/indices_of_matrices/2/text" ? 2U :
-                file_type == "E2::qtgl/buffer/indices_of_matrices/3/text" ? 3U :
-                                                                            4U ;
-
-        std::string  line;
-        if (!detail::read_line(istr,line))
-            throw std::runtime_error(msgstream() << "Cannot read indices of matrices in the file '" << path
-                                                 << "'.");
-        natural_32_bit const  num_elements = std::stoul(line);
-        if (num_elements == 0U)
-            throw std::runtime_error(msgstream() << "The buffer file '" << path
-                                                 << "' contains zero indices of matrices.");
-        for (natural_32_bit  i = 0U; i < num_elements; ++i)
-            for (natural_32_bit  j = 0U; j < num_matrices_per_vertex; ++j)
-            {
-                if (!detail::read_line(istr,line))
-                    throw std::runtime_error(msgstream() << "Cannot read the index no." << j
-                                                         << " of the element no." << i
-                                                         << " in the file '" << path << "'.");
-                natural_32_bit const index = std::stoul(line);
-                std::copy(reinterpret_cast<natural_8_bit const*>(&index),
-                          reinterpret_cast<natural_8_bit const*>(&index) + sizeof(index),
-                          std::back_inserter(buffer_data));
-            }
-        if (detail::read_line(istr,line))
-            throw std::runtime_error(msgstream() << "The file '" << path << "' contains more indices than "
-                                                 << num_matrices_per_vertex * num_elements <<" indices.");
-
-        initialise(
-                0U,
-                num_matrices_per_vertex, num_elements, sizeof(natural_32_bit), true,
-                buffer_data.data(), buffer_data.data() + buffer_data.size(),
-                nullptr
-                );
-    }
-    else if (file_type == "E2::qtgl/buffer/weights_of_matrices/2/text" ||
-             file_type == "E2::qtgl/buffer/weights_of_matrices/3/text" ||
-             file_type == "E2::qtgl/buffer/weights_of_matrices/4/text" )
-    {
-        natural_32_bit const  num_matrices_per_vertex =
-                file_type == "E2::qtgl/buffer/weights_of_matrices/2/text" ? 2U :
-                file_type == "E2::qtgl/buffer/weights_of_matrices/3/text" ? 3U :
-                                                                            4U ;
-
-        std::string  line;
-        if (!detail::read_line(istr, line))
-            throw std::runtime_error(msgstream() << "Cannot read number of weights in the file '" << path << "'.");
-        natural_32_bit const  num_weights = std::stoul(line);
-        if (num_weights == 0U)
-            throw std::runtime_error(msgstream() << "The buffer file '" << path
-                                                 << "' contains zero weights of matrices.");
-        for (natural_32_bit i = 0U; i < num_weights; ++i)
-            for (natural_32_bit j = 0U; j < num_matrices_per_vertex; ++j)
-            {
-                if (!detail::read_line(istr, line))
-                    throw std::runtime_error(msgstream() << "Cannot read the weight no." << i+j
-                                                         << " in the file '" << path << "'.");
-                float_32_bit const coord = std::stof(line);
-                std::copy(reinterpret_cast<natural_8_bit const*>(&coord),
-                    reinterpret_cast<natural_8_bit const*>(&coord) + sizeof(coord),
-                    std::back_inserter(buffer_data));
-            }
-        if (detail::read_line(istr, line))
-            throw std::runtime_error(msgstream() << "The file '" << path << "' contains more than "
-                                                 << 1U * num_weights << " weights of matrices.");
-
-        initialise(
-                0U,
-                num_matrices_per_vertex, num_weights, sizeof(float_32_bit), false,
-                buffer_data.data(), buffer_data.data() + buffer_data.size(),
-                nullptr
-                );
-    }
-    else if (file_type == "E2::qtgl/buffer/texcoords/2d/1/text")
-    {
-        NOT_IMPLEMENTED_YET();
-    }
-    else if (file_type == "E2::qtgl/buffer/texcoords/2d/2/text")
-    {
-        NOT_IMPLEMENTED_YET();
-    }
-    else if (file_type == "E2::qtgl/buffer/texcoords/2d/3/text")
-    {
-        NOT_IMPLEMENTED_YET();
-    }
-    else if (file_type == "E2::qtgl/buffer/texcoords/2d/4/text")
-    {
-        NOT_IMPLEMENTED_YET();
-    }
-    else if (file_type == "E2::qtgl/buffer/texcoords/2d/5/text")
-    {
-        NOT_IMPLEMENTED_YET();
-    }
-    else if (file_type == "E2::qtgl/buffer/texcoords/2d/6/text")
-    {
-        NOT_IMPLEMENTED_YET();
-    }
-    else if (file_type == "E2::qtgl/buffer/texcoords/2d/7/text")
-    {
-        NOT_IMPLEMENTED_YET();
-    }
-    else if (file_type == "E2::qtgl/buffer/texcoords/2d/8/text")
-    {
-        NOT_IMPLEMENTED_YET();
-    }
-    else if (file_type == "E2::qtgl/buffer/texcoords/2d/9/text")
-    {
-        NOT_IMPLEMENTED_YET();
-    }
-    else
-    {
-        throw std::runtime_error(msgstream() << "The passed file '" << path
-                                             << "' is a qtgl file of unknown type '" << file_type << "'.");
-    }
+    initialise(
+            0U,
+            num_components,
+            num_elements,
+            has_integer_components ? sizeof(natural_32_bit) : sizeof(float_32_bit),
+            has_integer_components,
+            buffer_data.data(),
+            buffer_data.data() + buffer_data.size(),
+            compute_boundary ? &boundary : nullptr
+            );
 }
 
 
@@ -601,7 +413,6 @@ static void  load_buffers_map(
 
             it->second.insert_load_request(
                     paths.at(it->first).string(),
-                    1UL,
                     std::bind(&local::on_buffer_loaded, paths, it, std::ref(buffers), initialiser, finaliser)
                     );
         }
@@ -619,7 +430,6 @@ static void  load_buffers_map(
 
     it->second.insert_load_request(
             paths.at(it->first).string(),
-            1UL,
             std::bind(&local::on_buffer_loaded, paths, it, std::ref(buffers), initialiser, finaliser)
             );
 }
@@ -638,7 +448,6 @@ buffers_binding_data::buffers_binding_data(
 {
     m_index_buffer.insert_load_request(
         index_buffer_path.string(),
-        1UL,
         std::bind(
             &load_buffers_map,
             paths,
@@ -765,6 +574,7 @@ bool  buffers_binding::ready() const
 
         mutable_this->create_gl_binding();
         glapi().glBindVertexArray(id());
+        INVARIANT(glapi().glGetError() == 0U);
 
         if (get_index_buffer().loaded_successfully())
             get_index_buffer().create_gl_buffer();
@@ -783,6 +593,7 @@ bool  buffers_binding::ready() const
                         0U,
                         nullptr
                         );
+            INVARIANT(glapi().glGetError() == 0U);
         }
 
         mutable_this->set_ready();
@@ -800,6 +611,7 @@ bool  buffers_binding::make_current() const
         return false;
 
     glapi().glBindVertexArray(id());
+    INVARIANT(glapi().glGetError() == 0U);
 
     if (get_index_buffer().empty())
     {

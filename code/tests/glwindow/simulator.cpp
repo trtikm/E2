@@ -157,8 +157,38 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                     }
                     );
     qtgl::shaders_binding const  object_shaders_binding =
-            qtgl::shaders_binding("../data/shared/gfx/shaders/vertex/vs_IpctUamOpctFc.a=Ua.txt",
-                                  "../data/shared/gfx/shaders/fragment/fs_IctUdFmix(c,d).txt");
+            qtgl::shaders_binding(
+                qtgl::vertex_shader(
+                    {
+                        qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
+                        qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE,
+                        qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0
+                        },
+                    {
+                        qtgl::VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_DIFFUSE
+                        },
+                    {
+                        qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED
+                        },
+                    std::vector<std::string>{
+                        // TODO!
+                        }
+                    ),
+                qtgl::fragment_shader(
+                    {
+                        qtgl::FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE,
+                        qtgl::FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0
+                        },
+                    {
+                        },
+                    {
+                        qtgl::FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE
+                        },
+                    std::vector<std::string>{
+                        // TODO!
+                        }
+                    )
+                );
 
     static bool  use_chessboard_texture = true;
     static float_64_bit  texture_swap_timer = 0.0L;

@@ -88,11 +88,12 @@ add_library(${THIS_TARGET_NAME}
     ./src/gui_utils.cpp
 
     ./include/qtgl/spatial_boundary.hpp 
+    
+    ./include/qtgl/skeleton_alignment.hpp
+    ./src/skeleton_alignment.cpp
 
     ./include/qtgl/detail/window.hpp
     ./src/detail/window.cpp
-    ./include/qtgl/detail/read_line.hpp
-    ./src/detail/read_line.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

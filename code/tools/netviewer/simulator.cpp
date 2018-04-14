@@ -290,15 +290,41 @@ simulator::simulator(
 
     , m_selected_object_stats()
 
-    , m_batch_spiker{ qtgl::batch(canonical_path(
-            boost::filesystem::path{get_program_options()->dataRoot()} / "shared/gfx/models/neuron/body.txt"
-            )) }
-    , m_batch_dock{ qtgl::batch(canonical_path(
-            boost::filesystem::path{get_program_options()->dataRoot()} / "shared/gfx/models/input_spot/input_spot.txt"
-            )) }
-    , m_batch_ship{ qtgl::batch(canonical_path(
-            boost::filesystem::path{get_program_options()->dataRoot()} / "shared/gfx/models/output_terminal/output_terminal.txt"
-            )) }
+    , m_effects_config(
+            qtgl::effects_config::light_types{},
+            qtgl::effects_config::lighting_data_types{
+                { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE }
+                },
+            qtgl::effects_config::shader_output_types{ qtgl::SHADER_DATA_OUTPUT_TYPE::DEFAULT }
+            )
+
+    , m_batch_spiker{
+        qtgl::batch(
+            canonical_path(
+                boost::filesystem::path{get_program_options()->dataRoot()}
+                    / "shared" / "gfx" / "meshes" / "spiker"
+                ),
+            m_effects_config
+            )
+        }
+    , m_batch_dock{
+        qtgl::batch(
+            canonical_path(
+                boost::filesystem::path{get_program_options()->dataRoot()}
+                    / "shared" / "gfx" / "meshes" / "dock"
+                ),
+            m_effects_config
+            )
+        }
+    , m_batch_ship{
+        qtgl::batch(
+            canonical_path(
+                boost::filesystem::path{get_program_options()->dataRoot()}
+                    / "shared" / "gfx" / "meshes" / "ship"
+                ),
+                m_effects_config
+                )
+        }
 
     , m_batch_spiker_bbox{}
     , m_batch_dock_bbox{}

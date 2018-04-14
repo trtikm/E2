@@ -6,6 +6,7 @@
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>
 #   include <qtgl/draw.hpp>
+#   include <qtgl/effects_config.hpp>
 #   include <string>
 #   include <memory>
 
@@ -98,6 +99,8 @@ private:
 
     qtgl::camera_perspective_ptr  m_camera;
     qtgl::free_fly_config  m_free_fly_config;
+
+    qtgl::effects_config  m_effects_config;
 
     qtgl::batch  m_batch_grid;
     qtgl::batch  m_batch_cell;

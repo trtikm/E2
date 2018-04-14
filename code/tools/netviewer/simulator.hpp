@@ -75,6 +75,9 @@ struct simulator : public qtgl::real_time_simulator
     netlab::layer_index_type  get_layer_index_of_chosen_layer_to_render() const noexcept { return m_layer_index_of_chosen_layer_to_render; }
     bool  set_layer_index_of_chosen_layer_to_render(netlab::layer_index_type const  layer_index);
 
+    qtgl::effects_config const&  get_effects_config() const { return m_effects_config; }
+    qtgl::effects_config&  effects_config_ref() { return m_effects_config; }
+
     /// Debugging stuff
     void  dbg_set_camera_far_plane(float_32_bit const  far_plane)
     {
@@ -147,6 +150,8 @@ private:
     std::shared_ptr<netlab::tracked_network_object_stats>  m_selected_object_stats;
 
     /// Data for rendering of entities in the network and selection related stuff
+    qtgl::effects_config  m_effects_config;
+
     qtgl::batch  m_batch_spiker;
     qtgl::batch  m_batch_dock;
     qtgl::batch  m_batch_ship;

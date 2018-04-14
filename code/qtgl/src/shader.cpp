@@ -657,18 +657,6 @@ void  parse_properties_from_fragment_shader_code(
 namespace qtgl { namespace detail {
 
 
-vertex_shader_data::vertex_shader_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr)
-{
-    TMPROF_BLOCK();
-
-    std::vector<std::string>  lines_of_shader_code;
-    std::string const  error_message = detail::parse_lines(path,GL_VERTEX_SHADER,lines_of_shader_code);
-    if (!error_message.empty())
-        throw std::runtime_error(error_message);
-    initialise(lines_of_shader_code);
-}
-
-
 vertex_shader_data::~vertex_shader_data()
 {
     TMPROF_BLOCK();
@@ -830,18 +818,6 @@ void  vertex_shader_data::initialise(
 }}
 
 namespace qtgl { namespace detail {
-
-
-fragment_shader_data::fragment_shader_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr)
-{
-    TMPROF_BLOCK();
-
-    std::vector<std::string>  lines_of_shader_code;
-    std::string const  error_message = detail::parse_lines(path,GL_FRAGMENT_SHADER,lines_of_shader_code);
-    if (!error_message.empty())
-        throw std::runtime_error(error_message);
-    initialise(lines_of_shader_code);
-}
 
 
 fragment_shader_data::~fragment_shader_data()
@@ -1007,34 +983,6 @@ void  fragment_shader_data::initialise(
 namespace qtgl { namespace detail {
 
 
-shaders_binding_data::shaders_binding_data(
-        async::finalise_load_on_destroy_ptr  finaliser,
-        boost::filesystem::path const&  vertex_shader_path,
-        boost::filesystem::path const&  fragment_shader_path
-        )
-    : m_id(0U)
-    , m_vertex_shader()
-    , m_fragment_shader()
-    , m_ready(false)
-{
-    TMPROF_BLOCK();
-
-    auto const  on_shaders_load_finished = 
-        std::bind(
-            &shaders_binding_data::on_shaders_load_finished,
-            this,
-            finaliser,
-            vertex_shader_path,
-            fragment_shader_path,
-            std::shared_ptr<bool>(new bool(false))  // See comment in shaders_binding_data::on_shaders_load_finished
-                                                    // to see why we need this shared variable.
-            );
-
-    m_vertex_shader.insert_load_request(vertex_shader_path.string(), 1UL, on_shaders_load_finished);
-    m_fragment_shader.insert_load_request(fragment_shader_path.string(), 1UL, on_shaders_load_finished);
-}
-
-
 shaders_binding_data::~shaders_binding_data()
 {
     TMPROF_BLOCK();
@@ -1064,52 +1012,6 @@ void  shaders_binding_data::destroy_gl_binding()
 
     glapi().glDeleteProgramPipelines(1,&m_id);
     INVARIANT(glapi().glGetError() == 0U);
-}
-
-
-void  shaders_binding_data::on_shaders_load_finished(
-        async::finalise_load_on_destroy_ptr  finaliser,
-        boost::filesystem::path const&  vertex_shader_path,
-        boost::filesystem::path const&  fragment_shader_path,
-        std::shared_ptr<bool>  visited
-        )
-{
-    TMPROF_BLOCK();
-
-    // The load is finished when both vertex and fragment shaders are loaded.
-    // Due to async load, any of the two can finish first. So, we have boolean
-    // shared variable 'visited', which tells us whether we already processed
-    // the first of the two shaders. Namely, for the first shader we only mark
-    // the variable and terminate (i.e. we wait till the second is loaded).
-    // And we do the proper load-finishing-work once the second shader is loaded.
-    if (!*visited)
-    {
-        *visited = true;
-        return;
-    }
-
-    if (get_vertex_shader().get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
-    {
-        // Oh no! We failed to load the vertex shader!
-        // So, let's also fail the load of the whole 'shaders_binding_data' resource.
-
-        finaliser->force_finalisation_as_failure(
-            "Load of vertex shader '" + vertex_shader_path.string() + "' has FAILED!"
-            );
-        return;
-    }
-    if (get_fragment_shader().get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
-    {
-        // Oh no! We failed to load the fragment shader!
-        // So, let's also fail the load of the whole 'shaders_binding_data' resource.
-
-        finaliser->force_finalisation_as_failure(
-            "Load of fragment shader '" + fragment_shader_path.string() + "' has FAILED!"
-            );
-        return;
-    }
-
-    initialise(0U, get_vertex_shader(), get_fragment_shader());
 }
 
 
@@ -1172,6 +1074,7 @@ bool  shaders_binding::make_current() const
         return false;
 
     glapi().glBindProgramPipeline(id());
+    INVARIANT(glapi().glGetError() == 0U);
 
     return true;
 }

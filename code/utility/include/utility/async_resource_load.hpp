@@ -5,6 +5,7 @@
 #   include <utility/assumptions.hpp>
 #   include <utility/invariants.hpp>
 #   include <utility/timeprof.hpp>
+#   include <utility/std_pair_hash.hpp>
 #   include <utility/msgstream.hpp>
 #   include <utility/log.hpp>
 #   include <boost/filesystem/path.hpp>
@@ -33,7 +34,7 @@ enum struct LOAD_STATE
 namespace async { namespace detail {
 
 
-using  key_type = std::string;
+using  key_type = std::pair<std::string,std::string>;  // <data-type-name,ID>, where ID is usually a disk path.
 using  resource_loader_type = std::function<void()>;
 using  resource_load_priority_type = natural_32_bit;
 
@@ -358,7 +359,7 @@ void  resource_cache::insert_resource(
 
     {
         std::lock_guard<std::mutex> const  lock(mutex());
-        if (key.empty())
+        if (key == key_type())
             key = generate_fresh_key();
         else
         {
@@ -449,23 +450,6 @@ struct  resource_accessor
         insert_load_request(key, priority, notification_callback);
     }
 
-    void  insert_load_request(
-            key_type const&  key,
-            load_priority_type const  priority,
-            notification_callback_type const& notification_callback = notification_callback_type()
-            )
-    {
-        ASSUMPTION(m_data_ptr == nullptr);
-        detail::resource_cache::instance().insert_load_request<resource_type>(
-                            key,
-                            priority,
-                            notification_callback,
-                            m_data_ptr
-                            );
-        if (m_data_ptr->second->get_load_state() != LOAD_STATE::IN_PROGRESS && notification_callback.operator bool())
-            notification_callback();
-    }
-
     template<typename... arg_types>
     explicit resource_accessor(
             key_type const&  key,
@@ -475,24 +459,6 @@ struct  resource_accessor
         : m_data_ptr(nullptr)
     {
         insert_resource(key, notification_callback, args_for_constructor_of_the_resource...);
-    }
-
-    template<typename... arg_types>
-    void  insert_resource(
-            key_type const&  key,
-            notification_callback_type const& notification_callback,
-            arg_types... args_for_constructor_of_the_resource
-            )
-    {
-        ASSUMPTION(m_data_ptr == nullptr);
-        detail::resource_cache::instance().insert_resource<resource_type>(
-                            key,
-                            notification_callback,
-                            m_data_ptr,
-                            args_for_constructor_of_the_resource...
-                            );
-        if (m_data_ptr->second->get_load_state() != LOAD_STATE::IN_PROGRESS && notification_callback.operator bool())
-            notification_callback();
     }
 
     resource_accessor(resource_accessor<resource_type> const&  other)
@@ -572,6 +538,43 @@ struct  resource_accessor
     {
         ASSUMPTION(is_load_finished());
         return m_data_ptr->second->error_message();
+    }
+
+protected:
+
+    void  insert_load_request(
+            key_type const&  key,
+            load_priority_type const  priority,
+            notification_callback_type const& notification_callback = notification_callback_type()
+            )
+    {
+        ASSUMPTION(m_data_ptr == nullptr);
+        detail::resource_cache::instance().insert_load_request<resource_type>(
+                            key,
+                            priority,
+                            notification_callback,
+                            m_data_ptr
+                            );
+        if (m_data_ptr->second->get_load_state() != LOAD_STATE::IN_PROGRESS && notification_callback.operator bool())
+            notification_callback();
+    }
+
+    template<typename... arg_types>
+    void  insert_resource(
+            key_type const&  key,
+            notification_callback_type const& notification_callback,
+            arg_types... args_for_constructor_of_the_resource
+            )
+    {
+        ASSUMPTION(m_data_ptr == nullptr);
+        detail::resource_cache::instance().insert_resource<resource_type>(
+                            key,
+                            notification_callback,
+                            m_data_ptr,
+                            args_for_constructor_of_the_resource...
+                            );
+        if (m_data_ptr->second->get_load_state() != LOAD_STATE::IN_PROGRESS && notification_callback.operator bool())
+            notification_callback();
     }
 
 private:

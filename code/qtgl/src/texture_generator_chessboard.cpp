@@ -45,14 +45,14 @@ texture  make_chessboard_texture(
                 y_wrapping_type,
                 min_filtering_type,
                 GL_NEAREST,
-                chessboard_texture_file_path()
+                chessboard_texture_file_path().string()
                 ),
             texture_image(
                 2U, 2U,
                 (natural_8_bit const*)image_data,
                 (natural_8_bit const*)image_data + sizeof(image_data),
                 GL_RGB, GL_FLOAT,
-                chessboard_texture_image_path()
+                chessboard_texture_image_path().string()
                 ),
             chessboard_texture_id()
             );

@@ -121,6 +121,14 @@ simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused, n
                 },
             }
 
+    , m_effects_config(
+            qtgl::effects_config::light_types{},
+            qtgl::effects_config::lighting_data_types{
+                { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE }
+                },
+            qtgl::effects_config::shader_output_types{ qtgl::SHADER_DATA_OUTPUT_TYPE::DEFAULT }
+            )
+
     , m_batch_grid{ 
             qtgl::create_grid(
                     50.0f,
@@ -140,9 +148,9 @@ simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused, n
                     "../data"
                     )
             }
-    , m_batch_cell{qtgl::batch(canonical_path("../data/shared/gfx/models/neuron/body.txt"))}
-    , m_batch_input_spot{ qtgl::batch(canonical_path("../data/shared/gfx/models/input_spot/input_spot.txt")) }
-    , m_batch_output_terminal{ qtgl::batch(canonical_path("../data/shared/gfx/models/output_terminal/output_terminal.txt")) }
+    , m_batch_cell{qtgl::batch(canonical_path("../data/shared/gfx/models/neuron/body.txt"), m_effects_config)}
+    , m_batch_input_spot{ qtgl::batch(canonical_path("../data/shared/gfx/models/input_spot/input_spot.txt"), m_effects_config) }
+    , m_batch_output_terminal{ qtgl::batch(canonical_path("../data/shared/gfx/models/output_terminal/output_terminal.txt"), m_effects_config) }
     , m_selected_cell_input_spot_lines()
     , m_selected_cell_output_terminal_lines()
 {

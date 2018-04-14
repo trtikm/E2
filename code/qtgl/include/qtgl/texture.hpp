@@ -15,7 +15,7 @@ namespace qtgl { namespace detail {
 
 struct texture_file_data
 {
-    texture_file_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr);
+    texture_file_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr);
     ~texture_file_data();
 
     texture_file_data(
@@ -76,8 +76,22 @@ struct texture_file : public async::resource_accessor<detail::texture_file_data>
     {}
 
     explicit texture_file(boost::filesystem::path const&  path)
-        : async::resource_accessor<detail::texture_file_data>(path.string(), 1U)
+        : async::resource_accessor<detail::texture_file_data>(
+            {"qtgl::texture_file",path.string()},
+            1U
+            )
     {}
+
+    void  insert_load_request(
+            boost::filesystem::path const&  path,
+            async::notification_callback_type const& notification_callback = async::notification_callback_type())
+    {
+        async::resource_accessor<detail::texture_file_data>::insert_load_request(
+            { "qtgl::texture_file", path.string() },
+            1U,
+            notification_callback
+            );
+    }
 
     texture_file(
             boost::filesystem::path const&  image_pathname,
@@ -86,10 +100,10 @@ struct texture_file : public async::resource_accessor<detail::texture_file_data>
             natural_32_bit const  y_wrapping_type,
             natural_32_bit const  min_filtering_type,
             natural_32_bit const  mag_filtering_type,
-            boost::filesystem::path const&  path
+            std::string const&  key = ""
             )
         : async::resource_accessor<detail::texture_file_data>(
-                path.string(),
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::texture_file", key },
                 async::notification_callback_type(),
                 image_pathname,
                 pixel_format,
@@ -116,7 +130,7 @@ namespace qtgl { namespace detail {
 
 struct texture_image_data
 {
-    texture_image_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr);
+    texture_image_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr);
 
     texture_image_data(
             async::finalise_load_on_destroy_ptr,
@@ -167,8 +181,22 @@ struct texture_image : public async::resource_accessor<detail::texture_image_dat
     {}
 
     explicit texture_image(boost::filesystem::path const&  path)
-        : async::resource_accessor<detail::texture_image_data>(path.string(), 1U)
+        : async::resource_accessor<detail::texture_image_data>(
+            {"qtgl::texture_image",path.string()},
+            1U
+            )
     {}
+
+    void  insert_load_request(
+            boost::filesystem::path const&  path,
+            async::notification_callback_type const& notification_callback = async::notification_callback_type())
+    {
+        async::resource_accessor<detail::texture_image_data>::insert_load_request(
+            { "qtgl::texture_image", path.string() },
+            1U,
+            notification_callback
+            );
+    }
 
     texture_image(
             natural_32_bit const  width,
@@ -177,10 +205,11 @@ struct texture_image : public async::resource_accessor<detail::texture_image_dat
             natural_8_bit const* const  data_end,
             natural_32_bit const  pixel_components,
             natural_32_bit const  pixel_components_type,
-            boost::filesystem::path const&  path
+            std::string const&  key = ""
             )
         : async::resource_accessor<detail::texture_image_data>(
-                path.string(), async::notification_callback_type(),
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::texture_image", key },
+                async::notification_callback_type(),
                 width, height, data_begin, data_end, pixel_components, pixel_components_type
                 )
     {}
@@ -200,7 +229,7 @@ namespace qtgl { namespace detail {
 
 struct texture_data
 {
-    texture_data(std::string const&  key, async::finalise_load_on_destroy_ptr  finaliser);
+    texture_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr  finaliser);
 
     texture_data(
             async::finalise_load_on_destroy_ptr  finaliser,
@@ -243,16 +272,19 @@ struct texture : public async::resource_accessor<detail::texture_data>
     {}
 
     explicit texture(boost::filesystem::path const&  path)
-        : async::resource_accessor<detail::texture_data>("[texture]:" + path.string(), 1U)
+        : async::resource_accessor<detail::texture_data>(
+            {"qtgl::texture", path.string()},
+            1U
+            )
     {}
 
     texture(GLuint const  id,
             texture_file const  texture_props,
             texture_image const  image_props,
-            boost::filesystem::path const&  path
+            std::string const&  key = ""
             )
         : async::resource_accessor<detail::texture_data>(
-                "[texture]:" + path.string(),
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::texture", key },
                 async::notification_callback_type(),
                 id,
                 texture_props,
@@ -306,6 +338,21 @@ struct textures_binding_data
             );    
     }
 
+    textures_binding_data(
+            async::finalise_load_on_destroy_ptr finaliser,
+            std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, boost::filesystem::path> const&  texture_paths
+            )
+        : textures_binding_data(
+                finaliser,
+                [&texture_paths]() -> binding_map_type {
+                    binding_map_type  result;
+                    for (auto const&  elem : texture_paths)
+                        result.insert({elem.first, texture(elem.second)});
+                    return result;
+                    }()
+                )
+    {}
+
     binding_map_type const&  bindings_map() const { return m_bindings; }
 
     bool  ready() const { return m_ready; }
@@ -333,12 +380,23 @@ struct textures_binding : public async::resource_accessor<detail::textures_bindi
 
     textures_binding(
             binding_map_type const&  bindings,
-            async::key_type const&  key = ""
+            std::string const&  key = ""
             )
         : async::resource_accessor<detail::textures_binding_data>(
-                key,
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::textures_binding", key },
                 async::notification_callback_type(),
                 bindings
+                )
+    {}
+
+    textures_binding(
+            std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, boost::filesystem::path> const&  texture_paths,
+            std::string const&  key = ""
+            )
+        : async::resource_accessor<detail::textures_binding_data>(
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::textures_binding", key },
+                async::notification_callback_type(),
+                texture_paths
                 )
     {}
 

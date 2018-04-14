@@ -14,7 +14,7 @@ namespace qtgl { namespace detail {
 
 struct  keyframe_data
 {
-    keyframe_data(boost::filesystem::path const&  pathname, async::finalise_load_on_destroy_ptr);
+    keyframe_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr);
     ~keyframe_data();
 
     float_32_bit  time_point() const { return m_time_point; }
@@ -39,8 +39,22 @@ struct  keyframe : public async::resource_accessor<detail::keyframe_data>
     {}
 
     explicit keyframe(boost::filesystem::path const&  path)
-        : async::resource_accessor<detail::keyframe_data>(path.string(),1U)
+        : async::resource_accessor<detail::keyframe_data>(
+            {"qtgl::keyframe",path.string()},
+            1U
+            )
     {}
+
+    void  insert_load_request(
+            boost::filesystem::path const&  path,
+            async::notification_callback_type const& notification_callback = async::notification_callback_type())
+    {
+        async::resource_accessor<detail::keyframe_data>::insert_load_request(
+            { "qtgl::keyframe", path.string() },
+            1U,
+            notification_callback
+            );
+    }
 
     float_32_bit  get_time_point() const { return resource().time_point(); }
 
@@ -56,7 +70,7 @@ namespace qtgl { namespace detail {
 
 struct  keyframes_data
 {
-    keyframes_data(boost::filesystem::path const&  pathname, async::finalise_load_on_destroy_ptr  finaliser);
+    keyframes_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr  finaliser);
     ~keyframes_data();
 
     std::vector<keyframe> const&  keyframes() const { return m_keyframes; }
@@ -75,7 +89,10 @@ namespace qtgl {
 struct  keyframes : public async::resource_accessor<detail::keyframes_data>
 {
     explicit keyframes(boost::filesystem::path const&  keyframes_dir)
-        : async::resource_accessor<detail::keyframes_data>(keyframes_dir.string(),1U)
+        : async::resource_accessor<detail::keyframes_data>(
+            {"qtgl::keyframes", keyframes_dir.string()},
+            1U
+            )
     {}
 
     std::vector<keyframe> const&  get_keyframes() const { return resource().keyframes(); }

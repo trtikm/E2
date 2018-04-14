@@ -39,7 +39,8 @@ batch  create_lines3d(
             {SHADER_DATA_OUTPUT_TYPE::DEFAULT}
             },
         qtgl::draw_state::create(),
-        modelspace()
+        modelspace(),
+        skeleton_alignment()
         );
     return pbatch;
 }

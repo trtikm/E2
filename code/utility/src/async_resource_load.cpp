@@ -13,7 +13,7 @@ resource_load_planner&  resource_load_planner::instance()
 resource_load_planner::~resource_load_planner()
 {
     assert(m_worker_finished == true);
-    assert(m_resource_just_being_loaded.empty());
+    assert(m_resource_just_being_loaded == key_type());
     assert(m_queue.empty());
 
     if (m_worker_thread.joinable()) // This must be here, because although the worker can be terminated
@@ -30,7 +30,7 @@ void  resource_load_planner::clear()
     std::lock_guard<std::mutex> const  lock(mutex());
     m_worker_finished = true;
     m_queue.clear();
-    m_resource_just_being_loaded.clear();
+    m_resource_just_being_loaded = key_type();
 }
 
 
@@ -42,7 +42,7 @@ void  resource_load_planner::insert_load_request(
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(!key.empty());
+    ASSUMPTION(key != key_type());
 
     std::lock_guard<std::mutex> const  lock(mutex());
     m_queue.push(queue_value_type{priority,key,loader});
@@ -65,7 +65,7 @@ void  resource_load_planner::cancel_load_request(key_type const&  key)
     for (queue_storage_type::iterator  it = m_queue.begin(); it != m_queue.end(); ++it)
         if (std::get<1>(*it) == key)
         {
-            *it = queue_value_type{ std::get<0>(*it), "", std::get<2>(*it) };
+            *it = queue_value_type{ std::get<0>(*it), key_type(), std::get<2>(*it) };
             break;
         }
 }
@@ -121,14 +121,14 @@ void  resource_load_planner::worker()
         if (done)
             break;
 
-        if (!std::get<1>(task).empty())
+        if (std::get<1>(task) != key_type())
         {
             TMPROF_BLOCK();
             std::get<2>(task)();
         }
 
         std::lock_guard<std::mutex> const  lock(mutex());
-        m_resource_just_being_loaded.clear();
+        m_resource_just_being_loaded = key_type();
     }
 
     m_worker_finished = true;
@@ -227,7 +227,7 @@ natural_64_bit  resource_cache::s_fresh_key_id = 0ULL;
 
 key_type  resource_cache::generate_fresh_key()
 {
-    return msgstream() << "@generic> " << ++s_fresh_key_id;
+    return key_type{"@generic", msgstream() << ++s_fresh_key_id};
 }
 
 

@@ -131,6 +131,13 @@ simulator::simulator()
     , m_batch_coord_system(qtgl::create_basis_vectors())
     , m_scene_edit_data(SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
 
+    , m_effects_config(
+            qtgl::effects_config::light_types{},
+            qtgl::effects_config::lighting_data_types{
+                { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE }
+                },
+            qtgl::effects_config::shader_output_types{ qtgl::SHADER_DATA_OUTPUT_TYPE::DEFAULT }
+            )
 {}
 
 simulator::~simulator()
@@ -541,7 +548,7 @@ void  simulator::render_scene_batches(matrix44 const&  view_projection_matrix, q
             batches;
     for (auto const& name_node : get_scene().get_all_scene_nodes())
         for (auto const& name_batch : name_node.second->get_batches())
-            batches[name_batch.second.key()].push_back({name_batch.second, name_node.second});
+            batches[name_batch.second.path_component_of_uid()].push_back({name_batch.second, name_node.second});
     for (auto const& path_and_pairs : batches)
         if (qtgl::make_current(path_and_pairs.second.front().first, *draw_state))
         {
@@ -601,7 +608,7 @@ void  simulator::insert_batch_to_scene_node(std::string const&  batch_name, boos
     TMPROF_BLOCK();
 
     ASSUMPTION(get_scene().has_scene_node(scene_node_name));
-    auto const  batch = qtgl::batch(canonical_path(batch_pathname));
+    auto const  batch = qtgl::batch(canonical_path(batch_pathname), get_effects_config());
     get_scene_node(scene_node_name)->insert_batches({ { batch_name, batch } });
 }
 

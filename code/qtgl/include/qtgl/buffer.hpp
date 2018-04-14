@@ -19,7 +19,7 @@ namespace qtgl { namespace detail {
 
 struct  buffer_file_data
 {
-    buffer_file_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr);
+    buffer_file_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr);
 
     buffer_file_data(
             async::finalise_load_on_destroy_ptr,
@@ -108,8 +108,22 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
     {}
 
     explicit buffer(boost::filesystem::path const&  path)
-        : async::resource_accessor<detail::buffer_file_data>(path.string(), 1U)
+        : async::resource_accessor<detail::buffer_file_data>(
+            {"qtgl::buffer",path.string()},
+            1U
+            )
     {}
+
+    void  insert_load_request(
+            boost::filesystem::path const&  path,
+            async::notification_callback_type const& notification_callback = async::notification_callback_type())
+    {
+        async::resource_accessor<detail::buffer_file_data>::insert_load_request(
+            { "qtgl::buffer", path.string() },
+            1U,
+            notification_callback
+            );
+    }
 
     buffer( GLuint const  id, 
             natural_8_bit const  num_components_per_primitive,
@@ -119,10 +133,10 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
             natural_8_bit const* const  data_begin,
             natural_8_bit const* const  data_end,
             spatial_boundary const* const  boundary,
-            boost::filesystem::path const&  path = ""
+            std::string const&  key = ""
             )
         : async::resource_accessor<detail::buffer_file_data>(
-                path.string(),
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer", key },
                 async::notification_callback_type(),
                 id,
                 num_components_per_primitive, num_primitives, num_bytes_per_component, has_integral_components,
@@ -131,9 +145,9 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
                 )
     {}
 
-    buffer(std::vector< std::array<float_32_bit,2> > const&  data, boost::filesystem::path const&  path = "")
+    buffer(std::vector< std::array<float_32_bit,2> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
-                path.string(),
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer", key },
                 async::notification_callback_type(),
                 data
                 )
@@ -141,43 +155,43 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
 
     buffer( std::vector< std::array<float_32_bit,3> > const&  data,
             bool const  do_compute_boundary = false,
-            boost::filesystem::path const&  path = ""
+            std::string const&  key = ""
             )
         : async::resource_accessor<detail::buffer_file_data>(
-                path.string(),
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer", key },
                 async::notification_callback_type(),
                 data,
                 do_compute_boundary
                 )
     {}
 
-    buffer(std::vector< std::array<float_32_bit,4> > const&  data, boost::filesystem::path const&  path = "")
+    buffer(std::vector< std::array<float_32_bit,4> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
-                path.string(),
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer", key },
                 async::notification_callback_type(),
                 data
                 )
     {}
 
-    buffer(std::vector< natural_32_bit > const&  data, boost::filesystem::path const&  path = "")
+    buffer(std::vector< natural_32_bit > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
-                path.string(),
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer", key },
                 async::notification_callback_type(),
                 data
                 )
     {}
 
-    buffer(std::vector< std::array<natural_32_bit,2> > const&  data, boost::filesystem::path const&  path = "")
+    buffer(std::vector< std::array<natural_32_bit,2> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
-                path.string(),
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer", key },
                 async::notification_callback_type(),
                 data
                 )
     {}
 
-    buffer(std::vector< std::array<natural_32_bit,3> > const&  data, boost::filesystem::path const&  path = "")
+    buffer(std::vector< std::array<natural_32_bit,3> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
-                path.string(),
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer", key },
                 async::notification_callback_type(),
                 data
                 )
@@ -291,10 +305,10 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
             GLuint const  id,
             buffer const  index_buffer,
             buffers_map_type const&  buffers,
-            async::key_type const&  key = ""
+            std::string const&  key = ""
             )
         : async::resource_accessor<detail::buffers_binding_data>(
-                key,
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer_binding", key },
                 async::notification_callback_type(),
                 id,
                 index_buffer,
@@ -306,10 +320,10 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
             GLuint const  id,
             natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
             buffers_map_type const&  buffers,
-            async::key_type const&  key = ""
+            std::string const&  key = ""
             )
         : async::resource_accessor<detail::buffers_binding_data>(
-                key,
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer_binding", key },
                 async::notification_callback_type(),
                 id,
                 num_indices_per_primitive,
@@ -320,10 +334,10 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
     buffers_binding(
             boost::filesystem::path const&  index_buffer_path,
             std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths,
-            async::key_type const&  key = ""
+            std::string const&  key = ""
             )
         : async::resource_accessor<detail::buffers_binding_data>(
-            key,
+            key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer_binding", key },
             async::notification_callback_type(),
             index_buffer_path,
             paths
@@ -333,10 +347,10 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
     buffers_binding(
             natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
             std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths,
-            async::key_type const&  key = ""
+            std::string const&  key = ""
             )
         : async::resource_accessor<detail::buffers_binding_data>(
-            key,
+            key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer_binding", key },
             async::notification_callback_type(),
             num_indices_per_primitive,
             paths

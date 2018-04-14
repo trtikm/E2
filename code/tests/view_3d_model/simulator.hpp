@@ -29,6 +29,9 @@ struct simulator : public qtgl::real_time_simulator
     void  insert_batch(boost::filesystem::path const&  batch_pathname);
     void  erase_batch(boost::filesystem::path const&  batch_pathname);
 
+    qtgl::effects_config const&  get_effects_config() const { return m_effects_config; }
+    qtgl::effects_config&  effects_config_ref() { return m_effects_config; }
+
 private:
     qtgl::camera_perspective_ptr  m_camera;
     qtgl::free_fly_config  m_free_fly_config;
@@ -38,6 +41,8 @@ private:
 
     angeo::coordinate_system_ptr  m_batch_space;
     std::vector<qtgl::batch>  m_batches;
+
+    qtgl::effects_config  m_effects_config;
 };
 
 typedef std::shared_ptr<simulator>  simulator_ptr;

@@ -46,8 +46,8 @@ struct  batch_available_resources_data  final
                                     //        BINDING_IN_TEXCOORD8
                                     //        BINDING_IN_TEXCOORD9
                                 std::string
-                                    // Full path-name of the corresponding resource file on the disk, or any other string
-                                    // (typically "") in case of generated buffer (e.g. for grid, lines, sphere, box)
+                                    // Full path-name of the corresponding the texture file on the disk, or any other string
+                                    // (typically "") in case of generated texture.
                                 >
                         >;
 
@@ -83,7 +83,7 @@ struct  batch_available_resources_data  final
                         // Holds pathnames of files containing batch-specific data related to the skeleton above.
                     >;
 
-    batch_available_resources_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr);
+    batch_available_resources_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr);
 
     batch_available_resources_data(
             async::finalise_load_on_destroy_ptr,
@@ -97,6 +97,7 @@ struct  batch_available_resources_data  final
     textures_dictionary_type const&  textures() const { return m_textures; }
     skeletal_dictionary_type const&  skeletal() const { return m_skeletal; }
     std::string const&  index_buffer() const { return m_index_buffer; }
+    std::string const&  get_root_dir() const { return m_root_dir; }
 
 private:
 
@@ -104,6 +105,7 @@ private:
     textures_dictionary_type  m_textures;
     skeletal_dictionary_type  m_skeletal;
     std::string  m_index_buffer;
+    std::string  m_root_dir;
 };
 
 
@@ -122,9 +124,26 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
     batch_available_resources() : async::resource_accessor<detail::batch_available_resources_data>()
     {}
 
-    batch_available_resources(boost::filesystem::path const&  path)
-        : async::resource_accessor<detail::batch_available_resources_data>(path.string(), 1U)
+    batch_available_resources(
+            boost::filesystem::path const&  path,
+            async::notification_callback_type const& notification_callback = async::notification_callback_type())
+        : async::resource_accessor<detail::batch_available_resources_data>(
+            {"qtgl::batch_available_resources", path.string()},
+            1U,
+            notification_callback
+            )
     {}
+
+    void  insert_load_request(
+            boost::filesystem::path const&  path,
+            async::notification_callback_type const& notification_callback = async::notification_callback_type())
+    {
+        async::resource_accessor<detail::batch_available_resources_data>::insert_load_request(
+            { "qtgl::batch_available_resources", path.string() },
+            1U,
+            notification_callback
+            );
+    }
 
     batch_available_resources(
             buffers_dictionaty_type const&  buffers_,
@@ -134,7 +153,7 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::batch_available_resources_data>(
-                key,
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::batch_available_resources", key },
                 async::notification_callback_type(),
                 buffers_,
                 textures_,
@@ -151,7 +170,7 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::batch_available_resources_data>(
-                key,
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::batch_available_resources", key },
                 async::notification_callback_type(),
                 [&buffers_binding_]() -> buffers_dictionaty_type {
                         buffers_dictionaty_type  result;
@@ -178,6 +197,7 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
     textures_dictionary_type const&  textures() const { return resource().textures(); }
     skeletal_dictionary_type const&  skeletal() const { return resource().skeletal(); }
     std::string const&  index_buffer() const { return resource().index_buffer(); }
+    std::string const&  root_dir() const { return resource().get_root_dir(); }
 };
 
 

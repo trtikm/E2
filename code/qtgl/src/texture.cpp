@@ -1,6 +1,6 @@
 #include <qtgl/texture.hpp>
-#include <qtgl/detail/read_line.hpp>
 #include <qtgl/glapi.hpp>
+#include <utility/read_line.hpp>
 #include <utility/msgstream.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -14,9 +14,11 @@
 namespace qtgl { namespace detail {
 
 
-texture_file_data::texture_file_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr)
+texture_file_data::texture_file_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr)
 {
     TMPROF_BLOCK();
+
+    boost::filesystem::path const  path = key.second;
 
     ASSUMPTION(boost::filesystem::exists(path));
     ASSUMPTION(boost::filesystem::is_regular_file(path));
@@ -29,111 +31,98 @@ texture_file_data::texture_file_data(boost::filesystem::path const&  path, async
     if (!istr.good())
         throw std::runtime_error(msgstream() << "Cannot open the texture file '" << path << "'.");
 
-    std::string  file_type;
-    if (!detail::read_line(istr,file_type))
-        throw std::runtime_error(msgstream() << "The passed file '" << path
-                                             << "' is not a qtgl file (cannot read its type string).");
+    std::string  line;
 
-    if (file_type == "E2::qtgl/texture/text")
-    {
-        std::string  line;
+    if (!read_line(istr,line))
+        throw std::runtime_error(msgstream() << "Cannot read a path to an image file in the file '"
+                                                << path << "'.");
 
-        if (!detail::read_line(istr,line))
-            throw std::runtime_error(msgstream() << "Cannot read a path to an image file in the file '"
-                                                 << path << "'.");
+    boost::filesystem::path const  image_file = canonical_path(path.parent_path() / line);
 
-        boost::filesystem::path const  image_file = canonical_path(path.parent_path() / line);
-
-        if (!detail::read_line(istr,line))
-            throw std::runtime_error(
-                    msgstream() << "Cannot read 'pixel format' in the texture file '" << path << "'."
-                    );
-        natural_32_bit  pixel_format;
-        if (line == "COMPRESSED_RGB")
-            pixel_format = GL_COMPRESSED_RGB;
-        else if (line == "COMPRESSED_RGBA")
-            pixel_format = GL_COMPRESSED_RGBA;
-        else
-            throw std::runtime_error(
-                    msgstream() << "Unknown pixel format '" << line << "' in the texture file '" << path << "'."
-                    );
-
-        if (!detail::read_line(istr,line))
-            throw std::runtime_error(
-                    msgstream() << "Cannot read 'x-wrapping type' in the texture file '" << path << "'."
-                    );
-        natural_32_bit  x_wrapping_type;
-        if (line == "REPEAT")
-            x_wrapping_type= GL_REPEAT;
-        else if (line == "CLAMP")
-            x_wrapping_type= GL_CLAMP;
-        else
-            throw std::runtime_error(
-                    msgstream() << "Unknown x-wrapping type '" << line << "' in the texture file '" << path << "'."
-                    );
-
-        if (!detail::read_line(istr,line))
-            throw std::runtime_error(
-                    msgstream() << "Cannot read 'y-wrapping type' in the texture file '" << path << "'."
-                    );
-        natural_32_bit  y_wrapping_type;
-        if (line == "REPEAT")
-            y_wrapping_type= GL_REPEAT;
-        else if (line == "CLAMP")
-            y_wrapping_type= GL_CLAMP;
-        else
-            throw std::runtime_error(
-                    msgstream() << "Unknown y-wrapping type '" << line << "' in the texture file '" << path << "'."
-                    );
-
-        if (!detail::read_line(istr,line))
-            throw std::runtime_error(
-                    msgstream() << "Cannot read 'min filtering type' in the texture file '" << path << "'."
-                    );
-        natural_32_bit  min_filtering_type;
-        if (line == "NEAREST_MIPMAP_NEAREST")
-            min_filtering_type= GL_NEAREST_MIPMAP_NEAREST;
-        else if (line == "NEAREST_MIPMAP_LINEAR")
-            min_filtering_type= GL_NEAREST_MIPMAP_LINEAR;
-        else if (line == "LINEAR_MIPMAP_NEAREST")
-            min_filtering_type= GL_LINEAR_MIPMAP_NEAREST;
-        else if (line == "LINEAR_MIPMAP_LINEAR")
-            min_filtering_type= GL_LINEAR_MIPMAP_LINEAR;
-        else
-            throw std::runtime_error(
-                    msgstream() << "Unknown min filtering type '" << line << "' in the texture file '"
-                                << path << "'."
-                    );
-
-        if (!detail::read_line(istr,line))
-            throw std::runtime_error(
-                    msgstream() << "Cannot read 'mag filtering type' in the texture file '" << path << "'."
-                    );
-        natural_32_bit  mag_filtering_type;
-        if (line == "NEAREST")
-            mag_filtering_type= GL_NEAREST;
-        else if (line == "LINEAR")
-            mag_filtering_type= GL_LINEAR;
-        else
-            throw std::runtime_error(
-                    msgstream() << "Unknown mag filtering type '" << line << "' in the texture file '"
-                                << path << "'."
-                    );
-
-        initialise(
-                image_file,
-                pixel_format,
-                x_wrapping_type,
-                y_wrapping_type,
-                min_filtering_type,
-                mag_filtering_type
+    if (!read_line(istr,line))
+        throw std::runtime_error(
+                msgstream() << "Cannot read 'pixel format' in the texture file '" << path << "'."
                 );
-    }
+    natural_32_bit  pixel_format;
+    if (line == "COMPRESSED_RGB")
+        pixel_format = GL_COMPRESSED_RGB;
+    else if (line == "COMPRESSED_RGBA")
+        pixel_format = GL_COMPRESSED_RGBA;
     else
         throw std::runtime_error(
-                msgstream() << "The passed texture file '" << path
-                            << "' is of an unknown type '" << file_type << "'."
+                msgstream() << "Unknown pixel format '" << line << "' in the texture file '" << path << "'."
                 );
+
+    if (!read_line(istr,line))
+        throw std::runtime_error(
+                msgstream() << "Cannot read 'x-wrapping type' in the texture file '" << path << "'."
+                );
+    natural_32_bit  x_wrapping_type;
+    if (line == "REPEAT")
+        x_wrapping_type= GL_REPEAT;
+    else if (line == "CLAMP")
+        x_wrapping_type= GL_CLAMP;
+    else
+        throw std::runtime_error(
+                msgstream() << "Unknown x-wrapping type '" << line << "' in the texture file '" << path << "'."
+                );
+
+    if (!read_line(istr,line))
+        throw std::runtime_error(
+                msgstream() << "Cannot read 'y-wrapping type' in the texture file '" << path << "'."
+                );
+    natural_32_bit  y_wrapping_type;
+    if (line == "REPEAT")
+        y_wrapping_type= GL_REPEAT;
+    else if (line == "CLAMP")
+        y_wrapping_type= GL_CLAMP;
+    else
+        throw std::runtime_error(
+                msgstream() << "Unknown y-wrapping type '" << line << "' in the texture file '" << path << "'."
+                );
+
+    if (!read_line(istr,line))
+        throw std::runtime_error(
+                msgstream() << "Cannot read 'min filtering type' in the texture file '" << path << "'."
+                );
+    natural_32_bit  min_filtering_type;
+    if (line == "NEAREST_MIPMAP_NEAREST")
+        min_filtering_type= GL_NEAREST_MIPMAP_NEAREST;
+    else if (line == "NEAREST_MIPMAP_LINEAR")
+        min_filtering_type= GL_NEAREST_MIPMAP_LINEAR;
+    else if (line == "LINEAR_MIPMAP_NEAREST")
+        min_filtering_type= GL_LINEAR_MIPMAP_NEAREST;
+    else if (line == "LINEAR_MIPMAP_LINEAR")
+        min_filtering_type= GL_LINEAR_MIPMAP_LINEAR;
+    else
+        throw std::runtime_error(
+                msgstream() << "Unknown min filtering type '" << line << "' in the texture file '"
+                            << path << "'."
+                );
+
+    if (!read_line(istr,line))
+        throw std::runtime_error(
+                msgstream() << "Cannot read 'mag filtering type' in the texture file '" << path << "'."
+                );
+    natural_32_bit  mag_filtering_type;
+    if (line == "NEAREST")
+        mag_filtering_type= GL_NEAREST;
+    else if (line == "LINEAR")
+        mag_filtering_type= GL_LINEAR;
+    else
+        throw std::runtime_error(
+                msgstream() << "Unknown mag filtering type '" << line << "' in the texture file '"
+                            << path << "'."
+                );
+
+    initialise(
+            image_file,
+            pixel_format,
+            x_wrapping_type,
+            y_wrapping_type,
+            min_filtering_type,
+            mag_filtering_type
+            );
 }
 
 
@@ -185,9 +174,11 @@ void  texture_file_data::initialise(
 namespace qtgl { namespace detail {
 
 
-texture_image_data::texture_image_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr)
+texture_image_data::texture_image_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr)
 {
     TMPROF_BLOCK();
+
+    boost::filesystem::path const  path = key.second;
 
     ASSUMPTION(boost::filesystem::exists(path));
     ASSUMPTION(boost::filesystem::is_regular_file(path));
@@ -278,19 +269,16 @@ void  texture_image_data::initialise(
 namespace qtgl { namespace detail {
 
 
-texture_data::texture_data(std::string const&  key, async::finalise_load_on_destroy_ptr  finaliser)
+texture_data::texture_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr  finaliser)
     : m_id(0U)
     , m_texture_props()
     , m_image_props()
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(key.find("[texture]:") == 0UL);
-
-    std::string const  texture_file_pathname = key.substr(std::string("[texture]:").size());
+    std::string const  texture_file_pathname = key.second;
     m_texture_props.insert_load_request(
             texture_file_pathname,
-            1U,
             [this, texture_file_pathname, finaliser]() -> void {
                     if (m_texture_props.get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
                     {
@@ -302,7 +290,6 @@ texture_data::texture_data(std::string const&  key, async::finalise_load_on_dest
                     std::string const  image_file_pathname = m_texture_props.image_pathname().string();
                     m_image_props.insert_load_request(
                         image_file_pathname,
-                        1U,
                         [this, image_file_pathname, finaliser]() -> void {
                                 if (m_image_props.get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
                                 {
@@ -425,6 +412,7 @@ bool  textures_binding::make_current() const
         {
             glapi().glActiveTexture(GL_TEXTURE0 + value(sampler_and_texture.first));
             glapi().glBindTexture(GL_TEXTURE_2D, sampler_and_texture.second.id());
+            INVARIANT(glapi().glGetError() == 0U);
         }
     return true;
 }

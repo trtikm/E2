@@ -8,9 +8,6 @@
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>
 #   include <qtgl/draw.hpp>
-#   include <qtgl/batch.hpp>
-#   include <qtgl/modelspace.hpp>
-#   include <qtgl/keyframe.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <utility/std_pair_hash.hpp>
 #   include <vector>
@@ -111,6 +108,9 @@ struct simulator : public qtgl::real_time_simulator
 
     scene_edit_data const&  get_scene_edit_data() const { return m_scene_edit_data; }
 
+    qtgl::effects_config const&  get_effects_config() const { return m_effects_config; }
+    qtgl::effects_config&  effects_config_ref() { return m_effects_config; }
+
 private:
 
     // Simulation
@@ -146,6 +146,7 @@ private:
     scene_edit_data  m_scene_edit_data;
 
     /// Other data
+    qtgl::effects_config  m_effects_config;
 };
 
 

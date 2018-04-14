@@ -54,6 +54,8 @@ void  make_current(draw_state const&  state)
     else
         glapi().glDisable(GL_BLEND);
     glapi().glBlendFunc(state.alpha_blending_src_function(),state.alpha_blending_dst_function());
+
+    INVARIANT(glapi().glGetError() == 0U);
 }
 
 void  make_current(draw_state const&  state, draw_state const&  previous_state)
@@ -84,6 +86,8 @@ void  make_current(draw_state const&  state, draw_state const&  previous_state)
              (state.alpha_blending_src_function() != previous_state.alpha_blending_src_function() ||
               state.alpha_blending_dst_function() != previous_state.alpha_blending_dst_function()) )
         glapi().glBlendFunc(state.alpha_blending_src_function(),state.alpha_blending_dst_function());
+
+    INVARIANT(glapi().glGetError() == 0U);
 }
 
 

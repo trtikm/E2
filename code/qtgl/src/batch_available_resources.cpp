@@ -16,15 +16,18 @@ namespace qtgl { namespace detail {
 
 
 batch_available_resources_data::batch_available_resources_data(
-        boost::filesystem::path const&  path,
+        async::key_type const&  key,
         async::finalise_load_on_destroy_ptr
         )
     : m_buffers()
     , m_textures()
     , m_skeletal()
     , m_index_buffer()
+    , m_root_dir(canonical_path(key.second).string())
 {
     TMPROF_BLOCK();
+
+    boost::filesystem::path const  path = m_root_dir;
 
     if (!boost::filesystem::is_directory(path))
         throw std::runtime_error(msgstream() << "The passed mesh path '" << path << "' is not an existing directory.");
@@ -85,7 +88,7 @@ batch_available_resources_data::batch_available_resources_data(
                 auto const  load_link_file =
                     [&data_root_dir, &valid_texcoord_indices](
                             boost::filesystem::path const&  pathname
-                            ) -> textures_dictionary_type::mapped_type
+                            ) -> std::pair<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, std::string>
                     {
                         std::ifstream  istr(pathname.string());
                         std::vector<std::string> const  lines{
@@ -109,11 +112,29 @@ batch_available_resources_data::batch_available_resources_data(
 
                 std::string const  fname = entry.path().filename().string();
                 if (fname == "diffuse.txt")
-                    m_textures.insert({FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, load_link_file(entry.path())});
+                {
+                    auto const  location_and_path = load_link_file(entry.path());
+                    m_textures.insert({
+                        FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE,
+                        {location_and_path.first, location_and_path.second}
+                        });
+                }
                 else if (fname == "specular.txt")
-                    m_textures.insert({FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_SPECULAR, load_link_file(entry.path())});
+                {
+                    auto const  location_and_path = load_link_file(entry.path());
+                    m_textures.insert({
+                        FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_SPECULAR,
+                        {location_and_path.first, location_and_path.second}
+                        });
+                }
                 else if (fname == "normal.txt")
-                    m_textures.insert({FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_NORMAL, load_link_file(entry.path())});
+                {
+                    auto const  location_and_path = load_link_file(entry.path());
+                    m_textures.insert({
+                        FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_NORMAL,
+                        {location_and_path.first, location_and_path.second}
+                        });
+                }
             }
 
     boost::filesystem::path const  skeletal_dir = path / "skeletal";
@@ -134,7 +155,7 @@ batch_available_resources_data::batch_available_resources_data(
                     throw std::runtime_error(msgstream() << "Cannot locate file:" << weights_pathname);
 
                 boost::filesystem::path const  skeleton_dir =
-                        canonical_path(data_root_dir / "animation" / "skeletal" / entry.path().filename());
+                        canonical_path(data_root_dir / "animations" / "skeletal" / entry.path().filename());
                 if (!boost::filesystem::is_directory(skeleton_dir))
                     throw std::runtime_error(msgstream() << "Cannot access the reference skeleton directory:" << skeletal_dir);
 
@@ -161,6 +182,7 @@ batch_available_resources_data::batch_available_resources_data(
     , m_textures(textures_)
     , m_skeletal(skeletal_)
     , m_index_buffer(index_buffer)
+    , m_root_dir()
 {}
 
 

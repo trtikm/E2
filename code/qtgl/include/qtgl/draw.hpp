@@ -5,9 +5,12 @@
 #   include <qtgl/buffer.hpp>
 #   include <qtgl/shader.hpp>
 #   include <qtgl/texture.hpp>
+#   include <qtgl/modelspace.hpp>
+#   include <qtgl/skeleton_alignment.hpp>
 #   include <qtgl/camera.hpp>
 #   include <qtgl/draw_state.hpp>
 #   include <qtgl/batch.hpp>
+#   include <qtgl/effects_config.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/coordinate_system.hpp>
 #   include <vector>

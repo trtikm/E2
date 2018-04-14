@@ -7,18 +7,14 @@
 #   include <utility/async_resource_load.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <unordered_set>
-#   include <istream>
 #   include <string>
 #   include <vector>
-#   include <memory>
 
 namespace qtgl { namespace detail {
 
 
 struct  vertex_shader_data
 {
-    vertex_shader_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr);
-
     vertex_shader_data(async::finalise_load_on_destroy_ptr, std::vector<std::string> const&  lines_of_shader_code)
     {
         initialise(lines_of_shader_code);
@@ -86,28 +82,16 @@ struct  vertex_shader : public async::resource_accessor<detail::vertex_shader_da
         : async::resource_accessor<detail::vertex_shader_data>()
     {}
 
-    explicit vertex_shader(boost::filesystem::path const&  path)
-        : async::resource_accessor<detail::vertex_shader_data>(path.string(), 1U)
-    {}
-
-    vertex_shader(std::vector<std::string> const&  lines_of_shader_code, boost::filesystem::path const&  path = "")
-        : async::resource_accessor<detail::vertex_shader_data>(
-                path.string(),
-                async::notification_callback_type(),
-                lines_of_shader_code
-                )
-    {}
-
     vertex_shader(
             std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  input_buffer_bindings,
             std::unordered_set<VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION> const&  output_buffer_bindings,
             std::unordered_set<VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME> const&  symbolic_names_of_used_uniforms,
             std::vector<std::string> const&  lines_of_shader_code,
-            std::string const&  uid = "",
+            std::string const&  key = "",
             GLuint const  id = 0U
             )
         : async::resource_accessor<detail::vertex_shader_data>(
-                uid,
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::vertex_shader", key },
                 async::notification_callback_type(),
                 id,
                 input_buffer_bindings,
@@ -164,8 +148,6 @@ namespace qtgl { namespace detail {
 
 struct  fragment_shader_data
 {
-    fragment_shader_data(boost::filesystem::path const&  path, async::finalise_load_on_destroy_ptr);
-
     fragment_shader_data(async::finalise_load_on_destroy_ptr, std::vector<std::string> const&  lines_of_shader_code)
     {
         initialise(lines_of_shader_code);
@@ -233,28 +215,16 @@ struct  fragment_shader : public async::resource_accessor<detail::fragment_shade
         : async::resource_accessor<detail::fragment_shader_data>()
     {}
 
-    explicit fragment_shader(boost::filesystem::path const&  path)
-        : async::resource_accessor<detail::fragment_shader_data>(path.string(), 1U)
-    {}
-
-    fragment_shader(std::vector<std::string> const&  lines_of_shader_code, boost::filesystem::path const&  path = "")
-        : async::resource_accessor<detail::fragment_shader_data>(
-                path.string(),
-                async::notification_callback_type(),
-                lines_of_shader_code
-                )
-    {}
-
     fragment_shader(
             std::unordered_set<FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  input_buffer_bindings,
             std::unordered_set<FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION> const&  output_buffer_bindings,
             std::unordered_set<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME> const&  symbolic_names_of_used_uniforms,
             std::vector<std::string> const&  lines_of_shader_code,
-            std::string const&  uid = "",
+            std::string const&  key = "",
             GLuint const  id = 0U 
             )
         : async::resource_accessor<detail::fragment_shader_data>(
-                uid,
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::fragment_shader", key },
                 async::notification_callback_type(),
                 id,
                 input_buffer_bindings,
@@ -308,12 +278,6 @@ namespace qtgl { namespace detail {
 struct shaders_binding_data
 {
     shaders_binding_data(
-            async::finalise_load_on_destroy_ptr  finaliser,
-            boost::filesystem::path const&  vertex_shader_path,
-            boost::filesystem::path const&  fragment_shader_path
-            );
-
-    shaders_binding_data(
             async::finalise_load_on_destroy_ptr,
             GLuint const  id,
             vertex_shader const  vertex_shader,
@@ -336,13 +300,6 @@ struct shaders_binding_data
     void  destroy_gl_binding();
 
 private:
-
-    void  on_shaders_load_finished(
-            async::finalise_load_on_destroy_ptr  finaliser,
-            boost::filesystem::path const&  vertex_shader_path,
-            boost::filesystem::path const&  fragment_shader_path,
-            std::shared_ptr<bool>  visited
-            );
 
     void  initialise(
             GLuint const  id,
@@ -370,26 +327,13 @@ struct  shaders_binding : public async::resource_accessor<detail::shaders_bindin
     {}
 
     shaders_binding(
-            boost::filesystem::path const&  vertex_shader_path,
-            boost::filesystem::path const&  fragment_shader_path,
-            async::key_type const&  key = ""
-            )
-        : async::resource_accessor<detail::shaders_binding_data>(
-            key,
-            async::notification_callback_type(),
-            vertex_shader_path,
-            fragment_shader_path
-            )
-    {}
-
-    shaders_binding(
             vertex_shader const  vertex_shader,
             fragment_shader const  fragment_shader,
-            async::key_type const&  key = "",
+            std::string const&  key = "",
             GLuint const  id = 0U
             )
         : async::resource_accessor<detail::shaders_binding_data>(
-                key,
+                key.empty() ? async::key_type() : async::key_type{ "qtgl::shaders_binding", key },
                 async::notification_callback_type(),
                 id,
                 vertex_shader,

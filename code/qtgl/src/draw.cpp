@@ -1,7 +1,7 @@
 #include <qtgl/draw.hpp>
-#include <qtgl/modelspace.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
+#include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 
 namespace qtgl { namespace detail { namespace current_draw {
@@ -89,15 +89,19 @@ void  render_batch(
         for (VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : shader.get_symbolic_names_of_used_uniforms())
             switch (uniform)
             {
-            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA:
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA: // Deprecated! Remove!
+                UNREACHABLE();
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                 shader.set_uniform_variable(uniform,diffuse_colour);
+                INVARIANT(qtgl::glapi().glGetError() == 0U);
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
                 ASSUMPTION(!transform_matrices.empty());
-                if (apply_modelspace_of_batch && batch.get_modelspace().loaded_successfully())
+                if (apply_modelspace_of_batch)
                 {
+                    INVARIANT(batch.get_modelspace().loaded_successfully() &&
+                              batch.get_skeleton_alignment().loaded_successfully());
                     apply_modelspace_to_frame_of_keyframe_animation(
                             batch.get_modelspace(),
                             transform_matrices
@@ -126,7 +130,20 @@ void  render_batch(
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_SPECULAR:
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_NORMAL:
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_POSITION:
-                shader.set_uniform_variable(uniform, value(uniform));
+                // Nothing to set here (a texture sampler cannot be set any data).
+                break;
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_COLOUR:
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::AMBIENT_COLOUR:
+                NOT_IMPLEMENTED_YET();
+                break;
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
+                shader.set_uniform_variable(uniform, diffuse_colour);
+                INVARIANT(qtgl::glapi().glGetError() == 0U);
+                break;
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::SPECULAR_COLOUR:
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::DIRECTIONAL_LIGHT_POSITION:
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::DIRECTIONAL_LIGHT_COLOUR:
+                NOT_IMPLEMENTED_YET();
                 break;
             }
     }
@@ -171,7 +188,10 @@ void  render_batch(
         bool const  apply_modelspace_of_batch
         )
 {
-    std::vector<matrix44>  temp(get_modelspace_size(batch.get_modelspace()), transform_matrix );
+    std::vector<matrix44>  temp(
+            apply_modelspace_of_batch ? get_modelspace_size(batch.get_modelspace()) : 1U,
+            transform_matrix
+            );
     render_batch(batch, temp, diffuse_colour, apply_modelspace_of_batch);
 }
 
@@ -185,8 +205,7 @@ void  render_batch(
 {
     matrix44  world_transformation;
     angeo::from_base_matrix(coord_system, world_transformation);
-    std::vector<matrix44>  temp(get_modelspace_size(batch.get_modelspace()),
-                                view_projection_matrix * world_transformation );
+    std::vector<matrix44>  temp(get_modelspace_size(batch.get_modelspace()), view_projection_matrix * world_transformation );
     render_batch(batch, temp, diffuse_colour, false);
 }
 
