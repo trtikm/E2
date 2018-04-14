@@ -15,11 +15,6 @@ namespace qtgl { namespace detail {
 
 struct  vertex_shader_data
 {
-    vertex_shader_data(async::finalise_load_on_destroy_ptr, std::vector<std::string> const&  lines_of_shader_code)
-    {
-        initialise(lines_of_shader_code);
-    }
-
     vertex_shader_data(
             async::finalise_load_on_destroy_ptr,
             GLuint const  id, 
@@ -27,10 +22,7 @@ struct  vertex_shader_data
             std::unordered_set<VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION> const&  output_buffer_bindings,
             std::unordered_set<VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME> const&  symbolic_names_of_used_uniforms,
             std::vector<std::string> const&  lines_of_shader_code
-            )
-    {
-        initialise(id, input_buffer_bindings, output_buffer_bindings, symbolic_names_of_used_uniforms, lines_of_shader_code);
-    }
+            );
 
     ~vertex_shader_data();
 
@@ -54,14 +46,6 @@ struct  vertex_shader_data
     void  destroy_gl_shader();
 
 private:
-    void  initialise(std::vector<std::string> const&  lines_of_shader_code);
-    void  initialise(
-            GLuint const  id, 
-            std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  input_buffer_bindings,
-            std::unordered_set<VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION> const&  output_buffer_bindings,
-            std::unordered_set<VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME> const&  symbolic_names_of_used_uniforms,
-            std::vector<std::string> const&  lines_of_shader_code
-            );
 
     GLuint  m_id;
     std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>  m_input_buffer_bindings;
@@ -148,11 +132,6 @@ namespace qtgl { namespace detail {
 
 struct  fragment_shader_data
 {
-    fragment_shader_data(async::finalise_load_on_destroy_ptr, std::vector<std::string> const&  lines_of_shader_code)
-    {
-        initialise(lines_of_shader_code);
-    }
-
     fragment_shader_data(
             async::finalise_load_on_destroy_ptr,
             GLuint const  id, 
@@ -160,10 +139,7 @@ struct  fragment_shader_data
             std::unordered_set<FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION> const&  output_buffer_bindings,
             std::unordered_set<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME> const&  symbolic_names_of_used_uniforms,
             std::vector<std::string> const&  lines_of_shader_code
-            )
-    {
-        initialise(id, input_buffer_bindings, output_buffer_bindings, symbolic_names_of_used_uniforms, lines_of_shader_code);
-    }
+            );
 
     ~fragment_shader_data();
 
@@ -187,14 +163,6 @@ struct  fragment_shader_data
     void  destroy_gl_shader();
 
 private:
-    void  initialise(std::vector<std::string> const&  lines_of_shader_code);
-    void  initialise(
-            GLuint const  id, 
-            std::unordered_set<FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  input_buffer_bindings,
-            std::unordered_set<FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION> const&  output_buffer_bindings,
-            std::unordered_set<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME> const&  symbolic_names_of_used_uniforms,
-            std::vector<std::string> const&  lines_of_shader_code
-            );
 
     GLuint  m_id;
     std::unordered_set<FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION>  m_input_buffer_bindings;
