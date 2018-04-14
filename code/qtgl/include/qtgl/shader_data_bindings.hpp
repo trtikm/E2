@@ -80,21 +80,19 @@ std::string  name(VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION const  location);
 
 enum struct VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME : natural_8_bit
 {
-    COLOUR_ALPHA                    = 0,
-    DIFFUSE_COLOUR                  = 1,
-    TRANSFORM_MATRIX_TRANSPOSED     = 2,
-    NUM_MATRICES_PER_VERTEX         = 3,
+    DIFFUSE_COLOUR                  = 0,
+    TRANSFORM_MATRIX_TRANSPOSED     = 1,
+    NUM_MATRICES_PER_VERTEX         = 2,
 };
 
 inline natural_32_bit  value(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  name)
 { return static_cast<natural_8_bit>(name); }
 std::string  name(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name);
-std::string  uniform_name(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name);
 VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME  to_symbolic_uniform_name_of_vertex_shader(std::string  name);
 inline constexpr natural_32_bit  uniform_max_transform_matrices() { return 64U; }
 
 inline constexpr VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME  min_VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME()
-{ return VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA; }
+{ return VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR; }
 inline constexpr VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME  max_VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME()
 { return VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX; }
 inline constexpr natural_8_bit  num_VERTEX_SHADER_UNIFORM_SYMBOLIC_NAMEs()
@@ -159,7 +157,6 @@ enum struct FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME : natural_8_bit
 inline natural_32_bit  value(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  binding)
 { return static_cast<natural_8_bit>(binding); }
 std::string  name(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform_symbolic_name);
-std::string  uniform_name(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform_symbolic_name);
 bool  is_texture_sampler(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform_symbolic_name);
 FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME  to_symbolic_uniform_name_of_fragment_shader(std::string  name);
 

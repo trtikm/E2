@@ -113,8 +113,6 @@ static std::string  get_uniform_type_name(VS_UNIFORM const  symbolic_name)
 {
     switch (symbolic_name)
     {
-    case VS_UNIFORM::COLOUR_ALPHA:
-        UNREACHABLE(); // This uniform is about to be removed, so no support here.
     case VS_UNIFORM::DIFFUSE_COLOUR:
         return "ver4";
     case VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED:

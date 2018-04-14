@@ -89,9 +89,6 @@ void  render_batch(
         for (VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : shader.get_symbolic_names_of_used_uniforms())
             switch (uniform)
             {
-            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA: // Deprecated! Remove!
-                UNREACHABLE();
-                break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                 shader.set_uniform_variable(uniform,diffuse_colour);
                 INVARIANT(qtgl::glapi().glGetError() == 0U);

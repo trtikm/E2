@@ -56,22 +56,9 @@ std::string  name(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name)
 {
     switch (symbolic_name)
     {
-    case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA: return "COLOUR_ALPHA";
     case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR: return "DIFFUSE_COLOUR";
     case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED: return "TRANSFORM_MATRIX_TRANSPOSED";
     case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX: return "NUM_MATRICES_PER_VERTEX";
-    default: UNREACHABLE();
-    }
-}
-
-std::string  uniform_name(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name)
-{
-    switch (symbolic_name)
-    {
-    case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA: return "UNIFORM_COLOUR_ALPHA";
-    case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR: return "UNIFORM_DIFFUSE_COLOUR";
-    case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED: return "UNIFORM_TRANSFORM_MATRIX_TRANSPOSED";
-    case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX: return "UNIFORM_NUM_MATRICES_PER_VERTEX";
     default: UNREACHABLE();
     }
 }
@@ -81,8 +68,6 @@ VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME  to_symbolic_uniform_name_of_vertex_shader(s
     if (name.find("UNIFORM_") == 0UL)
         name = name.substr(std::strlen("UNIFORM_"));
 
-    if (name == "COLOUR_ALPHA")
-        return VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA;
     if (name == "DIFFUSE_COLOUR")
         return VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR;
     if (name == "TRANSFORM_MATRIX_TRANSPOSED")
@@ -149,11 +134,6 @@ std::string  name(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform_symbolic_
     }
 }
 
-std::string  uniform_name(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform_symbolic_name)
-{
-    return "UNIFORM_" + name(uniform_symbolic_name);
-}
-
 bool  is_texture_sampler(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform_symbolic_name)
 {
     switch (uniform_symbolic_name)
@@ -187,32 +167,6 @@ FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME  to_symbolic_uniform_name_of_fragment_shad
     auto const  it = map.find(name);
     ASSUMPTION(it != map.cend());
     return it->second;
-
-    //{
-    //    { "TEXTURE_SAMPLER_DIFFUSE",
-    //    { "TEXTURE_SAMPLER_SPECULAR",
-    //    { "TEXTURE_SAMPLER_NORMAL",
-    //    { "TEXTURE_SAMPLER_POSITION",
-
-    //    { "FOG_COLOUR",
-    //    { "AMBIENT_COLOUR",
-    //    { "DIFFUSE_COLOUR",
-    //    { "SPECULAR_COLOUR",
-
-    //    { "DIRECTIONAL_LIGHT_POSITION",
-    //    { "DIRECTIONAL_LIGHT_COLOUR",
-    //};
-
-    //if (name == "COLOUR_ALPHA")
-    //    return VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA;
-    //if (name == "DIFFUSE_COLOUR")
-    //    return VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR;
-    //if (name == "TRANSFORM_MATRIX_TRANSPOSED")
-    //    return VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED;
-    //if (name == "NUM_MATRICES_PER_VERTEX")
-    //    return VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX;
-
-    UNREACHABLE();
 }
 
 

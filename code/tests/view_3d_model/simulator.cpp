@@ -248,8 +248,6 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                 for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform : batch.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                     switch (uniform)
                     {
-                        case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA:
-                            break;
                         case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                             break;
                         case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:

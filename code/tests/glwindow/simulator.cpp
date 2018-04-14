@@ -254,9 +254,6 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
             object_shaders_binding.get_vertex_shader().set_uniform_variable(
                                        qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED,
                                        object_transform_matrix);
-            object_shaders_binding.get_vertex_shader().set_uniform_variable(
-                                       qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::COLOUR_ALPHA,
-                                       0.5f);
         }
         qtgl::make_current(object_buffers_binding);
         qtgl::make_current(object_textures_binding);
