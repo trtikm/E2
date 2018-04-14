@@ -315,6 +315,22 @@ bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_na
     return true;
 }
 
+bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_name, vector3 const&  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    GLint const  layout_location = glapi().glGetUniformLocation(id(), variable_name.c_str());
+    if (layout_location == -1)
+    {
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_fragment_shader(variable_name)) == 1UL);
+        INVARIANT(glapi().glGetError() == 0U);
+        return false;
+    }
+    glapi().glProgramUniform3fv(id(), layout_location, 1U, value_to_store.data());
+    INVARIANT(glapi().glGetError() == 0U);
+    return true;
+}
+
 bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store)
 {
     TMPROF_BLOCK();

@@ -116,6 +116,7 @@ static std::string  get_uniform_type_name(VS_UNIFORM const  symbolic_name)
     case VS_UNIFORM::DIFFUSE_COLOUR:
         return "ver4";
     case VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED:
+    case VS_UNIFORM::TRANSFORM_MATRICES_TRANSPOSED:
         return "mat4";
     case VS_UNIFORM::NUM_MATRICES_PER_VERTEX:
         return "uint";
@@ -124,10 +125,34 @@ static std::string  get_uniform_type_name(VS_UNIFORM const  symbolic_name)
 }
 
 
+static natural_32_bit  get_uniform_num_elements(VS_UNIFORM const  symbolic_name)
+{
+    switch (symbolic_name)
+    {
+    case VS_UNIFORM::DIFFUSE_COLOUR:
+    case VS_UNIFORM::NUM_MATRICES_PER_VERTEX:
+    case VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED:
+        return 0U;
+    case VS_UNIFORM::TRANSFORM_MATRICES_TRANSPOSED:
+        return vertex_shader_MAX_TRANSFORM_MATRICES();
+    default: UNREACHABLE();
+    }
+}
+
+
+static std::string  get_uniform_array_decl(VS_UNIFORM const  symbolic_name)
+{
+    natural_32_bit const  num_elements = get_uniform_num_elements(symbolic_name);
+    return num_elements == 0U ? "" : "[" + std::to_string(num_elements) + "]";
+}
+
+
 static std::string  uniform(VS_UNIFORM const  symbolic_name, std::unordered_set<VS_UNIFORM>&  vs_uniforms)
 {
     vs_uniforms.insert(symbolic_name);
-    return "uniform " + get_uniform_type_name(symbolic_name) + " " + name(symbolic_name) + ";";
+    natural_32_bit const  num_elements = get_uniform_num_elements(symbolic_name);
+    return "uniform " + get_uniform_type_name(symbolic_name) + " " + name(symbolic_name)
+                      + get_uniform_array_decl(symbolic_name) + ";";
 }
 
 
@@ -208,7 +233,7 @@ static std::string  get_uniform_type_name(FS_UNIFORM const  symbolic_name)
         return "vec4";
     case FS_UNIFORM::SPECULAR_COLOUR:
         return "vec4";
-    case FS_UNIFORM::DIRECTIONAL_LIGHT_POSITION:
+    case FS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION:
         return "vec3";
     case FS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR:
         return "vec4";
@@ -265,20 +290,51 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                 {
                 case SHADER_DATA_INPUT_TYPE::UNIFORM:
                     {
-                        vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                            "#version 420",
+                        if (resources.skeletal().empty())
+                        {
+                            vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                "#version 420",
 
-                            varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
-                            varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
+                                varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
 
-                            uniform(VS_UNIFORM::DIFFUSE_COLOUR, vs_uniforms),
-                            uniform(VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED, vs_uniforms),
+                                uniform(VS_UNIFORM::DIFFUSE_COLOUR, vs_uniforms),
+                                uniform(VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED, vs_uniforms),
 
-                            "void main() {",
-                            "    gl_Position = vec4(in_position,1.0f) * TRANSFORM_MATRIX_TRANSPOSED;",
-                            "    out_colour = DIFFUSE_COLOUR;",
-                            "}",
-                        };
+                                "void main() {",
+                                "    gl_Position = vec4(in_position,1.0f) * TRANSFORM_MATRIX_TRANSPOSED;",
+                                "    out_colour = DIFFUSE_COLOUR;",
+                                "}",
+                            };
+                        }
+                        else
+                        {
+                            vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                "#version 420",
+
+                                varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                varying("in_indices_of_matrices", VS_IN::BINDING_IN_INDICES_OF_MATRICES, vs_input),
+                                varying("in_weights_of_matrices", VS_IN::BINDING_IN_WEIGHTS_OF_MATRICES, vs_input),
+                                varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
+
+                                uniform(VS_UNIFORM::DIFFUSE_COLOUR, vs_uniforms),
+                                uniform(VS_UNIFORM::NUM_MATRICES_PER_VERTEX, vs_uniforms),
+                                uniform(VS_UNIFORM::TRANSFORM_MATRICES_TRANSPOSED, vs_uniforms),
+
+                                "void main() {",
+                                "    int i;",
+                                "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
+                                "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                "    {",
+                                "        const vec4 pos = vec4(in_position,1.0f) *",
+                                "                         TRANSFORM_MATRICES_TRANSPOSED[in_indices_of_matrices[i]];",
+                                "        result_position = result_position + in_weights_of_matrices[i] * pos;",
+                                "    }",
+                                "    gl_Position = result_position;",
+                                "    out_colour = DIFFUSE_COLOUR;",
+                                "}",
+                            };
+                        }
                         fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                             "#version 420",
 
@@ -299,20 +355,51 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                     }
                     else
                     {
-                        vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                            "#version 420",
+                        if (resources.skeletal().empty())
+                        {
+                            vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                "#version 420",
 
-                            varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
-                            varying("in_colour", VS_IN::BINDING_IN_DIFFUSE, vs_input),
-                            varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
+                                varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                varying("in_colour", VS_IN::BINDING_IN_DIFFUSE, vs_input),
+                                varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
 
-                            uniform(VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED, vs_uniforms),
+                                uniform(VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED, vs_uniforms),
 
-                            "void main() {",
-                            "    gl_Position = vec4(in_position,1.0f) * TRANSFORM_MATRIX_TRANSPOSED;",
-                            "    out_colour = in_colour;",
-                            "}",
-                        };
+                                "void main() {",
+                                "    gl_Position = vec4(in_position,1.0f) * TRANSFORM_MATRIX_TRANSPOSED;",
+                                "    out_colour = in_colour;",
+                                "}",
+                            };
+                        }
+                        else
+                        {
+                            vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                "#version 420",
+
+                                varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                varying("in_colour", VS_IN::BINDING_IN_DIFFUSE, vs_input),
+                                varying("in_indices_of_matrices", VS_IN::BINDING_IN_INDICES_OF_MATRICES, vs_input),
+                                varying("in_weights_of_matrices", VS_IN::BINDING_IN_WEIGHTS_OF_MATRICES, vs_input),
+                                varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
+
+                                uniform(VS_UNIFORM::NUM_MATRICES_PER_VERTEX, vs_uniforms),
+                                uniform(VS_UNIFORM::TRANSFORM_MATRICES_TRANSPOSED, vs_uniforms),
+
+                                "void main() {",
+                                "    int i;",
+                                "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
+                                "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                "    {",
+                                "        const vec4 pos = vec4(in_position,1.0f) *",
+                                "                         TRANSFORM_MATRICES_TRANSPOSED[in_indices_of_matrices[i]];",
+                                "        result_position = result_position + in_weights_of_matrices[i] * pos;",
+                                "    }",
+                                "    gl_Position = result_position;",
+                                "    out_colour = in_colour;",
+                                "}",
+                            };
+                        }
                         fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                             "#version 420",
 
@@ -333,20 +420,51 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                     }
                     else
                     {
-                        vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
-                            "#version 420",
+                        if (resources.skeletal().empty())
+                        {
+                            vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                "#version 420",
 
-                            varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
-                            varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
-                            varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
+                                varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+                                varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
 
-                            uniform(VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED, vs_uniforms),
+                                uniform(VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED, vs_uniforms),
 
-                            "void main() {",
-                            "    gl_Position = vec4(in_position,1.0f) * TRANSFORM_MATRIX_TRANSPOSED;",
-                            "    out_texture_coords = in_texture_coords;",
-                            "}",
-                        };
+                                "void main() {",
+                                "    gl_Position = vec4(in_position,1.0f) * TRANSFORM_MATRIX_TRANSPOSED;",
+                                "    out_texture_coords = in_texture_coords;",
+                                "}",
+                            };
+                        }
+                        else
+                        {
+                            vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                "#version 420",
+
+                                varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+                                varying("in_indices_of_matrices", VS_IN::BINDING_IN_INDICES_OF_MATRICES, vs_input),
+                                varying("in_weights_of_matrices", VS_IN::BINDING_IN_WEIGHTS_OF_MATRICES, vs_input),
+                                varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
+
+                                uniform(VS_UNIFORM::NUM_MATRICES_PER_VERTEX, vs_uniforms),
+                                uniform(VS_UNIFORM::TRANSFORM_MATRICES_TRANSPOSED, vs_uniforms),
+
+                                "void main() {",
+                                "    int i;",
+                                "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
+                                "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                "    {",
+                                "        const vec4 pos = vec4(in_position,1.0f) *",
+                                "                         TRANSFORM_MATRICES_TRANSPOSED[in_indices_of_matrices[i]];",
+                                "        result_position = result_position + in_weights_of_matrices[i] * pos;",
+                                "    }",
+                                "    gl_Position = result_position;",
+                                "    out_texture_coords = in_texture_coords;",
+                                "}",
+                            };
+                        }
                         fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                             "#version 420",
 

@@ -82,7 +82,8 @@ enum struct VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME : natural_8_bit
 {
     DIFFUSE_COLOUR                  = 0,
     TRANSFORM_MATRIX_TRANSPOSED     = 1,
-    NUM_MATRICES_PER_VERTEX         = 2,
+    TRANSFORM_MATRICES_TRANSPOSED   = 2,
+    NUM_MATRICES_PER_VERTEX         = 3,
 };
 
 inline natural_32_bit  value(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  name)
@@ -99,6 +100,8 @@ inline constexpr natural_8_bit  num_VERTEX_SHADER_UNIFORM_SYMBOLIC_NAMEs()
 { return static_cast<natural_8_bit>(max_VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME()) -
          static_cast<natural_8_bit>(min_VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME()) +
          1U; }
+
+inline natural_32_bit  vertex_shader_MAX_TRANSFORM_MATRICES() { return 64U; }
 
 
 enum struct FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION : natural_8_bit
@@ -150,7 +153,7 @@ enum struct FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME : natural_8_bit
     DIFFUSE_COLOUR                  = 6,
     SPECULAR_COLOUR                 = 7,
 
-    DIRECTIONAL_LIGHT_POSITION      = 8,
+    DIRECTIONAL_LIGHT_DIRECTION     = 8,
     DIRECTIONAL_LIGHT_COLOUR        = 9,
 };
 

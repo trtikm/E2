@@ -76,50 +76,36 @@ void  draw()
 
 
 void  render_batch(
-        batch const&  batch,
-        std::vector<matrix44>&  transform_matrices,
-        vector4 const&  diffuse_colour,
-        bool  apply_modelspace_of_batch
+        batch const  batch_,
+        vertex_shader_uniform_data_provider_base const&  vertex_uniform_provider,
+        fragment_shader_uniform_data_provider_base const&  fragment_uniform_provider,
+        fragment_shader_output_texture_provider_base const&  fragment_output_textures
         )
 {
     TMPROF_BLOCK();
 
     {
-        vertex_shader  shader = batch.get_shaders_binding().get_vertex_shader();
+        vertex_shader  shader = batch_.get_shaders_binding().get_vertex_shader();
         for (VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : shader.get_symbolic_names_of_used_uniforms())
             switch (uniform)
             {
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
-                shader.set_uniform_variable(uniform,diffuse_colour);
-                INVARIANT(qtgl::glapi().glGetError() == 0U);
+                shader.set_uniform_variable(uniform,vertex_uniform_provider.get_DIFFUSE_COLOUR());
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
-                ASSUMPTION(!transform_matrices.empty());
-                if (apply_modelspace_of_batch)
-                {
-                    INVARIANT(batch.get_modelspace().loaded_successfully() &&
-                              batch.get_skeleton_alignment().loaded_successfully());
-                    apply_modelspace_to_frame_of_keyframe_animation(
-                            batch.get_modelspace(),
-                            transform_matrices
-                            );
-                    apply_modelspace_of_batch = false;
-                }
-                if (transform_matrices.size() == 1UL)
-                    shader.set_uniform_variable(uniform,transform_matrices.front());
-                else
-                    shader.set_uniform_variable(uniform, transform_matrices);
+                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_TRANSFORM_MATRIX_TRANSPOSED());
+                break;
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRICES_TRANSPOSED:
+                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_TRANSFORM_MATRICES_TRANSPOSED());
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX:
-                ASSUMPTION(transform_matrices.size() >= batch.get_buffers_binding().num_matrices_per_vertex());
-                ASSUMPTION(transform_matrices.size() != 1UL || batch.get_buffers_binding().num_matrices_per_vertex() == 1U);
-                shader.set_uniform_variable(uniform, batch.get_buffers_binding().num_matrices_per_vertex());
+                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_NUM_MATRICES_PER_VERTEX());
                 break;
             }
     }
 
     {
-        fragment_shader  shader = batch.get_shaders_binding().get_fragment_shader();
+        fragment_shader  shader = batch_.get_shaders_binding().get_fragment_shader();
         for (FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : shader.get_symbolic_names_of_used_uniforms())
             switch (uniform)
             {
@@ -130,71 +116,45 @@ void  render_batch(
                 // Nothing to set here (a texture sampler cannot be set any data).
                 break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_COLOUR:
+                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_FOG_COLOUR());
+                break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::AMBIENT_COLOUR:
-                NOT_IMPLEMENTED_YET();
+                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_AMBIENT_COLOUR());
                 break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
-                shader.set_uniform_variable(uniform, diffuse_colour);
-                INVARIANT(qtgl::glapi().glGetError() == 0U);
+                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_DIFFUSE_COLOUR());
                 break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::SPECULAR_COLOUR:
-            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::DIRECTIONAL_LIGHT_POSITION:
+                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_SPECULAR_COLOUR());
+                break;
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::DIRECTIONAL_LIGHT_DIRECTION:
+                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_DIRECTIONAL_LIGHT_DIRECTION());
+                break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::DIRECTIONAL_LIGHT_COLOUR:
+                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_DIRECTIONAL_LIGHT_COLOUR());
+                break;
+            }
+        for (FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION const location : shader.get_output_buffer_bindings())
+            switch (location)
+            {
+            case FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION::BINDING_OUT_COLOUR:
+                // Nothing to set here (a texture sampler cannot be set any data).
+                break;
+            case FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION::BINDING_OUT_TEXTURE_POSITION:
+            case FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION::BINDING_OUT_TEXTURE_NORMAL:
+            case FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION::BINDING_OUT_TEXTURE_DIFFUSE:
+            case FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION::BINDING_OUT_TEXTURE_SPECULAR:
                 NOT_IMPLEMENTED_YET();
                 break;
             }
     }
+
     draw();
 }
 
 
 void  render_batch(
-        batch const&  batch,
-        std::vector<matrix44> const&  transform_matrices,
-        vector4 const&  diffuse_colour,
-        bool const  apply_modelspace_of_batch
-        )
-{
-    if (apply_modelspace_of_batch)
-    {
-        std::vector<matrix44>  temp(transform_matrices);
-        render_batch(batch, temp, diffuse_colour, apply_modelspace_of_batch);
-    }
-    else
-        render_batch(
-                batch,
-                const_cast<std::vector<matrix44>&>(transform_matrices), // but, won't be modified.
-                diffuse_colour,
-                false
-                );
-}
-
-
-static std::size_t  get_modelspace_size(
-        modelspace const  modelspace,
-        std::size_t const  value_when_nullptr = 1UL)
-{
-    return modelspace.loaded_successfully() ? modelspace.get_coord_systems().size() : value_when_nullptr;
-}
-
-
-void  render_batch(
-        batch const&  batch,
-        matrix44 const&  transform_matrix,
-        vector4 const&  diffuse_colour,
-        bool const  apply_modelspace_of_batch
-        )
-{
-    std::vector<matrix44>  temp(
-            apply_modelspace_of_batch ? get_modelspace_size(batch.get_modelspace()) : 1U,
-            transform_matrix
-            );
-    render_batch(batch, temp, diffuse_colour, apply_modelspace_of_batch);
-}
-
-
-void  render_batch(
-        batch const&  batch,
+        batch const  batch_,
         matrix44 const&  view_projection_matrix,
         angeo::coordinate_system const&  coord_system,
         vector4 const&  diffuse_colour
@@ -202,8 +162,10 @@ void  render_batch(
 {
     matrix44  world_transformation;
     angeo::from_base_matrix(coord_system, world_transformation);
-    std::vector<matrix44>  temp(get_modelspace_size(batch.get_modelspace()), view_projection_matrix * world_transformation );
-    render_batch(batch, temp, diffuse_colour, false);
+    render_batch(
+        batch_,
+        vertex_shader_uniform_data_provider(batch_, { view_projection_matrix * world_transformation }, diffuse_colour)
+        );
 }
 
 

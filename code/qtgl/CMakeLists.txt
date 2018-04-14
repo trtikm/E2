@@ -31,6 +31,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/qtgl/shader_data_bindings.hpp
     ./src/shader_data_bindings.cpp
 
+    ./include/qtgl/shader_data_linkers.hpp
+    ./src/shader_data_linkers.cpp
+
     ./include/qtgl/shader_compose.hpp
     ./src/shader_compose.cpp
     

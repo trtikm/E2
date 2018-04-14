@@ -48,12 +48,6 @@ struct  modelspace : public async::resource_accessor<detail::modelspace_data>
 };
 
 
-void  apply_modelspace_to_frame_of_keyframe_animation(
-        modelspace const&  modelspace,
-        std::vector<matrix44>&  frame  // the results will be composed with the current data.
-        );
-
-
 }
 
 #endif

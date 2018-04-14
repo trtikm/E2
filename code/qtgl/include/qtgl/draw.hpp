@@ -11,6 +11,7 @@
 #   include <qtgl/draw_state.hpp>
 #   include <qtgl/batch.hpp>
 #   include <qtgl/effects_config.hpp>
+#   include <qtgl/shader_data_linkers.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/coordinate_system.hpp>
 #   include <vector>
@@ -25,63 +26,44 @@ namespace qtgl {
 void  draw();
 
 
-// 'render_batch' functions
-// ~~~~~~~~~~~~~~~~~~~~~~~~
-//
-// These functions provide rendering of a single setup/configuration
+// The function provides rendering of a single setup/configuration
 // of OpenGL to render primitives, like a set of triangles with proper
-// shaders and textures. Any such OpenGL setup is called '(render) batch' 
+// shaders and textures. Any such OpenGL setup is called a 'batch' 
 // in this library, see 'struct batch'. In fact, a 'batch' is NOT
-// a complete setup of OpenGL. There are missing data, which are supposed
-// to be fed into constant registers of shaders, like transformation
-// matrices. These data must thus be passed to 'render_batch' functions
-// together with a desired 'batch' instance. Here are descriptions of
-// some of the other parameters.
-//
-// (*) Use of 'apply_modelspace_of_batch' parameter
-//
-// The parameter indicates whether the called 'render_batch' function
-// should apply the model-space transformation of the passed batch
-// or not. If the batch does not have a model-space defined (i.e.
-// there is no keyframe animation defined for it), or if you already
-// applied the model-space transformations of the batch to the passed
-// matrix/matrices by yourself, or if no keyframe transformation was
-// applied to the passed matrices, then pass 'false' to the parameter.
-// Otherwise pass 'true'. The default values for the parameter match
-// typical usage. So, initially do not specify the parameter (use the
-// default value). Only in case of wrong rendered output check, if the
-// default value is vaild in your case.
-
-
+// a complete setup of OpenGL. There are missing, for example, data
+// to be fed into constant registers of shaders and outpput textures.
+// These data are thus be passed to 'render_batch' function
+// together with a desired 'batch' instance.
 void  render_batch(
-        qtgl::batch const&  batch,
-        std::vector<matrix44>&  transform_matrices,
-        vector4 const&  diffuse_colour = { 0.0f, 0.0f, 0.0f, 0.0f },
-        bool  apply_modelspace_of_batch = true
+        batch const  batch_,
+        vertex_shader_uniform_data_provider_base const&  vertex_uniform_provider,
+        fragment_shader_uniform_data_provider_base const&  fragment_uniform_provider
+                = fragment_shader_uniform_data_provider(),
+        fragment_shader_output_texture_provider_base const&  fragment_output_textures
+                = fragment_shader_output_texture_provider()
         );
 
 
-void  render_batch(
-        qtgl::batch const&  batch,
-        std::vector<matrix44> const&  transform_matrices,
-        vector4 const&  diffuse_colour = { 0.0f, 0.0f, 0.0f, 0.0f },
-        bool const  apply_modelspace_of_batch = true
+// And next follow few helper functions for simpler calling of render_batch.
+
+
+inline void  render_batch(
+        batch const  batch_,
+        matrix44 const&  transform_matrix
+        )
+{
+    render_batch(
+        batch_,
+        vertex_shader_uniform_data_provider(batch_, { transform_matrix })
         );
+}
 
 
 void  render_batch(
-        qtgl::batch const&  batch,
-        matrix44 const&  transform_matrix,
-        vector4 const&  diffuse_colour = { 0.0f, 0.0f, 0.0f, 0.0f },
-        bool const  apply_modelspace_of_batch = false
-        );
-
-
-void  render_batch(
-        qtgl::batch const&  batch,
+        batch const  batch_,
         matrix44 const&  view_projection_matrix,
         angeo::coordinate_system const&  coord_system,
-        vector4 const&  diffuse_colour = { 0.0f, 0.0f, 0.0f, 0.0f }
+        vector4 const&  diffuse_colour = { 0.0f, 0.0f, 0.0f, 1.0f }
         );
 
 
