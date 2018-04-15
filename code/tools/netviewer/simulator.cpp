@@ -273,6 +273,7 @@ simulator::simulator(
                     { 0.0f, 0.0f, 1.0f, 1.0f },
                     10U,
                     qtgl::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE,
+                    false,
                     get_program_options()->dataRoot()
                     )
             }

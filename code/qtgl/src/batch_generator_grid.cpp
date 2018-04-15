@@ -20,6 +20,7 @@ batch  create_grid(
         std::array<float_32_bit, 4> const&  colour_for_central_z_line,
         natural_32_bit const  highlight_every,
         GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE const  main_exes_orientation_marker_type,
+        bool const  use_fog,
         std::string const&  id
         )
 {
@@ -160,7 +161,7 @@ batch  create_grid(
         }
     }
 
-    return create_lines3d(vertices, colours, id);
+    return create_lines3d(vertices, colours, use_fog, id);
 }
 
 

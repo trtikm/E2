@@ -48,6 +48,7 @@ void  dbg_draw_movement_areas::collect_visible_areas(
                                 -0.5f * props.size_of_ship_movement_area_in_meters(area_layer_index),
                                 +0.5f * props.size_of_ship_movement_area_in_meters(area_layer_index),
                                 vector4(0.5f, 0.5f, 0.5f, 1.0f),
+                                false,
                                 msgstream() << "netviewer/movement_area_of_layer_" << layer_index << "_to_layer_" << area_layer_index
                                 );
         }

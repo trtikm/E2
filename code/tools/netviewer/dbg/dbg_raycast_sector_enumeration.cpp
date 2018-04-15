@@ -26,6 +26,7 @@ void  enumerate_sectors(
                     -0.5f * vector3{ sector_size_x, sector_size_y, sector_size_c },
                     +0.5f * vector3{ sector_size_x, sector_size_y, sector_size_c },
                     vector4(0.5f, 0.5f, 0.5f, 1.0f),
+                    false,
                     id
                     );
     netview::enumerate_sectors_intersecting_line(

@@ -10,6 +10,7 @@ batch  create_wireframe_sphere(
         float_32_bit const  radius,
         natural_8_bit const  num_lines_per_quarter_of_circle,
         vector4 const&  colour,
+        bool const  use_fog,
         std::string const&  id
         )
 {
@@ -57,7 +58,7 @@ batch  create_wireframe_sphere(
         vertices.push_back({ 0.0f, v[0], v[1] });
     }
 
-    return create_lines3d(vertices, colour, id);
+    return create_lines3d(vertices, colour, use_fog, id);
 }
 
 
