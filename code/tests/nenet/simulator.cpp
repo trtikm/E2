@@ -126,7 +126,8 @@ simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused, n
             qtgl::effects_config::lighting_data_types{
                 { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE }
                 },
-            qtgl::effects_config::shader_output_types{ qtgl::SHADER_DATA_OUTPUT_TYPE::DEFAULT }
+            qtgl::effects_config::shader_output_types{ qtgl::SHADER_DATA_OUTPUT_TYPE::DEFAULT },
+            false
             )
 
     , m_batch_grid{ 

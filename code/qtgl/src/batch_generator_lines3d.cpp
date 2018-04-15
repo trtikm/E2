@@ -36,7 +36,8 @@ batch  create_lines3d(
         qtgl::effects_config{
             {}, // Light types.
             {{LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::BUFFER}},
-            {SHADER_DATA_OUTPUT_TYPE::DEFAULT}
+            {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
+            false
             },
         qtgl::draw_state::create(),
         modelspace(),
