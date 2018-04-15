@@ -34,17 +34,16 @@ skeleton_alignment_data::skeleton_alignment_data(async::key_type const&  key, as
         return line;
     };
 
-    m_skeleton_alignment.set_origin({
-        std::stof(read_string("origin.x")),
-        std::stof(read_string("origin.y")),
-        std::stof(read_string("origin.z"))
-        });
-    m_skeleton_alignment.set_orientation(make_quaternion_wxyz(
-        std::stof(read_string("orientation.w")),
-        std::stof(read_string("orientation.x")),
-        std::stof(read_string("orientation.y")),
-        std::stof(read_string("orientation.z"))
-        ));
+    float_32_bit const  pos_x = std::stof(read_string("origin.x"));
+    float_32_bit const  pos_y = std::stof(read_string("origin.y"));
+    float_32_bit const  pos_z = std::stof(read_string("origin.z"));
+    m_skeleton_alignment.set_origin({pos_x, pos_y, pos_z});
+
+    float_32_bit const  rot_w = std::stof(read_string("orientation.w"));
+    float_32_bit const  rot_x = std::stof(read_string("orientation.x"));
+    float_32_bit const  rot_y = std::stof(read_string("orientation.y"));
+    float_32_bit const  rot_z = std::stof(read_string("orientation.z"));
+    m_skeleton_alignment.set_orientation(normalised(make_quaternion_wxyz(rot_w, rot_x, rot_y, rot_z)));
 }
 
 
