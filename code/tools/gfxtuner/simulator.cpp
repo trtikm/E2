@@ -131,6 +131,8 @@ simulator::simulator()
     , m_batch_coord_system(qtgl::create_basis_vectors())
     , m_scene_edit_data(SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
 
+    , m_gfx_animated_objects()
+
     , m_effects_config(
             qtgl::effects_config::light_types{},
             qtgl::effects_config::lighting_data_types{
@@ -176,6 +178,7 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
 {
     TMPROF_BLOCK();
 
+    bool  is_simulation_round = false;
     if (!is_this_pure_redraw_request)
     {
         qtgl::adjust(*m_camera,window_props());
@@ -186,6 +189,8 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
             call_listeners(simulator_notifications::camera_position_updated());
         if (translated_rotated.second)
             call_listeners(simulator_notifications::camera_orientation_updated());
+
+        bool const  old_paused = paused();
 
         if (keyboard_props().was_just_released(qtgl::KEY_SPACE()))
         {
@@ -204,7 +209,12 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
         }
 
         if (!paused())
+        {
+            is_simulation_round = true;
+            if (old_paused != paused())
+                validate_simulation_state();
             perform_simulation_step(seconds_from_previous_call);
+        }
         else
             perform_scene_update(seconds_from_previous_call);
 
@@ -230,12 +240,40 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
             draw_state = m_batch_grid.get_draw_state();
         }
 
-    render_simulation_state(view_projection_matrix,draw_state);
-
-    render_scene_batches(view_projection_matrix, draw_state);
-    render_scene_coord_systems(view_projection_matrix, draw_state);
+    if (is_simulation_round)
+        render_simulation_state(view_projection_matrix,draw_state);
+    else
+    {
+        render_scene_batches(view_projection_matrix, draw_state);
+        render_scene_coord_systems(view_projection_matrix, draw_state);
+    }
 
     qtgl::swap_buffers();
+}
+
+
+void  simulator::validate_simulation_state()
+{
+    TMPROF_BLOCK();
+
+    std::unordered_set<std::pair<std::string, std::string> >  to_remove;
+    for (auto& elem : m_gfx_animated_objects)
+    {
+        auto const  node = get_scene().get_scene_node(elem.first.first);
+        if (node == nullptr || !node->has_batch(elem.first.second))
+            to_remove.insert(elem.first);
+    }
+    for (auto const&  key : to_remove)
+        m_gfx_animated_objects.erase(key);
+
+    for (auto const& name_node : get_scene().get_all_scene_nodes())
+        for (auto const& name_batch : name_node.second->get_batches())
+            if (name_batch.second.ready() && name_batch.second.get_available_resources().skeletal().size() == 1UL)
+            {
+                std::pair<std::string, std::string> const  key = { name_node.first, name_batch.first };
+                if (m_gfx_animated_objects.count(key) == 0UL)
+                    m_gfx_animated_objects.emplace(key, gfx_animated_object(name_batch.second));
+            }
 }
 
 
@@ -243,6 +281,8 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
 {
     TMPROF_BLOCK();
 
+    for (auto&  elem : m_gfx_animated_objects)
+        elem.second.next_round(time_to_simulate_in_seconds);
 }
 
 
@@ -250,7 +290,51 @@ void  simulator::render_simulation_state(matrix44 const&  view_projection_matrix
 {
     TMPROF_BLOCK();
 
+    std::unordered_map<
+            std::string,    // batch ID
+            std::pair<
+                qtgl::batch,
+                std::vector<std::pair<scene_node_const_ptr,gfx_animated_object const*> > > >
+        batches;
+    for (auto const& name_node : get_scene().get_all_scene_nodes())
+        for (auto const& name_batch : name_node.second->get_batches())
+        {
+            auto&  record = batches[name_batch.second.path_component_of_uid()];
+            if (record.first.empty())
+                record.first = name_batch.second;
+            INVARIANT(record.first == name_batch.second);
+            auto const  it = m_gfx_animated_objects.find({ name_node.first, name_batch.first });
+            INVARIANT(it == m_gfx_animated_objects.cend() || it->second.get_batch() == record.first);
+            record.second.push_back({
+                name_node.second,
+                it != m_gfx_animated_objects.cend() ? &it->second : nullptr
+                });
+        }
+    for (auto const& elem : batches)
+        if (qtgl::make_current(elem.second.first, *draw_state))
+        {
+            for (auto const& node_and_anim : elem.second.second)
+                if (node_and_anim.second == nullptr)
+                    qtgl::render_batch(
+                        elem.second.first,
+                        view_projection_matrix * node_and_anim.first->get_world_matrix()
+                        );
+                else
+                {
+                    std::vector<matrix44>  frame;
+                    node_and_anim.second->get_transformations(
+                            frame,
+                            view_projection_matrix * node_and_anim.first->get_world_matrix()
+                            );
+                    qtgl::render_batch(
+                            elem.second.first,
+                            qtgl::vertex_shader_uniform_data_provider(elem.second.first, frame)
+                            );
+                }
+            draw_state = elem.second.first.get_draw_state();
+        }
 }
+
 
 void  simulator::perform_scene_update(float_64_bit const  time_to_simulate_in_seconds)
 {

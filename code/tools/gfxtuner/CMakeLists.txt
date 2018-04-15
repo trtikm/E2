@@ -20,6 +20,9 @@ add_executable(${THIS_TARGET_NAME}
     scene.hpp
     scene.cpp
     
+    gfx_object.hpp
+    gfx_object.cpp
+    
     scene_selection.hpp 
     scene_selection.cpp 
 

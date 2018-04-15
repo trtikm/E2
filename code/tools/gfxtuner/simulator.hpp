@@ -4,6 +4,7 @@
 #   include <gfxtuner/scene.hpp>
 #   include <gfxtuner/scene_selection.hpp>
 #   include <gfxtuner/scene_edit_utils.hpp>
+#   include <gfxtuner/gfx_object.hpp>
 #   include <qtgl/real_time_simulator.hpp>
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>
@@ -14,7 +15,7 @@
 #   include <unordered_map>
 #   include <unordered_set>
 #   include <string>
-
+#   include <list>
 
 struct simulator : public qtgl::real_time_simulator
 {
@@ -28,7 +29,7 @@ struct simulator : public qtgl::real_time_simulator
             bool const  is_this_pure_redraw_request
             ) override;
 
-    bool  paused() const noexcept { return m_paused; }
+    bool  paused() const { return m_paused; }
 
     // Background and grid
 
@@ -115,6 +116,7 @@ private:
 
     // Simulation
 
+    void  validate_simulation_state();
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
     void  render_simulation_state(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state);
 
@@ -144,6 +146,9 @@ private:
     scene_selection  m_scene_selection;
     qtgl::batch  m_batch_coord_system;
     scene_edit_data  m_scene_edit_data;
+
+    /// Simulation related data
+    std::unordered_map<std::pair<std::string, std::string>, gfx_animated_object>  m_gfx_animated_objects;
 
     /// Other data
     qtgl::effects_config  m_effects_config;
