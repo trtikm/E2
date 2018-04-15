@@ -88,12 +88,27 @@ namespace qtgl {
 
 struct  keyframes : public async::resource_accessor<detail::keyframes_data>
 {
+    keyframes()
+        : async::resource_accessor<detail::keyframes_data>()
+    {}
+
     explicit keyframes(boost::filesystem::path const&  keyframes_dir)
         : async::resource_accessor<detail::keyframes_data>(
             {"qtgl::keyframes", keyframes_dir.string()},
             1U
             )
     {}
+
+    void  insert_load_request(
+            boost::filesystem::path const&  path,
+            async::notification_callback_type const& notification_callback = async::notification_callback_type())
+    {
+        async::resource_accessor<detail::keyframes_data>::insert_load_request(
+            { "qtgl::keyframes", path.string() },
+            1U,
+            notification_callback
+            );
+    }
 
     std::vector<keyframe> const&  get_keyframes() const { return resource().keyframes(); }
 
