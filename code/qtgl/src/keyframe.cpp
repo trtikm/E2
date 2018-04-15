@@ -113,7 +113,7 @@ keyframes_data::keyframes_data(
 
     boost::filesystem::path const  keyframes_dir = key.second;
 
-    if (boost::filesystem::is_directory(keyframes_dir))
+    if (!boost::filesystem::is_directory(keyframes_dir))
         throw std::runtime_error("Cannot access the directory of keyframes: " + keyframes_dir.string());
 
     std::shared_ptr< std::vector<boost::filesystem::path> >  keyframe_pathnames(
@@ -123,7 +123,7 @@ keyframes_data::keyframes_data(
     {
         std::string const  filename = entry.path().filename().string();
         std::string const  extension = entry.path().filename().extension().string();
-        if (filename.find("keyframe_") == 0UL && extension == ".txt")
+        if (filename.find("keyframe") == 0UL && extension == ".txt")
             keyframe_pathnames->push_back(canonical_path(entry.path()));
     }
 
@@ -229,7 +229,7 @@ std::pair<std::size_t, std::size_t>  find_indices_of_keyframes_to_interpolate_fo
     while (keyframe_index + 1ULL < keyframes.num_keyframes() &&
            time_point >= keyframes.time_point_at(keyframe_index + 1ULL))
         ++keyframe_index;
-    std::size_t const  keyframe_succ_index = keyframe_index + (keyframes.num_keyframes() < 2ULL ? 0ULL : 1ULL);
+    std::size_t const  keyframe_succ_index = keyframe_index + (keyframe_index + 1ULL < keyframes.num_keyframes() ? 1ULL : 0ULL);
     INVARIANT(keyframe_succ_index < keyframes.num_keyframes());
     INVARIANT(time_point >= keyframes.time_point_at(keyframe_index));
     INVARIANT(keyframe_index == keyframe_succ_index || time_point < keyframes.time_point_at(keyframe_succ_index));
