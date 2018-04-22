@@ -717,7 +717,7 @@ def save_mesh_links_to_textures(
               "will be used.")
     buffers_export_info["texture_links"] = []
     for tex_idx in range(len(texture_file_name)):
-        key = (mtl_index, tex_idx)
+        key = (mtl_index, texture_file_name[tex_idx])
         if key not in export_info["textures"]:
             continue
         buffers_export_info["texture_links"].append(
@@ -749,11 +749,23 @@ def save_textures(
         for mat_idx in range(len(materials)):
             if materials[mat_idx] is None:
                 continue
-            tex_idx = 0
             for slot_idx in range(len(materials[mat_idx].texture_slots)):
                 slot = materials[mat_idx].texture_slots[slot_idx]
                 if slot is None:
                     continue
+
+                if slot.use_map_color_diffuse:
+                    texture_kind_name = "diffuse"
+                elif slot.use_map_color_spec:
+                    texture_kind_name = "specular"
+                elif slot.use_map_normal:
+                    texture_kind_name = "normal"
+                else:
+                    print("WARNING: Unsupported texture kind in slot " + str(slot_idx) +
+                          " in material " + str(mat_idx) + " called " + materials[mat_idx].name +
+                          ". Skipping the texture.")
+                    continue
+
                 texture = slot.texture
                 if not hasattr(texture, "image"):
                     continue
@@ -791,11 +803,7 @@ def save_textures(
                     f.write("REPEAT\n")
                     f.write("LINEAR_MIPMAP_LINEAR\n")
                     f.write("LINEAR\n")
-                if slot_idx != tex_idx:
-                    print("WARNING: Inconsistency in texture slots detected! So, papping the slot #" + str(slot_idx) +
-                          " to #" + str(tex_idx) + ".")
-                export_info["textures"][(mat_idx, tex_idx)] = dst_texture_pathname
-                tex_idx += 1
+                export_info["textures"][(mat_idx, texture_kind_name)] = dst_texture_pathname
 
 
 def save_coord_systems_of_bones(
