@@ -168,7 +168,8 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                         qtgl::VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION::BINDING_OUT_DIFFUSE
                         },
                     {
-                        qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED
+                        qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_MODEL_TO_CAMERA,
+                        qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_CAMERA_TO_CLIPSPACE,
                         },
                     std::vector<std::string>{
                         // TODO!
@@ -241,19 +242,24 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     qtgl::glapi().glViewport(0, 0, window_props().width_in_pixels(), window_props().height_in_pixels());
 
-    matrix44  view_projection_matrix;
-    qtgl::view_projection_matrix(*m_camera,view_projection_matrix);
+    matrix44  matrix_from_world_to_camera;
+    m_camera->to_camera_space_matrix(matrix_from_world_to_camera);
+    matrix44  matrix_from_camera_to_clipspace;
+    m_camera->projection_matrix(matrix_from_camera_to_clipspace);
 
     {
         matrix44  object_world_transformation;
         angeo::from_base_matrix(*object_space,object_world_transformation);
-        matrix44 const  object_transform_matrix = view_projection_matrix * object_world_transformation;
+        matrix44 const  matrix_from_model_to_camera = matrix_from_world_to_camera * object_world_transformation;
 
         if (qtgl::make_current(object_shaders_binding))
         {
             object_shaders_binding.get_vertex_shader().set_uniform_variable(
-                                       qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED,
-                                       object_transform_matrix);
+                                       qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_MODEL_TO_CAMERA,
+                                       matrix_from_model_to_camera);
+            object_shaders_binding.get_vertex_shader().set_uniform_variable(
+                                       qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_CAMERA_TO_CLIPSPACE,
+                                       matrix_from_camera_to_clipspace);
         }
         qtgl::make_current(object_buffers_binding);
         qtgl::make_current(object_textures_binding);
@@ -262,10 +268,9 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
     {
         matrix44  grid_world_transformation;
         angeo::from_base_matrix(*grid_space,grid_world_transformation);
-        matrix44 const  grid_transform_matrix = view_projection_matrix * grid_world_transformation;
 
         if (qtgl::make_current(grid_batch))
-            qtgl::render_batch(grid_batch, grid_transform_matrix);
+            qtgl::render_batch(grid_batch, matrix_from_world_to_camera * grid_world_transformation, matrix_from_camera_to_clipspace);
     }
 
     qtgl::swap_buffers();

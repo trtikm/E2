@@ -13,7 +13,7 @@ batch  create_wireframe_perspective_frustum(
         float_32_bit const  top_plane,
         float_32_bit const  bottom_plane,
         vector4 const&  colour,
-        bool const  use_fog,
+        FOG_TYPE const  fog_type_,
         std::string const&  id
         )
 {
@@ -55,7 +55,7 @@ batch  create_wireframe_perspective_frustum(
         corners.at(3U), corners.at(7U),
     };
 
-    return create_lines3d(vertices, colour, use_fog, id);
+    return create_lines3d(vertices, colour, fog_type_, id);
 }
 
 

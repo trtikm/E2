@@ -273,7 +273,7 @@ simulator::simulator(
                     { 0.0f, 0.0f, 1.0f, 1.0f },
                     10U,
                     qtgl::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE,
-                    false,
+                    qtgl::FOG_TYPE::NONE,
                     get_program_options()->dataRoot()
                     )
             }
@@ -297,7 +297,7 @@ simulator::simulator(
                 { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE }
                 },
             qtgl::effects_config::shader_output_types{ qtgl::SHADER_DATA_OUTPUT_TYPE::DEFAULT },
-            false
+            qtgl::FOG_TYPE::NONE
             )
 
     , m_batch_spiker{
@@ -433,25 +433,27 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     qtgl::glapi().glViewport(0, 0, window_props().width_in_pixels(), window_props().height_in_pixels());
 
-    matrix44  view_projection_matrix;
-    qtgl::view_projection_matrix(*m_camera,view_projection_matrix);
+    matrix44  matrix_from_world_to_camera;
+    m_camera->to_camera_space_matrix(matrix_from_world_to_camera);
+    matrix44  matrix_from_camera_to_clipspace;
+    m_camera->projection_matrix(matrix_from_camera_to_clipspace);
 
     qtgl::draw_state_ptr  draw_state;
     if (m_do_show_grid)
         if (qtgl::make_current(m_batch_grid, *draw_state))
         {
-            qtgl::render_batch(m_batch_grid,view_projection_matrix);
+            qtgl::render_batch(m_batch_grid, matrix_from_world_to_camera, matrix_from_camera_to_clipspace);
             draw_state = m_batch_grid.get_draw_state();
         }
 
     if (network() != nullptr)
-        render_network(view_projection_matrix,draw_state);
+        render_network(matrix_from_world_to_camera, matrix_from_camera_to_clipspace,draw_state);
     else if (g_apply_pause_to_construction)
     {
         if (g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP)
         {
             if (g_constructed_network->get_state() == netlab::NETWORK_STATE::READY_FOR_MOVEMENT_AREA_CENTERS_MIGRATION_STEP)
-                render_constructed_network(view_projection_matrix,draw_state);
+                render_constructed_network(matrix_from_world_to_camera, matrix_from_camera_to_clipspace,draw_state);
             if (!paused())
                 g_network_construction_state = NETWORK_CONSTRUCTION_STATE::PERFORMING_INITIALISATION_STEP;
         }
@@ -622,7 +624,11 @@ void  simulator::update_selection_of_network_objects(float_64_bit const  seconds
 }
 
 
-void  simulator::render_network(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
+void  simulator::render_network(
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        qtgl::draw_state_ptr  draw_state
+        )
 {
     TMPROF_BLOCK();
 
@@ -643,37 +649,38 @@ void  simulator::render_network(matrix44 const&  view_projection_matrix, qtgl::d
         clip_planes.push_back({props.high_corner_of_ships(),-vector3_unit_z()});
     }
 
-    render_network_spikers(view_projection_matrix,clip_planes,draw_state);
-    render_network_docks(view_projection_matrix,clip_planes,draw_state);
-    render_network_ships(view_projection_matrix,clip_planes,draw_state);
+    render_network_spikers(matrix_from_world_to_camera,matrix_from_camera_to_clipspace,clip_planes,draw_state);
+    render_network_docks(matrix_from_world_to_camera, matrix_from_camera_to_clipspace,clip_planes,draw_state);
+    render_network_ships(matrix_from_world_to_camera, matrix_from_camera_to_clipspace,clip_planes,draw_state);
 
-    render_selected_network_object(view_projection_matrix,draw_state);
+    render_selected_network_object(matrix_from_world_to_camera, matrix_from_camera_to_clipspace,draw_state);
 
     if (m_dbg_network_camera.is_enabled())
-        m_dbg_network_camera.render_camera_frustum(view_projection_matrix,draw_state);
+        m_dbg_network_camera.render_camera_frustum(matrix_from_world_to_camera,matrix_from_camera_to_clipspace,draw_state);
     if (m_dbg_frustum_sector_enumeration.is_enabled())
     {
         if (m_dbg_frustum_sector_enumeration.is_invalidated() ||
                 !m_dbg_network_camera.is_enabled() ||
                 window_props().just_resized())
             m_dbg_frustum_sector_enumeration.enumerate(clip_planes,network()->properties()->layer_props());
-        m_dbg_frustum_sector_enumeration.render(view_projection_matrix,draw_state);
+        m_dbg_frustum_sector_enumeration.render(matrix_from_world_to_camera,matrix_from_camera_to_clipspace,draw_state);
     }
     if (m_dbg_raycast_sector_enumeration.is_enabled())
-        m_dbg_raycast_sector_enumeration.render(view_projection_matrix,draw_state);
+        m_dbg_raycast_sector_enumeration.render(matrix_from_world_to_camera,matrix_from_camera_to_clipspace,draw_state);
     if (m_dbg_draw_movement_areas.is_enabled())
     {
         if (m_dbg_draw_movement_areas.is_invalidated() ||
                 !m_dbg_network_camera.is_enabled() ||
                 window_props().just_resized())
             m_dbg_draw_movement_areas.collect_visible_areas(clip_planes,network());
-        m_dbg_draw_movement_areas.render(view_projection_matrix,draw_state);
+        m_dbg_draw_movement_areas.render(matrix_from_world_to_camera,matrix_from_camera_to_clipspace,draw_state);
     }
 }
 
 
 void  simulator::render_network_spikers(
-        matrix44 const&  view_projection_matrix,
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
         std::vector< std::pair<vector3,vector3> > const& clip_planes,
         qtgl::draw_state_ptr&  draw_state
         )
@@ -690,22 +697,25 @@ void  simulator::render_network_spikers(
             qtgl::spatial_boundary const  boundary = m_batch_spiker.get_buffers_binding().get_boundary();
 
             m_batch_spiker_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
-                                                             vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/spiker_bbox");
-            m_batch_spiker_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,
-                                                                   vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/spiker_bsphere");
+                                                             vector4(0.5f, 0.5f, 0.5f, 1.0f),qtgl::FOG_TYPE::NONE,
+                                                             "/netviewer/spiker_bbox");
+            m_batch_spiker_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U, vector4(0.5f, 0.5f, 0.5f, 1.0f),
+                                                                   qtgl::FOG_TYPE::NONE, "/netviewer/spiker_bsphere");
         }
 
         struct  local
         {
             static bool  callback(
                         qtgl::batch const  batch_spiker,
-                        matrix44 const&  view_projection_matrix,
+                        matrix44 const&  matrix_from_world_to_camera,
+                        matrix44 const&  matrix_from_camera_to_clipspace,
                         vector3 const&  spiker_position
                         )
             {
                 qtgl::render_batch(
                     batch_spiker,
-                    view_projection_matrix,
+                    matrix_from_world_to_camera,
+                    matrix_from_camera_to_clipspace,
                     angeo::coordinate_system(spiker_position,quaternion_identity())
                     );
                 return true;
@@ -715,7 +725,13 @@ void  simulator::render_network_spikers(
         natural_64_bit const  num_rendered = netview::enumerate_spiker_positions(
                     network()->properties()->layer_props(),
                     clip_planes,
-                    std::bind(&local::callback,m_batch_spiker,std::cref(view_projection_matrix),std::placeholders::_1)
+                    std::bind(
+                        &local::callback,
+                        m_batch_spiker,
+                        std::cref(matrix_from_world_to_camera),
+                        std::cref(matrix_from_camera_to_clipspace),
+                        std::placeholders::_1
+                        )
                     );
 
         if (num_rendered != 0UL)
@@ -725,7 +741,8 @@ void  simulator::render_network_spikers(
 
 
 void  simulator::render_network_docks(
-        matrix44 const&  view_projection_matrix,
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
         std::vector< std::pair<vector3,vector3> > const& clip_planes,
         qtgl::draw_state_ptr&  draw_state)
 {
@@ -741,22 +758,25 @@ void  simulator::render_network_docks(
             qtgl::spatial_boundary const  boundary = m_batch_dock.get_buffers_binding().get_boundary();
 
             m_batch_dock_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
-                                                           vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/dock_bbox");
-            m_batch_dock_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,
-                                                                 vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/dock_bsphere");
+                                                           vector4(0.5f, 0.5f, 0.5f, 1.0f), qtgl::FOG_TYPE::NONE,
+                                                           "/netviewer/dock_bbox");
+            m_batch_dock_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U, vector4(0.5f, 0.5f, 0.5f, 1.0f),
+                                                                 qtgl::FOG_TYPE::NONE,"/netviewer/dock_bsphere");
         }
 
         struct  local
         {
             static bool  callback(
                         qtgl::batch const  batch_dock,
-                        matrix44 const&  view_projection_matrix,
+                        matrix44 const&  matrix_from_world_to_camera,
+                        matrix44 const&  matrix_from_camera_to_clipspace,
                         vector3 const&  dock_position
                         )
             {
                 qtgl::render_batch(
                     batch_dock,
-                    view_projection_matrix,
+                    matrix_from_world_to_camera,
+                    matrix_from_camera_to_clipspace,
                     angeo::coordinate_system(dock_position,quaternion_identity())
                     );
                 return true;
@@ -766,7 +786,13 @@ void  simulator::render_network_docks(
         natural_64_bit const  num_rendered = netview::enumerate_dock_positions(
                     network()->properties()->layer_props(),
                     clip_planes,
-                    std::bind(&local::callback,m_batch_dock,std::cref(view_projection_matrix),std::placeholders::_1)
+                    std::bind(
+                        &local::callback,
+                        m_batch_dock,
+                        std::cref(matrix_from_world_to_camera),
+                        std::cref(matrix_from_camera_to_clipspace),
+                        std::placeholders::_1
+                        )
                     );
 
         if (num_rendered != 0UL)
@@ -776,7 +802,8 @@ void  simulator::render_network_docks(
 
 
 void  simulator::render_network_ships(
-        matrix44 const&  view_projection_matrix,
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
         std::vector< std::pair<vector3,vector3> > const& clip_planes,
         qtgl::draw_state_ptr&  draw_state
         )
@@ -793,22 +820,25 @@ void  simulator::render_network_ships(
             qtgl::spatial_boundary const  boundary = m_batch_ship.get_buffers_binding().get_boundary();
 
             m_batch_ship_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
-                                                           vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/ship_bbox");
-            m_batch_ship_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,
-                                                                 vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/ship_bsphere");
+                                                           vector4(0.5f, 0.5f, 0.5f, 1.0f), qtgl::FOG_TYPE::NONE,
+                                                           "/netviewer/ship_bbox");
+            m_batch_ship_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,vector4(0.5f, 0.5f, 0.5f, 1.0f),
+                                                                 qtgl::FOG_TYPE::NONE,"/netviewer/ship_bsphere");
         }
 
         struct  local
         {
             static bool  callback(
                         qtgl::batch const  batch_ship,
-                        matrix44 const&  view_projection_matrix,
+                        matrix44 const&  matrix_from_world_to_camera,
+                        matrix44 const&  matrix_from_camera_to_clipspace,
                         vector3 const&  ship_position
                         )
             {
                 qtgl::render_batch(
                     batch_ship,
-                    view_projection_matrix,
+                    matrix_from_world_to_camera,
+                    matrix_from_camera_to_clipspace,
                     angeo::coordinate_system(ship_position,quaternion_identity())
                     );
                 return true;
@@ -818,7 +848,13 @@ void  simulator::render_network_ships(
         natural_64_bit const  num_rendered = netview::enumerate_ship_positions(
                     *network(),
                     clip_planes,
-                    std::bind(&local::callback,m_batch_ship,std::cref(view_projection_matrix),std::placeholders::_1)
+                    std::bind(
+                        &local::callback,
+                        m_batch_ship,
+                        std::cref(matrix_from_world_to_camera),
+                        std::cref(matrix_from_camera_to_clipspace),
+                        std::placeholders::_1
+                        )
                     );
 
         if (num_rendered != 0UL)
@@ -827,7 +863,11 @@ void  simulator::render_network_ships(
 }
 
 
-void  simulator::render_selected_network_object(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state)
+void  simulator::render_selected_network_object(
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        qtgl::draw_state_ptr&  draw_state
+        )
 {
     if (!network().operator bool())
         return;
@@ -845,7 +885,8 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                 vector3 const&  pos = props.spiker_sector_centre(x, y, c);
                 qtgl::render_batch(
                     m_batch_spiker_bsphere,
-                    view_projection_matrix,
+                    matrix_from_world_to_camera,
+                    matrix_from_camera_to_clipspace,
                     angeo::coordinate_system(pos, quaternion_identity()),
                     { 1.0f, 1.0f, 1.0f, 1.0f }
                 );
@@ -862,7 +903,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                                                         m_selected_object_stats->indices());
                 m_batches_selection.push_back(
                         qtgl::create_wireframe_box(sector_center - sector_shift,sector_center + sector_shift,
-                                                   vector4(0.5f, 0.5f, 0.5f, 1.0f),
+                                                   vector4(0.5f, 0.5f, 0.5f, 1.0f), qtgl::FOG_TYPE::NONE,
                                                    "/netviewer/selected_spiker_sector_bbox")
                         );
             }
@@ -877,7 +918,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                                                                      .size_of_ship_movement_area_in_meters(area_layer_index);
                 m_batches_selection.push_back(
                         qtgl::create_wireframe_box(area_center - area_shift,area_center + area_shift,
-                                                   vector4(0.5f, 0.5f, 0.5f, 1.0f),
+                                                   vector4(0.5f, 0.5f, 0.5f, 1.0f), qtgl::FOG_TYPE::NONE,
                                                    "/netviewer/selected_spiker_ship_movement_area")
                         );
                 m_batches_selection.push_back(
@@ -897,6 +938,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                                         )
                                 },
                                 vector4{ 0.5f, 0.25f, 0.5f, 1.0f },
+                                qtgl::FOG_TYPE::NONE,
                                 "/netviewer/selected_spiker_ship_movement_area_center"
                                 )
                         );
@@ -914,7 +956,8 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
             {
                 qtgl::render_batch(
                     m_batches_selection.at(i),
-                    view_projection_matrix,
+                    matrix_from_world_to_camera,
+                    matrix_from_camera_to_clipspace,
                     angeo::coordinate_system(vector3_zero(), quaternion_identity()),
                     colours.at(i)
                 );
@@ -935,13 +978,14 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                         network()->get_layer_of_ships(m_selected_object_stats->indices().layer_index()).position(ships_begin_index + i)
                         });
             qtgl::batch const  batch =
-                    qtgl::create_lines3d(lines, { 0.5f, 0.5f, 0.5f, 1.0f },
+                    qtgl::create_lines3d(lines, { 0.5f, 0.5f, 0.5f, 1.0f }, qtgl::FOG_TYPE::NONE,
                                          "/netviewer/selected_spiker_lines_to_ships");
             if (qtgl::make_current(batch, *draw_state))
             {
                 qtgl::render_batch(
                     batch,
-                    view_projection_matrix,
+                    matrix_from_world_to_camera,
+                    matrix_from_camera_to_clipspace,
                     angeo::coordinate_system(vector3_zero(), quaternion_identity())
                     );
                 draw_state = batch.get_draw_state();
@@ -961,7 +1005,8 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                 vector3 const&  pos = props.dock_sector_centre(x,y,c);
                 qtgl::render_batch(
                     m_batch_dock_bsphere,
-                    view_projection_matrix,
+                    matrix_from_world_to_camera,
+                    matrix_from_camera_to_clipspace,
                     angeo::coordinate_system(pos,quaternion_identity()),
                     { 1.0f, 1.0f, 1.0f, 1.0f }
                     );
@@ -978,7 +1023,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                                                         m_selected_object_stats->indices());
                 m_batches_selection.push_back(
                         qtgl::create_wireframe_box(sector_center - sector_shift,sector_center + sector_shift,
-                                                   vector4(0.5f, 0.5f, 0.5f, 1.0f),
+                                                   vector4(0.5f, 0.5f, 0.5f, 1.0f), qtgl::FOG_TYPE::NONE,
                                                    "/netviewer/selected_dock_sector_bbox")
                         );
             }
@@ -993,13 +1038,14 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                 vector3 const  sector_shift = netlab::shift_from_low_corner_of_spiker_sector_to_center(props);
                 m_batches_selection.push_back(
                     qtgl::create_wireframe_box(sector_center - sector_shift, sector_center + sector_shift,
-                                               vector4(0.5f, 0.5f, 0.5f, 1.0f),
+                                               vector4(0.5f, 0.5f, 0.5f, 1.0f), qtgl::FOG_TYPE::NONE,
                                                "/netviewer/selected_spiker_sector_bbox")
                                                );
                 m_batches_selection.push_back(
                         qtgl::create_lines3d(
                                 { { sector_center, netlab::dock_sector_centre(props,m_selected_object_stats->indices().object_index()) } },
                                 { 0.5f, 0.5f, 0.5f, 1.0f },
+                                qtgl::FOG_TYPE::NONE,
                                 "/netviewer/selected_dock_line_to_spiker"
                                 )
                         );
@@ -1017,7 +1063,8 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
             {
                 qtgl::render_batch(
                     m_batches_selection.at(i),
-                    view_projection_matrix,
+                    matrix_from_world_to_camera,
+                    matrix_from_camera_to_clipspace,
                     angeo::coordinate_system(vector3_zero(), quaternion_identity()),
                     colours.at(i)
                 );
@@ -1036,7 +1083,8 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                               .position(m_selected_object_stats->indices().object_index());
                 qtgl::render_batch(
                     m_batch_ship_bsphere,
-                    view_projection_matrix,
+                    matrix_from_world_to_camera,
+                    matrix_from_camera_to_clipspace,
                     angeo::coordinate_system(pos,quaternion_identity()),
                     { 1.0f, 1.0f, 1.0f, 1.0f }
                     );
@@ -1056,13 +1104,15 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                             netlab::spiker_sector_centre(props,spiker_index)
                         }},
                         { 0.5f, 0.5f, 0.5f, 1.0f },
+                        qtgl::FOG_TYPE::NONE,
                         "/netviewer/selected_ship_line_to_spiker"
                         );
             if (qtgl::make_current(batch, *draw_state))
             {
                 qtgl::render_batch(
                     batch,
-                    view_projection_matrix,
+                    matrix_from_world_to_camera,
+                    matrix_from_camera_to_clipspace,
                     angeo::coordinate_system(vector3_zero(), quaternion_identity())
                     );
                 draw_state = batch.get_draw_state();
@@ -1081,7 +1131,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
             vector3 const  area_shift = 0.5f * props.size_of_ship_movement_area_in_meters(area_layer_index);
             m_batches_selection.push_back(
                     qtgl::create_wireframe_box(area_center - area_shift,area_center + area_shift,
-                                               vector4(0.5f, 0.5f, 0.5f, 1.0f),
+                                               vector4(0.5f, 0.5f, 0.5f, 1.0f), qtgl::FOG_TYPE::NONE,
                                                "/netviewer/selected_ship_movement_area")
                     );
             m_batches_selection.push_back(
@@ -1101,6 +1151,7 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
                                     )
                             },
                             vector4{ 0.5f, 0.25f, 0.5f, 1.0f },
+                            qtgl::FOG_TYPE::NONE,
                             "/netviewer/selected_ship_movement_area_center"
                             )
                     );
@@ -1116,7 +1167,8 @@ void  simulator::render_selected_network_object(matrix44 const&  view_projection
             {
                 qtgl::render_batch(
                     m_batches_selection.at(i),
-                    view_projection_matrix,
+                    matrix_from_world_to_camera,
+                    matrix_from_camera_to_clipspace,
                     angeo::coordinate_system(vector3_zero(), quaternion_identity()),
                     colours.at(i)
                 );
@@ -1203,7 +1255,11 @@ void  simulator::enable_usage_of_queues_in_update_of_ships_in_network(bool const
 }
 
 
-void  simulator::render_constructed_network(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state)
+void  simulator::render_constructed_network(
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        qtgl::draw_state_ptr  draw_state
+        )
 {
     TMPROF_BLOCK();
 
@@ -1230,32 +1286,38 @@ void  simulator::render_constructed_network(matrix44 const&  view_projection_mat
         clip_planes.push_back({ props.high_corner_of_ships(),-vector3_unit_z() });
     }
 
-    render_spikers_of_constructed_network(view_projection_matrix, clip_planes, draw_state);
+    render_spikers_of_constructed_network(
+            matrix_from_world_to_camera,
+            matrix_from_camera_to_clipspace,
+            clip_planes,
+            draw_state
+            );
 
     if (m_dbg_network_camera.is_enabled())
-        m_dbg_network_camera.render_camera_frustum(view_projection_matrix, draw_state);
+        m_dbg_network_camera.render_camera_frustum(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
     if (m_dbg_frustum_sector_enumeration.is_enabled())
     {
         if (m_dbg_frustum_sector_enumeration.is_invalidated() ||
             !m_dbg_network_camera.is_enabled() ||
             window_props().just_resized())
             m_dbg_frustum_sector_enumeration.enumerate(clip_planes, g_constructed_network->properties()->layer_props());
-        m_dbg_frustum_sector_enumeration.render(view_projection_matrix, draw_state);
+        m_dbg_frustum_sector_enumeration.render(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
     }
     if (m_dbg_raycast_sector_enumeration.is_enabled())
-        m_dbg_raycast_sector_enumeration.render(view_projection_matrix, draw_state);
+        m_dbg_raycast_sector_enumeration.render(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
     if (m_dbg_draw_movement_areas.is_enabled())
     {
         if (m_dbg_draw_movement_areas.is_invalidated() ||
             !m_dbg_network_camera.is_enabled() ||
             window_props().just_resized())
             m_dbg_draw_movement_areas.collect_visible_areas(clip_planes, g_constructed_network);
-        m_dbg_draw_movement_areas.render(view_projection_matrix, draw_state);
+        m_dbg_draw_movement_areas.render(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
     }
 }
 
 void  simulator::render_spikers_of_constructed_network(
-        matrix44 const&  view_projection_matrix,
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
         std::vector< std::pair<vector3, vector3> > const&  clip_planes,
         qtgl::draw_state_ptr&  draw_state
         )
@@ -1273,22 +1335,25 @@ void  simulator::render_spikers_of_constructed_network(
             qtgl::spatial_boundary const  boundary = m_batch_spiker.get_buffers_binding().get_boundary();
 
             m_batch_spiker_bbox = qtgl::create_wireframe_box(boundary.lo_corner(),boundary.hi_corner(),
-                                                             vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/spiker_bbox");
-            m_batch_spiker_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,
-                                                                   vector4(0.5f, 0.5f, 0.5f, 1.0f),"/netviewer/spiker_bsphere");
+                                                             vector4(0.5f, 0.5f, 0.5f, 1.0f), qtgl::FOG_TYPE::NONE,
+                                                             "/netviewer/spiker_bbox");
+            m_batch_spiker_bsphere = qtgl::create_wireframe_sphere(boundary.radius(),5U,vector4(0.5f, 0.5f, 0.5f, 1.0f),
+                                                                   qtgl::FOG_TYPE::NONE,"/netviewer/spiker_bsphere");
         }
 
         struct  local
         {
             static bool  callback(
                         qtgl::batch const  batch_spiker,
-                        matrix44 const&  view_projection_matrix,
+                        matrix44 const&  matrix_from_world_to_camera,
+                        matrix44 const&  matrix_from_camera_to_clipspace,
                         vector3 const&  spiker_position
                         )
             {
                 qtgl::render_batch(
                     batch_spiker,
-                    view_projection_matrix,
+                    matrix_from_world_to_camera,
+                    matrix_from_camera_to_clipspace,
                     angeo::coordinate_system(spiker_position,quaternion_identity())
                     );
                 return true;
@@ -1298,7 +1363,12 @@ void  simulator::render_spikers_of_constructed_network(
         natural_64_bit const  num_rendered = netview::enumerate_spiker_positions(
                     g_constructed_network->properties()->layer_props(),
                     clip_planes,
-                    std::bind(&local::callback,m_batch_spiker,std::cref(view_projection_matrix),std::placeholders::_1)
+                    std::bind(
+                        &local::callback,
+                        m_batch_spiker,
+                        std::cref(matrix_from_world_to_camera),
+                        std::cref(matrix_from_camera_to_clipspace),
+                        std::placeholders::_1)
                     );
 
         if (num_rendered != 0UL)

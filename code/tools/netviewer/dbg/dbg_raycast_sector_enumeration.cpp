@@ -26,7 +26,7 @@ void  enumerate_sectors(
                     -0.5f * vector3{ sector_size_x, sector_size_y, sector_size_c },
                     +0.5f * vector3{ sector_size_x, sector_size_y, sector_size_c },
                     vector4(0.5f, 0.5f, 0.5f, 1.0f),
-                    false,
+                    qtgl::FOG_TYPE::NONE,
                     id
                     );
     netview::enumerate_sectors_intersecting_line(
@@ -113,7 +113,11 @@ void  dbg_raycast_sector_enumeration::enumerate(
 }
 
 
-void  dbg_raycast_sector_enumeration::render(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state) const
+void  dbg_raycast_sector_enumeration::render(
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        qtgl::draw_state_ptr&  draw_state
+        ) const
 {
     if (!is_enabled())
         return;
@@ -121,7 +125,7 @@ void  dbg_raycast_sector_enumeration::render(matrix44 const&  view_projection_ma
     if (!m_batch_line.empty())
         if (qtgl::make_current(m_batch_line, *draw_state))
         {
-            qtgl::render_batch(m_batch_line,view_projection_matrix);
+            qtgl::render_batch(m_batch_line, matrix_from_world_to_camera, matrix_from_camera_to_clipspace);
             draw_state = m_batch_line.get_draw_state();
         }
 
@@ -130,7 +134,8 @@ void  dbg_raycast_sector_enumeration::render(matrix44 const&  view_projection_ma
         {
             qtgl::render_batch(
                 pos_batch.second,
-                view_projection_matrix,
+                matrix_from_world_to_camera,
+                matrix_from_camera_to_clipspace,
                 angeo::coordinate_system(pos_batch.first,quaternion_identity()),
                 vector4(0.5f, 0.5f, 0.5f, 1.0f)
                 );

@@ -45,7 +45,7 @@ void  dbg_frustum_sector_enumeration::enumerate(
                                          props.distance_of_spikers_along_y_axis_in_meters(),
                                          props.distance_of_spikers_along_c_axis_in_meters() },
                         vector4(0.5f, 0.5f, 0.5f, 1.0f),
-                        false,
+                        qtgl::FOG_TYPE::NONE,
                         msgstream() << "netviewer/spiker_sector_of_layer_" << layer_index
                         );
         netview::enumerate_spiker_positions(
@@ -66,7 +66,7 @@ void  dbg_frustum_sector_enumeration::enumerate(
                                          props.distance_of_docks_in_meters(),
                                          props.distance_of_docks_in_meters() },
                         vector4(0.5f, 0.5f, 0.5f, 1.0f),
-                        false,
+                        qtgl::FOG_TYPE::NONE,
                         msgstream() << "netviewer/dock_sector_of_layer_" << layer_index
                         );
         netview::enumerate_dock_positions(
@@ -82,7 +82,11 @@ void  dbg_frustum_sector_enumeration::enumerate(
 }
 
 
-void  dbg_frustum_sector_enumeration::render(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state) const
+void  dbg_frustum_sector_enumeration::render(
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        qtgl::draw_state_ptr&  draw_state
+        ) const
 {
     if (!is_enabled())
         return;
@@ -92,7 +96,8 @@ void  dbg_frustum_sector_enumeration::render(matrix44 const&  view_projection_ma
         {
             qtgl::render_batch(
                 pos_batch.second,
-                view_projection_matrix,
+                matrix_from_world_to_camera,
+                matrix_from_camera_to_clipspace,
                 angeo::coordinate_system(pos_batch.first,quaternion_identity()),
                 vector4(0.5f, 0.5f, 0.5f, 1.0f)
                 );

@@ -19,7 +19,11 @@ struct  dbg_raycast_sector_enumeration
     void  enumerate(vector3 const&  line_begin, vector3 const&  line_end,
                     std::vector<netlab::network_layer_props> const&  layer_props);
 
-    void  render(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state) const;
+    void  render(
+            matrix44 const&  matrix_from_world_to_camera,
+            matrix44 const&  matrix_from_camera_to_clipspace,
+            qtgl::draw_state_ptr&  draw_state
+            ) const;
 
 private:
     bool  m_enabled;

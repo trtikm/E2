@@ -42,6 +42,16 @@ enum struct  LIGHTING_DATA_TYPE : natural_8_bit
 };
 
 
+enum struct FOG_TYPE : natural_8_bit
+{
+    NONE            = 0,    // No fog (disabled)
+    INTERPOLATED    = 1,    // Computer in vertex shader (so, fragment shader then only uses the interpolated the fog colour). 
+    DETAILED        = 2,    // Computed in fragment shader.
+};
+
+std::string  name(FOG_TYPE const  fog_type_);
+
+
 struct  effects_config
 {
     using  light_types = std::set<LIGHT_TYPE>;
@@ -52,7 +62,7 @@ struct  effects_config
             light_types const&  light_types_,
             lighting_data_types const&  lighting_data_types_,
             shader_output_types const&  shader_output_types_,
-            bool  use_fog
+            FOG_TYPE const  fog_type_
             );
 
     light_types const&  get_light_types() const { return m_light_types; }
@@ -63,14 +73,15 @@ struct  effects_config
     lighting_data_types&  get_lighting_data_types() { return m_lighting_data_types; }
     shader_output_types&  get_shader_output_types() { return m_shader_output_types; }
 
-    bool  use_fog() const { return m_use_fog; }
+    FOG_TYPE  get_fog_type() const { return m_fog_type; }
+    void  set_fog_type(FOG_TYPE const  type) { m_fog_type = type; }
 
 private:
 
     light_types  m_light_types;
     lighting_data_types  m_lighting_data_types;
     shader_output_types  m_shader_output_types;
-    bool  m_use_fog;
+    FOG_TYPE  m_fog_type;
 };
 
 

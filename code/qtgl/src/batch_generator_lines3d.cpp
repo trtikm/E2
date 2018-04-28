@@ -10,7 +10,7 @@ namespace qtgl {
 batch  create_lines3d(
         std::vector< std::array<float_32_bit, 3> > const&  vertices,
         std::vector< std::array<float_32_bit, 4> > const&  colours,
-        bool const  use_fog,
+        FOG_TYPE const  fog_type_,
         std::string const&  id
         )
 {
@@ -38,7 +38,7 @@ batch  create_lines3d(
             {}, // Light types.
             {{LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::BUFFER}},
             {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
-            use_fog
+            fog_type_
             },
         qtgl::draw_state::create(),
         modelspace(),
@@ -51,7 +51,7 @@ batch  create_lines3d(
 batch  create_lines3d(
         std::vector< std::array<float_32_bit, 3> > const&  vertices,
         std::array<float_32_bit, 4> const&  common_colour,
-        bool const  use_fog,
+        FOG_TYPE const  fog_type_,
         std::string const&  id
         )
 {
@@ -64,14 +64,14 @@ batch  create_lines3d(
 
     std::vector< std::array<float_32_bit, 4> > const  colours(vertices.size(), common_colour);
 
-    return create_lines3d(vertices, colours, use_fog, id);
+    return create_lines3d(vertices, colours, fog_type_, id);
 }
 
 
 batch  create_lines3d(
         std::vector< std::array<float_32_bit, 3> > const&  vertices,
         vector4 const&  common_colour,
-        bool const  use_fog,
+        FOG_TYPE const  fog_type_,
         std::string const&  id
         )
 {
@@ -84,14 +84,14 @@ batch  create_lines3d(
         (float_32_bit)common_colour(3)
     };
 
-    return create_lines3d(vertices,colour,use_fog,id);
+    return create_lines3d(vertices,colour,fog_type_,id);
 }
 
 
 batch  create_lines3d(
         std::vector< std::pair<vector3, vector3> > const&  lines,
         std::vector< vector4 > const&  colours_of_lines,
-        bool const  use_fog,
+        FOG_TYPE const  fog_type_,
         std::string const&  id
         )
 {
@@ -120,14 +120,14 @@ batch  create_lines3d(
 
     INVARIANT(vertices.size() == colours.size());
 
-    return create_lines3d(vertices, colours, use_fog, id);
+    return create_lines3d(vertices, colours, fog_type_, id);
 }
 
 
 batch  create_lines3d(
         std::vector< std::pair<vector3, vector3> > const&  lines,
         vector4 const&  common_colour,
-        bool const  use_fog,
+        FOG_TYPE const  fog_type_,
         std::string const&  id
         )
 {
@@ -140,7 +140,7 @@ batch  create_lines3d(
         vertices.push_back({ (float_32_bit)AB.second(0), (float_32_bit)AB.second(1), (float_32_bit)AB.second(2) });
     }
 
-    return create_lines3d(vertices,common_colour,use_fog,id);
+    return create_lines3d(vertices,common_colour,fog_type_,id);
 }
 
 

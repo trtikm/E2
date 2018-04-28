@@ -166,6 +166,22 @@ bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name
     return true;
 }
 
+bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name, vector3 const&  value_to_store)
+{
+    TMPROF_BLOCK();
+
+    GLint const  layout_location = glapi().glGetUniformLocation(id(), variable_name.c_str());
+    if (layout_location == -1)
+    {
+        ASSUMPTION(get_symbolic_names_of_used_uniforms().count(to_symbolic_uniform_name_of_vertex_shader(variable_name)) == 1UL);
+        INVARIANT(glapi().glGetError() == 0U);
+        return false;
+    }
+    glapi().glProgramUniform3fv(id(), layout_location, 1U, value_to_store.data());
+    INVARIANT(glapi().glGetError() == 0U);
+    return true;
+}
+
 bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store)
 {
     TMPROF_BLOCK();
@@ -206,7 +222,7 @@ bool  vertex_shader_data::set_uniform_variable(std::string const&  variable_name
     TMPROF_BLOCK();
 
     static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
-    ASSUMPTION(value_to_store.size() <= uniform_max_transform_matrices());
+    ASSUMPTION(value_to_store.size() <= num_elements(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA));
 
     GLint const  layout_location = glapi().glGetUniformLocation(id(),variable_name.c_str());
     if (layout_location == -1)
@@ -371,7 +387,7 @@ bool  fragment_shader_data::set_uniform_variable(std::string const&  variable_na
     TMPROF_BLOCK();
 
     static_assert(sizeof(matrix44)==4*4*sizeof(float_32_bit),"");
-    ASSUMPTION(value_to_store.size() <= uniform_max_transform_matrices());
+    ASSUMPTION(value_to_store.size() <= num_elements(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA));
 
     GLint const  layout_location = glapi().glGetUniformLocation(id(),variable_name.c_str());
     if (layout_location == -1)

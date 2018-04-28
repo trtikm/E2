@@ -89,17 +89,44 @@ void  render_batch(
         for (VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : shader.get_symbolic_names_of_used_uniforms())
             switch (uniform)
             {
-            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
-                shader.set_uniform_variable(uniform,vertex_uniform_provider.get_DIFFUSE_COLOUR());
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_MODEL_TO_CAMERA:
+                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_MATRIX_FROM_MODEL_TO_CAMERA());
                 break;
-            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
-                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_TRANSFORM_MATRIX_TRANSPOSED());
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_CAMERA_TO_CLIPSPACE:
+                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_MATRIX_FROM_CAMERA_TO_CLIPSPACE());
                 break;
-            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRICES_TRANSPOSED:
-                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_TRANSFORM_MATRICES_TRANSPOSED());
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA:
+                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_MATRICES_FROM_MODEL_TO_CAMERA());
                 break;
             case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX:
                 shader.set_uniform_variable(uniform, vertex_uniform_provider.get_NUM_MATRICES_PER_VERTEX());
+                break;
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::AMBIENT_COLOUR:
+                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_AMBIENT_COLOUR());
+                break;
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
+                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_DIFFUSE_COLOUR());
+                break;
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::SPECULAR_COLOUR:
+                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_SPECULAR_COLOUR());
+                break;
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIRECTIONAL_LIGHT_DIRECTION:
+                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_DIRECTIONAL_LIGHT_DIRECTION());
+                break;
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIRECTIONAL_LIGHT_COLOUR:
+                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_DIRECTIONAL_LIGHT_COLOUR());
+                break;
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_COLOUR:
+                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_FOG_COLOUR());
+                break;
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_NEAR:
+                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_FOG_NEAR());
+                break;
+            case VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_FAR:
+                shader.set_uniform_variable(uniform, vertex_uniform_provider.get_FOG_FAR());
+                break;
+            default:
+                UNREACHABLE();
                 break;
             }
     }
@@ -112,11 +139,7 @@ void  render_batch(
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE:
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_SPECULAR:
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_NORMAL:
-            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_POSITION:
                 // Nothing to set here (a texture sampler cannot be set any data).
-                break;
-            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_COLOUR:
-                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_FOG_COLOUR());
                 break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::AMBIENT_COLOUR:
                 shader.set_uniform_variable(uniform, fragment_uniform_provider.get_AMBIENT_COLOUR());
@@ -133,6 +156,18 @@ void  render_batch(
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::DIRECTIONAL_LIGHT_COLOUR:
                 shader.set_uniform_variable(uniform, fragment_uniform_provider.get_DIRECTIONAL_LIGHT_COLOUR());
                 break;
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_COLOUR:
+                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_FOG_COLOUR());
+                break;
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_NEAR:
+                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_FOG_NEAR());
+                break;
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_FAR:
+                shader.set_uniform_variable(uniform, fragment_uniform_provider.get_FOG_FAR());
+                break;
+            default:
+                UNREACHABLE();
+                break;
             }
         for (FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION const location : shader.get_output_buffer_bindings())
             switch (location)
@@ -146,6 +181,9 @@ void  render_batch(
             case FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION::BINDING_OUT_TEXTURE_SPECULAR:
                 NOT_IMPLEMENTED_YET();
                 break;
+            default:
+                UNREACHABLE();
+                break;
             }
     }
 
@@ -155,16 +193,21 @@ void  render_batch(
 
 void  render_batch(
         batch const  batch_,
-        matrix44 const&  view_projection_matrix,
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
         angeo::coordinate_system const&  coord_system,
         vector4 const&  diffuse_colour
         )
 {
-    matrix44  world_transformation;
-    angeo::from_base_matrix(coord_system, world_transformation);
+    matrix44  matrix_from_model_to_world;
+    angeo::from_base_matrix(coord_system, matrix_from_model_to_world);
     render_batch(
         batch_,
-        vertex_shader_uniform_data_provider(batch_, { view_projection_matrix * world_transformation }, diffuse_colour)
+        vertex_shader_uniform_data_provider(
+                batch_,
+                { matrix_from_world_to_camera * matrix_from_model_to_world },
+                matrix_from_camera_to_clipspace, diffuse_colour
+                )
         );
 }
 

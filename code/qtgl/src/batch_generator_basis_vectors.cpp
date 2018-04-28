@@ -4,7 +4,7 @@
 namespace qtgl {
 
 
-batch  create_basis_vectors(bool const  use_fog)
+batch  create_basis_vectors(FOG_TYPE const  fog_type_)
 {
     TMPROF_BLOCK();
 
@@ -19,7 +19,7 @@ batch  create_basis_vectors(bool const  use_fog)
         { 0.0f, 0.0f, 1.0f, 1.0f },{ 0.0f, 0.0f, 1.0f, 1.0f },
     };
 
-    return create_lines3d(vertices, colours, use_fog, use_fog ? "basis_vectors<use_fog>" : "basis_vectors");
+    return create_lines3d(vertices, colours, fog_type_, "basis_vectors<fog:" + name(fog_type_) + ">");
 }
 
 

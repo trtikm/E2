@@ -127,7 +127,7 @@ simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused, n
                 { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE }
                 },
             qtgl::effects_config::shader_output_types{ qtgl::SHADER_DATA_OUTPUT_TYPE::DEFAULT },
-            false
+            qtgl::FOG_TYPE::NONE
             )
 
     , m_batch_grid{ 
@@ -146,6 +146,7 @@ simulator::simulator(vector3 const&  initial_clear_colour, bool const  paused, n
                     { 0.0f, 0.0f, 1.0f, 1.0f },
                     10U,
                     qtgl::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE,
+                    qtgl::FOG_TYPE::NONE,
                     "../data"
                     )
             }
@@ -295,8 +296,10 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     qtgl::glapi().glViewport(0, 0, window_props().width_in_pixels(), window_props().height_in_pixels());
 
-    matrix44  view_projection_matrix;
-    qtgl::view_projection_matrix(*m_camera,view_projection_matrix);
+    matrix44  matrix_from_world_to_camera;
+    m_camera->to_camera_space_matrix(matrix_from_world_to_camera);
+    matrix44  matrix_from_camera_to_clipspace;
+    m_camera->projection_matrix(matrix_from_camera_to_clipspace);
 
     qtgl::draw_state_ptr  draw_state = m_batch_grid.get_draw_state();
     qtgl::make_current(*draw_state);
@@ -304,14 +307,16 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     {
         if (qtgl::make_current(m_batch_grid, *draw_state))
         {
-            matrix44 const  transform_matrix = view_projection_matrix;
             for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : m_batch_grid.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                 switch (uniform)
                 {
                 case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                     break;
-                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
-                    m_batch_grid.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, transform_matrix);
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_MODEL_TO_CAMERA:
+                    m_batch_grid.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, matrix_from_world_to_camera);
+                    break;
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_CAMERA_TO_CLIPSPACE:
+                    m_batch_grid.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, matrix_from_camera_to_clipspace);
                     break;
                 }
 
@@ -330,7 +335,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                     (it == m_selected_cell) ? angle_axis_to_quaternion(m_selected_rot_angle,vector3_unit_z()) :
                                               quaternion_identity() ;
                 angeo::from_base_matrix(angeo::coordinate_system(it->first, orientation), world_transformation);
-                matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
+                matrix44 const  transform_matrix = matrix_from_world_to_camera * world_transformation;
 
                 vector4 const  diffuse_colour(
                         it->second.spiking_potential() > 0.0f ? 1.0f : 0.0f,
@@ -345,8 +350,11 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                     case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                         m_batch_cell.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, diffuse_colour);
                         break;
-                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_MODEL_TO_CAMERA:
                         m_batch_cell.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform,transform_matrix);
+                        break;
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_CAMERA_TO_CLIPSPACE:
+                        m_batch_cell.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, matrix_from_camera_to_clipspace);
                         break;
                     }
 
@@ -359,14 +367,16 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                         std::vector< std::pair<vector3, vector3> >  lines;
                         for (auto const iit : it->second.input_spots())
                             lines.push_back({ it->first,iit->first });
-                        m_selected_cell_input_spot_lines = qtgl::create_lines3d(lines, vector4{ 1.0f,1.0f,0.0f,1.0f },"../data");
+                        m_selected_cell_input_spot_lines =
+                            qtgl::create_lines3d(lines, vector4{ 1.0f,1.0f,0.0f,1.0f },qtgl::FOG_TYPE::NONE,"../data");
                     }
                     if (m_selected_cell_output_terminal_lines.empty())
                     {
                         std::vector< std::pair<vector3, vector3> >  lines;
                         for (auto const iit : it->second.output_terminals())
                             lines.push_back({ it->first,iit->pos() });
-                        m_selected_cell_output_terminal_lines = qtgl::create_lines3d(lines, vector4{ 1.0f,0.0f,0.5f,1.0f },"../data");
+                        m_selected_cell_output_terminal_lines = 
+                            qtgl::create_lines3d(lines, vector4{ 1.0f,0.0f,0.5f,1.0f },qtgl::FOG_TYPE::NONE,"../data");
                     }
                 }
             }
@@ -384,7 +394,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                     (it == m_selected_input_spot) ? angle_axis_to_quaternion(m_selected_rot_angle, vector3_unit_z()) :
                                                     quaternion_identity();
                 angeo::from_base_matrix(angeo::coordinate_system(it->first, orientation), world_transformation);
-                matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
+                matrix44 const  transform_matrix = matrix_from_world_to_camera * world_transformation;
 
                 for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : m_batch_input_spot.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                     switch (uniform)
@@ -392,8 +402,11 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                     case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                         m_batch_input_spot.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, vector4(1.0f, 1.0f, 1.0f, 1.0f));
                         break;
-                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_MODEL_TO_CAMERA:
                         m_batch_input_spot.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, transform_matrix);
+                        break;
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_CAMERA_TO_CLIPSPACE:
+                        m_batch_input_spot.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, matrix_from_camera_to_clipspace);
                         break;
                     }
 
@@ -406,6 +419,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                             qtgl::create_lines3d(
                                 { { get_position_of_selected(), it->second.cell()->first } },
                                 vector4{ 1.0f,1.0f,0.0f,1.0f },
+                                qtgl::FOG_TYPE::NONE,
                                 "../data"
                                 );
                 }
@@ -424,7 +438,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                     (&oterm == m_selected_output_terminal) ? angle_axis_to_quaternion(m_selected_rot_angle, vector3_unit_z()) :
                                                              quaternion_identity();
                 angeo::from_base_matrix(angeo::coordinate_system(oterm.pos(), orientation), world_transformation);
-                matrix44 const  transform_matrix = view_projection_matrix * world_transformation;
+                matrix44 const  transform_matrix = matrix_from_world_to_camera * world_transformation;
 
                 for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : m_batch_output_terminal.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                     switch (uniform)
@@ -432,8 +446,11 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                     case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                         m_batch_output_terminal.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, vector4(1.0f, 1.0f, 1.0f, 0.0f));
                         break;
-                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_MODEL_TO_CAMERA:
                         m_batch_output_terminal.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, transform_matrix);
+                        break;
+                    case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_CAMERA_TO_CLIPSPACE:
+                        m_batch_output_terminal.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, matrix_from_camera_to_clipspace);
                         break;
                     }
 
@@ -445,6 +462,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
                         qtgl::create_lines3d(
                             { { oterm.pos(), oterm.cell()->first } },
                             vector4{ 1.0f,0.0f,0.5f,1.0f },
+                            qtgl::FOG_TYPE::NONE,
                             "../data"
                             );
                 }
@@ -457,14 +475,16 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     {
         if (qtgl::make_current(m_selected_cell_input_spot_lines, *draw_state))
         {
-            matrix44 const  transform_matrix = view_projection_matrix;
             for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : m_selected_cell_input_spot_lines.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                 switch (uniform)
                 {
                 case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                     break;
-                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
-                    m_selected_cell_input_spot_lines.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, transform_matrix);
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_MODEL_TO_CAMERA:
+                    m_selected_cell_input_spot_lines.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, matrix_from_world_to_camera);
+                    break;
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_CAMERA_TO_CLIPSPACE:
+                    m_selected_cell_input_spot_lines.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, matrix_from_camera_to_clipspace);
                     break;
                 }
 
@@ -478,14 +498,16 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     {
         if (qtgl::make_current(m_selected_cell_output_terminal_lines, *draw_state))
         {
-            matrix44 const  transform_matrix = view_projection_matrix;
             for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : m_selected_cell_output_terminal_lines.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                 switch (uniform)
                 {
                 case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                     break;
-                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
-                    m_selected_cell_output_terminal_lines.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, transform_matrix);
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_MODEL_TO_CAMERA:
+                    m_selected_cell_output_terminal_lines.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, matrix_from_world_to_camera);
+                    break;
+                case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_CAMERA_TO_CLIPSPACE:
+                    m_selected_cell_output_terminal_lines.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, matrix_from_camera_to_clipspace);
                     break;
                 }
 

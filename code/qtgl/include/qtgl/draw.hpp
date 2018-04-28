@@ -49,19 +49,21 @@ void  render_batch(
 
 inline void  render_batch(
         batch const  batch_,
-        matrix44 const&  transform_matrix
+        matrix44 const&  matrix_from_model_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace
         )
 {
     render_batch(
         batch_,
-        vertex_shader_uniform_data_provider(batch_, { transform_matrix })
+        vertex_shader_uniform_data_provider(batch_, { matrix_from_model_to_camera }, matrix_from_camera_to_clipspace)
         );
 }
 
 
 void  render_batch(
         batch const  batch_,
-        matrix44 const&  view_projection_matrix,
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
         angeo::coordinate_system const&  coord_system,
         vector4 const&  diffuse_colour = { 0.0f, 0.0f, 0.0f, 1.0f }
         );

@@ -22,7 +22,11 @@ struct  dbg_draw_movement_areas
     void  collect_visible_areas(std::vector< std::pair<vector3, vector3> > const&  clip_planes,
                                 std::shared_ptr<netlab::network const> const  network);
 
-    void  render(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state) const;
+    void  render(
+            matrix44 const&  matrix_from_world_to_camera,
+            matrix44 const&  matrix_from_camera_to_clipspace,
+            qtgl::draw_state_ptr&  draw_state
+            ) const;
 
 private:
     bool  m_enabled;

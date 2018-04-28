@@ -38,6 +38,7 @@ struct  vertex_shader_data
 
     bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store);
     bool  set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store);
+    bool  set_uniform_variable(std::string const&  variable_name, vector3 const&  value_to_store);
     bool  set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store);
     bool  set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store);
     bool  set_uniform_variable(std::string const&  variable_name, std::vector<matrix44> const&  value_to_store);
@@ -111,9 +112,12 @@ struct  vertex_shader : public async::resource_accessor<detail::vertex_shader_da
     bool  set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store)
     { return resource().set_uniform_variable(variable_name, value_to_store); }
     
+    bool  set_uniform_variable(std::string const&  variable_name, vector3 const&  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+
     bool  set_uniform_variable(std::string const&  variable_name, vector4 const&  value_to_store)
     { return resource().set_uniform_variable(variable_name, value_to_store); }
-    
+
     bool  set_uniform_variable(std::string const&  variable_name, matrix44 const&  value_to_store)
     { return resource().set_uniform_variable(variable_name, value_to_store); }
     

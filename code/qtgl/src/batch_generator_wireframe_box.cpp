@@ -8,7 +8,7 @@ batch  create_wireframe_box(
         vector3 const&  lo_corner,
         vector3 const&  hi_corner,
         vector4 const&  colour,
-        bool const  use_fog,
+        FOG_TYPE const  fog_type_,
         std::string const&  id
         )
 {
@@ -31,7 +31,7 @@ batch  create_wireframe_box(
         { lo_corner(0), hi_corner(1), lo_corner(2) }, { lo_corner(0), hi_corner(1), hi_corner(2) },
     };
 
-    return create_lines3d(vertices, colour, use_fog, id);
+    return create_lines3d(vertices, colour, fog_type_, id);
 }
 
 

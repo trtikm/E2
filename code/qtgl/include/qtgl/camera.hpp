@@ -21,6 +21,7 @@ struct camera
     void  set_coordinate_system(angeo::coordinate_system const&   coord_system);
     void  set_coordinate_system(angeo::coordinate_system_ptr const   coord_system);
 
+    void  to_camera_space_matrix(matrix44&  output) const { to_base_matrix(*this->coordinate_system(), output); }
     virtual void  projection_matrix(matrix44&  output) const = 0;
 
 private:
@@ -30,9 +31,6 @@ private:
 
 typedef std::shared_ptr<camera>  camera_ptr;
 typedef std::shared_ptr<camera const>  camera_const_ptr;
-
-
-void  view_projection_matrix(camera const&  camera_ref, matrix44&  output);
 
 
 struct camera_perspective;

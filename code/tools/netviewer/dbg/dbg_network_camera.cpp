@@ -87,7 +87,11 @@ void  dbg_network_camera::on_window_resized(qtgl::window_props const&  window_pr
 }
 
 
-void  dbg_network_camera::render_camera_frustum(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state) const
+void  dbg_network_camera::render_camera_frustum(
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        qtgl::draw_state_ptr&  draw_state
+        ) const
 {
     TMPROF_BLOCK();
 
@@ -96,7 +100,12 @@ void  dbg_network_camera::render_camera_frustum(matrix44 const&  view_projection
 
     if (qtgl::make_current(m_batch_basis, *draw_state))
     {
-        qtgl::render_batch(m_batch_basis,view_projection_matrix,*m_camera->coordinate_system());
+        qtgl::render_batch(
+                m_batch_basis,
+                matrix_from_world_to_camera,
+                matrix_from_camera_to_clipspace,
+                *m_camera->coordinate_system()
+                );
         draw_state = m_batch_basis.get_draw_state();
     }
 
@@ -106,7 +115,8 @@ void  dbg_network_camera::render_camera_frustum(matrix44 const&  view_projection
 
         qtgl::render_batch(
             m_batch_camera_frustum,
-            view_projection_matrix,
+            matrix_from_world_to_camera,
+            matrix_from_camera_to_clipspace,
             angeo::coordinate_system(
                 m_camera->coordinate_system()->origin() + param * angeo::axis_z(*m_camera->coordinate_system()),
                 m_camera->coordinate_system()->orientation()

@@ -34,220 +34,45 @@ static std::string  layout(T const  location)
     return std::string("layout(location=") + std::to_string(value(location)) + ")";
 }
 
-
-static std::string  get_varying_type_name(VS_IN const  location)
-{
-    switch (location)
-    {
-    case VS_IN::BINDING_IN_POSITION:
-        return "vec3";
-    case VS_IN::BINDING_IN_DIFFUSE:
-        return "vec4";
-    case VS_IN::BINDING_IN_SPECULAR:
-        return "vec4";
-    case VS_IN::BINDING_IN_NORMAL:
-        return "vec3";
-    case VS_IN::BINDING_IN_INDICES_OF_MATRICES:
-        return "ivec4";
-    case VS_IN::BINDING_IN_WEIGHTS_OF_MATRICES:
-        return "vec4";
-    case VS_IN::BINDING_IN_TEXCOORD0:
-    case VS_IN::BINDING_IN_TEXCOORD1:
-    case VS_IN::BINDING_IN_TEXCOORD2:
-    case VS_IN::BINDING_IN_TEXCOORD3:
-    case VS_IN::BINDING_IN_TEXCOORD4:
-    case VS_IN::BINDING_IN_TEXCOORD5:
-    case VS_IN::BINDING_IN_TEXCOORD6:
-    case VS_IN::BINDING_IN_TEXCOORD7:
-    case VS_IN::BINDING_IN_TEXCOORD8:
-    case VS_IN::BINDING_IN_TEXCOORD9:
-        return "vec2";
-    default: UNREACHABLE();
-    }
-}
-
-
 static std::string  varying(std::string const&  var_name, VS_IN const  location, std::unordered_set<VS_IN>&  vs_input)
 {
     vs_input.insert(location);
-    return layout(location) + " in " + get_varying_type_name(location) + " " + var_name + ";";
+    return layout(location) + " in " + type_name(location) + " " + var_name + ";";
 }
-
-
-static std::string  get_varying_type_name(VS_OUT const  location)
-{
-    switch (location)
-    {
-    case VS_OUT::BINDING_OUT_POSITION:
-        return "vec3";
-    case VS_OUT::BINDING_OUT_DIFFUSE:
-        return "vec4";
-    case VS_OUT::BINDING_OUT_SPECULAR:
-        return "vec4";
-    case VS_OUT::BINDING_OUT_NORMAL:
-        return "vec3";
-    case VS_OUT::BINDING_OUT_TEXCOORD0:
-    case VS_OUT::BINDING_OUT_TEXCOORD1:
-    case VS_OUT::BINDING_OUT_TEXCOORD2:
-    case VS_OUT::BINDING_OUT_TEXCOORD3:
-    case VS_OUT::BINDING_OUT_TEXCOORD4:
-    case VS_OUT::BINDING_OUT_TEXCOORD5:
-    case VS_OUT::BINDING_OUT_TEXCOORD6:
-    case VS_OUT::BINDING_OUT_TEXCOORD7:
-    case VS_OUT::BINDING_OUT_TEXCOORD8:
-    case VS_OUT::BINDING_OUT_TEXCOORD9:
-        return "vec2";
-    default: UNREACHABLE();
-    }
-}
-
 
 static std::string  varying(std::string const&  var_name, VS_OUT const  location, std::unordered_set<VS_OUT>&  vs_output)
 {
     vs_output.insert(location);
-    return layout(location) + " out " + get_varying_type_name(location) + " " + var_name + ";";
+    return layout(location) + " out " + type_name(location) + " " + var_name + ";";
 }
-
-
-static std::string  get_uniform_type_name(VS_UNIFORM const  symbolic_name)
-{
-    switch (symbolic_name)
-    {
-    case VS_UNIFORM::DIFFUSE_COLOUR:
-        return "ver4";
-    case VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED:
-    case VS_UNIFORM::TRANSFORM_MATRICES_TRANSPOSED:
-        return "mat4";
-    case VS_UNIFORM::NUM_MATRICES_PER_VERTEX:
-        return "uint";
-    default: UNREACHABLE();
-    }
-}
-
-
-static natural_32_bit  get_uniform_num_elements(VS_UNIFORM const  symbolic_name)
-{
-    switch (symbolic_name)
-    {
-    case VS_UNIFORM::DIFFUSE_COLOUR:
-    case VS_UNIFORM::NUM_MATRICES_PER_VERTEX:
-    case VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED:
-        return 0U;
-    case VS_UNIFORM::TRANSFORM_MATRICES_TRANSPOSED:
-        return vertex_shader_MAX_TRANSFORM_MATRICES();
-    default: UNREACHABLE();
-    }
-}
-
-
-static std::string  get_uniform_array_decl(VS_UNIFORM const  symbolic_name)
-{
-    natural_32_bit const  num_elements = get_uniform_num_elements(symbolic_name);
-    return num_elements == 0U ? "" : "[" + std::to_string(num_elements) + "]";
-}
-
 
 static std::string  uniform(VS_UNIFORM const  symbolic_name, std::unordered_set<VS_UNIFORM>&  vs_uniforms)
 {
     vs_uniforms.insert(symbolic_name);
-    natural_32_bit const  num_elements = get_uniform_num_elements(symbolic_name);
-    return "uniform " + get_uniform_type_name(symbolic_name) + " " + name(symbolic_name)
-                      + get_uniform_array_decl(symbolic_name) + ";";
+    natural_32_bit const  num_elements = qtgl::num_elements(symbolic_name);
+    return "uniform " + type_name(symbolic_name) + " " + name(symbolic_name)
+                      + (num_elements < 2U ? std::string() : "[" + std::to_string(num_elements) + "]") + ";";
 }
-
-
-static std::string  get_varying_type_name(FS_IN const  location)
-{
-    switch (location)
-    {
-    case FS_IN::BINDING_IN_POSITION:
-        return "vec3";
-    case FS_IN::BINDING_IN_DIFFUSE:
-        return "vec4";
-    case FS_IN::BINDING_IN_SPECULAR:
-        return "vec4";
-    case FS_IN::BINDING_IN_NORMAL:
-        return "vec3";
-    case FS_IN::BINDING_IN_TEXCOORD0:
-    case FS_IN::BINDING_IN_TEXCOORD1:
-    case FS_IN::BINDING_IN_TEXCOORD2:
-    case FS_IN::BINDING_IN_TEXCOORD3:
-    case FS_IN::BINDING_IN_TEXCOORD4:
-    case FS_IN::BINDING_IN_TEXCOORD5:
-    case FS_IN::BINDING_IN_TEXCOORD6:
-    case FS_IN::BINDING_IN_TEXCOORD8:
-    case FS_IN::BINDING_IN_TEXCOORD9:
-        return "vec2";
-    default: UNREACHABLE();
-    }
-}
-
 
 static std::string  varying(std::string const&  var_name, FS_IN const  location, std::unordered_set<FS_IN>&  fs_input)
 {
     fs_input.insert(location);
-    return layout(location) + " in " + get_varying_type_name(location) + " " + var_name + ";";
+    return layout(location) + " in " + type_name(location) + " " + var_name + ";";
 }
-
-
-static std::string  get_varying_type_name(FS_OUT const  location)
-{
-    switch (location)
-    {
-    case FS_OUT::BINDING_OUT_COLOUR:
-        return "vec4";
-    case FS_OUT::BINDING_OUT_TEXTURE_POSITION:
-        return "vec3";
-    case FS_OUT::BINDING_OUT_TEXTURE_NORMAL:
-        return "vec3";
-    case FS_OUT::BINDING_OUT_TEXTURE_DIFFUSE:
-        return "vec4";
-    case FS_OUT::BINDING_OUT_TEXTURE_SPECULAR:
-        return "vec4";
-    default: UNREACHABLE();
-    }
-}
-
 
 static std::string  varying(std::string const&  var_name, FS_OUT const  location, std::unordered_set<FS_OUT>&  fs_output)
 {
     fs_output.insert(location);
-    return layout(location) + " out " + get_varying_type_name(location) + " " + var_name + ";";
+    return layout(location) + " out " + type_name(location) + " " + var_name + ";";
 }
-
-
-static std::string  get_uniform_type_name(FS_UNIFORM const  symbolic_name)
-{
-    switch (symbolic_name)
-    {
-    case FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE:
-    case FS_UNIFORM::TEXTURE_SAMPLER_SPECULAR:
-    case FS_UNIFORM::TEXTURE_SAMPLER_NORMAL:
-    case FS_UNIFORM::TEXTURE_SAMPLER_POSITION:
-        return "sampler2D";
-    case FS_UNIFORM::FOG_COLOUR:
-        return "vec4";
-    case FS_UNIFORM::AMBIENT_COLOUR:
-        return "vec4";
-    case FS_UNIFORM::DIFFUSE_COLOUR:
-        return "vec4";
-    case FS_UNIFORM::SPECULAR_COLOUR:
-        return "vec4";
-    case FS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION:
-        return "vec3";
-    case FS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR:
-        return "vec4";
-    default: UNREACHABLE();
-    }
-}
-
 
 static std::string  uniform(FS_UNIFORM const  symbolic_name, std::unordered_set<FS_UNIFORM>&  fs_uniforms)
 {
     fs_uniforms.insert(symbolic_name);
-    return "uniform " + get_uniform_type_name(symbolic_name) + " " + name(symbolic_name) + ";";
+    natural_32_bit const  num_elements = qtgl::num_elements(symbolic_name);
+    return "uniform " + type_name(symbolic_name) + " " + name(symbolic_name)
+                      + (num_elements < 2U ? std::string() : "[" + std::to_string(num_elements) + "]") + ";";
 }
-
 
 static void  add_new_line_terminators(std::vector<std::string>&  lines_of_shader_code)
 {
@@ -278,6 +103,13 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
 
     shader_compose_result_type  result{ "", effects};
 
+    if (effects.get_fog_type() != FOG_TYPE::NONE)
+    {
+        result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "The fog type is not FOG_TYPE::NONE (fog is not supported yet).";
+        result.second.set_fog_type(FOG_TYPE::NONE);
+        return result;
+    }
+
     if (effects.get_shader_output_types().size() == 1UL &&
         *effects.get_shader_output_types().cbegin() == SHADER_DATA_OUTPUT_TYPE::DEFAULT)
     {
@@ -299,10 +131,12 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
 
                                 uniform(VS_UNIFORM::DIFFUSE_COLOUR, vs_uniforms),
-                                uniform(VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED, vs_uniforms),
+                                uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
+                                uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
-                                "    gl_Position = vec4(in_position,1.0f) * TRANSFORM_MATRIX_TRANSPOSED;",
+                                "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
+                                "    gl_Position = vec4(in_position,1.0f) * T;",
                                 "    out_colour = DIFFUSE_COLOUR;",
                                 "}",
                             };
@@ -319,7 +153,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
 
                                 uniform(VS_UNIFORM::DIFFUSE_COLOUR, vs_uniforms),
                                 uniform(VS_UNIFORM::NUM_MATRICES_PER_VERTEX, vs_uniforms),
-                                uniform(VS_UNIFORM::TRANSFORM_MATRICES_TRANSPOSED, vs_uniforms),
+                                uniform(VS_UNIFORM::MATRICES_FROM_MODEL_TO_CAMERA, vs_uniforms),
+                                uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
                                 "    int i;",
@@ -327,10 +162,10 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
                                 "    {",
                                 "        const vec4 pos = vec4(in_position,1.0f) *",
-                                "                         TRANSFORM_MATRICES_TRANSPOSED[in_indices_of_matrices[i]];",
+                                "                         MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
                                 "        result_position = result_position + in_weights_of_matrices[i] * pos;",
                                 "    }",
-                                "    gl_Position = result_position;",
+                                "    gl_Position = result_position * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                 "    out_colour = DIFFUSE_COLOUR;",
                                 "}",
                             };
@@ -364,10 +199,12 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 varying("in_colour", VS_IN::BINDING_IN_DIFFUSE, vs_input),
                                 varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
 
-                                uniform(VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED, vs_uniforms),
+                                uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
+                                uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
-                                "    gl_Position = vec4(in_position,1.0f) * TRANSFORM_MATRIX_TRANSPOSED;",
+                                "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
+                                "    gl_Position = vec4(in_position,1.0f) * T;",
                                 "    out_colour = in_colour;",
                                 "}",
                             };
@@ -384,7 +221,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
 
                                 uniform(VS_UNIFORM::NUM_MATRICES_PER_VERTEX, vs_uniforms),
-                                uniform(VS_UNIFORM::TRANSFORM_MATRICES_TRANSPOSED, vs_uniforms),
+                                uniform(VS_UNIFORM::MATRICES_FROM_MODEL_TO_CAMERA, vs_uniforms),
+                                uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
                                 "    int i;",
@@ -392,24 +230,56 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
                                 "    {",
                                 "        const vec4 pos = vec4(in_position,1.0f) *",
-                                "                         TRANSFORM_MATRICES_TRANSPOSED[in_indices_of_matrices[i]];",
+                                "                         MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
                                 "        result_position = result_position + in_weights_of_matrices[i] * pos;",
                                 "    }",
-                                "    gl_Position = result_position;",
+                                "    gl_Position = result_position * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                 "    out_colour = in_colour;",
                                 "}",
                             };
                         }
-                        fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                            "#version 420",
+                        //if (effects.use_fog())
+                        //{
+                        //    fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                        //        "#version 420",
 
-                            varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
-                            varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+                        //        varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                        //        varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
 
-                            "void main() {",
-                            "    out_colour = in_colour;",
-                            "}",
-                        };
+                        //        "void main() {",
+                        //        "    const vec4 FOG_COLOUR = vec4(1.0f, 0.0f, 0.0f, 1.0f);",
+                        //        "    const float FOG_NEAR = 10.0f;",
+                        //        "    const float FOG_FAR = 50.0f;",
+                        //        "    const float FOG_DECAY_COEF = 2.0f;",
+
+                        //        //"    const float z = 1.0f / gl_FragCoord.w;",
+                        //        //"    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
+
+                        //        //"    const vec3 u = gl_FragCoord.xyz / gl_FragCoord.w;",
+                        //        //"    const float distance = length(u);",
+                        //        //"    const float D = max(min((distance - FOG_NEAR) / (FOG_FAR - FOG_NEAR), 1.0f), 0.0f);",
+                        //        //"    const float coef = pow(D, FOG_DECAY_COEF);",
+
+                        //        "    const float z = 1.0f / gl_FragCoord.w;",
+                        //        "    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
+
+                        //        "    out_colour = (1.0f - coef) * in_colour + coef * FOG_COLOUR;",
+                        //        "}",
+                        //    };
+                        //}
+                        //else
+                        {
+                            fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                "#version 420",
+
+                                varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                "void main() {",
+                                "    out_colour = in_colour;",
+                                "}",
+                            };
+                        }
                     }
                     break;
                 case SHADER_DATA_INPUT_TYPE::TEXTURE:
@@ -429,10 +299,12 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
                                 varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
 
-                                uniform(VS_UNIFORM::TRANSFORM_MATRIX_TRANSPOSED, vs_uniforms),
+                                uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
+                                uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
-                                "    gl_Position = vec4(in_position,1.0f) * TRANSFORM_MATRIX_TRANSPOSED;",
+                                "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
+                                "    gl_Position = vec4(in_position,1.0f) * T;",
                                 "    out_texture_coords = in_texture_coords;",
                                 "}",
                             };
@@ -449,7 +321,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
 
                                 uniform(VS_UNIFORM::NUM_MATRICES_PER_VERTEX, vs_uniforms),
-                                uniform(VS_UNIFORM::TRANSFORM_MATRICES_TRANSPOSED, vs_uniforms),
+                                uniform(VS_UNIFORM::MATRICES_FROM_MODEL_TO_CAMERA, vs_uniforms),
+                                uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
                                 "    int i;",
@@ -457,10 +330,10 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
                                 "    {",
                                 "        const vec4 pos = vec4(in_position,1.0f) *",
-                                "                         TRANSFORM_MATRICES_TRANSPOSED[in_indices_of_matrices[i]];",
+                                "                         MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
                                 "        result_position = result_position + in_weights_of_matrices[i] * pos;",
                                 "    }",
-                                "    gl_Position = result_position;",
+                                "    gl_Position = result_position * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
                                 "    out_texture_coords = in_texture_coords;",
                                 "}",
                             };

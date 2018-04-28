@@ -118,7 +118,7 @@ simulator::simulator()
                     { 0.0f, 0.0f, 1.0f, 1.0f },
                     10U,
                     qtgl::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE,
-                    false,
+                    qtgl::FOG_TYPE::NONE,
                     get_program_options()->dataRoot()
                     )
             }
@@ -140,7 +140,7 @@ simulator::simulator()
                 { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE }
                 },
             qtgl::effects_config::shader_output_types{ qtgl::SHADER_DATA_OUTPUT_TYPE::DEFAULT },
-            false
+            qtgl::FOG_TYPE::NONE
             )
 {}
 
@@ -231,23 +231,25 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     qtgl::glapi().glViewport(0, 0, window_props().width_in_pixels(), window_props().height_in_pixels());
 
-    matrix44  view_projection_matrix;
-    qtgl::view_projection_matrix(*m_camera,view_projection_matrix);
+    matrix44  matrix_from_world_to_camera;
+    m_camera->to_camera_space_matrix(matrix_from_world_to_camera);
+    matrix44  matrix_from_camera_to_clipspace;
+    m_camera->projection_matrix(matrix_from_camera_to_clipspace);
 
     qtgl::draw_state_ptr  draw_state;
     if (m_do_show_grid)
         if (qtgl::make_current(m_batch_grid, *draw_state))
         {
-            render_batch(m_batch_grid,view_projection_matrix);
+            render_batch(m_batch_grid, matrix_from_world_to_camera, matrix_from_camera_to_clipspace);
             draw_state = m_batch_grid.get_draw_state();
         }
 
     if (is_simulation_round)
-        render_simulation_state(view_projection_matrix,draw_state);
+        render_simulation_state(matrix_from_world_to_camera, matrix_from_camera_to_clipspace ,draw_state);
     else
     {
-        render_scene_batches(view_projection_matrix, draw_state);
-        render_scene_coord_systems(view_projection_matrix, draw_state);
+        render_scene_batches(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
+        render_scene_coord_systems(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
     }
 
     qtgl::swap_buffers();
@@ -288,7 +290,11 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
 }
 
 
-void  simulator::render_simulation_state(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state)
+void  simulator::render_simulation_state(
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        qtgl::draw_state_ptr&  draw_state
+        )
 {
     TMPROF_BLOCK();
 
@@ -319,18 +325,19 @@ void  simulator::render_simulation_state(matrix44 const&  view_projection_matrix
                 if (node_and_anim.second == nullptr)
                     qtgl::render_batch(
                         elem.second.first,
-                        view_projection_matrix * node_and_anim.first->get_world_matrix()
+                        matrix_from_world_to_camera * node_and_anim.first->get_world_matrix(),
+                        matrix_from_camera_to_clipspace
                         );
                 else
                 {
                     std::vector<matrix44>  frame;
                     node_and_anim.second->get_transformations(
                             frame,
-                            view_projection_matrix * node_and_anim.first->get_world_matrix()
+                            matrix_from_world_to_camera * node_and_anim.first->get_world_matrix()
                             );
                     qtgl::render_batch(
                             elem.second.first,
-                            qtgl::vertex_shader_uniform_data_provider(elem.second.first, frame)
+                            qtgl::vertex_shader_uniform_data_provider(elem.second.first, frame, matrix_from_camera_to_clipspace)
                             );
                 }
             draw_state = elem.second.first.get_draw_state();
@@ -626,7 +633,11 @@ void  simulator::rotate_scene_node(std::string const&  scene_node_name, float_64
 
 }
 
-void  simulator::render_scene_batches(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state)
+void  simulator::render_scene_batches(
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        qtgl::draw_state_ptr&  draw_state
+        )
 {
     TMPROF_BLOCK();
 
@@ -641,14 +652,16 @@ void  simulator::render_scene_batches(matrix44 const&  view_projection_matrix, q
             for (auto const& batch_and_node : path_and_pairs.second)
                 qtgl::render_batch(
                         batch_and_node.first,
-                        view_projection_matrix * batch_and_node.second->get_world_matrix()
+                        matrix_from_world_to_camera * batch_and_node.second->get_world_matrix(),
+                        matrix_from_camera_to_clipspace
                         );
             draw_state = path_and_pairs.second.front().first.get_draw_state();
         }
 }
 
 void  simulator::render_scene_coord_systems(
-        matrix44 const&  view_projection_matrix,
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
         qtgl::draw_state_ptr&  draw_state
         )
 {
@@ -667,7 +680,8 @@ void  simulator::render_scene_coord_systems(
     for (auto const& node_name : nodes_to_draw)
         qtgl::render_batch(
             m_batch_coord_system,
-            view_projection_matrix * get_scene().get_scene_node(node_name)->get_world_matrix()
+            matrix_from_world_to_camera * get_scene().get_scene_node(node_name)->get_world_matrix(),
+            matrix_from_camera_to_clipspace
             );
 
     //if (old_depth_test_state)

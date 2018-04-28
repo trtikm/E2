@@ -59,29 +59,48 @@ namespace qtgl {
 
 vertex_shader_uniform_data_provider::vertex_shader_uniform_data_provider(
         batch const  batch_,
-        std::vector<matrix44> const&  transformations,
-        vector4 const&  diffuse_colour
+        std::vector<matrix44> const&  matrices_from_model_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        vector4 const&  diffuse_colour,
+        vector3 const&  ambient_colour,
+        vector4 const&  specular_colour,
+        vector3 const&  directional_light_direction,
+        vector3 const&  directional_light_colour,
+        vector4 const&  fog_colour,
+        float const  fog_near,
+        float const  fog_far
         )
     : vertex_shader_uniform_data_provider_base(batch_)
-    , m_transformations()
+    , m_matrices_from_model_to_camera()
+    , m_matrix_from_camera_to_clipspace(matrix_from_camera_to_clipspace)
+    , m_ambient_colour(ambient_colour)
     , m_diffuse_colour(diffuse_colour)
+    , m_specular_colour(specular_colour)
+    , m_directional_light_direction(directional_light_direction)
+    , m_directional_light_colour(directional_light_colour)
+    , m_fog_colour(fog_colour)
+    , m_fog_near(fog_near)
+    , m_fog_far(fog_far)
 {
     if (get_batch().is_attached_to_skeleton())
     {
-        if (transformations.size() == 1UL)
-            m_transformations.resize(get_batch().get_modelspace().get_coord_systems().size(), transformations.front());
+        if (matrices_from_model_to_camera.size() == 1UL)
+            m_matrices_from_model_to_camera.resize(
+                    get_batch().get_modelspace().get_coord_systems().size(),
+                    matrices_from_model_to_camera.front()
+                    );
         else
             compose_skeleton_binding_data_with_frame_of_keyframe_animation(
                     get_batch().get_modelspace(),
                     get_batch().get_skeleton_alignment(),
-                    transformations,
-                    m_transformations
+                    matrices_from_model_to_camera,
+                    m_matrices_from_model_to_camera
                     );
     }
     else
     {
-        ASSUMPTION(transformations.size() == 1UL);
-        m_transformations.push_back(transformations.front());
+        ASSUMPTION(matrices_from_model_to_camera.size() == 1UL);
+        m_matrices_from_model_to_camera.push_back(matrices_from_model_to_camera.front());
     }
 }
 

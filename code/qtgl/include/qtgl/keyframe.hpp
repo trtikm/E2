@@ -184,7 +184,7 @@ void  compute_frame_of_keyframe_animation(
 
 void  compute_frame_of_keyframe_animation(
         keyframes const&  keyframes,
-        matrix44 const&  target_space, // typically, the target space is a camera space, i.e. view_projection_matrix
+        matrix44 const&  target_space, // typically, the target space is a camera space, i.e. MATRIX_FROM_MODEL_TO_CAMERA
         float_32_bit const  time_point,
         std::vector<matrix44>&  output // old content won't be used and it will be owerwritten by the computed data.
         );

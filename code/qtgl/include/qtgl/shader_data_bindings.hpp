@@ -11,162 +11,174 @@ namespace qtgl {
 
 enum struct VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION : natural_8_bit
 {
-    BINDING_IN_POSITION             = 0,
-    BINDING_IN_DIFFUSE              = 1,
-    BINDING_IN_SPECULAR             = 2,
-    BINDING_IN_NORMAL               = 3,
-    BINDING_IN_INDICES_OF_MATRICES  = 4,
-    BINDING_IN_WEIGHTS_OF_MATRICES  = 5,
-    BINDING_IN_TEXCOORD0            = 6,
-    BINDING_IN_TEXCOORD1            = 7,
-    BINDING_IN_TEXCOORD2            = 8,
-    BINDING_IN_TEXCOORD3            = 9,
-    BINDING_IN_TEXCOORD4            = 10,
-    BINDING_IN_TEXCOORD5            = 11,
-    BINDING_IN_TEXCOORD6            = 12,
-    BINDING_IN_TEXCOORD7            = 13,
-    BINDING_IN_TEXCOORD8            = 14,
-    BINDING_IN_TEXCOORD9            = 15,
+    BINDING_IN_POSITION             = 0,    // vec3; always in model space
+    BINDING_IN_DIFFUSE              = 1,    // vec4; each component in range <0,1>
+    BINDING_IN_SPECULAR             = 2,    // vec4; RGB components are in range <0,1>; The alpha component is used as the coeficient for specular lighting.
+    BINDING_IN_NORMAL               = 3,    // vec3; Always in model space; normalised (unit vector)
+    BINDING_IN_INDICES_OF_MATRICES  = 4,    // uint[VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX]; indices to the array VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA
+    BINDING_IN_WEIGHTS_OF_MATRICES  = 5,    // float[VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX]; weights (in range <0,1> each) of matrices in the array VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA
+    BINDING_IN_TEXCOORD0            = 6,    // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD1            = 7,    // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD2            = 8,    // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD3            = 9,    // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD4            = 10,   // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD5            = 11,   // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD6            = 12,   // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD7            = 13,   // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD8            = 14,   // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD9            = 15,   // vec2; texture uv coordinates
 };
 
 inline natural_32_bit  value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  location)
 { return static_cast<natural_8_bit>(location); }
 std::string  name(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  location);
-
+std::string  type_name(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  location);
 inline natural_8_bit  get_num_texcoord_binding_locations()
 {
     return value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD9) -
            value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0) + 1U;
 }
-
 inline VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION  get_texcoord_binding_location(natural_8_bit const  texcood_index)
 {
     return VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION(
                 value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0) + texcood_index
                 );
 }
-
 inline constexpr VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION  min_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION() noexcept
 { return VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION; }
 inline constexpr VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION  max_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION() noexcept
-{ return VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_WEIGHTS_OF_MATRICES; }
+{ return VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD9; }
 inline constexpr natural_8_bit  num_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATIONs() noexcept
 { return static_cast<natural_8_bit>(max_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION()) -
          static_cast<natural_8_bit>(min_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION()) +
          1U; }
 
+
 enum struct VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION : natural_8_bit
 {
-    BINDING_OUT_POSITION            = 0,
-    BINDING_OUT_DIFFUSE             = 1,
-    BINDING_OUT_SPECULAR            = 2,
-    BINDING_OUT_NORMAL              = 3,
-    BINDING_OUT_TEXCOORD0           = 4,
-    BINDING_OUT_TEXCOORD1           = 5,
-    BINDING_OUT_TEXCOORD2           = 6,
-    BINDING_OUT_TEXCOORD3           = 7,
-    BINDING_OUT_TEXCOORD4           = 8,
-    BINDING_OUT_TEXCOORD5           = 9,
-    BINDING_OUT_TEXCOORD6           = 10,
-    BINDING_OUT_TEXCOORD7           = 11,
-    BINDING_OUT_TEXCOORD8           = 12,
-    BINDING_OUT_TEXCOORD9           = 13,
+    BINDING_OUT_POSITION            = 0,    // vec3; always in camera space; without projection transformation
+    BINDING_OUT_DIFFUSE             = 1,    // vec4; each component in range <0,1>
+    BINDING_OUT_SPECULAR            = 2,    // vec4; The alpha component is used as the coeficient for specular lighting.
+    BINDING_OUT_NORMAL              = 3,    // vec3; Always in camera space; normalised (unit vector)
+    BINDING_OUT_TEXCOORD0           = 4,    // vec2; texture uv coordinates
+    BINDING_OUT_TEXCOORD1           = 5,    // vec2; texture uv coordinates
+    BINDING_OUT_TEXCOORD2           = 6,    // vec2; texture uv coordinates
+    BINDING_OUT_TEXCOORD3           = 7,    // vec2; texture uv coordinates
+    BINDING_OUT_TEXCOORD4           = 8,    // vec2; texture uv coordinates
+    BINDING_OUT_TEXCOORD5           = 9,    // vec2; texture uv coordinates
+    BINDING_OUT_TEXCOORD6           = 10,   // vec2; texture uv coordinates
+    BINDING_OUT_TEXCOORD7           = 11,   // vec2; texture uv coordinates
+    BINDING_OUT_TEXCOORD8           = 12,   // vec2; texture uv coordinates
+    BINDING_OUT_TEXCOORD9           = 13,   // vec2; texture uv coordinates
 };
 
 inline natural_32_bit  value(VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION const  location)
 { return static_cast<natural_8_bit>(location); }
 std::string  name(VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION const  location);
+std::string  type_name(VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION const  location);
 
 
 enum struct VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME : natural_8_bit
 {
-    DIFFUSE_COLOUR                  = 0,
-    TRANSFORM_MATRIX_TRANSPOSED     = 1,
-    TRANSFORM_MATRICES_TRANSPOSED   = 2,
-    NUM_MATRICES_PER_VERTEX         = 3,
+    MATRIX_FROM_MODEL_TO_CAMERA     = 0,    // mat4; from model space to the the camera space; without a projection transformation
+    MATRIX_FROM_CAMERA_TO_CLIPSPACE = 1,    // mat4; a projection matrix
+    MATRICES_FROM_MODEL_TO_CAMERA   = 2,    // mat4[64]; an array of matrices, each of the kind MATRIX_FROM_MODEL_TO_CAMERA
+    NUM_MATRICES_PER_VERTEX         = 3,    // uint; says how many indices to the array MATRICES_FROM_MODEL_TO_CAMERA there are for each vertex (see VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INDICES_OF_MATRICES/BINDING_IN_WEIGHTS_OF_MATRICES)
+
+    AMBIENT_COLOUR                  = 4,    // vec3; each component in range <0,1>
+    DIFFUSE_COLOUR                  = 5,    // vec4; each component in range <0,1>
+    SPECULAR_COLOUR                 = 6,    // vec4; first 3 components in range <0,1>; the alpha component is used as the coeficient for specular lighting.
+    DIRECTIONAL_LIGHT_DIRECTION     = 7,    // vec3; unit vector in camera space
+    DIRECTIONAL_LIGHT_COLOUR        = 8,    // vec3; each component in range <0,1>
+
+    FOG_COLOUR                      = 9,    // vec4; first 3 components in range <0,1>; the alpha compunent is used as the fog decay coefficient, in range <1,3>.
+    FOG_NEAR                        = 10,   // float; the distance where the fog starts; FOG_NEAR > 0.0
+    FOG_FAR                         = 11,   // float; the distance where the fog is maximal; FOG_FAR > FOG_NEAR
 };
 
 inline natural_32_bit  value(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  name)
 { return static_cast<natural_8_bit>(name); }
 std::string  name(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name);
+std::string  type_name(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name);
+natural_32_bit  num_elements(VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name);
 VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME  to_symbolic_uniform_name_of_vertex_shader(std::string  name);
-inline constexpr natural_32_bit  uniform_max_transform_matrices() { return 64U; }
-
 inline constexpr VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME  min_VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME()
-{ return VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR; }
+{ return VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_MODEL_TO_CAMERA; }
 inline constexpr VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME  max_VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME()
-{ return VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX; }
+{ return VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_FAR; }
 inline constexpr natural_8_bit  num_VERTEX_SHADER_UNIFORM_SYMBOLIC_NAMEs()
 { return static_cast<natural_8_bit>(max_VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME()) -
          static_cast<natural_8_bit>(min_VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME()) +
          1U; }
 
-inline natural_32_bit  vertex_shader_MAX_TRANSFORM_MATRICES() { return 64U; }
-
 
 enum struct FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION : natural_8_bit
 {
-    BINDING_IN_POSITION             = 0,
-    BINDING_IN_DIFFUSE              = 1,
-    BINDING_IN_SPECULAR             = 2,
-    BINDING_IN_NORMAL               = 3,
-    BINDING_IN_TEXCOORD0            = 4,
-    BINDING_IN_TEXCOORD1            = 5,
-    BINDING_IN_TEXCOORD2            = 6,
-    BINDING_IN_TEXCOORD3            = 7,
-    BINDING_IN_TEXCOORD4            = 8,
-    BINDING_IN_TEXCOORD5            = 9,
-    BINDING_IN_TEXCOORD6            = 10,
-    BINDING_IN_TEXCOORD7            = 11,
-    BINDING_IN_TEXCOORD8            = 12,
-    BINDING_IN_TEXCOORD9            = 13,
+    BINDING_IN_POSITION             = 0,    // vec3; Always in camera space; without a projection transformation
+    BINDING_IN_DIFFUSE              = 1,    // vec4; each component in range <0,1>
+    BINDING_IN_SPECULAR             = 2,    // vec4; RGB components are in range <0,1>; The alpha component is used as the coeficient for specular lighting.
+    BINDING_IN_NORMAL               = 3,    // vec3; Always in camera space; without a projection transformation
+    BINDING_IN_TEXCOORD0            = 4,    // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD1            = 5,    // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD2            = 6,    // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD3            = 7,    // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD4            = 8,    // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD5            = 9,    // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD6            = 10,   // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD7            = 11,   // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD8            = 12,   // vec2; texture uv coordinates
+    BINDING_IN_TEXCOORD9            = 13,   // vec2; texture uv coordinates
 };
 
 inline natural_32_bit  value(FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION const  location)
 { return static_cast<natural_8_bit>(location); }
 std::string  name(FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION const  location);
+std::string  type_name(FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION const  location);
 
 
 enum struct FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION : natural_8_bit
 {
-    BINDING_OUT_COLOUR              = 0,
-    BINDING_OUT_TEXTURE_POSITION    = 1,
-    BINDING_OUT_TEXTURE_NORMAL      = 2,
-    BINDING_OUT_TEXTURE_DIFFUSE     = 3,
-    BINDING_OUT_TEXTURE_SPECULAR    = 4,
+    BINDING_OUT_COLOUR              = 0,    // vec4; each component in range <0,1>; The default output to the framgment buffer (screen)
+    BINDING_OUT_TEXTURE_POSITION    = 1,    // vec3; always in camera space; For sampling to output G-buffer
+    BINDING_OUT_TEXTURE_NORMAL      = 2,    // vec3; always in camera space; normalised (unit) vector; For sampling to output G-buffer
+    BINDING_OUT_TEXTURE_DIFFUSE     = 3,    // vec4; each component in range <0,1>; For sampling to output G-buffer
+    BINDING_OUT_TEXTURE_SPECULAR    = 4,    // vec4; RGB components in range <0,1>; The alpha component is used as the coeficient for specular lighting; For sampling to output G-buffer
 };
 
 inline natural_32_bit  value(FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION const  location)
 { return static_cast<natural_8_bit>(location); }
 std::string  name(FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION const  location);
+std::string  type_name(FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION const  location);
 
 
 enum struct FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME : natural_8_bit
 {
-    TEXTURE_SAMPLER_DIFFUSE         = 0,
-    TEXTURE_SAMPLER_SPECULAR        = 1,
-    TEXTURE_SAMPLER_NORMAL          = 2,
-    TEXTURE_SAMPLER_POSITION        = 3,
+    TEXTURE_SAMPLER_DIFFUSE         = 0,    // sampler2D; For sampling to diffuse input texture.
+    TEXTURE_SAMPLER_SPECULAR        = 1,    // sampler2D; For sampling to specular input texture.
+    TEXTURE_SAMPLER_NORMAL          = 2,    // sampler2D; For sampling to normals input texture.
 
-    FOG_COLOUR                      = 4,
-    AMBIENT_COLOUR                  = 5,
-    DIFFUSE_COLOUR                  = 6,
-    SPECULAR_COLOUR                 = 7,
+    AMBIENT_COLOUR                  = 3,    // vec3; each component in range <0,1>
+    DIFFUSE_COLOUR                  = 4,    // vec4; each component in range <0,1>
+    SPECULAR_COLOUR                 = 5,    // vec4; first 3 components in range <0,1>; the alpha component is used as the coeficient for specular lighting.
+    DIRECTIONAL_LIGHT_DIRECTION     = 6,    // vec3; unit vector in camera space
+    DIRECTIONAL_LIGHT_COLOUR        = 7,    // vec3; each component in range <0,1>
 
-    DIRECTIONAL_LIGHT_DIRECTION     = 8,
-    DIRECTIONAL_LIGHT_COLOUR        = 9,
+    FOG_COLOUR                      = 8,    // vec4; first 3 components in range <0,1>; the alpha compunent is used as the fog decay coefficient, in range <1,3>.
+    FOG_NEAR                        = 9,    // float; the distance where the fog starts; FOG_NEAR > 0.0
+    FOG_FAR                         = 10,   // float; the distance where the fog is maximal; FOG_FAR > FOG_NEAR
 };
 
 inline natural_32_bit  value(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  binding)
 { return static_cast<natural_8_bit>(binding); }
 std::string  name(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform_symbolic_name);
+std::string  type_name(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name);
+natural_32_bit  num_elements(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  symbolic_name);
 bool  is_texture_sampler(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform_symbolic_name);
 FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME  to_symbolic_uniform_name_of_fragment_shader(std::string  name);
-
 inline constexpr FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME  min_FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME()
 { return FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE; }
 inline constexpr FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME  max_FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME()
-{ return FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::DIRECTIONAL_LIGHT_COLOUR; }
+{ return FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_FAR; }
 inline constexpr natural_8_bit  num_FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAMEs() noexcept
 { return static_cast<natural_8_bit>(max_FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME()) -
          static_cast<natural_8_bit>(min_FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME()) +

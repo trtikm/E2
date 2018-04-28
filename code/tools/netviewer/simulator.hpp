@@ -103,27 +103,43 @@ private:
     void  update_network(float_64_bit const  seconds_from_previous_call);
     void  update_selection_of_network_objects(float_64_bit const  seconds_from_previous_call);
 
-    void  render_network(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
+    void  render_network(
+            matrix44 const&  matrix_from_world_to_camera,
+            matrix44 const&  matrix_from_camera_to_clipspace,
+            qtgl::draw_state_ptr  draw_state
+            );
     void  render_network_spikers(
-            matrix44 const&  view_projection_matrix,
+            matrix44 const&  matrix_from_world_to_camera,
+            matrix44 const&  matrix_from_camera_to_clipspace,
             std::vector< std::pair<vector3,vector3> > const& clip_planes,
             qtgl::draw_state_ptr&  draw_state
             );
     void  render_network_docks(
-            matrix44 const&  view_projection_matrix,
+            matrix44 const&  matrix_from_world_to_camera,
+            matrix44 const&  matrix_from_camera_to_clipspace,
             std::vector< std::pair<vector3,vector3> > const& clip_planes,
             qtgl::draw_state_ptr&  draw_state
             );
     void  render_network_ships(
-            matrix44 const&  view_projection_matrix,
+            matrix44 const&  matrix_from_world_to_camera,
+            matrix44 const&  matrix_from_camera_to_clipspace,
             std::vector< std::pair<vector3,vector3> > const& clip_planes,
             qtgl::draw_state_ptr&  draw_state
             );
-    void  render_selected_network_object(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state);
+    void  render_selected_network_object(
+            matrix44 const&  matrix_from_world_to_camera,
+            matrix44 const&  matrix_from_camera_to_clipspace,
+            qtgl::draw_state_ptr&  draw_state
+            );
 
-    void  render_constructed_network(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr  draw_state);
+    void  render_constructed_network(
+            matrix44 const&  matrix_from_world_to_camera,
+            matrix44 const&  matrix_from_camera_to_clipspace,
+            qtgl::draw_state_ptr  draw_state
+            );
     void  render_spikers_of_constructed_network(
-            matrix44 const&  view_projection_matrix,
+            matrix44 const&  matrix_from_world_to_camera,
+            matrix44 const&  matrix_from_camera_to_clipspace,
             std::vector< std::pair<vector3,vector3> > const&  clip_planes,
             qtgl::draw_state_ptr&  draw_state
             );

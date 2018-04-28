@@ -190,7 +190,7 @@ simulator::simulator(vector3 const&  initial_clear_colour)
                 { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE }
                 },
             qtgl::effects_config::shader_output_types{ qtgl::SHADER_DATA_OUTPUT_TYPE::DEFAULT },
-            false
+            qtgl::FOG_TYPE::NONE
             )
 {
     LOG(debug,"simulator::simulator()");
@@ -221,19 +221,24 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     qtgl::glapi().glViewport(0, 0, window_props().width_in_pixels(), window_props().height_in_pixels());
 
-    matrix44  view_projection_matrix;
-    qtgl::view_projection_matrix(*m_camera,view_projection_matrix);
+    matrix44  matrix_from_world_to_camera;
+    m_camera->to_camera_space_matrix(matrix_from_world_to_camera);
+    matrix44  matrix_from_camera_to_clipspace;
+    m_camera->projection_matrix(matrix_from_camera_to_clipspace);
 
     qtgl::draw_state_ptr  draw_state;
 
     {
         matrix44  grid_world_transformation;
         angeo::from_base_matrix(*m_grid_space,grid_world_transformation);
-        matrix44 const  grid_transform_matrix = view_projection_matrix * grid_world_transformation;
 
         if (qtgl::make_current(m_grid_batch, *draw_state))
         {
-            qtgl::render_batch(m_grid_batch, grid_transform_matrix);
+            qtgl::render_batch(
+                    m_grid_batch,
+                    matrix_from_world_to_camera * grid_world_transformation,
+                    matrix_from_camera_to_clipspace
+                    );
             draw_state = m_grid_batch.get_draw_state();
         }
     }
@@ -241,7 +246,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
     {
         matrix44  batch_world_transformation;
         angeo::from_base_matrix(*m_batch_space, batch_world_transformation);
-        matrix44 const  batch_transform_matrix = view_projection_matrix * batch_world_transformation;
+        matrix44 const  matrix_from_model_to_camera = matrix_from_world_to_camera * batch_world_transformation;
 
         for (qtgl::batch const  batch : m_batches)
             if (qtgl::make_current(batch,*draw_state))
@@ -251,8 +256,11 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
                     {
                         case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::DIFFUSE_COLOUR:
                             break;
-                        case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::TRANSFORM_MATRIX_TRANSPOSED:
-                            batch.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform,batch_transform_matrix);
+                        case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA:
+                            batch.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, matrix_from_model_to_camera);
+                            break;
+                        case qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRIX_FROM_CAMERA_TO_CLIPSPACE:
+                            batch.get_shaders_binding().get_vertex_shader().set_uniform_variable(uniform, matrix_from_camera_to_clipspace);
                             break;
                     }
 

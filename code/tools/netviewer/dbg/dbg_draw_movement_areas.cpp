@@ -48,7 +48,7 @@ void  dbg_draw_movement_areas::collect_visible_areas(
                                 -0.5f * props.size_of_ship_movement_area_in_meters(area_layer_index),
                                 +0.5f * props.size_of_ship_movement_area_in_meters(area_layer_index),
                                 vector4(0.5f, 0.5f, 0.5f, 1.0f),
-                                false,
+                                qtgl::FOG_TYPE::NONE,
                                 msgstream() << "netviewer/movement_area_of_layer_" << layer_index << "_to_layer_" << area_layer_index
                                 );
         }
@@ -73,7 +73,11 @@ void  dbg_draw_movement_areas::collect_visible_areas(
 }
 
 
-void  dbg_draw_movement_areas::render(matrix44 const&  view_projection_matrix, qtgl::draw_state_ptr&  draw_state) const
+void  dbg_draw_movement_areas::render(
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        qtgl::draw_state_ptr&  draw_state
+        ) const
 {
     if (!is_enabled())
         return;
@@ -83,7 +87,8 @@ void  dbg_draw_movement_areas::render(matrix44 const&  view_projection_matrix, q
         {
             qtgl::render_batch(
                 pos_batch.second,
-                view_projection_matrix,
+                matrix_from_world_to_camera,
+                matrix_from_camera_to_clipspace,
                 angeo::coordinate_system(pos_batch.first,quaternion_identity()),
                 vector4(0.5f, 0.5f, 0.5f, 1.0f)
                 );
