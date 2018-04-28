@@ -217,7 +217,7 @@ void  batch_data::load(
                 buffer_paths.insert({location, get_available_resources().buffers().at(location)});
                 bool  used = false;
                 for (auto const&  elem : get_available_resources().textures())
-                    if (elem.second.first == location)
+                    if (fs_uniforms.count(elem.first) != 0UL && elem.second.first == location)
                     {
                         texture_paths.insert({elem.first, elem.second.second});
                         used = true;
