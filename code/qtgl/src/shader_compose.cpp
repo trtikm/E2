@@ -276,6 +276,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
 
                                 "void main() {",
+                                "    if (in_colour.a < 0.5f)",
+                                "        discard;",
                                 "    out_colour = in_colour;",
                                 "}",
                             };
@@ -347,7 +349,10 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
 
                             "void main() {",
-                            "    out_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
+                            "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);"
+                            "    if (diffuse_colour.a < 0.5f)",
+                            "        discard;",
+                            "    out_colour = diffuse_colour;",
                             "}",
                         };
                     }

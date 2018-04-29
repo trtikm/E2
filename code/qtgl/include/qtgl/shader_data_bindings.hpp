@@ -115,7 +115,7 @@ inline constexpr natural_8_bit  num_VERTEX_SHADER_UNIFORM_SYMBOLIC_NAMEs()
 enum struct FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION : natural_8_bit
 {
     BINDING_IN_POSITION             = 0,    // vec3; Always in camera space; without a projection transformation
-    BINDING_IN_DIFFUSE              = 1,    // vec4; each component in range <0,1>
+    BINDING_IN_DIFFUSE              = 1,    // vec4; each component in range <0,1>; Fragments with alpha component less than 0.5 are automatically discarded.
     BINDING_IN_SPECULAR             = 2,    // vec4; RGB components are in range <0,1>; The alpha component is used as the coeficient for specular lighting.
     BINDING_IN_NORMAL               = 3,    // vec3; Always in camera space; without a projection transformation
     BINDING_IN_TEXCOORD0            = 4,    // vec2; texture uv coordinates
