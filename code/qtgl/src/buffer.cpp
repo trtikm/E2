@@ -42,54 +42,59 @@ buffer_file_data::buffer_file_data(async::key_type const&  key, async::finalise_
         throw std::runtime_error(msgstream() << "The buffer path '" << path
                                              << "' does not reference a regular file.");
 
-    std::ifstream  istr(path.string(),std::ios_base::binary);
-    if (!istr.good())
-        throw std::runtime_error(msgstream() << "Cannot open the buffer file '" << path << "'.");
+    std::vector<natural_8_bit> file_content(boost::filesystem::file_size(path));
+    {
+        TMPROF_BLOCK();
 
-    auto const  read_string = [&istr, &path](std::string const&  kind_message) -> std::string {
-        std::string  line = read_line(istr);
-        if (line.empty())
-            throw std::runtime_error(msgstream() << "Failed to read " << kind_message << " in the file: " << path);
-        return line;
-    };
+        std::ifstream  istr(path.string(),std::ios_base::binary);
+        if (!istr.good())
+            throw std::runtime_error(msgstream() << "Cannot open the passed image file: " << path);
+        istr.read((char*)&file_content.at(0U), file_content.size());
+        if (istr.bad())
+            throw std::runtime_error(msgstream() << "Cannot read the passed image file: " << path);
+    }
+
+    per_line_buffer_reader  line_reader(file_content.data(), file_content.data() + file_content.size(), path.string());
 
     natural_8_bit  num_components = 0U;
     natural_32_bit  num_elements = 0U;
     bool  has_integer_components = false;
     bool  compute_boundary = false;
     {
+        TMPROF_BLOCK();
+
         if (path.filename() == "indices.txt")
         {
-            num_components = std::stoul(read_string("number of components"));
-            num_elements = std::stoul(read_string("number of elements"));
+            num_components = std::stoul(line_reader.get_next_line());
+            num_elements = std::stoul(line_reader.get_next_line());
             has_integer_components = true;
             compute_boundary = false;
         }
         else if (path.filename() == "diffuse.txt" || path.filename() == "specular.txt" || path.filename() == "weights.txt")
         {
-            num_components = std::stoul(read_string("number of components"));
-            num_elements = std::stoul(read_string("number of elements"));
+            num_components = std::stoul(line_reader.get_next_line());
+            num_elements = std::stoul(line_reader.get_next_line());
             has_integer_components = false;
             compute_boundary = false;
         }
         else if (path.filename() == "vertices.txt")
         {
             num_components = 3U;
-            num_elements = std::stoul(read_string("number of elements"));
+            num_elements = std::stoul(line_reader.get_next_line());
             has_integer_components = false;
             compute_boundary = true;
         }
         else if (path.filename() == "normals.txt")
         {
             num_components = 3U;
-            num_elements = std::stoul(read_string("number of elements"));
+            num_elements = std::stoul(line_reader.get_next_line());
             has_integer_components = false;
             compute_boundary = false;
         }
         else if (path.filename().string().find("texcoords") == 0UL && path.extension() == ".txt")
         {
             num_components = 2U;
-            num_elements = std::stoul(read_string("number of elements"));
+            num_elements = std::stoul(line_reader.get_next_line());
             has_integer_components = false;
             compute_boundary = false;
         }
@@ -97,30 +102,39 @@ buffer_file_data::buffer_file_data(async::key_type const&  key, async::finalise_
             throw std::runtime_error(msgstream() << "The passed file '" << path << "' is not of any known buffer type.");
     }
 
-    std::vector<natural_8_bit>  buffer_data;
+    std::vector<natural_8_bit>  buffer_data(
+            (natural_64_bit)num_elements *
+            (natural_64_bit)num_components *
+            (has_integer_components ? sizeof(natural_32_bit) : sizeof(float_32_bit))
+            );
+    auto  buffer_data_cursor = buffer_data.begin();
     float_32_bit  radius_squared = 0.0f;
     vector3  lo_corner{ 0.0f, 0.0f, 0.0f };
     vector3  hi_corner{ 0.0f, 0.0f, 0.0f };
     {
+        TMPROF_BLOCK();
+
         for (natural_32_bit  i = 0U; i < num_elements; ++i)
         {
             vector3  point;
             for (natural_8_bit  j = 0U; j < num_components; ++j)
             {
-                std::string const  line = read_string(msgstream() << "component " << (int)j << " of element " << i);
+                std::string const  line = line_reader.get_next_line();
                 if (has_integer_components)
                 {
                     natural_32_bit const  value = std::stoul(line);
                     std::copy(reinterpret_cast<natural_8_bit const*>(&value),
                               reinterpret_cast<natural_8_bit const*>(&value) + sizeof(value),
-                              std::back_inserter(buffer_data));
+                              buffer_data_cursor);
+                    buffer_data_cursor += sizeof(value);
                 }
                 else
                 {
                     float_32_bit const  value = std::stof(line);
                     std::copy(reinterpret_cast<natural_8_bit const*>(&value),
                               reinterpret_cast<natural_8_bit const*>(&value) + sizeof(value),
-                              std::back_inserter(buffer_data));
+                              buffer_data_cursor);
+                    buffer_data_cursor += sizeof(value);
                     if (compute_boundary)
                     {
                         point(j) = value;
