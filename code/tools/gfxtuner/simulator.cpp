@@ -102,6 +102,31 @@ simulator::simulator()
                     qtgl::free_fly_controler::mouse_button_pressed(qtgl::MIDDLE_MOUSE_BUTTON()),
                 },
             }
+    , m_effects_config(
+            qtgl::effects_config::light_types{
+                qtgl::LIGHT_TYPE::AMBIENT,
+                qtgl::LIGHT_TYPE::DIRECTIONAL,
+                },
+            qtgl::effects_config::lighting_data_types{
+                { qtgl::LIGHTING_DATA_TYPE::POSITION, qtgl::SHADER_DATA_INPUT_TYPE::UNIFORM },
+                { qtgl::LIGHTING_DATA_TYPE::NORMAL, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE },
+                { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE },
+                { qtgl::LIGHTING_DATA_TYPE::SPECULAR, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE }
+                },
+            qtgl::effects_config::shader_output_types{
+                qtgl::SHADER_DATA_OUTPUT_TYPE::DEFAULT
+                },
+            qtgl::FOG_TYPE::NONE
+            )
+    , m_diffuse_colour{ 0.5f, 0.5f, 0.5f, 1.0f }
+    , m_ambient_colour{ 0.25f, 0.25f, 0.25f }
+    , m_specular_colour{ 1.0f, 1.0f, 1.0f, 2.0f }
+    , m_directional_light_direction(normalised(-vector3(1.0f, 1.0f, 1.0f)))
+    , m_directional_light_colour{ 1.0f, 1.0f, 1.0f }
+    , m_fog_colour{ 0.25f, 0.25f, 0.25f, 2.0f }
+    , m_fog_near(0.25f)
+    , m_fog_far(1000.0f)
+
     , m_batch_grid{ 
             qtgl::create_grid(
                     50.0f,
@@ -118,7 +143,7 @@ simulator::simulator()
                     { 0.0f, 0.0f, 1.0f, 1.0f },
                     10U,
                     qtgl::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE,
-                    qtgl::FOG_TYPE::NONE,
+                    m_effects_config.get_fog_type(),
                     get_program_options()->dataRoot()
                     )
             }
@@ -133,15 +158,6 @@ simulator::simulator()
     , m_scene_edit_data(SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
 
     , m_gfx_animated_objects()
-
-    , m_effects_config(
-            qtgl::effects_config::light_types{},
-            qtgl::effects_config::lighting_data_types{
-                { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE }
-                },
-            qtgl::effects_config::shader_output_types{ qtgl::SHADER_DATA_OUTPUT_TYPE::DEFAULT },
-            qtgl::FOG_TYPE::NONE
-            )
 {}
 
 simulator::~simulator()
@@ -240,7 +256,22 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
     if (m_do_show_grid)
         if (qtgl::make_current(m_batch_grid, *draw_state))
         {
-            render_batch(m_batch_grid, matrix_from_world_to_camera, matrix_from_camera_to_clipspace);
+            render_batch(
+                m_batch_grid,
+                qtgl::vertex_shader_uniform_data_provider(
+                    m_batch_grid,
+                    { matrix_from_world_to_camera },
+                    matrix_from_camera_to_clipspace,
+                    m_diffuse_colour,
+                    m_ambient_colour,
+                    m_specular_colour,
+                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                    m_directional_light_colour,
+                    m_fog_colour,
+                    m_fog_near,
+                    m_fog_far
+                    )
+                );
             draw_state = m_batch_grid.get_draw_state();
         }
 
@@ -325,8 +356,19 @@ void  simulator::render_simulation_state(
                 if (node_and_anim.second == nullptr)
                     qtgl::render_batch(
                         elem.second.first,
-                        matrix_from_world_to_camera * node_and_anim.first->get_world_matrix(),
-                        matrix_from_camera_to_clipspace
+                        qtgl::vertex_shader_uniform_data_provider(
+                            elem.second.first,
+                            { matrix_from_world_to_camera * node_and_anim.first->get_world_matrix() },
+                            matrix_from_camera_to_clipspace,
+                            m_diffuse_colour,
+                            m_ambient_colour,
+                            m_specular_colour,
+                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                            m_directional_light_colour,
+                            m_fog_colour,
+                            m_fog_near,
+                            m_fog_far
+                            )
                         );
                 else
                 {
@@ -337,7 +379,19 @@ void  simulator::render_simulation_state(
                             );
                     qtgl::render_batch(
                             elem.second.first,
-                            qtgl::vertex_shader_uniform_data_provider(elem.second.first, frame, matrix_from_camera_to_clipspace)
+                            qtgl::vertex_shader_uniform_data_provider(
+                                elem.second.first,
+                                frame,
+                                matrix_from_camera_to_clipspace,
+                                m_diffuse_colour,
+                                m_ambient_colour,
+                                m_specular_colour,
+                                transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                                m_directional_light_colour,
+                                m_fog_colour,
+                                m_fog_near,
+                                m_fog_far
+                                )
                             );
                 }
             draw_state = elem.second.first.get_draw_state();
@@ -652,8 +706,19 @@ void  simulator::render_scene_batches(
             for (auto const& batch_and_node : path_and_pairs.second)
                 qtgl::render_batch(
                         batch_and_node.first,
-                        matrix_from_world_to_camera * batch_and_node.second->get_world_matrix(),
-                        matrix_from_camera_to_clipspace
+                        qtgl::vertex_shader_uniform_data_provider(
+                            batch_and_node.first,
+                            { matrix_from_world_to_camera * batch_and_node.second->get_world_matrix() },
+                            matrix_from_camera_to_clipspace,
+                            m_diffuse_colour,
+                            m_ambient_colour,
+                            m_specular_colour,
+                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                            m_directional_light_colour,
+                            m_fog_colour,
+                            m_fog_near,
+                            m_fog_far
+                            )
                         );
             draw_state = path_and_pairs.second.front().first.get_draw_state();
         }
@@ -680,8 +745,19 @@ void  simulator::render_scene_coord_systems(
     for (auto const& node_name : nodes_to_draw)
         qtgl::render_batch(
             m_batch_coord_system,
-            matrix_from_world_to_camera * get_scene().get_scene_node(node_name)->get_world_matrix(),
-            matrix_from_camera_to_clipspace
+            qtgl::vertex_shader_uniform_data_provider(
+                m_batch_coord_system,
+                { matrix_from_world_to_camera * get_scene().get_scene_node(node_name)->get_world_matrix() },
+                matrix_from_camera_to_clipspace,
+                m_diffuse_colour,
+                m_ambient_colour,
+                m_specular_colour,
+                transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                m_directional_light_colour,
+                m_fog_colour,
+                m_fog_near,
+                m_fog_far
+                )
             );
 
     //if (old_depth_test_state)

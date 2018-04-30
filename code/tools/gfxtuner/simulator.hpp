@@ -146,6 +146,15 @@ private:
     /// Data providing feedback loop between a human user and 3D scene in the tool
     qtgl::camera_perspective_ptr  m_camera;
     qtgl::free_fly_config  m_free_fly_config;
+    qtgl::effects_config  m_effects_config;
+    vector4  m_diffuse_colour;
+    vector3  m_ambient_colour;
+    vector4  m_specular_colour;
+    vector3  m_directional_light_direction;
+    vector3  m_directional_light_colour;
+    vector4  m_fog_colour;
+    float  m_fog_near;
+    float  m_fog_far;
     qtgl::batch  m_batch_grid;
     bool  m_do_show_grid;
 
@@ -163,7 +172,6 @@ private:
     std::unordered_map<std::pair<std::string, std::string>, gfx_animated_object>  m_gfx_animated_objects;
 
     /// Other data
-    qtgl::effects_config  m_effects_config;
 };
 
 

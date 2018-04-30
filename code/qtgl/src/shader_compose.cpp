@@ -16,6 +16,18 @@
                                                             ": ERROR : "                                                \
                                                             )
 
+#define DEFINE_FUNCTION_ambient_and_directional_lighting() \
+        "vec4  ambient_and_directional_lighting(",\
+        "        const vec3  normal,",\
+        "        const vec3  light_dir,",\
+        "        const vec3  ambient_colour,",\
+        "        const vec3  light_colour",\
+        "        ) {",\
+        "    const float  mult = min(1.0f, max(-dot(normal, light_dir), 0.0f));",\
+        "    return vec4((1.0f - mult) * ambient_colour  + mult * light_colour, 1.0f);",\
+        "}"
+
+
 namespace qtgl { namespace detail {
 
 
@@ -367,8 +379,389 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
         }
         else
         {
-            result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "The set of supported light types is not empty.";
-            result.second.get_light_types().clear();
+            if (effects.get_light_types().count(LIGHT_TYPE::AMBIENT) && effects.get_light_types().count(LIGHT_TYPE::DIRECTIONAL) != 0UL)
+            {
+                if (effects.get_lighting_data_types().size() >= 3UL &&
+                    effects.get_lighting_data_types().count(LIGHTING_DATA_TYPE::POSITION) != 0UL &&
+                    effects.get_lighting_data_types().count(LIGHTING_DATA_TYPE::NORMAL) != 0UL &&
+                    effects.get_lighting_data_types().count(LIGHTING_DATA_TYPE::DIFFUSE) != 0UL
+                    )
+                {
+                    if (effects.get_lighting_data_types().at(LIGHTING_DATA_TYPE::POSITION) == SHADER_DATA_INPUT_TYPE::UNIFORM)
+                    {
+                        if (effects.get_lighting_data_types().count(LIGHTING_DATA_TYPE::SPECULAR) == 0UL)
+                        {
+                            if (effects.get_lighting_data_types().at(LIGHTING_DATA_TYPE::NORMAL) == SHADER_DATA_INPUT_TYPE::BUFFER)
+                            {
+                                if (resources.buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_NORMAL) == 0UL)
+                                {
+                                    result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Normals buffer is not available.";
+                                    result.second.get_lighting_data_types() = { { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE } };
+                                    result.second.get_light_types().clear();
+                                }
+                                else
+                                {
+                                    switch (effects.get_lighting_data_types().at(LIGHTING_DATA_TYPE::DIFFUSE))
+                                    {
+                                    case SHADER_DATA_INPUT_TYPE::UNIFORM:
+                                        {
+                                            if (resources.skeletal().empty())
+                                            {
+                                                vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                                    "#version 420",
+
+                                                    varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                                    varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
+                                                    varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
+
+                                                    uniform(VS_UNIFORM::AMBIENT_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIFFUSE_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
+
+                                                    DEFINE_FUNCTION_ambient_and_directional_lighting(),
+
+                                                    "void main() {",
+                                                    "    gl_Position = vec4(in_position,1.0f) * (MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE);",
+                                                    "    const vec4 colour_mult = ambient_and_directional_lighting(",
+                                                    "        vec3(vec4(in_normal, 0.0f) * MATRIX_FROM_MODEL_TO_CAMERA),",
+                                                    "        DIRECTIONAL_LIGHT_DIRECTION,",
+                                                    "        AMBIENT_COLOUR,",
+                                                    "        DIRECTIONAL_LIGHT_COLOUR",
+                                                    "        );",
+                                                    "    out_colour = colour_mult * DIFFUSE_COLOUR;",
+                                                    "}",
+                                                };
+                                            }
+                                            else
+                                            {
+                                                vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                                    "#version 420",
+
+                                                    varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                                    varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
+                                                    varying("in_indices_of_matrices", VS_IN::BINDING_IN_INDICES_OF_MATRICES, vs_input),
+                                                    varying("in_weights_of_matrices", VS_IN::BINDING_IN_WEIGHTS_OF_MATRICES, vs_input),
+                                                    varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
+
+                                                    uniform(VS_UNIFORM::AMBIENT_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIFFUSE_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, vs_uniforms),
+                                                    uniform(VS_UNIFORM::NUM_MATRICES_PER_VERTEX, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRICES_FROM_MODEL_TO_CAMERA, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
+
+                                                    DEFINE_FUNCTION_ambient_and_directional_lighting(),
+
+                                                    "void main() {",
+                                                    "    int i;",
+                                                    "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
+                                                    "    vec3 result_normal = vec3(0.0f, 0.0f, 0.0f);",
+                                                    "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                                    "    {",
+                                                    "        const vec4 pos = vec4(in_position,1.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
+                                                    "        result_position = result_position + in_weights_of_matrices[i] * pos;",
+                                                    "        const vec3 nor = vec3(vec4(in_normal,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]);",
+                                                    "        result_normal = result_normal + in_weights_of_matrices[i] * nor;",
+                                                    "    }",
+                                                    "    result_normal = normalize(result_normal);",
+                                                    "    gl_Position = result_position * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                                    "    const vec4 colour_mult = ambient_and_directional_lighting(",
+                                                    "        result_normal,",
+                                                    "        DIRECTIONAL_LIGHT_DIRECTION,",
+                                                    "        AMBIENT_COLOUR,",
+                                                    "        DIRECTIONAL_LIGHT_COLOUR",
+                                                    "        );",
+                                                    "    out_colour = colour_mult * DIFFUSE_COLOUR;",
+                                                    "}",
+                                                };
+                                            }
+                                            fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                                "#version 420",
+
+                                                varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                                varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                                "void main() {",
+                                                "    out_colour = in_colour;",
+                                                "}",
+                                            };
+                                        }
+                                        break;
+                                    case SHADER_DATA_INPUT_TYPE::BUFFER:
+                                        if (resources.buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE) == 0UL)
+                                        {
+                                            result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Diffuse colour buffer is not available.";
+                                            result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::DIFFUSE] = SHADER_DATA_INPUT_TYPE::UNIFORM;
+                                        }
+                                        else
+                                        {
+                                            if (resources.skeletal().empty())
+                                            {
+                                                vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                                    "#version 420",
+
+                                                    varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                                    varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
+                                                    varying("in_colour", VS_IN::BINDING_IN_DIFFUSE, vs_input),
+                                                    varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
+
+                                                    uniform(VS_UNIFORM::AMBIENT_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
+
+                                                    DEFINE_FUNCTION_ambient_and_directional_lighting(),
+
+                                                    "void main() {",
+                                                    "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
+                                                    "    gl_Position = vec4(in_position,1.0f) * T;",
+                                                    "    const vec4 colour_mult = ambient_and_directional_lighting(",
+                                                    "        vec3(vec4(in_normal, 0.0f) * MATRIX_FROM_MODEL_TO_CAMERA),",
+                                                    "        DIRECTIONAL_LIGHT_DIRECTION,",
+                                                    "        AMBIENT_COLOUR,",
+                                                    "        DIRECTIONAL_LIGHT_COLOUR",
+                                                    "        );",
+                                                    "    out_colour = colour_mult * in_colour;",
+                                                    "}",
+                                                };
+                                            }
+                                            else
+                                            {
+                                                vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                                    "#version 420",
+
+                                                    varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                                    varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
+                                                    varying("in_colour", VS_IN::BINDING_IN_DIFFUSE, vs_input),
+                                                    varying("in_indices_of_matrices", VS_IN::BINDING_IN_INDICES_OF_MATRICES, vs_input),
+                                                    varying("in_weights_of_matrices", VS_IN::BINDING_IN_WEIGHTS_OF_MATRICES, vs_input),
+                                                    varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
+
+                                                    uniform(VS_UNIFORM::AMBIENT_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, vs_uniforms),
+                                                    uniform(VS_UNIFORM::NUM_MATRICES_PER_VERTEX, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRICES_FROM_MODEL_TO_CAMERA, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
+
+                                                    DEFINE_FUNCTION_ambient_and_directional_lighting(),
+
+                                                    "void main() {",
+                                                    "    int i;",
+                                                    "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
+                                                    "    vec3 result_normal = vec3(0.0f, 0.0f, 0.0f);",
+                                                    "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                                    "    {",
+                                                    "        const vec4 pos = vec4(in_position,1.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
+                                                    "        result_position = result_position + in_weights_of_matrices[i] * pos;",
+                                                    "        const vec3 nor = vec3(vec4(in_normal,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]);",
+                                                    "        result_normal = result_normal + in_weights_of_matrices[i] * nor;",
+                                                    "    }",
+                                                    "    result_normal = normalize(result_normal);",
+                                                    "    gl_Position = result_position * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                                    "    const vec4 colour_mult = ambient_and_directional_lighting(",
+                                                    "        result_normal,",
+                                                    "        DIRECTIONAL_LIGHT_DIRECTION,",
+                                                    "        AMBIENT_COLOUR,",
+                                                    "        DIRECTIONAL_LIGHT_COLOUR",
+                                                    "        );",
+                                                    "    out_colour = colour_mult * in_colour;",
+                                                    "}",
+                                                };
+                                            }
+                                            //if (effects.use_fog())
+                                            //{
+                                            //    fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                            //        "#version 420",
+
+                                            //        varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                            //        varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                            //        "void main() {",
+                                            //        "    const vec4 FOG_COLOUR = vec4(1.0f, 0.0f, 0.0f, 1.0f);",
+                                            //        "    const float FOG_NEAR = 10.0f;",
+                                            //        "    const float FOG_FAR = 50.0f;",
+                                            //        "    const float FOG_DECAY_COEF = 2.0f;",
+
+                                            //        //"    const float z = 1.0f / gl_FragCoord.w;",
+                                            //        //"    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
+
+                                            //        //"    const vec3 u = gl_FragCoord.xyz / gl_FragCoord.w;",
+                                            //        //"    const float distance = length(u);",
+                                            //        //"    const float D = max(min((distance - FOG_NEAR) / (FOG_FAR - FOG_NEAR), 1.0f), 0.0f);",
+                                            //        //"    const float coef = pow(D, FOG_DECAY_COEF);",
+
+                                            //        "    const float z = 1.0f / gl_FragCoord.w;",
+                                            //        "    const float coef = pow(min(z / FOG_FAR, 1.0f), FOG_DECAY_COEF);",
+
+                                            //        "    out_colour = (1.0f - coef) * in_colour + coef * FOG_COLOUR;",
+                                            //        "}",
+                                            //    };
+                                            //}
+                                            //else
+                                            {
+                                                fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                                    "#version 420",
+
+                                                    varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                                    varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                                    "void main() {",
+                                                    "    if (in_colour.a < 0.5f)",
+                                                    "        discard;",
+                                                    "    out_colour = in_colour;",
+                                                    "}",
+                                                };
+                                            }
+                                        }
+                                        break;
+                                    case SHADER_DATA_INPUT_TYPE::TEXTURE:
+                                        if (resources.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE) == 0UL)
+                                        {
+                                            result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Diffuse texture is not available.";
+                                            result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::DIFFUSE] = SHADER_DATA_INPUT_TYPE::BUFFER;
+                                        }
+                                        else
+                                        {
+                                            if (resources.skeletal().empty())
+                                            {
+                                                vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                                    "#version 420",
+
+                                                    varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                                    varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
+                                                    varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+                                                    varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
+                                                    varying("out_colour_mult", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
+
+                                                    uniform(VS_UNIFORM::AMBIENT_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
+
+                                                    DEFINE_FUNCTION_ambient_and_directional_lighting(),
+
+                                                    "void main() {",
+                                                    "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
+                                                    "    gl_Position = vec4(in_position,1.0f) * T;",
+                                                    "    out_texture_coords = in_texture_coords;",
+                                                    "    out_colour_mult = ambient_and_directional_lighting(",
+                                                    "        vec3(vec4(in_normal, 0.0f) * MATRIX_FROM_MODEL_TO_CAMERA),",
+                                                    "        DIRECTIONAL_LIGHT_DIRECTION,",
+                                                    "        AMBIENT_COLOUR,",
+                                                    "        DIRECTIONAL_LIGHT_COLOUR",
+                                                    "        );",
+                                                    "}",
+                                                };
+                                            }
+                                            else
+                                            {
+                                                vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                                    "#version 420",
+
+                                                    varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                                    varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
+                                                    varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+                                                    varying("in_indices_of_matrices", VS_IN::BINDING_IN_INDICES_OF_MATRICES, vs_input),
+                                                    varying("in_weights_of_matrices", VS_IN::BINDING_IN_WEIGHTS_OF_MATRICES, vs_input),
+                                                    varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
+                                                    varying("out_colour_mult", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
+
+                                                    uniform(VS_UNIFORM::AMBIENT_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, vs_uniforms),
+                                                    uniform(VS_UNIFORM::NUM_MATRICES_PER_VERTEX, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRICES_FROM_MODEL_TO_CAMERA, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
+
+                                                    DEFINE_FUNCTION_ambient_and_directional_lighting(),
+
+                                                    "void main() {",
+                                                    "    int i;",
+                                                    "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
+                                                    "    vec3 result_normal = vec3(0.0f, 0.0f, 0.0f);",
+                                                    "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                                    "    {",
+                                                    "        const vec4 pos = vec4(in_position,1.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
+                                                    "        result_position = result_position + in_weights_of_matrices[i] * pos;",
+                                                    "        const vec3 nor = vec3(vec4(in_normal,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]);",
+                                                    "        result_normal = result_normal + in_weights_of_matrices[i] * nor;",
+                                                    "    }",
+                                                    "    result_normal = normalize(result_normal);",
+                                                    "    gl_Position = result_position * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                                    "    out_texture_coords = in_texture_coords;",
+                                                    "    out_colour_mult = ambient_and_directional_lighting(",
+                                                    "        result_normal,",
+                                                    "        DIRECTIONAL_LIGHT_DIRECTION,",
+                                                    "        AMBIENT_COLOUR,",
+                                                    "        DIRECTIONAL_LIGHT_COLOUR",
+                                                    "        );",
+                                                    "}",
+                                                };
+                                            }
+                                            fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                                "#version 420",
+
+                                                varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
+                                                varying("in_colour_mult", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                                varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                                uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
+
+                                                "void main() {",
+                                                "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);"
+                                                "    if (diffuse_colour.a < 0.5f)",
+                                                "        discard;",
+                                                "    out_colour = in_colour_mult * diffuse_colour;",
+                                                "}",
+                                            };
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                            else if (effects.get_lighting_data_types().at(LIGHTING_DATA_TYPE::NORMAL) == SHADER_DATA_INPUT_TYPE::TEXTURE)
+                            {
+                                result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "The lighting data type DIFFUSE assigned to TEXTURE shader input type is not supported yet.";
+                                result.second.get_lighting_data_types()[qtgl::LIGHTING_DATA_TYPE::NORMAL] = qtgl::SHADER_DATA_INPUT_TYPE::BUFFER;
+                            }
+                            else
+                            {
+                                result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "The lighting data type NORMAL is assigned to neither BUFFER nor TEXTURE shader input type.";
+                                result.second.get_lighting_data_types() = { { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE } };
+                                result.second.get_light_types().clear();
+                            }
+                        }
+                        else
+                        {
+                            result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "SPECULAR lighting data type is not supported yet.";
+                            result.second.get_lighting_data_types().erase(qtgl::LIGHTING_DATA_TYPE::SPECULAR);
+                        }
+                    }
+                    else
+                    {
+                        result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "POSITION lighting data type is not assigned to UNIFOR shader input.";
+                        result.second.get_lighting_data_types()[qtgl::LIGHTING_DATA_TYPE::POSITION] = SHADER_DATA_INPUT_TYPE::UNIFORM;
+                    }
+                }
+                else
+                {
+                    result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "The lighting data types does not contain all POSITION, NORMAL, and DIFFUSE.";
+                    result.second.get_lighting_data_types() = { { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE } };
+                    result.second.get_light_types().clear();
+                }
+            }
+            else
+            {
+                result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "The set of supported light types does not contain both AMBIENT and DIRECTIONAL.";
+                result.second.get_light_types().clear();
+            }
         }
     }
     else

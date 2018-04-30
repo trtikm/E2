@@ -78,7 +78,7 @@ struct vertex_shader_uniform_data_provider : public vertex_shader_uniform_data_p
             vector4 const&  diffuse_colour = vector4{0.5f, 0.5f, 0.5f, 1.0f},
             vector3 const&  ambient_colour = vector3{ 0.25f, 0.25f, 0.25f },
             vector4 const&  specular_colour = vector4{ 1.0f, 1.0f, 1.0f, 2.0f },
-            vector3 const&  directional_light_direction = vector3{ 0.0f, 0.0f, -1.0f },
+            vector3 const&  directional_light_direction = vector3{ 0.0f, 0.0f, -1.0f }, // WARNING! This should be in camera space!!!!!
             vector3 const&  directional_light_colour = vector3{ 1.0f, 1.0f, 1.0f },
             vector4 const&  fog_colour = vector4{ 0.25f, 0.25f, 0.25f, 2.0f },
             float const  fog_near = 0.25f,
