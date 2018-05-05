@@ -132,6 +132,9 @@ class SpikeTrain:
     def get_statistics(self):
         return self._statistics
 
+    def get_next_spike_time(self):
+        return self._next_spike_time
+
     def get_configuration(self):
         return {
             "spiking_distribution_mean": self.get_spiking_distribution().get_mean(),
@@ -167,7 +170,7 @@ class SpikeTrain:
             self._phase_end_time = self._phase_start_time + self.get_noise_length_distribution().next_event()
             self._last_recording_time = t
         assert self._statistics["num_generated_spike_events"] == 1 + len(self._spikes_buffer) + self._statistics["num_calls_to_do_recording"]
-        if self._next_spike_time > t + dt:
+        if self._next_spike_time > t + 1.5 * dt:
             self._statistics["time_on_time_step"] += time.time() - start_time
             return False
         self._do_recording(t, dt, self._next_spike_time)
@@ -235,11 +238,11 @@ class SpikeTrain:
         self._statistics["time__recharge_spikes_buffer"] += time.time() - start_time
 
     def _do_recording(self, t, dt, spike_time):
-        assert spike_time <= t + dt
+        assert spike_time <= t + 1.5 * dt
         self._statistics["num_calls_to_do_recording"] += 1
         if self._recording_controller(self._last_recording_time, t + dt) is True:
             self._last_recording_time = t + dt
-            self._spikes_history.append(spike_time)
+            self._spikes_history.append(self._last_recording_time)
 
 
 def create(spiking_distribution,
