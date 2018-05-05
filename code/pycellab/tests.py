@@ -3,6 +3,7 @@ import shutil
 import time
 import numpy
 import json
+import bisect
 import plot
 import distribution
 import spike_train
@@ -400,6 +401,189 @@ def _test_surface_under_function(info):
                   )
             num_failures += 1
     return num_failures
+
+
+# class SpikesWindow:
+#     def __init__(
+#             self,
+#             spiking_distribution,
+#             percentage_of_regularity_phases,
+#             noise_length_distribution,
+#             regularity_length_distribution,
+#             max_spikes_buffer_size,
+#             regularity_chunk_size
+#             ):
+#         self._train = spike_train.SpikeTrain(
+#                             spiking_distribution,
+#                             percentage_of_regularity_phases,
+#                             noise_length_distribution,
+#                             regularity_length_distribution,
+#                             max_spikes_buffer_size,
+#                             regularity_chunk_size,
+#                             lambda last_recording_time, current_time: True
+#                             )
+#
+#     def get_next_spike_time_after(self, t):
+#         pass
+
+
+class CorrelatingSpikeTrain:
+    def __init__(self, pivot, deviation, ideal_buffer_size=100):
+        assert isinstance(pivot, spike_train.SpikeTrain) or isinstance(pivot, CorrelatingSpikeTrain)
+        assert isinstance(deviation, distribution.Distribution)
+        assert min(deviation.get_events()) >= -1 and max(deviation.get_events()) <= 1
+        assert isinstance(ideal_buffer_size, int) and ideal_buffer_size > 0
+        self._pivot = pivot
+        self._deviation = deviation
+        self._event_buffer = []
+        self._ideal_buffer_size = ideal_buffer_size
+        self._next_spike_time = None
+        self._last_pivot_index = 0
+        self._spikes_history = []
+
+    def get_spikes_history(self):
+        return self._spikes_history
+
+    def get_next_spike_time(self):
+        return self._next_spike_time
+
+    @staticmethod
+    def choose_event_index(events, pivot_event, correlation_coefficient):
+        assert isinstance(events, list) and len(events) > 0
+        assert isinstance(pivot_event, float) and pivot_event > 0
+        assert isinstance(correlation_coefficient, float) and -1 <= correlation_coefficient and correlation_coefficient <= 1
+        random_event = numpy.random.uniform(events[0], events[-1])
+        if correlation_coefficient < 0:
+            correlated_event = events[(bisect.bisect_left(events, pivot_event) + len(events) // 2) % len(events)]
+            # correlated_event = events[-bisect.bisect_left(events, pivot_event)]
+            # if abs(events[0] - pivot_event) < abs(events[-1] - pivot_event):
+            #     correlated_event = events[-1]
+            # else:
+            #     correlated_event = events[0]
+        else:
+            correlated_event = pivot_event
+        param = abs(correlation_coefficient)
+        selected_event = (1 - param) * random_event + param * correlated_event
+        idx = bisect.bisect_left(events, selected_event)
+        return min(idx, len(events) - 1)
+
+    def on_time_step(self, t, dt):
+        if self._next_spike_time is None:
+            self._next_spike_time = t
+            if self._pivot.get_next_spike_time() is None:
+                self._pivot.on_time_step(t, dt)
+        elif self._next_spike_time > t + 1.5 * dt:
+            return False
+        else:
+            self._spikes_history.append(t + dt)
+        while len(self._event_buffer) < self._ideal_buffer_size:
+            while self._last_pivot_index >= len(self._pivot.get_spikes_history()):
+                t0 = t
+                while t0 + dt < self._pivot.get_next_spike_time():
+                    t0 += dt
+                old_len = len(self._pivot.get_spikes_history())
+                self._pivot.on_time_step(t0, dt)
+                assert old_len + 1 == len(self._pivot.get_spikes_history())
+            prev = self._pivot.get_spikes_history()[self._last_pivot_index - 1] if self._last_pivot_index > 0 else 0.0
+            bisect.insort_left(self._event_buffer, self._pivot.get_spikes_history()[self._last_pivot_index] - prev)
+            self._last_pivot_index += 1
+        pivot_next_time = self._pivot.get_spikes_history()[
+            bisect.bisect_left(self._pivot.get_spikes_history(), self._next_spike_time + dt)
+            ]
+        to_pivot_time = pivot_next_time - self._next_spike_time
+        assert to_pivot_time > 0
+        correlation_coefficient = self._deviation.next_event()
+        idx = self.choose_event_index(self._event_buffer, to_pivot_time, correlation_coefficient)
+        assert idx >= 0 and idx < len(self._event_buffer)
+        # assert abs(self._next_spike_time + self._event_buffer[idx] - pivot_next_time) < 0.0001
+        self._next_spike_time += self._event_buffer[idx]
+
+        self._event_buffer.pop(idx)
+        assert self._next_spike_time > t + dt
+        return True
+
+
+def _test_correlation_of_spike_trains(info):
+    """
+    Checks correlation of spike trains for different coefficients.
+    """
+    assert isinstance(info, TestInfo)
+
+    numpy.random.seed(1)
+
+    def make_spike_train(is_excitatory=True, mean_frequency=None, percentage_of_regularity_phases=None):
+        min_event = 0.003
+        max_event = 0.103
+        num_events = 100
+        return spike_train.create(
+                    distribution.Distribution(
+                        {(min_event + (i / float(num_events - 1)) * (max_event - min_event)): 1.0 / float(num_events)
+                         for i in range(0, num_events)}
+                        )
+                    )
+        # if mean_frequency is None:
+        #     mean_frequency = 15.0 if is_excitatory else 60.0
+        # if percentage_of_regularity_phases is None:
+        #     percentage_of_regularity_phases = 50.0
+        # return spike_train.create(
+        #             distribution.hermit_distribution_with_desired_mean(1.0 / mean_frequency, 0.003, 0.3, 0.0001, pow_y=2)
+        #                 if is_excitatory
+        #                 else distribution.hermit_distribution_with_desired_mean(1.0 / mean_frequency, 0.001, 0.08, 0.0001, pow_y=2),
+        #             percentage_of_regularity_phases
+        #             )
+    pivot_train = make_spike_train()
+    trains = [
+        (pivot_train, "pivot"),
+        # (make_spike_train(), "uncorrelated"),
+        # (CorrelatingSpikeTrain(pivot_train, distribution.Distribution({0.0: 1.0}), 100), "correlated_zero"),
+        ] + [
+        (CorrelatingSpikeTrain(pivot_train, distribution.Distribution({x: 1.0}), 100), "correlated_pos_" + str(int(100 * x)))
+            for x in [
+                # 0.25,
+                # 0.5,
+                0.95,
+                # 1.0
+                ]
+        ] + [
+        (CorrelatingSpikeTrain(pivot_train, distribution.Distribution({-x: 1.0}), 100), "correlated_neg_" + str(int(100 * x)))
+            for x in [
+                # 0.25,
+                # 0.5,
+                # 0.75,
+                # 1.0
+                ]
+        ]
+
+    nsteps = 100000
+    dt = 0.001
+    start_time = 0.0
+
+    t = start_time
+    for step in range(nsteps):
+        utility.print_progress_string(step, nsteps)
+        for idx in range(1, len(trains)):
+            trains[idx][0].on_time_step(t, dt)
+        t += dt
+
+    def convert_times_to_events(times, start_time, max_len):
+        last_time = start_time
+        result = []
+        for idx in range(max(0, min(len(times), max_len))):
+            result.append(times[idx] - last_time)
+            last_time = times[idx]
+        return result
+
+    max_num_nevents = min([len(train.get_spikes_history()) for train, _ in trains])
+    events = [convert_times_to_events(train.get_spikes_history(), start_time, max_num_nevents) for train, _ in trains]
+    assert len(events) == len(trains)
+    for idx in range(1, len(events)):
+        print("Saving correlation plot: " + trains[0][1] + " VS " + trains[idx][1])
+        plot.scatter(
+            list(zip(events[0], events[idx])),
+            os.path.join(info.output_dir, trains[0][1] + "_vs_" + trains[idx][1] + ".png"),
+            size_xy=(10, 10)
+            )
+    return 0    # No failures
 
 
 ####################################################################################################
