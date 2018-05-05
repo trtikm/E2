@@ -126,8 +126,8 @@ class Plot:
             )
 
 
-def __write_xplot(draw_fn, points, pathname, title, xaxis_name, faxis_name):
-    with Plot(pathname, title, xaxis_name, faxis_name) as the_plot:
+def __write_xplot(draw_fn, points, pathname, title, xaxis_name, faxis_name, size_xy=None, dpi=None):
+    with Plot(pathname, title, xaxis_name, faxis_name, size_xy, dpi) as the_plot:
         the_plot.make_plot(draw_fn, points)
 
 
@@ -192,10 +192,11 @@ def curve_per_partes(points, pathname, start, end, step, max_num_parts=None, on_
         idx += 1
 
 
-def scatter(points, pathname, colours=None, title=None, xaxis_name=None, faxis_name=None):
+def scatter(points, pathname, colours=None, title=None, xaxis_name=None, faxis_name=None, size_xy=None, dpi=None):
     if title is not None:
         title = title.replace(get_title_placeholder(), "#points=" + str(len(points)))
-    __write_xplot(lambda ax, x, y: ax.scatter(x, y, s=2, c=colours), points, pathname, title, xaxis_name, faxis_name)
+    __write_xplot(lambda ax, x, y: ax.scatter(x, y, s=2, c=colours),
+                  points, pathname, title, xaxis_name, faxis_name, size_xy, dpi)
 
 
 def scatter_per_partes(points, pathname, start, end, step, max_num_parts=None, on_plot_part_callback_fn=None,
