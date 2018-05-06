@@ -456,6 +456,46 @@ def interpolate_discrete_function(points, num_segment_inner_points=None):
     return result
 
 
+def make_alignment_histogram_of_spike_history(left, right, bin_size=0.0025, epsilon=0.001):
+    assert is_sorted_list_of_numbers(left)
+    assert is_sorted_list_of_numbers(right)
+    assert isinstance(epsilon, float) and epsilon >= 0.0
+    events = []
+    i = 0
+    while i < len(left):
+        hi = bisect.bisect_left(right, left[i])
+        if hi == len(right):
+            break
+        lo = hi
+        while lo > 0 and right[lo] > left[i]:
+            lo -= 1
+        if right[lo] > left[i]:
+            i += 1
+            continue
+        delta = right[hi] - right[lo]
+        if delta < epsilon:
+            i += 1
+            continue
+        j = i
+        while j + 1 < len(left) and left[j + 1] < right[hi]:
+            j += 1
+        delta -= left[j] - left[i]
+        if delta < epsilon:
+            i = j + 1
+            continue
+        event = max(-1.0, min(2.0 * (left[i] - right[lo]) / delta - 1.0, 1.0))
+        events.append(event)
+        i = j + 1
+    return make_histogram(events, bin_size, 0.0, 1)
+
+
+def make_alignment_histograms_of_spike_histories(left, right, bin_size=0.0025, epsilon=0.001):
+    return (
+        make_alignment_histogram_of_spike_history(left, right, bin_size, epsilon),
+        make_alignment_histogram_of_spike_history(right, left, bin_size, epsilon)
+        )
+
+
 ########################################################################################################################
 ########################################################################################################################
 ########################################################################################################################
