@@ -503,50 +503,78 @@ class CorrelatingSpikeTrain:
         return True
 
 
-def _test_correlation_of_spike_trains(info):
+def _test_aligned_spike_trains(info):
     """
-    Checks correlation of spike trains for different coefficients.
+    Checks alignment of spike trains for different alignment coefficients.
     """
     assert isinstance(info, TestInfo)
 
     numpy.random.seed(1)
 
-    def make_spike_train(is_excitatory=True, mean_frequency=None, percentage_of_regularity_phases=None):
-        min_event = 0.003
-        max_event = 0.103
-        num_events = 100
-        return spike_train.create(
-                    distribution.Distribution(
-                        {(min_event + (i / float(num_events - 1)) * (max_event - min_event)): 1.0 / float(num_events)
-                         for i in range(0, num_events)}
-                        )
-                    )
-        # if mean_frequency is None:
-        #     mean_frequency = 15.0 if is_excitatory else 60.0
-        # if percentage_of_regularity_phases is None:
-        #     percentage_of_regularity_phases = 50.0
+    def make_spike_train(is_excitatory=True, mean_frequency=None, percentage_of_regularity_phases=None, seed=None):
+        # min_event = 0.003
+        # max_event = 0.103
+        # num_events = 100
         # return spike_train.create(
-        #             distribution.hermit_distribution_with_desired_mean(1.0 / mean_frequency, 0.003, 0.3, 0.0001, pow_y=2)
-        #                 if is_excitatory
-        #                 else distribution.hermit_distribution_with_desired_mean(1.0 / mean_frequency, 0.001, 0.08, 0.0001, pow_y=2),
-        #             percentage_of_regularity_phases
+        #             distribution.Distribution(
+        #                 {(min_event + (i / float(num_events - 1)) * (max_event - min_event)): 1.0 / float(num_events)
+        #                  for i in range(0, num_events)}
+        #                 ),
+        #             seed
         #             )
-    pivot_train = make_spike_train()
-    trains = [
-        (pivot_train, "pivot"),
-        # (make_spike_train(), "uncorrelated"),
-        # (CorrelatingSpikeTrain(pivot_train, distribution.Distribution({0.0: 1.0}), 100), "correlated_zero"),
+        if mean_frequency is None:
+            mean_frequency = 15.0 if is_excitatory else 60.0
+        if percentage_of_regularity_phases is None:
+            percentage_of_regularity_phases = 50.0
+        return spike_train.create(
+                    distribution.hermit_distribution_with_desired_mean(1.0 / mean_frequency, 0.003, 0.3, 0.0001, pow_y=2, seed=seed)
+                        if is_excitatory
+                        else distribution.hermit_distribution_with_desired_mean(1.0 / mean_frequency, 0.001, 0.08, 0.0001, pow_y=2, seed=seed),
+                    percentage_of_regularity_phases
+                    )
+
+    pivot_trains = [
+        (make_spike_train(True, seed=111), "epivot"),
+        (make_spike_train(False, seed=222), "ipovot"),
+        ]
+
+    nsteps = 1000000
+    dt = 0.001
+    start_time = 0.0
+
+    def simulate_trains(trains):
+        t = start_time
+        for step in range(nsteps):
+            utility.print_progress_string(step, nsteps)
+            for train, _ in trains:
+                train.on_time_step(t, dt)
+            t += dt
+
+    print("Simulating pivot trains")
+    simulate_trains(pivot_trains)
+
+    def make_aligned_train(
+            pivot, alignment_coefficient,
+            is_excitatory=True, mean_frequency=None, percentage_of_regularity_phases=None, seed=None
+            ):
+        assert isinstance(pivot, spike_train.SpikeTrain)
+        train = make_spike_train(is_excitatory, mean_frequency, percentage_of_regularity_phases, seed)
+        train.set_spike_history_alignment(pivot.get_spikes_history(), alignment_coefficient)
+        return train
+
+    other_trains = [
+        (make_spike_train(True, seed=333), "eunaligned"),
+        (make_spike_train(False, seed=444), "iunaligned"),
         ] + [
-        (CorrelatingSpikeTrain(pivot_train, distribution.Distribution({x: 1.0}), 100), "correlated_pos_" + str(int(100 * x)))
-            for x in [
-                # 0.25,
-                # 0.5,
-                0.95,
-                # 1.0
-                ]
-        ] + [
-        (CorrelatingSpikeTrain(pivot_train, distribution.Distribution({-x: 1.0}), 100), "correlated_neg_" + str(int(100 * x)))
-            for x in [
+        (make_aligned_train(pivot, coef, kind), kname + "aligned(" + desc + "," + format(coef, ".2f") + ")")
+            for pivot, desc in pivot_trains
+            for kind, kname in [(True, "e"), (False, "i")]
+            for coef in [
+                # -1.0
+                # -0.75,
+                # -0.5,
+                # -0.25,
+                # 0.0,
                 # 0.25,
                 # 0.5,
                 # 0.75,
@@ -554,35 +582,44 @@ def _test_correlation_of_spike_trains(info):
                 ]
         ]
 
-    nsteps = 100000
-    dt = 0.001
-    start_time = 0.0
+    print("Simulating other trains")
+    simulate_trains(other_trains)
 
-    t = start_time
-    for step in range(nsteps):
-        utility.print_progress_string(step, nsteps)
-        for idx in range(1, len(trains)):
-            trains[idx][0].on_time_step(t, dt)
-        t += dt
+    print("Saving results:")
+    for pivot, pivot_desc in pivot_trains:
+        for other, other_desc in other_trains:
+            print("    Saving alignment histograms: " + pivot_desc + " VS " + other_desc)
+            hist_pair = datalgo.make_alignment_histograms_of_spike_histories(
+                                pivot.get_spikes_history(),
+                                other.get_spikes_history()
+                                )
+            plot.histogram(
+                hist_pair[0],
+                os.path.join(info.output_dir, "hist_" + pivot_desc + "_vs_" + other_desc + ".png")
+                )
+            plot.histogram(
+                hist_pair[1],
+                os.path.join(info.output_dir, "hist_" + pivot_desc + "_vs_" + other_desc + "_inv.png")
+                )
+            print("    Saving alignment curve: " + pivot_desc + " VS " + other_desc)
+            with plot.Plot(os.path.join(info.output_dir, "curve_" + pivot_desc + "_vs_" + other_desc + ".png")) as plt:
+                plt.curve(
+                    datalgo.interpolate_discrete_function(
+                        datalgo.approximate_discrete_function(
+                            distribution.Distribution(hist_pair[0]).get_probability_points()
+                            )
+                        ),
+                    legend=pivot_desc + " -> " + other_desc
+                    )
+                plt.curve(
+                    datalgo.interpolate_discrete_function(
+                        datalgo.approximate_discrete_function(
+                            distribution.Distribution(hist_pair[1]).get_probability_points()
+                            )
+                        ),
+                    legend=other_desc + " -> " + pivot_desc
+                    )
 
-    def convert_times_to_events(times, start_time, max_len):
-        last_time = start_time
-        result = []
-        for idx in range(max(0, min(len(times), max_len))):
-            result.append(times[idx] - last_time)
-            last_time = times[idx]
-        return result
-
-    max_num_nevents = min([len(train.get_spikes_history()) for train, _ in trains])
-    events = [convert_times_to_events(train.get_spikes_history(), start_time, max_num_nevents) for train, _ in trains]
-    assert len(events) == len(trains)
-    for idx in range(1, len(events)):
-        print("Saving correlation plot: " + trains[0][1] + " VS " + trains[idx][1])
-        plot.scatter(
-            list(zip(events[0], events[idx])),
-            os.path.join(info.output_dir, trains[0][1] + "_vs_" + trains[idx][1] + ".png"),
-            size_xy=(10, 10)
-            )
     return 0    # No failures
 
 
