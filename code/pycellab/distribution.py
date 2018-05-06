@@ -2,10 +2,11 @@ import numpy
 import math
 import bisect
 import datalgo
+import random
 
 
 class Distribution:
-    def __init__(self, histogram):
+    def __init__(self, histogram, seed=None):
         assert histogram is None or isinstance(histogram, dict)
         if histogram is None or len(histogram) == 0:
             self._histogram = {1e23: 0.0}
@@ -33,6 +34,7 @@ class Distribution:
         self._variance = sum([((numeric_event_line[i] - self._mean)**2) * self._probabilities[i] for i in range(len(self._events_line))])
         self._standard_deviation = numpy.sqrt(self._variance)
         self._coefficient_of_variation = self._standard_deviation / (self._mean if abs(self._mean) > 0.00001 else 0.00001)
+        self._rnd_generator = random.Random(seed)
 
     def __str__(self):
         return (
@@ -106,7 +108,7 @@ class Distribution:
         return [(self._events_line[i], self._probabilities[i]) for i in range(len(self._events_line))]
 
     def next_event(self):
-        return self.event_with_probability(numpy.random.uniform(0.0, 1.0))
+        return self.event_with_probability(self._rnd_generator.uniform(0.0, 1.0))
 
     def generate(self, n):
         assert type(n) == int and n >= 0
@@ -274,9 +276,13 @@ def hermit_distribution(
         shift_x=0.002,
         bin_size=0.001,
         mult_m01=1.0,
-        mult_mx=1.0
+        mult_mx=1.0,
+        seed=None
         ):
-    return Distribution(hermit_distribution_histogram(peek_x, scale_x, scale_y, pow_y, shift_x, bin_size, mult_m01, mult_mx))
+    return Distribution(
+                hermit_distribution_histogram(peek_x, scale_x, scale_y, pow_y, shift_x, bin_size, mult_m01, mult_mx),
+                seed
+                )
 
 
 _cache_of_hermit_distribution_with_desired_mean = dict()
@@ -292,7 +298,8 @@ def hermit_distribution_with_desired_mean(
         bin_size=0.001,
         mult_m01=1.0,
         mult_mx=1.0,
-        use_cache=True
+        use_cache=True,
+        seed=None
         ):
     assert type(mean) in [int, float]
     assert type(lo) in [int, float]
@@ -328,7 +335,8 @@ def hermit_distribution_with_desired_mean(
                 pow_y=pow_y,
                 bin_size=bin_size,
                 mult_m01=mult_m01,
-                mult_mx=mult_mx
+                mult_mx=mult_mx,
+                seed=seed
                 )
         if D.get_mean() < mean - max_mean_error:
             peek_lo = peek_mid

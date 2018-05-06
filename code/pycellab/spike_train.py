@@ -1,5 +1,5 @@
 import bisect
-import numpy
+import random
 import time
 import distribution
 
@@ -23,7 +23,8 @@ class SpikeTrain:
             regularity_length_distribution,
             max_spikes_buffer_size,
             regularity_chunk_size,
-            recording_controller
+            recording_controller,
+            seed
             ):
         """
         :param spiking_distribution:
@@ -83,6 +84,7 @@ class SpikeTrain:
         self._spikes_history = []
         self._recording_controller = recording_controller
         self._statistics = SpikeTrain.get_initial_statistics()
+        self._rnd_generator = random.Random(seed)
 
     @staticmethod
     def get_initial_statistics():
@@ -203,28 +205,31 @@ class SpikeTrain:
             self._recharge_spikes_buffer(self.get_max_spikes_buffer_size())
             self._regularity_chunk_index_low = (bisect.bisect_left(self._spikes_buffer, self._next_spike_time)
                                                 if self._regularity_chunk_index_low != -1
-                                                else int(numpy.random.uniform(0, len(self._spikes_buffer))))
+                                                else self._get_random_index_to_spikes_buffer())
             self._regularity_chunk_index_high = self._regularity_chunk_index_low
             while self._regularity_chunk_index_high - self._regularity_chunk_index_low < self.get_regularity_chunk_size():
                 if self._regularity_chunk_index_low == 0:
                     self._regularity_chunk_index_high += 1
                 elif self._regularity_chunk_index_high == len(self._spikes_buffer):
                     self._regularity_chunk_index_low -= 1
-                elif numpy.random.uniform() < 0.5:
+                elif self._rnd_generator.uniform(0, 1) < 0.5:
                     self._regularity_chunk_index_low -= 1
                 else:
                     self._regularity_chunk_index_high += 1
             assert self._regularity_chunk_index_low >= 0
             assert self._regularity_chunk_index_high <= len(self._spikes_buffer)
         assert self._regularity_chunk_index_low < self._regularity_chunk_index_high
-        index = int(numpy.random.uniform(self._regularity_chunk_index_low, self._regularity_chunk_index_high))
+        index = int(self._rnd_generator.uniform(self._regularity_chunk_index_low, self._regularity_chunk_index_high))
         event = self._spikes_buffer.pop(index)
         self._regularity_chunk_index_high -= 1
         return event
 
     def _get_next_noise_phase_event(self):
         self._recharge_spikes_buffer(1)
-        return self._spikes_buffer.pop(int(numpy.random.uniform(0, len(self._spikes_buffer))))
+        return self._spikes_buffer.pop(self._get_random_index_to_spikes_buffer())
+
+    def _get_random_index_to_spikes_buffer(self):
+        return min(int(self._rnd_generator.uniform(0, len(self._spikes_buffer))), len(self._spikes_buffer))
 
     def _recharge_spikes_buffer(self, desired_size):
         start_time = time.time()
@@ -258,7 +263,8 @@ def create(spiking_distribution,
            noise_phase_max_duration=0.75,
            max_spikes_buffer_size=100,
            regularity_chunk_size=17,
-           recording_controller=lambda last_recording_time, current_time: True
+           recording_controller=lambda last_recording_time, current_time: True,
+           seed=None
            ):
     """
     Simplifies construction of the spikes train by automating construction of distributions of
@@ -293,6 +299,7 @@ def create(spiking_distribution,
         See description of the same parameter in SpikeTrain.__init__.
     :param recording_controller:
         See description of the same parameter in SpikeTrain.__init__.
+    :param seed: A seed for the random generator
     """
     return SpikeTrain(spiking_distribution,
                       percentage_of_regularity_phases,
@@ -312,5 +319,6 @@ def create(spiking_distribution,
                             ),
                       max_spikes_buffer_size,
                       regularity_chunk_size,
-                      recording_controller
+                      recording_controller,
+                      seed
                       )
