@@ -128,10 +128,8 @@ def make_histogram(events, bin_size, reference_event, count_unit=1):
     result = {}
     for event in events:
         sign = 1 if event >= 0 else -1
-        bin_idx = int(float(event - reference_event) / float(bin_size) + sign * float(bin_size) / 2.0)
+        bin_idx = int(float(event - reference_event) / float(bin_size) + sign * 0.5)
         key = reference_event + bin_idx * bin_size
-        if key == 0:
-            iii = 0
         result[key] = count_unit if key not in result else result[key] + count_unit
 
     assert is_histogram(result)
