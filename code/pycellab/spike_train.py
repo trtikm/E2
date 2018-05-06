@@ -2,6 +2,7 @@ import bisect
 import random
 import time
 import distribution
+import datalgo
 
 
 class SpikeTrain:
@@ -85,6 +86,8 @@ class SpikeTrain:
         self._recording_controller = recording_controller
         self._statistics = SpikeTrain.get_initial_statistics()
         self._rnd_generator = random.Random(seed)
+        self._alignment_spike_history = None
+        self._alignment_coefficient = None
 
     @staticmethod
     def get_initial_statistics():
@@ -101,6 +104,7 @@ class SpikeTrain:
             "calls_on_time_step": 0,
             "time__recharge_spikes_buffer": 0.0,
             "calls__recharge_spikes_buffer": 0,
+            "num_aligned_spikes": 0,
         }
 
     @staticmethod
@@ -163,6 +167,14 @@ class SpikeTrain:
             "statistics": self.get_statistics(),
         }
 
+    def set_spike_history_alignment(self, spikes_history=None, alignment_coefficient=None):
+        assert (spikes_history is None and alignment_coefficient is None) or \
+               (isinstance(spikes_history, list) and type(alignment_coefficient) in [int, float])
+        assert spikes_history is None or all(isinstance(x, float) for x in spikes_history)
+        assert alignment_coefficient is None or (-1 <= alignment_coefficient and alignment_coefficient <= 1)
+        self._alignment_spike_history = spikes_history
+        self._alignment_coefficient = alignment_coefficient
+
     def on_time_step(self, t, dt):
         self._statistics["calls_on_time_step"] += 1
         start_time = time.time()
@@ -176,26 +188,39 @@ class SpikeTrain:
             self._statistics["time_on_time_step"] += time.time() - start_time
             return False
         self._do_recording(t, dt, self._next_spike_time)
-        if self._phase_end_time <= self._next_spike_time:
-            if self._is_noise_phase_active:
-                self._statistics["num_noise_phases"] += 1
-                self._statistics["total_desired_time_of_noise_phases"] += self._phase_end_time - self._phase_start_time
-                self._statistics["total_real_time_of_noise_phases"] += self._next_spike_time - self._phase_start_time
-            else:
-                self._statistics["num_regularity_phases"] += 1
-                self._statistics["total_desired_time_of_regularity_phases"] += self._phase_end_time - self._phase_start_time
-                self._statistics["total_real_time_of_regularity_phases"] += self._next_spike_time - self._phase_start_time
-            self._is_noise_phase_active = True if self.get_phases_distribution().next_event() == "noise" else False
-            self._phase_start_time = self._next_spike_time
-            self._phase_end_time = self._phase_start_time + (self.get_noise_length_distribution().next_event()
-                                                             if self._is_noise_phase_active
-                                                             else self.get_regularity_length_distribution().next_event())
-            assert self._phase_end_time > t + dt
-            self._regularity_chunk_index_low = -1
-            self._regularity_chunk_index_high = -1
-        self._next_spike_time += (self._get_next_noise_phase_event()
-                                  if self._is_noise_phase_active
-                                  else self._get_next_regularity_phase_event())
+        if self._alignment_spike_history is not None:
+            self._recharge_spikes_buffer(self.get_max_spikes_buffer_size())
+            idx = datalgo.find_spikes_history_alignment(
+                        self._spikes_buffer,
+                        t + dt,
+                        self._alignment_spike_history,
+                        self._alignment_coefficient,
+                        self._rnd_generator
+                        )
+            self._next_spike_time += self._spikes_buffer[idx]
+            self._spikes_buffer.pop(idx)
+            self._statistics["num_aligned_spikes"] += 1
+        else:
+            if self._phase_end_time <= self._next_spike_time:
+                if self._is_noise_phase_active:
+                    self._statistics["num_noise_phases"] += 1
+                    self._statistics["total_desired_time_of_noise_phases"] += self._phase_end_time - self._phase_start_time
+                    self._statistics["total_real_time_of_noise_phases"] += self._next_spike_time - self._phase_start_time
+                else:
+                    self._statistics["num_regularity_phases"] += 1
+                    self._statistics["total_desired_time_of_regularity_phases"] += self._phase_end_time - self._phase_start_time
+                    self._statistics["total_real_time_of_regularity_phases"] += self._next_spike_time - self._phase_start_time
+                self._is_noise_phase_active = True if self.get_phases_distribution().next_event() == "noise" else False
+                self._phase_start_time = self._next_spike_time
+                self._phase_end_time = self._phase_start_time + (self.get_noise_length_distribution().next_event()
+                                                                 if self._is_noise_phase_active
+                                                                 else self.get_regularity_length_distribution().next_event())
+                assert self._phase_end_time > t + dt
+                self._regularity_chunk_index_low = -1
+                self._regularity_chunk_index_high = -1
+            self._next_spike_time += (self._get_next_noise_phase_event()
+                                      if self._is_noise_phase_active
+                                      else self._get_next_regularity_phase_event())
         assert self._next_spike_time > t + dt
         self._statistics["time_on_time_step"] += time.time() - start_time
         return True

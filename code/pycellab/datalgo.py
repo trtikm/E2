@@ -456,6 +456,13 @@ def interpolate_discrete_function(points, num_segment_inner_points=None):
     return result
 
 
+def find_spikes_history_alignment(events, current_time, spike_history, coefficient, rnd_generator=None):
+    if rnd_generator is None:
+        rnd_generator = lambda lo, hi: numpy.random.uniform(lo, hi)
+    # TODO!
+    return min(rnd_generator(0, len(events)), len(events) - 1)
+
+
 def make_alignment_histogram_of_spike_history(left, right, bin_size=0.0025, epsilon=0.001):
     assert is_sorted_list_of_numbers(left)
     assert is_sorted_list_of_numbers(right)
