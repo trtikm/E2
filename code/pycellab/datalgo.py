@@ -456,11 +456,61 @@ def interpolate_discrete_function(points, num_segment_inner_points=None):
     return result
 
 
-def find_spikes_history_alignment(events, current_time, spike_history, coefficient, rnd_generator=None):
+def find_next_event_index_for_spikes_history_alignment(
+        events,
+        creation_times,
+        mean_event,
+        current_time,
+        spike_history,
+        coefficient,
+        rnd_generator=None
+        ):
+    assert isinstance(events, list) and isinstance(creation_times, list) and isinstance(spike_history, list)
+    assert len(events) > 0 and len(events) == len(creation_times)
+    assert rnd_generator is None or callable(rnd_generator)
     if rnd_generator is None:
         rnd_generator = lambda lo, hi: numpy.random.uniform(lo, hi)
-    # TODO!
-    return min(rnd_generator(0, len(events)), len(events) - 1)
+    lo_idx = bisect.bisect_left(spike_history, current_time + min(events))
+    if lo_idx >= len(spike_history):
+        return min(int(rnd_generator(0, len(events))), len(events) - 1)
+    if lo_idx > 0:
+        lo_idx -= 1
+    max_event = max(events)
+    assert max_event >= 0.0
+    hi_idx = bisect.bisect_left(spike_history, current_time + max_event)
+    if hi_idx >= len(spike_history):
+        hi_idx = len(spike_history) - 1
+    if lo_idx == hi_idx:
+        return min(int(rnd_generator(0, len(events))), len(events) - 1)
+    assert lo_idx < hi_idx
+    ideal_events = []
+    interpolator = (1.0 + coefficient) / 2.0
+    for i in range(lo_idx, hi_idx):
+        t = spike_history[i] + interpolator * (spike_history[i + 1] - spike_history[i])
+        if t > current_time:
+            ideal_events.append(max(0.0, t - current_time))
+    if len(ideal_events) == 0:
+        return min(int(rnd_generator(0, len(events))), len(events) - 1)
+    result_idx = None
+    result_distance = None
+    for i in range(len(events)):
+        dispersion = max(0.0, (current_time - creation_times[i]) / (mean_event * len(events))) * 0.5 * max_event
+        best_distance = None
+        for j in range(len(ideal_events)):
+            distance = abs(ideal_events[j] - events[i])
+            if distance <= dispersion:
+                best_distance = 0.0
+                break
+            if best_distance is None or abs(distance - dispersion) < best_distance:
+                best_distance = abs(distance - dispersion)
+        if best_distance is not None:
+            if (result_distance is None
+                    or best_distance < result_distance
+                    or (best_distance == result_distance and creation_times[result_idx] < creation_times[i])
+                    ):
+                result_idx = i
+                result_distance = best_distance
+    return result_idx
 
 
 def make_alignment_histogram_of_spike_history(left, right, bin_size=0.0025, epsilon=0.001):

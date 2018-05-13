@@ -509,7 +509,14 @@ def _test_aligned_spike_trains(info):
     """
     assert isinstance(info, TestInfo)
 
-    numpy.random.seed(1)
+    seed = 0
+
+    def get_next_seed():
+        nonlocal seed
+        seed += 1
+        return seed
+
+    numpy.random.seed(get_next_seed())
 
     def make_spike_train(is_excitatory=True, mean_frequency=None, percentage_of_regularity_phases=None, seed=None):
         # min_event = 0.003
@@ -525,7 +532,7 @@ def _test_aligned_spike_trains(info):
         if mean_frequency is None:
             mean_frequency = 15.0 if is_excitatory else 60.0
         if percentage_of_regularity_phases is None:
-            percentage_of_regularity_phases = 50.0
+            percentage_of_regularity_phases = 0.0
         return spike_train.create(
                     distribution.hermit_distribution_with_desired_mean(1.0 / mean_frequency, 0.003, 0.3, 0.0001, pow_y=2, seed=seed)
                         if is_excitatory
@@ -534,8 +541,8 @@ def _test_aligned_spike_trains(info):
                     )
 
     pivot_trains = [
-        (make_spike_train(True, seed=111), "epivot"),
-        (make_spike_train(False, seed=222), "ipovot"),
+        (make_spike_train(True, seed=get_next_seed()), "epivot"),
+        (make_spike_train(False, seed=get_next_seed()), "ipivot"),
         ]
 
     nsteps = 1000000
@@ -555,37 +562,60 @@ def _test_aligned_spike_trains(info):
 
     def make_aligned_train(
             pivot, alignment_coefficient,
-            is_excitatory=True, mean_frequency=None, percentage_of_regularity_phases=None, seed=None
+            is_excitatory=True, mean_frequency=None, seed=None
             ):
         assert isinstance(pivot, spike_train.SpikeTrain)
-        train = make_spike_train(is_excitatory, mean_frequency, percentage_of_regularity_phases, seed)
+        train = make_spike_train(is_excitatory, mean_frequency, 0.0, seed)
         train.set_spike_history_alignment(pivot.get_spikes_history(), alignment_coefficient)
         return train
 
     other_trains = [
-        (make_spike_train(True, seed=333), "eunaligned"),
-        (make_spike_train(False, seed=444), "iunaligned"),
+        (make_spike_train(True, seed=get_next_seed()), "eunaligned"),
+        (make_spike_train(False, seed=get_next_seed()), "iunaligned"),
         ] + [
-        (make_aligned_train(pivot, coef, kind), kname + "aligned(" + desc + "," + format(coef, ".2f") + ")")
+        (make_aligned_train(pivot, coef, kind, seed=get_next_seed()),
+         kname + "aligned(" + desc + "," + format(coef, ".2f") + ")")
             for pivot, desc in pivot_trains
             for kind, kname in [(True, "e"), (False, "i")]
-            for coef in [
-                # -1.0
-                # -0.75,
-                # -0.5,
-                # -0.25,
-                # 0.0,
-                # 0.25,
-                # 0.5,
-                # 0.75,
-                # 1.0
-                ]
+            for coef in [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0]
         ]
 
     print("Simulating other trains")
     simulate_trains(other_trains)
 
     print("Saving results:")
+    for pivot, pivot_desc in pivot_trains:
+        print("    Saving statistics of spike train: " + pivot_desc)
+        with open(os.path.join(info.output_dir, "stats_" + pivot_desc + ".json"), "w") as ofile:
+            ofile.write(json.dumps({"configuration": pivot.get_configuration(), "statistics": pivot.get_statistics()},
+                                   sort_keys=True,
+                                   indent=4))
+        print("    Saving spike event distributions of spike train: " + pivot_desc)
+        plot.histogram(
+            datalgo.make_histogram(
+                datalgo.make_difference_events(pivot.get_spikes_history()),
+                dt,
+                start_time
+                ),
+            os.path.join(info.output_dir, "distrib_" + pivot_desc + ".png"),
+            normalised=False
+            )
+    for other, other_desc in other_trains:
+        print("    Saving statistics of spike train: " + other_desc)
+        with open(os.path.join(info.output_dir, "stats_" + other_desc + ".json"), "w") as ofile:
+            ofile.write(json.dumps({"configuration": other.get_configuration(), "statistics": other.get_statistics()},
+                                   sort_keys=True,
+                                   indent=4))
+        print("    Saving spike event distributions of spike train: " + other_desc)
+        plot.histogram(
+            datalgo.make_histogram(
+                datalgo.make_difference_events(other.get_spikes_history()),
+                dt,
+                start_time
+                ),
+            os.path.join(info.output_dir, "distrib_" + other_desc + ".png"),
+            normalised=False
+            )
     for pivot, pivot_desc in pivot_trains:
         for other, other_desc in other_trains:
             print("    Saving alignment histograms: " + pivot_desc + " VS " + other_desc)
@@ -619,6 +649,17 @@ def _test_aligned_spike_trains(info):
                         ),
                     legend=other_desc + " -> " + pivot_desc
                     )
+        plot.event_board_per_partes(
+            [pivot.get_spikes_history()] + [other.get_spikes_history() for other, _ in other_trains],
+            os.path.join(info.output_dir, "spikes_board_" + pivot_desc + ".png"),
+            start_time,
+            start_time + nsteps * dt,
+            1000.0 * dt,
+            5,
+            lambda p: print("    Saving spikes board part: " + os.path.basename(p)),
+            None,
+            " " + plot.get_title_placeholder() + " SPIKES BOARD"
+            )
 
     return 0    # No failures
 

@@ -76,6 +76,7 @@ class SpikeTrain:
         self._regularity_chunk_index_high = -1
         self._regularity_chunk_size = regularity_chunk_size
         self._spikes_buffer = []
+        self._spikes_buffer_creation_times = []
         self._max_spikes_buffer_size = max_spikes_buffer_size
         self._is_noise_phase_active = True
         self._next_spike_time = None
@@ -103,6 +104,7 @@ class SpikeTrain:
             "time_on_time_step": 0.0,
             "calls_on_time_step": 0,
             "time__recharge_spikes_buffer": 0.0,
+            "time__spikes_history_alignment": 0.0,
             "calls__recharge_spikes_buffer": 0,
             "num_aligned_spikes": 0,
         }
@@ -179,7 +181,7 @@ class SpikeTrain:
         self._statistics["calls_on_time_step"] += 1
         start_time = time.time()
         if self._next_spike_time is None:
-            self._next_spike_time = t + dt + self._get_next_noise_phase_event()
+            self._next_spike_time = t + dt + self._get_next_noise_phase_event(t + dt)
             self._phase_start_time = t + dt
             self._phase_end_time = self._phase_start_time + self.get_noise_length_distribution().next_event()
             self._last_recording_time = t
@@ -189,17 +191,22 @@ class SpikeTrain:
             return False
         self._do_recording(t, dt, self._next_spike_time)
         if self._alignment_spike_history is not None:
-            self._recharge_spikes_buffer(self.get_max_spikes_buffer_size())
-            idx = datalgo.find_spikes_history_alignment(
+            alignment_start_time = time.time()
+            self._recharge_spikes_buffer(self.get_max_spikes_buffer_size(), t + dt)
+            idx = datalgo.find_next_event_index_for_spikes_history_alignment(
                         self._spikes_buffer,
+                        self._spikes_buffer_creation_times,
+                        self._spiking_distribution.get_mean(),
                         t + dt,
                         self._alignment_spike_history,
                         self._alignment_coefficient,
-                        self._rnd_generator
+                        lambda lo, hi: self._rnd_generator.uniform(lo, hi)
                         )
             self._next_spike_time += self._spikes_buffer[idx]
             self._spikes_buffer.pop(idx)
+            self._spikes_buffer_creation_times.pop(idx)
             self._statistics["num_aligned_spikes"] += 1
+            self._statistics["time__spikes_history_alignment"] += time.time() - alignment_start_time
         else:
             if self._phase_end_time <= self._next_spike_time:
                 if self._is_noise_phase_active:
@@ -218,16 +225,17 @@ class SpikeTrain:
                 assert self._phase_end_time > t + dt
                 self._regularity_chunk_index_low = -1
                 self._regularity_chunk_index_high = -1
-            self._next_spike_time += (self._get_next_noise_phase_event()
+            self._next_spike_time += (self._get_next_noise_phase_event(t + dt)
                                       if self._is_noise_phase_active
-                                      else self._get_next_regularity_phase_event())
+                                      else self._get_next_regularity_phase_event(t + dt))
         assert self._next_spike_time > t + dt
+        assert len(self._spikes_buffer) == len(self._spikes_buffer_creation_times)
         self._statistics["time_on_time_step"] += time.time() - start_time
         return True
 
-    def _get_next_regularity_phase_event(self):
+    def _get_next_regularity_phase_event(self, current_time):
         if self._regularity_chunk_index_low == self._regularity_chunk_index_high:
-            self._recharge_spikes_buffer(self.get_max_spikes_buffer_size())
+            self._recharge_spikes_buffer(self.get_max_spikes_buffer_size(), current_time)
             self._regularity_chunk_index_low = (bisect.bisect_left(self._spikes_buffer, self._next_spike_time)
                                                 if self._regularity_chunk_index_low != -1
                                                 else self._get_random_index_to_spikes_buffer())
@@ -246,24 +254,29 @@ class SpikeTrain:
         assert self._regularity_chunk_index_low < self._regularity_chunk_index_high
         index = int(self._rnd_generator.uniform(self._regularity_chunk_index_low, self._regularity_chunk_index_high))
         event = self._spikes_buffer.pop(index)
+        self._spikes_buffer_creation_times.pop(index)
         self._regularity_chunk_index_high -= 1
         return event
 
-    def _get_next_noise_phase_event(self):
-        self._recharge_spikes_buffer(1)
-        return self._spikes_buffer.pop(self._get_random_index_to_spikes_buffer())
+    def _get_next_noise_phase_event(self, current_time):
+        self._recharge_spikes_buffer(1, current_time)
+        idx = self._get_random_index_to_spikes_buffer()
+        self._spikes_buffer_creation_times.pop(idx)
+        return self._spikes_buffer.pop(idx)
 
     def _get_random_index_to_spikes_buffer(self):
         return min(int(self._rnd_generator.uniform(0, len(self._spikes_buffer))), len(self._spikes_buffer))
 
-    def _recharge_spikes_buffer(self, desired_size):
+    def _recharge_spikes_buffer(self, desired_size, current_time):
         start_time = time.time()
         self._statistics["calls__recharge_spikes_buffer"] += 1
         assert isinstance(desired_size, int) and desired_size >= 1
         while len(self._spikes_buffer) < desired_size:
             event = self.get_spiking_distribution().next_event()
             assert event > 0.00001
-            self._spikes_buffer.insert(bisect.bisect_left(self._spikes_buffer, event), event)
+            idx = bisect.bisect_left(self._spikes_buffer, event)
+            self._spikes_buffer.insert(idx, event)
+            self._spikes_buffer_creation_times.insert(idx, current_time)
             self._statistics["num_generated_spike_events"] += 1
         self._statistics["time__recharge_spikes_buffer"] += time.time() - start_time
 
