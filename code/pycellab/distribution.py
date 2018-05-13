@@ -12,19 +12,19 @@ class Distribution:
             self._histogram = {1e23: 0.0}
         else:
             self._histogram = histogram.copy()
-        self._bars_line = numpy.arange(len(self._histogram) + 1, dtype=float)
+        self._bars_line = numpy.arange(len(self._histogram), dtype=float)
         self._events_line = []
         sum_bars = 0.0
         for idx, event in enumerate(sorted(self._histogram.keys())):
-            self._bars_line[idx] = sum_bars
-            self._events_line.append(event)
             bar_size = self._histogram[event]
             assert bar_size >= 0.0
             sum_bars += bar_size
+            self._bars_line[idx] = sum_bars
+            self._events_line.append(event)
         for i in range(0, len(self._histogram)):
             self._bars_line[i] /= (sum_bars + 0.00001)
         self._bars_line[-1] = 1.0
-        assert len(self._events_line) + 1 == len(self._bars_line)
+        assert len(self._events_line) == len(self._bars_line)
         self._probabilities = numpy.array([float(self._histogram[k]) for k in self._events_line])
         self._probabilities *= 1.0 / (sum(self._probabilities) + 0.00001)
         self._has_numeric_events = all(isinstance(x, int) or isinstance(x, float) for x in self._events_line)
@@ -108,7 +108,7 @@ class Distribution:
         return [(self._events_line[i], self._probabilities[i]) for i in range(len(self._events_line))]
 
     def next_event(self):
-        return self.event_with_probability(self._rnd_generator.uniform(0.0, 1.0))
+        return self.event_with_probability(self._rnd_generator.random())
 
     def generate(self, n):
         assert type(n) == int and n >= 0
@@ -125,9 +125,7 @@ class Distribution:
 
     def event_with_probability(self, probability):
         assert probability >= 0.0 and probability <= 1.0
-        idx = self._bars_line.searchsorted(probability)
-        if idx != 0:
-            idx -= 1
+        idx = min(bisect.bisect_left(self._bars_line, probability), len(self._bars_line) - 1)
         return self._events_line[idx]
 
     def get_mean(self):
@@ -319,7 +317,7 @@ def hermit_distribution_with_desired_mean(
             mult_mx
             )
         if cache_key in _cache_of_hermit_distribution_with_desired_mean:
-            return _cache_of_hermit_distribution_with_desired_mean[cache_key]
+            return Distribution(_cache_of_hermit_distribution_with_desired_mean[cache_key], seed=seed)
 
     if hi - lo < 0.00001:
         return Distribution({(lo + hi) / 2.0: 1.0})
@@ -327,7 +325,7 @@ def hermit_distribution_with_desired_mean(
     peek_lo = 0.001
     peek_hi = 0.999
     while peek_hi - peek_lo > 0.00001:
-        D = hermit_distribution(
+        H = hermit_distribution_histogram(
                 peek_x=peek_mid,
                 scale_x=hi - lo,
                 shift_x=lo,
@@ -335,16 +333,16 @@ def hermit_distribution_with_desired_mean(
                 pow_y=pow_y,
                 bin_size=bin_size,
                 mult_m01=mult_m01,
-                mult_mx=mult_mx,
-                seed=seed
+                mult_mx=mult_mx
                 )
+        D = Distribution(H, seed=seed)
         if D.get_mean() < mean - max_mean_error:
             peek_lo = peek_mid
         elif mean + max_mean_error < D.get_mean():
             peek_hi = peek_mid
         else:
             if use_cache:
-                _cache_of_hermit_distribution_with_desired_mean[cache_key] = D
+                _cache_of_hermit_distribution_with_desired_mean[cache_key] = H
             return D
         peek_mid = (peek_hi + peek_lo) / 2.0
     raise Exception("hermit_distribution_with_desired_mean(mean=" + str(mean) + "): The distribution does not exist.")
