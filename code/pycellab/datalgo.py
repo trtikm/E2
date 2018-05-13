@@ -517,32 +517,28 @@ def make_alignment_histogram_of_spike_history(left, right, bin_size=0.0025, epsi
     assert is_sorted_list_of_numbers(left)
     assert is_sorted_list_of_numbers(right)
     assert isinstance(epsilon, float) and epsilon >= 0.0
+    half_epsilon = 0.5 * epsilon
     events = []
-    i = 0
-    while i < len(left):
+    for i in range(len(left)):
         hi = bisect.bisect_left(right, left[i])
         if hi == len(right):
             break
-        lo = hi
-        while lo > 0 and right[lo] > left[i]:
-            lo -= 1
-        if right[lo] > left[i]:
-            i += 1
+        if hi == 0 or right[hi] < left[i] + half_epsilon:
             continue
-        delta = right[hi] - right[lo]
-        if delta < epsilon:
-            i += 1
+        lo = hi - 1
+        if right[lo] > left[i] - half_epsilon:
+            continue
+        if i > 0 and left[i - 1] > right[lo] + half_epsilon:
             continue
         j = i
-        while j + 1 < len(left) and left[j + 1] < right[hi]:
+        while j + 1 < len(left) and left[j + 1] < right[hi] - half_epsilon:
             j += 1
-        delta -= left[j] - left[i]
-        if delta < epsilon:
-            i = j + 1
-            continue
-        event = max(-1.0, min(2.0 * (left[i] - right[lo]) / delta - 1.0, 1.0))
+        full_dist = (right[hi] - right[lo]) - (left[j] - left[i])
+        assert full_dist >= epsilon
+        left_dist = left[i] - right[lo]
+        assert left_dist >= epsilon and left_dist <= full_dist
+        event = max(-1.0, min(2.0 * left_dist / full_dist - 1.0, 1.0))
         events.append(event)
-        i = j + 1
     return make_histogram(events, bin_size, 0.0, 1)
 
 
