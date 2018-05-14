@@ -520,14 +520,15 @@ def _test_aligned_spike_trains(info):
 
     def make_spike_train(is_excitatory=True, mean_frequency=None, percentage_of_regularity_phases=None, seed=None):
         # min_event = 0.003
-        # max_event = 0.103
-        # num_events = 100
+        # max_event = 0.030
+        # num_events = 28
         # return spike_train.create(
         #             distribution.Distribution(
         #                 {(min_event + (i / float(num_events - 1)) * (max_event - min_event)): 1.0 / float(num_events)
-        #                  for i in range(0, num_events)}
+        #                  for i in range(0, num_events)},
+        #                 seed
         #                 ),
-        #             seed
+        #             0.0
         #             )
         if mean_frequency is None:
             mean_frequency = 15.0 if is_excitatory else 60.0
@@ -621,11 +622,14 @@ def _test_aligned_spike_trains(info):
             print("    Saving alignment histograms: " + pivot_desc + " VS " + other_desc)
             hist_pair = datalgo.make_alignment_histograms_of_spike_histories(
                                 pivot.get_spikes_history(),
-                                other.get_spikes_history()
+                                other.get_spikes_history(),
+                                0.01,
+                                dt / 2.0
                                 )
             plot.histogram(
                 hist_pair[0],
-                os.path.join(info.output_dir, "hist_" + pivot_desc + "_vs_" + other_desc + ".png")
+                os.path.join(info.output_dir, "hist_" + pivot_desc + "_vs_" + other_desc + ".png"),
+                normalised=False
                 )
             plot.histogram(
                 hist_pair[1],
