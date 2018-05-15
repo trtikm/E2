@@ -509,6 +509,43 @@ def _test_aligned_spike_trains(info):
     """
     assert isinstance(info, TestInfo)
 
+
+    # def make_alignment_histogram(name, lo_event, hi_event, dt, num_events=None):
+    #     if num_events is None:
+    #         num_events = int((hi_event - lo_event) / dt) + 1
+    #     raw_events = [lo_event + (i / float(num_events - 1)) * (hi_event - lo_event) for i in range(0, num_events)]
+    #     events = []
+    #     for e in raw_events:
+    #         t = 0.0
+    #         while e > t + 1.5 * dt:
+    #             t += dt
+    #         events.append(t)
+    #     half_epsilon = 0.5 * (dt / 10)
+    #     coefs = []
+    #     for i in range(len(events)):
+    #         for j in range(i + 1, len(events)):
+    #             dist = events[j] - events[i]
+    #             shift = dt
+    #             while shift < dist:
+    #                 if not (shift < half_epsilon or shift > dist - half_epsilon):
+    #                     # print(format(shift, ".3f") + " / " + format(dist, ".3f") + " = " + format(shift/dist, ".3f") +
+    #                     #       "  --->  " +
+    #                     #       format(shift/dt, ".3f") + " / " + format(dist / dt, ".3f") + " = " + format((shift/dt)/(dist/dt), ".3f"))
+    #                     coef = max(-1.0, min(2.0 * shift / dist - 1.0, 1.0))
+    #                     coefs.append(coef)
+    #                 shift += dt
+    #     coefs = sorted(coefs)
+    #     hist = datalgo.make_histogram(coefs, 0.005, 0.0, 1)
+    #     plot.histogram(
+    #         hist,
+    #         os.path.join(info.output_dir, name + ".png"),
+    #         normalised=False
+    #         )
+    #     return 0
+    # make_alignment_histogram("xhist", 0.003, 0.030, 0.0001)
+    # make_alignment_histogram("yhist", 0.003, 0.130, 0.0001)
+    # return 0
+
     seed = 0
 
     def get_next_seed():
@@ -537,7 +574,7 @@ def _test_aligned_spike_trains(info):
         return spike_train.create(
                     distribution.hermit_distribution_with_desired_mean(1.0 / mean_frequency, 0.003, 0.3, 0.0001, pow_y=2, seed=seed)
                         if is_excitatory
-                        else distribution.hermit_distribution_with_desired_mean(1.0 / mean_frequency, 0.001, 0.08, 0.0001, pow_y=2, seed=seed),
+                        else distribution.hermit_distribution_with_desired_mean(1.0 / mean_frequency, 0.001, 0.08, 0.0001, bin_size=0.0002, pow_y=2, seed=seed),
                     percentage_of_regularity_phases
                     )
 
@@ -547,7 +584,7 @@ def _test_aligned_spike_trains(info):
         ]
 
     nsteps = 1000000
-    dt = 0.001
+    dt = 0.0001
     start_time = 0.0
 
     def simulate_trains(trains):
@@ -623,7 +660,7 @@ def _test_aligned_spike_trains(info):
             hist_pair = datalgo.make_alignment_histograms_of_spike_histories(
                                 pivot.get_spikes_history(),
                                 other.get_spikes_history(),
-                                0.01,
+                                0.005,
                                 dt / 2.0
                                 )
             plot.histogram(
@@ -658,7 +695,7 @@ def _test_aligned_spike_trains(info):
             os.path.join(info.output_dir, "spikes_board_" + pivot_desc + ".png"),
             start_time,
             start_time + nsteps * dt,
-            1000.0 * dt,
+            1.0,
             5,
             lambda p: print("    Saving spikes board part: " + os.path.basename(p)),
             None,
