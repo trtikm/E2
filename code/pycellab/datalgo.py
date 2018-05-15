@@ -125,13 +125,13 @@ def make_histogram(events, bin_size, reference_event, count_unit=1):
 
     if len(events) == 0:
         return {}
-    result = {}
+    lookup = {}
     for event in events:
         sign = 1 if event >= 0 else -1
         bin_idx = int(float(event - reference_event) / float(bin_size) + sign * 0.5)
         key = reference_event + bin_idx * bin_size
-        result[key] = count_unit if key not in result else result[key] + count_unit
-
+        lookup[bin_idx] = (key, count_unit + (0 if bin_idx not in lookup else lookup[bin_idx][1]))
+    result = {key: value for _, (key, value) in lookup.items()}
     assert is_histogram(result)
     return result
 
