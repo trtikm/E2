@@ -353,4 +353,4 @@ def default_excitatory_isi_distribution():
 
 
 def default_inhibitory_isi_distribution():
-    return hermit_distribution(0.092, 0.08, pow_y=2)
+    return hermit_distribution(0.092, 0.08, bin_size=0.0002, pow_y=2)
