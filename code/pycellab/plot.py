@@ -42,6 +42,14 @@ def get_predefined_colour_names():
         ]
 
 
+def get_random_rgb_colour(min_component=0.0, max_component=0.9, rnd_generator=None):
+    if rnd_generator is None:
+        rnd_generator = lambda lo, hi: numpy.random.uniform(lo, hi)
+    return (rnd_generator(min_component, max_component),
+            rnd_generator(min_component, max_component),
+            rnd_generator(min_component, max_component) )
+
+
 class Plot:
     def __init__(self, pathname, title=None, xaxis_name=None, faxis_name=None, size_xy=None, dpi=None):
         assert isinstance(pathname, str) and len(pathname) > 0
