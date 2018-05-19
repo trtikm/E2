@@ -599,19 +599,21 @@ def _test_aligned_spike_trains(info):
     simulate_trains(pivot_trains)
 
     def make_aligned_train(
-            pivot, alignment_coefficient,
+            pivot, alignment_coefficient, dispersion_fn,
             is_excitatory=True, mean_frequency=None, seed=None
             ):
         assert isinstance(pivot, spike_train.SpikeTrain)
         train = make_spike_train(is_excitatory, mean_frequency, 0.0, seed)
-        train.set_spike_history_alignment(pivot.get_spikes_history(), alignment_coefficient)
+        train.set_spike_history_alignment(pivot.get_spikes_history(), alignment_coefficient, dispersion_fn)
         return train
+
+    dispersion_fn = datalgo.AlignmentDispersionToSpikesHistory(2.0)
 
     other_trains = [
         (make_spike_train(True, seed=get_next_seed()), "eunaligned"),
         (make_spike_train(False, seed=get_next_seed()), "iunaligned"),
         ] + [
-        (make_aligned_train(pivot, coef, kind, seed=get_next_seed()),
+        (make_aligned_train(pivot, coef, dispersion_fn, kind, seed=get_next_seed()),
          kname + "aligned(" + desc + "," + format(coef, ".2f") + ")")
             for pivot, desc in pivot_trains
             for kind, kname in [(True, "e"), (False, "i")]
@@ -698,7 +700,9 @@ def _test_aligned_spike_trains(info):
             1.0,
             5,
             lambda p: print("    Saving spikes board part: " + os.path.basename(p)),
-            None,
+            [[plot.get_random_rgb_colour()] * len(pivot.get_spikes_history())] +
+                [[plot.get_random_rgb_colour()] * len(other.get_spikes_history())
+                 for other, _ in other_trains],
             " " + plot.get_title_placeholder() + " SPIKES BOARD"
             )
 

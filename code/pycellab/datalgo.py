@@ -456,26 +456,42 @@ def interpolate_discrete_function(points, num_segment_inner_points=None):
     return result
 
 
+class AlignmentDispersionToSpikesHistory:
+    def __init__(self, exponent=1.0, scale=0.5):
+        self._exponent = exponent
+        self._scale = scale
+
+    def compute(self, dt, max_dt, max_event):
+        dispersion = max(0.0, pow(dt / max_dt, self._exponent)) * self._scale * max_event
+        return dispersion
+
+
 def find_next_event_index_for_spikes_history_alignment(
-        events,
+        events,             # MUST BE SORTED!!! (not checked due to performance reasons)
         creation_times,
         mean_event,
         current_time,
-        spike_history,
+        spike_history,      # MUST BE SORTED!!! (not checked due to performance reasons)
         coefficient,
+        dispersion_generator=None,
         rnd_generator=None
         ):
     assert isinstance(events, list) and isinstance(creation_times, list) and isinstance(spike_history, list)
+    # assert is_sorted_list_of_events(events)   # commented because of performance
+    # assert is_sorted_list_of_events(spike_history)   # commented because of performance
     assert len(events) > 0 and len(events) == len(creation_times)
+    assert dispersion_generator is None or isinstance(dispersion_generator, AlignmentDispersionToSpikesHistory)
     assert rnd_generator is None or callable(rnd_generator)
+    if dispersion_generator is None:
+        dispersion_generator = AlignmentDispersionToSpikesHistory()
     if rnd_generator is None:
         rnd_generator = lambda lo, hi: numpy.random.uniform(lo, hi)
-    lo_idx = bisect.bisect_left(spike_history, current_time + min(events))
+    lo_idx = bisect.bisect_left(spike_history, current_time + events[0])
     if lo_idx >= len(spike_history):
         return min(int(rnd_generator(0, len(events))), len(events) - 1)
     if lo_idx > 0:
         lo_idx -= 1
-    max_event = max(events)
+    max_event = events[-1]
     assert max_event >= 0.0
     hi_idx = bisect.bisect_left(spike_history, current_time + max_event)
     if hi_idx >= len(spike_history):
@@ -494,7 +510,7 @@ def find_next_event_index_for_spikes_history_alignment(
     result_idx = None
     result_distance = None
     for i in range(len(events)):
-        dispersion = max(0.0, (current_time - creation_times[i]) / (mean_event * len(events))) * 0.5 * max_event
+        dispersion = dispersion_generator.compute(current_time - creation_times[i], mean_event * len(events), max_event)
         best_distance = None
         for j in range(len(ideal_events)):
             distance = abs(ideal_events[j] - events[i])

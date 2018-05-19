@@ -89,6 +89,7 @@ class SpikeTrain:
         self._rnd_generator = random.Random(seed)
         self._alignment_spike_history = None
         self._alignment_coefficient = None
+        self._alignment_dispersion_fn = None
 
     @staticmethod
     def get_initial_statistics():
@@ -169,13 +170,15 @@ class SpikeTrain:
             "statistics": self.get_statistics(),
         }
 
-    def set_spike_history_alignment(self, spikes_history=None, alignment_coefficient=None):
+    def set_spike_history_alignment(self, spikes_history=None, alignment_coefficient=None, dispersion_fn=None):
         assert (spikes_history is None and alignment_coefficient is None) or \
                (isinstance(spikes_history, list) and type(alignment_coefficient) in [int, float])
         assert spikes_history is None or all(isinstance(x, float) for x in spikes_history)
         assert alignment_coefficient is None or (-1 <= alignment_coefficient and alignment_coefficient <= 1)
+        assert dispersion_fn is None or isinstance(dispersion_fn, datalgo.AlignmentDispersionToSpikesHistory)
         self._alignment_spike_history = spikes_history
         self._alignment_coefficient = alignment_coefficient
+        self._alignment_dispersion_fn = dispersion_fn
 
     def on_time_step(self, t, dt):
         self._statistics["calls_on_time_step"] += 1
@@ -200,6 +203,7 @@ class SpikeTrain:
                         t + dt,
                         self._alignment_spike_history,
                         self._alignment_coefficient,
+                        self._alignment_dispersion_fn,
                         lambda lo, hi: self._rnd_generator.uniform(lo, hi)
                         )
             self._next_spike_time += self._spikes_buffer[idx]
