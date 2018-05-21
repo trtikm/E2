@@ -8,6 +8,7 @@ import config
 from plot import get_colour_pre_inhibitory
 import tests
 import neuron
+import synapse
 import spike_train
 import datalgo
 import plot
@@ -1876,6 +1877,145 @@ def evaluate_synaptic_plasticity(cfg, force_recompute, dependencies):
     print("  Done.")
 
 
+def evaluate_neuron_receives_aligned_input(cfg, force_recompute, dependencies):
+    assert isinstance(cfg, config.NeuronReceivesAlignedInput)
+
+    tmprof_begin = time.time()
+
+    print("Simulating pivot train")
+    t = cfg.start_time
+    for step in range(cfg.nsteps):
+        utility.print_progress_string(step, cfg.nsteps)
+        cfg.pivot_train.on_time_step(t, cfg.dt)
+        t += cfg.dt
+
+    tmprof_pivot_simulation = time.time()
+
+    print("Simulating aligned trains")
+    cell = neuron.Neuron(
+                cfg.cell_soma,
+                [synapse.Synapse.constant() for _ in range(len(cfg.excitatory_trains))],
+                [synapse.Synapse.constant() for _ in range(len(cfg.inhibitory_trains))],
+                cfg.num_sub_iterations,
+                cfg.start_time,
+                None
+                )
+    t = cfg.start_time
+    for step in range(cfg.nsteps):
+        utility.print_progress_string(step, cfg.nsteps)
+        cell.integrate(t, cfg.dt)
+        for i in range(len(cfg.excitatory_trains)):
+            was_spike_generated = cfg.excitatory_trains[i].on_time_step(t, cfg.dt)
+            if was_spike_generated:
+                cell.on_excitatory_spike(i)
+        for i in range(len(cfg.inhibitory_trains)):
+            was_spike_generated = cfg.inhibitory_trains[i].on_time_step(t, cfg.dt)
+            if was_spike_generated:
+                cell.on_inhibitory_spike(i)
+        t += cfg.dt
+
+    tmprof_cell_simulation = time.time()
+
+    print("Saving results")
+
+    if force_recompute or not os.path.exists(cfg.output_dir):
+        if os.path.exists(cfg.output_dir):
+            shutil.rmtree(cfg.output_dir)
+        os.makedirs(cfg.output_dir)
+
+    for var_name, points in cell.get_soma_recording().items():
+        if len(points) != 0:
+            file_name = "soma_" + cell.get_soma().get_name() + "__VAR[" + var_name + "]"
+            plot.curve_per_partes(
+                points,
+                os.path.join(cfg.output_dir, file_name + cfg.plot_files_extension),
+                cfg.start_time,
+                cfg.start_time + cfg.nsteps * cfg.dt,
+                cfg.plot_time_step,
+                5,
+                lambda p: print("    Saving plot " + p),
+                get_colour_soma(),
+                cell.get_soma().get_short_description()
+                )
+
+    print("    Saving post spikes ISI histogram")
+    plot.histogram(
+        datalgo.make_histogram(datalgo.make_difference_events(cell.get_spikes()), cfg.dt, cfg.start_time),
+        os.path.join(cfg.output_dir, "hist_isi_post_spikes.png"),
+        False
+        )
+
+    for i in range(0, len(cfg.excitatory_trains), max(1, len(cfg.excitatory_trains) // 10)):
+        print("    Saving excitatory pre spikes ISI histogram of train #" + str(i) + ".")
+        plot.histogram(
+            datalgo.make_histogram(
+                datalgo.make_difference_events(cfg.excitatory_trains[i].get_spikes_history()),
+                cfg.dt,
+                cfg.start_time
+                ),
+            os.path.join(cfg.output_dir, "hist_isi_pre_pikes_e" + str(i) + ".png"),
+            normalised=False
+            )
+
+    for i in range(0, len(cfg.inhibitory_trains), max(1, len(cfg.inhibitory_trains) // 10)):
+        print("    Saving inhibitory pre spikes ISI histogram of train #" + str(i) + ".")
+        plot.histogram(
+            datalgo.make_histogram(
+                datalgo.make_difference_events(cfg.inhibitory_trains[i].get_spikes_history()),
+                cfg.dt,
+                cfg.start_time
+                ),
+            os.path.join(cfg.output_dir, "hist_isi_pre_pikes_i" + str(i) + ".png"),
+            normalised=False
+            )
+
+    e_board_histories = []
+    for i in range(0, len(cfg.excitatory_trains), max(1, len(cfg.excitatory_trains) // 10)):
+        e_board_histories.append(cfg.excitatory_trains[i].get_spikes_history())
+    i_board_histories = []
+    for i in range(0, len(cfg.inhibitory_trains), max(1, len(cfg.inhibitory_trains) // 10)):
+        i_board_histories.append(cfg.inhibitory_trains[i].get_spikes_history())
+
+    plot.event_board_per_partes(
+        [cell.get_spikes()] + e_board_histories + i_board_histories,
+        os.path.join(cfg.output_dir, "spikes_board.png"),
+        cfg.start_time,
+        cfg.start_time + cfg.nsteps * cfg.dt,
+        1.0,
+        5,
+        lambda p: print("    Saving spikes board part: " + os.path.basename(p)),
+        [[(0.0, 0.0, 0.0)] * len(cell.get_spikes())] + [[plot.get_random_rgb_colour()] * len(spikes_history)
+                                                        for spikes_history in e_board_histories]
+                                                     + [[plot.get_random_rgb_colour()] * len(spikes_history)
+                                                        for spikes_history in i_board_histories],
+        " " + plot.get_title_placeholder() + " SPIKES BOARD"
+        )
+
+    tmprof_end = time.time()
+
+    time_profile = {
+        "pivot_simulation": tmprof_pivot_simulation - tmprof_begin,
+        "cell_simulation": tmprof_cell_simulation - tmprof_pivot_simulation,
+        "save_results": tmprof_end - tmprof_cell_simulation,
+        "TOTAL": tmprof_end - tmprof_begin,
+        "spike_trains_statistics": spike_train.merge_statistics(
+            [train.get_statistics() for train in cfg.excitatory_trains + cfg.inhibitory_trains]
+            )
+    }
+    pathname = os.path.join(cfg.output_dir, "time_profile.json")
+    print("    Saving time profile to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(time_profile, sort_keys=True, indent=4))
+
+    print("  Time profile of the evaluation [in seconds]:" +
+          "\n    pivot_simulation" + utility.duration_string(tmprof_begin, tmprof_pivot_simulation) +
+          "\n    cell_simulation" + utility.duration_string(tmprof_pivot_simulation, tmprof_cell_simulation) +
+          "\n    save_results" + utility.duration_string(tmprof_cell_simulation, tmprof_end) +
+          "\n    TOTAL: " + utility.duration_string(tmprof_begin, tmprof_end))
+
+    print("  Done.")
+
+
 def main(cmdline):
     if cmdline.test is not None and cmdline.evaluate is None:
         for tst in tests.get_registered_tests():
@@ -1900,6 +2040,8 @@ def main(cmdline):
                 evaluate_time_differences_between_pre_post_spikes(config.construct_experiment(cfg), cmdline.force_recompute)
             elif cfg["class_name"] == config.SynapticPlasticity.__name__:
                 evaluate_synaptic_plasticity(config.construct_experiment(cfg), cmdline.force_recompute, cmdline.dependencies)
+            elif cfg["class_name"] == config.NeuronReceivesAlignedInput.__name__:
+                evaluate_neuron_receives_aligned_input(config.construct_experiment(cfg), cmdline.force_recompute, cmdline.dependencies)
             else:
                 print("ERROR: There is not defined the evaluation function for configuration class '" +
                       cfg["class_name"] + "'.")

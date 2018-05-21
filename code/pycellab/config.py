@@ -25,7 +25,7 @@ class CommonProps:
         assert isinstance(dt, float)
         assert isinstance(nsteps, int)
         assert isinstance(plot_files_extension, str)
-        assert isinstance(plot_time_step, float)
+        assert type(plot_time_step) in [int, float]
         assert dt > 0.0
         assert nsteps >= 0
         assert plot_files_extension.lower() == ".svg" or plot_files_extension.lower() == ".png"
@@ -1295,7 +1295,44 @@ class AutoBalancedPreSynapticInput:
                 "num_seconds_to_simulate": self._num_seconds_to_simulate
             }
 
-    pass
+
+class NeuronReceivesAlignedInput(CommonProps):
+    def __init__(self,
+                 name,
+                 output_dir
+                 ):
+        super().__init__(name, output_dir, 0.0, 0.0001, 100000, ".png", 1)
+        self.num_sub_iterations = 1
+        self.cell_soma = soma.izhikevich.regular_spiking(spike_magnitude=0.15)
+
+        seed = 0
+
+        def get_next_seed():
+            nonlocal seed
+            seed += 1
+            return seed
+
+        numpy.random.seed(get_next_seed())
+
+        self.pivot_train = spike_train.create_default(True, spiking_seed=get_next_seed(), train_seed=get_next_seed())
+
+        num_excitatory_trains = 4 * 100
+        num_inhibitory_trains = 1 * 100
+
+        self.excitatory_trains = [spike_train.create_aligned_train(self.pivot_train, 1.0, True)
+                                  for _ in range(num_excitatory_trains)]
+        self.inhibitory_trains = [spike_train.create_aligned_train(self.pivot_train, 1.0, False)
+                                  for _ in range(num_inhibitory_trains)]
+
+    @staticmethod
+    def single_group(my_precomputed_full_name, output_dir):
+        """
+        TODO.
+        """
+        return NeuronReceivesAlignedInput(
+                    my_precomputed_full_name,
+                    output_dir
+                    )
 
 
 ####################################################################################################
@@ -1317,7 +1354,7 @@ def __list_local_classes(items_list):
 def __list_static_methods_of_class(the_class):
     result = []
     for key, value in the_class.__dict__.items():
-        if isinstance(value, staticmethod):
+        if isinstance(value, staticmethod) and not key.startswith("_"):
             function = eval(the_class.__name__ + "." + key)
             result.append({
                 "class_name": str(the_class.__name__),
