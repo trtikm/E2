@@ -457,7 +457,7 @@ def interpolate_discrete_function(points, num_segment_inner_points=None):
 
 
 class AlignmentDispersionToSpikesHistory:
-    def __init__(self, exponent=1.0, scale=0.5):
+    def __init__(self, exponent=2.0, scale=0.5):
         self._exponent = exponent
         self._scale = scale
 
