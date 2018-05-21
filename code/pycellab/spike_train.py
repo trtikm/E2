@@ -364,3 +364,65 @@ def create(spiking_distribution,
                       recording_controller,
                       seed
                       )
+
+
+def create_default(
+        is_excitatory=True,
+        mean_frequency=None,
+        percentage_of_regularity_phases=None,
+        spiking_seed=None,
+        train_seed=None
+        ):
+    assert isinstance(is_excitatory, bool)
+    assert mean_frequency is None or (type(mean_frequency) in [int, float] and mean_frequency > 0.00001)
+    assert percentage_of_regularity_phases is None or type(percentage_of_regularity_phases) in [int, float]
+    if mean_frequency is None:
+        mean_frequency = 15.0 if is_excitatory else 60.0
+    if percentage_of_regularity_phases is None:
+        percentage_of_regularity_phases = 0.0
+    if is_excitatory:
+        distrib = distribution.hermit_distribution_with_desired_mean(
+                        1.0 / mean_frequency,
+                        0.003,
+                        0.3,
+                        0.0001,
+                        pow_y=2,
+                        seed=spiking_seed
+                        )
+    else:
+        distrib = distribution.hermit_distribution_with_desired_mean(
+                        1.0 / mean_frequency,
+                        0.001,
+                        0.08,
+                        0.0001,
+                        bin_size=0.0002,
+                        pow_y=2,
+                        seed=spiking_seed
+                        )
+    return create(distrib, percentage_of_regularity_phases, seed=train_seed)
+
+
+def create_aligned_train(
+        pivot,
+        alignment_coefficient,
+        is_excitatory,
+        dispersion_generator=None,
+        mean_frequency=None,
+        spiking_seed=None,
+        train_seed=None
+        ):
+    assert isinstance(pivot, SpikeTrain)
+    train = create_default(is_excitatory, mean_frequency, 0.0, spiking_seed, train_seed)
+    train.set_spike_history_alignment(pivot.get_spikes_history(), alignment_coefficient, dispersion_generator)
+    return train
+
+
+def merge_statistics(list_of_statistics):
+    assert isinstance(list_of_statistics, list) and all(isinstance(x, dict) for x in list_of_statistics)
+    D = SpikeTrain.get_initial_statistics().copy()
+    for key in D.keys():
+        for stats in list_of_statistics:
+            assert key in stats
+            D[key] += stats[key]
+    return D
+
