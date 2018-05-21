@@ -709,6 +709,184 @@ def _test_aligned_spike_trains(info):
     return 0    # No failures
 
 
+def _test_alignment_of_aligned_spike_trains(info):
+    """
+    Checks alignment of spike trains all aligned to a pivot
+    spike train. Test is conducted for several alignment
+    coefficients.
+    """
+    assert isinstance(info, TestInfo)
+
+    seed = 0
+
+    def get_next_seed():
+        nonlocal seed
+        seed += 1
+        return seed
+
+    numpy.random.seed(get_next_seed())
+
+    def make_spike_train(is_excitatory=True, mean_frequency=None, percentage_of_regularity_phases=None, seed=None):
+        if mean_frequency is None:
+            mean_frequency = 15.0 if is_excitatory else 60.0
+        if percentage_of_regularity_phases is None:
+            percentage_of_regularity_phases = 0.0
+        return spike_train.create(
+                    distribution.hermit_distribution_with_desired_mean(1.0 / mean_frequency, 0.003, 0.3, 0.0001, pow_y=2, seed=seed)
+                        if is_excitatory
+                        else distribution.hermit_distribution_with_desired_mean(1.0 / mean_frequency, 0.001, 0.08, 0.0001, bin_size=0.0002, pow_y=2, seed=seed),
+                    percentage_of_regularity_phases
+                    )
+
+    pivot_trains = [
+        (make_spike_train(True, seed=get_next_seed()), "epivot"),
+        (make_spike_train(False, seed=get_next_seed()), "ipivot"),
+        ]
+
+    nsteps = 1000000
+    dt = 0.0001
+    start_time = 0.0
+
+    def simulate_trains(trains):
+        t = start_time
+        for step in range(nsteps):
+            utility.print_progress_string(step, nsteps)
+            for train, _ in trains:
+                train.on_time_step(t, dt)
+            t += dt
+
+    print("Simulating pivot trains")
+    simulate_trains(pivot_trains)
+
+    def make_aligned_train(
+            pivot, alignment_coefficient, dispersion_fn,
+            is_excitatory=True, mean_frequency=None, seed=None
+            ):
+        assert isinstance(pivot, spike_train.SpikeTrain)
+        train = make_spike_train(is_excitatory, mean_frequency, 0.0, seed)
+        train.set_spike_history_alignment(pivot.get_spikes_history(), alignment_coefficient, dispersion_fn)
+        return train
+
+    dispersion_fn = datalgo.AlignmentDispersionToSpikesHistory(2.0)
+
+    other_trains = [[(make_aligned_train(pivot, coef, dispersion_fn, kind, seed=get_next_seed()),
+                      kname + str(idx) + "_" + format(coef, ".2f"))
+                        for kind, kname in [(True, "e"), (False, "i")]
+                        for idx in range(2)
+                        for coef in [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0]
+                        ] for pivot, _ in pivot_trains]
+
+    print("Simulating other trains")
+    simulate_trains([train for pivot_trains in other_trains for train in pivot_trains])
+
+    print("Saving results:")
+    for pivot_desc_pair, pivot_trains in zip(pivot_trains, other_trains):
+        pivot = pivot_desc_pair[0]
+        pivot_desc = pivot_desc_pair[1]
+        outdir = os.path.join(info.output_dir, pivot_desc)
+        os.makedirs(outdir, exist_ok=True)
+        print("    Saving statistics of spike train: " + pivot_desc)
+        with open(os.path.join(outdir, "stats_" + pivot_desc + ".json"), "w") as ofile:
+            ofile.write(json.dumps({"configuration": pivot.get_configuration(), "statistics": pivot.get_statistics()},
+                                   sort_keys=True,
+                                   indent=4))
+        print("    Saving spike event distributions of spike train: " + pivot_desc)
+        plot.histogram(
+            datalgo.make_histogram(
+                datalgo.make_difference_events(pivot.get_spikes_history()),
+                dt,
+                start_time
+                ),
+            os.path.join(outdir, "distrib_" + pivot_desc + ".png"),
+            normalised=False
+            )
+        for i in range(len(pivot_trains)):
+            train_i, desc_i = pivot_trains[i]
+            print("    Saving statistics of spike train: " + desc_i)
+            with open(os.path.join(outdir, "stats_" + desc_i + ".json"), "w") as ofile:
+                ofile.write(json.dumps({"configuration": train_i.get_configuration(),
+                                        "statistics": train_i.get_statistics()},
+                                       sort_keys=True,
+                                       indent=4))
+            print("    Saving spike event distributions of spike train: " + desc_i)
+            plot.histogram(
+                datalgo.make_histogram(
+                    datalgo.make_difference_events(train_i.get_spikes_history()),
+                    dt,
+                    start_time
+                    ),
+                os.path.join(outdir, "distrib_" + desc_i + ".png"),
+                normalised=False
+                )
+
+            print("    Saving alignment histogram: " + desc_i + " VS " + pivot_desc)
+            hist_pair = datalgo.make_alignment_histograms_of_spike_histories(
+                                train_i.get_spikes_history(),
+                                pivot.get_spikes_history(),
+                                0.005,
+                                dt / 2.0
+                                )
+            plot.histogram(
+                hist_pair[0],
+                os.path.join(outdir, "hist_" + desc_i + "_vs_" + pivot_desc + ".png"),
+                normalised=False
+                )
+
+            for j in range(i + 1, len(pivot_trains)):
+                train_j, desc_j = pivot_trains[j]
+
+                print("    Saving alignment histogram: " + desc_i + " VS " + desc_j)
+                hist_pair = datalgo.make_alignment_histograms_of_spike_histories(
+                                    train_i.get_spikes_history(),
+                                    train_j.get_spikes_history(),
+                                    0.005,
+                                    dt / 2.0
+                                    )
+                # plot.histogram(
+                #     hist_pair[0],
+                #     os.path.join(outdir, "hist_" + desc_i + "_vs_" + desc_j + ".png"),
+                #     normalised=False
+                #     )
+                # plot.histogram(
+                #     hist_pair[1],
+                #     os.path.join(outdir, "hist_" + desc_j + "_vs_" + desc_i + ".png")
+                #     )
+
+                print("    Saving alignment curve: " + desc_i + " VS " + desc_j)
+                with plot.Plot(os.path.join(outdir, "curve_" + desc_i + "_vs_" + desc_j + ".png")) as plt:
+                    plt.curve(
+                        datalgo.interpolate_discrete_function(
+                            datalgo.approximate_discrete_function(
+                                distribution.Distribution(hist_pair[0]).get_probability_points()
+                                )
+                            ),
+                        legend=desc_i + " -> " + desc_j
+                        )
+                    plt.curve(
+                        datalgo.interpolate_discrete_function(
+                            datalgo.approximate_discrete_function(
+                                distribution.Distribution(hist_pair[1]).get_probability_points()
+                                )
+                            ),
+                        legend=desc_j + " -> " + desc_i
+                        )
+        plot.event_board_per_partes(
+            [pivot.get_spikes_history()] + [train.get_spikes_history() for train, _ in pivot_trains],
+            os.path.join(outdir, "spikes_board.png"),
+            start_time,
+            start_time + nsteps * dt,
+            1.0,
+            5,
+            lambda p: print("    Saving spikes board part: " + os.path.basename(p)),
+            [[plot.get_random_rgb_colour()] * len(pivot.get_spikes_history())] +
+                [[plot.get_random_rgb_colour()] * len(train.get_spikes_history())
+                 for train, _ in pivot_trains],
+            " " + plot.get_title_placeholder() + " SPIKES BOARD"
+            )
+
+    return 0    # No failures
+
+
 ####################################################################################################
 ####################################################################################################
 ####################################################################################################
