@@ -1898,20 +1898,39 @@ def evaluate_neuron_receives_aligned_input(cfg, force_recompute, dependencies):
                 [synapse.Synapse.constant() for _ in range(len(cfg.inhibitory_trains))],
                 cfg.num_sub_iterations,
                 cfg.start_time,
-                None
+                neuron.RecordingConfig(do_recording_of_key_variables_only=False)
                 )
+
+    voltage_curve_excitatory = []
+    voltage_curve_inhibitory = []
+    voltage_curve = []
+
     t = cfg.start_time
     for step in range(cfg.nsteps):
         utility.print_progress_string(step, cfg.nsteps)
         cell.integrate(t, cfg.dt)
+
+        num_excitatory_spikes = 0
         for i in range(len(cfg.excitatory_trains)):
             was_spike_generated = cfg.excitatory_trains[i].on_time_step(t, cfg.dt)
             if was_spike_generated:
                 cell.on_excitatory_spike(i)
+                num_excitatory_spikes += 1
+        if num_excitatory_spikes > 0:
+            voltage_curve_excitatory.append((t + cfg.dt, num_excitatory_spikes))
+
+        num_inhibitory_spikes = 0
         for i in range(len(cfg.inhibitory_trains)):
             was_spike_generated = cfg.inhibitory_trains[i].on_time_step(t, cfg.dt)
             if was_spike_generated:
                 cell.on_inhibitory_spike(i)
+                num_inhibitory_spikes += 1
+        if num_inhibitory_spikes > 0:
+            voltage_curve_inhibitory.append((t + cfg.dt, num_inhibitory_spikes))
+
+        if num_excitatory_spikes > 0 or num_inhibitory_spikes > 0:
+            voltage_curve.append((t + cfg.dt, num_excitatory_spikes - num_inhibitory_spikes))
+
         t += cfg.dt
 
     tmprof_cell_simulation = time.time()
@@ -1989,6 +2008,61 @@ def evaluate_neuron_receives_aligned_input(cfg, force_recompute, dependencies):
                                                      + [[plot.get_random_rgb_colour()] * len(spikes_history)
                                                         for spikes_history in i_board_histories],
         " " + plot.get_title_placeholder() + " SPIKES BOARD"
+        )
+
+    for kind, curve, colour in [("excitatory", voltage_curve_excitatory, get_colour_pre_excitatory()),
+                                ("inhibitory", voltage_curve_inhibitory, get_colour_pre_inhibitory())]:
+        pathname = os.path.join(cfg.output_dir, "voltage_effect_curve_" + kind + ".json")
+        print("    Saving voltage effect curve of " + kind + " spike trains in JSON format.")
+        with open(pathname, "w") as ofile:
+            ofile.write(json.dumps(curve, sort_keys=True, indent=4))
+        plot.curve_per_partes(
+            datalgo.reduce_gaps_between_points_along_x_axis(curve, cfg.dt),
+            os.path.join(cfg.output_dir, "voltage_effect_curve_" + kind + cfg.plot_files_extension),
+            cfg.start_time,
+            cfg.start_time + cfg.nsteps * cfg.dt,
+            cfg.plot_time_step,
+            5,
+            lambda p: print("    Saving plot " + p),
+            colour,
+            plot.get_title_placeholder()
+            )
+        pathname = os.path.join(cfg.output_dir, "voltage_effect_histogram" + kind + ".json")
+        print("    Saving voltage effect histogram of " + kind + " spike trains in JSON format.")
+        voltage_histogram = datalgo.make_histogram([p[1] for p in curve], 1.0, 0.0)
+        with open(pathname, "w") as ofile:
+            ofile.write(json.dumps(voltage_histogram, sort_keys=True, indent=4))
+        plot.histogram(
+            voltage_histogram,
+            os.path.join(cfg.output_dir, "voltage_effect_histogram_" + kind + cfg.plot_files_extension),
+            colours=colour,
+            normalised=False
+            )
+    pathname = os.path.join(cfg.output_dir, "voltage_effect_curve" + ".json")
+    print("    Saving voltage effect curve of all spike trains in JSON format to " + pathname)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(voltage_curve, sort_keys=True, indent=4))
+    plot.curve_per_partes(
+        datalgo.reduce_gaps_between_points_along_x_axis(voltage_curve, cfg.dt),
+        os.path.join(cfg.output_dir, "voltage_effect_curve" + cfg.plot_files_extension),
+        cfg.start_time,
+        cfg.start_time + cfg.nsteps * cfg.dt,
+        cfg.plot_time_step,
+        5,
+        lambda p: print("    Saving plot " + p),
+        get_colour_pre_excitatory_and_inhibitory(),
+        plot.get_title_placeholder()
+        )
+    pathname = os.path.join(cfg.output_dir, "voltage_effect_histogram" + ".json")
+    print("    Saving voltage effect histogram of all spike trains in JSON format to " + pathname)
+    voltage_histogram = datalgo.make_histogram([p[1] for p in voltage_curve], 1.0, 0.0)
+    with open(pathname, "w") as ofile:
+        ofile.write(json.dumps(voltage_histogram, sort_keys=True, indent=4))
+    plot.histogram(
+        voltage_histogram,
+        os.path.join(cfg.output_dir, "voltage_effect_histogram" + cfg.plot_files_extension),
+        colours=get_colour_pre_excitatory_and_inhibitory(),
+        normalised=False
         )
 
     tmprof_end = time.time()

@@ -1319,9 +1319,9 @@ class NeuronReceivesAlignedInput(CommonProps):
         num_excitatory_trains = 4 * 100
         num_inhibitory_trains = 1 * 100
 
-        self.excitatory_trains = [spike_train.create_aligned_train(self.pivot_train, 1.0, True)
+        self.excitatory_trains = [spike_train.create_aligned_train(self.pivot_train, 0.5, True)
                                   for _ in range(num_excitatory_trains)]
-        self.inhibitory_trains = [spike_train.create_aligned_train(self.pivot_train, 1.0, False)
+        self.inhibitory_trains = [spike_train.create_aligned_train(self.pivot_train, 0.5, False)
                                   for _ in range(num_inhibitory_trains)]
 
     @staticmethod
