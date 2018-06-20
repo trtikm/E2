@@ -863,15 +863,16 @@ class EffectOfInputSpikeTrains:
             ]
         excitatory_percentages = [
             89.0,
-            86.0,
-            83.0,
+            # 86.0,
+            # 83.0,
             80.0,
-            77.0,
-            74.0,
+            # 77.0,
+            # 74.0,
             71.0
         ]
         histograms = [
-            distribution.hermit_distribution_histogram(0.5, 100.0, 100.0, 1.0, 0.0, 1.0),
+            {0.0: 1.0},
+            # distribution.hermit_distribution_histogram(0.5, 100.0, 100.0, 1.0, 0.0, 1.0),
         ]
         return EffectOfInputSpikeTrains(
             [EffectOfInputSpikeTrains.ConstructionData(

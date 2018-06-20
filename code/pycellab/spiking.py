@@ -1210,7 +1210,7 @@ def _evaluate_configuration_of_input_spike_trains(construction_data):
             colour,
             plot.get_title_placeholder()
             )
-        pathname = os.path.join(cfg.output_dir, "voltage_effect_histogram" + kind + ".json")
+        pathname = os.path.join(cfg.output_dir, "voltage_effect_histogram_" + kind + ".json")
         print("    Saving voltage effect histogram of " + kind + " spike trains in JSON format to " + pathname)
         voltage_histogram = datalgo.make_histogram([p[1] for p in curve], 1.0, 0.0)
         with open(pathname, "w") as ofile:
