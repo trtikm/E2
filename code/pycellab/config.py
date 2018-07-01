@@ -718,7 +718,8 @@ class EffectOfInputSpikeTrains:
                 num_plots_of_excitatory_trains=10,
                 num_plots_of_inhibitory_trains=10,
                 plot_time_step=1.0,
-                num_plots_parts=10
+                num_plots_parts=10,
+                plot_files_extension=None
                 ):
             assert type(num_seconds_to_simulate) in [int, float] and num_seconds_to_simulate > 0
             return EffectOfInputSpikeTrains.Configuration(
@@ -745,7 +746,7 @@ class EffectOfInputSpikeTrains:
                     ),
                 plot_time_step=plot_time_step,
                 num_plots_parts=num_plots_parts,
-                plot_files_extension=".png",
+                plot_files_extension=".png" if plot_files_extension is None else plot_files_extension,
                 )
 
     class ConstructionData:
@@ -762,7 +763,8 @@ class EffectOfInputSpikeTrains:
                 num_plots_of_excitatory_trains=10,
                 num_plots_of_inhibitory_trains=10,
                 plot_time_step=1.0,
-                num_plots_parts=10
+                num_plots_parts=10,
+                plot_files_extension=None
                 ):
             self._name = name
             self._output_dir = output_dir
@@ -776,12 +778,16 @@ class EffectOfInputSpikeTrains:
             self._num_plots_of_inhibitory_trains = num_plots_of_inhibitory_trains
             self._plot_time_step = plot_time_step
             self._num_plots_parts = num_plots_parts
+            self._plot_files_extension = ".png" if plot_files_extension is None else plot_files_extension
 
         def get_name(self):
             return os.path.join(self._name, self._sub_dir)
 
         def get_output_root_dir(self):
             return os.path.join(self._output_dir, self.get_name())
+
+        def get_plot_files_extension(self):
+            return self._plot_files_extension
 
         def apply(self):
             return EffectOfInputSpikeTrains.Configuration.create(
@@ -795,7 +801,8 @@ class EffectOfInputSpikeTrains:
                 self._num_plots_of_excitatory_trains,
                 self._num_plots_of_inhibitory_trains,
                 self._plot_time_step,
-                self._num_plots_parts
+                self._num_plots_parts,
+                self._plot_files_extension
                 )
 
         def to_json(self):
@@ -817,7 +824,7 @@ class EffectOfInputSpikeTrains:
             }
 
     def __init__(self, list_of_construction_data):
-        assert isinstance(list_of_construction_data, list)
+        assert isinstance(list_of_construction_data, list) and len(list_of_construction_data) > 0
         assert all(isinstance(data, EffectOfInputSpikeTrains.ConstructionData) for data in list_of_construction_data)
         self._list_of_construction_data = list_of_construction_data
         self._output_dirs = [os.path.abspath(cfg.get_output_root_dir()) for cfg in self.get_list_of_construction_data()]
@@ -831,6 +838,9 @@ class EffectOfInputSpikeTrains:
 
     def get_interconfig_output_dir(self):
         return self._interconfig_output_dir
+
+    def get_plot_files_extension(self):
+        return self.get_list_of_construction_data()[0].get_plot_files_extension()
 
     @staticmethod
     def all_in_one(my_precomputed_full_name, output_dir):
