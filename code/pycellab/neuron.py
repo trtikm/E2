@@ -134,3 +134,17 @@ class Neuron:
                                    if self.get_recording_config().key_variables_only
                                    else self._inhibitory_synapses[i].get_variables()).items():
                     self._inhibitory_synapses_recording[i][key].append((t + dt, value))
+
+
+def get_average_excitation_level(
+        num_excitatory_input_trains,
+        num_inhibitory_input_trains,
+        spiking_frequency_of_excitatory_neouron=15.0,
+        spiking_frequency_of_inhibitory_neouron=60.0
+        ):
+    assert type(num_excitatory_input_trains, int) and num_excitatory_input_trains >= 0
+    assert type(num_inhibitory_input_trains, int) and num_inhibitory_input_trains >= 0
+    assert spiking_frequency_of_excitatory_neouron >= 1
+    assert spiking_frequency_of_inhibitory_neouron >= 1
+    return (spiking_frequency_of_excitatory_neouron * num_excitatory_input_trains -
+            spiking_frequency_of_inhibitory_neouron * num_inhibitory_input_trains) / 1000.0
