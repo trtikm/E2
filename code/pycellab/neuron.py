@@ -1,3 +1,6 @@
+import numpy
+
+
 class RecordingConfig:
     def __init__(self,
                  do_recording_of_post_synaptic_spikes=True,
@@ -148,3 +151,8 @@ def get_average_excitation_level(
     assert spiking_frequency_of_inhibitory_neouron >= 1
     return (spiking_frequency_of_excitatory_neouron * num_excitatory_input_trains -
             spiking_frequency_of_inhibitory_neouron * num_inhibitory_input_trains) / 1000.0
+
+
+def get_99percent_diversion_from_average_excitation_level(num_excitatory_input_trains):
+    assert num_excitatory_input_trains >= 0
+    return numpy.sqrt(num_excitatory_input_trains / 3.5)

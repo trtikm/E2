@@ -1379,18 +1379,40 @@ def _compute_interconfig_for_effect_of_input_spike_trains(cfg):
                 }, sort_keys=True, indent=4)
             )
         for percentage in surface_points.keys():
-            for s_kind in [
-                    ("lo", "neuron excitation lower bound"),
-                    ("hi", "neuron excitation upper bound"),
-                    ("mean", "neuron average excitation")
-                    ]:
-                plot.curve(
-                    sorted(surface_points[percentage][s_kind[0]], key=lambda x: x[0]),
-                    os.path.join(plots_dir, "voltage_surface_" + s_kind[0] + "_" + str(percentage) + "e" + cfg.get_plot_files_extension()),
-                    title="Neuron excitation when " + str(percentage) + "% of trains are excitatory",
+            with plot.Plot(
+                    os.path.join(plots_dir, "voltage_surface_" + str(percentage) + "e" + cfg.get_plot_files_extension()),
+                    title="Input voltage level on a neuron when " + str(percentage) + "% of trains are excitatory",
                     xaxis_name="number of excitatory input trains",
-                    faxis_name=s_kind[1]
-                    )
+                    faxis_name="input voltage level"
+                    ) as plt:
+                for s_kind in [("lo", "lower bound"), ("hi", "upper bound"), ("mean", "average")]:
+                    plt.curve(sorted(surface_points[percentage][s_kind[0]], key=lambda x: x[0]), legend=s_kind[1])
+            with plot.Plot(
+                    os.path.join(plots_dir, "voltage_surface_" + str(percentage) + "e_diff" + cfg.get_plot_files_extension()),
+                    title="Input voltage difference from mean on a neuron when " + str(percentage) + "% of trains are excitatory",
+                    xaxis_name="number of excitatory input trains",
+                    faxis_name="input voltage level"
+                    ) as plt:
+                mean_points = surface_points[percentage]["mean"]
+                for s_kind in [("lo", "lower bound"), ("hi", "upper bound")]:
+                    s_points = surface_points[percentage][s_kind[0]]
+                    assert len(s_points) == len(mean_points)
+                    diff_points = [(s_points[i][0], s_points[i][1] - mean_points[i][1])
+                                   for i in range(len(surface_points[percentage]["mean"]))]
+                    plt.curve(sorted(diff_points, key=lambda x: x[0]), legend=s_kind[1])
+            with plot.Plot(
+                    os.path.join(plots_dir, "voltage_99percent_bounds_" + cfg.get_plot_files_extension()),
+                    title="Input voltage 99% bounds from mean voltage",
+                    xaxis_name="number of excitatory input trains",
+                    faxis_name="voltage 99% bound"
+                    ) as plt:
+                num_points = 500
+                dx = max(surface_points[percentage]["mean"], key=lambda x: x[0])[0] / num_points
+                hi_points = [(i * dx, neuron.get_99percent_diversion_from_average_excitation_level(i * dx))
+                             for i in range(num_points + 1)]
+                lo_points = [(p[0], -p[1]) for p in hi_points]
+                plt.curve(lo_points, legend="99% lower bound")
+                plt.curve(hi_points, legend="99% upper bound")
 
     tmprof_end = time.time()
     print("  Done in " + utility.duration_string(tmprof_begin, tmprof_end) + " seconds.")
