@@ -15,6 +15,8 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/angeo/shape.hpp
     ./src/shape.cpp
+
+    ./include/angeo/proximity_map.hpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
