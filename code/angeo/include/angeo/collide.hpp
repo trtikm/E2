@@ -20,6 +20,14 @@ namespace angeo {
  * @return A parameter to the closest point to the passed one.
  *         Value 0.0f means it is 'line_begin' and value 1.0f
  *         means it is line_end.
+ *
+ * NOTE: This algorithm can be used to compute collision of the line and sphere (the point being
+ *       the centre). Use comparison |*output_closest_point - point| <= sphere_radius.
+ *
+ * NOTE: This algorithm can be used to compute collision of a capsule (the line being its axis)
+ *        and sphere (the point being the centre). Use comparison
+ *        |*output_closest_point - point| <= sphere_radius + capsule_radius.
+ *
  */
 float_32_bit  closest_point_on_line_to_point(
         vector3 const&  line_begin,
@@ -30,10 +38,17 @@ float_32_bit  closest_point_on_line_to_point(
 
 
 /**
- * It computes the point of the passed boundig box which is the closes one to the passed point.
+ * It computes the point of the passed axis-aligned boundig box which is the closes to the passed point.
  *
  * @param output_closest_point  Reference to a memory where the nearest point will be stored.
  *                              The references point and output_closest_point may be aliased.
+ *
+ * NOTE: This algorithm can be used to compute collision of a box (transformed into space where it becomes
+ *       the passed axis aligned bounding box) and sphere (the point being the centre).
+ *       Use comparison |output_closest_point - point| <= sphere_radius.
+ *
+ * NOTE: The second function detects whether there is a non-empty intersection.
+ *
  */
 void  closest_point_of_bbox_to_point(
         vector3 const&  bbox_low_corner,
@@ -44,12 +59,8 @@ void  closest_point_of_bbox_to_point(
 
 
 /**
- *
- * @param point
- * @param bbox_low_corner
- * @param bbox_high_corner
- * @return
- */
+* Returns false iff the point is outside the axis-aligned bounding box.
+*/
 bool  collision_point_and_bbox(
         vector3 const&  point,
         vector3 const&  bbox_low_corner,
@@ -73,6 +84,10 @@ bool  collision_point_and_bbox(
  * @param output_nearest_point_in_plane
  *              It is the point on the plane which is the nearest to the passed point.
  *              The value nullptr can be passed indicating 'not interested in this output'.
+ *
+ * NOTE: This algorithm can be used to compute collision of a the plane and a sphere (the point being the centre).
+ *       Use comparison *output_distance_to_plane <= sphere_radius.
+ *
  */
 void  collision_point_and_plane(
         vector3 const&  point,
@@ -157,10 +172,15 @@ bool  clip_line_into_bbox(
 
 
 /**
+ * Computes and intersection of two axis-aligned bounding boxes.
+ *
  * Aliasing of any "intersection_bbox_*_corner" with any "bbox_*_*_corner" is allowed. In that
  * case the "bbox_*_*_corner" will be overwritten by the alliased "intersection_bbox_*_corner".
  * However, if "intersection_bbox_low_corner" and "intersection_bbox_high_corner" are aliased,
  * then the result is undefined.
+ *
+ * NOTE: the second function only detects whether there is a non-empty intersection.
+ *
  */
 bool  collision_bbox_bbox(
         vector3 const&  bbox_0_low_corner,
@@ -170,8 +190,6 @@ bool  collision_bbox_bbox(
         vector3&  intersection_bbox_low_corner,
         vector3&  intersection_bbox_high_corner
         );
-
-
 bool  collision_bbox_bbox(
         vector3 const&  bbox_0_low_corner,
         vector3 const&  bbox_0_high_corner,
