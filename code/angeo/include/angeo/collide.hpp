@@ -38,6 +38,75 @@ float_32_bit  closest_point_on_line_to_point(
 
 
 /**
+* It computes one or two pairs of closest points on the passed lines. The case when two pairs are
+* returned may only occur when both lines are parallel. Each point in each pair can be obtained
+* directly and/or parameter of the point on the corresponding line can be obtained. 
+*
+* INPUT PARAMS:
+*
+* @param line_1_begin                   The first end point of the first line.
+* @param line_1_end                     The second end point of the first line.
+* 
+* @param line_2_begin                   The first end point of the second line.
+* @param line_2_end                     The second end point of the second line.
+*
+* OUTPUT PARAMS:
+*
+* output_line_1_closest_point_1         A pointer to memory where to write the first closest point on the first line.
+* output_line_1_closest_point_param_1   A pointer to memory where to write the parameter of first closest point on the first line.
+* output_line_2_closest_point_1         A pointer to memory where to write the first closest point on the second line.
+* output_line_2_closest_point_param_1   A pointer to memory where to write the parameter of first closest point on the second line.
+*
+* output_line_1_closest_point_2         A pointer to memory where to write the second closest point on the first line.
+* output_line_1_closest_point_param_2   A pointer to memory where to write the parameter of second closest point on the first line.
+* output_line_2_closest_point_2         A pointer to memory where to write the second closest point on the second line.
+* output_line_2_closest_point_param_2   A pointer to memory where to write the parameter of second closest point on the second line.
+*
+* RETURN VALUE:
+*
+* @return A number of pairs of closest points computed. The value can either be 1 or 2.
+*
+* NOTE: This algorithm can be used to compute collision of the line and sphere (the point being
+*       the centre). Use comparison |*output_closest_point - point| <= sphere_radius.
+*
+* NOTE: This algorithm can be used to compute collision of two capsules (the lines being their axes). Use comparison
+*       |*output_line_1_closest_point_1 - *output_line_2_closest_point_1| <= capsule_1_radius + capsule_2_radius.
+*       If 2 pairs are returned, then add also this comparion
+*       |*output_line_1_closest_point_2 - *output_line_2_closest_point_2| <= capsule_1_radius + capsule_2_radius.
+*
+*/
+natural_32_bit  closest_points_of_two_lines(
+        // INPUT SECTION:
+
+        // The first line
+        vector3 const&  line_1_begin,
+        vector3 const&  line_1_end,
+
+        // The second line
+        vector3 const&  line_2_begin,
+        vector3 const&  line_2_end,
+
+        // OUTPUT SECTION:
+
+        // Pair 1 of clossest points (always available):
+        // - the closest point on the first line
+        vector3*  output_line_1_closest_point_1,
+        float_32_bit*  output_line_1_closest_point_param_1,
+        // - the closest point on the second line
+        vector3*  output_line_2_closest_point_1,
+        float_32_bit*  output_line_2_closest_point_param_1,
+
+        // Pair 2 of clossest points (may be available only when both lines are parallel)
+        // - the closest point on the first line
+        vector3*  output_line_1_closest_point_2,
+        float_32_bit*  output_line_1_closest_point_param_2,
+        // - the closest point on the second line
+        vector3*  output_line_2_closest_point_2,
+        float_32_bit*  output_line_2_closest_point_param_2
+        );
+
+
+/**
  * It computes the point of the passed axis-aligned boundig box which is the closes to the passed point.
  *
  * @param output_closest_point  Reference to a memory where the nearest point will be stored.

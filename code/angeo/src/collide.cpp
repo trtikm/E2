@@ -29,6 +29,346 @@ float_32_bit  closest_point_on_line_to_point(
 }
 
 
+natural_32_bit  closest_points_of_two_lines(
+        vector3 const&  line_1_begin,
+        vector3 const&  line_1_end,
+        vector3 const&  line_2_begin,
+        vector3 const&  line_2_end,
+        vector3*  output_line_1_closest_point_1,
+        float_32_bit*  output_line_1_closest_point_param_1,
+        vector3*  output_line_2_closest_point_1,
+        float_32_bit*  output_line_2_closest_point_param_1,
+        vector3*  output_line_1_closest_point_2,
+        float_32_bit*  output_line_1_closest_point_param_2,
+        vector3*  output_line_2_closest_point_2,
+        float_32_bit*  output_line_2_closest_point_param_2
+        )
+{
+    vector3 const  u1 = line_1_end - line_1_begin;
+    vector3 const  u2 = line_2_end - line_2_begin;
+    vector3 const  u12 = line_1_begin - line_2_begin;
+
+    vector3 const  n = cross_product(u1, u2);
+    float_32_bit const  n_dot = dot_product(n, n); 
+
+    if (n_dot < 0.00001f)
+    {
+        // Lines are (almost) parallel.
+
+        float_32_bit const  u1u2_dot = dot_product(u1, u2);
+
+        // Solve for k2_begin:  u2 * (line_1_begin + k2_begin * u1 - line_2_begin) = 0
+        float_32_bit const  k2_begin = -dot_product(u2, u12) / u1u2_dot;
+
+        // Solve for k2_end:  u2 * (line_1_begin + k2_end * u1 - line_2_end) = 0
+        float_32_bit const  k2_end = -dot_product(u2, line_1_begin - line_2_end) / u1u2_dot;
+
+        if (k2_begin <= k2_end)
+        {
+            if (k2_end <= 0.0f)
+            {
+                if (output_line_1_closest_point_param_1 != nullptr)
+                    *output_line_1_closest_point_param_1 = 0.0f;
+                if (output_line_1_closest_point_1 != nullptr)
+                    *output_line_1_closest_point_1 = line_1_begin;
+
+                if (output_line_2_closest_point_param_1 != nullptr)
+                    *output_line_2_closest_point_param_1 = 1.0f;
+                if (output_line_2_closest_point_1 != nullptr)
+                    *output_line_2_closest_point_1 = line_2_end;
+
+                return 1U;  // There is only 1 pair of closest points (1 point on each line)
+            }
+
+            if (k2_begin >= 1.0f)
+            {
+                if (output_line_1_closest_point_param_1 != nullptr)
+                    *output_line_1_closest_point_param_1 = 1.0f;
+                if (output_line_1_closest_point_1 != nullptr)
+                    *output_line_1_closest_point_1 = line_1_end;
+
+                if (output_line_2_closest_point_param_1 != nullptr)
+                    *output_line_2_closest_point_param_1 = 0.0f;
+                if (output_line_2_closest_point_1 != nullptr)
+                    *output_line_2_closest_point_1 = line_2_begin;
+
+                return 1U;  // There is only 1 pair of closest points (1 point on each line)
+            }
+
+            float_32_bit  dummy;
+
+            if (k2_begin <= 0.0f)
+                if (k2_end <= 1.0f)
+                {
+                    // Pair 1
+
+                    if (output_line_1_closest_point_param_1 != nullptr)
+                        *output_line_1_closest_point_param_1 = 0.0f;
+                    if (output_line_1_closest_point_1 != nullptr)
+                        *output_line_1_closest_point_1 = line_1_begin;
+
+                    *((output_line_2_closest_point_param_1 != nullptr) ? output_line_2_closest_point_param_1 : &dummy) =
+                        closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_begin, output_line_2_closest_point_1);
+
+                    // Pair 2
+
+                    if (output_line_1_closest_point_param_2 != nullptr)
+                        *output_line_1_closest_point_param_2 = k2_end;
+                    if (output_line_1_closest_point_2 != nullptr)
+                        *output_line_1_closest_point_2 = line_1_begin + k2_end * u1;
+
+                    if (output_line_2_closest_point_param_2 != nullptr)
+                        *output_line_2_closest_point_param_2 = 1.0f;
+                    if (output_line_2_closest_point_2 != nullptr)
+                        *output_line_2_closest_point_2 = line_2_end;
+                }
+                else
+                {
+                    // Pair 1
+
+                    if (output_line_1_closest_point_param_1 != nullptr)
+                        *output_line_1_closest_point_param_1 = 0.0f;
+                    if (output_line_1_closest_point_1 != nullptr)
+                        *output_line_1_closest_point_1 = line_1_begin;
+
+                    *((output_line_2_closest_point_param_1 != nullptr) ? output_line_2_closest_point_param_1 : &dummy) =
+                        closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_begin, output_line_2_closest_point_1);
+
+                    // Pair 2
+
+                    if (output_line_1_closest_point_param_2 != nullptr)
+                        *output_line_1_closest_point_param_2 = 1.0f;
+                    if (output_line_1_closest_point_2 != nullptr)
+                        *output_line_1_closest_point_2 = line_1_end;
+
+                    *((output_line_2_closest_point_param_2 != nullptr) ? output_line_2_closest_point_param_2 : &dummy) =
+                        closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_end, output_line_2_closest_point_2);
+
+                }
+            else // k2_begin < 1.0f
+                if (k2_end <= 1.0f)
+                {
+                    // Pair 1
+
+                    if (output_line_1_closest_point_param_1 != nullptr)
+                        *output_line_1_closest_point_param_1 = k2_begin;
+                    if (output_line_1_closest_point_1 != nullptr)
+                        *output_line_1_closest_point_1 = line_1_begin + k2_begin * u1;
+
+                    if (output_line_2_closest_point_param_1 != nullptr)
+                        *output_line_2_closest_point_param_1 = 0.0f;
+                    if (output_line_2_closest_point_1 != nullptr)
+                        *output_line_2_closest_point_1 = line_2_begin;
+
+                    // Pair 2
+
+                    if (output_line_1_closest_point_param_2 != nullptr)
+                        *output_line_1_closest_point_param_2 = k2_end;
+                    if (output_line_1_closest_point_2 != nullptr)
+                        *output_line_1_closest_point_2 = line_1_begin + k2_end * u1;
+
+                    if (output_line_2_closest_point_param_2 != nullptr)
+                        *output_line_2_closest_point_param_2 = 1.0f;
+                    if (output_line_2_closest_point_2 != nullptr)
+                        *output_line_2_closest_point_2 = line_2_end;
+                }
+                else
+                {
+                    // Pair 1
+
+                    if (output_line_1_closest_point_param_1 != nullptr)
+                        *output_line_1_closest_point_param_1 = k2_begin;
+                    if (output_line_1_closest_point_1 != nullptr)
+                        *output_line_1_closest_point_1 = line_1_begin + k2_begin * u1;
+
+                    if (output_line_2_closest_point_param_1 != nullptr)
+                        *output_line_2_closest_point_param_1 = 0.0f;
+                    if (output_line_2_closest_point_1 != nullptr)
+                        *output_line_2_closest_point_1 = line_2_begin;
+
+                    // Pair 2
+
+                    if (output_line_1_closest_point_param_2 != nullptr)
+                        *output_line_1_closest_point_param_2 = 1.0f;
+                    if (output_line_1_closest_point_2 != nullptr)
+                        *output_line_1_closest_point_2 = line_1_end;
+
+                    *((output_line_2_closest_point_param_2 != nullptr) ? output_line_2_closest_point_param_2 : &dummy) =
+                        closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_end, output_line_2_closest_point_2);
+                }
+        }
+        else
+        {
+            if (k2_begin <= 0.0f)
+            {
+                if (output_line_1_closest_point_param_1 != nullptr)
+                    *output_line_1_closest_point_param_1 = 0.0f;
+                if (output_line_1_closest_point_1 != nullptr)
+                    *output_line_1_closest_point_1 = line_1_begin;
+
+                if (output_line_2_closest_point_param_1 != nullptr)
+                    *output_line_2_closest_point_param_1 = 0.0f;
+                if (output_line_2_closest_point_1 != nullptr)
+                    *output_line_2_closest_point_1 = line_2_begin;
+
+                return 1U;  // There is only 1 pair of closest points (1 point on each line)
+            }
+
+            if (k2_end >= 1.0f)
+            {
+                if (output_line_1_closest_point_param_1 != nullptr)
+                    *output_line_1_closest_point_param_1 = 1.0f;
+                if (output_line_1_closest_point_1 != nullptr)
+                    *output_line_1_closest_point_1 = line_1_end;
+
+                if (output_line_2_closest_point_param_1 != nullptr)
+                    *output_line_2_closest_point_param_1 = 1.0f;
+                if (output_line_2_closest_point_1 != nullptr)
+                    *output_line_2_closest_point_1 = line_2_end;
+
+                return 1U;  // There is only 1 pair of closest points (1 point on each line)
+            }
+
+            float_32_bit  dummy;
+
+            if (k2_end <= 0.0f)
+                if (k2_begin <= 1.0f)
+                {
+                    // Pair 1
+
+                    if (output_line_1_closest_point_param_1 != nullptr)
+                        *output_line_1_closest_point_param_1 = 0.0f;
+                    if (output_line_1_closest_point_1 != nullptr)
+                        *output_line_1_closest_point_1 = line_1_begin;
+
+                    *((output_line_2_closest_point_param_1 != nullptr) ? output_line_2_closest_point_param_1 : &dummy) =
+                        closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_begin, output_line_2_closest_point_1);
+
+                    // Pair 2
+
+                    if (output_line_1_closest_point_param_2 != nullptr)
+                        *output_line_1_closest_point_param_2 = k2_begin;
+                    if (output_line_1_closest_point_2 != nullptr)
+                        *output_line_1_closest_point_2 = line_1_begin + k2_begin * u1;
+
+                    if (output_line_2_closest_point_param_2 != nullptr)
+                        *output_line_2_closest_point_param_2 = 0.0f;
+                    if (output_line_2_closest_point_2 != nullptr)
+                        *output_line_2_closest_point_2 = line_2_begin;
+                }
+                else
+                {
+                    // Pair 1
+
+                    if (output_line_1_closest_point_param_1 != nullptr)
+                        *output_line_1_closest_point_param_1 = 0.0f;
+                    if (output_line_1_closest_point_1 != nullptr)
+                        *output_line_1_closest_point_1 = line_1_begin;
+
+                    *((output_line_2_closest_point_param_1 != nullptr) ? output_line_2_closest_point_param_1 : &dummy) =
+                        closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_begin, output_line_2_closest_point_1);
+
+                    // Pair 2
+
+                    if (output_line_1_closest_point_param_2 != nullptr)
+                        *output_line_1_closest_point_param_2 = 1.0f;
+                    if (output_line_1_closest_point_2 != nullptr)
+                        *output_line_1_closest_point_2 = line_1_end;
+
+                    *((output_line_2_closest_point_param_2 != nullptr) ? output_line_2_closest_point_param_2 : &dummy) =
+                        closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_end, output_line_2_closest_point_2);
+
+                }
+            else // k2_end < 1.0f
+                if (k2_begin <= 1.0f)
+                {
+                    // Pair 1
+
+                    if (output_line_1_closest_point_param_1 != nullptr)
+                        *output_line_1_closest_point_param_1 = k2_end;
+                    if (output_line_1_closest_point_1 != nullptr)
+                        *output_line_1_closest_point_1 = line_1_begin + k2_end * u1;
+
+                    if (output_line_2_closest_point_param_1 != nullptr)
+                        *output_line_2_closest_point_param_1 = 1.0f;
+                    if (output_line_2_closest_point_1 != nullptr)
+                        *output_line_2_closest_point_1 = line_2_end;
+
+                    // Pair 2
+
+                    if (output_line_1_closest_point_param_2 != nullptr)
+                        *output_line_1_closest_point_param_2 = k2_begin;
+                    if (output_line_1_closest_point_2 != nullptr)
+                        *output_line_1_closest_point_2 = line_1_begin + k2_begin * u1;
+
+                    if (output_line_2_closest_point_param_2 != nullptr)
+                        *output_line_2_closest_point_param_2 = 0.0f;
+                    if (output_line_2_closest_point_2 != nullptr)
+                        *output_line_2_closest_point_2 = line_2_begin;
+                }
+                else
+                {
+                    // Pair 1
+
+                    if (output_line_1_closest_point_param_1 != nullptr)
+                        *output_line_1_closest_point_param_1 = k2_end;
+                    if (output_line_1_closest_point_1 != nullptr)
+                        *output_line_1_closest_point_1 = line_1_begin + k2_end * u1;
+
+                    if (output_line_2_closest_point_param_1 != nullptr)
+                        *output_line_2_closest_point_param_1 = 1.0f;
+                    if (output_line_2_closest_point_1 != nullptr)
+                        *output_line_2_closest_point_1 = line_2_end;
+
+                    // Pair 2
+
+                    if (output_line_1_closest_point_param_2 != nullptr)
+                        *output_line_1_closest_point_param_2 = 1.0f;
+                    if (output_line_1_closest_point_2 != nullptr)
+                        *output_line_1_closest_point_2 = line_1_end;
+
+                    *((output_line_2_closest_point_param_2 != nullptr) ? output_line_2_closest_point_param_2 : &dummy) =
+                        closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_end, output_line_2_closest_point_2);
+                }
+        }
+
+        return 2U;  // There are infinitelly many pairs of closest points. We return only 2 pairs: most distant ones.
+    }
+
+    // General case: lines are not parallel.
+
+    vector3 const  m = cross_product(n, u2);
+
+    // Solve for k1:  m * (line_1_begin + k1 * u1 - line_2_begin) = 0
+    float_32_bit const  k1 = -dot_product(m, u12) / dot_product(m, u1);
+
+    // Write output for line 1
+    {
+        float_32_bit const  t1 = std::max(0.0f, std::min(k1, 1.0f));
+        if (output_line_1_closest_point_param_1 != nullptr)
+            *output_line_1_closest_point_param_1 = t1;
+        if (output_line_1_closest_point_1 != nullptr)
+            *output_line_1_closest_point_1 = line_1_begin + t1 * u1;
+    }
+
+    // Solve for h:  n * (X1 + h * n - line_2_begin) = 0, where X1 = line_1_begin + k1 * u1.
+    float_32_bit const  h = -(dot_product(n, u12) + k1 * dot_product(n, u1)) / n_dot;
+
+    // Write output for line 2
+    {
+        vector3 const  v2 = k1 * u1 + h * n + u12; // ((line_1_begin + k1 * u1) + h * n) - line_2_begin 
+        float_32_bit const  k2 = std::sqrtf(dot_product(v2, v2) / dot_product(u2, u2));
+        float_32_bit const  t2 = std::max(0.0f, std::min(k2, 1.0f));
+        if (output_line_2_closest_point_param_1 != nullptr)
+            *output_line_2_closest_point_param_1 = t2;
+        if (output_line_2_closest_point_1 != nullptr)
+            *output_line_2_closest_point_1 = line_2_begin + t2 * u2;
+    }
+
+    return 1U;  // There is only 1 pair of closest points (1 point on each line)
+}
+
+
 void  closest_point_of_bbox_to_point(
         vector3 const&  bbox_low_corner,
         vector3 const&  bbox_high_corner,
