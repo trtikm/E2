@@ -20,8 +20,8 @@ struct proximity_map
     using  object_type = object_type__;
 
     proximity_map(
-            std::function<vector3(object_type)> const&  AABB_min_corner_of_object_getter,
-            std::function<vector3(object_type)> const&  AABB_max_corner_of_object_getter,
+            std::function<vector3(object_type)> const&  bbox_min_corner_of_object_getter,
+            std::function<vector3(object_type)> const&  bbox_max_corner_of_object_getter,
             natural_32_bit const  max_num_objects_in_leaf_before_split = 25U,
             float_32_bit const  treashold_for_applying_node_balancing_rotations = 0.5f // 0.0 - min rotate, 1.0 - max rotate
             );
@@ -30,9 +30,9 @@ struct proximity_map
     bool  erase(object_type const object);
     void  clear();
 
-    void  find_by_AABB(
-            vector3 const& query_AABB_min_corner,
-            vector3 const& query_AABB_max_corner,
+    void  find_by_bbox(
+            vector3 const& query_bbox_min_corner,
+            vector3 const& query_bbox_max_corner,
             std::function<bool(object_type)> const&  output_collector
             );
 
@@ -70,21 +70,21 @@ private:
     static bool  insert(
             split_node*  node_ptr,
             object_type const object,
-            vector3 const&  object_AABB_min_corner,
-            vector3 const&  object_AABB_max_corner
+            vector3 const&  object_bbox_min_corner,
+            vector3 const&  object_bbox_max_corner
             );
 
     static bool  erase(
             split_node*  node_ptr,
             object_type const object,
-            vector3 const&  object_AABB_min_corner,
-            vector3 const&  object_AABB_max_corner
+            vector3 const&  object_bbox_min_corner,
+            vector3 const&  object_bbox_max_corner
             );
 
-    void  find_by_AABB(
+    void  find_by_bbox(
             split_node*  node_ptr,
-            vector3 const& query_AABB_min_corner,
-            vector3 const& query_AABB_max_corner,
+            vector3 const& query_bbox_min_corner,
+            vector3 const& query_bbox_max_corner,
             split_node*  parent_node_ptr,
             std::function<bool(object_type)> const&  output_collector
             );
@@ -104,8 +104,8 @@ private:
     void  apply_node_rotation_from_front_to_back(split_node* const  node_ptr, split_node* const  parent_node_ptr);
     void  apply_objects_move(split_node* const  from_node_ptr, split_node* const  to_node_ptr);
 
-    std::function<vector3(object_type)>  m_get_AABB_min_corner_of_object;
-    std::function<vector3(object_type)>  m_get_AABB_max_corner_of_object;
+    std::function<vector3(object_type)>  m_get_bbox_min_corner;
+    std::function<vector3(object_type)>  m_get_bbox_max_corner;
     natural_32_bit  m_max_num_objects_in_leaf_before_split;
     float_32_bit  m_min_ratio_for_applycation_balancing_rotation;
 
@@ -115,13 +115,13 @@ private:
 
 template<typename  object_type__>
 proximity_map<object_type__>::proximity_map(
-        std::function<vector3(object_type)> const&  AABB_min_corner_of_object_getter,
-        std::function<vector3(object_type)> const&  AABB_max_corner_of_object_getter,
+        std::function<vector3(object_type)> const&  bbox_min_corner_of_object_getter,
+        std::function<vector3(object_type)> const&  bbox_max_corner_of_object_getter,
         natural_32_bit const  max_num_objects_in_leaf_before_split,
         float_32_bit const  treashold_for_applying_node_balancing_rotations
         )
-    : m_get_AABB_min_corner_of_object(AABB_min_corner_of_object_getter)
-    , m_get_AABB_max_corner_of_object(AABB_max_corner_of_object_getter)
+    : m_get_bbox_min_corner(bbox_min_corner_of_object_getter)
+    , m_get_bbox_max_corner(bbox_max_corner_of_object_getter)
     , m_max_num_objects_in_leaf_before_split(max_num_objects_in_leaf_before_split)
     , m_min_ratio_for_applycation_balancing_rotation(
             0.5f + (1.0f - treashold_for_applying_node_balancing_rotations) * (1.0f - 0.5f)
@@ -148,8 +148,8 @@ proximity_map<object_type__>::split_node::split_node()
 template<typename  object_type__>
 bool  proximity_map<object_type__>::insert(object_type const object)
 {
-    vector3 const  min_corner = m_get_AABB_min_corner_of_object(object);
-    vector3 const  max_corner = m_get_AABB_max_corner_of_object(object);
+    vector3 const  min_corner = m_get_bbox_min_corner(object);
+    vector3 const  max_corner = m_get_bbox_max_corner(object);
     return insert(m_root.get(), object, min_corner, max_corner);
 }
 
@@ -158,8 +158,8 @@ template<typename  object_type__>
 bool  proximity_map<object_type__>::insert(
         split_node*  node_ptr,
         object_type const object,
-        vector3 const&  object_AABB_min_corner,
-        vector3 const&  object_AABB_max_corner
+        vector3 const&  object_bbox_min_corner,
+        vector3 const&  object_bbox_max_corner
         )
 {
     if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
@@ -174,9 +174,9 @@ bool  proximity_map<object_type__>::insert(
 
     int const  coord_idx = (int)node_ptr->m_split_plane_normal_direction;
 
-    if (object_AABB_min_corner(coord_idx) > node_ptr->m_spit_plane_origin(coord_idx))
+    if (object_bbox_min_corner(coord_idx) > node_ptr->m_spit_plane_origin(coord_idx))
     {
-        if (insert(node_ptr->m_front_child_node.get(), object, object_AABB_min_corner, object_AABB_max_corner))
+        if (insert(node_ptr->m_front_child_node.get(), object, object_bbox_min_corner, object_bbox_max_corner))
         {
             ++node_ptr->m_num_objects;
             return true;
@@ -184,9 +184,9 @@ bool  proximity_map<object_type__>::insert(
         return false;
     }
     
-    if (object_AABB_max_corner(coord_idx) < node_ptr->m_spit_plane_origin(coord_idx))
+    if (object_bbox_max_corner(coord_idx) < node_ptr->m_spit_plane_origin(coord_idx))
     {
-        if (insert(node_ptr->m_back_child_node.get(), object, object_AABB_min_corner, object_AABB_max_corner))
+        if (insert(node_ptr->m_back_child_node.get(), object, object_bbox_min_corner, object_bbox_max_corner))
         {
             ++node_ptr->m_num_objects;
             return true;
@@ -195,9 +195,9 @@ bool  proximity_map<object_type__>::insert(
     }
 
     bool const  front_inserted =
-            insert(node_ptr->m_front_child_node.get(), object, object_AABB_min_corner, object_AABB_max_corner);
+            insert(node_ptr->m_front_child_node.get(), object, object_bbox_min_corner, object_bbox_max_corner);
     bool const  back_inserted =
-            insert(node_ptr->m_back_child_node.get(), object, object_AABB_min_corner, object_AABB_max_corner);
+            insert(node_ptr->m_back_child_node.get(), object, object_bbox_min_corner, object_bbox_max_corner);
     if (front_inserted || back_inserted)
     {
         ++node_ptr->m_num_objects;
@@ -210,8 +210,8 @@ bool  proximity_map<object_type__>::insert(
 template<typename  object_type__>
 bool  proximity_map<object_type__>::erase(object_type const object)
 {
-    vector3 const  min_corner = m_get_AABB_min_corner_of_object(object);
-    vector3 const  max_corner = m_get_AABB_max_corner_of_object(object);
+    vector3 const  min_corner = m_get_bbox_min_corner(object);
+    vector3 const  max_corner = m_get_bbox_max_corner(object);
     return erase(m_root.get(), object, min_corner, max_corner);
 }
 
@@ -220,8 +220,8 @@ template<typename  object_type__>
 bool  proximity_map<object_type__>::erase(
         split_node*  node_ptr,
         object_type const object,
-        vector3 const&  object_AABB_min_corner,
-        vector3 const&  object_AABB_max_corner
+        vector3 const&  object_bbox_min_corner,
+        vector3 const&  object_bbox_max_corner
         )
 {
     if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
@@ -236,9 +236,9 @@ bool  proximity_map<object_type__>::erase(
 
     int const  coord_idx = (int)node_ptr->m_split_plane_normal_direction;
 
-    if (object_AABB_min_corner(coord_idx) > node_ptr->m_spit_plane_origin(coord_idx))
+    if (object_bbox_min_corner(coord_idx) > node_ptr->m_spit_plane_origin(coord_idx))
     {
-        if (erase(node_ptr->m_front_child_node.get(), object, object_AABB_min_corner, object_AABB_max_corner))
+        if (erase(node_ptr->m_front_child_node.get(), object, object_bbox_min_corner, object_bbox_max_corner))
         {
             --node_ptr->m_num_objects;
             return true;
@@ -246,9 +246,9 @@ bool  proximity_map<object_type__>::erase(
         return false;
     }
     
-    if (object_AABB_max_corner(coord_idx) < node_ptr->m_spit_plane_origin(coord_idx))
+    if (object_bbox_max_corner(coord_idx) < node_ptr->m_spit_plane_origin(coord_idx))
     {
-        if (erase(node_ptr->m_back_child_node.get(), object, object_AABB_min_corner, object_AABB_max_corner))
+        if (erase(node_ptr->m_back_child_node.get(), object, object_bbox_min_corner, object_bbox_max_corner))
         {
             --node_ptr->m_num_objects;
             return true;
@@ -257,9 +257,9 @@ bool  proximity_map<object_type__>::erase(
     }
 
     bool const  front_erased =
-        erase(node_ptr->m_front_child_node.get(), object, object_AABB_min_corner, object_AABB_max_corner);
+        erase(node_ptr->m_front_child_node.get(), object, object_bbox_min_corner, object_bbox_max_corner);
     bool const  back_erased =
-        erase(node_ptr->m_back_child_node.get(), object, object_AABB_min_corner, object_AABB_max_corner);
+        erase(node_ptr->m_back_child_node.get(), object, object_bbox_min_corner, object_bbox_max_corner);
     if (front_erased || back_erased)
     {
         --node_ptr->m_num_objects;
@@ -277,21 +277,21 @@ void  proximity_map<object_type__>::clear()
 
 
 template<typename  object_type__>
-void  proximity_map<object_type__>::find_by_AABB(
-        vector3 const& query_AABB_min_corner,
-        vector3 const& query_AABB_max_corner,
+void  proximity_map<object_type__>::find_by_bbox(
+        vector3 const& query_bbox_min_corner,
+        vector3 const& query_bbox_max_corner,
         std::function<bool(object_type)> const&  output_collector
         )
 {
-    find_by_AABB(m_root.get(), query_AABB_min_corner, query_AABB_max_corner, nullptr, output_collector);
+    find_by_bbox(m_root.get(), query_bbox_min_corner, query_bbox_max_corner, nullptr, output_collector);
 }
 
 
 template<typename  object_type__>
-void  proximity_map<object_type__>::find_by_AABB(
+void  proximity_map<object_type__>::find_by_bbox(
         split_node*  node_ptr,
-        vector3 const& query_AABB_min_corner,
-        vector3 const& query_AABB_max_corner,
+        vector3 const& query_bbox_min_corner,
+        vector3 const& query_bbox_max_corner,
         split_node*  parent_node_ptr,
         std::function<bool(object_type)> const&  output_collector
         )
@@ -304,10 +304,10 @@ void  proximity_map<object_type__>::find_by_AABB(
             for (object_type  object : *node_ptr->m_objects)
             {
                 if (collision_bbox_bbox(
-                        query_AABB_min_corner,
-                        query_AABB_max_corner,
-                        m_get_AABB_min_corner_of_object(object),
-                        m_get_AABB_max_corner_of_object(object)
+                        query_bbox_min_corner,
+                        query_bbox_max_corner,
+                        m_get_bbox_min_corner(object),
+                        m_get_bbox_max_corner(object)
                         ))
                 {
                     if (output_collector(object) == false)
@@ -321,19 +321,19 @@ void  proximity_map<object_type__>::find_by_AABB(
 
     int const  coord_idx = (int)node_ptr->m_split_plane_normal_direction;
 
-    if (query_AABB_max_corner(coord_idx) > node_ptr->m_spit_plane_origin(coord_idx))
-        find_by_AABB(
+    if (query_bbox_max_corner(coord_idx) > node_ptr->m_spit_plane_origin(coord_idx))
+        find_by_bbox(
                 node_ptr->m_front_child_node.get(),
-                query_AABB_min_corner,
-                query_AABB_max_corner,
+                query_bbox_min_corner,
+                query_bbox_max_corner,
                 node_ptr,
                 output_collector
                 );
-    else if (query_AABB_min_corner(coord_idx) < node_ptr->m_spit_plane_origin(coord_idx))
-        find_by_AABB(
+    else if (query_bbox_min_corner(coord_idx) < node_ptr->m_spit_plane_origin(coord_idx))
+        find_by_bbox(
                 node_ptr->m_back_child_node.get(),
-                query_AABB_min_corner,
-                query_AABB_max_corner,
+                query_bbox_min_corner,
+                query_bbox_max_corner,
                 node_ptr,
                 output_collector
                 );
@@ -391,8 +391,8 @@ void  proximity_map<object_type__>::find_by_line(
                 if (clip_line_into_bbox(
                         line_begin,
                         line_end,
-                        m_get_AABB_min_corner_of_object(object),
-                        m_get_AABB_max_corner_of_object(object),
+                        m_get_bbox_min_corner(object),
+                        m_get_bbox_max_corner(object),
                         nullptr,
                         nullptr,
                         nullptr,
@@ -484,7 +484,7 @@ void  proximity_map<object_type__>::apply_node_split(split_node* const  node_ptr
     std::vector<vector3>  object_centers(objects->size());
     for (object_type object : *objects)
     {
-        object_centers.push_back(0.5f * (m_get_AABB_min_corner_of_object(object) + m_get_AABB_max_corner_of_object(object)));
+        object_centers.push_back(0.5f * (m_get_bbox_min_corner(object) + m_get_bbox_max_corner(object)));
         node_ptr->m_spit_plane_origin += object_centers.back();
     }
     node_ptr->m_spit_plane_origin /= objects->size();
@@ -505,7 +505,7 @@ void  proximity_map<object_type__>::apply_node_split(split_node* const  node_ptr
             node_ptr->m_split_plane_normal_direction = split_node::SPLIT_PLANE_NORMAL_DIRECTION::Z_AXIS;
     
     for (object_type object : *objects)
-        insert(node_ptr, object, m_get_AABB_min_corner_of_object(object), m_get_AABB_max_corner_of_object(object));
+        insert(node_ptr, object, m_get_bbox_min_corner(object), m_get_bbox_max_corner(object));
 }
 
 
@@ -567,7 +567,7 @@ void  proximity_map<object_type__>::apply_objects_move(split_node* const  from_n
     if (from_node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
     {
         for (object_type object : *from_node_ptr->m_objects)
-            insert(to_node_ptr, object, m_get_AABB_min_corner_of_object(object), m_get_AABB_max_corner_of_object(object));
+            insert(to_node_ptr, object, m_get_bbox_min_corner(object), m_get_bbox_max_corner(object));
         return;
     }
 
