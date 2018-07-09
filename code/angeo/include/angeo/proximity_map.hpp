@@ -5,15 +5,95 @@
 #   include <angeo/collide.hpp>
 #   include <utility/assumptions.hpp>
 #   include <utility/invariants.hpp>
+#   include <utility/timeprof.hpp>
 #   include <unordered_set>
 #   include <functional>
 #   include <memory>
 #   include <vector>
 #   include <array>
+#   include <mutex>
 
 namespace angeo {
 
 
+/**
+ * The proximity map provides fast search for objects distributed in 3D space.
+ * A shape of an object is approximated by an axis aligned bounding box. The
+ * map this assumes, there is a fast algorithm obtaining a bounding box for
+ * any objects inserted into the map. Instead of requiring the type of objects
+ * contain a method for obtaining a bounding box, the map rather accepts two
+ * algorithms in the initialisation providing minimal and maximal corner points
+ * of a bounding box for any object in the map. For example, let type of our
+ * objects looks like this:
+ *
+ *      struct my_object3d_type
+ *      {
+ *          vector3 lo, hi; // min. and max. corner points of the bounding box.
+ *      };
+ *
+ * Then we can initialise a proximity map of these objects as follows:
+ *
+ *      angeo::proximity_map<my_object3d_type*> map(
+ *              [](my_object3d_type* obj) { return obj->lo; },  // getter for min. corner
+ *              [](my_object3d_type* obj) { return obj->hi; }   // getter for max. corner
+ *              );
+ *
+ * The typical usage of the map in a 3d simulation is as follows. In the initial
+ * step, we insert objects into the map. 
+ *
+ *      std::vector<my_object3d_type*>  my_objects_to_simulate;
+ *      ...  // Create and initialise your objects
+ *      for (my_object3d_type* obj :  my_objects_to_simulate)
+ *          map.insert(obj);  // Insert objects into the map.
+ *      map.rebalance();  // Optimize the map structure for subsequent search operations.
+ * 
+ * In the update step of the simulation (from the current state to the next one)
+ * you use the map to search for objects in desired space. For example, a search
+ * for objects in a 3d space denoted by an axis aligned bounding box will look
+ * like this:
+ *
+ *      vector3 query_bbox_min_corner, query_bbox_max_corner; // Defines 3d space where to search for objects
+ *      ...  // Initialise the corner points to desired values.
+ *      std::unordered_set<my_object3d_type*>  collected_objects;  // Will be filled in by found objects.
+ *      map.find_by_bbox(
+ *              query_bbox_min_corner,
+ *              query_bbox_max_corner,
+ *              [&collected_objects](my_object3d_type* obj) {
+ *                  collected_objects.insert(obj);
+ *                  return true; // Tell the map to continue the search for remaining objects (if any).
+ *                               // The return value 'false' would instruct the map to terminate the search.
+ *               });
+ *
+ * In order to search for objects colliding with a line, use the function
+ * 'find_by_line' instead of 'find_by_bbox'.
+ *
+ * In the end of the update step of the simulation you typically want to move objects
+ * from current positions to the new (computed) ones. You need to erase an object from
+ * the map before you change its position and insert it back after the new position is set.
+ * So, the process may looks like this:
+ *
+ *      for (my_object3d_type* obj :  my_objects_to_simulate)
+ *      {
+ *          map.erase(obj);   // Erase the object from the map using its old position.
+ *
+ *          // Update object's position according to computed data in this time step
+ *          // of the simulation. Let us say, it is just object's velocity vector.
+ *          vector3 const  object_translation = get_computed_veocity(obj) * simulation_time_step;
+ *          obj->lo += object_translation;
+ *          obj->hi += object_translation;
+ *
+ *          map.insert(obj);  // Insert object back into the map for the updated position.
+ *      }
+ *      // Once we updated the map for all relocated objects, we can optimize the map structure again
+ *      // for search operations in the next update step of the simulation.
+ *      map.rebalance();
+ *
+ * NOTE: The proximity map is partially thread-safe. It means that:
+ *          - You can call insert and/or erase methods from different threads.
+ *          - You can call find_by_bbox and/or find_by_line methods from different threads.
+ *          - NO OTHER CONCURRENT EXECUTION OF METHODS IS ALLOWED.
+ *
+ */
 template<typename  object_type__>
 struct proximity_map
 {
@@ -28,7 +108,10 @@ struct proximity_map
 
     bool  insert(object_type const object);
     bool  erase(object_type const object);
+
     void  clear();
+
+    void  rebalance(natural_32_bit const  num_threads_available = 0U);
 
     void  find_by_bbox(
             vector3 const& query_bbox_min_corner,
@@ -65,27 +148,34 @@ private:
         std::unique_ptr<split_node>  m_back_child_node;
 
         std::unique_ptr<std::unordered_set<object_type> >  m_objects;
+
+        std::mutex  m_mutex;
     };
 
     static bool  insert(
-            split_node*  node_ptr,
+            split_node* const  node_ptr,
             object_type const object,
             vector3 const&  object_bbox_min_corner,
             vector3 const&  object_bbox_max_corner
             );
 
     static bool  erase(
-            split_node*  node_ptr,
+            split_node* const  node_ptr,
             object_type const object,
             vector3 const&  object_bbox_min_corner,
             vector3 const&  object_bbox_max_corner
+            );
+
+    void  rebalance(
+            split_node* const  node_ptr,
+            split_node* const  parent_node_ptr,
+            natural_32_bit const  num_threads_available
             );
 
     void  find_by_bbox(
             split_node*  node_ptr,
             vector3 const& query_bbox_min_corner,
             vector3 const& query_bbox_max_corner,
-            split_node*  parent_node_ptr,
             std::function<bool(object_type)> const&  output_collector
             );
 
@@ -93,7 +183,6 @@ private:
             split_node* const  node_ptr,
             vector3 const&  line_begin,
             vector3 const&  line_end,
-            split_node*  parent_node_ptr,
             std::function<bool(object_type)> const&  output_collector
             );
 
@@ -141,6 +230,7 @@ proximity_map<object_type__>::split_node::split_node()
     , m_front_child_node(nullptr)
     , m_back_child_node(nullptr)
     , m_objects(new std::unordered_set<object_type>)
+    , m_mutex()
 {
 }
 
@@ -148,6 +238,8 @@ proximity_map<object_type__>::split_node::split_node()
 template<typename  object_type__>
 bool  proximity_map<object_type__>::insert(object_type const object)
 {
+    TMPROF_BLOCK();
+
     vector3 const  min_corner = m_get_bbox_min_corner(object);
     vector3 const  max_corner = m_get_bbox_max_corner(object);
     return insert(m_root.get(), object, min_corner, max_corner);
@@ -156,7 +248,7 @@ bool  proximity_map<object_type__>::insert(object_type const object)
 
 template<typename  object_type__>
 bool  proximity_map<object_type__>::insert(
-        split_node*  node_ptr,
+        split_node* const  node_ptr,
         object_type const object,
         vector3 const&  object_bbox_min_corner,
         vector3 const&  object_bbox_max_corner
@@ -164,6 +256,7 @@ bool  proximity_map<object_type__>::insert(
 {
     if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
     {
+        std::lock_guard<std::mutex> lock(node_ptr->m_mutex);
         if (node_ptr->m_objects->insert(object).second)
         {
             ++node_ptr->m_num_objects;
@@ -178,6 +271,7 @@ bool  proximity_map<object_type__>::insert(
     {
         if (insert(node_ptr->m_front_child_node.get(), object, object_bbox_min_corner, object_bbox_max_corner))
         {
+            std::lock_guard<std::mutex> lock(node_ptr->m_mutex);
             ++node_ptr->m_num_objects;
             return true;
         }
@@ -188,6 +282,7 @@ bool  proximity_map<object_type__>::insert(
     {
         if (insert(node_ptr->m_back_child_node.get(), object, object_bbox_min_corner, object_bbox_max_corner))
         {
+            std::lock_guard<std::mutex> lock(node_ptr->m_mutex);
             ++node_ptr->m_num_objects;
             return true;
         }
@@ -200,6 +295,7 @@ bool  proximity_map<object_type__>::insert(
             insert(node_ptr->m_back_child_node.get(), object, object_bbox_min_corner, object_bbox_max_corner);
     if (front_inserted || back_inserted)
     {
+        std::lock_guard<std::mutex> lock(node_ptr->m_mutex);
         ++node_ptr->m_num_objects;
         return true;
     }
@@ -210,6 +306,8 @@ bool  proximity_map<object_type__>::insert(
 template<typename  object_type__>
 bool  proximity_map<object_type__>::erase(object_type const object)
 {
+    TMPROF_BLOCK();
+
     vector3 const  min_corner = m_get_bbox_min_corner(object);
     vector3 const  max_corner = m_get_bbox_max_corner(object);
     return erase(m_root.get(), object, min_corner, max_corner);
@@ -218,14 +316,15 @@ bool  proximity_map<object_type__>::erase(object_type const object)
 
 template<typename  object_type__>
 bool  proximity_map<object_type__>::erase(
-        split_node*  node_ptr,
-        object_type const object,
+        split_node* const  node_ptr,
+        object_type const  object,
         vector3 const&  object_bbox_min_corner,
         vector3 const&  object_bbox_max_corner
         )
 {
     if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
     {
+        std::lock_guard<std::mutex> lock(node_ptr->m_mutex);
         if (node_ptr->m_objects->erase(object) != 0U)
         {
             --node_ptr->m_num_objects;
@@ -240,6 +339,7 @@ bool  proximity_map<object_type__>::erase(
     {
         if (erase(node_ptr->m_front_child_node.get(), object, object_bbox_min_corner, object_bbox_max_corner))
         {
+            std::lock_guard<std::mutex> lock(node_ptr->m_mutex);
             --node_ptr->m_num_objects;
             return true;
         }
@@ -250,6 +350,7 @@ bool  proximity_map<object_type__>::erase(
     {
         if (erase(node_ptr->m_back_child_node.get(), object, object_bbox_min_corner, object_bbox_max_corner))
         {
+            std::lock_guard<std::mutex> lock(node_ptr->m_mutex);
             --node_ptr->m_num_objects;
             return true;
         }
@@ -262,6 +363,7 @@ bool  proximity_map<object_type__>::erase(
         erase(node_ptr->m_back_child_node.get(), object, object_bbox_min_corner, object_bbox_max_corner);
     if (front_erased || back_erased)
     {
+        std::lock_guard<std::mutex> lock(node_ptr->m_mutex);
         --node_ptr->m_num_objects;
         return true;
     }
@@ -277,23 +379,19 @@ void  proximity_map<object_type__>::clear()
 
 
 template<typename  object_type__>
-void  proximity_map<object_type__>::find_by_bbox(
-        vector3 const& query_bbox_min_corner,
-        vector3 const& query_bbox_max_corner,
-        std::function<bool(object_type)> const&  output_collector
-        )
+void  proximity_map<object_type__>::rebalance(natural_32_bit const  num_threads_available)
 {
-    find_by_bbox(m_root.get(), query_bbox_min_corner, query_bbox_max_corner, nullptr, output_collector);
+    TMPROF_BLOCK();
+
+    rebalance(m_root.get(), nullptr, num_threads_available);
 }
 
 
 template<typename  object_type__>
-void  proximity_map<object_type__>::find_by_bbox(
-        split_node*  node_ptr,
-        vector3 const& query_bbox_min_corner,
-        vector3 const& query_bbox_max_corner,
-        split_node*  parent_node_ptr,
-        std::function<bool(object_type)> const&  output_collector
+void  proximity_map<object_type__>::rebalance(
+        split_node* const  node_ptr,
+        split_node* const  parent_node_ptr,
+        natural_32_bit const  num_threads_available
         )
 {
     if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
@@ -301,42 +399,14 @@ void  proximity_map<object_type__>::find_by_bbox(
         if (node_ptr->m_num_objects <= m_max_num_objects_in_leaf_before_split ||
             (parent_node_ptr != nullptr && parent_node_ptr->m_num_objects == node_ptr->m_num_objects))
         {
-            for (object_type  object : *node_ptr->m_objects)
-            {
-                if (collision_bbox_bbox(
-                        query_bbox_min_corner,
-                        query_bbox_max_corner,
-                        m_get_bbox_min_corner(object),
-                        m_get_bbox_max_corner(object)
-                        ))
-                {
-                    if (output_collector(object) == false)
-                        return;
-                }
-            }
             return;
         }
         apply_node_split(node_ptr);
     }
 
-    int const  coord_idx = (int)node_ptr->m_split_plane_normal_direction;
-
-    if (query_bbox_max_corner(coord_idx) > node_ptr->m_spit_plane_origin(coord_idx))
-        find_by_bbox(
-                node_ptr->m_front_child_node.get(),
-                query_bbox_min_corner,
-                query_bbox_max_corner,
-                node_ptr,
-                output_collector
-                );
-    else if (query_bbox_min_corner(coord_idx) < node_ptr->m_spit_plane_origin(coord_idx))
-        find_by_bbox(
-                node_ptr->m_back_child_node.get(),
-                query_bbox_min_corner,
-                query_bbox_max_corner,
-                node_ptr,
-                output_collector
-                );
+    // TODO: use 'num_threads_available' to spawn a thread for back child, if a tread is available.
+    rebalance(node_ptr->m_front_child_node.get(), node_ptr, num_threads_available);
+    rebalance(node_ptr->m_back_child_node.get(), node_ptr, num_threads_available);
 
     if (node_ptr->m_num_objects < m_max_num_objects_in_leaf_before_split)
     {
@@ -362,13 +432,68 @@ void  proximity_map<object_type__>::find_by_bbox(
 
 
 template<typename  object_type__>
+void  proximity_map<object_type__>::find_by_bbox(
+        vector3 const& query_bbox_min_corner,
+        vector3 const& query_bbox_max_corner,
+        std::function<bool(object_type)> const&  output_collector
+        )
+{
+    TMPROF_BLOCK();
+
+    find_by_bbox(m_root.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector);
+}
+
+
+template<typename  object_type__>
+void  proximity_map<object_type__>::find_by_bbox(
+        split_node* const  node_ptr,
+        vector3 const& query_bbox_min_corner,
+        vector3 const& query_bbox_max_corner,
+        std::function<bool(object_type)> const&  output_collector
+        )
+{
+    if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
+    {
+        for (object_type  object : *node_ptr->m_objects)
+        {
+            if (collision_bbox_bbox(
+                    query_bbox_min_corner,
+                    query_bbox_max_corner,
+                    m_get_bbox_min_corner(object),
+                    m_get_bbox_max_corner(object)
+                    ))
+            {
+                if (output_collector(object) == false)
+                    return;
+            }
+        }
+        return;
+    }
+
+    int const  coord_idx = (int)node_ptr->m_split_plane_normal_direction;
+
+    if (query_bbox_min_corner(coord_idx) > node_ptr->m_spit_plane_origin(coord_idx))
+        find_by_bbox(node_ptr->m_front_child_node.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector);
+    else if (query_bbox_max_corner(coord_idx) < node_ptr->m_spit_plane_origin(coord_idx))
+        find_by_bbox(node_ptr->m_back_child_node.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector);
+    else
+    {
+        find_by_bbox(node_ptr->m_front_child_node.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector);
+        find_by_bbox(node_ptr->m_back_child_node.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector);
+    }
+}
+
+
+template<typename  object_type__>
 void  proximity_map<object_type__>::find_by_line(
         vector3 const&  line_begin,
         vector3 const&  line_end,
         std::function<bool(object_type)> const&  output_collector
         )
 {
-    find_by_ray(m_root.get(), ray_origin, ray_unit_direction, nullptr, output_collector);
+    TMPROF_BLOCK();
+
+    find_by_line(m_root.get(), line_begin, line_end, output_collector);
 }
 
 
@@ -377,35 +502,29 @@ void  proximity_map<object_type__>::find_by_line(
         split_node* const  node_ptr,
         vector3 const&  line_begin,
         vector3 const&  line_end,
-        split_node*  parent_node_ptr,
         std::function<bool(object_type)> const&  output_collector
         )
 {
     if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
     {
-        if (node_ptr->m_num_objects <= m_max_num_objects_in_leaf_before_split ||
-            (parent_node_ptr != nullptr && parent_node_ptr->m_num_objects == node_ptr->m_num_objects))
+        for (object_type  object : *node_ptr->m_objects)
         {
-            for (object_type  object : *node_ptr->m_objects)
+            if (clip_line_into_bbox(
+                    line_begin,
+                    line_end,
+                    m_get_bbox_min_corner(object),
+                    m_get_bbox_max_corner(object),
+                    nullptr,
+                    nullptr,
+                    nullptr,
+                    nullptr
+                    ))
             {
-                if (clip_line_into_bbox(
-                        line_begin,
-                        line_end,
-                        m_get_bbox_min_corner(object),
-                        m_get_bbox_max_corner(object),
-                        nullptr,
-                        nullptr,
-                        nullptr,
-                        nullptr
-                        ))
-                {
-                    if (output_collector(object) == false)
-                        return;
-                }
+                if (output_collector(object) == false)
+                    return;
             }
-            return;
         }
-        apply_node_split(node_ptr);
+        return;
     }
 
     int const  coord_idx = (int)node_ptr->m_split_plane_normal_direction;
@@ -413,12 +532,12 @@ void  proximity_map<object_type__>::find_by_line(
     if (line_begin(coord_idx) > node_ptr->m_spit_plane_origin(coord_idx) &&
         line_end(coord_idx) > node_ptr->m_spit_plane_origin(coord_idx))
     {
-        find_by_line(node_ptr->m_front_child_node.get(), line_begin, line_end, node_ptr, output_collector);
+        find_by_line(node_ptr->m_front_child_node.get(), line_begin, line_end, output_collector);
     }
     else if (line_begin(coord_idx) < node_ptr->m_spit_plane_origin(coord_idx) &&
              line_end(coord_idx) < node_ptr->m_spit_plane_origin(coord_idx))
     {
-        find_by_line(node_ptr->m_back_child_node.get(), line_begin, line_end, node_ptr, output_collector);
+        find_by_line(node_ptr->m_back_child_node.get(), line_begin, line_end, output_collector);
     }
     else
     {
@@ -446,29 +565,8 @@ void  proximity_map<object_type__>::find_by_line(
             }
         }
 
-        find_by_line(first_node, line_begin, plane_point, node_ptr, output_collector);
-        find_by_line(second_node, plane_point, line_end, node_ptr, output_collector);
-    }
-
-    if (node_ptr->m_num_objects < m_max_num_objects_in_leaf_before_split)
-    {
-        apply_node_merge(node_ptr);
-        return;
-    }
-
-    natural_32_bit const  diff_front_back_objects =
-            node_ptr->m_front_child_node->m_num_objects - node_ptr->m_back_child_node->m_num_objects;
-    float_32_bit const  ratio = (float_32_bit)diff_front_back_objects / (float_32_bit)node_ptr->m_num_objects;
-
-    if (ratio >= m_min_ratio_for_applycation_balancing_rotation)
-    {
-        apply_node_rotation_from_back_to_front(node_ptr, parent_node_ptr);
-        return;
-    }
-    if (ratio <= -m_min_ratio_for_applycation_balancing_rotation)
-    {
-        apply_node_rotation_from_front_to_back(node_ptr, parent_node_ptr);
-        return;
+        find_by_line(first_node, line_begin, plane_point, output_collector);
+        find_by_line(second_node, plane_point, line_end, output_collector);
     }
 }
 
@@ -476,6 +574,8 @@ void  proximity_map<object_type__>::find_by_line(
 template<typename  object_type__>
 void  proximity_map<object_type__>::apply_node_split(split_node* const  node_ptr)
 {
+    TMPROF_BLOCK();
+
     std::unique_ptr<std::unordered_set<object_type> > const  objects(node_ptr->m_objects.release());
     node_ptr->m_num_objects = 0U;
     node_ptr->m_front_child_node.reset(new split_node);
@@ -487,7 +587,7 @@ void  proximity_map<object_type__>::apply_node_split(split_node* const  node_ptr
         object_centers.push_back(0.5f * (m_get_bbox_min_corner(object) + m_get_bbox_max_corner(object)));
         node_ptr->m_spit_plane_origin += object_centers.back();
     }
-    node_ptr->m_spit_plane_origin /= objects->size();
+    node_ptr->m_spit_plane_origin /= (float_32_bit)objects->size();
 
     vector3  directions = vector3_zero();
     for (vector3 const&  object_centre : object_centers)
@@ -512,6 +612,8 @@ void  proximity_map<object_type__>::apply_node_split(split_node* const  node_ptr
 template<typename  object_type__>
 void  proximity_map<object_type__>::apply_node_merge(split_node* const  node_ptr)
 {
+    TMPROF_BLOCK();
+
     std::array<std::unique_ptr<std::unordered_set<object_type> >, 2U> const  objects
     {
         std::unique_ptr<std::unordered_set<object_type> >(node_ptr->m_front_child_node->m_objects.release()),
@@ -533,6 +635,8 @@ void  proximity_map<object_type__>::apply_node_rotation_from_back_to_front(
         split_node* const  parent_node_ptr
         )
 {
+    TMPROF_BLOCK();
+
     apply_objects_move(node_ptr->m_back_child_node.get(), node_ptr->m_front_child_node.get());
 
     if (parent_node_ptr == nullptr)
@@ -550,6 +654,8 @@ void  proximity_map<object_type__>::apply_node_rotation_from_front_to_back(
         split_node* const  parent_node_ptr
         )
 {
+    TMPROF_BLOCK();
+
     apply_objects_move(node_ptr->m_front_child_node.get(), node_ptr->m_back_child_node.get());
 
     if (parent_node_ptr == nullptr)
@@ -564,6 +670,8 @@ void  proximity_map<object_type__>::apply_node_rotation_from_front_to_back(
 template<typename  object_type__>
 void  proximity_map<object_type__>::apply_objects_move(split_node* const  from_node_ptr, split_node* const  to_node_ptr)
 {
+    TMPROF_BLOCK();
+
     if (from_node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
     {
         for (object_type object : *from_node_ptr->m_objects)
@@ -577,5 +685,34 @@ void  proximity_map<object_type__>::apply_objects_move(split_node* const  from_n
 
 
 }
+/*
+namespace __nouse__ {
+
+
+struct X
+{
+    vector3 lo, hi;
+};
+
+void foo()
+{
+    angeo::proximity_map<X*> map([](X* x) { return x->lo; }, [](X* x) { return x->hi; });
+    
+    X x;
+    map.insert(&x);
+
+    map.rebalance();
+
+    vector3 lo, hi;
+    map.find_by_bbox(lo, hi, [](X*) { return true; });
+    map.find_by_line(lo, hi, [](X*) { return true; });
+
+    map.erase(&x);
+    map.clear();
+}
+
+
+}
+*/
 
 #endif
