@@ -100,26 +100,75 @@ inline matrix33 matrix33_identity() { return matrix33::Identity(); }
 inline matrix43 matrix43_identity() { return matrix43::Identity(); }
 inline matrix44 matrix44_identity() { return matrix44::Identity(); }
 
-inline matrix44  inverse(matrix44 const&  M) { return M.inverse(); }
+inline matrix22  transpose22(matrix22 const&  M) { return M.transpose(); }
+inline matrix33  transpose33(matrix33 const&  M) { return M.transpose(); }
+inline matrix44  transpose44(matrix44 const&  M) { return M.transpose(); }
+
+inline matrix22  inverse22(matrix22 const&  M) { return M.inverse(); }
+inline matrix33  inverse33(matrix33 const&  M) { return M.inverse(); }
+inline matrix44  inverse44(matrix44 const&  M) { return M.inverse(); }
 
 inline matrix33  quaternion_to_rotation_matrix(quaternion const& q) { return q.toRotationMatrix(); }
 inline quaternion  rotation_matrix_to_quaternion(matrix33 const&  R) { return quaternion(R); }
-inline quaternion  rotation_matrix_to_basis(
-            matrix33 const&  R,
-            vector3&  x_axis_unit_vector,
-            vector3&  y_axis_unit_vector,
-            vector3&  z_axis_unit_vector
-            )
-{
-    x_axis_unit_vector(0) = R(0,0); x_axis_unit_vector(1) = R(1,0); x_axis_unit_vector(2) = R(2,0);
-    y_axis_unit_vector(0) = R(0,1); y_axis_unit_vector(1) = R(1,1); y_axis_unit_vector(2) = R(2,1);
-    z_axis_unit_vector(0) = R(0,2); z_axis_unit_vector(1) = R(1,2); z_axis_unit_vector(2) = R(2,2);
-    return quaternion(R);
-}
-void  basis_to_rotation_matrix(vector3 const&  x_axis_unit_vector,
-                               vector3 const&  y_axis_unit_vector,
-                               vector3 const&  z_axis_unit_vector,
-                               matrix33&  R);
+void  rotation_matrix_to_basis(
+        matrix33 const&  R,
+        vector3&  x_axis_unit_vector,
+        vector3&  y_axis_unit_vector,
+        vector3&  z_axis_unit_vector
+        );
+void  basis_to_rotation_matrix(
+        vector3 const&  x_axis_unit_vector,
+        vector3 const&  y_axis_unit_vector,
+        vector3 const&  z_axis_unit_vector,
+        matrix33&  R);
+void  compose_from_base_matrix(
+        vector3 const&  origin,
+        matrix33 const&  rotation_matrix,
+        matrix44&  result
+        );
+void  compose_from_base_matrix(
+        vector3 const&  origin,
+        vector3 const&  x_axis_unit_vector,
+        vector3 const&  y_axis_unit_vector,
+        vector3 const&  z_axis_unit_vector,
+        matrix44&  M
+        );
+void  decompose_from_base_matrix(
+        matrix44 const&  M,
+        vector3&  origin,
+        matrix33&  rotation_matrix
+        );
+void  decompose_from_base_matrix(
+        matrix44 const&  M,
+        vector3&  origin,
+        vector3&  x_axis_unit_vector,
+        vector3&  y_axis_unit_vector,
+        vector3&  z_axis_unit_vector
+        );
+void  compose_to_base_matrix(
+        vector3 const&  origin,
+        matrix33 const&  rotation_matrix,   // Not transposed! The function applies the transpose automatically
+        matrix44&  result
+        );
+void  compose_to_base_matrix(
+        vector3 const&  origin,
+        vector3 const&  x_axis_unit_vector,
+        vector3 const&  y_axis_unit_vector,
+        vector3 const&  z_axis_unit_vector,
+        matrix44&  M
+        );
+void  decompose_to_base_matrix(
+        matrix44 const&  M,
+        vector3&  origin,
+        matrix33&  rotation_matrix   // The result is normal rotation matrix, i.e. NOT transposed!
+        );
+void  decompose_to_base_matrix(
+        matrix44 const&  M,
+        vector3&  origin,
+        vector3&  x_axis_unit_vector,
+        vector3&  y_axis_unit_vector,
+        vector3&  z_axis_unit_vector
+        );
 inline quaternion  angle_axis_to_quaternion(scalar const  angle, vector3 const&  axis) {
     return quaternion(Eigen::AngleAxis<scalar>(angle,axis));
 }

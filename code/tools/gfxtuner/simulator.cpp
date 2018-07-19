@@ -568,7 +568,7 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
     {
         scene_node_ptr const  node = get_scene_node(node_name);
         vector3 const  node_shift = node->has_parent() ?
-            contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(shift, 0.0f)) :
+            contract43(inverse44(node->get_parent()->get_world_matrix()) * expand34(shift, 0.0f)) :
             shift;
         node->translate(node_shift);
     }
@@ -659,7 +659,7 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
     {
         scene_node_ptr const  node = get_scene_node(node_name);
         vector3 const  rotation_axis = node->has_parent() ?
-                contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(axis, 0.0f)) :
+                contract43(inverse44(node->get_parent()->get_world_matrix()) * expand34(axis, 0.0f)) :
                 axis ;
         quaternion const  rotation = angle_axis_to_quaternion(angle, rotation_axis);
         node->rotate(rotation);
@@ -672,7 +672,7 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
             vector3 const  rotated_radius_vector = radius_vector_rotation_matrix * original_radius_vector;
             vector3 const  raw_shift = rotated_radius_vector - original_radius_vector;
             vector3 const  shift = node->has_parent() ?
-                    contract43(inverse(node->get_parent()->get_world_matrix()) * expand34(raw_shift, 0.0f)) :
+                    contract43(inverse44(node->get_parent()->get_world_matrix()) * expand34(raw_shift, 0.0f)) :
                     raw_shift;
             node->translate(shift);
         }

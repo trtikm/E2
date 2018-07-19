@@ -84,7 +84,7 @@ bool  compute_collision_of_scene_node_and_line(
         scalar* const  parameter_on_line_to_collision_point
         )
 {
-    matrix44 const  to_node_space = inverse(node.get_world_matrix());
+    matrix44 const  to_node_space = inverse44(node.get_world_matrix());
     vector3 const  A = contract43(to_node_space * expand34(line_begin));
     vector3 const  B = contract43(to_node_space * expand34(line_end));
 

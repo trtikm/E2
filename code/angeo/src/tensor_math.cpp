@@ -1,5 +1,6 @@
 #include <angeo/tensor_math.hpp>
 #include <utility/assumptions.hpp>
+#include <utility/development.hpp>
 
 #ifdef E2_USE_UBLAS_MATH_LIBRARY
 
@@ -47,14 +48,138 @@ quaternion  interpolate_spherical(quaternion const& u, quaternion const& v, floa
 }
 
 
-void  basis_to_rotation_matrix(vector3 const&  x_axis_unit_vector,
-                               vector3 const&  y_axis_unit_vector,
-                               vector3 const&  z_axis_unit_vector,
-                               matrix33&  R)
+void  rotation_matrix_to_basis(
+        matrix33 const&  R,
+        vector3&  x_axis_unit_vector,
+        vector3&  y_axis_unit_vector,
+        vector3&  z_axis_unit_vector
+        )
+{
+    x_axis_unit_vector(0) = R(0,0); x_axis_unit_vector(1) = R(1,0); x_axis_unit_vector(2) = R(2,0);
+    y_axis_unit_vector(0) = R(0,1); y_axis_unit_vector(1) = R(1,1); y_axis_unit_vector(2) = R(2,1);
+    z_axis_unit_vector(0) = R(0,2); z_axis_unit_vector(1) = R(1,2); z_axis_unit_vector(2) = R(2,2);
+}
+
+
+void  basis_to_rotation_matrix(
+        vector3 const&  x_axis_unit_vector,
+        vector3 const&  y_axis_unit_vector,
+        vector3 const&  z_axis_unit_vector,
+        matrix33&  R
+        )
 {
     R(0,0) = x_axis_unit_vector(0);  R(0,1) = y_axis_unit_vector(0);  R(0,2) = z_axis_unit_vector(0);
     R(1,0) = x_axis_unit_vector(1);  R(1,1) = y_axis_unit_vector(1);  R(1,2) = z_axis_unit_vector(1);
     R(2,0) = x_axis_unit_vector(2);  R(2,1) = y_axis_unit_vector(2);  R(2,2) = z_axis_unit_vector(2);
+}
+
+
+void  compose_from_base_matrix(
+        vector3 const&  origin,
+        matrix33 const&  rotation_matrix,
+        matrix44&  result
+        )
+{
+    result <<
+        rotation_matrix(0, 0), rotation_matrix(0, 1), rotation_matrix(0, 2), origin(0),
+        rotation_matrix(1, 0), rotation_matrix(1, 1), rotation_matrix(1, 2), origin(1),
+        rotation_matrix(2, 0), rotation_matrix(2, 1), rotation_matrix(2, 2), origin(2),
+        0.0f,                  0.0f,                  0.0f,                  1.0f
+        ;
+}
+
+
+void  compose_from_base_matrix(
+        vector3 const&  origin,
+        vector3 const&  x_axis_unit_vector,
+        vector3 const&  y_axis_unit_vector,
+        vector3 const&  z_axis_unit_vector,
+        matrix44&  M
+        )
+{
+    M(0, 0) = x_axis_unit_vector(0);  M(0, 1) = y_axis_unit_vector(0);  M(0, 2) = z_axis_unit_vector(0);  M(0, 2) = origin(0);
+    M(1, 0) = x_axis_unit_vector(1);  M(1, 1) = y_axis_unit_vector(1);  M(1, 2) = z_axis_unit_vector(1);  M(1, 2) = origin(1);
+    M(2, 0) = x_axis_unit_vector(2);  M(2, 1) = y_axis_unit_vector(2);  M(2, 2) = z_axis_unit_vector(2);  M(2, 2) = origin(2);
+    M(3, 0) = 0.0f;                   M(3, 1) = 0.0f;                   M(3, 2) = 0.0f;                   M(3, 3) = 1.0f;
+}
+
+
+void  decompose_from_base_matrix(
+        matrix44 const&  M,
+        vector3&  origin,
+        matrix33&  rotation_matrix
+        )
+{
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  decompose_from_base_matrix(
+        matrix44 const&  M,
+        vector3&  origin,
+        vector3&  x_axis_unit_vector,
+        vector3&  y_axis_unit_vector,
+        vector3&  z_axis_unit_vector
+        )
+{
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  compose_to_base_matrix(
+        vector3 const&  origin,
+        matrix33 const&  rotation_matrix,
+        matrix44&  result
+        )
+{
+    vector3 const  p {
+        -(rotation_matrix(0, 0) * origin(0) + rotation_matrix(1, 0) * origin(1) + rotation_matrix(2, 0) * origin(2)),
+        -(rotation_matrix(0, 1) * origin(0) + rotation_matrix(1, 1) * origin(1) + rotation_matrix(2, 1) * origin(2)),
+        -(rotation_matrix(0, 2) * origin(0) + rotation_matrix(1, 2) * origin(1) + rotation_matrix(2, 2) * origin(2))
+    };
+    result <<
+        rotation_matrix(0, 0), rotation_matrix(1, 0), rotation_matrix(2, 0), p(0),
+        rotation_matrix(0, 1), rotation_matrix(1, 1), rotation_matrix(2, 1), p(1),
+        rotation_matrix(0, 2), rotation_matrix(1, 2), rotation_matrix(2, 2), p(2),
+        0.0f,                  0.0f,                  0.0f,                  1.0f
+        ;
+}
+
+
+void  compose_to_base_matrix(
+        vector3 const&  origin,
+        vector3 const&  x_axis_unit_vector,
+        vector3 const&  y_axis_unit_vector,
+        vector3 const&  z_axis_unit_vector,
+        matrix44&  M
+        )
+{
+    M(0, 0) = x_axis_unit_vector(0);  M(0, 1) = x_axis_unit_vector(1);  M(0, 2) = x_axis_unit_vector(2);  M(0, 2) = -dot_product(x_axis_unit_vector, origin);
+    M(1, 0) = y_axis_unit_vector(0);  M(1, 1) = y_axis_unit_vector(1);  M(1, 2) = y_axis_unit_vector(2);  M(1, 2) = -dot_product(y_axis_unit_vector, origin);
+    M(2, 0) = z_axis_unit_vector(0);  M(2, 1) = z_axis_unit_vector(1);  M(2, 2) = z_axis_unit_vector(2);  M(2, 2) = -dot_product(z_axis_unit_vector, origin);
+    M(3, 0) = 0.0f;                   M(3, 1) = 0.0f;                   M(3, 2) = 0.0f;                   M(3, 3) = 1.0f;
+}
+
+
+void  decompose_to_base_matrix(
+        matrix44 const&  M,
+        vector3&  origin,
+        matrix33&  rotation_matrix
+        )
+{
+    NOT_IMPLEMENTED_YET();
+}
+
+
+void  decompose_to_base_matrix(
+        matrix44 const&  M,
+        vector3&  origin,
+        vector3&  x_axis_unit_vector,
+        vector3&  y_axis_unit_vector,
+        vector3&  z_axis_unit_vector
+        )
+{
+    NOT_IMPLEMENTED_YET();
 }
 
 

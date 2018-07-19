@@ -23,7 +23,7 @@ inline void  transform_origin_and_orientation_from_world_to_scene_node(
         quaternion&  orientation
         )
 {
-    transform_origin_and_orientation(inverse(node->get_world_matrix()), origin, orientation);
+    transform_origin_and_orientation(inverse44(node->get_world_matrix()), origin, orientation);
 }
 
 
@@ -60,7 +60,7 @@ inline vector3  transform_point_from_world_to_scene_node(
         vector3 const&  point
         )
 {
-    return transform_point(inverse(node.get_world_matrix()), point);
+    return transform_point(inverse44(node.get_world_matrix()), point);
 }
 
 
@@ -69,7 +69,7 @@ inline vector3  transform_vector_from_world_to_scene_node(
         vector3 const&  vector
         )
 {
-    return transform_vector(inverse(node.get_world_matrix()), vector);
+    return transform_vector(inverse44(node.get_world_matrix()), vector);
 }
 
 
@@ -87,7 +87,7 @@ inline quaternion  transform_orientation_from_world_to_scene_node(
         quaternion const&  orientation
         )
 {
-    return transform_orientation(inverse(node.get_world_matrix()), orientation);
+    return transform_orientation(inverse44(node.get_world_matrix()), orientation);
 }
 
 
