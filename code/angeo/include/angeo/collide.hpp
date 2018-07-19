@@ -289,7 +289,7 @@ struct clipped_polygon_description
 
 
 POINT_SET_TYPE  clip_polygon(
-        std::vector<vector2> const&  polygon_points,
+        std::vector<vector2> const&  polygon_points,    // The first and the last point must be the same.
         vector2 const&  clip_origin,
         vector2 const&  clip_normal,
         clipped_polygon_description* const  description
@@ -305,11 +305,20 @@ POINT_SET_TYPE  instersection_of_plane_with_xy_coord_plane(
 
 
 POINT_SET_TYPE  clip_polygon(
+        std::vector<vector2> const&  polygon_points,    // The first and the last point must be the same.
         matrix44 const&  to_polygon_space_matrix,
-        std::vector<vector2> const&  polygon_points,
         vector3 const&  clip_origin,
         vector3 const&  clip_normal,
         clipped_polygon_description* const  description
+        );
+
+
+POINT_SET_TYPE  clip_polygon(
+        std::vector<vector2> const&  polygon_points,    // The first and the last point must be the same.
+        matrix44 const&  to_polygon_space_matrix,
+        std::vector< std::pair<vector3,vector3> > const&  clip_planes,
+        std::vector<vector2>* const  output_clipped_polygon_points,
+        std::vector<natural_32_bit>* const  output_indices_of_intersection_points
         );
 
 

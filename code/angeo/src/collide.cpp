@@ -4,6 +4,8 @@
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <utility/development.hpp>
+#include <array>
+#include <tuple>
 
 namespace angeo {
 
@@ -576,6 +578,8 @@ POINT_SET_TYPE  clip_polygon(
         clipped_polygon_description* const  description
         )
 {
+    TMPROF_BLOCK();
+
     INVARIANT(polygon_points.size() >= 4UL);    // The first point and the last one are the same.
                                                 // So, at least 3 different points are required.
 
@@ -750,6 +754,8 @@ POINT_SET_TYPE  instersection_of_plane_with_xy_coord_plane(
         vector2&  intersection_normal
         )
 {
+    TMPROF_BLOCK();
+
     if (normal(2) > scalar(1.0 - 1e-4))
     {
         if (origin(2) <= scalar(0.0))
@@ -778,13 +784,15 @@ POINT_SET_TYPE  instersection_of_plane_with_xy_coord_plane(
 
 
 POINT_SET_TYPE  clip_polygon(
-        matrix44 const&  to_polygon_space_matrix,
         std::vector<vector2> const&  polygon_points,
+        matrix44 const&  to_polygon_space_matrix,
         vector3 const&  clip_origin,
         vector3 const&  clip_normal,
         clipped_polygon_description* const  description
         )
 {
+    TMPROF_BLOCK();
+
     vector3 const  transformed_clip_origin = transform_point(clip_origin, to_polygon_space_matrix);
     vector3 const  transformed_clip_normal = transform_vector(clip_normal, to_polygon_space_matrix);
 
@@ -801,6 +809,198 @@ POINT_SET_TYPE  clip_polygon(
     return plane_intersection_type != POINT_SET_TYPE::GENERAL ?
                 plane_intersection_type :
                 clip_polygon(polygon_points,origin2d,normal2d,description);
+}
+
+
+POINT_SET_TYPE  clip_polygon(
+        std::vector<vector2> const&  polygon_points,
+        matrix44 const&  to_polygon_space_matrix,
+        std::vector< std::pair<vector3,vector3> > const&  clip_planes,
+        std::vector<vector2>* const  output_clipped_polygon_points,
+        std::vector<natural_32_bit>* const  output_indices_of_intersection_points
+        )
+{
+    TMPROF_BLOCK();
+
+    natural_32_bit  free_buffer_index = ((clip_planes.size() & 1UL) == 0UL) ? 0U : 1U;
+
+    std::array<std::vector<vector2>, 2U>  polygon_points_buffers;
+    polygon_points_buffers.at(0U).reserve(polygon_points.size() + 2U * clip_planes.size() + 1U);
+    polygon_points_buffers.at(1U).reserve(polygon_points.size() + 2U * clip_planes.size() + 1U);
+    std::array<std::vector<vector2>*, 2U> const  polygon_points_buffer_ptr{
+        output_clipped_polygon_points == nullptr ? &polygon_points_buffers.at(0U) : output_clipped_polygon_points,
+        &polygon_points_buffers.at(1U)
+    };
+    std::vector<vector2> const*  polygon_points_ptr = &polygon_points;
+
+    std::array<std::vector<natural_32_bit>, 2U>  intersection_points_buffers;
+    intersection_points_buffers.at(0U).reserve(2U * clip_planes.size());
+    intersection_points_buffers.at(1U).reserve(2U * clip_planes.size());
+    std::array<std::vector<natural_32_bit>*, 2U> const  intersection_points_buffer_ptr{
+        output_indices_of_intersection_points == nullptr ? &intersection_points_buffers.at(0U) : output_indices_of_intersection_points,
+        &intersection_points_buffers.at(1U)
+    };
+    std::vector<natural_32_bit> const*  intersection_points_ptr = intersection_points_buffer_ptr.at(free_buffer_index);
+
+    bool  was_clipped = false;
+    for (std::pair<vector3, vector3> const&  origin_and_normal : clip_planes)
+    {
+        clipped_polygon_description  description;
+        POINT_SET_TYPE const  set_type = angeo::clip_polygon(
+                                                *polygon_points_ptr,
+                                                to_polygon_space_matrix,
+                                                origin_and_normal.first,
+                                                origin_and_normal.second,
+                                                &description
+                                                );
+        if (set_type == POINT_SET_TYPE::EMPTY)
+            return POINT_SET_TYPE::EMPTY;
+        if (set_type == POINT_SET_TYPE::FULL)
+            continue;
+
+        ++free_buffer_index;
+        if (free_buffer_index == 2U)
+            free_buffer_index = 0U;
+
+        std::vector<vector2>&  free_polygon_points_buffer_ref = polygon_points_buffers.at(free_buffer_index);
+        std::vector<natural_32_bit>&  free_intersection_points_buffer_ref = intersection_points_buffers.at(free_buffer_index);
+        free_polygon_points_buffer_ref.clear();
+        free_intersection_points_buffer_ref.clear();
+        if (description.index_start <= description.index_end)
+        {
+            for (std::size_t  i = description.index_start; i != description.index_end; ++i)
+                free_polygon_points_buffer_ref.push_back(polygon_points_ptr->at(i));
+
+            for (natural_32_bit  idx : *intersection_points_ptr)
+                if (idx >= description.index_start && idx < description.index_end)
+                    free_intersection_points_buffer_ref.push_back(idx - (natural_32_bit)description.index_start);
+        }
+        else
+        {
+            for (std::size_t i = description.index_start; i != polygon_points_ptr->size(); ++i)
+                free_polygon_points_buffer_ref.push_back(polygon_points_ptr->at(i));
+            for (std::size_t i = 0U; i != description.index_end; ++i)
+                free_polygon_points_buffer_ref.push_back(polygon_points_ptr->at(i));
+
+            natural_32_bit const  end_shift = (natural_32_bit)(polygon_points_ptr->size() - description.index_start);
+            for (natural_32_bit idx : *intersection_points_ptr)
+                if (idx >= description.index_start)
+                    free_intersection_points_buffer_ref.push_back(idx - (natural_32_bit)description.index_start);
+                else if (idx < description.index_end)
+                    free_intersection_points_buffer_ref.push_back(idx + end_shift);
+        }
+        free_intersection_points_buffer_ref.push_back((natural_32_bit)free_polygon_points_buffer_ref.size());
+        free_polygon_points_buffer_ref.push_back(description.point_start);
+
+        free_intersection_points_buffer_ref.push_back((natural_32_bit)free_polygon_points_buffer_ref.size());
+        free_polygon_points_buffer_ref.push_back(description.point_end);
+
+        free_polygon_points_buffer_ref.push_back(free_polygon_points_buffer_ref.front()); // Make the polygon cyclic.
+
+        polygon_points_ptr = &free_polygon_points_buffer_ref;
+        intersection_points_ptr = &free_intersection_points_buffer_ref;
+
+        was_clipped = true;
+    }
+
+    if (was_clipped == false)
+        return POINT_SET_TYPE::FULL;
+
+    if (free_buffer_index == 0U)
+    {
+        if (output_clipped_polygon_points != nullptr)
+            output_clipped_polygon_points->swap(polygon_points_buffers.front());
+        if (output_indices_of_intersection_points != nullptr)
+            output_indices_of_intersection_points->swap(intersection_points_buffers.front());
+    }
+
+    return POINT_SET_TYPE::GENERAL;
+}
+
+
+void  collision_box_box(
+    vector3 const&  box_1_origin_in_bbox_space,
+    vector3 const&  box_1_basis_x_vector_in_bbox_space,
+    vector3 const&  box_1_basis_y_vector_in_bbox_space,
+    vector3 const&  box_1_basis_z_vector_in_bbox_space,
+    vector3 const&  box_1_min_corner_in_box_space,
+    vector3 const&  box_1_max_corner_in_box_space,
+
+    vector3 const&  box_2_origin_in_bbox_space,
+    vector3 const&  box_2_basis_x_vector_in_bbox_space,
+    vector3 const&  box_2_basis_y_vector_in_bbox_space,
+    vector3 const&  box_2_basis_z_vector_in_bbox_space,
+    vector3 const&  box_2_min_corner_in_box_space,
+    vector3 const&  box_2_max_corner_in_box_space,
+
+    std::vector<vector3>  output_collision_plane_points,
+    vector3  ouptut_collision_plane_normal
+    )
+{
+    // Build clip planes from faces of box 2.
+
+    matrix44  box_2_from_space_matrix;
+    compose_from_base_matrix(
+            box_2_origin_in_bbox_space,
+            box_2_basis_x_vector_in_bbox_space,
+            box_2_basis_y_vector_in_bbox_space,
+            box_2_basis_z_vector_in_bbox_space,
+            box_2_from_space_matrix
+            );
+    vector3 const  box_2_min_corners_in_world = transform_point(box_2_min_corner_in_box_space, box_2_from_space_matrix);
+    vector3 const  box_2_max_corners_in_world = transform_point(box_2_max_corner_in_box_space, box_2_from_space_matrix);
+    std::vector< std::pair<vector3, vector3> > const  clip_planes {
+        std::pair<vector3, vector3>{ box_2_min_corners_in_world, box_2_basis_x_vector_in_bbox_space },
+        std::pair<vector3, vector3>{ box_2_min_corners_in_world, box_2_basis_y_vector_in_bbox_space },
+        std::pair<vector3, vector3>{ box_2_min_corners_in_world, box_2_basis_z_vector_in_bbox_space },
+
+        std::pair<vector3, vector3>{ box_2_max_corners_in_world, -box_2_basis_x_vector_in_bbox_space },
+        std::pair<vector3, vector3>{ box_2_max_corners_in_world, -box_2_basis_y_vector_in_bbox_space },
+        std::pair<vector3, vector3>{ box_2_max_corners_in_world, -box_2_basis_z_vector_in_bbox_space },
+    };
+
+    // Prepare data for cliping faces of box 1.
+
+    matrix44  box_1_from_space_matrix;
+    compose_from_base_matrix(
+            box_1_origin_in_bbox_space,
+            box_1_basis_x_vector_in_bbox_space,
+            box_1_basis_y_vector_in_bbox_space,
+            box_1_basis_z_vector_in_bbox_space,
+            box_1_from_space_matrix
+            );
+    vector3 const  box_1_min_corners_in_world = transform_point(box_1_min_corner_in_box_space, box_1_from_space_matrix);
+    vector3 const  box_1_max_corners_in_world = transform_point(box_1_max_corner_in_box_space, box_1_from_space_matrix);
+
+    // Build polygon and to-space-matrix of face 1 of box 1.
+
+    matrix44  to_polygon_space_matrix;
+    compose_to_base_matrix(
+            box_1_min_corners_in_world,
+            box_1_basis_y_vector_in_bbox_space,
+            box_1_basis_z_vector_in_bbox_space,
+            -box_1_basis_z_vector_in_bbox_space,
+            to_polygon_space_matrix
+            );
+    std::vector<vector2>  polygon_points {
+
+    };
+
+    // Clip face 1 by all clip planes
+
+    std::vector<vector2>  clipped_polygon_points;
+    std::vector<natural_32_bit>  indices_of_intersection_points;
+    POINT_SET_TYPE const  set_type = clip_polygon(
+                                            polygon_points,
+                                            to_polygon_space_matrix,
+                                            clip_planes,
+                                            &clipped_polygon_points,
+                                            &indices_of_intersection_points
+                                            );
+
+
+
+
 }
 
 
