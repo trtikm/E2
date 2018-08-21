@@ -919,84 +919,119 @@ POINT_SET_TYPE  clip_polygon(
 
 
 void  collision_box_box(
-    vector3 const&  box_1_origin_in_bbox_space,
-    vector3 const&  box_1_basis_x_vector_in_bbox_space,
-    vector3 const&  box_1_basis_y_vector_in_bbox_space,
-    vector3 const&  box_1_basis_z_vector_in_bbox_space,
-    vector3 const&  box_1_min_corner_in_box_space,
-    vector3 const&  box_1_max_corner_in_box_space,
+        vector3 const&  box_1_origin_in_world_space,
+        vector3 const&  box_1_basis_x_vector_in_world_space,
+        vector3 const&  box_1_basis_y_vector_in_world_space,
+        vector3 const&  box_1_basis_z_vector_in_world_space,
+        vector3 const&  box_1_min_corner_in_box_space,
+        vector3 const&  box_1_max_corner_in_box_space,
 
-    vector3 const&  box_2_origin_in_bbox_space,
-    vector3 const&  box_2_basis_x_vector_in_bbox_space,
-    vector3 const&  box_2_basis_y_vector_in_bbox_space,
-    vector3 const&  box_2_basis_z_vector_in_bbox_space,
-    vector3 const&  box_2_min_corner_in_box_space,
-    vector3 const&  box_2_max_corner_in_box_space,
+        vector3 const&  box_2_origin_in_world_space,
+        vector3 const&  box_2_basis_x_vector_in_world_space,
+        vector3 const&  box_2_basis_y_vector_in_world_space,
+        vector3 const&  box_2_basis_z_vector_in_world_space,
+        vector3 const&  box_2_min_corner_in_box_space,
+        vector3 const&  box_2_max_corner_in_box_space,
 
-    std::vector<vector3>  output_collision_plane_points,
-    vector3  ouptut_collision_plane_normal
-    )
+        std::vector<vector3>  output_collision_plane_points,
+        vector3  ouptut_collision_plane_normal
+        )
 {
     // Build clip planes from faces of box 2.
 
     matrix44  box_2_from_space_matrix;
     compose_from_base_matrix(
-            box_2_origin_in_bbox_space,
-            box_2_basis_x_vector_in_bbox_space,
-            box_2_basis_y_vector_in_bbox_space,
-            box_2_basis_z_vector_in_bbox_space,
+            box_2_origin_in_world_space,
+            box_2_basis_x_vector_in_world_space,
+            box_2_basis_y_vector_in_world_space,
+            box_2_basis_z_vector_in_world_space,
             box_2_from_space_matrix
             );
     vector3 const  box_2_min_corners_in_world = transform_point(box_2_min_corner_in_box_space, box_2_from_space_matrix);
     vector3 const  box_2_max_corners_in_world = transform_point(box_2_max_corner_in_box_space, box_2_from_space_matrix);
     std::vector< std::pair<vector3, vector3> > const  clip_planes {
-        std::pair<vector3, vector3>{ box_2_min_corners_in_world, box_2_basis_x_vector_in_bbox_space },
-        std::pair<vector3, vector3>{ box_2_min_corners_in_world, box_2_basis_y_vector_in_bbox_space },
-        std::pair<vector3, vector3>{ box_2_min_corners_in_world, box_2_basis_z_vector_in_bbox_space },
+        std::pair<vector3, vector3>{ box_2_min_corners_in_world, box_2_basis_x_vector_in_world_space },
+        std::pair<vector3, vector3>{ box_2_min_corners_in_world, box_2_basis_y_vector_in_world_space },
+        std::pair<vector3, vector3>{ box_2_min_corners_in_world, box_2_basis_z_vector_in_world_space },
 
-        std::pair<vector3, vector3>{ box_2_max_corners_in_world, -box_2_basis_x_vector_in_bbox_space },
-        std::pair<vector3, vector3>{ box_2_max_corners_in_world, -box_2_basis_y_vector_in_bbox_space },
-        std::pair<vector3, vector3>{ box_2_max_corners_in_world, -box_2_basis_z_vector_in_bbox_space },
+        std::pair<vector3, vector3>{ box_2_max_corners_in_world, -box_2_basis_x_vector_in_world_space },
+        std::pair<vector3, vector3>{ box_2_max_corners_in_world, -box_2_basis_y_vector_in_world_space },
+        std::pair<vector3, vector3>{ box_2_max_corners_in_world, -box_2_basis_z_vector_in_world_space },
     };
 
     // Prepare data for cliping faces of box 1.
 
     matrix44  box_1_from_space_matrix;
     compose_from_base_matrix(
-            box_1_origin_in_bbox_space,
-            box_1_basis_x_vector_in_bbox_space,
-            box_1_basis_y_vector_in_bbox_space,
-            box_1_basis_z_vector_in_bbox_space,
+            box_1_origin_in_world_space,
+            box_1_basis_x_vector_in_world_space,
+            box_1_basis_y_vector_in_world_space,
+            box_1_basis_z_vector_in_world_space,
             box_1_from_space_matrix
             );
     vector3 const  box_1_min_corners_in_world = transform_point(box_1_min_corner_in_box_space, box_1_from_space_matrix);
     vector3 const  box_1_max_corners_in_world = transform_point(box_1_max_corner_in_box_space, box_1_from_space_matrix);
 
-    // Build polygon and to-space-matrix of face 1 of box 1.
-
     matrix44  to_polygon_space_matrix;
-    compose_to_base_matrix(
-            box_1_min_corners_in_world,
-            box_1_basis_y_vector_in_bbox_space,
-            box_1_basis_z_vector_in_bbox_space,
-            -box_1_basis_z_vector_in_bbox_space,
-            to_polygon_space_matrix
-            );
-    std::vector<vector2>  polygon_points {
+    std::vector<vector2>  polygon_points(5UL);
 
-    };
+    {
+        // Build polygon and to-space-matrix of face 1 of box 1 (xy-face-low).
 
-    // Clip face 1 by all clip planes
+        compose_to_base_matrix(
+                box_1_min_corners_in_world,
+                box_1_basis_y_vector_in_world_space,
+                box_1_basis_x_vector_in_world_space,
+                -box_1_basis_z_vector_in_world_space,
+                to_polygon_space_matrix
+                );
+        polygon_points.at(0UL) = vector2(box_1_min_corner_in_box_space(1), box_1_min_corner_in_box_space(0));
+        polygon_points.at(1UL) = vector2(box_1_max_corner_in_box_space(1), box_1_min_corner_in_box_space(0));
+        polygon_points.at(2UL) = vector2(box_1_max_corner_in_box_space(1), box_1_max_corner_in_box_space(0));
+        polygon_points.at(3UL) = vector2(box_1_min_corner_in_box_space(1), box_1_max_corner_in_box_space(0));
+        polygon_points.at(4UL) = polygon_points.at(0UL);
 
-    std::vector<vector2>  clipped_polygon_points;
-    std::vector<natural_32_bit>  indices_of_intersection_points;
-    POINT_SET_TYPE const  set_type = clip_polygon(
-                                            polygon_points,
-                                            to_polygon_space_matrix,
-                                            clip_planes,
-                                            &clipped_polygon_points,
-                                            &indices_of_intersection_points
-                                            );
+        // Clip face 1 by all clip planes
+
+        std::vector<vector2>  clipped_polygon_points;
+        std::vector<natural_32_bit>  indices_of_intersection_points;
+        POINT_SET_TYPE const  set_type = clip_polygon(
+                                                polygon_points,
+                                                to_polygon_space_matrix,
+                                                clip_planes,
+                                                &clipped_polygon_points,
+                                                &indices_of_intersection_points
+                                                );
+    }
+    {
+        // Build polygon and to-space-matrix of face 2 of box 1 (xz-face-low).
+
+        compose_to_base_matrix(
+                box_1_min_corners_in_world,
+                box_1_basis_x_vector_in_world_space,
+                box_1_basis_z_vector_in_world_space,
+                -box_1_basis_y_vector_in_world_space,
+                to_polygon_space_matrix
+                );
+        polygon_points.at(0UL) = vector2(box_1_min_corner_in_box_space(0), box_1_min_corner_in_box_space(2));
+        polygon_points.at(1UL) = vector2(box_1_max_corner_in_box_space(0), box_1_min_corner_in_box_space(2));
+        polygon_points.at(2UL) = vector2(box_1_max_corner_in_box_space(0), box_1_max_corner_in_box_space(2));
+        polygon_points.at(3UL) = vector2(box_1_min_corner_in_box_space(0), box_1_max_corner_in_box_space(2));
+        polygon_points.at(4UL) = polygon_points.at(0UL);
+
+        // Clip face 2 by all clip planes
+
+        std::vector<vector2>  clipped_polygon_points;
+        std::vector<natural_32_bit>  indices_of_intersection_points;
+        POINT_SET_TYPE const  set_type = clip_polygon(
+                                                polygon_points,
+                                                to_polygon_space_matrix,
+                                                clip_planes,
+                                                &clipped_polygon_points,
+                                                &indices_of_intersection_points
+                                                );
+    }
+
 
 
 
