@@ -3,6 +3,7 @@
 
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/coordinate_system.hpp>
+#   include <unordered_map>
 #   include <vector>
 #   include <tuple>
 
@@ -16,6 +17,43 @@ namespace angeo {
  * are emulated; they are just lists (i.e. union) of convex shapes.
  *
  */
+
+enum struct  COLLISION_PRIMITIVE_TYPE : natural_8_bit
+{
+    // Convex primitives with no volume.
+    POINT           = 0,
+    LINE            = 1,
+    TRIANGLE        = 2,
+    PLANE           = 3,
+    HALF_SPACE      = 4,
+
+    // Convex primitives with volume.
+    SPHERE          = 5,
+    CAPSULE         = 6,
+    BOX             = 7,
+    CONVEX_POLYTOPE = 8,
+};
+
+
+enum struct  COLLISION_MATERIAL_TYPE : natural_8_bit
+{
+    WOOD            = 0,
+    STEEL           = 1,
+    CONCRETE        = 2,
+    GLASS           = 3,
+    GUM             = 4,
+    PLASTIC         = 5,
+};
+
+struct  collision_shape
+{
+    struct sphere
+    {
+
+    };
+
+    static sphere  s_spheres;
+};
 
 
 //enum struct convex_shape_kind : natural_8_bit
