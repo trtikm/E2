@@ -17,12 +17,11 @@ namespace window_tabs { namespace tab_statistics {
 widgets::widgets(program_window* const  wnd)
     : QTabWidget()
     , m_wnd(wnd)
-    , m_tab_resources(wnd)
+    , m_tab_resources(new tab_resources::widgets(wnd))
 {
     connect(this, SIGNAL(currentChanged(int)), this, SLOT(on_tab_changed(int)));
 
-    addTab(tab_resources::make_tab_content(m_tab_resources),
-           QString(tab_names::RESOURCES().c_str()));
+    addTab(m_tab_resources, QString(tab_names::RESOURCES().c_str()));
 }
 
 

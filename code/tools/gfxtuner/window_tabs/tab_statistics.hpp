@@ -29,7 +29,7 @@ private:
 
     program_window*  m_wnd;
 
-    tab_resources::widgets  m_tab_resources;
+    tab_resources::widgets*  m_tab_resources;
 };
 
 
