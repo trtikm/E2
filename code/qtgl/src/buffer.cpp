@@ -34,7 +34,7 @@ buffer_file_data::buffer_file_data(async::key_type const&  key, async::finalise_
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  path = key.second;
+    boost::filesystem::path const  path = key.get_unique_id();
 
     if (!boost::filesystem::exists(path))
         throw std::runtime_error(msgstream() << "The buffer file '" << path << "' does not exists.");

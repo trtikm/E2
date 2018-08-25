@@ -18,7 +18,7 @@ texture_file_data::texture_file_data(async::key_type const&  key, async::finalis
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  path = key.second;
+    boost::filesystem::path const  path = key.get_unique_id();
 
     ASSUMPTION(boost::filesystem::exists(path));
     ASSUMPTION(boost::filesystem::is_regular_file(path));
@@ -178,7 +178,7 @@ texture_image_data::texture_image_data(async::key_type const&  key, async::final
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  path = key.second;
+    boost::filesystem::path const  path = key.get_unique_id();
 
     ASSUMPTION(boost::filesystem::exists(path));
     ASSUMPTION(boost::filesystem::is_regular_file(path));
@@ -276,7 +276,7 @@ texture_data::texture_data(async::key_type const&  key, async::finalise_load_on_
 {
     TMPROF_BLOCK();
 
-    std::string const  texture_file_pathname = key.second;
+    std::string const  texture_file_pathname = key.get_unique_id();
     m_texture_props.insert_load_request(
             texture_file_pathname,
             [this, texture_file_pathname, finaliser]() -> void {

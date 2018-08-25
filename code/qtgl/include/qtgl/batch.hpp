@@ -178,8 +178,8 @@ struct batch : public async::resource_accessor<detail::batch_data>
     skeleton_alignment  get_skeleton_alignment() const { return resource().get_skeleton_alignment(); }
     batch_available_resources  get_available_resources() const { return resource().get_available_resources(); }
 
-    std::string  uid() const { return key().first + key().second; }
-    std::string const&  path_component_of_uid() const { return key().second; }
+    std::string  uid() const { return key().get_data_type_name() + key().get_unique_id(); }
+    std::string const&  path_component_of_uid() const { return key().get_unique_id(); }
 
     bool  is_attached_to_skeleton() const { return resource().is_attached_to_skeleton(); }
     bool  ready() const;

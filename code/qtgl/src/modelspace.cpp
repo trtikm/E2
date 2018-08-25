@@ -18,7 +18,7 @@ modelspace_data::modelspace_data(async::key_type const&  key, async::finalise_lo
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  pathname = key.second;
+    boost::filesystem::path const  pathname = key.get_unique_id();
 
     if (!boost::filesystem::exists(pathname))
         throw std::runtime_error(msgstream() << "The passed file '" << pathname << "' does not exist.");

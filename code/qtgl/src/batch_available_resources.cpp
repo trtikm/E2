@@ -23,7 +23,7 @@ batch_available_resources_data::batch_available_resources_data(
     , m_textures()
     , m_skeletal()
     , m_index_buffer()
-    , m_root_dir(canonical_path(key.second).string())
+    , m_root_dir(canonical_path(key.get_unique_id()).string())
 {
     TMPROF_BLOCK();
 

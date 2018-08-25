@@ -1,5 +1,28 @@
 #include <utility/async_resource_load.hpp>
 
+
+namespace async { namespace detail {
+
+
+std::string  key_type::generate_unique_id()
+{
+    static natural_64_bit  s_fresh_key_id = 0ULL;
+    static std::string const  s_uid_prefix(get_prefix_of_generated_fresh_unique_id());
+    return s_uid_prefix + std::to_string(++s_fresh_key_id);
+}
+
+key_type const&  key_type::get_invalid_key()
+{
+    static key_type const  s_invalid_key(
+            std::string(get_default_data_type_name()),
+            std::string(get_prefix_of_generated_fresh_unique_id()) + "INVALID"
+            );
+    return s_invalid_key;
+}
+
+
+}}
+
 namespace async { namespace detail {
 
 
@@ -13,7 +36,7 @@ resource_load_planner&  resource_load_planner::instance()
 resource_load_planner::~resource_load_planner()
 {
     assert(m_worker_finished == true);
-    assert(m_resource_just_being_loaded == key_type());
+    assert(m_resource_just_being_loaded == key_type::get_invalid_key());
     assert(m_queue.empty());
 
     if (m_worker_thread.joinable()) // This must be here, because although the worker can be terminated
@@ -30,7 +53,7 @@ void  resource_load_planner::clear()
     std::lock_guard<std::mutex> const  lock(mutex());
     m_worker_finished = true;
     m_queue.clear();
-    m_resource_just_being_loaded = key_type();
+    m_resource_just_being_loaded = key_type::get_invalid_key();
 }
 
 
@@ -42,7 +65,7 @@ void  resource_load_planner::insert_load_request(
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(key != key_type());
+    ASSUMPTION(key != key_type::get_invalid_key());
 
     std::lock_guard<std::mutex> const  lock(mutex());
     m_queue.push(queue_value_type{priority,key,loader});
@@ -58,23 +81,23 @@ void  resource_load_planner::cancel_load_request(key_type const&  key)
     {
         std::lock_guard<std::mutex> const  lock(mutex());
         if (resource_just_being_loaded() != key)
-            break;
-    }
-
-    std::lock_guard<std::mutex> const  lock(mutex());
-    for (queue_storage_type::iterator  it = m_queue.begin(); it != m_queue.end(); ++it)
-        if (std::get<1>(*it) == key)
         {
-            *it = queue_value_type{ std::get<0>(*it), key_type(), std::get<2>(*it) };
+            for (queue_storage_type::iterator  it = m_queue.begin(); it != m_queue.end(); ++it)
+                if (std::get<1>(*it) == key)
+                {
+                    *it = queue_value_type{ std::get<0>(*it), key_type::get_invalid_key(), std::get<2>(*it) };
+                    break;
+                }
             break;
         }
+    }
 }
 
 
 resource_load_planner::resource_load_planner()
     : m_queue()
     , m_mutex()
-    , m_resource_just_being_loaded()
+    , m_resource_just_being_loaded(key_type::get_invalid_key())
     , m_worker_thread()
     , m_worker_finished(true)
 {}
@@ -121,14 +144,14 @@ void  resource_load_planner::worker()
         if (done)
             break;
 
-        if (std::get<1>(task) != key_type())
+        if (std::get<1>(task) != key_type::get_invalid_key())
         {
             TMPROF_BLOCK();
             std::get<2>(task)();
         }
 
         std::lock_guard<std::mutex> const  lock(mutex());
-        m_resource_just_being_loaded = key_type();
+        m_resource_just_being_loaded = key_type::get_invalid_key();
     }
 
     m_worker_finished = true;

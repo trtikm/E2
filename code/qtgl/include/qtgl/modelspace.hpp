@@ -44,7 +44,10 @@ struct  modelspace : public async::resource_accessor<detail::modelspace_data>
     std::vector<angeo::coordinate_system> const&  get_coord_systems() const
     { return resource().coord_systems(); }
 
-    boost::filesystem::path  get_skeleton_path() const { return boost::filesystem::path(key().second).parent_path(); }
+    boost::filesystem::path  get_skeleton_path() const
+    {
+        return boost::filesystem::path(key().get_unique_id()).parent_path();
+    }
 };
 
 

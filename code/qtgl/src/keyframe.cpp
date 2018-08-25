@@ -19,7 +19,7 @@ keyframe_data::keyframe_data(async::key_type const&  key, async::finalise_load_o
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  pathname = key.second;
+    boost::filesystem::path const  pathname = key.get_unique_id();
 
     if (!boost::filesystem::exists(pathname))
         throw std::runtime_error(msgstream() << "The passed file '" << pathname << "' does not exist.");
@@ -111,7 +111,7 @@ keyframes_data::keyframes_data(
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  keyframes_dir = key.second;
+    boost::filesystem::path const  keyframes_dir = key.get_unique_id();
 
     if (!boost::filesystem::is_directory(keyframes_dir))
         throw std::runtime_error("Cannot access the directory of keyframes: " + keyframes_dir.string());

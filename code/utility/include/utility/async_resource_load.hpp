@@ -11,6 +11,7 @@
 #   include <boost/filesystem/path.hpp>
 #   include <unordered_map>
 #   include <vector>
+#   include <string>
 #   include <mutex>
 #   include <queue>
 #   include <atomic>
@@ -34,7 +35,79 @@ enum struct LOAD_STATE
 namespace async { namespace detail {
 
 
-using  key_type = std::pair<std::string,std::string>;  // <data-type-name,ID>, where ID is usually a disk path.
+struct  key_type
+{
+    key_type() : key_type(get_default_data_type_name()) {}
+
+    explicit key_type(std::string const& data_type_name) : key_type(data_type_name, generate_unique_id()) {}
+
+    key_type(std::string const& data_type_name, std::string const&  unique_id)
+        : m_data_type_name(data_type_name)
+        , m_unique_id(unique_id)
+    {}
+
+    std::string const&  get_data_type_name() const { return  m_data_type_name; }
+    std::string const&  get_unique_id() const { return  m_unique_id; }
+
+    static char const*  get_default_data_type_name() noexcept { return "@async::any"; }
+    static char const*  get_prefix_of_generated_fresh_unique_id() noexcept { return "@async::uid#"; }
+
+    static std::string  generate_unique_id();
+
+    static key_type const&  get_invalid_key();
+
+private:
+    std::string  m_data_type_name;
+    std::string  m_unique_id;
+};
+
+
+inline bool  operator==(key_type const&  left, key_type const&  right)
+{
+    return left.get_unique_id() == right.get_unique_id() &&
+           left.get_data_type_name() == right.get_data_type_name();
+}
+
+
+inline bool  operator<(key_type const&  left, key_type const&  right)
+{
+    return left.get_data_type_name() < right.get_data_type_name()
+           || ( left.get_data_type_name() == right.get_data_type_name()
+                && left.get_unique_id() < right.get_unique_id() );
+}
+
+
+inline bool  operator!=(key_type const&  left, key_type const&  right) { return !(left == right); }
+inline bool  operator>(key_type const&  left, key_type const&  right) { return  right < left; }
+inline bool  operator<=(key_type const&  left, key_type const&  right) { return  left == right || left < right; }
+inline bool  operator>=(key_type const&  left, key_type const&  right) { return  left == right || left > right; }
+
+
+}}
+
+namespace std
+{
+
+
+template<>
+struct hash<async::detail::key_type>
+{
+    size_t operator()(async::detail::key_type const&  key) const
+    {
+        size_t seed = 0;
+        ::hash_combine(seed, key.get_data_type_name());
+        ::hash_combine(seed, key.get_unique_id());
+        return seed;
+    }
+};
+
+
+}
+
+
+namespace async { namespace detail {
+
+
 using  resource_loader_type = std::function<void()>;
 using  resource_load_priority_type = natural_32_bit;
 
@@ -261,7 +334,7 @@ struct  resource_cache  final
 
     template<typename resource_type, typename... arg_types>
     void  insert_resource(
-            key_type  key,
+            key_type const&  key,
             notification_callback_type const&  parent_notification_callback,
             resources_cache_type::value_type*&  output,
             arg_types... args_for_constructor_of_the_resource
@@ -349,7 +422,7 @@ void  resource_cache::insert_load_request(
 
 template<typename resource_type, typename... arg_types>
 void  resource_cache::insert_resource(
-        key_type  key,
+        key_type const&  key,
         notification_callback_type const&  parent_notification_callback,
         resources_cache_type::value_type*&  output,
         arg_types... args_for_constructor_of_the_resource
@@ -357,22 +430,20 @@ void  resource_cache::insert_resource(
 {
     TMPROF_BLOCK();
 
+    ASSUMPTION(key != key_type::get_invalid_key());
+
     {
         std::lock_guard<std::mutex> const  lock(mutex());
-        if (key == key_type())
-            key = generate_fresh_key();
-        else
+
+        resources_cache_type::value_type* const  resource_ptr = find_resource(key);
+        if (resource_ptr != nullptr)
         {
-            resources_cache_type::value_type* const  resource_ptr = find_resource(key);
-            if (resource_ptr != nullptr)
-            {
-                if (resource_ptr->second->get_load_state() == LOAD_STATE::IN_PROGRESS &&
-                        parent_notification_callback.operator bool())
-                    m_notification_callbacks[key].push_back(parent_notification_callback);
-                output = resource_ptr;
-                output->second->inc_ref_count();
-                return;
-            }
+            if (resource_ptr->second->get_load_state() == LOAD_STATE::IN_PROGRESS &&
+                    parent_notification_callback.operator bool())
+                m_notification_callbacks[key].push_back(parent_notification_callback);
+            output = resource_ptr;
+            output->second->inc_ref_count();
+            return;
         }
 
         auto const  iter_and_bool = m_cache.insert({
