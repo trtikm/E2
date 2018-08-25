@@ -23,6 +23,9 @@ add_executable(${THIS_TARGET_NAME}
     gfx_object.hpp
     gfx_object.cpp
     
+    collision_system.hpp
+    collision_system.cpp
+    
     scene_selection.hpp 
     scene_selection.cpp 
 
