@@ -76,7 +76,7 @@ struct  vertex_shader : public async::resource_accessor<detail::vertex_shader_da
             GLuint const  id = 0U
             )
         : async::resource_accessor<detail::vertex_shader_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::vertex_shader", key },
+                key.empty() ? async::key_type("qtgl::vertex_shader") : async::key_type{ "qtgl::vertex_shader", key },
                 async::notification_callback_type(),
                 id,
                 input_buffer_bindings,
@@ -197,7 +197,7 @@ struct  fragment_shader : public async::resource_accessor<detail::fragment_shade
             GLuint const  id = 0U 
             )
         : async::resource_accessor<detail::fragment_shader_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::fragment_shader", key },
+                key.empty() ? async::key_type("qtgl::fragment_shader") : async::key_type{ "qtgl::fragment_shader", key },
                 async::notification_callback_type(),
                 id,
                 input_buffer_bindings,
@@ -309,7 +309,7 @@ struct  shaders_binding : public async::resource_accessor<detail::shaders_bindin
             GLuint const  id = 0U
             )
         : async::resource_accessor<detail::shaders_binding_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::shaders_binding", key },
+                key.empty() ? async::key_type("qtgl::shaders_binding") : async::key_type{ "qtgl::shaders_binding", key },
                 async::notification_callback_type(),
                 id,
                 vertex_shader,

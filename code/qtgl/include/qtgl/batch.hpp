@@ -136,7 +136,7 @@ struct batch : public async::resource_accessor<detail::batch_data>
             batch_available_resources const  available_resources_
             )
         : async::resource_accessor<detail::batch_data>(
-            id.empty() ? async::key_type() : async::key_type{ "qtgl::batch", id },
+            id.empty() ? async::key_type("qtgl::batch") : async::key_type{ "qtgl::batch", id },
             async::notification_callback_type(),
             buffers_binding_,
             shaders_binding_,
@@ -158,7 +158,7 @@ struct batch : public async::resource_accessor<detail::batch_data>
             skeleton_alignment const  skeleton_alignment_
             )
         : async::resource_accessor<detail::batch_data>(
-            id.empty() ? async::key_type() : async::key_type{ "qtgl::batch", id },
+            id.empty() ? async::key_type("qtgl::batch") : async::key_type{ "qtgl::batch", id },
             async::notification_callback_type(),
             buffers_binding_,
             textures_binding_,

@@ -136,7 +136,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::buffer_file_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer", key },
+                key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
                 async::notification_callback_type(),
                 id,
                 num_components_per_primitive, num_primitives, num_bytes_per_component, has_integral_components,
@@ -147,7 +147,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
 
     buffer(std::vector< std::array<float_32_bit,2> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer", key },
+                key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
                 async::notification_callback_type(),
                 data
                 )
@@ -158,7 +158,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::buffer_file_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer", key },
+                key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
                 async::notification_callback_type(),
                 data,
                 do_compute_boundary
@@ -167,7 +167,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
 
     buffer(std::vector< std::array<float_32_bit,4> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer", key },
+                key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
                 async::notification_callback_type(),
                 data
                 )
@@ -175,7 +175,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
 
     buffer(std::vector< natural_32_bit > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer", key },
+                key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
                 async::notification_callback_type(),
                 data
                 )
@@ -183,7 +183,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
 
     buffer(std::vector< std::array<natural_32_bit,2> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer", key },
+                key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
                 async::notification_callback_type(),
                 data
                 )
@@ -191,7 +191,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
 
     buffer(std::vector< std::array<natural_32_bit,3> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer", key },
+                key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
                 async::notification_callback_type(),
                 data
                 )
@@ -308,7 +308,7 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::buffers_binding_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer_binding", key },
+                key.empty() ? async::key_type("qtgl::buffer_binding") : async::key_type{ "qtgl::buffer_binding", key },
                 async::notification_callback_type(),
                 id,
                 index_buffer,
@@ -323,7 +323,7 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::buffers_binding_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer_binding", key },
+                key.empty() ? async::key_type("qtgl::buffer_binding") : async::key_type{ "qtgl::buffer_binding", key },
                 async::notification_callback_type(),
                 id,
                 num_indices_per_primitive,
@@ -337,7 +337,7 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::buffers_binding_data>(
-            key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer_binding", key },
+            key.empty() ? async::key_type("qtgl::buffer_binding") : async::key_type{ "qtgl::buffer_binding", key },
             async::notification_callback_type(),
             index_buffer_path,
             paths
@@ -350,7 +350,7 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::buffers_binding_data>(
-            key.empty() ? async::key_type() : async::key_type{ "qtgl::buffer_binding", key },
+            key.empty() ? async::key_type("qtgl::buffer_binding") : async::key_type{ "qtgl::buffer_binding", key },
             async::notification_callback_type(),
             num_indices_per_primitive,
             paths

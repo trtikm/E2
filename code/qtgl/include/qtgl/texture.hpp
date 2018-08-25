@@ -103,7 +103,7 @@ struct texture_file : public async::resource_accessor<detail::texture_file_data>
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::texture_file_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::texture_file", key },
+                key.empty() ? async::key_type("qtgl::texture_file") : async::key_type{ "qtgl::texture_file", key },
                 async::notification_callback_type(),
                 image_pathname,
                 pixel_format,
@@ -208,7 +208,7 @@ struct texture_image : public async::resource_accessor<detail::texture_image_dat
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::texture_image_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::texture_image", key },
+                key.empty() ? async::key_type("qtgl::texture_image") : async::key_type{ "qtgl::texture_image", key },
                 async::notification_callback_type(),
                 width, height, data_begin, data_end, pixel_components, pixel_components_type
                 )
@@ -284,7 +284,7 @@ struct texture : public async::resource_accessor<detail::texture_data>
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::texture_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::texture", key },
+                key.empty() ? async::key_type("qtgl::texture") : async::key_type{ "qtgl::texture", key },
                 async::notification_callback_type(),
                 id,
                 texture_props,
@@ -383,7 +383,7 @@ struct textures_binding : public async::resource_accessor<detail::textures_bindi
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::textures_binding_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::textures_binding", key },
+                key.empty() ? async::key_type("qtgl::textures_binding") : async::key_type{ "qtgl::textures_binding", key },
                 async::notification_callback_type(),
                 bindings
                 )
@@ -394,7 +394,7 @@ struct textures_binding : public async::resource_accessor<detail::textures_bindi
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::textures_binding_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::textures_binding", key },
+                key.empty() ? async::key_type("qtgl::textures_binding") : async::key_type{ "qtgl::textures_binding", key },
                 async::notification_callback_type(),
                 texture_paths
                 )

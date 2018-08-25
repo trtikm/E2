@@ -153,7 +153,8 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::batch_available_resources_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::batch_available_resources", key },
+                key.empty() ? async::key_type("qtgl::batch_available_resources") :
+                              async::key_type{ "qtgl::batch_available_resources", key },
                 async::notification_callback_type(),
                 buffers_,
                 textures_,
@@ -170,7 +171,8 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
             std::string const&  key = ""
             )
         : async::resource_accessor<detail::batch_available_resources_data>(
-                key.empty() ? async::key_type() : async::key_type{ "qtgl::batch_available_resources", key },
+                key.empty() ? async::key_type("qtgl::batch_available_resources") :
+                              async::key_type{ "qtgl::batch_available_resources", key },
                 async::notification_callback_type(),
                 [&buffers_binding_]() -> buffers_dictionaty_type {
                         buffers_dictionaty_type  result;
