@@ -4,6 +4,7 @@
 #   include <gfxtuner/simulator.hpp>
 #   include <gfxtuner/window_tabs/tab_draw.hpp>
 #   include <gfxtuner/window_tabs/tab_scene.hpp>
+#   include <gfxtuner/window_tabs/tab_statistics.hpp>
 #   include <gfxtuner/status_bar.hpp>
 #   include <gfxtuner/menu_bar.hpp>
 #   include <qtgl/window.hpp>
@@ -151,6 +152,7 @@ private:
 
     window_tabs::tab_draw::widgets  m_tab_draw_widgets;
     window_tabs::tab_scene::widgets  m_tab_scene_widgets;
+    window_tabs::tab_statistics::widgets*  m_tab_statistics_widgets;
 
     menu_bar  m_menu_bar;
     status_bar  m_status_bar;

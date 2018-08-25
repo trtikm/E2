@@ -52,6 +52,12 @@ add_executable(${THIS_TARGET_NAME}
 
     window_tabs/tab_scene.hpp
     window_tabs/tab_scene.cpp
+
+    window_tabs/tab_statistics.hpp
+    window_tabs/tab_statistics.cpp
+    
+    window_tabs/tab_statistics_resources.hpp
+    window_tabs/tab_statistics_resources.cpp
     )
 
 target_link_libraries(${THIS_TARGET_NAME}

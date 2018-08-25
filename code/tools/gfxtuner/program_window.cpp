@@ -13,11 +13,12 @@
 #include <sstream>
 
 
-namespace tab_names { namespace {
+namespace { namespace tab_names {
 
 
 inline std::string  DRAW() { return "Draw"; }
 inline std::string  SCENE() { return "Scene"; }
+inline std::string  STATISTICS() { return "Statistics"; }
 
 
 }}
@@ -64,6 +65,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 
     , m_tab_draw_widgets(this)
     , m_tab_scene_widgets(this)
+    , m_tab_statistics_widgets(new window_tabs::tab_statistics::widgets(this))
 
     , m_menu_bar(this)
     , m_status_bar(this)
@@ -83,6 +85,8 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
                     QString(tab_names::DRAW().c_str()) );
     m_tabs->addTab( window_tabs::tab_scene::make_scene_tab_content(m_tab_scene_widgets),
                     QString(tab_names::SCENE().c_str()));
+    m_tabs->addTab( m_tab_statistics_widgets,
+                    QString(tab_names::STATISTICS().c_str()));
 
     for (int i = 0; i != m_tabs->count(); ++i)
         if (qtgl::to_string(m_tabs->tabText(i)) == ptree().get("window.active_tab", tab_names::SCENE()))
@@ -146,13 +150,18 @@ void program_window::timerEvent(QTimerEvent* const event)
 
     m_status_bar.update();
 
-    if (qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex())) == tab_names::DRAW())
+    std::string const  current_tab = qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex()));
+    if (current_tab == tab_names::DRAW())
     {
         // Nothing to do...
     }
-    else if (qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex())) == tab_names::SCENE())
+    else if (current_tab == tab_names::SCENE())
     {
         // Nothing to do...
+    }
+    else if (current_tab == tab_names::STATISTICS())
+    {
+        m_tab_statistics_widgets->on_timer_event();
     }
 
     if (m_focus_just_received)
@@ -193,6 +202,10 @@ void  program_window::on_tab_changed(int const  tab_index)
         // Nothing to do...
     }
     else if (tab_name == tab_names::SCENE())
+    {
+        // Nothing to do...
+    }
+    else if (tab_name == tab_names::STATISTICS())
     {
         // Nothing to do...
     }
