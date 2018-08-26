@@ -268,6 +268,8 @@ namespace async {
 
 key_type  get_statistics_of_cached_resources(statistics_of_cached_resources&  output_statistics)
 {
+    TMPROF_BLOCK();
+
     {
         std::lock_guard<std::mutex> const  lock(detail::resource_cache::instance().mutex());
         for (auto const&  cache_elem : detail::resource_cache::instance().get_cache())
@@ -287,7 +289,14 @@ key_type  get_statistics_of_cached_resources(statistics_of_cached_resources&  ou
     // resources could be loaded between the filling-in the 'output_statistics' map and acquiring
     // the 'just_being_loaded' key. So, the next line preserves the consistency (in a price of
     // some inaccuracy).
-    output_statistics.at(just_being_loaded) = cached_resource_info(LOAD_STATE::IN_PROGRESS, 1ULL, "");
+    if (just_being_loaded != get_invalid_key())
+    {
+        auto  it = output_statistics.find(just_being_loaded);
+        if (it == output_statistics.end())
+            output_statistics.insert({ just_being_loaded, cached_resource_info(LOAD_STATE::IN_PROGRESS, 1ULL, "") });
+        else
+            output_statistics.at(just_being_loaded) = cached_resource_info(LOAD_STATE::IN_PROGRESS, 1ULL, "");
+    }
 
     return just_being_loaded;
 }

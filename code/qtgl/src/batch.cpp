@@ -100,7 +100,7 @@ batch_data::batch_data(
     shaders_binding const  shaders_binding_{
         vertex_shader{vs_input, vs_output, vs_uniforms, vs_source, vs_uid},
         fragment_shader{fs_input, fs_output, fs_uniforms, fs_source, fs_uid},
-        "{" + vs_uid + "}{" + vs_uid + "}"
+        "{" + vs_uid + "}{" + fs_uid + "}"
     };
     initialise(buffers_binding_,shaders_binding_,textures_binding_,draw_state_,modelspace_,skeleton_alignment_,resources);
 }
@@ -239,7 +239,7 @@ void  batch_data::load(
         shaders_binding{
             vertex_shader{vs_input, vs_output, vs_uniforms, vs_source, vs_uid},
             fragment_shader{fs_input, fs_output, fs_uniforms, fs_source, fs_uid},
-            "{" + vs_uid + "}{" + vs_uid + "}"
+            "{" + vs_uid + "}{" + fs_uid + "}"
             },
         textures_binding(texture_paths),
         draw_state::create(GL_BACK, false, 0U, 0U),

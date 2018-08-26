@@ -702,13 +702,27 @@ struct cached_resource_info
     natural_64_bit  get_ref_count() const { return m_ref_count; }
 
     /// Returns a non-empty string only if 'get_load_state() == LOAD_STATE::FINISHED_WITH_ERROR'
-    std::string const&  error_message() const { return m_error_message; }
+    std::string const&  get_error_message() const { return m_error_message; }
 
 private:
     LOAD_STATE  m_load_state;
     natural_64_bit  m_ref_count;
     std::string  m_error_message;
 };
+
+
+inline bool  operator==(cached_resource_info const&  left, cached_resource_info const&  right)
+{
+    return  left.get_load_state() == right.get_load_state() &&
+            left.get_ref_count() == right.get_ref_count()   &&
+            left.get_error_message() == right.get_error_message()   ;
+}
+
+
+inline bool  operator!=(cached_resource_info const&  left, cached_resource_info const&  right)
+{
+    return  !(left == right);
+}
 
 
 using  statistics_of_cached_resources = std::unordered_map<key_type, cached_resource_info>;

@@ -161,7 +161,7 @@ batch  create_grid(
         }
     }
 
-    return create_lines3d(vertices, colours, fog_type_, id);
+    return create_lines3d(vertices, colours, fog_type_, "grid/" + id);
 }
 
 

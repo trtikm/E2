@@ -144,7 +144,7 @@ simulator::simulator()
                     10U,
                     qtgl::GRID_MAIN_AXES_ORIENTATION_MARKER_TYPE::TRIANGLE,
                     m_effects_config.get_fog_type(),
-                    get_program_options()->dataRoot()
+                    "gfxtuner"
                     )
             }
     , m_do_show_grid(true)
