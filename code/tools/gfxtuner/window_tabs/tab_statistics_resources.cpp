@@ -18,14 +18,22 @@ widgets::widgets(program_window* const  wnd)
                           "shared/gfx/icons/loading.png").string().c_str())
     , m_icon_in_use((boost::filesystem::path{ get_program_options()->dataRoot() } /
                     "shared/gfx/icons/in_use.png").string().c_str())
+    , m_records()
+    , m_just_being_loaded(async::get_invalid_key())
 {
     setSelectionMode(QAbstractItemView::SelectionMode::NoSelection);
 
     {
         QTreeWidgetItem* const  headerItem = new QTreeWidgetItem();
-        headerItem->setText(0, QString("async::detail::resource_cache"));
+        headerItem->setText(0, QString("Resource types"));
+        headerItem->setText(1, QString("#Refs"));
         setHeaderItem(headerItem);
     }
+}
+
+
+void  widgets::on_time_event()
+{
 }
 
 

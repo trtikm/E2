@@ -40,7 +40,7 @@ void  widgets::on_timer_event()
     std::string const  tab_name = qtgl::to_string(tabText(currentIndex()));
     if (tab_name == tab_names::RESOURCES())
     {
-        // Nothing to do...
+        m_tab_resources->on_time_event();
     }
 }
 

@@ -262,3 +262,15 @@ resource_cache::~resource_cache()
 
 
 }}
+
+namespace async {
+
+
+key_type  get_statistics_of_cached_resources(statistics_of_cached_resources&  output_statistics)
+{
+    // TODO!
+    return get_invalid_key();
+}
+
+
+}

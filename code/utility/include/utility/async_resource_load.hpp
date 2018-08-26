@@ -682,4 +682,53 @@ resource_accessor<resource_type__>  insert_resource(
 
 }
 
+namespace async {
+
+
+struct cached_resource_info
+{
+    cached_resource_info(
+            LOAD_STATE const  load_state,
+            natural_64_bit const  ref_count,
+            std::string const&  error_message
+            )
+        : m_load_state(load_state)
+        , m_ref_count(ref_count)
+        , m_error_message(error_message)
+    {}
+
+    LOAD_STATE  get_load_state() const { return m_load_state; }
+    natural_64_bit  get_ref_count() const { return m_ref_count; }
+
+    /// Returns a non-empty string only if 'get_load_state() == LOAD_STATE::FINISHED_WITH_ERROR'
+    std::string const&  error_message() const { return m_error_message; }
+
+private:
+    LOAD_STATE  m_load_state;
+    natural_64_bit  m_ref_count;
+    std::string  m_error_message;
+};
+
+
+using  statistics_of_cached_resources = std::unordered_map<key_type, cached_resource_info>;
+
+
+/**
+ * Returns an invalid key, i.e. a key which does not represent any resource.
+ */
+inline key_type const&  get_invalid_key() { return key_type::get_invalid_key(); }
+
+
+/**
+ * The returned key identifies the just being loaded resource (by its 'key_type'). If the
+ * key is invalid (i.e. equals to the key returned from 'get_invalid_key()' function), then
+ * there is no resource being loaded. Otherwise, the corresponding resource is just being
+ * loaded and there is a 'cached_resource_info' record in the filled-in 'output_statistics'
+ * map for that key.
+ */
+key_type  get_statistics_of_cached_resources(statistics_of_cached_resources&  output_statistics);
+
+
+}
+
 #endif
