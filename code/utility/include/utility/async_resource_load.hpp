@@ -349,6 +349,7 @@ struct  resource_cache  final
     template<typename resource_type>
     void  erase_resource(key_type const&  key);
 
+    resources_cache_type const&  get_cache() const { return m_cache; }
     std::mutex&  mutex() { return m_mutex; }
 
 private:

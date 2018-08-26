@@ -268,8 +268,28 @@ namespace async {
 
 key_type  get_statistics_of_cached_resources(statistics_of_cached_resources&  output_statistics)
 {
-    // TODO!
-    return get_invalid_key();
+    {
+        std::lock_guard<std::mutex> const  lock(detail::resource_cache::instance().mutex());
+        for (auto const&  cache_elem : detail::resource_cache::instance().get_cache())
+            output_statistics.insert({
+                cache_elem.first,
+                { cache_elem.second->get_load_state(), cache_elem.second->ref_count(), cache_elem.second->error_message() }
+                });
+    }
+
+    key_type  just_being_loaded = get_invalid_key();
+    {
+        std::lock_guard<std::mutex> const  lock(detail::resource_cache::instance().mutex());
+        just_being_loaded = detail::resource_load_planner::instance().resource_just_being_loaded();
+    }
+
+    // This is mecessary, because loading is on a different 'worker' thread and so many other
+    // resources could be loaded between the filling-in the 'output_statistics' map and acquiring
+    // the 'just_being_loaded' key. So, the next line preserves the consistency (in a price of
+    // some inaccuracy).
+    output_statistics.at(just_being_loaded) = cached_resource_info(LOAD_STATE::IN_PROGRESS, 1ULL, "");
+
+    return just_being_loaded;
 }
 
 
