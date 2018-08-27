@@ -17,6 +17,7 @@ bl_info = {
 
 import bpy
 import mathutils
+import math
 import time
 import os
 import shutil
@@ -106,6 +107,88 @@ def remove_ignored_part_of_name(name, phase=None):
     return "".join(process_name(name, phase))
 
 
+def vector2_neg(u):
+    return -u[0], -u[1]
+
+
+def vector2_add(u, v):
+    return u[0] + v[0], u[1] + v[1]
+
+
+def vector2_mul(a, u):
+    return a * u[0], a * u[1]
+
+
+def vector2_sub(u, v):
+    return vector2_add(u, vector2_neg(v))
+
+
+def vector2_dot(u, v):
+    return u[0] * v[0] + u[1] * v[1]
+
+
+def vector2_ortho(u):
+    return -u[1], u[0]
+
+
+def vector3_zero():
+    return 0.0, 0.0, 0.0
+
+
+def vector3_axis_x():
+    return 1.0, 0.0, 0.0
+
+
+def vector3_axis_y():
+    return 0.0, 1.0, 0.0
+
+
+def vector3_axis_z():
+    return 0.0, 0.0, 1.0
+
+
+def vector3_neg(u):
+    return -u[0], -u[1], -u[2]
+
+
+def vector3_add(u, v):
+    return u[0] + v[0], u[1] + v[1], u[2] + v[2]
+
+
+def vector3_mul(a, u):
+    return a * u[0], a * u[1], a * u[2]
+
+
+def vector3_sub(u, v):
+    return vector3_add(u, vector3_neg(v))
+
+
+def vector3_dot(u, v):
+    return u[0] * v[0] + u[1] * v[1] + u[2] * v[2]
+
+
+def vector3_cross(u, v):
+    return u[1] * v[2] - v[1] * u[2],  u[2] * v[0] - v[2] * u[0], u[0] * v[1] - v[0] * u[1]
+
+
+def vector3_length(u):
+    return math.sqrt(vector3_dot(u, u))
+
+
+def vector3_normalised(u):
+    return vector3_mul(1.0 / vector3_length(u), u)
+
+
+def vector3_perpendicular(u, v):
+    """ Returns a vector 'w' perpendicular to 'v' lying also in the plane 'X = p*u + q*v', for any 'p,q'. """
+    return vector3_sub(u, vector3_mul(vector3_dot(u, v) / vector3_dot(v, v), v))
+
+
+def vector3_any_linear_independent(u):
+    return sorted([(vector3_axis_x(), abs(u[0])), (vector3_axis_y(), abs(u[1])), (vector3_axis_z(), abs(u[2]))],
+                  key=lambda x: x[1])[0][0]
+
+
 def from_base_matrix(
         position,       # An instance of 'mathutils.Vector'; i.e. a 3d vector
         orientation     # An instance of 'mathutils.Quaternion'; it must be unit (normalised) quaternion
@@ -131,6 +214,17 @@ def to_base_matrix(
     """
     with TimeProf.instance().start("to_base_matrix"):
         return orientation.to_matrix().transposed().to_4x4() * mathutils.Matrix.Translation(-position)
+
+
+def compute_tangent_vector_of_textured_triangle(A, B, C, uvA, uvB, uvC):
+    u = vector2_sub(uvB, uvA)
+    v = vector2_sub(uvC, uvA)
+    denom = vector2_dot(u, vector2_ortho(v))
+    min_denom = 0.00000001
+    if abs(denom) < min_denom:
+        return None
+    return vector3_normalised(vector3_add(vector3_mul(-v[1] / denom, vector3_sub(B, A)),
+                                          vector3_mul( u[1] / denom, vector3_sub(C, A))))
 
 
 def get_object_rotation_quaternion(obj):
@@ -316,6 +410,12 @@ class render_element:
     def index_of_matrix(self,index):
         return self._indices_of_matrices[index]
 
+    def set_tangent_coords(self, tangent_coords):
+        self._tangent_coords = tangent_coords
+
+    def set_bitangent_coords(self, bitangent_coords):
+        self._bitangent_coords = bitangent_coords
+
     def __eq__(self,other):
         with TimeProf.instance().start("render_element.__eq__"):
             if (self.vertex_coords() != other.vertex_coords()
@@ -438,10 +538,45 @@ class render_buffers:
         return index
 
     def compute_tangent_space(self):
-        # TODO!
-        print("WARNING: Tangent space computation is NOT implemented yet!")
-        print("         So, the corresponding buffers won't be saved.")
-        pass
+        if self.num_elements() == 0 or self.num_texture_coords() == 0:
+            return
+        texcoord_idx = 2 if 2 < self.num_texture_coords() else 0    # 0 - diffuse (or default), 1 - specular, 2 - normal
+        for triangle_idx in range(self.num_triangles()):
+            triangle = self.triangle_at_index(triangle_idx)
+            render_elems = [self.element_at_index(triangle[i]) for i in [0, 1, 2, 0, 1]]
+            points = [elem.vertex_coords() for elem in render_elems]
+            texels = [elem.texture_coords(texcoord_idx) for elem in render_elems]
+            for start_point_idx in range(3):
+                tangent = compute_tangent_vector_of_textured_triangle(
+                                points[start_point_idx + 0],
+                                points[start_point_idx + 1],
+                                points[start_point_idx + 2],
+                                texels[start_point_idx + 0],
+                                texels[start_point_idx + 1],
+                                texels[start_point_idx + 2]
+                                )
+                elem = render_elems[start_point_idx]
+                if tangent is not None:
+                    tangent = vector3_normalised(vector3_perpendicular(tangent, elem.normal_coords()))
+                    elem.set_tangent_coords(vector3_add(elem.tangent_coords(), tangent))
+                else:
+                    print("WARNING: Degenerated uv-triangle detected:")
+                    for name, idx in [("A", 0), ("B", 1), ("C", 2)]:
+                        print("         " + name + "=" + str(points[start_point_idx + idx]) + ", uv=" + str(texels[start_point_idx + idx]))
+                    print("         Skipping tangent computation.")
+        for elem_idx in range(self.num_elements()):
+            elem = self.element_at_index(elem_idx)
+            tangent = vector3_perpendicular(elem.tangent_coords(), elem.normal_coords())
+            if vector3_length(tangent) < 0.001:
+                print("WARNING: The main algorithm for tangent space computation has FAILED at point:")
+                print("         " + str(elem.vertex_coords()))
+                print("         Generation a randomly chosen tangent space at that point.")
+                tangent = vector3_perpendicular(vector3_any_linear_independent(elem.normal_coords()), elem.normal_coords())
+            tangent = vector3_normalised(tangent)
+            bitangent = vector3_cross(elem.normal_coords(), tangent)
+            elem.set_tangent_coords(tangent)
+            elem.set_bitangent_coords(bitangent)
+        self._has_tangent_space = True
 
 
 def build_render_buffers(
