@@ -266,6 +266,8 @@ class render_element:
         assert len(weights_of_matrices) == len(indices_of_matrices)
         self._vertex_coords = (vertex_coords[0],vertex_coords[1],vertex_coords[2])
         self._normal_coords = (normal_coords[0],normal_coords[1],normal_coords[2])
+        self._tangent_coords = (0.0,0.0,0.0)
+        self._bitangent_coords = (0.0,0.0,0.0)
         self._diffuse_colour = (diffuse_colour[0],diffuse_colour[1],diffuse_colour[2],diffuse_colour[3])
         self._specular_colour = (specular_colour[0],specular_colour[1],specular_colour[2],specular_colour[3])
         self._texture_coords = []
@@ -283,6 +285,12 @@ class render_element:
 
     def normal_coords(self):
         return self._normal_coords
+
+    def tangent_coords(self):
+        return self._tangent_coords
+
+    def bitangent_coords(self):
+        return self._bitangent_coords
 
     def diffuse_colour(self):
         return self._diffuse_colour
@@ -359,6 +367,7 @@ class render_buffers:
         self._triangles = []
         self._counter = 0
         self._num_texture_coordinates = 0
+        self._has_tangent_space = False
 
     def dump(self):
         print("_elements_to_indices:")
@@ -389,6 +398,9 @@ class render_buffers:
 
     def num_texture_coords(self):
         return self._num_texture_coordinates
+
+    def has_tangent_space(self):
+        return self._has_tangent_space
 
     def num_weights_of_matrices_per_vertex(self):
         if self.num_elements() == 0:
@@ -424,6 +436,12 @@ class render_buffers:
             index = self._counter
             self._counter += 1
         return index
+
+    def compute_tangent_space(self):
+        # TODO!
+        print("WARNING: Tangent space computation is NOT implemented yet!")
+        print("         So, the corresponding buffers won't be saved.")
+        pass
 
 
 def build_render_buffers(
@@ -540,6 +558,18 @@ def build_render_buffers(
                 polygon.append(E)
             buffers[mtl_index].add_polygon(polygon)
 
+        for mtl_index in range(len(buffers)):
+            if mtl_index < len(mesh.materials) and mesh.materials[mtl_index] is not None:
+                material = mesh.materials[mtl_index]
+                has_normal_map = False
+                for slot_idx in range(len(material.texture_slots)):
+                    slot = material.texture_slots[slot_idx]
+                    if slot is not None and slot.use_map_normal:
+                        has_normal_map = True
+                        break
+                if has_normal_map is True:
+                    buffers[mtl_index].compute_tangent_space()
+
         return buffers
 
 
@@ -616,6 +646,29 @@ def save_render_buffers(
                 f.write(float_to_string(c[0]) + "\n")
                 f.write(float_to_string(c[1]) + "\n")
                 f.write(float_to_string(c[2]) + "\n")
+
+        if buffers.has_tangent_space():
+            buffers_export_info["tangent_buffer"] = os.path.join(buffers_root_dir, "tangents.txt")
+            with open(buffers_export_info["tangent_buffer"], "w") as f:
+                print("Saving tangent buffer: " +
+                      os.path.relpath(buffers_export_info["tangent_buffer"], export_info["root_dir"]))
+                f.write(str(buffers.num_elements()) + "\n")
+                for i in range(buffers.num_elements()):
+                    c = buffers.element_at_index(i).tangent_coords()
+                    f.write(float_to_string(c[0]) + "\n")
+                    f.write(float_to_string(c[1]) + "\n")
+                    f.write(float_to_string(c[2]) + "\n")
+
+            buffers_export_info["bitangent_buffer"] = os.path.join(buffers_root_dir, "bitangents.txt")
+            with open(buffers_export_info["bitangent_buffer"], "w") as f:
+                print("Saving bitangent buffer: " +
+                      os.path.relpath(buffers_export_info["bitangent_buffer"], export_info["root_dir"]))
+                f.write(str(buffers.num_elements()) + "\n")
+                for i in range(buffers.num_elements()):
+                    c = buffers.element_at_index(i).bitangent_coords()
+                    f.write(float_to_string(c[0]) + "\n")
+                    f.write(float_to_string(c[1]) + "\n")
+                    f.write(float_to_string(c[2]) + "\n")
 
         buffers_export_info["diffuse_buffer"] = os.path.join(buffers_root_dir, "diffuse.txt")
         with open(buffers_export_info["diffuse_buffer"], "w") as f:
