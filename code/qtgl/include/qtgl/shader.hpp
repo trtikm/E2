@@ -157,6 +157,7 @@ struct  fragment_shader_data
     std::vector<std::string> const&  get_lines_of_shader_code() const
     { return m_lines_of_shader_code; }
 
+    bool  set_uniform_variable(std::string const&  variable_name, integer_32_bit const  value_to_store);
     bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store);
     bool  set_uniform_variable(std::string const&  variable_name, float_32_bit const  value_to_store);
     bool  set_uniform_variable(std::string const&  variable_name, vector3 const&  value_to_store);
@@ -223,6 +224,9 @@ struct  fragment_shader : public async::resource_accessor<detail::fragment_shade
         return set_uniform_variable(name(symbolic_name), value_to_store);
     }
 
+    bool  set_uniform_variable(std::string const&  variable_name, integer_32_bit const  value_to_store)
+    { return resource().set_uniform_variable(variable_name, value_to_store); }
+    
     bool  set_uniform_variable(std::string const&  variable_name, natural_32_bit const  value_to_store)
     { return resource().set_uniform_variable(variable_name, value_to_store); }
     

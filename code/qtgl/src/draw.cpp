@@ -139,7 +139,7 @@ void  render_batch(
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE:
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_SPECULAR:
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_NORMAL:
-                // Nothing to set here (a texture sampler cannot be set any data).
+                shader.set_uniform_variable(uniform, (integer_32_bit)value(uniform));
                 break;
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::AMBIENT_COLOUR:
                 shader.set_uniform_variable(uniform, fragment_uniform_provider.get_AMBIENT_COLOUR());
