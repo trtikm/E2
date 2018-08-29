@@ -280,7 +280,10 @@ void  resource_holder_type::resource_loader(
         resource_holder.m_error_message = msgstream() << "ERROR: " << e.what();
     }
     if (!resource_holder.m_error_message.empty())
+    {
+        resource_holder.m_load_state = LOAD_STATE::FINISHED_WITH_ERROR;
         LOG(error, resource_holder.m_error_message);
+    }
 }
 
 
@@ -304,7 +307,10 @@ void  resource_holder_type::resource_constructor(
         resource_holder.m_error_message = msgstream() << "ERROR: " << e.what();
     }
     if (!resource_holder.m_error_message.empty())
+    {
+        resource_holder.m_load_state = LOAD_STATE::FINISHED_WITH_ERROR;
         LOG(error, resource_holder.m_error_message);
+    }
 }
 
 
