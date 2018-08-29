@@ -718,6 +718,16 @@ void  simulator::render_scene_batches(
                             m_fog_colour,
                             m_fog_near,
                             m_fog_far
+                            ),
+                        qtgl::fragment_shader_uniform_data_provider(
+                            m_diffuse_colour,
+                            m_ambient_colour,
+                            m_specular_colour,
+                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                            m_directional_light_colour,
+                            m_fog_colour,
+                            m_fog_near,
+                            m_fog_far
                             )
                         );
             draw_state = path_and_pairs.second.front().first.get_draw_state();

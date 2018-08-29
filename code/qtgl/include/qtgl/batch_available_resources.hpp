@@ -20,6 +20,8 @@ struct  batch_available_resources_data  final
                             //        BINDING_IN_DIFFUSE
                             //        BINDING_IN_SPECULAR
                             //        BINDING_IN_NORMAL
+                            //        BINDING_IN_TANGENT
+                            //        BINDING_IN_BITANGENT
                         std::string
                             // Full path-name of the corresponding resource file on the disk, or any other string
                             // (typically "") in case of generated buffer (e.g. for grid, lines, sphere, box)

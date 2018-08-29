@@ -195,6 +195,12 @@ void  batch_data::load(
         case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_NORMAL:
             buffer_paths.insert({location, get_available_resources().buffers().at(location)});
             break;
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TANGENT:
+            buffer_paths.insert({ location, get_available_resources().buffers().at(location) });
+            break;
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_BITANGENT:
+            buffer_paths.insert({ location, get_available_resources().buffers().at(location) });
+            break;
         case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INDICES_OF_MATRICES:
             INVARIANT(skeletal_info != get_available_resources().skeletal().cend());
             buffer_paths.insert({location, skeletal_info->second.indices()});

@@ -91,6 +91,20 @@ buffer_file_data::buffer_file_data(async::key_type const&  key, async::finalise_
             has_integer_components = false;
             compute_boundary = false;
         }
+        else if (path.filename() == "tangents.txt")
+        {
+            num_components = 3U;
+            num_elements = std::stoul(line_reader.get_next_line());
+            has_integer_components = false;
+            compute_boundary = false;
+        }
+        else if (path.filename() == "bitangents.txt")
+        {
+            num_components = 3U;
+            num_elements = std::stoul(line_reader.get_next_line());
+            has_integer_components = false;
+            compute_boundary = false;
+        }
         else if (path.filename().string().find("texcoords") == 0UL && path.extension() == ".txt")
         {
             num_components = 2U;

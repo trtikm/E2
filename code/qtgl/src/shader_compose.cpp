@@ -729,8 +729,163 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             }
                             else if (effects.get_lighting_data_types().at(LIGHTING_DATA_TYPE::NORMAL) == SHADER_DATA_INPUT_TYPE::TEXTURE)
                             {
-                                result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "The lighting data type DIFFUSE assigned to TEXTURE shader input type is not supported yet.";
-                                result.second.get_lighting_data_types()[qtgl::LIGHTING_DATA_TYPE::NORMAL] = qtgl::SHADER_DATA_INPUT_TYPE::BUFFER;
+                                if (resources.buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_NORMAL) == 0UL)
+                                {
+                                    result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Normals buffer is not available.";
+                                    result.second.get_lighting_data_types() = { { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE } };
+                                    result.second.get_light_types().clear();
+                                }
+                                else if (resources.buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TANGENT) == 0UL)
+                                {
+                                    result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Tangents buffer is not available.";
+                                    result.second.get_lighting_data_types() = { { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE } };
+                                    result.second.get_light_types().clear();
+                                }
+                                else if (resources.buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_BITANGENT) == 0UL)
+                                {
+                                    result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Bitangents buffer is not available.";
+                                    result.second.get_lighting_data_types() = { { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE } };
+                                    result.second.get_light_types().clear();
+                                }
+                                else if (resources.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_NORMAL) == 0UL)
+                                {
+                                    result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Normals texture is not available.";
+                                    result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::NORMAL] = SHADER_DATA_INPUT_TYPE::BUFFER;
+                                }
+                                else
+                                {
+                                    switch (effects.get_lighting_data_types().at(LIGHTING_DATA_TYPE::DIFFUSE))
+                                    {
+                                    case SHADER_DATA_INPUT_TYPE::UNIFORM:
+                                        result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Uniform diffuse colour for normals in texture is not implemented yet.";
+                                        result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::NORMAL] = SHADER_DATA_INPUT_TYPE::BUFFER;
+                                        break;
+                                    case SHADER_DATA_INPUT_TYPE::BUFFER:
+                                        result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Diffuse colour buffer for normals in texture is not implemented yet.";
+                                        result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::NORMAL] = SHADER_DATA_INPUT_TYPE::BUFFER;
+                                        break;
+                                    case SHADER_DATA_INPUT_TYPE::TEXTURE:
+                                        if (resources.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE) == 0UL)
+                                        {
+                                            result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Diffuse texture is not available.";
+                                            result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::DIFFUSE] = SHADER_DATA_INPUT_TYPE::BUFFER;
+                                        }
+                                        else
+                                        {
+                                            if (resources.skeletal().empty())
+                                            {
+                                                vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                                    "#version 420",
+
+                                                    varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                                    varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
+                                                    varying("in_tangent", VS_IN::BINDING_IN_TANGENT, vs_input),
+                                                    varying("in_bitangent", VS_IN::BINDING_IN_BITANGENT, vs_input),
+                                                    varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+
+                                                    varying("out_normal", VS_OUT::BINDING_OUT_NORMAL, vs_output),
+                                                    varying("out_tangent", VS_OUT::BINDING_OUT_TANGENT, vs_output),
+                                                    varying("out_bitangent", VS_OUT::BINDING_OUT_BITANGENT, vs_output),
+                                                    varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
+
+                                                    uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
+
+                                                    "void main() {",
+                                                    "    gl_Position = vec4(in_position,1.0f) * MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                                    "    out_normal = (vec4(in_normal,0.0f) * MATRIX_FROM_MODEL_TO_CAMERA).xyz;",
+                                                    "    out_tangent = (vec4(in_tangent,0.0f) * MATRIX_FROM_MODEL_TO_CAMERA).xyz;",
+                                                    "    out_bitangent = (vec4(in_bitangent,0.0f) * MATRIX_FROM_MODEL_TO_CAMERA).xyz;",
+                                                    "    out_texture_coords = in_texture_coords;",
+                                                    "}",
+                                                };
+                                            }
+                                            else
+                                            {
+                                                vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                                    "#version 420",
+
+                                                    varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                                    varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
+                                                    varying("in_tangent", VS_IN::BINDING_IN_TANGENT, vs_input),
+                                                    varying("in_bitangent", VS_IN::BINDING_IN_BITANGENT, vs_input),
+                                                    varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+                                                    varying("in_indices_of_matrices", VS_IN::BINDING_IN_INDICES_OF_MATRICES, vs_input),
+                                                    varying("in_weights_of_matrices", VS_IN::BINDING_IN_WEIGHTS_OF_MATRICES, vs_input),
+
+                                                    varying("out_normal", VS_OUT::BINDING_OUT_NORMAL, vs_output),
+                                                    varying("out_tangent", VS_OUT::BINDING_OUT_TANGENT, vs_output),
+                                                    varying("out_bitangent", VS_OUT::BINDING_OUT_BITANGENT, vs_output),
+                                                    varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
+
+                                                    uniform(VS_UNIFORM::NUM_MATRICES_PER_VERTEX, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRICES_FROM_MODEL_TO_CAMERA, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
+
+                                                    "void main() {",
+                                                    "    int i;",
+                                                    "    vec4 result_position = vec4(0.0f, 0.0f, 0.0f, 0.0f);",
+                                                    "    vec3 result_normal = vec3(0.0f, 0.0f, 0.0f);",
+                                                    "    vec3 result_tangent = vec3(0.0f, 0.0f, 0.0f);",
+                                                    "    vec3 result_bitangent = vec3(0.0f, 0.0f, 0.0f);",
+                                                    "    for (i = 0; i != NUM_MATRICES_PER_VERTEX; ++i)",
+                                                    "    {",
+                                                    "        const vec4 pos = vec4(in_position,1.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]];",
+                                                    "        result_position = result_position + in_weights_of_matrices[i] * pos;",
+
+                                                    "        const vec3 normal = (vec4(in_normal,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]).xyz;",
+                                                    "        result_normal = result_normal + in_weights_of_matrices[i] * normal;",
+
+                                                    "        const vec3 tangent = (vec4(in_tangent,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]).xyz;",
+                                                    "        result_tangent = result_result + in_weights_of_matrices[i] * tangent;",
+
+                                                    "        const vec3 bitangent = (vec4(in_bitangent,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]).xyz;",
+                                                    "        result_bitangent = result_bitangent + in_weights_of_matrices[i] * bitangent;",
+                                                    "    }",
+                                                    "    gl_Position = result_position * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                                    "    out_normal = normalize(result_normal);",
+                                                    "    out_tangent = normalize(result_tangent);",
+                                                    "    out_bitangent = normalize(result_bitangent);",
+                                                    "    out_texture_coords = in_texture_coords;",
+                                                    "}",
+                                                };
+                                            }
+                                            fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                                "#version 420",
+
+                                                varying("in_normal", FS_IN::BINDING_IN_NORMAL, fs_input),
+                                                varying("in_tangent", FS_IN::BINDING_IN_TANGENT, fs_input),
+                                                varying("in_bitangent", FS_IN::BINDING_IN_BITANGENT, fs_input),
+                                                varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
+                                                varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                                uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
+                                                uniform(FS_UNIFORM::TEXTURE_SAMPLER_NORMAL, fs_uniforms),
+                                                uniform(FS_UNIFORM::AMBIENT_COLOUR, fs_uniforms),
+                                                uniform(FS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, fs_uniforms),
+                                                uniform(FS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, fs_uniforms),
+
+                                                DEFINE_FUNCTION_ambient_and_directional_lighting(),
+
+                                                "void main() {",
+                                                "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);"
+                                                "    if (diffuse_colour.a < 0.5f)",
+                                                "        discard;",
+                                                "    const vec4  N = texture(TEXTURE_SAMPLER_NORMAL, in_texture_coords);"
+                                                "    const vec3  normal = N.x * in_tangent + N.y * in_bitangent + N.z * in_normal;",
+                                                "    const vec4  colour_mult = ambient_and_directional_lighting(",
+                                                "        normalize(normal),",
+                                                "        DIRECTIONAL_LIGHT_DIRECTION,",
+                                                "        AMBIENT_COLOUR,",
+                                                "        DIRECTIONAL_LIGHT_COLOUR",
+                                                "        );",
+                                                "    out_colour = colour_mult * diffuse_colour;",
+                                                "}",
+                                            };
+                                        }
+                                        break;
+                                    }
+                                }
                             }
                             else
                             {

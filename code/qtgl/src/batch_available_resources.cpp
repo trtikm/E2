@@ -60,6 +60,12 @@ batch_available_resources_data::batch_available_resources_data(
             else if (fname == "normals.txt")
                 m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_NORMAL,
                                   canonical_path(entry.path()).string()});
+            else if (fname == "tangents.txt")
+                m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TANGENT,
+                                  canonical_path(entry.path()).string()});
+            else if (fname == "bitangents.txt")
+                m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_BITANGENT,
+                                  canonical_path(entry.path()).string()});
             else if (fname == "diffuse.txt")
                 m_buffers.insert({VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE,
                                   canonical_path(entry.path()).string()});
