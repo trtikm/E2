@@ -868,10 +868,10 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                 DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                 "void main() {",
-                                                "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);"
+                                                "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
                                                 "    if (diffuse_colour.a < 0.5f)",
                                                 "        discard;",
-                                                "    const vec4  N = texture(TEXTURE_SAMPLER_NORMAL, in_texture_coords);"
+                                                "    const vec3  N = normalize(2.0 * texture(TEXTURE_SAMPLER_NORMAL, in_texture_coords).rgb - 1.0);",
                                                 "    const vec3  normal = N.x * in_tangent + N.y * in_bitangent + N.z * in_normal;",
                                                 "    const vec4  colour_mult = ambient_and_directional_lighting(",
                                                 "        normalize(normal),",
