@@ -737,15 +737,13 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 }
                                 else if (resources.buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TANGENT) == 0UL)
                                 {
-                                    result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Tangents buffer is not available.";
-                                    result.second.get_lighting_data_types() = { { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE } };
-                                    result.second.get_light_types().clear();
+                                    result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Tangents buffer is not available. Normals texture cannot be used.";
+                                    result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::NORMAL] = SHADER_DATA_INPUT_TYPE::BUFFER;
                                 }
                                 else if (resources.buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_BITANGENT) == 0UL)
                                 {
-                                    result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Bitangents buffer is not available.";
-                                    result.second.get_lighting_data_types() = { { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE } };
-                                    result.second.get_light_types().clear();
+                                    result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Bitangents buffer is not available. Normals texture cannot be used.";
+                                    result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::NORMAL] = SHADER_DATA_INPUT_TYPE::BUFFER;
                                 }
                                 else if (resources.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_NORMAL) == 0UL)
                                 {
