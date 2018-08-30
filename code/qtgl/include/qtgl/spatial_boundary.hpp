@@ -18,9 +18,9 @@ struct  spatial_boundary
         , m_hi_corner(hi_corner)
     {}
 
-    float_32_bit const  radius() const noexcept { return m_radius; }
-    vector3 const&  lo_corner() const noexcept { return m_lo_corner; }
-    vector3 const&  hi_corner() const noexcept { return m_hi_corner; }
+    float_32_bit const  radius() const { return m_radius; }
+    vector3 const&  lo_corner() const { return m_lo_corner; }
+    vector3 const&  hi_corner() const { return m_hi_corner; }
 
 private:
     float_32_bit  m_radius;

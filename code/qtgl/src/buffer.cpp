@@ -42,7 +42,7 @@ buffer_file_data::buffer_file_data(async::key_type const&  key, async::finalise_
         throw std::runtime_error(msgstream() << "The buffer path '" << path
                                              << "' does not reference a regular file.");
 
-    std::vector<natural_8_bit> file_content(boost::filesystem::file_size(path));
+    std::vector<natural_8_bit> file_content(boost::filesystem::file_size(path) + 1UL);
     {
         TMPROF_BLOCK();
 
@@ -52,6 +52,7 @@ buffer_file_data::buffer_file_data(async::key_type const&  key, async::finalise_
         istr.read((char*)&file_content.at(0U), file_content.size());
         if (istr.bad())
             throw std::runtime_error(msgstream() << "Cannot read the passed image file: " << path);
+        file_content.back() = 0U;
     }
 
     per_line_buffer_reader  line_reader(file_content.data(), file_content.data() + file_content.size(), path.string());
@@ -121,50 +122,47 @@ buffer_file_data::buffer_file_data(async::key_type const&  key, async::finalise_
             (natural_64_bit)num_components *
             (has_integer_components ? sizeof(natural_32_bit) : sizeof(float_32_bit))
             );
-    auto  buffer_data_cursor = buffer_data.begin();
+    auto  buffer_data_cursor = buffer_data.data();
     float_32_bit  radius_squared = 0.0f;
     vector3  lo_corner{ 0.0f, 0.0f, 0.0f };
     vector3  hi_corner{ 0.0f, 0.0f, 0.0f };
     {
         TMPROF_BLOCK();
 
-        for (natural_32_bit  i = 0U; i < num_elements; ++i)
+        if (has_integer_components)
         {
-            vector3  point;
-            for (natural_8_bit  j = 0U; j < num_components; ++j)
-            {
-                std::string const  line = line_reader.get_next_line();
-                if (has_integer_components)
+            for (natural_32_bit i = 0U; i < num_elements; ++i)
+                for (natural_8_bit j = 0U; j < num_components; ++j)
                 {
-                    natural_32_bit const  value = std::stoul(line);
-                    std::copy(reinterpret_cast<natural_8_bit const*>(&value),
-                              reinterpret_cast<natural_8_bit const*>(&value) + sizeof(value),
-                              buffer_data_cursor);
-                    buffer_data_cursor += sizeof(value);
+                    line_reader.read_next_line_as_primitive_type<natural_32_bit>(buffer_data_cursor);
+                    buffer_data_cursor += sizeof(natural_32_bit);
                 }
-                else
+        }
+        else
+        {
+            for (natural_32_bit  i = 0U; i < num_elements; ++i)
+            {
+                vector3  point;
+                for (natural_8_bit  j = 0U; j < num_components; ++j)
                 {
-                    float_32_bit const  value = std::stof(line);
-                    std::copy(reinterpret_cast<natural_8_bit const*>(&value),
-                              reinterpret_cast<natural_8_bit const*>(&value) + sizeof(value),
-                              buffer_data_cursor);
-                    buffer_data_cursor += sizeof(value);
+                    line_reader.read_next_line_as_primitive_type<float_32_bit>(buffer_data_cursor);
                     if (compute_boundary)
                     {
-                        point(j) = value;
-                        if (value < lo_corner(j))
-                            lo_corner(j) = value;
-                        if (value > hi_corner(j))
-                            hi_corner(j) = value;
+                        point(j) = *(float_32_bit const*)buffer_data_cursor;
+                        if (point(j) < lo_corner(j))
+                            lo_corner(j) = point(j);
+                        if (point(j) > hi_corner(j))
+                            hi_corner(j) = point(j);
 
                     }
+                    buffer_data_cursor += sizeof(float_32_bit);
                 }
-            }
-            if (compute_boundary)
-            {
-                float_32_bit const  len2 = length_squared(point);
-                if (len2 > radius_squared)
-                    radius_squared = len2;
+                if (compute_boundary)
+                {
+                    float_32_bit const  len2 = length_squared(point);
+                    if (len2 > radius_squared)
+                        radius_squared = len2;
+                }
             }
         }
     }

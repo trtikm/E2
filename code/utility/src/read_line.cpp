@@ -1,6 +1,7 @@
 #include <utility/read_line.hpp>
 #include <utility/msgstream.hpp>
 #include <utility/timeprof.hpp>
+#include <utility/assumptions.hpp>
 #include <fstream>
 
 
@@ -13,7 +14,9 @@ per_line_buffer_reader::per_line_buffer_reader(
     : m_cursor(start)
     , m_end(end)
     , m_line_number(start_line_number)
-{}
+{
+    ASSUMPTION(m_cursor < m_end && *(m_end - 1UL) == 0U);
+}
 
 
 std::string  per_line_buffer_reader::get_next_line(bool const  allow_empty_lines, bool const  allow_read_on_eof)
@@ -47,6 +50,13 @@ void  per_line_buffer_reader::goto_next_line()
         ++m_cursor;
     if (m_cursor != m_end)
         ++m_line_number;
+}
+
+
+void  per_line_buffer_reader::skip_spaces()
+{
+    while (m_cursor != m_end && (*m_cursor == ' ' || *m_cursor == '\t'))
+        ++m_cursor;
 }
 
 
