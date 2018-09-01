@@ -16,6 +16,7 @@
 #   include <queue>
 #   include <atomic>
 #   include <memory>
+#   include <iosfwd>
 #   include <exception>
 
 
@@ -81,6 +82,9 @@ inline bool  operator!=(key_type const&  left, key_type const&  right) { return 
 inline bool  operator>(key_type const&  left, key_type const&  right) { return  right < left; }
 inline bool  operator<=(key_type const&  left, key_type const&  right) { return  left == right || left < right; }
 inline bool  operator>=(key_type const&  left, key_type const&  right) { return  left == right || left > right; }
+
+
+std::ostream&  operator<<(std::ostream&  ostr, key_type const&  key);
 
 
 }}
@@ -173,10 +177,6 @@ private:
 };
 
 
-using  pointer_to_resource_type = void*;
-using  notification_callback_type = std::function<void()>;
-
-
 struct  finalise_load_on_destroy
 {
     explicit finalise_load_on_destroy(key_type const&  key)
@@ -191,6 +191,9 @@ struct  finalise_load_on_destroy
 
     ~finalise_load_on_destroy();
 
+    key_type const&  get_key() const { return m_key; }
+    std::string const&  get_error_message() const { return m_error_message; }
+
 private:
     key_type  m_key;
     std::string  m_error_message;
@@ -198,6 +201,8 @@ private:
 
 
 using  finalise_load_on_destroy_ptr = std::shared_ptr<finalise_load_on_destroy>;
+using  pointer_to_resource_type = void*;
+using  notification_callback_type = std::pair<std::function<void(finalise_load_on_destroy_ptr)>, finalise_load_on_destroy_ptr>;
 
 
 struct  resource_holder_type  final
@@ -390,11 +395,19 @@ void  resource_cache::insert_load_request(
 
     {
         std::lock_guard<std::mutex> const  lock(mutex());
+
+        ASSUMPTION(
+            parent_notification_callback.first.operator bool() == false ||
+                ( parent_notification_callback.second != nullptr &&
+                    ( parent_notification_callback.second->get_key() == key ||
+                      m_cache.count(parent_notification_callback.second->get_key()) != 0UL ) )
+            );
+
         resources_cache_type::value_type* const  resource_ptr = find_resource(key);
         if (resource_ptr != nullptr)
         {
             if (resource_ptr->second->get_load_state() == LOAD_STATE::IN_PROGRESS &&
-                    parent_notification_callback.operator bool())
+                    parent_notification_callback.first.operator bool())
                 m_notification_callbacks[key].push_back(parent_notification_callback);
             output = resource_ptr;
             output->second->inc_ref_count();
@@ -407,7 +420,7 @@ void  resource_cache::insert_load_request(
                 });
         INVARIANT(iter_and_bool.second);
 
-        if (parent_notification_callback.operator bool())
+        if (parent_notification_callback.first.operator bool())
             m_notification_callbacks[key].push_back(parent_notification_callback);
 
         output = &*iter_and_bool.first;
@@ -442,11 +455,18 @@ void  resource_cache::insert_resource(
     {
         std::lock_guard<std::mutex> const  lock(mutex());
 
+        ASSUMPTION(
+            parent_notification_callback.first.operator bool() == false ||
+                ( parent_notification_callback.second != nullptr &&
+                    ( parent_notification_callback.second->get_key() == key ||
+                      m_cache.count(parent_notification_callback.second->get_key()) != 0UL ) )
+            );
+
         resources_cache_type::value_type* const  resource_ptr = find_resource(key);
         if (resource_ptr != nullptr)
         {
             if (resource_ptr->second->get_load_state() == LOAD_STATE::IN_PROGRESS &&
-                    parent_notification_callback.operator bool())
+                    parent_notification_callback.first.operator bool())
                 m_notification_callbacks[key].push_back(parent_notification_callback);
             output = resource_ptr;
             output->second->inc_ref_count();
@@ -459,7 +479,7 @@ void  resource_cache::insert_resource(
                 });
         INVARIANT(iter_and_bool.second);
 
-        if (parent_notification_callback.operator bool())
+        if (parent_notification_callback.first.operator bool())
             m_notification_callbacks[key].push_back(parent_notification_callback);
 
         output = &*iter_and_bool.first;
@@ -480,6 +500,7 @@ void  resource_cache::erase_resource(key_type const&  key)
     TMPROF_BLOCK();
 
     pointer_to_resource_type  destroy_resource_ptr = nullptr;
+    std::vector<notification_callback_type>  callbacks_to_delete;
     {
         std::lock_guard<std::mutex> const  lock(mutex());
         auto const  it = m_cache.find(key);
@@ -491,7 +512,12 @@ void  resource_cache::erase_resource(key_type const&  key)
         ASSUMPTION(it->second->ref_count() == 0UL);
         destroy_resource_ptr = it->second->resource_ptr();
 
-        m_notification_callbacks.erase(key);
+        auto const  callbacks_it = m_notification_callbacks.find(key);
+        if (callbacks_it != m_notification_callbacks.end())
+        {
+            callbacks_to_delete.swap(callbacks_it->second);
+            m_notification_callbacks.erase(callbacks_it);
+        }
         m_cache.erase(it);
     }
     if (destroy_resource_ptr != nullptr)
@@ -623,7 +649,7 @@ protected:
     void  insert_load_request(
             key_type const&  key,
             load_priority_type const  priority,
-            notification_callback_type const& notification_callback = notification_callback_type()
+            notification_callback_type const& notification_callback
             )
     {
         ASSUMPTION(m_data_ptr == nullptr);
@@ -633,8 +659,6 @@ protected:
                             notification_callback,
                             m_data_ptr
                             );
-        if (m_data_ptr->second->get_load_state() != LOAD_STATE::IN_PROGRESS && notification_callback.operator bool())
-            notification_callback();
     }
 
     template<typename... arg_types>
@@ -651,8 +675,6 @@ protected:
                             m_data_ptr,
                             args_for_constructor_of_the_resource...
                             );
-        if (m_data_ptr->second->get_load_state() != LOAD_STATE::IN_PROGRESS && notification_callback.operator bool())
-            notification_callback();
     }
 
 private:

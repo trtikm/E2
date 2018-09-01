@@ -294,28 +294,34 @@ texture_data::texture_data(async::key_type const&  key, async::finalise_load_on_
     std::string const  texture_file_pathname = key.get_unique_id();
     m_texture_props.insert_load_request(
             texture_file_pathname,
-            [this, texture_file_pathname, finaliser]() -> void {
-                    if (m_texture_props.get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
-                    {
-                        finaliser->force_finalisation_as_failure(
-                                "Load of texture file '" + texture_file_pathname + "' has FAILED!"
-                                );
-                        return;
-                    }
-                    std::string const  image_file_pathname = m_texture_props.image_pathname().string();
-                    m_image_props.insert_load_request(
-                        image_file_pathname,
-                        [this, image_file_pathname, finaliser]() -> void {
-                                if (m_image_props.get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
-                                {
-                                    finaliser->force_finalisation_as_failure(
-                                            "Load of texture image file '" + image_file_pathname + "' has FAILED!"
-                                            );
-                                    return;
+            {
+                [this, texture_file_pathname](async::finalise_load_on_destroy_ptr const  finaliser) -> void {
+                        if (m_texture_props.get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
+                        {
+                            finaliser->force_finalisation_as_failure(
+                                    "Load of texture file '" + texture_file_pathname + "' has FAILED!"
+                                    );
+                            return;
+                        }
+                        std::string const  image_file_pathname = m_texture_props.image_pathname().string();
+                        m_image_props.insert_load_request(
+                            image_file_pathname,
+                            {
+                                [this, image_file_pathname](async::finalise_load_on_destroy_ptr const  finaliser) -> void {
+                                        if (m_image_props.get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
+                                        {
+                                            finaliser->force_finalisation_as_failure(
+                                                    "Load of texture image file '" + image_file_pathname + "' has FAILED!"
+                                                    );
+                                            return;
+                                        }
+                                    },
+                                finaliser
                                 }
-                            }
-                        );
+                            );
 
+                    },
+                finaliser
                 }
             );
 }

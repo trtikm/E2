@@ -21,6 +21,13 @@ key_type const&  key_type::get_invalid_key()
 }
 
 
+std::ostream&  operator<<(std::ostream&  ostr, key_type const&  key)
+{
+    ostr << "async::key_type{" << key.get_data_type_name() << ", " << key.get_unique_id() << "}";
+    return ostr;
+}
+
+
 }}
 
 namespace async { namespace detail {
@@ -174,23 +181,32 @@ resource_holder_type::resource_holder_type()
 
 void  resource_holder_type::finalise_load(std::string const&  force_error_message)
 {
-    if (m_load_state != LOAD_STATE::IN_PROGRESS)
+    switch (m_load_state)
     {
-        ASSUMPTION(m_error_message == force_error_message);
-        return;
-    }
-
-    ASSUMPTION(m_error_message.empty() || m_error_message == force_error_message);
-
-    if (!force_error_message.empty())
-        m_error_message = force_error_message;
-
-    if (!m_error_message.empty())
-        m_load_state = LOAD_STATE::FINISHED_WITH_ERROR;
-    else
-    {
-        ASSUMPTION(resource_ptr() != nullptr);
-        m_load_state = LOAD_STATE::FINISHED_SUCCESSFULLY;
+    case LOAD_STATE::IN_PROGRESS:
+        if (force_error_message.empty())
+        {
+            ASSUMPTION(resource_ptr() != nullptr);
+            m_load_state = LOAD_STATE::FINISHED_SUCCESSFULLY;
+        }
+        else
+        {
+            m_load_state = LOAD_STATE::FINISHED_WITH_ERROR;
+            m_error_message = "FORCED ERRROR: " + force_error_message;
+        }
+        break;
+    case LOAD_STATE::FINISHED_SUCCESSFULLY:
+        if (!force_error_message.empty())
+        {
+            m_load_state = LOAD_STATE::FINISHED_WITH_ERROR;
+            m_error_message = "FORCED ERRROR: " + force_error_message;
+        }
+        break;
+    case LOAD_STATE::FINISHED_WITH_ERROR:
+        if (!force_error_message.empty())
+            m_error_message += " FORCED ERRROR: " + force_error_message;
+        break;
+    default: UNREACHABLE();
     }
 }
 
@@ -231,17 +247,28 @@ void  resource_cache::process_notification_callbacks(key_type const&  key)
     TMPROF_BLOCK();
 
     std::vector<notification_callback_type>  to_process;
+    bool  success = true;
     {
         std::lock_guard<std::mutex> const  lock(mutex());
         auto const  it = m_notification_callbacks.find(key);
         if (it != m_notification_callbacks.end())
         {
-            to_process = it->second;
+            to_process.swap(it->second);
             m_notification_callbacks.erase(it);
+            auto const  resource_it = m_cache.find(key);
+            if (resource_it->second->get_load_state() != LOAD_STATE::FINISHED_SUCCESSFULLY)
+            {
+                for (auto const& callback_and_finaliser : to_process)
+                    callback_and_finaliser.second->force_finalisation_as_failure(
+                            msgstream() << "Load of depenedent resource '" << key << "' has FAILED."
+                            );
+                success = false;
+            }
         }
     }
-    for (auto const&  callback : to_process)
-        callback();
+    if (success)
+        for (auto const&  callback_and_finaliser : to_process)
+            callback_and_finaliser.first(callback_and_finaliser.second);
 }
 
 

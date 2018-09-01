@@ -32,7 +32,7 @@ batch_data::batch_data(
 
     m_available_resources.insert_load_request(
             path.string(),
-            std::bind(&batch_data::load, this, effects, skeleton_name, finaliser)
+            { std::bind(&batch_data::load, this, effects, skeleton_name, std::placeholders::_1), finaliser }
             );
 }
 

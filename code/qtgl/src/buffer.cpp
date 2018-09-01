@@ -439,7 +439,10 @@ static void  load_buffers_map(
 
             it->second.insert_load_request(
                     paths.at(it->first).string(),
-                    std::bind(&local::on_buffer_loaded, paths, it, std::ref(buffers), initialiser, finaliser)
+                    {
+                        std::bind(&local::on_buffer_loaded, paths, it, std::ref(buffers), initialiser, std::placeholders::_1),
+                        finaliser
+                        }
                     );
         }
     };
@@ -456,7 +459,10 @@ static void  load_buffers_map(
 
     it->second.insert_load_request(
             paths.at(it->first).string(),
-            std::bind(&local::on_buffer_loaded, paths, it, std::ref(buffers), initialiser, finaliser)
+            {
+                std::bind(&local::on_buffer_loaded, paths, it, std::ref(buffers), initialiser, std::placeholders::_1),
+                finaliser
+                }
             );
 }
 
@@ -474,13 +480,16 @@ buffers_binding_data::buffers_binding_data(
 {
     m_index_buffer.insert_load_request(
         index_buffer_path.string(),
-        std::bind(
-            &load_buffers_map,
-            paths,
-            std::ref(m_buffers),
-            [this]() { initialise( 0U, m_index_buffer, 0U, m_buffers); },
+        {
+            std::bind(
+                &load_buffers_map,
+                paths,
+                std::ref(m_buffers),
+                [this]() { initialise( 0U, m_index_buffer, 0U, m_buffers); },
+                std::placeholders::_1
+                ),
             finaliser
-            )
+            }
         );
 }
 

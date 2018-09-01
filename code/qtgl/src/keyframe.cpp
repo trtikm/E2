@@ -193,7 +193,10 @@ keyframes_data::keyframes_data(
 
             keyframes.at(index).insert_load_request(
                     keyframe_pathnames->at(index).string(),
-                    std::bind(&on_keyframe_loaded, keyframe_pathnames, index, finaliser, std::ref(keyframes))
+                    {
+                        std::bind(&on_keyframe_loaded, keyframe_pathnames, index, std::placeholders::_1, std::ref(keyframes)),
+                        finaliser
+                        }
                     );
         }
     };
@@ -203,7 +206,10 @@ keyframes_data::keyframes_data(
 
     m_keyframes.at(0UL).insert_load_request(
             keyframe_pathnames->at(0UL).string(),
-            std::bind(&local::on_keyframe_loaded, keyframe_pathnames, 0UL, finaliser, std::ref(m_keyframes))
+            {
+                std::bind(&local::on_keyframe_loaded, keyframe_pathnames, 0UL, std::placeholders::_1, std::ref(m_keyframes)),
+                finaliser
+                }
             );
 }
 
