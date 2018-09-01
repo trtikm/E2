@@ -973,8 +973,14 @@ def save_textures(
                     src_image_pathname = bpy.path.abspath("//textures/" + image.name)
                     assert os.path.exists(src_image_pathname)
 
-                dst_image_name = os.path.splitext(os.path.basename(src_image_pathname))[0]
                 dst_image_extension = os.path.splitext(os.path.basename(src_image_pathname))[1]
+
+                dst_image_name, ext = os.path.splitext(os.path.basename(texture.name))
+                if ext != dst_image_extension:
+                    dst_image_name += ext
+                if len(dst_image_name) == 0:
+                    dst_image_name = os.path.splitext(os.path.basename(src_image_pathname))[0]
+
                 dst_image_pathname = os.path.join(texture_output_dir, dst_image_name + dst_image_extension)
 
                 print("Copying image in slot #" + str(slot_idx) + " of material " + materials[mat_idx].name + ": " +
