@@ -106,7 +106,10 @@ void  widgets::on_time_event()
                     update_record.second->first == new_just_being_loaded
                     );
     if (!update_records.empty())
+    {
+        expandAll();
         sortItems(0, Qt::SortOrder::AscendingOrder);
+    }
 
     // And finaly save the new values for the use in the next update.
 
