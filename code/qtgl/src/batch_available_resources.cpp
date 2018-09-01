@@ -163,7 +163,7 @@ batch_available_resources_data::batch_available_resources_data(
                 boost::filesystem::path const  skeleton_dir =
                         canonical_path(data_root_dir / "animations" / "skeletal" / entry.path().filename());
                 if (!boost::filesystem::is_directory(skeleton_dir))
-                    throw std::runtime_error(msgstream() << "Cannot access the reference skeleton directory:" << skeletal_dir);
+                    throw std::runtime_error(msgstream() << "Cannot access the reference skeleton directory:" << skeleton_dir);
 
                 m_skeletal.insert({
                     skeleton_dir.string(),
