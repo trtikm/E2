@@ -992,7 +992,7 @@ def save_textures(
                     print("Saving texture in slot #" + str(slot_idx) + " of material " + materials[mat_idx].name +
                           ": " + os.path.relpath(dst_texture_pathname, export_info["root_dir"]))
                     f.write("./" + dst_image_name + dst_image_extension + "\n")
-                    f.write("COMPRESSED_RGBA\n")
+                    f.write("RGB" + ("A" if image.use_alpha else "") + "\n")
                     f.write("REPEAT\n")
                     f.write("REPEAT\n")
                     f.write("LINEAR_MIPMAP_LINEAR\n")
