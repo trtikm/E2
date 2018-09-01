@@ -44,7 +44,11 @@ texture_file_data::texture_file_data(async::key_type const&  key, async::finalis
                 msgstream() << "Cannot read 'pixel format' in the texture file '" << path << "'."
                 );
     natural_32_bit  pixel_format;
-    if (line == "COMPRESSED_RGB")
+    if (line == "RGB")
+        pixel_format = GL_RGB;
+    else if (line == "RGBA")
+        pixel_format = GL_RGBA;
+    else if (line == "COMPRESSED_RGB")
         pixel_format = GL_COMPRESSED_RGB;
     else if (line == "COMPRESSED_RGBA")
         pixel_format = GL_COMPRESSED_RGBA;
@@ -145,7 +149,10 @@ void  texture_file_data::initialise(
 
     if (!boost::filesystem::exists(image_pathname) || !boost::filesystem::is_regular_file(image_pathname))
         throw std::runtime_error(msgstream() << "The image file '" << image_pathname << "' does not exist.");
-    if (pixel_format != GL_COMPRESSED_RGB && pixel_format != GL_COMPRESSED_RGBA)
+    if (pixel_format != GL_RGB
+        && pixel_format != GL_RGBA
+        && pixel_format != GL_COMPRESSED_RGB
+        && pixel_format != GL_COMPRESSED_RGBA)
         throw std::runtime_error(msgstream() << "Unknown pixel format '" << pixel_format << "'.");
     if (x_wrapping_type != GL_REPEAT && x_wrapping_type != GL_CLAMP)
         throw std::runtime_error(msgstream() << "Unknown x-wrapping type '" << x_wrapping_type << "'.");
@@ -200,20 +207,28 @@ texture_image_data::texture_image_data(async::key_type const&  key, async::final
                 throw std::runtime_error(msgstream() << "Qt function QImage::loadFromData() has failed for "
                                                         "the passed image file: " << path);
         }
-        if (qtmp_image.format() != QImage::Format_RGBA8888)
+        QImage::Format const  desired_format = qtmp_image.hasAlphaChannel() ? QImage::Format_RGBA8888 :
+                                                                              QImage::Format_RGB888;
+        if (qtmp_image.format() != desired_format)
         {
+            // We subclass QImage, because its method 'convertToFormat_helper' is protected.
             struct format_convertor : public QImage
             {
-                format_convertor(QImage const& orig)
+                format_convertor(QImage const& orig, QImage::Format const  desired_format)
                     : QImage(orig)
+                    , m_desired_format(desired_format)
                 {}
                 QImage  operator()() const
                 {
-                    return convertToFormat_helper(QImage::Format_RGBA8888,Qt::AutoColor);
+                    return convertToFormat_helper(m_desired_format,Qt::AutoColor);
                 }
+            private:
+                QImage::Format  m_desired_format;
             };
-            qtmp_image = format_convertor(qtmp_image)();
+            qtmp_image = format_convertor(qtmp_image, desired_format)();
         }
+
+        // We have to flip the image vertically for OpenGL (because its origin is at bottom).
         qimage = qtmp_image.transformed(QMatrix().scale(1,-1));
     }
 
@@ -222,7 +237,7 @@ texture_image_data::texture_image_data(async::key_type const&  key, async::final
         qimage.height(),
         qimage.bits(),
         qimage.bits()+qimage.byteCount(),
-        GL_RGBA,
+        qimage.hasAlphaChannel() ? GL_RGBA : GL_RGB,
         GL_UNSIGNED_BYTE
         );
 }
