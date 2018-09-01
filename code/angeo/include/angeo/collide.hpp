@@ -66,9 +66,6 @@ float_32_bit  closest_point_on_line_to_point(
 *
 * @return A number of pairs of closest points computed. The value can either be 1 or 2.
 *
-* NOTE: This algorithm can be used to compute collision of the line and sphere (the point being
-*       the centre). Use comparison |*output_closest_point - point| <= sphere_radius.
-*
 * NOTE: This algorithm can be used to compute collision of two capsules (the lines being their axes). Use comparison
 *       |*output_line_1_closest_point_1 - *output_line_2_closest_point_1| <= capsule_1_radius + capsule_2_radius.
 *       If 2 pairs are returned, then add also this comparion
