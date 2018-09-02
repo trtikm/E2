@@ -73,11 +73,12 @@ struct  vertex_shader : public async::resource_accessor<detail::vertex_shader_da
             std::unordered_set<VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME> const&  symbolic_names_of_used_uniforms,
             std::vector<std::string> const&  lines_of_shader_code,
             std::string const&  key = "",
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr,
             GLuint const  id = 0U
             )
         : async::resource_accessor<detail::vertex_shader_data>(
                 key.empty() ? async::key_type("qtgl::vertex_shader") : async::key_type{ "qtgl::vertex_shader", key },
-                async::notification_callback_type(),
+                parent_finaliser,
                 id,
                 input_buffer_bindings,
                 output_buffer_bindings,
@@ -195,11 +196,12 @@ struct  fragment_shader : public async::resource_accessor<detail::fragment_shade
             std::unordered_set<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME> const&  symbolic_names_of_used_uniforms,
             std::vector<std::string> const&  lines_of_shader_code,
             std::string const&  key = "",
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr,
             GLuint const  id = 0U 
             )
         : async::resource_accessor<detail::fragment_shader_data>(
                 key.empty() ? async::key_type("qtgl::fragment_shader") : async::key_type{ "qtgl::fragment_shader", key },
-                async::notification_callback_type(),
+                parent_finaliser,
                 id,
                 input_buffer_bindings,
                 output_buffer_bindings,
@@ -310,11 +312,12 @@ struct  shaders_binding : public async::resource_accessor<detail::shaders_bindin
             vertex_shader const  vertex_shader,
             fragment_shader const  fragment_shader,
             std::string const&  key = "",
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr,
             GLuint const  id = 0U
             )
         : async::resource_accessor<detail::shaders_binding_data>(
                 key.empty() ? async::key_type("qtgl::shaders_binding") : async::key_type{ "qtgl::shaders_binding", key },
-                async::notification_callback_type(),
+                parent_finaliser,
                 id,
                 vertex_shader,
                 fragment_shader

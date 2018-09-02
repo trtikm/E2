@@ -13,13 +13,13 @@
 namespace qtgl { namespace detail {
 
 
-keyframe_data::keyframe_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr)
+keyframe_data::keyframe_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : m_time_point(0.0)
     , m_coord_systems()
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  pathname = key.get_unique_id();
+    boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
 
     if (!boost::filesystem::exists(pathname))
         throw std::runtime_error(msgstream() << "The passed file '" << pathname << "' does not exist.");
@@ -105,112 +105,52 @@ namespace qtgl { namespace detail {
 
 
 keyframes_data::keyframes_data(
-        async::key_type const&  key,
-        async::finalise_load_on_destroy_ptr  finaliser)
+        async::finalise_load_on_destroy_ptr const  finaliser)
     : m_keyframes()
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  keyframes_dir = key.get_unique_id();
+    boost::filesystem::path const  keyframes_dir = finaliser->get_key().get_unique_id();
 
     if (!boost::filesystem::is_directory(keyframes_dir))
         throw std::runtime_error("Cannot access the directory of keyframes: " + keyframes_dir.string());
 
-    std::shared_ptr< std::vector<boost::filesystem::path> >  keyframe_pathnames(
-            new std::vector<boost::filesystem::path>()
-            );
-    for (boost::filesystem::directory_entry const&  entry : boost::filesystem::directory_iterator(keyframes_dir))
+    async::finalise_load_on_destroy_ptr const  keyframes_finaliser =
+        async::finalise_load_on_destroy::create(
+                [this, &keyframes_dir](async::finalise_load_on_destroy_ptr) {
+                    // All keyframes are loaded. So, let's check for their consistency and sort them by time.
+
+                    if (m_keyframes.empty())
+                        throw std::runtime_error("There is no keyframe file in the directory: " + keyframes_dir.string());
+
+                    auto const  num_coord_systems_per_keyframe = m_keyframes.front().get_coord_systems().size();
+                    for (std::size_t i = 0ULL; i != m_keyframes.size(); ++i)
+                        if (m_keyframes.at(i).get_coord_systems().size() != num_coord_systems_per_keyframe)
+                            throw std::runtime_error("Loaded of keyframes have different counts of coordinate "
+                                                     "systems (inconsystent animation).");
+
+                    std::sort(
+                        m_keyframes.begin(),
+                        m_keyframes.end(),
+                        [](keyframe const& left, keyframe const& right) -> bool {
+                            return left.get_time_point() < right.get_time_point();
+                            }
+                        );
+                    },
+                finaliser
+                );
+
+    for (boost::filesystem::directory_entry const& entry : boost::filesystem::directory_iterator(keyframes_dir))
     {
         std::string const  filename = entry.path().filename().string();
         std::string const  extension = entry.path().filename().extension().string();
-        if (filename.find("keyframe") == 0UL && extension == ".txt")
-            keyframe_pathnames->push_back(canonical_path(entry.path()));
+
+        if ( !(filename.find("keyframe") == 0UL && extension == ".txt") )
+            continue;
+
+        m_keyframes.push_back(keyframe());
+        m_keyframes.back().insert_load_request(canonical_path(entry.path()), keyframes_finaliser);
     }
-
-    if (keyframe_pathnames->empty())
-        throw std::runtime_error("There is no keyframe file in the directory: " + keyframes_dir.string());
-
-    m_keyframes.resize(keyframe_pathnames->size());
-
-    struct local
-    {
-        static void  on_keyframe_loaded(
-                std::shared_ptr< std::vector<boost::filesystem::path> > const  keyframe_pathnames,
-                natural_64_bit  index,
-                async::finalise_load_on_destroy_ptr  finaliser,
-                std::vector<keyframe>&  keyframes
-                )
-        {
-            ASSUMPTION(index < keyframes.size());
-            ASSUMPTION(keyframes.at(index).is_load_finished());
-
-            if (keyframes.at(index).get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
-            {
-                // Oh no! We failed to load the keyframe at index 'index'!
-                // So, let's also fail the load of the whole 'keyframe_data' resource.
-
-                finaliser->force_finalisation_as_failure(
-                        "Load of keyframe '" + keyframe_pathnames->at(index).string() + "' has FAILED!"
-                        );
-                return;
-            }
-
-            // Let's load the next keyframe (if any remains)
-
-            ++index;
-            if (index == keyframes.size())
-            {
-                // All keyframes are loaded! So, let's check for their consystency and sort them by time.
-
-                if (![&keyframes]() -> bool {
-                        auto const  num_coord_systems_per_keyframe = keyframes.front().get_coord_systems().size();
-                        for (std::size_t i = 0ULL; i != keyframes.size(); ++i)
-                            if (keyframes.at(i).get_coord_systems().size() != num_coord_systems_per_keyframe)
-                                return false;
-                        return true;
-                        }())
-                {
-                    finaliser->force_finalisation_as_failure(
-                        "Loaded of keyframes have different counts of coordinate systems (inconsystent animation)."
-                        );
-                    return;
-                }
-
-                std::sort(
-                    keyframes.begin(),
-                    keyframes.end(),
-                    [](keyframe const& left, keyframe const& right) -> bool {
-                        return left.get_time_point() < right.get_time_point();
-                        }
-                    );
-
-                return;
-            }
-    
-            ASSUMPTION(keyframe_pathnames->size() == keyframes.size());
-
-            // Let's load the next keyframe.
-
-            keyframes.at(index).insert_load_request(
-                    keyframe_pathnames->at(index).string(),
-                    {
-                        std::bind(&on_keyframe_loaded, keyframe_pathnames, index, std::placeholders::_1, std::ref(keyframes)),
-                        finaliser
-                        }
-                    );
-        }
-    };
-
-    // We load individual keyframes one by one, starting from the first one in the array (at index 0).
-    // NOTE: All remaining keyframes (at remaining indices) are loaded in function 'local::on_keyframe_loaded'.
-
-    m_keyframes.at(0UL).insert_load_request(
-            keyframe_pathnames->at(0UL).string(),
-            {
-                std::bind(&local::on_keyframe_loaded, keyframe_pathnames, 0UL, std::placeholders::_1, std::ref(m_keyframes)),
-                finaliser
-                }
-            );
 }
 
 

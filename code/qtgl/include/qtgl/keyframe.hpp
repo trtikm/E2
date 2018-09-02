@@ -14,7 +14,7 @@ namespace qtgl { namespace detail {
 
 struct  keyframe_data
 {
-    keyframe_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr);
+    keyframe_data(async::finalise_load_on_destroy_ptr const  finaliser);
     ~keyframe_data();
 
     float_32_bit  time_point() const { return m_time_point; }
@@ -38,21 +38,26 @@ struct  keyframe : public async::resource_accessor<detail::keyframe_data>
         : async::resource_accessor<detail::keyframe_data>()
     {}
 
-    explicit keyframe(boost::filesystem::path const&  path)
+    keyframe(
+            boost::filesystem::path const&  path,
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
+            )
         : async::resource_accessor<detail::keyframe_data>(
             {"qtgl::keyframe",path.string()},
-            1U
+            1U,
+            parent_finaliser
             )
     {}
 
     void  insert_load_request(
             boost::filesystem::path const&  path,
-            async::notification_callback_type const& notification_callback = async::notification_callback_type())
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
+            )
     {
         async::resource_accessor<detail::keyframe_data>::insert_load_request(
             { "qtgl::keyframe", path.string() },
             1U,
-            notification_callback
+            parent_finaliser
             );
     }
 
@@ -70,7 +75,7 @@ namespace qtgl { namespace detail {
 
 struct  keyframes_data
 {
-    keyframes_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr  finaliser);
+    keyframes_data(async::finalise_load_on_destroy_ptr const  finaliser);
     ~keyframes_data();
 
     std::vector<keyframe> const&  keyframes() const { return m_keyframes; }
@@ -92,21 +97,25 @@ struct  keyframes : public async::resource_accessor<detail::keyframes_data>
         : async::resource_accessor<detail::keyframes_data>()
     {}
 
-    explicit keyframes(boost::filesystem::path const&  keyframes_dir)
+    keyframes(
+            boost::filesystem::path const&  keyframes_dir,
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
+            )
         : async::resource_accessor<detail::keyframes_data>(
             {"qtgl::keyframes", keyframes_dir.string()},
-            1U
+            1U,
+            parent_finaliser
             )
     {}
 
     void  insert_load_request(
             boost::filesystem::path const&  path,
-            async::notification_callback_type const& notification_callback = async::notification_callback_type())
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr)
     {
         async::resource_accessor<detail::keyframes_data>::insert_load_request(
             { "qtgl::keyframes", path.string() },
             1U,
-            notification_callback
+            parent_finaliser
             );
     }
 

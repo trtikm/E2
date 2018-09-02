@@ -19,7 +19,7 @@ namespace qtgl { namespace detail {
 
 struct  buffer_file_data
 {
-    buffer_file_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr);
+    buffer_file_data(async::finalise_load_on_destroy_ptr const  finaliser);
 
     buffer_file_data(
             async::finalise_load_on_destroy_ptr,
@@ -107,21 +107,25 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
         : async::resource_accessor<detail::buffer_file_data>()
     {}
 
-    explicit buffer(boost::filesystem::path const&  path)
+    explicit buffer(
+            boost::filesystem::path const&  path,
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
+            )
         : async::resource_accessor<detail::buffer_file_data>(
             {"qtgl::buffer",path.string()},
-            1U
+            1U,
+            parent_finaliser
             )
     {}
 
     void  insert_load_request(
             boost::filesystem::path const&  path,
-            async::notification_callback_type const& notification_callback = async::notification_callback_type())
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr)
     {
         async::resource_accessor<detail::buffer_file_data>::insert_load_request(
             { "qtgl::buffer", path.string() },
             1U,
-            notification_callback
+            parent_finaliser
             );
     }
 
@@ -133,11 +137,12 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
             natural_8_bit const* const  data_begin,
             natural_8_bit const* const  data_end,
             spatial_boundary const* const  boundary,
-            std::string const&  key = ""
+            std::string const&  key = "",
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::buffer_file_data>(
                 key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
-                async::notification_callback_type(),
+                parent_finaliser,
                 id,
                 num_components_per_primitive, num_primitives, num_bytes_per_component, has_integral_components,
                 data_begin, data_end,
@@ -148,7 +153,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
     buffer(std::vector< std::array<float_32_bit,2> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
                 key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
-                async::notification_callback_type(),
+                nullptr,
                 data
                 )
     {}
@@ -159,7 +164,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
             )
         : async::resource_accessor<detail::buffer_file_data>(
                 key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
-                async::notification_callback_type(),
+                nullptr,
                 data,
                 do_compute_boundary
                 )
@@ -168,7 +173,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
     buffer(std::vector< std::array<float_32_bit,4> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
                 key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
-                async::notification_callback_type(),
+                nullptr,
                 data
                 )
     {}
@@ -176,7 +181,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
     buffer(std::vector< natural_32_bit > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
                 key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
-                async::notification_callback_type(),
+                nullptr,
                 data
                 )
     {}
@@ -184,7 +189,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
     buffer(std::vector< std::array<natural_32_bit,2> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
                 key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
-                async::notification_callback_type(),
+                nullptr,
                 data
                 )
     {}
@@ -192,7 +197,7 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
     buffer(std::vector< std::array<natural_32_bit,3> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
                 key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
-                async::notification_callback_type(),
+                nullptr,
                 data
                 )
     {}
@@ -231,7 +236,7 @@ struct buffers_binding_data
     }
 
     buffers_binding_data(
-            async::finalise_load_on_destroy_ptr  finaliser,
+            async::finalise_load_on_destroy_ptr const  finaliser,
             GLuint const  id,
             natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
             buffers_map_type const&  buffers
@@ -241,13 +246,13 @@ struct buffers_binding_data
     }
 
     buffers_binding_data(
-            async::finalise_load_on_destroy_ptr  finaliser,
+            async::finalise_load_on_destroy_ptr const  finaliser,
             boost::filesystem::path const&  index_buffer_path,
             std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths
             );
 
     buffers_binding_data(
-            async::finalise_load_on_destroy_ptr  finaliser,
+            async::finalise_load_on_destroy_ptr const  finaliser,
             natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
             std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths
             );
@@ -305,11 +310,12 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
             GLuint const  id,
             buffer const  index_buffer,
             buffers_map_type const&  buffers,
-            std::string const&  key = ""
+            std::string const&  key = "",
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::buffers_binding_data>(
                 key.empty() ? async::key_type("qtgl::buffer_binding") : async::key_type{ "qtgl::buffer_binding", key },
-                async::notification_callback_type(),
+                parent_finaliser,
                 id,
                 index_buffer,
                 buffers
@@ -320,11 +326,12 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
             GLuint const  id,
             natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
             buffers_map_type const&  buffers,
-            std::string const&  key = ""
+            std::string const&  key = "",
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::buffers_binding_data>(
                 key.empty() ? async::key_type("qtgl::buffer_binding") : async::key_type{ "qtgl::buffer_binding", key },
-                async::notification_callback_type(),
+                parent_finaliser,
                 id,
                 num_indices_per_primitive,
                 buffers
@@ -334,27 +341,29 @@ struct  buffers_binding : public async::resource_accessor<detail::buffers_bindin
     buffers_binding(
             boost::filesystem::path const&  index_buffer_path,
             std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths,
-            std::string const&  key = ""
+            std::string const&  key = "",
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::buffers_binding_data>(
-            key.empty() ? async::key_type("qtgl::buffer_binding") : async::key_type{ "qtgl::buffer_binding", key },
-            async::notification_callback_type(),
-            index_buffer_path,
-            paths
-            )
+                key.empty() ? async::key_type("qtgl::buffer_binding") : async::key_type{ "qtgl::buffer_binding", key },
+                parent_finaliser,
+                index_buffer_path,
+                paths
+                )
     {}
 
     buffers_binding(
             natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
             std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths,
-            std::string const&  key = ""
+            std::string const&  key = "",
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::buffers_binding_data>(
-            key.empty() ? async::key_type("qtgl::buffer_binding") : async::key_type{ "qtgl::buffer_binding", key },
-            async::notification_callback_type(),
-            num_indices_per_primitive,
-            paths
-            )
+                key.empty() ? async::key_type("qtgl::buffer_binding") : async::key_type{ "qtgl::buffer_binding", key },
+                parent_finaliser,
+                num_indices_per_primitive,
+                paths
+                )
     {}
 
     GLuint  id() const { return resource().id(); }

@@ -10,9 +10,9 @@
 namespace qtgl { namespace detail {
 
 
-skeleton_alignment_data::skeleton_alignment_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr)
+skeleton_alignment_data::skeleton_alignment_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : m_skeleton_alignment()
-    , m_skeleton_alignment_path(key.get_unique_id())
+    , m_skeleton_alignment_path(finaliser->get_key().get_unique_id())
 {
     TMPROF_BLOCK();
 

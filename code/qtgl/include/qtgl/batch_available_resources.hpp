@@ -85,7 +85,7 @@ struct  batch_available_resources_data  final
                         // Holds pathnames of files containing batch-specific data related to the skeleton above.
                     >;
 
-    batch_available_resources_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr);
+    batch_available_resources_data(async::finalise_load_on_destroy_ptr const  finaliser);
 
     batch_available_resources_data(
             async::finalise_load_on_destroy_ptr,
@@ -128,22 +128,22 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
 
     batch_available_resources(
             boost::filesystem::path const&  path,
-            async::notification_callback_type const& notification_callback = async::notification_callback_type())
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr)
         : async::resource_accessor<detail::batch_available_resources_data>(
             {"qtgl::batch_available_resources", path.string()},
             1U,
-            notification_callback
+            parent_finaliser
             )
     {}
 
     void  insert_load_request(
             boost::filesystem::path const&  path,
-            async::notification_callback_type const& notification_callback = async::notification_callback_type())
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr)
     {
         async::resource_accessor<detail::batch_available_resources_data>::insert_load_request(
             { "qtgl::batch_available_resources", path.string() },
             1U,
-            notification_callback
+            parent_finaliser
             );
     }
 
@@ -157,7 +157,7 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
         : async::resource_accessor<detail::batch_available_resources_data>(
                 key.empty() ? async::key_type("qtgl::batch_available_resources") :
                               async::key_type{ "qtgl::batch_available_resources", key },
-                async::notification_callback_type(),
+                nullptr,
                 buffers_,
                 textures_,
                 skeletal_,
@@ -175,7 +175,7 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
         : async::resource_accessor<detail::batch_available_resources_data>(
                 key.empty() ? async::key_type("qtgl::batch_available_resources") :
                               async::key_type{ "qtgl::batch_available_resources", key },
-                async::notification_callback_type(),
+                nullptr,
                 [&buffers_binding_]() -> buffers_dictionaty_type {
                         buffers_dictionaty_type  result;
                         for (auto const&  elem : buffers_binding_)

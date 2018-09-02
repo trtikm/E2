@@ -22,7 +22,7 @@ namespace qtgl { namespace detail {
 
 
 batch_data::batch_data(
-        async::finalise_load_on_destroy_ptr  finaliser,
+        async::finalise_load_on_destroy_ptr const  finaliser,
         boost::filesystem::path const&  path,
         effects_config const&  effects,
         std::string const&  skeleton_name
@@ -30,15 +30,17 @@ batch_data::batch_data(
 {
     TMPROF_BLOCK();
 
-    m_available_resources.insert_load_request(
-            path.string(),
-            { std::bind(&batch_data::load, this, effects, skeleton_name, std::placeholders::_1), finaliser }
-            );
+    async::finalise_load_on_destroy_ptr const  available_resources_finaliser =
+        async::finalise_load_on_destroy::create(
+                std::bind(&batch_data::load, this, effects, skeleton_name, std::placeholders::_1),
+                finaliser
+                );
+    m_available_resources.insert_load_request(path.string(), available_resources_finaliser);
 }
 
 
 batch_data::batch_data(
-        async::finalise_load_on_destroy_ptr,
+        async::finalise_load_on_destroy_ptr const  finaliser,
         buffers_binding const  buffers_binding_,
         textures_binding const  textures_binding_,
         texcoord_binding const&  texcoord_binding_,
@@ -100,7 +102,8 @@ batch_data::batch_data(
     shaders_binding const  shaders_binding_{
         vertex_shader{vs_input, vs_output, vs_uniforms, vs_source, vs_uid},
         fragment_shader{fs_input, fs_output, fs_uniforms, fs_source, fs_uid},
-        "{" + vs_uid + "}{" + fs_uid + "}"
+        "{" + vs_uid + "}{" + fs_uid + "}",
+        finaliser
     };
     initialise(buffers_binding_,shaders_binding_,textures_binding_,draw_state_,modelspace_,skeleton_alignment_,resources);
 }
@@ -115,7 +118,7 @@ batch_data::~batch_data()
 void  batch_data::load(
         effects_config const&  effects,
         std::string const&  skeleton_name,
-        async::finalise_load_on_destroy_ptr  finaliser
+        async::finalise_load_on_destroy_ptr const  finaliser
         )
 {
     TMPROF_BLOCK();
@@ -240,21 +243,23 @@ void  batch_data::load(
         buffers_binding(
             get_available_resources().index_buffer(),
             buffer_paths,
-            get_available_resources().root_dir()
+            get_available_resources().root_dir(),
+            finaliser
             ),
         shaders_binding{
-            vertex_shader{vs_input, vs_output, vs_uniforms, vs_source, vs_uid},
-            fragment_shader{fs_input, fs_output, fs_uniforms, fs_source, fs_uid},
-            "{" + vs_uid + "}{" + fs_uid + "}"
+            vertex_shader(vs_input, vs_output, vs_uniforms, vs_source, vs_uid, finaliser),
+            fragment_shader(fs_input, fs_output, fs_uniforms, fs_source, fs_uid, finaliser),
+            "{" + vs_uid + "}{" + fs_uid + "}",
+            finaliser
             },
-        textures_binding(texture_paths),
+        textures_binding(texture_paths, "", finaliser),
         draw_state::create(GL_BACK, false, 0U, 0U),
         skeletal_info == get_available_resources().skeletal().cend() ?
             modelspace() :
-            modelspace(boost::filesystem::path(skeletal_info->first) / "pose.txt"),
+            modelspace(boost::filesystem::path(skeletal_info->first) / "pose.txt", finaliser),
         skeletal_info == get_available_resources().skeletal().cend() ?
             skeleton_alignment() :
-            skeleton_alignment(skeletal_info->second.alignment()),
+            skeleton_alignment(skeletal_info->second.alignment(), finaliser),
         get_available_resources()
         );
 }

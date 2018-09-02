@@ -30,11 +30,11 @@ void  set_num_primitives(natural_32_bit const  num_primitives);
 namespace qtgl { namespace detail {
 
 
-buffer_file_data::buffer_file_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr)
+buffer_file_data::buffer_file_data(async::finalise_load_on_destroy_ptr const  finaliser)
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  path = key.get_unique_id();
+    boost::filesystem::path const  path = finaliser->get_key().get_unique_id();
 
     if (!boost::filesystem::exists(path))
         throw std::runtime_error(msgstream() << "The buffer file '" << path << "' does not exists.");
@@ -393,82 +393,8 @@ void  buffer_file_data::destroy_gl_buffer()
 namespace qtgl { namespace detail {
 
 
-static void  load_buffers_map(
-        std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths,
-        buffers_binding_data::buffers_map_type&  buffers,
-        std::function<void()> const&  initialiser,
-        async::finalise_load_on_destroy_ptr  finaliser
-        )
-{
-    TMPROF_BLOCK();
-
-    struct local
-    {
-        static void  on_buffer_loaded(
-                std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths,
-                buffers_binding_data::buffers_map_type::iterator  it,
-                buffers_binding_data::buffers_map_type&  buffers,
-                std::function<void()> const&  initialiser,
-                async::finalise_load_on_destroy_ptr  finaliser
-                )
-        {
-            ASSUMPTION(it != buffers.end());
-
-            if (it->second.get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
-            {
-                // Oh no! We failed to load the buffer at position 'it'!
-                // So, let's also fail the load of the whole 'buffers_binding_data' resource.
-
-                finaliser->force_finalisation_as_failure(
-                        "Load of buffer '" + paths.at(it->first).string() + "' has FAILED!"
-                        );
-                return;
-            }
-
-            // Let's load the next buffer (if any remains)
-
-            ++it;
-            if (it == buffers.end())
-            {
-                // All buffers are loaded! So, let's initialise the 'buffers_binding_data' structure.
-                initialiser();
-                return;
-            }
-    
-            // Let's load the next buffer.
-
-            it->second.insert_load_request(
-                    paths.at(it->first).string(),
-                    {
-                        std::bind(&local::on_buffer_loaded, paths, it, std::ref(buffers), initialiser, std::placeholders::_1),
-                        finaliser
-                        }
-                    );
-        }
-    };
-
-    ASSUMPTION(!paths.empty());
-    ASSUMPTION(buffers.empty());
-    for (auto const& elem : paths)
-        buffers.insert({ elem.first, buffer() });
-
-    // We load individual buffers one by one, starting from the first one in the map (at cbegin()).
-    // NOTE: All remaining buffers are loaded in function 'local::on_buffer_loaded'.
-
-    auto const  it = buffers.begin();
-
-    it->second.insert_load_request(
-            paths.at(it->first).string(),
-            {
-                std::bind(&local::on_buffer_loaded, paths, it, std::ref(buffers), initialiser, std::placeholders::_1),
-                finaliser
-                }
-            );
-}
-
-
 buffers_binding_data::buffers_binding_data(
-        async::finalise_load_on_destroy_ptr  finaliser,
+        async::finalise_load_on_destroy_ptr const  finaliser,
         boost::filesystem::path const&  index_buffer_path,
         std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths
         )
@@ -478,24 +404,24 @@ buffers_binding_data::buffers_binding_data(
     , m_buffers()
     , m_ready(false)
 {
-    m_index_buffer.insert_load_request(
-        index_buffer_path.string(),
-        {
-            std::bind(
-                &load_buffers_map,
-                paths,
-                std::ref(m_buffers),
-                [this]() { initialise( 0U, m_index_buffer, 0U, m_buffers); },
-                std::placeholders::_1
-                ),
-            finaliser
-            }
-        );
+    TMPROF_BLOCK();
+
+    async::finalise_load_on_destroy_ptr const  buffers_finaliser =
+        async::finalise_load_on_destroy::create(
+                [this](async::finalise_load_on_destroy_ptr const  finaliser) {
+                    initialise(0U, m_index_buffer, 0U, m_buffers);
+                    },
+                finaliser
+                );
+
+    m_index_buffer.insert_load_request(index_buffer_path.string(), buffers_finaliser);
+    for (auto const& elem : paths)
+        m_buffers[elem.first].insert_load_request(elem.second, buffers_finaliser);
 }
 
 
 buffers_binding_data::buffers_binding_data(
-        async::finalise_load_on_destroy_ptr  finaliser,
+        async::finalise_load_on_destroy_ptr const  finaliser,
         natural_8_bit const  num_indices_per_primitive, // 1 (points), 2 (lines), or 3 (triangles)
         std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path> const&  paths
         )
@@ -505,12 +431,18 @@ buffers_binding_data::buffers_binding_data(
     , m_buffers()
     , m_ready(false)
 {
-    load_buffers_map(
-        paths,
-        m_buffers,
-        [this, num_indices_per_primitive]() { initialise(0U, buffer(), num_indices_per_primitive, m_buffers); },
-        finaliser
-        );
+    TMPROF_BLOCK();
+
+    async::finalise_load_on_destroy_ptr const  buffers_finaliser =
+        async::finalise_load_on_destroy::create(
+                [this, num_indices_per_primitive](async::finalise_load_on_destroy_ptr const  finaliser) {
+                    initialise(0U, buffer(), num_indices_per_primitive, m_buffers);
+                    },
+                finaliser
+                );
+
+    for (auto const& elem : paths)
+        m_buffers[elem.first].insert_load_request(elem.second, buffers_finaliser);
 }
 
 

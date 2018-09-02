@@ -11,7 +11,7 @@ namespace qtgl { namespace detail {
 
 struct  skeleton_alignment_data
 {
-    skeleton_alignment_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr);
+    skeleton_alignment_data(async::finalise_load_on_destroy_ptr const  finaliser);
     ~skeleton_alignment_data();
 
     angeo::coordinate_system const&  get_skeleton_alignment() const { return m_skeleton_alignment; }
@@ -35,10 +35,14 @@ struct  skeleton_alignment : public async::resource_accessor<detail::skeleton_al
         : async::resource_accessor<detail::skeleton_alignment_data>()
     {}
 
-    explicit skeleton_alignment(boost::filesystem::path const&  path)
+    explicit skeleton_alignment(
+            boost::filesystem::path const&  path,
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
+            )
         : async::resource_accessor<detail::skeleton_alignment_data>(
             {"qtgl::skeleton_alignment",path.string()},
-            1U
+            1U,
+            parent_finaliser
             )
     {}
 

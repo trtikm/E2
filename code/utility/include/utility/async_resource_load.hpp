@@ -177,32 +177,53 @@ private:
 };
 
 
+struct  finalise_load_on_destroy;
+using  finalise_load_on_destroy_ptr = std::shared_ptr<finalise_load_on_destroy>;
+using  callback_function_type = std::function<void(finalise_load_on_destroy_ptr)>;
+
+
 struct  finalise_load_on_destroy
 {
-    explicit finalise_load_on_destroy(key_type const&  key)
-        : m_key(key)
-        , m_error_message()
-    {}
+    static finalise_load_on_destroy_ptr  create(
+            key_type const&  key,
+            finalise_load_on_destroy_ptr const  parent = nullptr
+            );
 
-    void  force_finalisation_as_failure(std::string const&  force_error_message)
-    {
-        m_error_message = force_error_message;
-    }
+    static finalise_load_on_destroy_ptr  create(
+            callback_function_type const&  callback,
+            finalise_load_on_destroy_ptr const  finaliser
+            );
 
     ~finalise_load_on_destroy();
 
     key_type const&  get_key() const { return m_key; }
     std::string const&  get_error_message() const { return m_error_message; }
+    finalise_load_on_destroy_ptr  get_parent() const { return m_parent; }
+    callback_function_type const&  get_callback() const { return m_callback; }
+
+    void  force_finalisation_as_failure(std::string const&  force_error_message);
 
 private:
+
+    finalise_load_on_destroy(
+            key_type const&  key,
+            finalise_load_on_destroy_ptr const  parent,
+            callback_function_type const&  callback 
+            )
+        : m_key(key)
+        , m_error_message()
+        , m_parent(parent)
+        , m_callback(callback)
+    {}
+
     key_type  m_key;
     std::string  m_error_message;
+    finalise_load_on_destroy_ptr  m_parent;
+    callback_function_type  m_callback;
 };
 
 
-using  finalise_load_on_destroy_ptr = std::shared_ptr<finalise_load_on_destroy>;
 using  pointer_to_resource_type = void*;
-using  notification_callback_type = std::pair<std::function<void(finalise_load_on_destroy_ptr)>, finalise_load_on_destroy_ptr>;
 
 
 struct  resource_holder_type  final
@@ -240,7 +261,6 @@ struct  resource_holder_type  final
 
     template<typename resource_type>
     static void  resource_loader(
-            key_type const&  key,
             resource_holder_type&  resource_holder,
             finalise_load_on_destroy_ptr const  load_finaliser
             );
@@ -268,7 +288,6 @@ private:
 
 template<typename resource_type>
 void  resource_holder_type::resource_loader(
-        key_type const&  key,
         resource_holder_type&  resource_holder,
         finalise_load_on_destroy_ptr const  load_finaliser
         )
@@ -277,17 +296,12 @@ void  resource_holder_type::resource_loader(
 
     try
     {
-        std::unique_ptr<resource_type> resource_ptr(new resource_type(key, load_finaliser));
+        std::unique_ptr<resource_type> resource_ptr(new resource_type(load_finaliser));
         resource_holder.m_resource_ptr = resource_ptr.release();
     }
     catch (std::exception const&  e)
     {
-        resource_holder.m_error_message = msgstream() << "ERROR: " << e.what();
-    }
-    if (!resource_holder.m_error_message.empty())
-    {
-        resource_holder.m_load_state = LOAD_STATE::FINISHED_WITH_ERROR;
-        LOG(error, resource_holder.m_error_message);
+        load_finaliser->force_finalisation_as_failure( msgstream() << "ERROR: " << e.what() );
     }
 }
 
@@ -309,12 +323,7 @@ void  resource_holder_type::resource_constructor(
     }
     catch (std::exception const&  e)
     {
-        resource_holder.m_error_message = msgstream() << "ERROR: " << e.what();
-    }
-    if (!resource_holder.m_error_message.empty())
-    {
-        resource_holder.m_load_state = LOAD_STATE::FINISHED_WITH_ERROR;
-        LOG(error, resource_holder.m_error_message);
+        load_finaliser->force_finalisation_as_failure(msgstream() << "ERROR: " << e.what());
     }
 }
 
@@ -339,23 +348,21 @@ struct  resource_cache  final
     void  insert_load_request(
             key_type const&  key,
             resource_load_priority_type const  priority,
-            notification_callback_type const&  parent_notification_callback,
+            finalise_load_on_destroy_ptr const  parent_finaliser,
             resources_cache_type::value_type*&  output
             );
 
     template<typename resource_type, typename... arg_types>
     void  insert_resource(
             key_type const&  key,
-            notification_callback_type const&  parent_notification_callback,
+            finalise_load_on_destroy_ptr const  parent_finaliser,
             resources_cache_type::value_type*&  output,
             arg_types... args_for_constructor_of_the_resource
             );
 
     resources_cache_type::value_type*  find_resource(key_type const&  key);
 
-    void  finalise_load(key_type const&  key, std::string const&  force_error_message);
-
-    void  process_notification_callbacks(key_type const&  key);
+    LOAD_STATE  finalise_load(key_type const  key, std::string const&  error_message);
 
     template<typename resource_type>
     void  erase_resource(key_type const&  key);
@@ -378,7 +385,6 @@ private:
     static natural_64_bit  s_fresh_key_id;
 
     resources_cache_type  m_cache;
-    std::unordered_map<key_type, std::vector<notification_callback_type> >  m_notification_callbacks;
     std::mutex  m_mutex;
 };
 
@@ -387,7 +393,7 @@ template<typename resource_type>
 void  resource_cache::insert_load_request(
         key_type const&  key,
         resource_load_priority_type const  priority,
-        notification_callback_type const&  parent_notification_callback,
+        finalise_load_on_destroy_ptr const  parent_finaliser,
         resources_cache_type::value_type*&  output
         )
 {
@@ -396,19 +402,9 @@ void  resource_cache::insert_load_request(
     {
         std::lock_guard<std::mutex> const  lock(mutex());
 
-        ASSUMPTION(
-            parent_notification_callback.first.operator bool() == false ||
-                ( parent_notification_callback.second != nullptr &&
-                    ( parent_notification_callback.second->get_key() == key ||
-                      m_cache.count(parent_notification_callback.second->get_key()) != 0UL ) )
-            );
-
         resources_cache_type::value_type* const  resource_ptr = find_resource(key);
         if (resource_ptr != nullptr)
         {
-            if (resource_ptr->second->get_load_state() == LOAD_STATE::IN_PROGRESS &&
-                    parent_notification_callback.first.operator bool())
-                m_notification_callbacks[key].push_back(parent_notification_callback);
             output = resource_ptr;
             output->second->inc_ref_count();
             return;
@@ -420,9 +416,6 @@ void  resource_cache::insert_load_request(
                 });
         INVARIANT(iter_and_bool.second);
 
-        if (parent_notification_callback.first.operator bool())
-            m_notification_callbacks[key].push_back(parent_notification_callback);
-
         output = &*iter_and_bool.first;
         output->second->inc_ref_count();
     }
@@ -431,9 +424,8 @@ void  resource_cache::insert_load_request(
         key,
         std::bind(
             &resource_holder_type::resource_loader<resource_type>,
-            key,
             std::ref(*output->second),
-            finalise_load_on_destroy_ptr(new finalise_load_on_destroy(key))
+            finalise_load_on_destroy::create(key, parent_finaliser)
             ),
         priority
         );
@@ -443,7 +435,7 @@ void  resource_cache::insert_load_request(
 template<typename resource_type, typename... arg_types>
 void  resource_cache::insert_resource(
         key_type const&  key,
-        notification_callback_type const&  parent_notification_callback,
+        finalise_load_on_destroy_ptr const  parent_finaliser,
         resources_cache_type::value_type*&  output,
         arg_types... args_for_constructor_of_the_resource
         )
@@ -455,19 +447,9 @@ void  resource_cache::insert_resource(
     {
         std::lock_guard<std::mutex> const  lock(mutex());
 
-        ASSUMPTION(
-            parent_notification_callback.first.operator bool() == false ||
-                ( parent_notification_callback.second != nullptr &&
-                    ( parent_notification_callback.second->get_key() == key ||
-                      m_cache.count(parent_notification_callback.second->get_key()) != 0UL ) )
-            );
-
         resources_cache_type::value_type* const  resource_ptr = find_resource(key);
         if (resource_ptr != nullptr)
         {
-            if (resource_ptr->second->get_load_state() == LOAD_STATE::IN_PROGRESS &&
-                    parent_notification_callback.first.operator bool())
-                m_notification_callbacks[key].push_back(parent_notification_callback);
             output = resource_ptr;
             output->second->inc_ref_count();
             return;
@@ -479,16 +461,13 @@ void  resource_cache::insert_resource(
                 });
         INVARIANT(iter_and_bool.second);
 
-        if (parent_notification_callback.first.operator bool())
-            m_notification_callbacks[key].push_back(parent_notification_callback);
-
         output = &*iter_and_bool.first;
         output->second->inc_ref_count();
     }
 
     resource_holder_type::resource_constructor<resource_type>(
         *output->second,
-        finalise_load_on_destroy_ptr(new finalise_load_on_destroy(key)),
+        finalise_load_on_destroy::create(key, parent_finaliser),
         args_for_constructor_of_the_resource...
         );
 }
@@ -500,7 +479,6 @@ void  resource_cache::erase_resource(key_type const&  key)
     TMPROF_BLOCK();
 
     pointer_to_resource_type  destroy_resource_ptr = nullptr;
-    std::vector<notification_callback_type>  callbacks_to_delete;
     {
         std::lock_guard<std::mutex> const  lock(mutex());
         auto const  it = m_cache.find(key);
@@ -512,12 +490,6 @@ void  resource_cache::erase_resource(key_type const&  key)
         ASSUMPTION(it->second->ref_count() == 0UL);
         destroy_resource_ptr = it->second->resource_ptr();
 
-        auto const  callbacks_it = m_notification_callbacks.find(key);
-        if (callbacks_it != m_notification_callbacks.end())
-        {
-            callbacks_to_delete.swap(callbacks_it->second);
-            m_notification_callbacks.erase(callbacks_it);
-        }
         m_cache.erase(it);
     }
     if (destroy_resource_ptr != nullptr)
@@ -532,7 +504,7 @@ namespace async {
 
 using  key_type = detail::key_type;
 using  load_priority_type = detail::resource_load_priority_type;
-using  notification_callback_type = detail::notification_callback_type;
+using  finalise_load_on_destroy = detail::finalise_load_on_destroy;
 using  finalise_load_on_destroy_ptr = detail::finalise_load_on_destroy_ptr;
 
 
@@ -548,21 +520,22 @@ struct  resource_accessor
     explicit resource_accessor(
             key_type const&  key,
             load_priority_type const  priority,
-            notification_callback_type const& notification_callback = notification_callback_type())
+            finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
+            )
         : m_data_ptr(nullptr)
     {
-        insert_load_request(key, priority, notification_callback);
+        insert_load_request(key, priority, parent_finaliser);
     }
 
     template<typename... arg_types>
     explicit resource_accessor(
             key_type const&  key,
-            notification_callback_type const& notification_callback,
+            finalise_load_on_destroy_ptr const  parent_finaliser,
             arg_types... args_for_constructor_of_the_resource
             )
         : m_data_ptr(nullptr)
     {
-        insert_resource(key, notification_callback, args_for_constructor_of_the_resource...);
+        insert_resource(key, parent_finaliser, args_for_constructor_of_the_resource...);
     }
 
     resource_accessor(resource_accessor<resource_type> const&  other)
@@ -649,14 +622,14 @@ protected:
     void  insert_load_request(
             key_type const&  key,
             load_priority_type const  priority,
-            notification_callback_type const& notification_callback
+            finalise_load_on_destroy_ptr const  parent_finaliser
             )
     {
         ASSUMPTION(m_data_ptr == nullptr);
         detail::resource_cache::instance().insert_load_request<resource_type>(
                             key,
                             priority,
-                            notification_callback,
+                            parent_finaliser,
                             m_data_ptr
                             );
     }
@@ -664,14 +637,14 @@ protected:
     template<typename... arg_types>
     void  insert_resource(
             key_type const&  key,
-            notification_callback_type const& notification_callback,
+            finalise_load_on_destroy_ptr const  parent_finaliser,
             arg_types... args_for_constructor_of_the_resource
             )
     {
         ASSUMPTION(m_data_ptr == nullptr);
         detail::resource_cache::instance().insert_resource<resource_type>(
                             key,
-                            notification_callback,
+                            parent_finaliser,
                             m_data_ptr,
                             args_for_constructor_of_the_resource...
                             );
@@ -687,11 +660,11 @@ template<typename resource_type__>
 resource_accessor<resource_type__>  insert_load_request(
         key_type const&  key,
         load_priority_type const  priority,
-        notification_callback_type const& notification_callback = notification_callback_type()
+        finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
         )
 {
     resource_accessor<resource_type__>  accessor;
-    accessor.insert_load_request(key, priority, notification_callback);
+    accessor.insert_load_request(key, priority, parent_finaliser);
     return accessor;
 }
 
@@ -699,12 +672,12 @@ resource_accessor<resource_type__>  insert_load_request(
 template<typename resource_type__, typename... arg_types>
 resource_accessor<resource_type__>  insert_resource(
         key_type const&  key,
-        arg_types... args_for_constructor_of_the_resource,
-        notification_callback_type const& notification_callback = notification_callback_type()
+        finalise_load_on_destroy_ptr const  parent_finaliser,
+        arg_types... args_for_constructor_of_the_resource
         )
 {
     resource_accessor<resource_type__>  accessor;
-    accessor.insert_resource(key, args_for_constructor_of_the_resource..., notification_callback);
+    accessor.insert_resource(key, parent_finaliser, args_for_constructor_of_the_resource...);
     return accessor;
 }
 

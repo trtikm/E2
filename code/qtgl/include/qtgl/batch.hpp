@@ -21,7 +21,7 @@ namespace qtgl { namespace detail {
 struct batch_data
 {
     batch_data(
-            async::finalise_load_on_destroy_ptr  finaliser,
+            async::finalise_load_on_destroy_ptr const  finaliser,
             boost::filesystem::path const&  path,
             effects_config const&  effects,
             std::string const&  skeleton_name
@@ -50,7 +50,7 @@ struct batch_data
     }
 
     batch_data(
-            async::finalise_load_on_destroy_ptr,
+            async::finalise_load_on_destroy_ptr const  finaliser,
             buffers_binding const  buffers_binding_,
             textures_binding const  textures_binding_,
             texcoord_binding const&  texcoord_binding_,
@@ -79,7 +79,7 @@ private:
     void  load(
             effects_config const&  effects,
             std::string const&  skeleton_name,
-            async::finalise_load_on_destroy_ptr  finaliser
+            async::finalise_load_on_destroy_ptr const  finaliser
             );
 
     void  initialise(
@@ -119,7 +119,7 @@ struct batch : public async::resource_accessor<detail::batch_data>
             )
         : async::resource_accessor<detail::batch_data>(
             {"qtgl::batch", path.string()},
-            async::notification_callback_type(),
+            nullptr,
             path,
             effects,
             skeleton_name
@@ -137,7 +137,7 @@ struct batch : public async::resource_accessor<detail::batch_data>
             )
         : async::resource_accessor<detail::batch_data>(
             id.empty() ? async::key_type("qtgl::batch") : async::key_type{ "qtgl::batch", id },
-            async::notification_callback_type(),
+            nullptr,
             buffers_binding_,
             shaders_binding_,
             textures_binding_,
@@ -159,7 +159,7 @@ struct batch : public async::resource_accessor<detail::batch_data>
             )
         : async::resource_accessor<detail::batch_data>(
             id.empty() ? async::key_type("qtgl::batch") : async::key_type{ "qtgl::batch", id },
-            async::notification_callback_type(),
+            nullptr,
             buffers_binding_,
             textures_binding_,
             texcoord_binding_,

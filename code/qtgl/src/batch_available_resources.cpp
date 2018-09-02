@@ -15,15 +15,12 @@
 namespace qtgl { namespace detail {
 
 
-batch_available_resources_data::batch_available_resources_data(
-        async::key_type const&  key,
-        async::finalise_load_on_destroy_ptr
-        )
+batch_available_resources_data::batch_available_resources_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : m_buffers()
     , m_textures()
     , m_skeletal()
     , m_index_buffer()
-    , m_root_dir(canonical_path(key.get_unique_id()).string())
+    , m_root_dir(canonical_path(finaliser->get_key().get_unique_id()).string())
 {
     TMPROF_BLOCK();
 

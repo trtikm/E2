@@ -164,11 +164,68 @@ void  resource_load_planner::worker()
     m_worker_finished = true;
 }
 
+finalise_load_on_destroy_ptr  finalise_load_on_destroy::create(
+        key_type const&  key,
+        finalise_load_on_destroy_ptr const  parent
+        )
+{
+    ASSUMPTION(key != key_type::get_invalid_key());
+    return  finalise_load_on_destroy_ptr(new finalise_load_on_destroy(key, parent, callback_function_type()));
+}
+
+
+finalise_load_on_destroy_ptr  finalise_load_on_destroy::create(
+        callback_function_type const&  callback,
+        finalise_load_on_destroy_ptr const  finaliser
+        )
+{
+    ASSUMPTION(callback.operator bool() && finaliser != nullptr && finaliser->get_key() != key_type::get_invalid_key());
+    return  finalise_load_on_destroy_ptr(new finalise_load_on_destroy(key_type::get_invalid_key(), finaliser, callback));
+}
+
 
 finalise_load_on_destroy::~finalise_load_on_destroy()
 {
-    resource_cache::instance().finalise_load(m_key, m_error_message);
+    TMPROF_BLOCK();
+
+    if (get_key() == key_type::get_invalid_key())
+    {
+        if (get_error_message().empty())
+        {
+            TMPROF_BLOCK();
+
+            try
+            {
+                get_callback()(get_parent());
+            }
+            catch (std::exception const&  e)
+            {
+                get_parent()->force_finalisation_as_failure(e.what());
+            }
+        }
+        else
+            get_parent()->force_finalisation_as_failure(get_error_message());
+    }
+    else if (resource_cache::instance().finalise_load(get_key(), get_error_message()) == LOAD_STATE::FINISHED_WITH_ERROR)
+    {
+        if (get_parent() != nullptr)
+            get_parent()->force_finalisation_as_failure(
+                    msgstream() << "Load of depenedent resource '" << get_key() << "' has FAILED."
+                    );
+    }
 }
+
+
+void  finalise_load_on_destroy::force_finalisation_as_failure(std::string const&  force_error_message)
+{
+    std::size_t const  index = force_error_message.find("ERROR: ");
+    std::string const  error_message_addon = index == 0UL ? force_error_message.substr(7UL) : force_error_message;
+    if (m_error_message.empty())
+        m_error_message = "ERROR: " + error_message_addon;
+    else
+        m_error_message += " " + error_message_addon;
+}
+
 
 
 resource_holder_type::resource_holder_type()
@@ -192,19 +249,24 @@ void  resource_holder_type::finalise_load(std::string const&  force_error_messag
         else
         {
             m_load_state = LOAD_STATE::FINISHED_WITH_ERROR;
-            m_error_message = "FORCED ERRROR: " + force_error_message;
+            m_error_message = force_error_message;
+            LOG(error, m_error_message);
         }
         break;
     case LOAD_STATE::FINISHED_SUCCESSFULLY:
         if (!force_error_message.empty())
         {
             m_load_state = LOAD_STATE::FINISHED_WITH_ERROR;
-            m_error_message = "FORCED ERRROR: " + force_error_message;
+            m_error_message = force_error_message;
+            LOG(error, m_error_message);
         }
         break;
     case LOAD_STATE::FINISHED_WITH_ERROR:
         if (!force_error_message.empty())
-            m_error_message += " FORCED ERRROR: " + force_error_message;
+        {
+            m_error_message += " " + force_error_message;
+            LOG(error, m_error_message);
+        }
         break;
     default: UNREACHABLE();
     }
@@ -227,48 +289,16 @@ resources_cache_type::value_type*  resource_cache::find_resource(key_type const&
 }
 
 
-void  resource_cache::finalise_load(key_type const&  key, std::string const&  force_error_message)
+LOAD_STATE  resource_cache::finalise_load(key_type const  key, std::string const&  error_message)
 {
     TMPROF_BLOCK();
 
-    {
-        std::lock_guard<std::mutex> const  lock(mutex());
-        resources_cache_type::value_type* const  resource_ptr = find_resource(key);
-        if (resource_ptr == nullptr)
-            return;
-        resource_ptr->second->finalise_load(force_error_message);
-    }
-    process_notification_callbacks(key);
-}
-
-
-void  resource_cache::process_notification_callbacks(key_type const&  key)
-{
-    TMPROF_BLOCK();
-
-    std::vector<notification_callback_type>  to_process;
-    bool  success = true;
-    {
-        std::lock_guard<std::mutex> const  lock(mutex());
-        auto const  it = m_notification_callbacks.find(key);
-        if (it != m_notification_callbacks.end())
-        {
-            to_process.swap(it->second);
-            m_notification_callbacks.erase(it);
-            auto const  resource_it = m_cache.find(key);
-            if (resource_it->second->get_load_state() != LOAD_STATE::FINISHED_SUCCESSFULLY)
-            {
-                for (auto const& callback_and_finaliser : to_process)
-                    callback_and_finaliser.second->force_finalisation_as_failure(
-                            msgstream() << "Load of depenedent resource '" << key << "' has FAILED."
-                            );
-                success = false;
-            }
-        }
-    }
-    if (success)
-        for (auto const&  callback_and_finaliser : to_process)
-            callback_and_finaliser.first(callback_and_finaliser.second);
+    std::lock_guard<std::mutex> const  lock(mutex());
+    resources_cache_type::value_type* const  resource_ptr = find_resource(key);
+    if (resource_ptr == nullptr)
+        return LOAD_STATE::FINISHED_SUCCESSFULLY;
+    resource_ptr->second->finalise_load(error_message);
+    return resource_ptr->second->get_load_state();
 }
 
 
@@ -284,7 +314,6 @@ key_type  resource_cache::generate_fresh_key()
 resource_cache::~resource_cache()
 {
     assert(m_cache.empty());
-    assert(m_notification_callbacks.empty());
 }
 
 

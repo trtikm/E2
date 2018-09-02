@@ -13,12 +13,12 @@
 namespace qtgl { namespace detail {
 
 
-modelspace_data::modelspace_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr)
+modelspace_data::modelspace_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : m_coord_systems()
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  pathname = key.get_unique_id();
+    boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
 
     if (!boost::filesystem::exists(pathname))
         throw std::runtime_error(msgstream() << "The passed file '" << pathname << "' does not exist.");

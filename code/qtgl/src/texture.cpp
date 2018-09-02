@@ -14,11 +14,11 @@
 namespace qtgl { namespace detail {
 
 
-texture_file_data::texture_file_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr)
+texture_file_data::texture_file_data(async::finalise_load_on_destroy_ptr const  finaliser)
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  path = key.get_unique_id();
+    boost::filesystem::path const  path = finaliser->get_key().get_unique_id();
 
     ASSUMPTION(boost::filesystem::exists(path));
     ASSUMPTION(boost::filesystem::is_regular_file(path));
@@ -181,11 +181,11 @@ void  texture_file_data::initialise(
 namespace qtgl { namespace detail {
 
 
-texture_image_data::texture_image_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr)
+texture_image_data::texture_image_data(async::finalise_load_on_destroy_ptr const  finaliser)
 {
     TMPROF_BLOCK();
 
-    boost::filesystem::path const  path = key.get_unique_id();
+    boost::filesystem::path const  path = finaliser->get_key().get_unique_id();
 
     ASSUMPTION(boost::filesystem::exists(path));
     ASSUMPTION(boost::filesystem::is_regular_file(path));
@@ -284,51 +284,29 @@ void  texture_image_data::initialise(
 namespace qtgl { namespace detail {
 
 
-texture_data::texture_data(async::key_type const&  key, async::finalise_load_on_destroy_ptr  finaliser)
+texture_data::texture_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : m_id(0U)
     , m_texture_props()
     , m_image_props()
 {
     TMPROF_BLOCK();
 
-    std::string const  texture_file_pathname = key.get_unique_id();
-    m_texture_props.insert_load_request(
-            texture_file_pathname,
-            {
-                [this, texture_file_pathname](async::finalise_load_on_destroy_ptr const  finaliser) -> void {
-                        if (m_texture_props.get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
-                        {
-                            finaliser->force_finalisation_as_failure(
-                                    "Load of texture file '" + texture_file_pathname + "' has FAILED!"
-                                    );
-                            return;
-                        }
-                        std::string const  image_file_pathname = m_texture_props.image_pathname().string();
-                        m_image_props.insert_load_request(
-                            image_file_pathname,
-                            {
-                                [this, image_file_pathname](async::finalise_load_on_destroy_ptr const  finaliser) -> void {
-                                        if (m_image_props.get_load_state() != async::LOAD_STATE::FINISHED_SUCCESSFULLY)
-                                        {
-                                            finaliser->force_finalisation_as_failure(
-                                                    "Load of texture image file '" + image_file_pathname + "' has FAILED!"
-                                                    );
-                                            return;
-                                        }
-                                    },
-                                finaliser
-                                }
-                            );
+    std::string const  texture_file_pathname = finaliser->get_key().get_unique_id();
 
+    async::finalise_load_on_destroy_ptr const  texture_file_finaliser =
+        async::finalise_load_on_destroy::create(
+                [this](async::finalise_load_on_destroy_ptr const  finaliser) {
+                    std::string const  image_file_pathname = m_texture_props.image_pathname().string();
+                    m_image_props.insert_load_request(image_file_pathname, finaliser);
                     },
                 finaliser
-                }
-            );
+                );
+    m_texture_props.insert_load_request(texture_file_pathname, texture_file_finaliser);
 }
 
 
 texture_data::texture_data(
-        async::finalise_load_on_destroy_ptr  finaliser,
+        async::finalise_load_on_destroy_ptr,
         GLuint const  id,
         texture_file const  texture_props,
         texture_image const  image_props
@@ -337,7 +315,10 @@ texture_data::texture_data(
     , m_texture_props(texture_props)
     , m_image_props(image_props)
 {
-    ASSUMPTION(m_texture_props.loaded_successfully() && m_image_props.loaded_successfully());
+    if (!m_texture_props.loaded_successfully())
+        throw std::runtime_error(msgstream() << "Load of texture file '" << m_texture_props.key() << "' has FAILED.");
+    if (!m_image_props.loaded_successfully())
+        throw std::runtime_error(msgstream() << "Load of texture image '" << m_image_props.key() << "' has FAILED.");
 }
 
 
@@ -387,6 +368,23 @@ texture_data::~texture_data()
     TMPROF_BLOCK();
 
     destroy_gl_image();
+}
+
+
+}}
+
+namespace qtgl { namespace detail {
+
+
+textures_binding_data::textures_binding_data(
+        async::finalise_load_on_destroy_ptr finaliser,
+        std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, boost::filesystem::path> const&  texture_paths
+        )
+    : m_bindings()
+    , m_ready(false)
+{
+    for (auto const& elem : texture_paths)
+        m_bindings.insert({ elem.first, texture(elem.second, finaliser) });
 }
 
 
