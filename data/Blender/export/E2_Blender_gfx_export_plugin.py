@@ -420,6 +420,8 @@ class render_element:
         with TimeProf.instance().start("render_element.__eq__"):
             if (self.vertex_coords() != other.vertex_coords()
                 or self.normal_coords() != other.normal_coords()
+                or self.tangent_coords() != other.tangent_coords()
+                or self.bitangent_coords() != other.bitangent_coords()
                 or self.diffuse_colour() != other.diffuse_colour()
                 or self.specular_colour() != other.specular_colour()
                 or self.num_texture_coords() != other.num_texture_coords()
@@ -441,6 +443,8 @@ class render_element:
         with TimeProf.instance().start("render_element.__hash__"):
             result = (hash(self.vertex_coords())
                       +  7 * hash(self.normal_coords())
+                      + 31 * hash(self.tangent_coords())
+                      + 101 * hash(self.bitangent_coords())
                       + 17 * hash(self.diffuse_colour())
                       + 29 * hash(self.specular_colour()))
             for i in range(0,self.num_texture_coords()):
@@ -966,12 +970,9 @@ def save_textures(
 
                 os.makedirs(texture_output_dir, exist_ok=True)
 
-                if os.path.exists(bpy.path.abspath(image.filepath)):
-                    src_image_pathname = bpy.path.abspath(image.filepath)
-                else:
-                    image.unpack(method="USE_LOCAL")
-                    src_image_pathname = bpy.path.abspath("//textures/" + image.name)
-                    assert os.path.exists(src_image_pathname)
+                image.pack(as_png=True)
+                image.unpack(method="USE_LOCAL")
+                src_image_pathname = bpy.path.abspath(image.filepath)
 
                 dst_image_extension = os.path.splitext(os.path.basename(src_image_pathname))[1]
 
@@ -986,6 +987,8 @@ def save_textures(
                 print("Copying image in slot #" + str(slot_idx) + " of material " + materials[mat_idx].name + ": " +
                       os.path.relpath(dst_image_pathname, export_info["root_dir"]))
                 shutil.copyfile(src_image_pathname, dst_image_pathname)
+
+                os.remove(src_image_pathname)
 
                 dst_texture_pathname = os.path.join(texture_output_dir, dst_image_name + ".txt")
                 with open(dst_texture_pathname, "w") as f:
