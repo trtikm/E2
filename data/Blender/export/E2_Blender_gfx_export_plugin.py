@@ -970,25 +970,28 @@ def save_textures(
 
                 os.makedirs(texture_output_dir, exist_ok=True)
 
-                image.pack(as_png=True)
-                image.unpack(method="USE_LOCAL")
-                src_image_pathname = bpy.path.abspath(image.filepath)
 
-                dst_image_extension = os.path.splitext(os.path.basename(src_image_pathname))[1]
+                old_image_filepath = image.filepath     # Save the original image file location
 
-                dst_image_name, ext = os.path.splitext(os.path.basename(texture.name))
-                if ext != dst_image_extension:
-                    dst_image_name += ext
+                image.pack(as_png=True)                 # Using this fixes normal maps and also converts to PNG
+                image.unpack(method="USE_LOCAL")        # This saves the image to Blender's standard dick location
+
+                src_image_pathname = bpy.path.abspath(image.filepath)  # Get the saved image disc location
+
+                image.filepath = old_image_filepath     # Restore the original image file location
+
+                dst_image_name = os.path.splitext(os.path.basename(texture.name))[0]
                 if len(dst_image_name) == 0:
                     dst_image_name = os.path.splitext(os.path.basename(src_image_pathname))[0]
-
+                dst_image_extension = ".png"  # The final image is always PNG, see 'image.pack(as_png=True)' above
                 dst_image_pathname = os.path.join(texture_output_dir, dst_image_name + dst_image_extension)
 
                 print("Copying image in slot #" + str(slot_idx) + " of material " + materials[mat_idx].name + ": " +
                       os.path.relpath(dst_image_pathname, export_info["root_dir"]))
                 shutil.copyfile(src_image_pathname, dst_image_pathname)
 
-                os.remove(src_image_pathname)
+                if bpy.path.abspath(image.filepath) != src_image_pathname:
+                    os.remove(src_image_pathname)
 
                 dst_texture_pathname = os.path.join(texture_output_dir, dst_image_name + ".txt")
                 with open(dst_texture_pathname, "w") as f:
