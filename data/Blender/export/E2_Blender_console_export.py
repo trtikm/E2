@@ -296,3 +296,45 @@ if len(bpy.context.selected_objects) == 1 and bpy.context.selected_objects[0].ty
                 "c:/Users/Marek/root/E2qtgl/data/Blender/export/out_test")
 else:
     print("ERROR: The script requires exacly one object of the 'MESH' type to be selected.")
+
+
+
+######################################################################################
+# import bpy
+# import mathutils
+# import os
+#
+# print("----------------------------------------------")
+#
+# mesh = bpy.context.selected_objects[0].data
+# materials = mesh.materials
+#
+# for mat_idx in range(len(materials)):
+#     if materials[mat_idx] is None:
+#         continue
+#     for slot_idx in range(len(materials[mat_idx].texture_slots)):
+#         slot = materials[mat_idx].texture_slots[slot_idx]
+#         if slot is None:
+#             continue
+#
+#         texture = slot.texture
+#         if not hasattr(texture, "image"):
+#             continue
+#
+#         image = texture.image
+#
+#         print("materials[mat_idx].name = " + materials[mat_idx].name)
+#         print("image.name = " + image.name)
+#         print("image.filepath = " + image.filepath)
+#
+#         old_image_filepath = image.filepath
+#
+#         image.pack(as_png=True)
+#         image.unpack(method="USE_LOCAL")
+#
+#         print("image.name = " + image.name)
+#         print("image.filepath = " + image.filepath)
+#
+#         image.filepath = old_image_filepath
+#
+#         print("image.filepath = " + image.filepath)
