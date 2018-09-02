@@ -368,6 +368,16 @@ void  simulator::render_simulation_state(
                             m_fog_colour,
                             m_fog_near,
                             m_fog_far
+                            ),
+                        qtgl::fragment_shader_uniform_data_provider(
+                            m_diffuse_colour,
+                            m_ambient_colour,
+                            m_specular_colour,
+                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                            m_directional_light_colour,
+                            m_fog_colour,
+                            m_fog_near,
+                            m_fog_far
                             )
                         );
                 else
@@ -391,8 +401,18 @@ void  simulator::render_simulation_state(
                                 m_fog_colour,
                                 m_fog_near,
                                 m_fog_far
+                                ),
+                            qtgl::fragment_shader_uniform_data_provider(
+                                m_diffuse_colour,
+                                m_ambient_colour,
+                                m_specular_colour,
+                                transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                                m_directional_light_colour,
+                                m_fog_colour,
+                                m_fog_near,
+                                m_fog_far
                                 )
-                            );
+                        );
                 }
             draw_state = elem.second.first.get_draw_state();
         }
