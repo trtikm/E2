@@ -90,7 +90,7 @@ void  dbg_network_camera::on_window_resized(qtgl::window_props const&  window_pr
 void  dbg_network_camera::render_camera_frustum(
         matrix44 const&  matrix_from_world_to_camera,
         matrix44 const&  matrix_from_camera_to_clipspace,
-        qtgl::draw_state_ptr&  draw_state
+        qtgl::draw_state&  draw_state
         ) const
 {
     TMPROF_BLOCK();
@@ -98,7 +98,7 @@ void  dbg_network_camera::render_camera_frustum(
     if (!is_enabled())
         return;
 
-    if (qtgl::make_current(m_batch_basis, *draw_state))
+    if (qtgl::make_current(m_batch_basis, draw_state))
     {
         qtgl::render_batch(
                 m_batch_basis,
@@ -109,7 +109,7 @@ void  dbg_network_camera::render_camera_frustum(
         draw_state = m_batch_basis.get_draw_state();
     }
 
-    if (qtgl::make_current(m_batch_camera_frustum, *draw_state))
+    if (qtgl::make_current(m_batch_camera_frustum, draw_state))
     {
         float_32_bit const  param = -0.5f * (m_camera->near_plane() + m_camera->far_plane());
 

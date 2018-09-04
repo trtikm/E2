@@ -121,7 +121,7 @@ private:
     void  render_simulation_state(
             matrix44 const&  matrix_from_world_to_camera,
             matrix44 const&  matrix_from_camera_to_clipspace,
-            qtgl::draw_state_ptr&  draw_state
+            qtgl::draw_state&  draw_state
             );
 
     void  perform_scene_update(float_64_bit const  time_to_simulate_in_seconds);
@@ -133,12 +133,12 @@ private:
     void  render_scene_batches(
             matrix44 const&  matrix_from_world_to_camera,
             matrix44 const&  matrix_from_camera_to_clipspace,
-            qtgl::draw_state_ptr&  draw_state
+            qtgl::draw_state&  draw_state
             );
     void  render_scene_coord_systems(
             matrix44 const&  matrix_from_world_to_camera,
             matrix44 const&  matrix_from_camera_to_clipspace,
-            qtgl::draw_state_ptr&  draw_state
+            qtgl::draw_state&  draw_state
             );
 
     // Utility functions

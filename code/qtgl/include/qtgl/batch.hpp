@@ -32,7 +32,7 @@ struct batch_data
             buffers_binding const  buffers_binding_,
             shaders_binding const  shaders_binding_,
             textures_binding const  textures_binding_,
-            draw_state_ptr const  draw_state_,
+            draw_state const  draw_state_,
             modelspace const  modelspace_,
             skeleton_alignment const  skeleton_alignment_,
             batch_available_resources const  available_resources_
@@ -55,7 +55,7 @@ struct batch_data
             textures_binding const  textures_binding_,
             texcoord_binding const&  texcoord_binding_,
             effects_config const&  effects,
-            draw_state_ptr const  draw_state_,
+            draw_state const  draw_state_,
             modelspace const  modelspace_,
             skeleton_alignment const  skeleton_alignment_
             );
@@ -65,7 +65,7 @@ struct batch_data
     buffers_binding  get_buffers_binding() const { return m_buffers_binding; }
     shaders_binding  get_shaders_binding() const { return m_shaders_binding; }
     textures_binding  get_textures_binding() const { return m_textures_binding; }
-    draw_state_ptr  get_draw_state() const { return m_draw_state; }
+    draw_state  get_draw_state() const { return m_draw_state; }
     modelspace  get_modelspace() const { return m_modelspace; }
     skeleton_alignment  get_skeleton_alignment() const { return m_skeleton_alignment; }
     batch_available_resources  get_available_resources() const { return m_available_resources; }
@@ -86,7 +86,7 @@ private:
             buffers_binding const  buffers_binding_,
             shaders_binding const  shaders_binding_,
             textures_binding const  textures_binding_,
-            draw_state_ptr const  draw_state_,
+            draw_state const  draw_state_,
             modelspace const  modelspace_,
             skeleton_alignment const  skeleton_alignment_,
             batch_available_resources const  available_resources_
@@ -95,7 +95,7 @@ private:
     buffers_binding  m_buffers_binding;
     shaders_binding  m_shaders_binding;
     textures_binding  m_textures_binding;
-    draw_state_ptr  m_draw_state;
+    draw_state  m_draw_state;
     modelspace  m_modelspace;
     skeleton_alignment  m_skeleton_alignment;
     batch_available_resources  m_available_resources;
@@ -115,11 +115,12 @@ struct batch : public async::resource_accessor<detail::batch_data>
 
     batch(  boost::filesystem::path const&  path,
             effects_config const&  effects,
-            std::string const&  skeleton_name = ""
+            std::string const&  skeleton_name = "",
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::batch_data>(
             {"qtgl::batch", path.string()},
-            nullptr,
+            parent_finaliser,
             path,
             effects,
             skeleton_name
@@ -130,14 +131,15 @@ struct batch : public async::resource_accessor<detail::batch_data>
             buffers_binding const  buffers_binding_,
             shaders_binding const  shaders_binding_,
             textures_binding const  textures_binding_,
-            draw_state_ptr const  draw_state_,
+            draw_state const  draw_state_,
             modelspace const  modelspace_,
             skeleton_alignment const  skeleton_alignment_,
-            batch_available_resources const  available_resources_
+            batch_available_resources const  available_resources_,
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::batch_data>(
             id.empty() ? async::key_type("qtgl::batch") : async::key_type{ "qtgl::batch", id },
-            nullptr,
+            parent_finaliser,
             buffers_binding_,
             shaders_binding_,
             textures_binding_,
@@ -153,13 +155,14 @@ struct batch : public async::resource_accessor<detail::batch_data>
             textures_binding const  textures_binding_,
             texcoord_binding const&  texcoord_binding_,
             effects_config const&  effects,
-            draw_state_ptr const  draw_state_,
+            draw_state const  draw_state_,
             modelspace const  modelspace_,
-            skeleton_alignment const  skeleton_alignment_
+            skeleton_alignment const  skeleton_alignment_,
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::batch_data>(
             id.empty() ? async::key_type("qtgl::batch") : async::key_type{ "qtgl::batch", id },
-            nullptr,
+            parent_finaliser,
             buffers_binding_,
             textures_binding_,
             texcoord_binding_,
@@ -173,7 +176,7 @@ struct batch : public async::resource_accessor<detail::batch_data>
     buffers_binding  get_buffers_binding() const { return resource().get_buffers_binding(); }
     shaders_binding  get_shaders_binding() const { return resource().get_shaders_binding(); }
     textures_binding  get_textures_binding() const { return resource().get_textures_binding(); }
-    draw_state_ptr  get_draw_state() const { return resource().get_draw_state(); }
+    draw_state  get_draw_state() const { return resource().get_draw_state(); }
     modelspace  get_modelspace() const { return resource().get_modelspace(); }
     skeleton_alignment  get_skeleton_alignment() const { return resource().get_skeleton_alignment(); }
     batch_available_resources  get_available_resources() const { return resource().get_available_resources(); }
@@ -184,7 +187,7 @@ struct batch : public async::resource_accessor<detail::batch_data>
     bool  is_attached_to_skeleton() const { return resource().is_attached_to_skeleton(); }
     bool  ready() const;
 
-    bool  make_current(draw_state const* const  previous_state) const;
+    bool  make_current(draw_state const&  previous_state) const;
 
 private:
 

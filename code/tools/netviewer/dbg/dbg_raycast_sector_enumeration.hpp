@@ -22,7 +22,7 @@ struct  dbg_raycast_sector_enumeration
     void  render(
             matrix44 const&  matrix_from_world_to_camera,
             matrix44 const&  matrix_from_camera_to_clipspace,
-            qtgl::draw_state_ptr&  draw_state
+            qtgl::draw_state&  draw_state
             ) const;
 
 private:

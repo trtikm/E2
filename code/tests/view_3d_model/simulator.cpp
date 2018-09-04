@@ -226,13 +226,13 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
     matrix44  matrix_from_camera_to_clipspace;
     m_camera->projection_matrix(matrix_from_camera_to_clipspace);
 
-    qtgl::draw_state_ptr  draw_state;
+    qtgl::draw_state  draw_state;
 
     {
         matrix44  grid_world_transformation;
         angeo::from_base_matrix(*m_grid_space,grid_world_transformation);
 
-        if (qtgl::make_current(m_grid_batch, *draw_state))
+        if (qtgl::make_current(m_grid_batch, draw_state))
         {
             qtgl::render_batch(
                     m_grid_batch,
@@ -249,7 +249,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
         matrix44 const  matrix_from_model_to_camera = matrix_from_world_to_camera * batch_world_transformation;
 
         for (qtgl::batch const  batch : m_batches)
-            if (qtgl::make_current(batch,*draw_state))
+            if (qtgl::make_current(batch,draw_state))
             {
                 for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const  uniform : batch.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                     switch (uniform)

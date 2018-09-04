@@ -45,7 +45,7 @@ batch_data::batch_data(
         textures_binding const  textures_binding_,
         texcoord_binding const&  texcoord_binding_,
         effects_config const&  effects,
-        draw_state_ptr const  draw_state_,
+        draw_state const  draw_state_,
         modelspace const  modelspace_,
         skeleton_alignment const  skeleton_alignment_
         )
@@ -253,7 +253,7 @@ void  batch_data::load(
             finaliser
             },
         textures_binding(texture_paths, "", finaliser),
-        draw_state::create(GL_BACK, false, 0U, 0U),
+        draw_state(finaliser),
         skeletal_info == get_available_resources().skeletal().cend() ?
             modelspace() :
             modelspace(boost::filesystem::path(skeletal_info->first) / "pose.txt", finaliser),
@@ -269,7 +269,7 @@ void  batch_data::initialise(
         buffers_binding const  buffers_binding_,
         shaders_binding const  shaders_binding_,
         textures_binding const  textures_binding_,
-        draw_state_ptr const  draw_state_,
+        draw_state const  draw_state_,
         modelspace const  modelspace_,
         skeleton_alignment const  skeleton_alignment_,
         batch_available_resources const  available_resources_
@@ -306,6 +306,7 @@ bool  batch::ready() const
         if (!get_buffers_binding().ready() ||
             !get_shaders_binding().ready() ||
             !get_textures_binding().ready() ||
+            !get_draw_state().loaded_successfully() ||
             (is_attached_to_skeleton() && (
                 !get_modelspace().loaded_successfully() ||
                 !get_skeleton_alignment().loaded_successfully() )))
@@ -318,7 +319,7 @@ bool  batch::ready() const
 }
 
 
-bool  batch::make_current(draw_state const* const  previous_state) const
+bool  batch::make_current(draw_state const&  previous_state) const
 {
     TMPROF_BLOCK();
 
@@ -336,10 +337,11 @@ bool  batch::make_current(draw_state const* const  previous_state) const
     result = get_textures_binding().make_current();
     INVARIANT(result == true);
 
-    if (previous_state != nullptr)
-        qtgl::make_current(*get_draw_state(), *previous_state);
+    if (previous_state.loaded_successfully())
+        result = qtgl::make_current(get_draw_state(), previous_state);
     else
-        qtgl::make_current(*get_draw_state());
+        result = qtgl::make_current(get_draw_state());
+    INVARIANT(result == true);
 
     return true;
 }
@@ -347,12 +349,12 @@ bool  batch::make_current(draw_state const* const  previous_state) const
 
 bool  make_current(batch const&  batch)
 {
-    return batch.make_current(nullptr);
+    return batch.make_current(draw_state());
 }
 
 bool  make_current(batch const&  batch, draw_state const&  previous_state)
 {
-    return batch.make_current(&previous_state);
+    return batch.make_current(previous_state);
 }
 
 

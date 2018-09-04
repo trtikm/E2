@@ -301,11 +301,11 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     matrix44  matrix_from_camera_to_clipspace;
     m_camera->projection_matrix(matrix_from_camera_to_clipspace);
 
-    qtgl::draw_state_ptr  draw_state = m_batch_grid.get_draw_state();
-    qtgl::make_current(*draw_state);
+    qtgl::draw_state  draw_state = m_batch_grid.get_draw_state();
+    qtgl::make_current(draw_state);
 
     {
-        if (qtgl::make_current(m_batch_grid, *draw_state))
+        if (qtgl::make_current(m_batch_grid, draw_state))
         {
             for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : m_batch_grid.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                 switch (uniform)
@@ -326,7 +326,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     }
 
     {
-        if (qtgl::make_current(m_batch_cell, *draw_state))
+        if (qtgl::make_current(m_batch_cell, draw_state))
         {
             for (cell::pos_map::const_iterator it = nenet()->cells().cbegin(); it != nenet()->cells().cend(); ++it)
             {
@@ -385,7 +385,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     }
 
     {
-        if (qtgl::make_current(m_batch_input_spot, *draw_state))
+        if (qtgl::make_current(m_batch_input_spot, draw_state))
         {
             for (input_spot::pos_map::const_iterator it = nenet()->input_spots().cbegin(); it != nenet()->input_spots().cend(); ++it)
             {
@@ -429,7 +429,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     }
 
     {
-        if (qtgl::make_current(m_batch_output_terminal, *draw_state))
+        if (qtgl::make_current(m_batch_output_terminal, draw_state))
         {
             for (output_terminal const&  oterm : nenet()->output_terminals())
             {
@@ -473,7 +473,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
     if (!m_selected_cell_input_spot_lines.empty())
     {
-        if (qtgl::make_current(m_selected_cell_input_spot_lines, *draw_state))
+        if (qtgl::make_current(m_selected_cell_input_spot_lines, draw_state))
         {
             for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : m_selected_cell_input_spot_lines.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                 switch (uniform)
@@ -496,7 +496,7 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
     if (!m_selected_cell_output_terminal_lines.empty())
     {
-        if (qtgl::make_current(m_selected_cell_output_terminal_lines, *draw_state))
+        if (qtgl::make_current(m_selected_cell_output_terminal_lines, draw_state))
         {
             for (qtgl::VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : m_selected_cell_output_terminal_lines.get_shaders_binding().get_vertex_shader().get_symbolic_names_of_used_uniforms())
                 switch (uniform)

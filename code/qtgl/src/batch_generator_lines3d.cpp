@@ -21,26 +21,26 @@ batch  create_lines3d(
 
     batch const  pbatch = batch(
         id.empty() ? id : "/generic/lines3d_with_colours/batch/" + id,
-        qtgl::buffers_binding(
+        buffers_binding(
             0U,
             2U,
             {
-                { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
                   buffer(vertices, true, (id.empty() ? id : "/generic/lines3d_with_colours/buffer/vertices/" + id)) },
-                { qtgl::VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE,
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE,
                   buffer(colours, id.empty() ? id : "/generic/lines3d_with_colours/buffer/diffuse/" + id) },
             },
             id.empty() ? id : "/generic/lines3d_with_colours/buffers_binding/" + id
             ),
-        qtgl::textures_binding(),
+        textures_binding(),
         {}, // Texcoord binding.
-        qtgl::effects_config{
+        effects_config{
             {}, // Light types.
             {{LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::BUFFER}},
             {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
             fog_type_
             },
-        qtgl::draw_state::create(),
+        draw_state(nullptr),
         modelspace(),
         skeleton_alignment()
         );

@@ -85,14 +85,14 @@ void  dbg_frustum_sector_enumeration::enumerate(
 void  dbg_frustum_sector_enumeration::render(
         matrix44 const&  matrix_from_world_to_camera,
         matrix44 const&  matrix_from_camera_to_clipspace,
-        qtgl::draw_state_ptr&  draw_state
+        qtgl::draw_state&  draw_state
         ) const
 {
     if (!is_enabled())
         return;
 
     for (auto const&  pos_batch : m_batches)
-        if (qtgl::make_current(pos_batch.second, *draw_state))
+        if (qtgl::make_current(pos_batch.second, draw_state))
         {
             qtgl::render_batch(
                 pos_batch.second,

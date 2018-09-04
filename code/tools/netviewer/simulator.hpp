@@ -106,42 +106,42 @@ private:
     void  render_network(
             matrix44 const&  matrix_from_world_to_camera,
             matrix44 const&  matrix_from_camera_to_clipspace,
-            qtgl::draw_state_ptr  draw_state
+            qtgl::draw_state  draw_state
             );
     void  render_network_spikers(
             matrix44 const&  matrix_from_world_to_camera,
             matrix44 const&  matrix_from_camera_to_clipspace,
             std::vector< std::pair<vector3,vector3> > const& clip_planes,
-            qtgl::draw_state_ptr&  draw_state
+            qtgl::draw_state&  draw_state
             );
     void  render_network_docks(
             matrix44 const&  matrix_from_world_to_camera,
             matrix44 const&  matrix_from_camera_to_clipspace,
             std::vector< std::pair<vector3,vector3> > const& clip_planes,
-            qtgl::draw_state_ptr&  draw_state
+            qtgl::draw_state&  draw_state
             );
     void  render_network_ships(
             matrix44 const&  matrix_from_world_to_camera,
             matrix44 const&  matrix_from_camera_to_clipspace,
             std::vector< std::pair<vector3,vector3> > const& clip_planes,
-            qtgl::draw_state_ptr&  draw_state
+            qtgl::draw_state&  draw_state
             );
     void  render_selected_network_object(
             matrix44 const&  matrix_from_world_to_camera,
             matrix44 const&  matrix_from_camera_to_clipspace,
-            qtgl::draw_state_ptr&  draw_state
+            qtgl::draw_state&  draw_state
             );
 
     void  render_constructed_network(
             matrix44 const&  matrix_from_world_to_camera,
             matrix44 const&  matrix_from_camera_to_clipspace,
-            qtgl::draw_state_ptr  draw_state
+            qtgl::draw_state  draw_state
             );
     void  render_spikers_of_constructed_network(
             matrix44 const&  matrix_from_world_to_camera,
             matrix44 const&  matrix_from_camera_to_clipspace,
             std::vector< std::pair<vector3,vector3> > const&  clip_planes,
-            qtgl::draw_state_ptr&  draw_state
+            qtgl::draw_state&  draw_state
             );
 
 

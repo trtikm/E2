@@ -438,9 +438,9 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     matrix44  matrix_from_camera_to_clipspace;
     m_camera->projection_matrix(matrix_from_camera_to_clipspace);
 
-    qtgl::draw_state_ptr  draw_state;
+    qtgl::draw_state  draw_state;
     if (m_do_show_grid)
-        if (qtgl::make_current(m_batch_grid, *draw_state))
+        if (qtgl::make_current(m_batch_grid, draw_state))
         {
             qtgl::render_batch(m_batch_grid, matrix_from_world_to_camera, matrix_from_camera_to_clipspace);
             draw_state = m_batch_grid.get_draw_state();
@@ -627,7 +627,7 @@ void  simulator::update_selection_of_network_objects(float_64_bit const  seconds
 void  simulator::render_network(
         matrix44 const&  matrix_from_world_to_camera,
         matrix44 const&  matrix_from_camera_to_clipspace,
-        qtgl::draw_state_ptr  draw_state
+        qtgl::draw_state  draw_state
         )
 {
     TMPROF_BLOCK();
@@ -682,14 +682,14 @@ void  simulator::render_network_spikers(
         matrix44 const&  matrix_from_world_to_camera,
         matrix44 const&  matrix_from_camera_to_clipspace,
         std::vector< std::pair<vector3,vector3> > const& clip_planes,
-        qtgl::draw_state_ptr&  draw_state
+        qtgl::draw_state&  draw_state
         )
 {
     TMPROF_BLOCK();
 
     INVARIANT(network().operator bool());
 
-    if (qtgl::make_current(m_batch_spiker, *draw_state))
+    if (qtgl::make_current(m_batch_spiker, draw_state))
     {
         if (m_batch_spiker_bbox.empty())
         {
@@ -744,13 +744,13 @@ void  simulator::render_network_docks(
         matrix44 const&  matrix_from_world_to_camera,
         matrix44 const&  matrix_from_camera_to_clipspace,
         std::vector< std::pair<vector3,vector3> > const& clip_planes,
-        qtgl::draw_state_ptr&  draw_state)
+        qtgl::draw_state&  draw_state)
 {
     TMPROF_BLOCK();
 
     INVARIANT(network().operator bool());
 
-    if (qtgl::make_current(m_batch_dock, *draw_state))
+    if (qtgl::make_current(m_batch_dock, draw_state))
     {
         if (m_batch_dock_bbox.empty())
         {
@@ -805,14 +805,14 @@ void  simulator::render_network_ships(
         matrix44 const&  matrix_from_world_to_camera,
         matrix44 const&  matrix_from_camera_to_clipspace,
         std::vector< std::pair<vector3,vector3> > const& clip_planes,
-        qtgl::draw_state_ptr&  draw_state
+        qtgl::draw_state&  draw_state
         )
 {
     TMPROF_BLOCK();
 
     INVARIANT(network().operator bool());
 
-    if (qtgl::make_current(m_batch_ship, *draw_state))
+    if (qtgl::make_current(m_batch_ship, draw_state))
     {
         if (m_batch_ship_bbox.empty())
         {
@@ -866,7 +866,7 @@ void  simulator::render_network_ships(
 void  simulator::render_selected_network_object(
         matrix44 const&  matrix_from_world_to_camera,
         matrix44 const&  matrix_from_camera_to_clipspace,
-        qtgl::draw_state_ptr&  draw_state
+        qtgl::draw_state&  draw_state
         )
 {
     if (!network().operator bool())
@@ -876,7 +876,7 @@ void  simulator::render_selected_network_object(
     {
         if (m_batch_spiker_bsphere.empty())
         {
-            if (qtgl::make_current(m_batch_spiker_bsphere, *draw_state))
+            if (qtgl::make_current(m_batch_spiker_bsphere, draw_state))
             {
                 netlab::network_layer_props const&  props =
                     network()->properties()->layer_props().at(m_selected_object_stats->indices().layer_index());
@@ -952,7 +952,7 @@ void  simulator::render_selected_network_object(
         INVARIANT(m_batches_selection.size() == colours.size());
         for (std::size_t  i = 0ULL; i != colours.size(); ++i)
         {
-            if (qtgl::make_current(m_batches_selection.at(i), *draw_state))
+            if (qtgl::make_current(m_batches_selection.at(i), draw_state))
             {
                 qtgl::render_batch(
                     m_batches_selection.at(i),
@@ -980,7 +980,7 @@ void  simulator::render_selected_network_object(
             qtgl::batch const  batch =
                     qtgl::create_lines3d(lines, { 0.5f, 0.5f, 0.5f, 1.0f }, qtgl::FOG_TYPE::NONE,
                                          "/netviewer/selected_spiker_lines_to_ships");
-            if (qtgl::make_current(batch, *draw_state))
+            if (qtgl::make_current(batch, draw_state))
             {
                 qtgl::render_batch(
                     batch,
@@ -996,7 +996,7 @@ void  simulator::render_selected_network_object(
     {
         if (!m_batch_dock_bsphere.empty())
         {
-            if (qtgl::make_current(m_batch_dock_bsphere, *draw_state))
+            if (qtgl::make_current(m_batch_dock_bsphere, draw_state))
             {
                 netlab::network_layer_props const&  props =
                     network()->properties()->layer_props().at(m_selected_object_stats->indices().layer_index());
@@ -1059,7 +1059,7 @@ void  simulator::render_selected_network_object(
         INVARIANT(m_batches_selection.size() == colours.size());
         for (std::size_t  i = 0ULL; i != colours.size(); ++i)
         {
-            if (qtgl::make_current(m_batches_selection.at(i), *draw_state))
+            if (qtgl::make_current(m_batches_selection.at(i), draw_state))
             {
                 qtgl::render_batch(
                     m_batches_selection.at(i),
@@ -1076,7 +1076,7 @@ void  simulator::render_selected_network_object(
     {
         if (!m_batch_ship_bsphere.empty())
         {
-            if (qtgl::make_current(m_batch_ship_bsphere, *draw_state))
+            if (qtgl::make_current(m_batch_ship_bsphere, draw_state))
             {
                 vector3 const&  pos =
                     network()->get_layer_of_ships(m_selected_object_stats->indices().layer_index())
@@ -1107,7 +1107,7 @@ void  simulator::render_selected_network_object(
                         qtgl::FOG_TYPE::NONE,
                         "/netviewer/selected_ship_line_to_spiker"
                         );
-            if (qtgl::make_current(batch, *draw_state))
+            if (qtgl::make_current(batch, draw_state))
             {
                 qtgl::render_batch(
                     batch,
@@ -1163,7 +1163,7 @@ void  simulator::render_selected_network_object(
         INVARIANT(m_batches_selection.size() == colours.size());
         for (std::size_t  i = 0ULL; i != colours.size(); ++i)
         {
-            if (qtgl::make_current(m_batches_selection.at(i), *draw_state))
+            if (qtgl::make_current(m_batches_selection.at(i), draw_state))
             {
                 qtgl::render_batch(
                     m_batches_selection.at(i),
@@ -1258,7 +1258,7 @@ void  simulator::enable_usage_of_queues_in_update_of_ships_in_network(bool const
 void  simulator::render_constructed_network(
         matrix44 const&  matrix_from_world_to_camera,
         matrix44 const&  matrix_from_camera_to_clipspace,
-        qtgl::draw_state_ptr  draw_state
+        qtgl::draw_state  draw_state
         )
 {
     TMPROF_BLOCK();
@@ -1319,7 +1319,7 @@ void  simulator::render_spikers_of_constructed_network(
         matrix44 const&  matrix_from_world_to_camera,
         matrix44 const&  matrix_from_camera_to_clipspace,
         std::vector< std::pair<vector3, vector3> > const&  clip_planes,
-        qtgl::draw_state_ptr&  draw_state
+        qtgl::draw_state&  draw_state
         )
 {
     TMPROF_BLOCK();
@@ -1327,7 +1327,7 @@ void  simulator::render_spikers_of_constructed_network(
     INVARIANT(g_network_construction_state == NETWORK_CONSTRUCTION_STATE::PERFORMING_IDLE_BETWEEN_INITIALISATION_STEP);
     INVARIANT(g_constructed_network != nullptr);
 
-    if (qtgl::make_current(m_batch_spiker, *draw_state))
+    if (qtgl::make_current(m_batch_spiker, draw_state))
     {
         if (m_batch_spiker_bbox.empty())
         {

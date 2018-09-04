@@ -252,9 +252,9 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
     matrix44  matrix_from_camera_to_clipspace;
     m_camera->projection_matrix(matrix_from_camera_to_clipspace);
 
-    qtgl::draw_state_ptr  draw_state;
+    qtgl::draw_state  draw_state;
     if (m_do_show_grid)
-        if (qtgl::make_current(m_batch_grid, *draw_state))
+        if (qtgl::make_current(m_batch_grid, draw_state))
         {
             render_batch(
                 m_batch_grid,
@@ -324,7 +324,7 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
 void  simulator::render_simulation_state(
         matrix44 const&  matrix_from_world_to_camera,
         matrix44 const&  matrix_from_camera_to_clipspace,
-        qtgl::draw_state_ptr&  draw_state
+        qtgl::draw_state&  draw_state
         )
 {
     TMPROF_BLOCK();
@@ -350,7 +350,7 @@ void  simulator::render_simulation_state(
                 });
         }
     for (auto const& elem : batches)
-        if (qtgl::make_current(elem.second.first, *draw_state))
+        if (qtgl::make_current(elem.second.first, draw_state))
         {
             for (auto const& node_and_anim : elem.second.second)
                 if (node_and_anim.second == nullptr)
@@ -710,7 +710,7 @@ void  simulator::rotate_scene_node(std::string const&  scene_node_name, float_64
 void  simulator::render_scene_batches(
         matrix44 const&  matrix_from_world_to_camera,
         matrix44 const&  matrix_from_camera_to_clipspace,
-        qtgl::draw_state_ptr&  draw_state
+        qtgl::draw_state&  draw_state
         )
 {
     TMPROF_BLOCK();
@@ -721,7 +721,7 @@ void  simulator::render_scene_batches(
         for (auto const& name_batch : name_node.second->get_batches())
             batches[name_batch.second.path_component_of_uid()].push_back({name_batch.second, name_node.second});
     for (auto const& path_and_pairs : batches)
-        if (qtgl::make_current(path_and_pairs.second.front().first, *draw_state))
+        if (qtgl::make_current(path_and_pairs.second.front().first, draw_state))
         {
             for (auto const& batch_and_node : path_and_pairs.second)
                 qtgl::render_batch(
@@ -757,12 +757,12 @@ void  simulator::render_scene_batches(
 void  simulator::render_scene_coord_systems(
         matrix44 const&  matrix_from_world_to_camera,
         matrix44 const&  matrix_from_camera_to_clipspace,
-        qtgl::draw_state_ptr&  draw_state
+        qtgl::draw_state&  draw_state
         )
 {
     TMPROF_BLOCK();
 
-    if (!qtgl::make_current(m_batch_coord_system, *draw_state))
+    if (!qtgl::make_current(m_batch_coord_system, draw_state))
         return;
 
     //auto const  old_depth_test_state = qtgl::glapi().glIsEnabled(GL_DEPTH_TEST);
