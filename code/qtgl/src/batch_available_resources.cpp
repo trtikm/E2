@@ -21,6 +21,8 @@ batch_available_resources_data::batch_available_resources_data(async::finalise_l
     , m_skeletal()
     , m_index_buffer()
     , m_root_dir(canonical_path(finaliser->get_key().get_unique_id()).string())
+    , m_draw_state_file()
+    , m_effects_file()
 {
     TMPROF_BLOCK();
 
@@ -39,6 +41,14 @@ batch_available_resources_data::batch_available_resources_data(async::finalise_l
         if (current_dir == "meshes")
             break;
     }
+
+    m_draw_state_file = (path / "draw_state.txt").string();
+    if (!boost::filesystem::is_regular_file(m_draw_state_file))
+        throw std::runtime_error(msgstream() << "Cannot access 'draw_state' file '" << m_draw_state_file << "'.");
+
+    m_effects_file = (path / "effects.txt").string();
+    if (!boost::filesystem::is_regular_file(m_effects_file))
+        throw std::runtime_error(msgstream() << "Cannot access 'effects' file '" << m_effects_file << "'.");
 
     boost::filesystem::path const  buffers_dir = path / "buffers";
     if (!boost::filesystem::is_directory(buffers_dir))
@@ -179,13 +189,17 @@ batch_available_resources_data::batch_available_resources_data(
         buffers_dictionaty_type const&  buffers_,
         textures_dictionary_type const&  textures_,
         skeletal_dictionary_type const&  skeletal_,
-        std::string const&  index_buffer
+        std::string const&  index_buffer,
+        std::string const&  draw_state_file,
+        std::string const&  effects_file
         )
     : m_buffers(buffers_)
     , m_textures(textures_)
     , m_skeletal(skeletal_)
     , m_index_buffer(index_buffer)
     , m_root_dir()
+    , m_draw_state_file(draw_state_file)
+    , m_effects_file(effects_file)
 {}
 
 

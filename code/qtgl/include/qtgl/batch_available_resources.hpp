@@ -92,7 +92,9 @@ struct  batch_available_resources_data  final
             buffers_dictionaty_type const&  buffers_,
             textures_dictionary_type const&  textures_,
             skeletal_dictionary_type const&  skeletal_,
-            std::string const&  index_buffer
+            std::string const&  index_buffer,
+            std::string const&  draw_state_file,
+            std::string const&  effects_file
             );
 
     buffers_dictionaty_type const&  buffers() const { return m_buffers; }
@@ -100,6 +102,8 @@ struct  batch_available_resources_data  final
     skeletal_dictionary_type const&  skeletal() const { return m_skeletal; }
     std::string const&  index_buffer() const { return m_index_buffer; }
     std::string const&  get_root_dir() const { return m_root_dir; }
+    std::string const&  draw_state_file() const { return m_draw_state_file; }
+    std::string const&  effects_file() const { return m_effects_file; }
 
 private:
 
@@ -108,6 +112,8 @@ private:
     skeletal_dictionary_type  m_skeletal;
     std::string  m_index_buffer;
     std::string  m_root_dir;
+    std::string  m_draw_state_file;
+    std::string  m_effects_file;
 };
 
 
@@ -138,7 +144,8 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
 
     void  insert_load_request(
             boost::filesystem::path const&  path,
-            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr)
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
+            )
     {
         async::resource_accessor<detail::batch_available_resources_data>::insert_load_request(
             { "qtgl::batch_available_resources", path.string() },
@@ -152,16 +159,21 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
             textures_dictionary_type const&  textures_,
             skeletal_dictionary_type const&  skeletal_,
             std::string const&  index_buffer,
-            std::string const&  key = ""
+            std::string const&  draw_state_file,
+            std::string const&  effects_file,
+            std::string const&  key = "",
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::batch_available_resources_data>(
                 key.empty() ? async::key_type("qtgl::batch_available_resources") :
                               async::key_type{ "qtgl::batch_available_resources", key },
-                nullptr,
+                parent_finaliser,
                 buffers_,
                 textures_,
                 skeletal_,
-                index_buffer
+                index_buffer,
+                draw_state_file,
+                effects_file
                 )
     {}
 
@@ -170,12 +182,13 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
             std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, B> const&  buffers_binding_,
             std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, T> const&  textures_binding_,
             texcoord_binding const& texcoord_binding_,
-            std::string const&  key = ""
+            std::string const&  key = "",
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::batch_available_resources_data>(
                 key.empty() ? async::key_type("qtgl::batch_available_resources") :
                               async::key_type{ "qtgl::batch_available_resources", key },
-                nullptr,
+                parent_finaliser,
                 [&buffers_binding_]() -> buffers_dictionaty_type {
                         buffers_dictionaty_type  result;
                         for (auto const&  elem : buffers_binding_)
@@ -193,6 +206,8 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
                         return result;
                     }(),
                 skeletal_dictionary_type{},
+                std::string(),
+                std::string(),
                 std::string()
                 )
     {}
@@ -202,6 +217,8 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
     skeletal_dictionary_type const&  skeletal() const { return resource().skeletal(); }
     std::string const&  index_buffer() const { return resource().index_buffer(); }
     std::string const&  root_dir() const { return resource().get_root_dir(); }
+    std::string const&  draw_state_file() const { return resource().draw_state_file(); }
+    std::string const&  effects_file() const { return resource().effects_file(); }
 };
 
 

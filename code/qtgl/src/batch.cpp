@@ -100,8 +100,8 @@ batch_data::batch_data(
         result.first.clear();
     }
     shaders_binding const  shaders_binding_{
-        vertex_shader{vs_input, vs_output, vs_uniforms, vs_source, vs_uid},
-        fragment_shader{fs_input, fs_output, fs_uniforms, fs_source, fs_uid},
+        vertex_shader{vs_input, vs_output, vs_uniforms, vs_source, vs_uid, finaliser },
+        fragment_shader{fs_input, fs_output, fs_uniforms, fs_source, fs_uid, finaliser },
         "{" + vs_uid + "}{" + fs_uid + "}",
         finaliser
     };
@@ -253,7 +253,7 @@ void  batch_data::load(
             finaliser
             },
         textures_binding(texture_paths, "", finaliser),
-        draw_state(finaliser),
+        draw_state(get_available_resources().draw_state_file(), finaliser),
         skeletal_info == get_available_resources().skeletal().cend() ?
             modelspace() :
             modelspace(boost::filesystem::path(skeletal_info->first) / "pose.txt", finaliser),

@@ -12,7 +12,7 @@ namespace qtgl { namespace detail {
 
 struct draw_state_data
 {
-    draw_state_data(async::finalise_load_on_destroy_ptr);
+    draw_state_data(async::finalise_load_on_destroy_ptr const  finaliser);
 
     draw_state_data(
             async::finalise_load_on_destroy_ptr,
