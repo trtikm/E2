@@ -1156,6 +1156,28 @@ def save_keyframe_coord_systems_of_bones(
             frame_idx += 1
 
 
+def save_draw_state_file(export_info, buffers_index):
+    buffers_export_info = export_info["render_buffers"][buffers_index]
+    with open(os.path.join(buffers_export_info["mesh_root_dir"], "draw_state.txt"), "w") as ofile:
+        ofile.write(
+            "use_alpha_blending              false\n"
+            "alpha_blending_src_function     SRC_ALPHA\n"
+            "alpha_blending_dst_function     ONE_MINUS_CONSTANT_ALPHA\n"
+            "cull_face_mode                  BACK\n"
+            )
+
+
+def save_effects_file(export_info, buffers_index):
+    buffers_export_info = export_info["render_buffers"][buffers_index]
+    with open(os.path.join(buffers_export_info["mesh_root_dir"], "effects.txt"), "w") as ofile:
+        ofile.write(
+            "use_alpha_testing               false\n"
+            "lighting_algo_location          fragment_program\n"
+            "fog_algo_location               vertex_program\n"
+            )
+
+
+
 def export_object_mesh(
         obj,            # A selected object with MESH data to be exported
         export_dir      # A directory under which all exported files will be saved.
@@ -1222,6 +1244,9 @@ def export_object_mesh(
                 save_mesh_spatial_alignment_to_armature(obj, buffers_export_info, export_info["root_dir"])
             if buffers_list[idx].num_texture_coords() > 0:
                 save_mesh_links_to_textures(idx, buffers_export_info, export_info)
+
+            save_draw_state_file(export_info, idx)
+            save_effects_file(export_info, idx)
 
 
 def export_object_armature(

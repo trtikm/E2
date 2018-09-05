@@ -1,0 +1,3 @@
+use_alpha_testing               false
+lighting_algo_location          fragment_program
+fog_algo_location               vertex_program
