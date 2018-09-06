@@ -95,6 +95,7 @@ struct  batch_available_resources_data  final
     {
         shaders_effects_config_type()
             : m_use_alpha_testing(false)
+            , m_alpha_test_constant(1.0f)
             , m_lighting_algo_location(SHADER_PROGRAM_TYPE::VERTEX)
             , m_fog_algo_location(SHADER_PROGRAM_TYPE::VERTEX)
             , m_effects_file()
@@ -102,23 +103,27 @@ struct  batch_available_resources_data  final
 
         shaders_effects_config_type(
                 bool const  use_alpha_testing,
+                float_32_bit const  alpha_test_constant,
                 SHADER_PROGRAM_TYPE  lighting_algo_location,
                 SHADER_PROGRAM_TYPE  fog_algo_location,
                 std::string const&  effects_file
                 )
             : m_use_alpha_testing(use_alpha_testing)
+            , m_alpha_test_constant(alpha_test_constant)
             , m_lighting_algo_location(lighting_algo_location)
             , m_fog_algo_location(fog_algo_location)
             , m_effects_file(effects_file)
         {}
 
         bool  use_alpha_testing() const { return m_use_alpha_testing; }
+        float_32_bit  alpha_test_constant() const { return m_alpha_test_constant; }
         SHADER_PROGRAM_TYPE  lighting_algo_location() const { return m_lighting_algo_location; }
         SHADER_PROGRAM_TYPE  fog_algo_location() const { return m_fog_algo_location; }
         std::string const&  effects_file() const { return m_effects_file; }
 
     private:
         bool  m_use_alpha_testing;
+        float_32_bit  m_alpha_test_constant;
         SHADER_PROGRAM_TYPE  m_lighting_algo_location;
         SHADER_PROGRAM_TYPE  m_fog_algo_location;
         std::string  m_effects_file;

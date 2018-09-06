@@ -172,6 +172,8 @@ enum struct FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME : natural_8_bit
     FOG_COLOUR                      = 8,    // vec4; first 3 components in range <0,1>; the alpha compunent is used as the fog decay coefficient, in range <1,3>.
     FOG_NEAR                        = 9,    // float; the distance where the fog starts; FOG_NEAR > 0.0
     FOG_FAR                         = 10,   // float; the distance where the fog is maximal; FOG_FAR > FOG_NEAR
+
+    ALPHA_TEST_CONSTANT             = 11,   // float; in range <0,1>; fragments with the alpha component less than values of this uniform will be discarded.
 };
 
 inline natural_32_bit  value(FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME const  binding)

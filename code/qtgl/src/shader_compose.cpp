@@ -289,8 +289,10 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
                                 varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
 
+                                uniform(FS_UNIFORM::ALPHA_TEST_CONSTANT, fs_uniforms),
+
                                 "void main() {",
-                                "    if (in_colour.a < 0.5f)",
+                                "    if (in_colour.a < ALPHA_TEST_CONSTANT)",
                                 "        discard;",
                                 "    out_colour = in_colour;",
                                 "}",
@@ -376,10 +378,11 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
 
                                 uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
+                                uniform(FS_UNIFORM::ALPHA_TEST_CONSTANT, fs_uniforms),
 
                                 "void main() {",
                                 "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);"
-                                "    if (diffuse_colour.a < 0.5f)",
+                                "    if (diffuse_colour.a < ALPHA_TEST_CONSTANT)",
                                 "        discard;",
                                 "    out_colour = diffuse_colour;",
                                 "}",
@@ -645,8 +648,10 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
                                                     varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
 
+                                                    uniform(FS_UNIFORM::ALPHA_TEST_CONSTANT, fs_uniforms),
+
                                                     "void main() {",
-                                                    "    if (in_colour.a < 0.5f)",
+                                                    "    if (in_colour.a < ALPHA_TEST_CONSTANT)",
                                                     "        discard;",
                                                     "    out_colour = in_colour;",
                                                     "}",
@@ -762,10 +767,11 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
 
                                                     uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
+                                                    uniform(FS_UNIFORM::ALPHA_TEST_CONSTANT, fs_uniforms),
 
                                                     "void main() {",
                                                     "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);"
-                                                    "    if (diffuse_colour.a < 0.5f)",
+                                                    "    if (diffuse_colour.a < ALPHA_TEST_CONSTANT)",
                                                     "        discard;",
                                                     "    out_colour = in_colour_mult * diffuse_colour;",
                                                     "}",
@@ -930,12 +936,13 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     uniform(FS_UNIFORM::AMBIENT_COLOUR, fs_uniforms),
                                                     uniform(FS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, fs_uniforms),
                                                     uniform(FS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, fs_uniforms),
+                                                    uniform(FS_UNIFORM::ALPHA_TEST_CONSTANT, fs_uniforms),
 
                                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                     "void main() {",
                                                     "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
-                                                    "    if (diffuse_colour.a < 0.5f)",
+                                                    "    if (diffuse_colour.a < ALPHA_TEST_CONSTANT)",
                                                     "        discard;",
                                                     "    const vec3  N = normalize(2.0 * texture(TEXTURE_SAMPLER_NORMAL, in_texture_coords).rgb - 1.0);",
                                                     "    const vec3  normal = N.x * in_tangent + N.y * in_bitangent + N.z * in_normal;",

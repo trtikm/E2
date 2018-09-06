@@ -165,6 +165,9 @@ void  render_batch(
             case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::FOG_FAR:
                 shader.set_uniform_variable(uniform, fragment_uniform_provider.get_FOG_FAR());
                 break;
+            case FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::ALPHA_TEST_CONSTANT:
+                shader.set_uniform_variable(uniform, batch_.get_available_resources().shaders_effects_config().alpha_test_constant());
+                break;
             default:
                 UNREACHABLE();
                 break;
