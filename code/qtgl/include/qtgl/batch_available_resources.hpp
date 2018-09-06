@@ -85,6 +85,45 @@ struct  batch_available_resources_data  final
                         // Holds pathnames of files containing batch-specific data related to the skeleton above.
                     >;
 
+    enum struct SHADER_PROGRAM_TYPE : natural_32_bit
+    {
+        VERTEX = 0,
+        FRAGMENT = 1
+    };
+
+    struct  shaders_effects_config_type
+    {
+        shaders_effects_config_type()
+            : m_use_alpha_testing(false)
+            , m_lighting_algo_location(SHADER_PROGRAM_TYPE::VERTEX)
+            , m_fog_algo_location(SHADER_PROGRAM_TYPE::VERTEX)
+            , m_effects_file()
+        {}
+
+        shaders_effects_config_type(
+                bool const  use_alpha_testing,
+                SHADER_PROGRAM_TYPE  lighting_algo_location,
+                SHADER_PROGRAM_TYPE  fog_algo_location,
+                std::string const&  effects_file
+                )
+            : m_use_alpha_testing(use_alpha_testing)
+            , m_lighting_algo_location(lighting_algo_location)
+            , m_fog_algo_location(fog_algo_location)
+            , m_effects_file(effects_file)
+        {}
+
+        bool  use_alpha_testing() const { return m_use_alpha_testing; }
+        SHADER_PROGRAM_TYPE  lighting_algo_location() const { return m_lighting_algo_location; }
+        SHADER_PROGRAM_TYPE  fog_algo_location() const { return m_fog_algo_location; }
+        std::string const&  effects_file() const { return m_effects_file; }
+
+    private:
+        bool  m_use_alpha_testing;
+        SHADER_PROGRAM_TYPE  m_lighting_algo_location;
+        SHADER_PROGRAM_TYPE  m_fog_algo_location;
+        std::string  m_effects_file;
+    };
+
     batch_available_resources_data(async::finalise_load_on_destroy_ptr const  finaliser);
 
     batch_available_resources_data(
@@ -94,7 +133,7 @@ struct  batch_available_resources_data  final
             skeletal_dictionary_type const&  skeletal_,
             std::string const&  index_buffer,
             std::string const&  draw_state_file,
-            std::string const&  effects_file
+            shaders_effects_config_type const&  shaders_effects_config_
             );
 
     buffers_dictionaty_type const&  buffers() const { return m_buffers; }
@@ -103,7 +142,7 @@ struct  batch_available_resources_data  final
     std::string const&  index_buffer() const { return m_index_buffer; }
     std::string const&  get_root_dir() const { return m_root_dir; }
     std::string const&  draw_state_file() const { return m_draw_state_file; }
-    std::string const&  effects_file() const { return m_effects_file; }
+    shaders_effects_config_type const&  shaders_effects_config() const { return m_shaders_effects_config; }
 
 private:
 
@@ -113,7 +152,7 @@ private:
     std::string  m_index_buffer;
     std::string  m_root_dir;
     std::string  m_draw_state_file;
-    std::string  m_effects_file;
+    shaders_effects_config_type  m_shaders_effects_config;
 };
 
 
@@ -128,6 +167,8 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
     using  textures_dictionary_type = detail::batch_available_resources_data::textures_dictionary_type;
     using  skeletal_info = detail::batch_available_resources_data::skeletal_info;
     using  skeletal_dictionary_type = detail::batch_available_resources_data::skeletal_dictionary_type;
+    using  SHADER_PROGRAM_TYPE = detail::batch_available_resources_data::SHADER_PROGRAM_TYPE;
+    using  shaders_effects_config_type = detail::batch_available_resources_data::shaders_effects_config_type;
 
     batch_available_resources() : async::resource_accessor<detail::batch_available_resources_data>()
     {}
@@ -160,7 +201,7 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
             skeletal_dictionary_type const&  skeletal_,
             std::string const&  index_buffer,
             std::string const&  draw_state_file,
-            std::string const&  effects_file,
+            shaders_effects_config_type const&  shaders_effects_config_,
             std::string const&  key = "",
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
@@ -173,7 +214,7 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
                 skeletal_,
                 index_buffer,
                 draw_state_file,
-                effects_file
+                shaders_effects_config_
                 )
     {}
 
@@ -208,7 +249,7 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
                 skeletal_dictionary_type{},
                 std::string(),
                 std::string(),
-                std::string()
+                shaders_effects_config_type()
                 )
     {}
 
@@ -218,7 +259,7 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
     std::string const&  index_buffer() const { return resource().index_buffer(); }
     std::string const&  root_dir() const { return resource().get_root_dir(); }
     std::string const&  draw_state_file() const { return resource().draw_state_file(); }
-    std::string const&  effects_file() const { return resource().effects_file(); }
+    shaders_effects_config_type const&  shaders_effects_config() const { return resource().shaders_effects_config(); }
 };
 
 

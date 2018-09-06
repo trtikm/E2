@@ -281,6 +281,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         //    };
                         //}
                         //else
+                        if (resources.shaders_effects_config().use_alpha_testing())
                         {
                             fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                                 "#version 420",
@@ -291,6 +292,19 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 "void main() {",
                                 "    if (in_colour.a < 0.5f)",
                                 "        discard;",
+                                "    out_colour = in_colour;",
+                                "}",
+                            };
+                        }
+                        else
+                        {
+                            fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                "#version 420",
+
+                                varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                "void main() {",
                                 "    out_colour = in_colour;",
                                 "}",
                             };
@@ -353,21 +367,39 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 "}",
                             };
                         }
-                        fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                            "#version 420",
+                        if (resources.shaders_effects_config().use_alpha_testing())
+                        {
+                            fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                "#version 420",
 
-                            varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
-                            varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+                                varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
+                                varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
 
-                            uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
+                                uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
 
-                            "void main() {",
-                            "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);"
-                            "    if (diffuse_colour.a < 0.5f)",
-                            "        discard;",
-                            "    out_colour = diffuse_colour;",
-                            "}",
-                        };
+                                "void main() {",
+                                "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);"
+                                "    if (diffuse_colour.a < 0.5f)",
+                                "        discard;",
+                                "    out_colour = diffuse_colour;",
+                                "}",
+                            };
+                        }
+                        else
+                        {
+                            fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                "#version 420",
+
+                                varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
+                                varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
+
+                                "void main() {",
+                                "    out_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);"
+                                "}",
+                            };
+                        }
                     }
                     break;
                 }
@@ -605,6 +637,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             //    };
                                             //}
                                             //else
+                                            if (resources.shaders_effects_config().use_alpha_testing())
                                             {
                                                 fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                                                     "#version 420",
@@ -615,6 +648,19 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "void main() {",
                                                     "    if (in_colour.a < 0.5f)",
                                                     "        discard;",
+                                                    "    out_colour = in_colour;",
+                                                    "}",
+                                                };
+                                            }
+                                            else
+                                            {
+                                                fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                                    "#version 420",
+
+                                                    varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                                    varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                                    "void main() {",
                                                     "    out_colour = in_colour;",
                                                     "}",
                                                 };
@@ -706,22 +752,42 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "}",
                                                 };
                                             }
-                                            fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                                "#version 420",
+                                            if (resources.shaders_effects_config().use_alpha_testing())
+                                            {
+                                                fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                                    "#version 420",
 
-                                                varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
-                                                varying("in_colour_mult", FS_IN::BINDING_IN_DIFFUSE, fs_input),
-                                                varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+                                                    varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
+                                                    varying("in_colour_mult", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                                    varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
 
-                                                uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
+                                                    uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
 
-                                                "void main() {",
-                                                "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);"
-                                                "    if (diffuse_colour.a < 0.5f)",
-                                                "        discard;",
-                                                "    out_colour = in_colour_mult * diffuse_colour;",
-                                                "}",
-                                            };
+                                                    "void main() {",
+                                                    "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);"
+                                                    "    if (diffuse_colour.a < 0.5f)",
+                                                    "        discard;",
+                                                    "    out_colour = in_colour_mult * diffuse_colour;",
+                                                    "}",
+                                                };
+                                            }
+                                            else
+                                            {
+                                                fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                                    "#version 420",
+
+                                                    varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
+                                                    varying("in_colour_mult", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                                    varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                                    uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
+
+                                                    "void main() {",
+                                                    "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);"
+                                                    "    out_colour = in_colour_mult * diffuse_colour;",
+                                                    "}",
+                                                };
+                                            }
                                         }
                                         break;
                                     }
@@ -848,38 +914,74 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "}",
                                                 };
                                             }
-                                            fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
-                                                "#version 420",
+                                            if (resources.shaders_effects_config().use_alpha_testing())
+                                            {
+                                                fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                                    "#version 420",
 
-                                                varying("in_normal", FS_IN::BINDING_IN_NORMAL, fs_input),
-                                                varying("in_tangent", FS_IN::BINDING_IN_TANGENT, fs_input),
-                                                varying("in_bitangent", FS_IN::BINDING_IN_BITANGENT, fs_input),
-                                                varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
-                                                varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+                                                    varying("in_normal", FS_IN::BINDING_IN_NORMAL, fs_input),
+                                                    varying("in_tangent", FS_IN::BINDING_IN_TANGENT, fs_input),
+                                                    varying("in_bitangent", FS_IN::BINDING_IN_BITANGENT, fs_input),
+                                                    varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
+                                                    varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
 
-                                                uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
-                                                uniform(FS_UNIFORM::TEXTURE_SAMPLER_NORMAL, fs_uniforms),
-                                                uniform(FS_UNIFORM::AMBIENT_COLOUR, fs_uniforms),
-                                                uniform(FS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, fs_uniforms),
-                                                uniform(FS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, fs_uniforms),
+                                                    uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
+                                                    uniform(FS_UNIFORM::TEXTURE_SAMPLER_NORMAL, fs_uniforms),
+                                                    uniform(FS_UNIFORM::AMBIENT_COLOUR, fs_uniforms),
+                                                    uniform(FS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, fs_uniforms),
+                                                    uniform(FS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, fs_uniforms),
 
-                                                DEFINE_FUNCTION_ambient_and_directional_lighting(),
+                                                    DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
-                                                "void main() {",
-                                                "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
-                                                "    if (diffuse_colour.a < 0.5f)",
-                                                "        discard;",
-                                                "    const vec3  N = normalize(2.0 * texture(TEXTURE_SAMPLER_NORMAL, in_texture_coords).rgb - 1.0);",
-                                                "    const vec3  normal = N.x * in_tangent + N.y * in_bitangent + N.z * in_normal;",
-                                                "    const vec4  colour_mult = ambient_and_directional_lighting(",
-                                                "        normalize(normal),",
-                                                "        DIRECTIONAL_LIGHT_DIRECTION,",
-                                                "        AMBIENT_COLOUR,",
-                                                "        DIRECTIONAL_LIGHT_COLOUR",
-                                                "        );",
-                                                "    out_colour = colour_mult * diffuse_colour;",
-                                                "}",
-                                            };
+                                                    "void main() {",
+                                                    "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
+                                                    "    if (diffuse_colour.a < 0.5f)",
+                                                    "        discard;",
+                                                    "    const vec3  N = normalize(2.0 * texture(TEXTURE_SAMPLER_NORMAL, in_texture_coords).rgb - 1.0);",
+                                                    "    const vec3  normal = N.x * in_tangent + N.y * in_bitangent + N.z * in_normal;",
+                                                    "    const vec4  colour_mult = ambient_and_directional_lighting(",
+                                                    "        normalize(normal),",
+                                                    "        DIRECTIONAL_LIGHT_DIRECTION,",
+                                                    "        AMBIENT_COLOUR,",
+                                                    "        DIRECTIONAL_LIGHT_COLOUR",
+                                                    "        );",
+                                                    "    out_colour = colour_mult * diffuse_colour;",
+                                                    "}",
+                                                };
+                                            }
+                                            else
+                                            {
+                                                fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                                    "#version 420",
+
+                                                    varying("in_normal", FS_IN::BINDING_IN_NORMAL, fs_input),
+                                                    varying("in_tangent", FS_IN::BINDING_IN_TANGENT, fs_input),
+                                                    varying("in_bitangent", FS_IN::BINDING_IN_BITANGENT, fs_input),
+                                                    varying("in_texture_coords", FS_IN::BINDING_IN_TEXCOORD0, fs_input),
+                                                    varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                                    uniform(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE, fs_uniforms),
+                                                    uniform(FS_UNIFORM::TEXTURE_SAMPLER_NORMAL, fs_uniforms),
+                                                    uniform(FS_UNIFORM::AMBIENT_COLOUR, fs_uniforms),
+                                                    uniform(FS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, fs_uniforms),
+                                                    uniform(FS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, fs_uniforms),
+
+                                                    DEFINE_FUNCTION_ambient_and_directional_lighting(),
+
+                                                    "void main() {",
+                                                    "    const vec4  diffuse_colour = texture(TEXTURE_SAMPLER_DIFFUSE, in_texture_coords);",
+                                                    "    const vec3  N = normalize(2.0 * texture(TEXTURE_SAMPLER_NORMAL, in_texture_coords).rgb - 1.0);",
+                                                    "    const vec3  normal = N.x * in_tangent + N.y * in_bitangent + N.z * in_normal;",
+                                                    "    const vec4  colour_mult = ambient_and_directional_lighting(",
+                                                    "        normalize(normal),",
+                                                    "        DIRECTIONAL_LIGHT_DIRECTION,",
+                                                    "        AMBIENT_COLOUR,",
+                                                    "        DIRECTIONAL_LIGHT_COLOUR",
+                                                    "        );",
+                                                    "    out_colour = colour_mult * diffuse_colour;",
+                                                    "}",
+                                                };
+                                            }
                                         }
                                         break;
                                     }

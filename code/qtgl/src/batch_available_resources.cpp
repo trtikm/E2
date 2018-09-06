@@ -7,6 +7,7 @@
 #include <utility/read_line.hpp>
 #include <utility/canonical_path.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/property_tree/info_parser.hpp>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -22,7 +23,7 @@ batch_available_resources_data::batch_available_resources_data(async::finalise_l
     , m_index_buffer()
     , m_root_dir(canonical_path(finaliser->get_key().get_unique_id()).string())
     , m_draw_state_file()
-    , m_effects_file()
+    , m_shaders_effects_config()
 {
     TMPROF_BLOCK();
 
@@ -46,9 +47,30 @@ batch_available_resources_data::batch_available_resources_data(async::finalise_l
     if (!boost::filesystem::is_regular_file(m_draw_state_file))
         throw std::runtime_error(msgstream() << "Cannot access 'draw_state' file '" << m_draw_state_file << "'.");
 
-    m_effects_file = (path / "effects.txt").string();
-    if (!boost::filesystem::is_regular_file(m_effects_file))
-        throw std::runtime_error(msgstream() << "Cannot access 'effects' file '" << m_effects_file << "'.");
+    {
+        std::string const  shader_effects_file = (path / "effects.txt").string();
+        if (!boost::filesystem::is_regular_file(shader_effects_file))
+            throw std::runtime_error(msgstream() << "Cannot access 'effects' file '" << shader_effects_file << "'.");
+
+        boost::property_tree::ptree  shader_effects_ptree;
+        boost::property_tree::read_info(shader_effects_file, shader_effects_ptree);
+        auto const  convert_string_to_shader_program_type = 
+                [](std::string const&  shader_program_name) -> SHADER_PROGRAM_TYPE
+                {
+                    if (shader_program_name == "vertex_program")
+                        return SHADER_PROGRAM_TYPE::VERTEX;
+                    if (shader_program_name == "fragment_program")
+                        return SHADER_PROGRAM_TYPE::FRAGMENT;
+                    throw std::runtime_error(msgstream() << "Unknown/unsupported shader program type '"
+                                                         << shader_program_name << "'.");
+                };
+        m_shaders_effects_config = shaders_effects_config_type(
+                shader_effects_ptree.get("use_alpha_testing", false),
+                convert_string_to_shader_program_type(shader_effects_ptree.get<std::string>("lighting_algo_location")),
+                convert_string_to_shader_program_type(shader_effects_ptree.get<std::string>("fog_algo_location")),
+                shader_effects_file
+                );
+    }
 
     boost::filesystem::path const  buffers_dir = path / "buffers";
     if (!boost::filesystem::is_directory(buffers_dir))
@@ -191,7 +213,7 @@ batch_available_resources_data::batch_available_resources_data(
         skeletal_dictionary_type const&  skeletal_,
         std::string const&  index_buffer,
         std::string const&  draw_state_file,
-        std::string const&  effects_file
+        shaders_effects_config_type const&  shaders_effects_config_
         )
     : m_buffers(buffers_)
     , m_textures(textures_)
@@ -199,7 +221,7 @@ batch_available_resources_data::batch_available_resources_data(
     , m_index_buffer(index_buffer)
     , m_root_dir()
     , m_draw_state_file(draw_state_file)
-    , m_effects_file(effects_file)
+    , m_shaders_effects_config(shaders_effects_config_)
 {}
 
 
