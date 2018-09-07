@@ -66,7 +66,7 @@ batch_available_resources_data::batch_available_resources_data(async::finalise_l
                 };
         m_shaders_effects_config = shaders_effects_config_type(
                 shader_effects_ptree.get("use_alpha_testing", false),
-                shader_effects_ptree.get("alpha_test_constant", 1.0f),
+                shader_effects_ptree.get("alpha_test_constant", 0.0f),
                 convert_string_to_shader_program_type(shader_effects_ptree.get<std::string>("lighting_algo_location")),
                 convert_string_to_shader_program_type(shader_effects_ptree.get<std::string>("fog_algo_location")),
                 shader_effects_file

@@ -95,7 +95,7 @@ struct  batch_available_resources_data  final
     {
         shaders_effects_config_type()
             : m_use_alpha_testing(false)
-            , m_alpha_test_constant(1.0f)
+            , m_alpha_test_constant(0.0f)
             , m_lighting_algo_location(SHADER_PROGRAM_TYPE::VERTEX)
             , m_fog_algo_location(SHADER_PROGRAM_TYPE::VERTEX)
             , m_effects_file()

@@ -1172,6 +1172,7 @@ def save_effects_file(export_info, buffers_index):
     with open(os.path.join(buffers_export_info["mesh_root_dir"], "effects.txt"), "w") as ofile:
         ofile.write(
             "use_alpha_testing               false\n"
+            "alpha_test_constant             0.0\n"
             "lighting_algo_location          fragment_program\n"
             "fog_algo_location               vertex_program\n"
             )
