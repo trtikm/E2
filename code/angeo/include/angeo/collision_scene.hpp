@@ -329,21 +329,30 @@ namespace angeo {
 
 
 /**
+ * An instance of this type is a special purpose container for so called 'collision objects'.
+ * A collision object is always a convex set of points in 3D Euklidian space, e.g. sphere,
+ * triangle, box (see COLLISION_SHAPE_TYPE for complete list of supported shapes).
  *
+ * Each object inserted to the container is considered either 'static' or 'dynamic', depending on
+ * the value passed to the parameter 'is_dynamic' to a particular 'insert_*' function. Although you
+ * can then call the method 'on_position_changed' for any object inserted into the contained (to
+ * relocate that object's collision shape in the 3D space), it is expected that you will call it
+ * frequently ONLY for dynamic objects. Calling that method for static objects may lead to decrease
+ * of performance (when there was inserted a large number of static objects into the container).
  *
+ * The container provides two kinds of queries on inserted collision objects:
+ *      1. A search for objects in close proximity to either line or an axis aligned boundig box (AABB).
+ *         An objects is in a proximity of a line/AABB if an only if its AABB has non-empty intersection
+ *         with that line/AABB.
  *
+ *      2. Computation of contact points (and normal vectors at those points) between individual objects.
+ *         Given a pair of objects, computed contacts between them should be sufficient for computation
+ *         of forces/impulses preventing deeper penetration of collision shapes of the objects.
+ *         NOTE: Contacts are NEVER computed between any two STATIC objects.
  *
- *
- *
- *
- *
- *
- *
- *
+ * It is also possible to specify pairs of objects for which the computation of contacts will be
+ * disabled. Each such pair must contain at least one dynamic object.
  */
-/// Pass 'false' only if you will NOT call 'on_position_changed' often
-/// for this object during the simulation (like never or very rarely;
-/// definitely not in every frame). 
 struct  collision_scene
 {
     collision_scene();
