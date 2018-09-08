@@ -18,8 +18,8 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/angeo/proximity_map.hpp
 
-    ./include/angeo/collision_system.hpp
-    ./src/collision_system.cpp
+    ./include/angeo/collision_scene.hpp
+    ./src/collision_scene.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
