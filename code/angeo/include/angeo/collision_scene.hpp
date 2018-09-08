@@ -1,5 +1,5 @@
-#ifndef E2_TOOL_GFXTUNER_COLLISION_SYSTEM_HPP_INCLUDED
-#   define E2_TOOL_GFXTUNER_COLLISION_SYSTEM_HPP_INCLUDED
+#ifndef ANGEO_COLLISION_SCENE_HPP_INCLUDED
+#   define ANGEO_COLLISION_SCENE_HPP_INCLUDED
 
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/proximity_map.hpp>
