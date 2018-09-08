@@ -9,6 +9,8 @@
 #   include <functional>
 #   include <tuple>
 
+namespace angeo {
+
 
 enum struct  COLLISION_SHAPE_TYPE : natural_8_bit
 {
@@ -21,18 +23,6 @@ enum struct  COLLISION_SHAPE_TYPE : natural_8_bit
     SPHERE                  = 6,
     //TORUS                   = 7,
     TRIANGLE                = 8,
-};
-
-
-enum struct  COLLISION_MATERIAL_TYPE : natural_8_bit
-{
-    CONCRETE                = 0,
-    GLASS                   = 1,
-    GUM                     = 2,
-    PLASTIC                 = 3,
-    RUBBER                  = 4,
-    STEEL                   = 5,
-    WOOD                    = 6,
 };
 
 
@@ -112,19 +102,23 @@ inline bool operator>=(collision_object_id const  left, collision_object_id cons
 }
 
 
-namespace std
-{
-    template<> struct hash<collision_object_id>
-    {
-        inline size_t operator()(collision_object_id const&  coid) const
-        {
-            return std::hash<natural_32_bit>()(as_number(coid));
-        }
-    };
 }
 
+namespace std {
 
-namespace detail {
+
+template<> struct hash<angeo::collision_object_id>
+{
+    inline size_t operator()(angeo::collision_object_id const&  coid) const
+    {
+        return std::hash<natural_32_bit>()(as_number(coid));
+    }
+};
+
+
+}
+
+namespace angeo { namespace detail {
 
 
 /**
@@ -141,7 +135,9 @@ inline collision_objects_pair  make_collision_objects_pair(
 }
 
 
-}
+}}
+
+namespace angeo {
 
 
 enum struct  COLLISION_SHAPE_FEATURE_TYPE : natural_8_bit
@@ -228,16 +224,24 @@ inline bool operator>=(collision_shape_feature_id const  left, collision_shape_f
 }
 
 
+}
+
 namespace std
 {
-    template<> struct hash<collision_shape_feature_id>
+
+
+template<> struct hash<angeo::collision_shape_feature_id>
+{
+    inline size_t operator()(angeo::collision_shape_feature_id const&  cfid) const
     {
-        inline size_t operator()(collision_shape_feature_id const&  cfid) const
-        {
-            return std::hash<natural_32_bit>()(as_number(cfid));
-        }
-    };
+        return std::hash<natural_32_bit>()(as_number(cfid));
+    }
+};
+
+
 }
+
+namespace angeo {
 
 
 using  collision_object_and_shape_feature_id = std::pair<collision_object_id, collision_shape_feature_id>;
@@ -251,6 +255,11 @@ inline collision_shape_feature_id  get_shape_feature_id(collision_object_and_sha
 {
     return cosfid.second;
 }
+
+
+}
+
+namespace angeo {
 
 
 /**
@@ -277,6 +286,11 @@ inline collision_object_and_shape_feature_id const&  get_second_collider_id(cont
 }
 
 
+}
+
+namespace angeo {
+
+
 /**
 * The callback function can early terminate the search for other objects by returning false.
 */
@@ -290,6 +304,28 @@ using  collision_object_acceptor = std::function<bool(collision_object_id)>;
 * The callback function can early terminate the search for other contacts by returning false.
 */
 using  contact_acceptor = std::function<bool(contact_id const& cid, vector3 const& contact_point, vector3 const& unit_normal)>;
+
+
+}
+
+namespace angeo {
+
+
+enum struct  COLLISION_MATERIAL_TYPE : natural_8_bit
+{
+    CONCRETE            = 0,
+    GLASS               = 1,
+    GUM                 = 2,
+    PLASTIC             = 3,
+    RUBBER              = 4,
+    STEEL               = 5,
+    WOOD                = 6,
+};
+
+
+}
+
+namespace angeo {
 
 
 /**
@@ -308,8 +344,10 @@ using  contact_acceptor = std::function<bool(contact_id const& cid, vector3 cons
 /// Pass 'false' only if you will NOT call 'on_position_changed' often
 /// for this object during the simulation (like never or very rarely;
 /// definitely not in every frame). 
-struct  collision_system
+struct  collision_scene
 {
+    collision_scene();
+
     collision_object_id  insert_line(
             vector3 const&  point_1,
             vector3 const&  point_2,
@@ -389,5 +427,7 @@ private:
     std::vector<COLLISION_MATERIAL_TYPE>  m_triangles_material;
 };
 
+
+}
 
 #endif
