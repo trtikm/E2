@@ -385,18 +385,55 @@ void  collision_scene::enable_colliding_of_dynamic_objects(
 }
 
 
-void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor&  acceptor)
+void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor&  acceptor, bool const with_static)
 {
+    rebalance_static_proximity_map_if_needed();
+    rebalance_dynamic_proximity_map_if_needed();
+
     // TODO!
 }
 
 
 void  collision_scene::compute_contacts_of_single_dynamic_object(
         collision_object_id const  coid,
-        contact_acceptor&  acceptor
+        contact_acceptor&  acceptor,
+        bool const with_static,
+        bool const with_dynamic
         )
 {
-    // TODO!
+    vector3 const  min_corner_of_objects_bbox = get_object_aabb_min_corner(coid);
+    vector3 const  max_corner_of_objects_bbox = get_object_aabb_max_corner(coid);
+
+    if (with_static)
+    {
+        rebalance_static_proximity_map_if_needed();
+        std::unordered_set<collision_object_id>  visited{ coid };
+        m_proximity_static_objects.find_by_bbox(
+                min_corner_of_objects_bbox,
+                max_corner_of_objects_bbox,
+                [this, &acceptor, coid, &visited](collision_object_id const  other_coid) -> bool {
+                        if (visited.count(other_coid) != 0UL)
+                            return true;
+                        visited.insert(other_coid);
+                        return compute_contacts(detail::make_collision_objects_pair(coid, other_coid), acceptor);
+                    }
+                );
+    }
+    if (with_dynamic)
+    {
+        rebalance_dynamic_proximity_map_if_needed();
+        std::unordered_set<collision_object_id>  visited{ coid };
+        m_proximity_dynamic_objects.find_by_bbox(
+                min_corner_of_objects_bbox,
+                max_corner_of_objects_bbox,
+                [this, &acceptor, coid, &visited](collision_object_id const  other_coid) -> bool {
+                        if (visited.count(other_coid) != 0UL)
+                            return true;
+                        visited.insert(other_coid);
+                        return compute_contacts(detail::make_collision_objects_pair(coid, other_coid), acceptor);
+                    }
+                );
+    }
 }
 
 
@@ -411,12 +448,32 @@ void  collision_scene::find_objects_in_proximity_to_axis_aligned_bounding_box(
     if (search_static)
     {
         rebalance_static_proximity_map_if_needed();
-        m_proximity_static_objects.find_by_bbox(min_corner, max_corner, acceptor);
+        std::unordered_set<collision_object_id>  visited;
+        m_proximity_static_objects.find_by_bbox(
+                min_corner,
+                max_corner,
+                [&acceptor, &visited](collision_object_id const  coid) -> bool {
+                        if (visited.count(coid) != 0UL)
+                            return true;
+                        visited.insert(coid);
+                        return acceptor(coid);
+                    }
+                );
     }
     if (search_dynamic)
     {
         rebalance_dynamic_proximity_map_if_needed();
-        m_proximity_dynamic_objects.find_by_bbox(min_corner, max_corner, acceptor);
+        std::unordered_set<collision_object_id>  visited;
+        m_proximity_dynamic_objects.find_by_bbox(
+                min_corner,
+                max_corner,
+                [&acceptor, &visited](collision_object_id const  coid) -> bool {
+                        if (visited.count(coid) != 0UL)
+                            return true;
+                        visited.insert(coid);
+                        return acceptor(coid);
+                    }
+                );
     }
 }
 
@@ -432,12 +489,32 @@ void  collision_scene::find_objects_in_proximity_to_line(
     if (search_static)
     {
         rebalance_static_proximity_map_if_needed();
-        m_proximity_static_objects.find_by_line(line_begin, line_end, acceptor);
+        std::unordered_set<collision_object_id>  visited;
+        m_proximity_static_objects.find_by_line(
+                line_begin,
+                line_end,
+                [&acceptor, &visited](collision_object_id const  coid) -> bool {
+                        if (visited.count(coid) != 0UL)
+                            return true;
+                        visited.insert(coid);
+                        return acceptor(coid);
+                    }
+                );
     }
     if (search_dynamic)
     {
         rebalance_dynamic_proximity_map_if_needed();
-        m_proximity_dynamic_objects.find_by_line(line_begin, line_end, acceptor);
+        std::unordered_set<collision_object_id>  visited;
+        m_proximity_dynamic_objects.find_by_line(
+                line_begin,
+                line_end,
+                [&acceptor, &visited](collision_object_id const  coid) -> bool {
+                        if (visited.count(coid) != 0UL)
+                            return true;
+                        visited.insert(coid);
+                        return acceptor(coid);
+                    }
+                );
     }
 }
 
@@ -585,6 +662,14 @@ void  collision_scene::rebalance_dynamic_proximity_map_if_needed()
         m_proximity_dynamic_objects.rebalance();
         m_does_proximity_dynamic_need_rebalancing = false;
     }
+}
+
+
+bool  collision_scene::compute_contacts(detail::collision_objects_pair  cop, contact_acceptor&  acceptor)
+{
+    // TODO!
+
+    return true;
 }
 
 

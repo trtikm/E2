@@ -67,6 +67,10 @@ namespace angeo {
  * In order to search for objects colliding with a line, use the function
  * 'find_by_line' instead of 'find_by_bbox'.
  *
+ * NOTE: Both 'find_by_bbox' and 'find_by_line' may send the same object several times
+ *       to the collector callback. So, the collector is responsible for filtering out
+ *       those duplicities.
+ *
  * In the end of the update step of the simulation you typically want to move objects
  * from current positions to the new (computed) ones. You need to erase an object from
  * the map before you change its position and insert it back after the new position is set.
