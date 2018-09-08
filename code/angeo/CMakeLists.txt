@@ -17,6 +17,9 @@ add_library(${THIS_TARGET_NAME}
     ./src/shape.cpp
 
     ./include/angeo/proximity_map.hpp
+
+    ./include/angeo/collision_system.hpp
+    ./src/collision_system.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
