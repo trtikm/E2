@@ -6,7 +6,7 @@
 namespace angeo {
 
 
-std::pair<vector3, vector3>  compute_aabb_of_capsule(
+axis_aligned_bounding_box  compute_aabb_of_capsule(
         vector3 const&  point_1,
         vector3 const&  point_2,
         float_32_bit const  radius
@@ -25,7 +25,7 @@ std::pair<vector3, vector3>  compute_aabb_of_capsule(
 }
 
 
-std::pair<vector3, vector3>  compute_aabb_of_line(
+axis_aligned_bounding_box  compute_aabb_of_line(
         vector3 const&  point_1,
         vector3 const&  point_2
         )
@@ -43,7 +43,7 @@ std::pair<vector3, vector3>  compute_aabb_of_line(
 }
 
 
-std::pair<vector3, vector3>  compute_aabb_of_triangle(
+axis_aligned_bounding_box  compute_aabb_of_triangle(
         vector3 const&  point_1,
         vector3 const&  point_2,
         vector3 const&  point_3
@@ -106,33 +106,45 @@ collision_scene::collision_scene()
 
 
 collision_object_id  collision_scene::insert_capsule(
-        vector3 const&  point_1,
-        vector3 const&  point_2,
-        float_32_bit const  radius,
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line,
+        matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
         bool const  is_dynamic
         )
 {
     collision_object_id  coid;
     {
-        std::pair<std::pair<vector3, vector3>, float_32_bit> const  capsule{ {point_1, point_2}, radius };
-        std::pair<vector3, vector3> const  bbox = compute_aabb_of_capsule(point_1, point_2, radius);
+        vector3 const  end_point_1_in_model_space(0.0f, 0.0f, +half_distance_between_end_points);
+        vector3 const  end_point_2_in_model_space(0.0f, 0.0f, -half_distance_between_end_points);
+
+        capsule_geometry const  geometry {
+                transform_point(end_point_1_in_model_space, from_base_matrix),
+                transform_point(end_point_2_in_model_space, from_base_matrix),
+                half_distance_between_end_points,
+                thickness_from_central_line
+                };
+        axis_aligned_bounding_box const  bbox =
+                compute_aabb_of_capsule(
+                        geometry.end_point_1_in_world_space,
+                        geometry.end_point_2_in_world_space,
+                        geometry.thickness_from_central_line
+                        );
 
         auto&  invalid_ids = m_invalid_object_ids.at(as_number(COLLISION_SHAPE_TYPE::CAPSULE));
         if (invalid_ids.empty())
         {
             coid = make_collision_object_id(COLLISION_SHAPE_TYPE::CAPSULE, (natural_32_bit)m_capsules_geometry.size());
 
-            m_capsules_geometry.push_back(capsule);
+            m_capsules_geometry.push_back(geometry);
             m_capsules_bbox.push_back(bbox);
             m_capsules_material.push_back(material);
-
         }
         else
         {
             coid = make_collision_object_id(COLLISION_SHAPE_TYPE::CAPSULE, invalid_ids.back());
 
-            m_capsules_geometry.at(invalid_ids.back()) = capsule;
+            m_capsules_geometry.at(invalid_ids.back()) = geometry;
             m_capsules_bbox.at(invalid_ids.back()) = bbox;
             m_capsules_material.at(invalid_ids.back()) = material;
 
@@ -145,23 +157,31 @@ collision_object_id  collision_scene::insert_capsule(
 
 
 collision_object_id  collision_scene::insert_line(
-        vector3 const&  point_1,
-        vector3 const&  point_2,
+        float_32_bit const  half_distance_between_end_points,
+        matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
         bool const  is_dynamic
         )
 {
     collision_object_id  coid;
     {
-        std::pair<vector3, vector3> const  line{ point_1, point_2 };
-        std::pair<vector3, vector3> const  bbox = compute_aabb_of_line(point_1, point_2);
+        vector3 const  end_point_1_in_model_space(0.0f, 0.0f, +half_distance_between_end_points);
+        vector3 const  end_point_2_in_model_space(0.0f, 0.0f, -half_distance_between_end_points);
+
+        line_geometry const  geometry {
+                transform_point(end_point_1_in_model_space, from_base_matrix),
+                transform_point(end_point_2_in_model_space, from_base_matrix),
+                half_distance_between_end_points
+                };
+        axis_aligned_bounding_box const  bbox =
+                compute_aabb_of_line(geometry.end_point_1_in_world_space, geometry.end_point_2_in_world_space);
 
         auto&  invalid_ids = m_invalid_object_ids.at(as_number(COLLISION_SHAPE_TYPE::LINE));
         if (invalid_ids.empty())
         {
             coid = make_collision_object_id(COLLISION_SHAPE_TYPE::LINE, (natural_32_bit)m_lines_geometry.size());
 
-            m_lines_geometry.push_back(line);
+            m_lines_geometry.push_back(geometry);
             m_lines_bbox.push_back(bbox);
             m_lines_material.push_back(material);
 
@@ -170,7 +190,7 @@ collision_object_id  collision_scene::insert_line(
         {
             coid = make_collision_object_id(COLLISION_SHAPE_TYPE::LINE, invalid_ids.back());
 
-            m_lines_geometry.at(invalid_ids.back()) = line;
+            m_lines_geometry.at(invalid_ids.back()) = geometry;
             m_lines_bbox.at(invalid_ids.back()) = bbox;
             m_lines_material.at(invalid_ids.back()) = material;
 
@@ -183,19 +203,21 @@ collision_object_id  collision_scene::insert_line(
 
 
 collision_object_id  collision_scene::insert_point(
-        vector3 const&  position,
+        matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
         bool const  is_dynamic  
         )
 {
     collision_object_id  coid;
     {
+        vector3 const  position_in_world_space = transform_point(vector3_zero(), from_base_matrix);
+
         auto&  invalid_ids = m_invalid_object_ids.at(as_number(COLLISION_SHAPE_TYPE::POINT));
         if (invalid_ids.empty())
         {
             coid = make_collision_object_id(COLLISION_SHAPE_TYPE::POINT, (natural_32_bit)m_points_geometry.size());
 
-            m_points_geometry.push_back(position);
+            m_points_geometry.push_back(position_in_world_space);
             m_points_material.push_back(material);
 
         }
@@ -203,7 +225,7 @@ collision_object_id  collision_scene::insert_point(
         {
             coid = make_collision_object_id(COLLISION_SHAPE_TYPE::POINT, invalid_ids.back());
 
-            m_points_geometry.at(invalid_ids.back()) = position;
+            m_points_geometry.at(invalid_ids.back()) = position_in_world_space;
             m_points_material.at(invalid_ids.back()) = material;
 
             invalid_ids.pop_back();
@@ -215,22 +237,22 @@ collision_object_id  collision_scene::insert_point(
 
 
 collision_object_id  collision_scene::insert_sphere(
-        vector3 const&  centre,
         float_32_bit const  radius,
+        matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
         bool const  is_dynamic
         )
 {
     collision_object_id  coid;
     {
-        std::pair<vector3, float_32_bit> const  sphere = { centre, radius };
+        sphere_geometry const  geometry { transform_point(vector3_zero(), from_base_matrix), radius };
 
         auto&  invalid_ids = m_invalid_object_ids.at(as_number(COLLISION_SHAPE_TYPE::SPHERE));
         if (invalid_ids.empty())
         {
             coid = make_collision_object_id(COLLISION_SHAPE_TYPE::SPHERE, (natural_32_bit)m_spheres_geometry.size());
 
-            m_spheres_geometry.push_back(sphere);
+            m_spheres_geometry.push_back(geometry);
             m_spheres_material.push_back(material);
 
         }
@@ -238,7 +260,7 @@ collision_object_id  collision_scene::insert_sphere(
         {
             coid = make_collision_object_id(COLLISION_SHAPE_TYPE::SPHERE, invalid_ids.back());
 
-            m_spheres_geometry.at(invalid_ids.back()) = sphere;
+            m_spheres_geometry.at(invalid_ids.back()) = geometry;
             m_spheres_material.at(invalid_ids.back()) = material;
 
             invalid_ids.pop_back();
@@ -250,24 +272,39 @@ collision_object_id  collision_scene::insert_sphere(
 
 
 collision_object_id  collision_scene::insert_triangle(
-        vector3 const&  point_1,
-        vector3 const&  point_2,
-        vector3 const&  point_3,
+        float_32_bit const  end_point_2_x_coord_in_model_space,
+        vector2 const&  end_point_3_in_model_space,
+        matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
         bool const  is_dynamic
         )
 {
     collision_object_id  coid;
     {
-        std::tuple<vector3, vector3, vector3> const  triangle{ point_1, point_2, point_3 };
-        std::pair<vector3, vector3> const  bbox = compute_aabb_of_triangle(point_1, point_2, point_3);
+        vector3 const  end_point_1_in_model_space_ = vector3_zero();
+        vector3 const  end_point_2_in_model_space_ = vector3(end_point_2_x_coord_in_model_space, 0.0f, 0.0f);
+        vector3 const  end_point_3_in_model_space_ = expand23(end_point_3_in_model_space, 0.0f);
+
+        triangle_geometry const  geometry {
+                transform_point(end_point_1_in_model_space_, from_base_matrix),
+                transform_point(end_point_2_in_model_space_, from_base_matrix),
+                transform_point(end_point_3_in_model_space_, from_base_matrix),
+                end_point_2_x_coord_in_model_space,
+                end_point_3_in_model_space
+                };
+        axis_aligned_bounding_box const  bbox =
+                compute_aabb_of_triangle(
+                        geometry.end_point_1_in_world_space,
+                        geometry.end_point_2_in_world_space,
+                        geometry.end_point_3_in_world_space
+                        );
 
         auto&  invalid_ids = m_invalid_object_ids.at(as_number(COLLISION_SHAPE_TYPE::TRIANGLE));
         if (invalid_ids.empty())
         {
             coid = make_collision_object_id(COLLISION_SHAPE_TYPE::TRIANGLE, (natural_32_bit)m_triangles_geometry.size());
 
-            m_triangles_geometry.push_back(triangle);
+            m_triangles_geometry.push_back(geometry);
             m_triangles_bbox.push_back(bbox);
             m_triangles_material.push_back(material);
 
@@ -276,7 +313,7 @@ collision_object_id  collision_scene::insert_triangle(
         {
             coid = make_collision_object_id(COLLISION_SHAPE_TYPE::TRIANGLE, invalid_ids.back());
 
-            m_triangles_geometry.at(invalid_ids.back()) = triangle;
+            m_triangles_geometry.at(invalid_ids.back()) = geometry;
             m_triangles_bbox.at(invalid_ids.back()) = bbox;
             m_triangles_material.at(invalid_ids.back()) = material;
 
@@ -309,7 +346,24 @@ void  collision_scene::erase_object(collision_object_id const  coid)
 
 void  collision_scene::on_position_changed(collision_object_id const  coid, matrix44 const&  from_base_matrix)
 {
-    // TODO!
+    if (m_dynamic_object_ids.count(coid) == 0UL)
+    {
+        m_proximity_static_objects.erase(coid);
+
+        update_shape_position(coid, from_base_matrix);
+
+        m_proximity_static_objects.insert(coid);
+        m_does_proximity_static_need_rebalancing = true;
+    }
+    else
+    {
+        m_proximity_dynamic_objects.erase(coid);
+
+        update_shape_position(coid, from_base_matrix);
+
+        m_proximity_dynamic_objects.insert(coid);
+        m_does_proximity_dynamic_need_rebalancing = true;
+    }
 }
 
 
@@ -371,22 +425,20 @@ vector3  collision_scene::get_object_aabb_min_corner(collision_object_id const  
     switch (get_shape_type(coid))
     {
     case COLLISION_SHAPE_TYPE::CAPSULE:
-        return m_capsules_bbox.at(get_instance_index(coid)).first;
+        return m_capsules_bbox.at(get_instance_index(coid)).min_corner;
     case COLLISION_SHAPE_TYPE::LINE:
-        return m_lines_bbox.at(get_instance_index(coid)).first;
+        return m_lines_bbox.at(get_instance_index(coid)).min_corner;
     case COLLISION_SHAPE_TYPE::POINT:
         return m_points_geometry.at(get_instance_index(coid));
         break;
     case COLLISION_SHAPE_TYPE::SPHERE:
         {
-            auto const&  center_and_radius = m_spheres_geometry.at(get_instance_index(coid));
-            return center_and_radius.first - vector3(center_and_radius.second,
-                                                     center_and_radius.second,
-                                                     center_and_radius.second);
+            auto const&  geometry = m_spheres_geometry.at(get_instance_index(coid));
+            return geometry.center_in_world_space - vector3(geometry.radius, geometry.radius, geometry.radius);
         }
         break;
     case COLLISION_SHAPE_TYPE::TRIANGLE:
-        return m_triangles_bbox.at(get_instance_index(coid)).first;
+        return m_triangles_bbox.at(get_instance_index(coid)).min_corner;
         break;
     default:
         UNREACHABLE();
@@ -399,26 +451,87 @@ vector3  collision_scene::get_object_aabb_max_corner(collision_object_id const  
     switch (get_shape_type(coid))
     {
     case COLLISION_SHAPE_TYPE::CAPSULE:
-        return m_capsules_bbox.at(get_instance_index(coid)).second;
+        return m_capsules_bbox.at(get_instance_index(coid)).max_corner;
     case COLLISION_SHAPE_TYPE::LINE:
-        return m_lines_bbox.at(get_instance_index(coid)).second;
+        return m_lines_bbox.at(get_instance_index(coid)).max_corner;
     case COLLISION_SHAPE_TYPE::POINT:
         return m_points_geometry.at(get_instance_index(coid));
         break;
     case COLLISION_SHAPE_TYPE::SPHERE:
         {
-            auto const&  center_and_radius = m_spheres_geometry.at(get_instance_index(coid));
-            return center_and_radius.first + vector3(center_and_radius.second,
-                                                     center_and_radius.second,
-                                                     center_and_radius.second);
-        }
+            auto const&  geometry = m_spheres_geometry.at(get_instance_index(coid));
+            return geometry.center_in_world_space + vector3(geometry.radius, geometry.radius, geometry.radius);
+    }
         break;
     case COLLISION_SHAPE_TYPE::TRIANGLE:
-        return m_triangles_bbox.at(get_instance_index(coid)).second;
+        return m_triangles_bbox.at(get_instance_index(coid)).max_corner;
         break;
     default:
         UNREACHABLE();
     }
+}
+
+
+void  collision_scene::update_shape_position(collision_object_id const  coid, matrix44 const&  from_base_matrix)
+{
+    switch (get_shape_type(coid))
+    {
+    case COLLISION_SHAPE_TYPE::CAPSULE:
+        {
+            auto&  geometry = m_capsules_geometry.at(get_instance_index(coid));
+            vector3 const  end_point_1_in_model_space(0.0f, 0.0f, +geometry.half_distance_between_end_points);
+            vector3 const  end_point_2_in_model_space(0.0f, 0.0f, -geometry.half_distance_between_end_points);
+            geometry.end_point_1_in_world_space = transform_point(end_point_1_in_model_space, from_base_matrix);
+            geometry.end_point_2_in_world_space = transform_point(end_point_2_in_model_space, from_base_matrix);
+
+            m_capsules_bbox.at(get_instance_index(coid)) =
+                    compute_aabb_of_capsule(
+                            geometry.end_point_1_in_world_space,
+                            geometry.end_point_2_in_world_space,
+                            geometry.thickness_from_central_line
+                            );
+        }
+        break;
+    case COLLISION_SHAPE_TYPE::LINE:
+        {
+            auto&  geometry = m_lines_geometry.at(get_instance_index(coid));
+            vector3 const  end_point_1_in_model_space(0.0f, 0.0f, +geometry.half_distance_between_end_points);
+            vector3 const  end_point_2_in_model_space(0.0f, 0.0f, -geometry.half_distance_between_end_points);
+            geometry.end_point_1_in_world_space = transform_point(end_point_1_in_model_space, from_base_matrix);
+            geometry.end_point_2_in_world_space = transform_point(end_point_2_in_model_space, from_base_matrix);
+
+            m_lines_bbox.at(get_instance_index(coid)) =
+                    compute_aabb_of_line(geometry.end_point_1_in_world_space, geometry.end_point_2_in_world_space);
+        }
+        break;
+    case COLLISION_SHAPE_TYPE::POINT:
+        m_points_geometry.at(get_instance_index(coid)) = transform_point(vector3_zero(), from_base_matrix);
+        break;
+    case COLLISION_SHAPE_TYPE::SPHERE:
+        m_spheres_geometry.at(get_instance_index(coid)).center_in_world_space = transform_point(vector3_zero(), from_base_matrix);
+        break;
+    case COLLISION_SHAPE_TYPE::TRIANGLE:
+        {
+            auto&  geometry = m_triangles_geometry.at(get_instance_index(coid));
+            vector3 const  end_point_1_in_model_space = vector3_zero();
+            vector3 const  end_point_2_in_model_space = vector3(geometry.end_point_2_x_coord_in_model_space, 0.0f, 0.0f);
+            vector3 const  end_point_3_in_model_space = expand23(geometry.end_point_3_in_model_space, 0.0f);
+            geometry.end_point_1_in_world_space = transform_point(end_point_1_in_model_space, from_base_matrix);
+            geometry.end_point_2_in_world_space = transform_point(end_point_2_in_model_space, from_base_matrix);
+            geometry.end_point_2_in_world_space = transform_point(end_point_3_in_model_space, from_base_matrix);
+
+            m_triangles_bbox.at(get_instance_index(coid)) =
+                    compute_aabb_of_triangle(
+                            geometry.end_point_1_in_world_space,
+                            geometry.end_point_2_in_world_space,
+                            geometry.end_point_3_in_world_space
+                            );
+        }
+        break;
+    default:
+        UNREACHABLE();
+    }
+    // TODO!
 }
 
 

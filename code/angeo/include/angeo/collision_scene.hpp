@@ -13,20 +13,27 @@
 namespace angeo {
 
 
-std::pair<vector3, vector3>  compute_aabb_of_capsule(
+struct  axis_aligned_bounding_box
+{
+    vector3  min_corner;
+    vector3  max_corner;
+};
+
+
+axis_aligned_bounding_box  compute_aabb_of_capsule(
         vector3 const&  point_1,
         vector3 const&  point_2,
         float_32_bit const  radius
         );
 
 
-std::pair<vector3, vector3>  compute_aabb_of_line(
+axis_aligned_bounding_box  compute_aabb_of_line(
         vector3 const&  point_1,
         vector3 const&  point_2
         );
 
 
-std::pair<vector3, vector3>  compute_aabb_of_triangle(
+axis_aligned_bounding_box  compute_aabb_of_triangle(
         vector3 const&  point_1,
         vector3 const&  point_2,
         vector3 const&  point_3
@@ -393,38 +400,52 @@ struct  collision_scene
 {
     collision_scene();
 
+    /// In the models space the end points have coordinates:
+    ///      end_point_1_in_model_space = vector3(0,0,+half_distance_between_end_points)
+    ///      end_point_2_in_model_space = vector3(0,0,-half_distance_between_end_points)
     collision_object_id  insert_capsule(
-            vector3 const&  point_1,
-            vector3 const&  point_2,
-            float_32_bit const  radius,
+            float_32_bit const  half_distance_between_end_points,
+            float_32_bit const  thickness_from_central_line,
+            matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
             bool const  is_dynamic
             );
 
+    /// In the models space the end points have coordinates:
+    ///      end_point_1_in_model_space = vector3(0,0,+half_distance_between_end_points)
+    ///      end_point_2_in_model_space = vector3(0,0,-half_distance_between_end_points)
     collision_object_id  insert_line(
-            vector3 const&  point_1,
-            vector3 const&  point_2,
+            float_32_bit const  half_distance_between_end_points,
+            matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
             bool const  is_dynamic
             );
 
+    /// In the models space the points have coordinates:
+    ///      point_in_model_space = vector3_zero()
     collision_object_id  insert_point(
-            vector3 const&  position,
-            COLLISION_MATERIAL_TYPE const  material,
-            bool const  is_dynamic  
-            );
-
-    collision_object_id  insert_sphere(
-            vector3 const&  centre,
-            float_32_bit const  radius,
+            matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
             bool const  is_dynamic
             );
 
+    /// In the models space the points have coordinates:
+    ///      point_in_model_space = vector3_zero()
+    collision_object_id  insert_sphere(
+            float_32_bit const  radius,
+            matrix44 const&  from_base_matrix,
+            COLLISION_MATERIAL_TYPE const  material,
+            bool const  is_dynamic
+            );
+
+    /// In the model space the end points are assumed as follows:
+    ///      end_point_1_in_model_space = vector3_zero()
+    ///      end_point_2_in_model_space = vector3(end_point_2_x_coord_in_model_space,0,0)
+    ///      end_point_3_in_model_space = expand23(end_point_3_in_model_space,0)
     collision_object_id  insert_triangle(
-            vector3 const&  point_1,
-            vector3 const&  point_2,
-            vector3 const&  point_3,
+            float_32_bit const  end_point_2_x_coord_in_model_space,
+            vector2 const&  end_point_3_in_model_space,
+            matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
             bool const  is_dynamic
             );
@@ -459,12 +480,20 @@ private:
     vector3  get_object_aabb_min_corner(collision_object_id const  coid) const;
     vector3  get_object_aabb_max_corner(collision_object_id const  coid) const;
 
+    void  update_shape_position(collision_object_id const  coid, matrix44 const&  from_base_matrix);
+
     void  insert_object(collision_object_id const  coid, bool const  is_dynamic)
     {
         if (is_dynamic) insert_dynamic_object(coid); else insert_static_object(coid);
     }
     void  insert_static_object(collision_object_id const  coid);
     void  insert_dynamic_object(collision_object_id const  coid);
+
+
+    /////////////////////////////////////////////////////////////////////////////////
+    // DATA
+    /////////////////////////////////////////////////////////////////////////////////
+
 
     angeo::proximity_map<collision_object_id>  m_proximity_static_objects;  ///< These do not collide amongst each other.
     angeo::proximity_map<collision_object_id>  m_proximity_dynamic_objects; ///< These collide amongst each other, plus with
@@ -477,22 +506,84 @@ private:
 
     std::array<std::vector<natural_32_bit>, get_max_collision_shape_type_id() + 1U>  m_invalid_object_ids;
 
-    std::vector<std::pair<std::pair<vector3, vector3>, float_32_bit> >  m_capsules_geometry;
-    std::vector<std::pair<vector3, vector3> >  m_capsules_bbox;
+    /////////////////////////////////////////////////////////////////////////////////
+    // CAPSULES
+
+    struct capsule_geometry
+    {
+        vector3  end_point_1_in_world_space;
+        vector3  end_point_2_in_world_space;
+
+        // In the models space the end points have coordinates:
+        //      end_point_1_in_model_space = vector3(0,0,+half_distance_between_end_points)
+        //      end_point_2_in_model_space = vector3(0,0,-half_distance_between_end_points)
+
+        float_32_bit  half_distance_between_end_points;
+
+        float_32_bit  thickness_from_central_line;
+    };
+
+    std::vector<capsule_geometry>  m_capsules_geometry;
+    std::vector<axis_aligned_bounding_box>  m_capsules_bbox;
     std::vector<COLLISION_MATERIAL_TYPE>  m_capsules_material;
 
-    std::vector<std::pair<vector3, vector3> >  m_lines_geometry;
-    std::vector<std::pair<vector3, vector3> >  m_lines_bbox;
+    /////////////////////////////////////////////////////////////////////////////////
+    // LINES
+
+    struct line_geometry
+    {
+        vector3  end_point_1_in_world_space;
+        vector3  end_point_2_in_world_space;
+
+        // In the models space the end points have coordinates:
+        //      end_point_1_in_model_space = vector3(0,0,+half_distance_between_end_points)
+        //      end_point_2_in_model_space = vector3(0,0,-half_distance_between_end_points)
+
+        float_32_bit  half_distance_between_end_points;
+    };
+
+    std::vector<line_geometry>  m_lines_geometry;
+    std::vector<axis_aligned_bounding_box>  m_lines_bbox;
     std::vector<COLLISION_MATERIAL_TYPE>  m_lines_material;
+
+    /////////////////////////////////////////////////////////////////////////////////
+    // POINTS
 
     std::vector<vector3>  m_points_geometry;
     std::vector<COLLISION_MATERIAL_TYPE>  m_points_material;
 
-    std::vector<std::pair<vector3, float_32_bit> >  m_spheres_geometry;
+    /////////////////////////////////////////////////////////////////////////////////
+    // SPHERES
+
+    struct sphere_geometry
+    {
+        vector3  center_in_world_space;
+        float_32_bit  radius;
+    };
+
+    std::vector<sphere_geometry>  m_spheres_geometry;
     std::vector<COLLISION_MATERIAL_TYPE>  m_spheres_material;
 
-    std::vector<std::tuple<vector3, vector3, vector3> >  m_triangles_geometry;
-    std::vector<std::pair<vector3, vector3> >  m_triangles_bbox;
+    /////////////////////////////////////////////////////////////////////////////////
+    // TRIANGLES
+
+    struct triangle_geometry
+    {
+        vector3  end_point_1_in_world_space;
+        vector3  end_point_2_in_world_space;
+        vector3  end_point_3_in_world_space;
+
+        // In the model space the end points are assumed as follows:
+        //      end_point_1_in_model_space = vector3_zero()
+        //      end_point_2_in_model_space = vector3(end_point_2_x_coord_in_model_space,0,0)
+        //      end_point_3_in_model_space = expand23(end_point_3_in_model_space,0)
+
+        float_32_bit  end_point_2_x_coord_in_model_space;
+        vector2  end_point_3_in_model_space;
+    };
+
+    std::vector<triangle_geometry>  m_triangles_geometry;
+    std::vector<axis_aligned_bounding_box>  m_triangles_bbox;
     std::vector<COLLISION_MATERIAL_TYPE>  m_triangles_material;
 };
 
