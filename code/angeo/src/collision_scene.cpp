@@ -403,20 +403,42 @@ void  collision_scene::compute_contacts_of_single_dynamic_object(
 void  collision_scene::find_objects_in_proximity_to_axis_aligned_bounding_box(
         vector3 const& min_corner,
         vector3 const& max_corner,
+        bool const search_static,
+        bool const search_dynamic,
         collision_object_acceptor&  acceptor
         )
 {
-    // TODO!
+    if (search_static)
+    {
+        rebalance_static_proximity_map_if_needed();
+        m_proximity_static_objects.find_by_bbox(min_corner, max_corner, acceptor);
+    }
+    if (search_dynamic)
+    {
+        rebalance_dynamic_proximity_map_if_needed();
+        m_proximity_dynamic_objects.find_by_bbox(min_corner, max_corner, acceptor);
+    }
 }
 
 
 void  collision_scene::find_objects_in_proximity_to_line(
         vector3 const&  line_begin,
         vector3 const&  line_end,
+        bool const search_static,
+        bool const search_dynamic,
         collision_object_acceptor&  acceptor
         )
 {
-    // TODO!
+    if (search_static)
+    {
+        rebalance_static_proximity_map_if_needed();
+        m_proximity_static_objects.find_by_line(line_begin, line_end, acceptor);
+    }
+    if (search_dynamic)
+    {
+        rebalance_dynamic_proximity_map_if_needed();
+        m_proximity_dynamic_objects.find_by_line(line_begin, line_end, acceptor);
+    }
 }
 
 
@@ -531,7 +553,6 @@ void  collision_scene::update_shape_position(collision_object_id const  coid, ma
     default:
         UNREACHABLE();
     }
-    // TODO!
 }
 
 
@@ -546,6 +567,24 @@ void  collision_scene::insert_dynamic_object(collision_object_id const  coid)
     m_dynamic_object_ids.insert(coid);
     m_proximity_dynamic_objects.insert(coid);
     m_does_proximity_dynamic_need_rebalancing = true;
+}
+
+void  collision_scene::rebalance_static_proximity_map_if_needed()
+{
+    if (m_does_proximity_static_need_rebalancing)
+    {
+        m_proximity_static_objects.rebalance();
+        m_does_proximity_static_need_rebalancing = false;
+    }
+}
+
+void  collision_scene::rebalance_dynamic_proximity_map_if_needed()
+{
+    if (m_does_proximity_dynamic_need_rebalancing)
+    {
+        m_proximity_dynamic_objects.rebalance();
+        m_does_proximity_dynamic_need_rebalancing = false;
+    }
 }
 
 

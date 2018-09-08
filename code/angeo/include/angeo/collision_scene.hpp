@@ -466,12 +466,16 @@ struct  collision_scene
     void  find_objects_in_proximity_to_axis_aligned_bounding_box(
             vector3 const& min_corner,
             vector3 const& max_corner,
+            bool const search_static,
+            bool const search_dynamic,
             collision_object_acceptor&  acceptor
             );
 
     void  find_objects_in_proximity_to_line(
             vector3 const&  line_begin,
             vector3 const&  line_end,
+            bool const search_static,
+            bool const search_dynamic,
             collision_object_acceptor&  acceptor
             );
 
@@ -488,6 +492,9 @@ private:
     }
     void  insert_static_object(collision_object_id const  coid);
     void  insert_dynamic_object(collision_object_id const  coid);
+
+    void  rebalance_static_proximity_map_if_needed();
+    void  rebalance_dynamic_proximity_map_if_needed();
 
 
     /////////////////////////////////////////////////////////////////////////////////
