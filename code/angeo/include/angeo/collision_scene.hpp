@@ -5,6 +5,7 @@
 #   include <angeo/proximity_map.hpp>
 #   include <utility/std_pair_hash.hpp>
 #   include <unordered_set>
+#   include <array>
 #   include <vector>
 #   include <functional>
 #   include <tuple>
@@ -12,10 +13,35 @@
 namespace angeo {
 
 
+std::pair<vector3, vector3>  compute_aabb_of_capsule(
+        vector3 const&  point_1,
+        vector3 const&  point_2,
+        float_32_bit const  radius
+        );
+
+
+std::pair<vector3, vector3>  compute_aabb_of_line(
+        vector3 const&  point_1,
+        vector3 const&  point_2
+        );
+
+
+std::pair<vector3, vector3>  compute_aabb_of_triangle(
+        vector3 const&  point_1,
+        vector3 const&  point_2,
+        vector3 const&  point_3
+        );
+
+
+}
+
+namespace angeo {
+
+
 enum struct  COLLISION_SHAPE_TYPE : natural_8_bit
 {
     //BOX                     = 0,
-    //CAPSULE                 = 1,
+    CAPSULE                 = 1,
     //CONE                    = 2,
     LINE                    = 3,
     POINT                   = 4,
@@ -24,6 +50,16 @@ enum struct  COLLISION_SHAPE_TYPE : natural_8_bit
     //TORUS                   = 7,
     TRIANGLE                = 8,
 };
+
+inline natural_8_bit  as_number(COLLISION_SHAPE_TYPE const  cst)
+{
+    return static_cast<natural_8_bit>(cst);
+}
+
+inline constexpr natural_8_bit  get_max_collision_shape_type_id()
+{ 
+    return static_cast<natural_8_bit>(COLLISION_SHAPE_TYPE::TRIANGLE);
+}
 
 
 struct  collision_object_id
@@ -357,6 +393,14 @@ struct  collision_scene
 {
     collision_scene();
 
+    collision_object_id  insert_capsule(
+            vector3 const&  point_1,
+            vector3 const&  point_2,
+            float_32_bit const  radius,
+            COLLISION_MATERIAL_TYPE const  material,
+            bool const  is_dynamic
+            );
+
     collision_object_id  insert_line(
             vector3 const&  point_1,
             vector3 const&  point_2,
@@ -412,6 +456,16 @@ struct  collision_scene
 
 private:
 
+    vector3  get_object_aabb_min_corner(collision_object_id const  coid) const;
+    vector3  get_object_aabb_max_corner(collision_object_id const  coid) const;
+
+    void  insert_object(collision_object_id const  coid, bool const  is_dynamic)
+    {
+        if (is_dynamic) insert_dynamic_object(coid); else insert_static_object(coid);
+    }
+    void  insert_static_object(collision_object_id const  coid);
+    void  insert_dynamic_object(collision_object_id const  coid);
+
     angeo::proximity_map<collision_object_id>  m_proximity_static_objects;  ///< These do not collide amongst each other.
     angeo::proximity_map<collision_object_id>  m_proximity_dynamic_objects; ///< These collide amongst each other, plus with
                                                                             ///< those in 'm_proximity_static_objects' map.
@@ -420,6 +474,12 @@ private:
     bool  m_does_proximity_dynamic_need_rebalancing;
 
     std::unordered_set<detail::collision_objects_pair>  m_disabled_colliding;
+
+    std::array<std::vector<natural_32_bit>, get_max_collision_shape_type_id() + 1U>  m_invalid_object_ids;
+
+    std::vector<std::pair<std::pair<vector3, vector3>, float_32_bit> >  m_capsules_geometry;
+    std::vector<std::pair<vector3, vector3> >  m_capsules_bbox;
+    std::vector<COLLISION_MATERIAL_TYPE>  m_capsules_material;
 
     std::vector<std::pair<vector3, vector3> >  m_lines_geometry;
     std::vector<std::pair<vector3, vector3> >  m_lines_bbox;
