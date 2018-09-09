@@ -1,8 +1,45 @@
 #include <angeo/collision_scene.hpp>
+#include <angeo/collide.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
+#include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 #include <set>
+
+namespace {
+
+
+using  collision_shape_type_pair = std::pair<angeo::COLLISION_SHAPE_TYPE, angeo::COLLISION_SHAPE_TYPE>;
+
+inline collision_shape_type_pair  make_collision_shape_type_pair(
+        angeo::COLLISION_SHAPE_TYPE const  first,
+        angeo::COLLISION_SHAPE_TYPE const  second
+        ) noexcept
+{
+    return as_number(first) < as_number(second) ? collision_shape_type_pair{ first, second } :
+                                                  collision_shape_type_pair{ second, first };
+}
+
+bool  makes_sense_to_check_bboxes_intersection(
+            angeo::COLLISION_SHAPE_TYPE const  cst_1,
+            angeo::COLLISION_SHAPE_TYPE const  cst_2
+            )
+{
+    static std::unordered_set<std::pair<angeo::COLLISION_SHAPE_TYPE, angeo::COLLISION_SHAPE_TYPE> > const  useless_bbox_checks {
+        make_collision_shape_type_pair(angeo::COLLISION_SHAPE_TYPE::POINT, angeo::COLLISION_SHAPE_TYPE::CAPSULE),
+        make_collision_shape_type_pair(angeo::COLLISION_SHAPE_TYPE::POINT, angeo::COLLISION_SHAPE_TYPE::LINE),
+        make_collision_shape_type_pair(angeo::COLLISION_SHAPE_TYPE::POINT, angeo::COLLISION_SHAPE_TYPE::POINT),
+        make_collision_shape_type_pair(angeo::COLLISION_SHAPE_TYPE::POINT, angeo::COLLISION_SHAPE_TYPE::SPHERE),
+        make_collision_shape_type_pair(angeo::COLLISION_SHAPE_TYPE::POINT, angeo::COLLISION_SHAPE_TYPE::TRIANGLE),
+
+        make_collision_shape_type_pair(angeo::COLLISION_SHAPE_TYPE::SPHERE, angeo::COLLISION_SHAPE_TYPE::SPHERE),
+    };
+    return useless_bbox_checks.count(make_collision_shape_type_pair(cst_1, cst_2)) == 0UL;
+}
+
+
+}
+
 
 namespace angeo {
 
@@ -114,6 +151,8 @@ collision_object_id  collision_scene::insert_capsule(
         bool const  is_dynamic
         )
 {
+    TMPROF_BLOCK();
+
     collision_object_id  coid;
     {
         vector3 const  end_point_1_in_model_space(0.0f, 0.0f, +half_distance_between_end_points);
@@ -164,6 +203,8 @@ collision_object_id  collision_scene::insert_line(
         bool const  is_dynamic
         )
 {
+    TMPROF_BLOCK();
+
     collision_object_id  coid;
     {
         vector3 const  end_point_1_in_model_space(0.0f, 0.0f, +half_distance_between_end_points);
@@ -209,6 +250,8 @@ collision_object_id  collision_scene::insert_point(
         bool const  is_dynamic  
         )
 {
+    TMPROF_BLOCK();
+
     collision_object_id  coid;
     {
         vector3 const  position_in_world_space = transform_point(vector3_zero(), from_base_matrix);
@@ -244,6 +287,8 @@ collision_object_id  collision_scene::insert_sphere(
         bool const  is_dynamic
         )
 {
+    TMPROF_BLOCK();
+
     collision_object_id  coid;
     {
         sphere_geometry const  geometry { transform_point(vector3_zero(), from_base_matrix), radius };
@@ -280,6 +325,8 @@ collision_object_id  collision_scene::insert_triangle(
         bool const  is_dynamic
         )
 {
+    TMPROF_BLOCK();
+
     collision_object_id  coid;
     {
         vector3 const  end_point_1_in_model_space_ = vector3_zero();
@@ -328,6 +375,8 @@ collision_object_id  collision_scene::insert_triangle(
 
 void  collision_scene::erase_object(collision_object_id const  coid)
 {
+    TMPROF_BLOCK();
+
     auto const  it = m_dynamic_object_ids.find(coid);
     if (it == m_dynamic_object_ids.end())
     {
@@ -347,6 +396,8 @@ void  collision_scene::erase_object(collision_object_id const  coid)
 
 void  collision_scene::on_position_changed(collision_object_id const  coid, matrix44 const&  from_base_matrix)
 {
+    TMPROF_BLOCK();
+
     if (m_dynamic_object_ids.count(coid) == 0UL)
     {
         m_proximity_static_objects.erase(coid);
@@ -386,8 +437,10 @@ void  collision_scene::enable_colliding_of_dynamic_objects(
 }
 
 
-void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor&  acceptor, bool  with_static)
+void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor const&  acceptor, bool  with_static)
 {
+    TMPROF_BLOCK();
+
     {
         rebalance_dynamic_proximity_map_if_needed();
 
@@ -434,11 +487,13 @@ void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor&
 
 void  collision_scene::compute_contacts_of_single_dynamic_object(
         collision_object_id const  coid,
-        contact_acceptor&  acceptor,
+        contact_acceptor const&  acceptor,
         bool const with_static,
         bool const with_dynamic
         )
 {
+    TMPROF_BLOCK();
+
     vector3 const  min_corner_of_objects_bbox = get_object_aabb_min_corner(coid);
     vector3 const  max_corner_of_objects_bbox = get_object_aabb_max_corner(coid);
 
@@ -480,9 +535,11 @@ void  collision_scene::find_objects_in_proximity_to_axis_aligned_bounding_box(
         vector3 const& max_corner,
         bool const search_static,
         bool const search_dynamic,
-        collision_object_acceptor&  acceptor
+        collision_object_acceptor const&  acceptor
         )
 {
+    TMPROF_BLOCK();
+
     if (search_static)
     {
         rebalance_static_proximity_map_if_needed();
@@ -521,9 +578,11 @@ void  collision_scene::find_objects_in_proximity_to_line(
         vector3 const&  line_end,
         bool const search_static,
         bool const search_dynamic,
-        collision_object_acceptor&  acceptor
+        collision_object_acceptor const&  acceptor
         )
 {
+    TMPROF_BLOCK();
+
     if (search_static)
     {
         rebalance_static_proximity_map_if_needed();
@@ -611,6 +670,8 @@ vector3  collision_scene::get_object_aabb_max_corner(collision_object_id const  
 
 void  collision_scene::update_shape_position(collision_object_id const  coid, matrix44 const&  from_base_matrix)
 {
+    TMPROF_BLOCK();
+
     switch (get_shape_type(coid))
     {
     case COLLISION_SHAPE_TYPE::CAPSULE:
@@ -705,14 +766,292 @@ void  collision_scene::rebalance_dynamic_proximity_map_if_needed()
 
 bool  collision_scene::compute_contacts(
         detail::collision_objects_pair  cop,
-        contact_acceptor&  acceptor,
-        bool const  bboex_surely_intersect
+        contact_acceptor const&  acceptor,
+        bool const  bboxes_of_objects_surely_intersect
         )
 {
-    // TODO!
+    TMPROF_BLOCK();
 
-    return true;
+    COLLISION_SHAPE_TYPE const  shape_type_1 = get_shape_type(cop.first);
+    COLLISION_SHAPE_TYPE const  shape_type_2 = get_shape_type(cop.second);
+
+    if (bboxes_of_objects_surely_intersect == false && makes_sense_to_check_bboxes_intersection(shape_type_1,shape_type_2))
+    {
+        if (false == collision_bbox_bbox(
+                            get_object_aabb_min_corner(cop.first),
+                            get_object_aabb_max_corner(cop.first),
+                            get_object_aabb_min_corner(cop.second),
+                            get_object_aabb_max_corner(cop.second)
+                            ))
+            return true; // I.e. do not stop a high-level contact search algorithm.
+    }
+
+    natural_32_bit const  instance_index_1 = get_instance_index(cop.first);
+    natural_32_bit const  instance_index_2 = get_instance_index(cop.second);
+
+    auto const  swap_acceptor =
+            [&acceptor](contact_id const& cid, vector3 const& contact_point, vector3 const& unit_normal) -> bool {
+                return acceptor(contact_id(cid.second, cid.first), contact_point, -unit_normal);
+            };
+
+    switch (shape_type_1)
+    {
+    case COLLISION_SHAPE_TYPE::CAPSULE:
+        switch (shape_type_2)
+        {
+        case COLLISION_SHAPE_TYPE::CAPSULE:
+            return compute_contacts__capsule_vs_capsule(instance_index_1, instance_index_2, acceptor);
+        case COLLISION_SHAPE_TYPE::LINE:
+            return compute_contacts__capsule_vs_line(instance_index_1, instance_index_2, acceptor);
+        case COLLISION_SHAPE_TYPE::POINT:
+            return compute_contacts__capsule_vs_point(instance_index_1, instance_index_2, acceptor);
+        case COLLISION_SHAPE_TYPE::SPHERE:
+            return compute_contacts__capsule_vs_sphere(instance_index_1, instance_index_2, acceptor);
+        case COLLISION_SHAPE_TYPE::TRIANGLE:
+            return compute_contacts__capsule_vs_triangle(instance_index_1, instance_index_2, acceptor);
+        default: UNREACHABLE();
+        }
+        break;
+    case COLLISION_SHAPE_TYPE::LINE:
+        switch (shape_type_2)
+        {
+        case COLLISION_SHAPE_TYPE::CAPSULE:
+            return compute_contacts__capsule_vs_line(instance_index_2, instance_index_1, swap_acceptor);
+        case COLLISION_SHAPE_TYPE::LINE:
+            return compute_contacts__line_vs_line(instance_index_1, instance_index_2, acceptor);
+        case COLLISION_SHAPE_TYPE::POINT:
+            return compute_contacts__line_vs_point(instance_index_1, instance_index_2, acceptor);
+        case COLLISION_SHAPE_TYPE::SPHERE:
+            return compute_contacts__line_vs_sphere(instance_index_1, instance_index_2, acceptor);
+        case COLLISION_SHAPE_TYPE::TRIANGLE:
+            return compute_contacts__line_vs_triangle(instance_index_1, instance_index_2, acceptor);
+        default: UNREACHABLE();
+        }
+        break;
+    case COLLISION_SHAPE_TYPE::POINT:
+        switch (shape_type_2)
+        {
+        case COLLISION_SHAPE_TYPE::CAPSULE:
+            return compute_contacts__capsule_vs_point(instance_index_2, instance_index_1, swap_acceptor);
+        case COLLISION_SHAPE_TYPE::LINE:
+            return compute_contacts__line_vs_point(instance_index_2, instance_index_1, swap_acceptor);
+        case COLLISION_SHAPE_TYPE::POINT:
+            return compute_contacts__point_vs_point(instance_index_1, instance_index_2, acceptor);
+        case COLLISION_SHAPE_TYPE::SPHERE:
+            return compute_contacts__point_vs_sphere(instance_index_1, instance_index_2, acceptor);
+        case COLLISION_SHAPE_TYPE::TRIANGLE:
+            return compute_contacts__point_vs_triangle(instance_index_1, instance_index_2, acceptor);
+        default: UNREACHABLE();
+        }
+        break;
+    case COLLISION_SHAPE_TYPE::SPHERE:
+        switch (shape_type_2)
+        {
+        case COLLISION_SHAPE_TYPE::CAPSULE:
+            return compute_contacts__capsule_vs_sphere(instance_index_2, instance_index_1, swap_acceptor);
+        case COLLISION_SHAPE_TYPE::LINE:
+            return compute_contacts__line_vs_sphere(instance_index_2, instance_index_1, swap_acceptor);
+        case COLLISION_SHAPE_TYPE::POINT:
+            return compute_contacts__point_vs_sphere(instance_index_2, instance_index_1, swap_acceptor);
+        case COLLISION_SHAPE_TYPE::SPHERE:
+            return compute_contacts__sphere_vs_sphere(instance_index_1, instance_index_2, acceptor);
+        case COLLISION_SHAPE_TYPE::TRIANGLE:
+            return compute_contacts__sphere_vs_triangle(instance_index_1, instance_index_2, acceptor);
+        default: UNREACHABLE();
+        }
+        break;
+    case COLLISION_SHAPE_TYPE::TRIANGLE:
+        switch (shape_type_2)
+        {
+        case COLLISION_SHAPE_TYPE::CAPSULE:
+            return compute_contacts__capsule_vs_triangle(instance_index_2, instance_index_1, swap_acceptor);
+        case COLLISION_SHAPE_TYPE::LINE:
+            return compute_contacts__line_vs_triangle(instance_index_2, instance_index_1, swap_acceptor);
+        case COLLISION_SHAPE_TYPE::POINT:
+            return compute_contacts__point_vs_triangle(instance_index_2, instance_index_1, swap_acceptor);
+        case COLLISION_SHAPE_TYPE::SPHERE:
+            return compute_contacts__sphere_vs_triangle(instance_index_2, instance_index_1, swap_acceptor);
+        case COLLISION_SHAPE_TYPE::TRIANGLE:
+            return compute_contacts__triangle_vs_triangle(instance_index_1, instance_index_2, acceptor);
+        default: UNREACHABLE();
+        }
+        break;
+    default: UNREACHABLE();
+    }
+
+    return true; // I.e. do not stop a high-level contact search algorithm.
 }
+
+
+bool  collision_scene::compute_contacts__capsule_vs_capsule(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+bool  collision_scene::compute_contacts__capsule_vs_line(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+bool  collision_scene::compute_contacts__capsule_vs_point(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+bool  collision_scene::compute_contacts__capsule_vs_sphere(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+bool  collision_scene::compute_contacts__capsule_vs_triangle(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+
+bool  collision_scene::compute_contacts__line_vs_line(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+bool  collision_scene::compute_contacts__line_vs_point(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+bool  collision_scene::compute_contacts__line_vs_sphere(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+bool  collision_scene::compute_contacts__line_vs_triangle(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+
+bool  collision_scene::compute_contacts__point_vs_point(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+bool  collision_scene::compute_contacts__point_vs_sphere(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+bool  collision_scene::compute_contacts__point_vs_triangle(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+
+bool  collision_scene::compute_contacts__sphere_vs_sphere(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+bool  collision_scene::compute_contacts__sphere_vs_triangle(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+
+bool  collision_scene::compute_contacts__triangle_vs_triangle(
+        natural_32_bit const  instance_index_1,
+        natural_32_bit const  instance_index_2,
+        contact_acceptor const&  acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
 
 
 }

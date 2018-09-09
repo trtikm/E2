@@ -69,6 +69,11 @@ inline constexpr natural_8_bit  get_max_collision_shape_type_id()
 }
 
 
+}
+
+namespace angeo {
+
+
 struct  collision_object_id
 {
     natural_32_bit   m_shape_type : 4,
@@ -306,7 +311,8 @@ namespace angeo {
 
 
 /**
- * INVARIANT: For each instance 'X' of the type 'contact_id': 'X.first < X.second'.
+ * INVARIANT: For each instance 'X' of the type 'contact_id':
+ *            'get_object_id(get_first_collider_id(X)) < get_object_id(get_second_collider_id(X))'.
  */
 using  contact_id = std::pair<collision_object_and_shape_feature_id, collision_object_and_shape_feature_id>;
 
@@ -469,10 +475,10 @@ struct  collision_scene
     void  disable_colliding_of_dynamic_objects(collision_object_id const  coid_1, collision_object_id const  coid_2);
     void  enable_colliding_of_dynamic_objects(collision_object_id const  coid_1, collision_object_id const  coid_2);
 
-    void  compute_contacts_of_all_dynamic_objects(contact_acceptor&  acceptor, bool  with_static = true);
+    void  compute_contacts_of_all_dynamic_objects(contact_acceptor const&  acceptor, bool  with_static = true);
     void  compute_contacts_of_single_dynamic_object(
             collision_object_id const  coid,
-            contact_acceptor&  acceptor,
+            contact_acceptor const&  acceptor,
             bool const with_static = true,
             bool const with_dynamic = true
             );
@@ -482,7 +488,7 @@ struct  collision_scene
             vector3 const& max_corner,
             bool const search_static,
             bool const search_dynamic,
-            collision_object_acceptor&  acceptor
+            collision_object_acceptor const&  acceptor
             );
 
     void  find_objects_in_proximity_to_line(
@@ -490,7 +496,7 @@ struct  collision_scene
             vector3 const&  line_end,
             bool const search_static,
             bool const search_dynamic,
-            collision_object_acceptor&  acceptor
+            collision_object_acceptor const&  acceptor
             );
 
 private:
@@ -512,9 +518,29 @@ private:
 
     bool  compute_contacts(
             detail::collision_objects_pair  cop,
-            contact_acceptor&  acceptor,
-            bool const  bboex_surely_intersect = false
+            contact_acceptor const&  acceptor,
+            bool const  bboxes_of_objects_surely_intersect = false
             );
+
+    bool  compute_contacts__capsule_vs_capsule(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor );
+    bool  compute_contacts__capsule_vs_line(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__capsule_vs_point(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__capsule_vs_sphere(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__capsule_vs_triangle(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+
+    bool  compute_contacts__line_vs_line(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__line_vs_point(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__line_vs_sphere(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__line_vs_triangle(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+
+    bool  compute_contacts__point_vs_point(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__point_vs_sphere(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__point_vs_triangle(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+
+    bool  compute_contacts__sphere_vs_sphere(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__sphere_vs_triangle(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+
+    bool  compute_contacts__triangle_vs_triangle(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
 
     /////////////////////////////////////////////////////////////////////////////////
     // DATA
