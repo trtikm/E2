@@ -120,14 +120,16 @@ struct proximity_map
     void  find_by_bbox(
             vector3 const& query_bbox_min_corner,
             vector3 const& query_bbox_max_corner,
-            std::function<bool(object_type)> const&  output_collector
+            std::function<bool(object_type)>&  output_collector
             );
 
     void  find_by_line(
             vector3 const&  line_begin,
             vector3 const&  line_end,
-            std::function<bool(object_type)> const&  output_collector
+            std::function<bool(object_type)>&  output_collector
             );
+
+    void  enumerate(std::function<bool(object_type, natural_32_bit)>&  output_collector);
 
 private:
 
@@ -180,14 +182,20 @@ private:
             split_node*  node_ptr,
             vector3 const& query_bbox_min_corner,
             vector3 const& query_bbox_max_corner,
-            std::function<bool(object_type)> const&  output_collector
+            std::function<bool(object_type)>&  output_collector
             );
 
     void  find_by_line(
             split_node* const  node_ptr,
             vector3 const&  line_begin,
             vector3 const&  line_end,
-            std::function<bool(object_type)> const&  output_collector
+            std::function<bool(object_type)>&  output_collector
+            );
+
+    bool  enumerate(
+            split_node* const  node_ptr,
+            natural_32_bit&  output_leaf_node_index,
+            std::function<bool(object_type, natural_32_bit)>&  output_collector
             );
 
     void  apply_node_split(split_node* const  node_ptr);
@@ -439,7 +447,7 @@ template<typename  object_type__>
 void  proximity_map<object_type__>::find_by_bbox(
         vector3 const& query_bbox_min_corner,
         vector3 const& query_bbox_max_corner,
-        std::function<bool(object_type)> const&  output_collector
+        std::function<bool(object_type)>&  output_collector
         )
 {
     TMPROF_BLOCK();
@@ -453,7 +461,7 @@ void  proximity_map<object_type__>::find_by_bbox(
         split_node* const  node_ptr,
         vector3 const& query_bbox_min_corner,
         vector3 const& query_bbox_max_corner,
-        std::function<bool(object_type)> const&  output_collector
+        std::function<bool(object_type)>&  output_collector
         )
 {
     if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
@@ -492,7 +500,7 @@ template<typename  object_type__>
 void  proximity_map<object_type__>::find_by_line(
         vector3 const&  line_begin,
         vector3 const&  line_end,
-        std::function<bool(object_type)> const&  output_collector
+        std::function<bool(object_type)>&  output_collector
         )
 {
     TMPROF_BLOCK();
@@ -506,7 +514,7 @@ void  proximity_map<object_type__>::find_by_line(
         split_node* const  node_ptr,
         vector3 const&  line_begin,
         vector3 const&  line_end,
-        std::function<bool(object_type)> const&  output_collector
+        std::function<bool(object_type)>&  output_collector
         )
 {
     if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
@@ -572,6 +580,38 @@ void  proximity_map<object_type__>::find_by_line(
         find_by_line(first_node, line_begin, plane_point, output_collector);
         find_by_line(second_node, plane_point, line_end, output_collector);
     }
+}
+
+
+template<typename  object_type__>
+void  proximity_map<object_type__>::enumerate(std::function<bool(object_type, natural_32_bit)>&  output_collector)
+{
+    TMPROF_BLOCK();
+
+    natural_32_bit  leaf_node_index = 0U;
+    enumerate((m_root.get(), leaf_node_index, output_collector);
+}
+
+
+template<typename  object_type__>
+bool  proximity_map<object_type__>::enumerate(
+        split_node* const  node_ptr,
+        natural_32_bit&  output_leaf_node_index,
+        std::function<bool(object_type, natural_32_bit)>&  output_collector
+        )
+{
+    if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
+    {
+        for (object_type  object : *node_ptr->m_objects)
+            if (output_collector(object) == false)
+                return false;
+        ++output_leaf_node_index;
+        return true;
+    }
+
+    if (enumerate(node_ptr->m_front_child_node.get(), output_leaf_node_index, output_collector) == false)
+        return false;
+    return enumerate(node_ptr->m_back_child_node.get(), output_leaf_node_index, output_collector);
 }
 
 
