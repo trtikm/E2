@@ -178,14 +178,14 @@ private:
             natural_32_bit const  num_threads_available
             );
 
-    void  find_by_bbox(
+    bool  find_by_bbox(
             split_node*  node_ptr,
             vector3 const& query_bbox_min_corner,
             vector3 const& query_bbox_max_corner,
             std::function<bool(object_type)>&  output_collector
             );
 
-    void  find_by_line(
+    bool  find_by_line(
             split_node* const  node_ptr,
             vector3 const&  line_begin,
             vector3 const&  line_end,
@@ -457,7 +457,7 @@ void  proximity_map<object_type__>::find_by_bbox(
 
 
 template<typename  object_type__>
-void  proximity_map<object_type__>::find_by_bbox(
+bool  proximity_map<object_type__>::find_by_bbox(
         split_node* const  node_ptr,
         vector3 const& query_bbox_min_corner,
         vector3 const& query_bbox_max_corner,
@@ -476,22 +476,27 @@ void  proximity_map<object_type__>::find_by_bbox(
                     ))
             {
                 if (output_collector(object) == false)
-                    return;
+                    return false;
             }
         }
-        return;
+        return true;
     }
 
     int const  coord_idx = (int)node_ptr->m_split_plane_normal_direction;
 
     if (query_bbox_min_corner(coord_idx) > node_ptr->m_spit_plane_origin(coord_idx))
-        find_by_bbox(node_ptr->m_front_child_node.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector);
+        return find_by_bbox(node_ptr->m_front_child_node.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector);
     else if (query_bbox_max_corner(coord_idx) < node_ptr->m_spit_plane_origin(coord_idx))
-        find_by_bbox(node_ptr->m_back_child_node.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector);
+        return find_by_bbox(node_ptr->m_back_child_node.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector);
     else
     {
-        find_by_bbox(node_ptr->m_front_child_node.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector);
-        find_by_bbox(node_ptr->m_back_child_node.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector);
+        // We do not have to cut the query AABB into two sub-AABBs, because bothsub-AABBs
+        // would have the same lenghts along the remaining two axes as the original AABB.
+        // So, the cutting will not lead to exploration of less nodes.
+
+        if (find_by_bbox(node_ptr->m_front_child_node.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector) == false)
+            return false;
+        return find_by_bbox(node_ptr->m_back_child_node.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector);
     }
 }
 
@@ -510,7 +515,7 @@ void  proximity_map<object_type__>::find_by_line(
 
 
 template<typename  object_type__>
-void  proximity_map<object_type__>::find_by_line(
+bool  proximity_map<object_type__>::find_by_line(
         split_node* const  node_ptr,
         vector3 const&  line_begin,
         vector3 const&  line_end,
@@ -533,10 +538,10 @@ void  proximity_map<object_type__>::find_by_line(
                     ))
             {
                 if (output_collector(object) == false)
-                    return;
+                    return false;
             }
         }
-        return;
+        return true;
     }
 
     int const  coord_idx = (int)node_ptr->m_split_plane_normal_direction;
@@ -544,15 +549,19 @@ void  proximity_map<object_type__>::find_by_line(
     if (line_begin(coord_idx) > node_ptr->m_spit_plane_origin(coord_idx) &&
         line_end(coord_idx) > node_ptr->m_spit_plane_origin(coord_idx))
     {
-        find_by_line(node_ptr->m_front_child_node.get(), line_begin, line_end, output_collector);
+        return find_by_line(node_ptr->m_front_child_node.get(), line_begin, line_end, output_collector);
     }
     else if (line_begin(coord_idx) < node_ptr->m_spit_plane_origin(coord_idx) &&
              line_end(coord_idx) < node_ptr->m_spit_plane_origin(coord_idx))
     {
-        find_by_line(node_ptr->m_back_child_node.get(), line_begin, line_end, output_collector);
+        return find_by_line(node_ptr->m_back_child_node.get(), line_begin, line_end, output_collector);
     }
     else
     {
+        // We have to cut the query line by the split plane into two sub-lines, because that often
+        // makes both sub-lines shorter also along the remaining two axes (which in turn leads to
+        // more efficient query - more nodes NOT explored).
+
         vector3  plane_point;
         split_node* first_node;
         split_node* second_node;
@@ -577,8 +586,9 @@ void  proximity_map<object_type__>::find_by_line(
             }
         }
 
-        find_by_line(first_node, line_begin, plane_point, output_collector);
-        find_by_line(second_node, plane_point, line_end, output_collector);
+        if (find_by_line(first_node, line_begin, plane_point, output_collector) == false)
+            return false;
+        return find_by_line(second_node, plane_point, line_end, output_collector);
     }
 }
 
