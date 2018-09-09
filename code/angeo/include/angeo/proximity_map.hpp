@@ -64,12 +64,27 @@ namespace angeo {
  *                               // The return value 'false' would instruct the map to terminate the search.
  *               });
  *
- * In order to search for objects colliding with a line, use the function
- * 'find_by_line' instead of 'find_by_bbox'.
+ * NOTE: In order to search for objects colliding with a line, use the function
+ *       'find_by_line' instead of 'find_by_bbox'.
  *
- * NOTE: Both 'find_by_bbox' and 'find_by_line' may send the same object several times
- *       to the collector callback. So, the collector is responsible for filtering out
- *       those duplicities.
+ * NOTE: The proximity also provides a method 'enumerate' providing an enumeration of all
+ *       objects in the proximity map PER PROXIMITY CLUSTER. Objects are grouped into cluster
+ *       according to their spatial proximity. Technically speaking, each leaf node in the
+ *       proximity map represents one such cluster. You can control maximal size of the clusters
+ *       via the parameter 'max_num_objects_in_leaf_before_split' of the constructor of the
+ *       map. The method 'enumerate' first enumerates all objects in the first leaf node (cluster),
+ *       then all nodes in the second leaf, and so on. Each enumerated object is passed to the
+ *       output callback function together with an index of the currently enumerated leaf node.
+ *       So, the sequence of objects (with leaf indices) after enumeration of all K leaf nodes in
+ *       the proximity map will look like this:
+ *          (obj[0], 0), (obj[1], 0), ... ,(obj[n[0]-1], 0),                    // all n[0] objects in the leaf 0
+ *          (obj[n[0]], 1), (obj[n[0]+1], 1), ..., (obj[n[0]+n[1]-1], 1),       // all n[1] objects in the leaf 1
+ *          .........................................................................................................
+ *          (obj[n[0]+...+n[K-2]], K-1), ..., (obj[n[0]+...+n[K-1]-1], K-1),    // all n[K-1] objects in the leaf K-1
+ *
+ * NOTE: All methods 'find_by_bbox', 'find_by_line', and 'enumerate' may send the same
+ *       object several times to the collector callback. So, the collector is responsible
+ *       for filtering out those duplicities.
  *
  * In the end of the update step of the simulation you typically want to move objects
  * from current positions to the new (computed) ones. You need to erase an object from
@@ -120,16 +135,16 @@ struct proximity_map
     void  find_by_bbox(
             vector3 const& query_bbox_min_corner,
             vector3 const& query_bbox_max_corner,
-            std::function<bool(object_type)>&  output_collector
+            std::function<bool(object_type)> const&  output_collector
             );
 
     void  find_by_line(
             vector3 const&  line_begin,
             vector3 const&  line_end,
-            std::function<bool(object_type)>&  output_collector
+            std::function<bool(object_type)> const&  output_collector
             );
 
-    void  enumerate(std::function<bool(object_type, natural_32_bit)>&  output_collector);
+    void  enumerate(std::function<bool(object_type, natural_32_bit)> const&  output_collector);
 
 private:
 
@@ -182,20 +197,20 @@ private:
             split_node*  node_ptr,
             vector3 const& query_bbox_min_corner,
             vector3 const& query_bbox_max_corner,
-            std::function<bool(object_type)>&  output_collector
+            std::function<bool(object_type)> const&  output_collector
             );
 
     bool  find_by_line(
             split_node* const  node_ptr,
             vector3 const&  line_begin,
             vector3 const&  line_end,
-            std::function<bool(object_type)>&  output_collector
+            std::function<bool(object_type)> const&  output_collector
             );
 
     bool  enumerate(
             split_node* const  node_ptr,
             natural_32_bit&  output_leaf_node_index,
-            std::function<bool(object_type, natural_32_bit)>&  output_collector
+            std::function<bool(object_type, natural_32_bit)> const&  output_collector
             );
 
     void  apply_node_split(split_node* const  node_ptr);
@@ -447,7 +462,7 @@ template<typename  object_type__>
 void  proximity_map<object_type__>::find_by_bbox(
         vector3 const& query_bbox_min_corner,
         vector3 const& query_bbox_max_corner,
-        std::function<bool(object_type)>&  output_collector
+        std::function<bool(object_type)> const&  output_collector
         )
 {
     TMPROF_BLOCK();
@@ -461,7 +476,7 @@ bool  proximity_map<object_type__>::find_by_bbox(
         split_node* const  node_ptr,
         vector3 const& query_bbox_min_corner,
         vector3 const& query_bbox_max_corner,
-        std::function<bool(object_type)>&  output_collector
+        std::function<bool(object_type)> const&  output_collector
         )
 {
     if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
@@ -505,7 +520,7 @@ template<typename  object_type__>
 void  proximity_map<object_type__>::find_by_line(
         vector3 const&  line_begin,
         vector3 const&  line_end,
-        std::function<bool(object_type)>&  output_collector
+        std::function<bool(object_type)> const&  output_collector
         )
 {
     TMPROF_BLOCK();
@@ -519,7 +534,7 @@ bool  proximity_map<object_type__>::find_by_line(
         split_node* const  node_ptr,
         vector3 const&  line_begin,
         vector3 const&  line_end,
-        std::function<bool(object_type)>&  output_collector
+        std::function<bool(object_type)> const&  output_collector
         )
 {
     if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
@@ -594,12 +609,12 @@ bool  proximity_map<object_type__>::find_by_line(
 
 
 template<typename  object_type__>
-void  proximity_map<object_type__>::enumerate(std::function<bool(object_type, natural_32_bit)>&  output_collector)
+void  proximity_map<object_type__>::enumerate(std::function<bool(object_type, natural_32_bit)> const&  output_collector)
 {
     TMPROF_BLOCK();
 
     natural_32_bit  leaf_node_index = 0U;
-    enumerate((m_root.get(), leaf_node_index, output_collector);
+    enumerate(m_root.get(), leaf_node_index, output_collector);
 }
 
 
@@ -607,7 +622,7 @@ template<typename  object_type__>
 bool  proximity_map<object_type__>::enumerate(
         split_node* const  node_ptr,
         natural_32_bit&  output_leaf_node_index,
-        std::function<bool(object_type, natural_32_bit)>&  output_collector
+        std::function<bool(object_type, natural_32_bit)> const&  output_collector
         )
 {
     if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
