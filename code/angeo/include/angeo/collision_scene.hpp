@@ -522,25 +522,25 @@ private:
             bool const  bboxes_of_objects_surely_intersect = false
             );
 
-    bool  compute_contacts__capsule_vs_capsule(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor );
-    bool  compute_contacts__capsule_vs_line(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__capsule_vs_point(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__capsule_vs_sphere(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__capsule_vs_triangle(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__capsule_vs_capsule(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor );
+    bool  compute_contacts__capsule_vs_line(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__capsule_vs_point(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__capsule_vs_sphere(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__capsule_vs_triangle(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
 
-    bool  compute_contacts__line_vs_line(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__line_vs_point(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__line_vs_sphere(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__line_vs_triangle(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__line_vs_line(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__line_vs_point(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__line_vs_sphere(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__line_vs_triangle(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
 
-    bool  compute_contacts__point_vs_point(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__point_vs_sphere(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__point_vs_triangle(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__point_vs_point(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__point_vs_sphere(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__point_vs_triangle(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
 
-    bool  compute_contacts__sphere_vs_sphere(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__sphere_vs_triangle(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__sphere_vs_sphere(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__sphere_vs_triangle(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
 
-    bool  compute_contacts__triangle_vs_triangle(natural_32_bit const  instance_index_1, natural_32_bit const  instance_index_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__triangle_vs_triangle(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
 
     /////////////////////////////////////////////////////////////////////////////////
     // DATA
