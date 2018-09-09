@@ -2,6 +2,7 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
+#include <set>
 
 namespace angeo {
 
@@ -385,12 +386,49 @@ void  collision_scene::enable_colliding_of_dynamic_objects(
 }
 
 
-void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor&  acceptor, bool const with_static)
+void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor&  acceptor, bool  with_static)
 {
-    rebalance_static_proximity_map_if_needed();
-    rebalance_dynamic_proximity_map_if_needed();
+    {
+        rebalance_dynamic_proximity_map_if_needed();
 
-    // TODO!
+        std::unordered_set<detail::collision_objects_pair>  processed_collision_queries;
+        natural_32_bit  current_leaf_node_index = 0U;
+        std::set<collision_object_id>  cluster;
+        m_proximity_dynamic_objects.enumerate(
+            [this, &acceptor, &with_static, &processed_collision_queries, &current_leaf_node_index, &cluster](
+                    collision_object_id const  coid,
+                    natural_32_bit const leaf_node_index
+                    ) -> bool
+                {
+                    if (leaf_node_index != current_leaf_node_index)
+                    {
+                        for (auto it = cluster.cbegin(); it != cluster.cend(); ++it)
+                            for (auto next_it = std::next(it); next_it != cluster.cend(); ++next_it)
+                            {
+                                detail::collision_objects_pair const coid_pair =
+                                        detail::make_collision_objects_pair(*it, *next_it);
+                                if (processed_collision_queries.count(coid_pair) == 0UL)
+                                {
+                                    processed_collision_queries.insert(coid_pair);
+                                    if (compute_contacts(coid_pair, acceptor, false) == false)
+                                    {
+                                        with_static = false;
+                                        return false;
+                                    }
+                                }
+                            }
+
+                        cluster.clear();
+                        current_leaf_node_index = leaf_node_index;
+                    }
+                    cluster.insert(coid);
+                    return true;
+                }
+            );
+    }
+    if (with_static)
+        for (auto const  coid : m_dynamic_object_ids)
+            compute_contacts_of_single_dynamic_object(coid, acceptor, true, false);
 }
 
 
@@ -415,7 +453,7 @@ void  collision_scene::compute_contacts_of_single_dynamic_object(
                         if (visited.count(other_coid) != 0UL)
                             return true;
                         visited.insert(other_coid);
-                        return compute_contacts(detail::make_collision_objects_pair(coid, other_coid), acceptor);
+                        return compute_contacts(detail::make_collision_objects_pair(coid, other_coid), acceptor, true);
                     }
                 );
     }
@@ -430,7 +468,7 @@ void  collision_scene::compute_contacts_of_single_dynamic_object(
                         if (visited.count(other_coid) != 0UL)
                             return true;
                         visited.insert(other_coid);
-                        return compute_contacts(detail::make_collision_objects_pair(coid, other_coid), acceptor);
+                        return compute_contacts(detail::make_collision_objects_pair(coid, other_coid), acceptor, true);
                     }
                 );
     }
@@ -665,7 +703,11 @@ void  collision_scene::rebalance_dynamic_proximity_map_if_needed()
 }
 
 
-bool  collision_scene::compute_contacts(detail::collision_objects_pair  cop, contact_acceptor&  acceptor)
+bool  collision_scene::compute_contacts(
+        detail::collision_objects_pair  cop,
+        contact_acceptor&  acceptor,
+        bool const  bboex_surely_intersect
+        )
 {
     // TODO!
 

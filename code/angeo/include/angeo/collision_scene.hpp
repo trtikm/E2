@@ -457,7 +457,7 @@ struct  collision_scene
     void  disable_colliding_of_dynamic_objects(collision_object_id const  coid_1, collision_object_id const  coid_2);
     void  enable_colliding_of_dynamic_objects(collision_object_id const  coid_1, collision_object_id const  coid_2);
 
-    void  compute_contacts_of_all_dynamic_objects(contact_acceptor&  acceptor, bool const with_static = true);
+    void  compute_contacts_of_all_dynamic_objects(contact_acceptor&  acceptor, bool  with_static = true);
     void  compute_contacts_of_single_dynamic_object(
             collision_object_id const  coid,
             contact_acceptor&  acceptor,
@@ -498,7 +498,11 @@ private:
     void  rebalance_static_proximity_map_if_needed();
     void  rebalance_dynamic_proximity_map_if_needed();
 
-    bool  compute_contacts(detail::collision_objects_pair  cop, contact_acceptor&  acceptor);
+    bool  compute_contacts(
+            detail::collision_objects_pair  cop,
+            contact_acceptor&  acceptor,
+            bool const  bboex_surely_intersect = false
+            );
 
     /////////////////////////////////////////////////////////////////////////////////
     // DATA
