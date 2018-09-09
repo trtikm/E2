@@ -395,6 +395,18 @@ namespace angeo {
  *
  * It is also possible to specify pairs of objects for which the computation of contacts will be
  * disabled. Each such pair must contain at least one dynamic object.
+ *
+ * NOTE: In order to achieve the best performance we strongly recommend to prevent interleaving of calls
+ *       to methods from different 'purpose groups' as much as possible. The methods of 'collison_scene'
+ *       class are split into these two purpose groups:
+ *          1. [Update group]: All 'insert_*' methods, 'erase_object', and 'on_position_changed'.
+ *          2. [Query group]: Both 'compute_contacts_*' methods, both 'find_objects_*' methods, and
+ *                            both 'enable/disable_colliding_of_dynamic_objects'.
+ *       This is because each method in the 'update group' marks an internal 'proximity_map' as
+ *       'need-for-rebalancing' and each method in the 'query group' must be performed on rebalanced
+ *       proximity map, i.e. the method must call 'rebalance' method on the proximity map before
+ *       starting the query, if the mark 'need-for-rebalancing' is set. The 'rebalance' method can
+ *       be costly, especially for large scenes and/or when it is called too often.
  */
 struct  collision_scene
 {
