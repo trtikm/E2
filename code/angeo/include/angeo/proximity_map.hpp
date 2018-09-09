@@ -628,7 +628,7 @@ bool  proximity_map<object_type__>::enumerate(
     if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
     {
         for (object_type  object : *node_ptr->m_objects)
-            if (output_collector(object) == false)
+            if (output_collector(object, output_leaf_node_index) == false)
                 return false;
         ++output_leaf_node_index;
         return true;
