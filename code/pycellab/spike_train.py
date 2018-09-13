@@ -69,7 +69,7 @@ class SpikeTrain:
         self._phases_distribution = distribution.Distribution({
             "regularity": percentage_of_regularity_phases,
             "noise": 100 - percentage_of_regularity_phases
-            })
+            }, seed)
         self._noise_length_distribution = noise_length_distribution
         self._regularity_length_distribution = regularity_length_distribution
         self._regularity_chunk_index_low = -1
