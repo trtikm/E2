@@ -76,8 +76,20 @@ class Distribution:
             assert len(data_in_json["events"]) == len(data_in_json["probabilities"])
             return Distribution(dict(zip(data_in_json["events"], data_in_json["probabilities"])))
 
-    def copy(self):
-        return Distribution(self.get_histogram())
+    def copy(self, seed=None):
+        other = Distribution(None, seed)
+        other._histogram = self._histogram
+        other._bars_line = self._bars_line
+        other._events_line = self._events_line
+        other._probabilities = self._probabilities
+        other._has_numeric_events = self._has_numeric_events
+        other._mean = self._mean
+        other._median = self._median
+        other._variance = self._variance
+        other._standard_deviation = self._standard_deviation
+        other._coefficient_of_variation = self._coefficient_of_variation
+        return other
+        # return Distribution(self.get_histogram())
 
     def has_numeric_events(self):
         return self._has_numeric_events
@@ -348,9 +360,9 @@ def hermit_distribution_with_desired_mean(
     raise Exception("hermit_distribution_with_desired_mean(mean=" + str(mean) + "): The distribution does not exist.")
 
 
-def default_excitatory_isi_distribution():
-    return hermit_distribution(0.1372, pow_y=2)
+def default_excitatory_isi_distribution(dt=0.0001):
+    return hermit_distribution(0.1372, bin_size=dt, pow_y=2)
 
 
-def default_inhibitory_isi_distribution():
-    return hermit_distribution(0.092, 0.08, bin_size=0.0002, pow_y=2)
+def default_inhibitory_isi_distribution(dt=0.0001):
+    return hermit_distribution(0.092, 0.08, bin_size=dt, pow_y=2)
