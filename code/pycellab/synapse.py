@@ -111,7 +111,7 @@ class Synapse:
                  input_post_cooling_coef,
                  spike_magnitude,
                  integrator_function,
-                 name="synapse_custom"
+                 name=None
                  ):
         assert weight_epsilon > 0.0001
         assert weight_power >= 2
@@ -141,7 +141,7 @@ class Synapse:
         self._input_post_cooling_coef = input_post_cooling_coef
         self._spike_magnitude = spike_magnitude
         self._integrator = integrator_function
-        self._name = name
+        self._name = "synapse_custom" if name is None else name
 
     @staticmethod
     def constant(initial_weight=1.0
