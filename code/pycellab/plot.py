@@ -172,7 +172,7 @@ def curve(points, pathname, colours=None, title=None, xaxis_name=None, faxis_nam
 
 def curve_per_partes(points, pathname, start, end, step, max_num_parts=None, on_plot_part_callback_fn=None,
                      colour=None, title=None, xaxis_name=None, faxis_name=None, marker="-"):
-    assert start < end and step > 0.0001
+    assert start < end and step > 0.000001
     assert len(points) > 0
     assert max_num_parts is None or isinstance(max_num_parts, int) and max_num_parts > 0
     assert on_plot_part_callback_fn is None or callable(on_plot_part_callback_fn)
@@ -209,7 +209,7 @@ def scatter(points, pathname, colours=None, title=None, xaxis_name=None, faxis_n
 
 def scatter_per_partes(points, pathname, start, end, step, max_num_parts=None, on_plot_part_callback_fn=None,
                        colours=None, title=None, xaxis_name=None, faxis_name=None):
-    assert start < end and step > 0.0001
+    assert start < end and step > 0.000001
     assert max_num_parts is None or isinstance(max_num_parts, int) and max_num_parts > 0
     assert len(points) > 0
     assert on_plot_part_callback_fn is None or callable(on_plot_part_callback_fn)
@@ -287,7 +287,7 @@ def event_board_per_partes(events, pathname, start, end, step, max_num_parts=Non
     assert colours is None or all(len(events[i]) == len(colours[i]) for i in range(len(events)))
     assert isinstance(start, float) or isinstance(start, int)
     assert isinstance(end, float) or isinstance(end, int)
-    assert start < end and step > 0.0001
+    assert start < end and step > 0.000001
     assert max_num_parts is None or isinstance(max_num_parts, int) and max_num_parts > 0
     assert on_plot_part_callback_fn is None or callable(on_plot_part_callback_fn)
     if not os.path.exists(os.path.dirname(pathname)):
@@ -343,6 +343,7 @@ def histogram(distrib, pathname, normalised=True, colours=None, title=None, xaxi
     title_addon += (
         "#bars=" + str(len(distrib.get_histogram())) + ", "
         "sum bars=" + format(sum([value for _, value in distrib.get_histogram().items()]), ".3f") + ", "
+        "sum x*bar=" + format(sum([x*value for x, value in distrib.get_histogram().items()]), ".3f") + ", "
         "median=" + format(distrib.get_median(), ".3f") + ", "
         "mean=" + format(distrib.get_mean(), ".3f") + ", "
         "mean freq.=" + format(1.0 / (distrib.get_mean() if abs(distrib.get_mean()) > 0.00001 else 0.00001), ".3f") + ", "
