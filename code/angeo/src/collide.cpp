@@ -371,6 +371,84 @@ natural_32_bit  closest_points_of_two_lines(
 }
 
 
+bool  closest_point_of_triangle_to_point(
+        vector3 const&  triangle_vertex_1,
+        vector3 const&  triangle_vertex_2,
+        vector3 const&  triangle_vertex_3,
+        vector3 const&  unit_normal_vector,
+        bool const  cull_triangle_back_side,
+        vector3 const&  point,
+        vector3*  output_triangle_closest_point_ptr,
+        collision_shape_feature_id*  output_triangle_shape_feature_id_ptr,
+        float_32_bit*  output_parameter_ptr
+        )
+{
+    vector3  w = point - triangle_vertex_1;
+    float_32_bit const  dot_normal_w = dot_product(unit_normal_vector, w);
+
+    if (cull_triangle_back_side == true && dot_normal_w < 0.0f)
+        return false;
+
+    vector3  closest_point;
+
+    auto const  edge_collider =
+            [output_triangle_closest_point_ptr,
+             output_triangle_shape_feature_id_ptr,
+             output_parameter_ptr,
+             &unit_normal_vector](
+                    vector3 const&  A,
+                    vector3 const&  B,
+                    natural_32_bit const  feature_index,
+                    vector3 const&  P
+                    )
+            {
+                if (dot_product(cross_product(B - A, unit_normal_vector), P - A) < 0.0f)
+                    return false;
+                float_32_bit const  line_param = closest_point_on_line_to_point(A, B, P, output_triangle_closest_point_ptr);
+                if (output_triangle_shape_feature_id_ptr != nullptr)
+                {
+                    if (line_param < 0.001f)
+                        *output_triangle_shape_feature_id_ptr = make_collision_shape_feature_id(
+                                COLLISION_SHAPE_FEATURE_TYPE::VERTEX,
+                                feature_index
+                                );
+                    else if (line_param > 0.999f)
+                        *output_triangle_shape_feature_id_ptr = make_collision_shape_feature_id(
+                                COLLISION_SHAPE_FEATURE_TYPE::VERTEX,
+                                feature_index == 2U ? 0U : feature_index + 1U
+                                );
+                    else
+                        *output_triangle_shape_feature_id_ptr = make_collision_shape_feature_id(
+                                COLLISION_SHAPE_FEATURE_TYPE::EDGE,
+                                feature_index
+                                );
+                }
+                if (output_parameter_ptr != nullptr)
+                    *output_parameter_ptr = line_param;
+                return true;
+            };
+
+    if (edge_collider(triangle_vertex_1, triangle_vertex_2, 0U, point) == true)
+        return true;
+    if (edge_collider(triangle_vertex_2, triangle_vertex_3, 1U, point) == true)
+        return true;
+    if (edge_collider(triangle_vertex_3, triangle_vertex_1, 2U, point) == true)
+        return true;
+
+    collision_point_and_plane(
+            point,
+            triangle_vertex_1,
+            unit_normal_vector,
+            output_parameter_ptr,
+            output_triangle_closest_point_ptr
+            );
+    if (output_triangle_shape_feature_id_ptr != nullptr)
+        *output_triangle_shape_feature_id_ptr = make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 0U);
+
+    return true;
+}
+
+
 void  closest_point_of_bbox_to_point(
         vector3 const&  bbox_low_corner,
         vector3 const&  bbox_high_corner,

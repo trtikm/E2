@@ -2,6 +2,7 @@
 #   define ANGEO_COLLIDE_HPP_INCLUDED
 
 #   include <angeo/tensor_math.hpp>
+#   include <angeo/collision_shape_feature_id.hpp>
 #   include <angeo/coordinate_system.hpp>
 #   include <vector>
 
@@ -99,6 +100,67 @@ natural_32_bit  closest_points_of_two_lines(
         vector3*  output_line_2_closest_point_2,
         float_32_bit*  output_line_2_closest_point_param_2
         );
+
+
+/**
+ * The front face of the triangle is determined by unit normal vector. It is assumed
+ * the normal vector points to the half-space of the front face of the triangle.
+ *
+ * If cull_triangle_back_side is true and the passed point does NOT lies in the half-space
+ * of the FRONT face of the triangle, then the function does NOT write any data to memory
+ * pointed to by 'output_*' parameters (even if they are not 'nullptr') and returns 'false'
+ * immediatelly. Otherwise, the function writes computed data to all memory locations pointed
+ * to be all not 'nullptr' output parameters 'output_*', and returns 'true'.
+ *
+ * NOTE: The interpretation of a value stored to memory pointed to by output_parameter_ptr
+ *       depends on location of the closest point on the triangle. If the closest point is
+ *       on the edge, then the written value is the parameter of the cloest point on the line.
+ *       If the closest point is in the triangle's interior, then the written value is the
+ *       distance of the triangle to the passed point. If the closest point is one of the
+ *       triangle vertices, them the written value has no particular meaning (igore it).
+ *
+ * NOTE: The alogorithm can also be used for computation of collision between triangle and
+ *       a sphere. Use then a comparison (if the function returns 'true'):
+ *          |*output_triangle_closest_point_ptr - point| <= sphere_radius.
+ */
+bool  closest_point_of_triangle_to_point(
+        vector3 const&  triangle_vertex_1,
+        vector3 const&  triangle_vertex_2,
+        vector3 const&  triangle_vertex_3,
+        vector3 const&  unit_normal_vector,
+        bool const  cull_triangle_back_side,
+        vector3 const&  point,
+        vector3*  output_triangle_closest_point_ptr,
+        collision_shape_feature_id*  output_triangle_shape_feature_id_ptr,
+        float_32_bit*  output_parameter_ptr
+        );
+
+/// The front face of the triangle is the one having counter-clock-wise orientation
+/// of vertices. The computed unit normal points to the half-space of the front face
+/// of the triangle.
+inline bool  closest_point_of_triangle_to_point(
+        vector3 const&  triangle_vertex_1,
+        vector3 const&  triangle_vertex_2,
+        vector3 const&  triangle_vertex_3,
+        bool const  cull_triangle_back_side,
+        vector3 const&  point,
+        vector3*  output_triangle_closest_point_ptr,
+        collision_shape_feature_id*  output_triangle_shape_feature_id_ptr,
+        float_32_bit*  output_parameter_ptr
+        )
+{
+    return closest_point_of_triangle_to_point(
+                triangle_vertex_1,
+                triangle_vertex_2,
+                triangle_vertex_3,
+                normalised(cross_product(triangle_vertex_2 - triangle_vertex_1, triangle_vertex_3 - triangle_vertex_1)),
+                cull_triangle_back_side,
+                point,
+                output_triangle_closest_point_ptr,
+                output_triangle_shape_feature_id_ptr,
+                output_parameter_ptr
+                );
+}
 
 
 /**
