@@ -271,6 +271,8 @@ private:
         vector3  end_point_2_in_world_space;
         vector3  end_point_3_in_world_space;
 
+        vector3  unit_normal_in_world_space;
+
         // In the model space the end points are assumed as follows:
         //      end_point_1_in_model_space = vector3_zero()
         //      end_point_2_in_model_space = vector3(end_point_2_x_coord_in_model_space,0,0)

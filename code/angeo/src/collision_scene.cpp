@@ -278,10 +278,15 @@ collision_object_id  collision_scene::insert_triangle(
         vector3 const  end_point_2_in_model_space_ = vector3(end_point_2_x_coord_in_model_space, 0.0f, 0.0f);
         vector3 const  end_point_3_in_model_space_ = expand23(end_point_3_in_model_space, 0.0f);
 
+        vector3 const  end_point_1_in_world_space = transform_point(end_point_1_in_model_space_, from_base_matrix);
+        vector3 const  end_point_2_in_world_space = transform_point(end_point_2_in_model_space_, from_base_matrix);
+        vector3 const  end_point_3_in_world_space = transform_point(end_point_3_in_model_space_, from_base_matrix);
         triangle_geometry const  geometry {
-                transform_point(end_point_1_in_model_space_, from_base_matrix),
-                transform_point(end_point_2_in_model_space_, from_base_matrix),
-                transform_point(end_point_3_in_model_space_, from_base_matrix),
+                end_point_1_in_world_space,
+                end_point_2_in_world_space,
+                end_point_3_in_world_space,
+                normalised(cross_product(end_point_2_in_world_space - end_point_1_in_world_space,
+                                         end_point_3_in_world_space - end_point_1_in_world_space)),
                 end_point_2_x_coord_in_model_space,
                 end_point_3_in_model_space
                 };
@@ -661,7 +666,11 @@ void  collision_scene::update_shape_position(collision_object_id const  coid, ma
             vector3 const  end_point_3_in_model_space = expand23(geometry.end_point_3_in_model_space, 0.0f);
             geometry.end_point_1_in_world_space = transform_point(end_point_1_in_model_space, from_base_matrix);
             geometry.end_point_2_in_world_space = transform_point(end_point_2_in_model_space, from_base_matrix);
-            geometry.end_point_2_in_world_space = transform_point(end_point_3_in_model_space, from_base_matrix);
+            geometry.end_point_3_in_world_space = transform_point(end_point_3_in_model_space, from_base_matrix);
+            geometry.unit_normal_in_world_space = 
+                normalised(cross_product(geometry.end_point_2_in_world_space - geometry.end_point_1_in_world_space,
+                                         geometry.end_point_3_in_world_space - geometry.end_point_1_in_world_space))
+                ;
 
             m_triangles_bbox.at(get_instance_index(coid)) =
                     compute_aabb_of_triangle(
@@ -1172,7 +1181,34 @@ bool  collision_scene::compute_contacts__sphere_vs_triangle(
     sphere_geometry const&  geometry_1 = m_spheres_geometry.at(get_instance_index(coid_1));
     triangle_geometry const&  geometry_2 = m_triangles_geometry.at(get_instance_index(coid_2));
 
-    NOT_IMPLEMENTED_YET();
+    vector3  triangle_closest_point;
+    collision_shape_feature_id  triangle_shape_feature_id;
+    if (false == closest_point_of_triangle_to_point(
+            geometry_2.end_point_1_in_world_space,
+            geometry_2.end_point_2_in_world_space,
+            geometry_2.end_point_3_in_world_space,
+            geometry_2.unit_normal_in_world_space,
+            true,
+            geometry_1.center_in_world_space,
+            &triangle_closest_point,
+            &triangle_shape_feature_id,
+            nullptr
+            ))
+        return true;
+
+    vector3 const  u = geometry_1.center_in_world_space - triangle_closest_point;
+    float_32_bit const  u_len = length(u);
+    if (u_len < geometry_1.radius)
+        return acceptor(
+                    {
+                        { coid_1, make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, 0U) },
+                        { coid_2, triangle_shape_feature_id },
+                    },
+                    triangle_closest_point,
+                    u_len > 0.0001f ? vector3(u / u_len) : vector3_unit_z(),
+                    geometry_1.radius - u_len
+                    );
+    return true;
 }
 
 
