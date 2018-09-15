@@ -787,8 +787,12 @@ bool  collision_scene::compute_contacts(
     }
 
     auto const  swap_acceptor =
-            [&acceptor](contact_id const& cid, vector3 const& contact_point, vector3 const& unit_normal) -> bool {
-                return acceptor(contact_id(cid.second, cid.first), contact_point, -unit_normal);
+            [&acceptor](contact_id const& cid,
+                        vector3 const& contact_point,
+                        vector3 const& unit_normal,
+                        float_32_bit const  penetration_depth)
+                        -> bool {
+                return acceptor(contact_id(cid.second, cid.first), contact_point, -unit_normal, penetration_depth);
             };
 
     switch (shape_type_1)
@@ -891,8 +895,81 @@ bool  collision_scene::compute_contacts__capsule_vs_capsule(
     capsule_geometry const&  geometry_1 = m_capsules_geometry.at(get_instance_index(coid_1));
     capsule_geometry const&  geometry_2 = m_capsules_geometry.at(get_instance_index(coid_2));
 
+    vector3  capsule_1_point_1;
+    float_32_bit  capsule_1_param_1, capsule_1_param_2;
+    vector3  capsule_2_point_1, capsule_2_point_2;
+    float_32_bit  capsule_2_param_1, capsule_2_param_2;
+    natural_32_bit const  num_collision_point_pairs = closest_points_of_two_lines(
+        geometry_1.end_point_1_in_world_space,
+        geometry_1.end_point_2_in_world_space,
+        geometry_2.end_point_1_in_world_space,
+        geometry_2.end_point_2_in_world_space,
+        &capsule_1_point_1, &capsule_1_param_1,
+        &capsule_2_point_1, &capsule_2_param_1,
+        nullptr,            &capsule_1_param_2,
+        &capsule_2_point_2, &capsule_2_param_2
+        );
 
-    NOT_IMPLEMENTED_YET();
+    vector3 const  u = capsule_1_point_1 - capsule_2_point_1;
+    float_32_bit const  u_len = length(u);
+    float_32_bit const  separation_distance = geometry_1.thickness_from_central_line + geometry_2.thickness_from_central_line;
+    if (u_len < separation_distance)
+    {
+        auto const  build_collision_shape_feature_id = [](float_32_bit const  param) -> collision_shape_feature_id {
+            return (param < 0.001f) ? make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, 0U) :
+                   (param > 0.999f) ? make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, 1U) :
+                                      make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::EDGE, 0U)   ;
+        };
+
+        float_32_bit const  epsilon_distance = 0.0001f;
+
+        float_32_bit const  min_thickness =
+                std::min(geometry_1.thickness_from_central_line, geometry_2.thickness_from_central_line);
+        float_32_bit const  max_thickness =
+                std::max(geometry_1.thickness_from_central_line, geometry_2.thickness_from_central_line);
+
+        float_32_bit const  penetration_depth = std::min(separation_distance - u_len, max_thickness);
+
+        vector3  unit_normal;
+        float_32_bit  contact_point_param;
+        if (u_len > epsilon_distance)
+        {
+            unit_normal = u / u_len;
+            contact_point_param =
+                    geometry_2.thickness_from_central_line
+                        - penetration_depth
+                        + std::min(0.5f * penetration_depth, min_thickness)
+                    ;
+        }
+        else
+        {
+            unit_normal = vector3_unit_z();
+            contact_point_param = 0.0f;
+        }
+
+        if (acceptor(
+                {
+                    { coid_1, build_collision_shape_feature_id(capsule_1_param_1) },
+                    { coid_2, build_collision_shape_feature_id(capsule_2_param_1) }
+                },
+                capsule_2_point_1 + contact_point_param * unit_normal,
+                unit_normal,
+                penetration_depth
+                ) == false)
+            return false;
+
+        if (num_collision_point_pairs == 2U)
+            return acceptor(
+                        {
+                            { coid_1, build_collision_shape_feature_id(capsule_1_param_2) },
+                            { coid_2, build_collision_shape_feature_id(capsule_2_param_2) }
+                        },
+                        capsule_2_point_2 + contact_point_param * unit_normal,
+                        unit_normal,
+                        penetration_depth
+                        );
+    }
+    return true;
 }
 
 bool  collision_scene::compute_contacts__capsule_vs_line(
@@ -1065,16 +1142,38 @@ bool  collision_scene::compute_contacts__sphere_vs_sphere(
 
     vector3 const  u = geometry_1.center_in_world_space - geometry_2.center_in_world_space;
     float_32_bit const  u_len = length(u);
-    if (u_len < geometry_1.radius + geometry_2.radius)
+    float_32_bit const  separation_distance = geometry_1.radius + geometry_2.radius;
+    if (u_len < separation_distance)
     {
-        contact_id const  cid {
-                { coid_1, make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, 0U) },
-                { coid_2, make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, 0U) },
+        contact_id const  cid{
+            { coid_1, make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, 0U) },
+            { coid_2, make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, 0U) },
         };
-        vector3 const  contact_point = geometry_2.center_in_world_space + 0.5 * u;
-        vector3 const  unit_normal = u_len < 0.00001f ? vector3_unit_z() : u / u_len;
 
-        return acceptor(cid, contact_point, unit_normal);
+        float_32_bit const  max_thickness = std::max(geometry_1.radius, geometry_2.radius);
+        float_32_bit const  penetration_depth = std::min(separation_distance - u_len, max_thickness);
+
+        vector3  contact_point;
+        vector3  unit_normal;
+        {
+            float_32_bit const  epsilon_distance = 0.0001f;
+            if (u_len > epsilon_distance)
+            {
+                unit_normal = u / u_len;
+                float_32_bit const  min_thickness = std::min(geometry_1.radius, geometry_2.radius);
+                float_32_bit const  contact_point_param =
+                        geometry_2.radius - penetration_depth + std::min(0.5f * penetration_depth, min_thickness)
+                        ;
+                contact_point = geometry_2.center_in_world_space + contact_point_param * unit_normal;
+            }
+            else
+            {
+                unit_normal = vector3_unit_z();
+                contact_point = geometry_2.center_in_world_space;
+            }
+        }
+
+        return acceptor(cid, contact_point, unit_normal, penetration_depth);
     }
     return true;
 }

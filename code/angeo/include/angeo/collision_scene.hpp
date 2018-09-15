@@ -352,7 +352,10 @@ using  collision_object_acceptor = std::function<bool(collision_object_id)>;
 *            with id 'get_object_id(get_first_collider_id(cid))'.
 * The callback function can early terminate the search for other contacts by returning false.
 */
-using  contact_acceptor = std::function<bool(contact_id const& cid, vector3 const& contact_point, vector3 const& unit_normal)>;
+using  contact_acceptor = std::function<bool(contact_id const& cid,
+                                             vector3 const& contact_point,
+                                             vector3 const& unit_normal,
+                                             float_32_bit  penetration_depth)>;
 
 
 }
