@@ -64,6 +64,7 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/utility/dynamic_linking.hpp
     
+    ./include/utility/hash_combine.hpp     
     ./include/utility/std_pair_hash.hpp     
 
     ./include/utility/read_line.hpp
