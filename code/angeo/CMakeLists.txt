@@ -17,6 +17,20 @@ add_library(${THIS_TARGET_NAME}
     ./src/shape.cpp
 
     ./include/angeo/proximity_map.hpp
+    
+    ./include/angeo/axis_aligned_bounding_box.hpp
+    ./src/axis_aligned_bounding_box.cpp
+
+    ./include/angeo/collision_shape_id.hpp
+    ./include/angeo/collision_shape_feature_id.hpp
+    ./include/angeo/collision_object_id.hpp
+    ./include/angeo/collision_object_id_pair.hpp
+    ./include/angeo/collision_object_and_shape_feature_id.hpp
+    ./include/angeo/collision_object_acceptor.hpp
+    ./include/angeo/collision_material.hpp
+
+    ./include/angeo/contact_id.hpp
+    ./include/angeo/contact_acceptor.hpp
 
     ./include/angeo/collision_scene.hpp
     ./src/collision_scene.cpp

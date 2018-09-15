@@ -48,6 +48,69 @@ inline collision_shape_feature_id  build_capsule_collision_shape_feature_id(floa
 
 }}
 
+
+namespace angeo {
+
+
+axis_aligned_bounding_box  compute_aabb_of_capsule(
+        vector3 const&  point_1,
+        vector3 const&  point_2,
+        float_32_bit const  radius
+        )
+{
+    return  {
+                vector3(std::min(point_1(0), point_2(0)) - radius,
+                        std::min(point_1(1), point_2(1)) - radius,
+                        std::min(point_1(2), point_2(2)) - radius
+                        ),
+                vector3(std::max(point_1(0), point_2(0)) + radius,
+                        std::max(point_1(1), point_2(1)) + radius,
+                        std::max(point_1(2), point_2(2)) + radius
+                        )
+            };
+}
+
+
+axis_aligned_bounding_box  compute_aabb_of_line(
+        vector3 const&  point_1,
+        vector3 const&  point_2
+        )
+{
+    return  {
+                vector3(std::min(point_1(0), point_2(0)),
+                        std::min(point_1(1), point_2(1)),
+                        std::min(point_1(2), point_2(2))
+                        ),
+                vector3(std::max(point_1(0), point_2(0)),
+                        std::max(point_1(1), point_2(1)),
+                        std::max(point_1(2), point_2(2))
+                        )
+            };
+}
+
+
+axis_aligned_bounding_box  compute_aabb_of_triangle(
+        vector3 const&  point_1,
+        vector3 const&  point_2,
+        vector3 const&  point_3
+        )
+{
+    return  {
+                vector3(std::min(std::min(point_1(0), point_2(0)), point_3(0)),
+                        std::min(std::min(point_1(1), point_2(1)), point_3(1)),
+                        std::min(std::min(point_1(2), point_2(2)), point_3(2))
+                        ),
+                vector3(std::max(std::max(point_1(0), point_2(0)), point_3(0)),
+                        std::max(std::max(point_1(1), point_2(1)), point_3(1)),
+                        std::max(std::max(point_1(2), point_2(2)), point_3(2))
+                        )
+            };
+}
+
+
+}
+
+
 namespace angeo {
 
 
@@ -369,7 +432,7 @@ void  collision_scene::disable_colliding_of_dynamic_objects(
             collision_object_id const  coid_2
             )
 {
-    m_disabled_colliding.insert(make_collision_object_id_pair(coid_1, coid_2));
+    m_disabled_colliding.insert(detail::make_collision_objects_pair(coid_1, coid_2));
 }
 
 
@@ -378,7 +441,7 @@ void  collision_scene::enable_colliding_of_dynamic_objects(
             collision_object_id const  coid_2
             )
 {
-    m_disabled_colliding.erase(make_collision_object_id_pair(coid_1, coid_2));
+    m_disabled_colliding.erase(detail::make_collision_objects_pair(coid_1, coid_2));
 }
 
 
@@ -389,7 +452,7 @@ void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor 
     {
         rebalance_dynamic_proximity_map_if_needed();
 
-        std::unordered_set<collision_object_id_pair>  processed_collision_queries;
+        std::unordered_set<detail::collision_objects_pair>  processed_collision_queries;
         natural_32_bit  current_leaf_node_index = 0U;
         std::set<collision_object_id>  cluster;
         m_proximity_dynamic_objects.enumerate(
@@ -403,8 +466,8 @@ void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor 
                         for (auto it = cluster.cbegin(); it != cluster.cend(); ++it)
                             for (auto next_it = std::next(it); next_it != cluster.cend(); ++next_it)
                             {
-                                collision_object_id_pair const coid_pair =
-                                        make_collision_object_id_pair(*it, *next_it);
+                                detail::collision_objects_pair const coid_pair =
+                                        detail::make_collision_objects_pair(*it, *next_it);
                                 if (processed_collision_queries.count(coid_pair) == 0UL)
                                 {
                                     processed_collision_queries.insert(coid_pair);
@@ -453,7 +516,7 @@ void  collision_scene::compute_contacts_of_single_dynamic_object(
                         if (visited.count(other_coid) != 0UL)
                             return true;
                         visited.insert(other_coid);
-                        return compute_contacts(make_collision_object_id_pair(coid, other_coid), acceptor, true);
+                        return compute_contacts(detail::make_collision_objects_pair(coid, other_coid), acceptor, true);
                     }
                 );
     }
@@ -468,7 +531,7 @@ void  collision_scene::compute_contacts_of_single_dynamic_object(
                         if (visited.count(other_coid) != 0UL)
                             return true;
                         visited.insert(other_coid);
-                        return compute_contacts(make_collision_object_id_pair(coid, other_coid), acceptor, true);
+                        return compute_contacts(detail::make_collision_objects_pair(coid, other_coid), acceptor, true);
                     }
                 );
     }
@@ -710,7 +773,7 @@ void  collision_scene::rebalance_dynamic_proximity_map_if_needed()
 
 
 bool  collision_scene::compute_contacts(
-        collision_object_id_pair  cop,
+        detail::collision_objects_pair  cop,
         contact_acceptor const&  acceptor,
         bool const  bboxes_of_objects_surely_intersect
         )
