@@ -44,17 +44,22 @@ axis_aligned_bounding_box  compute_aabb_of_triangle(
 
 namespace angeo {
 
-
+/**
+ * Types of "primitive" collision shapes for which we provide contact point computation.
+ * All these shapes represent a CONVEX set of points. It implies that POLYHEDRON shape
+ * kind represents only convex polyhedra. More complex shapes (e.g. non-convex) can be
+ * approximated by several primitive collision shapes properly arranged in the space.
+ */
 enum struct  COLLISION_SHAPE_TYPE : natural_8_bit
 {
     //BOX                     = 0,
     CAPSULE                 = 1,
     //CONE                    = 2,
-    LINE                    = 3,
-    POINT                   = 4,
-    //POLYHEDRON              = 5,
-    SPHERE                  = 6,
-    //TORUS                   = 7,
+    //CYLINDER                = 3,
+    LINE                    = 4,
+    POINT                   = 5,
+    //POLYHEDRON              = 6,
+    SPHERE                  = 7,
     TRIANGLE                = 8,
 };
 
