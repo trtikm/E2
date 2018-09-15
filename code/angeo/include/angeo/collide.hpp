@@ -68,8 +68,6 @@ float_32_bit  closest_point_on_line_to_point(
 *
 * NOTE: This algorithm can be used to compute collision of two capsules (the lines being their axes). Use comparison
 *       |*output_line_1_closest_point_1 - *output_line_2_closest_point_1| <= capsule_1_radius + capsule_2_radius.
-*       If 2 pairs are returned, then add also this comparion
-*       |*output_line_1_closest_point_2 - *output_line_2_closest_point_2| <= capsule_1_radius + capsule_2_radius.
 *
 */
 natural_32_bit  closest_points_of_two_lines(
