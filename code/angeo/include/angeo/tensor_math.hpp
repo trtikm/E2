@@ -91,6 +91,8 @@ inline scalar  dot_product(quaternion const& u, quaternion const& v) { return u.
 inline vector4 const&  quaternion_coefficients_wxyz(quaternion const& q) { return { q.coeffs()(3), q.coeffs()(0), q.coeffs()(1), q.coeffs()(2) }; }
 inline vector4 const&  quaternion_coefficients_xyzw(quaternion const& q) { return q.coeffs(); }
 
+quaternion  transform(quaternion const&  orientation, matrix44 const&  transformation);
+
 quaternion  interpolate_linear(quaternion const& u, quaternion const& v, float_32_bit const  t);
 quaternion  interpolate_spherical(quaternion const& u, quaternion const& v, float_32_bit const  t);
 

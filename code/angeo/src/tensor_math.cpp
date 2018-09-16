@@ -16,6 +16,21 @@ vector3  interpolate_linear(vector3 const&  u, vector3 const&  v, float_32_bit c
 }
 
 
+quaternion  transform(quaternion const&  orientation, matrix44 const&  transformation)
+{
+    vector3  x, y, z;
+    rotation_matrix_to_basis(quaternion_to_rotation_matrix(orientation), x, y, z);
+    matrix33 rotation;
+    basis_to_rotation_matrix(
+        contract43(transformation * expand34(x, 0.0f)),
+        contract43(transformation * expand34(y, 0.0f)),
+        contract43(transformation * expand34(z, 0.0f)),
+        rotation
+        );
+    return rotation_matrix_to_quaternion(rotation);
+}
+
+
 quaternion  interpolate_linear(quaternion const& u, quaternion const& v, float_32_bit const  t)
 {
     quaternion q(u.coeffs() + t * (v.coeffs() - u.coeffs()));

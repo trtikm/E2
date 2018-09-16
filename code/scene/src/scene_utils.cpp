@@ -8,20 +8,6 @@
 namespace scn {
 
 
-quaternion  transform_orientation(matrix44 const  transformation, quaternion const&  orientation) 
-{
-    vector3  x, y, z;
-    rotation_matrix_to_basis(quaternion_to_rotation_matrix(orientation), x, y, z);
-    matrix33 rotation;
-    basis_to_rotation_matrix(
-        contract43(transformation * expand34(x, 0.0f)),
-        contract43(transformation * expand34(y, 0.0f)),
-        contract43(transformation * expand34(z, 0.0f)),
-        rotation
-        );
-    return rotation_matrix_to_quaternion(rotation);
-}
-
 void  transform_origin_and_orientation(
         matrix44 const  transformation,
         vector3&  origin,
@@ -29,7 +15,7 @@ void  transform_origin_and_orientation(
         )
 {
     origin = transform_point(origin, transformation);
-    orientation = transform_orientation(transformation, orientation);
+    orientation = transform(orientation, transformation);
 }
 
 

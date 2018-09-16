@@ -10,7 +10,7 @@
 namespace scn {
 
 
-quaternion  transform_orientation(matrix44 const  transformation, quaternion const&  orientation);
+//quaternion  transform_orientation(matrix44 const  transformation, quaternion const&  orientation);
 
 void  transform_origin_and_orientation(
         matrix44 const  transformation,
@@ -79,7 +79,7 @@ inline quaternion  transform_orientation_from_scene_node_to_world(
         quaternion const&  orientation
         )
 {
-    return transform_orientation(node.get_world_matrix(), orientation);
+    return transform(orientation, node.get_world_matrix());
 }
 
 
@@ -88,7 +88,7 @@ inline quaternion  transform_orientation_from_world_to_scene_node(
         quaternion const&  orientation
         )
 {
-    return transform_orientation(inverse44(node.get_world_matrix()), orientation);
+    return transform(orientation, inverse44(node.get_world_matrix()));
 }
 
 
