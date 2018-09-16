@@ -158,6 +158,7 @@ simulator::simulator()
     , m_scene_edit_data(SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
 
     , m_gfx_animated_objects()
+    , m_collision_scene()
 {}
 
 simulator::~simulator()

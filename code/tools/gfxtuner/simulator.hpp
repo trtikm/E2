@@ -10,6 +10,7 @@
 #   include <qtgl/free_fly.hpp>
 #   include <qtgl/draw.hpp>
 #   include <angeo/tensor_math.hpp>
+#   include <angeo/collision_scene.hpp>
 #   include <utility/std_pair_hash.hpp>
 #   include <vector>
 #   include <unordered_map>
@@ -170,6 +171,7 @@ private:
 
     /// Simulation related data
     std::unordered_map<std::pair<std::string, std::string>, gfx_animated_object>  m_gfx_animated_objects;
+    angeo::collision_scene  m_collision_scene;
 
     /// Other data
 };
