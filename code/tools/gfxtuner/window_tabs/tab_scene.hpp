@@ -2,7 +2,7 @@
 #   define E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_SCENE_HPP_INCLUDED
 
 #   include <angeo/tensor_math.hpp>
-#   include <gfxtuner/scene.hpp>
+#   include <scene/scene.hpp>
 #   include <boost/filesystem.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <QWidget>
@@ -105,7 +105,7 @@ private:
 
     void  update_coord_system_location_widgets();
     void  enable_coord_system_location_widgets(bool const  state, bool const  read_only);
-    void  refresh_text_in_coord_system_location_widgets(scene_node_ptr const  node_ptr);
+    void  refresh_text_in_coord_system_location_widgets(scn::scene_node_ptr const  node_ptr);
     void  refresh_text_in_coord_system_rotation_widgets(quaternion const&  q);
 
     void  set_window_title();

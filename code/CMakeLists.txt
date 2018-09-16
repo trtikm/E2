@@ -11,6 +11,7 @@ include_directories(
     "${PROJECT_SOURCE_DIR}/code/efloop/include"
     "${PROJECT_SOURCE_DIR}/code/envlab/include"
     "${PROJECT_SOURCE_DIR}/code/qtgl/include"
+    "${PROJECT_SOURCE_DIR}/code/scene/include"
     "${PROJECT_SOURCE_DIR}/code/plot/include"
     "${PROJECT_SOURCE_DIR}/code/utility/include"
     )
@@ -37,6 +38,8 @@ add_subdirectory(./envlab)
     message("-- envlab")
 add_subdirectory(./qtgl)
     message("-- qtgl")
+add_subdirectory(./scene)
+    message("-- scene")
 add_subdirectory(./plot)
     message("-- plot")
 add_subdirectory(./utility)

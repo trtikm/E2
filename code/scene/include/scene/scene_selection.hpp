@@ -1,11 +1,13 @@
-#ifndef E2_TOOL_GFXTUNER_SCENE_SELECTION_HPP_INCLUDED
-#   define E2_TOOL_GFXTUNER_SCENE_SELECTION_HPP_INCLUDED
+#ifndef E2_SCENE_SCENE_SELECTION_HPP_INCLUDED
+#   define E2_SCENE_SCENE_SELECTION_HPP_INCLUDED
 
-#   include <gfxtuner/scene.hpp>
+#   include <scene/scene.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <utility/std_pair_hash.hpp>
 #   include <unordered_set>
 #   include <string>
+
+namespace scn {
 
 
 struct scene_selection
@@ -49,5 +51,7 @@ void  get_nodes_of_selected_batches(scene_selection const&  selection, std::unor
 
 inline scalar  get_selection_radius_of_bounding_sphere_of_scene_node() { return 0.25f; }
 
+
+}
 
 #endif

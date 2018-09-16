@@ -1,10 +1,12 @@
-#ifndef E2_TOOL_GFXTUNER_SCENE_EDIT_UTILS_HPP_INCLUDED
-#   define E2_TOOL_GFXTUNER_SCENE_EDIT_UTILS_HPP_INCLUDED
+#ifndef E2_SCENE_SCENE_EDIT_UTILS_HPP_INCLUDED
+#   define E2_SCENE_SCENE_EDIT_UTILS_HPP_INCLUDED
 
 #   include <angeo/tensor_math.hpp>
 #   include <unordered_set>
 #   include <string>
 #   include <vector>
+
+namespace scn {
 
 
 enum struct SCENE_EDIT_MODE : natural_8_bit
@@ -124,5 +126,7 @@ private:
 
 inline std::string get_pivot_node_name() { return "@pivot"; }
 
+
+}
 
 #endif

@@ -1,20 +1,12 @@
-#include <gfxtuner/scene_utils.hpp>
-#include <gfxtuner/scene_selection.hpp>
+#include <scene/scene_utils.hpp>
+#include <scene/scene_selection.hpp>
 #include <angeo/collide.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
 
+namespace scn {
 
-vector3  transform_point(matrix44 const  transformation, vector3 const&  point)
-{
-    return contract43(transformation * expand34(point));
-}
-
-vector3  transform_vector(matrix44 const  transformation, vector3 const&  vector)
-{
-    return contract43(transformation * expand34(vector, 0.0f));
-}
 
 quaternion  transform_orientation(matrix44 const  transformation, quaternion const&  orientation) 
 {
@@ -36,7 +28,7 @@ void  transform_origin_and_orientation(
         quaternion&  orientation
         )
 {
-    origin = transform_point(transformation, origin);
+    origin = transform_point(origin, transformation);
     orientation = transform_orientation(transformation, orientation);
 }
 
@@ -208,4 +200,7 @@ void  get_bbox_of_selected_scene_nodes(
     for (auto const& node_name : node_names)
         nodes.insert(scene.get_scene_node(node_name));
     get_bbox_of_selected_scene_nodes(nodes, lo, hi);
+}
+
+
 }

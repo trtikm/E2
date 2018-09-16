@@ -1,18 +1,18 @@
-#include <gfxtuner/scene.hpp>
+#include <scene/scene.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
 
-namespace detail { namespace {
+namespace scn { namespace detail {
 
 
-bool is_direct_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  child)
+static bool is_direct_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  child)
 {
     return child->get_parent() == parent;
 }
 
 
-bool is_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  child)
+static bool is_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  child)
 {
     TMPROF_BLOCK();
 
@@ -24,6 +24,8 @@ bool is_parent_and_child(scene_node_ptr const  parent, scene_node_ptr const  chi
 
 
 }}
+
+namespace scn {
 
 
 scene_node_ptr  scene_node::create(
@@ -207,4 +209,7 @@ void  scene::clear()
 {
     m_scene.clear();
     m_names_to_nodes.clear();
+}
+
+
 }

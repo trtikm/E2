@@ -1,10 +1,9 @@
-#include <gfxtuner/scene_history.hpp>
+#include <scene/scene_history.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 
-
-namespace detail {
+namespace scn { namespace detail {
 
 
 struct  scene_history_commit final : public scene_history_node
@@ -38,7 +37,9 @@ static inline natural_64_bit  get_commit_node_id(scene_history_node_ptr const  n
 }
 
 
-}
+}}
+
+namespace scn {
 
 
 scene_history&  scene_history::get_instance()
@@ -126,4 +127,7 @@ bool  scene_history::was_applied_mutator_since_commit(natural_64_bit const  comm
         if (m_history.at(i)->is_mutator())
             return true;
     return false;
+}
+
+
 }

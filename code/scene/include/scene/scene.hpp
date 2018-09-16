@@ -1,5 +1,5 @@
-#ifndef E2_TOOL_GFXTUNER_SCENE_HPP_INCLUDED
-#   define E2_TOOL_GFXTUNER_SCENE_HPP_INCLUDED
+#ifndef E2_SCENE_SCENE_HPP_INCLUDED
+#   define E2_SCENE_SCENE_HPP_INCLUDED
 
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/coordinate_system.hpp>
@@ -11,6 +11,8 @@
 #   include <string>
 #   include <functional>
 #   include <memory>
+
+namespace scn {
 
 
 struct scene;
@@ -120,5 +122,7 @@ private:
 using scene_ptr = std::shared_ptr<scene>;
 using scene_const_ptr = std::shared_ptr<scene const>;
 
+
+}
 
 #endif

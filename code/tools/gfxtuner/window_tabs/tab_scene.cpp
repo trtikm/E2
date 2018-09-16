@@ -2,9 +2,9 @@
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <gfxtuner/simulator_notifications.hpp>
-#include <gfxtuner/scene_utils.hpp>
-#include <gfxtuner/scene_edit_utils.hpp>
-#include <gfxtuner/scene_history.hpp>
+#include <scene/scene_utils.hpp>
+#include <scene/scene_edit_utils.hpp>
+#include <scene/scene_history.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <utility/std_pair_hash.hpp>
 #include <utility/msgstream.hpp>
@@ -232,14 +232,14 @@ bool  update_history_according_to_change_in_selection(
             INVARIANT(item != nullptr);
             std::string const  item_name = qtgl::to_string(item->text(0));
             if (item->represents_coord_system())
-                get_scene_history().insert<scene_history_coord_system_insert_to_selection>(item_name,true);
+                scn::get_scene_history().insert<scn::scene_history_coord_system_insert_to_selection>(item_name,true);
             else
             {
                 tree_widget_item* const  parent_item = dynamic_cast<tree_widget_item*>(item->parent());
                 INVARIANT(parent_item != nullptr);
                 INVARIANT(parent_item->represents_coord_system());
                 std::string const  parent_item_name = qtgl::to_string(parent_item->text(0));
-                get_scene_history().insert<scene_history_batch_insert_to_selection>(
+                scn::get_scene_history().insert<scn::scene_history_batch_insert_to_selection>(
                     std::pair<std::string, std::string>{ parent_item_name, item_name },
                     true
                     );
@@ -253,21 +253,21 @@ bool  update_history_according_to_change_in_selection(
             INVARIANT(item != nullptr);
             std::string const  item_name = qtgl::to_string(item->text(0));
             if (item->represents_coord_system())
-                get_scene_history().insert<scene_history_coord_system_insert_to_selection>(item_name, false);
+                scn::get_scene_history().insert<scn::scene_history_coord_system_insert_to_selection>(item_name, false);
             else
             {
                 tree_widget_item* const  parent_item = dynamic_cast<tree_widget_item*>(item->parent());
                 INVARIANT(parent_item != nullptr);
                 INVARIANT(parent_item->represents_coord_system());
                 std::string const  parent_item_name = qtgl::to_string(parent_item->text(0));
-                get_scene_history().insert<scene_history_batch_insert_to_selection>(
+                scn::get_scene_history().insert<scn::scene_history_batch_insert_to_selection>(
                     std::pair<std::string, std::string>{ parent_item_name, item_name },
                     false
                     );
             }
         }
     if (change == true && apply_commit == true)
-        get_scene_history().commit();
+        scn::get_scene_history().commit();
 
     return change;
 }
@@ -307,7 +307,7 @@ widgets::widgets(program_window* const  wnd)
 
     , m_processing_selection_change(false)
 
-    , m_save_commit_id(get_scene_history().get_active_commit_id())
+    , m_save_commit_id(scn::get_scene_history().get_active_commit_id())
 
     , m_coord_system_pos_x(
         [](program_window* wnd) {
@@ -427,8 +427,8 @@ widgets::widgets(program_window* const  wnd)
     m_scene_tree->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
     enable_coord_system_location_widgets(false, false);
 
-    scene_history_coord_system_insert::set_undo_processor(
-        [this](scene_history_coord_system_insert const&  history_node) {
+    scn::scene_history_coord_system_insert::set_undo_processor(
+        [this](scn::scene_history_coord_system_insert const&  history_node) {
             auto const  items_list = m_scene_tree->findItems(QString(history_node.get_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
             ASSUMPTION(items_list.size() == 1UL);
             tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(items_list.front());
@@ -446,8 +446,8 @@ widgets::widgets(program_window* const  wnd)
             INVARIANT(taken_item == tree_item); (void)taken_item;
             delete tree_item;
         });
-    scene_history_coord_system_insert::set_redo_processor(
-        [this](scene_history_coord_system_insert const& history_node) {
+    scn::scene_history_coord_system_insert::set_redo_processor(
+        [this](scn::scene_history_coord_system_insert const& history_node) {
             tree_widget_item*  parent_tree_item = nullptr;
             if (!history_node.get_parent_name().empty())
             {
@@ -466,8 +466,8 @@ widgets::widgets(program_window* const  wnd)
             INVARIANT(tree_node->isSelected() == false);
     });
 
-    scene_history_coord_system_relocate::set_undo_processor(
-        [this](scene_history_coord_system_relocate const&  history_node) {
+    scn::scene_history_coord_system_relocate::set_undo_processor(
+        [this](scn::scene_history_coord_system_relocate const&  history_node) {
             m_wnd->glwindow().call_now(
                     &simulator::relocate_scene_node,
                     history_node.get_name(),
@@ -477,8 +477,8 @@ widgets::widgets(program_window* const  wnd)
             if (is_active_coord_system_in_tree_widget(*m_scene_tree, history_node.get_name()))
                 update_coord_system_location_widgets();
         });
-    scene_history_coord_system_relocate::set_redo_processor(
-        [this](scene_history_coord_system_relocate const&  history_node) {
+    scn::scene_history_coord_system_relocate::set_redo_processor(
+        [this](scn::scene_history_coord_system_relocate const&  history_node) {
             m_wnd->glwindow().call_now(
                     &simulator::relocate_scene_node,
                     history_node.get_name(),
@@ -489,8 +489,8 @@ widgets::widgets(program_window* const  wnd)
                 update_coord_system_location_widgets();
         });
 
-    scene_history_coord_system_insert_to_selection::set_undo_processor(
-        [this](scene_history_coord_system_insert_to_selection const&  history_node) {
+    scn::scene_history_coord_system_insert_to_selection::set_undo_processor(
+        [this](scn::scene_history_coord_system_insert_to_selection const&  history_node) {
             auto const items_list = m_scene_tree->findItems(QString(history_node.get_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
             ASSUMPTION(items_list.size() == 1UL);
             tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(items_list.front());
@@ -502,8 +502,8 @@ widgets::widgets(program_window* const  wnd)
             m_wnd->glwindow().call_now(&simulator::erase_from_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_batches));
             update_coord_system_location_widgets();
         });
-    scene_history_coord_system_insert_to_selection::set_redo_processor(
-        [this](scene_history_coord_system_insert_to_selection const&  history_node) {
+    scn::scene_history_coord_system_insert_to_selection::set_redo_processor(
+        [this](scn::scene_history_coord_system_insert_to_selection const&  history_node) {
             auto const items_list = m_scene_tree->findItems(QString(history_node.get_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
             ASSUMPTION(items_list.size() == 1UL);
             tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(items_list.front());
@@ -518,8 +518,8 @@ widgets::widgets(program_window* const  wnd)
         });
 
 
-    scene_history_batch_insert::set_undo_processor(
-        [this](scene_history_batch_insert const&  history_node) {
+    scn::scene_history_batch_insert::set_undo_processor(
+        [this](scn::scene_history_batch_insert const&  history_node) {
             auto const  items_list = m_scene_tree->findItems(QString(history_node.get_coord_system_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
             ASSUMPTION(items_list.size() == 1UL);
             auto const  parent_item = dynamic_cast<tree_widget_item*>(items_list.front());
@@ -541,8 +541,8 @@ widgets::widgets(program_window* const  wnd)
             }
             UNREACHABLE();
         });
-    scene_history_batch_insert::set_redo_processor(
-        [this](scene_history_batch_insert const&  history_node) {
+    scn::scene_history_batch_insert::set_redo_processor(
+        [this](scn::scene_history_batch_insert const&  history_node) {
             auto const  items_list = m_scene_tree->findItems(QString(history_node.get_coord_system_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
             ASSUMPTION(items_list.size() == 1UL);
             auto const  parent_item = dynamic_cast<tree_widget_item*>(items_list.front());
@@ -570,8 +570,8 @@ widgets::widgets(program_window* const  wnd)
             tree_node.release();
         });
 
-    scene_history_batch_insert_to_selection::set_undo_processor(
-        [this](scene_history_batch_insert_to_selection const&  history_node) {
+    scn::scene_history_batch_insert_to_selection::set_undo_processor(
+        [this](scn::scene_history_batch_insert_to_selection const&  history_node) {
             auto const  items_list = m_scene_tree->findItems(QString(history_node.get_coord_system_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
             ASSUMPTION(items_list.size() == 1UL);
             auto const  parent_item = dynamic_cast<tree_widget_item*>(items_list.front());
@@ -595,8 +595,8 @@ widgets::widgets(program_window* const  wnd)
             }
             UNREACHABLE();
         });
-    scene_history_batch_insert_to_selection::set_redo_processor(
-        [this](scene_history_batch_insert_to_selection const&  history_node) {
+    scn::scene_history_batch_insert_to_selection::set_redo_processor(
+        [this](scn::scene_history_batch_insert_to_selection const&  history_node) {
             auto const  items_list = m_scene_tree->findItems(QString(history_node.get_coord_system_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
             ASSUMPTION(items_list.size() == 1UL);
             auto const  parent_item = dynamic_cast<tree_widget_item*>(items_list.front());
@@ -823,7 +823,7 @@ void  widgets::on_scene_insert_coord_system()
             return;
         }
         std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
-        if (tree_item_name == get_pivot_node_name())
+        if (tree_item_name == scn::get_pivot_node_name())
             use_pivot = true;
         else
         {
@@ -860,7 +860,7 @@ void  widgets::on_scene_insert_coord_system()
         quaternion  orientation = quaternion_identity();
         if (use_pivot)
         {
-            scene_node_ptr const  pivot = wnd()->glwindow().call_now(&simulator::get_scene_node, get_pivot_node_name());
+            scn::scene_node_ptr const  pivot = wnd()->glwindow().call_now(&simulator::get_scene_node, scn::get_pivot_node_name());
             origin = pivot->get_coord_system()->origin();
             orientation = pivot->get_coord_system()->orientation();
             if (parent_tree_item != nullptr)
@@ -875,7 +875,7 @@ void  widgets::on_scene_insert_coord_system()
         std::unordered_set<std::pair<std::string, std::string> >  selected_batches;
         m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_batches));
 
-        get_scene_history().insert<scene_history_coord_system_insert>(
+        scn::get_scene_history().insert<scn::scene_history_coord_system_insert>(
                 dlg.get_name(),
                 origin,
                 orientation,
@@ -885,7 +885,7 @@ void  widgets::on_scene_insert_coord_system()
         add_tree_item_to_selection(tree_item);
         QList<QTreeWidgetItem*> const  new_selection = m_scene_tree->selectedItems();
         update_history_according_to_change_in_selection(old_selection, new_selection, false);
-        get_scene_history().commit();
+        scn::get_scene_history().commit();
         set_window_title();
     }
     else
@@ -930,7 +930,7 @@ void  widgets::on_scene_insert_batch()
             INVARIANT(tree_item != nullptr && tree_item->represents_coord_system());
         }
         std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
-        if (tree_item->represents_coord_system() &&  qtgl::to_string(tree_item->text(0)) != get_pivot_node_name())
+        if (tree_item->represents_coord_system() &&  qtgl::to_string(tree_item->text(0)) != scn::get_pivot_node_name())
         {
             nodes.insert(tree_item);
             auto const  node = wnd()->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
@@ -994,7 +994,7 @@ void  widgets::on_scene_insert_batch()
             std::unordered_set<std::pair<std::string, std::string> >  selected_batches{ batch_name };
             m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_batches));
 
-            get_scene_history().insert<scene_history_batch_insert>(
+            scn::get_scene_history().insert<scn::scene_history_batch_insert>(
                     batch_name,
                     batch_pathname,
                     false
@@ -1005,7 +1005,7 @@ void  widgets::on_scene_insert_batch()
         QList<QTreeWidgetItem*> const  new_selection = m_scene_tree->selectedItems();
         update_history_according_to_change_in_selection(old_selection, new_selection, false);
 
-        get_scene_history().commit();
+        scn::get_scene_history().commit();
         set_window_title();
     }
 }
@@ -1026,7 +1026,7 @@ void  widgets::on_scene_erase_selected()
     std::unordered_set<QTreeWidgetItem*>  to_erase_items;
     foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
     {
-        if (item->parent() == nullptr && qtgl::to_string(item->text(0)) == get_pivot_node_name())
+        if (item->parent() == nullptr && qtgl::to_string(item->text(0)) == scn::get_pivot_node_name())
         {
             wnd()->print_status_message("ERROR: Cannot erase 'pivot' coordinate system.", 10000);
             return;
@@ -1042,7 +1042,7 @@ void  widgets::on_scene_erase_selected()
             erase_subtree_at_root_item(item, erased_items);
 
     INVARIANT(!erased_items.empty());
-    get_scene_history().commit();
+    scn::get_scene_history().commit();
     set_window_title();
 }
 
@@ -1056,10 +1056,10 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
         while (item->childCount() > 0)
             erase_subtree_at_root_item(item->child(0), erased_items);
 
-        get_scene_history().insert<scene_history_coord_system_insert_to_selection>(item_name, true);
-        scene_node_ptr const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, item_name);
+        scn::get_scene_history().insert<scn::scene_history_coord_system_insert_to_selection>(item_name, true);
+        scn::scene_node_ptr const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, item_name);
         INVARIANT(node_ptr != nullptr);
-        get_scene_history().insert<scene_history_coord_system_insert>(
+        scn::get_scene_history().insert<scn::scene_history_coord_system_insert>(
                 item_name,
                 node_ptr->get_coord_system()->origin(),
                 node_ptr->get_coord_system()->orientation(),
@@ -1080,11 +1080,11 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
         std::string const  parent_item_name = qtgl::to_string(parent_item->text(0));
 
         std::pair<std::string, std::string> const  name{ parent_item_name, item_name };
-        get_scene_history().insert<scene_history_batch_insert_to_selection>(name, true);
-        scene_node_ptr const  parent_node_ptr =
+        scn::get_scene_history().insert<scn::scene_history_batch_insert_to_selection>(name, true);
+        scn::scene_node_ptr const  parent_node_ptr =
             wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_name);
         INVARIANT(parent_node_ptr != nullptr);
-        get_scene_history().insert<scene_history_batch_insert>(
+        scn::get_scene_history().insert<scn::scene_history_batch_insert>(
             name,
             parent_node_ptr->get_batch(item_name).path_component_of_uid(),
             true
@@ -1116,11 +1116,11 @@ void  widgets::clear_scene()
 
     m_scene_tree->clear();
     wnd()->glwindow().call_now(&simulator::clear_scene);
-    get_scene_history().clear();
-    m_save_commit_id = get_scene_history().get_active_commit_id();
+    scn::get_scene_history().clear();
+    m_save_commit_id = scn::get_scene_history().get_active_commit_id();
     set_window_title();
 
-    insert_coord_system(get_pivot_node_name(), vector3_zero(), quaternion_identity(), nullptr);
+    insert_coord_system(scn::get_pivot_node_name(), vector3_zero(), quaternion_identity(), nullptr);
 
     g_new_coord_system_id_counter = 0UL;
 }
@@ -1150,10 +1150,10 @@ static tree_widget_item*  load_scene_node(
             orientation_tree.get<scalar>("w")
             );
 
-    if (node_name == get_pivot_node_name())
+    if (node_name == scn::get_pivot_node_name())
     {
-        scene_node_ptr const  pivot = glwindow.call_now(&simulator::get_scene_node, get_pivot_node_name());
-        glwindow.call_now(&simulator::relocate_scene_node, get_pivot_node_name(), origin, orientation);
+        scn::scene_node_ptr const  pivot = glwindow.call_now(&simulator::get_scene_node, scn::get_pivot_node_name());
+        glwindow.call_now(&simulator::relocate_scene_node, scn::get_pivot_node_name(), origin, orientation);
         return nullptr;
     }
 
@@ -1236,7 +1236,7 @@ static void  save_scene_item(
     ASSUMPTION(item_ptr != nullptr);
 
     std::string const  item_name = qtgl::to_string(item_ptr->text(0));
-    scene_node_ptr const  node_ptr = glwindow.call_now(&simulator::get_scene_node, item_name);
+    scn::scene_node_ptr const  node_ptr = glwindow.call_now(&simulator::get_scene_node, item_name);
     
     {
         boost::property_tree::ptree  origin_tree;
@@ -1290,7 +1290,7 @@ void  widgets::save_scene(boost::filesystem::path const&  scene_root_dir)
     boost::property_tree::write_info((scene_root_dir / "hierarchy.info").string(), save_tree);
     wnd()->print_status_message(std::string("SUCCESS: Scene saved to: ") + scene_root_dir.string(), 5000);
     wnd()->set_title(scene_root_dir.string());
-    m_save_commit_id = get_scene_history().get_active_commit_id();
+    m_save_commit_id = scn::get_scene_history().get_active_commit_id();
     set_window_title();
 }
 
@@ -1316,14 +1316,14 @@ void  widgets::on_coord_system_pos_changed()
 
     wnd()->glwindow().call_later(&simulator::set_position_of_scene_node, name, pos);
 
-    get_scene_history().insert<scene_history_coord_system_relocate>(
+    scn::get_scene_history().insert<scn::scene_history_coord_system_relocate>(
             name,
             node_ptr->get_coord_system()->origin(),
             node_ptr->get_coord_system()->orientation(),
             pos,
             node_ptr->get_coord_system()->orientation()
             );
-    get_scene_history().commit();
+    scn::get_scene_history().commit();
     set_window_title();
     wnd()->set_focus_to_glwindow();
 }
@@ -1352,14 +1352,14 @@ void  widgets::on_coord_system_rot_changed()
 
     wnd()->glwindow().call_later(&simulator::set_orientation_of_scene_node, name, q);
 
-    get_scene_history().insert<scene_history_coord_system_relocate>(
+    scn::get_scene_history().insert<scn::scene_history_coord_system_relocate>(
             name,
             node_ptr->get_coord_system()->origin(),
             node_ptr->get_coord_system()->orientation(),
             node_ptr->get_coord_system()->origin(),
             q
             );
-    get_scene_history().commit();
+    scn::get_scene_history().commit();
     set_window_title();
     wnd()->set_focus_to_glwindow();
 }
@@ -1387,14 +1387,14 @@ void  widgets::on_coord_system_rot_tait_bryan_changed()
 
     wnd()->glwindow().call_later(&simulator::set_orientation_of_scene_node, name, q);
 
-    get_scene_history().insert<scene_history_coord_system_relocate>(
+    scn::get_scene_history().insert<scn::scene_history_coord_system_relocate>(
             name,
             node_ptr->get_coord_system()->origin(),
             node_ptr->get_coord_system()->orientation(),
             node_ptr->get_coord_system()->origin(),
             q
             );
-    get_scene_history().commit();
+    scn::get_scene_history().commit();
     set_window_title();
     wnd()->set_focus_to_glwindow();
 }
@@ -1436,7 +1436,7 @@ void  widgets::on_coord_system_position_finished()
     {
         auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, name_and_system.first);
         INVARIANT(node_ptr != nullptr);
-        get_scene_history().insert<scene_history_coord_system_relocate>(
+        scn::get_scene_history().insert<scn::scene_history_coord_system_relocate>(
                 name_and_system.first,
                 name_and_system.second.origin(),
                 name_and_system.second.orientation(),
@@ -1446,7 +1446,7 @@ void  widgets::on_coord_system_position_finished()
     }
     if (!m_coord_system_location_backup_buffer.empty())
     {
-        get_scene_history().commit();
+        scn::get_scene_history().commit();
         set_window_title();
     }
 }
@@ -1470,19 +1470,19 @@ void  widgets::on_coord_system_rotation_finished()
 void  widgets::on_scene_mode_selection()
 {
     if (is_editing_enabled())
-        wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, SCENE_EDIT_MODE::SELECT_SCENE_OBJECT);
+        wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, scn::SCENE_EDIT_MODE::SELECT_SCENE_OBJECT);
 }
 
 void  widgets::on_scene_mode_translation()
 {
     if (is_editing_enabled())
-        wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES);
+        wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, scn::SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES);
 }
 
 void  widgets::on_scene_mode_rotation()
 {
     if (is_editing_enabled())
-        wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, SCENE_EDIT_MODE::ROTATE_SELECTED_NODES);
+        wnd()->glwindow().call_later(&simulator::set_scene_edit_mode, scn::SCENE_EDIT_MODE::ROTATE_SELECTED_NODES);
 }
 
 void  widgets::on_scene_toggle_pivot_selection()
@@ -1491,11 +1491,11 @@ void  widgets::on_scene_toggle_pivot_selection()
 
     QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
 
-    auto const items_list = m_scene_tree->findItems(QString(get_pivot_node_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
+    auto const items_list = m_scene_tree->findItems(QString(scn::get_pivot_node_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
     ASSUMPTION(items_list.size() == 1UL);
     tree_widget_item* const  tree_item = dynamic_cast<tree_widget_item*>(items_list.front());
     ASSUMPTION(tree_item->represents_coord_system());
-    std::unordered_set<std::string>  selected_scene_nodes{ get_pivot_node_name() };
+    std::unordered_set<std::string>  selected_scene_nodes{ scn::get_pivot_node_name() };
     std::unordered_set<std::pair<std::string, std::string> >  selected_batches;
     if (tree_item->isSelected())
     {
@@ -1523,7 +1523,7 @@ void  widgets::on_scene_move_selection_to_pivot()
         return;
     }
 
-    std::unordered_set<scene_node_ptr>  nodes;
+    std::unordered_set<scn::scene_node_ptr>  nodes;
     foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
     {
         tree_widget_item*  tree_item = dynamic_cast<tree_widget_item*>(item);
@@ -1534,7 +1534,7 @@ void  widgets::on_scene_move_selection_to_pivot()
             INVARIANT(tree_item != nullptr && tree_item->represents_coord_system());
         }
         std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
-        if (tree_item->represents_coord_system() && qtgl::to_string(tree_item->text(0)) != get_pivot_node_name())
+        if (tree_item->represents_coord_system() && qtgl::to_string(tree_item->text(0)) != scn::get_pivot_node_name())
         {
             auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
             INVARIANT(node_ptr != nullptr);
@@ -1547,12 +1547,12 @@ void  widgets::on_scene_move_selection_to_pivot()
         return;
     }
 
-    auto const  pivot_node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, get_pivot_node_name());
+    auto const  pivot_node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, scn::get_pivot_node_name());
     INVARIANT(pivot_node_ptr != nullptr);
 
-    SCENE_EDIT_MODE const  edit_mode = wnd()->glwindow().call_now(&simulator::get_scene_edit_mode);
+    scn::SCENE_EDIT_MODE const  edit_mode = wnd()->glwindow().call_now(&simulator::get_scene_edit_mode);
 
-    if (edit_mode == SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
+    if (edit_mode == scn::SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
     {
         vector3  shift_vector;
         {
@@ -1575,10 +1575,10 @@ void  widgets::on_scene_move_selection_to_pivot()
         {
             vector3 const  local_shift_vector =
                 node_ptr->has_parent() ?
-                    transform_vector_from_world_to_scene_node(*node_ptr->get_parent(), shift_vector) :
+                    scn::transform_vector_from_world_to_scene_node(*node_ptr->get_parent(), shift_vector) :
                     shift_vector
                     ;
-            get_scene_history().insert<scene_history_coord_system_relocate>(
+            scn::get_scene_history().insert<scn::scene_history_coord_system_relocate>(
                     node_ptr->get_name(),
                     node_ptr->get_coord_system()->origin(),
                     node_ptr->get_coord_system()->orientation(),
@@ -1588,7 +1588,7 @@ void  widgets::on_scene_move_selection_to_pivot()
             node_ptr->translate(local_shift_vector);
         }
     }
-    else if (edit_mode == SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
+    else if (edit_mode == scn::SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
         for (auto node_ptr : nodes)
         {
             quaternion const  local_orientation =
@@ -1599,7 +1599,7 @@ void  widgets::on_scene_move_selection_to_pivot()
                             ) :
                     pivot_node_ptr->get_coord_system()->orientation()
                     ;
-            get_scene_history().insert<scene_history_coord_system_relocate>(
+            scn::get_scene_history().insert<scn::scene_history_coord_system_relocate>(
                 node_ptr->get_name(),
                 node_ptr->get_coord_system()->origin(),
                 node_ptr->get_coord_system()->orientation(),
@@ -1615,7 +1615,7 @@ void  widgets::on_scene_move_selection_to_pivot()
         return;
     }
 
-    get_scene_history().commit();
+    scn::get_scene_history().commit();
     update_coord_system_location_widgets();
 }
 
@@ -1624,7 +1624,7 @@ void  widgets::on_scene_move_pivot_to_selection()
     if (!is_editing_enabled())
         return;
 
-    std::unordered_set<scene_node_ptr>  nodes;
+    std::unordered_set<scn::scene_node_ptr>  nodes;
     foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
     {
         tree_widget_item*  tree_item = dynamic_cast<tree_widget_item*>(item);
@@ -1635,7 +1635,7 @@ void  widgets::on_scene_move_pivot_to_selection()
             INVARIANT(tree_item != nullptr && tree_item->represents_coord_system());
         }
         std::string const  tree_item_name = qtgl::to_string(tree_item->text(0));
-        if (tree_item->represents_coord_system() && qtgl::to_string(tree_item->text(0)) != get_pivot_node_name())
+        if (tree_item->represents_coord_system() && qtgl::to_string(tree_item->text(0)) != scn::get_pivot_node_name())
         {
             auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, tree_item_name);
             INVARIANT(node_ptr != nullptr);
@@ -1648,12 +1648,12 @@ void  widgets::on_scene_move_pivot_to_selection()
         return;
     }
 
-    auto const  pivot_node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, get_pivot_node_name());
+    auto const  pivot_node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, scn::get_pivot_node_name());
     INVARIANT(pivot_node_ptr != nullptr);
 
-    SCENE_EDIT_MODE const  edit_mode = wnd()->glwindow().call_now(&simulator::get_scene_edit_mode);
+    scn::SCENE_EDIT_MODE const  edit_mode = wnd()->glwindow().call_now(&simulator::get_scene_edit_mode);
 
-    if (edit_mode == SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
+    if (edit_mode == scn::SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
     {
         vector3  target_position;
         {
@@ -1667,7 +1667,7 @@ void  widgets::on_scene_move_pivot_to_selection()
             }
         }
 
-        get_scene_history().insert<scene_history_coord_system_relocate>(
+        scn::get_scene_history().insert<scn::scene_history_coord_system_relocate>(
                 pivot_node_ptr->get_name(),
                 pivot_node_ptr->get_coord_system()->origin(),
                 pivot_node_ptr->get_coord_system()->orientation(),
@@ -1676,7 +1676,7 @@ void  widgets::on_scene_move_pivot_to_selection()
                 );
         pivot_node_ptr->set_origin(target_position);
     }
-    else if (edit_mode == SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
+    else if (edit_mode == scn::SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
     {
         if (nodes.size() == 1UL)
         {
@@ -1688,7 +1688,7 @@ void  widgets::on_scene_move_pivot_to_selection()
                             ) :
                     (*nodes.cbegin())->get_coord_system()->orientation()
                     ;
-            get_scene_history().insert<scene_history_coord_system_relocate>(
+            scn::get_scene_history().insert<scn::scene_history_coord_system_relocate>(
                     pivot_node_ptr->get_name(),
                     pivot_node_ptr->get_coord_system()->origin(),
                     pivot_node_ptr->get_coord_system()->orientation(),
@@ -1711,7 +1711,7 @@ void  widgets::on_scene_move_pivot_to_selection()
         return;
     }
 
-    get_scene_history().commit();
+    scn::get_scene_history().commit();
     update_coord_system_location_widgets();
 }
 
@@ -1723,7 +1723,7 @@ void  widgets::on_scene_undo()
         wnd()->print_status_message("ERROR: Scene editing is disabled.", 10000);
         return;
     }
-    get_scene_history().undo();
+    scn::get_scene_history().undo();
     set_window_title();
 }
 
@@ -1735,7 +1735,7 @@ void  widgets::on_scene_redo()
         wnd()->print_status_message("ERROR: Scene editing is disabled.", 10000);
         return;
     }
-    get_scene_history().redo();
+    scn::get_scene_history().redo();
     set_window_title();
 }
 
@@ -1797,8 +1797,8 @@ void  widgets::on_look_at_selection(std::function<void(vector3 const&, float_32_
         centre = 0.5f * (lo + hi);
     }
 
-    SCENE_EDIT_MODE const  edit_mode = wnd()->glwindow().call_now(&simulator::get_scene_edit_mode);
-    if (edit_mode == SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
+    scn::SCENE_EDIT_MODE const  edit_mode = wnd()->glwindow().call_now(&simulator::get_scene_edit_mode);
+    if (edit_mode == scn::SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
     {
         float_32_bit  distance;
         {
@@ -1819,7 +1819,7 @@ void  widgets::on_look_at_selection(std::function<void(vector3 const&, float_32_
         }
         solver(centre, &distance);
     }
-    else if (edit_mode == SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
+    else if (edit_mode == scn::SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
     {
         solver(centre, nullptr);
     }
@@ -1914,7 +1914,7 @@ void  widgets::enable_coord_system_location_widgets(bool const  state, bool cons
     }
 }
 
-void  widgets::refresh_text_in_coord_system_location_widgets(scene_node_ptr const  node_ptr)
+void  widgets::refresh_text_in_coord_system_location_widgets(scn::scene_node_ptr const  node_ptr)
 {
     ASSUMPTION(node_ptr != nullptr);
 
@@ -1944,7 +1944,7 @@ void  widgets::refresh_text_in_coord_system_rotation_widgets(quaternion const&  
 void  widgets::set_window_title()
 {
     wnd()->set_title(
-        (get_scene_history().was_applied_mutator_since_commit(m_save_commit_id) ? "* " : "") +
+        (scn::get_scene_history().was_applied_mutator_since_commit(m_save_commit_id) ? "* " : "") +
         (wnd()->get_current_scene_dir().empty() ? "New scene" : wnd()->get_current_scene_dir().string())
         );
 }

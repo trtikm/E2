@@ -2,7 +2,7 @@
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/simulator.hpp>
 #include <gfxtuner/simulator_notifications.hpp>
-#include <gfxtuner/scene_edit_utils.hpp>
+#include <scene/scene_edit_utils.hpp>
 #include <qtgl/window.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <qtgl/widget_base.hpp>
@@ -62,9 +62,9 @@ void  status_bar::edit_mode_listener()
     auto const  edit_mode = m_wnd->glwindow().call_now(&simulator::get_scene_edit_mode);
     switch (edit_mode)
     {
-    case SCENE_EDIT_MODE::SELECT_SCENE_OBJECT: m_state->setText(" SELECT "); break;
-    case SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES: m_state->setText(" TRANSLATE "); break;
-    case SCENE_EDIT_MODE::ROTATE_SELECTED_NODES: m_state->setText(" ROTATE "); break;
+    case scn::SCENE_EDIT_MODE::SELECT_SCENE_OBJECT: m_state->setText(" SELECT "); break;
+    case scn::SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES: m_state->setText(" TRANSLATE "); break;
+    case scn::SCENE_EDIT_MODE::ROTATE_SELECTED_NODES: m_state->setText(" ROTATE "); break;
     }
 }
 

@@ -1,14 +1,15 @@
-#ifndef E2_TOOL_GFXTUNER_SCENE_UTILS_HPP_INCLUDED
-#   define E2_TOOL_GFXTUNER_SCENE_UTILS_HPP_INCLUDED
+#ifndef E2_SCENE_SCENE_UTILS_HPP_INCLUDED
+#   define E2_SCENE_SCENE_UTILS_HPP_INCLUDED
 
-#   include <gfxtuner/scene.hpp>
+#   include <scene/scene.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <string>
 #   include <map>
+#   include <unordered_set>
+
+namespace scn {
 
 
-vector3  transform_point(matrix44 const  transformation, vector3 const&  point);
-vector3  transform_vector(matrix44 const  transformation, vector3 const&  vector);
 quaternion  transform_orientation(matrix44 const  transformation, quaternion const&  orientation);
 
 void  transform_origin_and_orientation(
@@ -42,7 +43,7 @@ inline vector3  transform_point_from_scene_node_to_world(
         vector3 const&  point
         )
 {
-    return transform_point(node.get_world_matrix(), point);
+    return transform_point(point, node.get_world_matrix());
 }
 
 
@@ -51,7 +52,7 @@ inline vector3  transform_vector_from_scene_node_to_world(
         vector3 const&  vector
         )
 {
-    return transform_vector(node.get_world_matrix(), vector);
+    return transform_vector(vector, node.get_world_matrix());
 }
 
 
@@ -60,7 +61,7 @@ inline vector3  transform_point_from_world_to_scene_node(
         vector3 const&  point
         )
 {
-    return transform_point(inverse44(node.get_world_matrix()), point);
+    return transform_point(point, inverse44(node.get_world_matrix()));
 }
 
 
@@ -69,7 +70,7 @@ inline vector3  transform_vector_from_world_to_scene_node(
         vector3 const&  vector
         )
 {
-    return transform_vector(inverse44(node.get_world_matrix()), vector);
+    return transform_vector(vector, inverse44(node.get_world_matrix()));
 }
 
 
@@ -128,5 +129,7 @@ void  get_bbox_of_selected_scene_nodes(
         vector3&  hi
         );
 
+
+}
 
 #endif

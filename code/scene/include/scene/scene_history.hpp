@@ -1,7 +1,7 @@
-#ifndef E2_TOOL_GFXTUNER_SCENE_HISTORY_HPP_INCLUDED
-#   define E2_TOOL_GFXTUNER_SCENE_HISTORY_HPP_INCLUDED
+#ifndef E2_SCENE_SCENE_HISTORY_HPP_INCLUDED
+#   define E2_SCENE_SCENE_HISTORY_HPP_INCLUDED
 
-#   include <gfxtuner/scene.hpp>
+#   include <scene/scene.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <utility/std_pair_hash.hpp>
 #   include <boost/filesystem/path.hpp>
@@ -9,6 +9,8 @@
 #   include <string>
 #   include <vector>
 #   include <functional>
+
+namespace scn {
 
 
 struct  scene_history_node
@@ -242,5 +244,7 @@ private:
 
 inline scene_history&  get_scene_history() { return scene_history::get_instance(); }
 
+
+}
 
 #endif

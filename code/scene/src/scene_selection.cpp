@@ -1,8 +1,10 @@
-#include <gfxtuner/scene_selection.hpp>
-#include <gfxtuner/scene_utils.hpp>
+#include <scene/scene_selection.hpp>
+#include <scene/scene_utils.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
+
+namespace scn {
 
 
 void  scene_selection::insert_node(std::string const&  name)
@@ -75,4 +77,7 @@ void  get_nodes_of_selected_batches(scene_selection const&  selection, std::unor
 {
     for (auto const&  node_batch : selection.get_batches())
         nodes.insert(node_batch.first);
+}
+
+
 }

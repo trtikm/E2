@@ -17,24 +17,9 @@ add_executable(${THIS_TARGET_NAME}
     simulator.cpp
     simulator_notifications.hpp
 
-    scene.hpp
-    scene.cpp
-    
     gfx_object.hpp
     gfx_object.cpp
     
-    scene_selection.hpp 
-    scene_selection.cpp 
-
-    scene_edit_utils.hpp 
-    scene_edit_utils.cpp 
-
-    scene_history.hpp 
-    scene_history.cpp 
-
-    scene_utils.hpp
-    scene_utils.cpp
-
     program_window.hpp
     program_window.cpp
     
@@ -60,6 +45,7 @@ add_executable(${THIS_TARGET_NAME}
 target_link_libraries(${THIS_TARGET_NAME}
     angeo
     qtgl
+    scene
     utility
     ${QT5_LIST_OF_LIBRARIES_TO_LINK_WITH}
     ${OPENGL_LIST_OF_LIBRARIES_TO_LINK_WITH}

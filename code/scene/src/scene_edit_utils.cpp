@@ -1,7 +1,9 @@
-#include <gfxtuner/scene_edit_utils.hpp>
+#include <scene/scene_edit_utils.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <algorithm>
+
+namespace scn {
 
 
 std::string  scene_nodes_selection_data::choose_best_selection(std::vector<std::string> const&  nodes_on_line)
@@ -170,4 +172,7 @@ scene_nodes_rotation_data&  scene_edit_data::get_rotation_data()
     ASSUMPTION(get_mode() == SCENE_EDIT_MODE::ROTATE_SELECTED_NODES);
     ASSUMPTION(!are_data_invalidated());
     return m_nodes_rotation_data;
+}
+
+
 }

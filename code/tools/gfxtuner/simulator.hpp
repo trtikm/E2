@@ -1,9 +1,9 @@
 #ifndef E2_TOOL_GFXTUNER_SIMULATOR_HPP_INCLUDED
 #   define E2_TOOL_GFXTUNER_SIMULATOR_HPP_INCLUDED
 
-#   include <gfxtuner/scene.hpp>
-#   include <gfxtuner/scene_selection.hpp>
-#   include <gfxtuner/scene_edit_utils.hpp>
+#   include <scene/scene.hpp>
+#   include <scene/scene_selection.hpp>
+#   include <scene/scene_edit_utils.hpp>
 #   include <gfxtuner/gfx_object.hpp>
 #   include <qtgl/real_time_simulator.hpp>
 #   include <qtgl/camera.hpp>
@@ -51,22 +51,22 @@ struct simulator : public qtgl::real_time_simulator
 
     // Scene
 
-    scene const&  get_scene() const { return *m_scene; }
-    scene&  get_scene() { return *m_scene; }
+    scn::scene const&  get_scene() const { return *m_scene; }
+    scn::scene&  get_scene() { return *m_scene; }
 
-    scene_node_ptr  get_scene_node(std::string const&  name) const
+    scn::scene_node_ptr  get_scene_node(std::string const&  name) const
     { return get_scene().get_scene_node(name); }
 
-    scene_node_ptr  insert_scene_node(std::string const&  name)
+    scn::scene_node_ptr  insert_scene_node(std::string const&  name)
     { return insert_scene_node_at(name, vector3_zero(), quaternion_identity()); }
 
-    scene_node_ptr  insert_scene_node_at(std::string const&  name, vector3 const&  origin, quaternion const&  orientation)
+    scn::scene_node_ptr  insert_scene_node_at(std::string const&  name, vector3 const&  origin, quaternion const&  orientation)
     { return get_scene().insert_scene_node(name, origin, orientation, nullptr); }
 
-    scene_node_ptr  insert_child_scene_node(std::string const&  name, std::string const&  parent_name)
+    scn::scene_node_ptr  insert_child_scene_node(std::string const&  name, std::string const&  parent_name)
     { return insert_child_scene_node_at(name, vector3_zero(), quaternion_identity(), parent_name); }
 
-    scene_node_ptr  insert_child_scene_node_at(
+    scn::scene_node_ptr  insert_child_scene_node_at(
             std::string const&  name,
             vector3 const&  origin,
             quaternion const&  orientation,
@@ -105,10 +105,10 @@ struct simulator : public qtgl::real_time_simulator
         std::unordered_set<std::pair<std::string, std::string> >&  selected_batches
         ) const;
 
-    SCENE_EDIT_MODE  get_scene_edit_mode() const { return m_scene_edit_data.get_mode(); }
-    void  set_scene_edit_mode(SCENE_EDIT_MODE const  edit_mode);
+    scn::SCENE_EDIT_MODE  get_scene_edit_mode() const { return m_scene_edit_data.get_mode(); }
+    void  set_scene_edit_mode(scn::SCENE_EDIT_MODE const  edit_mode);
 
-    scene_edit_data const&  get_scene_edit_data() const { return m_scene_edit_data; }
+    scn::scene_edit_data const&  get_scene_edit_data() const { return m_scene_edit_data; }
 
     qtgl::effects_config const&  get_effects_config() const { return m_effects_config; }
     qtgl::effects_config&  effects_config_ref() { return m_effects_config; }
@@ -164,10 +164,10 @@ private:
     bool  m_do_single_step;
 
     /// Scene related data
-    scene_ptr  m_scene;
-    scene_selection  m_scene_selection;
+    scn::scene_ptr  m_scene;
+    scn::scene_selection  m_scene_selection;
     qtgl::batch  m_batch_coord_system;
-    scene_edit_data  m_scene_edit_data;
+    scn::scene_edit_data  m_scene_edit_data;
 
     /// Simulation related data
     std::unordered_map<std::pair<std::string, std::string>, gfx_animated_object>  m_gfx_animated_objects;

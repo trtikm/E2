@@ -1,7 +1,7 @@
 #include <gfxtuner/simulator.hpp>
 #include <gfxtuner/simulator_notifications.hpp>
 #include <gfxtuner/program_options.hpp>
-#include <gfxtuner/scene_utils.hpp>
+#include <scene/scene_utils.hpp>
 #include <angeo/collide.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
@@ -152,10 +152,10 @@ simulator::simulator()
     , m_paused(true)
     , m_do_single_step(false)
 
-    , m_scene(new scene)
+    , m_scene(new scn::scene)
     , m_scene_selection(m_scene)
     , m_batch_coord_system(qtgl::create_basis_vectors())
-    , m_scene_edit_data(SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
+    , m_scene_edit_data(scn::SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
 
     , m_gfx_animated_objects()
     , m_collision_scene()
@@ -334,7 +334,7 @@ void  simulator::render_simulation_state(
             std::string,    // batch ID
             std::pair<
                 qtgl::batch,
-                std::vector<std::pair<scene_node_const_ptr,gfx_animated_object const*> > > >
+                std::vector<std::pair<scn::scene_node_const_ptr,gfx_animated_object const*> > > >
         batches;
     for (auto const& name_node : get_scene().get_all_scene_nodes())
         for (auto const& name_batch : name_node.second->get_batches())
@@ -426,13 +426,13 @@ void  simulator::perform_scene_update(float_64_bit const  time_to_simulate_in_se
 
     switch (get_scene_edit_mode())
     {
-    case SCENE_EDIT_MODE::SELECT_SCENE_OBJECT:
+    case scn::SCENE_EDIT_MODE::SELECT_SCENE_OBJECT:
         select_scene_objects(time_to_simulate_in_seconds);
         break;
-    case SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES:
+    case scn::SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES:
         translate_scene_selected_objects(time_to_simulate_in_seconds);
         break;
-    case SCENE_EDIT_MODE::ROTATE_SELECTED_NODES:
+    case scn::SCENE_EDIT_MODE::ROTATE_SELECTED_NODES:
         rotate_scene_selected_objects(time_to_simulate_in_seconds);
         break;
     default:
@@ -531,9 +531,9 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
         return;
     if (get_scene_edit_data().are_data_invalidated())
     {
-        if (m_scene_selection.is_node_selected(get_pivot_node_name()))
+        if (m_scene_selection.is_node_selected(scn::get_pivot_node_name()))
             m_scene_edit_data.initialise_translation_data({ 
-                get_scene().get_scene_node(get_pivot_node_name())->get_coord_system()->origin()
+                get_scene().get_scene_node(scn::get_pivot_node_name())->get_coord_system()->origin()
                 });
         else
         {
@@ -581,13 +581,16 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
     for (auto const& node_batch_names : m_scene_selection.get_batches())
         nodes_to_translate.insert(node_batch_names.first);
     if (nodes_to_translate.size() > 1UL)
-        nodes_to_translate.erase(get_pivot_node_name());
-    vector3 const  shift = m_scene_selection.is_node_selected(get_pivot_node_name()) && nodes_to_translate.count(get_pivot_node_name()) == 0UL ?
-        contract43(get_scene().get_scene_node(get_pivot_node_name())->get_world_matrix() * expand34(raw_shift, 0.0f)) :
-        raw_shift;
+        nodes_to_translate.erase(scn::get_pivot_node_name());
+    vector3 const  shift =
+        m_scene_selection.is_node_selected(scn::get_pivot_node_name())
+        && nodes_to_translate.count(scn::get_pivot_node_name()) == 0UL ?
+                contract43(get_scene().get_scene_node(scn::get_pivot_node_name())->get_world_matrix()
+                    * expand34(raw_shift, 0.0f)) :
+                raw_shift;
     for (auto const& node_name : nodes_to_translate)
     {
-        scene_node_ptr const  node = get_scene_node(node_name);
+        scn::scene_node_ptr const  node = get_scene_node(node_name);
         vector3 const  node_shift = node->has_parent() ?
             contract43(inverse44(node->get_parent()->get_world_matrix()) * expand34(shift, 0.0f)) :
             shift;
@@ -613,9 +616,9 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
 
     if (get_scene_edit_data().are_data_invalidated())
     {
-        if (m_scene_selection.is_node_selected(get_pivot_node_name()))
+        if (m_scene_selection.is_node_selected(scn::get_pivot_node_name()))
             m_scene_edit_data.initialise_rotation_data({
-                get_scene().get_scene_node(get_pivot_node_name())->get_coord_system()->origin()
+                get_scene().get_scene_node(scn::get_pivot_node_name())->get_coord_system()->origin()
                 });
         else
         {
@@ -667,18 +670,21 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
     for (auto const& node_batch_names : m_scene_selection.get_batches())
         nodes_to_rotate.insert(node_batch_names.first);
     if (nodes_to_rotate.size() > 1UL)
-        nodes_to_rotate.erase(get_pivot_node_name());
-    bool const  rotate_around_pivot = m_scene_selection.is_node_selected(get_pivot_node_name()) && nodes_to_rotate.count(get_pivot_node_name()) == 0UL;
-    bool const  is_alternative_rotation_enabled = nodes_to_rotate.size() > 1UL && mouse_props().is_pressed(qtgl::RIGHT_MOUSE_BUTTON());
+        nodes_to_rotate.erase(scn::get_pivot_node_name());
+    bool const  rotate_around_pivot =
+        m_scene_selection.is_node_selected(scn::get_pivot_node_name())
+        && nodes_to_rotate.count(scn::get_pivot_node_name()) == 0UL;
+    bool const  is_alternative_rotation_enabled =
+        nodes_to_rotate.size() > 1UL && mouse_props().is_pressed(qtgl::RIGHT_MOUSE_BUTTON());
     vector3 const  axis = rotate_around_pivot ?
-        contract43(get_scene().get_scene_node(get_pivot_node_name())->get_world_matrix() * expand34(raw_axis, 0.0f)) :
+        contract43(get_scene().get_scene_node(scn::get_pivot_node_name())->get_world_matrix() * expand34(raw_axis, 0.0f)) :
         raw_axis;
     matrix33 const  radius_vector_rotation_matrix = is_alternative_rotation_enabled ?
         quaternion_to_rotation_matrix(angle_axis_to_quaternion(angle, axis)) :
         matrix33_identity();
     for (auto const& node_name : nodes_to_rotate)
     {
-        scene_node_ptr const  node = get_scene_node(node_name);
+        scn::scene_node_ptr const  node = get_scene_node(node_name);
         vector3 const  rotation_axis = node->has_parent() ?
                 contract43(inverse44(node->get_parent()->get_world_matrix()) * expand34(axis, 0.0f)) :
                 axis ;
@@ -716,7 +722,7 @@ void  simulator::render_scene_batches(
 {
     TMPROF_BLOCK();
 
-    std::unordered_map<std::string, std::vector<std::pair<qtgl::batch,scene_node_const_ptr> > >
+    std::unordered_map<std::string, std::vector<std::pair<qtgl::batch, scn::scene_node_const_ptr> > >
             batches;
     for (auto const& name_node : get_scene().get_all_scene_nodes())
         for (auto const& name_batch : name_node.second->get_batches())
@@ -771,8 +777,8 @@ void  simulator::render_scene_coord_systems(
 
     std::unordered_set<std::string>  nodes_to_draw = m_scene_selection.get_nodes();
     get_nodes_of_selected_batches(m_scene_selection, nodes_to_draw);
-    if (get_scene().has_scene_node(get_pivot_node_name())) // The pivot may be missing, if the scene is not completely initialised yet.
-        nodes_to_draw.insert(get_pivot_node_name());
+    if (get_scene().has_scene_node(scn::get_pivot_node_name())) // The pivot may be missing, if the scene is not completely initialised yet.
+        nodes_to_draw.insert(scn::get_pivot_node_name());
     for (auto const& node_name : nodes_to_draw)
         qtgl::render_batch(
             m_batch_coord_system,
@@ -916,7 +922,7 @@ void  simulator::get_scene_selection(
 }
 
 
-void  simulator::set_scene_edit_mode(SCENE_EDIT_MODE const  edit_mode)
+void  simulator::set_scene_edit_mode(scn::SCENE_EDIT_MODE const  edit_mode)
 {
     if (m_scene_edit_data.get_mode() != edit_mode)
     {
