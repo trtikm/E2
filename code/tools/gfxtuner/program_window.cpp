@@ -1,7 +1,7 @@
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_info.hpp>
 #include <gfxtuner/program_options.hpp>
-#include <gfxtuner/simulator.hpp>
+#include <gfxtuner/simulation/simulator.hpp>
 #include <qtgl/window.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <qtgl/widget_base.hpp>

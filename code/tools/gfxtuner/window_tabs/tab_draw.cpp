@@ -1,6 +1,6 @@
 #include <gfxtuner/window_tabs/tab_draw.hpp>
 #include <gfxtuner/program_window.hpp>
-#include <gfxtuner/simulator_notifications.hpp>
+#include <gfxtuner/simulation/simulator_notifications.hpp>
 #include <qtgl/camera_utils.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <QLabel>

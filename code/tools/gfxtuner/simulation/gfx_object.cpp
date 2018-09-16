@@ -1,4 +1,4 @@
-#include <gfxtuner/gfx_object.hpp>
+#include <gfxtuner/simulation/gfx_object.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>

@@ -1,5 +1,5 @@
-#include <gfxtuner/simulator.hpp>
-#include <gfxtuner/simulator_notifications.hpp>
+#include <gfxtuner/simulation/simulator.hpp>
+#include <gfxtuner/simulation/simulator_notifications.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <scene/scene_utils.hpp>
 #include <angeo/collide.hpp>

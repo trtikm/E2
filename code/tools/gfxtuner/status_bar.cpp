@@ -1,7 +1,7 @@
 #include <gfxtuner/status_bar.hpp>
 #include <gfxtuner/program_window.hpp>
-#include <gfxtuner/simulator.hpp>
-#include <gfxtuner/simulator_notifications.hpp>
+#include <gfxtuner/simulation/simulator.hpp>
+#include <gfxtuner/simulation/simulator_notifications.hpp>
 #include <scene/scene_edit_utils.hpp>
 #include <qtgl/window.hpp>
 #include <qtgl/gui_utils.hpp>

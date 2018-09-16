@@ -1,7 +1,7 @@
 #include <gfxtuner/window_tabs/tab_scene.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
-#include <gfxtuner/simulator_notifications.hpp>
+#include <gfxtuner/simulation/simulator_notifications.hpp>
 #include <scene/scene_utils.hpp>
 #include <scene/scene_edit_utils.hpp>
 #include <qtgl/gui_utils.hpp>

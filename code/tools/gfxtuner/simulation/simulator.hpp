@@ -5,7 +5,7 @@
 #   include <scene/scene_selection.hpp>
 #   include <scene/scene_history.hpp>
 #   include <scene/scene_edit_utils.hpp>
-#   include <gfxtuner/gfx_object.hpp>
+#   include <gfxtuner/simulation/gfx_object.hpp>
 #   include <qtgl/real_time_simulator.hpp>
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>

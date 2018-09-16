@@ -1,7 +1,7 @@
 #ifndef E2_TOOL_GFXTUNER_PROGRAM_WINDOW_HPP_INCLUDED
 #   define E2_TOOL_GFXTUNER_PROGRAM_WINDOW_HPP_INCLUDED
 
-#   include <gfxtuner/simulator.hpp>
+#   include <gfxtuner/simulation/simulator.hpp>
 #   include <gfxtuner/window_tabs/tab_draw.hpp>
 #   include <gfxtuner/window_tabs/tab_scene.hpp>
 #   include <gfxtuner/window_tabs/tab_statistics.hpp>

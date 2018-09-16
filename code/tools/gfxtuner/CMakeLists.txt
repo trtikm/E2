@@ -13,12 +13,6 @@ add_executable(${THIS_TARGET_NAME}
     main.cpp
     run.cpp
 
-    simulator.hpp
-    simulator.cpp
-    simulator_notifications.hpp
-
-    gfx_object.hpp
-    gfx_object.cpp
     
     program_window.hpp
     program_window.cpp
@@ -40,6 +34,13 @@ add_executable(${THIS_TARGET_NAME}
     
     window_tabs/tab_statistics_resources.hpp
     window_tabs/tab_statistics_resources.cpp
+
+    simulation/simulator.hpp
+    simulation/simulator.cpp
+    simulation/simulator_notifications.hpp
+
+    simulation/gfx_object.hpp
+    simulation/gfx_object.cpp
     )
 
 target_link_libraries(${THIS_TARGET_NAME}
