@@ -212,7 +212,7 @@ private:
 
 struct  scene_history final
 {
-    static scene_history&  get_instance();
+    scene_history();
 
     void  insert(scene_history_node_ptr const  node_ptr);
 
@@ -233,7 +233,6 @@ struct  scene_history final
     bool  empty() const { return m_active_commit == 0UL; }
 
 private:
-    scene_history();
 
     /// Returns the index of the commit in 'm_history' vector.
     std::size_t  find_commit(natural_64_bit const  commit_id) const;
@@ -242,7 +241,11 @@ private:
     std::size_t  m_active_commit;
 };
 
-inline scene_history&  get_scene_history() { return scene_history::get_instance(); }
+using scene_history_ptr = std::shared_ptr<scene_history>;
+using scene_history_const_ptr = std::shared_ptr<scene_history const>;
+
+
+inline constexpr natural_64_bit  get_invalid_scene_history_commit_id() noexcept { return 0ULL; }
 
 
 }

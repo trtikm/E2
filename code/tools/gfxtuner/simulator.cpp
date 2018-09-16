@@ -154,6 +154,7 @@ simulator::simulator()
 
     , m_scene(new scn::scene)
     , m_scene_selection(m_scene)
+    , m_scene_history(new scn::scene_history)
     , m_batch_coord_system(qtgl::create_basis_vectors())
     , m_scene_edit_data(scn::SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
 

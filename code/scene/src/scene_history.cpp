@@ -24,7 +24,7 @@ private:
     static natural_64_bit  s_id_counter;
 };
 
-natural_64_bit  scene_history_commit::s_id_counter = 0ULL;
+natural_64_bit  scene_history_commit::s_id_counter = get_invalid_scene_history_commit_id();
 
 static inline bool  is_commit_node(scene_history_node_ptr const  node_ptr)
 {
@@ -40,13 +40,6 @@ static inline natural_64_bit  get_commit_node_id(scene_history_node_ptr const  n
 }}
 
 namespace scn {
-
-
-scene_history&  scene_history::get_instance()
-{
-    static scene_history  history;
-    return history;
-}
 
 
 scene_history::scene_history()

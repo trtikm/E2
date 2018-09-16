@@ -3,6 +3,7 @@
 
 #   include <angeo/tensor_math.hpp>
 #   include <scene/scene.hpp>
+#   include <scene/scene_history.hpp>
 #   include <boost/filesystem.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <QWidget>
@@ -107,6 +108,8 @@ private:
     void  enable_coord_system_location_widgets(bool const  state, bool const  read_only);
     void  refresh_text_in_coord_system_location_widgets(scn::scene_node_ptr const  node_ptr);
     void  refresh_text_in_coord_system_rotation_widgets(quaternion const&  q);
+
+    scn::scene_history_ptr  get_scene_history();
 
     void  set_window_title();
 

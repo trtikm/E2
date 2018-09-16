@@ -3,6 +3,7 @@
 
 #   include <scene/scene.hpp>
 #   include <scene/scene_selection.hpp>
+#   include <scene/scene_history.hpp>
 #   include <scene/scene_edit_utils.hpp>
 #   include <gfxtuner/gfx_object.hpp>
 #   include <qtgl/real_time_simulator.hpp>
@@ -81,6 +82,8 @@ struct simulator : public qtgl::real_time_simulator
     void  erase_batch_from_scene_node(std::string const&  batch_name, std::string const&  scene_node_name);
 
     void  clear_scene();
+
+    scn::scene_history_ptr  get_scene_history() { return m_scene_history; }
 
     void  translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift);
     void  rotate_scene_node(std::string const&  scene_node_name, quaternion const&  rotation);
@@ -166,6 +169,7 @@ private:
     /// Scene related data
     scn::scene_ptr  m_scene;
     scn::scene_selection  m_scene_selection;
+    scn::scene_history_ptr  m_scene_history;
     qtgl::batch  m_batch_coord_system;
     scn::scene_edit_data  m_scene_edit_data;
 
