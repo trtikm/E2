@@ -970,15 +970,17 @@ def save_textures(
 
                 os.makedirs(texture_output_dir, exist_ok=True)
 
+                def export_image(img):
+                    ximage = img.copy()
+                    if len(ximage.filepath_raw) == 0:
+                        ximage.filepath_raw = "E2_tmp_image.png"
+                    ximage.pack(as_png=True)
+                    ximage.unpack(method="USE_LOCAL")
+                    pathname = bpy.path.abspath(ximage.filepath_raw)
+                    bpy.data.images.remove(bpy.data.images[ximage.name])
+                    return pathname
 
-                old_image_filepath = image.filepath     # Save the original image file location
-
-                image.pack(as_png=True)                 # Using this fixes normal maps and also converts to PNG
-                image.unpack(method="USE_LOCAL")        # This saves the image to Blender's standard dick location
-
-                src_image_pathname = bpy.path.abspath(image.filepath)  # Get the saved image disc location
-
-                image.filepath = old_image_filepath     # Restore the original image file location
+                src_image_pathname = export_image(image)  # Get the saved image disc location
 
                 dst_image_name = os.path.splitext(os.path.basename(texture.name))[0]
                 if len(dst_image_name) == 0:
