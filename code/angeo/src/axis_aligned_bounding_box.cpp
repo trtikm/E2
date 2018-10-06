@@ -1,4 +1,5 @@
 #include <angeo/axis_aligned_bounding_box.hpp>
+#include <array>
 
 namespace angeo {
 
@@ -56,6 +57,51 @@ axis_aligned_bounding_box  compute_aabb_of_triangle(
                         std::max(std::max(point_1(2), point_2(2)), point_3(2))
                         )
             };
+}
+
+
+void  compute_union_bbox(
+        axis_aligned_bounding_box const&  bbox_1,
+        axis_aligned_bounding_box const&  bbox_2,
+        axis_aligned_bounding_box&  union_bbox
+        )
+{
+    for (std::size_t j = 0UL; j != 3UL; ++j)
+    {
+        union_bbox.min_corner(j) = std::min(bbox_1.min_corner(j), bbox_2.min_corner(j));
+        union_bbox.max_corner(j) = std::max(bbox_1.max_corner(j), bbox_2.max_corner(j));
+    }
+}
+
+
+void  transform_bbox(
+        axis_aligned_bounding_box const&  bbox,
+        matrix44 const&  transformation,
+        axis_aligned_bounding_box&  transformed_bbox
+        )
+{
+    std::array<vector3, 8UL> const  corners {
+        transform_point(vector3(bbox.min_corner(0), bbox.min_corner(1), bbox.min_corner(2)), transformation),
+        transform_point(vector3(bbox.max_corner(0), bbox.min_corner(1), bbox.min_corner(2)), transformation),
+        transform_point(vector3(bbox.max_corner(0), bbox.max_corner(1), bbox.min_corner(2)), transformation),
+        transform_point(vector3(bbox.min_corner(0), bbox.max_corner(1), bbox.min_corner(2)), transformation),
+
+        transform_point(vector3(bbox.min_corner(0), bbox.min_corner(1), bbox.max_corner(2)), transformation),
+        transform_point(vector3(bbox.max_corner(0), bbox.min_corner(1), bbox.max_corner(2)), transformation),
+        transform_point(vector3(bbox.max_corner(0), bbox.max_corner(1), bbox.max_corner(2)), transformation),
+        transform_point(vector3(bbox.min_corner(0), bbox.max_corner(1), bbox.max_corner(2)), transformation),
+    };
+
+    transformed_bbox.min_corner = corners.at(0U);
+    transformed_bbox.max_corner = corners.at(0U);
+    for (std::size_t  i = 1UL; i != corners.size(); ++i)
+        for (std::size_t j = 0UL; j != 3UL; ++j)
+        {
+            if (transformed_bbox.min_corner(j) > corners.at(i)(j))
+                transformed_bbox.min_corner(j) = corners.at(i)(j);
+            if (transformed_bbox.max_corner(j) < corners.at(i)(j))
+                transformed_bbox.max_corner(j) = corners.at(i)(j);
+        }
 }
 
 

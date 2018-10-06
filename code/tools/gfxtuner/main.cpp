@@ -21,7 +21,7 @@ static void save_crash_report(std::string const& crash_message)
 
 int main(int argc, char* argv[])
 {
-    try
+    //try
     {
         initialise_program_options(argc,argv);
         if (get_program_options()->helpMode())
@@ -35,15 +35,15 @@ int main(int argc, char* argv[])
         }
 
     }
-    catch(std::exception const& e)
-    {
-        try { save_crash_report(e.what()); } catch (...) {}
-        return -1;
-    }
-    catch(...)
-    {
-        try { save_crash_report("Unknown exception was thrown."); } catch (...) {}
-        return -2;
-    }
+    //catch(std::exception const& e)
+    //{
+    //    try { save_crash_report(e.what()); } catch (...) {}
+    //    return -1;
+    //}
+    //catch(...)
+    //{
+    //    try { save_crash_report("Unknown exception was thrown."); } catch (...) {}
+    //    return -2;
+    //}
     return 0;
 }

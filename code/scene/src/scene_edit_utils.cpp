@@ -6,26 +6,33 @@
 namespace scn {
 
 
-std::string  scene_nodes_selection_data::choose_best_selection(std::vector<std::string> const&  nodes_on_line)
+scn::scene_record_id const*  scene_nodes_selection_data::choose_best_selection(
+        std::vector<scn::scene_record_id> const&  records_on_line
+        )
 {
-    std::vector<std::string>  suppressed_nodes;
-    for (auto const&  name : m_suppressed_nodes)
-        if (std::find(nodes_on_line.cbegin(), nodes_on_line.cend(), name) != nodes_on_line.cend())
-            suppressed_nodes.push_back(name);
-    for (auto const& name : nodes_on_line)
-        if (std::find(suppressed_nodes.cbegin(), suppressed_nodes.cend(), name) == suppressed_nodes.cend())
+    std::vector<scn::scene_record_id>  suppressed_records;
+    for (auto const&  id : m_suppressed_records)
+        if (std::find(records_on_line.cbegin(), records_on_line.cend(), id) != records_on_line.cend())
+            suppressed_records.push_back(id);
+
+    for (auto const& id : records_on_line)
+        if (std::find(suppressed_records.cbegin(), suppressed_records.cend(), id) == suppressed_records.cend())
         {
-            m_suppressed_nodes = suppressed_nodes;
-            m_suppressed_nodes.push_back(name);
-            return name;
+            m_suppressed_records.swap(suppressed_records);
+            m_suppressed_records.push_back(id);
+
+            return &m_suppressed_records.back();
         }
-    INVARIANT(!suppressed_nodes.empty());
-    auto const  name = suppressed_nodes.front();
-    m_suppressed_nodes.clear();
-    for (auto  it = std::next(suppressed_nodes.cbegin()); it != suppressed_nodes.cend(); ++it)
-        m_suppressed_nodes.push_back(*it);
-    m_suppressed_nodes.push_back(name);
-    return name;
+
+    m_suppressed_records.clear();
+    if (suppressed_records.empty())
+        return nullptr;
+
+    for (auto  it = std::next(suppressed_records.cbegin()); it != suppressed_records.cend(); ++it)
+        m_suppressed_records.push_back(*it);
+    m_suppressed_records.push_back(suppressed_records.front());
+
+    return &m_suppressed_records.back();
 }
 
 

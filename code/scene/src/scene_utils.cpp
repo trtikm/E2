@@ -5,7 +5,73 @@
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
 
+namespace scn { namespace detail {
+
+
+scene_node::record_holder const*  get_record_holder_ptr(scene_node const&  n, scene_node_record_id const&  id)
+{
+    scene_node::folder_content::records_map const&  folder_ref = get_folder_records_map(n, id.get_folder_name());
+    auto const  holder_it = folder_ref.find(id.get_record_name());
+    return (holder_it == folder_ref.cend()) ? nullptr : &holder_it->second;
+}
+
+
+scene_node::record_holder const*  get_record_holder_ptr(scene const&  s, scene_record_id const&  id)
+{
+    scene_node_ptr const  node_ptr = get_node(s, id.get_node_name());
+    return (node_ptr == nullptr) ? nullptr : get_record_holder_ptr(*node_ptr, { id.get_folder_name(), id.get_record_name() });
+}
+
+
+scene_node::record_bbox_getter const*  get_record_bbox_getter_ptr(scene_node const&  n, scene_node_record_id const&  id)
+{
+    scene_node::folder_content::bbox_getters_map const&  folder_ref = get_folder_bbox_getters_map(n, id.get_folder_name());
+    auto const  getter_it = folder_ref.find(id.get_record_name());
+    return (getter_it == folder_ref.cend()) ? nullptr : &getter_it->second;
+}
+
+
+scene_node::record_bbox_getter const*  get_record_bbox_getter_ptr(scene const&  s, scene_record_id const&  id)
+{
+    scene_node_ptr const  node_ptr = get_node(s, id.get_node_name());
+    return (node_ptr == nullptr) ? nullptr : get_record_bbox_getter_ptr(*node_ptr, { id.get_folder_name(), id.get_record_name() });
+}
+
+
+bool  get_bbox(scene_node::record_bbox_getter const* const  bbox_getter_ptr, angeo::axis_aligned_bounding_box&  out_bbox)
+{
+    if (bbox_getter_ptr == nullptr)
+        return false;
+    (*bbox_getter_ptr)(out_bbox);
+    return true;
+}
+
+
+}}
+
 namespace scn {
+
+
+scene_node::folder_content::records_map const&  get_folder_records_map(
+        scene_node const&  node,
+        scene_node::folder_name const&  folder_name
+        )
+{
+    static scene_node::folder_content::records_map  dummy;
+    auto const  folder_it = node.find_folder(folder_name);
+    return (folder_it == node.get_folders().cend()) ? dummy : folder_it->second.get_records();
+}
+
+
+scene_node::folder_content::bbox_getters_map const&  get_folder_bbox_getters_map(
+        scene_node const&  node,
+        scene_node::folder_name const&  folder_name
+        )
+{
+    static scene_node::folder_content::bbox_getters_map  dummy;
+    auto const  folder_it = node.find_folder(folder_name);
+    return (folder_it == node.get_folders().cend()) ? dummy : folder_it->second.get_bbox_getters();
+}
 
 
 void  transform_origin_and_orientation(
@@ -19,173 +85,160 @@ void  transform_origin_and_orientation(
 }
 
 
-scalar  compute_bounding_sphere_of_batch_of_scene_node(
-        scene_node const&  node,
-        std::string const&  batch_name,
-        vector3&  centre
-        )
+vector3  get_center_of_scene_nodes(std::unordered_set<scene_node_ptr> const&  nodes)
 {
-    centre = vector3_zero();
-    auto const  batch = node.get_batch(batch_name);
-    if (batch.empty())
-        return 0.0f;
-    auto const  binding = batch.get_buffers_binding();
-    if (!binding.loaded_successfully())
-        return 0.0f;
-    auto const&  boundary = binding.get_boundary();
-    centre = 0.5f * (boundary.lo_corner() + boundary.hi_corner());
-    return std::max(length(boundary.lo_corner() - centre), length(boundary.hi_corner() - centre));
+    vector3  center = vector3_zero();
+    for (auto const& node : nodes)
+        center += transform_point(vector3_zero(), node->get_world_matrix());
+    return center / scalar(nodes.size());
 }
 
 
-scalar  compute_bounding_sphere_radius_of_scene_node(scene_node const&  node)
+bool  collision_scene_node_vs_line(
+        scene_node const&  node,
+        vector3 const&  line_start_point,
+        vector3 const&  line_end_point,
+        scalar* const  output_param_on_line
+        )
 {
-    scalar  max_radius = get_selection_radius_of_bounding_sphere_of_scene_node();
-    for (auto const& name_and_batch : node.get_batches())
-    {
-        auto const  binding = name_and_batch.second.get_buffers_binding();
-        if (binding.loaded_successfully())
-        {
-            qtgl::spatial_boundary const&  boundary = binding.get_boundary();
-            if (boundary.radius() > max_radius)
-                max_radius = boundary.radius();
-        }
-    }
-    return max_radius;
+    angeo::axis_aligned_bounding_box  bbox_in_local_space;
+    get_bbox(node, bbox_in_local_space);
+    angeo::axis_aligned_bounding_box  bbox_in_world_space;
+    angeo::transform_bbox(bbox_in_local_space, node.get_world_matrix(), bbox_in_world_space);
+    return angeo::clip_line_into_bbox(
+                line_start_point,
+                line_end_point,
+                bbox_in_world_space.min_corner,
+                bbox_in_world_space.max_corner,
+                nullptr,
+                nullptr,
+                output_param_on_line,
+                nullptr
+                );
 }
 
 
-bool  compute_collision_of_scene_node_and_line(
+bool  collision_scene_record_vs_line(
         scene_node const&  node,
-        vector3 const&  line_begin,
-        vector3 const&  line_end,
-        scalar* const  parameter_on_line_to_collision_point
+        scene_node_record_id const&  id,
+        vector3 const&  line_start_point,
+        vector3 const&  line_end_point,
+        scalar* const  output_param_on_line
         )
 {
-    matrix44 const  to_node_space = inverse44(node.get_world_matrix());
-    vector3 const  A = contract43(to_node_space * expand34(line_begin));
-    vector3 const  B = contract43(to_node_space * expand34(line_end));
-
-    auto const  collide_with_bounding_sphere = [&A, &B](
-                    scalar const  radius,
-                    scalar* const  out_param = nullptr,
-                    scalar* const  out_distance_from_origin = nullptr
-                    ) -> bool {
-        vector3  closest_point;
-        scalar const  param = angeo::closest_point_on_line_to_point(A, B, vector3_zero(), &closest_point);
-        scalar const  distance = length(closest_point);
-        if (param < 0.0f || param > 1.0f || distance > radius + 0.001f)
-            return false;
-        else
-        {
-            if (out_param != nullptr)
-                *out_param = param;
-            if (out_distance_from_origin != nullptr)
-                *out_distance_from_origin = distance;
-            return true;
-        }
-    };
-
-    if (node.get_batches().empty())
-        return collide_with_bounding_sphere(
-                        get_selection_radius_of_bounding_sphere_of_scene_node(),
-                        parameter_on_line_to_collision_point
-                        );
-
-    auto const  collide_with_bounding_box = [&A, &B](
-                    vector3 const&  bbox_lo_corner,
-                    vector3 const&  bbox_hi_corner,
-                    scalar* const  out_param = nullptr,
-                    scalar* const  out_distance_from_origin = nullptr
-                    ) -> bool {
-        vector3  point;
-        scalar  param;
-        if (!angeo::clip_line_into_bbox(A, B, bbox_lo_corner, bbox_hi_corner, &point, nullptr, &param, nullptr))
-            return false;
-        if (out_param != nullptr)
-            *out_param = param;
-        if (out_distance_from_origin != nullptr)
-            *out_distance_from_origin = length(point);
-        return true;
-    };
-
-    scalar  min_param = 2.0f;
-    for (auto const& name_and_batch : node.get_batches())
-        if (name_and_batch.second.get_buffers_binding().loaded_successfully())
-        {
-            qtgl::spatial_boundary const&  boundary = name_and_batch.second.get_buffers_binding().get_boundary();
-
-            scalar  sphere_param;
-            scalar  sphere_distance_to_origin;
-            bool const  sphere_collision = collide_with_bounding_sphere(boundary.radius(), &sphere_param, &sphere_distance_to_origin);
-
-            scalar  bbox_param;
-            scalar  bbox_distance_to_origin;
-            bool const  bbox_collision = collide_with_bounding_box(boundary.lo_corner(), boundary.hi_corner(), &bbox_param, &bbox_distance_to_origin);
-
-            if (sphere_collision && bbox_collision)
-            {
-                scalar const  param = sphere_distance_to_origin < bbox_distance_to_origin ? sphere_param : bbox_param;
-                if (param < min_param)
-                    min_param = param;
-            }
-        }
-
-    if (min_param > 1.0f)
+    if (!has_bbox(node, id))
         return false;
-    if (parameter_on_line_to_collision_point != nullptr)
-        *parameter_on_line_to_collision_point = min_param;
-    return true;
+    angeo::axis_aligned_bounding_box  bbox_in_local_space;
+    get_bbox(node, id, bbox_in_local_space);
+    angeo::axis_aligned_bounding_box  bbox_in_world_space;
+    angeo::transform_bbox(bbox_in_local_space, node.get_world_matrix(), bbox_in_world_space);
+    return angeo::clip_line_into_bbox(
+                line_start_point,
+                line_end_point,
+                bbox_in_world_space.min_corner,
+                bbox_in_world_space.max_corner,
+                nullptr,
+                nullptr,
+                output_param_on_line,
+                nullptr
+                );
+
 }
 
-void  find_scene_nodes_on_line(
+
+void  collision_scene_vs_line(
         scene const&  scene,
-        vector3 const&  line_begin,
-        vector3 const&  line_end,
-        std::map<scalar, std::string>&  result
+        vector3 const&  line_start_point,
+        vector3 const&  line_end_point,
+        std::map<scalar, scn::scene_node_name>* const  output_nodes_ptr,
+        std::map<scalar, scn::scene_record_id>* const  output_records_ptr
         )
 {
     for (auto const& name_and_node : scene.get_all_scene_nodes())
     {
-        scalar param;
-        if (compute_collision_of_scene_node_and_line(*name_and_node.second, line_begin, line_end, &param))
-            result.insert({param, name_and_node.first});
+        scalar  param;
+        if (output_nodes_ptr != nullptr &&
+                collision_scene_node_vs_line(*name_and_node.second, line_start_point, line_end_point, &param))
+            output_nodes_ptr->insert({param, name_and_node.first});
+        if (output_records_ptr != nullptr)
+            for (auto const&  name_and_folder : name_and_node.second->get_folders())
+                for (auto const& name_and_holder : name_and_folder.second.get_records())
+                    if (collision_scene_record_vs_line(
+                            *name_and_node.second,
+                            { name_and_folder.first, name_and_holder.first },
+                            line_start_point,
+                            line_end_point,
+                            &param
+                            ))
+                        output_records_ptr->insert({
+                                param, { name_and_node.first, name_and_folder.first, name_and_holder.first }
+                                });
     }
 }
 
 
-void  get_bbox_of_selected_scene_nodes(
-        std::unordered_set<scene_node_ptr> const&  nodes,
-        vector3&  lo,
-        vector3&  hi
+void  collect_nearest_scene_objects_on_line_within_parameter_range(
+        std::map<scalar, scn::scene_node_name> const* const  nodes_on_line_ptr,
+        std::map<scalar, scn::scene_record_id> const* const  records_on_line_ptr,
+        float_32_bit const  param_region_size,
+        std::vector<scn::scene_record_id>&  output_nearnest_records_in_range,
+        std::vector<scalar>*  output_params_of_records_in_range_ptr
         )
 {
-    lo = vector3{ 1e20f,  1e20f,  1e20f };
-    hi = vector3{ -1e20f, -1e20f, -1e20f };
-    for (auto const& node : nodes)
+    static std::map<scalar, scn::scene_node_name>  dummy_nodes;
+    static std::map<scalar, scn::scene_record_id>  dummy_records;
+
+    std::map<scalar, scn::scene_node_name>::const_iterator  nodes_it =
+        (nodes_on_line_ptr == nullptr) ? dummy_nodes.cbegin() : nodes_on_line_ptr->cbegin();
+    std::map<scalar, scn::scene_node_name>::const_iterator  nodes_end =
+        (nodes_on_line_ptr == nullptr) ? dummy_nodes.cend() : nodes_on_line_ptr->cend();
+
+    std::map<scalar, scn::scene_record_id>::const_iterator  records_it =
+        (nodes_on_line_ptr == nullptr) ? dummy_records.cbegin() : records_on_line_ptr->cbegin();
+    std::map<scalar, scn::scene_record_id>::const_iterator  records_end =
+        (nodes_on_line_ptr == nullptr) ? dummy_records.cend() : records_on_line_ptr->cend();
+
+    std::vector<scalar>  dummy_params;
+    if (output_params_of_records_in_range_ptr == nullptr)
+        output_params_of_records_in_range_ptr = &dummy_params;
+
+    auto const  insert_from_nodes =
+        [&nodes_it, output_params_of_records_in_range_ptr, &output_nearnest_records_in_range, param_region_size]() -> bool {
+            if (!output_params_of_records_in_range_ptr->empty() &&
+                    nodes_it->first > output_params_of_records_in_range_ptr->front() + param_region_size)
+                return false;
+            output_params_of_records_in_range_ptr->push_back(nodes_it->first);
+            output_nearnest_records_in_range.push_back(scn::scene_record_id(nodes_it->second));
+            ++nodes_it;
+            return true;
+        };
+
+    auto const  insert_from_records =
+        [&records_it, output_params_of_records_in_range_ptr, &output_nearnest_records_in_range, param_region_size]() -> bool {
+            if (!output_params_of_records_in_range_ptr->empty() &&
+                    records_it->first > output_params_of_records_in_range_ptr->front() + param_region_size)
+                return false;
+            output_params_of_records_in_range_ptr->push_back(records_it->first);
+            output_nearnest_records_in_range.push_back(records_it->second);
+            ++records_it;
+            return true;
+        };
+
+    bool  is_parameter_in_region = true;
+    while (nodes_it != nodes_end || records_it != records_end)
     {
-        vector3 const  node_wold_pos = transform_point(vector3_zero(), node->get_world_matrix());
-        for (int i = 0; i != 3; ++i)
-        {
-            if (lo(i) > node_wold_pos(i))
-                lo(i) = node_wold_pos(i);
-            if (hi(i) < node_wold_pos(i))
-                hi(i) = node_wold_pos(i);
-        }
-    }
-}
+        if (nodes_it == nodes_end)
+            is_parameter_in_region = insert_from_records();
+        else if (records_it == records_end)
+            is_parameter_in_region = insert_from_nodes();
+        else if (nodes_it->first < records_it->first)
+            is_parameter_in_region = insert_from_nodes();
+        else
+            is_parameter_in_region = insert_from_records();
 
-void  get_bbox_of_selected_scene_nodes(
-        scene const&  scene,
-        std::unordered_set<std::string> const&  node_names,
-        vector3&  lo,
-        vector3&  hi
-        )
-{
-    std::unordered_set<scene_node_ptr>  nodes;
-    for (auto const& node_name : node_names)
-        nodes.insert(scene.get_scene_node(node_name));
-    get_bbox_of_selected_scene_nodes(nodes, lo, hi);
+        if (!is_parameter_in_region)
+            break;
+    }
 }
 
 

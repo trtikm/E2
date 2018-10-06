@@ -29,7 +29,7 @@ namespace scn {
 
 
 scene_node_ptr  scene_node::create(
-    std::string const&  name,
+    scene_node_name const&  name,
     vector3 const&  origin,
     quaternion const&  orientation
     )
@@ -38,44 +38,18 @@ scene_node_ptr  scene_node::create(
 }
 
 scene_node::scene_node(
-        std::string const&  name,
+        scene_node_name const&  name,
         vector3 const&  origin,
         quaternion const&  orientation
         )
     : m_name(name)
     , m_parent()
     , m_coord_system(new angeo::coordinate_system(origin, orientation))
-    , m_batches()
+    , m_folders()
     , m_children()
     , m_is_world_matrix_valid(false)
 {
     ASSUMPTION(!m_name.empty());
-}
-
-qtgl::batch  scene_node::get_batch(std::string const&  name) const
-{
-    auto const  it = get_batches().find(name);
-    return it == get_batches().cend() ? qtgl::batch() : it->second;
-}
-
-void  scene_node::insert_batches(std::unordered_map<std::string, qtgl::batch> const&  batches)
-{
-    TMPROF_BLOCK();
-
-    for (auto name_batch : batches)
-        m_batches.insert(name_batch);
-}
-
-void  scene_node::erase_batches(std::unordered_set<std::string> const&  names_of_batches)
-{
-    TMPROF_BLOCK();
-
-    for (auto const& name : names_of_batches)
-    {
-        auto const  it = m_batches.find(name);
-        ASSUMPTION(it != m_batches.end());
-        m_batches.erase(it);
-    }
 }
 
 matrix44 const&  scene_node::get_world_matrix() const

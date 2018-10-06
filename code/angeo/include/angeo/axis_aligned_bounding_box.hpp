@@ -13,6 +13,16 @@ struct  axis_aligned_bounding_box
 };
 
 
+inline axis_aligned_bounding_box  compute_aabb_of_sphere(
+        vector3 const&  center,
+        float_32_bit const  radius
+        )
+{
+    vector3 const  shift(radius, radius, radius);
+    return { center - shift, center + shift };
+}
+
+
 axis_aligned_bounding_box  compute_aabb_of_capsule(
         vector3 const&  point_1,
         vector3 const&  point_2,
@@ -31,6 +41,44 @@ axis_aligned_bounding_box  compute_aabb_of_triangle(
         vector3 const&  point_2,
         vector3 const&  point_3
         );
+
+
+void  compute_union_bbox(
+        axis_aligned_bounding_box const&  bbox_1,
+        axis_aligned_bounding_box const&  bbox_2,
+        axis_aligned_bounding_box&  union_bbox
+        );
+
+// Expands 'union_bbox' so that it captures also 'bbox'.
+inline void  extend_union_bbox(
+        axis_aligned_bounding_box&  union_bbox,
+        axis_aligned_bounding_box const&  bbox
+        )
+{
+    compute_union_bbox(union_bbox, bbox, union_bbox);
+}
+
+
+inline vector3  center_of_bbox(axis_aligned_bounding_box const&  bbox) { return 0.5f * (bbox.min_corner + bbox.max_corner); }
+inline float_32_bit  radius_of_bbox(axis_aligned_bounding_box const&  bbox) { return 0.5f * length(bbox.min_corner - bbox.max_corner); }
+
+
+void  transform_bbox(
+        axis_aligned_bounding_box const&  bbox,
+        matrix44 const&  transformation,
+        axis_aligned_bounding_box&  transformed_bbox
+        );
+
+
+inline axis_aligned_bounding_box  transform_bbox(
+        axis_aligned_bounding_box const&  bbox,
+        matrix44 const&  transformation
+        )
+{
+    axis_aligned_bounding_box  transformed_bbox;
+    transform_bbox(bbox, transformation, transformed_bbox);
+    return transformed_bbox;
+}
 
 
 }

@@ -4,8 +4,11 @@
 #   include <angeo/tensor_math.hpp>
 #   include <scene/scene.hpp>
 #   include <scene/scene_history.hpp>
+#   include <scene/scene_record_id.hpp>
+#   include <scene/scene_node_record_id.hpp>
 #   include <boost/filesystem.hpp>
 #   include <boost/filesystem/path.hpp>
+#   include <boost/property_tree/ptree.hpp>
 #   include <QWidget>
 #   include <QTreeWidget>
 #   include <QColor>
@@ -46,6 +49,15 @@ struct  widgets
 
     void  on_scene_hierarchy_item_selected();
     void  on_scene_insert_coord_system();
+    void  on_scene_insert_record(
+            scn::scene_node::folder_name const&  folder_name,
+            boost::filesystem::path const&  root_dir,
+            bool const  directory_input_mode,
+            QIcon const&  icon,
+            std::function<std::string(boost::filesystem::path const&)> const&  get_raw_record_name,
+            std::function<void(boost::filesystem::path const&, scn::scene_record_id const&)> const&  insert_to_scene,
+            std::function<void(boost::filesystem::path const&, scn::scene_record_id const&)> const&  insert_to_history
+            );
     void  on_scene_insert_batch();
     void  on_scene_erase_selected();
 
@@ -94,15 +106,31 @@ private:
                 vector3 const&  origin,
                 quaternion const&  orientation,
                 QTreeWidgetItem* const  parent_tree_item);
-    QTreeWidgetItem*  insert_batch(
-                QTreeWidgetItem* const  node_item,
-                std::string const&  batch_name,
-                boost::filesystem::path const  batch_pathname
-                );
 
     void  add_tree_item_to_selection(QTreeWidgetItem* const  item);
 
+    void  erase_scene_record(scn::scene_record_id const&  id);
     void  erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std::unordered_set<QTreeWidgetItem*>&  erased_items);
+
+    void  load_scene_record(scn::scene_record_id const&  id, boost::property_tree::ptree const&  data);
+    void  save_scene_record(
+            scn::scene_node_ptr const  node_ptr,
+            scn::scene_node_record_id const&  id,
+            boost::property_tree::ptree&  data
+            );
+
+    QTreeWidgetItem*  load_scene_node(
+            std::string const&  node_name,
+            boost::property_tree::ptree const&  node_tree,
+            QTreeWidgetItem*  parent_item
+            );
+
+    void  save_scene_node(
+            QTreeWidgetItem* const  item_ptr,
+            boost::property_tree::ptree& save_tree
+            );
+
+
 
     void  update_coord_system_location_widgets();
     void  enable_coord_system_location_widgets(bool const  state, bool const  read_only);
@@ -117,6 +145,7 @@ private:
 
     QTreeWidget*  m_scene_tree;
     QIcon  m_node_icon;
+    QIcon  m_folder_icon;
     QIcon  m_batch_icon;
 
     bool  m_processing_selection_change;

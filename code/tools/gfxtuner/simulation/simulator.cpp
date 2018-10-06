@@ -2,6 +2,7 @@
 #include <gfxtuner/simulation/simulator_notifications.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <scene/scene_utils.hpp>
+#include <scene/scene_batch_utils.hpp>
 #include <angeo/collide.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
@@ -293,24 +294,24 @@ void  simulator::validate_simulation_state()
 {
     TMPROF_BLOCK();
 
-    std::unordered_set<std::pair<std::string, std::string> >  to_remove;
+    std::unordered_set<scn::scene_record_id>  to_remove;
     for (auto& elem : m_gfx_animated_objects)
-    {
-        auto const  node = get_scene().get_scene_node(elem.first.first);
-        if (node == nullptr || !node->has_batch(elem.first.second))
+        if (!scn::has_record(get_scene(), elem.first))
             to_remove.insert(elem.first);
-    }
     for (auto const&  key : to_remove)
         m_gfx_animated_objects.erase(key);
 
-    for (auto const& name_node : get_scene().get_all_scene_nodes())
-        for (auto const& name_batch : name_node.second->get_batches())
-            if (name_batch.second.ready() && name_batch.second.get_available_resources().skeletal().size() == 1UL)
+    for (auto const& name_node : scn::get_all_nodes(get_scene()))
+        for (auto const& name_holder : scn::get_batch_holders(*name_node.second))
+        {
+            qtgl::batch const  batch = scn::as_batch(name_holder.second);
+            if (batch.ready() && batch.get_available_resources().skeletal().size() == 1UL)
             {
-                std::pair<std::string, std::string> const  key = { name_node.first, name_batch.first };
+                scn::scene_record_id const  key = scn::make_batch_record_id(name_node.first, name_holder.first);
                 if (m_gfx_animated_objects.count(key) == 0UL)
-                    m_gfx_animated_objects.emplace(key, gfx_animated_object(name_batch.second));
+                    m_gfx_animated_objects.emplace(key, gfx_animated_object(batch));
             }
+        }
 }
 
 
@@ -337,14 +338,15 @@ void  simulator::render_simulation_state(
                 qtgl::batch,
                 std::vector<std::pair<scn::scene_node_const_ptr,gfx_animated_object const*> > > >
         batches;
-    for (auto const& name_node : get_scene().get_all_scene_nodes())
-        for (auto const& name_batch : name_node.second->get_batches())
+    for (auto const& name_node : scn::get_all_nodes(get_scene()))
+        for (auto const& name_holder : scn::get_batch_holders(*name_node.second))
         {
-            auto&  record = batches[name_batch.second.path_component_of_uid()];
+            qtgl::batch const  batch = scn::as_batch(name_holder.second);
+            auto&  record = batches[batch.path_component_of_uid()];
             if (record.first.empty())
-                record.first = name_batch.second;
-            INVARIANT(record.first == name_batch.second);
-            auto const  it = m_gfx_animated_objects.find({ name_node.first, name_batch.first });
+                record.first = batch;
+            INVARIANT(record.first == batch);
+            auto const  it = m_gfx_animated_objects.find(scn::make_batch_record_id(name_node.first, name_holder.first));
             INVARIANT(it == m_gfx_animated_objects.cend() || it->second.get_batch() == record.first);
             record.second.push_back({
                 name_node.second,
@@ -461,57 +463,59 @@ void  simulator::select_scene_objects(float_64_bit const  time_to_simulate_in_se
         );
     cursor_line_end(*m_camera, ray_begin, ray_end);
 
-    std::map<scalar, std::string>  nodes_on_line;
-    find_scene_nodes_on_line(get_scene(), ray_begin, ray_end, nodes_on_line);
+
+    scn::scene_record_id const*  chosen_scene_object;
+    {
+        std::map<scalar, scn::scene_node_name>  nodes_on_line;
+        std::map<scalar, scn::scene_record_id>  records_on_line;
+        scn::collision_scene_vs_line(get_scene(), ray_begin, ray_end, &nodes_on_line, &records_on_line);
+
+        constexpr float_32_bit  RANGE_FROM_CLOSEST_IN_METERS = 2.0f;
+
+        std::vector<scn::scene_record_id>  nearnest_records_in_range;
+        collect_nearest_scene_objects_on_line_within_parameter_range(
+                &nodes_on_line,
+                &records_on_line,
+                std::min(1.0f, RANGE_FROM_CLOSEST_IN_METERS / (length(ray_end - ray_begin) + 0.001f)),
+                nearnest_records_in_range,
+                nullptr
+                );
+
+        chosen_scene_object = m_scene_edit_data.get_selection_data().choose_best_selection(nearnest_records_in_range);
+    }
 
     if (mouse_props().was_just_released(qtgl::RIGHT_MOUSE_BUTTON()) ||
         keyboard_props().is_pressed(qtgl::KEY_LCTRL()) ||
         keyboard_props().is_pressed(qtgl::KEY_RCTRL()))
     {
-        if (nodes_on_line.empty())
+        if (chosen_scene_object == nullptr)
             return;
 
-        std::string const&  chosen_node_name = nodes_on_line.begin()->second;
-
-        std::unordered_set<std::string>  nodes_of_selected_batches;
-        get_nodes_of_selected_batches(m_scene_selection, nodes_of_selected_batches);
-        if (m_scene_selection.is_node_selected(chosen_node_name) ||
-            nodes_of_selected_batches.count(chosen_node_name) != 0UL)
+        if (chosen_scene_object->is_node_reference())
         {
-            m_scene_selection.erase_node(chosen_node_name);
-            m_scene_selection.erase_batches_of_node(chosen_node_name);
+            if (m_scene_selection.is_node_selected(chosen_scene_object->get_node_name()))
+                m_scene_selection.erase_node(chosen_scene_object->get_node_name());
+            else
+                m_scene_selection.insert_node(chosen_scene_object->get_node_name());
         }
-        else if (get_scene().get_scene_node(chosen_node_name)->get_batches().empty())
-            m_scene_selection.insert_node(chosen_node_name);
         else
-            m_scene_selection.insert_batches_of_node(chosen_node_name);
+        {
+            if (m_scene_selection.is_record_selected(*chosen_scene_object))
+                m_scene_selection.erase_record(*chosen_scene_object);
+            else
+                m_scene_selection.insert_record(*chosen_scene_object);
+        }
     }
     else
     {
         m_scene_selection.clear();
 
-        if (!nodes_on_line.empty())
+        if (chosen_scene_object != nullptr)
         {
-            std::vector<std::string>  candidate_nodes_on_line;
-            {
-                scalar const  max_candidate_distance = 2.0f;
-                    //compute_bounding_sphere_radius_of_scene_node(*get_scene().get_scene_node(nodes_on_line.cbegin()->second));
-                scalar const  line_length = length(ray_end - ray_begin);
-                scalar const  max_param_value =
-                    nodes_on_line.cbegin()->first + (line_length < max_candidate_distance ? 1.0 : max_candidate_distance / line_length);
-                for (auto const&  param_and_name : nodes_on_line)
-                {
-                    if (param_and_name.first > max_param_value)
-                        break;
-                    candidate_nodes_on_line.push_back(param_and_name.second);
-                }
-                INVARIANT(!candidate_nodes_on_line.empty());
-            }
-            std::string const  chosen_node_name = m_scene_edit_data.get_selection_data().choose_best_selection(candidate_nodes_on_line);
-            if (!get_scene().get_scene_node(chosen_node_name)->get_batches().empty())
-                m_scene_selection.insert_batches_of_node(chosen_node_name);
+            if (chosen_scene_object->is_node_reference())
+                m_scene_selection.insert_node(chosen_scene_object->get_node_name());
             else
-                m_scene_selection.insert_node(chosen_node_name);
+                m_scene_selection.insert_record(*chosen_scene_object);
         }
     }
 
@@ -525,7 +529,10 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
     if (!mouse_props().is_pressed(qtgl::LEFT_MOUSE_BUTTON()))
     {
         if (m_scene_edit_data.was_operation_started() && mouse_props().was_just_released(qtgl::LEFT_MOUSE_BUTTON()))
+        {
             call_listeners(simulator_notifications::scene_node_position_update_finished());
+            m_scene_edit_data.invalidate_data();
+        }
         return;
     }
     if (m_scene_selection.empty())
@@ -537,12 +544,7 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
                 get_scene().get_scene_node(scn::get_pivot_node_name())->get_coord_system()->origin()
                 });
         else
-        {
-            vector3  lo, hi;
-            if (!get_bbox_of_selected_scene_nodes(m_scene_selection, m_scene, lo, hi))
-                return;
-            m_scene_edit_data.initialise_translation_data({ 0.5f * (lo + hi) });
-        }
+            m_scene_edit_data.initialise_translation_data(scn::get_center_of_selected_scene_nodes(m_scene_selection));
         call_listeners(simulator_notifications::scene_node_position_update_started());
     }
     m_scene_edit_data.get_translation_data().update(
@@ -578,9 +580,9 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
 
     vector3 const  raw_shift = m_scene_edit_data.get_translation_data().get_shift(new_plane_point);
 
-    std::unordered_set<std::string> nodes_to_translate = m_scene_selection.get_nodes();
-    for (auto const& node_batch_names : m_scene_selection.get_batches())
-        nodes_to_translate.insert(node_batch_names.first);
+    std::unordered_set<scn::scene_node_name> nodes_to_translate = m_scene_selection.get_nodes();
+    for (auto const& record_id : m_scene_selection.get_records())
+        nodes_to_translate.insert(record_id.get_node_name());
     if (nodes_to_translate.size() > 1UL)
         nodes_to_translate.erase(scn::get_pivot_node_name());
     vector3 const  shift =
@@ -609,7 +611,10 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
     {
         if (m_scene_edit_data.was_operation_started() && (mouse_props().was_just_released(qtgl::LEFT_MOUSE_BUTTON()) ||
                                                           mouse_props().was_just_released(qtgl::RIGHT_MOUSE_BUTTON())))
+        {
             call_listeners(simulator_notifications::scene_node_orientation_update_finished());
+            m_scene_edit_data.invalidate_data();
+        }
         return;
     }
     if (m_scene_selection.empty())
@@ -622,12 +627,7 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
                 get_scene().get_scene_node(scn::get_pivot_node_name())->get_coord_system()->origin()
                 });
         else
-        {
-            vector3  lo, hi;
-            if (!get_bbox_of_selected_scene_nodes(m_scene_selection, m_scene, lo, hi))
-                return;
-            m_scene_edit_data.initialise_rotation_data({ 0.5f * (lo + hi) });
-        }
+            m_scene_edit_data.initialise_rotation_data(scn::get_center_of_selected_scene_nodes(m_scene_selection));
         call_listeners(simulator_notifications::scene_node_orientation_update_started());
     }
 
@@ -667,9 +667,9 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
     vector3  raw_axis;
     scalar const  angle = quaternion_to_angle_axis(raw_rotation, raw_axis);
 
-    std::unordered_set<std::string> nodes_to_rotate = m_scene_selection.get_nodes();
-    for (auto const& node_batch_names : m_scene_selection.get_batches())
-        nodes_to_rotate.insert(node_batch_names.first);
+    std::unordered_set<scn::scene_node_name> nodes_to_rotate = m_scene_selection.get_nodes();
+    for (auto const& record_id : m_scene_selection.get_records())
+        nodes_to_rotate.insert(record_id.get_node_name());
     if (nodes_to_rotate.size() > 1UL)
         nodes_to_rotate.erase(scn::get_pivot_node_name());
     bool const  rotate_around_pivot =
@@ -709,7 +709,7 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
     call_listeners(simulator_notifications::scene_node_orientation_updated());
 }
 
-void  simulator::rotate_scene_node(std::string const&  scene_node_name, float_64_bit const  time_to_simulate_in_seconds)
+void  simulator::rotate_scene_node(scn::scene_node_name const&  scene_node_name, float_64_bit const  time_to_simulate_in_seconds)
 {
     TMPROF_BLOCK();
 
@@ -725,9 +725,12 @@ void  simulator::render_scene_batches(
 
     std::unordered_map<std::string, std::vector<std::pair<qtgl::batch, scn::scene_node_const_ptr> > >
             batches;
-    for (auto const& name_node : get_scene().get_all_scene_nodes())
-        for (auto const& name_batch : name_node.second->get_batches())
-            batches[name_batch.second.path_component_of_uid()].push_back({name_batch.second, name_node.second});
+    for (auto const& name_node : scn::get_all_nodes(get_scene()))
+        for (auto const& name_holder : scn::get_batch_holders(*name_node.second))
+        {
+            qtgl::batch const  batch = scn::as_batch(name_holder.second);
+            batches[batch.path_component_of_uid()].push_back({batch, name_node.second});
+        }
     for (auto const& path_and_pairs : batches)
         if (qtgl::make_current(path_and_pairs.second.front().first, draw_state))
         {
@@ -776,9 +779,9 @@ void  simulator::render_scene_coord_systems(
     //auto const  old_depth_test_state = qtgl::glapi().glIsEnabled(GL_DEPTH_TEST);
     //qtgl::glapi().glDisable(GL_DEPTH_TEST);
 
-    std::unordered_set<std::string>  nodes_to_draw = m_scene_selection.get_nodes();
-    get_nodes_of_selected_batches(m_scene_selection, nodes_to_draw);
-    if (get_scene().has_scene_node(scn::get_pivot_node_name())) // The pivot may be missing, if the scene is not completely initialised yet.
+    std::unordered_set<scn::scene_node_name>  nodes_to_draw = m_scene_selection.get_nodes();
+    scn::get_nodes_of_selected_records(m_scene_selection, nodes_to_draw);
+    if (scn::has_node(get_scene(), scn::get_pivot_node_name())) // The pivot may be missing, if the scene is not completely initialised yet.
         nodes_to_draw.insert(scn::get_pivot_node_name());
     for (auto const& node_name : nodes_to_draw)
         qtgl::render_batch(
@@ -804,12 +807,12 @@ void  simulator::render_scene_coord_systems(
     draw_state = m_batch_coord_system.get_draw_state();
 }
 
-void  simulator::erase_scene_node(std::string const&  name)
+void  simulator::erase_scene_node(scn::scene_node_name const&  name)
 {
     TMPROF_BLOCK();
 
     m_scene_selection.erase_node(name);
-    m_scene_selection.erase_batches_of_node(name);
+    m_scene_selection.erase_records_of_node(name);
 
     m_scene_edit_data.invalidate_data();
 
@@ -817,20 +820,26 @@ void  simulator::erase_scene_node(std::string const&  name)
 
 }
 
-void  simulator::insert_batch_to_scene_node(std::string const&  batch_name, boost::filesystem::path const&  batch_pathname, std::string const&  scene_node_name)
+void  simulator::insert_batch_to_scene_node(
+        scn::scene_node::record_name const&  batch_name,
+        boost::filesystem::path const&  batch_pathname,
+        scn::scene_node_name const&  scene_node_name
+        )
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(get_scene().has_scene_node(scene_node_name));
+    ASSUMPTION(scn::has_node(get_scene(), scene_node_name));
     auto const  batch = qtgl::batch(canonical_path(batch_pathname), get_effects_config());
-    get_scene_node(scene_node_name)->insert_batches({ { batch_name, batch } });
+    scn::insert_batch(*get_scene_node(scene_node_name), batch_name, batch);
 }
 
-void  simulator::erase_batch_from_scene_node(std::string const&  batch_name, std::string const&  scene_node_name)
+void  simulator::erase_batch_from_scene_node(
+        scn::scene_node::record_name const&  batch_name,
+        scn::scene_node_name const&  scene_node_name
+        )
 {
-    m_scene_selection.erase_batch({ scene_node_name, batch_name });
-    auto const  node = get_scene_node(scene_node_name);
-    node->erase_batches({ batch_name });
+    m_scene_selection.erase_record(scn::make_batch_record_id(scene_node_name, batch_name));
+    scn::erase_batch(*get_scene_node(scene_node_name), batch_name);
 }
 
 
@@ -840,86 +849,86 @@ void  simulator::clear_scene()
     get_scene().clear();
 }
 
-void  simulator::translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift)
+void  simulator::translate_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  shift)
 {
     get_scene_node(scene_node_name)->translate(shift);
     m_scene_edit_data.invalidate_data();
 }
 
-void  simulator::rotate_scene_node(std::string const&  scene_node_name, quaternion const&  rotation)
+void  simulator::rotate_scene_node(scn::scene_node_name const&  scene_node_name, quaternion const&  rotation)
 {
     get_scene_node(scene_node_name)->rotate(rotation);
     m_scene_edit_data.invalidate_data();
 }
 
-void  simulator::set_position_of_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin)
+void  simulator::set_position_of_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  new_origin)
 {
     get_scene_node(scene_node_name)->set_origin(new_origin);
     m_scene_edit_data.invalidate_data();
 }
 
-void  simulator::set_orientation_of_scene_node(std::string const&  scene_node_name, quaternion const&  new_orientation)
+void  simulator::set_orientation_of_scene_node(scn::scene_node_name const&  scene_node_name, quaternion const&  new_orientation)
 {
     get_scene_node(scene_node_name)->set_orientation(new_orientation);
     m_scene_edit_data.invalidate_data();
 }
 
-void  simulator::relocate_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation)
+void  simulator::relocate_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation)
 {
     get_scene_node(scene_node_name)->relocate(new_origin, new_orientation);
     m_scene_edit_data.invalidate_data();
 }
 
 void  simulator::set_scene_selection(
-        std::unordered_set<std::string> const&  selected_scene_nodes,
-        std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
+        std::unordered_set<scn::scene_node_name> const&  selected_scene_nodes,
+        std::unordered_set<scn::scene_record_id> const&  selected_records
         )
 {
     TMPROF_BLOCK();
 
     m_scene_selection.clear();
-    insert_to_scene_selection(selected_scene_nodes, selected_batches);
+    insert_to_scene_selection(selected_scene_nodes, selected_records);
 }
 
 void  simulator::insert_to_scene_selection(
-        std::unordered_set<std::string> const&  selected_scene_nodes,
-        std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
+        std::unordered_set<scn::scene_node_name> const&  selected_scene_nodes,
+        std::unordered_set<scn::scene_record_id> const&  selected_records
         )
 {
     TMPROF_BLOCK();
 
     for (auto const& name : selected_scene_nodes)
         m_scene_selection.insert_node(name);
-    for (auto const& node_batch_names : selected_batches)
-        m_scene_selection.insert_batch(node_batch_names);
+    for (auto const& id : selected_records)
+        m_scene_selection.insert_record(id);
 
     m_scene_edit_data.invalidate_data();
 }
 
 void  simulator::erase_from_scene_selection(
-        std::unordered_set<std::string> const&  selected_scene_nodes,
-        std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
+        std::unordered_set<scn::scene_node_name> const&  selected_scene_nodes,
+        std::unordered_set<scn::scene_record_id> const&  selected_records
         )
 {
     TMPROF_BLOCK();
 
     for (auto const& name : selected_scene_nodes)
         m_scene_selection.erase_node(name);
-    for (auto const& node_batch_names : selected_batches)
-        m_scene_selection.erase_batch(node_batch_names);
+    for (auto const& id : selected_records)
+        m_scene_selection.erase_record(id);
 
     m_scene_edit_data.invalidate_data();
 }
 
 void  simulator::get_scene_selection(
-        std::unordered_set<std::string>&  selected_scene_nodes,
-        std::unordered_set<std::pair<std::string, std::string> >&  selected_batches
+        std::unordered_set<scn::scene_node_name>&  selected_scene_nodes,
+        std::unordered_set<scn::scene_record_id>&  selected_records
         ) const
 {
     TMPROF_BLOCK();
 
     selected_scene_nodes = m_scene_selection.get_nodes();
-    selected_batches = m_scene_selection.get_batches();
+    selected_records = m_scene_selection.get_records();
 }
 
 

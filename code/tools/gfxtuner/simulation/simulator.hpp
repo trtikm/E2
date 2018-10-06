@@ -2,6 +2,7 @@
 #   define E2_TOOL_GFXTUNER_SIMULATOR_HPP_INCLUDED
 
 #   include <scene/scene.hpp>
+#   include <scene/scene_record_id.hpp>
 #   include <scene/scene_selection.hpp>
 #   include <scene/scene_history.hpp>
 #   include <scene/scene_edit_utils.hpp>
@@ -55,58 +56,65 @@ struct simulator : public qtgl::real_time_simulator
     scn::scene const&  get_scene() const { return *m_scene; }
     scn::scene&  get_scene() { return *m_scene; }
 
-    scn::scene_node_ptr  get_scene_node(std::string const&  name) const
+    scn::scene_node_ptr  get_scene_node(scn::scene_node_name const&  name) const
     { return get_scene().get_scene_node(name); }
 
-    scn::scene_node_ptr  insert_scene_node(std::string const&  name)
+    scn::scene_node_ptr  insert_scene_node(scn::scene_node_name const&  name)
     { return insert_scene_node_at(name, vector3_zero(), quaternion_identity()); }
 
-    scn::scene_node_ptr  insert_scene_node_at(std::string const&  name, vector3 const&  origin, quaternion const&  orientation)
+    scn::scene_node_ptr  insert_scene_node_at(scn::scene_node_name const&  name, vector3 const&  origin, quaternion const&  orientation)
     { return get_scene().insert_scene_node(name, origin, orientation, nullptr); }
 
-    scn::scene_node_ptr  insert_child_scene_node(std::string const&  name, std::string const&  parent_name)
+    scn::scene_node_ptr  insert_child_scene_node(scn::scene_node_name const&  name, scn::scene_node_name const&  parent_name)
     { return insert_child_scene_node_at(name, vector3_zero(), quaternion_identity(), parent_name); }
 
     scn::scene_node_ptr  insert_child_scene_node_at(
-            std::string const&  name,
+            scn::scene_node_name const&  name,
             vector3 const&  origin,
             quaternion const&  orientation,
             std::string const&  parent_name
             )
     { return get_scene().insert_scene_node(name, origin, orientation, get_scene_node(parent_name)); }
 
-    void  erase_scene_node(std::string const&  name);
+    void  erase_scene_node(scn::scene_node_name const&  name);
 
-    void  insert_batch_to_scene_node(std::string const&  batch_name, boost::filesystem::path const&  batch_pathname, std::string const&  scene_node_name);
+    void  insert_batch_to_scene_node(
+            scn::scene_node::record_name const&  batch_name,
+            boost::filesystem::path const&  batch_pathname,
+            scn::scene_node_name const&  scene_node_name
+            );
 
-    void  erase_batch_from_scene_node(std::string const&  batch_name, std::string const&  scene_node_name);
+    void  erase_batch_from_scene_node(
+            scn::scene_node::record_name const&  batch_name,
+            scn::scene_node_name const&  scene_node_name
+            );
 
     void  clear_scene();
 
     scn::scene_history_ptr  get_scene_history() { return m_scene_history; }
 
-    void  translate_scene_node(std::string const&  scene_node_name, vector3 const&  shift);
-    void  rotate_scene_node(std::string const&  scene_node_name, quaternion const&  rotation);
-    void  set_position_of_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin);
-    void  set_orientation_of_scene_node(std::string const&  scene_node_name, quaternion const&  new_orientation);
-    void  relocate_scene_node(std::string const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation);
+    void  translate_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  shift);
+    void  rotate_scene_node(scn::scene_node_name const&  scene_node_name, quaternion const&  rotation);
+    void  set_position_of_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  new_origin);
+    void  set_orientation_of_scene_node(scn::scene_node_name const&  scene_node_name, quaternion const&  new_orientation);
+    void  relocate_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation);
 
     void  set_scene_selection(
-            std::unordered_set<std::string> const&  selected_scene_nodes,
-            std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
+            std::unordered_set<scn::scene_node_name> const&  selected_scene_nodes,
+            std::unordered_set<scn::scene_record_id> const&  selected_records
             );
     void  insert_to_scene_selection(
-            std::unordered_set<std::string> const&  selected_scene_nodes,
-            std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
+            std::unordered_set<scn::scene_node_name> const&  selected_scene_nodes,
+            std::unordered_set<scn::scene_record_id> const&  selected_records
             );
     void  erase_from_scene_selection(
-            std::unordered_set<std::string> const&  selected_scene_nodes,
-            std::unordered_set<std::pair<std::string, std::string> > const&  selected_batches
+            std::unordered_set<scn::scene_node_name> const&  selected_scene_nodes,
+            std::unordered_set<scn::scene_record_id> const&  selected_records
             );
     void  get_scene_selection(
-        std::unordered_set<std::string>&  selected_scene_nodes,
-        std::unordered_set<std::pair<std::string, std::string> >&  selected_batches
-        ) const;
+            std::unordered_set<scn::scene_node_name>&  selected_scene_nodes,
+            std::unordered_set<scn::scene_record_id>&  selected_records
+            ) const;
 
     scn::SCENE_EDIT_MODE  get_scene_edit_mode() const { return m_scene_edit_data.get_mode(); }
     void  set_scene_edit_mode(scn::SCENE_EDIT_MODE const  edit_mode);
@@ -132,7 +140,7 @@ private:
     void  select_scene_objects(float_64_bit const  time_to_simulate_in_seconds);
     void  translate_scene_selected_objects(float_64_bit const  time_to_simulate_in_seconds);
     void  rotate_scene_selected_objects(float_64_bit const  time_to_simulate_in_seconds);
-    void  rotate_scene_node(std::string const&  scene_node_name, float_64_bit const  time_to_simulate_in_seconds);
+    void  rotate_scene_node(scn::scene_node_name const&  scene_node_name, float_64_bit const  time_to_simulate_in_seconds);
 
     void  render_scene_batches(
             matrix44 const&  matrix_from_world_to_camera,
@@ -174,7 +182,7 @@ private:
     scn::scene_edit_data  m_scene_edit_data;
 
     /// Simulation related data
-    std::unordered_map<std::pair<std::string, std::string>, gfx_animated_object>  m_gfx_animated_objects;
+    std::unordered_map<scn::scene_record_id, gfx_animated_object>  m_gfx_animated_objects;
     angeo::collision_scene  m_collision_scene;
 
     /// Other data

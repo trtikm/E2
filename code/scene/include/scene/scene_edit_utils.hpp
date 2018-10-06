@@ -1,6 +1,8 @@
 #ifndef E2_SCENE_SCENE_EDIT_UTILS_HPP_INCLUDED
 #   define E2_SCENE_SCENE_EDIT_UTILS_HPP_INCLUDED
 
+#   include <scene/scene.hpp>
+#   include <scene/scene_record_id.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <unordered_set>
 #   include <string>
@@ -20,13 +22,13 @@ enum struct SCENE_EDIT_MODE : natural_8_bit
 struct  scene_nodes_selection_data
 {
     scene_nodes_selection_data()
-        : m_suppressed_nodes()
+        : m_suppressed_records()
     {}
 
-    std::string  choose_best_selection(std::vector<std::string> const&  nodes_on_line);
+    scn::scene_record_id const*  choose_best_selection(std::vector<scn::scene_record_id> const&  records_on_line);
 
 private:
-    std::vector<std::string>  m_suppressed_nodes;
+    std::vector<scn::scene_record_id>  m_suppressed_records;
 };
 
 
@@ -124,7 +126,7 @@ private:
 };
 
 
-inline std::string get_pivot_node_name() { return "@pivot"; }
+inline scene_node_name get_pivot_node_name() { return "@pivot"; }
 
 
 }

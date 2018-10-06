@@ -2,10 +2,10 @@
 #   define E2_SCENE_SCENE_SELECTION_HPP_INCLUDED
 
 #   include <scene/scene.hpp>
+#   include <scene/scene_record_id.hpp>
 #   include <angeo/tensor_math.hpp>
-#   include <utility/std_pair_hash.hpp>
+#   include <angeo/axis_aligned_bounding_box.hpp>
 #   include <unordered_set>
-#   include <string>
 
 namespace scn {
 
@@ -16,40 +16,40 @@ struct scene_selection
         : m_scene(scene)
     {}
 
-    std::unordered_set<std::string> const&  get_nodes() const { return m_nodes; }
-    std::unordered_set<std::pair<std::string, std::string> > const&  get_batches() const { return m_batches; }
+    std::unordered_set<scene_node_name> const&  get_nodes() const { return m_nodes; }
+    std::unordered_set<scene_record_id> const&  get_records() const { return m_records; }
 
-    bool  empty() const { return empty_nodes() && empty_batches(); }
+    bool  empty() const { return empty_nodes() && empty_records(); }
     bool  empty_nodes() const { return m_nodes.empty(); }
-    bool  empty_batches() const { return m_batches.empty(); }
+    bool  empty_records() const { return m_records.empty(); }
 
-    bool  is_node_selected(std::string const&  name) const { return m_nodes.count(name) != 0UL; }
-    bool  is_batch_selected(std::pair<std::string, std::string> const&  name) const { return m_batches.count(name) != 0UL; }
+    bool  is_node_selected(scene_node_name const&  name) const { return m_nodes.count(name) != 0UL; }
+    bool  is_record_selected(scene_record_id const&  id) const { return m_records.count(id) != 0UL; }
 
-    void  insert_node(std::string const&  name);
-    void  insert_batch(std::pair<std::string, std::string> const&  name);
-    void  insert_batches_of_node(std::string const&  name);
+    void  insert_node(scene_node_name const&  name);
+    void  insert_record(scene_record_id const&  id);
+    void  insert_records_of_node(scene_node_name const&  name);
 
-    void  erase_node(std::string const&  name);
-    void  erase_batch(std::pair<std::string, std::string> const&  name);
-    void  erase_batches_of_node(std::string const&  name);
+    void  erase_node(scene_node_name const&  name);
+    void  erase_record(scene_record_id const&  id);
+    void  erase_records_of_node(scene_node_name const&  name);
 
-    void  clear() { clear_nodes();  clear_batches(); }
+    void  clear() { clear_nodes();  clear_records(); }
     void  clear_nodes() { m_nodes.clear(); }
-    void  clear_batches() { m_batches.clear(); }
-    void  clear_batches_of_node(std::string const&  node_name);
+    void  clear_records() { m_records.clear(); }
+
+    scene_ptr  get_scene_ptr() const { return m_scene; }
 
 private:
-    std::unordered_set<std::string>  m_nodes;
-    std::unordered_set<std::pair<std::string, std::string> >  m_batches;
+    std::unordered_set<scene_node_name>  m_nodes;
+    std::unordered_set<scene_record_id>  m_records;
     scene_ptr  m_scene;
 };
 
 
-bool  get_bbox_of_selected_scene_nodes(scene_selection const&  selection, scene_ptr const  scene, vector3&  lo, vector3&  hi);
-void  get_nodes_of_selected_batches(scene_selection const&  selection, std::unordered_set<std::string>&  nodes);
+vector3  get_center_of_selected_scene_nodes(scene_selection const&  selection);
 
-inline scalar  get_selection_radius_of_bounding_sphere_of_scene_node() { return 0.25f; }
+void  get_nodes_of_selected_records(scene_selection const&  selection, std::unordered_set<scene_node_name>&  nodes);
 
 
 }
