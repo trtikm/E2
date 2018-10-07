@@ -1609,7 +1609,7 @@ void  widgets::save_scene_node(
             boost::property_tree::ptree  records;
             for (int j = 0, m = folder_ptr->childCount(); j != m; ++j)
             {
-                QTreeWidgetItem* const  record_ptr = folder_ptr->child(i);
+                QTreeWidgetItem* const  record_ptr = folder_ptr->child(j);
                 INVARIANT(represents_record(record_ptr));
                 std::string const  record_name = get_tree_widget_item_name(record_ptr);
 

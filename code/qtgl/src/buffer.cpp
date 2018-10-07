@@ -7,6 +7,7 @@
 #include <utility/msgstream.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/functional/hash.hpp>
+#include <limits>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
@@ -124,8 +125,14 @@ buffer_file_data::buffer_file_data(async::finalise_load_on_destroy_ptr const  fi
             );
     auto  buffer_data_cursor = buffer_data.data();
     float_32_bit  radius_squared = 0.0f;
-    vector3  lo_corner{ 0.0f, 0.0f, 0.0f };
-    vector3  hi_corner{ 0.0f, 0.0f, 0.0f };
+    vector3  lo_corner =
+        !compute_boundary ? vector3_zero() : vector3(std::numeric_limits<float_32_bit>::max(),
+                                                     std::numeric_limits<float_32_bit>::max(),
+                                                     std::numeric_limits<float_32_bit>::max());
+    vector3  hi_corner =
+        !compute_boundary ? vector3_zero() : vector3(std::numeric_limits<float_32_bit>::min(),
+                                                     std::numeric_limits<float_32_bit>::min(),
+                                                     std::numeric_limits<float_32_bit>::min());
     {
         TMPROF_BLOCK();
 
@@ -157,17 +164,11 @@ buffer_file_data::buffer_file_data(async::finalise_load_on_destroy_ptr const  fi
                     }
                     buffer_data_cursor += sizeof(float_32_bit);
                 }
-                if (compute_boundary)
-                {
-                    float_32_bit const  len2 = length_squared(point);
-                    if (len2 > radius_squared)
-                        radius_squared = len2;
-                }
             }
         }
     }
 
-    spatial_boundary const  boundary{ std::sqrtf(radius_squared), lo_corner, hi_corner };
+    spatial_boundary const  boundary{ length(hi_corner - lo_corner), lo_corner, hi_corner };
 
     initialise(
             0U,
@@ -224,9 +225,12 @@ buffer_file_data::buffer_file_data(
         )
 {
     float_32_bit  radius_squared = 0.0f;
-    vector3  lo_corner{ 0.0f, 0.0f, 0.0f };
-    vector3  hi_corner{ 0.0f, 0.0f, 0.0f };
+    vector3  lo_corner;
+    vector3  hi_corner;
     if (do_compute_boundary)
+    {
+        lo_corner = vector3(std::numeric_limits<float_32_bit>::max(), std::numeric_limits<float_32_bit>::max(), std::numeric_limits<float_32_bit>::max());
+        hi_corner = vector3(std::numeric_limits<float_32_bit>::min(), std::numeric_limits<float_32_bit>::min(), std::numeric_limits<float_32_bit>::min());
         for (auto const& point : data)
         {
             for (natural_32_bit j = 0U; j < 3U; ++j)
@@ -236,13 +240,14 @@ buffer_file_data::buffer_file_data(
                 if (point.at(j) > hi_corner(j))
                     hi_corner(j) = point.at(j);
             }
-            float_32_bit const  len2 = point.at(0U) * point.at(0U) +
-                                       point.at(1U) * point.at(1U) +
-                                       point.at(2U) * point.at(2U);
-            if (len2 > radius_squared)
-                radius_squared = len2;
         }
-    spatial_boundary const  boundary{ std::sqrtf(radius_squared),lo_corner,hi_corner };
+    }
+    else
+    {
+        lo_corner = vector3_zero();
+        hi_corner = vector3_zero();
+    }
+    spatial_boundary const  boundary{ length(hi_corner - lo_corner), lo_corner, hi_corner };
     initialise(
         0U,
         3U, (natural_32_bit)data.size(), sizeof(float_32_bit), false,
