@@ -475,9 +475,11 @@ natural_32_bit  closest_points_of_triangle_and_line(
     float_32_bit constexpr  distance_epsilon = 0.0001f;
     float_32_bit constexpr  param_epsilon = 0.001f;
 
-    scalar const  dot_Tnormal_T1L1 = dot_product(triangle_unit_normal_vector, line_point_1 - triangle_vertex_1);
-    scalar const  dot_Tnormal_T1L2 = dot_product(triangle_unit_normal_vector, line_point_2 - triangle_vertex_1);
+    scalar  dot_Tnormal_T1L1 = dot_product(triangle_unit_normal_vector, line_point_1 - triangle_vertex_1);
+    scalar  dot_Tnormal_T1L2 = dot_product(triangle_unit_normal_vector, line_point_2 - triangle_vertex_1);
 
+    bool  is_dot_Tnormal_T1L1_outdated = false;
+    bool  is_dot_Tnormal_T1L2_outdated = false;
     scalar  min_line_param = 0.0f;
     scalar  max_line_param = 1.0f;
     if (dot_Tnormal_T1L1 < distance_epsilon)
@@ -488,24 +490,16 @@ natural_32_bit  closest_points_of_triangle_and_line(
         scalar const  L1_distance_to_triangle_plane = std::fabsf(dot_Tnormal_T1L1);
         scalar const  param = L1_distance_to_triangle_plane / (L1_distance_to_triangle_plane + dot_Tnormal_T1L2);
         line_point_1 += param * (line_point_2 - line_point_1);
+        is_dot_Tnormal_T1L1_outdated = true;
     }
     else if (dot_Tnormal_T1L2 < distance_epsilon)
     {
         scalar const  param = dot_Tnormal_T1L1 / (dot_Tnormal_T1L1 + std::fabsf(dot_Tnormal_T1L2));
         line_point_2 = line_point_1 + param * (line_point_2 - line_point_1);
+        is_dot_Tnormal_T1L2_outdated = true;
     }
 
-    vector3 const normal_T12 = cross_product(triangle_vertex_2 - triangle_vertex_1, triangle_unit_normal_vector);
-    vector3 const normal_T23 = cross_product(triangle_vertex_3 - triangle_vertex_2, triangle_unit_normal_vector);
-    vector3 const normal_T31 = cross_product(triangle_vertex_1 - triangle_vertex_3, triangle_unit_normal_vector);
-
-    // Check that 'triangle_unit_normal_vector' agrees with the counter-clock-wise order of triangle's verices.
-    ASSUMPTION(dot_product(normal_T12, triangle_vertex_3 - triangle_vertex_1) < 0.0f);
-
-    bool const  L1_behind_T12 = dot_product(normal_T12, line_point_1 - triangle_vertex_1) >= 0.0f;
-    bool const  L2_behind_T12 = dot_product(normal_T12, line_point_2 - triangle_vertex_1) >= 0.0f;
-
-    auto const  build_triangle_feature_id =
+    auto const  build_triangle_edge_feature_id =
         [param_epsilon](float_32_bit const  param, natural_32_bit const  index_1, natural_32_bit const  index_2) -> collision_shape_feature_id {
             if (param < param_epsilon)
                 return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, index_1);
@@ -527,23 +521,32 @@ natural_32_bit  closest_points_of_triangle_and_line(
     auto const  build_triangle_line_and_line_both_feature_ids =
         [output_triangle_shape_feature_id_1, output_triangle_shape_feature_id_2,
          output_line_shape_feature_id_1, output_line_shape_feature_id_2,
-         &build_triangle_feature_id, &build_line_feature_id](
+         &build_triangle_edge_feature_id, &build_line_feature_id](
                 natural_32_bit const  num_collisions,
                 float_32_bit const  triangle_param_1, float_32_bit const  triangle_param_2,
                 natural_32_bit const  index_1, natural_32_bit const  index_2,
                 float_32_bit const  line_param_1, float_32_bit const  line_param_2) -> void {
             if (output_triangle_shape_feature_id_1 != nullptr)
-                *output_triangle_shape_feature_id_1 = build_triangle_feature_id(triangle_param_1, 0U, 1U);
+                *output_triangle_shape_feature_id_1 = build_triangle_edge_feature_id(triangle_param_1, 0U, 1U);
             if (output_line_shape_feature_id_1 != nullptr)
                 *output_line_shape_feature_id_1 = build_line_feature_id(line_param_1);
             if (num_collisions == 2U)
             {
                 if (output_triangle_shape_feature_id_2 != nullptr)
-                    *output_triangle_shape_feature_id_2 = build_triangle_feature_id(triangle_param_2, 0U, 1U);
+                    *output_triangle_shape_feature_id_2 = build_triangle_edge_feature_id(triangle_param_2, 0U, 1U);
                 if (output_line_shape_feature_id_2 != nullptr)
                     *output_line_shape_feature_id_2 = build_line_feature_id(line_param_2);
             }
         };
+
+    vector3 const normal_T12 = cross_product(triangle_vertex_2 - triangle_vertex_1, triangle_unit_normal_vector);
+
+    // Check that 'triangle_unit_normal_vector' agrees with the counter-clock-wise order of triangle's verices.
+    ASSUMPTION(dot_product(normal_T12, triangle_vertex_3 - triangle_vertex_1) < 0.0f);
+
+    bool const  L1_behind_T12 = dot_product(normal_T12, line_point_1 - triangle_vertex_1) >= 0.0f;
+    bool const  L2_behind_T12 = dot_product(normal_T12, line_point_2 - triangle_vertex_1) >= 0.0f;
+
     if (L1_behind_T12 && L2_behind_T12)
     {
         float_32_bit  triangle_param_1, triangle_param_2, line_param_1, line_param_2;
@@ -572,6 +575,8 @@ natural_32_bit  closest_points_of_triangle_and_line(
                 );
         return num_collisions;
     }
+
+    vector3 const normal_T23 = cross_product(triangle_vertex_3 - triangle_vertex_2, triangle_unit_normal_vector);
 
     bool const  L1_behind_T23 = dot_product(normal_T23, line_point_1 - triangle_vertex_2) >= 0.0f;
     bool const  L2_behind_T23 = dot_product(normal_T23, line_point_2 - triangle_vertex_2) >= 0.0f;
@@ -605,6 +610,8 @@ natural_32_bit  closest_points_of_triangle_and_line(
         return num_collisions;
     }
 
+    vector3 const normal_T31 = cross_product(triangle_vertex_1 - triangle_vertex_3, triangle_unit_normal_vector);
+
     bool const  L1_behind_T31 = dot_product(normal_T31, line_point_1 - triangle_vertex_3) >= 0.0f;
     bool const  L2_behind_T31 = dot_product(normal_T31, line_point_2 - triangle_vertex_3) >= 0.0f;
 
@@ -637,7 +644,262 @@ natural_32_bit  closest_points_of_triangle_and_line(
         return num_collisions;
     }
 
-    NOT_IMPLEMENTED_YET();
+    if (is_dot_Tnormal_T1L1_outdated)
+        dot_Tnormal_T1L1 = dot_product(triangle_unit_normal_vector, line_point_1 - triangle_vertex_1);
+    if (is_dot_Tnormal_T1L2_outdated)
+        dot_Tnormal_T1L2 = dot_product(triangle_unit_normal_vector, line_point_2 - triangle_vertex_1);
+
+    bool const  L1_inside_triagle = !L1_behind_T12 && !L1_behind_T23 && !L1_behind_T31;
+    bool const  L2_inside_triagle = !L2_behind_T12 && !L2_behind_T23 && !L2_behind_T31;
+    bool const  L1_below_L2 = dot_Tnormal_T1L1 < dot_Tnormal_T1L2 - 10.0f * distance_epsilon;
+    bool const  L2_below_L1 = dot_Tnormal_T1L2 < dot_Tnormal_T1L1 - 10.0f * distance_epsilon;
+
+    auto const  write_output_for_one_line_corner_point =
+        [&triangle_unit_normal_vector](
+                vector3 const  line_point,
+                float_32_bit const  distance_to_plane,
+                natural_32_bit const  point_index,
+                vector3*  output_triangle_closest_point,
+                collision_shape_feature_id*  output_triangle_shape_feature_id,
+                vector3*  output_line_closest_point,
+                collision_shape_feature_id*  output_line_shape_feature_id
+                ) -> natural_32_bit {
+            if (output_triangle_closest_point != nullptr)
+                *output_triangle_closest_point = line_point - distance_to_plane * triangle_unit_normal_vector;
+            if (output_triangle_shape_feature_id != nullptr)
+                *output_triangle_shape_feature_id = make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 0U);
+
+            if (output_line_closest_point != nullptr)
+                *output_line_closest_point = line_point;
+            if (output_line_shape_feature_id != nullptr)
+                *output_line_shape_feature_id = make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, point_index);
+
+            return 1U;
+        };
+
+    if (L1_inside_triagle && L1_below_L2)
+        return write_output_for_one_line_corner_point(
+                    line_point_1,
+                    dot_Tnormal_T1L1,
+                    0U,
+                    output_triangle_closest_point_1,
+                    output_triangle_shape_feature_id_1,
+                    output_line_closest_point_1,
+                    output_line_shape_feature_id_1
+                    );
+    if (L2_inside_triagle && L2_below_L1)
+        return write_output_for_one_line_corner_point(
+                    line_point_2,
+                    dot_Tnormal_T1L2,
+                    1U,
+                    output_triangle_closest_point_1,
+                    output_triangle_shape_feature_id_1,
+                    output_line_closest_point_1,
+                    output_line_shape_feature_id_1
+                    );
+    if (L1_inside_triagle && L2_inside_triagle)
+        return write_output_for_one_line_corner_point(
+                    line_point_1,
+                    dot_Tnormal_T1L1,
+                    0U,
+                    output_triangle_closest_point_1,
+                    output_triangle_shape_feature_id_1,
+                    output_line_closest_point_1,
+                    output_line_shape_feature_id_1
+                    ) +
+                write_output_for_one_line_corner_point(
+                    line_point_2,
+                    dot_Tnormal_T1L2,
+                    1U,
+                    output_triangle_closest_point_2,
+                    output_triangle_shape_feature_id_2,
+                    output_line_closest_point_2,
+                    output_line_shape_feature_id_2
+                    );
+
+    vector3  triangle_closest_points[3];
+    float_32_bit  triangle_closest_point_params[3];
+    collision_shape_feature_id  triangle_closest_point_feature_ids[3];
+
+    vector3  line_closest_points[3];
+    float_32_bit  line_closest_point_params[3];
+    collision_shape_feature_id  line_closest_point_feature_ids[3];
+
+    natural_32_bit  num_closest_point_pairs = 0U;
+
+    bool const  is_line_parallel_with_plane_of_triangle = !L1_below_L2 && !L2_below_L1;
+
+    if (is_line_parallel_with_plane_of_triangle)
+    {
+        if (L1_inside_triagle)
+        {
+            triangle_closest_points[num_closest_point_pairs] = line_point_1 - dot_Tnormal_T1L1 * triangle_unit_normal_vector;
+            triangle_closest_point_params[num_closest_point_pairs] = 0.0f;
+            triangle_closest_point_feature_ids[num_closest_point_pairs] =
+                    make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 0U);
+
+            line_closest_points[num_closest_point_pairs] = line_point_1;
+            line_closest_point_params[num_closest_point_pairs] = 0.0f;
+            line_closest_point_feature_ids[num_closest_point_pairs] =
+                    make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, 0U);
+
+            ++num_closest_point_pairs;
+        }
+        else if (L2_inside_triagle)
+        {
+            triangle_closest_points[num_closest_point_pairs] = line_point_2 - dot_Tnormal_T1L2 * triangle_unit_normal_vector;
+            triangle_closest_point_params[num_closest_point_pairs] = 1.0f;
+            triangle_closest_point_feature_ids[num_closest_point_pairs] =
+                    make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 0U);
+
+            line_closest_points[num_closest_point_pairs] = line_point_2;
+            line_closest_point_params[num_closest_point_pairs] = 1.0f;
+            line_closest_point_feature_ids[num_closest_point_pairs] =
+                    make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, 1U);
+
+            ++num_closest_point_pairs;
+        }
+    }
+
+    if ((L1_behind_T12 && !L2_below_L1) || (L2_behind_T12 && !L1_below_L2))
+    {
+        closest_points_of_two_lines(
+                triangle_vertex_1,
+                triangle_vertex_2,
+                line_point_1,
+                line_point_2,
+                &triangle_closest_points[num_closest_point_pairs],
+                &triangle_closest_point_params[num_closest_point_pairs],
+                &line_closest_points[num_closest_point_pairs],
+                &line_closest_point_params[num_closest_point_pairs],
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr
+                );
+        triangle_closest_point_feature_ids[num_closest_point_pairs] =
+                build_triangle_edge_feature_id(triangle_closest_point_params[num_closest_point_pairs], 0U, 1U);
+        line_closest_point_feature_ids[num_closest_point_pairs] =
+                build_line_feature_id(line_closest_point_params[num_closest_point_pairs]);
+        ++num_closest_point_pairs;
+    }
+
+    if ((L1_behind_T23 && !L2_below_L1) || (L2_behind_T23 && !L1_below_L2))
+    {
+        closest_points_of_two_lines(
+                triangle_vertex_2,
+                triangle_vertex_3,
+                line_point_1,
+                line_point_2,
+                &triangle_closest_points[num_closest_point_pairs],
+                &triangle_closest_point_params[num_closest_point_pairs],
+                &line_closest_points[num_closest_point_pairs],
+                &line_closest_point_params[num_closest_point_pairs],
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr
+                );
+        triangle_closest_point_feature_ids[num_closest_point_pairs] =
+                build_triangle_edge_feature_id(triangle_closest_point_params[num_closest_point_pairs], 2U, 3U);
+        line_closest_point_feature_ids[num_closest_point_pairs] =
+                build_line_feature_id(line_closest_point_params[num_closest_point_pairs]);
+        ++num_closest_point_pairs;
+    }
+
+    if ((L1_behind_T31 && !L2_below_L1) || (L2_behind_T31 && !L1_below_L2))
+    {
+        closest_points_of_two_lines(
+                triangle_vertex_3,
+                triangle_vertex_1,
+                line_point_1,
+                line_point_2,
+                &triangle_closest_points[num_closest_point_pairs],
+                &triangle_closest_point_params[num_closest_point_pairs],
+                &line_closest_points[num_closest_point_pairs],
+                &line_closest_point_params[num_closest_point_pairs],
+                nullptr,
+                nullptr,
+                nullptr,
+                nullptr
+                );
+        triangle_closest_point_feature_ids[num_closest_point_pairs] =
+                build_triangle_edge_feature_id(triangle_closest_point_params[num_closest_point_pairs], 3U, 1U);
+        line_closest_point_feature_ids[num_closest_point_pairs] =
+                build_line_feature_id(line_closest_point_params[num_closest_point_pairs]);
+        ++num_closest_point_pairs;
+    }
+
+    if (is_line_parallel_with_plane_of_triangle)
+    {
+        INVARIANT(num_closest_point_pairs > 1U);
+
+        natural_32_bit  index_1 = 0U, index_2 = 1U;
+        if (num_closest_point_pairs == 3U)
+        {
+            float_32_bit const  distance2_1 = length_squared(triangle_closest_points[0] - line_closest_points[0]);
+            float_32_bit const  distance2_2 = length_squared(triangle_closest_points[1] - line_closest_points[1]);
+            float_32_bit const  distance2_3 = length_squared(triangle_closest_points[2] - line_closest_points[2]);
+
+            if (distance2_1 < distance2_2)
+            {
+                if (distance2_3 < distance2_2)
+                    index_2 = 2;
+            }
+            else
+            {
+                if (distance2_3 < distance2_1)
+                    index_1 = 2;
+            }
+        }
+
+        if (output_triangle_closest_point_1 != nullptr)
+            *output_triangle_closest_point_1 = triangle_closest_points[index_1];
+        if (output_triangle_shape_feature_id_1 != nullptr)
+            *output_triangle_shape_feature_id_1 = triangle_closest_point_feature_ids[index_1];
+
+        if (output_line_closest_point_1 != nullptr)
+            *output_line_closest_point_1 = line_closest_points[index_1];
+        if (output_line_shape_feature_id_1 != nullptr)
+            *output_line_shape_feature_id_1 = line_closest_point_feature_ids[index_1];
+
+        if (output_triangle_closest_point_2 != nullptr)
+            *output_triangle_closest_point_2 = triangle_closest_points[index_2];
+        if (output_triangle_shape_feature_id_2 != nullptr)
+            *output_triangle_shape_feature_id_2 = triangle_closest_point_feature_ids[index_2];
+
+        if (output_line_closest_point_2 != nullptr)
+            *output_line_closest_point_2 = line_closest_points[index_2];
+        if (output_line_shape_feature_id_2 != nullptr)
+            *output_line_shape_feature_id_2 = line_closest_point_feature_ids[index_2];
+
+        return 2U;
+    }
+    else
+    {
+        INVARIANT(num_closest_point_pairs > 0U);
+
+        natural_32_bit  index = 0U;
+        float_32_bit  distance2 = length_squared(triangle_closest_points[index] - line_closest_points[index]);
+        for (natural_32_bit  i = 1U; i != num_closest_point_pairs; ++i)
+        {
+            float_32_bit const  i_distance2 = length_squared(triangle_closest_points[i] - line_closest_points[i]);
+            if (i_distance2 < distance2)
+                index = i;
+        }
+
+        if (output_triangle_closest_point_1 != nullptr)
+            *output_triangle_closest_point_1 = triangle_closest_points[index];
+        if (output_triangle_shape_feature_id_1 != nullptr)
+            *output_triangle_shape_feature_id_1 = triangle_closest_point_feature_ids[index];
+
+        if (output_line_closest_point_1 != nullptr)
+            *output_line_closest_point_1 = line_closest_points[index];
+        if (output_line_shape_feature_id_1 != nullptr)
+            *output_line_shape_feature_id_1 = line_closest_point_feature_ids[index];
+
+        return 1U;
+    }
 }
 
 
