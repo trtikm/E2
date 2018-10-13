@@ -126,8 +126,6 @@ struct simulator : public qtgl::real_time_simulator
 
 private:
 
-    // Simulation
-
     void  validate_simulation_state();
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
     void  render_simulation_state(
@@ -153,9 +151,8 @@ private:
             qtgl::draw_state&  draw_state
             );
 
-    // Utility functions
+    // Data providing feedback loop between a human user and 3D scene in the tool
 
-    /// Data providing feedback loop between a human user and 3D scene in the tool
     qtgl::camera_perspective_ptr  m_camera;
     qtgl::free_fly_config  m_free_fly_config;
     qtgl::effects_config  m_effects_config;
@@ -170,22 +167,26 @@ private:
     qtgl::batch  m_batch_grid;
     bool  m_do_show_grid;
 
-    /// Data related to simulation
+    // Common and shared data for both modes: Editing and Simulation
+
     bool  m_paused;
     bool  m_do_single_step;
-
-    /// Scene related data
     scn::scene_ptr  m_scene;
+    std::unordered_set<scn::scene_node_name>  m_scene_nodes_relocated_during_simulation;
+    std::unordered_set<scn::scene_record_id>  m_scene_records_inserted_during_simulation;
+    std::unordered_set<scn::scene_record_id>  m_scene_records_erased_during_simulation;
+
+    // Editing mode data
+
     scn::scene_selection  m_scene_selection;
     scn::scene_history_ptr  m_scene_history;
-    qtgl::batch  m_batch_coord_system;
     scn::scene_edit_data  m_scene_edit_data;
+    qtgl::batch  m_batch_coord_system;
 
-    /// Simulation related data
-    std::unordered_map<scn::scene_record_id, gfx_animated_object>  m_gfx_animated_objects;
+    // Simulation mode data
+
     angeo::collision_scene  m_collision_scene;
-
-    /// Other data
+    std::unordered_map<scn::scene_record_id, gfx_animated_object>  m_gfx_animated_objects;
 };
 
 

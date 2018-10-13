@@ -25,6 +25,8 @@
 simulator::simulator()
     : qtgl::real_time_simulator()
 
+    // Data providing feedback loop between a human user and 3D scene in the tool
+
     , m_camera(
             qtgl::camera_perspective::create(
                     angeo::coordinate_system::create(
@@ -150,17 +152,27 @@ simulator::simulator()
             }
     , m_do_show_grid(true)
 
+    // Common and shared data for both modes: Editing and Simulation
+
     , m_paused(true)
     , m_do_single_step(false)
-
     , m_scene(new scn::scene)
+    , m_scene_nodes_relocated_during_simulation()
+    , m_scene_records_inserted_during_simulation()
+    , m_scene_records_erased_during_simulation()
+
+    // Editing mode data
+
     , m_scene_selection(m_scene)
     , m_scene_history(new scn::scene_history)
-    , m_batch_coord_system(qtgl::create_basis_vectors())
     , m_scene_edit_data(scn::SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
+    , m_batch_coord_system(qtgl::create_basis_vectors())
 
-    , m_gfx_animated_objects()
+    // Simulation mode data
+
     , m_collision_scene()
+    , m_gfx_animated_objects()
+
 {}
 
 simulator::~simulator()
