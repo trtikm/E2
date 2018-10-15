@@ -33,7 +33,6 @@ void  translate(coordinate_system&  coord_system, vector3 const&  shift)
 
 void  rotate(coordinate_system&  coord_system, quaternion const&  rotation)
 {
-    ASSUMPTION(are_equal(length_squared(rotation),1));
     quaternion  composed = rotation * coord_system.orientation();
     normalise(composed);
     coord_system.set_orientation( composed );
