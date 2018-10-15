@@ -34,6 +34,13 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/angeo/collision_scene.hpp
     ./src/collision_scene.cpp
+
+    ./include/angeo/rigid_body.hpp
+    ./src/rigid_body.cpp
+    ./include/angeo/motion_constraint_system.hpp
+    ./src/motion_constraint_system.cpp
+    ./include/angeo/rigid_body_simulator.hpp
+    ./src/rigid_body_simulator.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
