@@ -81,8 +81,10 @@ inline vector3  transform_vector(vector3 const& u, matrix44 const& M) { return t
 vector3  interpolate_linear(vector3 const&  u, vector3 const&  v, float_32_bit const  t);
 
 inline quaternion  quaternion_identity() { return quaternion::Identity(); }
+inline quaternion  make_quaternion(scalar const w, vector3 const& v) { return quaternion(w, v(0), v(1), v(2)); }
 inline quaternion  make_quaternion_wxyz(scalar const w, scalar const x, scalar const y, scalar const z) { return quaternion(w,x,y,z); }
 inline quaternion  make_quaternion_xyzw(scalar const x, scalar const y, scalar const z, scalar const w) { return quaternion(w,x,y,z); }
+inline quaternion  scale(scalar const s, quaternion const& q) { return{ s*q.coeffs()(0), s*q.coeffs()(1), s*q.coeffs()(2), s*q.coeffs()(3) }; }
 inline scalar  length_squared(quaternion const& q) { return q.squaredNorm(); }
 inline scalar  length(quaternion const& q) { return q.norm(); }
 inline quaternion  normalised(quaternion const& q) { return q.normalized(); }
