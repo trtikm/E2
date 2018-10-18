@@ -648,7 +648,7 @@ def build_render_buffers(
                         specular_colour = colours[1]
                     else:
                         specular_colour = (0.0, 0.0, 0.0, 1.0)
-                elif len(mesh.materials) > 0:
+                elif len(mesh.materials) > mtl_index and mesh.materials[mtl_index] is not None:
                     diffuse_colour = (
                         mesh.materials[mtl_index].diffuse_color[0],
                         mesh.materials[mtl_index].diffuse_color[1],
@@ -662,6 +662,10 @@ def build_render_buffers(
                         mesh.materials[mtl_index].specular_alpha
                         )
                 else:
+                    if len(mesh.materials) <= mtl_index:
+                        print("WARNING: Wrong material index of vertex #" + str(j) + " polygon #" + str(i))
+                    elif mesh.materials[mtl_index] is None:
+                        print("WARNING: Wrong material #" + str(mtl_index))
                     diffuse_colour = (0.8, 0.8, 0.8, 1.0)
                     specular_colour = (0.0, 0.0, 0.0, 1.0)
 
@@ -1235,10 +1239,15 @@ def export_object_mesh(
         assert len(buffers_list) <= 1 or len(buffers_list) <= len(mesh.materials)
         for idx in range(len(buffers_list)):
             if len(buffers_list) > 1:
-                print("--- Exporting a batch for material '" + mesh.materials[idx].name + "' ---")
+                if mesh.materials[idx] is not None:
+                    print("--- Exporting a batch for material '" + mesh.materials[idx].name  + "' ---")
+                else:
+                    print("--- WARNING: Skipping export of a batch for material #" + str(idx) + ", because the material is None.")
+                    continue
             save_render_buffers(
                 buffers_list[idx],
-                remove_ignored_part_of_name(mesh.materials[idx].name, "BUFFERS") if len(buffers_list) > 1 else None,
+                remove_ignored_part_of_name(mesh.materials[idx].name, "BUFFERS")
+                    if len(buffers_list) > 1 and mesh.materials[idx] is not None else None,
                 remove_ignored_part_of_name(armature.name, "BUFFERS") if armature is not None else None,
                 export_info
                 )
