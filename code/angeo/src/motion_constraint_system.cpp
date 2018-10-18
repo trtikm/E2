@@ -23,17 +23,32 @@ motion_constraint_system::constraint_id  motion_constraint_system::insert_constr
         float_32_bit const  variable_initial_value
         )
 {
-    TMPROF_BLOCK();
+    m_lambdas.push_back(variable_initial_value);
+    m_variable_lower_bound_types.push_back(variable_lower_bound_type);
+    m_variable_lower_bounds.push_back(variable_lower_bound);
+    m_variable_upper_bound_types.push_back(variable_upper_bound_type);
+    m_variable_upper_bounds.push_back(variable_upper_bound);
+    m_index.push_back({ rb_0, rb_1});
+    m_jacobian.push_back({ { linear_component_0, angular_component_0 }, { linear_component_1, angular_component_1 } });        
+    m_rhs_vector.push_back(bias);
 
-    NOT_IMPLEMENTED_YET();
+    return (constraint_id)m_lambdas.size() - 1U;
 }
 
 
 void  motion_constraint_system::clear()
 {
-    TMPROF_BLOCK();
+    m_lambdas.clear();
+    m_variable_lower_bound_types.clear();
+    m_variable_lower_bounds.clear();
+    m_variable_upper_bound_types.clear();
+    m_variable_upper_bounds.clear();
 
-    NOT_IMPLEMENTED_YET();
+    m_index.clear();
+
+    m_jacobian.clear();
+    m_inverted_mass_matrix_times_jacobian_transposed.clear();
+    m_rhs_vector.clear();
 }
 
 

@@ -11,6 +11,11 @@
 namespace angeo {
 
 
+/**
+ * This module is designed according to paper:
+ *      Iterative Dynamics with Temporal Coherence
+ *      Erin Catto, Crystal Dynamics, Menlo Park, California, June 5, 2005
+ */
 struct  motion_constraint_system
 {
     enum struct VARIABLE_BOUND_TYPE : natural_8_bit
