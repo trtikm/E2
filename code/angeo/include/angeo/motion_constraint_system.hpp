@@ -6,6 +6,7 @@
 #   include <vector>
 #   include <functional>
 #   include <tuple>
+#   include <chrono>
 
 namespace angeo {
 
@@ -33,8 +34,8 @@ struct  motion_constraint_system
                                                         // an update of the corresponding variable to be a bit closer to a solution.
         float_32_bit  m_max_change_of_variables;        // The absolute value of the maximal change of any variable of the system
                                                         // in the last iteration.
-        natural_32_bit  m_time_of_last_iteration_in_micro_seconds;
-        natural_32_bit  m_total_time_of_all_performed_iterations_in_micro_seconds;
+        std::chrono::high_resolution_clock::rep  m_time_of_last_iteration_in_micro_seconds;
+        std::chrono::high_resolution_clock::rep  m_total_time_of_all_performed_iterations_in_micro_seconds;
     };
 
     // It is assumed, that ids 'rb_0' and 'rb_1' will be interpreted in the method 'solve'
@@ -69,7 +70,7 @@ struct  motion_constraint_system
     // variables. The order of variables (and their values) is the same as the order in which the
     // constraints were added to the system.
     std::vector<float_32_bit> const&  solve(
-            std::vector<rigid_body> const&  rigid_bosies,   // It is assumed, that ids 'rb_0' and 'rb_1' passed to
+            std::vector<rigid_body> const&  rigid_bodies,   // It is assumed, that ids 'rb_0' and 'rb_1' passed to
                                                             // 'insert_constraint' method all relate to this vector.
             std::vector<linear_and_angular_vector> const&  accelerations_from_external_forces,
                     // For each rigid body: The external force (i.e. the linear component) is multiplied by the
@@ -84,7 +85,7 @@ struct  motion_constraint_system
                     // The function then computes and writes both accelerations for each rigid body, whose id was
                     // passed to any inserted constraint (see the method 'insert_constraint'). Other records in the
                     // vector are not accessed.
-            computation_statistics* const  output_statistics_ptr = nullptr
+            computation_statistics*  output_statistics_ptr = nullptr
             );
 
 private:
@@ -105,7 +106,9 @@ private:
 
     std::vector<matrix_element>  m_jacobian;    // The constraints.
     std::vector<matrix_element>  m_inverted_mass_matrix_times_jacobian_transposed;
-    std::vector<float_32_bit>  m_rhs_vector;
+    std::vector<float_32_bit>  m_rhs_vector;    // Initially in stores bias values for inserted constraints. Then,
+                                                // in the 'solve' method the elementes are updated to contain proper
+                                                // RHS values of the system.
 };
 
 

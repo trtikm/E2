@@ -27,6 +27,8 @@ struct  rigid_body
 
     coordinate_system_ptr  m_coord_system; // The centre of mass is assumed to be in the origin of that coordinate system!!
     rigid_body_velocity  m_velocity;
+    float_32_bit  m_inverted_mass;  // The value 0.0f means the mass is infinite. 
+    matrix33  m_inverted_inertia_tensor; // Zero matrix means an infinite inertia.
 };
 
 

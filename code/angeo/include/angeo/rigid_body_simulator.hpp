@@ -52,7 +52,6 @@ private:
     // All the vectors below have the same size.
     std::vector<rigid_body>  m_rigid_bosies;
     std::vector<natural_32_bit>  m_matter_props_indices;
-    std::vector<matrix33>  m_inverted_inertia_tensors_in_world_space;
     std::vector<linear_and_angular_vector>  m_accelerations_from_constraints;
     std::vector<linear_and_angular_vector>  m_accelerations_from_external_forces;
 
