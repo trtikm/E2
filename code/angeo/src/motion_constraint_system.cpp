@@ -67,17 +67,13 @@ bool  motion_constraint_system::default_computation_terminator(
 
 
 std::vector<float_32_bit> const&  motion_constraint_system::solve(
-        std::vector<rigid_body> const&  rigid_bodies,
-        std::vector<linear_and_angular_vector> const&  accelerations_from_external_forces,
+        std::vector<rigid_body>&  rigid_bodies,
         std::function<bool(computation_statistics const&)> const&  terminate_comutation,
         float_32_bit const  time_step_in_seconds,
-        std::vector<linear_and_angular_vector>& output_accelerations_from_constraints,
         computation_statistics*  output_statistics_ptr
         )
 {
     TMPROF_BLOCK();
-
-    ASSUMPTION(accelerations_from_external_forces.size() == rigid_bodies.size());
 
     {
         TMPROF_BLOCK();
@@ -111,20 +107,19 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
             index_element const&  rb_ids = m_index.at(i);
             rigid_body const&  rb_first = rigid_bodies.at(rb_ids.first);
             rigid_body const&  rb_second = rigid_bodies.at(rb_ids.second);
-            linear_and_angular_vector const&  external_accel_first = accelerations_from_external_forces.at(rb_ids.first);
-            linear_and_angular_vector const&  external_accel_second = accelerations_from_external_forces.at(rb_ids.second);
             matrix_element const&  jacobian_elem = m_jacobian.at(i);
 
             m_rhs_vector.at(i) =
                     dt_inverted * m_rhs_vector.at(i) - (
                         dot_product(jacobian_elem.first.m_linear,
-                                    dt_inverted * rb_first.m_velocity.m_linear - external_accel_first.m_linear) +
+                                    dt_inverted * rb_first.m_velocity.m_linear -
+                                    rb_first.m_acceleration_from_external_forces.m_linear) +
                         dot_product(jacobian_elem.first.m_angular,
-                                    dt_inverted * rb_first.m_velocity.m_angular - external_accel_first.m_angular) +
+                                    dt_inverted * rb_first.m_velocity.m_angular - rb_first.m_acceleration_from_external_forces.m_angular) +
                         dot_product(jacobian_elem.second.m_linear,
-                                    dt_inverted * rb_second.m_velocity.m_linear - external_accel_second.m_linear) +
+                                    dt_inverted * rb_second.m_velocity.m_linear - rb_second.m_acceleration_from_external_forces.m_linear) +
                         dot_product(jacobian_elem.second.m_angular,
-                                    dt_inverted * rb_second.m_velocity.m_angular - external_accel_second.m_angular)
+                                    dt_inverted * rb_second.m_velocity.m_angular - rb_second.m_acceleration_from_external_forces.m_angular)
                         );
         }
     }
@@ -132,21 +127,20 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
     {
         TMPROF_BLOCK();
 
-        // Compute initial values of 'output_accelerations_from_constraints'.
-        output_accelerations_from_constraints.clear();
-        output_accelerations_from_constraints.resize(rigid_bodies.size(), { vector3_zero(), vector3_zero() });
+        // Compute initial values of 'accelerations_from_constraints' of all rigid bodies.
+        // It is assumed 'accelerations_from_constraints' are all cleared to zero vectors.
         for (natural_32_bit i = 0U; i != get_num_constraints(); ++i)
         {
             matrix_element const&  matrix_elem = m_inverted_mass_matrix_times_jacobian_transposed.at(i);
             index_element const&  rb_ids = m_index.at(i);
-            linear_and_angular_vector&  rb_first_accel_ref = output_accelerations_from_constraints.at(rb_ids.first);
-            linear_and_angular_vector&  rb_second_accel_ref = output_accelerations_from_constraints.at(rb_ids.second);
+            rigid_body&  rb_first = rigid_bodies.at(rb_ids.first);
+            rigid_body&  rb_second = rigid_bodies.at(rb_ids.second);
 
-            rb_first_accel_ref.m_linear += m_lambdas.at(i) * matrix_elem.first.m_linear;
-            rb_first_accel_ref.m_angular += m_lambdas.at(i) * matrix_elem.first.m_angular;
+            rb_first.m_acceleration_from_constraints.m_linear += m_lambdas.at(i) * matrix_elem.first.m_linear;
+            rb_first.m_acceleration_from_constraints.m_angular += m_lambdas.at(i) * matrix_elem.first.m_angular;
 
-            rb_second_accel_ref.m_linear += m_lambdas.at(i) * matrix_elem.second.m_linear;
-            rb_second_accel_ref.m_angular += m_lambdas.at(i) * matrix_elem.second.m_angular;
+            rb_second.m_acceleration_from_constraints.m_linear += m_lambdas.at(i) * matrix_elem.second.m_linear;
+            rb_second.m_acceleration_from_constraints.m_angular += m_lambdas.at(i) * matrix_elem.second.m_angular;
         }
     }
 
@@ -198,19 +192,18 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
             {
                 matrix_element const&  jacobian_elem = m_jacobian.at(i);
                 index_element const&  rb_ids = m_index.at(i);
+                rigid_body&  rb_first = rigid_bodies.at(rb_ids.first);
+                rigid_body&  rb_second = rigid_bodies.at(rb_ids.second);
                 matrix_element const&  matrix_elem = m_inverted_mass_matrix_times_jacobian_transposed.at(i);
-
                 float_32_bit&  lambda_ref = m_lambdas.at(i);
-                linear_and_angular_vector&  rb_first_accel_ref = output_accelerations_from_constraints.at(rb_ids.first);
-                linear_and_angular_vector&  rb_second_accel_ref = output_accelerations_from_constraints.at(rb_ids.second);
 
                 float_32_bit const  raw_delta_lambda = (
                     m_rhs_vector.at(i) - 
-                    (dot_product(jacobian_elem.first.m_linear, rb_first_accel_ref.m_linear) +
-                        dot_product(jacobian_elem.first.m_angular, rb_first_accel_ref.m_angular)
+                    (dot_product(jacobian_elem.first.m_linear, rb_first.m_acceleration_from_constraints.m_linear) +
+                        dot_product(jacobian_elem.first.m_angular, rb_first.m_acceleration_from_constraints.m_angular)
                         ) -
-                    (dot_product(jacobian_elem.second.m_linear, rb_second_accel_ref.m_linear) +
-                        dot_product(jacobian_elem.second.m_angular, rb_second_accel_ref.m_angular)
+                    (dot_product(jacobian_elem.second.m_linear, rb_second.m_acceleration_from_constraints.m_linear) +
+                        dot_product(jacobian_elem.second.m_angular, rb_second.m_acceleration_from_constraints.m_angular)
                         )
                     ) / diagonal_elements.at(i);
 
@@ -230,11 +223,11 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
 
                 lambda_ref = new_lambda;
 
-                rb_first_accel_ref.m_linear += delta_lambda * matrix_elem.first.m_linear;
-                rb_first_accel_ref.m_angular += delta_lambda * matrix_elem.first.m_angular;
+                rb_first.m_acceleration_from_constraints.m_linear += delta_lambda * matrix_elem.first.m_linear;
+                rb_first.m_acceleration_from_constraints.m_angular += delta_lambda * matrix_elem.first.m_angular;
 
-                rb_second_accel_ref.m_linear += delta_lambda * matrix_elem.second.m_linear;
-                rb_second_accel_ref.m_angular += delta_lambda * matrix_elem.second.m_angular;
+                rb_second.m_acceleration_from_constraints.m_linear += delta_lambda * matrix_elem.second.m_linear;
+                rb_second.m_acceleration_from_constraints.m_angular += delta_lambda * matrix_elem.second.m_angular;
             }
 
             std::chrono::high_resolution_clock::time_point const  iteration_end_time_point =

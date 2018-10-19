@@ -74,22 +74,14 @@ struct  motion_constraint_system
     // Solves the constraint system and returns a reference to the solution, i.e. values of unknown
     // variables. The order of variables (and their values) is the same as the order in which the
     // constraints were added to the system.
+    // The function also computes accelerations 'm_acceleration_from_constraints' for each rigid body,
+    // whose id was passed to any inserted constraint (see the method 'insert_constraint').
     std::vector<float_32_bit> const&  solve(
-            std::vector<rigid_body> const&  rigid_bodies,   // It is assumed, that ids 'rb_0' and 'rb_1' passed to
-                                                            // 'insert_constraint' method all relate to this vector.
-            std::vector<linear_and_angular_vector> const&  accelerations_from_external_forces,
-                    // For each rigid body: The external force (i.e. the linear component) is multiplied by the
-                    // inverted mass, and the external torque (i.e. the second component) is multiplied (from the left)
-                    // by the inverted inertia tensor. When no exteral force and torque is acting on the body, then
-                    // both components are zero vectors.
+            std::vector<rigid_body>&  rigid_bodies,     // It is assumed, that ids 'rb_0' and 'rb_1' passed to
+                                                        // 'insert_constraint' method all relate to this vector.
             std::function<bool(computation_statistics const&)> const&  terminate_comutation,
-                    // The return value 'true' will terminate the computation.
+                                                        // The return value 'true' will terminate the computation.
             float_32_bit const  time_step_in_seconds,
-            std::vector<linear_and_angular_vector>& output_accelerations_from_constraints,
-                    // For each rigid body, both vecors (i.e. the linear and angular component) must be zero vector.
-                    // The function then computes and writes both accelerations for each rigid body, whose id was
-                    // passed to any inserted constraint (see the method 'insert_constraint'). Other records in the
-                    // vector are not accessed.
             computation_statistics*  output_statistics_ptr = nullptr
             );
 
