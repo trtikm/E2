@@ -95,9 +95,7 @@ private:
     std::vector<VARIABLE_BOUND_TYPE>  m_variable_upper_bound_types;
     std::vector<variable_bound>  m_variable_upper_bounds;
 
-    using  index_element = std::pair<rigid_body_id, rigid_body_id>;
-
-    std::vector<index_element>  m_index;    // Look up table from constraint ids to constraoined pair of rigid body ids.
+    std::vector<pair_of_rigid_body_ids>  m_index;    // Look up table from constraint ids to constraoined pair of rigid body ids.
 
     using  matrix_element = std::pair<linear_and_angular_vector, linear_and_angular_vector>;
 

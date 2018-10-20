@@ -81,7 +81,7 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
         // We fill-in the matrix 'm_inverted_mass_matrix_times_jacobian_transposed'.
         for (natural_32_bit  i = 0U; i != get_num_constraints(); ++i)
         {
-            index_element const&  rb_ids = m_index.at(i);
+            pair_of_rigid_body_ids const&  rb_ids = m_index.at(i);
             rigid_body const&  rb_first = rigid_bodies.at(rb_ids.first);
             rigid_body const&  rb_second = rigid_bodies.at(rb_ids.second);
             matrix_element const&  jacobian_elem = m_jacobian.at(i);
@@ -104,7 +104,7 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
         // We fill-in the vector 'm_rhs_vector'.
         for (natural_32_bit i = 0U; i != get_num_constraints(); ++i)
         {
-            index_element const&  rb_ids = m_index.at(i);
+            pair_of_rigid_body_ids const&  rb_ids = m_index.at(i);
             rigid_body const&  rb_first = rigid_bodies.at(rb_ids.first);
             rigid_body const&  rb_second = rigid_bodies.at(rb_ids.second);
             matrix_element const&  jacobian_elem = m_jacobian.at(i);
@@ -132,7 +132,7 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
         for (natural_32_bit i = 0U; i != get_num_constraints(); ++i)
         {
             matrix_element const&  matrix_elem = m_inverted_mass_matrix_times_jacobian_transposed.at(i);
-            index_element const&  rb_ids = m_index.at(i);
+            pair_of_rigid_body_ids const&  rb_ids = m_index.at(i);
             rigid_body&  rb_first = rigid_bodies.at(rb_ids.first);
             rigid_body&  rb_second = rigid_bodies.at(rb_ids.second);
 
@@ -191,7 +191,7 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
             for (natural_32_bit i = 0U; i != get_num_constraints(); ++i)
             {
                 matrix_element const&  jacobian_elem = m_jacobian.at(i);
-                index_element const&  rb_ids = m_index.at(i);
+                pair_of_rigid_body_ids const&  rb_ids = m_index.at(i);
                 rigid_body&  rb_first = rigid_bodies.at(rb_ids.first);
                 rigid_body&  rb_second = rigid_bodies.at(rb_ids.second);
                 matrix_element const&  matrix_elem = m_inverted_mass_matrix_times_jacobian_transposed.at(i);

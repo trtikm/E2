@@ -18,6 +18,9 @@ struct  linear_and_angular_vector
 using  rigid_body_id = natural_32_bit;
 
 
+using  pair_of_rigid_body_ids = std::pair<rigid_body_id, rigid_body_id>;
+
+
 struct  rigid_body
 {
     // All fields below are in the world space!
