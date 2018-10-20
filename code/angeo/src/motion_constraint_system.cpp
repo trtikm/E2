@@ -23,6 +23,8 @@ motion_constraint_system::constraint_id  motion_constraint_system::insert_constr
         float_32_bit const  variable_initial_value
         )
 {
+    ASSUMPTION(rb_0 != rb_1);
+
     m_lambdas.push_back(variable_initial_value);
     m_variable_lower_bound_types.push_back(variable_lower_bound_type);
     m_variable_lower_bounds.push_back(variable_lower_bound);

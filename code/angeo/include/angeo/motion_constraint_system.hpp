@@ -26,6 +26,8 @@ struct  motion_constraint_system
 
     union  variable_bound
     {
+        explicit variable_bound(float_32_bit const  concrete_value) { m_concrete_value = concrete_value; }
+        explicit variable_bound(natural_32_bit const  variable_index) { m_variable_index = variable_index; }
         float_32_bit  m_concrete_value;
         natural_32_bit  m_variable_index;
     };
@@ -63,6 +65,8 @@ struct  motion_constraint_system
     void  clear();
 
     natural_32_bit  get_num_constraints() const { return (natural_32_bit)m_lambdas.size(); }
+    pair_of_rigid_body_ids const&  get_rigid_bodies_of_constraint(constraint_id const  id) const { return m_index.at(id); }
+    float_32_bit  get_solution_of_constraint(constraint_id const  id) const { return m_lambdas.at(id); }
 
     static bool  default_computation_terminator(
             natural_32_bit const  max_num_iterations,

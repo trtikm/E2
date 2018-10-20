@@ -75,6 +75,7 @@ void  rigid_body_simulator::set_orientation(rigid_body_id const  id, quaternion 
 {
     m_rigid_bosies.at(id).m_orientation = orientation;
     update_dependent_variables_of_rigid_body(id);
+    erase_from_contact_cache(id);
 }
 
 
@@ -106,6 +107,38 @@ void  rigid_body_simulator::set_inverted_inertia_tensor_in_local_space(rigid_bod
 {
     m_inverted_inertia_tensors.at(id) = inverted_inertia_tensor_in_local_space;
     update_dependent_variables_of_rigid_body(id);
+}
+
+
+motion_constraint_system::constraint_id  rigid_body_simulator::insert_contact_constraint(
+        rigid_body_id const  rb_0,
+        rigid_body_id const  rb_1,
+        contact_id const& cid,
+        vector3 const& contact_point,
+        vector3 const& unit_normal,
+        float_32_bit const  penetration_depth,
+        float_32_bit const  depenetration_coef
+        )
+{
+    motion_constraint_system::constraint_id const  constraint_id =
+            get_constraint_system().insert_constraint(
+                    rb_0,
+                    unit_normal,
+                    cross_product(contact_point - m_rigid_bosies.at(rb_0).m_position_of_mass_centre, unit_normal),
+                    rb_1,
+                    -unit_normal,
+                    -cross_product(contact_point - m_rigid_bosies.at(rb_0).m_position_of_mass_centre, unit_normal),
+                    -depenetration_coef * penetration_depth,
+                    motion_constraint_system::VARIABLE_BOUND_TYPE::CONCRETE_VALUE,
+                    motion_constraint_system::variable_bound(0.0f),
+                    motion_constraint_system::VARIABLE_BOUND_TYPE::CONCRETE_VALUE,
+                    motion_constraint_system::variable_bound(std::numeric_limits<float_32_bit>::max()),
+                    read_contact_cache({ rb_0, rb_1 }, cid, 0.0f)
+                    );
+
+    m_from_constraints_to_contact_ids.insert({ constraint_id, cid });
+
+    return constraint_id;
 }
 
 
@@ -152,6 +185,8 @@ void  rigid_body_simulator::do_simulation_step(
         update_dependent_variables_of_rigid_body(id);
     }
 
+    update_contact_cache();
+
     get_constraint_system().clear();
 }
 
@@ -167,6 +202,36 @@ void  rigid_body_simulator::update_dependent_variables_of_rigid_body(rigid_body_
     rb.m_acceleration_from_constraints.m_angular = vector3_zero();
 
     rb.m_acceleration_from_external_forces.m_angular = rb.m_inverted_inertia_tensor * m_external_torques.at(id);
+}
+
+
+float_32_bit  rigid_body_simulator::read_contact_cache(
+        pair_of_rigid_body_ids const&  rb_ids,
+        contact_id const&  cid,
+        float_32_bit const  value_on_cache_miss
+        ) const
+{
+    if (m_invalidated_rigid_bodies_in_contact_cache.count(rb_ids.first) != 0U ||
+        m_invalidated_rigid_bodies_in_contact_cache.count(rb_ids.second) != 0U)
+        return value_on_cache_miss;
+    auto const  rbs_bucket_it = m_contact_cache.find(rb_ids);
+    if (rbs_bucket_it == m_contact_cache.cend())
+        return value_on_cache_miss;
+    auto const  contact_and_lambda_it = rbs_bucket_it->second.find(cid);
+    return (contact_and_lambda_it == rbs_bucket_it->second.cend()) ? value_on_cache_miss : contact_and_lambda_it->second;
+}
+
+
+void  rigid_body_simulator::update_contact_cache()
+{
+    m_contact_cache.clear();
+    for (auto const& constraint_and_contact_ids : m_from_constraints_to_contact_ids)
+        m_contact_cache
+                [get_constraint_system().get_rigid_bodies_of_constraint(constraint_and_contact_ids.first)]
+                [constraint_and_contact_ids.second]
+            = get_constraint_system().get_solution_of_constraint(constraint_and_contact_ids.first);
+    m_invalidated_rigid_bodies_in_contact_cache.clear();
+    m_from_constraints_to_contact_ids.clear();
 }
 
 
