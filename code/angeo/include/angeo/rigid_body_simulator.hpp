@@ -55,61 +55,63 @@ struct  rigid_body_simulator
     motion_constraint_system&  get_constraint_system() { return m_constraint_system; }
     motion_constraint_system const&  get_constraint_system() const { return m_constraint_system; }
 
-    // Inserts a constraint which will prevent penetration of collision objects the passed
-    // rigid bodies in the specified contact point and normal direction. Note though that the
-    // constraint does not include handling of friction forces at that point. If you want to
-    // also handle friction, then use to constraint_id returned from this function for calling
-    // the function 'insert_contact_friction_constraint', which allows you to insert frinction
-    // constraints.
-    motion_constraint_system::constraint_id  insert_contact_constraint(
+    struct  contact_friction_constraints_info
+    {
+        std::vector<vector3>  m_unit_tangent_plane_vectors;
+                                    // A vector of at least 2 linearly independent unit vectors, all lying the tangent
+                                    // plane of a related contact point (the contact point is not specified here; it is
+                                    // passed to function 'insert_contact_constraints' together with this instance.
+                                    // Each vector3 identifies a direction in which the corresponding friction force
+                                    // will act. A friction force can either acts in both positive and negative direction
+                                    // of the vector, or only in the positive. You, can control that by the flag
+                                    // 'm_suppress_negative_directions' (see below).
+                                    // The most common case is that you specify only 2 vectors orthogonal to each other
+                                    // and 'm_suppress_negative_directions' is set to 'false'.
+        bool  m_suppress_negative_directions;
+                                    // If true, then friction forces computed will act only in positive directions of the
+                                    // vectors in 'm_unit_tangent_plane_vectors'. Otherwise, the forces can act in both
+                                    // directions (positive and negative).
+        COLLISION_MATERIAL_TYPE  m_material_0;
+                                    // The collision material of the rigid body 'rb_0' (see the function
+                                    // 'insert_contact_constraints' below) at the contact point.
+        COLLISION_MATERIAL_TYPE  m_material_1;
+                                    // The collision material of the rigid body 'rb_1' (see the function
+                                    // 'insert_contact_constraints' below) at the contact point.
+        float_32_bit  m_max_tangent_relative_speed_for_static_friction;
+                                    // If the relative tnagent plane velocity of both rigid bodies at the contact point is
+                                    // smaller that the passed value, then static friction coefficient will be used for this
+                                    // constraint, else the dynamic friction coefficient will be used. Typically, the value
+                                    // 0.001f (tangent speed 1mm per second) works well in most cases.
+    };
+
+    // Inserts contact constraints which will prevent penetration of collision objects of the specified
+    // rigid bodies in the passed contact point and in the normal direction. If 'friction_info_ptr != nullptr',
+    // then there are also generated constraints applying friction forces at the contact point.
+    void  insert_contact_constraints(
             rigid_body_id const  rb_0,
             rigid_body_id const  rb_1,
             contact_id const&  cid,
             vector3 const&  contact_point,
             vector3 const&  unit_normal, // Must point towards the first rigid body (i.e. towards rb_0)
+            contact_friction_constraints_info const* const  friction_info_ptr,
+                                    // When passed 'nullptr', then no friction constraint will be generated.
             float_32_bit const  penetration_depth,
-            float_32_bit const  depenetration_coef = 20.0f  // The greater the coeficient, the faster the resolution
-                                                            // of the penetration depth. However, for smooth convergence
-                                                            // of the constraint it is recommended to keep the value of
-                                                            // the coefficient smaller than the actual time-stepping
-                                                            // frequency of the physiscal system. The default value
-                                                            // assumes that the update frequency of the physical system
-                                                            // does not drop under 20Hz. We recommend to pass custom
-                                                            // values for the coeeficient (i.e. not to rely of the defaul one)
-                                                            // correlating with update frequency of the system.
-            );
-
-    // For each contact constraint preventing penetration, inserted by the the function 'insert_contact_constraint' above,
-    // this function allows you to insert a frinction constraint associated with that contact point. For each contact
-    // point you should include at least 2 friction constraints (one acting in a tangent direction and the other in the
-    // bitangent direction). You can control precision of the friction model by providing arbitrary number (>= 2) of
-    // unit vectors in the tangent plane. They all must always be linearly independent. For each tangent vector you are
-    // supposed to call this funciton in order the corresponding frinction is added to the system. Note that each friction
-    // constraint resolves the friction only in the direction of the passed tangent vector. The use of static or dynamic
-    // friction coefficient is determined automatically based of the relative motion of both rigid bodies in the contact point.
-    motion_constraint_system::constraint_id  insert_contact_friction_constraint(
-            motion_constraint_system::constraint_id const  contact_constraint_id,
-                            // The constraint id returned from the function 'insert_contact_constraint' above.
-            contact_id const&  cid,
-                            // Must be the same contact id as the one passed to the function 'insert_contact_constraint' above.
-            vector3 const&  contact_point,
-                            // Must be the same contact point as the one passed to the function 'insert_contact_constraint' above.
-            vector3 const&  unit_normal,
-                            // Must be the same unit normal as the one passed to the function 'insert_contact_constraint' above.
-            vector3 const&  unit_tangent_plane_vector,
-            natural_32_bit const  unit_tangent_plane_vector_ordinal,
-                            // All tanget vectors used here must be identified by a unique index (ordinal) from the range
-                            // 0,...,N-1, where N is the number of all tangent vectors which will be used. The order of
-                            // vectors is important for effective caching of computed forces.
-            COLLISION_MATERIAL_TYPE const  material_0,
-                            // Material of the 'get_first_collider_id(cid)'.
-            COLLISION_MATERIAL_TYPE const  material_1,
-                            // Material of the 'get_second_collider_id(cid)'.
-            float_32_bit const  max_tangent_relative_speed_for_static_friction = 0.001f
-                            // If the relative tnagent plane velocity of both rigid bodies at the contact point is
-                            // smaller that the passed value, then static friction coefficient will be used for this
-                            // constraint, else the dynamic friction coefficient will be used. The defaut value 0.001f
-                            // represent the max. tangent speed for static friction as 1mm per second.
+            float_32_bit const  depenetration_coef = 20.0f,
+                                    // The greater the coeficient, the faster the resolution
+                                    // of the penetration depth. However, for smooth convergence
+                                    // of the constraint it is recommended to keep the value of
+                                    // the coefficient smaller than the actual time-stepping
+                                    // frequency of the physiscal system. The default value
+                                    // assumes that the update frequency of the physical system
+                                    // does not drop under 20Hz. We recommend to pass custom
+                                    // values for the coeeficient (i.e. not to rely of the defaul one)
+                                    // correlating with update frequency of the system.
+            std::vector<motion_constraint_system::constraint_id>* const  output_constraint_ids_ptr = nullptr
+                                    // If passed a valid pointer (i.e. not nullptr), then the referenced vector
+                                    // is extended by all generated constraints. Namely, first will be added
+                                    // the one preventing contact penetration, and then follow all friction
+                                    // constraints (if 'friction_info_ptr != nullptr', of course; for each vector3
+                                    // in 'friction_info_ptr->m_unit_tangent_plane_vectors' one friction constraint).
             );
 
     void  do_simulation_step(
