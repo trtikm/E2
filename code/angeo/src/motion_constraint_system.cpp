@@ -169,7 +169,8 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
     {
         TMPROF_BLOCK();
 
-        // And we iteratively improve unknowns 'm_lambdas' towards a solution of the system.
+        // And we iteratively improve unknowns 'm_lambdas' towards a solution of the system
+        // using the 'Projected Gauss-Seidel' method.
 
         computation_statistics  statistics;
         if (output_statistics_ptr == nullptr)
