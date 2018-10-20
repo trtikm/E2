@@ -41,6 +41,9 @@ add_library(${THIS_TARGET_NAME}
     ./src/motion_constraint_system.cpp
     ./include/angeo/rigid_body_simulator.hpp
     ./src/rigid_body_simulator.cpp
+    
+    ./include/angeo/friction_coefficients.hpp
+    ./src/friction_coefficients.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

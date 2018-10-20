@@ -93,6 +93,9 @@ struct  rigid_body_simulator
             contact_id const&  cid,
                             // Must be the same contact id as the one passed to the function 'insert_contact_constraint' above.
             vector3 const&  contact_point,
+                            // Must be the same contact point as the one passed to the function 'insert_contact_constraint' above.
+            vector3 const&  unit_normal,
+                            // Must be the same unit normal as the one passed to the function 'insert_contact_constraint' above.
             vector3 const&  unit_tangent_plane_vector,
             natural_32_bit const  unit_tangent_plane_vector_ordinal,
                             // All tanget vectors used here must be identified by a unique index (ordinal) from the range
@@ -100,8 +103,13 @@ struct  rigid_body_simulator
                             // vectors is important for effective caching of computed forces.
             COLLISION_MATERIAL_TYPE const  material_0,
                             // Material of the 'get_first_collider_id(cid)'.
-            COLLISION_MATERIAL_TYPE const  material_1
+            COLLISION_MATERIAL_TYPE const  material_1,
                             // Material of the 'get_second_collider_id(cid)'.
+            float_32_bit const  max_tangent_relative_speed_for_static_friction = 0.001f
+                            // If the relative tnagent plane velocity of both rigid bodies at the contact point is
+                            // smaller that the passed value, then static friction coefficient will be used for this
+                            // constraint, else the dynamic friction coefficient will be used. The defaut value 0.001f
+                            // represent the max. tangent speed for static friction as 1mm per second.
             );
 
     void  do_simulation_step(

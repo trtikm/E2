@@ -1,9 +1,34 @@
 #include <angeo/rigid_body_simulator.hpp>
+#include <angeo/friction_coefficients.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <utility/development.hpp>
+
+namespace angeo { namespace detail {
+
+
+vector3  compute_velocity_of_point_of_rigid_body(rigid_body const&  rb, vector3 const&  point)
+{
+    return rb.m_velocity.m_linear + cross_product(rb.m_velocity.m_angular, point - rb.m_position_of_mass_centre);
+}
+
+
+vector3  compute_relative_tangent_plane_velocity_of_point_of_rigid_bodies(
+        rigid_body const&  rb_0,
+        rigid_body const&  rb_1,
+        vector3 const&  point,
+        vector3 const&  unit_normal_vector
+        )
+{
+    vector3 const  relative_velocity =
+            compute_velocity_of_point_of_rigid_body(rb_1, point) - compute_velocity_of_point_of_rigid_body(rb_0, point);
+    return relative_velocity - dot_product(relative_velocity, unit_normal_vector) * unit_normal_vector;
+}                               
+
+
+}}
 
 namespace angeo {
 
@@ -113,9 +138,9 @@ void  rigid_body_simulator::set_inverted_inertia_tensor_in_local_space(rigid_bod
 motion_constraint_system::constraint_id  rigid_body_simulator::insert_contact_constraint(
         rigid_body_id const  rb_0,
         rigid_body_id const  rb_1,
-        contact_id const& cid,
-        vector3 const& contact_point,
-        vector3 const& unit_normal,
+        contact_id const&  cid,
+        vector3 const&  contact_point,
+        vector3 const&  unit_normal,
         float_32_bit const  penetration_depth,
         float_32_bit const  depenetration_coef
         )
@@ -144,24 +169,34 @@ motion_constraint_system::constraint_id  rigid_body_simulator::insert_contact_fr
         motion_constraint_system::constraint_id const  contact_constraint_id,
         contact_id const&  cid,
         vector3 const&  contact_point,
+        vector3 const&  unit_normal,
         vector3 const&  unit_tangent_plane_vector,
         natural_32_bit const  unit_tangent_plane_vector_id,
         COLLISION_MATERIAL_TYPE const  material_0,
-        COLLISION_MATERIAL_TYPE const  material_1
+        COLLISION_MATERIAL_TYPE const  material_1,
+        float_32_bit const  max_tangent_relative_speed_for_static_friction
         )
 {
-    float_32_bit const  friction_coef = 0.25f;
-
     pair_of_rigid_body_ids const&  rb_ids = get_constraint_system().get_rigid_bodies_of_constraint(contact_constraint_id);
+
+    rigid_body const&  rb_0 = m_rigid_bosies.at(rb_ids.first);
+    rigid_body const&  rb_1 = m_rigid_bosies.at(rb_ids.second);
+
+    vector3 const  tangent_plane_velocity =
+            detail::compute_relative_tangent_plane_velocity_of_point_of_rigid_bodies(rb_0, rb_1, contact_point, unit_normal);
+    float_32_bit const  friction_coef =
+            length(tangent_plane_velocity) > max_tangent_relative_speed_for_static_friction ?
+                    get_dynamic_friction_coefficient(material_0, material_1) :
+                    get_static_friction_coefficient(material_0, material_1) ;
 
     motion_constraint_system::constraint_id const  friction_constraint_id =
             get_constraint_system().insert_constraint(
                     rb_ids.first,
                     unit_tangent_plane_vector,
-                    cross_product(contact_point - m_rigid_bosies.at(rb_ids.first).m_position_of_mass_centre, unit_tangent_plane_vector),
+                    cross_product(contact_point - rb_0.m_position_of_mass_centre, unit_tangent_plane_vector),
                     rb_ids.second,
                     -unit_tangent_plane_vector,
-                    -cross_product(contact_point - m_rigid_bosies.at(rb_ids.second).m_position_of_mass_centre, unit_tangent_plane_vector),
+                    -cross_product(contact_point - rb_1.m_position_of_mass_centre, unit_tangent_plane_vector),
                     0.0f,
                     [contact_constraint_id, friction_coef](std::vector<float_32_bit> const& variables) {
                             return -friction_coef * variables.at(contact_constraint_id);
