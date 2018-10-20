@@ -127,18 +127,51 @@ motion_constraint_system::constraint_id  rigid_body_simulator::insert_contact_co
                     cross_product(contact_point - m_rigid_bosies.at(rb_0).m_position_of_mass_centre, unit_normal),
                     rb_1,
                     -unit_normal,
-                    -cross_product(contact_point - m_rigid_bosies.at(rb_0).m_position_of_mass_centre, unit_normal),
+                    -cross_product(contact_point - m_rigid_bosies.at(rb_1).m_position_of_mass_centre, unit_normal),
                     -depenetration_coef * penetration_depth,
                     motion_constraint_system::VARIABLE_BOUND_TYPE::CONCRETE_VALUE,
                     motion_constraint_system::variable_bound(0.0f),
                     motion_constraint_system::VARIABLE_BOUND_TYPE::CONCRETE_VALUE,
                     motion_constraint_system::variable_bound(std::numeric_limits<float_32_bit>::max()),
-                    read_contact_cache({ rb_0, rb_1 }, cid, 0.0f)
+                    read_contact_cache({ rb_0, rb_1 }, cid, 0U, 0.0f)
                     );
 
-    m_from_constraints_to_contact_ids.insert({ constraint_id, cid });
+    m_from_constraints_to_contact_ids.insert({ constraint_id, {cid, 0U} });
 
     return constraint_id;
+}
+
+
+motion_constraint_system::constraint_id  rigid_body_simulator::insert_contact_friction_constraint(
+        motion_constraint_system::constraint_id const  contact_constraint_id,
+        contact_id const&  cid,
+        vector3 const&  contact_point,
+        vector3 const&  unit_tangent_plane_vector,
+        natural_32_bit const  unit_tangent_plane_vector_id,
+        COLLISION_MATERIAL_TYPE const  material_0,
+        COLLISION_MATERIAL_TYPE const  material_1
+        )
+{
+    pair_of_rigid_body_ids const&  rb_ids = get_constraint_system().get_rigid_bodies_of_constraint(contact_constraint_id);
+    motion_constraint_system::constraint_id const  friction_constraint_id =
+            get_constraint_system().insert_constraint(
+                    rb_ids.first,
+                    unit_tangent_plane_vector,
+                    cross_product(contact_point - m_rigid_bosies.at(rb_ids.first).m_position_of_mass_centre, unit_tangent_plane_vector),
+                    rb_ids.second,
+                    -unit_tangent_plane_vector,
+                    -cross_product(contact_point - m_rigid_bosies.at(rb_ids.second).m_position_of_mass_centre, unit_tangent_plane_vector),
+                    0.0f,
+                    motion_constraint_system::VARIABLE_BOUND_TYPE::NEGATED_VARIABLE_AT_INDEX,
+                    motion_constraint_system::variable_bound(contact_constraint_id),
+                    motion_constraint_system::VARIABLE_BOUND_TYPE::VARIABLE_AT_INDEX,
+                    motion_constraint_system::variable_bound(contact_constraint_id),
+                    read_contact_cache(rb_ids, cid, unit_tangent_plane_vector_id + 1U, 0.0f)
+                    );
+
+    m_from_constraints_to_contact_ids.insert({ friction_constraint_id, { cid, unit_tangent_plane_vector_id } });
+
+    return friction_constraint_id;
 }
 
 
@@ -208,6 +241,7 @@ void  rigid_body_simulator::update_dependent_variables_of_rigid_body(rigid_body_
 float_32_bit  rigid_body_simulator::read_contact_cache(
         pair_of_rigid_body_ids const&  rb_ids,
         contact_id const&  cid,
+        natural_32_bit const  contact_vector_id,
         float_32_bit const  value_on_cache_miss
         ) const
 {
@@ -217,19 +251,23 @@ float_32_bit  rigid_body_simulator::read_contact_cache(
     auto const  rbs_bucket_it = m_contact_cache.find(rb_ids);
     if (rbs_bucket_it == m_contact_cache.cend())
         return value_on_cache_miss;
-    auto const  contact_and_lambda_it = rbs_bucket_it->second.find(cid);
-    return (contact_and_lambda_it == rbs_bucket_it->second.cend()) ? value_on_cache_miss : contact_and_lambda_it->second;
+    auto const  contact_and_lambdas_it = rbs_bucket_it->second.find(cid);
+    if (contact_and_lambdas_it == rbs_bucket_it->second.cend())
+        return value_on_cache_miss;
+    auto const  lambda_it = contact_and_lambdas_it->second.find(contact_vector_id);
+    return (lambda_it == contact_and_lambdas_it->second.cend()) ? value_on_cache_miss : lambda_it->second;
 }
 
 
 void  rigid_body_simulator::update_contact_cache()
 {
     m_contact_cache.clear();
-    for (auto const& constraint_and_contact_ids : m_from_constraints_to_contact_ids)
+    for (auto const& constraint_and_contact_and_vector_ids : m_from_constraints_to_contact_ids)
         m_contact_cache
-                [get_constraint_system().get_rigid_bodies_of_constraint(constraint_and_contact_ids.first)]
-                [constraint_and_contact_ids.second]
-            = get_constraint_system().get_solution_of_constraint(constraint_and_contact_ids.first);
+                [get_constraint_system().get_rigid_bodies_of_constraint(constraint_and_contact_and_vector_ids.first)]
+                [constraint_and_contact_and_vector_ids.second.first]
+                [constraint_and_contact_and_vector_ids.second.second]
+            = get_constraint_system().get_solution_of_constraint(constraint_and_contact_and_vector_ids.first);
     m_invalidated_rigid_bodies_in_contact_cache.clear();
     m_from_constraints_to_contact_ids.clear();
 }

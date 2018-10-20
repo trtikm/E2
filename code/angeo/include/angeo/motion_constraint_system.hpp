@@ -21,7 +21,8 @@ struct  motion_constraint_system
     enum struct VARIABLE_BOUND_TYPE : natural_8_bit
     {
         CONCRETE_VALUE = 0,
-        VARIABLE_INDEX = 1
+        VARIABLE_AT_INDEX = 1,
+        NEGATED_VARIABLE_AT_INDEX = 2
     };
 
     union  variable_bound

@@ -5,6 +5,26 @@
 #include <utility/log.hpp>
 #include <utility/development.hpp>
 
+namespace angeo { namespace detail {
+
+
+float_32_bit  read_variable_bound(
+        motion_constraint_system::VARIABLE_BOUND_TYPE const  type,
+        motion_constraint_system::variable_bound const&  bound,
+        std::vector<float_32_bit> const&  variables
+        )
+{
+    switch (type)
+    {
+    case motion_constraint_system::VARIABLE_BOUND_TYPE::CONCRETE_VALUE: return bound.m_concrete_value;
+    case motion_constraint_system::VARIABLE_BOUND_TYPE::VARIABLE_AT_INDEX: return variables.at(bound.m_variable_index);
+    default: return -variables.at(bound.m_variable_index);
+    }
+}
+
+
+}}
+
 namespace angeo {
 
 
@@ -211,15 +231,9 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
                     ) / diagonal_elements.at(i);
 
                 float_32_bit const  min_lambda =
-                        m_variable_lower_bound_types.at(i) == VARIABLE_BOUND_TYPE::CONCRETE_VALUE ?
-                                m_variable_lower_bounds.at(i).m_concrete_value :
-                                m_lambdas.at(m_variable_lower_bounds.at(i).m_variable_index)
-                                ;
+                        detail::read_variable_bound(m_variable_lower_bound_types.at(i), m_variable_lower_bounds.at(i), m_lambdas);
                 float_32_bit const  max_lambda =
-                        m_variable_upper_bound_types.at(i) == VARIABLE_BOUND_TYPE::CONCRETE_VALUE ?
-                                m_variable_upper_bounds.at(i).m_concrete_value :
-                                m_lambdas.at(m_variable_upper_bounds.at(i).m_variable_index)
-                                ;
+                        detail::read_variable_bound(m_variable_upper_bound_types.at(i), m_variable_upper_bounds.at(i), m_lambdas);
 
                 float_32_bit const  new_lambda = std::max(min_lambda, std::min(max_lambda, lambda_ref + raw_delta_lambda));
                 float_32_bit const  delta_lambda = new_lambda - lambda_ref;
