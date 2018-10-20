@@ -5,26 +5,6 @@
 #include <utility/log.hpp>
 #include <utility/development.hpp>
 
-namespace angeo { namespace detail {
-
-
-float_32_bit  read_variable_bound(
-        motion_constraint_system::VARIABLE_BOUND_TYPE const  type,
-        motion_constraint_system::variable_bound const&  bound,
-        std::vector<float_32_bit> const&  variables
-        )
-{
-    switch (type)
-    {
-    case motion_constraint_system::VARIABLE_BOUND_TYPE::CONCRETE_VALUE: return bound.m_concrete_value;
-    case motion_constraint_system::VARIABLE_BOUND_TYPE::VARIABLE_AT_INDEX: return variables.at(bound.m_variable_index);
-    default: return -variables.at(bound.m_variable_index);
-    }
-}
-
-
-}}
-
 namespace angeo {
 
 
@@ -36,19 +16,15 @@ motion_constraint_system::constraint_id  motion_constraint_system::insert_constr
         vector3 const&  linear_component_1,
         vector3 const&  angular_component_1,
         float_32_bit const  bias,
-        VARIABLE_BOUND_TYPE const  variable_lower_bound_type,
-        variable_bound const&  variable_lower_bound,
-        VARIABLE_BOUND_TYPE const  variable_upper_bound_type,
-        variable_bound const&  variable_upper_bound,
+        variable_bound_getter const&  variable_lower_bound,
+        variable_bound_getter const&  variable_upper_bound,
         float_32_bit const  variable_initial_value
         )
 {
     ASSUMPTION(rb_0 != rb_1);
 
     m_lambdas.push_back(variable_initial_value);
-    m_variable_lower_bound_types.push_back(variable_lower_bound_type);
     m_variable_lower_bounds.push_back(variable_lower_bound);
-    m_variable_upper_bound_types.push_back(variable_upper_bound_type);
     m_variable_upper_bounds.push_back(variable_upper_bound);
     m_index.push_back({ rb_0, rb_1});
     m_jacobian.push_back({ { linear_component_0, angular_component_0 }, { linear_component_1, angular_component_1 } });        
@@ -61,9 +37,7 @@ motion_constraint_system::constraint_id  motion_constraint_system::insert_constr
 void  motion_constraint_system::clear()
 {
     m_lambdas.clear();
-    m_variable_lower_bound_types.clear();
     m_variable_lower_bounds.clear();
-    m_variable_upper_bound_types.clear();
     m_variable_upper_bounds.clear();
 
     m_index.clear();
@@ -230,10 +204,8 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
                         )
                     ) / diagonal_elements.at(i);
 
-                float_32_bit const  min_lambda =
-                        detail::read_variable_bound(m_variable_lower_bound_types.at(i), m_variable_lower_bounds.at(i), m_lambdas);
-                float_32_bit const  max_lambda =
-                        detail::read_variable_bound(m_variable_upper_bound_types.at(i), m_variable_upper_bounds.at(i), m_lambdas);
+                float_32_bit const  min_lambda = m_variable_lower_bounds.at(i)(m_lambdas);
+                float_32_bit const  max_lambda = m_variable_upper_bounds.at(i)(m_lambdas);
 
                 float_32_bit const  new_lambda = std::max(min_lambda, std::min(max_lambda, lambda_ref + raw_delta_lambda));
                 float_32_bit const  delta_lambda = new_lambda - lambda_ref;

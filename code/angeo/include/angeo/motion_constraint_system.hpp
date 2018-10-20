@@ -18,22 +18,9 @@ namespace angeo {
  */
 struct  motion_constraint_system
 {
-    enum struct VARIABLE_BOUND_TYPE : natural_8_bit
-    {
-        CONCRETE_VALUE = 0,
-        VARIABLE_AT_INDEX = 1,
-        NEGATED_VARIABLE_AT_INDEX = 2
-    };
-
-    union  variable_bound
-    {
-        explicit variable_bound(float_32_bit const  concrete_value) { m_concrete_value = concrete_value; }
-        explicit variable_bound(natural_32_bit const  variable_index) { m_variable_index = variable_index; }
-        float_32_bit  m_concrete_value;
-        natural_32_bit  m_variable_index;
-    };
-
     using  constraint_id = natural_32_bit;
+
+    using  variable_bound_getter = std::function<float_32_bit(std::vector<float_32_bit> const&)>;
 
     struct  computation_statistics
     {
@@ -56,10 +43,8 @@ struct  motion_constraint_system
             vector3 const&  linear_component_1,
             vector3 const&  angular_component_1,
             float_32_bit const  bias,
-            VARIABLE_BOUND_TYPE const  variable_lower_bound_type,
-            variable_bound const&  variable_lower_bound,
-            VARIABLE_BOUND_TYPE const  variable_upper_bound_type,
-            variable_bound const&  variable_upper_bound,
+            variable_bound_getter const&  variable_lower_bound,
+            variable_bound_getter const&  variable_upper_bound,
             float_32_bit const  variable_initial_value = 0.0f
             );
 
@@ -95,10 +80,8 @@ private:
     // All vectors below have the same size, which is the number of inserted constraints. 
 
     std::vector<float_32_bit>  m_lambdas;   // Unknown variables of the system.
-    std::vector<VARIABLE_BOUND_TYPE>  m_variable_lower_bound_types;
-    std::vector<variable_bound>  m_variable_lower_bounds;
-    std::vector<VARIABLE_BOUND_TYPE>  m_variable_upper_bound_types;
-    std::vector<variable_bound>  m_variable_upper_bounds;
+    std::vector<variable_bound_getter>  m_variable_lower_bounds;
+    std::vector<variable_bound_getter>  m_variable_upper_bounds;
 
     std::vector<pair_of_rigid_body_ids>  m_index;    // Look up table from constraint ids to constraoined pair of rigid body ids.
 

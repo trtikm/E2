@@ -129,10 +129,8 @@ motion_constraint_system::constraint_id  rigid_body_simulator::insert_contact_co
                     -unit_normal,
                     -cross_product(contact_point - m_rigid_bosies.at(rb_1).m_position_of_mass_centre, unit_normal),
                     -depenetration_coef * penetration_depth,
-                    motion_constraint_system::VARIABLE_BOUND_TYPE::CONCRETE_VALUE,
-                    motion_constraint_system::variable_bound(0.0f),
-                    motion_constraint_system::VARIABLE_BOUND_TYPE::CONCRETE_VALUE,
-                    motion_constraint_system::variable_bound(std::numeric_limits<float_32_bit>::max()),
+                    [](std::vector<float_32_bit> const&) { return 0.0f; },
+                    [](std::vector<float_32_bit> const&) { return std::numeric_limits<float_32_bit>::max(); },
                     read_contact_cache({ rb_0, rb_1 }, cid, 0U, 0.0f)
                     );
 
@@ -152,7 +150,10 @@ motion_constraint_system::constraint_id  rigid_body_simulator::insert_contact_fr
         COLLISION_MATERIAL_TYPE const  material_1
         )
 {
+    float_32_bit const  friction_coef = 0.25f;
+
     pair_of_rigid_body_ids const&  rb_ids = get_constraint_system().get_rigid_bodies_of_constraint(contact_constraint_id);
+
     motion_constraint_system::constraint_id const  friction_constraint_id =
             get_constraint_system().insert_constraint(
                     rb_ids.first,
@@ -162,10 +163,12 @@ motion_constraint_system::constraint_id  rigid_body_simulator::insert_contact_fr
                     -unit_tangent_plane_vector,
                     -cross_product(contact_point - m_rigid_bosies.at(rb_ids.second).m_position_of_mass_centre, unit_tangent_plane_vector),
                     0.0f,
-                    motion_constraint_system::VARIABLE_BOUND_TYPE::NEGATED_VARIABLE_AT_INDEX,
-                    motion_constraint_system::variable_bound(contact_constraint_id),
-                    motion_constraint_system::VARIABLE_BOUND_TYPE::VARIABLE_AT_INDEX,
-                    motion_constraint_system::variable_bound(contact_constraint_id),
+                    [contact_constraint_id, friction_coef](std::vector<float_32_bit> const& variables) {
+                            return -friction_coef * variables.at(contact_constraint_id);
+                        },
+                    [contact_constraint_id, friction_coef](std::vector<float_32_bit> const& variables) {
+                            return +friction_coef * variables.at(contact_constraint_id);
+                        },
                     read_contact_cache(rb_ids, cid, unit_tangent_plane_vector_id + 1U, 0.0f)
                     );
 
