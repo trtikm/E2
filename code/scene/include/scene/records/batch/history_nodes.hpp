@@ -1,7 +1,7 @@
-#ifndef E2_SCENE_SCENE_HISTORY_SPECIALISED_NODES_HPP_INCLUDED
-#   define E2_SCENE_SCENE_HISTORY_SPECIALISED_NODES_HPP_INCLUDED
+#ifndef E2_SCENE_RECORDS_BATCH_HISTORY_NODES_HPP_INCLUDED
+#   define E2_SCENE_RECORDS_BATCH_HISTORY_NODES_HPP_INCLUDED
 
-#   include <scene/scene_history_default_nodes.hpp>
+#   include <scene/scene_history_nodes_default.hpp>
 #   include <scene/scene_record_id.hpp>
 #   include <boost/filesystem/path.hpp>
 

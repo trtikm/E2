@@ -1,5 +1,5 @@
-#ifndef E2_SCENE_SCENE_HISTORY_DEFAULT_NODES_HPP_INCLUDED
-#   define E2_SCENE_SCENE_HISTORY_DEFAULT_NODES_HPP_INCLUDED
+#ifndef E2_SCENE_SCENE_HISTORY_NODES_DEFAULT_HPP_INCLUDED
+#   define E2_SCENE_SCENE_HISTORY_NODES_DEFAULT_HPP_INCLUDED
 
 #   include <scene/scene_history_node.hpp>
 #   include <scene/scene_record_id.hpp>

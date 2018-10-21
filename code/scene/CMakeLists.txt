@@ -7,22 +7,24 @@ add_library(${THIS_TARGET_NAME}
     ./include/scene/scene_node_record_id.hpp
     ./include/scene/scene_record_id.hpp
 
-    ./include/scene/scene_selection.hpp 
-    ./src/scene_selection.cpp 
+    ./include/scene/scene_selection.hpp
+    ./src/scene_selection.cpp
 
-    ./include/scene/scene_edit_utils.hpp 
-    ./src/scene_edit_utils.cpp 
+    ./include/scene/scene_editing.hpp
+    ./src/scene_editing.cpp
 
-    ./include/scene/scene_history.hpp 
-    ./include/scene/scene_history_node.hpp 
-    ./include/scene/scene_history_default_nodes.hpp 
-    ./include/scene/scene_history_specialised_nodes.hpp 
-    ./src/scene_history.cpp 
+    ./include/scene/scene_history.hpp
+    ./include/scene/scene_history_node.hpp
+    ./include/scene/scene_history_nodes_default.hpp
+    ./include/scene/scene_history_nodes_specialised.hpp
+    ./src/scene_history.cpp
 
     ./include/scene/scene_utils.hpp
+    ./include/scene/scene_utils_specialised.hpp
     ./src/scene_utils.cpp
-    
-    ./include/scene/scene_batch_utils.hpp 
+
+    ./include/scene/records/batch/utils.hpp
+    ./include/scene/records/batch/history_nodes.hpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

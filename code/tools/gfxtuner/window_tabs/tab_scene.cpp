@@ -3,8 +3,8 @@
 #include <gfxtuner/program_options.hpp>
 #include <gfxtuner/simulation/simulator_notifications.hpp>
 #include <scene/scene_utils.hpp>
-#include <scene/scene_batch_utils.hpp>
-#include <scene/scene_edit_utils.hpp>
+#include <scene/scene_utils_specialised.hpp>
+#include <scene/scene_editing.hpp>
 #include <angeo/axis_aligned_bounding_box.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <utility/std_pair_hash.hpp>

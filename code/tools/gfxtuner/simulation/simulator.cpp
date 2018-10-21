@@ -2,7 +2,7 @@
 #include <gfxtuner/simulation/simulator_notifications.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <scene/scene_utils.hpp>
-#include <scene/scene_batch_utils.hpp>
+#include <scene/scene_utils_specialised.hpp>
 #include <angeo/collide.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
@@ -171,6 +171,7 @@ simulator::simulator()
     // Simulation mode data
 
     , m_collision_scene()
+    , m_rigid_body_simulator()
     , m_gfx_animated_objects()
 
 {}

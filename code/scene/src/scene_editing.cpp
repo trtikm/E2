@@ -1,4 +1,4 @@
-#include <scene/scene_edit_utils.hpp>
+#include <scene/scene_editing.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <algorithm>

@@ -1,15 +1,9 @@
-#ifndef E2_SCENE_SCENE_BATCH_UTILS_HPP_INCLUDED
-#   define E2_SCENE_SCENE_BATCH_UTILS_HPP_INCLUDED
+#ifndef E2_SCENE_RECORDS_BATCH_UTILS_HPP_INCLUDED
+#   define E2_SCENE_RECORDS_BATCH_UTILS_HPP_INCLUDED
 
 #   include <scene/scene.hpp>
-#   include <scene/scene_node_record_id.hpp>
-#   include <scene/scene_record_id.hpp>
 #   include <scene/scene_utils.hpp>
-#   include <angeo/axis_aligned_bounding_box.hpp>
 #   include <qtgl/batch.hpp>
-#   include <angeo/tensor_math.hpp>
-#   include <angeo/axis_aligned_bounding_box.hpp>
-#   include <utility/assumptions.hpp>
 
 namespace scn { namespace detail {
 

@@ -2,7 +2,7 @@
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/simulation/simulator.hpp>
 #include <gfxtuner/simulation/simulator_notifications.hpp>
-#include <scene/scene_edit_utils.hpp>
+#include <scene/scene_editing.hpp>
 #include <qtgl/window.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <qtgl/widget_base.hpp>

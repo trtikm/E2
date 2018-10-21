@@ -5,7 +5,7 @@
 #   include <scene/scene_record_id.hpp>
 #   include <scene/scene_selection.hpp>
 #   include <scene/scene_history.hpp>
-#   include <scene/scene_edit_utils.hpp>
+#   include <scene/scene_editing.hpp>
 #   include <gfxtuner/simulation/gfx_object.hpp>
 #   include <qtgl/real_time_simulator.hpp>
 #   include <qtgl/camera.hpp>
@@ -13,6 +13,7 @@
 #   include <qtgl/draw.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/collision_scene.hpp>
+#   include <angeo/rigid_body_simulator.hpp>
 #   include <utility/std_pair_hash.hpp>
 #   include <vector>
 #   include <unordered_map>
@@ -186,6 +187,7 @@ private:
     // Simulation mode data
 
     angeo::collision_scene  m_collision_scene;
+    angeo::rigid_body_simulator  m_rigid_body_simulator;
     std::unordered_map<scn::scene_record_id, gfx_animated_object>  m_gfx_animated_objects;
 };
 

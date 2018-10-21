@@ -3,8 +3,8 @@
 
 #   include <scene/scene.hpp>
 #   include <scene/scene_history_node.hpp>
-#   include <scene/scene_history_default_nodes.hpp>
-#   include <scene/scene_history_specialised_nodes.hpp>
+#   include <scene/scene_history_nodes_default.hpp>
+#   include <scene/scene_history_nodes_specialised.hpp>
 #   include <scene/scene_record_id.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <utility/std_pair_hash.hpp>

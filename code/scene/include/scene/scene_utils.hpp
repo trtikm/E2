@@ -6,6 +6,7 @@
 #   include <scene/scene_record_id.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/axis_aligned_bounding_box.hpp>
+#   include <utility/assumptions.hpp>
 #   include <boost/any.hpp>
 #   include <string>
 #   include <map>

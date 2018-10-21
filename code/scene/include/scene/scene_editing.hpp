@@ -1,5 +1,5 @@
-#ifndef E2_SCENE_SCENE_EDIT_UTILS_HPP_INCLUDED
-#   define E2_SCENE_SCENE_EDIT_UTILS_HPP_INCLUDED
+#ifndef E2_SCENE_SCENE_EDITING_HPP_INCLUDED
+#   define E2_SCENE_SCENE_EDITING_HPP_INCLUDED
 
 #   include <scene/scene.hpp>
 #   include <scene/scene_record_id.hpp>
