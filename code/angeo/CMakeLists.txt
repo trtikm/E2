@@ -14,7 +14,6 @@ add_library(${THIS_TARGET_NAME}
     ./src/utility.cpp
 
     ./include/angeo/shape.hpp
-    ./src/shape.cpp
 
     ./include/angeo/proximity_map.hpp
     
@@ -36,7 +35,6 @@ add_library(${THIS_TARGET_NAME}
     ./src/collision_scene.cpp
 
     ./include/angeo/rigid_body.hpp
-    ./src/rigid_body.cpp
     ./include/angeo/motion_constraint_system.hpp
     ./src/motion_constraint_system.cpp
     ./include/angeo/rigid_body_simulator.hpp
