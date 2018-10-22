@@ -1,0 +1,36 @@
+#ifndef ANGEO_COLLISION_SCENE_RECORDS_INTEGRATION_HPP_INCLUDED
+#   define ANGEO_COLLISION_SCENE_RECORDS_INTEGRATION_HPP_INCLUDED
+
+#   include <scene/scene_record_id.hpp>
+#   include <unordered_map>
+#   include <functional>
+#   include <string>
+#   include <QIcon>
+#   include <boost/property_tree/info_parser.hpp>
+
+namespace window_tabs { namespace tab_scene {
+
+
+struct  widgets;
+
+
+void  register_record_icons(std::unordered_map<std::string, QIcon>& icons_of_records);
+
+void  register_record_undo_redo_processors(widgets* const  w);
+
+void  register_record_handler_for_erase_scene_record(
+        std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)>>&
+                erase_record_handlers
+        );
+
+void  register_record_handler_for_load_scene_record(
+        std::unordered_map<std::string, std::function<void(widgets*,
+                                                           scn::scene_record_id const&,
+                                                           boost::property_tree::ptree const&)>>&
+                load_record_handlers
+        );
+
+
+}}
+
+#endif

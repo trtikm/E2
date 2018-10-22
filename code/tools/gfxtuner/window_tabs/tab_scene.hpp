@@ -12,6 +12,7 @@
 #   include <QWidget>
 #   include <QTreeWidget>
 #   include <QColor>
+#   include <QIcon>
 #   include <string>
 #   include <unordered_set>
 #   include <unordered_map>
@@ -93,6 +94,12 @@ struct  widgets
     void  selection_changed_listener();
     bool  processing_selection_change() const { return m_processing_selection_change; }
 
+    scn::scene_history_ptr  get_scene_history();
+
+    QIcon const&  get_node_icon() const { return m_node_icon; }
+    QIcon const&  get_folder_icon() const { return m_folder_icon; }
+    QIcon const&  get_record_icon(std::string const&  record_kind) const { return m_icons_of_records.at(record_kind); }
+
     void  clear_scene();
     void  open_scene(boost::filesystem::path const&  scene_root_dir);
     void  save_scene(boost::filesystem::path const&  scene_root_dir);
@@ -130,14 +137,10 @@ private:
             boost::property_tree::ptree& save_tree
             );
 
-
-
     void  update_coord_system_location_widgets();
     void  enable_coord_system_location_widgets(bool const  state, bool const  read_only);
     void  refresh_text_in_coord_system_location_widgets(scn::scene_node_ptr const  node_ptr);
     void  refresh_text_in_coord_system_rotation_widgets(quaternion const&  q);
-
-    scn::scene_history_ptr  get_scene_history();
 
     void  set_window_title();
 
@@ -146,7 +149,14 @@ private:
     QTreeWidget*  m_scene_tree;
     QIcon  m_node_icon;
     QIcon  m_folder_icon;
-    QIcon  m_batch_icon;
+    std::unordered_map<std::string, QIcon> m_icons_of_records;
+
+    std::unordered_map<std::string, std::function<void(widgets* const  w, scn::scene_record_id const&  id)>>
+            m_erase_record_handlers;
+    std::unordered_map<std::string, std::function<void(widgets* const  w,
+                                                       scn::scene_record_id const&  id,
+                                                       boost::property_tree::ptree const&)>>
+            m_load_record_handlers;
 
     bool  m_processing_selection_change;
 

@@ -1,4 +1,11 @@
 #include <gfxtuner/window_tabs/tab_scene.hpp>
+#include <gfxtuner/window_tabs/tab_scene_bool_lock.hpp>
+#include <gfxtuner/window_tabs/tab_scene_insert_name_dialog.hpp>
+#include <gfxtuner/window_tabs/tab_scene_record_id_reverse_builder.hpp>
+#include <gfxtuner/window_tabs/tab_scene_records_integration.hpp>
+#include <gfxtuner/window_tabs/tab_scene_tree_widget.hpp>
+#include <gfxtuner/window_tabs/tab_scene_tree_widget.hpp>
+#include <gfxtuner/window_tabs/tab_scene_utils.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <gfxtuner/simulation/simulator_notifications.hpp>
@@ -26,498 +33,10 @@
 #include <QDoubleValidator>
 #include <QFileDialog>
 
-namespace {
-
-
-struct  lock_bool
-{
-    lock_bool(bool* ptr)
-        : m_ptr(ptr)
-        , m_old_value()
-    {
-        if (m_ptr != nullptr)
-        { 
-            m_old_value = *m_ptr;
-            *m_ptr = true;
-        }
-    }
-    
-    ~lock_bool()
-    {
-        if (m_ptr != nullptr)
-            *m_ptr = m_old_value;
-    }
-private:
-    bool* m_ptr;
-    bool  m_old_value;
-};
-
-
-struct  tree_widget_item : public QTreeWidgetItem
-{
-    explicit tree_widget_item(bool const  represents_coord_system)
-        : QTreeWidgetItem()
-        , m_represents_coord_system(represents_coord_system)
-    {}
-
-    bool  represents_coord_system() const { return m_represents_coord_system; }
-
-private:
-    
-    bool  m_represents_coord_system;
-};
-
-
-struct  insert_name_dialog : public QDialog
-{
-    insert_name_dialog(program_window* const  wnd,
-                       std::string const&  initial_name,
-                       std::function<bool(std::string const&)> const&  is_name_valid)
-        : QDialog(wnd)
-        , m_wnd(wnd)
-        , m_name_edit(
-            [](insert_name_dialog* dlg, std::string const&  initial_name) {
-                struct s : public QLineEdit {
-                    s(insert_name_dialog* dlg, std::string const&  initial_name) : QLineEdit()
-                    {
-                        setText(QString(initial_name.c_str()));
-                        QObject::connect(this, &QLineEdit::textChanged, dlg, &insert_name_dialog::on_name_changed);
-                    }
-                };
-                return new s(dlg, initial_name);
-            }(this, initial_name)
-            )
-        , m_name_taken_indicator(new QLabel("WARNING: The name is already in use."))
-        , m_OK_button(
-            [](insert_name_dialog* wnd) {
-                struct Open : public QPushButton {
-                    Open(insert_name_dialog* wnd) : QPushButton("OK")
-                    {
-                        QObject::connect(this, SIGNAL(released()), wnd, SLOT(accept()));
-                        setDefault(true);
-                        autoDefault();
-                    }
-                };
-                return new Open(wnd);
-            }(this)
-            )
-        , m_is_name_valid_function(is_name_valid)
-        , m_name()
-    {
-        QVBoxLayout* const dlg_layout = new QVBoxLayout;
-        {
-            dlg_layout->addWidget(m_name_edit);
-            dlg_layout->addWidget(m_name_taken_indicator);
-
-            QHBoxLayout* const buttons_layout = new QHBoxLayout;
-            {
-                buttons_layout->addWidget(m_OK_button);
-                buttons_layout->addWidget(
-                    [](insert_name_dialog* wnd) {
-                        struct Close : public QPushButton {
-                            Close(insert_name_dialog* wnd) : QPushButton("Cancel")
-                            {
-                                QObject::connect(this, SIGNAL(released()), wnd, SLOT(reject()));
-                            }
-                        };
-                        return new Close(wnd);
-                    }(this)
-                    );
-                buttons_layout->addStretch(1);
-            }
-            dlg_layout->addLayout(buttons_layout);
-        }
-        this->setLayout(dlg_layout);
-        this->setWindowTitle("Insert name");
-        this->resize(300,100);
-
-        on_name_changed(QString(initial_name.c_str()));
-    }
-
-    std::string const&  get_name() const { return m_name; }
-
-    void  on_name_changed(QString const&  qname)
-    {
-        if (!m_is_name_valid_function(qtgl::to_string(qname)))
-        {
-            m_name_taken_indicator->setText(QString("WARNING: the name is already in use."));
-            m_OK_button->setEnabled(false);
-        }
-        else
-        {
-            m_name_taken_indicator->setText(QString("OK: The name is fresh."));
-            m_OK_button->setEnabled(true);
-        }
-    }
-
-public slots:
-
-    void  accept()
-    {
-        m_name = qtgl::to_string(m_name_edit->text());
-        QDialog::accept();
-    }
-
-    void  reject()
-    {
-        QDialog::reject();
-    }
-    //
-private:
-    program_window*  m_wnd;
-    QLineEdit*  m_name_edit;
-    QLabel*  m_name_taken_indicator;
-    QPushButton*  m_OK_button;
-    std::function<bool(std::string const&)>  m_is_name_valid_function;
-    std::string  m_name;
-};
-
-
-inline tree_widget_item*  as_tree_widget_item(QTreeWidgetItem* const tree_item)
-{
-    return  dynamic_cast<tree_widget_item*>(tree_item);
-}
-
-
-inline std::string  get_tree_widget_item_name(QTreeWidgetItem* const  tree_item)
-{
-    return qtgl::to_string(tree_item->text(0));
-}
-
-
-inline bool  represents_coord_system(tree_widget_item* const  item)
-{
-    return item != nullptr && item->represents_coord_system();
-}
-
-
-inline bool  represents_coord_system(QTreeWidgetItem* const  item)
-{
-    return represents_coord_system(as_tree_widget_item(item));
-}
-
-
-bool  represents_folder(tree_widget_item* const  item)
-{
-    return item != nullptr && !represents_coord_system(item) && represents_coord_system(item->parent());
-}
-
-
-inline bool  represents_folder(QTreeWidgetItem* const  item)
-{
-    return represents_folder(as_tree_widget_item(item));
-}
-
-
-bool  represents_record(tree_widget_item* const  item)
-{
-    return item != nullptr && represents_folder(item->parent()) && item->childCount() == 0;
-}
-
-
-inline bool  represents_record(QTreeWidgetItem* const  item)
-{
-    return represents_record(as_tree_widget_item(item));
-}
-
-
-tree_widget_item*  find_nearest_coord_system_item(
-        tree_widget_item*  tree_item,
-        std::function<void(std::string const&)> const&  names_acceptor = [](std::string const&) {}
-        )
-{
-    while (tree_item != nullptr && !tree_item->represents_coord_system())
-    {
-        names_acceptor(get_tree_widget_item_name(tree_item));
-        tree_item = as_tree_widget_item(tree_item->parent());
-    }
-    if (tree_item != nullptr)
-        names_acceptor(get_tree_widget_item_name(tree_item));
-    return tree_item;
-}
-
-
-inline tree_widget_item*  find_nearest_coord_system_item(
-        QTreeWidgetItem*  tree_item,
-        std::function<void(std::string const&)> const&  names_acceptor = [](std::string const&) {}
-        )
-{
-    return find_nearest_coord_system_item(as_tree_widget_item(tree_item), names_acceptor);
-}
-
-
-struct  scene_record_id_reverse_builder
-{
-    void next_name(std::string const&  name)
-    {
-        if (m_record_name.empty())
-            m_record_name = name;
-        else
-        {
-            if (!m_node_name.empty())
-            {
-                if (m_folder_name.empty())
-                    m_folder_name = m_node_name;
-                else
-                    m_folder_name = m_node_name + '/' + m_folder_name;
-            }
-            m_node_name = name;
-        }
-    }
-
-    scn::scene_record_id  get_record_id()
-    {
-        return { m_node_name, m_folder_name, m_record_name };
-    }
-
-    scn::scene_node_record_id  get_node_record_id()
-    {
-        return { m_folder_name, m_record_name };
-    }
-
-    static scene_record_id_reverse_builder  run(
-            tree_widget_item* const  tree_item,
-            tree_widget_item** const  coord_system_item = nullptr)
-    {
-        scene_record_id_reverse_builder  id_builder;
-        tree_widget_item* coord_system_tree_item =
-            find_nearest_coord_system_item(tree_item, [&id_builder](std::string const& s) { id_builder.next_name(s); });
-        if (coord_system_item != nullptr)
-            *coord_system_item = coord_system_tree_item;
-        return id_builder;
-    }
-
-private:
-    std::string  m_node_name;
-    std::string  m_folder_name;
-    std::string  m_record_name;
-};
-
-
-void  remove_record_from_tree_widget(QTreeWidget* const  scene_tree, scn::scene_record_id const&  record_id)
-{
-    auto const  items_list = scene_tree->findItems(
-            QString(record_id.get_node_name().c_str()),
-            Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-            0
-            );
-    ASSUMPTION(items_list.size() == 1UL);
-    auto const  coord_system_item = as_tree_widget_item(items_list.front());
-    std::string const  coord_system_name = get_tree_widget_item_name(coord_system_item);
-    ASSUMPTION(represents_coord_system(coord_system_item));
-    ASSUMPTION(coord_system_name == record_id.get_node_name());
-    for (int i = 0, n = coord_system_item->childCount(); i != n; ++i)
-    {
-        auto const  folder_item = as_tree_widget_item(coord_system_item->child(i));
-        if (!represents_folder(folder_item))
-        {
-            INVARIANT(represents_coord_system(folder_item));
-            continue;
-        }
-        std::string const  folder_item_name = get_tree_widget_item_name(folder_item);
-        if (folder_item_name == record_id.get_folder_name())
-        {
-            for (int j = 0, m = folder_item->childCount(); j != m; ++j)
-            {
-                auto const  record_item = as_tree_widget_item(folder_item->child(j));
-                INVARIANT(represents_record(record_item));
-                std::string const  record_name = get_tree_widget_item_name(record_item);
-                if (record_name == record_id.get_record_name())
-                {
-                    ASSUMPTION(!record_item->isSelected());
-                    auto  taken_item = folder_item->takeChild(j);
-                    INVARIANT(taken_item == record_item); (void)taken_item;
-                    delete taken_item;
-                    if (folder_item->childCount() == 0)
-                    {
-                        taken_item = coord_system_item->takeChild(i);
-                        INVARIANT(taken_item == folder_item); (void)taken_item;
-                        delete taken_item;
-                    }
-                    return;
-                }
-            }
-            UNREACHABLE();
-        }
-    }
-    UNREACHABLE();
-}
-
-
-QTreeWidgetItem*  insert_coord_system_to_tree_widget(
-        QTreeWidget* const  scene_tree,
-        scn::scene_node_name const&  name,
-        vector3 const&  origin,
-        quaternion const&  orientation,
-        QIcon const&  icon,
-        QTreeWidgetItem* const  parent_tree_item
-        )
-{
-    std::unique_ptr<tree_widget_item>  tree_node(new tree_widget_item(true));
-    tree_node->setText(0, QString(name.c_str()));
-    tree_node->setIcon(0, icon);
-    if (parent_tree_item == nullptr)
-        scene_tree->addTopLevelItem(tree_node.get());
-    else
-        parent_tree_item->addChild(tree_node.get());
-    return tree_node.release();
-}
-
-
-tree_widget_item*  insert_record_to_tree_widget(
-        QTreeWidget* const  scene_tree,
-        scn::scene_record_id const&  record_id,
-        QIcon const&  icon,
-        QIcon const&  folder_icon
-        )
-{
-    auto const  items_list = scene_tree->findItems(
-            QString(record_id.get_node_name().c_str()),
-            Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-            0
-            );
-    ASSUMPTION(items_list.size() == 1UL);
-    auto const  coord_system_item = as_tree_widget_item(items_list.front());
-    ASSUMPTION(represents_coord_system(coord_system_item));
-    std::string const  coord_system_name = get_tree_widget_item_name(coord_system_item);
-    ASSUMPTION(coord_system_name == record_id.get_node_name());
-    ASSUMPTION(
-        ([coord_system_item, &record_id]() -> bool {
-            for (int i = 0, n = coord_system_item->childCount(); i != n; ++i)
-            {
-                auto const  folder_item = as_tree_widget_item(coord_system_item->child(i));
-                if (!represents_folder(folder_item))
-                {
-                    INVARIANT(represents_coord_system(folder_item));
-                    continue;
-                }
-                std::string const  folder_item_name = get_tree_widget_item_name(folder_item);
-                if (folder_item_name == record_id.get_folder_name())
-                {
-                    for (int j = 0, m = folder_item->childCount(); j != m; ++j)
-                    {
-                        auto const  record_item = as_tree_widget_item(folder_item->child(j));
-                        std::string const  record_name = get_tree_widget_item_name(record_item);
-                        if (record_name == record_id.get_record_name())
-                            return false;
-                    }
-                    return true;
-                }
-            }
-            return true;
-        }())
-    );
-    tree_widget_item*  folder_item = nullptr;
-    for (int i = 0, n = coord_system_item->childCount(); i != n; ++i)
-    {
-        auto const  item = as_tree_widget_item(coord_system_item->child(i));
-        if (!represents_folder(item))
-        {
-            INVARIANT(represents_coord_system(item));
-            continue;
-        }
-        std::string const  item_name = get_tree_widget_item_name(item);
-        if (item_name == record_id.get_folder_name())
-        {
-            folder_item = item;
-            break;
-        }
-    }
-    if (folder_item == nullptr)
-    {
-        std::unique_ptr<tree_widget_item>  tree_node(new tree_widget_item(false));
-        tree_node->setText(0, QString(record_id.get_folder_name().c_str()));
-        tree_node->setIcon(0, folder_icon);
-        folder_item = tree_node.release();
-        coord_system_item->addChild(folder_item);
-        INVARIANT(folder_item->isSelected() == false);
-    }
-    std::unique_ptr<tree_widget_item>  tree_node(new tree_widget_item(false));
-    tree_node->setText(0, QString(record_id.get_record_name().c_str()));
-    tree_node->setIcon(0, icon);
-    folder_item->addChild(tree_node.get());
-    INVARIANT(tree_node->isSelected() == false);
-    return tree_node.release();
-}
-
-
-tree_widget_item*  get_active_coord_system_item_in_tree_widget(QTreeWidget const&  tree_widget)
-{
-    auto const selected_items = tree_widget.selectedItems();
-    INVARIANT(
-        !selected_items.empty() &&
-        [&selected_items]() -> bool {
-            foreach(QTreeWidgetItem* const  item, selected_items)
-                if (find_nearest_coord_system_item(item) != find_nearest_coord_system_item(selected_items.front()))
-                    return false;
-                return true;
-            }()
-        );
-    tree_widget_item* const  tree_item = find_nearest_coord_system_item(selected_items.front());
-    INVARIANT(tree_item != nullptr && tree_item->represents_coord_system());
-    return tree_item;
-}
-
-
-inline std::string  get_name_of_active_coord_system_in_tree_widget(QTreeWidget const&  tree_widget)
-{
-    return get_tree_widget_item_name(get_active_coord_system_item_in_tree_widget(tree_widget));
-}
-
-
-bool  is_active_coord_system_in_tree_widget(QTreeWidget const&  tree_widget, std::string const&  name)
-{
-    auto const selected_items = tree_widget.selectedItems();
-    if (selected_items.size() != 1)
-        return false;
-    tree_widget_item* const  tree_item = find_nearest_coord_system_item(selected_items.front());
-    INVARIANT(tree_item != nullptr && tree_item->represents_coord_system());
-    std::string const  active_name = get_tree_widget_item_name(tree_item);
-    return name == active_name;
-}
-
-
-bool  update_history_according_to_change_in_selection(
-    QList<QTreeWidgetItem*> const&  old_selection,
-    QList<QTreeWidgetItem*> const&  new_selection,
-    scn::scene_history_ptr const  scene_history_ptr,
-    bool  apply_commit = true
-    )
-{
-    std::vector< std::pair<std::unordered_set<QTreeWidgetItem*>, bool> > const  work_list {
-        { std::unordered_set<QTreeWidgetItem*>(old_selection.cbegin(), old_selection.cend()), true },
-        { std::unordered_set<QTreeWidgetItem*>(new_selection.cbegin(), new_selection.cend()), false },
-    };
-    bool  change = false;
-    for (std::size_t  i = 0UL, j = 1UL; i != work_list.size(); ++i, j = (j + 1) % 2)
-        for (auto const  item_ptr : work_list.at(i).first)
-            if (work_list.at(j).first.count(item_ptr) == 0UL)
-            {
-                change = true;
-                tree_widget_item* const  item = as_tree_widget_item(item_ptr);
-                INVARIANT(item != nullptr);
-                std::string const  item_name = get_tree_widget_item_name(item);
-                if (represents_coord_system(item))
-                    scene_history_ptr->insert<scn::scene_history_coord_system_insert_to_selection>(item_name,work_list.at(i).second);
-                else if (!represents_folder(item))
-                    scene_history_ptr->insert<scn::scene_history_record_insert_to_selection>(
-                        scene_record_id_reverse_builder::run(item).get_record_id(),
-                        work_list.at(i).second
-                        );
-            }
-    if (change == true && apply_commit == true)
-        scene_history_ptr->commit();
-
-    return change;
-}
-
-
-natural_64_bit  g_new_coord_system_id_counter = 0ULL;
-
-
-}
-
 namespace window_tabs { namespace tab_scene {
+
+
+static natural_64_bit  g_new_coord_system_id_counter = 0ULL;
 
 
 widgets::widgets(program_window* const  wnd)
@@ -539,12 +58,14 @@ widgets::widgets(program_window* const  wnd)
             return new s(wnd);
         }(m_wnd)
         )
+
     , m_node_icon((boost::filesystem::path{ get_program_options()->dataRoot() } /
-                   "shared/gfx/icons/coord_system.png").string().c_str())
+                  "shared/gfx/icons/coord_system.png").string().c_str())
     , m_folder_icon((boost::filesystem::path{ get_program_options()->dataRoot() } /
-                   "shared/gfx/icons/folder.png").string().c_str())
-    , m_batch_icon((boost::filesystem::path{ get_program_options()->dataRoot() } /
-                   "shared/gfx/icons/batch.png").string().c_str())
+                    "shared/gfx/icons/folder.png").string().c_str())
+
+    , m_erase_record_handlers()
+    , m_load_record_handlers()
 
     , m_processing_selection_change(false)
 
@@ -860,31 +381,10 @@ widgets::widgets(program_window* const  wnd)
             UNREACHABLE();
         });
 
-    /////////////////////////////////////////////////////////////////////////////////////
-    // Next follow undo/redo inserters of individual record kinds.
-    /////////////////////////////////////////////////////////////////////////////////////
-
-    scn::scene_history_batch_insert::set_undo_processor(
-        [this](scn::scene_history_batch_insert const&  history_node) {
-            INVARIANT(history_node.get_id().get_folder_name() == scn::get_batches_folder_name());
-            m_wnd->glwindow().call_now(
-                    &simulator::erase_batch_from_scene_node,
-                    history_node.get_id().get_record_name(),
-                    history_node.get_id().get_node_name()
-                    );
-            remove_record_from_tree_widget(m_scene_tree, history_node.get_id());
-        });
-    scn::scene_history_batch_insert::set_redo_processor(
-        [this](scn::scene_history_batch_insert const&  history_node) {
-            INVARIANT(history_node.get_id().get_folder_name() == scn::get_batches_folder_name());
-            m_wnd->glwindow().call_now(
-                    &simulator::insert_batch_to_scene_node,
-                    history_node.get_id().get_record_name(),
-                    history_node.get_batch_pathname(),
-                    history_node.get_id().get_node_name()
-                    );
-            insert_record_to_tree_widget(m_scene_tree, history_node.get_id(), m_batch_icon, m_folder_icon);
-        });
+    register_record_icons(m_icons_of_records);
+    register_record_undo_redo_processors(this);
+    register_record_handler_for_erase_scene_record(m_erase_record_handlers);
+    register_record_handler_for_load_scene_record(m_load_record_handlers);
 }
 
 
@@ -1311,7 +811,7 @@ void  widgets::on_scene_insert_batch()
                 boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "meshes"
                 )),
             true,
-            m_batch_icon,
+            get_record_icon(scn::get_batches_folder_name()),
             [](boost::filesystem::path const&  pathname) -> std::string {
                 boost::filesystem::path const  batch_dir = pathname.parent_path().filename();
                 boost::filesystem::path  batch_name = pathname.filename();
@@ -1369,18 +869,7 @@ void  widgets::on_scene_erase_selected()
 
 void  widgets::erase_scene_record(scn::scene_record_id const&  id)
 {
-    if (id.get_folder_name() == scn::get_batches_folder_name())
-    {
-        scn::scene_node_ptr const  parent_node_ptr =
-                wnd()->glwindow().call_now(&simulator::get_scene_node, id.get_node_name());
-        INVARIANT(parent_node_ptr != nullptr);
-        get_scene_history()->insert<scn::scene_history_batch_insert>(
-                id,
-                scn::get_batch(*parent_node_ptr, id.get_record_name()).path_component_of_uid(),
-                true
-                );
-        wnd()->glwindow().call_now(&simulator::erase_batch_from_scene_node, id.get_record_name(), id.get_node_name());
-    }
+    m_erase_record_handlers.at(id.get_folder_name())(this, id);
 }
 
 void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std::unordered_set<QTreeWidgetItem*>&  erased_items)
@@ -1472,12 +961,7 @@ void  widgets::clear_scene()
 
 void  widgets::load_scene_record(scn::scene_record_id const&  id, boost::property_tree::ptree const&  data)
 {
-    if (id.get_folder_name() == scn::get_batches_folder_name())
-    {
-        boost::filesystem::path const  pathname = data.get<std::string>("pathname");
-        m_wnd->glwindow().call_now(&simulator::insert_batch_to_scene_node, id.get_record_name(), pathname, id.get_node_name());
-        insert_record_to_tree_widget(m_scene_tree, id, m_batch_icon, m_folder_icon);
-    }
+    m_load_record_handlers.at(id.get_folder_name())(this, id, data);
 }
 
 void  widgets::save_scene_record(

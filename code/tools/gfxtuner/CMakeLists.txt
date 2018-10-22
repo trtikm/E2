@@ -28,6 +28,19 @@ add_executable(${THIS_TARGET_NAME}
 
     window_tabs/tab_scene.hpp
     window_tabs/tab_scene.cpp
+    window_tabs/tab_scene_bool_lock.hpp
+    window_tabs/tab_scene_insert_name_dialog.hpp
+    window_tabs/tab_scene_insert_name_dialog.cpp
+    window_tabs/tab_scene_record_id_reverse_builder.hpp
+    window_tabs/tab_scene_record_id_reverse_builder.cpp
+    window_tabs/tab_scene_records_integration.hpp
+    window_tabs/tab_scene_records_integration.cpp
+    window_tabs/tab_scene_tree_widget.hpp
+    window_tabs/tab_scene_tree_widget.cpp
+    window_tabs/tab_scene_utils.hpp
+    window_tabs/tab_scene_utils.cpp
+    window_tabs/tab_scene_record_batch.hpp
+    window_tabs/tab_scene_record_batch.cpp
 
     window_tabs/tab_statistics.hpp
     window_tabs/tab_statistics.cpp
