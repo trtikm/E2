@@ -1,4 +1,5 @@
 #include <gfxtuner/menu_bar.hpp>
+#include <gfxtuner/menu_bar_records_integration.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <gfxtuner/program_info.hpp>
@@ -60,7 +61,7 @@ menu_bar::menu_bar(program_window* const  wnd)
 
     , m_menu_edit(new detail::menu("&Edit", wnd))
     , m_edit_action_insert_coord_system(new QAction(QString("Insert &coord system"), wnd))
-    , m_edit_action_insert_batch(new QAction(QString("Insert &batch"), wnd))
+    , m_record_menu_items()
     , m_edit_action_erase_selected(new QAction(QString("&Erase selected"), wnd))
     , m_edit_action_mode_select(new QAction(QString("&Selection"), wnd))
     , m_edit_action_mode_translate(new QAction(QString("&Translation"), wnd))
@@ -79,6 +80,16 @@ menu_bar::menu_bar(program_window* const  wnd)
     if(!boost::filesystem::is_directory(m_default_scene_root_dir))
         boost::filesystem::create_directories(m_default_scene_root_dir);
     m_default_scene_root_dir = canonical_path(m_default_scene_root_dir);
+
+    std::map<std::string, record_menu_items::record_menu_item_info>  record_menu_items;
+    record_menu_items::register_record_menu_items(record_menu_items);
+    for (auto const& record_kind_and_info : record_menu_items)
+    {
+        QAction* const  action = new QAction(QString(record_kind_and_info.second.m_name.c_str()), wnd);
+        action->setShortcut(QString(record_kind_and_info.second.m_shortcut.c_str()));
+        action->setToolTip(QString(record_kind_and_info.second.m_tooltip.c_str()));
+        m_record_menu_items[record_kind_and_info.first] = action;
+    }
 }
 
 void  menu_bar::on_file_action_new_scene()
@@ -199,21 +210,16 @@ void  make_menu_bar_content(menu_bar const&  w)
         );
     QObject::connect(w.get_edit_action_insert_coord_system(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_insert_coord_system);
 
-    w.get_menu_edit()->addAction(w.get_edit_action_insert_batch());
-    w.get_edit_action_insert_batch()->setShortcut(QString("Ctrl+Alt+B"));
-    w.get_edit_action_insert_batch()->setToolTip(
-        "A batch is an atomic block of grahical data. It can only be placed under a coordinate system. It means that at least one\n"
-        "non-'@pivot' coord. system must be selected. Otherwise the operation will fail (with an error message to the status bar).\n"
-        "For each selected non-'@pivot' coord. system there will be created a copy of the newly created batch under that system.\n"
-        "Batches are available on the disc under models root directory 'E2/dist/data/shared/gfx/models'. Finally, the newly created\n"
-        "batch will become the only selected object in the scene."
-        );
-    QObject::connect(
-            w.get_edit_action_insert_batch(),
-            &QAction::triggered,
-            w.wnd(),
-            std::bind(&program_window::on_menu_edit_insert_record, w.wnd(), std::string("batches"))
-            );
+    for (auto const&  record_kind_and_action : w.get_edit_actions_of_records())
+    {
+        w.get_menu_edit()->addAction(record_kind_and_action.second);
+        QObject::connect(
+                record_kind_and_action.second,
+                &QAction::triggered,
+                w.wnd(),
+                std::bind(&program_window::on_menu_edit_insert_record, w.wnd(), record_kind_and_action.first)
+                );
+    }
 
     w.get_menu_edit()->addSeparator();
 

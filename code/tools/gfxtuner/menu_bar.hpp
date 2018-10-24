@@ -5,8 +5,10 @@
 #   include <QMenuBar>
 #   include <QMenu>
 #   include <QAction>
-#   include <vector>
 #   include <boost/filesystem.hpp>
+#   include <vector>
+#   include <map>
+#   include <string>
 
 struct  program_window;
 
@@ -29,7 +31,7 @@ struct  menu_bar
 
     QMenu*  get_menu_edit() const noexcept { return m_menu_edit; }
     QAction*  get_edit_action_insert_coord_system() const { return m_edit_action_insert_coord_system; }
-    QAction*  get_edit_action_insert_batch() const { return m_edit_action_insert_batch; }
+    std::map<std::string, QAction*> const& get_edit_actions_of_records() const { return m_record_menu_items; }
     QAction*  get_edit_action_erase_selected() const { return m_edit_action_erase_selected; }
     QAction*  get_edit_action_mode_select() const { return m_edit_action_mode_select; }
     QAction*  get_edit_action_mode_translate() const { return m_edit_action_mode_translate; }
@@ -80,7 +82,7 @@ private:
 
     QMenu*  m_menu_edit;
     QAction*  m_edit_action_insert_coord_system;
-    QAction*  m_edit_action_insert_batch;
+    std::map<std::string, QAction*>  m_record_menu_items;
     QAction*  m_edit_action_erase_selected;
     QAction*  m_edit_action_mode_select;
     QAction*  m_edit_action_mode_translate;

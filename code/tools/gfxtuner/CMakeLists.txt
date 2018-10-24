@@ -22,6 +22,10 @@ add_executable(${THIS_TARGET_NAME}
     
     menu_bar.hpp
     menu_bar.cpp
+    menu_bar_records_integration.hpp
+    menu_bar_records_integration.cpp
+    menu_bar_record_batch.hpp
+    menu_bar_record_batch.cpp
     
     window_tabs/tab_draw.hpp
     window_tabs/tab_draw.cpp
