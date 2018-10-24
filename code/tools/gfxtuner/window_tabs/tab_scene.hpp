@@ -17,6 +17,7 @@
 #   include <unordered_set>
 #   include <unordered_map>
 #   include <functional>
+#   include <tuple>
 
 
 struct  program_window;
@@ -50,16 +51,7 @@ struct  widgets
 
     void  on_scene_hierarchy_item_selected();
     void  on_scene_insert_coord_system();
-    void  on_scene_insert_record(
-            scn::scene_node::folder_name const&  folder_name,
-            boost::filesystem::path const&  root_dir,
-            bool const  directory_input_mode,
-            QIcon const&  icon,
-            std::function<std::string(boost::filesystem::path const&)> const&  get_raw_record_name,
-            std::function<void(boost::filesystem::path const&, scn::scene_record_id const&)> const&  insert_to_scene,
-            std::function<void(boost::filesystem::path const&, scn::scene_record_id const&)> const&  insert_to_history
-            );
-    void  on_scene_insert_batch();
+    void  on_scene_insert_record(std::string const&  record_kind);
     void  on_scene_erase_selected();
 
     void  on_coord_system_pos_changed();
@@ -151,6 +143,10 @@ private:
     QIcon  m_folder_icon;
     std::unordered_map<std::string, QIcon> m_icons_of_records;
 
+    std::unordered_map<std::string,
+                        std::function<std::pair<std::string, std::function<void(scn::scene_record_id const&)>>
+                                        (widgets*, std::unordered_set<std::string> const&)> >
+            m_insert_record_handlers;
     std::unordered_map<std::string, std::function<void(widgets* const  w, scn::scene_record_id const&  id)>>
             m_erase_record_handlers;
     std::unordered_map<std::string, std::function<void(widgets* const  w,

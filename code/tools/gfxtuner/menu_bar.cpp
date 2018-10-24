@@ -208,7 +208,12 @@ void  make_menu_bar_content(menu_bar const&  w)
         "Batches are available on the disc under models root directory 'E2/dist/data/shared/gfx/models'. Finally, the newly created\n"
         "batch will become the only selected object in the scene."
         );
-    QObject::connect(w.get_edit_action_insert_batch(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_insert_batch);
+    QObject::connect(
+            w.get_edit_action_insert_batch(),
+            &QAction::triggered,
+            w.wnd(),
+            std::bind(&program_window::on_menu_edit_insert_record, w.wnd(), std::string("batches"))
+            );
 
     w.get_menu_edit()->addSeparator();
 

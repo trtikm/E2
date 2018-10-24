@@ -64,6 +64,7 @@ widgets::widgets(program_window* const  wnd)
     , m_folder_icon((boost::filesystem::path{ get_program_options()->dataRoot() } /
                     "shared/gfx/icons/folder.png").string().c_str())
 
+    , m_insert_record_handlers()
     , m_erase_record_handlers()
     , m_load_record_handlers()
 
@@ -383,6 +384,7 @@ widgets::widgets(program_window* const  wnd)
 
     register_record_icons(m_icons_of_records);
     register_record_undo_redo_processors(this);
+    register_record_handler_for_insert_scene_record(m_insert_record_handlers);
     register_record_handler_for_erase_scene_record(m_erase_record_handlers);
     register_record_handler_for_load_scene_record(m_load_record_handlers);
 }
@@ -687,15 +689,7 @@ void  widgets::on_scene_insert_coord_system()
 }
 
 
-void  widgets::on_scene_insert_record(
-        scn::scene_node::folder_name const&  folder_name,
-        boost::filesystem::path const&  root_dir,
-        bool const  directory_input_mode,
-        QIcon const&  icon,
-        std::function<std::string(boost::filesystem::path const&)> const&  get_raw_record_name,
-        std::function<void(boost::filesystem::path const&, scn::scene_record_id const&)> const&  insert_to_scene,
-        std::function<void(boost::filesystem::path const&, scn::scene_record_id const&)> const&  insert_to_history
-        )
+void  widgets::on_scene_insert_record(std::string const&  record_kind)
 {
     ASSUMPTION(!processing_selection_change());
     lock_bool const  _(&m_processing_selection_change);
@@ -725,7 +719,7 @@ void  widgets::on_scene_insert_record(
                     continue;
                 INVARIANT(represents_folder(item));
                 std::string const  item_name = get_tree_widget_item_name(item);
-                if (item_name == folder_name)
+                if (item_name == record_kind)
                 {
                     for (int j = 0, m = item->childCount(); j != m; ++j)
                     {
@@ -745,27 +739,15 @@ void  widgets::on_scene_insert_record(
         return;
     }
 
-    QFileDialog  dialog(wnd());
-    dialog.setDirectory(root_dir.string().c_str());
-    dialog.setFileMode(directory_input_mode ? QFileDialog::DirectoryOnly : QFileDialog::ExistingFile);
-    if (!dialog.exec())
+    std::pair<std::string, std::function<void(scn::scene_record_id const&)> > const  record_name_and_system_inserted =
+            m_insert_record_handlers.at(record_kind)(this, used_names);
+    if (record_name_and_system_inserted.first.empty() || !record_name_and_system_inserted.second)
         return;
-    QStringList const  selected = dialog.selectedFiles();
-    if (selected.size() != 1)
-    {
-        if (directory_input_mode)
-            wnd()->print_status_message("ERROR: Exactly one folder must be selected/provided.", 10000);
-        else
-            wnd()->print_status_message("ERROR: Exactly one file must be selected/provided.", 10000);
-        return;
-    }
-    boost::filesystem::path const  pathname = qtgl::to_string(selected.front());
-    std::string const  raw_name = get_raw_record_name(pathname);
-    static natural_64_bit  counter = 0ULL;
-    std::string  name = raw_name;
+    natural_64_bit  counter = 0ULL;
+    std::string  name = record_name_and_system_inserted.first;
     while (used_names.count(name) != 0UL)
     {
-        name = msgstream() << raw_name << "_" << counter;
+        name = msgstream() << record_name_and_system_inserted.first << "_" << counter;
         ++counter;
     }
     insert_name_dialog  dlg(wnd(), name,
@@ -778,14 +760,14 @@ void  widgets::on_scene_insert_record(
         QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
         m_scene_tree->clearSelection();
 
-        for (auto const&  tree_item : nodes)
+        for (auto const& tree_item : nodes)
         {
-            scn::scene_record_id const  record_id { get_tree_widget_item_name(tree_item), folder_name, dlg.get_name() };
+            scn::scene_record_id const  record_id{ get_tree_widget_item_name(tree_item), record_kind, dlg.get_name() };
 
-            auto const  record_item = insert_record_to_tree_widget(m_scene_tree, record_id, icon, m_folder_icon);
+            auto const  record_item =
+                    insert_record_to_tree_widget(m_scene_tree, record_id, m_icons_of_records.at(record_kind), m_folder_icon);
 
-            insert_to_scene(pathname, record_id);
-            insert_to_history(pathname, record_id);
+            record_name_and_system_inserted.second(record_id);
 
             std::unordered_set<scn::scene_node_name>  selected_scene_nodes;
             std::unordered_set<scn::scene_record_id>  selected_records{ record_id };
@@ -800,32 +782,6 @@ void  widgets::on_scene_insert_record(
         get_scene_history()->commit();
         set_window_title();
     }
-}
-
-
-void  widgets::on_scene_insert_batch()
-{
-    on_scene_insert_record(
-            scn::get_batches_folder_name(),
-            canonical_path(boost::filesystem::absolute(
-                boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "meshes"
-                )),
-            true,
-            get_record_icon(scn::get_batches_folder_name()),
-            [](boost::filesystem::path const&  pathname) -> std::string {
-                boost::filesystem::path const  batch_dir = pathname.parent_path().filename();
-                boost::filesystem::path  batch_name = pathname.filename();
-                if (batch_name.has_extension())
-                    batch_name.replace_extension("");
-                return batch_dir.string() + "/" + batch_name.string();
-                },
-            [this](boost::filesystem::path const&  pathname, scn::scene_record_id const&  record_id) -> void {
-                wnd()->glwindow().call_now(&simulator::insert_batch_to_scene_node, record_id.get_record_name(), pathname, record_id.get_node_name());
-                },
-            [this](boost::filesystem::path const&  pathname, scn::scene_record_id const&  record_id) -> void {
-                get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, pathname, false);
-                }
-            );
 }
 
 
@@ -1805,22 +1761,6 @@ QWidget*  make_scene_tab_content(widgets const&  w)
                                                 SIGNAL(released()),
                                                 wnd,
                                                 SLOT(on_scene_insert_coord_system())
-                                                );
-                                        }
-                                    };
-                                    return new choose(wnd);
-                                }(w.wnd())
-                                );
-                        insertion_layout->addWidget(
-                            [](program_window* wnd) {
-                                    struct choose : public QPushButton {
-                                        choose(program_window* wnd) : QPushButton("Insert batch")
-                                        {
-                                            QObject::connect(
-                                                this,
-                                                SIGNAL(released()),
-                                                wnd,
-                                                SLOT(on_scene_insert_batch())
                                                 );
                                         }
                                     };
