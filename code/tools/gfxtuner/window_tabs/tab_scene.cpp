@@ -1745,57 +1745,6 @@ QWidget*  make_scene_tab_content(widgets const&  w)
             }
             scene_tab_layout->addWidget(w.scene_tree());
 
-            QWidget* const operation_group = new QGroupBox("Operation");
-            {
-                QVBoxLayout* const buttons_layout = new QVBoxLayout;
-                {
-                    QHBoxLayout* const insertion_layout = new QHBoxLayout;
-                    {
-                        insertion_layout->addWidget(
-                            [](program_window* wnd) {
-                                    struct choose : public QPushButton {
-                                        choose(program_window* wnd) : QPushButton("Insert node")
-                                        {
-                                            QObject::connect(
-                                                this,
-                                                SIGNAL(released()),
-                                                wnd,
-                                                SLOT(on_scene_insert_coord_system())
-                                                );
-                                        }
-                                    };
-                                    return new choose(wnd);
-                                }(w.wnd())
-                                );
-                    }
-                    buttons_layout->addLayout(insertion_layout);
-
-                    buttons_layout->addWidget(
-                        [](program_window* wnd) {
-                                struct choose : public QPushButton {
-                                    choose(program_window* wnd) : QPushButton("Erase selected")
-                                    {
-                                        QObject::connect(
-                                            this,
-                                            SIGNAL(released()),
-                                            wnd,
-                                            SLOT(on_scene_erase_selected())
-                                            );
-                                    }
-                                };
-                                return new choose(wnd);
-                            }(w.wnd())
-                            );
-                }
-                operation_group->setLayout(buttons_layout);
-            }
-            scene_tab_layout->addWidget(operation_group);
-
-            //QWidget* const search_group = new QGroupBox("Search");
-            //{
-            //}
-            //scene_tab_layout->addWidget(search_group);
-
             QWidget* const selected_group = new QGroupBox("Properties of selection");
             {
                 QVBoxLayout* const selected_layout = new QVBoxLayout();
