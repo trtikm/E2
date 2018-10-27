@@ -440,7 +440,13 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                 vector3 const& unit_normal,
                 float_32_bit  penetration_depth) -> bool {
                     angeo::collision_object_id const  coid_1 = angeo::get_object_id(angeo::get_first_collider_id(cid));
+                    auto const  rb_1_it = m_binding_of_collision_objects.find(coid_1);
+                    if (rb_1_it == m_binding_of_collision_objects.cend())
+                        return true;
                     angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
+                    auto const  rb_2_it = m_binding_of_collision_objects.find(coid_2);
+                    if (rb_2_it == m_binding_of_collision_objects.cend())
+                        return true;
                     vector3  unit_tangent, unit_bitangent;
                     angeo::compute_tangent_space_of_unit_vector(unit_normal, unit_tangent, unit_bitangent);
                     angeo::rigid_body_simulator::contact_friction_constraints_info  friction_info {
@@ -451,8 +457,8 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                             0.001f
                     };
                     m_rigid_body_simulator.insert_contact_constraints(
-                            m_binding_of_collision_objects.at(coid_1),
-                            m_binding_of_collision_objects.at(coid_2),
+                            rb_1_it->second,
+                            rb_2_it->second,
                             cid,
                             contact_point,
                             unit_normal,
