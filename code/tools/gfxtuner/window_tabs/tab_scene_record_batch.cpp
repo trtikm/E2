@@ -60,13 +60,13 @@ void  register_record_undo_redo_processors(widgets* const  w)
 void  register_record_handler_for_insert_scene_record(
         std::unordered_map<std::string,
                            std::function<std::pair<std::string, std::function<void(scn::scene_record_id const&)>>
-                                         (widgets*, std::unordered_set<std::string> const&)> >&
+                                         (widgets*, std::string const&, std::unordered_set<std::string> const&)> >&
                 insert_record_handlers
         )
 {
     insert_record_handlers.insert({
             scn::get_batches_folder_name(),
-            [](widgets* const  w, std::unordered_set<std::string> const&  used_names)
+            [](widgets* const  w, std::string const&, std::unordered_set<std::string> const&  used_names)
                 -> std::pair<std::string, std::function<void(scn::scene_record_id const&)>> {
                 boost::filesystem::path const&  root_dir =
                         canonical_path(boost::filesystem::absolute(

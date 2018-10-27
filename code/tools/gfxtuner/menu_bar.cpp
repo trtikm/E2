@@ -81,14 +81,14 @@ menu_bar::menu_bar(program_window* const  wnd)
         boost::filesystem::create_directories(m_default_scene_root_dir);
     m_default_scene_root_dir = canonical_path(m_default_scene_root_dir);
 
-    std::multimap<std::string, record_menu_items::record_menu_item_info>  record_menu_items;
+    std::multimap<std::string, std::pair<std::string, record_menu_items::record_menu_item_info> >  record_menu_items;
     record_menu_items::register_record_menu_items(record_menu_items);
     for (auto const& record_kind_and_info : record_menu_items)
     {
-        QAction* const  action = new QAction(QString(record_kind_and_info.second.m_name.c_str()), wnd);
-        action->setShortcut(QString(record_kind_and_info.second.m_shortcut.c_str()));
-        action->setToolTip(QString(record_kind_and_info.second.m_tooltip.c_str()));
-        m_record_menu_items.insert({record_kind_and_info.first, action });
+        QAction* const  action = new QAction(QString(record_kind_and_info.second.second.m_name.c_str()), wnd);
+        action->setShortcut(QString(record_kind_and_info.second.second.m_shortcut.c_str()));
+        action->setToolTip(QString(record_kind_and_info.second.second.m_tooltip.c_str()));
+        m_record_menu_items.insert({record_kind_and_info.first, { action, record_kind_and_info.second.first } });
     }
 }
 
@@ -210,14 +210,21 @@ void  make_menu_bar_content(menu_bar const&  w)
         );
     QObject::connect(w.get_edit_action_insert_coord_system(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_insert_coord_system);
 
+    w.get_menu_edit()->addSeparator();
+
     for (auto const&  record_kind_and_action : w.get_edit_actions_of_records())
     {
-        w.get_menu_edit()->addAction(record_kind_and_action.second);
+        w.get_menu_edit()->addAction(record_kind_and_action.second.first);
         QObject::connect(
-                record_kind_and_action.second,
+                record_kind_and_action.second.first,
                 &QAction::triggered,
                 w.wnd(),
-                std::bind(&program_window::on_menu_edit_insert_record, w.wnd(), record_kind_and_action.first)
+                std::bind(
+                    &program_window::on_menu_edit_insert_record,
+                    w.wnd(),
+                    record_kind_and_action.first,
+                    record_kind_and_action.second.second
+                    )
                 );
     }
 
@@ -312,7 +319,7 @@ void  make_menu_bar_content(menu_bar const&  w)
 
     w.get_menu_bar()->addMenu(w.get_menu_edit());
 
-    // "Edit" menu
+    // "View" menu
 
     w.get_menu_view()->addAction(w.get_view_action_double_camera_speed());
     w.get_view_action_double_camera_speed()->setShortcut(QString("Ctrl++"));

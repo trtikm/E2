@@ -689,7 +689,7 @@ void  widgets::on_scene_insert_coord_system()
 }
 
 
-void  widgets::on_scene_insert_record(std::string const&  record_kind)
+void  widgets::on_scene_insert_record(std::string const&  record_kind, std::string const&  mode)
 {
     ASSUMPTION(!processing_selection_change());
     lock_bool const  _(&m_processing_selection_change);
@@ -740,7 +740,7 @@ void  widgets::on_scene_insert_record(std::string const&  record_kind)
     }
 
     std::pair<std::string, std::function<void(scn::scene_record_id const&)> > const  record_name_and_system_inserted =
-            m_insert_record_handlers.at(record_kind)(this, used_names);
+            m_insert_record_handlers.at(record_kind)(this, mode, used_names);
     if (record_name_and_system_inserted.first.empty() || !record_name_and_system_inserted.second)
         return;
     natural_64_bit  counter = 0ULL;

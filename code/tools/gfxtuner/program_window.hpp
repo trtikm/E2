@@ -100,7 +100,7 @@ public slots:
     void  on_menu_exit() { if (m_menu_bar.on_file_action_exit()) PostQuitMessage(0); }
 
     void  on_menu_edit_insert_coord_system() { m_tab_scene_widgets.on_scene_insert_coord_system(); }
-    void  on_menu_edit_insert_record(std::string const&  record_kind) { m_tab_scene_widgets.on_scene_insert_record(record_kind); }
+    void  on_menu_edit_insert_record(std::string const&  record_kind, std::string const&  mode) { m_tab_scene_widgets.on_scene_insert_record(record_kind, mode); }
     void  on_menu_edit_erase_selected() { m_tab_scene_widgets.on_scene_erase_selected(); }
     void  on_menu_edit_mode_selection() { m_tab_scene_widgets.on_scene_mode_selection(); }
     void  on_menu_edit_mode_translation() { m_tab_scene_widgets.on_scene_mode_translation(); }

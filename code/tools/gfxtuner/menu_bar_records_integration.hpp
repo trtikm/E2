@@ -15,7 +15,7 @@ struct  record_menu_item_info
 };
 
 
-void  register_record_menu_items(std::multimap<std::string, record_menu_item_info>&  record_menu_items);
+void  register_record_menu_items(std::multimap<std::string, std::pair<std::string, record_menu_item_info> >&  record_menu_items);
 
 
 }

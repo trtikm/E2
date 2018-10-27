@@ -4,14 +4,17 @@
 namespace record_menu_items { namespace record_rigid_body {
 
 
-void  register_record_menu_items(std::multimap<std::string, record_menu_item_info>&  record_menu_items)
+void  register_record_menu_items(std::multimap<std::string, std::pair<std::string, record_menu_item_info> >&  record_menu_items)
 {
     record_menu_items.insert({
         scn::get_rigid_body_folder_name(),
         {
-            "Insert physical &rigid body",
-            "Ctrl+Alt+R",
-            "TODO!"
+            "default",
+            {
+                "Insert physical &rigid body",
+                "Ctrl+Alt+R",
+                "TODO!"
+            }
         }
     });
 }

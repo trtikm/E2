@@ -30,7 +30,7 @@ void  register_record_undo_redo_processors(widgets* const  w)
 {
     //scn::scene_history_batch_insert::set_undo_processor(
     //    [w](scn::scene_history_batch_insert const&  history_node) {
-    //        INVARIANT(history_node.get_id().get_folder_name() == scn::get_batches_folder_name());
+    //        INVARIANT(history_node.get_id().get_folder_name() == scn::get_collider_folder_name());
     //        w->wnd()->glwindow().call_now(
     //                &simulator::erase_batch_from_scene_node,
     //                history_node.get_id().get_record_name(),
@@ -40,7 +40,7 @@ void  register_record_undo_redo_processors(widgets* const  w)
     //    });
     //scn::scene_history_batch_insert::set_redo_processor(
     //    [w](scn::scene_history_batch_insert const&  history_node) {
-    //        INVARIANT(history_node.get_id().get_folder_name() == scn::get_batches_folder_name());
+    //        INVARIANT(history_node.get_id().get_folder_name() == scn::get_collider_folder_name());
     //        w->wnd()->glwindow().call_now(
     //                &simulator::insert_batch_to_scene_node,
     //                history_node.get_id().get_record_name(),
@@ -50,7 +50,7 @@ void  register_record_undo_redo_processors(widgets* const  w)
     //        insert_record_to_tree_widget(
     //                w->scene_tree(),
     //                history_node.get_id(),
-    //                w->get_record_icon(scn::get_batches_folder_name()),
+    //                w->get_record_icon(scn::get_collider_folder_name()),
     //                w->get_folder_icon());
     //    });
 }
@@ -60,48 +60,34 @@ void  register_record_undo_redo_processors(widgets* const  w)
 void  register_record_handler_for_insert_scene_record(
         std::unordered_map<std::string,
                            std::function<std::pair<std::string, std::function<void(scn::scene_record_id const&)>>
-                                         (widgets*, std::unordered_set<std::string> const&)> >&
+                                         (widgets*, std::string const&, std::unordered_set<std::string> const&)> >&
                 insert_record_handlers
         )
 {
-    //insert_record_handlers.insert({
-    //        scn::get_batches_folder_name(),
-    //        [](widgets* const  w, std::unordered_set<std::string> const&  used_names)
-    //            -> std::pair<std::string, std::function<void(scn::scene_record_id const&)>> {
-    //            boost::filesystem::path const&  root_dir =
-    //                    canonical_path(boost::filesystem::absolute(
-    //                        boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "meshes"
-    //                        ));
-    //            QFileDialog  dialog(w->wnd());
-    //            dialog.setDirectory(root_dir.string().c_str());
-    //            dialog.setFileMode(QFileDialog::DirectoryOnly);
-    //            if (!dialog.exec())
-    //                return {"", {}};
-    //            QStringList const  selected = dialog.selectedFiles();
-    //            if (selected.size() != 1)
-    //            {
-    //                w->wnd()->print_status_message("ERROR: Exactly one folder must be selected/provided.", 10000);
-    //                return {"", {}};
-    //            }
-    //            boost::filesystem::path const  pathname = qtgl::to_string(selected.front());
-    //            boost::filesystem::path const  batch_dir = pathname.parent_path().filename();
-    //            boost::filesystem::path  batch_name = pathname.filename();
-    //            if (batch_name.has_extension())
-    //                batch_name.replace_extension("");
-    //            return {
-    //                batch_dir.string() + "/" + batch_name.string(),
-    //                [pathname, w](scn::scene_record_id const&  record_id) -> void {
-    //                        w->wnd()->glwindow().call_now(
-    //                                &simulator::insert_batch_to_scene_node,
-    //                                record_id.get_record_name(),
-    //                                pathname,
-    //                                record_id.get_node_name()
-    //                                );
-    //                        w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, pathname, false);
-    //                    }
-    //                };
-    //            }
-    //        });
+    insert_record_handlers.insert({
+            scn::get_collider_folder_name(),
+            [](widgets* const  w, std::string const&  shape_type, std::unordered_set<std::string> const&  used_names)
+                -> std::pair<std::string, std::function<void(scn::scene_record_id const&)>> {
+                    if (used_names.size() != 0UL)
+                    {
+                        w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one collider.", 10000);
+                        return {"", {}};
+                    }
+                    w->wnd()->print_status_message("ERROR: Insertion of a collider is not implemented.", 10000);
+                    return{ "",{} };
+                    //return {
+                    //    scn::get_collider_record_name(),
+                    //    [w](scn::scene_record_id const&  record_id) -> void {
+                    //            w->wnd()->glwindow().call_now(
+                    //                    &simulator::insert_collision_sphere_to_scene_node,
+                    //                    // TODO!
+                    //                    record_id.get_node_name()
+                    //                    );
+                    //            w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, false);
+                    //        }
+                    //    };
+                }
+            });
 }
 
 
@@ -110,24 +96,23 @@ void  register_record_handler_for_erase_scene_record(
                 erase_record_handlers
         )
 {
-    //erase_record_handlers.insert({
-    //        scn::get_batches_folder_name(),
-    //        [](widgets* const  w, scn::scene_record_id const&  id) -> void {
-    //                scn::scene_node_ptr const  parent_node_ptr =
-    //                        w->wnd()->glwindow().call_now(&simulator::get_scene_node, id.get_node_name());
-    //                INVARIANT(parent_node_ptr != nullptr);
-    //                w->get_scene_history()->insert<scn::scene_history_batch_insert>(
-    //                        id,
-    //                        scn::get_batch(*parent_node_ptr, id.get_record_name()).path_component_of_uid(),
-    //                        true
-    //                        );
-    //                w->wnd()->glwindow().call_now(
-    //                        &simulator::erase_batch_from_scene_node,
-    //                        id.get_record_name(),
-    //                        id.get_node_name()
-    //                        );
-    //            }
-    //        });
+    erase_record_handlers.insert({
+            scn::get_collider_folder_name(),
+            [](widgets* const  w, scn::scene_record_id const&  id) -> void {
+                    scn::scene_node_ptr const  node_ptr =
+                            w->wnd()->glwindow().call_now(&simulator::get_scene_node, id.get_node_name());
+                    INVARIANT(node_ptr != nullptr);
+                    //w->get_scene_history()->insert<scn::scene_history_batch_insert>(
+                    //        id,
+                    //        scn::get_batch(*node_ptr, id.get_record_name()).path_component_of_uid(),
+                    //        true
+                    //        );
+                    w->wnd()->glwindow().call_now(
+                            &simulator::erase_collision_object_from_scene_node,
+                            id.get_node_name()
+                            );
+                }
+            });
 }
 
 
@@ -139,7 +124,7 @@ void  register_record_handler_for_load_scene_record(
         )
 {
     //load_record_handlers.insert({
-    //        scn::get_batches_folder_name(),
+    //        scn::get_collider_folder_name(),
     //        [](widgets* const  w, scn::scene_record_id const&  id, boost::property_tree::ptree const&  data) -> void {
     //                boost::filesystem::path const  pathname = data.get<std::string>("pathname");
     //                w->wnd()->glwindow().call_now(
@@ -151,7 +136,7 @@ void  register_record_handler_for_load_scene_record(
     //                insert_record_to_tree_widget(
     //                        w->scene_tree(),
     //                        id,
-    //                        w->get_record_icon(scn::get_batches_folder_name()),
+    //                        w->get_record_icon(scn::get_collider_folder_name()),
     //                        w->get_folder_icon()
     //                        );
     //            }
