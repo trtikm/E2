@@ -1309,7 +1309,7 @@ POINT_SET_TYPE  instersection_of_plane_with_xy_coord_plane(
     scalar const  down_hill_param = -origin(3) / down_hill_line_vector(3);
 
     intersection_origin = contract32(origin) + down_hill_param * contract32(down_hill_line_vector);
-    intersection_normal = normalised_2d(orthogonal(contract32(intersection_line_vector)));
+    intersection_normal = normalised_2d(orthogonal_2d(contract32(intersection_line_vector)));
 
     return POINT_SET_TYPE::GENERAL;
 }

@@ -3,8 +3,15 @@
 
 #   include <angeo/collision_material.hpp>
 #   include <angeo/tensor_math.hpp>
+#   include <vector>
+#   include <tuple>
 
 namespace angeo {
+
+
+float_32_bit  get_material_density(COLLISION_MATERIAL_TYPE const  material);
+
+inline float_32_bit  compute_mass(float_32_bit const  density, float_32_bit const  volume) { return density * volume; }
 
 
 struct  mass_and_inertia_tensor_builder
@@ -24,6 +31,13 @@ struct  mass_and_inertia_tensor_builder
     void  run(float_32_bit&  inverted_mass, matrix33&  inverted_inertia_tensor);
 
 private:
+
+    struct  sphere_info {
+        vector3  center;
+        float_32_bit radius;
+        COLLISION_MATERIAL_TYPE  material;
+    };
+    std::vector<sphere_info>  m_spheres;
 };
 
 

@@ -36,7 +36,8 @@ void  compute_tangent_space_of_unit_vector(
         vector3&  output_unit_bitangent
         )
 {
-    NOT_IMPLEMENTED_YET();
+    output_unit_tangent = normalised(orthogonal(input_unit_vector));
+    output_unit_bitangent = cross_product(input_unit_vector, output_unit_tangent);
 }
 
 

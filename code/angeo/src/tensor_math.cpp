@@ -10,6 +10,25 @@
 #else
 
 
+vector3  orthogonal(vector3 const&  u)
+{
+    scalar const x = std::abs(u(0));
+    scalar const y = std::abs(u(1));
+    scalar const z = std::abs(u(2));
+
+    if (x < y)
+        if (x < z)
+            return cross_product(u, vector3_unit_x());
+        else
+            return cross_product(u, vector3_unit_z());
+    else
+        if (y < z)
+            return cross_product(u, vector3_unit_y());
+        else
+            return cross_product(u, vector3_unit_z());
+}
+
+
 vector3  interpolate_linear(vector3 const&  u, vector3 const&  v, float_32_bit const  t)
 {
     return u + t * (v - u);

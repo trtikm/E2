@@ -54,7 +54,8 @@ inline scalar  length_squared_2d(vector2 const& u) { return dot_product_2d(u,u);
 inline scalar  length_2d(vector2 const& u) { return u.norm(); }
 inline vector2  normalised_2d(vector2 const&  u) { return u.normalized(); }
 inline void  normalise_2d(vector2& u) { u.normalize(); }
-inline vector2  orthogonal(vector2 const&  u) { return { -u(1), u(0) }; }
+inline vector2  orthogonal_2d(vector2 const&  u) { return { -u(1), u(0) }; }
+vector3  orthogonal(vector3 const&  u);
 
 inline vector3  expand23(vector2 const& u, scalar h=scalar(1.0)) { return { u(0), u(1), h }; }
 inline vector2  contract32(vector3 const& u) { return { u(0), u(1) }; }
