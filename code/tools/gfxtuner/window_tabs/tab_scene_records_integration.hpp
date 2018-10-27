@@ -2,6 +2,7 @@
 #   define ANGEO_COLLISION_SCENE_RECORDS_INTEGRATION_HPP_INCLUDED
 
 #   include <scene/scene_record_id.hpp>
+#   include <scene/scene_node_record_id.hpp>
 #   include <unordered_map>
 #   include <unordered_set>
 #   include <functional>
@@ -33,10 +34,16 @@ void  register_record_handler_for_erase_scene_record(
         );
 
 void  register_record_handler_for_load_scene_record(
-        std::unordered_map<std::string, std::function<void(widgets*,
-                                                           scn::scene_record_id const&,
-                                                           boost::property_tree::ptree const&)>>&
+        std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&, boost::property_tree::ptree const&)>>&
                 load_record_handlers
+        );
+
+void  register_record_handler_for_save_scene_record(
+        std::unordered_map<std::string, std::function<void(widgets*,
+                                                           scn::scene_node_ptr,
+                                                           scn::scene_node_record_id const&,
+                                                           boost::property_tree::ptree&)>>&
+                save_record_handlers
         );
 
 

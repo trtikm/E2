@@ -159,4 +159,24 @@ void  register_record_handler_for_load_scene_record(
 }
 
 
+void  register_record_handler_for_save_scene_record(
+        std::unordered_map<std::string, std::function<void(widgets*,
+                                                           scn::scene_node_ptr,
+                                                           scn::scene_node_record_id const&,
+                                                           boost::property_tree::ptree&)>>&
+                save_record_handlers
+        )
+{
+    save_record_handlers.insert({
+            scn::get_batches_folder_name(),
+            []( widgets*,
+                scn::scene_node_ptr const  node_ptr,
+                scn::scene_node_record_id const&  id,
+                boost::property_tree::ptree&  data) -> void {
+                    data.put("pathname", scn::get_batch(*node_ptr, id.get_record_name()).path_component_of_uid());
+                }
+            });
+}
+
+
 }}}

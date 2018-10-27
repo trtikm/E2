@@ -144,4 +144,15 @@ void  register_record_handler_for_load_scene_record(
 }
 
 
+void  register_record_handler_for_save_scene_record(
+        std::unordered_map<std::string, std::function<void(widgets*,
+                                                           scn::scene_node_ptr,
+                                                           scn::scene_node_record_id const&,
+                                                           boost::property_tree::ptree&)>>&
+                save_record_handlers
+        )
+{
+}
+
+
 }}}

@@ -147,12 +147,15 @@ private:
                        std::function<std::pair<std::string, std::function<void(scn::scene_record_id const&)>>
                                      (widgets*, std::string const&, std::unordered_set<std::string> const&)> >
             m_insert_record_handlers;
-    std::unordered_map<std::string, std::function<void(widgets* const  w, scn::scene_record_id const&  id)>>
+    std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)>>
             m_erase_record_handlers;
-    std::unordered_map<std::string, std::function<void(widgets* const  w,
-                                                       scn::scene_record_id const&  id,
-                                                       boost::property_tree::ptree const&)>>
+    std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&, boost::property_tree::ptree const&)>>
             m_load_record_handlers;
+    std::unordered_map<std::string, std::function<void(widgets*,
+                                                       scn::scene_node_ptr,
+                                                       scn::scene_node_record_id const&,
+                                                       boost::property_tree::ptree&)>>
+            m_save_record_handlers;
 
     bool  m_processing_selection_change;
 

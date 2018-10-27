@@ -67,6 +67,7 @@ widgets::widgets(program_window* const  wnd)
     , m_insert_record_handlers()
     , m_erase_record_handlers()
     , m_load_record_handlers()
+    , m_save_record_handlers()
 
     , m_processing_selection_change(false)
 
@@ -387,6 +388,7 @@ widgets::widgets(program_window* const  wnd)
     register_record_handler_for_insert_scene_record(m_insert_record_handlers);
     register_record_handler_for_erase_scene_record(m_erase_record_handlers);
     register_record_handler_for_load_scene_record(m_load_record_handlers);
+    register_record_handler_for_save_scene_record(m_save_record_handlers);
 }
 
 
@@ -926,8 +928,7 @@ void  widgets::save_scene_record(
         boost::property_tree::ptree&  data
         )
 {
-    if (id.get_folder_name() == scn::get_batches_folder_name())
-        data.put("pathname", scn::get_batch(*node_ptr, id.get_record_name()).path_component_of_uid());
+    m_save_record_handlers.at(id.get_folder_name())(this, node_ptr, id, data);
 }
 
 
