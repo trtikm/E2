@@ -42,6 +42,9 @@ add_library(${THIS_TARGET_NAME}
     
     ./include/angeo/friction_coefficients.hpp
     ./src/friction_coefficients.cpp
+    
+    ./include/angeo/mass_and_inertia_tensor.hpp
+    ./src/mass_and_inertia_tensor.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

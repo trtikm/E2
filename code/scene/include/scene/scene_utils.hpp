@@ -203,9 +203,9 @@ void  insert_record(
         TRecordValueType const&  value
         )
 {
-    scene_node_ptr  node_ptr = get_node(s, id.get_node_name());
+    scene_node_ptr  node_ptr = get_node(s, record_id.get_node_name());
     ASSUMPTION(node_ptr != nullptr);
-    insert_record<TRecordValueType>(*node, { record_id.get_folder_name(), record_id.get_record_name() }, value);
+    insert_record<TRecordValueType>(*node_ptr, { record_id.get_folder_name(), record_id.get_record_name() }, value);
 }
 
 template<typename TRecordValueType>

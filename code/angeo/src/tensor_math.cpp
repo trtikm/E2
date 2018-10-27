@@ -223,4 +223,14 @@ void  rotation_to_yaw_pitch_roll(matrix33 const&  R, scalar&  yaw, scalar&  pitc
 }
 
 
+matrix33  rotation_matrix(matrix44 const&  M)
+{
+    matrix33  R;
+    R(0, 0) = M(0, 0);  R(0, 1) = M(0, 1);  R(0, 2) = M(0, 2);
+    R(1, 0) = M(1, 0);  R(1, 1) = M(1, 1);  R(1, 2) = M(1, 2);
+    R(2, 0) = M(2, 0);  R(2, 1) = M(2, 1);  R(2, 2) = M(2, 2);
+    return R;
+}
+
+
 #endif

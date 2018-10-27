@@ -96,6 +96,23 @@ void  rigid_body_simulator::erase_rigid_body(rigid_body_id const  id)
 }
 
 
+void  rigid_body_simulator::clear()
+{
+    TMPROF_BLOCK();
+
+    m_constraint_system.clear();
+
+    m_contact_cache.clear();
+    m_invalidated_rigid_bodies_in_contact_cache.clear();
+    m_from_constraints_to_contact_ids.clear();
+
+    m_rigid_bosies.clear();
+    m_inverted_inertia_tensors.clear();
+    m_external_torques.clear();
+    m_invalid_rigid_body_ids.clear();
+}
+
+
 void  rigid_body_simulator::set_orientation(rigid_body_id const  id, quaternion const&  orientation)
 {
     m_rigid_bosies.at(id).m_orientation = orientation;

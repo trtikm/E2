@@ -29,6 +29,8 @@ struct  rigid_body_simulator
 
     void  erase_rigid_body(rigid_body_id const  id);
 
+    void  clear();
+
     vector3 const&  get_position_of_mass_centre(rigid_body_id const  id) const { return m_rigid_bosies.at(id).m_position_of_mass_centre; }
     void  set_position_of_mass_centre(rigid_body_id const  id, vector3 const&  position)
     { m_rigid_bosies.at(id).m_position_of_mass_centre = position; erase_from_contact_cache(id); }
@@ -37,7 +39,7 @@ struct  rigid_body_simulator
     void  set_orientation(rigid_body_id const  id, quaternion const&  orientation);
 
     vector3 const&  get_linear_velocity(rigid_body_id const  id) const { return m_rigid_bosies.at(id).m_velocity.m_linear; }
-    vector3 const&  get_anguar_velocity(rigid_body_id const  id) const { return m_rigid_bosies.at(id).m_velocity.m_angular; }
+    vector3 const&  get_angular_velocity(rigid_body_id const  id) const { return m_rigid_bosies.at(id).m_velocity.m_angular; }
     void  set_linear_velocity(rigid_body_id const  id, vector3 const&  velocity) { m_rigid_bosies.at(id).m_velocity.m_linear = velocity; }
     void  set_angular_velocity(rigid_body_id const  id, vector3 const&  velocity) { m_rigid_bosies.at(id).m_velocity.m_angular = velocity; }
 

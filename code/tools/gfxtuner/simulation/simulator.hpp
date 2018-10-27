@@ -6,6 +6,8 @@
 #   include <scene/scene_selection.hpp>
 #   include <scene/scene_history.hpp>
 #   include <scene/scene_editing.hpp>
+#   include <scene/records/collider/collider.hpp>
+#   include <scene/records/rigid_body/rigid_body.hpp>
 #   include <gfxtuner/simulation/gfx_object.hpp>
 #   include <qtgl/real_time_simulator.hpp>
 #   include <qtgl/camera.hpp>
@@ -90,6 +92,46 @@ struct simulator : public qtgl::real_time_simulator
             scn::scene_node_name const&  scene_node_name
             );
 
+    void  insert_collision_sphere_to_scene_node(
+            float_32_bit const  radius,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            bool const  as_dynamic,
+            scn::scene_node_name const&  scene_node_name
+            );
+
+    void  insert_collision_capsule_to_scene_node(
+            float_32_bit const  half_distance_between_end_points,
+            float_32_bit const  thickness_from_central_line,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            bool const  as_dynamic,
+            scn::scene_node_name const&  scene_node_name
+            );
+
+    void  insert_collision_trianle_mesh_to_scene_node(
+            qtgl::buffer const  vertex_buffer,
+            qtgl::buffer const  index_buffer,
+            qtgl::buffer const  material_buffer,
+            scn::scene_node_name const&  scene_node_name
+            );
+
+    void  erase_collision_object_from_scene_node(
+            scn::scene_node_name const&  scene_node_name
+            );
+
+    void  insert_rigid_body_to_scene_node(
+            float_32_bit const  inverted_mass,                          // The value 0.0f means the mass is infinite.
+            matrix33 const&  inverted_inertia_tensor_in_local_space,    // Zero matrix means an infinite inertia.
+            vector3 const&  linear_velocity,
+            vector3 const&  angular_velocity,
+            vector3 const&  external_force,
+            vector3 const&  external_torque,
+            scn::scene_node_name const&  scene_node_name
+            );
+
+    void  erase_rigid_body_from_scene_node(
+            scn::scene_node_name const&  scene_node_name
+            );
+
     void  clear_scene();
 
     scn::scene_history_ptr  get_scene_history() { return m_scene_history; }
@@ -125,9 +167,10 @@ struct simulator : public qtgl::real_time_simulator
     qtgl::effects_config const&  get_effects_config() const { return m_effects_config; }
     qtgl::effects_config&  effects_config_ref() { return m_effects_config; }
 
+    void  validate_simulation_state();
+
 private:
 
-    void  validate_simulation_state();
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
     void  render_simulation_state(
             matrix44 const&  matrix_from_world_to_camera,
@@ -139,7 +182,6 @@ private:
     void  select_scene_objects(float_64_bit const  time_to_simulate_in_seconds);
     void  translate_scene_selected_objects(float_64_bit const  time_to_simulate_in_seconds);
     void  rotate_scene_selected_objects(float_64_bit const  time_to_simulate_in_seconds);
-    void  rotate_scene_node(scn::scene_node_name const&  scene_node_name, float_64_bit const  time_to_simulate_in_seconds);
 
     void  render_scene_batches(
             matrix44 const&  matrix_from_world_to_camera,
@@ -151,6 +193,31 @@ private:
             matrix44 const&  matrix_from_camera_to_clipspace,
             qtgl::draw_state&  draw_state
             );
+
+    scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_ptr  node_ptr);
+    scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_name const&  node_name)
+    { return find_nearest_rigid_body_node(get_scene().get_scene_node(node_name)); }
+
+    void  invalidate_rigid_body_at_node(scn::scene_node_ptr  node_ptr, bool const  collider_change);
+    void  invalidate_rigid_body_controling_node(scn::scene_node_ptr  node_ptr, bool const  collider_change);
+    void  invalidate_rigid_body_controling_node(scn::scene_node_name const&  node_name, bool const  collider_change)
+    { return invalidate_rigid_body_controling_node(get_scene().get_scene_node(node_name), collider_change); }
+    void  invalidate_rigid_bodies_in_subtree(scn::scene_node_ptr  node_ptr, bool const  collider_change);
+    void  invalidate_rigid_bodies_in_subtree(scn::scene_node_name const&  node_name, bool const  collider_change)
+    { return invalidate_rigid_bodies_in_subtree(get_scene().get_scene_node(node_name), collider_change); }
+
+    void  foreach_collider_in_subtree(
+                scn::scene_node_ptr const  node_ptr,
+                std::function<void(scn::collider&,scn::scene_node_ptr)> const&  action
+                );
+    void  foreach_rigid_body_in_subtree(
+                scn::scene_node_ptr const  node_ptr,
+                std::function<void(scn::rigid_body&,scn::scene_node_ptr)> const&  action
+                );
+
+    void  update_collider_locations_in_subtree(scn::scene_node_ptr  node_ptr);
+    void  update_collider_locations_in_subtree(scn::scene_node_name const&  node_name)
+    { update_collider_locations_in_subtree(get_scene().get_scene_node(node_name)); }
 
     // Data providing feedback loop between a human user and 3D scene in the tool
 
@@ -183,11 +250,16 @@ private:
     scn::scene_history_ptr  m_scene_history;
     scn::scene_edit_data  m_scene_edit_data;
     qtgl::batch  m_batch_coord_system;
+    std::unordered_map<scn::scene_node_name, bool>  m_invalidated_nodes_of_rigid_bodies;
 
     // Simulation mode data
 
     angeo::collision_scene  m_collision_scene;
     angeo::rigid_body_simulator  m_rigid_body_simulator;
+    std::unordered_map<angeo::collision_object_id, angeo::rigid_body_id>  m_binding_of_collision_objects;
+    std::unordered_map<angeo::rigid_body_id, scn::scene_node_ptr>  m_binding_of_rigid_bodies;
+    std::unordered_set<angeo::rigid_body_id>  m_dynamic_rigid_bodies;
+
     std::unordered_map<scn::scene_record_id, gfx_animated_object>  m_gfx_animated_objects;
 };
 

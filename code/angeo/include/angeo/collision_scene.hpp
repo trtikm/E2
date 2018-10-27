@@ -103,18 +103,21 @@ struct  collision_scene
             );
 
     /// In the model space the end points are assumed as follows:
-    ///      end_point_1_in_model_space = vector3_zero()
-    ///      end_point_2_in_model_space = vector3(end_point_2_x_coord_in_model_space,0,0)
-    ///      end_point_3_in_model_space = expand23(end_point_3_in_model_space,0)
+    ///      end_point_1_in_model_space = getter_of_end_points_in_model_space(0U)
+    ///      end_point_2_in_model_space = getter_of_end_points_in_model_space(1U)
+    ///      end_point_3_in_model_space = getter_of_end_points_in_model_space(2U)
+    /// The front face of the trianle is the one defined by the counter-clock-wise
+    /// orientation of vertices.
     collision_object_id  insert_triangle(
-            float_32_bit const  end_point_2_x_coord_in_model_space,
-            vector2 const&  end_point_3_in_model_space,
+            std::function<vector3 const&(natural_8_bit)> const&  getter_of_end_points_in_model_space,
             matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
             bool const  is_dynamic
             );
 
     void  erase_object(collision_object_id const  coid);
+
+    void  clear();
 
     void  on_position_changed(collision_object_id const  coid, matrix44 const&  from_base_matrix);
 
@@ -145,10 +148,17 @@ struct  collision_scene
             collision_object_acceptor const&  acceptor
             );
 
-private:
-
     vector3  get_object_aabb_min_corner(collision_object_id const  coid) const;
     vector3  get_object_aabb_max_corner(collision_object_id const  coid) const;
+
+    bool  is_dynamic(collision_object_id const  coid) const { return m_dynamic_object_ids.count(coid) != 0UL; }
+
+    void  get_capsule_end_points_in_world_space(collision_object_id const  coid, vector3&  end_point_1, vector3&  end_point_2) const;
+    void  get_sphere_center_and_radius_in_world_space(collision_object_id const  coid, vector3&  center, float_32_bit&  radius) const;
+
+    COLLISION_MATERIAL_TYPE  get_material(collision_object_id const  coid) const;
+
+private:
 
     void  update_shape_position(collision_object_id const  coid, matrix44 const&  from_base_matrix);
 
@@ -273,13 +283,7 @@ private:
 
         vector3  unit_normal_in_world_space;
 
-        // In the model space the end points are assumed as follows:
-        //      end_point_1_in_model_space = vector3_zero()
-        //      end_point_2_in_model_space = vector3(end_point_2_x_coord_in_model_space,0,0)
-        //      end_point_3_in_model_space = expand23(end_point_3_in_model_space,0)
-
-        float_32_bit  end_point_2_x_coord_in_model_space;
-        vector2  end_point_3_in_model_space;
+        std::function<vector3 const&(natural_8_bit)>  getter_of_end_points_in_model_space;
     };
 
     std::vector<triangle_geometry>  m_triangles_geometry;

@@ -263,8 +263,7 @@ collision_object_id  collision_scene::insert_sphere(
 
 
 collision_object_id  collision_scene::insert_triangle(
-        float_32_bit const  end_point_2_x_coord_in_model_space,
-        vector2 const&  end_point_3_in_model_space,
+        std::function<vector3 const&(natural_8_bit)> const&  getter_of_end_points_in_model_space,
         matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
         bool const  is_dynamic
@@ -274,21 +273,16 @@ collision_object_id  collision_scene::insert_triangle(
 
     collision_object_id  coid;
     {
-        vector3 const  end_point_1_in_model_space_ = vector3_zero();
-        vector3 const  end_point_2_in_model_space_ = vector3(end_point_2_x_coord_in_model_space, 0.0f, 0.0f);
-        vector3 const  end_point_3_in_model_space_ = expand23(end_point_3_in_model_space, 0.0f);
-
-        vector3 const  end_point_1_in_world_space = transform_point(end_point_1_in_model_space_, from_base_matrix);
-        vector3 const  end_point_2_in_world_space = transform_point(end_point_2_in_model_space_, from_base_matrix);
-        vector3 const  end_point_3_in_world_space = transform_point(end_point_3_in_model_space_, from_base_matrix);
+        vector3 const  end_point_1_in_world_space = transform_point(getter_of_end_points_in_model_space(0U), from_base_matrix);
+        vector3 const  end_point_2_in_world_space = transform_point(getter_of_end_points_in_model_space(1U), from_base_matrix);
+        vector3 const  end_point_3_in_world_space = transform_point(getter_of_end_points_in_model_space(2U), from_base_matrix);
         triangle_geometry const  geometry {
                 end_point_1_in_world_space,
                 end_point_2_in_world_space,
                 end_point_3_in_world_space,
                 normalised(cross_product(end_point_2_in_world_space - end_point_1_in_world_space,
                                          end_point_3_in_world_space - end_point_1_in_world_space)),
-                end_point_2_x_coord_in_model_space,
-                end_point_3_in_model_space
+                getter_of_end_points_in_model_space
                 };
         axis_aligned_bounding_box const  bbox =
                 compute_aabb_of_triangle(
@@ -341,6 +335,42 @@ void  collision_scene::erase_object(collision_object_id const  coid)
     }
 
     m_invalid_object_ids.at(as_number(get_shape_type(coid))).push_back(get_instance_index(coid));
+}
+
+
+void  collision_scene::clear()
+{
+    TMPROF_BLOCK();
+
+    m_proximity_static_objects.clear();
+    m_proximity_dynamic_objects.clear();
+
+    m_dynamic_object_ids.clear();
+    m_does_proximity_static_need_rebalancing = false;
+    m_does_proximity_dynamic_need_rebalancing = false;
+
+    m_disabled_colliding.clear();
+
+    for (auto&  vec : m_invalid_object_ids)
+        vec.clear();
+
+    m_capsules_geometry.clear();
+    m_capsules_bbox.clear();
+    m_capsules_material.clear();
+
+    m_lines_geometry.clear();
+    m_lines_bbox.clear();
+    m_lines_material.clear();
+
+    m_points_geometry.clear();
+    m_points_material.clear();
+
+    m_spheres_geometry.clear();
+    m_spheres_material.clear();
+
+    m_triangles_geometry.clear();
+    m_triangles_bbox.clear();
+    m_triangles_material.clear();
 }
 
 
@@ -602,16 +632,58 @@ vector3  collision_scene::get_object_aabb_max_corner(collision_object_id const  
         return m_lines_bbox.at(get_instance_index(coid)).max_corner;
     case COLLISION_SHAPE_TYPE::POINT:
         return m_points_geometry.at(get_instance_index(coid));
-        break;
     case COLLISION_SHAPE_TYPE::SPHERE:
         {
             auto const&  geometry = m_spheres_geometry.at(get_instance_index(coid));
             return geometry.center_in_world_space + vector3(geometry.radius, geometry.radius, geometry.radius);
-    }
-        break;
+        }
     case COLLISION_SHAPE_TYPE::TRIANGLE:
         return m_triangles_bbox.at(get_instance_index(coid)).max_corner;
-        break;
+    default:
+        UNREACHABLE();
+    }
+}
+
+
+void  collision_scene::get_capsule_end_points_in_world_space(
+        collision_object_id const  coid,
+        vector3&  end_point_1,
+        vector3&  end_point_2
+        ) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::CAPSULE);
+    capsule_geometry const&  geometry = m_capsules_geometry.at(get_instance_index(coid));
+    end_point_1 = geometry.end_point_1_in_world_space;
+    end_point_2 = geometry.end_point_2_in_world_space;
+}
+
+void  collision_scene::get_sphere_center_and_radius_in_world_space(
+        collision_object_id const  coid,
+        vector3&  center,
+        float_32_bit&  radius
+        ) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::SPHERE);
+    sphere_geometry const&  geometry = m_spheres_geometry.at(get_instance_index(coid));
+    center = geometry.center_in_world_space;
+    radius = geometry.radius;
+}
+
+
+COLLISION_MATERIAL_TYPE  collision_scene::get_material(collision_object_id const  coid) const
+{
+    switch (get_shape_type(coid))
+    {
+    case COLLISION_SHAPE_TYPE::CAPSULE:
+        return m_capsules_material.at(get_instance_index(coid));
+    case COLLISION_SHAPE_TYPE::LINE:
+        return m_lines_material.at(get_instance_index(coid));
+    case COLLISION_SHAPE_TYPE::POINT:
+        return m_points_material.at(get_instance_index(coid));
+    case COLLISION_SHAPE_TYPE::SPHERE:
+        return m_spheres_material.at(get_instance_index(coid));
+    case COLLISION_SHAPE_TYPE::TRIANGLE:
+        return m_triangles_material.at(get_instance_index(coid));
     default:
         UNREACHABLE();
     }
@@ -661,12 +733,9 @@ void  collision_scene::update_shape_position(collision_object_id const  coid, ma
     case COLLISION_SHAPE_TYPE::TRIANGLE:
         {
             auto&  geometry = m_triangles_geometry.at(get_instance_index(coid));
-            vector3 const  end_point_1_in_model_space = vector3_zero();
-            vector3 const  end_point_2_in_model_space = vector3(geometry.end_point_2_x_coord_in_model_space, 0.0f, 0.0f);
-            vector3 const  end_point_3_in_model_space = expand23(geometry.end_point_3_in_model_space, 0.0f);
-            geometry.end_point_1_in_world_space = transform_point(end_point_1_in_model_space, from_base_matrix);
-            geometry.end_point_2_in_world_space = transform_point(end_point_2_in_model_space, from_base_matrix);
-            geometry.end_point_3_in_world_space = transform_point(end_point_3_in_model_space, from_base_matrix);
+            geometry.end_point_1_in_world_space = transform_point(geometry.getter_of_end_points_in_model_space(0U), from_base_matrix);
+            geometry.end_point_2_in_world_space = transform_point(geometry.getter_of_end_points_in_model_space(1U), from_base_matrix);
+            geometry.end_point_3_in_world_space = transform_point(geometry.getter_of_end_points_in_model_space(2U), from_base_matrix);
             geometry.unit_normal_in_world_space = 
                 normalised(cross_product(geometry.end_point_2_in_world_space - geometry.end_point_1_in_world_space,
                                          geometry.end_point_3_in_world_space - geometry.end_point_1_in_world_space))

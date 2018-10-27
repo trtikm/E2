@@ -4,5 +4,7 @@
 #   include <scene/scene_utils.hpp>
 
 #   include <scene/records/batch/utils.hpp>
+#   include <scene/records/collider/utils.hpp>
+#   include <scene/records/rigid_body/utils.hpp>
 
 #endif

@@ -26,6 +26,10 @@ add_executable(${THIS_TARGET_NAME}
     menu_bar_records_integration.cpp
     menu_bar_record_batch.hpp
     menu_bar_record_batch.cpp
+    menu_bar_record_collider.hpp
+    menu_bar_record_collider.cpp
+    menu_bar_record_rigid_body.hpp
+    menu_bar_record_rigid_body.cpp
     
     window_tabs/tab_draw.hpp
     window_tabs/tab_draw.cpp
@@ -45,6 +49,10 @@ add_executable(${THIS_TARGET_NAME}
     window_tabs/tab_scene_utils.cpp
     window_tabs/tab_scene_record_batch.hpp
     window_tabs/tab_scene_record_batch.cpp
+    window_tabs/tab_scene_record_collider.hpp
+    window_tabs/tab_scene_record_collider.cpp
+    window_tabs/tab_scene_record_rigid_body.hpp
+    window_tabs/tab_scene_record_rigid_body.cpp
 
     window_tabs/tab_statistics.hpp
     window_tabs/tab_statistics.cpp

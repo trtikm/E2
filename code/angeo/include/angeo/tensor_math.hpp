@@ -104,6 +104,12 @@ inline matrix33 matrix33_identity() { return matrix33::Identity(); }
 inline matrix43 matrix43_identity() { return matrix43::Identity(); }
 inline matrix44 matrix44_identity() { return matrix44::Identity(); }
 
+inline matrix22 matrix22_zero() { return matrix22::Zero(); }
+inline matrix32 matrix32_zero() { return matrix32::Zero(); }
+inline matrix33 matrix33_zero() { return matrix33::Zero(); }
+inline matrix43 matrix43_zero() { return matrix43::Zero(); }
+inline matrix44 matrix44_zero() { return matrix44::Zero(); }
+
 inline matrix22  transpose22(matrix22 const&  M) { return M.transpose(); }
 inline matrix33  transpose33(matrix33 const&  M) { return M.transpose(); }
 inline matrix44  transpose44(matrix44 const&  M) { return M.transpose(); }
@@ -183,6 +189,9 @@ inline scalar quaternion_to_angle_axis(quaternion const& q, vector3&  axis) {
 }
 matrix33  yaw_pitch_roll_to_rotation(scalar const  yaw, scalar const  pitch, scalar const  roll);
 void  rotation_to_yaw_pitch_roll(matrix33 const&  R, scalar&  yaw, scalar&  pitch, scalar&  roll);
+
+inline vector3  translation_vector(matrix44 const&  M) { return vector3(M(0, 2), M(1, 2), M(2, 2)); }
+matrix33  rotation_matrix(matrix44 const&  M);
 
 //template<typename T, int nrows, int ncols>
 //inline Eigen::ArrayWrapper< Eigen::Matrix<T, nrows, ncols> > as_array(Eigen::Matrix<T, nrows, ncols> const&  u)

@@ -25,6 +25,12 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/scene/records/batch/utils.hpp
     ./include/scene/records/batch/history_nodes.hpp
+    ./include/scene/records/collider/collider.hpp
+    ./include/scene/records/collider/utils.hpp
+    ./include/scene/records/collider/history_nodes.hpp
+    ./include/scene/records/rigid_body/rigid_body.hpp
+    ./include/scene/records/rigid_body/utils.hpp
+    ./include/scene/records/rigid_body/history_nodes.hpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

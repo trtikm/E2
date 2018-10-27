@@ -33,6 +33,13 @@ void  get_random_vector_of_magnitude(
         );
 
 
+void  compute_tangent_space_of_unit_vector(
+        vector3 const&  input_unit_vector,
+        vector3&  output_unit_tangent,
+        vector3&  output_unit_bitangent
+        );
+
+
 }
 
 #endif
