@@ -81,14 +81,14 @@ menu_bar::menu_bar(program_window* const  wnd)
         boost::filesystem::create_directories(m_default_scene_root_dir);
     m_default_scene_root_dir = canonical_path(m_default_scene_root_dir);
 
-    std::map<std::string, record_menu_items::record_menu_item_info>  record_menu_items;
+    std::multimap<std::string, record_menu_items::record_menu_item_info>  record_menu_items;
     record_menu_items::register_record_menu_items(record_menu_items);
     for (auto const& record_kind_and_info : record_menu_items)
     {
         QAction* const  action = new QAction(QString(record_kind_and_info.second.m_name.c_str()), wnd);
         action->setShortcut(QString(record_kind_and_info.second.m_shortcut.c_str()));
         action->setToolTip(QString(record_kind_and_info.second.m_tooltip.c_str()));
-        m_record_menu_items[record_kind_and_info.first] = action;
+        m_record_menu_items.insert({record_kind_and_info.first, action });
     }
 }
 
