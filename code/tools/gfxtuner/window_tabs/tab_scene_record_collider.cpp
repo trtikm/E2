@@ -10,9 +10,96 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/canonical_path.hpp>
+#include <utility/msgstream.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
-#include <QFileDialog>
+#include <QDialog>
+#include <QLabel>
+#include <QPushButton>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+
+namespace window_tabs { namespace tab_scene { namespace record_collider { namespace detail {
+
+
+struct  collider_props_dialog : public QDialog
+{
+    collider_props_dialog(
+            program_window* const  wnd,
+            std::string const&  shape_type
+            );
+
+    bool  ok() const { return m_ok; }
+
+public slots:
+
+    void  accept();
+    void  reject();
+
+private:
+    program_window*  m_wnd;
+    std::string  m_shape_type;
+    bool  m_ok;
+};
+
+
+collider_props_dialog::collider_props_dialog(
+        program_window* const  wnd,
+        std::string const&  shape_type
+        )
+    : QDialog(wnd)
+    , m_wnd(wnd)
+    , m_shape_type(shape_type)
+    , m_ok(false)
+{
+    QVBoxLayout* const dlg_layout = new QVBoxLayout;
+    {
+        QHBoxLayout* const buttons_layout = new QHBoxLayout;
+        {
+            buttons_layout->addWidget(
+                [](collider_props_dialog* wnd) {
+                    struct OK : public QPushButton {
+                        OK(collider_props_dialog* wnd) : QPushButton("OK")
+                        {
+                            QObject::connect(this, SIGNAL(released()), wnd, SLOT(accept()));
+                        }
+                    };
+                    return new OK(wnd);
+                }(this)
+                );
+            buttons_layout->addWidget(
+                [](collider_props_dialog* wnd) {
+                    struct Close : public QPushButton {
+                        Close(collider_props_dialog* wnd) : QPushButton("Cancel")
+                        {
+                            QObject::connect(this, SIGNAL(released()), wnd, SLOT(reject()));
+                        }
+                    };
+                    return new Close(wnd);
+                }(this)
+                );
+            buttons_layout->addStretch(1);
+        }
+        dlg_layout->addLayout(buttons_layout);
+    }
+    this->setLayout(dlg_layout);
+    this->setWindowTitle((msgstream() << "Collider '" << m_shape_type << "' properties.").get().c_str());
+    //this->resize(300,100);
+}
+
+void  collider_props_dialog::accept()
+{
+    m_ok = true;
+    QDialog::accept();
+}
+
+void  collider_props_dialog::reject()
+{
+    QDialog::reject();
+}
+
+
+}}}}
 
 namespace window_tabs { namespace tab_scene { namespace record_collider {
 
@@ -73,6 +160,10 @@ void  register_record_handler_for_insert_scene_record(
                         w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one collider.", 10000);
                         return {"", {}};
                     }
+                    detail::collider_props_dialog  dlg(w->wnd(), shape_type);
+                    dlg.exec();
+                    if (!dlg.ok())
+                        return{ "",{} };
                     w->wnd()->print_status_message("ERROR: Insertion of a collider is not implemented.", 10000);
                     return{ "",{} };
                     //return {
