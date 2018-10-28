@@ -215,6 +215,10 @@ private:
                 std::function<void(scn::rigid_body&,scn::scene_node_ptr)> const&  action
                 );
 
+    void  collect_colliders_in_subtree(
+                scn::scene_node_ptr const  node_ptr,
+                std::vector<angeo::collision_object_id>&  output
+                );
     void  update_collider_locations_in_subtree(scn::scene_node_ptr  node_ptr);
     void  update_collider_locations_in_subtree(scn::scene_node_name const&  node_name)
     { update_collider_locations_in_subtree(get_scene().get_scene_node(node_name)); }
@@ -258,8 +262,8 @@ private:
     angeo::rigid_body_simulator  m_rigid_body_simulator;
     std::unordered_map<angeo::collision_object_id, angeo::rigid_body_id>  m_binding_of_collision_objects;
     std::unordered_map<angeo::rigid_body_id, scn::scene_node_ptr>  m_binding_of_rigid_bodies;
-    std::unordered_set<angeo::rigid_body_id>  m_dynamic_rigid_bodies;
 
+    // TODO: The member below should be removed at some point.
     std::unordered_map<scn::scene_record_id, gfx_animated_object>  m_gfx_animated_objects;
 };
 

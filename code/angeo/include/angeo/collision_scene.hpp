@@ -121,8 +121,8 @@ struct  collision_scene
 
     void  on_position_changed(collision_object_id const  coid, matrix44 const&  from_base_matrix);
 
-    void  disable_colliding_of_dynamic_objects(collision_object_id const  coid_1, collision_object_id const  coid_2);
-    void  enable_colliding_of_dynamic_objects(collision_object_id const  coid_1, collision_object_id const  coid_2);
+    void  disable_colliding(collision_object_id const  coid_1, collision_object_id const  coid_2);
+    void  enable_colliding(collision_object_id const  coid_1, collision_object_id const  coid_2);
 
     void  compute_contacts_of_all_dynamic_objects(contact_acceptor const&  acceptor, bool  with_static = true);
     void  compute_contacts_of_single_dynamic_object(

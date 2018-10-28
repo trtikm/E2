@@ -177,7 +177,6 @@ simulator::simulator()
     , m_rigid_body_simulator()
     , m_binding_of_collision_objects()
     , m_binding_of_rigid_bodies()
-    , m_dynamic_rigid_bodies()
 
     , m_gfx_animated_objects()
 
@@ -324,12 +323,15 @@ void  simulator::validate_simulation_state()
             auto  rb_ptr = scn::get_rigid_body(*node_ptr);
             INVARIANT(rb_ptr != nullptr);
 
-            update_collider_locations_in_subtree(node_ptr);
+            std::vector<angeo::collision_object_id>  coids;
+            collect_colliders_in_subtree(node_ptr, coids);
 
+            for (angeo::collision_object_id coid : coids)
+                m_collision_scene.on_position_changed(coid, node_ptr->get_world_matrix());
+            
             if (node_name_and_collider_change.second)
             {
                 m_binding_of_rigid_bodies.erase(rb_ptr->id());
-                m_dynamic_rigid_bodies.erase(rb_ptr->id());
 
                 vector3 const  linear_velocity = m_rigid_body_simulator.get_linear_velocity(rb_ptr->id());
                 vector3 const  angular_velocity = m_rigid_body_simulator.get_angular_velocity(rb_ptr->id());
@@ -342,42 +344,41 @@ void  simulator::validate_simulation_state()
                 matrix33  inverted_inertia_tensor_in_local_space = matrix33_zero();
 
                 bool  has_static_collider = false;
-                foreach_collider_in_subtree(
-                        node_ptr,
-                        [this, &has_static_collider](scn::collider& collider, scn::scene_node_ptr) {
-                                if (!m_collision_scene.is_dynamic(collider.id()))
-                                    has_static_collider = true;
-                            }
-                        );
+                for (angeo::collision_object_id  coid : coids)
+                    if (!m_collision_scene.is_dynamic(coid))
+                    {
+                        has_static_collider = true;
+                        break;
+                    }
                 if (!has_static_collider)
                 {
+                    for (std::size_t i = 0U; i < coids.size(); ++i)
+                        for (std::size_t j = i + 1U; j < coids.size(); ++j)
+                            m_collision_scene.disable_colliding(coids.at(i), coids.at(j));
+
                     angeo::mass_and_inertia_tensor_builder  builder;
-                    foreach_collider_in_subtree(
-                            node_ptr,
-                            [this, node_ptr, &builder](scn::collider& collider, scn::scene_node_ptr const  collider_node_ptr) {
-                                    switch (angeo::get_shape_type(collider.id()))
-                                    {
-                                    case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
-                                        {
-                                            vector3  A, B;
-                                            m_collision_scene.get_capsule_end_points_in_world_space(collider.id(), A, B);
-                                            builder.insert_capsule(A, B, m_collision_scene.get_material(collider.id()));
-                                        }
-                                        break;
-                                    case angeo::COLLISION_SHAPE_TYPE::SPHERE:
-                                        {
-                                            vector3  S;
-                                            float_32_bit  r;
-                                            m_collision_scene.get_sphere_center_and_radius_in_world_space(collider.id(), S, r);
-                                            builder.insert_sphere(S, r, m_collision_scene.get_material(collider.id()));
-                                        }
-                                        break;
-                                    default:
-                                        NOT_IMPLEMENTED_YET();
-                                        break;
-                                    }
-                                }
-                            );
+                    for (angeo::collision_object_id coid : coids)
+                        switch (angeo::get_shape_type(coid))
+                        {
+                        case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+                            {
+                                vector3  A, B;
+                                m_collision_scene.get_capsule_end_points_in_world_space(coid, A, B);
+                                builder.insert_capsule(A, B, m_collision_scene.get_material(coid));
+                            }
+                            break;
+                        case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+                            {
+                                vector3  S;
+                                float_32_bit  r;
+                                m_collision_scene.get_sphere_center_and_radius_in_world_space(coid, S, r);
+                                builder.insert_sphere(S, r, m_collision_scene.get_material(coid));
+                            }
+                            break;
+                        default:
+                            NOT_IMPLEMENTED_YET();
+                            break;
+                        }
                     builder.run(inverted_mass, inverted_inertia_tensor_in_local_space);
                 }
 
@@ -395,18 +396,13 @@ void  simulator::validate_simulation_state()
                         );
                 m_binding_of_rigid_bodies[rb_ptr->id()] = node_ptr;
 
-                foreach_collider_in_subtree(
-                        node_ptr,
-                        [this, rb_ptr](scn::collider& collider, scn::scene_node_ptr) {
-                                m_binding_of_collision_objects[collider.id()] = rb_ptr->id();
-                            }
-                        );
-
-                if (!has_static_collider)
-                    m_dynamic_rigid_bodies.insert(rb_ptr->id());
+                for (angeo::collision_object_id coid : coids)
+                    m_binding_of_collision_objects[coid] = rb_ptr->id();
             }
         }
     m_invalidated_nodes_of_rigid_bodies.clear();
+
+    // TODO: The code below should be removed at some point.
 
     std::unordered_set<scn::scene_record_id>  to_remove;
     for (auto& elem : m_gfx_animated_objects)
@@ -473,9 +469,10 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
             true
             );
     m_rigid_body_simulator.do_simulation_step(time_to_simulate_in_seconds, time_to_simulate_in_seconds);
-    for (auto const  rb_id : m_dynamic_rigid_bodies)
+    for (auto const&  rb_id_and_node_ptr : m_binding_of_rigid_bodies)
     {
-        scn::scene_node_ptr const  rb_node_ptr = m_binding_of_rigid_bodies.at(rb_id);
+        angeo::rigid_body_id const  rb_id = rb_id_and_node_ptr.first;
+        scn::scene_node_ptr const  rb_node_ptr = rb_id_and_node_ptr.second;
 
         if (rb_node_ptr->has_parent())
         {
@@ -488,7 +485,6 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                             * quaternion_to_rotation_matrix(m_rigid_body_simulator.get_orientation(rb_id))
                         )
                     );
-matrix33_zero();
         }
         else
             rb_node_ptr->relocate(
@@ -500,6 +496,8 @@ matrix33_zero();
 
         m_scene_nodes_relocated_during_simulation.insert(rb_node_ptr->get_name());
     }
+
+    // TODO: The code below should be removed at some point.
 
     for (auto&  elem : m_gfx_animated_objects)
         elem.second.next_round(time_to_simulate_in_seconds);
@@ -1073,6 +1071,19 @@ void  simulator::foreach_rigid_body_in_subtree(
 }
 
 
+void  simulator::collect_colliders_in_subtree(
+            scn::scene_node_ptr const  node_ptr,
+            std::vector<angeo::collision_object_id>&  output
+            )
+{
+    foreach_collider_in_subtree(
+            node_ptr,
+            [&output](scn::collider& collider, scn::scene_node_ptr) {
+                    output.push_back(collider.id());
+                }
+            );
+}
+
 void  simulator::update_collider_locations_in_subtree(scn::scene_node_ptr  node_ptr)
 {
     foreach_collider_in_subtree(
@@ -1220,6 +1231,20 @@ void  simulator::erase_rigid_body_from_scene_node(
     auto const  node_ptr = get_scene_node(scene_node_name);
     if (auto const  rb_ptr = scn::get_rigid_body(*node_ptr))
     {
+        std::vector<angeo::collision_object_id>  coids;
+        collect_colliders_in_subtree(node_ptr, coids);
+        bool  has_static_collider = false;
+        for (angeo::collision_object_id coid : coids)
+            if (!m_collision_scene.is_dynamic(coid))
+            {
+                has_static_collider = true;
+                break;
+            }
+        if (!has_static_collider)
+            for (std::size_t i = 0U; i < coids.size(); ++i)
+                for (std::size_t j = i + 1U; j < coids.size(); ++j)
+                    m_collision_scene.enable_colliding(coids.at(i), coids.at(j));
+
         m_rigid_body_simulator.erase_rigid_body(rb_ptr->id());
         m_binding_of_rigid_bodies.erase(rb_ptr->id());
 
@@ -1242,7 +1267,6 @@ void  simulator::clear_scene()
     m_rigid_body_simulator.clear();
     m_binding_of_collision_objects.clear();
     m_binding_of_rigid_bodies.clear();
-    m_dynamic_rigid_bodies.clear();
     m_gfx_animated_objects.clear();
 }
 

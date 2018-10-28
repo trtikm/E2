@@ -399,7 +399,7 @@ void  collision_scene::on_position_changed(collision_object_id const  coid, matr
 }
 
 
-void  collision_scene::disable_colliding_of_dynamic_objects(
+void  collision_scene::disable_colliding(
             collision_object_id const  coid_1,
             collision_object_id const  coid_2
             )
@@ -408,7 +408,7 @@ void  collision_scene::disable_colliding_of_dynamic_objects(
 }
 
 
-void  collision_scene::enable_colliding_of_dynamic_objects(
+void  collision_scene::enable_colliding(
             collision_object_id const  coid_1,
             collision_object_id const  coid_2
             )
@@ -440,6 +440,8 @@ void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor 
                             {
                                 collision_object_id_pair const coid_pair =
                                         make_collision_object_id_pair(*it, *next_it);
+                                if (m_disabled_colliding.count(coid_pair) != 0UL)
+                                    continue;
                                 if (processed_collision_queries.count(coid_pair) == 0UL)
                                 {
                                     processed_collision_queries.insert(coid_pair);
@@ -487,8 +489,11 @@ void  collision_scene::compute_contacts_of_single_dynamic_object(
                 [this, &acceptor, coid, &visited](collision_object_id const  other_coid) -> bool {
                         if (visited.count(other_coid) != 0UL)
                             return true;
+                        collision_object_id_pair const coid_pair = make_collision_object_id_pair(coid, other_coid);
+                        if (m_disabled_colliding.count(coid_pair) != 0UL)
+                            return true;
                         visited.insert(other_coid);
-                        return compute_contacts(make_collision_object_id_pair(coid, other_coid), acceptor, true);
+                        return compute_contacts(coid_pair, acceptor, true);
                     }
                 );
     }
@@ -502,8 +507,11 @@ void  collision_scene::compute_contacts_of_single_dynamic_object(
                 [this, &acceptor, coid, &visited](collision_object_id const  other_coid) -> bool {
                         if (visited.count(other_coid) != 0UL)
                             return true;
+                        collision_object_id_pair const coid_pair = make_collision_object_id_pair(coid, other_coid);
+                        if (m_disabled_colliding.count(coid_pair) != 0UL)
+                            return true;
                         visited.insert(other_coid);
-                        return compute_contacts(make_collision_object_id_pair(coid, other_coid), acceptor, true);
+                        return compute_contacts(coid_pair, acceptor, true);
                     }
                 );
     }
