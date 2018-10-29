@@ -114,14 +114,9 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, collide
             common_props_layout->addWidget(new QLabel("      Material:"));
             common_props_layout->addWidget(m_widget_material);
             m_widget_material->setEditable(false);
-            m_widget_material->insertItem((int)angeo::COLLISION_MATERIAL_TYPE::CONCRETE, "Concrete");
-            m_widget_material->insertItem((int)angeo::COLLISION_MATERIAL_TYPE::GLASS, "Glass");
-            m_widget_material->insertItem((int)angeo::COLLISION_MATERIAL_TYPE::GUM, "Gum");
-            m_widget_material->insertItem((int)angeo::COLLISION_MATERIAL_TYPE::PLASTIC, "Plastic");
-            m_widget_material->insertItem((int)angeo::COLLISION_MATERIAL_TYPE::RUBBER, "Rubber");
-            m_widget_material->insertItem((int)angeo::COLLISION_MATERIAL_TYPE::STEEL, "Steel");
-            m_widget_material->insertItem((int)angeo::COLLISION_MATERIAL_TYPE::WOOD, "Wood");
-            m_widget_material->setCurrentIndex((int)m_props->m_material);
+            for (natural_8_bit  mat_id = 0U; mat_id != angeo::get_num_collision_materials(); ++mat_id)
+                m_widget_material->insertItem(mat_id, angeo::to_string(angeo::as_material(mat_id)));
+            m_widget_material->setCurrentIndex(angeo::as_number(m_props->m_material));
 
             common_props_layout->addStretch(1);
         }

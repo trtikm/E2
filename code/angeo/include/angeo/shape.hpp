@@ -3,6 +3,7 @@
 
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/coordinate_system.hpp>
+#   include <angeo/collision_material.hpp>
 #   include <unordered_map>
 #   include <vector>
 #   include <tuple>
@@ -34,16 +35,6 @@ enum struct  COLLISION_PRIMITIVE_TYPE : natural_8_bit
     CONVEX_POLYTOPE = 8,
 };
 
-
-enum struct  COLLISION_MATERIAL_TYPE : natural_8_bit
-{
-    WOOD            = 0,
-    STEEL           = 1,
-    CONCRETE        = 2,
-    GLASS           = 3,
-    GUM             = 4,
-    PLASTIC         = 5,
-};
 
 struct  collision_shape
 {

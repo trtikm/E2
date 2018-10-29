@@ -27,6 +27,7 @@ add_library(${THIS_TARGET_NAME}
     ./include/angeo/collision_object_and_shape_feature_id.hpp
     ./include/angeo/collision_object_acceptor.hpp
     ./include/angeo/collision_material.hpp
+    ./src/collision_material.cpp
 
     ./include/angeo/contact_id.hpp
     ./include/angeo/contact_acceptor.hpp
