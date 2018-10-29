@@ -3,6 +3,7 @@
 #include <gfxtuner/window_tabs/tab_scene_utils.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
+#include <angeo/collision_material.hpp>
 #include <scene/scene.hpp>
 #include <scene/scene_history.hpp>
 #include <scene/scene_node_record_id.hpp>
@@ -14,20 +15,42 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
 #include <QDialog>
-#include <QLabel>
-#include <QPushButton>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
+#include <QLabel>
+#include <QPushButton>
+#include <QCheckBox>
+#include <QComboBox>
+#include <QLineEdit>
 
 namespace window_tabs { namespace tab_scene { namespace record_collider { namespace detail {
 
 
 struct  collider_props_dialog : public QDialog
 {
-    collider_props_dialog(
-            program_window* const  wnd,
-            std::string const&  shape_type
-            );
+    struct  collider_props
+    {
+        std::string  m_shape_type;
+
+        bool  m_as_dynamic;
+        angeo::COLLISION_MATERIAL_TYPE  m_material;
+
+        // DATA OF CAPSULE
+
+        float_32_bit  m_capsule_half_distance_between_end_points;
+        float_32_bit  m_capsule_thickness_from_central_line;
+
+        // DATA OF SPHERE 
+
+        float_32_bit  m_sphere_radius;
+
+        // DATA OF TRIANGLE MESH
+
+        boost::filesystem::path  m_triangle_mesh_vertex_buffer_pathname;
+        boost::filesystem::path  m_triangle_mesh_index_buffer_pathname;     // The path is empty, when no index buffer is available.
+    };
+
+    collider_props_dialog(program_window* const  wnd, collider_props* const  props);
 
     bool  ok() const { return m_ok; }
 
@@ -38,22 +61,72 @@ public slots:
 
 private:
     program_window*  m_wnd;
-    std::string  m_shape_type;
+    collider_props*  m_props;
     bool  m_ok;
+
+    QCheckBox*  m_widget_as_dynamic;
+    QComboBox*  m_widget_material;
+
+    QLineEdit*  m_widget_capsule_half_distance_between_end_points;
+    QLineEdit*  m_capsule_thickness_from_central_line;
+
+    QLineEdit*  m_widget_sphere_radius;
 };
 
 
-collider_props_dialog::collider_props_dialog(
-        program_window* const  wnd,
-        std::string const&  shape_type
-        )
+collider_props_dialog::collider_props_dialog(program_window* const  wnd, collider_props* const  props)
     : QDialog(wnd)
     , m_wnd(wnd)
-    , m_shape_type(shape_type)
+    , m_props(props)
     , m_ok(false)
+
+    , m_widget_as_dynamic(new QCheckBox("Movable during simulation"))
+    , m_widget_material(new QComboBox)
 {
+    ASSUMPTION(m_props != nullptr);
+
     QVBoxLayout* const dlg_layout = new QVBoxLayout;
     {
+        QVBoxLayout* const collider_props_layout = new QVBoxLayout;
+        {
+            if (m_props->m_shape_type == "capsule")
+            {
+            }
+            else if (m_props->m_shape_type == "sphere")
+            {
+            }
+            else if (m_props->m_shape_type == "triangle mesh")
+            {
+            }
+            else
+            {
+                UNREACHABLE();
+            }
+
+            collider_props_layout->addStretch(1);
+        }
+        dlg_layout->addLayout(collider_props_layout);
+
+        QHBoxLayout* const common_props_layout = new QHBoxLayout;
+        {
+            common_props_layout->addWidget(m_widget_as_dynamic);
+
+            common_props_layout->addWidget(new QLabel("      Material:"));
+            common_props_layout->addWidget(m_widget_material);
+            m_widget_material->setEditable(false);
+            m_widget_material->insertItem((int)angeo::COLLISION_MATERIAL_TYPE::CONCRETE, "Concrete");
+            m_widget_material->insertItem((int)angeo::COLLISION_MATERIAL_TYPE::GLASS, "Glass");
+            m_widget_material->insertItem((int)angeo::COLLISION_MATERIAL_TYPE::GUM, "Gum");
+            m_widget_material->insertItem((int)angeo::COLLISION_MATERIAL_TYPE::PLASTIC, "Plastic");
+            m_widget_material->insertItem((int)angeo::COLLISION_MATERIAL_TYPE::RUBBER, "Rubber");
+            m_widget_material->insertItem((int)angeo::COLLISION_MATERIAL_TYPE::STEEL, "Steel");
+            m_widget_material->insertItem((int)angeo::COLLISION_MATERIAL_TYPE::WOOD, "Wood");
+            m_widget_material->setCurrentIndex((int)m_props->m_material);
+
+            common_props_layout->addStretch(1);
+        }
+        dlg_layout->addLayout(common_props_layout);
+
         QHBoxLayout* const buttons_layout = new QHBoxLayout;
         {
             buttons_layout->addWidget(
@@ -83,13 +156,31 @@ collider_props_dialog::collider_props_dialog(
         dlg_layout->addLayout(buttons_layout);
     }
     this->setLayout(dlg_layout);
-    this->setWindowTitle((msgstream() << "Collider '" << m_shape_type << "' properties.").get().c_str());
+    this->setWindowTitle((msgstream() << "Collider '" << m_props->m_shape_type << "' properties.").get().c_str());
     //this->resize(300,100);
 }
 
 void  collider_props_dialog::accept()
 {
     m_ok = true;
+
+    m_props->m_as_dynamic = m_widget_as_dynamic->isChecked();
+    m_props->m_material = (angeo::COLLISION_MATERIAL_TYPE)m_widget_material->currentIndex();
+
+    if (m_props->m_shape_type == "capsule")
+    {
+    }
+    else if (m_props->m_shape_type == "sphere")
+    {
+    }
+    else if (m_props->m_shape_type == "triangle mesh")
+    {
+    }
+    else
+    {
+        UNREACHABLE();
+    }
+
     QDialog::accept();
 }
 
@@ -160,7 +251,28 @@ void  register_record_handler_for_insert_scene_record(
                         w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one collider.", 10000);
                         return {"", {}};
                     }
-                    detail::collider_props_dialog  dlg(w->wnd(), shape_type);
+
+                    detail::collider_props_dialog::collider_props  props;
+                    props.m_shape_type = shape_type;
+                    props.m_as_dynamic = true;
+                    props.m_material = angeo::COLLISION_MATERIAL_TYPE::WOOD;
+                    if (props.m_shape_type == "capsule")
+                    {
+                        props.m_capsule_half_distance_between_end_points = 0.05f;
+                        props.m_capsule_thickness_from_central_line = 0.05f;
+                    }
+                    else if (props.m_shape_type == "sphere")
+                    {
+                        props.m_sphere_radius = 0.05f;
+                    }
+                    else if (props.m_shape_type == "triangle mesh")
+                    {
+                    }
+                    else
+                    {
+                        UNREACHABLE();
+                    }
+                    detail::collider_props_dialog  dlg(w->wnd(), &props);
                     dlg.exec();
                     if (!dlg.ok())
                         return{ "",{} };
