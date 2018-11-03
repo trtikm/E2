@@ -413,10 +413,12 @@ void  simulator::validate_simulation_state()
                             );
                 }
 
+                matrix44 const  world_matrix = node_ptr->get_world_matrix();
+
                 rb_ptr->set_id(
                         m_rigid_body_simulator.insert_rigid_body(
-                                    node_ptr->get_coord_system()->origin(),
-                                    node_ptr->get_coord_system()->orientation(),
+                                    translation_vector(world_matrix),
+                                    rotation_matrix_to_quaternion(rotation_matrix(world_matrix)),
                                     inverted_mass,
                                     inverted_inertia_tensor_in_local_space,
                                     linear_velocity,
@@ -429,6 +431,13 @@ void  simulator::validate_simulation_state()
 
                 for (angeo::collision_object_id coid : coids)
                     m_binding_of_collision_objects[coid] = rb_ptr->id();
+            }
+            else
+            {
+                matrix44 const  world_matrix = node_ptr->get_world_matrix();
+                m_rigid_body_simulator.set_position_of_mass_centre(rb_ptr->id(), translation_vector(world_matrix));
+                m_rigid_body_simulator.set_orientation(rb_ptr->id(), rotation_matrix_to_quaternion(rotation_matrix(world_matrix)));
+               
             }
         }
     m_invalidated_nodes_of_rigid_bodies.clear();
@@ -1219,8 +1228,9 @@ void  simulator::erase_collision_object_from_scene_node(
     if (auto const  collider_ptr = scn::get_collider(*node_ptr))
     {
         m_binding_of_collision_objects.erase(collider_ptr->id());
-        scn::erase_collider(*node_ptr);
         m_scene_selection.erase_record(scn::make_collider_record_id(scene_node_name));
+        scn::erase_collider(*node_ptr);
+
         invalidate_rigid_body_controling_node(node_ptr, true);
     }
 }
@@ -1284,8 +1294,9 @@ void  simulator::erase_rigid_body_from_scene_node(
         m_rigid_body_simulator.erase_rigid_body(rb_ptr->id());
         m_binding_of_rigid_bodies.erase(rb_ptr->id());
 
-        scn::erase_rigid_body(*node_ptr);
         m_scene_selection.erase_record(scn::make_rigid_body_record_id(scene_node_name));
+        scn::erase_rigid_body(*node_ptr);
+
         invalidate_rigid_body_controling_node(node_ptr, true);
     }
 }
