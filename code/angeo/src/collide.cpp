@@ -1103,6 +1103,24 @@ bool  collision_bbox_bbox(
 }
 
 
+bool  is_point_inside_capsule(
+        vector3 const&  point_in_sphere_local_space,
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line
+        )
+{
+    vector3  central_line_closest_point;
+    closest_point_on_line_to_point(
+            { 0.0f, 0.0f, -half_distance_between_end_points},
+            { 0.0f, 0.0f, +half_distance_between_end_points},
+            point_in_sphere_local_space,
+            &central_line_closest_point
+            );
+    return length_squared(point_in_sphere_local_space - central_line_closest_point)
+                <= thickness_from_central_line *thickness_from_central_line;
+}
+
+
 POINT_SET_TYPE  clip_polygon(
         std::vector<vector2> const&  polygon_points,
         vector2 const&  clip_origin,

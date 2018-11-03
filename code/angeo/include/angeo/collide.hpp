@@ -324,6 +324,22 @@ bool  collision_bbox_bbox(
         );
 
 
+inline bool  is_point_inside_sphere(
+        vector3 const&  point_in_sphere_local_space,
+        float_32_bit const  sphere_radius
+        )
+{
+    return length_squared(point_in_sphere_local_space) <= sphere_radius * sphere_radius;
+}
+
+bool  is_point_inside_capsule(
+        vector3 const&  point_in_sphere_local_space,
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line
+        );
+
+
+
 enum struct POINT_SET_TYPE : natural_8_bit
 {
     EMPTY = 0,

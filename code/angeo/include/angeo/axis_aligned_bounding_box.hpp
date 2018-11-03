@@ -23,11 +23,27 @@ inline axis_aligned_bounding_box  compute_aabb_of_sphere(
 }
 
 
+inline axis_aligned_bounding_box  compute_aabb_of_sphere(float_32_bit const  radius)
+{
+    return { vector3(-radius, -radius, -radius), vector3(radius, radius, radius) };
+}
+
+
 axis_aligned_bounding_box  compute_aabb_of_capsule(
         vector3 const&  point_1,
         vector3 const&  point_2,
         float_32_bit const  radius
         );
+
+
+inline axis_aligned_bounding_box  compute_aabb_of_capsule(
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line
+        )
+{
+    return { vector3(-thickness_from_central_line, -thickness_from_central_line, -half_distance_between_end_points),
+             vector3(+thickness_from_central_line, +thickness_from_central_line, +half_distance_between_end_points) };
+}
 
 
 axis_aligned_bounding_box  compute_aabb_of_line(
