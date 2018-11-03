@@ -48,7 +48,7 @@ struct  mass_and_inertia_tensor_builder
 
 private:
 
-    float_32_bit  compute_total_mass_and_center_of_mass(vector3&  center_of_mass);
+    void  compute_inverted_total_mass_and_center_of_mass(float_32_bit&  inverted_mass, vector3&  center_of_mass);
 
     struct  capsule_info {
         float_32_bit  half_distance_between_end_points;

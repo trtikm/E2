@@ -139,24 +139,32 @@ void  mass_and_inertia_tensor_builder::insert_sphere(
 }
 
 
-float_32_bit  mass_and_inertia_tensor_builder::compute_total_mass_and_center_of_mass(vector3&  center_of_mass)
+void  mass_and_inertia_tensor_builder::compute_inverted_total_mass_and_center_of_mass(
+        float_32_bit&  inverted_mass,
+        vector3&  center_of_mass
+        )
 {
     center_of_mass = vector3_zero();
-    float_32_bit  total_mass = 0.0f;
+    inverted_mass = 0.0f;
 
     for (capsule_info const&  info : m_capsules)
     {
         center_of_mass += info.mass * translation_vector(info.from_base_matrix);
-        total_mass += info.mass;
+        inverted_mass += info.mass;
     }
 
     for (sphere_info const&  info : m_spheres)
     {
         center_of_mass += info.mass * info.center;
-        total_mass += info.mass;
+        inverted_mass += info.mass;
     }
 
-    return  total_mass;
+    if (inverted_mass > 0.00001f)
+        inverted_mass = 1.0f / inverted_mass;
+    else
+        inverted_mass = 0.0f;
+
+    center_of_mass = inverted_mass * center_of_mass;
 }
 
 
@@ -166,10 +174,7 @@ void  mass_and_inertia_tensor_builder::run(
         vector3&  center_of_mass
         )
 {
-    float_32_bit  total_mass = compute_total_mass_and_center_of_mass(center_of_mass);
-    INVARIANT(total_mass > 0.0001f);
-
-    inverted_mass = 1.0f / total_mass;
+    compute_inverted_total_mass_and_center_of_mass(inverted_mass, center_of_mass);
 
     matrix33  inertia_tensor = matrix33_zero();
 
