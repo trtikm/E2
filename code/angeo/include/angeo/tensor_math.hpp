@@ -85,7 +85,14 @@ inline quaternion  quaternion_identity() { return quaternion::Identity(); }
 inline quaternion  make_quaternion(scalar const w, vector3 const& v) { return quaternion(w, v(0), v(1), v(2)); }
 inline quaternion  make_quaternion_wxyz(scalar const w, scalar const x, scalar const y, scalar const z) { return quaternion(w,x,y,z); }
 inline quaternion  make_quaternion_xyzw(scalar const x, scalar const y, scalar const z, scalar const w) { return quaternion(w,x,y,z); }
-inline quaternion  scale(scalar const s, quaternion const& q) { return{ s*q.coeffs()(0), s*q.coeffs()(1), s*q.coeffs()(2), s*q.coeffs()(3) }; }
+inline quaternion  operator+(quaternion const&  p, quaternion const&  q)
+{
+    return{ p.coeffs()(3) + q.coeffs()(3), p.coeffs()(0) + q.coeffs()(0), p.coeffs()(1) + q.coeffs()(1), p.coeffs()(2) + q.coeffs()(2) };
+}
+inline quaternion  scale(scalar const s, quaternion const& q)
+{
+    return{ s*q.coeffs()(3), s*q.coeffs()(0), s*q.coeffs()(1), s*q.coeffs()(2) };
+}
 inline scalar  length_squared(quaternion const& q) { return q.squaredNorm(); }
 inline scalar  length(quaternion const& q) { return q.norm(); }
 inline quaternion  normalised(quaternion const& q) { return q.normalized(); }
@@ -191,7 +198,7 @@ inline scalar quaternion_to_angle_axis(quaternion const& q, vector3&  axis) {
 matrix33  yaw_pitch_roll_to_rotation(scalar const  yaw, scalar const  pitch, scalar const  roll);
 void  rotation_to_yaw_pitch_roll(matrix33 const&  R, scalar&  yaw, scalar&  pitch, scalar&  roll);
 
-inline vector3  translation_vector(matrix44 const&  M) { return vector3(M(0, 2), M(1, 2), M(2, 2)); }
+inline vector3  translation_vector(matrix44 const&  M) { return vector3(M(0, 3), M(1, 3), M(2, 3)); }
 matrix33  rotation_matrix(matrix44 const&  M);
 
 //template<typename T, int nrows, int ncols>

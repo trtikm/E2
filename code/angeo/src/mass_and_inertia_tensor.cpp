@@ -175,10 +175,14 @@ void  mass_and_inertia_tensor_builder::run(
         )
 {
     compute_inverted_total_mass_and_center_of_mass(inverted_mass, center_of_mass);
+    if (inverted_mass == 0.0f)
+    {
+        inverted_inertia_tensor = matrix33_zero();
+        return;
+    }
 
     matrix33  inertia_tensor = matrix33_zero();
 
-    natural_32_bit const  num_particles_per_collider = 1000U;
     for (capsule_info const&  info : m_capsules)
         detail::foreach_particle_in_bbox(
                 compute_aabb_of_capsule(info.half_distance_between_end_points, info.thickness_from_central_line),

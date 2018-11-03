@@ -273,7 +273,7 @@ void  rigid_body_simulator::do_simulation_step(
                 scale(0.5f, make_quaternion(0.0f, rb.m_velocity.m_angular) * rb.m_orientation);
 
         rb.m_position_of_mass_centre += time_step_in_seconds * rb.m_velocity.m_linear;
-        rb.m_orientation = normalised(scale(time_step_in_seconds, orientation_derivative) * rb.m_orientation);
+        rb.m_orientation = normalised(rb.m_orientation + scale(time_step_in_seconds, orientation_derivative));
 
         update_dependent_variables_of_rigid_body(id);
     }
