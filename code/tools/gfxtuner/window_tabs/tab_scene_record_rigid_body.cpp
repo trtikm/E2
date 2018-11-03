@@ -13,6 +13,237 @@
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
 #include <QFileDialog>
+#include <QDialog>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
+#include <QLabel>
+#include <QPushButton>
+#include <QCheckBox>
+#include <QComboBox>
+#include <QLineEdit>
+#include <QGroupBox>
+
+namespace window_tabs { namespace tab_scene { namespace record_rigid_body { namespace detail {
+
+
+struct  rigid_body_props_dialog : public QDialog
+{
+    struct  rigid_body_props
+    {
+        vector3  m_linear_velocity;
+        vector3  m_angular_velocity;
+        vector3  m_external_linear_acceleration;
+        vector3  m_external_angular_acceleration;
+    };
+
+    rigid_body_props_dialog(program_window* const  wnd, struct  rigid_body_props* const  props);
+
+    bool  ok() const { return m_ok; }
+
+public slots:
+
+    void  accept();
+    void  reject();
+
+private:
+    program_window*  m_wnd;
+    rigid_body_props*  m_props;
+    bool  m_ok;
+
+    QLineEdit*  m_widget_linear_velocity_x;
+    QLineEdit*  m_widget_linear_velocity_y;
+    QLineEdit*  m_widget_linear_velocity_z;
+
+    QLineEdit*  m_widget_angular_velocity_x;
+    QLineEdit*  m_widget_angular_velocity_y;
+    QLineEdit*  m_widget_angular_velocity_z;
+
+    QLineEdit*  m_widget_external_linear_acceleration_x;
+    QLineEdit*  m_widget_external_linear_acceleration_y;
+    QLineEdit*  m_widget_external_linear_acceleration_z;
+
+    QLineEdit*  m_widget_external_angular_acceleration_x;
+    QLineEdit*  m_widget_external_angular_acceleration_y;
+    QLineEdit*  m_widget_external_angular_acceleration_z;
+};
+
+
+rigid_body_props_dialog::rigid_body_props_dialog(program_window* const  wnd, rigid_body_props* const  props)
+    : QDialog(wnd)
+    , m_wnd(wnd)
+    , m_props(props)
+    , m_ok(false)
+
+    , m_widget_linear_velocity_x(new QLineEdit)
+    , m_widget_linear_velocity_y(new QLineEdit)
+    , m_widget_linear_velocity_z(new QLineEdit)
+
+    , m_widget_angular_velocity_x(new QLineEdit)
+    , m_widget_angular_velocity_y(new QLineEdit)
+    , m_widget_angular_velocity_z(new QLineEdit)
+
+    , m_widget_external_linear_acceleration_x(new QLineEdit)
+    , m_widget_external_linear_acceleration_y(new QLineEdit)
+    , m_widget_external_linear_acceleration_z(new QLineEdit)
+
+    , m_widget_external_angular_acceleration_x(new QLineEdit)
+    , m_widget_external_angular_acceleration_y(new QLineEdit)
+    , m_widget_external_angular_acceleration_z(new QLineEdit)
+{
+    ASSUMPTION(m_props != nullptr);
+
+    m_widget_linear_velocity_x->setText(QString::number(m_props->m_linear_velocity(0)));
+    m_widget_linear_velocity_y->setText(QString::number(m_props->m_linear_velocity(1)));
+    m_widget_linear_velocity_z->setText(QString::number(m_props->m_linear_velocity(2)));
+
+    m_widget_angular_velocity_x->setText(QString::number(m_props->m_angular_velocity(0)));
+    m_widget_angular_velocity_y->setText(QString::number(m_props->m_angular_velocity(1)));
+    m_widget_angular_velocity_z->setText(QString::number(m_props->m_angular_velocity(2)));
+
+    m_widget_external_linear_acceleration_x->setText(QString::number(m_props->m_external_linear_acceleration(0)));
+    m_widget_external_linear_acceleration_y->setText(QString::number(m_props->m_external_linear_acceleration(1)));
+    m_widget_external_linear_acceleration_z->setText(QString::number(m_props->m_external_linear_acceleration(2)));
+
+    m_widget_external_angular_acceleration_x->setText(QString::number(m_props->m_external_angular_acceleration(0)));
+    m_widget_external_angular_acceleration_y->setText(QString::number(m_props->m_external_angular_acceleration(1)));
+    m_widget_external_angular_acceleration_z->setText(QString::number(m_props->m_external_angular_acceleration(2)));
+
+    m_widget_linear_velocity_x->setToolTip("x coordinate in world space.");
+    m_widget_linear_velocity_y->setToolTip("y coordinate in world space.");
+    m_widget_linear_velocity_z->setToolTip("z coordinate in world space.");
+
+    m_widget_angular_velocity_x->setToolTip("x coordinate in world space.");
+    m_widget_angular_velocity_y->setToolTip("y coordinate in world space.");
+    m_widget_angular_velocity_z->setToolTip("z coordinate in world space.");
+
+    m_widget_external_linear_acceleration_x->setToolTip("x coordinate in world space.");
+    m_widget_external_linear_acceleration_y->setToolTip("y coordinate in world space.");
+    m_widget_external_linear_acceleration_z->setToolTip("z coordinate in world space.");
+
+    m_widget_external_angular_acceleration_x->setToolTip("x coordinate in world space.");
+    m_widget_external_angular_acceleration_y->setToolTip("y coordinate in world space.");
+    m_widget_external_angular_acceleration_z->setToolTip("z coordinate in world space.");
+
+    QVBoxLayout* const dlg_layout = new QVBoxLayout;
+    {
+        auto const  insert_vector_group =
+            [](std::string const&  group_name, QLineEdit* const  x_edit, QLineEdit* const  y_edit, QLineEdit* const  z_edit)
+                -> QWidget*
+            {
+                QWidget* const group = new QGroupBox(group_name.c_str());
+                {
+                    QHBoxLayout* const coords_layout = new QHBoxLayout;
+                    {
+                        coords_layout->addWidget(x_edit);
+                        coords_layout->addWidget(y_edit);
+                        coords_layout->addWidget(z_edit);
+                    }
+                    group->setLayout(coords_layout);
+                }
+                return group;
+            };
+
+        dlg_layout->addWidget(insert_vector_group(
+                "Linear velocity [m/s]",
+                m_widget_linear_velocity_x,
+                m_widget_linear_velocity_y,
+                m_widget_linear_velocity_z
+                ));
+
+        dlg_layout->addWidget(insert_vector_group(
+                "Angular velocity [m/s]",
+                m_widget_angular_velocity_x,
+                m_widget_angular_velocity_y,
+                m_widget_angular_velocity_z
+                ));
+
+        dlg_layout->addWidget(insert_vector_group(
+                "External linear acceleration [m/(s*s)]",
+                m_widget_external_linear_acceleration_x,
+                m_widget_external_linear_acceleration_y,
+                m_widget_external_linear_acceleration_z
+                ));
+
+        dlg_layout->addWidget(insert_vector_group(
+                "External angular acceleration [m/(s*s)]",
+                m_widget_external_angular_acceleration_x,
+                m_widget_external_angular_acceleration_y,
+                m_widget_external_angular_acceleration_z
+                ));
+
+        QHBoxLayout* const buttons_layout = new QHBoxLayout;
+        {
+            buttons_layout->addWidget(
+                [](rigid_body_props_dialog* wnd) {
+                struct OK : public QPushButton {
+                    OK(rigid_body_props_dialog* wnd) : QPushButton("OK")
+                    {
+                        QObject::connect(this, SIGNAL(released()), wnd, SLOT(accept()));
+                    }
+                };
+                return new OK(wnd);
+            }(this)
+                );
+            buttons_layout->addWidget(
+                [](rigid_body_props_dialog* wnd) {
+                struct Close : public QPushButton {
+                    Close(rigid_body_props_dialog* wnd) : QPushButton("Cancel")
+                    {
+                        QObject::connect(this, SIGNAL(released()), wnd, SLOT(reject()));
+                    }
+                };
+                return new Close(wnd);
+            }(this)
+                );
+            buttons_layout->addStretch(1);
+        }
+        dlg_layout->addLayout(buttons_layout);
+        //dlg_layout->setAlignment(buttons_layout, Qt::Alignment(Qt::AlignmentFlag::AlignRight));
+    }
+    this->setLayout(dlg_layout);
+    this->setWindowTitle("Rigid body");
+    //this->resize(300,100);
+}
+
+
+void  rigid_body_props_dialog::accept()
+{
+    m_props->m_linear_velocity = {
+            (float_32_bit)std::atof(qtgl::to_string(m_widget_linear_velocity_x->text()).c_str()),
+            (float_32_bit)std::atof(qtgl::to_string(m_widget_linear_velocity_y->text()).c_str()),
+            (float_32_bit)std::atof(qtgl::to_string(m_widget_linear_velocity_z->text()).c_str())
+            };
+
+    m_props->m_angular_velocity = {
+            (float_32_bit)std::atof(qtgl::to_string(m_widget_angular_velocity_x->text()).c_str()),
+            (float_32_bit)std::atof(qtgl::to_string(m_widget_angular_velocity_y->text()).c_str()),
+            (float_32_bit)std::atof(qtgl::to_string(m_widget_angular_velocity_z->text()).c_str())
+            };
+
+    m_props->m_external_linear_acceleration = {
+            (float_32_bit)std::atof(qtgl::to_string(m_widget_external_linear_acceleration_x->text()).c_str()),
+            (float_32_bit)std::atof(qtgl::to_string(m_widget_external_linear_acceleration_y->text()).c_str()),
+            (float_32_bit)std::atof(qtgl::to_string(m_widget_external_linear_acceleration_z->text()).c_str())
+            };
+
+    m_props->m_external_angular_acceleration = {
+            (float_32_bit)std::atof(qtgl::to_string(m_widget_external_angular_acceleration_x->text()).c_str()),
+            (float_32_bit)std::atof(qtgl::to_string(m_widget_external_angular_acceleration_y->text()).c_str()),
+            (float_32_bit)std::atof(qtgl::to_string(m_widget_external_angular_acceleration_z->text()).c_str())
+            };
+
+    m_ok = true;
+
+    QDialog::accept();
+}
+
+void  rigid_body_props_dialog::reject()
+{
+    QDialog::reject();
+}
+
+
+}}}}
 
 namespace window_tabs { namespace tab_scene { namespace record_rigid_body {
 
@@ -73,6 +304,17 @@ void  register_record_handler_for_insert_scene_record(
                         w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one rigid body.", 10000);
                         return{ "",{} };
                     }
+                    detail::rigid_body_props_dialog::rigid_body_props  rb_props {
+                        { 0.0f, 0.0f, 0.0f },
+                        { 0.0f, 0.0f, 0.0f },
+
+                        { 0.0f, 0.0f, -9.81f },
+                        { 0.0f, 0.0f, 0.0f },
+                    };
+                    detail::rigid_body_props_dialog  dlg(w->wnd(), &rb_props);
+                    dlg.exec();
+                    if (!dlg.ok())
+                        return{ "",{} };
                     w->wnd()->print_status_message("ERROR: Insertion of rigid body is not implemented yet.", 10000);
                     return{ "",{} };
                     //return {

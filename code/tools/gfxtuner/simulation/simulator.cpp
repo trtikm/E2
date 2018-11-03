@@ -336,8 +336,12 @@ void  simulator::validate_simulation_state()
 
                 vector3 const  linear_velocity = m_rigid_body_simulator.get_linear_velocity(rb_ptr->id());
                 vector3 const  angular_velocity = m_rigid_body_simulator.get_angular_velocity(rb_ptr->id());
-                vector3 const  external_force = m_rigid_body_simulator.get_external_force(rb_ptr->id());
-                vector3 const  external_torque = m_rigid_body_simulator.get_external_torque(rb_ptr->id());
+                vector3 const  external_linear_acceleration =
+                        m_rigid_body_simulator.get_inverted_mass(rb_ptr->id())
+                            * m_rigid_body_simulator.get_external_force(rb_ptr->id());
+                vector3 const  external_angular_acceleration =
+                        m_rigid_body_simulator.get_inverted_mass(rb_ptr->id())
+                            * m_rigid_body_simulator.get_external_torque(rb_ptr->id());
 
                 m_rigid_body_simulator.erase_rigid_body(rb_ptr->id());
 
@@ -417,8 +421,8 @@ void  simulator::validate_simulation_state()
                                     inverted_inertia_tensor_in_local_space,
                                     linear_velocity,
                                     angular_velocity,
-                                    external_force,
-                                    external_torque
+                                    external_linear_acceleration / (inverted_mass == 0.0f ? 1.0f : inverted_mass),
+                                    external_angular_acceleration / (inverted_mass == 0.0f ? 1.0f : inverted_mass)
                                     )
                         );
                 m_binding_of_rigid_bodies[rb_ptr->id()] = node_ptr;
@@ -1220,12 +1224,10 @@ void  simulator::erase_collision_object_from_scene_node(
 
 
 void  simulator::insert_rigid_body_to_scene_node(
-        float_32_bit const  inverted_mass,                          // The value 0.0f means the mass is infinite.
-        matrix33 const&  inverted_inertia_tensor_in_local_space,    // Zero matrix means an infinite inertia.
         vector3 const&  linear_velocity,
         vector3 const&  angular_velocity,
-        vector3 const&  external_force,
-        vector3 const&  external_torque,
+        vector3 const&  external_linear_acceleration,
+        vector3 const&  external_angular_acceleration,
         scn::scene_node_name const&  scene_node_name
         )
 {
@@ -1239,16 +1241,17 @@ void  simulator::insert_rigid_body_to_scene_node(
             m_rigid_body_simulator.insert_rigid_body(
                     vector3_zero(),
                     quaternion_identity(),
-                    inverted_mass,
-                    inverted_inertia_tensor_in_local_space,
+                    1.0f,
+                    matrix33_identity(),
                     linear_velocity,
                     angular_velocity,
-                    external_force,
-                    external_torque
+                    external_linear_acceleration,
+                    external_angular_acceleration
                     );
 
     scn::insert_rigid_body(*node_ptr, rb_id);
     m_binding_of_rigid_bodies[rb_id] = node_ptr;
+
     invalidate_rigid_body_controling_node(node_ptr, true);
 }
 

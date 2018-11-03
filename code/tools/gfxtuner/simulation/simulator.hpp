@@ -119,12 +119,10 @@ struct simulator : public qtgl::real_time_simulator
             );
 
     void  insert_rigid_body_to_scene_node(
-            float_32_bit const  inverted_mass,                          // The value 0.0f means the mass is infinite.
-            matrix33 const&  inverted_inertia_tensor_in_local_space,    // Zero matrix means an infinite inertia.
             vector3 const&  linear_velocity,
             vector3 const&  angular_velocity,
-            vector3 const&  external_force,
-            vector3 const&  external_torque,
+            vector3 const&  external_linear_acceleration,
+            vector3 const&  external_angular_acceleration,
             scn::scene_node_name const&  scene_node_name
             );
 
