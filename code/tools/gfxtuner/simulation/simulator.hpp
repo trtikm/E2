@@ -17,6 +17,7 @@
 #   include <angeo/collision_scene.hpp>
 #   include <angeo/rigid_body_simulator.hpp>
 #   include <utility/std_pair_hash.hpp>
+#   include <boost/property_tree/ptree.hpp>
 #   include <vector>
 #   include <unordered_map>
 #   include <unordered_set>
@@ -129,6 +130,9 @@ struct simulator : public qtgl::real_time_simulator
     void  erase_rigid_body_from_scene_node(
             scn::scene_node_name const&  scene_node_name
             );
+
+    void  load_rigid_body(boost::property_tree::ptree const&  data, scn::scene_node_name const&  scene_node_name);
+    void  save_rigid_body(angeo::rigid_body_id const  rb_id, boost::property_tree::ptree&  data);
 
     void  clear_scene();
 

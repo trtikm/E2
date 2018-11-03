@@ -1288,6 +1288,43 @@ void  simulator::erase_rigid_body_from_scene_node(
 }
 
 
+void  simulator::load_rigid_body(
+        boost::property_tree::ptree const&  data,
+        scn::scene_node_name const&  scene_node_name
+        )
+{
+    auto const  load_vector = [&data](std::string const&  key) -> vector3 {
+        return vector3(data.get<float_32_bit>(key + ".x"),
+                       data.get<float_32_bit>(key + ".y"),
+                       data.get<float_32_bit>(key + ".z"));
+    };
+
+    insert_rigid_body_to_scene_node(
+            load_vector("linear_velocity"),
+            load_vector("angular_velocity"),
+            load_vector("external_linear_acceleration"),
+            load_vector("external_angular_acceleration"),
+            scene_node_name
+            );
+}
+
+void  simulator::save_rigid_body(angeo::rigid_body_id const  rb_id, boost::property_tree::ptree&  data)
+{
+    auto const  save_vector = [&data](std::string const&  key, vector3 const&  u) -> void {
+        data.put(key + ".x", u(0));
+        data.put(key + ".y", u(1));
+        data.put(key + ".z", u(2));
+    };
+
+    save_vector("linear_velocity", m_rigid_body_simulator.get_linear_velocity(rb_id));
+    save_vector("angular_velocity", m_rigid_body_simulator.get_angular_velocity(rb_id));
+    save_vector("external_linear_acceleration",
+                m_rigid_body_simulator.get_inverted_mass(rb_id) * m_rigid_body_simulator.get_external_force(rb_id));
+    save_vector("external_angular_acceleration",
+                m_rigid_body_simulator.get_inverted_mass(rb_id) * m_rigid_body_simulator.get_external_torque(rb_id));
+}
+
+
 void  simulator::clear_scene()
 {
     m_scene_selection.clear();

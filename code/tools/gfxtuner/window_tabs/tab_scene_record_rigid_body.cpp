@@ -12,6 +12,7 @@
 #include <utility/canonical_path.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
+#include <memory>
 #include <QFileDialog>
 #include <QDialog>
 #include <QHBoxLayout>
@@ -304,30 +305,30 @@ void  register_record_handler_for_insert_scene_record(
                         w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one rigid body.", 10000);
                         return{ "",{} };
                     }
-                    detail::rigid_body_props_dialog::rigid_body_props  rb_props {
-                        { 0.0f, 0.0f, 0.0f },
-                        { 0.0f, 0.0f, 0.0f },
-
-                        { 0.0f, 0.0f, -9.81f },
-                        { 0.0f, 0.0f, 0.0f },
-                    };
-                    detail::rigid_body_props_dialog  dlg(w->wnd(), &rb_props);
+                    std::shared_ptr<detail::rigid_body_props_dialog::rigid_body_props>  rb_props =
+                            std::make_shared<detail::rigid_body_props_dialog::rigid_body_props>();
+                    rb_props->m_linear_velocity = { 0.0f, 0.0f, 0.0f };
+                    rb_props->m_angular_velocity ={ 0.0f, 0.0f, 0.0f };
+                    rb_props->m_external_linear_acceleration = { 0.0f, 0.0f, -9.81f };
+                    rb_props->m_external_angular_acceleration ={ 0.0f, 0.0f, 0.0f };
+                    detail::rigid_body_props_dialog  dlg(w->wnd(), rb_props.get());
                     dlg.exec();
                     if (!dlg.ok())
                         return{ "",{} };
-                    w->wnd()->print_status_message("ERROR: Insertion of rigid body is not implemented yet.", 10000);
-                    return{ "",{} };
-                    //return {
-                    //    scn::get_rigid_body_record_name(),
-                    //    [w](scn::scene_record_id const&  record_id) -> void {
-                    //            w->wnd()->glwindow().call_now(
-                    //                    &simulator::insert_rigid_body_to_scene_node,
-                    //                    //TODO!
-                    //                    record_id.get_node_name()
-                    //                    );
-                    //            w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, pathname, false);
-                    //        }
-                    //    };
+                    return {
+                        scn::get_rigid_body_record_name(),
+                        [w, rb_props](scn::scene_record_id const&  record_id) -> void {
+                                w->wnd()->glwindow().call_now(
+                                        &simulator::insert_rigid_body_to_scene_node,
+                                        rb_props->m_linear_velocity,
+                                        rb_props->m_angular_velocity,
+                                        rb_props->m_external_linear_acceleration,
+                                        rb_props->m_external_angular_acceleration,
+                                        record_id.get_node_name()
+                                        );
+                                //w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, pathname, false);
+                            }
+                        };
                 }
             });
 }
@@ -365,24 +366,22 @@ void  register_record_handler_for_load_scene_record(
                 load_record_handlers
         )
 {
-    //load_record_handlers.insert({
-    //        scn::get_rigid_body_folder_name(),
-    //        [](widgets* const  w, scn::scene_record_id const&  id, boost::property_tree::ptree const&  data) -> void {
-    //                boost::filesystem::path const  pathname = data.get<std::string>("pathname");
-    //                w->wnd()->glwindow().call_now(
-    //                        &simulator::insert_batch_to_scene_node,
-    //                        id.get_record_name(),
-    //                        pathname,
-    //                        id.get_node_name()
-    //                        );
-    //                insert_record_to_tree_widget(
-    //                        w->scene_tree(),
-    //                        id,
-    //                        w->get_record_icon(scn::get_rigid_body_folder_name()),
-    //                        w->get_folder_icon()
-    //                        );
-    //            }
-    //        });
+    load_record_handlers.insert({
+            scn::get_rigid_body_folder_name(),
+            [](widgets* const  w, scn::scene_record_id const&  id, boost::property_tree::ptree const&  data) -> void {
+                    w->wnd()->glwindow().call_now(
+                            &simulator::load_rigid_body,
+                            std::cref(data),
+                            id.get_node_name()
+                            );
+                    insert_record_to_tree_widget(
+                            w->scene_tree(),
+                            id,
+                            w->get_record_icon(scn::get_rigid_body_folder_name()),
+                            w->get_folder_icon()
+                            );
+                }
+            });
 }
 
 
@@ -394,6 +393,19 @@ void  register_record_handler_for_save_scene_record(
                 save_record_handlers
         )
 {
+    save_record_handlers.insert({
+            scn::get_rigid_body_folder_name(),
+            []( widgets* const  w,
+                scn::scene_node_ptr const  node_ptr,
+                scn::scene_node_record_id const&  id,
+                boost::property_tree::ptree&  data) -> void {
+                    w->wnd()->glwindow().call_now(
+                            &simulator::save_rigid_body,
+                            scn::get_rigid_body(*node_ptr)->id(),
+                            std::ref(data)
+                            );
+                }
+            });
 }
 
 
