@@ -10,32 +10,58 @@ namespace angeo {
 
 
 float_32_bit  get_material_density(COLLISION_MATERIAL_TYPE const  material);
-
 inline float_32_bit  compute_mass(float_32_bit const  density, float_32_bit const  volume) { return density * volume; }
+
+
+inline float_32_bit  compute_volume_of_sphere(float_32_bit const  radius) { return 4.0f * (PI() * radius * radius * radius) / 3.0f; }
+
+inline float_32_bit  compute_volume_of_capsule(
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line
+        )
+{
+    return compute_volume_of_sphere(thickness_from_central_line) +
+           PI() * thickness_from_central_line * thickness_from_central_line * (2.0f * half_distance_between_end_points);
+}
 
 
 struct  mass_and_inertia_tensor_builder
 {
     void  insert_capsule(
-            vector3 const&  end_point_1_in_world_space,
-            vector3 const&  end_point_2_in_world_space,
-            COLLISION_MATERIAL_TYPE const  material
+            float_32_bit const  half_distance_between_end_points,
+            float_32_bit const  thickness_from_central_line,
+            matrix44 const&  from_base_matrix,
+            COLLISION_MATERIAL_TYPE const  material,
+            float_32_bit const  density_multiplier = 1.0f
             );
 
     void  insert_sphere(
             vector3 const&  center_in_world_space,
             float_32_bit const  radius,
-            COLLISION_MATERIAL_TYPE const  material
+            COLLISION_MATERIAL_TYPE const  material,
+            float_32_bit const  density_multiplier = 1.0f
             );
 
-    void  run(float_32_bit&  inverted_mass, matrix33&  inverted_inertia_tensor);
+    /// All three parameters are outputs. The inertia tensor is computed in coodrinate system
+    /// with center at the returned 'center_of_mass' and axis vectors 'vector3_unit_x/y/z'.
+    void  run(float_32_bit&  inverted_mass, matrix33&  inverted_inertia_tensor, vector3&  center_of_mass);
 
 private:
 
+    float_32_bit  compute_total_mass_and_center_of_mass(vector3&  center_of_mass);
+
+    struct  capsule_info {
+        float_32_bit  half_distance_between_end_points;
+        float_32_bit  thickness_from_central_line;
+        matrix44  from_base_matrix;
+        float_32_bit  mass;
+    };
+    std::vector<capsule_info>  m_capsules;
+
     struct  sphere_info {
         vector3  center;
-        float_32_bit radius;
-        COLLISION_MATERIAL_TYPE  material;
+        float_32_bit  radius;
+        float_32_bit  mass;
     };
     std::vector<sphere_info>  m_spheres;
 };

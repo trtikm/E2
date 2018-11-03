@@ -324,10 +324,11 @@ void  simulator::validate_simulation_state()
             INVARIANT(rb_ptr != nullptr);
 
             std::vector<angeo::collision_object_id>  coids;
-            collect_colliders_in_subtree(node_ptr, coids);
+            std::vector<scn::scene_node_ptr>  coid_nodes;
+            collect_colliders_in_subtree(node_ptr, coids, &coid_nodes);
 
-            for (angeo::collision_object_id coid : coids)
-                m_collision_scene.on_position_changed(coid, node_ptr->get_world_matrix());
+            for (std::size_t  i = 0UL; i != coids.size(); ++i)
+                m_collision_scene.on_position_changed(coids.at(i), coid_nodes.at(i)->get_world_matrix());
             
             if (node_name_and_collider_change.second)
             {
@@ -357,29 +358,55 @@ void  simulator::validate_simulation_state()
                             m_collision_scene.disable_colliding(coids.at(i), coids.at(j));
 
                     angeo::mass_and_inertia_tensor_builder  builder;
-                    for (angeo::collision_object_id coid : coids)
+                    for (std::size_t i = 0UL; i != coids.size(); ++i)
+                    {
+                        angeo::collision_object_id const  coid = coids.at(i);
+                        scn::scene_node_ptr const  coid_node_ptr = coid_nodes.at(i);
                         switch (angeo::get_shape_type(coid))
                         {
                         case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
-                            {
-                                vector3  A, B;
-                                m_collision_scene.get_capsule_end_points_in_world_space(coid, A, B);
-                                builder.insert_capsule(A, B, m_collision_scene.get_material(coid));
-                            }
+                            builder.insert_capsule(
+                                    m_collision_scene.get_capsule_half_distance_between_end_points(coid),
+                                    m_collision_scene.get_capsule_thickness_from_central_line(coid),
+                                    coid_node_ptr->get_world_matrix(),
+                                    m_collision_scene.get_material(coid),
+                                    1.0f // TODO!
+                                    );
                             break;
                         case angeo::COLLISION_SHAPE_TYPE::SPHERE:
-                            {
-                                vector3  S;
-                                float_32_bit  r;
-                                m_collision_scene.get_sphere_center_and_radius_in_world_space(coid, S, r);
-                                builder.insert_sphere(S, r, m_collision_scene.get_material(coid));
-                            }
+                            builder.insert_sphere(
+                                    translation_vector(coid_node_ptr->get_world_matrix()),
+                                    m_collision_scene.get_sphere_radius(coid),
+                                    m_collision_scene.get_material(coid),
+                                    1.0f // TODO!
+                                    );
                             break;
                         default:
                             NOT_IMPLEMENTED_YET();
                             break;
                         }
-                    builder.run(inverted_mass, inverted_inertia_tensor_in_local_space);
+                    }
+                    vector3  center_of_mass_in_world_space;
+                    builder.run(inverted_mass, inverted_inertia_tensor_in_local_space, center_of_mass_in_world_space);
+
+                    vector3 const  origin_shift_in_world_space =
+                                center_of_mass_in_world_space - translation_vector(node_ptr->get_world_matrix());
+                    vector3 const  origin_shift_in_local_space =
+                                transform_vector(origin_shift_in_world_space, inverse44(node_ptr->get_world_matrix()));
+                    if (node_ptr->has_parent())
+                    {
+                        vector3 const  origin_shift_in_parent_space =
+                                transform_vector(origin_shift_in_world_space,
+                                                 inverse44(node_ptr->get_parent()->get_world_matrix()));
+                        node_ptr->translate(origin_shift_in_parent_space);
+                    }
+                    else
+                        node_ptr->translate(origin_shift_in_world_space);
+                    node_ptr->foreach_child(
+                            [&origin_shift_in_local_space](scn::scene_node_ptr const  child_node_ptr) -> void {
+                                    child_node_ptr->translate(-origin_shift_in_local_space);
+                                }
+                            );
                 }
 
                 rb_ptr->set_id(
@@ -1073,13 +1100,16 @@ void  simulator::foreach_rigid_body_in_subtree(
 
 void  simulator::collect_colliders_in_subtree(
             scn::scene_node_ptr const  node_ptr,
-            std::vector<angeo::collision_object_id>&  output
+            std::vector<angeo::collision_object_id>&  output,
+            std::vector<scn::scene_node_ptr>* const  output_nodes
             )
 {
     foreach_collider_in_subtree(
             node_ptr,
-            [&output](scn::collider& collider, scn::scene_node_ptr) {
+            [&output, output_nodes](scn::collider& collider, scn::scene_node_ptr const  collider_node_ptr) {
                     output.push_back(collider.id());
+                    if (output_nodes != nullptr)
+                        output_nodes->push_back(collider_node_ptr);
                 }
             );
 }

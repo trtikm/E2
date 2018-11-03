@@ -217,7 +217,8 @@ private:
 
     void  collect_colliders_in_subtree(
                 scn::scene_node_ptr const  node_ptr,
-                std::vector<angeo::collision_object_id>&  output
+                std::vector<angeo::collision_object_id>&  output,
+                std::vector<scn::scene_node_ptr>* const  output_nodes = nullptr
                 );
     void  update_collider_locations_in_subtree(scn::scene_node_ptr  node_ptr);
     void  update_collider_locations_in_subtree(scn::scene_node_name const&  node_name)

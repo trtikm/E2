@@ -146,6 +146,8 @@ struct scene_node final
 
     scene_node_name const&  get_name() const { return m_name; }
 
+    void  foreach_child(std::function<void(scene_node_ptr)> const&  action);
+
     children_map const&  get_children() const { return m_children; }
     children_map::const_iterator  find_child(scene_node_name const&  name) const { return get_children().find(name); }
     bool  has_parent() const { return !m_parent.expired(); }

@@ -52,6 +52,14 @@ scene_node::scene_node(
     ASSUMPTION(!m_name.empty());
 }
 
+
+void  scene_node::foreach_child(std::function<void(scene_node_ptr)> const&  action)
+{
+    for (auto name_child : get_children())
+        action(name_child.second);
+}
+
+
 matrix44 const&  scene_node::get_world_matrix() const
 {
     TMPROF_BLOCK();

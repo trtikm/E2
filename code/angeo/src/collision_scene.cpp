@@ -652,29 +652,25 @@ vector3  collision_scene::get_object_aabb_max_corner(collision_object_id const  
     }
 }
 
-
-void  collision_scene::get_capsule_end_points_in_world_space(
-        collision_object_id const  coid,
-        vector3&  end_point_1,
-        vector3&  end_point_2
-        ) const
+float_32_bit  collision_scene::get_capsule_half_distance_between_end_points(collision_object_id const  coid) const
 {
     ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::CAPSULE);
     capsule_geometry const&  geometry = m_capsules_geometry.at(get_instance_index(coid));
-    end_point_1 = geometry.end_point_1_in_world_space;
-    end_point_2 = geometry.end_point_2_in_world_space;
+    return geometry.half_distance_between_end_points;
 }
 
-void  collision_scene::get_sphere_center_and_radius_in_world_space(
-        collision_object_id const  coid,
-        vector3&  center,
-        float_32_bit&  radius
-        ) const
+float_32_bit  collision_scene::get_capsule_thickness_from_central_line(collision_object_id const  coid) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::CAPSULE);
+    capsule_geometry const&  geometry = m_capsules_geometry.at(get_instance_index(coid));
+    return geometry.thickness_from_central_line;
+}
+
+float_32_bit  collision_scene::get_sphere_radius(collision_object_id const  coid) const
 {
     ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::SPHERE);
     sphere_geometry const&  geometry = m_spheres_geometry.at(get_instance_index(coid));
-    center = geometry.center_in_world_space;
-    radius = geometry.radius;
+    return geometry.radius;
 }
 
 

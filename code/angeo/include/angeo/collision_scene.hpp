@@ -153,8 +153,10 @@ struct  collision_scene
 
     bool  is_dynamic(collision_object_id const  coid) const { return m_dynamic_object_ids.count(coid) != 0UL; }
 
-    void  get_capsule_end_points_in_world_space(collision_object_id const  coid, vector3&  end_point_1, vector3&  end_point_2) const;
-    void  get_sphere_center_and_radius_in_world_space(collision_object_id const  coid, vector3&  center, float_32_bit&  radius) const;
+    float_32_bit  get_capsule_half_distance_between_end_points(collision_object_id const  coid) const;
+    float_32_bit  get_capsule_thickness_from_central_line(collision_object_id const  coid) const;
+
+    float_32_bit  get_sphere_radius(collision_object_id const  coid) const;
 
     COLLISION_MATERIAL_TYPE  get_material(collision_object_id const  coid) const;
 
