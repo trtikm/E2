@@ -96,6 +96,7 @@ struct simulator : public qtgl::real_time_simulator
     void  insert_collision_sphere_to_scene_node(
             float_32_bit const  radius,
             angeo::COLLISION_MATERIAL_TYPE const  material,
+            float_32_bit const  density_multiplier,
             bool const  as_dynamic,
             scn::scene_node_name const&  scene_node_name
             );
@@ -104,6 +105,7 @@ struct simulator : public qtgl::real_time_simulator
             float_32_bit const  half_distance_between_end_points,
             float_32_bit const  thickness_from_central_line,
             angeo::COLLISION_MATERIAL_TYPE const  material,
+            float_32_bit const  density_multiplier,
             bool const  as_dynamic,
             scn::scene_node_name const&  scene_node_name
             );
@@ -130,6 +132,9 @@ struct simulator : public qtgl::real_time_simulator
     void  erase_rigid_body_from_scene_node(
             scn::scene_node_name const&  scene_node_name
             );
+
+    void  load_collider(boost::property_tree::ptree const&  data, scn::scene_node_name const&  scene_node_name);
+    void  save_collider(scn::collider const&  collider, boost::property_tree::ptree&  data);
 
     void  load_rigid_body(boost::property_tree::ptree const&  data, scn::scene_node_name const&  scene_node_name);
     void  save_rigid_body(angeo::rigid_body_id const  rb_id, boost::property_tree::ptree&  data);

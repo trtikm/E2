@@ -39,14 +39,23 @@ inline bool  has_collider(scene_node const&  node)
     return get_collider(node) != nullptr;
 }
 
-inline void  insert_collider(scene_node&  n, angeo::collision_object_id const  collider_id)
+inline void  insert_collider(
+        scene_node&  n,
+        angeo::collision_object_id const  collider_id,
+        float_32_bit const  density_multiplier = 1.0f
+        )
 {
-    insert_record<collider>(n, make_collider_node_record_id(), collider(collider_id));
+    insert_record<collider>(n, make_collider_node_record_id(), collider(collider_id, density_multiplier));
 }
 
-inline void  insert_collider(scene&  s, scene_node_name const&  node_name, angeo::collision_object_id const  collider_id)
+inline void  insert_collider(
+        scene&  s,
+        scene_node_name const&  node_name,
+        angeo::collision_object_id const  collider_id,
+        float_32_bit const  density_multiplier = 1.0f
+        )
 {
-    insert_record<collider>(s, make_collider_record_id(node_name), collider(collider_id));
+    insert_record<collider>(s, make_collider_record_id(node_name), collider(collider_id, density_multiplier));
 }
 
 inline void  erase_collider(scene_node&  n)

@@ -2,6 +2,7 @@
 #   define ANGEO_COLLISION_MATERIAL_HPP_INCLUDED
 
 #   include <utility/basic_numeric_types.hpp>
+#   include <string>
 
 namespace angeo {
 
@@ -27,6 +28,7 @@ constexpr natural_8_bit  get_num_collision_materials() { return 1U + (natural_8_
 inline natural_8_bit  as_number(COLLISION_MATERIAL_TYPE const  material) { return (natural_8_bit)material; }
 COLLISION_MATERIAL_TYPE  as_material(natural_8_bit  const  material);
 char const*  to_string(COLLISION_MATERIAL_TYPE const  material);
+COLLISION_MATERIAL_TYPE  read_collison_material_from_string(std::string const&  name);
 
 
 }

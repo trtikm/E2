@@ -374,6 +374,7 @@ void  register_record_handler_for_insert_scene_record(
                                             props->m_capsule_half_distance_between_end_points,
                                             props->m_capsule_thickness_from_central_line,
                                             props->m_material,
+                                            props->m_density_multiplier,
                                             props->m_as_dynamic,
                                             record_id.get_node_name()
                                             );
@@ -385,6 +386,7 @@ void  register_record_handler_for_insert_scene_record(
                                             &simulator::insert_collision_sphere_to_scene_node,
                                             props->m_sphere_radius,
                                             props->m_material,
+                                            props->m_density_multiplier,
                                             props->m_as_dynamic,
                                             record_id.get_node_name()
                                             );
@@ -437,24 +439,22 @@ void  register_record_handler_for_load_scene_record(
                 load_record_handlers
         )
 {
-    //load_record_handlers.insert({
-    //        scn::get_collider_folder_name(),
-    //        [](widgets* const  w, scn::scene_record_id const&  id, boost::property_tree::ptree const&  data) -> void {
-    //                boost::filesystem::path const  pathname = data.get<std::string>("pathname");
-    //                w->wnd()->glwindow().call_now(
-    //                        &simulator::insert_batch_to_scene_node,
-    //                        id.get_record_name(),
-    //                        pathname,
-    //                        id.get_node_name()
-    //                        );
-    //                insert_record_to_tree_widget(
-    //                        w->scene_tree(),
-    //                        id,
-    //                        w->get_record_icon(scn::get_collider_folder_name()),
-    //                        w->get_folder_icon()
-    //                        );
-    //            }
-    //        });
+    load_record_handlers.insert({
+            scn::get_collider_folder_name(),
+            [](widgets* const  w, scn::scene_record_id const&  id, boost::property_tree::ptree const&  data) -> void {
+                    w->wnd()->glwindow().call_now(
+                            &simulator::load_collider,
+                            std::cref(data),
+                            id.get_node_name()
+                            );
+                    insert_record_to_tree_widget(
+                            w->scene_tree(),
+                            id,
+                            w->get_record_icon(scn::get_collider_folder_name()),
+                            w->get_folder_icon()
+                            );
+                }
+            });
 }
 
 
@@ -466,6 +466,19 @@ void  register_record_handler_for_save_scene_record(
                 save_record_handlers
         )
 {
+    save_record_handlers.insert({
+            scn::get_collider_folder_name(),
+            []( widgets* const  w,
+                scn::scene_node_ptr const  node_ptr,
+                scn::scene_node_record_id const&  id,
+                boost::property_tree::ptree&  data) -> void {
+                    w->wnd()->glwindow().call_now(
+                            &simulator::save_collider,
+                            *scn::get_collider(*node_ptr),
+                            std::ref(data)
+                            );
+                }
+            });
 }
 
 

@@ -1157,6 +1157,7 @@ void  simulator::erase_batch_from_scene_node(
 void  simulator::insert_collision_sphere_to_scene_node(
         float_32_bit const  radius,
         angeo::COLLISION_MATERIAL_TYPE const  material,
+        float_32_bit const  density_multiplier,
         bool const  as_dynamic,
         scn::scene_node_name const&  scene_node_name
         )
@@ -1166,7 +1167,7 @@ void  simulator::insert_collision_sphere_to_scene_node(
     scn::scene_node_ptr const  node_ptr = get_scene_node(scene_node_name);
     angeo::collision_object_id const  collider_id =
             m_collision_scene.insert_sphere(radius, node_ptr->get_world_matrix(), material, as_dynamic);
-    scn::insert_collider(*node_ptr, collider_id);
+    scn::insert_collider(*node_ptr, collider_id, density_multiplier);
     invalidate_rigid_body_controling_node(node_ptr, true);
 }
 
@@ -1174,6 +1175,7 @@ void  simulator::insert_collision_capsule_to_scene_node(
         float_32_bit const  half_distance_between_end_points,
         float_32_bit const  thickness_from_central_line,
         angeo::COLLISION_MATERIAL_TYPE const  material,
+        float_32_bit const  density_multiplier,
         bool const  as_dynamic,
         scn::scene_node_name const&  scene_node_name
         )
@@ -1189,7 +1191,7 @@ void  simulator::insert_collision_capsule_to_scene_node(
                     material,
                     as_dynamic
                     );
-    scn::insert_collider(*node_ptr, collider_id);
+    scn::insert_collider(*node_ptr, collider_id, density_multiplier);
     invalidate_rigid_body_controling_node(node_ptr, true);
 
 }
@@ -1204,6 +1206,7 @@ void  simulator::insert_collision_trianle_mesh_to_scene_node(
     TMPROF_BLOCK();
 
     // TODO!
+    NOT_IMPLEMENTED_YET();
 }
 
 void  simulator::erase_collision_object_from_scene_node(
@@ -1285,6 +1288,56 @@ void  simulator::erase_rigid_body_from_scene_node(
         m_scene_selection.erase_record(scn::make_rigid_body_record_id(scene_node_name));
         invalidate_rigid_body_controling_node(node_ptr, true);
     }
+}
+
+
+void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::scene_node_name const&  scene_node_name)
+{
+    std::string const  shape_type = data.get<std::string>("shape_type");
+    if (shape_type == "capsule")
+        insert_collision_capsule_to_scene_node(
+                data.get<float_32_bit>("half_distance_between_end_points"),
+                data.get<float_32_bit>("thickness_from_central_line"),
+                angeo::read_collison_material_from_string(data.get<std::string>("material")),
+                data.get<float_32_bit>("density_multiplier"),
+                data.get<bool>("is_dynamic"),
+                scene_node_name
+                );
+    else if (shape_type == "sphere")
+        insert_collision_sphere_to_scene_node(
+                data.get<float_32_bit>("radius"),
+                angeo::read_collison_material_from_string(data.get<std::string>("material")),
+                data.get<float_32_bit>("density_multiplier"),
+                data.get<bool>("is_dynamic"),
+                scene_node_name
+                );
+    else
+    {
+        NOT_IMPLEMENTED_YET();
+    }
+}
+
+void  simulator::save_collider(scn::collider const&  collider, boost::property_tree::ptree&  data)
+{
+    switch (angeo::get_shape_type(collider.id()))
+    {
+    case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+        data.put("shape_type", "capsule");
+        data.put("half_distance_between_end_points", m_collision_scene.get_capsule_half_distance_between_end_points(collider.id()));
+        data.put("thickness_from_central_line", m_collision_scene.get_capsule_thickness_from_central_line(collider.id()));
+        break;
+    case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+        data.put("shape_type", "sphere");
+        data.put("radius", m_collision_scene.get_sphere_radius(collider.id()));
+        break;
+    default:
+        NOT_IMPLEMENTED_YET();
+        break;
+    }
+
+    data.put("material", to_string(m_collision_scene.get_material(collider.id())));
+    data.put("is_dynamic", m_collision_scene.is_dynamic(collider.id()));
+    data.put("density_multiplier", collider.get_density_multiplier());
 }
 
 
