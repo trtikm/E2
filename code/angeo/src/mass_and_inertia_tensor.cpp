@@ -44,9 +44,9 @@ static  void  foreach_particle_in_bbox(
         float_32_bit const  num_cells_along_longest_edge =
                 std::pow((float)num_of_particles / (cells_count_ratios(0) * cells_count_ratios(1) * cells_count_ratios(2)),
                          1.0f / 3.0f);
-        num_cells_x = std::max(1U, (natural_32_bit)std::ceil(num_cells_along_longest_edge * cells_count_ratios(0)));
-        num_cells_y = std::max(1U, (natural_32_bit)std::ceil(num_cells_along_longest_edge * cells_count_ratios(1)));
-        num_cells_z = std::max(1U, (natural_32_bit)std::ceil(num_cells_along_longest_edge * cells_count_ratios(2)));
+        num_cells_x = std::max(1U, (natural_32_bit)std::round(num_cells_along_longest_edge * cells_count_ratios(0)));
+        num_cells_y = std::max(1U, (natural_32_bit)std::round(num_cells_along_longest_edge * cells_count_ratios(1)));
+        num_cells_z = std::max(1U, (natural_32_bit)std::round(num_cells_along_longest_edge * cells_count_ratios(2)));
     }
 
     vector3 const  shift{ 
