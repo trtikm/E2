@@ -22,6 +22,7 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QLineEdit>
+#include <QGroupBox>
 
 namespace window_tabs { namespace tab_scene { namespace record_collider { namespace detail {
 
@@ -34,6 +35,7 @@ struct  collider_props_dialog : public QDialog
 
         bool  m_as_dynamic;
         angeo::COLLISION_MATERIAL_TYPE  m_material;
+        float_32_bit  m_density_multiplier;
 
         // DATA OF CAPSULE
 
@@ -66,9 +68,10 @@ private:
 
     QCheckBox*  m_widget_as_dynamic;
     QComboBox*  m_widget_material;
+    QLineEdit*  m_density_multiplier;
 
     QLineEdit*  m_widget_capsule_half_distance_between_end_points;
-    QLineEdit*  m_capsule_thickness_from_central_line;
+    QLineEdit*  m_widget_capsule_thickness_from_central_line;
 
     QLineEdit*  m_widget_sphere_radius;
 };
@@ -82,41 +85,116 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, collide
 
     , m_widget_as_dynamic(new QCheckBox("Movable during simulation"))
     , m_widget_material(new QComboBox)
+    , m_density_multiplier(new QLineEdit)
+
+    , m_widget_capsule_half_distance_between_end_points(nullptr)
+    , m_widget_capsule_thickness_from_central_line(nullptr)
+
+    , m_widget_sphere_radius(nullptr)
 {
     ASSUMPTION(m_props != nullptr);
 
     QVBoxLayout* const dlg_layout = new QVBoxLayout;
     {
-        QVBoxLayout* const collider_props_layout = new QVBoxLayout;
+        QWidget* const collider_shape_group = new QGroupBox("Shape properties");
         {
-            if (m_props->m_shape_type == "capsule")
+            QVBoxLayout* const collider_shape_layout = new QVBoxLayout;
             {
-            }
-            else if (m_props->m_shape_type == "sphere")
-            {
-            }
-            else if (m_props->m_shape_type == "triangle mesh")
-            {
-            }
-            else
-            {
-                UNREACHABLE();
-            }
+                if (m_props->m_shape_type == "capsule")
+                {
+                    QHBoxLayout* const half_distance_between_end_points_layout = new QHBoxLayout;
+                    {
+                        half_distance_between_end_points_layout->addWidget(new QLabel("Excentricity: "));
+                        m_widget_capsule_half_distance_between_end_points = new QLineEdit();
+                        m_widget_capsule_half_distance_between_end_points->setText(
+                                QString::number(m_props->m_capsule_half_distance_between_end_points)
+                                );
+                        m_widget_capsule_half_distance_between_end_points->setToolTip(
+                                "A distance in meters from the genometrical center of the capsule\n"
+                                "to the center of any of the two hemispheres."
+                                );
+                        half_distance_between_end_points_layout->addWidget(m_widget_capsule_half_distance_between_end_points);
 
-            collider_props_layout->addStretch(1);
+                        half_distance_between_end_points_layout->addStretch(1);
+                    }
+                    collider_shape_layout->addLayout(half_distance_between_end_points_layout);
+
+                    QHBoxLayout* const thickness_from_central_line_layout = new QHBoxLayout;
+                    {
+                        thickness_from_central_line_layout->addWidget(new QLabel("Radius: "));
+                        m_widget_capsule_thickness_from_central_line = new QLineEdit();
+                        m_widget_capsule_thickness_from_central_line->setText(
+                                QString::number(m_props->m_capsule_thickness_from_central_line)
+                                );
+                        m_widget_capsule_thickness_from_central_line->setToolTip(
+                                "Defines a radius in meters of both hemispheres. You can also think\n"
+                                "of this number as the thickness of the capsule."
+                                );
+                        thickness_from_central_line_layout->addWidget(m_widget_capsule_thickness_from_central_line);
+
+                        thickness_from_central_line_layout->addStretch(1);
+                    }
+                    collider_shape_layout->addLayout(thickness_from_central_line_layout);
+                }
+                else if (m_props->m_shape_type == "sphere")
+                {
+                    QHBoxLayout* const radius_layout = new QHBoxLayout;
+                    {
+                        radius_layout->addWidget(new QLabel("Radius: "));
+                        m_widget_sphere_radius  = new QLineEdit();
+                        m_widget_sphere_radius->setText(QString::number(m_props->m_sphere_radius));
+                        m_widget_sphere_radius->setToolTip("The radius of the sphere in meters.");
+                        radius_layout->addWidget(m_widget_sphere_radius);
+                        radius_layout->addStretch(1);
+                    }
+                    collider_shape_layout->addLayout(radius_layout);
+                }
+                else if (m_props->m_shape_type == "triangle mesh")
+                {
+                    // TODO!
+                }
+                else
+                {
+                    UNREACHABLE();
+                }
+
+                collider_shape_layout->addStretch(1);
+            }
+            collider_shape_group->setLayout(collider_shape_layout);
         }
-        dlg_layout->addLayout(collider_props_layout);
+        dlg_layout->addWidget(collider_shape_group);
 
-        QHBoxLayout* const common_props_layout = new QHBoxLayout;
+        QVBoxLayout* const common_props_layout = new QVBoxLayout;
         {
-            common_props_layout->addWidget(m_widget_as_dynamic);
+            QWidget* const material_group = new QGroupBox("Material (with density multiplier)");
+            {
+                QHBoxLayout* const material_layout = new QHBoxLayout;
+                {
+                    material_layout->addWidget(m_widget_material);
+                    m_widget_material->setEditable(false);
+                    m_widget_material->setToolTip(
+                            "Defines a density of material in the volume of the constructed collider\n"
+                            "and also participates in computation of friction coefficients (both static\n"
+                            "and dynamic) at contact points with other colliders."
+                            );
+                    for (natural_8_bit  mat_id = 0U; mat_id != angeo::get_num_collision_materials(); ++mat_id)
+                        m_widget_material->insertItem(mat_id, angeo::to_string(angeo::as_material(mat_id)));
+                    m_widget_material->setCurrentIndex(angeo::as_number(m_props->m_material));
 
-            common_props_layout->addWidget(new QLabel("      Material:"));
-            common_props_layout->addWidget(m_widget_material);
-            m_widget_material->setEditable(false);
-            for (natural_8_bit  mat_id = 0U; mat_id != angeo::get_num_collision_materials(); ++mat_id)
-                m_widget_material->insertItem(mat_id, angeo::to_string(angeo::as_material(mat_id)));
-            m_widget_material->setCurrentIndex(angeo::as_number(m_props->m_material));
+                    material_layout->addWidget(m_density_multiplier);
+                    m_density_multiplier->setText(QString::number(m_props->m_density_multiplier));
+                    m_density_multiplier->setToolTip(
+                            "Allows you to diverge from real densities from the predefined materials.\n"
+                            "Namely, the density of a material you choose is multiplied by the number\n"
+                            "inserted here. Only positive values of the multiplier make sense."
+                            );
+                }
+                material_group->setLayout(material_layout);
+            }
+            common_props_layout->addWidget(material_group);
+
+            common_props_layout->addWidget(m_widget_as_dynamic);
+            m_widget_as_dynamic->setChecked(m_props->m_as_dynamic);
 
             common_props_layout->addStretch(1);
         }
@@ -149,32 +227,41 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, collide
             buttons_layout->addStretch(1);
         }
         dlg_layout->addLayout(buttons_layout);
+        //dlg_layout->setAlignment(buttons_layout, Qt::Alignment(Qt::AlignmentFlag::AlignRight));
     }
     this->setLayout(dlg_layout);
-    this->setWindowTitle((msgstream() << "Collider '" << m_props->m_shape_type << "' properties.").get().c_str());
+    this->setWindowTitle((msgstream() << "Collider: " << m_props->m_shape_type).get().c_str());
     //this->resize(300,100);
 }
 
 void  collider_props_dialog::accept()
 {
-    m_ok = true;
-
-    m_props->m_as_dynamic = m_widget_as_dynamic->isChecked();
-    m_props->m_material = (angeo::COLLISION_MATERIAL_TYPE)m_widget_material->currentIndex();
-
     if (m_props->m_shape_type == "capsule")
     {
+        m_props->m_capsule_half_distance_between_end_points =
+                std::atof(qtgl::to_string(m_widget_capsule_half_distance_between_end_points->text()).c_str());
+        m_props->m_capsule_thickness_from_central_line =
+                std::atof(qtgl::to_string(m_widget_capsule_thickness_from_central_line->text()).c_str());
     }
     else if (m_props->m_shape_type == "sphere")
     {
+        m_props->m_sphere_radius =
+            std::atof(qtgl::to_string(m_widget_sphere_radius->text()).c_str());
     }
     else if (m_props->m_shape_type == "triangle mesh")
     {
+        // TODO!
     }
     else
     {
         UNREACHABLE();
     }
+
+    m_props->m_as_dynamic = m_widget_as_dynamic->isChecked();
+    m_props->m_material = (angeo::COLLISION_MATERIAL_TYPE)m_widget_material->currentIndex();
+    m_props->m_density_multiplier = std::atof(qtgl::to_string(m_density_multiplier->text()).c_str());
+
+    m_ok = true;
 
     QDialog::accept();
 }
@@ -251,6 +338,7 @@ void  register_record_handler_for_insert_scene_record(
                     props.m_shape_type = shape_type;
                     props.m_as_dynamic = true;
                     props.m_material = angeo::COLLISION_MATERIAL_TYPE::WOOD;
+                    props.m_density_multiplier = 1.0f;
                     if (props.m_shape_type == "capsule")
                     {
                         props.m_capsule_half_distance_between_end_points = 0.05f;
@@ -262,6 +350,7 @@ void  register_record_handler_for_insert_scene_record(
                     }
                     else if (props.m_shape_type == "triangle mesh")
                     {
+                        // TODO!
                     }
                     else
                     {
