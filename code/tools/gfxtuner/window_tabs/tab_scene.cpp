@@ -1759,7 +1759,7 @@ QWidget*  make_scene_tab_content(widgets const&  w)
             }
             scene_tab_layout->addWidget(w.scene_tree());
 
-            QWidget* const selected_group = new QGroupBox("Properties of selection");
+            QWidget* const selected_group = new QGroupBox("Local coordinate system");
             {
                 QVBoxLayout* const selected_layout = new QVBoxLayout();
                 {
@@ -1832,7 +1832,7 @@ QWidget*  make_scene_tab_content(widgets const&  w)
             }
             scene_tab_layout->addWidget(selected_group);
 
-            scene_tab_layout->addStretch(1);
+            //scene_tab_layout->addStretch(1);
         }
         scene_tab->setLayout(scene_tab_layout);
     }
