@@ -1035,7 +1035,7 @@ void  simulator::erase_scene_node(scn::scene_node_name const&  name)
     if (scn::has_rigid_body(*node_ptr))
         erase_rigid_body_from_scene_node(name);
     if (scn::has_collider(*node_ptr))
-        erase_collision_object_from_scene_node(name);
+        erase_collision_object_from_scene_node(scn::make_collider_record_id(name, get_collider_record_name(*node_ptr)));
 
     m_scene_selection.erase_node(name);
     m_scene_selection.erase_records_of_node(name);
@@ -1167,15 +1167,15 @@ void  simulator::insert_collision_sphere_to_scene_node(
         angeo::COLLISION_MATERIAL_TYPE const  material,
         float_32_bit const  density_multiplier,
         bool const  as_dynamic,
-        scn::scene_node_name const&  scene_node_name
+        scn::scene_record_id const&  id
         )
 {
     TMPROF_BLOCK();
 
-    scn::scene_node_ptr const  node_ptr = get_scene_node(scene_node_name);
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_name());
     angeo::collision_object_id const  collider_id =
             m_collision_scene.insert_sphere(radius, node_ptr->get_world_matrix(), material, as_dynamic);
-    scn::insert_collider(*node_ptr, collider_id, density_multiplier);
+    scn::insert_collider(*node_ptr, id.get_record_name(), collider_id, density_multiplier);
     invalidate_rigid_body_controling_node(node_ptr, true);
 }
 
@@ -1185,12 +1185,12 @@ void  simulator::insert_collision_capsule_to_scene_node(
         angeo::COLLISION_MATERIAL_TYPE const  material,
         float_32_bit const  density_multiplier,
         bool const  as_dynamic,
-        scn::scene_node_name const&  scene_node_name
+        scn::scene_record_id const&  id
         )
 {
     TMPROF_BLOCK();
 
-    scn::scene_node_ptr const  node_ptr = get_scene_node(scene_node_name);
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_name());
     angeo::collision_object_id const  collider_id =
             m_collision_scene.insert_capsule(
                     half_distance_between_end_points,
@@ -1199,7 +1199,7 @@ void  simulator::insert_collision_capsule_to_scene_node(
                     material,
                     as_dynamic
                     );
-    scn::insert_collider(*node_ptr, collider_id, density_multiplier);
+    scn::insert_collider(*node_ptr, id.get_record_name(), collider_id, density_multiplier);
     invalidate_rigid_body_controling_node(node_ptr, true);
 
 }
@@ -1208,7 +1208,7 @@ void  simulator::insert_collision_trianle_mesh_to_scene_node(
         qtgl::buffer const  vertex_buffer,
         qtgl::buffer const  index_buffer,
         qtgl::buffer const  material_buffer,
-        scn::scene_node_name const&  scene_node_name
+        scn::scene_record_id const&  id
         )
 {
     TMPROF_BLOCK();
@@ -1218,16 +1218,16 @@ void  simulator::insert_collision_trianle_mesh_to_scene_node(
 }
 
 void  simulator::erase_collision_object_from_scene_node(
-        scn::scene_node_name const&  scene_node_name
+        scn::scene_record_id const&  id
         )
 {
     TMPROF_BLOCK();
 
-    auto const  node_ptr = get_scene_node(scene_node_name);
+    auto const  node_ptr = get_scene_node(id.get_node_name());
     if (auto const  collider_ptr = scn::get_collider(*node_ptr))
     {
         m_binding_of_collision_objects.erase(collider_ptr->id());
-        m_scene_selection.erase_record(scn::make_collider_record_id(scene_node_name));
+        m_scene_selection.erase_record(id);
         scn::erase_collider(*node_ptr);
 
         invalidate_rigid_body_controling_node(node_ptr, true);
@@ -1313,7 +1313,7 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
                 angeo::read_collison_material_from_string(data.get<std::string>("material")),
                 data.get<float_32_bit>("density_multiplier"),
                 data.get<bool>("is_dynamic"),
-                scene_node_name
+                scn::make_collider_record_id(scene_node_name, shape_type)
                 );
     else if (shape_type == "sphere")
         insert_collision_sphere_to_scene_node(
@@ -1321,7 +1321,7 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
                 angeo::read_collison_material_from_string(data.get<std::string>("material")),
                 data.get<float_32_bit>("density_multiplier"),
                 data.get<bool>("is_dynamic"),
-                scene_node_name
+                scn::make_collider_record_id(scene_node_name, shape_type)
                 );
     else
     {
@@ -1452,13 +1452,13 @@ void  simulator::on_relocation_of_scene_node(scn::scene_node_ptr const  node_ptr
     if (phs_node_ptr != nullptr)
     {
         if (phs_node_ptr == node_ptr)
-            m_invalidated_nodes_of_rigid_bodies.insert({ phs_node_ptr->get_name(), false });
+            invalidate_rigid_body_at_node(phs_node_ptr, false);
         else
         {
             std::vector<angeo::collision_object_id>  coids;
             collect_colliders_in_subtree(node_ptr, coids);
             if (!coids.empty())
-                m_invalidated_nodes_of_rigid_bodies.insert({ phs_node_ptr->get_name(), true });
+                invalidate_rigid_body_at_node(phs_node_ptr, true);
         }
     }
 }

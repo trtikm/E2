@@ -367,7 +367,7 @@ void  register_record_handler_for_insert_scene_record(
                         if (!dlg.ok())
                             return{ "",{} };
                         return {
-                            scn::get_collider_record_name(),
+                            props->m_shape_type,
                             [w, props](scn::scene_record_id const&  record_id) -> void {
                                     if (props->m_shape_type == "capsule")
                                     {
@@ -378,7 +378,7 @@ void  register_record_handler_for_insert_scene_record(
                                                 props->m_material,
                                                 props->m_density_multiplier,
                                                 props->m_as_dynamic,
-                                                record_id.get_node_name()
+                                                record_id
                                                 );
                                         //w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, false);
                                     }
@@ -390,7 +390,7 @@ void  register_record_handler_for_insert_scene_record(
                                                 props->m_material,
                                                 props->m_density_multiplier,
                                                 props->m_as_dynamic,
-                                                record_id.get_node_name()
+                                                record_id
                                                 );
                                         //w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, false);
                                     }
@@ -428,7 +428,7 @@ void  register_record_handler_for_erase_scene_record(
                     //        );
                     w->wnd()->glwindow().call_now(
                             &simulator::erase_collision_object_from_scene_node,
-                            id.get_node_name()
+                            id
                             );
                 }
             });

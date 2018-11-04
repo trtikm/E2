@@ -98,7 +98,7 @@ struct simulator : public qtgl::real_time_simulator
             angeo::COLLISION_MATERIAL_TYPE const  material,
             float_32_bit const  density_multiplier,
             bool const  as_dynamic,
-            scn::scene_node_name const&  scene_node_name
+            scn::scene_record_id const&  id
             );
 
     void  insert_collision_capsule_to_scene_node(
@@ -107,18 +107,18 @@ struct simulator : public qtgl::real_time_simulator
             angeo::COLLISION_MATERIAL_TYPE const  material,
             float_32_bit const  density_multiplier,
             bool const  as_dynamic,
-            scn::scene_node_name const&  scene_node_name
+            scn::scene_record_id const&  id
             );
 
     void  insert_collision_trianle_mesh_to_scene_node(
             qtgl::buffer const  vertex_buffer,
             qtgl::buffer const  index_buffer,
             qtgl::buffer const  material_buffer,
-            scn::scene_node_name const&  scene_node_name
+            scn::scene_record_id const&  id
             );
 
     void  erase_collision_object_from_scene_node(
-            scn::scene_node_name const&  scene_node_name
+            scn::scene_record_id const&  id
             );
 
     void  insert_rigid_body_to_scene_node(
