@@ -290,45 +290,48 @@ void  register_record_undo_redo_processors(widgets* const  w)
 
 
 void  register_record_handler_for_insert_scene_record(
-        std::unordered_map<std::string,
+        std::unordered_map<std::string, std::pair<bool,
                            std::function<std::pair<std::string, std::function<void(scn::scene_record_id const&)>>
-                                         (widgets*, std::string const&, std::unordered_set<std::string> const&)> >&
+                                         (widgets*, std::string const&, std::unordered_set<std::string> const&)>> >&
                 insert_record_handlers
         )
 {
     insert_record_handlers.insert({
             scn::get_rigid_body_folder_name(),
-            [](widgets* const  w, std::string const&, std::unordered_set<std::string> const&  used_names)
-                -> std::pair<std::string, std::function<void(scn::scene_record_id const&)>> {
-                    if (used_names.size() != 0UL)
-                    {
-                        w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one rigid body.", 10000);
-                        return{ "",{} };
+            {
+                false, // There cannot be mutiple records in one folder.
+                [](widgets* const  w, std::string const&, std::unordered_set<std::string> const&  used_names)
+                    -> std::pair<std::string, std::function<void(scn::scene_record_id const&)>> {
+                        if (used_names.size() != 0UL)
+                        {
+                            w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one rigid body.", 10000);
+                            return{ "",{} };
+                        }
+                        std::shared_ptr<detail::rigid_body_props_dialog::rigid_body_props>  rb_props =
+                                std::make_shared<detail::rigid_body_props_dialog::rigid_body_props>();
+                        rb_props->m_linear_velocity = { 0.0f, 0.0f, 0.0f };
+                        rb_props->m_angular_velocity ={ 0.0f, 0.0f, 0.0f };
+                        rb_props->m_external_linear_acceleration = { 0.0f, 0.0f, -9.81f };
+                        rb_props->m_external_angular_acceleration ={ 0.0f, 0.0f, 0.0f };
+                        detail::rigid_body_props_dialog  dlg(w->wnd(), rb_props.get());
+                        dlg.exec();
+                        if (!dlg.ok())
+                            return{ "",{} };
+                        return {
+                            scn::get_rigid_body_record_name(),
+                            [w, rb_props](scn::scene_record_id const&  record_id) -> void {
+                                    w->wnd()->glwindow().call_now(
+                                            &simulator::insert_rigid_body_to_scene_node,
+                                            rb_props->m_linear_velocity,
+                                            rb_props->m_angular_velocity,
+                                            rb_props->m_external_linear_acceleration,
+                                            rb_props->m_external_angular_acceleration,
+                                            record_id.get_node_name()
+                                            );
+                                    //w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, pathname, false);
+                                }
+                            };
                     }
-                    std::shared_ptr<detail::rigid_body_props_dialog::rigid_body_props>  rb_props =
-                            std::make_shared<detail::rigid_body_props_dialog::rigid_body_props>();
-                    rb_props->m_linear_velocity = { 0.0f, 0.0f, 0.0f };
-                    rb_props->m_angular_velocity ={ 0.0f, 0.0f, 0.0f };
-                    rb_props->m_external_linear_acceleration = { 0.0f, 0.0f, -9.81f };
-                    rb_props->m_external_angular_acceleration ={ 0.0f, 0.0f, 0.0f };
-                    detail::rigid_body_props_dialog  dlg(w->wnd(), rb_props.get());
-                    dlg.exec();
-                    if (!dlg.ok())
-                        return{ "",{} };
-                    return {
-                        scn::get_rigid_body_record_name(),
-                        [w, rb_props](scn::scene_record_id const&  record_id) -> void {
-                                w->wnd()->glwindow().call_now(
-                                        &simulator::insert_rigid_body_to_scene_node,
-                                        rb_props->m_linear_velocity,
-                                        rb_props->m_angular_velocity,
-                                        rb_props->m_external_linear_acceleration,
-                                        rb_props->m_external_angular_acceleration,
-                                        record_id.get_node_name()
-                                        );
-                                //w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, pathname, false);
-                            }
-                        };
                 }
             });
 }

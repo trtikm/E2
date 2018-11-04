@@ -741,30 +741,41 @@ void  widgets::on_scene_insert_record(std::string const&  record_kind, std::stri
         return;
     }
 
+    bool allow_multiple_records_in_folder = m_insert_record_handlers.at(record_kind).first;
+    if (!allow_multiple_records_in_folder && !used_names.empty())
+    {
+        wnd()->print_status_message("ERROR: Record of the kind '" + record_kind + "' is aready present.", 10000);
+        return;
+    }
+
     std::pair<std::string, std::function<void(scn::scene_record_id const&)> > const  record_name_and_system_inserted =
-            m_insert_record_handlers.at(record_kind)(this, mode, used_names);
+            m_insert_record_handlers.at(record_kind).second(this, mode, used_names);
     if (record_name_and_system_inserted.first.empty() || !record_name_and_system_inserted.second)
         return;
-    natural_64_bit  counter = 0ULL;
-    std::string  name = record_name_and_system_inserted.first;
-    while (used_names.count(name) != 0UL)
+    std::string  record_name = record_name_and_system_inserted.first;
+    if (allow_multiple_records_in_folder)
     {
-        name = msgstream() << record_name_and_system_inserted.first << "_" << counter;
-        ++counter;
+        natural_64_bit  counter = 0ULL;
+        while (used_names.count(record_name) != 0UL)
+        {
+            record_name = msgstream() << record_name_and_system_inserted.first << "_" << counter;
+            ++counter;
+        }
+        insert_name_dialog  dlg(wnd(), record_name,
+            [&used_names](std::string const&  name) {
+            return used_names.count(name) == 0UL;
+        });
+        dlg.exec();
+        record_name = dlg.get_name();
     }
-    insert_name_dialog  dlg(wnd(), name,
-        [&used_names](std::string const&  name) {
-        return used_names.count(name) == 0UL;
-    });
-    dlg.exec();
-    if (!dlg.get_name().empty())
+    if (!record_name.empty())
     {
         QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
         m_scene_tree->clearSelection();
 
         for (auto const& tree_item : nodes)
         {
-            scn::scene_record_id const  record_id{ get_tree_widget_item_name(tree_item), record_kind, dlg.get_name() };
+            scn::scene_record_id const  record_id{ get_tree_widget_item_name(tree_item), record_kind, record_name };
 
             auto const  record_item =
                     insert_record_to_tree_widget(m_scene_tree, record_id, m_icons_of_records.at(record_kind), m_folder_icon);

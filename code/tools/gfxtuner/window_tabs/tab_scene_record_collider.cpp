@@ -319,89 +319,92 @@ void  register_record_undo_redo_processors(widgets* const  w)
 
 
 void  register_record_handler_for_insert_scene_record(
-        std::unordered_map<std::string,
+        std::unordered_map<std::string, std::pair<bool,
                            std::function<std::pair<std::string, std::function<void(scn::scene_record_id const&)>>
-                                         (widgets*, std::string const&, std::unordered_set<std::string> const&)> >&
+                                         (widgets*, std::string const&, std::unordered_set<std::string> const&)>> >&
                 insert_record_handlers
         )
 {
     insert_record_handlers.insert({
             scn::get_collider_folder_name(),
-            [](widgets* const  w, std::string const&  shape_type, std::unordered_set<std::string> const&  used_names)
-                -> std::pair<std::string, std::function<void(scn::scene_record_id const&)>> {
-                    if (used_names.size() != 0UL)
-                    {
-                        w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one collider.", 10000);
-                        return {"", {}};
-                    }
+            {
+                false, // there cannot be multiple records in the folder.
+                [](widgets* const  w, std::string const&  shape_type, std::unordered_set<std::string> const&  used_names)
+                    -> std::pair<std::string, std::function<void(scn::scene_record_id const&)>> {
+                        if (used_names.size() != 0UL)
+                        {
+                            w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one collider.", 10000);
+                            return {"", {}};
+                        }
 
-                    std::shared_ptr<detail::collider_props_dialog::collider_props>  props =
-                            std::make_shared<detail::collider_props_dialog::collider_props>();
-                    props->m_shape_type = shape_type;
-                    props->m_as_dynamic = true;
-                    props->m_material = angeo::COLLISION_MATERIAL_TYPE::WOOD;
-                    props->m_density_multiplier = 1.0f;
-                    if (props->m_shape_type == "capsule")
-                    {
-                        props->m_capsule_half_distance_between_end_points = 0.05f;
-                        props->m_capsule_thickness_from_central_line = 0.05f;
-                    }
-                    else if (props->m_shape_type == "sphere")
-                    {
-                        props->m_sphere_radius = 0.05f;
-                    }
-                    else if (props->m_shape_type == "triangle mesh")
-                    {
-                        // TODO!
-                        w->wnd()->print_status_message("ERROR: Insertion of a collider 'triangle mesh' is not implemented.", 10000);
-                        return{ "",{} };
-                    }
-                    else
-                    {
-                        UNREACHABLE();
-                    }
-                    detail::collider_props_dialog  dlg(w->wnd(), props.get());
-                    dlg.exec();
-                    if (!dlg.ok())
-                        return{ "",{} };
-                    return {
-                        scn::get_collider_record_name(),
-                        [w, props](scn::scene_record_id const&  record_id) -> void {
-                                if (props->m_shape_type == "capsule")
-                                {
-                                    w->wnd()->glwindow().call_now(
-                                            &simulator::insert_collision_capsule_to_scene_node,
-                                            props->m_capsule_half_distance_between_end_points,
-                                            props->m_capsule_thickness_from_central_line,
-                                            props->m_material,
-                                            props->m_density_multiplier,
-                                            props->m_as_dynamic,
-                                            record_id.get_node_name()
-                                            );
-                                    //w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, false);
+                        std::shared_ptr<detail::collider_props_dialog::collider_props>  props =
+                                std::make_shared<detail::collider_props_dialog::collider_props>();
+                        props->m_shape_type = shape_type;
+                        props->m_as_dynamic = true;
+                        props->m_material = angeo::COLLISION_MATERIAL_TYPE::WOOD;
+                        props->m_density_multiplier = 1.0f;
+                        if (props->m_shape_type == "capsule")
+                        {
+                            props->m_capsule_half_distance_between_end_points = 0.05f;
+                            props->m_capsule_thickness_from_central_line = 0.05f;
+                        }
+                        else if (props->m_shape_type == "sphere")
+                        {
+                            props->m_sphere_radius = 0.05f;
+                        }
+                        else if (props->m_shape_type == "triangle mesh")
+                        {
+                            // TODO!
+                            w->wnd()->print_status_message("ERROR: Insertion of a collider 'triangle mesh' is not implemented.", 10000);
+                            return{ "",{} };
+                        }
+                        else
+                        {
+                            UNREACHABLE();
+                        }
+                        detail::collider_props_dialog  dlg(w->wnd(), props.get());
+                        dlg.exec();
+                        if (!dlg.ok())
+                            return{ "",{} };
+                        return {
+                            scn::get_collider_record_name(),
+                            [w, props](scn::scene_record_id const&  record_id) -> void {
+                                    if (props->m_shape_type == "capsule")
+                                    {
+                                        w->wnd()->glwindow().call_now(
+                                                &simulator::insert_collision_capsule_to_scene_node,
+                                                props->m_capsule_half_distance_between_end_points,
+                                                props->m_capsule_thickness_from_central_line,
+                                                props->m_material,
+                                                props->m_density_multiplier,
+                                                props->m_as_dynamic,
+                                                record_id.get_node_name()
+                                                );
+                                        //w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, false);
+                                    }
+                                    else if (props->m_shape_type == "sphere")
+                                    {
+                                        w->wnd()->glwindow().call_now(
+                                                &simulator::insert_collision_sphere_to_scene_node,
+                                                props->m_sphere_radius,
+                                                props->m_material,
+                                                props->m_density_multiplier,
+                                                props->m_as_dynamic,
+                                                record_id.get_node_name()
+                                                );
+                                        //w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, false);
+                                    }
+                                    else if (props->m_shape_type == "triangle mesh")
+                                    {
+                                        // TODO!
+                                    }
+                                    else
+                                    {
+                                        UNREACHABLE();
+                                    }
                                 }
-                                else if (props->m_shape_type == "sphere")
-                                {
-                                    w->wnd()->glwindow().call_now(
-                                            &simulator::insert_collision_sphere_to_scene_node,
-                                            props->m_sphere_radius,
-                                            props->m_material,
-                                            props->m_density_multiplier,
-                                            props->m_as_dynamic,
-                                            record_id.get_node_name()
-                                            );
-                                    //w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, false);
-                                }
-                                else if (props->m_shape_type == "triangle mesh")
-                                {
-                                    // TODO!
-                                }
-                                else
-                                {
-                                    UNREACHABLE();
-                                }
-                            }
-                        };
+                            };
+                    }
                 }
             });
 }
