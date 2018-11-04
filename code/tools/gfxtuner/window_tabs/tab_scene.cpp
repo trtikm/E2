@@ -189,6 +189,8 @@ widgets::widgets(program_window* const  wnd)
     , m_coord_system_location_backup_buffer()
 {
     m_scene_tree->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
+    m_scene_tree->setSortingEnabled(true);
+    m_scene_tree->sortItems(0, Qt::SortOrder::AscendingOrder);
     enable_coord_system_location_widgets(false, false);
 
     scn::scene_history_coord_system_insert::set_undo_processor(
@@ -1625,7 +1627,7 @@ void  widgets::update_coord_system_location_widgets()
             if (selected_items.empty())
                 return false;
             foreach(QTreeWidgetItem* const  item, selected_items)
-                if (item->parent() != selected_items.front()->parent())
+                if (find_nearest_coord_system_item(item) != find_nearest_coord_system_item(selected_items.front()))
                     return false;
             return true;
             }())
