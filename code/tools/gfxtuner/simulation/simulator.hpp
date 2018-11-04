@@ -195,7 +195,8 @@ struct simulator : public qtgl::real_time_simulator
     qtgl::effects_config const&  get_effects_config() const { return m_effects_config; }
     qtgl::effects_config&  effects_config_ref() { return m_effects_config; }
 
-    void  validate_simulation_state();
+    void  on_simulation_paused();
+    void  on_simulation_resumed();
 
 private:
 
@@ -291,6 +292,15 @@ private:
     angeo::rigid_body_simulator  m_rigid_body_simulator;
     std::unordered_map<angeo::collision_object_id, angeo::rigid_body_id>  m_binding_of_collision_objects;
     std::unordered_map<angeo::rigid_body_id, scn::scene_node_ptr>  m_binding_of_rigid_bodies;
+
+    struct  static_rigid_body_backup
+    {
+        vector3  m_linear_velocity;
+        vector3  m_angular_velocity;
+        vector3  m_external_linear_acceleration;
+        vector3  m_external_angular_acceleration;
+    };
+    std::unordered_map<angeo::rigid_body_id, static_rigid_body_backup>  m_static_rigid_body_backups;
 
     // TODO: The member below should be removed at some point.
     std::unordered_map<scn::scene_record_id, gfx_animated_object>  m_gfx_animated_objects;

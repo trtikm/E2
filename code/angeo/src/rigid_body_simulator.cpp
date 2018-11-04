@@ -40,8 +40,8 @@ rigid_body_id  rigid_body_simulator::insert_rigid_body(
         matrix33 const&  inverted_inertia_tensor_in_local_space,
         vector3 const&  linear_velocity,
         vector3 const&  angular_velocity,
-        vector3 const&  external_force,
-        vector3 const&  external_torque
+        vector3 const&  external_linear_acceleration,
+        vector3 const&  external_angular_acceleration
         )
 {
     TMPROF_BLOCK();
@@ -49,39 +49,34 @@ rigid_body_id  rigid_body_simulator::insert_rigid_body(
     rigid_body_id  id;
     if (m_invalid_rigid_body_ids.empty())
     {
-        id = (rigid_body_id)m_rigid_bosies.size();
+        id = (rigid_body_id)m_rigid_bodies.size();
 
-        m_rigid_bosies.push_back({
+        m_rigid_bodies.push_back({
                 position_of_mass_centre,
                 orientation,
                 { linear_velocity, angular_velocity },
                 { vector3_zero(), vector3_zero() },
-                { inverted_mass * external_force, vector3_zero() },
+                { external_linear_acceleration, external_angular_acceleration },
                 inverted_mass,
                 matrix33_identity()
                 });
         m_inverted_inertia_tensors.push_back(inverted_inertia_tensor_in_local_space);
-        m_external_torques.push_back(external_torque);
-
     }
     else
     {
-        rigid_body_id const  id = *m_invalid_rigid_body_ids.cbegin();
+        id = *m_invalid_rigid_body_ids.cbegin();
         m_invalid_rigid_body_ids.erase(id);
 
-        m_rigid_bosies.at(id) = {
+        m_rigid_bodies.at(id) = {
                 position_of_mass_centre,
                 orientation,
                 { linear_velocity, angular_velocity },
                 { vector3_zero(), vector3_zero() },
-                { inverted_mass * external_force, vector3_zero() },
+                { external_linear_acceleration, external_angular_acceleration },
                 inverted_mass,
                 matrix33_identity()
                 };
         m_inverted_inertia_tensors.at(id) = inverted_inertia_tensor_in_local_space;
-        m_external_torques.at(id) = external_torque;
-
-        return id;
     }
 
     update_dependent_variables_of_rigid_body(id);
@@ -106,42 +101,17 @@ void  rigid_body_simulator::clear()
     m_invalidated_rigid_bodies_in_contact_cache.clear();
     m_from_constraints_to_contact_ids.clear();
 
-    m_rigid_bosies.clear();
+    m_rigid_bodies.clear();
     m_inverted_inertia_tensors.clear();
-    m_external_torques.clear();
     m_invalid_rigid_body_ids.clear();
 }
 
 
 void  rigid_body_simulator::set_orientation(rigid_body_id const  id, quaternion const&  orientation)
 {
-    m_rigid_bosies.at(id).m_orientation = orientation;
+    m_rigid_bodies.at(id).m_orientation = orientation;
     update_dependent_variables_of_rigid_body(id);
     erase_from_contact_cache(id);
-}
-
-
-vector3  rigid_body_simulator::get_external_force(rigid_body_id const  id) const
-{
-    rigid_body const&  rb = m_rigid_bosies.at(id);
-    return rb.m_inverted_mass < 1e-5f ? vector3_zero() : rb.m_acceleration_from_external_forces.m_linear / rb.m_inverted_mass;
-}
-
-
-void  rigid_body_simulator::set_external_torque(rigid_body_id const  id, vector3 const&  external_torque)
-{
-    m_external_torques.at(id) = external_torque;
-    m_rigid_bosies.at(id).m_acceleration_from_external_forces.m_angular =
-            m_rigid_bosies.at(id).m_inverted_inertia_tensor * m_external_torques.at(id);
-}
-
-
-void  rigid_body_simulator::set_inverted_mass(rigid_body_id const  id, float_32_bit const  inverted_mass)
-{
-    vector3  external_force = get_external_force(id);
-    rigid_body&  rb = m_rigid_bosies.at(id);
-    rb.m_inverted_mass = inverted_mass;
-    rb.m_acceleration_from_external_forces.m_linear = rb.m_inverted_inertia_tensor * external_force;
 }
 
 
@@ -164,8 +134,8 @@ void  rigid_body_simulator::insert_contact_constraints(
         std::vector<motion_constraint_system::constraint_id>* const  output_constraint_ids_ptr
         )
 {
-    rigid_body const&  rb0 = m_rigid_bosies.at(rb_0);
-    rigid_body const&  rb1 = m_rigid_bosies.at(rb_1);
+    rigid_body const&  rb0 = m_rigid_bodies.at(rb_0);
+    rigid_body const&  rb1 = m_rigid_bodies.at(rb_1);
 
     motion_constraint_system::constraint_id const  contact_constraint_id =
             get_constraint_system().insert_constraint(
@@ -243,7 +213,7 @@ void  rigid_body_simulator::do_simulation_step(
     TMPROF_BLOCK();
 
     get_constraint_system().solve(
-            m_rigid_bosies,
+            m_rigid_bodies,
             std::bind(
                     &motion_constraint_system::default_computation_terminator,
                     get_constraint_system().get_num_constraints(),
@@ -255,12 +225,12 @@ void  rigid_body_simulator::do_simulation_step(
             nullptr
             );
 
-    for (rigid_body_id  id = 0U; id != m_rigid_bosies.size(); ++id)
+    for (rigid_body_id  id = 0U; id != m_rigid_bodies.size(); ++id)
     {
         if (m_invalid_rigid_body_ids.count(id) != 0U)
             continue;
 
-        rigid_body&  rb = m_rigid_bosies.at(id);
+        rigid_body&  rb = m_rigid_bodies.at(id);
 
         rb.m_velocity.m_linear += time_step_in_seconds * (
                 rb.m_acceleration_from_constraints.m_linear + rb.m_acceleration_from_external_forces.m_linear
@@ -286,15 +256,13 @@ void  rigid_body_simulator::do_simulation_step(
 
 void  rigid_body_simulator::update_dependent_variables_of_rigid_body(rigid_body_id const  id)
 {
-    rigid_body&  rb = m_rigid_bosies.at(id);
+    rigid_body&  rb = m_rigid_bodies.at(id);
 
     matrix33 const  R = quaternion_to_rotation_matrix(rb.m_orientation);
     rb.m_inverted_inertia_tensor = R * m_inverted_inertia_tensors.at(id) * transpose33(R);
 
     rb.m_acceleration_from_constraints.m_linear = vector3_zero();
     rb.m_acceleration_from_constraints.m_angular = vector3_zero();
-
-    rb.m_acceleration_from_external_forces.m_angular = rb.m_inverted_inertia_tensor * m_external_torques.at(id);
 }
 
 

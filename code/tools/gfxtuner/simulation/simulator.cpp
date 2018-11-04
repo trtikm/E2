@@ -177,6 +177,7 @@ simulator::simulator()
     , m_rigid_body_simulator()
     , m_binding_of_collision_objects()
     , m_binding_of_rigid_bodies()
+    , m_static_rigid_body_backups()
 
     , m_gfx_animated_objects()
 
@@ -252,16 +253,21 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
         {
             is_simulation_round = true;
             if (old_paused != paused())
-                validate_simulation_state();
+                on_simulation_resumed();
             perform_simulation_step(seconds_from_previous_call);
         }
         else
+        {
+            if (old_paused != paused())
+                on_simulation_paused();
             perform_scene_update(seconds_from_previous_call);
+        }
 
         if (m_do_single_step)
         {
             m_paused = true;
             call_listeners(simulator_notifications::paused());
+            on_simulation_paused();
             m_do_single_step = false;
         }
     }
@@ -309,13 +315,34 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
 }
 
 
-void  simulator::validate_simulation_state()
+void  simulator::on_simulation_paused()
 {
     TMPROF_BLOCK();
+
+    for (auto const&  rbid_and_backup : m_static_rigid_body_backups)
+        if (m_rigid_body_simulator.contains(rbid_and_backup.first))
+        {
+            m_rigid_body_simulator.set_linear_velocity(rbid_and_backup.first, rbid_and_backup.second.m_linear_velocity);
+            m_rigid_body_simulator.set_angular_velocity(rbid_and_backup.first, rbid_and_backup.second.m_angular_velocity);
+            m_rigid_body_simulator.set_external_linear_acceleration(rbid_and_backup.first, rbid_and_backup.second.m_external_linear_acceleration);
+            m_rigid_body_simulator.set_external_angular_acceleration(rbid_and_backup.first, rbid_and_backup.second.m_external_angular_acceleration);
+        }
+    m_static_rigid_body_backups.clear();
+
+    // TODO: process these before clear:
+    //    m_scene_nodes_relocated_during_simulation
+    //    m_scene_records_inserted_during_simulation
+    //    m_scene_records_erased_during_simulation
 
     m_scene_nodes_relocated_during_simulation.clear();
     m_scene_records_inserted_during_simulation.clear();
     m_scene_records_erased_during_simulation.clear();
+}
+
+
+void  simulator::on_simulation_resumed()
+{
+    TMPROF_BLOCK();
 
     for (auto const&  node_name_and_collider_change : m_invalidated_nodes_of_rigid_bodies)
         if (auto  node_ptr = get_scene().get_scene_node(node_name_and_collider_change.first))
@@ -335,14 +362,12 @@ void  simulator::validate_simulation_state()
             {
                 m_binding_of_rigid_bodies.erase(rb_ptr->id());
 
-                vector3 const  linear_velocity = m_rigid_body_simulator.get_linear_velocity(rb_ptr->id());
-                vector3 const  angular_velocity = m_rigid_body_simulator.get_angular_velocity(rb_ptr->id());
-                vector3 const  external_linear_acceleration =
-                        m_rigid_body_simulator.get_inverted_mass(rb_ptr->id())
-                            * m_rigid_body_simulator.get_external_force(rb_ptr->id());
-                vector3 const  external_angular_acceleration =
-                        m_rigid_body_simulator.get_inverted_mass(rb_ptr->id())
-                            * m_rigid_body_simulator.get_external_torque(rb_ptr->id());
+                vector3  linear_velocity = m_rigid_body_simulator.get_linear_velocity(rb_ptr->id());
+                vector3  angular_velocity = m_rigid_body_simulator.get_angular_velocity(rb_ptr->id());
+                vector3  external_linear_acceleration = m_rigid_body_simulator.get_external_linear_acceleration(rb_ptr->id());
+                vector3  external_angular_acceleration = m_rigid_body_simulator.get_external_angular_acceleration(rb_ptr->id());
+
+                static_rigid_body_backup  rb_backup;
 
                 m_rigid_body_simulator.erase_rigid_body(rb_ptr->id());
 
@@ -413,6 +438,18 @@ void  simulator::validate_simulation_state()
                                 }
                             );
                 }
+                else
+                {
+                    rb_backup.m_linear_velocity = linear_velocity;
+                    rb_backup.m_angular_velocity = angular_velocity;
+                    rb_backup.m_external_linear_acceleration = external_linear_acceleration;
+                    rb_backup.m_external_angular_acceleration = external_angular_acceleration;
+
+                    linear_velocity = vector3_zero();
+                    angular_velocity = vector3_zero();
+                    external_linear_acceleration = vector3_zero();
+                    external_angular_acceleration = vector3_zero();
+                }
 
                 matrix44 const  world_matrix = node_ptr->get_world_matrix();
 
@@ -424,14 +461,17 @@ void  simulator::validate_simulation_state()
                                     inverted_inertia_tensor_in_local_space,
                                     linear_velocity,
                                     angular_velocity,
-                                    external_linear_acceleration / (inverted_mass == 0.0f ? 1.0f : inverted_mass),
-                                    external_angular_acceleration / (inverted_mass == 0.0f ? 1.0f : inverted_mass)
+                                    external_linear_acceleration,
+                                    external_angular_acceleration
                                     )
                         );
                 m_binding_of_rigid_bodies[rb_ptr->id()] = node_ptr;
 
                 for (angeo::collision_object_id coid : coids)
                     m_binding_of_collision_objects[coid] = rb_ptr->id();
+
+                if (has_static_collider)
+                    m_static_rigid_body_backups.insert({rb_ptr->id(), rb_backup});
             }
             else
             {
@@ -1419,10 +1459,8 @@ void  simulator::save_rigid_body(angeo::rigid_body_id const  rb_id, boost::prope
 
     save_vector("linear_velocity", m_rigid_body_simulator.get_linear_velocity(rb_id));
     save_vector("angular_velocity", m_rigid_body_simulator.get_angular_velocity(rb_id));
-    save_vector("external_linear_acceleration",
-                m_rigid_body_simulator.get_inverted_mass(rb_id) * m_rigid_body_simulator.get_external_force(rb_id));
-    save_vector("external_angular_acceleration",
-                m_rigid_body_simulator.get_inverted_mass(rb_id) * m_rigid_body_simulator.get_external_torque(rb_id));
+    save_vector("external_linear_acceleration", m_rigid_body_simulator.get_external_linear_acceleration(rb_id));
+    save_vector("external_angular_acceleration", m_rigid_body_simulator.get_external_angular_acceleration(rb_id));
 }
 
 

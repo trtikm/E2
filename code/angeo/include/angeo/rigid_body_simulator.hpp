@@ -23,35 +23,37 @@ struct  rigid_body_simulator
             matrix33 const&  inverted_inertia_tensor_in_local_space,    // Zero matrix means an infinite inertia.
             vector3 const&  linear_velocity = vector3_zero(),
             vector3 const&  angular_velocity = vector3_zero(),
-            vector3 const&  external_force = vector3_zero(),
-            vector3 const&  external_torque = vector3_zero()
+            vector3 const&  external_linear_acceleration = vector3_zero(),
+            vector3 const&  external_angular_acceleration = vector3_zero()
             );
 
     void  erase_rigid_body(rigid_body_id const  id);
 
+    bool  contains(rigid_body_id const  id) { return id < m_rigid_bodies.size() && m_invalid_rigid_body_ids.count(id) == 0UL; }
+
     void  clear();
 
-    vector3 const&  get_position_of_mass_centre(rigid_body_id const  id) const { return m_rigid_bosies.at(id).m_position_of_mass_centre; }
+    vector3 const&  get_position_of_mass_centre(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_position_of_mass_centre; }
     void  set_position_of_mass_centre(rigid_body_id const  id, vector3 const&  position)
-    { m_rigid_bosies.at(id).m_position_of_mass_centre = position; erase_from_contact_cache(id); }
+    { m_rigid_bodies.at(id).m_position_of_mass_centre = position; erase_from_contact_cache(id); }
 
-    quaternion const&  get_orientation(rigid_body_id const  id) const { return m_rigid_bosies.at(id).m_orientation; }
+    quaternion const&  get_orientation(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_orientation; }
     void  set_orientation(rigid_body_id const  id, quaternion const&  orientation);
 
-    vector3 const&  get_linear_velocity(rigid_body_id const  id) const { return m_rigid_bosies.at(id).m_velocity.m_linear; }
-    vector3 const&  get_angular_velocity(rigid_body_id const  id) const { return m_rigid_bosies.at(id).m_velocity.m_angular; }
-    void  set_linear_velocity(rigid_body_id const  id, vector3 const&  velocity) { m_rigid_bosies.at(id).m_velocity.m_linear = velocity; }
-    void  set_angular_velocity(rigid_body_id const  id, vector3 const&  velocity) { m_rigid_bosies.at(id).m_velocity.m_angular = velocity; }
+    vector3 const&  get_linear_velocity(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_velocity.m_linear; }
+    vector3 const&  get_angular_velocity(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_velocity.m_angular; }
+    void  set_linear_velocity(rigid_body_id const  id, vector3 const&  velocity) { m_rigid_bodies.at(id).m_velocity.m_linear = velocity; }
+    void  set_angular_velocity(rigid_body_id const  id, vector3 const&  velocity) { m_rigid_bodies.at(id).m_velocity.m_angular = velocity; }
 
-    vector3  get_external_force(rigid_body_id const  id) const;
-    vector3  get_external_torque(rigid_body_id const  id) const { return m_external_torques.at(id); }
-    void  set_external_force(rigid_body_id const  id, vector3 const&  external_force) { m_external_torques.at(id) = external_force; }
-    void  set_external_torque(rigid_body_id const  id, vector3 const&  external_torque);
+    vector3 const&  get_external_linear_acceleration(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_linear; }
+    vector3 const&  get_external_angular_acceleration(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_angular; }
+    void  set_external_linear_acceleration(rigid_body_id const  id, vector3 const&  acceleration) { m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_linear = acceleration; }
+    void  set_external_angular_acceleration(rigid_body_id const  id, vector3 const&  acceleration) { m_rigid_bodies.at(id).m_acceleration_from_external_forces.m_angular = acceleration; }
 
-    float_32_bit  get_inverted_mass(rigid_body_id const  id) const { return m_rigid_bosies.at(id).m_inverted_mass; }
-    void  set_inverted_mass(rigid_body_id const  id, float_32_bit const  inverted_mass);
+    float_32_bit  get_inverted_mass(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_inverted_mass; }
+    void  set_inverted_mass(rigid_body_id const  id, float_32_bit const  inverted_mass) { m_rigid_bodies.at(id).m_inverted_mass = inverted_mass; }
 
-    matrix33 const&  get_inverted_inertia_tensor_in_world_space(rigid_body_id const  id) const { return m_rigid_bosies.at(id).m_inverted_inertia_tensor; }
+    matrix33 const&  get_inverted_inertia_tensor_in_world_space(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_inverted_inertia_tensor; }
     void  set_inverted_inertia_tensor_in_local_space(rigid_body_id const  id, matrix33 const&  inverted_inertia_tensor_in_local_space);
 
     motion_constraint_system&  get_constraint_system() { return m_constraint_system; }
@@ -147,9 +149,8 @@ private:
 
     // All the vectors below have the same size.
 
-    std::vector<rigid_body>  m_rigid_bosies;
+    std::vector<rigid_body>  m_rigid_bodies;
     std::vector<matrix33>  m_inverted_inertia_tensors;  // Always in the local space. Zero matrix means an infinite inertia.
-    std::vector<vector3>  m_external_torques;           // In the world space.
     std::unordered_set<rigid_body_id>  m_invalid_rigid_body_ids;
 };
 
