@@ -50,6 +50,7 @@ struct  widgets
     void  on_simulator_started() { clear_scene(); }
 
     void  on_scene_hierarchy_item_selected();
+    void  on_scene_hierarchy_item_update_action(QTreeWidgetItem* const  item);
     void  on_scene_insert_coord_system();
     void  on_scene_insert_record(std::string const&  record_kind, std::string const&  mode);
     void  on_scene_erase_selected();
@@ -147,6 +148,8 @@ private:
                        std::function<std::pair<std::string, std::function<void(scn::scene_record_id const&)>>
                                      (widgets*, std::string const&, std::unordered_set<std::string> const&)> > >
             m_insert_record_handlers;
+    std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)> >
+            m_update_record_handlers;
     std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)>>
             m_erase_record_handlers;
     std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&, boost::property_tree::ptree const&)>>

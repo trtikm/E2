@@ -121,6 +121,23 @@ struct simulator : public qtgl::real_time_simulator
             scn::scene_record_id const&  id
             );
 
+    void  get_collision_sphere_info(
+            scn::scene_record_id const&  id,
+            float_32_bit&  radius,
+            angeo::COLLISION_MATERIAL_TYPE&  material,
+            float_32_bit&  density_multiplier,
+            bool&  is_dynamic
+            );
+
+    void  get_collision_capsule_info(
+            scn::scene_record_id const&  id,
+            float_32_bit&  half_distance_between_end_points,
+            float_32_bit&  thickness_from_central_line,
+            angeo::COLLISION_MATERIAL_TYPE&  material,
+            float_32_bit&  density_multiplier,
+            bool&  is_dynamic
+            );
+
     void  insert_rigid_body_to_scene_node(
             vector3 const&  linear_velocity,
             vector3 const&  angular_velocity,

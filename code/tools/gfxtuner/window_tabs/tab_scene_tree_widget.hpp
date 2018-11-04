@@ -5,8 +5,42 @@
 #   include <QTreeWidget>
 #   include <functional>
 #   include <string>
+#   include <QtGui>
 
 namespace window_tabs { namespace tab_scene {
+
+
+struct tree_widget : public QTreeWidget {
+private:
+    Q_OBJECT
+public:
+    tree_widget(
+            std::function<void()> const&  on_selection_changed,
+            std::function<void(QTreeWidgetItem*)> const&  on_item_double_clicked
+            )
+        : QTreeWidget()
+        , m_on_selection_changed(on_selection_changed)
+        , m_on_item_double_clicked(on_item_double_clicked)
+    {
+        connect(this, SIGNAL(itemSelectionChanged()), this, SLOT(on_selection_changed()));
+        connect(this, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), this, SLOT(on_item_double_clicked(QTreeWidgetItem*, int)));
+    }
+public slots:
+
+    void on_selection_changed()
+    {
+        m_on_selection_changed();
+    }
+
+    void on_item_double_clicked(QTreeWidgetItem* item, int )
+    {
+        m_on_item_double_clicked(item);
+    }
+
+private:
+    std::function<void()>  m_on_selection_changed;
+    std::function<void(QTreeWidgetItem*)>  m_on_item_double_clicked;
+};
 
 
 struct  tree_widget_item : public QTreeWidgetItem

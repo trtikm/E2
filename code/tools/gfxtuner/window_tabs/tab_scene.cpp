@@ -4,7 +4,6 @@
 #include <gfxtuner/window_tabs/tab_scene_record_id_reverse_builder.hpp>
 #include <gfxtuner/window_tabs/tab_scene_records_integration.hpp>
 #include <gfxtuner/window_tabs/tab_scene_tree_widget.hpp>
-#include <gfxtuner/window_tabs/tab_scene_tree_widget.hpp>
 #include <gfxtuner/window_tabs/tab_scene_utils.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
@@ -42,22 +41,10 @@ static natural_64_bit  g_new_coord_system_id_counter = 0ULL;
 widgets::widgets(program_window* const  wnd)
     : m_wnd(wnd)
 
-    , m_scene_tree(
-        [](program_window* wnd) {
-            struct s : public QTreeWidget {
-                s(program_window* wnd) : QTreeWidget()
-                {
-                    QObject::connect(
-                        this,
-                        SIGNAL(itemSelectionChanged()),
-                        wnd,
-                        SLOT(on_scene_hierarchy_item_selected())
-                        );
-                }
-            };
-            return new s(wnd);
-        }(m_wnd)
-        )
+    , m_scene_tree(new tree_widget(
+            std::bind(&widgets::on_scene_hierarchy_item_selected, this),
+            std::bind(&widgets::on_scene_hierarchy_item_update_action, this, std::placeholders::_1)
+            ))
 
     , m_node_icon((boost::filesystem::path{ get_program_options()->dataRoot() } /
                   "shared/gfx/icons/coord_system.png").string().c_str())
@@ -65,6 +52,7 @@ widgets::widgets(program_window* const  wnd)
                     "shared/gfx/icons/data_type.png").string().c_str())
 
     , m_insert_record_handlers()
+    , m_update_record_handlers()
     , m_erase_record_handlers()
     , m_load_record_handlers()
     , m_save_record_handlers()
@@ -388,6 +376,7 @@ widgets::widgets(program_window* const  wnd)
     register_record_icons(m_icons_of_records);
     register_record_undo_redo_processors(this);
     register_record_handler_for_insert_scene_record(m_insert_record_handlers);
+    register_record_handler_for_update_scene_record(m_update_record_handlers);
     register_record_handler_for_erase_scene_record(m_erase_record_handlers);
     register_record_handler_for_load_scene_record(m_load_record_handlers);
     register_record_handler_for_save_scene_record(m_save_record_handlers);
@@ -480,6 +469,17 @@ void  widgets::on_scene_hierarchy_item_selected()
     update_history_according_to_change_in_selection(old_selection, new_selection, get_scene_history());
     set_window_title();
     wnd()->set_focus_to_glwindow(false);
+}
+
+void  widgets::on_scene_hierarchy_item_update_action(QTreeWidgetItem* const  item)
+{
+    if (!represents_record(item))
+        return;
+    scn::scene_record_id const  id = scene_record_id_reverse_builder::run(as_tree_widget_item(item)).get_record_id();
+    auto  it = m_update_record_handlers.find(id.get_folder_name());
+    if (it == m_update_record_handlers.end())
+        return;
+    it->second(this, id);
 }
 
 void  widgets::selection_changed_listener()

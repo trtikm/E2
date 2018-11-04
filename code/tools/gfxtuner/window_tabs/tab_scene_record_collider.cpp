@@ -410,6 +410,84 @@ void  register_record_handler_for_insert_scene_record(
 }
 
 
+void  register_record_handler_for_update_scene_record(
+        std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)> >&  update_record_handlers
+        )
+{
+    update_record_handlers.insert({
+            scn::get_collider_folder_name(),
+            [](widgets* const  w, scn::scene_record_id const&  record_id) -> void {
+                    detail::collider_props_dialog::collider_props  props;
+                    props.m_shape_type = record_id.get_record_name();
+                    if (props.m_shape_type == "capsule")
+                        w->wnd()->glwindow().call_now(
+                                &simulator::get_collision_capsule_info,
+                                record_id,
+                                std::ref(props.m_capsule_half_distance_between_end_points),
+                                std::ref(props.m_capsule_thickness_from_central_line),
+                                std::ref(props.m_material),
+                                std::ref(props.m_density_multiplier),
+                                std::ref(props.m_as_dynamic)
+                                );
+                    else if (props.m_shape_type == "sphere")
+                        w->wnd()->glwindow().call_now(
+                                &simulator::get_collision_sphere_info,
+                                record_id,
+                                std::ref(props.m_sphere_radius),
+                                std::ref(props.m_material),
+                                std::ref(props.m_density_multiplier),
+                                std::ref(props.m_as_dynamic)
+                                );
+                    else if (props.m_shape_type == "triangle mesh")
+                    {
+                        // TODO!
+                        w->wnd()->print_status_message("ERROR: Editing properties of a collider 'triangle mesh' is not implemented.", 10000);
+                        return;
+                    }
+                    else
+                    {
+                        UNREACHABLE();
+                    }
+                    detail::collider_props_dialog  dlg(w->wnd(), &props);
+                    dlg.exec();
+                    if (!dlg.ok())
+                        return;
+                    w->wnd()->glwindow().call_now(
+                            &simulator::erase_collision_object_from_scene_node,
+                            record_id
+                            );
+                    if (props.m_shape_type == "capsule")
+                        w->wnd()->glwindow().call_now(
+                                &simulator::insert_collision_capsule_to_scene_node,
+                                props.m_capsule_half_distance_between_end_points,
+                                props.m_capsule_thickness_from_central_line,
+                                props.m_material,
+                                props.m_density_multiplier,
+                                props.m_as_dynamic,
+                                record_id
+                                );
+                    else if (props.m_shape_type == "sphere")
+                        w->wnd()->glwindow().call_now(
+                                &simulator::insert_collision_sphere_to_scene_node,
+                                props.m_sphere_radius,
+                                props.m_material,
+                                props.m_density_multiplier,
+                                props.m_as_dynamic,
+                                record_id
+                                );
+                    else if (props.m_shape_type == "triangle mesh")
+                    {
+                        // TODO!
+                    }
+                    else
+                    {
+                        UNREACHABLE();
+                    }
+                }
+            });
+}
+
+
 void  register_record_handler_for_erase_scene_record(
         std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)>>&
                 erase_record_handlers

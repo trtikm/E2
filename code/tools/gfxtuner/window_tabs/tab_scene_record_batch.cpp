@@ -108,6 +108,14 @@ void  register_record_handler_for_insert_scene_record(
 }
 
 
+void  register_record_handler_for_update_scene_record(
+        std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)> >&  update_record_handlers
+        )
+{
+    // Nothing to do here. Properties of a batch cannot be modified.
+}
+
+
 void  register_record_handler_for_erase_scene_record(
         std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)>>&
                 erase_record_handlers

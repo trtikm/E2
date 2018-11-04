@@ -1238,6 +1238,39 @@ void  simulator::erase_collision_object_from_scene_node(
 }
 
 
+void  simulator::get_collision_sphere_info(
+        scn::scene_record_id const&  id,
+        float_32_bit&  radius,
+        angeo::COLLISION_MATERIAL_TYPE&  material,
+        float_32_bit&  density_multiplier,
+        bool&  is_dynamic
+        )
+{
+    scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_name()));
+    radius = m_collision_scene.get_sphere_radius(collider->id());
+    material = m_collision_scene.get_material(collider->id());
+    density_multiplier = collider->get_density_multiplier();
+    is_dynamic = m_collision_scene.is_dynamic(collider->id());
+}
+
+void  simulator::get_collision_capsule_info(
+        scn::scene_record_id const&  id,
+        float_32_bit&  half_distance_between_end_points,
+        float_32_bit&  thickness_from_central_line,
+        angeo::COLLISION_MATERIAL_TYPE&  material,
+        float_32_bit&  density_multiplier,
+        bool&  is_dynamic
+        )
+{
+    scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_name()));
+    half_distance_between_end_points = m_collision_scene.get_capsule_half_distance_between_end_points(collider->id());
+    thickness_from_central_line = m_collision_scene.get_capsule_thickness_from_central_line(collider->id());
+    material = m_collision_scene.get_material(collider->id());
+    density_multiplier = collider->get_density_multiplier();
+    is_dynamic = m_collision_scene.is_dynamic(collider->id());
+}
+
+
 void  simulator::insert_rigid_body_to_scene_node(
         vector3 const&  linear_velocity,
         vector3 const&  angular_velocity,
