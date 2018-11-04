@@ -149,6 +149,10 @@ struct simulator : public qtgl::real_time_simulator
     void  set_orientation_of_scene_node(scn::scene_node_name const&  scene_node_name, quaternion const&  new_orientation);
     void  relocate_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation);
 
+    void  on_relocation_of_scene_node(scn::scene_node_ptr const  node_ptr);
+    void  on_relocation_of_scene_node(scn::scene_node_name const&  scene_node_name)
+    { on_relocation_of_scene_node(get_scene().get_scene_node(scene_node_name)); }
+
     void  set_scene_selection(
             std::unordered_set<scn::scene_node_name> const&  selected_scene_nodes,
             std::unordered_set<scn::scene_record_id> const&  selected_records

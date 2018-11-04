@@ -820,8 +820,7 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
             shift;
         node->translate(node_shift);
 
-        if (scn::has_rigid_body(*node))
-            m_invalidated_nodes_of_rigid_bodies.insert({ node_name, false });
+        on_relocation_of_scene_node(node);
     }
 
     call_listeners(simulator_notifications::scene_node_position_updated());
@@ -929,8 +928,7 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
             node->translate(shift);
         }
 
-        if (scn::has_rigid_body(*node))
-            m_invalidated_nodes_of_rigid_bodies.insert({ node_name, false });
+        on_relocation_of_scene_node(node);
     }
 
     call_listeners(simulator_notifications::scene_node_orientation_updated());
@@ -1412,7 +1410,7 @@ void  simulator::translate_scene_node(scn::scene_node_name const&  scene_node_na
     auto const  node_ptr = get_scene_node(scene_node_name);
     node_ptr->translate(shift);
     m_scene_edit_data.invalidate_data();
-    invalidate_rigid_bodies_in_subtree(node_ptr, false);
+    on_relocation_of_scene_node(node_ptr);
 }
 
 void  simulator::rotate_scene_node(scn::scene_node_name const&  scene_node_name, quaternion const&  rotation)
@@ -1420,7 +1418,7 @@ void  simulator::rotate_scene_node(scn::scene_node_name const&  scene_node_name,
     auto const  node_ptr = get_scene_node(scene_node_name);
     node_ptr->rotate(rotation);
     m_scene_edit_data.invalidate_data();
-    invalidate_rigid_bodies_in_subtree(node_ptr, false);
+    on_relocation_of_scene_node(node_ptr);
 }
 
 void  simulator::set_position_of_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  new_origin)
@@ -1428,7 +1426,7 @@ void  simulator::set_position_of_scene_node(scn::scene_node_name const&  scene_n
     auto const  node_ptr = get_scene_node(scene_node_name);
     node_ptr->set_origin(new_origin);
     m_scene_edit_data.invalidate_data();
-    invalidate_rigid_bodies_in_subtree(node_ptr, false);
+    on_relocation_of_scene_node(node_ptr);
 }
 
 void  simulator::set_orientation_of_scene_node(scn::scene_node_name const&  scene_node_name, quaternion const&  new_orientation)
@@ -1436,7 +1434,7 @@ void  simulator::set_orientation_of_scene_node(scn::scene_node_name const&  scen
     auto const  node_ptr = get_scene_node(scene_node_name);
     node_ptr->set_orientation(new_orientation);
     m_scene_edit_data.invalidate_data();
-    invalidate_rigid_bodies_in_subtree(node_ptr, false);
+    on_relocation_of_scene_node(node_ptr);
 }
 
 void  simulator::relocate_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation)
@@ -1444,8 +1442,27 @@ void  simulator::relocate_scene_node(scn::scene_node_name const&  scene_node_nam
     auto const  node_ptr = get_scene_node(scene_node_name);
     node_ptr->relocate(new_origin, new_orientation);
     m_scene_edit_data.invalidate_data();
-    invalidate_rigid_bodies_in_subtree(node_ptr, false);
+    on_relocation_of_scene_node(node_ptr);
 }
+
+
+void  simulator::on_relocation_of_scene_node(scn::scene_node_ptr const  node_ptr)
+{
+    scn::scene_node_ptr const  phs_node_ptr = find_nearest_rigid_body_node(node_ptr);
+    if (phs_node_ptr != nullptr)
+    {
+        if (phs_node_ptr == node_ptr)
+            m_invalidated_nodes_of_rigid_bodies.insert({ phs_node_ptr->get_name(), false });
+        else
+        {
+            std::vector<angeo::collision_object_id>  coids;
+            collect_colliders_in_subtree(node_ptr, coids);
+            if (!coids.empty())
+                m_invalidated_nodes_of_rigid_bodies.insert({ phs_node_ptr->get_name(), true });
+        }
+    }
+}
+
 
 void  simulator::set_scene_selection(
         std::unordered_set<scn::scene_node_name> const&  selected_scene_nodes,
