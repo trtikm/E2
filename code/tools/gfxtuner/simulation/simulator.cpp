@@ -517,14 +517,17 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
 
         if (rb_node_ptr->has_parent())
         {
-            matrix44 const&  parent_from_base_matrix = rb_node_ptr->get_parent()->get_world_matrix();
+            matrix44  rb_world_matrix;
+            compose_from_base_matrix(
+                    m_rigid_body_simulator.get_position_of_mass_centre(rb_id),
+                    quaternion_to_rotation_matrix(m_rigid_body_simulator.get_orientation(rb_id)),
+                    rb_world_matrix
+                    );
+            matrix44 const  parent_to_base_matrix = inverse44(rb_node_ptr->get_parent()->get_world_matrix());
+            matrix44 const  from_rb_parent_matrix = parent_to_base_matrix * rb_world_matrix;
             rb_node_ptr->relocate(
-                    m_rigid_body_simulator.get_position_of_mass_centre(rb_id)
-                        - translation_vector(parent_from_base_matrix),
-                    rotation_matrix_to_quaternion(
-                        inverse33(rotation_matrix(parent_from_base_matrix))
-                            * quaternion_to_rotation_matrix(m_rigid_body_simulator.get_orientation(rb_id))
-                        )
+                    translation_vector(from_rb_parent_matrix),
+                    rotation_matrix_to_quaternion(rotation_matrix(from_rb_parent_matrix))
                     );
         }
         else
