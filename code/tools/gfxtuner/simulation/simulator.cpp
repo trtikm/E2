@@ -321,7 +321,8 @@ void  simulator::validate_simulation_state()
         if (auto  node_ptr = get_scene().get_scene_node(node_name_and_collider_change.first))
         {
             auto  rb_ptr = scn::get_rigid_body(*node_ptr);
-            INVARIANT(rb_ptr != nullptr);
+            if (rb_ptr == nullptr)
+                continue;
 
             std::vector<angeo::collision_object_id>  coids;
             std::vector<scn::scene_node_ptr>  coid_nodes;
@@ -1279,6 +1280,8 @@ void  simulator::erase_rigid_body_from_scene_node(
     {
         std::vector<angeo::collision_object_id>  coids;
         collect_colliders_in_subtree(node_ptr, coids);
+        for (angeo::collision_object_id coid : coids)
+            m_binding_of_collision_objects.erase(coid);
         bool  has_static_collider = false;
         for (angeo::collision_object_id coid : coids)
             if (!m_collision_scene.is_dynamic(coid))
