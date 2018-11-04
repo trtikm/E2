@@ -62,7 +62,7 @@ widgets::widgets(program_window* const  wnd)
     , m_node_icon((boost::filesystem::path{ get_program_options()->dataRoot() } /
                   "shared/gfx/icons/coord_system.png").string().c_str())
     , m_folder_icon((boost::filesystem::path{ get_program_options()->dataRoot() } /
-                    "shared/gfx/icons/folder.png").string().c_str())
+                    "shared/gfx/icons/data_type.png").string().c_str())
 
     , m_insert_record_handlers()
     , m_erase_record_handlers()
