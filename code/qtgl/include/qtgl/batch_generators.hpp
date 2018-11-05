@@ -85,6 +85,16 @@ batch  create_wireframe_box(
         );
 
 
+batch  create_wireframe_capsule(
+        float_32_bit const  half_distance_between_end_points,
+        float_32_bit const  thickness_from_central_line,
+        natural_8_bit const  num_lines_per_quarter_of_circle,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
+        std::string const&  id = ""
+        );
+
+
 batch  create_wireframe_sphere(
         float_32_bit const  radius,
         natural_8_bit const  num_lines_per_quarter_of_circle,

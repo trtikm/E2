@@ -62,6 +62,16 @@ public slots:
     void  on_draw_clear_colour_reset() { m_tab_draw_widgets.on_clear_colour_reset(); }
 
     void  on_draw_show_grid_changed(int const  value) { m_tab_draw_widgets.on_show_grid_changed(value); }
+    void  on_draw_show_batches_changed(int const  value) { m_tab_draw_widgets.on_show_batches_changed(value); }
+    void  on_draw_show_colliders_changed(int const  value) { m_tab_draw_widgets.on_show_colliders_changed(value); }
+
+    void  on_draw_colliders_colour_changed() { m_tab_draw_widgets.on_colliders_colour_changed(); }
+    void  on_draw_colliders_colour_set(QColor const&  colour) { m_tab_draw_widgets.on_colliders_colour_set(colour); }
+    void  on_draw_colliders_colour_choose() { m_tab_draw_widgets.on_colliders_colour_choose(); }
+    void  on_draw_colliders_colour_reset() { m_tab_draw_widgets.on_colliders_colour_reset(); }
+
+    void  on_draw_render_in_wireframe_changed(int const  value) { m_tab_draw_widgets.on_render_in_wireframe_changed(value); }
+
     void  on_draw_save_pos_rot_changed(int const  value) { m_tab_draw_widgets.on_save_pos_rot_changed(value); }
 
     void  draw_camera_position_listener() { m_tab_draw_widgets.camera_position_listener(); }

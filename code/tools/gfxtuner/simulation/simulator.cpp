@@ -153,6 +153,10 @@ simulator::simulator()
                     )
             }
     , m_do_show_grid(true)
+    , m_do_show_batches(true)
+    , m_do_show_colliders(true)
+    , m_colliders_colour{ 0.75f, 0.75f, 1.0f, 1.0f }
+    , m_render_in_wireframe(false)
 
     // Common and shared data for both modes: Editing and Simulation
 
@@ -274,6 +278,7 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     qtgl::glapi().glViewport(0, 0, window_props().width_in_pixels(), window_props().height_in_pixels());
+    qtgl::glapi().glPolygonMode(GL_FRONT_AND_BACK, m_render_in_wireframe ? GL_LINE : GL_FILL);
 
     matrix44  matrix_from_world_to_camera;
     m_camera->to_camera_space_matrix(matrix_from_world_to_camera);
@@ -303,11 +308,15 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
             draw_state = m_batch_grid.get_draw_state();
         }
 
+    if (m_do_show_colliders)
+        render_colliders(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
+
     if (is_simulation_round)
         render_simulation_state(matrix_from_world_to_camera, matrix_from_camera_to_clipspace ,draw_state);
     else
     {
-        render_scene_batches(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
+        if (m_do_show_batches)
+            render_scene_batches(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
         render_scene_coord_systems(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
     }
 
@@ -596,70 +605,39 @@ void  simulator::render_simulation_state(
 {
     TMPROF_BLOCK();
 
-    std::unordered_map<
-            std::string,    // batch ID
-            std::pair<
-                qtgl::batch,
-                std::vector<std::pair<scn::scene_node_const_ptr,gfx_animated_object const*> > > >
-        batches;
-    for (auto const& name_node : scn::get_all_nodes(get_scene()))
-        for (auto const& name_holder : scn::get_batch_holders(*name_node.second))
-        {
-            qtgl::batch const  batch = scn::as_batch(name_holder.second);
-            auto&  record = batches[batch.path_component_of_uid()];
-            if (record.first.empty())
-                record.first = batch;
-            INVARIANT(record.first == batch);
-            auto const  it = m_gfx_animated_objects.find(scn::make_batch_record_id(name_node.first, name_holder.first));
-            INVARIANT(it == m_gfx_animated_objects.cend() || it->second.get_batch() == record.first);
-            record.second.push_back({
-                name_node.second,
-                it != m_gfx_animated_objects.cend() ? &it->second : nullptr
-                });
-        }
-    for (auto const& elem : batches)
-        if (qtgl::make_current(elem.second.first, draw_state))
-        {
-            for (auto const& node_and_anim : elem.second.second)
-                if (node_and_anim.second == nullptr)
-                    qtgl::render_batch(
-                        elem.second.first,
-                        qtgl::vertex_shader_uniform_data_provider(
-                            elem.second.first,
-                            { matrix_from_world_to_camera * node_and_anim.first->get_world_matrix() },
-                            matrix_from_camera_to_clipspace,
-                            m_diffuse_colour,
-                            m_ambient_colour,
-                            m_specular_colour,
-                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                            m_directional_light_colour,
-                            m_fog_colour,
-                            m_fog_near,
-                            m_fog_far
-                            ),
-                        qtgl::fragment_shader_uniform_data_provider(
-                            m_diffuse_colour,
-                            m_ambient_colour,
-                            m_specular_colour,
-                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                            m_directional_light_colour,
-                            m_fog_colour,
-                            m_fog_near,
-                            m_fog_far
-                            )
-                        );
-                else
-                {
-                    std::vector<matrix44>  frame;
-                    node_and_anim.second->get_transformations(
-                            frame,
-                            matrix_from_world_to_camera * node_and_anim.first->get_world_matrix()
-                            );
-                    qtgl::render_batch(
+    if (m_do_show_batches)
+    {
+        std::unordered_map<
+                std::string,    // batch ID
+                std::pair<
+                    qtgl::batch,
+                    std::vector<std::pair<scn::scene_node_const_ptr,gfx_animated_object const*> > > >
+            batches;
+        for (auto const& name_node : scn::get_all_nodes(get_scene()))
+            for (auto const& name_holder : scn::get_batch_holders(*name_node.second))
+            {
+                qtgl::batch const  batch = scn::as_batch(name_holder.second);
+                auto&  record = batches[batch.path_component_of_uid()];
+                if (record.first.empty())
+                    record.first = batch;
+                INVARIANT(record.first == batch);
+                auto const  it = m_gfx_animated_objects.find(scn::make_batch_record_id(name_node.first, name_holder.first));
+                INVARIANT(it == m_gfx_animated_objects.cend() || it->second.get_batch() == record.first);
+                record.second.push_back({
+                    name_node.second,
+                    it != m_gfx_animated_objects.cend() ? &it->second : nullptr
+                    });
+            }
+        for (auto const& elem : batches)
+            if (qtgl::make_current(elem.second.first, draw_state))
+            {
+                for (auto const& node_and_anim : elem.second.second)
+                    if (node_and_anim.second == nullptr)
+                        qtgl::render_batch(
                             elem.second.first,
                             qtgl::vertex_shader_uniform_data_provider(
                                 elem.second.first,
-                                frame,
+                                { matrix_from_world_to_camera * node_and_anim.first->get_world_matrix() },
                                 matrix_from_camera_to_clipspace,
                                 m_diffuse_colour,
                                 m_ambient_colour,
@@ -680,10 +658,44 @@ void  simulator::render_simulation_state(
                                 m_fog_near,
                                 m_fog_far
                                 )
-                        );
-                }
-            draw_state = elem.second.first.get_draw_state();
-        }
+                            );
+                    else
+                    {
+                        std::vector<matrix44>  frame;
+                        node_and_anim.second->get_transformations(
+                                frame,
+                                matrix_from_world_to_camera * node_and_anim.first->get_world_matrix()
+                                );
+                        qtgl::render_batch(
+                                elem.second.first,
+                                qtgl::vertex_shader_uniform_data_provider(
+                                    elem.second.first,
+                                    frame,
+                                    matrix_from_camera_to_clipspace,
+                                    m_diffuse_colour,
+                                    m_ambient_colour,
+                                    m_specular_colour,
+                                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                                    m_directional_light_colour,
+                                    m_fog_colour,
+                                    m_fog_near,
+                                    m_fog_far
+                                    ),
+                                qtgl::fragment_shader_uniform_data_provider(
+                                    m_diffuse_colour,
+                                    m_ambient_colour,
+                                    m_specular_colour,
+                                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                                    m_directional_light_colour,
+                                    m_fog_colour,
+                                    m_fog_near,
+                                    m_fog_far
+                                    )
+                            );
+                    }
+                draw_state = elem.second.first.get_draw_state();
+            }
+    }
 }
 
 
@@ -1068,6 +1080,68 @@ void  simulator::render_scene_coord_systems(
 
     draw_state = m_batch_coord_system.get_draw_state();
 }
+
+void  simulator::render_colliders(
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        qtgl::draw_state&  draw_state
+        )
+{
+    TMPROF_BLOCK();
+
+    std::unordered_map<float_32_bit, qtgl::batch>  sphere_batches;
+    std::unordered_map<std::pair<float_32_bit, float_32_bit>, qtgl::batch>  capsule_batches;
+    for (auto const& name_node : scn::get_all_nodes(get_scene()))
+        if (auto const collider_ptr = scn::get_collider(*name_node.second))
+        {
+            qtgl::batch  batch;
+            {
+                angeo::collision_object_id const  coid = collider_ptr->id();
+                switch (angeo::get_shape_type(coid))
+                {
+                case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+                    {
+                        std::pair<float_32_bit, float_32_bit> const  key {
+                                m_collision_scene.get_capsule_half_distance_between_end_points(coid),
+                                m_collision_scene.get_capsule_thickness_from_central_line(coid)
+                                };
+                        auto  it = capsule_batches.find(key);
+                        if (it == capsule_batches.end())
+                            it = capsule_batches.insert({
+                                        key,
+                                        qtgl::create_wireframe_capsule(key.first, key.second, 5U, m_colliders_colour)
+                                        }).first;
+                        batch = it->second;
+                    }
+                    break;
+                case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+                    {
+                        float_32_bit const  key = m_collision_scene.get_sphere_radius(coid);
+                        auto  it = sphere_batches.find(key);
+                        if (it == sphere_batches.end())
+                            it = sphere_batches.insert({
+                                        key,
+                                        qtgl::create_wireframe_sphere(key, 5U, m_colliders_colour)
+                                        }).first;
+                        batch = it->second;
+                    }
+                    break;
+                default:
+                    NOT_IMPLEMENTED_YET();
+                }
+            }
+            if (qtgl::make_current(batch, draw_state))
+            {
+                qtgl::render_batch(
+                        batch,
+                        matrix_from_world_to_camera * name_node.second->get_world_matrix(),
+                        matrix_from_camera_to_clipspace
+                        );
+                draw_state = batch.get_draw_state();
+            }
+        }
+}
+
 
 void  simulator::erase_scene_node(scn::scene_node_name const&  name)
 {

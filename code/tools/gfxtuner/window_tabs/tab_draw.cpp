@@ -232,6 +232,83 @@ widgets::widgets(program_window* const  wnd)
             return new s(wnd);
         }(m_wnd)
         )
+    , m_show_batches(
+        [](program_window* wnd) {
+            struct s : public QCheckBox {
+                s(program_window* wnd) : QCheckBox("Show batches")
+                {
+                    setChecked(wnd->ptree().get("draw.show_batches", true));
+                    QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(on_draw_show_batches_changed(int)));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+    , m_show_colliders(
+        [](program_window* wnd) {
+            struct s : public QCheckBox {
+                s(program_window* wnd) : QCheckBox("Show colliders")
+                {
+                    setChecked(wnd->ptree().get("draw.show_colliders", true));
+                    QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(on_draw_show_colliders_changed(int)));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+
+    , m_colliders_colour_component_red(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    setValidator(new QIntValidator(0, 255));
+                    setText(QString::number(wnd->ptree().get("draw.colliders_colour.red", 191)));
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_draw_colliders_colour_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+    , m_colliders_colour_component_green(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    setValidator(new QIntValidator(0, 255));
+                    setText(QString::number(wnd->ptree().get("draw.colliders_colour.green", 191)));
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_draw_colliders_colour_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+    , m_colliders_colour_component_blue(
+        [](program_window* wnd) {
+            struct s : public QLineEdit {
+                s(program_window* wnd) : QLineEdit()
+                {
+                    setValidator(new QIntValidator(0, 255));
+                    setText(QString::number(wnd->ptree().get("draw.colliders_colour.blue", 255)));
+                    QObject::connect(this, SIGNAL(editingFinished()), wnd, SLOT(on_draw_colliders_colour_changed()));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+
+    , m_render_in_wireframe(
+        [](program_window* wnd) {
+            struct s : public QCheckBox {
+                s(program_window* wnd) : QCheckBox("Wireframe")
+                {
+                    setChecked(wnd->ptree().get("draw.render_in_wireframe", false));
+                    QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(on_draw_render_in_wireframe_changed(int)));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
 {
     m_camera_rot_w->setEnabled(false);
     m_camera_rot_x->setEnabled(false);
@@ -384,6 +461,68 @@ void widgets::on_show_grid_changed(int const  value)
     wnd()->set_focus_to_glwindow();
 }
 
+void widgets::on_show_batches_changed(int const  value)
+{
+    wnd()->glwindow().call_later(&simulator::set_show_batches, m_show_batches->isChecked());
+    wnd()->set_focus_to_glwindow();
+}
+
+void widgets::on_show_colliders_changed(int const  value)
+{
+    wnd()->glwindow().call_later(&simulator::set_show_colliders, m_show_colliders->isChecked());
+    wnd()->set_focus_to_glwindow();
+}
+
+void widgets::on_colliders_colour_changed()
+{
+    vector3 const  colour(
+        (float_32_bit)m_colliders_colour_component_red->text().toInt() / 255.0f,
+        (float_32_bit)m_colliders_colour_component_green->text().toInt() / 255.0f,
+        (float_32_bit)m_colliders_colour_component_blue->text().toInt() / 255.0f
+        );
+    wnd()->glwindow().call_later(&simulator::set_colliders_color, colour);
+    wnd()->set_focus_to_glwindow();
+}
+
+void widgets::on_colliders_colour_set(QColor const&  colour)
+{
+    m_colliders_colour_component_red->setText(QString::number(colour.red()));
+    m_colliders_colour_component_green->setText(QString::number(colour.green()));
+    m_colliders_colour_component_blue->setText(QString::number(colour.blue()));
+    on_colliders_colour_changed();
+}
+
+void widgets::on_colliders_colour_choose()
+{
+    QColor const  init_colour(m_colliders_colour_component_red->text().toInt(),
+        m_colliders_colour_component_green->text().toInt(),
+        m_colliders_colour_component_blue->text().toInt());
+    QColor const  colour = QColorDialog::getColor(init_colour, wnd(), "Choose colliders colour");
+    if (!colour.isValid())
+        return;
+    m_colliders_colour_component_red->setText(QString::number(colour.red()));
+    m_colliders_colour_component_green->setText(QString::number(colour.green()));
+    m_colliders_colour_component_blue->setText(QString::number(colour.blue()));
+    vector3 const  normalised_colour(
+        (float_32_bit)m_colliders_colour_component_red->text().toInt() / 255.0f,
+        (float_32_bit)m_colliders_colour_component_green->text().toInt() / 255.0f,
+        (float_32_bit)m_colliders_colour_component_blue->text().toInt() / 255.0f
+        );
+    wnd()->glwindow().call_later(&simulator::set_colliders_color, normalised_colour);
+    wnd()->set_focus_to_glwindow(false);
+}
+
+void widgets::on_colliders_colour_reset()
+{
+    on_colliders_colour_set(QColor(191, 191, 255));
+}
+
+void widgets::on_render_in_wireframe_changed(int const  value)
+{
+    wnd()->glwindow().call_later(&simulator::set_render_in_wireframe, m_render_in_wireframe->isChecked());
+    wnd()->set_focus_to_glwindow();
+}
+
 void  widgets::on_save_pos_rot_changed(int const  value)
 {
     wnd()->set_focus_to_glwindow();
@@ -454,6 +593,14 @@ void  widgets::save()
     wnd()->ptree().put("draw.clear_colour.blue", m_clear_colour_component_blue->text().toInt());
 
     wnd()->ptree().put("draw.show_grid", m_show_grid->isChecked());
+    wnd()->ptree().put("draw.show_batches", m_show_grid->isChecked());
+    wnd()->ptree().put("draw.show_colliders", m_show_grid->isChecked());
+
+    wnd()->ptree().put("draw.colliders_colour.red", m_colliders_colour_component_red->text().toInt());
+    wnd()->ptree().put("draw.colliders_colour.green", m_colliders_colour_component_green->text().toInt());
+    wnd()->ptree().put("draw.colliders_colour.blue", m_colliders_colour_component_blue->text().toInt());
+
+    wnd()->ptree().put("draw.render_in_wireframe", m_render_in_wireframe->isChecked());
 }
 
 QWidget*  make_draw_tab_content(widgets const&  w)
@@ -586,10 +733,64 @@ QWidget*  make_draw_tab_content(widgets const&  w)
             }
             draw_tab_layout->addWidget(clear_colour_group);
 
+            QWidget* const colliders_colour_group = new QGroupBox("Colliders colour [rgb]");
+            {
+                QVBoxLayout* const colliders_colour_layout = new QVBoxLayout;
+                {
+                    QHBoxLayout* const edit_boxes_layout = new QHBoxLayout;
+                    {
+                        edit_boxes_layout->addWidget(w.colliders_colour_component_red());
+                        edit_boxes_layout->addWidget(w.colliders_colour_component_green());
+                        edit_boxes_layout->addWidget(w.colliders_colour_component_blue());
+                        w.wnd()->on_draw_colliders_colour_changed();
+                    }
+                    colliders_colour_layout->addLayout(edit_boxes_layout);
+
+                    QHBoxLayout* const buttons_layout = new QHBoxLayout;
+                    {
+                        buttons_layout->addWidget(
+                            [](program_window* wnd) {
+                                struct choose : public QPushButton {
+                                    choose(program_window* wnd) : QPushButton("Choose")
+                                    {
+                                        QObject::connect(this, SIGNAL(released()), wnd, SLOT(on_draw_colliders_colour_choose()));
+                                    }
+                                };
+                                return new choose(wnd);
+                            }(w.wnd())
+                            );
+                        buttons_layout->addWidget(
+                            [](program_window* wnd) {
+                                struct choose : public QPushButton {
+                                    choose(program_window* wnd) : QPushButton("Default")
+                                    {
+                                        QObject::connect(this, SIGNAL(released()), wnd, SLOT(on_draw_colliders_colour_reset()));
+                                    }
+                                };
+                                return new choose(wnd);
+                            }(w.wnd())
+                            );
+                    }
+                    colliders_colour_layout->addLayout(buttons_layout);
+
+                }
+                colliders_colour_group->setLayout(colliders_colour_layout);
+            }
+            draw_tab_layout->addWidget(colliders_colour_group);
+
             QHBoxLayout* const render_options_layout = new QHBoxLayout;
             {
                 render_options_layout->addWidget(w.show_grid());
                 w.wnd()->on_draw_show_grid_changed(0);
+
+                render_options_layout->addWidget(w.show_batches());
+                w.wnd()->on_draw_show_batches_changed(0);
+
+                render_options_layout->addWidget(w.show_colliders());
+                w.wnd()->on_draw_show_colliders_changed(0);
+
+                render_options_layout->addWidget(w.render_in_wireframe());
+                w.wnd()->on_draw_render_in_wireframe_changed(0);
             }
             draw_tab_layout->addLayout(render_options_layout);
 

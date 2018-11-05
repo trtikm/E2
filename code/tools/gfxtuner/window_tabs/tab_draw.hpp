@@ -43,6 +43,14 @@ struct  widgets
     QLineEdit*  clear_colour_component_blue() const { return m_clear_colour_component_blue; }
 
     QCheckBox* show_grid() const { return m_show_grid; }
+    QCheckBox* show_batches() const { return m_show_batches; }
+    QCheckBox* show_colliders() const { return m_show_colliders; }
+
+    QLineEdit*  colliders_colour_component_red() const { return m_colliders_colour_component_red; }
+    QLineEdit*  colliders_colour_component_green() const { return m_colliders_colour_component_green; }
+    QLineEdit*  colliders_colour_component_blue() const { return m_colliders_colour_component_blue; }
+
+    QCheckBox* render_in_wireframe() const { return m_render_in_wireframe; }
 
     void  on_camera_pos_changed();
     void  camera_position_listener();
@@ -62,6 +70,16 @@ struct  widgets
     void  on_clear_colour_reset();
 
     void  on_show_grid_changed(int const  value);
+    void  on_show_batches_changed(int const  value);
+    void  on_show_colliders_changed(int const  value);
+
+    void  on_colliders_colour_changed();
+    void  on_colliders_colour_set(QColor const&  colour);
+    void  on_colliders_colour_choose();
+    void  on_colliders_colour_reset();
+
+    void  on_render_in_wireframe_changed(int const  value);
+
     void  on_save_pos_rot_changed(int const  value);
 
     void  on_double_camera_speed();
@@ -98,6 +116,14 @@ private:
     QLineEdit*  m_clear_colour_component_blue;
 
     QCheckBox*  m_show_grid;
+    QCheckBox*  m_show_batches;
+    QCheckBox*  m_show_colliders;
+
+    QLineEdit*  m_colliders_colour_component_red;
+    QLineEdit*  m_colliders_colour_component_green;
+    QLineEdit*  m_colliders_colour_component_blue;
+
+    QCheckBox*  m_render_in_wireframe;
 };
 
 

@@ -60,6 +60,7 @@ add_library(${THIS_TARGET_NAME}
     ./src/batch_generator_lines3d.cpp
     ./src/batch_generator_basis_vectors.cpp
     ./src/batch_generator_wireframe_box.cpp
+    ./src/batch_generator_wireframe_capsule.cpp
     ./src/batch_generator_wireframe_sphere.cpp
     ./src/batch_generator_perspective_frustum.cpp
 

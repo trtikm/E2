@@ -42,6 +42,10 @@ struct simulator : public qtgl::real_time_simulator
 
     void  set_clear_color(vector3 const&  colour) { qtgl::glapi().glClearColor(colour(0), colour(1), colour(2), 1.0f); }
     void  set_show_grid_state(bool const  state) { m_do_show_grid = state; }
+    void  set_show_batches(bool const  state) { m_do_show_batches = state; }
+    void  set_show_colliders(bool const  state) { m_do_show_colliders = state; }
+    void  set_colliders_color(vector3 const&  colour) { m_colliders_colour = expand34(colour); }
+    void  set_render_in_wireframe(bool const  state) { m_render_in_wireframe = state; }
 
     // Camera
 
@@ -230,6 +234,11 @@ private:
             matrix44 const&  matrix_from_camera_to_clipspace,
             qtgl::draw_state&  draw_state
             );
+    void  render_colliders(
+            matrix44 const&  matrix_from_world_to_camera,
+            matrix44 const&  matrix_from_camera_to_clipspace,
+            qtgl::draw_state&  draw_state
+            );
 
     scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_ptr  node_ptr);
     scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_name const&  node_name)
@@ -276,6 +285,10 @@ private:
     float  m_fog_far;
     qtgl::batch  m_batch_grid;
     bool  m_do_show_grid;
+    bool  m_do_show_batches;
+    bool  m_do_show_colliders;
+    vector4  m_colliders_colour;
+    bool  m_render_in_wireframe;
 
     // Common and shared data for both modes: Editing and Simulation
 
