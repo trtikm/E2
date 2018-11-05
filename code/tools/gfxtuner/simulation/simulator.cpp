@@ -1287,6 +1287,7 @@ void  simulator::get_collision_sphere_info(
         )
 {
     scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_name()));
+    ASSUMPTION(collider != nullptr);
     radius = m_collision_scene.get_sphere_radius(collider->id());
     material = m_collision_scene.get_material(collider->id());
     density_multiplier = collider->get_density_multiplier();
@@ -1303,6 +1304,7 @@ void  simulator::get_collision_capsule_info(
         )
 {
     scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_name()));
+    ASSUMPTION(collider != nullptr);
     half_distance_between_end_points = m_collision_scene.get_capsule_half_distance_between_end_points(collider->id());
     thickness_from_central_line = m_collision_scene.get_capsule_thickness_from_central_line(collider->id());
     material = m_collision_scene.get_material(collider->id());
@@ -1376,6 +1378,24 @@ void  simulator::erase_rigid_body_from_scene_node(
 
         invalidate_rigid_body_controling_node(node_ptr, true);
     }
+}
+
+
+void  simulator::get_rigid_body_info(
+        scn::scene_node_name const&  scene_node_name,
+        vector3&  linear_velocity,
+        vector3&  angular_velocity,
+        vector3&  external_linear_acceleration,
+        vector3&  external_angular_acceleration
+        )
+{
+    scn::scene_node_const_ptr const  node_ptr = get_scene_node(scene_node_name);
+    scn::rigid_body const* const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    linear_velocity = m_rigid_body_simulator.get_linear_velocity(rb_ptr->id());
+    angular_velocity = m_rigid_body_simulator.get_angular_velocity(rb_ptr->id());
+    external_linear_acceleration = m_rigid_body_simulator.get_external_linear_acceleration(rb_ptr->id());
+    external_angular_acceleration = m_rigid_body_simulator.get_external_angular_acceleration(rb_ptr->id());
 }
 
 

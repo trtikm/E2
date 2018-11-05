@@ -150,6 +150,14 @@ struct simulator : public qtgl::real_time_simulator
             scn::scene_node_name const&  scene_node_name
             );
 
+    void  get_rigid_body_info(
+            scn::scene_node_name const&  scene_node_name,
+            vector3&  linear_velocity,
+            vector3&  angular_velocity,
+            vector3&  external_linear_acceleration,
+            vector3&  external_angular_acceleration
+            );
+
     void  load_collider(boost::property_tree::ptree const&  data, scn::scene_node_name const&  scene_node_name);
     void  save_collider(scn::collider const&  collider, boost::property_tree::ptree&  data);
 

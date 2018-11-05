@@ -341,6 +341,36 @@ void  register_record_handler_for_update_scene_record(
         std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)> >&  update_record_handlers
         )
 {
+    update_record_handlers.insert({
+            scn::get_rigid_body_folder_name(),
+            [](widgets* const  w, scn::scene_record_id const&  record_id) -> void {
+                    detail::rigid_body_props_dialog::rigid_body_props  rb_props;
+                    w->wnd()->glwindow().call_now(
+                            &simulator::get_rigid_body_info,
+                            record_id.get_node_name(),
+                            std::ref(rb_props.m_linear_velocity),
+                            std::ref(rb_props.m_angular_velocity),
+                            std::ref(rb_props.m_external_linear_acceleration),
+                            std::ref(rb_props.m_external_angular_acceleration)
+                            );
+                    detail::rigid_body_props_dialog  dlg(w->wnd(), &rb_props);
+                    dlg.exec();
+                    if (!dlg.ok())
+                        return;
+                    w->wnd()->glwindow().call_now(
+                            &simulator::erase_rigid_body_from_scene_node,
+                            record_id.get_node_name()
+                            );
+                    w->wnd()->glwindow().call_now(
+                            &simulator::insert_rigid_body_to_scene_node,
+                            std::cref(rb_props.m_linear_velocity),
+                            std::cref(rb_props.m_angular_velocity),
+                            std::cref(rb_props.m_external_linear_acceleration),
+                            std::cref(rb_props.m_external_angular_acceleration),
+                            record_id.get_node_name()
+                            );
+                }
+            });
 }
 
 
