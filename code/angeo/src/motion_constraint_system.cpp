@@ -75,6 +75,7 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
         TMPROF_BLOCK();
 
         // We fill-in the matrix 'm_inverted_mass_matrix_times_jacobian_transposed'.
+        m_inverted_mass_matrix_times_jacobian_transposed.resize(get_num_constraints());
         for (natural_32_bit  i = 0U; i != get_num_constraints(); ++i)
         {
             pair_of_rigid_body_ids const&  rb_ids = m_index.at(i);
