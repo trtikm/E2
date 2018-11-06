@@ -109,14 +109,13 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
             m_rhs_vector.at(i) =
                     dt_inverted * m_rhs_vector.at(i) - (
                         dot_product(jacobian_elem.first.m_linear,
-                                    dt_inverted * rb_first.m_velocity.m_linear -
-                                    rb_first.m_acceleration_from_external_forces.m_linear) +
+                                    dt_inverted * rb_first.m_velocity.m_linear + rb_first.m_acceleration_from_external_forces.m_linear) +
                         dot_product(jacobian_elem.first.m_angular,
-                                    dt_inverted * rb_first.m_velocity.m_angular - rb_first.m_acceleration_from_external_forces.m_angular) +
+                                    dt_inverted * rb_first.m_velocity.m_angular + rb_first.m_acceleration_from_external_forces.m_angular) +
                         dot_product(jacobian_elem.second.m_linear,
-                                    dt_inverted * rb_second.m_velocity.m_linear - rb_second.m_acceleration_from_external_forces.m_linear) +
+                                    dt_inverted * rb_second.m_velocity.m_linear + rb_second.m_acceleration_from_external_forces.m_linear) +
                         dot_product(jacobian_elem.second.m_angular,
-                                    dt_inverted * rb_second.m_velocity.m_angular - rb_second.m_acceleration_from_external_forces.m_angular)
+                                    dt_inverted * rb_second.m_velocity.m_angular + rb_second.m_acceleration_from_external_forces.m_angular)
                         );
         }
     }
@@ -156,7 +155,6 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
             diagonal_elements.at(i) =
                 dot_product(jacobian_elem.first.m_linear, matrix_elem.first.m_linear) +
                 dot_product(jacobian_elem.first.m_angular, matrix_elem.first.m_angular) +
-
                 dot_product(jacobian_elem.second.m_linear, matrix_elem.second.m_linear) +
                 dot_product(jacobian_elem.second.m_angular, matrix_elem.second.m_angular)
                 ;
@@ -210,6 +208,10 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
 
                 float_32_bit const  new_lambda = std::max(min_lambda, std::min(max_lambda, lambda_ref + raw_delta_lambda));
                 float_32_bit const  delta_lambda = new_lambda - lambda_ref;
+
+                float_32_bit const  abs_delta_lambda = std::abs(delta_lambda);
+                if (max_change_of_variables < abs_delta_lambda)
+                    max_change_of_variables = abs_delta_lambda;
 
                 lambda_ref = new_lambda;
 
