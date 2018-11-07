@@ -145,7 +145,7 @@ void  rigid_body_simulator::insert_contact_constraints(
                     rb_1,
                     -unit_normal,
                     -cross_product(contact_point - rb1.m_position_of_mass_centre, unit_normal),
-                    depenetration_coef * penetration_depth,
+                    penetration_depth < 0.001f ? 0.0f : depenetration_coef * penetration_depth,
                     [](std::vector<float_32_bit> const&) { return 0.0f; },
                     [](std::vector<float_32_bit> const&) { return std::numeric_limits<float_32_bit>::max(); },
                     read_contact_cache({ rb_0, rb_1 }, cid, 0U, 0.0f)
@@ -216,8 +216,8 @@ void  rigid_body_simulator::do_simulation_step(
             m_rigid_bodies,
             std::bind(
                     &motion_constraint_system::default_computation_terminator,
-                    get_constraint_system().get_num_constraints(),
-                    1e-5f,
+                    3U * get_constraint_system().get_num_constraints(),
+                    1e-3f,
                     natural_32_bit(0.95f * max_computation_time_in_seconds * 1000000.0f),
                     std::placeholders::_1
                     ),
