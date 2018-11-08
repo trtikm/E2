@@ -100,6 +100,16 @@ natural_64_bit  scene_history::get_active_commit_id() const
     return detail::get_commit_node_id(m_history.at(m_active_commit));
 }
 
+bool  scene_history::is_commit_valid(natural_64_bit const  commit_id) const
+{
+    std::size_t  commit_index = 0UL;
+    for (; commit_index != m_history.size(); ++commit_index)
+        if (detail::is_commit_node(m_history.at(commit_index)) &&
+            detail::get_commit_node_id(m_history.at(commit_index)) == commit_id)
+            return true;
+    return false;
+}
+
 std::size_t  scene_history::find_commit(natural_64_bit const  commit_id) const
 {
     std::size_t  commit_index = 0UL;

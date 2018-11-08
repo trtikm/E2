@@ -31,6 +31,7 @@ struct  scene_history final
 
     void  commit();
     natural_64_bit  get_active_commit_id() const;
+    bool  is_commit_valid(natural_64_bit const  commit_id) const;
     bool  was_applied_mutator_since_commit(natural_64_bit const  commit_id) const;
 
     void  undo();

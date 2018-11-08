@@ -1731,7 +1731,9 @@ scn::scene_history_ptr  widgets::get_scene_history()
 void  widgets::set_window_title()
 {
     wnd()->set_title(
-        (get_scene_history()->was_applied_mutator_since_commit(m_save_commit_id) ? "* " : "") +
+        (!get_scene_history()->is_commit_valid(m_save_commit_id)
+            || get_scene_history()->was_applied_mutator_since_commit(m_save_commit_id)
+            ? "* " : "") +
         (wnd()->get_current_scene_dir().empty() ? "New scene" : wnd()->get_current_scene_dir().string())
         );
 }
