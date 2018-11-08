@@ -843,7 +843,7 @@ void  widgets::erase_scene_record(scn::scene_record_id const&  id)
     m_erase_record_handlers.at(id.get_folder_name())(this, id);
 }
 
-void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std::unordered_set<QTreeWidgetItem*>&  erased_items)
+void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std::unordered_set<QTreeWidgetItem*>&  erased_items, bool const  is_root)
 {
     tree_widget_item* const  item = as_tree_widget_item(root_item);
     INVARIANT(item != nullptr);
@@ -852,7 +852,7 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
     if (item->represents_coord_system())
     {
         while (item->childCount() > 0)
-            erase_subtree_at_root_item(item->child(0), erased_items);
+            erase_subtree_at_root_item(item->child(0), erased_items, false);
 
         get_scene_history()->insert<scn::scene_history_coord_system_insert_to_selection>(item_name, true);
         scn::scene_node_ptr const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, item_name);
@@ -873,7 +873,7 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
     else if (represents_folder(item))
     {
         while (item->childCount() > 0)
-            erase_subtree_at_root_item(item->child(0), erased_items);
+            erase_subtree_at_root_item(item->child(0), erased_items, false);
     }
     else
     {
@@ -898,7 +898,7 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
     delete taken_item;
     erased_items.insert(taken_item);
 
-    if (folder_item != nullptr && folder_item->childCount() == 0)
+    if (is_root && folder_item != nullptr && folder_item->childCount() == 0)
     {
         QTreeWidgetItem* const  node_item = folder_item->parent();
         INVARIANT(represents_coord_system(node_item));

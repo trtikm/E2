@@ -110,7 +110,7 @@ private:
     void  add_tree_item_to_selection(QTreeWidgetItem* const  item);
 
     void  erase_scene_record(scn::scene_record_id const&  id);
-    void  erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std::unordered_set<QTreeWidgetItem*>&  erased_items);
+    void  erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std::unordered_set<QTreeWidgetItem*>&  erased_items, bool const  is_root = true);
 
     void  load_scene_record(scn::scene_record_id const&  id, boost::property_tree::ptree const&  data);
     void  save_scene_record(
