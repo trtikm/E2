@@ -336,7 +336,6 @@ void  simulator::on_simulation_paused()
             m_rigid_body_simulator.set_external_linear_acceleration(rbid_and_backup.first, rbid_and_backup.second.m_external_linear_acceleration);
             m_rigid_body_simulator.set_external_angular_acceleration(rbid_and_backup.first, rbid_and_backup.second.m_external_angular_acceleration);
         }
-    m_static_rigid_body_backups.clear();
 
     // TODO: process these before clear:
     //    m_scene_nodes_relocated_during_simulation
@@ -370,6 +369,7 @@ void  simulator::on_simulation_resumed()
             if (node_name_and_collider_change.second)
             {
                 m_binding_of_rigid_bodies.erase(rb_ptr->id());
+                m_static_rigid_body_backups.erase(rb_ptr->id());
 
                 vector3  linear_velocity = m_rigid_body_simulator.get_linear_velocity(rb_ptr->id());
                 vector3  angular_velocity = m_rigid_body_simulator.get_angular_velocity(rb_ptr->id());
@@ -453,11 +453,6 @@ void  simulator::on_simulation_resumed()
                     rb_backup.m_angular_velocity = angular_velocity;
                     rb_backup.m_external_linear_acceleration = external_linear_acceleration;
                     rb_backup.m_external_angular_acceleration = external_angular_acceleration;
-
-                    linear_velocity = vector3_zero();
-                    angular_velocity = vector3_zero();
-                    external_linear_acceleration = vector3_zero();
-                    external_angular_acceleration = vector3_zero();
                 }
 
                 matrix44 const  world_matrix = node_ptr->get_world_matrix();
@@ -486,11 +481,19 @@ void  simulator::on_simulation_resumed()
             {
                 matrix44 const  world_matrix = node_ptr->get_world_matrix();
                 m_rigid_body_simulator.set_position_of_mass_centre(rb_ptr->id(), translation_vector(world_matrix));
-                m_rigid_body_simulator.set_orientation(rb_ptr->id(), rotation_matrix_to_quaternion(rotation_matrix(world_matrix)));
-               
+                m_rigid_body_simulator.set_orientation(rb_ptr->id(), rotation_matrix_to_quaternion(rotation_matrix(world_matrix))); 
             }
         }
     m_invalidated_nodes_of_rigid_bodies.clear();
+
+    for (auto const& rbid_and_backup : m_static_rigid_body_backups)
+        if (m_rigid_body_simulator.contains(rbid_and_backup.first))
+        {
+            m_rigid_body_simulator.set_linear_velocity(rbid_and_backup.first, vector3_zero());
+            m_rigid_body_simulator.set_angular_velocity(rbid_and_backup.first, vector3_zero());
+            m_rigid_body_simulator.set_external_linear_acceleration(rbid_and_backup.first, vector3_zero());
+            m_rigid_body_simulator.set_external_angular_acceleration(rbid_and_backup.first, vector3_zero());
+        }
 
     // TODO: The code below should be removed at some point.
 
@@ -1446,6 +1449,7 @@ void  simulator::erase_rigid_body_from_scene_node(
 
         m_rigid_body_simulator.erase_rigid_body(rb_ptr->id());
         m_binding_of_rigid_bodies.erase(rb_ptr->id());
+        m_static_rigid_body_backups.erase(rb_ptr->id());
 
         m_scene_selection.erase_record(scn::make_rigid_body_record_id(scene_node_name));
         scn::erase_rigid_body(*node_ptr);
