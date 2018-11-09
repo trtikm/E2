@@ -47,20 +47,54 @@ natural_32_bit  closest_points_of_two_lines(
         )
 {
     vector3 const  u1 = line_1_end - line_1_begin;
+
+    float_32_bit const  u1_dot_u1 = dot_product(u1, u1);
+
+    vector3 const  v1 = line_2_begin - line_1_begin;
+    vector3 const  v2 = line_2_end - line_1_begin;
+
+    float_32_bit const  v1_dot_u1 = dot_product(v1, u1);
+    float_32_bit const  v2_dot_u1 = dot_product(v2, u1);
+
+    if (v1_dot_u1 < 0.0f && v2_dot_u1 < 0.0f)
+    {
+        if (output_line_1_closest_point_1 != nullptr)
+            *output_line_1_closest_point_1 = line_1_begin;
+        if (output_line_1_closest_point_param_1 != nullptr)
+            *output_line_1_closest_point_param_1 = 0.0f;
+        float_32_bit const t = closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_begin, output_line_2_closest_point_1);
+        if (output_line_2_closest_point_param_1 != nullptr)
+            *output_line_2_closest_point_param_1 = t;
+        return 1U;
+    }
+
+    if (v1_dot_u1 > u1_dot_u1 && v2_dot_u1 > u1_dot_u1)
+    {
+        if (output_line_1_closest_point_1 != nullptr)
+            *output_line_1_closest_point_1 = line_1_end;
+        if (output_line_1_closest_point_param_1 != nullptr)
+            *output_line_1_closest_point_param_1 = 1.0f;
+        float_32_bit const t = closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_end, output_line_2_closest_point_1);
+        if (output_line_2_closest_point_param_1 != nullptr)
+            *output_line_2_closest_point_param_1 = t;
+        return 1U;
+    }
+
     vector3 const  u2 = line_2_end - line_2_begin;
-    vector3 const  u12 = line_1_begin - line_2_begin;
 
     vector3 const  n = cross_product(u1, u2);
-    float_32_bit const  n_dot = dot_product(n, n); 
 
-    if (n_dot < 0.00001f)
+    //float_32_bit constexpr  sin_1_degree_squared = 3.0458649e-4f;
+    //float_32_bit const  sin_of_angle_between_u1_and_u2_squared = dot_product(n, n) / (u1_dot_u1 * dot_product(u2, u2));
+    //if (sin_of_angle_between_u1_and_u2_squared < sin_1_degree_squared)
+    if (dot_product(n, n) < 0.0001f)
     {
         // Lines are (almost) parallel.
 
         float_32_bit const  u1u2_dot = dot_product(u1, u2);
 
         // Solve for k2_begin:  u2 * (line_1_begin + k2_begin * u1 - line_2_begin) = 0
-        float_32_bit const  k2_begin = -dot_product(u2, u12) / u1u2_dot;
+        float_32_bit const  k2_begin = dot_product(u2, v1) / u1u2_dot;
 
         // Solve for k2_end:  u2 * (line_1_begin + k2_end * u1 - line_2_end) = 0
         float_32_bit const  k2_end = -dot_product(u2, line_1_begin - line_2_end) / u1u2_dot;
@@ -339,35 +373,131 @@ natural_32_bit  closest_points_of_two_lines(
 
     // General case: lines are not parallel.
 
-    vector3 const  m = cross_product(n, u2);
+    vector3 const  m = cross_product(n, u1);
 
-    // Solve for k1:  m * (line_1_begin + k1 * u1 - line_2_begin) = 0
-    float_32_bit const  k1 = -dot_product(m, u12) / dot_product(m, u1);
+    float_32_bit const  m_dot_v1 = dot_product(m, v1);
+    float_32_bit const  m_dot_v2 = dot_product(m, v2);
 
-    // Write output for line 1
+    if (m_dot_v1 * m_dot_v2 >= 0.0f)
     {
-        float_32_bit const  t1 = std::max(0.0f, std::min(k1, 1.0f));
-        if (output_line_1_closest_point_param_1 != nullptr)
-            *output_line_1_closest_point_param_1 = t1;
+        // Both end points 'line_2_begin' and 'line_2_end' are on one side of the other line (either above or bellow).
+
+        if (std::fabsf(m_dot_v1) < std::fabsf(m_dot_v2))
+        {
+            if (v1_dot_u1 < 0.0f)
+            {
+                if (output_line_1_closest_point_1 != nullptr)
+                    *output_line_1_closest_point_1 = line_1_begin;
+                if (output_line_1_closest_point_param_1 != nullptr)
+                    *output_line_1_closest_point_param_1 = 0.0f;
+                float_32_bit const  t = closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_begin, output_line_2_closest_point_1);
+                if (output_line_2_closest_point_param_1 != nullptr)
+                    *output_line_2_closest_point_param_1 = t;
+            }
+            else if (v1_dot_u1 > u1_dot_u1)
+            {
+                if (output_line_1_closest_point_1 != nullptr)
+                    *output_line_1_closest_point_1 = line_1_end;
+                if (output_line_1_closest_point_param_1 != nullptr)
+                    *output_line_1_closest_point_param_1 = 1.0f;
+                float_32_bit const  t = closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_end, output_line_2_closest_point_1);
+                if (output_line_2_closest_point_param_1 != nullptr)
+                    *output_line_2_closest_point_param_1 = t;
+            }
+            else
+            {
+                float_32_bit const  t = closest_point_on_line_to_point(line_1_begin, line_1_end, line_2_begin, output_line_1_closest_point_1);
+                if (output_line_1_closest_point_param_1 != nullptr)
+                    *output_line_1_closest_point_param_1 = t;
+                if (output_line_2_closest_point_1 != nullptr)
+                    *output_line_2_closest_point_1 = line_2_begin;
+                if (output_line_2_closest_point_param_1 != nullptr)
+                    *output_line_2_closest_point_param_1 = 0.0f;
+            }
+        }
+        else
+        {
+            if (v2_dot_u1 < 0.0f)
+            {
+                if (output_line_1_closest_point_1 != nullptr)
+                    *output_line_1_closest_point_1 = line_1_begin;
+                if (output_line_1_closest_point_param_1 != nullptr)
+                    *output_line_1_closest_point_param_1 = 0.0f;
+                float_32_bit const  t = closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_begin, output_line_2_closest_point_1);
+                if (output_line_2_closest_point_param_1 != nullptr)
+                    *output_line_2_closest_point_param_1 = t;
+            }
+            else if (v2_dot_u1 > u1_dot_u1)
+            {
+                if (output_line_1_closest_point_1 != nullptr)
+                    *output_line_1_closest_point_1 = line_1_end;
+                if (output_line_1_closest_point_param_1 != nullptr)
+                    *output_line_1_closest_point_param_1 = 1.0f;
+                float_32_bit const  t = closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_end, output_line_2_closest_point_1);
+                if (output_line_2_closest_point_param_1 != nullptr)
+                    *output_line_2_closest_point_param_1 = t;
+            }
+            else
+            {
+                float_32_bit const  t = closest_point_on_line_to_point(line_1_begin, line_1_end, line_2_end, output_line_1_closest_point_1);
+                if (output_line_1_closest_point_param_1 != nullptr)
+                    *output_line_1_closest_point_param_1 = t;
+                if (output_line_2_closest_point_1 != nullptr)
+                    *output_line_2_closest_point_1 = line_2_end;
+                if (output_line_2_closest_point_param_1 != nullptr)
+                    *output_line_2_closest_point_param_1 = 1.0f;
+            }
+        }
+
+        return 1U;
+    }
+
+    // The end points 'line_2_begin' and 'line_2_end' are on oposite sides of the other line (one above the other bellow).
+
+    // Solve for 'k':  m * (line_2_begin + k * u2 - line_1_begin) = 0
+    float_32_bit const  k = -m_dot_v1 / dot_product(m, u2);
+
+    vector3 const  C2 = line_2_begin + k * u2;
+
+    vector3 const  w = C2 - line_1_begin;
+    float_32_bit const  w_dot_u1 = dot_product(w, u1);
+
+    if (w_dot_u1 < 0.0f)
+    {
         if (output_line_1_closest_point_1 != nullptr)
-            *output_line_1_closest_point_1 = line_1_begin + t1 * u1;
-    }
-
-    // Solve for h:  n * (X1 + h * n - line_2_begin) = 0, where X1 = line_1_begin + k1 * u1.
-    float_32_bit const  h = -(dot_product(n, u12) + k1 * dot_product(n, u1)) / n_dot;
-
-    // Write output for line 2
-    {
-        vector3 const  v2 = k1 * u1 + h * n + u12; // ((line_1_begin + k1 * u1) + h * n) - line_2_begin 
-        float_32_bit const  k2 = std::sqrtf(dot_product(v2, v2) / dot_product(u2, u2));
-        float_32_bit const  t2 = std::max(0.0f, std::min(k2, 1.0f));
+            *output_line_1_closest_point_1 = line_1_begin;
+        if (output_line_1_closest_point_param_1 != nullptr)
+            *output_line_1_closest_point_param_1 = 0.0f;
+        float_32_bit const  t = closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_begin, output_line_2_closest_point_1);
         if (output_line_2_closest_point_param_1 != nullptr)
-            *output_line_2_closest_point_param_1 = t2;
+            *output_line_2_closest_point_param_1 = t;
+    }
+    if (w_dot_u1 > u1_dot_u1)
+    {
+        if (output_line_1_closest_point_1 != nullptr)
+            *output_line_1_closest_point_1 = line_1_end;
+        if (output_line_1_closest_point_param_1 != nullptr)
+            *output_line_1_closest_point_param_1 = 1.0f;
+        float_32_bit const  t = closest_point_on_line_to_point(line_2_begin, line_2_end, line_1_end, output_line_2_closest_point_1);
+        if (output_line_2_closest_point_param_1 != nullptr)
+            *output_line_2_closest_point_param_1 = t;
+    }
+    else
+    {
+        // Solve for 'h':  w = h*u1 => w*u1 = h*(u1*u1)
+        float_32_bit const  h = w_dot_u1 / u1_dot_u1;
+        if (output_line_1_closest_point_1 != nullptr)
+            *output_line_1_closest_point_1 = line_1_begin + h * u1;
+        if (output_line_1_closest_point_param_1 != nullptr)
+            *output_line_1_closest_point_param_1 = h;
+
         if (output_line_2_closest_point_1 != nullptr)
-            *output_line_2_closest_point_1 = line_2_begin + t2 * u2;
+            *output_line_2_closest_point_1 = C2;
+        if (output_line_2_closest_point_param_1 != nullptr)
+            *output_line_2_closest_point_param_1 = k;
     }
 
-    return 1U;  // There is only 1 pair of closest points (1 point on each line)
+    return 1U;
 }
 
 
