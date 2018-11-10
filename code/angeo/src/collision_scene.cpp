@@ -275,25 +275,27 @@ void  collision_scene::insert_triangle_mesh(
 {
     TMPROF_BLOCK();
 
+    ASSUMPTION(num_triangles > 0U);
+
+    natural_32_bit  getter_index;
+    if (m_triangles_indices_of_invalidated_end_point_getters.empty())
+    {
+        getter_index = (natural_32_bit)m_triangles_end_point_getters.size();
+        m_triangles_end_point_getters.push_back({ getter_of_end_points_in_model_space, num_triangles });
+    }
+    else
+    {
+        getter_index = m_triangles_indices_of_invalidated_end_point_getters.back();
+        m_triangles_indices_of_invalidated_end_point_getters.pop_back();
+        m_triangles_end_point_getters.at(getter_index) = { getter_of_end_points_in_model_space, num_triangles };
+    }
+
+    auto const&  getter = m_triangles_end_point_getters.at(getter_index).first;
+
     for (natural_32_bit  i = 0U; i != num_triangles; ++i)
     {
         collision_object_id  coid;
         {
-            natural_32_bit  getter_index;
-            if (m_triangles_indices_of_invalidated_end_point_getters.empty())
-            {
-                getter_index = (natural_32_bit)m_triangles_end_point_getters.size();
-                m_triangles_end_point_getters.push_back({getter_of_end_points_in_model_space, num_triangles});
-            }
-            else
-            {
-                getter_index = m_triangles_indices_of_invalidated_end_point_getters.back();
-                m_triangles_indices_of_invalidated_end_point_getters.pop_back();
-                m_triangles_end_point_getters.at(getter_index) = { getter_of_end_points_in_model_space, num_triangles };
-            }
-
-            auto const&  getter = m_triangles_end_point_getters.at(getter_index).first;
-
             vector3 const  end_point_1_in_world_space = transform_point(getter(i, 0U), from_base_matrix);
             vector3 const  end_point_2_in_world_space = transform_point(getter(i, 1U), from_base_matrix);
             vector3 const  end_point_3_in_world_space = transform_point(getter(i, 2U), from_base_matrix);
@@ -396,6 +398,8 @@ void  collision_scene::clear()
     m_triangles_geometry.clear();
     m_triangles_bbox.clear();
     m_triangles_material.clear();
+    m_triangles_end_point_getters.clear();
+    m_triangles_indices_of_invalidated_end_point_getters.clear();
 }
 
 
