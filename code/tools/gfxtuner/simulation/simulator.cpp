@@ -52,7 +52,7 @@ struct  collider_triangle_mesh_vertex_getter
     {
         return vector3(
             ((float_32_bit const*)vertex_buffer.data().data())
-            + *(((natural_32_bit const*)index_buffer.data().data()) + 3U * triangle_index + vertex_index)
+            + 3U * *(((natural_32_bit const*)index_buffer.data().data()) + 3U * triangle_index + vertex_index)
             );
     }
 
