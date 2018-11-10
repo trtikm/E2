@@ -164,6 +164,30 @@ inline bool  closest_point_of_triangle_to_point(
 
 
 /**
+ * Ensure that 'triangle_unit_normal_vector' agrees with the counter-clock-wise order of triangle's verices.
+ *   ASSUMPTION(dot_product(normal_T12, triangle_vertex_3 - triangle_vertex_1) < 0.0f);
+ */
+natural_32_bit  closest_points_of_triangle_and_line(
+        vector3 const&  triangle_vertex_1,
+        vector3 const&  triangle_vertex_2,
+        vector3 const&  triangle_vertex_3,
+        vector3 const&  triangle_unit_normal_vector,
+        vector3  line_point_1,
+        vector3  line_point_2,
+
+        vector3*  output_triangle_closest_point_1,
+        collision_shape_feature_id*  output_triangle_shape_feature_id_1,
+        vector3*  output_line_closest_point_1,
+        collision_shape_feature_id*  output_line_shape_feature_id_1,
+
+        vector3*  output_triangle_closest_point_2,
+        collision_shape_feature_id*  output_triangle_shape_feature_id_2,
+        vector3*  output_line_closest_point_2,
+        collision_shape_feature_id*  output_line_shape_feature_id_2
+        );
+
+
+/**
  * It computes the point of the passed axis-aligned boundig box which is the closes to the passed point.
  *
  * @param output_closest_point  Reference to a memory where the nearest point will be stored.
