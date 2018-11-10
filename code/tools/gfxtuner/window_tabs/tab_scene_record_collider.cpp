@@ -14,7 +14,7 @@
 #include <utility/msgstream.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
-#include <memory>
+#include <QFileDialog>
 #include <QDialog>
 #include <QHBoxLayout>
 #include <QVBoxLayout>
@@ -24,8 +24,21 @@
 #include <QComboBox>
 #include <QLineEdit>
 #include <QGroupBox>
+#include <memory>
 
 namespace window_tabs { namespace tab_scene { namespace record_collider { namespace detail {
+
+
+std::string  check_triangle_mesh_buffers_directory(boost::filesystem::path const&  buffers_dir)
+{
+    if (!boost::filesystem::is_directory(buffers_dir))
+        return "Not a directory '" + buffers_dir.string() + "'.";
+    if (!boost::filesystem::is_regular_file(buffers_dir / "vetrices.txt"))
+        return "No file 'vertices.txt' inside the directory '" + buffers_dir.string() + "'.";
+    if (!boost::filesystem::is_regular_file(buffers_dir / "indices.txt"))
+        return "No file 'indices.txt' inside the directory '" + buffers_dir.string() + "'.";
+    return {};
+}
 
 
 struct  collider_props_dialog : public QDialog
@@ -49,8 +62,7 @@ struct  collider_props_dialog : public QDialog
 
         // DATA OF TRIANGLE MESH
 
-        boost::filesystem::path  m_triangle_mesh_vertex_buffer_pathname;
-        boost::filesystem::path  m_triangle_mesh_index_buffer_pathname;     // The path is empty, when no index buffer is available.
+        boost::filesystem::path  m_triangle_mesh_buffers_directory;
     };
 
     collider_props_dialog(program_window* const  wnd, collider_props* const  props);
@@ -59,6 +71,8 @@ struct  collider_props_dialog : public QDialog
 
 public slots:
 
+    void  on_triangle_mesh_choose_buffers_directory();
+
     void  accept();
     void  reject();
 
@@ -66,15 +80,26 @@ private:
     program_window*  m_wnd;
     collider_props*  m_props;
     bool  m_ok;
+    QPushButton*  m_widget_ok;
+
+    // WIDGETS COMMON TO ALL COLLIDERS
 
     QCheckBox*  m_widget_as_dynamic;
     QComboBox*  m_widget_material;
     QLineEdit*  m_density_multiplier;
 
+    // WIDGETS FOR CAPSULE
+
     QLineEdit*  m_widget_capsule_half_distance_between_end_points;
     QLineEdit*  m_widget_capsule_thickness_from_central_line;
 
+    // WIDGETS FOR SPHERE
+
     QLineEdit*  m_widget_sphere_radius;
+
+    // WIDGETS FOR TRIANGLE MESH
+
+    QLineEdit*  m_widget_triangle_mesh_buffers_directory;
 };
 
 
@@ -83,15 +108,36 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, collide
     , m_wnd(wnd)
     , m_props(props)
     , m_ok(false)
+    , m_widget_ok(
+            [](collider_props_dialog* wnd) {
+                    struct OK : public QPushButton {
+                        OK(collider_props_dialog* wnd) : QPushButton("OK")
+                        {
+                            QObject::connect(this, SIGNAL(released()), wnd, SLOT(accept()));
+                        }
+                    };
+                    return new OK(wnd);
+                }(this)
+            )
+
+    // WIDGETS COMMON TO ALL COLLIDERS
 
     , m_widget_as_dynamic(new QCheckBox("Movable during simulation"))
     , m_widget_material(new QComboBox)
     , m_density_multiplier(new QLineEdit)
 
+    // WIDGETS FOR CAPSULE
+
     , m_widget_capsule_half_distance_between_end_points(nullptr)
     , m_widget_capsule_thickness_from_central_line(nullptr)
 
+    // WIDGETS FOR SPHERE
+
     , m_widget_sphere_radius(nullptr)
+
+    // WIDGETS FOR TRIANGLE MESH
+
+    , m_widget_triangle_mesh_buffers_directory(nullptr)
 {
     ASSUMPTION(m_props != nullptr);
 
@@ -142,7 +188,7 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, collide
                     QHBoxLayout* const radius_layout = new QHBoxLayout;
                     {
                         radius_layout->addWidget(new QLabel("Radius: "));
-                        m_widget_sphere_radius  = new QLineEdit();
+                        m_widget_sphere_radius = new QLineEdit();
                         m_widget_sphere_radius->setText(QString::number(m_props->m_sphere_radius));
                         m_widget_sphere_radius->setToolTip("The radius of the sphere in meters.");
                         radius_layout->addWidget(m_widget_sphere_radius);
@@ -152,7 +198,41 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, collide
                 }
                 else if (m_props->m_shape_type == "triangle mesh")
                 {
-                    // TODO!
+                    QHBoxLayout* const triangle_mesh_layout = new QHBoxLayout;
+                    {
+                        triangle_mesh_layout->addWidget(new QLabel("Buffers' directory: "));
+                        m_widget_triangle_mesh_buffers_directory = new QLineEdit();
+                        m_widget_triangle_mesh_buffers_directory->setText(
+                            QString(m_props->m_triangle_mesh_buffers_directory.string().c_str())
+                            );
+                        m_widget_triangle_mesh_buffers_directory->setToolTip(
+                            "A directory containing files 'vertices.txt' and 'indices.txt', representing\n"
+                            "vertex and index buffer respectively, for the constructed triangle mesh."
+                            );
+                        triangle_mesh_layout->addWidget(m_widget_triangle_mesh_buffers_directory);
+
+                        triangle_mesh_layout->addWidget(
+                            [](collider_props_dialog* wnd) {
+                                struct choose_dir : public QPushButton {
+                                    choose_dir(collider_props_dialog* wnd) : QPushButton("Choose")
+                                    {
+                                        QObject::connect(this, SIGNAL(released()), wnd, SLOT(on_triangle_mesh_choose_buffers_directory()));
+                                    }
+                                };
+                                return new choose_dir(wnd);
+                            }(this)
+                            );
+
+                        triangle_mesh_layout->addStretch(1);
+
+                        m_widget_as_dynamic->setDisabled(true);
+                        m_widget_ok->setEnabled(
+                                check_triangle_mesh_buffers_directory(
+                                        qtgl::to_string(m_widget_triangle_mesh_buffers_directory->text())
+                                        ).empty()
+                                );
+                    }
+                    collider_shape_layout->addLayout(triangle_mesh_layout);
                 }
                 else
                 {
@@ -203,17 +283,7 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, collide
 
         QHBoxLayout* const buttons_layout = new QHBoxLayout;
         {
-            buttons_layout->addWidget(
-                [](collider_props_dialog* wnd) {
-                    struct OK : public QPushButton {
-                        OK(collider_props_dialog* wnd) : QPushButton("OK")
-                        {
-                            QObject::connect(this, SIGNAL(released()), wnd, SLOT(accept()));
-                        }
-                    };
-                    return new OK(wnd);
-                }(this)
-                );
+            buttons_layout->addWidget(m_widget_ok);
             buttons_layout->addWidget(
                 [](collider_props_dialog* wnd) {
                     struct Close : public QPushButton {
@@ -235,6 +305,35 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, collide
     //this->resize(300,100);
 }
 
+
+void  collider_props_dialog::on_triangle_mesh_choose_buffers_directory()
+{
+    QFileDialog  dialog(this);
+    dialog.setDirectory(m_widget_triangle_mesh_buffers_directory->text());
+    dialog.setFileMode(QFileDialog::DirectoryOnly);
+    if (!dialog.exec())
+        return;
+    QStringList const  selected = dialog.selectedFiles();
+    if (selected.size() != 1)
+    {
+        m_wnd->print_status_message("ERROR: Exactly one directory must be selected/provided.", 10000);
+        return;
+    }
+    m_widget_triangle_mesh_buffers_directory->setText(selected.front());
+    boost::filesystem::path const  buffers_dir = canonical_path(boost::filesystem::absolute(qtgl::to_string(selected.front())));
+    std::string const  error_message = check_triangle_mesh_buffers_directory(
+            qtgl::to_string(m_widget_triangle_mesh_buffers_directory->text())
+            );
+    if (!error_message.empty())
+    {
+        m_widget_ok->setEnabled(false);
+        m_wnd->print_status_message("ERROR: " + error_message, 10000);
+        return;
+    }
+    m_widget_ok->setEnabled(true);
+}
+
+
 void  collider_props_dialog::accept()
 {
     if (m_props->m_shape_type == "capsule")
@@ -251,7 +350,7 @@ void  collider_props_dialog::accept()
     }
     else if (m_props->m_shape_type == "triangle mesh")
     {
-        // TODO!
+        m_props->m_triangle_mesh_buffers_directory = qtgl::to_string(m_widget_triangle_mesh_buffers_directory->text());
     }
     else
     {
@@ -354,9 +453,11 @@ void  register_record_handler_for_insert_scene_record(
                         }
                         else if (props->m_shape_type == "triangle mesh")
                         {
-                            // TODO!
-                            w->wnd()->print_status_message("ERROR: Insertion of a collider 'triangle mesh' is not implemented.", 10000);
-                            return{ "",{} };
+                            props->m_as_dynamic = false;
+                            props->m_triangle_mesh_buffers_directory =
+                                canonical_path(boost::filesystem::absolute(
+                                    boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "meshes"
+                                    ));
                         }
                         else
                         {
@@ -396,7 +497,30 @@ void  register_record_handler_for_insert_scene_record(
                                     }
                                     else if (props->m_shape_type == "triangle mesh")
                                     {
-                                        // TODO!
+                                        qtgl::buffer  vertex_buffer(props->m_triangle_mesh_buffers_directory / "vertices.txt");
+                                        qtgl::buffer  index_buffer(props->m_triangle_mesh_buffers_directory / "indices.txt");
+
+                                        if (!vertex_buffer.wait_till_load_is_finished())
+                                        {
+                                            w->wnd()->print_status_message("ERROR: Failed to load vertex buffer '" + vertex_buffer.key().get_unique_id() + "'.", 10000);
+                                            return;
+                                        }
+                                        if (!index_buffer.wait_till_load_is_finished())
+                                        {
+                                            w->wnd()->print_status_message("ERROR: Failed to load index buffer '" + index_buffer.key().get_unique_id() + "'.", 10000);
+                                            return;
+                                        }
+
+                                        w->wnd()->glwindow().call_now(
+                                                &simulator::insert_collision_trianle_mesh_to_scene_node,
+                                                vertex_buffer,
+                                                index_buffer,
+                                                props->m_material,
+                                                props->m_density_multiplier,
+                                                // props->m_as_dynamic, <-- Is always assumed to be 'false'.
+                                                record_id
+                                                );
+                                        //w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, false);
                                     }
                                     else
                                     {
@@ -440,9 +564,19 @@ void  register_record_handler_for_update_scene_record(
                                 );
                     else if (props.m_shape_type == "triangle mesh")
                     {
-                        // TODO!
-                        w->wnd()->print_status_message("ERROR: Editing properties of a collider 'triangle mesh' is not implemented.", 10000);
-                        return;
+                        qtgl::buffer  vertex_buffer;
+                        qtgl::buffer  index_buffer;
+                        w->wnd()->glwindow().call_now(
+                                &simulator::get_collision_triangle_mesh_info,
+                                record_id,
+                                std::ref(vertex_buffer),
+                                std::ref(index_buffer),
+                                std::ref(props.m_material),
+                                std::ref(props.m_density_multiplier)
+                                );
+                        props.m_triangle_mesh_buffers_directory =
+                                boost::filesystem::path(vertex_buffer.key().get_unique_id()).parent_path();
+                        props.m_as_dynamic = false;
                     }
                     else
                     {
@@ -477,7 +611,29 @@ void  register_record_handler_for_update_scene_record(
                                 );
                     else if (props.m_shape_type == "triangle mesh")
                     {
-                        // TODO!
+                        qtgl::buffer  vertex_buffer(props.m_triangle_mesh_buffers_directory / "vertices.txt");
+                        qtgl::buffer  index_buffer(props.m_triangle_mesh_buffers_directory / "indices.txt");
+
+                        if (!vertex_buffer.wait_till_load_is_finished())
+                        {
+                            w->wnd()->print_status_message("ERROR: Failed to load vertex buffer '" + vertex_buffer.key().get_unique_id() + "'.", 10000);
+                            return;
+                        }
+                        if (!index_buffer.wait_till_load_is_finished())
+                        {
+                            w->wnd()->print_status_message("ERROR: Failed to load index buffer '" + index_buffer.key().get_unique_id() + "'.", 10000);
+                            return;
+                        }
+
+                        w->wnd()->glwindow().call_now(
+                                &simulator::insert_collision_trianle_mesh_to_scene_node,
+                                vertex_buffer,
+                                index_buffer,
+                                props.m_material,
+                                props.m_density_multiplier,
+                                // props.m_as_dynamic, <-- Is always assumed to be 'false'.
+                                record_id
+                                );
                     }
                     else
                     {

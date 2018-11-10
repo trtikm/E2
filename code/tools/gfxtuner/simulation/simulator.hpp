@@ -143,6 +143,14 @@ struct simulator : public qtgl::real_time_simulator
             bool&  is_dynamic
             );
 
+    void  get_collision_triangle_mesh_info(
+            scn::scene_record_id const&  id,
+            qtgl::buffer&  vertex_buffer,
+            qtgl::buffer&  index_buffer,
+            angeo::COLLISION_MATERIAL_TYPE&  material,
+            float_32_bit&  density_multiplier
+            );
+
     void  insert_rigid_body_to_scene_node(
             vector3 const&  linear_velocity,
             vector3 const&  angular_velocity,
@@ -299,6 +307,14 @@ private:
     std::unordered_set<scn::scene_node_name>  m_scene_nodes_relocated_during_simulation;
     std::unordered_set<scn::scene_record_id>  m_scene_records_inserted_during_simulation;
     std::unordered_set<scn::scene_record_id>  m_scene_records_erased_during_simulation;
+
+    struct  cache_of_batches_of_colliders
+    {
+        std::unordered_map<float_32_bit, qtgl::batch>  spheres;
+        std::unordered_map<std::pair<float_32_bit, float_32_bit>, qtgl::batch>  capsules;
+        std::unordered_map<std::string, qtgl::batch>  triangle_meshes;
+    };
+    cache_of_batches_of_colliders  m_cache_of_batches_of_colliders;
 
     // Editing mode data
 

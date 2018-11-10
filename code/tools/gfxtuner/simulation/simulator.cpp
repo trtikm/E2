@@ -23,6 +23,50 @@
 #include <map>
 #include <algorithm>
 
+namespace detail {
+
+
+struct  collider_triangle_mesh_vertex_getter
+{
+    collider_triangle_mesh_vertex_getter(
+            qtgl::buffer const  vertex_buffer_,
+            qtgl::buffer const  index_buffer_
+            )
+        : vertex_buffer(vertex_buffer_)
+        , index_buffer(index_buffer_)
+    {
+        ASSUMPTION(vertex_buffer.loaded_successfully() && index_buffer.loaded_successfully());
+        ASSUMPTION(
+            vertex_buffer.num_bytes_per_component() == sizeof(float_32_bit) &&
+            vertex_buffer.num_components_per_primitive() == 3U &&
+            vertex_buffer.has_integral_components() == false
+            );
+        ASSUMPTION(
+            index_buffer.num_bytes_per_component() == sizeof(natural_32_bit) &&
+            vertex_buffer.num_components_per_primitive() == 3U &&
+            vertex_buffer.has_integral_components() == true
+            );
+    }
+
+    vector3  operator()(natural_32_bit const  triangle_index, natural_8_bit const  vertex_index) const
+    {
+        return vector3(
+            ((float_32_bit const*)vertex_buffer.data().data())
+            + *(((natural_32_bit const*)index_buffer.data().data()) + 3U * triangle_index + vertex_index)
+            );
+    }
+
+    qtgl::buffer  get_vertex_buffer() const { return vertex_buffer; }
+    qtgl::buffer  get_index_buffer() const { return index_buffer; }
+
+private:
+    qtgl::buffer  vertex_buffer;
+    qtgl::buffer  index_buffer;
+};
+
+
+}
+
 
 simulator::simulator()
     : qtgl::real_time_simulator()
@@ -166,6 +210,7 @@ simulator::simulator()
     , m_scene_nodes_relocated_during_simulation()
     , m_scene_records_inserted_during_simulation()
     , m_scene_records_erased_during_simulation()
+    , m_cache_of_batches_of_colliders()
 
     // Editing mode data
 
@@ -1095,8 +1140,10 @@ void  simulator::render_colliders(
 {
     TMPROF_BLOCK();
 
-    std::unordered_map<float_32_bit, qtgl::batch>  sphere_batches;
-    std::unordered_map<std::pair<float_32_bit, float_32_bit>, qtgl::batch>  capsule_batches;
+    GLint  backup_polygon_mode[2];
+    qtgl::glapi().glGetIntegerv(GL_POLYGON_MODE, &backup_polygon_mode[0]);
+    qtgl::glapi().glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
     for (auto const& name_node : scn::get_all_nodes(get_scene()))
         if (auto const collider_ptr = scn::get_collider(*name_node.second))
         {
@@ -1111,9 +1158,9 @@ void  simulator::render_colliders(
                                 m_collision_scene.get_capsule_half_distance_between_end_points(coid),
                                 m_collision_scene.get_capsule_thickness_from_central_line(coid)
                                 };
-                        auto  it = capsule_batches.find(key);
-                        if (it == capsule_batches.end())
-                            it = capsule_batches.insert({
+                        auto  it = m_cache_of_batches_of_colliders.capsules.find(key);
+                        if (it == m_cache_of_batches_of_colliders.capsules.end())
+                            it = m_cache_of_batches_of_colliders.capsules.insert({
                                         key,
                                         qtgl::create_wireframe_capsule(key.first, key.second, 5U, m_colliders_colour)
                                         }).first;
@@ -1123,11 +1170,32 @@ void  simulator::render_colliders(
                 case angeo::COLLISION_SHAPE_TYPE::SPHERE:
                     {
                         float_32_bit const  key = m_collision_scene.get_sphere_radius(coid);
-                        auto  it = sphere_batches.find(key);
-                        if (it == sphere_batches.end())
-                            it = sphere_batches.insert({
+                        auto  it = m_cache_of_batches_of_colliders.spheres.find(key);
+                        if (it == m_cache_of_batches_of_colliders.spheres.end())
+                            it = m_cache_of_batches_of_colliders.spheres.insert({
                                         key,
                                         qtgl::create_wireframe_sphere(key, 5U, m_colliders_colour)
+                                        }).first;
+                        batch = it->second;
+                    }
+                    break;
+                case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
+                    {
+                        detail::collider_triangle_mesh_vertex_getter const* const  vertices_getter_ptr =
+                            m_collision_scene.get_triangle_points_getter(coid)
+                                             .target<detail::collider_triangle_mesh_vertex_getter>();
+                        std::string const  key =
+                            boost::filesystem::path(vertices_getter_ptr->get_vertex_buffer().key().get_unique_id())
+                                    .parent_path().string();
+                        auto  it = m_cache_of_batches_of_colliders.triangle_meshes.find(key);
+                        if (it == m_cache_of_batches_of_colliders.triangle_meshes.end())
+                            it = m_cache_of_batches_of_colliders.triangle_meshes.insert({
+                                        key,
+                                        qtgl::create_triangle_mesh(
+                                                vertices_getter_ptr->get_vertex_buffer(),
+                                                vertices_getter_ptr->get_index_buffer(),
+                                                m_colliders_colour
+                                                )
                                         }).first;
                         batch = it->second;
                     }
@@ -1146,6 +1214,8 @@ void  simulator::render_colliders(
                 draw_state = batch.get_draw_state();
             }
         }
+
+    qtgl::glapi().glPolygonMode(GL_FRONT_AND_BACK, backup_polygon_mode[0]);
 }
 
 
@@ -1339,28 +1409,29 @@ void  simulator::insert_collision_trianle_mesh_to_scene_node(
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(vertex_buffer.loaded_successfully() && index_buffer.loaded_successfully());
-    ASSUMPTION(
-            vertex_buffer.num_bytes_per_component() == sizeof(float_32_bit) &&
-            vertex_buffer.num_components_per_primitive() == 3U &&
-            vertex_buffer.has_integral_components() == false
-            );
-    ASSUMPTION(
-            index_buffer.num_bytes_per_component() == sizeof(natural_32_bit) &&
-            vertex_buffer.num_components_per_primitive() == 3U &&
-            vertex_buffer.has_integral_components() == true
-            );
+    //ASSUMPTION(vertex_buffer.loaded_successfully() && index_buffer.loaded_successfully());
+    //ASSUMPTION(
+    //        vertex_buffer.num_bytes_per_component() == sizeof(float_32_bit) &&
+    //        vertex_buffer.num_components_per_primitive() == 3U &&
+    //        vertex_buffer.has_integral_components() == false
+    //        );
+    //ASSUMPTION(
+    //        index_buffer.num_bytes_per_component() == sizeof(natural_32_bit) &&
+    //        vertex_buffer.num_components_per_primitive() == 3U &&
+    //        vertex_buffer.has_integral_components() == true
+    //        );
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_name());
     std::vector<angeo::collision_object_id>  collider_ids;
     m_collision_scene.insert_triangle_mesh(
             index_buffer.num_primitives(),
-            [vertex_buffer, index_buffer](natural_32_bit const  triangle_index, natural_8_bit const  vertex_index) -> vector3 {
-                    return vector3(
-                        ((float_32_bit const*)vertex_buffer.data().data())
-                            + *(((natural_32_bit const*)index_buffer.data().data()) + 3U * triangle_index + vertex_index) 
-                        );
-                },
+            detail::collider_triangle_mesh_vertex_getter(vertex_buffer, index_buffer),
+            //[vertex_buffer, index_buffer](natural_32_bit const  triangle_index, natural_8_bit const  vertex_index) -> vector3 {
+            //        return vector3(
+            //            ((float_32_bit const*)vertex_buffer.data().data())
+            //                + *(((natural_32_bit const*)index_buffer.data().data()) + 3U * triangle_index + vertex_index) 
+            //            );
+            //    },
             node_ptr->get_world_matrix(),
             material,
             false,
@@ -1423,6 +1494,25 @@ void  simulator::get_collision_capsule_info(
     material = m_collision_scene.get_material(collider->id());
     density_multiplier = collider->get_density_multiplier();
     is_dynamic = m_collision_scene.is_dynamic(collider->id());
+}
+
+
+void  simulator::get_collision_triangle_mesh_info(
+        scn::scene_record_id const&  id,
+        qtgl::buffer&  vertex_buffer,
+        qtgl::buffer&  index_buffer,
+        angeo::COLLISION_MATERIAL_TYPE&  material,
+        float_32_bit&  density_multiplier
+        )
+{
+    scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_name()));
+    ASSUMPTION(collider != nullptr);
+    detail::collider_triangle_mesh_vertex_getter const* const  vertices_getter_ptr =
+            m_collision_scene.get_triangle_points_getter(collider->id()).target<detail::collider_triangle_mesh_vertex_getter>();
+    vertex_buffer = vertices_getter_ptr->get_vertex_buffer();
+    index_buffer = vertices_getter_ptr->get_index_buffer();
+    material = m_collision_scene.get_material(collider->id());
+    density_multiplier = collider->get_density_multiplier();
 }
 
 
@@ -1533,6 +1623,23 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
                 data.get<bool>("is_dynamic"),
                 scn::make_collider_record_id(scene_node_name, shape_type)
                 );
+    else if (shape_type == "triangle_mesh")
+    {
+        boost::filesystem::path const  buffers_dir = data.get<std::string>("buffers_directory");
+        qtgl::buffer  vertex_buffer(buffers_dir / "vertices.txt");
+        qtgl::buffer  index_buffer(buffers_dir / "indices.txt");
+        if (!vertex_buffer.wait_till_load_is_finished())
+            throw std::runtime_error("Load of file 'vertices.txt' under directory '" + buffers_dir.string() + "' for 'triangle mesh' collider.");
+        if (!index_buffer.wait_till_load_is_finished())
+            throw std::runtime_error("Load of file 'indices.txt' under directory '" + buffers_dir.string() + "' for 'triangle mesh' collider.");
+        insert_collision_trianle_mesh_to_scene_node(
+                vertex_buffer,
+                index_buffer,
+                angeo::read_collison_material_from_string(data.get<std::string>("material")),
+                data.get<float_32_bit>("density_multiplier"),
+                scn::make_collider_record_id(scene_node_name, shape_type)
+                );
+    }
     else
     {
         NOT_IMPLEMENTED_YET();
@@ -1551,6 +1658,17 @@ void  simulator::save_collider(scn::collider const&  collider, boost::property_t
     case angeo::COLLISION_SHAPE_TYPE::SPHERE:
         data.put("shape_type", "sphere");
         data.put("radius", m_collision_scene.get_sphere_radius(collider.id()));
+        break;
+    case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
+        {
+            data.put("shape_type", "triangle_mesh");
+            detail::collider_triangle_mesh_vertex_getter const* const  vertices_getter_ptr =
+                m_collision_scene.get_triangle_points_getter(collider.id()).target<detail::collider_triangle_mesh_vertex_getter>();
+            data.put(
+                "buffers_directory",
+                boost::filesystem::path(vertices_getter_ptr->get_vertex_buffer().key().get_unique_id()).parent_path().string()
+                );
+        }
         break;
     default:
         NOT_IMPLEMENTED_YET();
