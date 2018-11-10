@@ -1196,7 +1196,7 @@ bool  collision_scene::compute_contacts__capsule_vs_triangle(
             geometry_2.unit_normal_in_world_space,
 
             geometry_1.end_point_1_in_world_space,
-            geometry_1.end_point_1_in_world_space,
+            geometry_1.end_point_2_in_world_space,
 
             &triangle_closest_point_1,
             &triangle_shape_feature_id_1,
