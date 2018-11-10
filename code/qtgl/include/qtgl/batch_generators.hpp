@@ -104,6 +104,15 @@ batch  create_wireframe_sphere(
         );
 
 
+batch  create_triangle_mesh(
+        qtgl::buffer  vertex_buffer,
+        qtgl::buffer  index_buffer,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
+        std::string const&  id = ""
+        );
+
+
 batch  create_wireframe_perspective_frustum(
         float_32_bit const  near_plane,
         float_32_bit const  far_plane,
