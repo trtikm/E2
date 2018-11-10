@@ -565,6 +565,9 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
     for (auto const&  rb_id_and_node_ptr : m_binding_of_rigid_bodies)
     {
         angeo::rigid_body_id const  rb_id = rb_id_and_node_ptr.first;
+        if (m_static_rigid_body_backups.count(rb_id) != 0UL)
+            continue; // The rigid body 'rb_id' is static => does not move => no need to update positions of its node and colliders.
+
         scn::scene_node_ptr const  rb_node_ptr = rb_id_and_node_ptr.second;
 
         if (rb_node_ptr->has_parent())
@@ -1239,9 +1242,11 @@ void  simulator::collect_colliders_in_subtree(
     foreach_collider_in_subtree(
             node_ptr,
             [&output, output_nodes](scn::collider& collider, scn::scene_node_ptr const  collider_node_ptr) {
-                    output.push_back(collider.id());
-                    if (output_nodes != nullptr)
-                        output_nodes->push_back(collider_node_ptr);
+                    for (auto  coid : collider.ids()) {
+                        output.push_back(coid);
+                        if (output_nodes != nullptr)
+                            output_nodes->push_back(collider_node_ptr);
+                    }
                 }
             );
 }
@@ -1251,7 +1256,8 @@ void  simulator::update_collider_locations_in_subtree(scn::scene_node_ptr  node_
     foreach_collider_in_subtree(
             node_ptr,
             [this](scn::collider& collider, scn::scene_node_ptr const  node_ptr) {
-                    m_collision_scene.on_position_changed(collider.id(), node_ptr->get_world_matrix());
+                    for (auto  coid : collider.ids())
+                        m_collision_scene.on_position_changed(coid, node_ptr->get_world_matrix());
                 }
             );
 }
@@ -1321,20 +1327,47 @@ void  simulator::insert_collision_capsule_to_scene_node(
                     );
     scn::insert_collider(*node_ptr, id.get_record_name(), collider_id, density_multiplier);
     invalidate_rigid_body_controling_node(node_ptr, true);
-
 }
 
 void  simulator::insert_collision_trianle_mesh_to_scene_node(
         qtgl::buffer const  vertex_buffer,
         qtgl::buffer const  index_buffer,
-        qtgl::buffer const  material_buffer,
+        angeo::COLLISION_MATERIAL_TYPE const  material,
+        float_32_bit const  density_multiplier,
         scn::scene_record_id const&  id
         )
 {
     TMPROF_BLOCK();
 
-    // TODO!
-    NOT_IMPLEMENTED_YET();
+    ASSUMPTION(vertex_buffer.loaded_successfully() && index_buffer.loaded_successfully());
+    ASSUMPTION(
+            vertex_buffer.num_bytes_per_component() == sizeof(float_32_bit) &&
+            vertex_buffer.num_components_per_primitive() == 3U &&
+            vertex_buffer.has_integral_components() == false
+            );
+    ASSUMPTION(
+            index_buffer.num_bytes_per_component() == sizeof(natural_32_bit) &&
+            vertex_buffer.num_components_per_primitive() == 3U &&
+            vertex_buffer.has_integral_components() == true
+            );
+
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_name());
+    std::vector<angeo::collision_object_id>  collider_ids;
+    m_collision_scene.insert_triangle_mesh(
+            index_buffer.num_primitives(),
+            [vertex_buffer, index_buffer](natural_32_bit const  triangle_index, natural_8_bit const  vertex_index) -> vector3 {
+                    return vector3(
+                        ((float_32_bit const*)vertex_buffer.data().data())
+                            + *(((natural_32_bit const*)index_buffer.data().data()) + 3U * triangle_index + vertex_index) 
+                        );
+                },
+            node_ptr->get_world_matrix(),
+            material,
+            false,
+            collider_ids
+            );
+    scn::insert_collider(*node_ptr, id.get_record_name(), collider_ids, density_multiplier);
+    invalidate_rigid_body_controling_node(node_ptr, true);
 }
 
 void  simulator::erase_collision_object_from_scene_node(
@@ -1346,7 +1379,10 @@ void  simulator::erase_collision_object_from_scene_node(
     auto const  node_ptr = get_scene_node(id.get_node_name());
     if (auto const  collider_ptr = scn::get_collider(*node_ptr))
     {
-        m_binding_of_collision_objects.erase(collider_ptr->id());
+        for (auto  coid : collider_ptr->ids()) {
+            m_collision_scene.erase_object(coid);
+            m_binding_of_collision_objects.erase(coid);
+        }
         m_scene_selection.erase_record(id);
         scn::erase_collider(*node_ptr);
 

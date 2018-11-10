@@ -85,6 +85,8 @@ collision_scene::collision_scene()
     , m_triangles_geometry()
     , m_triangles_bbox()
     , m_triangles_material()
+    , m_triangles_end_point_getters()
+    , m_triangles_indices_of_invalidated_end_point_getters()
 {}
 
 
@@ -262,64 +264,87 @@ collision_object_id  collision_scene::insert_sphere(
 }
 
 
-collision_object_id  collision_scene::insert_triangle(
-        std::function<vector3 const&(natural_8_bit)> const&  getter_of_end_points_in_model_space,
+void  collision_scene::insert_triangle_mesh(
+        natural_32_bit const  num_triangles,
+        std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
         matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
-        bool const  is_dynamic
+        bool const  is_dynamic, // Although not mandatory, it is recomended to pass 'false' here (for performance reasons).
+        std::vector<collision_object_id>&  output_coids_of_individual_triangles
         )
 {
     TMPROF_BLOCK();
 
-    collision_object_id  coid;
+    for (natural_32_bit  i = 0U; i != num_triangles; ++i)
     {
-        vector3 const  end_point_1_in_world_space = transform_point(getter_of_end_points_in_model_space(0U), from_base_matrix);
-        vector3 const  end_point_2_in_world_space = transform_point(getter_of_end_points_in_model_space(1U), from_base_matrix);
-        vector3 const  end_point_3_in_world_space = transform_point(getter_of_end_points_in_model_space(2U), from_base_matrix);
-        triangle_geometry const  geometry {
-                end_point_1_in_world_space,
-                end_point_2_in_world_space,
-                end_point_3_in_world_space,
-                normalised(cross_product(end_point_2_in_world_space - end_point_1_in_world_space,
-                                         end_point_3_in_world_space - end_point_1_in_world_space)),
-                getter_of_end_points_in_model_space
-                };
-        axis_aligned_bounding_box const  bbox =
-                compute_aabb_of_triangle(
-                        geometry.end_point_1_in_world_space,
-                        geometry.end_point_2_in_world_space,
-                        geometry.end_point_3_in_world_space
-                        );
-
-        auto&  invalid_ids = m_invalid_object_ids.at(as_number(COLLISION_SHAPE_TYPE::TRIANGLE));
-        if (invalid_ids.empty())
+        collision_object_id  coid;
         {
-            coid = make_collision_object_id(COLLISION_SHAPE_TYPE::TRIANGLE, (natural_32_bit)m_triangles_geometry.size());
+            natural_32_bit  getter_index;
+            if (m_triangles_indices_of_invalidated_end_point_getters.empty())
+            {
+                getter_index = (natural_32_bit)m_triangles_end_point_getters.size();
+                m_triangles_end_point_getters.push_back({getter_of_end_points_in_model_space, num_triangles});
+            }
+            else
+            {
+                getter_index = m_triangles_indices_of_invalidated_end_point_getters.back();
+                m_triangles_indices_of_invalidated_end_point_getters.pop_back();
+                m_triangles_end_point_getters.at(getter_index) = { getter_of_end_points_in_model_space, num_triangles };
+            }
 
-            m_triangles_geometry.push_back(geometry);
-            m_triangles_bbox.push_back(bbox);
-            m_triangles_material.push_back(material);
+            auto const&  getter = m_triangles_end_point_getters.at(getter_index).first;
 
+            vector3 const  end_point_1_in_world_space = transform_point(getter(i, 0U), from_base_matrix);
+            vector3 const  end_point_2_in_world_space = transform_point(getter(i, 1U), from_base_matrix);
+            vector3 const  end_point_3_in_world_space = transform_point(getter(i, 2U), from_base_matrix);
+            triangle_geometry const  geometry {
+                    end_point_1_in_world_space,
+                    end_point_2_in_world_space,
+                    end_point_3_in_world_space,
+                    normalised(cross_product(end_point_2_in_world_space - end_point_1_in_world_space,
+                                             end_point_3_in_world_space - end_point_1_in_world_space)),
+                    i,
+                    getter_index
+                    };
+            axis_aligned_bounding_box const  bbox =
+                    compute_aabb_of_triangle(
+                            geometry.end_point_1_in_world_space,
+                            geometry.end_point_2_in_world_space,
+                            geometry.end_point_3_in_world_space
+                            );
+
+            auto&  invalid_ids = m_invalid_object_ids.at(as_number(COLLISION_SHAPE_TYPE::TRIANGLE));
+            if (invalid_ids.empty())
+            {
+                coid = make_collision_object_id(COLLISION_SHAPE_TYPE::TRIANGLE, (natural_32_bit)m_triangles_geometry.size());
+
+                m_triangles_geometry.push_back(geometry);
+                m_triangles_bbox.push_back(bbox);
+                m_triangles_material.push_back(material);
+
+            }
+            else
+            {
+                coid = make_collision_object_id(COLLISION_SHAPE_TYPE::TRIANGLE, invalid_ids.back());
+
+                m_triangles_geometry.at(invalid_ids.back()) = geometry;
+                m_triangles_bbox.at(invalid_ids.back()) = bbox;
+                m_triangles_material.at(invalid_ids.back()) = material;
+
+                invalid_ids.pop_back();
+            }
         }
-        else
-        {
-            coid = make_collision_object_id(COLLISION_SHAPE_TYPE::TRIANGLE, invalid_ids.back());
-
-            m_triangles_geometry.at(invalid_ids.back()) = geometry;
-            m_triangles_bbox.at(invalid_ids.back()) = bbox;
-            m_triangles_material.at(invalid_ids.back()) = material;
-
-            invalid_ids.pop_back();
-        }
+        insert_object(coid, is_dynamic);
+        output_coids_of_individual_triangles.push_back(coid);
     }
-    insert_object(coid, is_dynamic);
-    return coid;
 }
 
 
 void  collision_scene::erase_object(collision_object_id const  coid)
 {
     TMPROF_BLOCK();
+
+    release_data_of_erased_object(coid);
 
     auto const  it = m_dynamic_object_ids.find(coid);
     if (it == m_dynamic_object_ids.end())
@@ -694,6 +719,31 @@ COLLISION_MATERIAL_TYPE  collision_scene::get_material(collision_object_id const
 }
 
 
+void  collision_scene::release_data_of_erased_object(collision_object_id const  coid)
+{
+    switch (get_shape_type(coid))
+    {
+    case COLLISION_SHAPE_TYPE::CAPSULE:
+    case COLLISION_SHAPE_TYPE::LINE:
+    case COLLISION_SHAPE_TYPE::POINT:
+    case COLLISION_SHAPE_TYPE::SPHERE:
+        break; // Nothing to release for these coids.
+    case COLLISION_SHAPE_TYPE::TRIANGLE:
+        {
+            auto&  geometry = m_triangles_geometry.at(get_instance_index(coid));
+            auto&  getter_info = m_triangles_end_point_getters.at(geometry.end_points_getter_index);
+            ASSUMPTION(getter_info.second > 0U);
+            --getter_info.second;
+            if (getter_info.second == 0U)
+                m_triangles_indices_of_invalidated_end_point_getters.push_back(geometry.end_points_getter_index);
+        }
+        break;
+    default:
+        UNREACHABLE();
+    }
+}
+
+
 void  collision_scene::update_shape_position(collision_object_id const  coid, matrix44 const&  from_base_matrix)
 {
     TMPROF_BLOCK();
@@ -737,9 +787,10 @@ void  collision_scene::update_shape_position(collision_object_id const  coid, ma
     case COLLISION_SHAPE_TYPE::TRIANGLE:
         {
             auto&  geometry = m_triangles_geometry.at(get_instance_index(coid));
-            geometry.end_point_1_in_world_space = transform_point(geometry.getter_of_end_points_in_model_space(0U), from_base_matrix);
-            geometry.end_point_2_in_world_space = transform_point(geometry.getter_of_end_points_in_model_space(1U), from_base_matrix);
-            geometry.end_point_3_in_world_space = transform_point(geometry.getter_of_end_points_in_model_space(2U), from_base_matrix);
+            auto const&  getter = m_triangles_end_point_getters.at(geometry.end_points_getter_index).first;
+            geometry.end_point_1_in_world_space = transform_point(getter(geometry.triangle_index, 0U), from_base_matrix);
+            geometry.end_point_2_in_world_space = transform_point(getter(geometry.triangle_index, 1U), from_base_matrix);
+            geometry.end_point_3_in_world_space = transform_point(getter(geometry.triangle_index, 2U), from_base_matrix);
             geometry.unit_normal_in_world_space = 
                 normalised(cross_product(geometry.end_point_2_in_world_space - geometry.end_point_1_in_world_space,
                                          geometry.end_point_3_in_world_space - geometry.end_point_1_in_world_space))

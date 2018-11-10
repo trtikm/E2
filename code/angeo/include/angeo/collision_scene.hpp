@@ -102,17 +102,18 @@ struct  collision_scene
             bool const  is_dynamic
             );
 
-    /// In the model space the end points are assumed as follows:
-    ///      end_point_1_in_model_space = getter_of_end_points_in_model_space(0U)
-    ///      end_point_2_in_model_space = getter_of_end_points_in_model_space(1U)
-    ///      end_point_3_in_model_space = getter_of_end_points_in_model_space(2U)
-    /// The front face of the trianle is the one defined by the counter-clock-wise
-    /// orientation of vertices.
-    collision_object_id  insert_triangle(
-            std::function<vector3 const&(natural_8_bit)> const&  getter_of_end_points_in_model_space,
+    /// In the model space the end points of 'i'-th triagle (i in range 0..num_triangles-1) are as follows:
+    ///      end_point_1_in_model_space = getter_of_end_points_in_model_space(i, 0U)
+    ///      end_point_2_in_model_space = getter_of_end_points_in_model_space(i, 1U)
+    ///      end_point_3_in_model_space = getter_of_end_points_in_model_space(i, 2U)
+    /// The front face of each triangle is the one defined by the counter-clock-wise orientation of vertices.
+    void  insert_triangle_mesh(
+            natural_32_bit const  num_triangles,
+            std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
             matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
-            bool const  is_dynamic
+            bool const  is_dynamic, // Although not mandatory, it is recomended to pass 'false' here (for performance reasons).
+            std::vector<collision_object_id>&  output_coids_of_individual_triangles
             );
 
     void  erase_object(collision_object_id const  coid);
@@ -161,6 +162,8 @@ struct  collision_scene
     COLLISION_MATERIAL_TYPE  get_material(collision_object_id const  coid) const;
 
 private:
+
+    void  release_data_of_erased_object(collision_object_id const  coid);
 
     void  update_shape_position(collision_object_id const  coid, matrix44 const&  from_base_matrix);
 
@@ -285,12 +288,16 @@ private:
 
         vector3  unit_normal_in_world_space;
 
-        std::function<vector3 const&(natural_8_bit)>  getter_of_end_points_in_model_space;
+        natural_32_bit  triangle_index;
+        natural_32_bit  end_points_getter_index;
     };
 
     std::vector<triangle_geometry>  m_triangles_geometry;
     std::vector<axis_aligned_bounding_box>  m_triangles_bbox;
     std::vector<COLLISION_MATERIAL_TYPE>  m_triangles_material;
+    std::vector<std::pair<std::function<vector3(natural_32_bit, natural_8_bit)>, natural_32_bit> >
+            m_triangles_end_point_getters;
+    std::vector<natural_32_bit>  m_triangles_indices_of_invalidated_end_point_getters;
 };
 
 

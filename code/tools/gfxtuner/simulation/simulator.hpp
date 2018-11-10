@@ -117,7 +117,8 @@ struct simulator : public qtgl::real_time_simulator
     void  insert_collision_trianle_mesh_to_scene_node(
             qtgl::buffer const  vertex_buffer,
             qtgl::buffer const  index_buffer,
-            qtgl::buffer const  material_buffer,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            float_32_bit const  density_multiplier,
             scn::scene_record_id const&  id
             );
 
