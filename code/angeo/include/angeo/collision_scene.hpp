@@ -159,6 +159,8 @@ struct  collision_scene
 
     float_32_bit  get_sphere_radius(collision_object_id const  coid) const;
 
+    std::function<vector3(natural_32_bit, natural_8_bit)> const&  get_triangle_points_getter(collision_object_id const  coid) const;
+
     COLLISION_MATERIAL_TYPE  get_material(collision_object_id const  coid) const;
 
 private:

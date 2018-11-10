@@ -698,6 +698,14 @@ float_32_bit  collision_scene::get_sphere_radius(collision_object_id const  coid
     return geometry.radius;
 }
 
+std::function<vector3(natural_32_bit, natural_8_bit)> const&  collision_scene::get_triangle_points_getter(
+        collision_object_id const  coid) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::TRIANGLE);
+    triangle_geometry const&  geometry = m_triangles_geometry.at(get_instance_index(coid));
+    return m_triangles_end_point_getters.at(geometry.end_points_getter_index).first;
+}
+
 
 COLLISION_MATERIAL_TYPE  collision_scene::get_material(collision_object_id const  coid) const
 {
