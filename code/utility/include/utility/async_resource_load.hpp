@@ -617,6 +617,15 @@ struct  resource_accessor
         return m_data_ptr->second->error_message();
     }
 
+    bool  wait_till_load_is_finished() const
+    {
+        while (!is_load_finished())
+        {
+            std::this_thread::yield();
+        }
+        return loaded_successfully();
+    }
+
 protected:
 
     void  insert_load_request(
