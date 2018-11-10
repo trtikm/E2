@@ -8,15 +8,28 @@
 namespace window_tabs { namespace tab_scene {
 
 
+
+void  find_all_coord_system_widgets(
+        QTreeWidget* const  scene_tree,
+        scn::scene_node_name const&  node_name,
+        std::vector<tree_widget_item*>&  output
+        )
+{
+    TMPROF_BLOCK();
+
+    for (auto item_ptr : scene_tree->findItems(QString(node_name.c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0))
+        if (auto  ptr = as_tree_widget_item(item_ptr))
+            if (ptr->represents_coord_system())
+                output.push_back(ptr);
+}
+
+
 void  remove_record_from_tree_widget(QTreeWidget* const  scene_tree, scn::scene_record_id const&  record_id)
 {
     TMPROF_BLOCK();
 
-    auto const  items_list = scene_tree->findItems(
-            QString(record_id.get_node_name().c_str()),
-            Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-            0
-            );
+    std::vector<tree_widget_item*>  items_list;
+    find_all_coord_system_widgets(scene_tree, record_id.get_node_name(), items_list);
     ASSUMPTION(items_list.size() == 1UL);
     auto const  coord_system_item = as_tree_widget_item(items_list.front());
     std::string const  coord_system_name = get_tree_widget_item_name(coord_system_item);
@@ -91,11 +104,8 @@ tree_widget_item*  insert_record_to_tree_widget(
 {
     TMPROF_BLOCK();
 
-    auto const  items_list = scene_tree->findItems(
-            QString(record_id.get_node_name().c_str()),
-            Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-            0
-            );
+    std::vector<tree_widget_item*>  items_list;
+    find_all_coord_system_widgets(scene_tree, record_id.get_node_name(), items_list);
     ASSUMPTION(items_list.size() == 1UL);
     auto const  coord_system_item = as_tree_widget_item(items_list.front());
     ASSUMPTION(represents_coord_system(coord_system_item));

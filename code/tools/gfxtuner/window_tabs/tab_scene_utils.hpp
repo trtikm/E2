@@ -7,9 +7,17 @@
 #   include <scene/scene_node_record_id.hpp>
 #   include <scene/scene_history.hpp>
 #   include <QTreeWidget>
+#   include <string>
+#   include <vector>
 
 namespace window_tabs { namespace tab_scene {
 
+
+void  find_all_coord_system_widgets(
+        QTreeWidget* const  scene_tree,
+        scn::scene_node_name const&  node_name,
+        std::vector<tree_widget_item*>&  output
+        );
 
 void  remove_record_from_tree_widget(QTreeWidget* const  scene_tree, scn::scene_record_id const&  record_id);
 

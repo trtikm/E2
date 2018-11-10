@@ -183,11 +183,8 @@ widgets::widgets(program_window* const  wnd)
 
     scn::scene_history_coord_system_insert::set_undo_processor(
         [this](scn::scene_history_coord_system_insert const&  history_node) {
-            auto const  items_list = m_scene_tree->findItems(
-                    QString(history_node.get_name().c_str()),
-                    Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-                    0
-                    );
+            std::vector<tree_widget_item*>  items_list;
+            find_all_coord_system_widgets(m_scene_tree, history_node.get_name(), items_list);
             ASSUMPTION(items_list.size() == 1UL);
             tree_widget_item* const  tree_item = as_tree_widget_item(items_list.front());
             ASSUMPTION(!tree_item->isSelected());
@@ -209,16 +206,10 @@ widgets::widgets(program_window* const  wnd)
             tree_widget_item*  parent_tree_item = nullptr;
             if (!history_node.get_parent_name().empty())
             {
-                ASSUMPTION(m_scene_tree->findItems(
-                               QString(history_node.get_name().c_str()),
-                               Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-                               0
-                               ).empty());
-                auto const items_list = m_scene_tree->findItems(
-                        QString(history_node.get_parent_name().c_str()),
-                        Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-                        0
-                        );
+                std::vector<tree_widget_item*>  items_list;
+                find_all_coord_system_widgets(m_scene_tree, history_node.get_name(), items_list);
+                ASSUMPTION(items_list.empty());
+                find_all_coord_system_widgets(m_scene_tree, history_node.get_parent_name(), items_list);
                 ASSUMPTION(items_list.size() == 1UL);
                 parent_tree_item = as_tree_widget_item(items_list.front());
                 ASSUMPTION(represents_coord_system(parent_tree_item));
@@ -257,11 +248,8 @@ widgets::widgets(program_window* const  wnd)
 
     scn::scene_history_coord_system_insert_to_selection::set_undo_processor(
         [this](scn::scene_history_coord_system_insert_to_selection const&  history_node) {
-            auto const items_list = m_scene_tree->findItems(
-                    QString(history_node.get_name().c_str()),
-                    Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-                    0
-                    );
+            std::vector<tree_widget_item*>  items_list;
+            find_all_coord_system_widgets(m_scene_tree, history_node.get_name(), items_list);
             ASSUMPTION(items_list.size() == 1UL);
             tree_widget_item* const  tree_item = as_tree_widget_item(items_list.front());
             ASSUMPTION(represents_coord_system(tree_item));
@@ -274,11 +262,8 @@ widgets::widgets(program_window* const  wnd)
         });
     scn::scene_history_coord_system_insert_to_selection::set_redo_processor(
         [this](scn::scene_history_coord_system_insert_to_selection const&  history_node) {
-            auto const items_list = m_scene_tree->findItems(
-                    QString(history_node.get_name().c_str()),
-                    Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-                    0
-                    );
+            std::vector<tree_widget_item*>  items_list;
+            find_all_coord_system_widgets(m_scene_tree, history_node.get_name(), items_list);
             ASSUMPTION(items_list.size() == 1UL);
             tree_widget_item* const  tree_item = as_tree_widget_item(items_list.front());
             ASSUMPTION(represents_coord_system(tree_item));
@@ -293,11 +278,8 @@ widgets::widgets(program_window* const  wnd)
 
     scn::scene_history_record_insert_to_selection::set_undo_processor(
         [this](scn::scene_history_record_insert_to_selection const&  history_node) {
-            auto const  items_list = m_scene_tree->findItems(
-                    QString(history_node.get_id().get_node_name().c_str()),
-                    Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-                    0
-                    );
+            std::vector<tree_widget_item*>  items_list;
+            find_all_coord_system_widgets(m_scene_tree, history_node.get_id().get_node_name(), items_list);
             ASSUMPTION(items_list.size() == 1UL);
             auto const  coord_system_item = as_tree_widget_item(items_list.front());
             ASSUMPTION(represents_coord_system(coord_system_item));
@@ -333,11 +315,8 @@ widgets::widgets(program_window* const  wnd)
         });
     scn::scene_history_record_insert_to_selection::set_redo_processor(
         [this](scn::scene_history_record_insert_to_selection const&  history_node) {
-            auto const  items_list = m_scene_tree->findItems(
-                    QString(history_node.get_id().get_node_name().c_str()),
-                    Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-                    0
-                    );
+            std::vector<tree_widget_item*>  items_list;
+            find_all_coord_system_widgets(m_scene_tree, history_node.get_id().get_node_name(), items_list);
             ASSUMPTION(items_list.size() == 1UL);
             auto const  coord_system_item = as_tree_widget_item(items_list.front());
             ASSUMPTION(coord_system_item != nullptr && coord_system_item->represents_coord_system());
@@ -402,21 +381,15 @@ void  widgets::on_scene_hierarchy_item_selected()
         wnd()->glwindow().call_now(&simulator::get_scene_selection, std::ref(selected_scene_nodes), std::ref(selected_records));
         for (auto const& node_name : selected_scene_nodes)
         {
-            auto const  items_list = m_scene_tree->findItems(
-                    QString(node_name.c_str()),
-                    Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-                    0
-                    );
+            std::vector<tree_widget_item*>  items_list;
+            find_all_coord_system_widgets(m_scene_tree, node_name, items_list);
             INVARIANT(items_list.size() == 1 && represents_coord_system(items_list.front()));
             old_selection.push_back(items_list.front());
         }
         for (scn::scene_record_id const&  record_id : selected_records)
         {
-            auto const  items_list = m_scene_tree->findItems(
-                    QString(record_id.get_node_name().c_str()),
-                    Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-                    0
-                    );
+            std::vector<tree_widget_item*>  items_list;
+            find_all_coord_system_widgets(m_scene_tree, record_id.get_node_name(), items_list);
             INVARIANT(items_list.size() == 1 && represents_coord_system(items_list.front()));
             bool  record_found = false;
             for (int i = 0, n = items_list.front()->childCount(); i != n; ++i)
@@ -508,11 +481,8 @@ void  widgets::selection_changed_listener()
     m_scene_tree->clearSelection();
     for (auto const&  node_name : selected_scene_nodes)
     {
-        auto const  items_list = m_scene_tree->findItems(
-                QString(node_name.c_str()),
-                Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-                0
-                );
+        std::vector<tree_widget_item*>  items_list;
+        find_all_coord_system_widgets(m_scene_tree, node_name, items_list);
         if (items_list.size() != 1 || !represents_coord_system(items_list.front()))
         {
             recover_from_failure();
@@ -522,11 +492,8 @@ void  widgets::selection_changed_listener()
     }
     for (scn::scene_record_id const&  record_id : selected_records)
     {
-        auto const  items_list = m_scene_tree->findItems(
-                QString(record_id.get_node_name().c_str()),
-                Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive,
-                0
-                );
+        std::vector<tree_widget_item*>  items_list;
+        find_all_coord_system_widgets(m_scene_tree, record_id.get_node_name(), items_list);
         if (items_list.size() != 1 || !represents_coord_system(items_list.front()))
         {
             recover_from_failure();
@@ -1284,7 +1251,8 @@ void  widgets::on_scene_toggle_pivot_selection()
 
     QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
 
-    auto const items_list = m_scene_tree->findItems(QString(scn::get_pivot_node_name().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
+    std::vector<tree_widget_item*>  items_list;
+    find_all_coord_system_widgets(m_scene_tree, scn::get_pivot_node_name(), items_list);
     ASSUMPTION(items_list.size() == 1UL);
     tree_widget_item* const  tree_item = as_tree_widget_item(items_list.front());
     ASSUMPTION(represents_coord_system(tree_item));
