@@ -51,6 +51,8 @@ add_executable(${THIS_TARGET_NAME}
     window_tabs/tab_scene_record_batch.cpp
     window_tabs/tab_scene_record_collider.hpp
     window_tabs/tab_scene_record_collider.cpp
+    window_tabs/tab_scene_record_collider_props_dialog.hpp 
+    window_tabs/tab_scene_record_collider_props_dialog.cpp 
     window_tabs/tab_scene_record_rigid_body.hpp
     window_tabs/tab_scene_record_rigid_body.cpp
 

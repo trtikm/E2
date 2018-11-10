@@ -43,8 +43,8 @@ struct  collider_triangle_mesh_vertex_getter
             );
         ASSUMPTION(
             index_buffer.num_bytes_per_component() == sizeof(natural_32_bit) &&
-            vertex_buffer.num_components_per_primitive() == 3U &&
-            vertex_buffer.has_integral_components() == true
+            index_buffer.num_components_per_primitive() == 3U &&
+            index_buffer.has_integral_components() == true
             );
     }
 
@@ -1623,7 +1623,7 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
                 data.get<bool>("is_dynamic"),
                 scn::make_collider_record_id(scene_node_name, shape_type)
                 );
-    else if (shape_type == "triangle_mesh")
+    else if (shape_type == "triangle mesh")
     {
         boost::filesystem::path const  buffers_dir = data.get<std::string>("buffers_directory");
         qtgl::buffer  vertex_buffer(buffers_dir / "vertices.txt");
@@ -1661,7 +1661,7 @@ void  simulator::save_collider(scn::collider const&  collider, boost::property_t
         break;
     case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
         {
-            data.put("shape_type", "triangle_mesh");
+            data.put("shape_type", "triangle mesh");
             detail::collider_triangle_mesh_vertex_getter const* const  vertices_getter_ptr =
                 m_collision_scene.get_triangle_points_getter(collider.id()).target<detail::collider_triangle_mesh_vertex_getter>();
             data.put(
