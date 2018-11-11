@@ -17,7 +17,7 @@ namespace {
 std::string  get_tree_resource_uid(async::key_type const&  key)
 {
     if (boost::starts_with(key.get_unique_id(), async::key_type::get_prefix_of_generated_fresh_unique_id()))
-        return async::key_type::get_prefix_of_generated_fresh_unique_id();
+        return std::string(async::key_type::get_prefix_of_generated_fresh_unique_id()) + "*";
     return key.get_unique_id();
 }
 
