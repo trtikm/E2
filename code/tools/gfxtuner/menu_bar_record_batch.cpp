@@ -16,8 +16,10 @@ void  register_record_menu_items(std::multimap<std::string, std::pair<std::strin
                 "A batch is an atomic block of grahical data. It can only be placed under a coordinate system. It means that at least one\n"
                 "non-'@pivot' coord. system must be selected. Otherwise the operation will fail (with an error message to the status bar).\n"
                 "For each selected non-'@pivot' coord. system there will be created a copy of the newly created batch under that system.\n"
-                "Batches are available on the disc under models root directory 'E2/dist/data/shared/gfx/models'. Finally, the newly created\n"
-                "batch will become the only selected object in the scene."
+                "Batches are available on the disk under meshes root directory '<E2-root-dir>/dist/data/shared/gfx/meshes'. The newly created\n"
+                "batch will become the only selected object in the scene.\n"
+                "Use 'Blender' and 'E2 Blender export plugin' (located in '<E2-root-dir>/data/Blender/export/E2_Blender_gfx_export_plugin.py')\n"
+                "to create new batches."
             }
         }
     });

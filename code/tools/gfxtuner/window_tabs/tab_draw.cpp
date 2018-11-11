@@ -824,7 +824,11 @@ QWidget*  make_draw_tab_content(widgets const&  w)
                         show_layout->addWidget(w.show_contact_normals());
                         w.show_contact_normals()->setToolTip(
                             "A 'contact normal' is a normal vector of a separation plane between\n"
-                            "colliding colliders at a certain contact point."
+                            "colliding colliders at a certain contact point.\n"
+                            "NOTE: Contact normals are shown only when at least one simulation step\n"
+                            "      is performed, after this check-box is set on. E.g. either press\n"
+                            "      'SPACE' or 'PAUSE' key, if some colliders are in collision, but\n"
+                            "      contact normals are not shown."
                             );
                         w.wnd()->on_draw_show_contact_normals_changed(0);
                     }

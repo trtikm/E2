@@ -212,8 +212,13 @@ void  make_menu_bar_content(menu_bar const&  w)
 
     w.get_menu_edit()->addSeparator();
 
+    std::string  last_kind = "";
     for (auto const&  record_kind_and_action : w.get_edit_actions_of_records())
     {
+        if (!last_kind.empty() && last_kind != record_kind_and_action.first)
+            w.get_menu_edit()->addSeparator();
+        last_kind = record_kind_and_action.first;
+
         w.get_menu_edit()->addAction(record_kind_and_action.second.first);
         QObject::connect(
                 record_kind_and_action.second.first,
