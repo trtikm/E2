@@ -51,6 +51,13 @@ widgets::widgets(program_window* const  wnd)
         headerItem->setText(1, QString("#Refs"));
         setHeaderItem(headerItem);
     }
+    //int cc = columnCount();
+    //int cs0 = columnWidth(0);
+    //int cs1 = columnWidth(1);
+    //int cs0X = (int)std::max(1.0f, std::roundf(0.9f * (cs0 + cs1)));
+    //int cs1X = (int)std::max(1.0f, std::roundf(0.1f * (cs0 + cs1)));
+    //setColumnWidth(0, cs0X);
+    //setColumnWidth(1, cs1X);
 }
 
 
