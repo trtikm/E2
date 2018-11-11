@@ -223,9 +223,9 @@ widgets::widgets(program_window* const  wnd)
     , m_show_grid(
         [](program_window* wnd) {
             struct s : public QCheckBox {
-                s(program_window* wnd) : QCheckBox("Show grid")
+                s(program_window* wnd) : QCheckBox("Grid")
                 {
-                    setChecked(wnd->ptree().get("draw.show_grid", true));
+                    setChecked(wnd->ptree().get("draw.show.grid", true));
                     QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(on_draw_show_grid_changed(int)));
                 }
             };
@@ -235,9 +235,9 @@ widgets::widgets(program_window* const  wnd)
     , m_show_batches(
         [](program_window* wnd) {
             struct s : public QCheckBox {
-                s(program_window* wnd) : QCheckBox("Show batches")
+                s(program_window* wnd) : QCheckBox("Batches")
                 {
-                    setChecked(wnd->ptree().get("draw.show_batches", true));
+                    setChecked(wnd->ptree().get("draw.show.batches", true));
                     QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(on_draw_show_batches_changed(int)));
                 }
             };
@@ -247,10 +247,22 @@ widgets::widgets(program_window* const  wnd)
     , m_show_colliders(
         [](program_window* wnd) {
             struct s : public QCheckBox {
-                s(program_window* wnd) : QCheckBox("Show colliders")
+                s(program_window* wnd) : QCheckBox("Colliders")
                 {
-                    setChecked(wnd->ptree().get("draw.show_colliders", true));
+                    setChecked(wnd->ptree().get("draw.show.colliders", true));
                     QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(on_draw_show_colliders_changed(int)));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
+    , m_show_contact_normals(
+        [](program_window* wnd) {
+            struct s : public QCheckBox {
+                s(program_window* wnd) : QCheckBox("Contact normals")
+                {
+                    setChecked(wnd->ptree().get("draw.show.contact_normals", false));
+                    QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(on_draw_show_contact_normals_changed(int)));
                 }
             };
             return new s(wnd);
@@ -473,6 +485,12 @@ void widgets::on_show_colliders_changed(int const  value)
     wnd()->set_focus_to_glwindow();
 }
 
+void widgets::on_show_contact_normals_changed(int const  value)
+{
+    wnd()->glwindow().call_later(&simulator::set_show_contact_normals, m_show_contact_normals->isChecked());
+    wnd()->set_focus_to_glwindow();
+}
+
 void widgets::on_colliders_colour_changed()
 {
     vector3 const  colour(
@@ -592,9 +610,10 @@ void  widgets::save()
     wnd()->ptree().put("draw.clear_colour.green", m_clear_colour_component_green->text().toInt());
     wnd()->ptree().put("draw.clear_colour.blue", m_clear_colour_component_blue->text().toInt());
 
-    wnd()->ptree().put("draw.show_grid", m_show_grid->isChecked());
-    wnd()->ptree().put("draw.show_batches", m_show_grid->isChecked());
-    wnd()->ptree().put("draw.show_colliders", m_show_grid->isChecked());
+    wnd()->ptree().put("draw.show.grid", m_show_grid->isChecked());
+    wnd()->ptree().put("draw.show.batches", m_show_batches->isChecked());
+    wnd()->ptree().put("draw.show.colliders", m_show_colliders->isChecked());
+    wnd()->ptree().put("draw.show.contact_normals", m_show_contact_normals->isChecked());
 
     wnd()->ptree().put("draw.colliders_colour.red", m_colliders_colour_component_red->text().toInt());
     wnd()->ptree().put("draw.colliders_colour.green", m_colliders_colour_component_green->text().toInt());
@@ -733,7 +752,7 @@ QWidget*  make_draw_tab_content(widgets const&  w)
             }
             draw_tab_layout->addWidget(clear_colour_group);
 
-            QWidget* const colliders_colour_group = new QGroupBox("Colliders colour [rgb]");
+            QWidget* const colliders_colour_group = new QGroupBox("Collider and contact normal colour [rgb]");
             {
                 QVBoxLayout* const colliders_colour_layout = new QVBoxLayout;
                 {
@@ -778,16 +797,40 @@ QWidget*  make_draw_tab_content(widgets const&  w)
             }
             draw_tab_layout->addWidget(colliders_colour_group);
 
-            QHBoxLayout* const render_options_layout = new QHBoxLayout;
+            QVBoxLayout* const render_options_layout = new QVBoxLayout;
             {
-                render_options_layout->addWidget(w.show_grid());
-                w.wnd()->on_draw_show_grid_changed(0);
+                QWidget* const show_group = new QGroupBox("Show");
+                {
+                    QHBoxLayout* const show_layout = new QHBoxLayout;
+                    {
+                        show_layout->addWidget(w.show_grid());
+                        w.wnd()->on_draw_show_grid_changed(0);
 
-                render_options_layout->addWidget(w.show_batches());
-                w.wnd()->on_draw_show_batches_changed(0);
+                        show_layout->addWidget(w.show_batches());
+                        w.show_batches()->setToolTip(
+                            "A 'batch' is a render unit for a graphic card. It consists\n"
+                            "of shader programs and render buffers. It may also comprise\n"
+                            "textures."
+                            );
+                        w.wnd()->on_draw_show_batches_changed(0);
 
-                render_options_layout->addWidget(w.show_colliders());
-                w.wnd()->on_draw_show_colliders_changed(0);
+                        show_layout->addWidget(w.show_colliders());
+                        w.show_colliders()->setToolTip(
+                            "A 'collider' is a convex collision primitive, like a sphere or capsule,\n"
+                            "appearing in the collision system (used for contact detection between colliders)."
+                            );
+                        w.wnd()->on_draw_show_colliders_changed(0);
+
+                        show_layout->addWidget(w.show_contact_normals());
+                        w.show_contact_normals()->setToolTip(
+                            "A 'contact normal' is a normal vector of a separation plane between\n"
+                            "colliding colliders at a certain contact point."
+                            );
+                        w.wnd()->on_draw_show_contact_normals_changed(0);
+                    }
+                    show_group->setLayout(show_layout);
+                }
+                render_options_layout->addWidget(show_group);
 
                 render_options_layout->addWidget(w.render_in_wireframe());
                 w.wnd()->on_draw_render_in_wireframe_changed(0);

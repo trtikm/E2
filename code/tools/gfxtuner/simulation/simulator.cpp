@@ -199,6 +199,7 @@ simulator::simulator()
     , m_do_show_grid(true)
     , m_do_show_batches(true)
     , m_do_show_colliders(true)
+    , m_do_show_contact_normals(false)
     , m_colliders_colour{ 0.75f, 0.75f, 1.0f, 1.0f }
     , m_render_in_wireframe(false)
 
@@ -355,6 +356,8 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
     if (m_do_show_colliders)
         render_colliders(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
+    if (m_do_show_contact_normals)
+        render_contact_normals(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
 
     if (is_simulation_round)
         render_simulation_state(matrix_from_world_to_camera, matrix_from_camera_to_clipspace ,draw_state);
@@ -567,12 +570,27 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
 {
     TMPROF_BLOCK();
 
+    if (m_do_show_contact_normals)
+    {
+        if (m_cache_of_batches_of_colliders.collision_normals_points.operator bool())
+            m_cache_of_batches_of_colliders.collision_normals_points->clear();
+        else
+            m_cache_of_batches_of_colliders.collision_normals_points =
+                    std::make_unique<std::vector< std::pair<vector3, vector3> > >();
+        m_cache_of_batches_of_colliders.collision_normals_batch.release();
+    }
+
     m_collision_scene.compute_contacts_of_all_dynamic_objects(
             [this](
                 angeo::contact_id const& cid,
                 vector3 const& contact_point,
                 vector3 const& unit_normal,
                 float_32_bit  penetration_depth) -> bool {
+                    if (m_do_show_contact_normals)
+                        m_cache_of_batches_of_colliders.collision_normals_points->push_back({
+                                contact_point, contact_point + 0.25f * unit_normal
+                                });
+
                     angeo::collision_object_id const  coid_1 = angeo::get_object_id(angeo::get_first_collider_id(cid));
                     auto const  rb_1_it = m_binding_of_collision_objects.find(coid_1);
                     if (rb_1_it == m_binding_of_collision_objects.cend())
@@ -1219,6 +1237,40 @@ void  simulator::render_colliders(
 }
 
 
+void  simulator::render_contact_normals(
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        qtgl::draw_state&  draw_state
+        )
+{
+    TMPROF_BLOCK();
+
+    if (m_cache_of_batches_of_colliders.collision_normals_points.operator bool())
+    {
+        if (m_cache_of_batches_of_colliders.collision_normals_points->empty())
+            m_cache_of_batches_of_colliders.collision_normals_batch.release();
+        else
+            m_cache_of_batches_of_colliders.collision_normals_batch = qtgl::create_lines3d(
+                *m_cache_of_batches_of_colliders.collision_normals_points,
+                m_colliders_colour
+                );
+        m_cache_of_batches_of_colliders.collision_normals_points.release();
+    }
+    if (m_cache_of_batches_of_colliders.collision_normals_batch.empty())
+        return;
+
+    if (qtgl::make_current(m_cache_of_batches_of_colliders.collision_normals_batch, draw_state))
+    {
+        qtgl::render_batch(
+                m_cache_of_batches_of_colliders.collision_normals_batch,
+                matrix_from_world_to_camera,
+                matrix_from_camera_to_clipspace
+                );
+        draw_state = m_cache_of_batches_of_colliders.collision_normals_batch.get_draw_state();
+    }
+}
+
+
 void  simulator::erase_scene_node(scn::scene_node_name const&  name)
 {
     TMPROF_BLOCK();
@@ -1721,6 +1773,11 @@ void  simulator::clear_scene()
     m_scene_selection.clear();
     m_scene_edit_data.invalidate_data();
     m_invalidated_nodes_of_rigid_bodies.clear();
+    m_cache_of_batches_of_colliders.capsules.clear();
+    m_cache_of_batches_of_colliders.spheres.clear();
+    m_cache_of_batches_of_colliders.triangle_meshes.clear();
+    m_cache_of_batches_of_colliders.collision_normals_points.release();
+    m_cache_of_batches_of_colliders.collision_normals_batch.release();
 
     get_scene().clear();
 

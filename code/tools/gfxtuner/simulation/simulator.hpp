@@ -44,6 +44,7 @@ struct simulator : public qtgl::real_time_simulator
     void  set_show_grid_state(bool const  state) { m_do_show_grid = state; }
     void  set_show_batches(bool const  state) { m_do_show_batches = state; }
     void  set_show_colliders(bool const  state) { m_do_show_colliders = state; }
+    void  set_show_contact_normals(bool const  state) { m_do_show_contact_normals = state; }
     void  set_colliders_color(vector3 const&  colour) { m_colliders_colour = expand34(colour); }
     void  set_render_in_wireframe(bool const  state) { m_render_in_wireframe = state; }
 
@@ -248,6 +249,11 @@ private:
             matrix44 const&  matrix_from_camera_to_clipspace,
             qtgl::draw_state&  draw_state
             );
+    void  render_contact_normals(
+            matrix44 const&  matrix_from_world_to_camera,
+            matrix44 const&  matrix_from_camera_to_clipspace,
+            qtgl::draw_state&  draw_state
+            );
 
     scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_ptr  node_ptr);
     scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_name const&  node_name)
@@ -296,6 +302,7 @@ private:
     bool  m_do_show_grid;
     bool  m_do_show_batches;
     bool  m_do_show_colliders;
+    bool  m_do_show_contact_normals;
     vector4  m_colliders_colour;
     bool  m_render_in_wireframe;
 
@@ -313,6 +320,9 @@ private:
         std::unordered_map<float_32_bit, qtgl::batch>  spheres;
         std::unordered_map<std::pair<float_32_bit, float_32_bit>, qtgl::batch>  capsules;
         std::unordered_map<std::string, qtgl::batch>  triangle_meshes;
+
+        std::unique_ptr<std::vector< std::pair<vector3, vector3> > >  collision_normals_points;
+        qtgl::batch  collision_normals_batch;
     };
     cache_of_batches_of_colliders  m_cache_of_batches_of_colliders;
 

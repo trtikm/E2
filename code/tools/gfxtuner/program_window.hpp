@@ -64,6 +64,7 @@ public slots:
     void  on_draw_show_grid_changed(int const  value) { m_tab_draw_widgets.on_show_grid_changed(value); }
     void  on_draw_show_batches_changed(int const  value) { m_tab_draw_widgets.on_show_batches_changed(value); }
     void  on_draw_show_colliders_changed(int const  value) { m_tab_draw_widgets.on_show_colliders_changed(value); }
+    void  on_draw_show_contact_normals_changed(int const  value) { m_tab_draw_widgets.on_show_contact_normals_changed(value); }
 
     void  on_draw_colliders_colour_changed() { m_tab_draw_widgets.on_colliders_colour_changed(); }
     void  on_draw_colliders_colour_set(QColor const&  colour) { m_tab_draw_widgets.on_colliders_colour_set(colour); }
