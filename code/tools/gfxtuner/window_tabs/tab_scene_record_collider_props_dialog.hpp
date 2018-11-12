@@ -6,6 +6,7 @@
 #   include <scene/scene.hpp>
 #   include <scene/scene_node_record_id.hpp>
 #   include <scene/scene_utils_specialised.hpp>
+#   include <scene/records/collider/collider.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <QDialog>
@@ -22,29 +23,7 @@ std::string  check_triangle_mesh_buffers_directory(boost::filesystem::path const
 
 struct  collider_props_dialog : public QDialog
 {
-    struct  collider_props
-    {
-        std::string  m_shape_type;
-
-        bool  m_as_dynamic;
-        angeo::COLLISION_MATERIAL_TYPE  m_material;
-        float_32_bit  m_density_multiplier;
-
-        // DATA OF CAPSULE
-
-        float_32_bit  m_capsule_half_distance_between_end_points;
-        float_32_bit  m_capsule_thickness_from_central_line;
-
-        // DATA OF SPHERE 
-
-        float_32_bit  m_sphere_radius;
-
-        // DATA OF TRIANGLE MESH
-
-        boost::filesystem::path  m_triangle_mesh_buffers_directory;
-    };
-
-    collider_props_dialog(program_window* const  wnd, collider_props* const  props);
+    collider_props_dialog(program_window* const  wnd, scn::collider_props* const  props);
 
     bool  ok() const { return m_ok; }
 
@@ -59,7 +38,7 @@ private:
     Q_OBJECT
 
     program_window*  m_wnd;
-    collider_props*  m_props;
+    scn::collider_props*  m_props;
     bool  m_ok;
     QPushButton*  m_widget_ok;
 

@@ -41,31 +41,69 @@ void  register_record_icons(std::unordered_map<std::string, QIcon>& icons_of_rec
 
 void  register_record_undo_redo_processors(widgets* const  w)
 {
-    //scn::scene_history_batch_insert::set_undo_processor(
-    //    [w](scn::scene_history_batch_insert const&  history_node) {
-    //        INVARIANT(history_node.get_id().get_folder_name() == scn::get_collider_folder_name());
-    //        w->wnd()->glwindow().call_now(
-    //                &simulator::erase_batch_from_scene_node,
-    //                history_node.get_id().get_record_name(),
-    //                history_node.get_id().get_node_name()
-    //                );
-    //        remove_record_from_tree_widget(w->scene_tree(), history_node.get_id());
-    //    });
-    //scn::scene_history_batch_insert::set_redo_processor(
-    //    [w](scn::scene_history_batch_insert const&  history_node) {
-    //        INVARIANT(history_node.get_id().get_folder_name() == scn::get_collider_folder_name());
-    //        w->wnd()->glwindow().call_now(
-    //                &simulator::insert_batch_to_scene_node,
-    //                history_node.get_id().get_record_name(),
-    //                history_node.get_batch_pathname(),
-    //                history_node.get_id().get_node_name()
-    //                );
-    //        insert_record_to_tree_widget(
-    //                w->scene_tree(),
-    //                history_node.get_id(),
-    //                w->get_record_icon(scn::get_collider_folder_name()),
-    //                w->get_folder_icon());
-    //    });
+    scn::scene_history_collider_insert::set_undo_processor(
+        [w](scn::scene_history_collider_insert const&  history_node) {
+            INVARIANT(history_node.get_id().get_folder_name() == scn::get_collider_folder_name());
+            w->wnd()->glwindow().call_now(
+                    &simulator::erase_collision_object_from_scene_node,
+                    history_node.get_id()
+                    );
+            remove_record_from_tree_widget(w->scene_tree(), history_node.get_id());
+        });
+    scn::scene_history_collider_insert::set_redo_processor(
+        [w](scn::scene_history_collider_insert const&  history_node) {
+            INVARIANT(history_node.get_id().get_folder_name() == scn::get_collider_folder_name());
+            if (history_node.get_collider_props().m_shape_type == "capsule")
+                w->wnd()->glwindow().call_now(
+                        &simulator::insert_collision_capsule_to_scene_node,
+                        history_node.get_collider_props().m_capsule_half_distance_between_end_points,
+                        history_node.get_collider_props().m_capsule_thickness_from_central_line,
+                        history_node.get_collider_props().m_material,
+                        history_node.get_collider_props().m_density_multiplier,
+                        history_node.get_collider_props().m_as_dynamic,
+                        history_node.get_id()
+                        );
+            else if (history_node.get_collider_props().m_shape_type == "sphere")
+                w->wnd()->glwindow().call_now(
+                        &simulator::insert_collision_sphere_to_scene_node,
+                        history_node.get_collider_props().m_sphere_radius,
+                        history_node.get_collider_props().m_material,
+                        history_node.get_collider_props().m_density_multiplier,
+                        history_node.get_collider_props().m_as_dynamic,
+                        history_node.get_id()
+                        );
+            else if (history_node.get_collider_props().m_shape_type == "triangle mesh")
+            {
+                qtgl::buffer  vertex_buffer(history_node.get_collider_props().m_triangle_mesh_buffers_directory / "vertices.txt");
+                qtgl::buffer  index_buffer(history_node.get_collider_props().m_triangle_mesh_buffers_directory / "indices.txt");
+
+                if (!vertex_buffer.wait_till_load_is_finished())
+                {
+                    UNREACHABLE();
+                }
+                if (!index_buffer.wait_till_load_is_finished())
+                {
+                    UNREACHABLE();
+                }
+                w->wnd()->glwindow().call_now(
+                        &simulator::insert_collision_trianle_mesh_to_scene_node,
+                        vertex_buffer,
+                        index_buffer,
+                        history_node.get_collider_props().m_material,
+                        history_node.get_collider_props().m_density_multiplier,
+                        history_node.get_id()
+                        );
+            }
+            else
+            {
+                UNREACHABLE();
+            }
+            insert_record_to_tree_widget(
+                    w->scene_tree(),
+                    history_node.get_id(),
+                    w->get_record_icon(scn::get_collider_folder_name()),
+                    w->get_folder_icon());
+        });
 }
 
 
@@ -89,8 +127,7 @@ void  register_record_handler_for_insert_scene_record(
                             return {"", {}};
                         }
 
-                        std::shared_ptr<detail::collider_props_dialog::collider_props>  props =
-                                std::make_shared<detail::collider_props_dialog::collider_props>();
+                        std::shared_ptr<scn::collider_props>  props = std::make_shared<scn::collider_props>();
                         props->m_shape_type = shape_type;
                         props->m_as_dynamic = true;
                         props->m_material = angeo::COLLISION_MATERIAL_TYPE::WOOD;
@@ -134,7 +171,6 @@ void  register_record_handler_for_insert_scene_record(
                                                 props->m_as_dynamic,
                                                 record_id
                                                 );
-                                        //w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, false);
                                     }
                                     else if (props->m_shape_type == "sphere")
                                     {
@@ -146,7 +182,6 @@ void  register_record_handler_for_insert_scene_record(
                                                 props->m_as_dynamic,
                                                 record_id
                                                 );
-                                        //w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, false);
                                     }
                                     else if (props->m_shape_type == "triangle mesh")
                                     {
@@ -173,12 +208,12 @@ void  register_record_handler_for_insert_scene_record(
                                                 // props->m_as_dynamic, <-- Is always assumed to be 'false'.
                                                 record_id
                                                 );
-                                        //w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, false);
                                     }
                                     else
                                     {
                                         UNREACHABLE();
                                     }
+                                    w->get_scene_history()->insert<scn::scene_history_collider_insert>(record_id, *props, false);
                                 }
                             };
                     }
@@ -194,7 +229,7 @@ void  register_record_handler_for_update_scene_record(
     update_record_handlers.insert({
             scn::get_collider_folder_name(),
             [](widgets* const  w, scn::scene_record_id const&  record_id) -> void {
-                    detail::collider_props_dialog::collider_props  props;
+                    scn::collider_props  props;
                     props.m_shape_type = record_id.get_record_name();
                     if (props.m_shape_type == "capsule")
                         w->wnd()->glwindow().call_now(
@@ -239,6 +274,7 @@ void  register_record_handler_for_update_scene_record(
                     dlg.exec();
                     if (!dlg.ok())
                         return;
+                    //w->get_scene_history()->insert<scn::scene_history_collider_insert>(record_id, props, true);
                     w->wnd()->glwindow().call_now(
                             &simulator::erase_collision_object_from_scene_node,
                             record_id
@@ -292,6 +328,7 @@ void  register_record_handler_for_update_scene_record(
                     {
                         UNREACHABLE();
                     }
+                    //w->get_scene_history()->insert<scn::scene_history_collider_insert>(record_id, props, false);
                 }
             });
 }
@@ -305,14 +342,48 @@ void  register_record_handler_for_erase_scene_record(
     erase_record_handlers.insert({
             scn::get_collider_folder_name(),
             [](widgets* const  w, scn::scene_record_id const&  id) -> void {
-                    scn::scene_node_ptr const  node_ptr =
-                            w->wnd()->glwindow().call_now(&simulator::get_scene_node, id.get_node_name());
-                    INVARIANT(node_ptr != nullptr);
-                    //w->get_scene_history()->insert<scn::scene_history_batch_insert>(
-                    //        id,
-                    //        scn::get_batch(*node_ptr, id.get_record_name()).path_component_of_uid(),
-                    //        true
-                    //        );
+                    scn::collider_props  props;
+                    props.m_shape_type = id.get_record_name();
+                    if (props.m_shape_type == "capsule")
+                        w->wnd()->glwindow().call_now(
+                                &simulator::get_collision_capsule_info,
+                                id,
+                                std::ref(props.m_capsule_half_distance_between_end_points),
+                                std::ref(props.m_capsule_thickness_from_central_line),
+                                std::ref(props.m_material),
+                                std::ref(props.m_density_multiplier),
+                                std::ref(props.m_as_dynamic)
+                                );
+                    else if (props.m_shape_type == "sphere")
+                        w->wnd()->glwindow().call_now(
+                                &simulator::get_collision_sphere_info,
+                                id,
+                                std::ref(props.m_sphere_radius),
+                                std::ref(props.m_material),
+                                std::ref(props.m_density_multiplier),
+                                std::ref(props.m_as_dynamic)
+                                );
+                    else if (props.m_shape_type == "triangle mesh")
+                    {
+                        qtgl::buffer  vertex_buffer;
+                        qtgl::buffer  index_buffer;
+                        w->wnd()->glwindow().call_now(
+                                &simulator::get_collision_triangle_mesh_info,
+                                id,
+                                std::ref(vertex_buffer),
+                                std::ref(index_buffer),
+                                std::ref(props.m_material),
+                                std::ref(props.m_density_multiplier)
+                                );
+                        props.m_triangle_mesh_buffers_directory =
+                                boost::filesystem::path(vertex_buffer.key().get_unique_id()).parent_path();
+                        props.m_as_dynamic = false;
+                    }
+                    else
+                    {
+                        UNREACHABLE();
+                    }
+                    w->get_scene_history()->insert<scn::scene_history_collider_insert>(id, props, true);
                     w->wnd()->glwindow().call_now(
                             &simulator::erase_collision_object_from_scene_node,
                             id

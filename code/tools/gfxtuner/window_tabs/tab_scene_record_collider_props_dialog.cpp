@@ -27,7 +27,7 @@ std::string  check_triangle_mesh_buffers_directory(boost::filesystem::path const
 }
 
 
-collider_props_dialog::collider_props_dialog(program_window* const  wnd, collider_props* const  props)
+collider_props_dialog::collider_props_dialog(program_window* const  wnd, scn::collider_props* const  props)
     : QDialog(wnd)
     , m_wnd(wnd)
     , m_props(props)
