@@ -792,14 +792,14 @@ void  widgets::on_scene_erase_selected()
         to_erase_items.insert(item);
     }
 
-    m_scene_tree->clearSelection();
-
     std::unordered_set<QTreeWidgetItem*>  erased_items;
     for (auto const  item : to_erase_items)
         if (erased_items.count(item) == 0UL)
             erase_subtree_at_root_item(item, erased_items);
+    INVARIANT(erased_items.size() >= to_erase_items.size());
 
-    INVARIANT(!erased_items.empty());
+    m_scene_tree->clearSelection();
+
     get_scene_history()->commit();
     set_window_title();
 }
@@ -821,7 +821,8 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
         while (item->childCount() > 0)
             erase_subtree_at_root_item(item->child(0), erased_items, false);
 
-        get_scene_history()->insert<scn::scene_history_coord_system_insert_to_selection>(item_name, true);
+        if (item->isSelected())
+            get_scene_history()->insert<scn::scene_history_coord_system_insert_to_selection>(item_name, true);
         scn::scene_node_ptr const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, item_name);
         INVARIANT(node_ptr != nullptr);
         get_scene_history()->insert<scn::scene_history_coord_system_insert>(
@@ -845,7 +846,9 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
     else
     {
         scn::scene_record_id const  id = scene_record_id_reverse_builder::run(item).get_record_id();
-        get_scene_history()->insert<scn::scene_history_record_insert_to_selection>(id, true);
+
+        if (item->isSelected())
+            get_scene_history()->insert<scn::scene_history_record_insert_to_selection>(id, true);
 
         std::unordered_set<scn::scene_node_name>  selected_scene_nodes;
         std::unordered_set<scn::scene_record_id>  selected_records{ id };
