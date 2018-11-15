@@ -58,6 +58,11 @@ void  scene_history::insert(scene_history_node_ptr const  node_ptr)
     m_history.push_back(node_ptr);
 }
 
+bool  scene_history::has_not_commited_data() const
+{
+    return m_active_commit < m_history.size() - 1UL && !detail::is_commit_node(m_history.at(m_history.size() - 1UL));
+}
+
 void  scene_history::commit()
 {
     ASSUMPTION(m_active_commit < m_history.size() - 1UL);

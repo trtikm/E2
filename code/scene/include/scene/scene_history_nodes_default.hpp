@@ -127,6 +127,30 @@ private:
 };
 
 
+template<typename T>
+struct  scene_history_record_update :
+    public scene_history_node_with_undo_and_redo_processors<T>
+{
+    using child_type = T;
+    using super_type = scene_history_node_with_undo_and_redo_processors<child_type>;
+
+    scene_history_record_update(
+            scene_record_id const&  id,
+            bool const  as_inverse_operation    // pass 'true', if the operation should represent 'erase'
+            )
+        : super_type(as_inverse_operation)
+        , m_id(id)
+    {
+        ASSUMPTION(!m_id.get_node_name().empty() && !m_id.get_record_name().empty());
+    }
+
+    scene_record_id const&  get_id() const { return m_id; }
+
+private:
+    scene_record_id  m_id;
+};
+
+
 struct  scene_history_record_insert_to_selection :
     public scene_history_node_with_undo_and_redo_processors<scene_history_record_insert_to_selection>
 {

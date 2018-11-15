@@ -27,6 +27,152 @@
 #include <QGroupBox>
 #include <memory>
 
+namespace window_tabs { namespace tab_scene { namespace record_collider { namespace detail {
+
+
+void  set_collider_props_to_defaults(std::string const&  shape_type, scn::collider_props&  props)
+{
+    props.m_shape_type = shape_type;
+    props.m_as_dynamic = true;
+    props.m_material = angeo::COLLISION_MATERIAL_TYPE::WOOD;
+    props.m_density_multiplier = 1.0f;
+    if (props.m_shape_type == "capsule")
+    {
+        props.m_capsule_half_distance_between_end_points = 0.05f;
+        props.m_capsule_thickness_from_central_line = 0.05f;
+    }
+    else if (props.m_shape_type == "sphere")
+    {
+        props.m_sphere_radius = 0.05f;
+    }
+    else if (props.m_shape_type == "triangle mesh")
+    {
+        props.m_as_dynamic = false;
+        props.m_triangle_mesh_buffers_directory =
+            canonical_path(boost::filesystem::absolute(
+                boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "meshes"
+                ));
+    }
+    else
+    {
+        UNREACHABLE();
+    }
+}
+
+
+void  insert_collider_to_simulator(widgets* const  w, scn::collider_props const&  props, scn::scene_record_id const&  record_id)
+{
+    if (props.m_shape_type == "capsule")
+    {
+        w->wnd()->glwindow().call_now(
+                &simulator::insert_collision_capsule_to_scene_node,
+                props.m_capsule_half_distance_between_end_points,
+                props.m_capsule_thickness_from_central_line,
+                props.m_material,
+                props.m_density_multiplier,
+                props.m_as_dynamic,
+                std::cref(record_id)
+                );
+    }
+    else if (props.m_shape_type == "sphere")
+    {
+        w->wnd()->glwindow().call_now(
+                &simulator::insert_collision_sphere_to_scene_node,
+                props.m_sphere_radius,
+                props.m_material,
+                props.m_density_multiplier,
+                props.m_as_dynamic,
+                std::cref(record_id)
+                );
+    }
+    else if (props.m_shape_type == "triangle mesh")
+    {
+        qtgl::buffer  vertex_buffer(props.m_triangle_mesh_buffers_directory / "vertices.txt");
+        qtgl::buffer  index_buffer(props.m_triangle_mesh_buffers_directory / "indices.txt");
+
+        if (!vertex_buffer.wait_till_load_is_finished())
+        {
+            w->wnd()->print_status_message("ERROR: Failed to load vertex buffer '" + vertex_buffer.key().get_unique_id() + "'.", 10000);
+            return;
+        }
+        if (!index_buffer.wait_till_load_is_finished())
+        {
+            w->wnd()->print_status_message("ERROR: Failed to load index buffer '" + index_buffer.key().get_unique_id() + "'.", 10000);
+            return;
+        }
+
+        w->wnd()->glwindow().call_now(
+                &simulator::insert_collision_trianle_mesh_to_scene_node,
+                vertex_buffer,
+                index_buffer,
+                props.m_material,
+                props.m_density_multiplier,
+                // props.m_as_dynamic, <-- Is always assumed to be 'false'.
+                std::cref(record_id)
+                );
+    }
+    else
+    {
+        UNREACHABLE();
+    }
+}
+
+
+void  erase_collider_from_simulator(widgets* const  w, scn::scene_record_id const&  record_id)
+{
+    w->wnd()->glwindow().call_now(
+            &simulator::erase_collision_object_from_scene_node,
+            std::cref(record_id)
+            );
+}
+
+void  read_collider_props_from_simulator(widgets* const  w, scn::scene_record_id const&  record_id, scn::collider_props&  props)
+{
+    props.m_shape_type = record_id.get_record_name();
+    if (props.m_shape_type == "capsule")
+        w->wnd()->glwindow().call_now(
+                &simulator::get_collision_capsule_info,
+                std::cref(record_id),
+                std::ref(props.m_capsule_half_distance_between_end_points),
+                std::ref(props.m_capsule_thickness_from_central_line),
+                std::ref(props.m_material),
+                std::ref(props.m_density_multiplier),
+                std::ref(props.m_as_dynamic)
+                );
+    else if (props.m_shape_type == "sphere")
+        w->wnd()->glwindow().call_now(
+                &simulator::get_collision_sphere_info,
+                std::cref(record_id),
+                std::ref(props.m_sphere_radius),
+                std::ref(props.m_material),
+                std::ref(props.m_density_multiplier),
+                std::ref(props.m_as_dynamic)
+                );
+    else if (props.m_shape_type == "triangle mesh")
+    {
+        qtgl::buffer  vertex_buffer;
+        qtgl::buffer  index_buffer;
+        w->wnd()->glwindow().call_now(
+                &simulator::get_collision_triangle_mesh_info,
+                std::cref(record_id),
+                std::ref(vertex_buffer),
+                std::ref(index_buffer),
+                std::ref(props.m_material),
+                std::ref(props.m_density_multiplier)
+                );
+        props.m_triangle_mesh_buffers_directory =
+                boost::filesystem::path(vertex_buffer.key().get_unique_id()).parent_path();
+        props.m_as_dynamic = false;
+    }
+    else
+    {
+        UNREACHABLE();
+    }
+}
+
+
+}}}}
+
 namespace window_tabs { namespace tab_scene { namespace record_collider {
 
 
@@ -44,68 +190,33 @@ void  register_record_undo_redo_processors(widgets* const  w)
     scn::scene_history_collider_insert::set_undo_processor(
         [w](scn::scene_history_collider_insert const&  history_node) {
             INVARIANT(history_node.get_id().get_folder_name() == scn::get_collider_folder_name());
-            w->wnd()->glwindow().call_now(
-                    &simulator::erase_collision_object_from_scene_node,
-                    history_node.get_id()
-                    );
+            detail::erase_collider_from_simulator(w, history_node.get_id());
             remove_record_from_tree_widget(w->scene_tree(), history_node.get_id());
         });
     scn::scene_history_collider_insert::set_redo_processor(
         [w](scn::scene_history_collider_insert const&  history_node) {
             INVARIANT(history_node.get_id().get_folder_name() == scn::get_collider_folder_name());
-            if (history_node.get_collider_props().m_shape_type == "capsule")
-                w->wnd()->glwindow().call_now(
-                        &simulator::insert_collision_capsule_to_scene_node,
-                        history_node.get_collider_props().m_capsule_half_distance_between_end_points,
-                        history_node.get_collider_props().m_capsule_thickness_from_central_line,
-                        history_node.get_collider_props().m_material,
-                        history_node.get_collider_props().m_density_multiplier,
-                        history_node.get_collider_props().m_as_dynamic,
-                        history_node.get_id()
-                        );
-            else if (history_node.get_collider_props().m_shape_type == "sphere")
-                w->wnd()->glwindow().call_now(
-                        &simulator::insert_collision_sphere_to_scene_node,
-                        history_node.get_collider_props().m_sphere_radius,
-                        history_node.get_collider_props().m_material,
-                        history_node.get_collider_props().m_density_multiplier,
-                        history_node.get_collider_props().m_as_dynamic,
-                        history_node.get_id()
-                        );
-            else if (history_node.get_collider_props().m_shape_type == "triangle mesh")
-            {
-                qtgl::buffer  vertex_buffer(history_node.get_collider_props().m_triangle_mesh_buffers_directory / "vertices.txt");
-                qtgl::buffer  index_buffer(history_node.get_collider_props().m_triangle_mesh_buffers_directory / "indices.txt");
-
-                if (!vertex_buffer.wait_till_load_is_finished())
-                {
-                    UNREACHABLE();
-                }
-                if (!index_buffer.wait_till_load_is_finished())
-                {
-                    UNREACHABLE();
-                }
-                w->wnd()->glwindow().call_now(
-                        &simulator::insert_collision_trianle_mesh_to_scene_node,
-                        vertex_buffer,
-                        index_buffer,
-                        history_node.get_collider_props().m_material,
-                        history_node.get_collider_props().m_density_multiplier,
-                        history_node.get_id()
-                        );
-            }
-            else
-            {
-                UNREACHABLE();
-            }
+            detail::insert_collider_to_simulator(w, history_node.get_collider_props(), history_node.get_id());
             insert_record_to_tree_widget(
                     w->scene_tree(),
                     history_node.get_id(),
                     w->get_record_icon(scn::get_collider_folder_name()),
                     w->get_folder_icon());
         });
-}
 
+    scn::scene_history_collider_update_props::set_undo_processor(
+        [w](scn::scene_history_collider_update_props const&  history_node) {
+            INVARIANT(history_node.get_id().get_folder_name() == scn::get_collider_folder_name());
+            detail::erase_collider_from_simulator(w, history_node.get_id());
+            detail::insert_collider_to_simulator(w, history_node.get_collider_old_props(), history_node.get_id());
+        });
+    scn::scene_history_collider_update_props::set_redo_processor(
+        [w](scn::scene_history_collider_update_props const&  history_node) {
+            INVARIANT(history_node.get_id().get_folder_name() == scn::get_collider_folder_name());
+            detail::erase_collider_from_simulator(w, history_node.get_id());
+            detail::insert_collider_to_simulator(w, history_node.get_collider_new_props(), history_node.get_id());
+        });
+}
 
 
 void  register_record_handler_for_insert_scene_record(
@@ -126,33 +237,8 @@ void  register_record_handler_for_insert_scene_record(
                             w->wnd()->print_status_message("ERROR: A coordinate system node may contain at most one collider.", 10000);
                             return {"", {}};
                         }
-
                         std::shared_ptr<scn::collider_props>  props = std::make_shared<scn::collider_props>();
-                        props->m_shape_type = shape_type;
-                        props->m_as_dynamic = true;
-                        props->m_material = angeo::COLLISION_MATERIAL_TYPE::WOOD;
-                        props->m_density_multiplier = 1.0f;
-                        if (props->m_shape_type == "capsule")
-                        {
-                            props->m_capsule_half_distance_between_end_points = 0.05f;
-                            props->m_capsule_thickness_from_central_line = 0.05f;
-                        }
-                        else if (props->m_shape_type == "sphere")
-                        {
-                            props->m_sphere_radius = 0.05f;
-                        }
-                        else if (props->m_shape_type == "triangle mesh")
-                        {
-                            props->m_as_dynamic = false;
-                            props->m_triangle_mesh_buffers_directory =
-                                canonical_path(boost::filesystem::absolute(
-                                    boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "meshes"
-                                    ));
-                        }
-                        else
-                        {
-                            UNREACHABLE();
-                        }
+                        detail::set_collider_props_to_defaults(shape_type, *props);
                         detail::collider_props_dialog  dlg(w->wnd(), props.get());
                         dlg.exec();
                         if (!dlg.ok())
@@ -160,59 +246,7 @@ void  register_record_handler_for_insert_scene_record(
                         return {
                             props->m_shape_type,
                             [w, props](scn::scene_record_id const&  record_id) -> void {
-                                    if (props->m_shape_type == "capsule")
-                                    {
-                                        w->wnd()->glwindow().call_now(
-                                                &simulator::insert_collision_capsule_to_scene_node,
-                                                props->m_capsule_half_distance_between_end_points,
-                                                props->m_capsule_thickness_from_central_line,
-                                                props->m_material,
-                                                props->m_density_multiplier,
-                                                props->m_as_dynamic,
-                                                record_id
-                                                );
-                                    }
-                                    else if (props->m_shape_type == "sphere")
-                                    {
-                                        w->wnd()->glwindow().call_now(
-                                                &simulator::insert_collision_sphere_to_scene_node,
-                                                props->m_sphere_radius,
-                                                props->m_material,
-                                                props->m_density_multiplier,
-                                                props->m_as_dynamic,
-                                                record_id
-                                                );
-                                    }
-                                    else if (props->m_shape_type == "triangle mesh")
-                                    {
-                                        qtgl::buffer  vertex_buffer(props->m_triangle_mesh_buffers_directory / "vertices.txt");
-                                        qtgl::buffer  index_buffer(props->m_triangle_mesh_buffers_directory / "indices.txt");
-
-                                        if (!vertex_buffer.wait_till_load_is_finished())
-                                        {
-                                            w->wnd()->print_status_message("ERROR: Failed to load vertex buffer '" + vertex_buffer.key().get_unique_id() + "'.", 10000);
-                                            return;
-                                        }
-                                        if (!index_buffer.wait_till_load_is_finished())
-                                        {
-                                            w->wnd()->print_status_message("ERROR: Failed to load index buffer '" + index_buffer.key().get_unique_id() + "'.", 10000);
-                                            return;
-                                        }
-
-                                        w->wnd()->glwindow().call_now(
-                                                &simulator::insert_collision_trianle_mesh_to_scene_node,
-                                                vertex_buffer,
-                                                index_buffer,
-                                                props->m_material,
-                                                props->m_density_multiplier,
-                                                // props->m_as_dynamic, <-- Is always assumed to be 'false'.
-                                                record_id
-                                                );
-                                    }
-                                    else
-                                    {
-                                        UNREACHABLE();
-                                    }
+                                    detail::insert_collider_to_simulator(w, *props, record_id);
                                     w->get_scene_history()->insert<scn::scene_history_collider_insert>(record_id, *props, false);
                                 }
                             };
@@ -230,105 +264,15 @@ void  register_record_handler_for_update_scene_record(
             scn::get_collider_folder_name(),
             [](widgets* const  w, scn::scene_record_id const&  record_id) -> void {
                     scn::collider_props  props;
-                    props.m_shape_type = record_id.get_record_name();
-                    if (props.m_shape_type == "capsule")
-                        w->wnd()->glwindow().call_now(
-                                &simulator::get_collision_capsule_info,
-                                record_id,
-                                std::ref(props.m_capsule_half_distance_between_end_points),
-                                std::ref(props.m_capsule_thickness_from_central_line),
-                                std::ref(props.m_material),
-                                std::ref(props.m_density_multiplier),
-                                std::ref(props.m_as_dynamic)
-                                );
-                    else if (props.m_shape_type == "sphere")
-                        w->wnd()->glwindow().call_now(
-                                &simulator::get_collision_sphere_info,
-                                record_id,
-                                std::ref(props.m_sphere_radius),
-                                std::ref(props.m_material),
-                                std::ref(props.m_density_multiplier),
-                                std::ref(props.m_as_dynamic)
-                                );
-                    else if (props.m_shape_type == "triangle mesh")
-                    {
-                        qtgl::buffer  vertex_buffer;
-                        qtgl::buffer  index_buffer;
-                        w->wnd()->glwindow().call_now(
-                                &simulator::get_collision_triangle_mesh_info,
-                                record_id,
-                                std::ref(vertex_buffer),
-                                std::ref(index_buffer),
-                                std::ref(props.m_material),
-                                std::ref(props.m_density_multiplier)
-                                );
-                        props.m_triangle_mesh_buffers_directory =
-                                boost::filesystem::path(vertex_buffer.key().get_unique_id()).parent_path();
-                        props.m_as_dynamic = false;
-                    }
-                    else
-                    {
-                        UNREACHABLE();
-                    }
+                    detail::read_collider_props_from_simulator(w, record_id, props);
+                    scn::collider_props  old_props = props;
                     detail::collider_props_dialog  dlg(w->wnd(), &props);
                     dlg.exec();
                     if (!dlg.ok())
                         return;
-                    //w->get_scene_history()->insert<scn::scene_history_collider_insert>(record_id, props, true);
-                    w->wnd()->glwindow().call_now(
-                            &simulator::erase_collision_object_from_scene_node,
-                            record_id
-                            );
-                    if (props.m_shape_type == "capsule")
-                        w->wnd()->glwindow().call_now(
-                                &simulator::insert_collision_capsule_to_scene_node,
-                                props.m_capsule_half_distance_between_end_points,
-                                props.m_capsule_thickness_from_central_line,
-                                props.m_material,
-                                props.m_density_multiplier,
-                                props.m_as_dynamic,
-                                record_id
-                                );
-                    else if (props.m_shape_type == "sphere")
-                        w->wnd()->glwindow().call_now(
-                                &simulator::insert_collision_sphere_to_scene_node,
-                                props.m_sphere_radius,
-                                props.m_material,
-                                props.m_density_multiplier,
-                                props.m_as_dynamic,
-                                record_id
-                                );
-                    else if (props.m_shape_type == "triangle mesh")
-                    {
-                        qtgl::buffer  vertex_buffer(props.m_triangle_mesh_buffers_directory / "vertices.txt");
-                        qtgl::buffer  index_buffer(props.m_triangle_mesh_buffers_directory / "indices.txt");
-
-                        if (!vertex_buffer.wait_till_load_is_finished())
-                        {
-                            w->wnd()->print_status_message("ERROR: Failed to load vertex buffer '" + vertex_buffer.key().get_unique_id() + "'.", 10000);
-                            return;
-                        }
-                        if (!index_buffer.wait_till_load_is_finished())
-                        {
-                            w->wnd()->print_status_message("ERROR: Failed to load index buffer '" + index_buffer.key().get_unique_id() + "'.", 10000);
-                            return;
-                        }
-
-                        w->wnd()->glwindow().call_now(
-                                &simulator::insert_collision_trianle_mesh_to_scene_node,
-                                vertex_buffer,
-                                index_buffer,
-                                props.m_material,
-                                props.m_density_multiplier,
-                                // props.m_as_dynamic, <-- Is always assumed to be 'false'.
-                                record_id
-                                );
-                    }
-                    else
-                    {
-                        UNREACHABLE();
-                    }
-                    //w->get_scene_history()->insert<scn::scene_history_collider_insert>(record_id, props, false);
+                    w->get_scene_history()->insert<scn::scene_history_collider_update_props>(record_id, old_props, props, false);
+                    detail::erase_collider_from_simulator(w, record_id);
+                    detail::insert_collider_to_simulator(w, props, record_id);
                 }
             });
 }
@@ -343,46 +287,7 @@ void  register_record_handler_for_erase_scene_record(
             scn::get_collider_folder_name(),
             [](widgets* const  w, scn::scene_record_id const&  id) -> void {
                     scn::collider_props  props;
-                    props.m_shape_type = id.get_record_name();
-                    if (props.m_shape_type == "capsule")
-                        w->wnd()->glwindow().call_now(
-                                &simulator::get_collision_capsule_info,
-                                id,
-                                std::ref(props.m_capsule_half_distance_between_end_points),
-                                std::ref(props.m_capsule_thickness_from_central_line),
-                                std::ref(props.m_material),
-                                std::ref(props.m_density_multiplier),
-                                std::ref(props.m_as_dynamic)
-                                );
-                    else if (props.m_shape_type == "sphere")
-                        w->wnd()->glwindow().call_now(
-                                &simulator::get_collision_sphere_info,
-                                id,
-                                std::ref(props.m_sphere_radius),
-                                std::ref(props.m_material),
-                                std::ref(props.m_density_multiplier),
-                                std::ref(props.m_as_dynamic)
-                                );
-                    else if (props.m_shape_type == "triangle mesh")
-                    {
-                        qtgl::buffer  vertex_buffer;
-                        qtgl::buffer  index_buffer;
-                        w->wnd()->glwindow().call_now(
-                                &simulator::get_collision_triangle_mesh_info,
-                                id,
-                                std::ref(vertex_buffer),
-                                std::ref(index_buffer),
-                                std::ref(props.m_material),
-                                std::ref(props.m_density_multiplier)
-                                );
-                        props.m_triangle_mesh_buffers_directory =
-                                boost::filesystem::path(vertex_buffer.key().get_unique_id()).parent_path();
-                        props.m_as_dynamic = false;
-                    }
-                    else
-                    {
-                        UNREACHABLE();
-                    }
+                    detail::read_collider_props_from_simulator(w, id, props);
                     w->get_scene_history()->insert<scn::scene_history_collider_insert>(id, props, true);
                     w->wnd()->glwindow().call_now(
                             &simulator::erase_collision_object_from_scene_node,

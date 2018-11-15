@@ -279,6 +279,40 @@ void  register_record_undo_redo_processors(widgets* const  w)
                     w->get_record_icon(scn::get_rigid_body_folder_name()),
                     w->get_folder_icon());
         });
+
+
+    scn::scene_history_rigid_body_update_props::set_undo_processor(
+        [w](scn::scene_history_rigid_body_update_props const&  history_node) {
+            INVARIANT(history_node.get_id().get_folder_name() == scn::get_rigid_body_folder_name());
+            w->wnd()->glwindow().call_now(
+                    &simulator::erase_rigid_body_from_scene_node,
+                    std::cref(history_node.get_id().get_node_name())
+                    );
+            w->wnd()->glwindow().call_now(
+                    &simulator::insert_rigid_body_to_scene_node,
+                    std::cref(history_node.get_old_props().m_linear_velocity),
+                    std::cref(history_node.get_old_props().m_angular_velocity),
+                    std::cref(history_node.get_old_props().m_external_linear_acceleration),
+                    std::cref(history_node.get_old_props().m_external_angular_acceleration),
+                    std::cref(history_node.get_id().get_node_name())
+                    );
+        });
+    scn::scene_history_rigid_body_update_props::set_redo_processor(
+        [w](scn::scene_history_rigid_body_update_props const&  history_node) {
+            INVARIANT(history_node.get_id().get_folder_name() == scn::get_rigid_body_folder_name());
+            w->wnd()->glwindow().call_now(
+                    &simulator::erase_rigid_body_from_scene_node,
+                    std::cref(history_node.get_id().get_node_name())
+                    );
+            w->wnd()->glwindow().call_now(
+                    &simulator::insert_rigid_body_to_scene_node,
+                    std::cref(history_node.get_new_props().m_linear_velocity),
+                    std::cref(history_node.get_new_props().m_angular_velocity),
+                    std::cref(history_node.get_new_props().m_external_linear_acceleration),
+                    std::cref(history_node.get_new_props().m_external_angular_acceleration),
+                    std::cref(history_node.get_id().get_node_name())
+                    );
+        });
 }
 
 
@@ -346,10 +380,12 @@ void  register_record_handler_for_update_scene_record(
                             std::ref(rb_props.m_external_linear_acceleration),
                             std::ref(rb_props.m_external_angular_acceleration)
                             );
+                    scn::rigid_body_props  rb_old_props = rb_props;
                     detail::rigid_body_props_dialog  dlg(w->wnd(), &rb_props);
                     dlg.exec();
                     if (!dlg.ok())
                         return;
+                    w->get_scene_history()->insert<scn::scene_history_rigid_body_update_props>(record_id, rb_old_props, rb_props, false);
                     w->wnd()->glwindow().call_now(
                             &simulator::erase_rigid_body_from_scene_node,
                             std::cref(record_id.get_node_name())

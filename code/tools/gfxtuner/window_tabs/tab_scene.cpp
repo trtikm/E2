@@ -453,6 +453,8 @@ void  widgets::on_scene_hierarchy_item_update_action(QTreeWidgetItem* const  ite
     if (it == m_update_record_handlers.end())
         return;
     it->second(this, id);
+    if (get_scene_history()->has_not_commited_data())
+        get_scene_history()->commit();
 }
 
 void  widgets::selection_changed_listener()

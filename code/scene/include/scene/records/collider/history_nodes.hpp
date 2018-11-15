@@ -28,6 +28,30 @@ private:
 };
 
 
+struct  scene_history_collider_update_props final : public scene_history_record_update<scene_history_collider_update_props>
+{
+    using super_type = scene_history_record_update<scene_history_collider_update_props>;
+
+    scene_history_collider_update_props(
+            scene_record_id const&  id,
+            collider_props const&  old_props,
+            collider_props const&  new_props,
+            bool const  as_inverse_operation    // pass 'true', if the operation should represent 'return-to-old-props'
+            )
+        : super_type(id, as_inverse_operation)
+        , m_old_props(old_props)
+        , m_new_props(new_props)
+    {}
+
+    collider_props const&  get_collider_old_props() const { return m_old_props; }
+    collider_props const&  get_collider_new_props() const { return m_new_props; }
+
+private:
+    collider_props  m_old_props;
+    collider_props  m_new_props;
+};
+
+
 }
 
 #endif

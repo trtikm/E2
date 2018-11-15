@@ -29,6 +29,7 @@ struct  scene_history final
         insert(scene_history_node_ptr(new scene_history_node_type(args_for_constructor_of_history_node...)));
     }
 
+    bool  has_not_commited_data() const;
     void  commit();
     natural_64_bit  get_active_commit_id() const;
     bool  is_commit_valid(natural_64_bit const  commit_id) const;
