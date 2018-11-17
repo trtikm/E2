@@ -49,16 +49,21 @@ void  motion_constraint_system::clear()
 
 
 bool  motion_constraint_system::default_computation_terminator(
-        natural_32_bit const  max_num_iterations,
+        computation_statistics const&  statistics,
+        float_64_bit const  max_computation_time_in_seconds,
         float_32_bit const  min_change_of_variables,
-        natural_32_bit const  max_computation_time_in_micro_seconds,
-        computation_statistics const&  statistics
+        float_32_bit const  min_absolute_difference_in_change_of_variables
         )
 {
-    return  max_num_iterations <= statistics.m_num_performed_iterations ||
-            min_change_of_variables >= statistics.m_max_change_of_variables ||
-            max_computation_time_in_micro_seconds <= statistics.m_total_time_of_all_performed_iterations_in_micro_seconds
-            ;
+    if (statistics.m_max_change_of_variables <= min_change_of_variables)
+        return true;
+    if (statistics.m_total_time_of_all_performed_iterations_in_seconds + statistics.m_time_of_last_iteration_in_seconds
+            > max_computation_time_in_seconds)
+        return true;
+    if (statistics.m_absolute_difference_in_max_change_of_variables_from_last_two_iterations
+            <= min_absolute_difference_in_change_of_variables)
+        return true;
+    return false;
 }
 
 
@@ -174,9 +179,11 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
                 get_num_constraints(),      // m_num_constraints_in_system
                 0U,                         // m_num_performed_iterations
                 0.0f,                       // m_max_change_of_variables
+                0.0f,                       // m_absolute_difference_in_max_change_of_variables_from_last_two_iterations
                 0U,                         // m_time_of_last_iteration_in_micro_seconds
                 0U                          // m_total_time_of_all_performed_iterations_in_micro_seconds
         };
+        float_32_bit  old_max_change_of_variables = 0.0f;
         std::chrono::high_resolution_clock::time_point const  start_time_point = std::chrono::high_resolution_clock::now();
         do
         {
@@ -227,10 +234,14 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
 
             ++output_statistics_ptr->m_num_performed_iterations;
             output_statistics_ptr->m_max_change_of_variables = max_change_of_variables;
-            output_statistics_ptr->m_time_of_last_iteration_in_micro_seconds =
-                std::chrono::high_resolution_clock::duration(iteration_end_time_point - iteration_start_time_point).count();
-            output_statistics_ptr->m_total_time_of_all_performed_iterations_in_micro_seconds =
-                std::chrono::high_resolution_clock::duration(iteration_end_time_point - start_time_point).count();
+            output_statistics_ptr->m_absolute_difference_in_max_change_of_variables_from_last_two_iterations =
+                std::fabs(max_change_of_variables - old_max_change_of_variables);
+            output_statistics_ptr->m_time_of_last_iteration_in_seconds =
+                std::chrono::duration<float_64_bit>(iteration_end_time_point - iteration_start_time_point).count();
+            output_statistics_ptr->m_total_time_of_all_performed_iterations_in_seconds =
+                std::chrono::duration<float_64_bit>(iteration_end_time_point - start_time_point).count();
+
+            old_max_change_of_variables = max_change_of_variables;
         }
         while (!terminate_comutation(*output_statistics_ptr));
     }

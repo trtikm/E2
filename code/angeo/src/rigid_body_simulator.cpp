@@ -228,10 +228,10 @@ void  rigid_body_simulator::do_simulation_step(
             m_rigid_bodies,
             std::bind(
                     &motion_constraint_system::default_computation_terminator,
-                    3U * get_constraint_system().get_num_constraints(),
-                    1e-3f,
-                    natural_32_bit(0.95f * max_computation_time_in_seconds * 1000000.0f),
-                    std::placeholders::_1
+                    std::placeholders::_1,
+                    0.95f * max_computation_time_in_seconds,
+                    0.001f,
+                    0.0025f
                     ),
             time_step_in_seconds,
             nullptr

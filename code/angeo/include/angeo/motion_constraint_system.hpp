@@ -29,8 +29,13 @@ struct  motion_constraint_system
                                                         // an update of the corresponding variable to be a bit closer to a solution.
         float_32_bit  m_max_change_of_variables;        // The absolute value of the maximal change of any variable of the system
                                                         // in the last iteration.
-        std::chrono::high_resolution_clock::rep  m_time_of_last_iteration_in_micro_seconds;
-        std::chrono::high_resolution_clock::rep  m_total_time_of_all_performed_iterations_in_micro_seconds;
+        float_32_bit  m_absolute_difference_in_max_change_of_variables_from_last_two_iterations;    // It is the absolute value
+                                                        // of difference between the current value of the variable
+                                                        // 'm_max_change_of_variables' and the previous value of the same
+                                                        // variable. The value of the variable only makes sense when
+                                                        // 'm_num_performed_iterations' > 1.
+        float_64_bit  m_time_of_last_iteration_in_seconds;
+        float_64_bit  m_total_time_of_all_performed_iterations_in_seconds;
     };
 
     // It is assumed, that ids 'rb_0' and 'rb_1' will be interpreted in the method 'solve'
@@ -55,10 +60,10 @@ struct  motion_constraint_system
     float_32_bit  get_solution_of_constraint(constraint_id const  id) const { return m_lambdas.at(id); }
 
     static bool  default_computation_terminator(
-            natural_32_bit const  max_num_iterations,
+            computation_statistics const&  statistics,
+            float_64_bit const  max_computation_time_in_seconds,
             float_32_bit const  min_change_of_variables,
-            natural_32_bit const  max_computation_time_in_micro_seconds,
-            computation_statistics const&  statistics
+            float_32_bit const  min_absolute_difference_in_change_of_variables
             );
 
     // Solves the constraint system and returns a reference to the solution, i.e. values of unknown
