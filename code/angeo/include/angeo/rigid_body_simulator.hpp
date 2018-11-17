@@ -75,12 +75,6 @@ struct  rigid_body_simulator
                                     // If true, then friction forces computed will act only in positive directions of the
                                     // vectors in 'm_unit_tangent_plane_vectors'. Otherwise, the forces can act in both
                                     // directions (positive and negative).
-        COLLISION_MATERIAL_TYPE  m_material_0;
-                                    // The collision material of the rigid body 'rb_0' (see the function
-                                    // 'insert_contact_constraints' below) at the contact point.
-        COLLISION_MATERIAL_TYPE  m_material_1;
-                                    // The collision material of the rigid body 'rb_1' (see the function
-                                    // 'insert_contact_constraints' below) at the contact point.
         float_32_bit  m_max_tangent_relative_speed_for_static_friction;
                                     // If the relative tnagent plane velocity of both rigid bodies at the contact point is
                                     // smaller that the passed value, then static friction coefficient will be used for this
@@ -97,6 +91,8 @@ struct  rigid_body_simulator
             contact_id const&  cid,
             vector3 const&  contact_point,
             vector3 const&  unit_normal, // Must point towards the first rigid body (i.e. towards rb_0)
+            COLLISION_MATERIAL_TYPE  rb_0_material, // The collision material of the rigid body 'rb_0' at the 'contact_point'.
+            COLLISION_MATERIAL_TYPE  rb_1_material, // The collision material of the rigid body 'rb_1' at the 'contact_point'.
             contact_friction_constraints_info const* const  friction_info_ptr,
                                     // When passed 'nullptr', then no friction constraint will be generated.
             float_32_bit const  penetration_depth,

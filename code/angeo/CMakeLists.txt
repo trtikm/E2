@@ -43,6 +43,8 @@ add_library(${THIS_TARGET_NAME}
     
     ./include/angeo/friction_coefficients.hpp
     ./src/friction_coefficients.cpp
+    ./include/angeo/bouncing_coefficients.hpp
+    ./src/bouncing_coefficients.cpp
     
     ./include/angeo/mass_and_inertia_tensor.hpp
     ./src/mass_and_inertia_tensor.cpp

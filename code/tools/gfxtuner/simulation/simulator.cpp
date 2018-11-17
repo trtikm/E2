@@ -605,8 +605,6 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                     angeo::rigid_body_simulator::contact_friction_constraints_info  friction_info {
                             { unit_tangent, unit_bitangent },
                             false,
-                            m_collision_scene.get_material(coid_1),
-                            m_collision_scene.get_material(coid_2),
                             0.001f
                     };
                     m_rigid_body_simulator.insert_contact_constraints(
@@ -615,6 +613,8 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                             cid,
                             contact_point,
                             unit_normal,
+                            m_collision_scene.get_material(coid_1),
+                            m_collision_scene.get_material(coid_2),
                             &friction_info,
                             penetration_depth,
                             20.0f,

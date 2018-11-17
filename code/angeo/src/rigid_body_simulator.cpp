@@ -1,5 +1,6 @@
 #include <angeo/rigid_body_simulator.hpp>
 #include <angeo/friction_coefficients.hpp>
+#include <angeo/bouncing_coefficients.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
@@ -128,6 +129,8 @@ void  rigid_body_simulator::insert_contact_constraints(
         contact_id const&  cid,
         vector3 const&  contact_point,
         vector3 const&  unit_normal,
+        COLLISION_MATERIAL_TYPE  rb_0_material,
+        COLLISION_MATERIAL_TYPE  rb_1_material,
         contact_friction_constraints_info const* const  friction_info_ptr,
         float_32_bit const  penetration_depth,
         float_32_bit const  depenetration_coef,
@@ -137,16 +140,13 @@ void  rigid_body_simulator::insert_contact_constraints(
     rigid_body const&  rb0 = m_rigid_bodies.at(rb_0);
     rigid_body const&  rb1 = m_rigid_bodies.at(rb_1);
 
-//    float_32_bit const  relative_normal_speed = dot_product(
-//            unit_normal,
-//            detail::compute_velocity_of_point_of_rigid_body(rb0, contact_point)
-//                - detail::compute_velocity_of_point_of_rigid_body(rb1, contact_point)
-//            );
-//
-//static float_32_bit bouncing_coef = 0.5f;
-//    float_32_bit const  bouncer = std::max(0.0f, bouncing_coef * -relative_normal_speed);
-//TODO: the correct 'bouncer' should actually be the inverse of 'pow((2.27**x - 1) / (2.27 - 1), 1.25)', where
-//      x = std::max(0.0f, bouncing_coef * -relative_normal_speed)
+    float_32_bit const  relative_normal_speed = dot_product(
+            unit_normal,
+            detail::compute_velocity_of_point_of_rigid_body(rb0, contact_point)
+                - detail::compute_velocity_of_point_of_rigid_body(rb1, contact_point)
+            );
+
+    float_32_bit const  bouncer = std::max(0.0f, get_bouncing_coefficient(rb_0_material, rb_1_material) * -relative_normal_speed);
 
     motion_constraint_system::constraint_id const  contact_constraint_id =
             get_constraint_system().insert_constraint(
@@ -156,8 +156,7 @@ void  rigid_body_simulator::insert_contact_constraints(
                     rb_1,
                     -unit_normal,
                     -cross_product(contact_point - rb1.m_position_of_mass_centre, unit_normal),
-                    penetration_depth < 0.001f ? 0.0f : depenetration_coef * penetration_depth,
-                    //std::max(penetration_depth, bouncer) < 0.001f ? 0.0f : std::max(depenetration_coef * penetration_depth, bouncer),
+                    std::max(penetration_depth, bouncer) < 0.001f ? 0.0f : std::max(depenetration_coef * penetration_depth, bouncer),
                     [](std::vector<float_32_bit> const&) { return 0.0f; },
                     [](std::vector<float_32_bit> const&) { return std::numeric_limits<float_32_bit>::max(); },
                     read_contact_cache({ rb_0, rb_1 }, cid, 0U, 0.0f)
@@ -177,8 +176,8 @@ void  rigid_body_simulator::insert_contact_constraints(
             detail::compute_relative_tangent_plane_velocity_of_point_of_rigid_bodies(rb0, rb1, contact_point, unit_normal);
     float_32_bit const  friction_coef =
             length(tangent_plane_velocity) > friction_info_ptr->m_max_tangent_relative_speed_for_static_friction ?
-                    get_dynamic_friction_coefficient(friction_info_ptr->m_material_0, friction_info_ptr->m_material_1) :
-                    get_static_friction_coefficient(friction_info_ptr->m_material_0, friction_info_ptr->m_material_1) ;
+                    get_dynamic_friction_coefficient(rb_0_material, rb_1_material) :
+                    get_static_friction_coefficient(rb_0_material, rb_1_material)  ;
 
     for (natural_32_bit  i = 0U; i != (natural_32_bit)friction_info_ptr->m_unit_tangent_plane_vectors.size(); ++i)
     {
