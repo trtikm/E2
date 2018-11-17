@@ -13,7 +13,7 @@ float_32_bit  get_static_friction_coefficient(
         COLLISION_MATERIAL_TYPE const  material_1
         )
 {
-    static float_32_bit  static_friction_coefficient[get_num_collision_materials()][get_num_collision_materials()] {
+    static float_32_bit const  static_friction_coefficient[get_num_collision_materials()][get_num_collision_materials()] {
     // NOTE: Elements above the diagonal are NOT used, so initialise them to '.0f'.
     // TODO: The values starting with '+' are not correct. Find the correct values on the Internet and update the table.
         +0.5f,    .0f,        .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,  // ASPHALT
@@ -41,7 +41,7 @@ float_32_bit  get_dynamic_friction_coefficient(
         COLLISION_MATERIAL_TYPE const  material_1
         )
 {
-    static float_32_bit  dynamic_friction_coefficient[get_num_collision_materials()][get_num_collision_materials()] {
+    static float_32_bit const  dynamic_friction_coefficient[get_num_collision_materials()][get_num_collision_materials()] {
     // NOTE: Elements above the diagonal are NOT used, so initialise them to '.0f'.
     // TODO: The values starting with '+' are not correct. Find the correct values on the Internet and update the table.
         +0.2f,    .0f,        .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,    .0f,  // ASPHALT
