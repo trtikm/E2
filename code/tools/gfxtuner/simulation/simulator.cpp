@@ -207,6 +207,7 @@ simulator::simulator()
 
     , m_paused(true)
     , m_do_single_step(false)
+    , m_fixed_time_step_in_seconds(1.0 / 25.0)
     , m_scene(new scn::scene)
     , m_scene_nodes_relocated_during_simulation()
     , m_scene_records_inserted_during_simulation()
@@ -304,7 +305,7 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
             is_simulation_round = true;
             if (old_paused != paused())
                 on_simulation_resumed();
-            perform_simulation_step(seconds_from_previous_call);
+            perform_simulation_step(m_do_single_step ? m_fixed_time_step_in_seconds : seconds_from_previous_call);
         }
         else
         {

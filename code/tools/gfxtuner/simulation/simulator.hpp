@@ -310,6 +310,7 @@ private:
 
     bool  m_paused;
     bool  m_do_single_step;
+    float_64_bit  m_fixed_time_step_in_seconds;
     scn::scene_ptr  m_scene;
     std::unordered_set<scn::scene_node_name>  m_scene_nodes_relocated_during_simulation;
     std::unordered_set<scn::scene_record_id>  m_scene_records_inserted_during_simulation;
