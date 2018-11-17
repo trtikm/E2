@@ -456,32 +456,37 @@ void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor 
         std::unordered_set<collision_object_id_pair>  processed_collision_queries;
         natural_32_bit  current_leaf_node_index = 0U;
         std::set<collision_object_id>  cluster;
+        auto const  process_cluster_content =
+            [this, &processed_collision_queries, &acceptor, &with_static](std::set<collision_object_id> const&  cluster) -> bool {
+                for (auto it = cluster.cbegin(); it != cluster.cend(); ++it)
+                    for (auto next_it = std::next(it); next_it != cluster.cend(); ++next_it)
+                    {
+                        collision_object_id_pair const coid_pair =
+                                make_collision_object_id_pair(*it, *next_it);
+                        if (m_disabled_colliding.count(coid_pair) != 0UL)
+                            continue;
+                        if (processed_collision_queries.count(coid_pair) == 0UL)
+                        {
+                            processed_collision_queries.insert(coid_pair);
+                            if (compute_contacts(coid_pair, acceptor, false) == false)
+                            {
+                                with_static = false;
+                                return false;
+                            }
+                        }
+                    }
+                return true;
+            };
         m_proximity_dynamic_objects.enumerate(
-            [this, &acceptor, &with_static, &processed_collision_queries, &current_leaf_node_index, &cluster](
+            [this, &process_cluster_content, &current_leaf_node_index, &cluster](
                     collision_object_id const  coid,
                     natural_32_bit const leaf_node_index
                     ) -> bool
                 {
                     if (leaf_node_index != current_leaf_node_index)
                     {
-                        for (auto it = cluster.cbegin(); it != cluster.cend(); ++it)
-                            for (auto next_it = std::next(it); next_it != cluster.cend(); ++next_it)
-                            {
-                                collision_object_id_pair const coid_pair =
-                                        make_collision_object_id_pair(*it, *next_it);
-                                if (m_disabled_colliding.count(coid_pair) != 0UL)
-                                    continue;
-                                if (processed_collision_queries.count(coid_pair) == 0UL)
-                                {
-                                    processed_collision_queries.insert(coid_pair);
-                                    if (compute_contacts(coid_pair, acceptor, false) == false)
-                                    {
-                                        with_static = false;
-                                        return false;
-                                    }
-                                }
-                            }
-
+                        if (process_cluster_content(cluster) == false)
+                            return false;
                         cluster.clear();
                         current_leaf_node_index = leaf_node_index;
                     }
@@ -489,6 +494,7 @@ void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor 
                     return true;
                 }
             );
+        process_cluster_content(cluster);
     }
     if (with_static)
         for (auto const  coid : m_dynamic_object_ids)
@@ -1159,7 +1165,7 @@ bool  collision_scene::compute_contacts__capsule_vs_sphere(
                         { coid_1, detail::build_capsule_collision_shape_feature_id(capsule_point_param) },
                         { coid_2, make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::VERTEX, 0U) }
                     },
-                    capsule_point + contact_point_param * unit_normal,
+                    geometry_2.center_in_world_space + contact_point_param * unit_normal,
                     unit_normal,
                     penetration_depth
                     );
