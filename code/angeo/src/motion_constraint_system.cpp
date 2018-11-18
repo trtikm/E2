@@ -58,7 +58,9 @@ bool  motion_constraint_system::default_computation_terminator(
     if (statistics.m_max_change_of_variables <= min_change_of_variables)
         return true;
     if (statistics.m_total_time_of_all_performed_iterations_in_seconds + statistics.m_time_of_last_iteration_in_seconds
-            > max_computation_time_in_seconds)
+            > max_computation_time_in_seconds)  // WARNING: This condition introduces non-determinism to fixed-time-step
+                                                //          simulation! Set 'max_computation_time_in_seconds' to +infinity
+                                                //          in order to disable the constraint.
         return true;
     if (statistics.m_absolute_difference_in_max_change_of_variables_from_last_two_iterations
             <= min_absolute_difference_in_change_of_variables)
