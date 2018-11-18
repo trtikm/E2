@@ -1,0 +1,2 @@
+0
+textures\sphere_material\sphere_texture.txt

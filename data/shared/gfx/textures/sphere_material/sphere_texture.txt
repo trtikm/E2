@@ -1,0 +1,6 @@
+./sphere_texture.png
+RGBA
+REPEAT
+REPEAT
+LINEAR_MIPMAP_LINEAR
+LINEAR

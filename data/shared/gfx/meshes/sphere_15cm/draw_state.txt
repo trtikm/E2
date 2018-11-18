@@ -1,0 +1,4 @@
+use_alpha_blending              false
+alpha_blending_src_function     SRC_ALPHA
+alpha_blending_dst_function     ONE_MINUS_CONSTANT_ALPHA
+cull_face_mode                  BACK
