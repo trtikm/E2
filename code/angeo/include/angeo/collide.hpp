@@ -103,6 +103,31 @@ natural_32_bit  closest_points_of_two_lines(
 
 
 /**
+ * The returned 'collision_shape_feature_id' instance assumes this classification of cylinder features:
+ *      - FACE 0 : All cylinder points inside plane
+ *                 '(cylinder_axis_line_end - cylinder_axis_line_begin) * (X - cylinder_axis_line_begin) = 0'
+ *                 except points of the circle (cylinder_axis_line_begin, cylinder_radius) in that plane.
+ *      - FACE 1 : All cylinder points inside plane
+ *                 '(cylinder_axis_line_end - cylinder_axis_line_begin) * (X - cylinder_axis_line_end) = 0'
+ *                 except points of the circle (cylinder_axis_line_end, cylinder_radius) in that plane.
+ *      - FACE 2 : All cylinder points satisfying:
+ *                 '(cylinder_axis_line_end - cylinder_axis_line_begin) * (X - cylinder_axis_line_begin) > 0'
+ *                 '(cylinder_axis_line_end - cylinder_axis_line_begin) * (X - cylinder_axis_line_end) < 0'
+ *      - EDGE 0 : All cylinder points of the circle (cylinder_axis_line_begin, cylinder_radius) in the plane
+ *                 '(cylinder_axis_line_end - cylinder_axis_line_begin) * (X - cylinder_axis_line_begin) = 0'
+ *      - EDGE 1 : All cylinder points of the circle (cylinder_axis_line_end, cylinder_radius) in the plane
+ *                 '(cylinder_axis_line_end - cylinder_axis_line_begin) * (X - cylinder_axis_line_end) = 0'
+ */
+collision_shape_feature_id  closest_point_on_cylinder_to_point(
+        vector3 const&  cylinder_axis_line_begin,
+        vector3 const&  cylinder_axis_line_end,
+        float_32_bit const  cylinder_radius,
+        vector3 const&  point,
+        vector3&  output_closest_point
+        );
+
+
+/**
  * The front face of the triangle is determined by unit normal vector. It is assumed
  * the normal vector points to the half-space of the front face of the triangle.
  *

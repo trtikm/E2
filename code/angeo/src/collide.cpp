@@ -501,6 +501,55 @@ natural_32_bit  closest_points_of_two_lines(
 }
 
 
+collision_shape_feature_id  closest_point_on_cylinder_to_point(
+        vector3 const&  cylinder_axis_line_begin,
+        vector3 const&  cylinder_axis_line_end,
+        float_32_bit const  cylinder_radius,
+        vector3 const&  point,
+        vector3&  output_closest_point
+        )
+{
+    vector3 const  n = cylinder_axis_line_end - cylinder_axis_line_begin;
+    float_32_bit const  dot_nn = dot_product(n, n);
+
+    vector3 const  u = point - cylinder_axis_line_begin;
+    float_32_bit const  dot_nu = dot_product(n, u);
+
+    vector3 const  v = (dot_nu / dot_nn) * n;
+    vector3 const  w = u - v;
+    float_32_bit const  dot_ww = dot_product(w, w);
+    bool const  is_within_radius = dot_ww <= cylinder_radius * cylinder_radius;
+
+    if (dot_nu <= 0.0f)
+    {
+        if (is_within_radius)
+        {
+            output_closest_point = cylinder_axis_line_begin + w;
+            return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 0U);
+        }
+        output_closest_point = cylinder_axis_line_begin + (cylinder_radius / std::sqrtf(dot_ww)) * w;
+        return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::EDGE, 0U);
+    }
+
+    if (dot_nu >= dot_nn)
+    {
+        if (is_within_radius)
+        {
+            output_closest_point = cylinder_axis_line_begin + w;
+            return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 1U);
+        }
+        output_closest_point = cylinder_axis_line_begin + (cylinder_radius / std::sqrtf(dot_ww)) * w;
+        return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::EDGE, 1U);
+    }
+
+    if (is_within_radius)
+        output_closest_point = point;
+    else
+        output_closest_point = cylinder_axis_line_begin + v + (cylinder_radius / std::sqrtf(dot_ww)) * w;
+    return make_collision_shape_feature_id(COLLISION_SHAPE_FEATURE_TYPE::FACE, 2U);
+}
+
+
 bool  closest_point_of_triangle_to_point(
         vector3 const&  triangle_vertex_1,
         vector3 const&  triangle_vertex_2,
