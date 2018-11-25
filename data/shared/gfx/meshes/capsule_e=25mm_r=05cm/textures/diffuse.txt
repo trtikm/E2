@@ -1,0 +1,2 @@
+0
+textures\capsule_material\capsule_texture.txt
