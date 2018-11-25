@@ -72,8 +72,7 @@ bool  motion_constraint_system::default_computation_terminator(
 std::vector<float_32_bit> const&  motion_constraint_system::solve(
         std::vector<rigid_body>&  rigid_bodies,
         std::function<bool(computation_statistics const&)> const&  terminate_comutation,
-        float_32_bit const  time_step_in_seconds,
-        computation_statistics*  output_statistics_ptr
+        float_32_bit const  time_step_in_seconds
         )
 {
     TMPROF_BLOCK();
@@ -174,17 +173,7 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
         // And we iteratively improve unknowns 'm_lambdas' towards a solution of the system
         // using the 'Projected Gauss-Seidel' method.
 
-        computation_statistics  statistics;
-        if (output_statistics_ptr == nullptr)
-            output_statistics_ptr = &statistics;
-        *output_statistics_ptr = {
-                get_num_constraints(),      // m_num_constraints_in_system
-                0U,                         // m_num_performed_iterations
-                0.0f,                       // m_max_change_of_variables
-                0.0f,                       // m_absolute_difference_in_max_change_of_variables_from_last_two_iterations
-                0U,                         // m_time_of_last_iteration_in_micro_seconds
-                0U                          // m_total_time_of_all_performed_iterations_in_micro_seconds
-        };
+        m_statistics.reset(get_num_constraints());
         float_32_bit  old_max_change_of_variables = 0.0f;
         std::chrono::high_resolution_clock::time_point const  start_time_point = std::chrono::high_resolution_clock::now();
         do
@@ -234,18 +223,18 @@ std::vector<float_32_bit> const&  motion_constraint_system::solve(
             std::chrono::high_resolution_clock::time_point const  iteration_end_time_point =
                     std::chrono::high_resolution_clock::now();
 
-            ++output_statistics_ptr->m_num_performed_iterations;
-            output_statistics_ptr->m_max_change_of_variables = max_change_of_variables;
-            output_statistics_ptr->m_absolute_difference_in_max_change_of_variables_from_last_two_iterations =
+            ++m_statistics.m_num_performed_iterations;
+            m_statistics.m_max_change_of_variables = max_change_of_variables;
+            m_statistics.m_absolute_difference_in_max_change_of_variables_from_last_two_iterations =
                 std::fabs(max_change_of_variables - old_max_change_of_variables);
-            output_statistics_ptr->m_time_of_last_iteration_in_seconds =
+            m_statistics.m_time_of_last_iteration_in_seconds =
                 std::chrono::duration<float_64_bit>(iteration_end_time_point - iteration_start_time_point).count();
-            output_statistics_ptr->m_total_time_of_all_performed_iterations_in_seconds =
+            m_statistics.m_total_time_of_all_performed_iterations_in_seconds =
                 std::chrono::duration<float_64_bit>(iteration_end_time_point - start_time_point).count();
 
             old_max_change_of_variables = max_change_of_variables;
         }
-        while (!terminate_comutation(*output_statistics_ptr));
+        while (!terminate_comutation(m_statistics));
     }
 
     return m_lambdas;

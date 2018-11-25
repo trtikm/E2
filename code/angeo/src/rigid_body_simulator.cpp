@@ -82,6 +82,8 @@ rigid_body_id  rigid_body_simulator::insert_rigid_body(
 
     update_dependent_variables_of_rigid_body(id);
 
+    ++m_statistics.m_num_rigid_bodies;
+
     return id;
 }
 
@@ -89,6 +91,8 @@ rigid_body_id  rigid_body_simulator::insert_rigid_body(
 void  rigid_body_simulator::erase_rigid_body(rigid_body_id const  id)
 {
     m_invalid_rigid_body_ids.insert(id);
+
+    --m_statistics.m_num_rigid_bodies;
 }
 
 
@@ -105,6 +109,8 @@ void  rigid_body_simulator::clear()
     m_rigid_bodies.clear();
     m_inverted_inertia_tensors.clear();
     m_invalid_rigid_body_ids.clear();
+
+    m_statistics = computation_statistics();
 }
 
 
@@ -232,9 +238,11 @@ void  rigid_body_simulator::do_simulation_step(
                     0.001f,
                     0.0025f
                     ),
-            time_step_in_seconds,
-            nullptr
+            time_step_in_seconds
             );
+
+    std::chrono::high_resolution_clock::time_point const  rb_update_start_time_point =
+            std::chrono::high_resolution_clock::now();
 
     for (rigid_body_id  id = 0U; id != m_rigid_bodies.size(); ++id)
     {
@@ -259,9 +267,21 @@ void  rigid_body_simulator::do_simulation_step(
         update_dependent_variables_of_rigid_body(id);
     }
 
+    std::chrono::high_resolution_clock::time_point const  contact_cache_start_time_point =
+            std::chrono::high_resolution_clock::now();
+
     update_contact_cache();
 
     get_constraint_system().clear();
+
+    std::chrono::high_resolution_clock::time_point const  end_time_point =
+            std::chrono::high_resolution_clock::now();
+
+    m_statistics.m_duration_of_rigid_body_update_in_seconds =
+            std::chrono::duration<float_64_bit>(contact_cache_start_time_point - rb_update_start_time_point).count();
+    m_statistics.m_duration_of_contact_cache_update_in_seconds =
+            std::chrono::duration<float_64_bit>(end_time_point - contact_cache_start_time_point).count();
+    ++m_statistics.m_performed_simulation_steps;
 }
 
 
@@ -286,16 +306,29 @@ float_32_bit  rigid_body_simulator::read_contact_cache(
 {
     if (m_invalidated_rigid_bodies_in_contact_cache.count(rb_ids.first) != 0U ||
         m_invalidated_rigid_bodies_in_contact_cache.count(rb_ids.second) != 0U)
+    {
+        ++m_statistics.m_num_contact_cache_misses;
         return value_on_cache_miss;
+    }
     auto const  rbs_bucket_it = m_contact_cache.find(rb_ids);
     if (rbs_bucket_it == m_contact_cache.cend())
+    {
+        ++m_statistics.m_num_contact_cache_misses;
         return value_on_cache_miss;
+    }
     auto const  contact_and_lambdas_it = rbs_bucket_it->second.find(cid);
     if (contact_and_lambdas_it == rbs_bucket_it->second.cend())
+    {
+        ++m_statistics.m_num_contact_cache_misses;
         return value_on_cache_miss;
+    }
     auto const  lambda_it = contact_and_lambdas_it->second.find(contact_vector_id);
     if (lambda_it == contact_and_lambdas_it->second.cend())
+    {
+        ++m_statistics.m_num_contact_cache_misses;
         return value_on_cache_miss;
+    }
+    ++m_statistics.m_num_contact_cache_hits;
     return lambda_it->second;
 }
 
@@ -311,6 +344,8 @@ void  rigid_body_simulator::update_contact_cache()
             = get_constraint_system().get_solution_of_constraint(constraint_and_contact_and_vector_ids.first);
     m_invalidated_rigid_bodies_in_contact_cache.clear();
     m_from_constraints_to_contact_ids.clear();
+
+    m_statistics.m_contact_cache_size = (natural_32_bit)m_contact_cache.size();
 }
 
 

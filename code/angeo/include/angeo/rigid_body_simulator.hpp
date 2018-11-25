@@ -16,6 +16,27 @@ namespace angeo {
 
 struct  rigid_body_simulator
 {
+    struct  computation_statistics
+    {
+        computation_statistics()
+            : m_num_rigid_bodies(0U)
+            , m_contact_cache_size(0U)
+            , m_num_contact_cache_hits(0U)
+            , m_num_contact_cache_misses(0U)
+            , m_performed_simulation_steps(0UL)
+            , m_duration_of_rigid_body_update_in_seconds(0.0)
+            , m_duration_of_contact_cache_update_in_seconds(0.0)
+        {}
+
+        natural_32_bit  m_num_rigid_bodies;
+        natural_32_bit  m_contact_cache_size;
+        natural_32_bit  m_num_contact_cache_hits;
+        natural_32_bit  m_num_contact_cache_misses;
+        natural_64_bit  m_performed_simulation_steps;
+        float_64_bit  m_duration_of_rigid_body_update_in_seconds;
+        float_64_bit  m_duration_of_contact_cache_update_in_seconds;
+    };
+
     rigid_body_id  insert_rigid_body(
             vector3 const&  position_of_mass_centre,
             quaternion const&  orientation,
@@ -119,6 +140,13 @@ struct  rigid_body_simulator
             float_32_bit const  max_computation_time_in_seconds
             );
 
+
+    // The both statistics below are updated updated during an execution of the method 'do_simulation_step' above.
+    // It means that values in the returned structures are vaild/actual only after each call to 'do_simulation_step'.
+    computation_statistics const&  get_simulation_statistics() const { return m_statistics; }
+    motion_constraint_system::computation_statistics const&  get_constraint_system_statistics() const
+    { return m_constraint_system.get_statistics(); }
+
 private:
 
     void  update_dependent_variables_of_rigid_body(rigid_body_id const  id);
@@ -132,6 +160,8 @@ private:
     void  erase_from_contact_cache(rigid_body_id const&  rb_id)
     { m_invalidated_rigid_bodies_in_contact_cache.insert(rb_id); }
     void  update_contact_cache();
+
+    mutable computation_statistics  m_statistics;
 
     motion_constraint_system  m_constraint_system;
 

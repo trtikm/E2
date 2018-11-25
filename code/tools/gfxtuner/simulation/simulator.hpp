@@ -223,6 +223,7 @@ struct simulator : public qtgl::real_time_simulator
 private:
 
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
+    void  perform_simulation_micro_step(float_64_bit const  time_to_simulate_in_seconds, bool const  is_last_micro_step);
     void  render_simulation_state(
             matrix44 const&  matrix_from_world_to_camera,
             matrix44 const&  matrix_from_camera_to_clipspace,

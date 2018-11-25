@@ -581,13 +581,54 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
         m_cache_of_batches_of_colliders.collision_normals_batch.release();
     }
 
+    constexpr float_64_bit  min_micro_time_step_in_seconds = 0.001;
+    constexpr float_64_bit  max_micro_time_step_in_seconds = 0.04;
+    static float_64_bit  time_buffer_in_seconds = 0.0f;
+    static float_64_bit  duration_of_last_simulation_step_in_seconds = 0.01f;
+
+    time_buffer_in_seconds += time_to_simulate_in_seconds;
+    float_64_bit  max_computation_time_in_seconds = time_to_simulate_in_seconds / 4.0f;
+    while (time_buffer_in_seconds >= min_micro_time_step_in_seconds)
+    {
+        natural_32_bit const  num_estimated_sub_steps =
+                std::max(1U, (natural_32_bit)(max_computation_time_in_seconds / duration_of_last_simulation_step_in_seconds));
+        float_32_bit const  micro_time_step_in_seconds =
+                std::min(
+                    max_micro_time_step_in_seconds,
+                    std::max(min_micro_time_step_in_seconds, time_buffer_in_seconds / num_estimated_sub_steps)
+                    );
+        bool const  is_last_micro_step = time_buffer_in_seconds - micro_time_step_in_seconds < min_micro_time_step_in_seconds;
+        std::chrono::high_resolution_clock::time_point const  start_time_point =
+                std::chrono::high_resolution_clock::now();
+
+
+        perform_simulation_micro_step(micro_time_step_in_seconds, is_last_micro_step);
+
+
+        time_buffer_in_seconds -= micro_time_step_in_seconds;
+        duration_of_last_simulation_step_in_seconds =
+                std::chrono::duration<float_64_bit>(std::chrono::high_resolution_clock::now() - start_time_point).count();
+        max_computation_time_in_seconds -= duration_of_last_simulation_step_in_seconds;
+    }
+
+    // TODO: The code below should be removed at some point.
+
+    for (auto&  elem : m_gfx_animated_objects)
+        elem.second.next_round(time_to_simulate_in_seconds);
+}
+
+
+void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simulate_in_seconds, bool const  is_last_micro_step)
+{
+    TMPROF_BLOCK();
+
     m_collision_scene.compute_contacts_of_all_dynamic_objects(
-            [this](
+            [this, is_last_micro_step](
                 angeo::contact_id const& cid,
                 vector3 const& contact_point,
                 vector3 const& unit_normal,
                 float_32_bit  penetration_depth) -> bool {
-                    if (m_do_show_contact_normals)
+                    if (is_last_micro_step && m_do_show_contact_normals)
                         m_cache_of_batches_of_colliders.collision_normals_points->push_back({
                                 contact_point, contact_point + 0.25f * unit_normal
                                 });
@@ -659,11 +700,6 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
 
         m_scene_nodes_relocated_during_simulation.insert(rb_node_ptr->get_name());
     }
-
-    // TODO: The code below should be removed at some point.
-
-    for (auto&  elem : m_gfx_animated_objects)
-        elem.second.next_round(time_to_simulate_in_seconds);
 }
 
 

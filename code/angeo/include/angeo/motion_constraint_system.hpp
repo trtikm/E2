@@ -36,6 +36,16 @@ struct  motion_constraint_system
                                                         // 'm_num_performed_iterations' > 1.
         float_64_bit  m_time_of_last_iteration_in_seconds;
         float_64_bit  m_total_time_of_all_performed_iterations_in_seconds;
+
+        void reset(natural_32_bit const  num_constraints_in_system)
+        {
+            m_num_constraints_in_system = num_constraints_in_system;
+            m_num_performed_iterations = 0U;
+            m_max_change_of_variables = 0.0f;
+            m_absolute_difference_in_max_change_of_variables_from_last_two_iterations = 0.0f;
+            m_time_of_last_iteration_in_seconds = 0.0;
+            m_total_time_of_all_performed_iterations_in_seconds = 0.0;
+        }
     };
 
     // It is assumed, that ids 'rb_0' and 'rb_1' will be interpreted in the method 'solve'
@@ -76,11 +86,16 @@ struct  motion_constraint_system
                                                         // 'insert_constraint' method all relate to this vector.
             std::function<bool(computation_statistics const&)> const&  terminate_comutation,
                                                         // The return value 'true' will terminate the computation.
-            float_32_bit const  time_step_in_seconds,
-            computation_statistics*  output_statistics_ptr = nullptr
+            float_32_bit const  time_step_in_seconds
             );
 
+    // The statistics are updated inside the method 'solve' above. It means that
+    // values in the returned structure are vaild/actual only after each call to 'solve'.
+    computation_statistics const&  get_statistics() const { return m_statistics; }
+
 private:
+
+    computation_statistics  m_statistics;
 
     // All vectors below have the same size, which is the number of inserted constraints. 
 
