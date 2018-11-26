@@ -1583,7 +1583,12 @@ void  widgets::on_look_at_selection(std::function<void(vector3 const&, float_32_
 
 void  widgets::on_pause()
 {
-    update_coord_system_location_widgets();
+    bool const  simulation_paused = wnd()->glwindow().call_now(&simulator::paused);
+
+    scene_tree()->setEnabled(simulation_paused);
+    enable_coord_system_location_widgets(simulation_paused, true);
+    if (simulation_paused)
+        update_coord_system_location_widgets();
 }
 
 

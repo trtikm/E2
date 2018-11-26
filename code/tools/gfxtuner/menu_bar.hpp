@@ -62,6 +62,8 @@ struct  menu_bar
     boost::filesystem::path const&  get_current_scene_dir() const { return m_current_scene_dir; }
     boost::filesystem::path&  get_current_scene_dir() { return m_current_scene_dir; }
 
+    void  on_pause();
+
     // Save menu props/config.
     void  save();
 

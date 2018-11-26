@@ -151,6 +151,33 @@ bool  menu_bar::on_file_action_exit()
 }
 
 
+void  menu_bar::on_pause()
+{
+    bool const  simulation_paused = wnd()->glwindow().call_now(&simulator::paused);
+
+    get_file_action_new_scene()->setEnabled(simulation_paused);
+    get_file_action_open_scene()->setEnabled(simulation_paused);
+    get_file_action_save_scene()->setEnabled(simulation_paused);
+    get_file_action_save_as_scene()->setEnabled(simulation_paused);
+    get_file_action_exit()->setEnabled(simulation_paused);
+
+    get_edit_action_insert_coord_system()->setEnabled(simulation_paused);
+    for (auto const& record_kind_and_action : get_edit_actions_of_records())
+        record_kind_and_action.second.first->setEnabled(simulation_paused);
+    get_edit_action_erase_selected()->setEnabled(simulation_paused);
+    get_edit_action_mode_select()->setEnabled(simulation_paused);
+    get_edit_action_mode_translate()->setEnabled(simulation_paused);
+    get_edit_action_mode_rotate()->setEnabled(simulation_paused);
+    get_edit_action_toggle_pivot_selection()->setEnabled(simulation_paused);
+    get_edit_action_move_selection_to_pivot()->setEnabled(simulation_paused);
+    get_edit_action_move_pivot_to_selection()->setEnabled(simulation_paused);
+    get_edit_action_undo()->setEnabled(simulation_paused);
+    get_edit_action_redo()->setEnabled(simulation_paused);
+
+    get_view_action_look_at_selection()->setEnabled(simulation_paused);
+}
+
+
 void  menu_bar::save()
 {
     //wnd()->ptree().put("...",...);
