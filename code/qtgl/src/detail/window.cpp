@@ -376,10 +376,6 @@ void window::render_now(bool const  is_this_pure_redraw_request)
         INVARIANT(m_simulator.operator bool());
 
         m_initialised = true;
-
-        for (auto const  &notification_listeners : m_notification_listeners)
-            for (auto& listener : notification_listeners.second)
-                listener.listener_function()();
     }
 
     ++m_round_id;
