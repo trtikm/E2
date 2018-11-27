@@ -98,7 +98,9 @@ public slots:
     void  on_scene_coord_system_rotation_finished() { m_tab_scene_widgets.on_coord_system_rotation_finished(); }
 
     void  scene_selection_listener() { m_tab_scene_widgets.selection_changed_listener(); }
-    void  scene_pause_listener() { m_tab_scene_widgets.on_pause(); m_menu_bar.on_pause(); }
+
+    void  scene_listener_simulation_paused() { m_tab_scene_widgets.on_simulation_paused(); }
+    void  scene_listener_simulation_resumed() { m_tab_scene_widgets.on_simulation_resumed(); }
 
     /// Status bar
     void  status_bar_edit_mode_listener() { m_status_bar.edit_mode_listener(); }
@@ -135,6 +137,9 @@ public slots:
                 )
             );
     }
+    void  menu_listener_simulation_paused() { m_menu_bar.on_simulation_paused(); }
+    void  menu_listener_simulation_resumed() { m_menu_bar.on_simulation_resumed(); }
+
 
     boost::filesystem::path&  get_current_scene_dir() { return m_menu_bar.get_current_scene_dir(); }
 

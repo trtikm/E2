@@ -1581,14 +1581,40 @@ void  widgets::on_look_at_selection(std::function<void(vector3 const&, float_32_
     }
 }
 
-void  widgets::on_pause()
-{
-    bool const  simulation_paused = wnd()->glwindow().call_now(&simulator::paused);
 
-    scene_tree()->setEnabled(simulation_paused);
-    enable_coord_system_location_widgets(simulation_paused, true);
-    if (simulation_paused)
-        update_coord_system_location_widgets();
+void  widgets::on_simulation_paused()
+{
+    scene_tree()->setEnabled(true);
+    enable_coord_system_location_widgets(true, true);
+
+    std::unordered_map<scn::scene_node_name, angeo::coordinate_system> const&  relocated_nodes =
+            wnd()->glwindow().call_now(&simulator::get_scene_nodes_relocated_during_simulation);
+    for (auto const&  name_and_system : relocated_nodes)
+    {
+        auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, name_and_system.first);
+        INVARIANT(node_ptr != nullptr);
+        get_scene_history()->insert<scn::scene_history_coord_system_relocate>(
+                name_and_system.first,
+                name_and_system.second.origin(),
+                name_and_system.second.orientation(),
+                node_ptr->get_coord_system()->origin(),
+                node_ptr->get_coord_system()->orientation()
+                );
+    }
+    if (!relocated_nodes.empty())
+    {
+        get_scene_history()->commit();
+        set_window_title();
+    }
+
+    update_coord_system_location_widgets();
+}
+
+
+void  widgets::on_simulation_resumed()
+{
+    scene_tree()->setEnabled(false);
+    enable_coord_system_location_widgets(false, true);
 }
 
 
@@ -1725,7 +1751,11 @@ QWidget*  make_scene_tab_content(widgets const&  w)
         {
             w.wnd()->glwindow().register_listener(
                         simulator_notifications::paused(),
-                        { &program_window::scene_pause_listener, w.wnd() }
+                        { &program_window::scene_listener_simulation_paused, w.wnd() }
+                        );
+            w.wnd()->glwindow().register_listener(
+                        simulator_notifications::resumed(),
+                        { &program_window::scene_listener_simulation_resumed, w.wnd() }
                         );
 
             {

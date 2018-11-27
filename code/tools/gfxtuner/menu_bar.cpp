@@ -4,6 +4,7 @@
 #include <gfxtuner/program_options.hpp>
 #include <gfxtuner/program_info.hpp>
 #include <gfxtuner/simulation/simulator.hpp>
+#include <gfxtuner/simulation/simulator_notifications.hpp>
 #include <qtgl/window.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <qtgl/widget_base.hpp>
@@ -151,30 +152,39 @@ bool  menu_bar::on_file_action_exit()
 }
 
 
-void  menu_bar::on_pause()
+void  menu_bar::on_simulation_paused()
 {
-    bool const  simulation_paused = wnd()->glwindow().call_now(&simulator::paused);
+    toggle_enable_state_of_menu_items_for_simulation_mode(false);
+}
 
-    get_file_action_new_scene()->setEnabled(simulation_paused);
-    get_file_action_open_scene()->setEnabled(simulation_paused);
-    get_file_action_save_scene()->setEnabled(simulation_paused);
-    get_file_action_save_as_scene()->setEnabled(simulation_paused);
-    get_file_action_exit()->setEnabled(simulation_paused);
+void  menu_bar::on_simulation_resumed()
+{
+    toggle_enable_state_of_menu_items_for_simulation_mode(true);
+}
 
-    get_edit_action_insert_coord_system()->setEnabled(simulation_paused);
+
+void  menu_bar::toggle_enable_state_of_menu_items_for_simulation_mode(bool const  simulation_resumed)
+{
+    get_file_action_new_scene()->setDisabled(simulation_resumed);
+    get_file_action_open_scene()->setDisabled(simulation_resumed);
+    get_file_action_save_scene()->setDisabled(simulation_resumed);
+    get_file_action_save_as_scene()->setDisabled(simulation_resumed);
+    get_file_action_exit()->setDisabled(simulation_resumed);
+
+    get_edit_action_insert_coord_system()->setDisabled(simulation_resumed);
     for (auto const& record_kind_and_action : get_edit_actions_of_records())
-        record_kind_and_action.second.first->setEnabled(simulation_paused);
-    get_edit_action_erase_selected()->setEnabled(simulation_paused);
-    get_edit_action_mode_select()->setEnabled(simulation_paused);
-    get_edit_action_mode_translate()->setEnabled(simulation_paused);
-    get_edit_action_mode_rotate()->setEnabled(simulation_paused);
-    get_edit_action_toggle_pivot_selection()->setEnabled(simulation_paused);
-    get_edit_action_move_selection_to_pivot()->setEnabled(simulation_paused);
-    get_edit_action_move_pivot_to_selection()->setEnabled(simulation_paused);
-    get_edit_action_undo()->setEnabled(simulation_paused);
-    get_edit_action_redo()->setEnabled(simulation_paused);
+        record_kind_and_action.second.first->setDisabled(simulation_resumed);
+    get_edit_action_erase_selected()->setDisabled(simulation_resumed);
+    get_edit_action_mode_select()->setDisabled(simulation_resumed);
+    get_edit_action_mode_translate()->setDisabled(simulation_resumed);
+    get_edit_action_mode_rotate()->setDisabled(simulation_resumed);
+    get_edit_action_toggle_pivot_selection()->setDisabled(simulation_resumed);
+    get_edit_action_move_selection_to_pivot()->setDisabled(simulation_resumed);
+    get_edit_action_move_pivot_to_selection()->setDisabled(simulation_resumed);
+    get_edit_action_undo()->setDisabled(simulation_resumed);
+    get_edit_action_redo()->setDisabled(simulation_resumed);
 
-    get_view_action_look_at_selection()->setEnabled(simulation_paused);
+    get_view_action_look_at_selection()->setDisabled(simulation_resumed);
 }
 
 
@@ -186,6 +196,15 @@ void  menu_bar::save()
 
 void  make_menu_bar_content(menu_bar const&  w)
 {
+    w.wnd()->glwindow().register_listener(
+                simulator_notifications::paused(),
+                { &program_window::menu_listener_simulation_paused, w.wnd() }
+                );
+    w.wnd()->glwindow().register_listener(
+                simulator_notifications::resumed(),
+                { &program_window::menu_listener_simulation_resumed, w.wnd() }
+                );
+
     // "File" menu
 
     w.get_menu_file()->addAction(w.get_file_action_new_scene());

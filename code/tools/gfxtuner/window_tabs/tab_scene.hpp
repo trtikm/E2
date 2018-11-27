@@ -80,7 +80,8 @@ struct  widgets
 
     void  on_look_at_selection(std::function<void(vector3 const&, float_32_bit const*)> const&  solver);
 
-    void  on_pause();
+    void  on_simulation_paused();
+    void  on_simulation_resumed();
 
     bool  is_editing_enabled() const;
 

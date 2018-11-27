@@ -217,6 +217,13 @@ struct simulator : public qtgl::real_time_simulator
     qtgl::effects_config const&  get_effects_config() const { return m_effects_config; }
     qtgl::effects_config&  effects_config_ref() { return m_effects_config; }
 
+    std::unordered_map<scn::scene_node_name, angeo::coordinate_system> const&
+    get_scene_nodes_relocated_during_simulation() const { return m_scene_nodes_relocated_during_simulation; }
+    std::unordered_set<scn::scene_record_id> const&  get_scene_records_inserted_during_simulation() const
+    { return m_scene_records_inserted_during_simulation; }
+    std::unordered_set<scn::scene_record_id> const&  get_scene_records_erased_during_simulation() const
+    { return m_scene_records_erased_during_simulation; }
+
     void  on_simulation_paused();
     void  on_simulation_resumed();
 
@@ -313,7 +320,7 @@ private:
     bool  m_do_single_step;
     float_64_bit  m_fixed_time_step_in_seconds;
     scn::scene_ptr  m_scene;
-    std::unordered_set<scn::scene_node_name>  m_scene_nodes_relocated_during_simulation;
+    std::unordered_map<scn::scene_node_name, angeo::coordinate_system>  m_scene_nodes_relocated_during_simulation;
     std::unordered_set<scn::scene_record_id>  m_scene_records_inserted_during_simulation;
     std::unordered_set<scn::scene_record_id>  m_scene_records_erased_during_simulation;
 

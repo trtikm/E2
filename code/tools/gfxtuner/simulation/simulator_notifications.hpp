@@ -7,6 +7,7 @@ namespace simulator_notifications {
 
 
 inline std::string  paused() { return "PAUSED"; }
+inline std::string  resumed() { return "RESUMED"; }
 
 inline std::string  camera_position_updated() { return "CAMERA_POSITION_UPDATED"; }
 inline std::string  camera_orientation_updated() { return "CAMERA_ORIENTATION_UPDATED"; }

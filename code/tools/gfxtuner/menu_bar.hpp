@@ -62,12 +62,15 @@ struct  menu_bar
     boost::filesystem::path const&  get_current_scene_dir() const { return m_current_scene_dir; }
     boost::filesystem::path&  get_current_scene_dir() { return m_current_scene_dir; }
 
-    void  on_pause();
+    void  on_simulation_paused();
+    void  on_simulation_resumed();
 
     // Save menu props/config.
     void  save();
 
 private:
+    void  toggle_enable_state_of_menu_items_for_simulation_mode(bool const  simulation_resumed);
+
     program_window*  m_wnd;
 
     QMenuBar*  m_menu_bar;

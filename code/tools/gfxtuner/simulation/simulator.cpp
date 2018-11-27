@@ -287,18 +287,12 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
         if (keyboard_props().was_just_released(qtgl::KEY_SPACE()))
         {
             if (paused())
-            {
                 m_paused = !m_paused;
-                call_listeners(simulator_notifications::paused());
-            }
             m_do_single_step = true;
         }
 
         if (!m_do_single_step && keyboard_props().was_just_released(qtgl::KEY_PAUSE()))
-        {
             m_paused = !m_paused;
-            call_listeners(simulator_notifications::paused());
-        }
 
         if (!paused())
         {
@@ -317,7 +311,6 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
         if (m_do_single_step)
         {
             m_paused = true;
-            call_listeners(simulator_notifications::paused());
             on_simulation_paused();
             m_do_single_step = false;
         }
@@ -386,6 +379,8 @@ void  simulator::on_simulation_paused()
             m_rigid_body_simulator.set_external_angular_acceleration(rbid_and_backup.first, rbid_and_backup.second.m_external_angular_acceleration);
         }
 
+    call_listeners(simulator_notifications::paused());
+
     // TODO: process these before clear:
     //    m_scene_nodes_relocated_during_simulation
     //    m_scene_records_inserted_during_simulation
@@ -400,6 +395,8 @@ void  simulator::on_simulation_paused()
 void  simulator::on_simulation_resumed()
 {
     TMPROF_BLOCK();
+
+    call_listeners(simulator_notifications::resumed());
 
     for (auto const&  node_name_and_collider_change : m_invalidated_nodes_of_rigid_bodies)
         if (auto  node_ptr = get_scene().get_scene_node(node_name_and_collider_change.first))
@@ -675,6 +672,8 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
 
         scn::scene_node_ptr const  rb_node_ptr = rb_id_and_node_ptr.second;
 
+        m_scene_nodes_relocated_during_simulation.insert({ rb_node_ptr->get_name(), *rb_node_ptr->get_coord_system()});
+
         if (rb_node_ptr->has_parent())
         {
             matrix44  rb_world_matrix;
@@ -697,8 +696,6 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                     );
 
         update_collider_locations_in_subtree(rb_node_ptr);
-
-        m_scene_nodes_relocated_during_simulation.insert(rb_node_ptr->get_name());
     }
 }
 
