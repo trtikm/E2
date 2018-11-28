@@ -54,6 +54,7 @@ struct  widgets
     void  on_scene_insert_coord_system();
     void  on_scene_insert_record(std::string const&  record_kind, std::string const&  mode);
     void  on_scene_erase_selected();
+    void  on_scene_duplicate_selected();
 
     void  on_coord_system_pos_changed();
     void  on_coord_system_rot_changed();

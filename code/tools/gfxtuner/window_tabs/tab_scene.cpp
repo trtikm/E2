@@ -788,7 +788,7 @@ void  widgets::on_scene_erase_selected()
     {
         if (item->parent() == nullptr && get_tree_widget_item_name(item) == scn::get_pivot_node_name())
         {
-            wnd()->print_status_message("ERROR: Cannot erase 'pivot' coordinate system.", 10000);
+            wnd()->print_status_message("ERROR: Cannot erase '@pivot' coordinate system.", 10000);
             return;
         }
         to_erase_items.insert(item);
@@ -881,6 +881,43 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
         erased_items.insert(taken_item);
     }
 }
+
+
+void  widgets::on_scene_duplicate_selected()
+{
+    ASSUMPTION(!processing_selection_change());
+    lock_bool const  _(&m_processing_selection_change);
+
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Scene editing is disabled.", 10000);
+        return;
+    }
+    if (m_scene_tree->selectedItems().size() != 1)
+    {
+        wnd()->print_status_message("ERROR: Not exactly 1 coordinate system node is selected.", 10000);
+        return;
+    }
+    tree_widget_item* const  source_item = as_tree_widget_item(m_scene_tree->selectedItems().front());
+    if (source_item->parent() == nullptr && get_tree_widget_item_name(source_item) == scn::get_pivot_node_name())
+    {
+        wnd()->print_status_message("ERROR: Cannot duplicate '@pivot' coordinate system.", 10000);
+        return;
+    }
+    if (!represents_coord_system(source_item))
+    {
+        wnd()->print_status_message("ERROR: The selected scene object to duplicate is NOT a coordinate system.", 10000);
+        return;
+    }
+
+    natural_32_bit const  num_copies = 1U; // TODO: open a dialog where a user may insert a number of copies to create.
+
+    if (num_copies == 0U)
+        return;
+
+    wnd()->print_status_message("ERROR: No duplication was performed, because the operation is NOT IMPLEMENTED YET.", 10000);
+}
+
 
 void  widgets::clear_scene()
 {

@@ -64,6 +64,7 @@ menu_bar::menu_bar(program_window* const  wnd)
     , m_edit_action_insert_coord_system(new QAction(QString("Insert &coord system"), wnd))
     , m_record_menu_items()
     , m_edit_action_erase_selected(new QAction(QString("&Erase selected"), wnd))
+    , m_edit_action_duplicate_selected(new QAction(QString("&Duplicate selected"), wnd))
     , m_edit_action_mode_select(new QAction(QString("&Selection"), wnd))
     , m_edit_action_mode_translate(new QAction(QString("&Translation"), wnd))
     , m_edit_action_mode_rotate(new QAction(QString("&Rotation"), wnd))
@@ -151,7 +152,6 @@ bool  menu_bar::on_file_action_exit()
     return true;
 }
 
-
 void  menu_bar::on_simulation_paused()
 {
     toggle_enable_state_of_menu_items_for_simulation_mode(false);
@@ -175,6 +175,7 @@ void  menu_bar::toggle_enable_state_of_menu_items_for_simulation_mode(bool const
     for (auto const& record_kind_and_action : get_edit_actions_of_records())
         record_kind_and_action.second.first->setDisabled(simulation_resumed);
     get_edit_action_erase_selected()->setDisabled(simulation_resumed);
+    get_edit_action_duplicate_selected()->setDisabled(simulation_resumed);
     get_edit_action_mode_select()->setDisabled(simulation_resumed);
     get_edit_action_mode_translate()->setDisabled(simulation_resumed);
     get_edit_action_mode_rotate()->setDisabled(simulation_resumed);
@@ -288,6 +289,20 @@ void  make_menu_bar_content(menu_bar const&  w)
         "The '@pivot' coord. system cannot be erased. It presence in the selection will lead to failure of the operation."
         );
     QObject::connect(w.get_edit_action_erase_selected(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_erase_selected);
+
+    w.get_menu_edit()->addSeparator();
+
+    w.get_menu_edit()->addAction(w.get_edit_action_duplicate_selected());
+    w.get_edit_action_duplicate_selected()->setShortcut(QString("Ctrl+D"));
+    w.get_edit_action_duplicate_selected()->setToolTip(
+        "Duplicates a selected coordinate systems node in the scene, including all its folders, records, and child\n"
+        "nodes recursively (if any). The '@pivot' coordinate system cannot be duplicated. You will be asked how many\n"
+        "copies of the selected node to create. The i-th copy will be placed at the position 'origin(selected_node) +\n"
+        "i * (origin(@pivot) - origin(selected_node)). All copies will have the same orientation as '@pivot'."
+        "If the selected node has a parent, then all duplicate nodes will have the same parent. Otherwise, duplicate\n"
+        "nodes will be without a parent too."
+        );
+    QObject::connect(w.get_edit_action_duplicate_selected(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_duplicate_selected);
 
     w.get_menu_edit()->addSeparator();
 
