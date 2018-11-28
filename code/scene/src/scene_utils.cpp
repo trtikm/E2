@@ -150,8 +150,53 @@ void  collision_scene_vs_line(
         scene const&  scene,
         vector3 const&  line_start_point,
         vector3 const&  line_end_point,
-        std::map<scalar, scn::scene_node_name>* const  output_nodes_ptr,
-        std::map<scalar, scn::scene_record_id>* const  output_records_ptr
+        std::multimap<scalar, scn::scene_node_name>&  output_nodes
+        )
+{
+    for (auto const& name_and_node : scene.get_all_scene_nodes())
+    {
+        scn::scene_node_name  winner_name;
+        float_32_bit  winner_param = 1.0f;
+        {
+            float_32_bit  param;
+            for (auto const&  name_and_folder : name_and_node.second->get_folders())
+                for (auto const& name_and_holder : name_and_folder.second.get_records())
+                    if (collision_scene_record_vs_line(
+                            *name_and_node.second,
+                            { name_and_folder.first, name_and_holder.first },
+                            line_start_point,
+                            line_end_point,
+                            &param
+                            ))
+                    {
+                        if (param < winner_param)
+                        {
+                            winner_name = name_and_node.first;
+                            winner_param = param;
+                        }
+                    }
+            if (winner_param == 1.0f && collision_scene_node_vs_line(
+                                                *name_and_node.second,
+                                                line_start_point,
+                                                line_end_point,
+                                                &param))
+            {
+                winner_name = name_and_node.first;
+                winner_param = param;
+            }
+        }
+        if (winner_param < 1.0f)
+            output_nodes.insert({winner_param, winner_name});
+    }
+}
+
+
+void  collision_scene_vs_line(
+        scene const&  scene,
+        vector3 const&  line_start_point,
+        vector3 const&  line_end_point,
+        std::multimap<scalar, scn::scene_node_name>* const  output_nodes_ptr,
+        std::multimap<scalar, scn::scene_record_id>* const  output_records_ptr
         )
 {
     for (auto const& name_and_node : scene.get_all_scene_nodes())
@@ -178,25 +223,25 @@ void  collision_scene_vs_line(
 
 
 void  collect_nearest_scene_objects_on_line_within_parameter_range(
-        std::map<scalar, scn::scene_node_name> const* const  nodes_on_line_ptr,
-        std::map<scalar, scn::scene_record_id> const* const  records_on_line_ptr,
+        std::multimap<scalar, scn::scene_node_name> const* const  nodes_on_line_ptr,
+        std::multimap<scalar, scn::scene_record_id> const* const  records_on_line_ptr,
         float_32_bit const  param_region_size,
         std::vector<scn::scene_record_id>&  output_nearnest_records_in_range,
         std::vector<scalar>*  output_params_of_records_in_range_ptr
         )
 {
-    static std::map<scalar, scn::scene_node_name>  dummy_nodes;
-    static std::map<scalar, scn::scene_record_id>  dummy_records;
+    static std::multimap<scalar, scn::scene_node_name>  dummy_nodes;
+    static std::multimap<scalar, scn::scene_record_id>  dummy_records;
 
-    std::map<scalar, scn::scene_node_name>::const_iterator  nodes_it =
+    std::multimap<scalar, scn::scene_node_name>::const_iterator  nodes_it =
         (nodes_on_line_ptr == nullptr) ? dummy_nodes.cbegin() : nodes_on_line_ptr->cbegin();
-    std::map<scalar, scn::scene_node_name>::const_iterator  nodes_end =
+    std::multimap<scalar, scn::scene_node_name>::const_iterator  nodes_end =
         (nodes_on_line_ptr == nullptr) ? dummy_nodes.cend() : nodes_on_line_ptr->cend();
 
-    std::map<scalar, scn::scene_record_id>::const_iterator  records_it =
-        (nodes_on_line_ptr == nullptr) ? dummy_records.cbegin() : records_on_line_ptr->cbegin();
-    std::map<scalar, scn::scene_record_id>::const_iterator  records_end =
-        (nodes_on_line_ptr == nullptr) ? dummy_records.cend() : records_on_line_ptr->cend();
+    std::multimap<scalar, scn::scene_record_id>::const_iterator  records_it =
+        (records_on_line_ptr == nullptr) ? dummy_records.cbegin() : records_on_line_ptr->cbegin();
+    std::multimap<scalar, scn::scene_record_id>::const_iterator  records_end =
+        (records_on_line_ptr == nullptr) ? dummy_records.cend() : records_on_line_ptr->cend();
 
     std::vector<scalar>  dummy_params;
     if (output_params_of_records_in_range_ptr == nullptr)

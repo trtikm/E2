@@ -845,16 +845,15 @@ void  simulator::select_scene_objects(float_64_bit const  time_to_simulate_in_se
 
     scn::scene_record_id const*  chosen_scene_object;
     {
-        std::map<scalar, scn::scene_node_name>  nodes_on_line;
-        std::map<scalar, scn::scene_record_id>  records_on_line;
-        scn::collision_scene_vs_line(get_scene(), ray_begin, ray_end, &nodes_on_line, &records_on_line);
+        std::multimap<scalar, scn::scene_node_name>  nodes_on_line;
+        scn::collision_scene_vs_line(get_scene(), ray_begin, ray_end, nodes_on_line);
 
         constexpr float_32_bit  RANGE_FROM_CLOSEST_IN_METERS = 2.0f;
 
         std::vector<scn::scene_record_id>  nearnest_records_in_range;
         collect_nearest_scene_objects_on_line_within_parameter_range(
                 &nodes_on_line,
-                &records_on_line,
+                nullptr,
                 std::min(1.0f, RANGE_FROM_CLOSEST_IN_METERS / (length(ray_end - ray_begin) + 0.001f)),
                 nearnest_records_in_range,
                 nullptr

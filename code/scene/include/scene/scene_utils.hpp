@@ -336,18 +336,31 @@ inline quaternion  transform_orientation_from_world_to_scene_node(
 vector3  get_center_of_scene_nodes(std::unordered_set<scene_node_ptr> const&  nodes);
 
 
+
 /**
- * Keys in both output maps represent parameters on the passed line to collision points
- * of the line with the corresponding scene object (i.e. node or a record). If a passed
- * pointer to an output map is 'nullptr', then related scene object will not be considered
- * for collision tests with the line.
+ * Keys in the output map represent parameters on the passed line to collision points
+ * of the line with bounding boxes the corresponding scene object (i.e. node or a record).
  */
 void  collision_scene_vs_line(
         scene const&  scene,
         vector3 const&  line_start_point,
         vector3 const&  line_end_point,
-        std::map<scalar, scn::scene_node_name>* const  output_nodes_ptr,
-        std::map<scalar, scn::scene_record_id>* const  output_records_ptr
+        std::multimap<scalar, scn::scene_node_name>&  output_nodes
+        );
+
+
+/**
+ * Keys in both output maps represent parameters on the passed line to collision points
+ * of the line with bounding boxes of the corresponding scene object (i.e. node or a record).
+ * If a passed pointer to an output map is 'nullptr', then related scene object will not be
+ * considered for collision tests with the line.
+ */
+void  collision_scene_vs_line(
+        scene const&  scene,
+        vector3 const&  line_start_point,
+        vector3 const&  line_end_point,
+        std::multimap<scalar, scn::scene_node_name>* const  output_nodes_ptr,
+        std::multimap<scalar, scn::scene_record_id>* const  output_records_ptr
         );
 
 /**
@@ -363,8 +376,8 @@ void  collision_scene_vs_line(
  * exactly one parameter).
  */
 void  collect_nearest_scene_objects_on_line_within_parameter_range(
-        std::map<scalar, scn::scene_node_name> const* const  nodes_on_line_ptr,
-        std::map<scalar, scn::scene_record_id> const* const  records_on_line_ptr,
+        std::multimap<scalar, scn::scene_node_name> const* const  nodes_on_line_ptr,
+        std::multimap<scalar, scn::scene_record_id> const* const  records_on_line_ptr,
         float_32_bit const  param_region_size,
         std::vector<scn::scene_record_id>&  output_nearnest_records_in_range,
         std::vector<scalar>*  output_params_of_records_in_range_ptr
