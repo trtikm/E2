@@ -41,6 +41,16 @@ void  register_record_handler_for_update_scene_record(
     record_rigid_body::register_record_handler_for_update_scene_record(update_record_handlers);
 }
 
+void  register_record_handler_for_duplicate_scene_record(
+        std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&, scn::scene_record_id const&)> >&
+                duplicate_record_handlers
+        )
+{
+    record_batch::register_record_handler_for_duplicate_scene_record(duplicate_record_handlers);
+    record_collider::register_record_handler_for_duplicate_scene_record(duplicate_record_handlers);
+    record_rigid_body::register_record_handler_for_duplicate_scene_record(duplicate_record_handlers);
+}
+
 void  register_record_handler_for_erase_scene_record(
         std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)>>&
                 erase_record_handlers

@@ -116,6 +116,30 @@ void  register_record_handler_for_update_scene_record(
 }
 
 
+void  register_record_handler_for_duplicate_scene_record(
+        std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&, scn::scene_record_id const&)> >&
+                duplicate_record_handlers
+        )
+{
+    duplicate_record_handlers.insert({
+            scn::get_batches_folder_name(),
+            [](widgets* const  w, scn::scene_record_id const&  src_record_id, scn::scene_record_id const&  dst_record_id) -> void {
+                    scn::scene_node_ptr const  src_node_ptr =
+                            w->wnd()->glwindow().call_now(&simulator::get_scene_node, src_record_id.get_node_name());
+                    boost::filesystem::path const  pathname =
+                            scn::get_batch(*src_node_ptr, src_record_id.get_record_name()).path_component_of_uid();
+                    w->wnd()->glwindow().call_now(
+                            &simulator::insert_batch_to_scene_node,
+                            dst_record_id.get_record_name(),
+                            pathname,
+                            dst_record_id.get_node_name()
+                            );
+                    w->get_scene_history()->insert<scn::scene_history_batch_insert>(dst_record_id, pathname, false);
+                }
+            });
+}
+
+
 void  register_record_handler_for_erase_scene_record(
         std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)>>&
                 erase_record_handlers

@@ -260,7 +260,7 @@ void  transform_origin_and_orientation(
         );
 
 inline void  transform_origin_and_orientation_from_world_to_scene_node(
-        scene_node_ptr const  node,
+        scene_node_const_ptr const  node,
         vector3&  origin,
         quaternion&  orientation
         )

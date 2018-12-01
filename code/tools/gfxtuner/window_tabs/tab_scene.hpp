@@ -102,6 +102,7 @@ struct  widgets
     void  save();
 
 private:
+    void  duplicate_subtree(QTreeWidgetItem const* const  source_item, QTreeWidgetItem* const  target_item);
 
     QTreeWidgetItem*  insert_coord_system(
                 std::string const&  name,
@@ -152,6 +153,8 @@ private:
             m_insert_record_handlers;
     std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)> >
             m_update_record_handlers;
+    std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&, scn::scene_record_id const&)> >
+            m_duplicate_record_handlers;
     std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)>>
             m_erase_record_handlers;
     std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&, boost::property_tree::ptree const&)>>

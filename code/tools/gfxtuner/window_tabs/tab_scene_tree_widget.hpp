@@ -64,43 +64,49 @@ inline tree_widget_item*  as_tree_widget_item(QTreeWidgetItem* const tree_item)
 }
 
 
-inline std::string  get_tree_widget_item_name(QTreeWidgetItem* const  tree_item)
+inline tree_widget_item const*  as_tree_widget_item(QTreeWidgetItem const* const tree_item)
+{
+    return  dynamic_cast<tree_widget_item const*>(tree_item);
+}
+
+
+inline std::string  get_tree_widget_item_name(QTreeWidgetItem const* const  tree_item)
 {
     return qtgl::to_string(tree_item->text(0));
 }
 
 
-inline bool  represents_coord_system(tree_widget_item* const  item)
+inline bool  represents_coord_system(tree_widget_item const* const  item)
 {
     return item != nullptr && item->represents_coord_system();
 }
 
 
-inline bool  represents_coord_system(QTreeWidgetItem* const  item)
+inline bool  represents_coord_system(QTreeWidgetItem const* const  item)
 {
     return represents_coord_system(as_tree_widget_item(item));
 }
 
 
-inline bool  represents_folder(tree_widget_item* const  item)
+inline bool  represents_folder(tree_widget_item const* const  item)
 {
     return item != nullptr && !represents_coord_system(item) && represents_coord_system(item->parent());
 }
 
 
-inline bool  represents_folder(QTreeWidgetItem* const  item)
+inline bool  represents_folder(QTreeWidgetItem const* const  item)
 {
     return represents_folder(as_tree_widget_item(item));
 }
 
 
-inline bool  represents_record(tree_widget_item* const  item)
+inline bool  represents_record(tree_widget_item const* const  item)
 {
     return item != nullptr && represents_folder(item->parent()) && item->childCount() == 0;
 }
 
 
-inline bool  represents_record(QTreeWidgetItem* const  item)
+inline bool  represents_record(QTreeWidgetItem const* const  item)
 {
     return represents_record(as_tree_widget_item(item));
 }

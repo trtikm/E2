@@ -278,6 +278,23 @@ void  register_record_handler_for_update_scene_record(
 }
 
 
+void  register_record_handler_for_duplicate_scene_record(
+        std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&, scn::scene_record_id const&)> >&
+                duplicate_record_handlers
+        )
+{
+    duplicate_record_handlers.insert({
+            scn::get_collider_folder_name(),
+            [](widgets* const  w, scn::scene_record_id const&  src_record_id, scn::scene_record_id const&  dst_record_id) -> void {
+                    scn::collider_props  props;
+                    detail::read_collider_props_from_simulator(w, src_record_id, props);
+                    detail::insert_collider_to_simulator(w, props, dst_record_id);
+                    w->get_scene_history()->insert<scn::scene_history_collider_insert>(dst_record_id, props, false);
+    }
+            });
+}
+
+
 void  register_record_handler_for_erase_scene_record(
         std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)>>&
                 erase_record_handlers
