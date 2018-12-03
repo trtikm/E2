@@ -105,10 +105,11 @@ private:
     void  duplicate_subtree(QTreeWidgetItem const* const  source_item, QTreeWidgetItem* const  target_item);
 
     QTreeWidgetItem*  insert_coord_system(
-                std::string const&  name,
+                scn::scene_node_id const&  id,
                 vector3 const&  origin,
                 quaternion const&  orientation,
-                QTreeWidgetItem* const  parent_tree_item);
+                QTreeWidgetItem* const  parent_tree_item
+                );
 
     void  add_tree_item_to_selection(QTreeWidgetItem* const  item);
 
@@ -123,7 +124,7 @@ private:
             );
 
     QTreeWidgetItem*  load_scene_node(
-            std::string const&  node_name,
+            scn::scene_node_id const&  id,
             boost::property_tree::ptree const&  node_tree,
             QTreeWidgetItem*  parent_item
             );
@@ -182,7 +183,7 @@ private:
     QLineEdit*  m_coord_system_pitch;
     QLineEdit*  m_coord_system_roll;
 
-    std::unordered_map<std::string, angeo::coordinate_system>  m_coord_system_location_backup_buffer;
+    std::unordered_map<scn::scene_node_id, angeo::coordinate_system>  m_coord_system_location_backup_buffer;
 };
 
 

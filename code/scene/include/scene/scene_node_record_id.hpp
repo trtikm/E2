@@ -27,19 +27,19 @@ private:
 };
 
 
-inline bool operator==(scene_node_record_id const  left, scene_node_record_id const  right) noexcept
+inline bool operator==(scene_node_record_id const&  left, scene_node_record_id const&  right)
 {
     return left.get_folder_name() == right.get_folder_name() && left.get_record_name() == right.get_record_name();
 }
 
 
-inline bool operator!=(scene_node_record_id const  left, scene_node_record_id const  right) noexcept
+inline bool operator!=(scene_node_record_id const&  left, scene_node_record_id const&  right)
 {
     return !(left == right);
 }
 
 
-inline bool operator<(scene_node_record_id const  left, scene_node_record_id const  right) noexcept
+inline bool operator<(scene_node_record_id const&  left, scene_node_record_id const&  right)
 {
     if (left.get_folder_name() < right.get_folder_name())
         return true;
@@ -50,19 +50,19 @@ inline bool operator<(scene_node_record_id const  left, scene_node_record_id con
 }
 
 
-inline bool operator>(scene_node_record_id const  left, scene_node_record_id const  right) noexcept
+inline bool operator>(scene_node_record_id const&  left, scene_node_record_id const&  right)
 {
     return right < left;
 }
 
 
-inline bool operator<=(scene_node_record_id const  left, scene_node_record_id const  right) noexcept
+inline bool operator<=(scene_node_record_id const&  left, scene_node_record_id const&  right)
 {
     return left == right || left < right;
 }
 
 
-inline bool operator>=(scene_node_record_id const  left, scene_node_record_id const  right) noexcept
+inline bool operator>=(scene_node_record_id const&  left, scene_node_record_id const&  right)
 {
     return left == right || right < left;
 }

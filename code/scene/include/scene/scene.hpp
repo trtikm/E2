@@ -1,6 +1,7 @@
 #ifndef E2_SCENE_SCENE_HPP_INCLUDED
 #   define E2_SCENE_SCENE_HPP_INCLUDED
 
+#   include <scene/scene_node_id.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/coordinate_system.hpp>
 #   include <angeo/axis_aligned_bounding_box.hpp>
@@ -21,12 +22,6 @@ struct scene;
 
 
 /**
- * The string represents a unique identifier of the node in the scene.
- */
-using  scene_node_name = std::string;
-
-
-/**
  * A node in a hierarchy of reference frames (i.e. coordinate systems) in 3D space.
  * A node has at most 1 parent node and any number of child nodes.
  * Each node can further hold data, called 'records', which must live in that frame.
@@ -44,6 +39,7 @@ struct scene_node final
 {
     using  scene_node_ptr = std::shared_ptr<scene_node>;
 
+    using  node_name = std::string;
     using  record_name = std::string;
     using  record_holder = boost::any;
     using  record_bbox_getter = std::function<void(angeo::axis_aligned_bounding_box&)>;
@@ -130,26 +126,27 @@ struct scene_node final
 
     using  folders = std::unordered_map<folder_name, folder_content>;
 
-    using  children_map = std::unordered_map<scene_node_name, scene_node_ptr>;
+    using  children_map = std::unordered_map<node_name, scene_node_ptr>;
 
     static scene_node_ptr  create(
-        scene_node_name const&  name,
+        node_name const&  name,
         vector3 const&  origin = vector3_zero(),
         quaternion const&  orientation = quaternion_identity()
         );
 
     scene_node(
-        scene_node_name const&  name,
+        node_name const&  name,
         vector3 const&  origin,
         quaternion const&  orientation
         );
 
-    scene_node_name const&  get_name() const { return m_name; }
+    node_name const&  get_name() const { return m_name; }
+    scene_node_id  get_id() const;
 
-    void  foreach_child(std::function<void(scene_node_ptr)> const&  action);
+    bool  foreach_child(std::function<bool(scene_node_ptr)> const&  action, bool const  recursively) const;
 
     children_map const&  get_children() const { return m_children; }
-    children_map::const_iterator  find_child(scene_node_name const&  name) const { return get_children().find(name); }
+    children_map::const_iterator  find_child(node_name const&  name) const { return get_children().find(name); }
     bool  has_parent() const { return !m_parent.expired(); }
     scene_node_ptr  get_parent() const { return m_parent.lock(); }
 
@@ -179,7 +176,7 @@ private:
     static void  insert_children_to_parent(std::vector<scene_node_ptr> const&  children, scene_node_ptr const  parent);
     static void  erase_children_from_parent(std::vector<scene_node_ptr> const&  children, scene_node_ptr const  parent);
 
-    scene_node_name  m_name;
+    node_name  m_name;
     angeo::coordinate_system_ptr  m_coord_system;
     folders  m_folders;
     children_map  m_children;
@@ -196,30 +193,29 @@ using scene_node_const_ptr = std::shared_ptr<scene_node const>;
 
 struct scene final
 {
-    std::unordered_map<scene_node_name, scene_node_ptr> const&  get_root_nodes() const { return m_scene; }
-    std::unordered_map<scene_node_name, scene_node_ptr> const&  get_all_scene_nodes() const { return m_names_to_nodes; }
+    std::unordered_map<scene_node::node_name, scene_node_ptr> const&  get_root_nodes() const { return m_scene; }
+    bool  foreach_node(std::function<bool(scene_node_ptr)> const&  action, bool const  root_nodes_only) const;
 
     /// Returns nullptr if there is no such node.
-    scene_node_ptr  get_scene_node(scene_node_name const&  name) const;
+    scene_node_ptr  get_scene_node(scene_node_id const&  id) const;
 
     scene_node_ptr  insert_scene_node(
-        scene_node_name const&  name,
+        scene_node_id const&  id,
         vector3 const&  origin = vector3_zero(),
-        quaternion const&  orientation = quaternion_identity(),
-        scene_node_ptr const  parent = nullptr
+        quaternion const&  orientation = quaternion_identity()
         );
 
-    void  erase_scene_node(scene_node_name const&  name);
+    void  erase_scene_node(scene_node_id const&  id);
 
     void  insert_children_to_parent(std::vector<scene_node_ptr> const&  children, scene_node_ptr const  parent)
     {
-        ASSUMPTION(get_scene_node(parent->get_name()) == parent);
+        ASSUMPTION(get_scene_node(parent->get_id()) == parent);
         scene_node::insert_children_to_parent(children, parent);
     }
 
     void  erase_children_from_parent(std::vector<scene_node_ptr> const&  children, scene_node_ptr const  parent)
     {
-        ASSUMPTION(get_scene_node(parent->get_name()) == parent);
+        ASSUMPTION(get_scene_node(parent->get_id()) == parent);
         scene_node::erase_children_from_parent(children, parent);
     }
 
@@ -229,8 +225,7 @@ struct scene final
     void  clear();
 
 private:
-    std::unordered_map<scene_node_name, scene_node_ptr>  m_scene;
-    std::unordered_map<scene_node_name, scene_node_ptr>  m_names_to_nodes;
+    std::unordered_map<scene_node::node_name, scene_node_ptr>  m_scene;
 };
 
 using scene_ptr = std::shared_ptr<scene>;

@@ -2,6 +2,7 @@
 #   define E2_SCENE_SCENE_UTILS_HPP_INCLUDED
 
 #   include <scene/scene.hpp>
+#   include <scene/scene_node_id.hpp>
 #   include <scene/scene_node_record_id.hpp>
 #   include <scene/scene_record_id.hpp>
 #   include <angeo/tensor_math.hpp>
@@ -41,24 +42,19 @@ bool  get_bbox(scene_node::record_bbox_getter const* const  bbox_getter_ptr, ang
 namespace scn {
 
 
-inline std::unordered_map<scene_node_name, scene_node_ptr> const&  get_root_nodes(scene const& s)
+inline std::unordered_map<scene_node::node_name, scene_node_ptr> const&  get_root_nodes(scene const& s)
 {
     return s.get_root_nodes();
 }
 
-inline std::unordered_map<scene_node_name, scene_node_ptr> const&  get_all_nodes(scene const& s)
+inline scene_node_ptr  get_node(scene const&  s, scene_node_id const&  id)
 {
-    return s.get_all_scene_nodes();
+    return s.get_scene_node(id);
 }
 
-inline scene_node_ptr  get_node(scene const&  s, scene_node_name const&  n)
+inline bool  has_node(scene const&  s, scene_node_id const&  id)
 {
-    return s.get_scene_node(n);
-}
-
-inline bool  has_node(scene const&  s, scene_node_name const&  n)
-{
-    return get_node(s,n) != nullptr;
+    return get_node(s,id) != nullptr;
 }
 
 /**
@@ -147,18 +143,17 @@ inline bool  has_bbox(scene const&  s, scene_record_id const&  id)
 
 inline scene_node_ptr  insert_node(
         scene&  s,
-        scene_node_name const&  name,
+        scene_node_id const&  id,
         vector3 const&  origin = vector3_zero(),
-        quaternion const&  orientation = quaternion_identity(),
-        scene_node_ptr const  parent = nullptr
+        quaternion const&  orientation = quaternion_identity()
         )
 {
-    return s.insert_scene_node(name, origin, orientation, parent);
+    return s.insert_scene_node(id, origin, orientation);
 }
 
-inline void  erase_node(scene&  s, scene_node_name const&  name)
+inline void  erase_node(scene&  s, scene_node_id const&  id)
 {
-    return s.erase_scene_node(name);
+    return s.erase_scene_node(id);
 }
 
 template<typename TRecordValueType>
@@ -203,7 +198,7 @@ void  insert_record(
         TRecordValueType const&  value
         )
 {
-    scene_node_ptr  node_ptr = get_node(s, record_id.get_node_name());
+    scene_node_ptr  node_ptr = get_node(s, record_id.get_node_id());
     ASSUMPTION(node_ptr != nullptr);
     insert_record<TRecordValueType>(*node_ptr, { record_id.get_folder_name(), record_id.get_record_name() }, value);
 }
@@ -216,7 +211,7 @@ void  insert_record(
         scene_node::record_bbox_getter const&  bbox_getter
         )
 {
-    scene_node_ptr  node_ptr = get_node(s, record_id.get_node_name());
+    scene_node_ptr  node_ptr = get_node(s, record_id.get_node_id());
     ASSUMPTION(node_ptr != nullptr);
     insert_record<TRecordValueType>(*node_ptr, { record_id.get_folder_name(), record_id.get_record_name() }, value, bbox_getter);
 }
@@ -229,7 +224,7 @@ void  insert_record(
         angeo::axis_aligned_bounding_box const&  bbox
         )
 {
-    scene_node_ptr  node_ptr = get_node(s, record_id.get_node_name());
+    scene_node_ptr  node_ptr = get_node(s, record_id.get_node_id());
     ASSUMPTION(node_ptr != nullptr);
     insert_record<TRecordValueType>(*node_ptr, { record_id.get_folder_name(), record_id.get_record_name() }, value, bbox);
 }
@@ -247,7 +242,7 @@ inline void  erase_record(scene_node&  n, scene_node_record_id const&  record_id
 
 inline void  erase_record(scene&  s, scene_record_id const&  record_id)
 {
-    scene_node_ptr  node_ptr = get_node(s, record_id.get_node_name());
+    scene_node_ptr  node_ptr = get_node(s, record_id.get_node_id());
     ASSUMPTION(node_ptr != nullptr);
     erase_record(*node_ptr, { record_id.get_folder_name(), record_id.get_record_name() });
 }
@@ -345,7 +340,7 @@ void  collision_scene_vs_line(
         scene const&  scene,
         vector3 const&  line_start_point,
         vector3 const&  line_end_point,
-        std::multimap<scalar, scn::scene_node_name>&  output_nodes
+        std::multimap<scalar, scn::scene_node_id>&  output_nodes
         );
 
 
@@ -359,7 +354,7 @@ void  collision_scene_vs_line(
         scene const&  scene,
         vector3 const&  line_start_point,
         vector3 const&  line_end_point,
-        std::multimap<scalar, scn::scene_node_name>* const  output_nodes_ptr,
+        std::multimap<scalar, scn::scene_node_id>* const  output_nodes_ptr,
         std::multimap<scalar, scn::scene_record_id>* const  output_records_ptr
         );
 
@@ -376,7 +371,7 @@ void  collision_scene_vs_line(
  * exactly one parameter).
  */
 void  collect_nearest_scene_objects_on_line_within_parameter_range(
-        std::multimap<scalar, scn::scene_node_name> const* const  nodes_on_line_ptr,
+        std::multimap<scalar, scn::scene_node_id> const* const  nodes_on_line_ptr,
         std::multimap<scalar, scn::scene_record_id> const* const  records_on_line_ptr,
         float_32_bit const  param_region_size,
         std::vector<scn::scene_record_id>&  output_nearnest_records_in_range,

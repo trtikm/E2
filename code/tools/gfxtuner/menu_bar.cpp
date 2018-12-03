@@ -298,7 +298,7 @@ void  make_menu_bar_content(menu_bar const&  w)
         "Duplicates a selected coordinate systems node in the scene, including all its folders, records, and child\n"
         "nodes recursively (if any). The '@pivot' coordinate system cannot be duplicated. You will be asked how many\n"
         "copies of the selected node to create. The i-th copy will be placed at the position 'origin(selected_node) +\n"
-        "i * (origin(@pivot) - origin(selected_node)). All copies will have the same orientation as '@pivot'."
+        "i * (origin(@pivot) - origin(selected_node)). All copies will have the same orientation as '@pivot'.\n"
         "If the selected node has a parent, then all duplicate nodes will have the same parent. Otherwise, duplicate\n"
         "nodes will be without a parent too."
         );

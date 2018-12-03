@@ -4,6 +4,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/scene/scene.hpp
     ./src/scene.cpp
     
+    ./include/scene/scene_node_id.hpp
+    ./src/scene_node_id.cpp
+
     ./include/scene/scene_node_record_id.hpp
     ./include/scene/scene_record_id.hpp
 

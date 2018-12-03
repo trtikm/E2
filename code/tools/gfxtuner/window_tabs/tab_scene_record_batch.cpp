@@ -34,7 +34,7 @@ void  register_record_undo_redo_processors(widgets* const  w)
             w->wnd()->glwindow().call_now(
                     &simulator::erase_batch_from_scene_node,
                     history_node.get_id().get_record_name(),
-                    history_node.get_id().get_node_name()
+                    history_node.get_id().get_node_id()
                     );
             remove_record_from_tree_widget(w->scene_tree(), history_node.get_id());
         });
@@ -45,7 +45,7 @@ void  register_record_undo_redo_processors(widgets* const  w)
                     &simulator::insert_batch_to_scene_node,
                     history_node.get_id().get_record_name(),
                     history_node.get_batch_pathname(),
-                    history_node.get_id().get_node_name()
+                    history_node.get_id().get_node_id()
                     );
             insert_record_to_tree_widget(
                     w->scene_tree(),
@@ -97,7 +97,7 @@ void  register_record_handler_for_insert_scene_record(
                                         &simulator::insert_batch_to_scene_node,
                                         record_id.get_record_name(),
                                         pathname,
-                                        record_id.get_node_name()
+                                        record_id.get_node_id()
                                         );
                                 w->get_scene_history()->insert<scn::scene_history_batch_insert>(record_id, pathname, false);
                             }
@@ -125,14 +125,14 @@ void  register_record_handler_for_duplicate_scene_record(
             scn::get_batches_folder_name(),
             [](widgets* const  w, scn::scene_record_id const&  src_record_id, scn::scene_record_id const&  dst_record_id) -> void {
                     scn::scene_node_ptr const  src_node_ptr =
-                            w->wnd()->glwindow().call_now(&simulator::get_scene_node, src_record_id.get_node_name());
+                            w->wnd()->glwindow().call_now(&simulator::get_scene_node, src_record_id.get_node_id());
                     boost::filesystem::path const  pathname =
                             scn::get_batch(*src_node_ptr, src_record_id.get_record_name()).path_component_of_uid();
                     w->wnd()->glwindow().call_now(
                             &simulator::insert_batch_to_scene_node,
                             dst_record_id.get_record_name(),
                             pathname,
-                            dst_record_id.get_node_name()
+                            dst_record_id.get_node_id()
                             );
                     w->get_scene_history()->insert<scn::scene_history_batch_insert>(dst_record_id, pathname, false);
                 }
@@ -149,7 +149,7 @@ void  register_record_handler_for_erase_scene_record(
             scn::get_batches_folder_name(),
             [](widgets* const  w, scn::scene_record_id const&  id) -> void {
                     scn::scene_node_ptr const  parent_node_ptr =
-                            w->wnd()->glwindow().call_now(&simulator::get_scene_node, id.get_node_name());
+                            w->wnd()->glwindow().call_now(&simulator::get_scene_node, id.get_node_id());
                     INVARIANT(parent_node_ptr != nullptr);
                     w->get_scene_history()->insert<scn::scene_history_batch_insert>(
                             id,
@@ -159,7 +159,7 @@ void  register_record_handler_for_erase_scene_record(
                     w->wnd()->glwindow().call_now(
                             &simulator::erase_batch_from_scene_node,
                             id.get_record_name(),
-                            id.get_node_name()
+                            id.get_node_id()
                             );
                 }
             });
@@ -181,7 +181,7 @@ void  register_record_handler_for_load_scene_record(
                             &simulator::insert_batch_to_scene_node,
                             id.get_record_name(),
                             pathname,
-                            id.get_node_name()
+                            id.get_node_id()
                             );
                     insert_record_to_tree_widget(
                             w->scene_tree(),

@@ -8,19 +8,32 @@
 namespace window_tabs { namespace tab_scene {
 
 
+bool  correspond(scn::scene_node_id  id, QTreeWidgetItem const*  tree_item)
+{
+    if (!id.valid() || tree_item == nullptr)
+        return false;
+    for ( ; id.valid(); id = id.get_direct_parent_id(), tree_item = tree_item->parent())
+        if (tree_item == nullptr ||
+            !represents_coord_system(tree_item) ||
+            get_tree_widget_item_name(tree_item) != id.path_last_element()
+            )
+            break;
+    // Yes, indeed NOT valid (because we succasfully processed all path elements and so we got an invalid id).
+    return !id.valid() && tree_item == nullptr;
+}
+
 
 void  find_all_coord_system_widgets(
         QTreeWidget* const  scene_tree,
-        scn::scene_node_name const&  node_name,
+        scn::scene_node_id const&  node_id,
         std::vector<tree_widget_item*>&  output
         )
 {
     TMPROF_BLOCK();
 
-    for (auto item_ptr : scene_tree->findItems(QString(node_name.c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0))
-        if (auto  ptr = as_tree_widget_item(item_ptr))
-            if (ptr->represents_coord_system())
-                output.push_back(ptr);
+    for (auto item_ptr : scene_tree->findItems(QString(node_id.path_last_element().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0))
+        if (correspond(node_id, item_ptr))
+            output.push_back(as_tree_widget_item(item_ptr));
 }
 
 
@@ -29,12 +42,12 @@ void  remove_record_from_tree_widget(QTreeWidget* const  scene_tree, scn::scene_
     TMPROF_BLOCK();
 
     std::vector<tree_widget_item*>  items_list;
-    find_all_coord_system_widgets(scene_tree, record_id.get_node_name(), items_list);
+    find_all_coord_system_widgets(scene_tree, record_id.get_node_id(), items_list);
     ASSUMPTION(items_list.size() == 1UL);
     auto const  coord_system_item = as_tree_widget_item(items_list.front());
     std::string const  coord_system_name = get_tree_widget_item_name(coord_system_item);
     ASSUMPTION(represents_coord_system(coord_system_item));
-    ASSUMPTION(coord_system_name == record_id.get_node_name());
+    ASSUMPTION(coord_system_name == record_id.get_node_id().path_last_element());
     for (int i = 0, n = coord_system_item->childCount(); i != n; ++i)
     {
         auto const  folder_item = as_tree_widget_item(coord_system_item->child(i));
@@ -75,7 +88,7 @@ void  remove_record_from_tree_widget(QTreeWidget* const  scene_tree, scn::scene_
 
 QTreeWidgetItem*  insert_coord_system_to_tree_widget(
         QTreeWidget* const  scene_tree,
-        scn::scene_node_name const&  name,
+        scn::scene_node_id const&  id,
         vector3 const&  origin,
         quaternion const&  orientation,
         QIcon const&  icon,
@@ -84,8 +97,10 @@ QTreeWidgetItem*  insert_coord_system_to_tree_widget(
 {
     TMPROF_BLOCK();
 
+    ASSUMPTION(parent_tree_item == nullptr || correspond(id.get_direct_parent_id(), parent_tree_item));
+
     std::unique_ptr<tree_widget_item>  tree_node(new tree_widget_item(true));
-    tree_node->setText(0, QString(name.c_str()));
+    tree_node->setText(0, QString(id.path_last_element().c_str()));
     tree_node->setIcon(0, icon);
     if (parent_tree_item == nullptr)
         scene_tree->addTopLevelItem(tree_node.get());
@@ -105,12 +120,12 @@ tree_widget_item*  insert_record_to_tree_widget(
     TMPROF_BLOCK();
 
     std::vector<tree_widget_item*>  items_list;
-    find_all_coord_system_widgets(scene_tree, record_id.get_node_name(), items_list);
+    find_all_coord_system_widgets(scene_tree, record_id.get_node_id(), items_list);
     ASSUMPTION(items_list.size() == 1UL);
     auto const  coord_system_item = as_tree_widget_item(items_list.front());
     ASSUMPTION(represents_coord_system(coord_system_item));
     std::string const  coord_system_name = get_tree_widget_item_name(coord_system_item);
-    ASSUMPTION(coord_system_name == record_id.get_node_name());
+    ASSUMPTION(coord_system_name == record_id.get_node_id().path_last_element());
     ASSUMPTION(
         ([coord_system_item, &record_id]() -> bool {
             for (int i = 0, n = coord_system_item->childCount(); i != n; ++i)
@@ -191,7 +206,7 @@ tree_widget_item*  get_active_coord_system_item_in_tree_widget(QTreeWidget const
 }
 
 
-bool  is_active_coord_system_in_tree_widget(QTreeWidget const&  tree_widget, std::string const&  name)
+bool  is_active_coord_system_in_tree_widget(QTreeWidget const&  tree_widget, scn::scene_node_id const&  id)
 {
     TMPROF_BLOCK();
 
@@ -200,8 +215,7 @@ bool  is_active_coord_system_in_tree_widget(QTreeWidget const&  tree_widget, std
         return false;
     tree_widget_item* const  tree_item = find_nearest_coord_system_item(selected_items.front());
     INVARIANT(tree_item != nullptr && tree_item->represents_coord_system());
-    std::string const  active_name = get_tree_widget_item_name(tree_item);
-    return name == active_name;
+    return correspond(id, tree_item);
 }
 
 
@@ -226,12 +240,15 @@ bool  update_history_according_to_change_in_selection(
                 change = true;
                 tree_widget_item* const  item = as_tree_widget_item(item_ptr);
                 INVARIANT(item != nullptr);
-                std::string const  item_name = get_tree_widget_item_name(item);
+                auto const  id_builder = scene_record_id_reverse_builder::run(item);
                 if (represents_coord_system(item))
-                    scene_history_ptr->insert<scn::scene_history_coord_system_insert_to_selection>(item_name,work_list.at(i).second);
+                    scene_history_ptr->insert<scn::scene_history_coord_system_insert_to_selection>(
+                        id_builder.get_node_id(),
+                        work_list.at(i).second
+                        );
                 else if (!represents_folder(item))
                     scene_history_ptr->insert<scn::scene_history_record_insert_to_selection>(
-                        scene_record_id_reverse_builder::run(item).get_record_id(),
+                        id_builder.get_record_id(),
                         work_list.at(i).second
                         );
             }

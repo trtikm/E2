@@ -11,9 +11,9 @@ namespace scn {
 inline scene_node::folder_name  get_rigid_body_folder_name() { return "rigid_body"; }
 inline scene_node::record_name  get_rigid_body_record_name() { return "instance"; }
 
-inline scene_record_id  make_rigid_body_record_id(scene_node_name const&  node_name)
+inline scene_record_id  make_rigid_body_record_id(scene_node_id const&  id)
 {
-    return { node_name, get_rigid_body_folder_name(), get_rigid_body_record_name() };
+    return { id, get_rigid_body_folder_name(), get_rigid_body_record_name() };
 }
 
 inline scene_node_record_id  make_rigid_body_node_record_id()
@@ -43,9 +43,9 @@ inline void  insert_rigid_body(scene_node&  n, angeo::rigid_body_id const  rb_id
     insert_record<rigid_body>(n, make_rigid_body_node_record_id(), rigid_body(rb_id));
 }
 
-inline void  insert_rigid_body(scene&  s, scene_node_name const&  node_name, angeo::rigid_body_id const  rb_id)
+inline void  insert_rigid_body(scene&  s, scene_node_id const&  node_id, angeo::rigid_body_id const  rb_id)
 {
-    insert_record<rigid_body>(s, make_rigid_body_record_id(node_name), rigid_body(rb_id));
+    insert_record<rigid_body>(s, make_rigid_body_record_id(node_id), rigid_body(rb_id));
 }
 
 inline void  erase_rigid_body(scene_node&  n)

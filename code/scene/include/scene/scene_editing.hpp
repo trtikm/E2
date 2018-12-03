@@ -126,7 +126,7 @@ private:
 };
 
 
-inline scene_node_name get_pivot_node_name() { return "@pivot"; }
+inline scene_node_id  get_pivot_node_id() { return scene_node_id{"@pivot"}; }
 
 
 }

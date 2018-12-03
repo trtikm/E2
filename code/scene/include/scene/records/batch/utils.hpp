@@ -34,11 +34,11 @@ namespace scn {
 inline scene_node::folder_name  get_batches_folder_name() { return "batches"; }
 
 inline scene_record_id  make_batch_record_id(
-        scene_node_name const&  node_name,
+        scene_node_id const&  node_id,
         scene_node::record_name const&  batch_name
         )
 {
-    return { node_name, get_batches_folder_name(), batch_name };
+    return { node_id, get_batches_folder_name(), batch_name };
 }
 
 inline scene_node_record_id  make_batch_node_record_id(scene_node::record_name const&  batch_name)

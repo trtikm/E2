@@ -13,9 +13,11 @@
 namespace window_tabs { namespace tab_scene {
 
 
+bool  correspond(scn::scene_node_id  id, QTreeWidgetItem const*  tree_item);
+
 void  find_all_coord_system_widgets(
         QTreeWidget* const  scene_tree,
-        scn::scene_node_name const&  node_name,
+        scn::scene_node_id const&  id,
         std::vector<tree_widget_item*>&  output
         );
 
@@ -23,7 +25,7 @@ void  remove_record_from_tree_widget(QTreeWidget* const  scene_tree, scn::scene_
 
 QTreeWidgetItem*  insert_coord_system_to_tree_widget(
         QTreeWidget* const  scene_tree,
-        scn::scene_node_name const&  name,
+        scn::scene_node_id const&  id,
         vector3 const&  origin,
         quaternion const&  orientation,
         QIcon const&  icon,
@@ -44,7 +46,7 @@ inline std::string  get_name_of_active_coord_system_in_tree_widget(QTreeWidget c
     return get_tree_widget_item_name(get_active_coord_system_item_in_tree_widget(tree_widget));
 }
 
-bool  is_active_coord_system_in_tree_widget(QTreeWidget const&  tree_widget, std::string const&  name);
+bool  is_active_coord_system_in_tree_widget(QTreeWidget const&  tree_widget, scn::scene_node_id const&  id);
 
 
 bool  update_history_according_to_change_in_selection(

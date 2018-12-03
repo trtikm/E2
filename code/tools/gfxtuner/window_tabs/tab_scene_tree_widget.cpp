@@ -5,7 +5,7 @@ namespace window_tabs { namespace tab_scene {
 
 
 tree_widget_item*  find_nearest_coord_system_item(
-        tree_widget_item*  tree_item,
+        tree_widget_item const*  tree_item,
         std::function<void(std::string const&)> const&  names_acceptor
         )
 {
@@ -18,7 +18,7 @@ tree_widget_item*  find_nearest_coord_system_item(
     }
     if (tree_item != nullptr)
         names_acceptor(get_tree_widget_item_name(tree_item));
-    return tree_item;
+    return const_cast<tree_widget_item*>(tree_item);
 }
 
 

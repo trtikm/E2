@@ -2,6 +2,7 @@
 #   define E2_TOOL_GFXTUNER_SIMULATOR_HPP_INCLUDED
 
 #   include <scene/scene.hpp>
+#   include <scene/scene_node_id.hpp>
 #   include <scene/scene_record_id.hpp>
 #   include <scene/scene_selection.hpp>
 #   include <scene/scene_history.hpp>
@@ -65,37 +66,26 @@ struct simulator : public qtgl::real_time_simulator
     scn::scene const&  get_scene() const { return *m_scene; }
     scn::scene&  get_scene() { return *m_scene; }
 
-    scn::scene_node_ptr  get_scene_node(scn::scene_node_name const&  name) const
-    { return get_scene().get_scene_node(name); }
+    scn::scene_node_ptr  get_scene_node(scn::scene_node_id const&  id) const
+    { return get_scene().get_scene_node(id); }
 
-    scn::scene_node_ptr  insert_scene_node(scn::scene_node_name const&  name)
-    { return insert_scene_node_at(name, vector3_zero(), quaternion_identity()); }
+    scn::scene_node_ptr  insert_scene_node(scn::scene_node_id const&  id)
+    { return insert_scene_node_at(id, vector3_zero(), quaternion_identity()); }
 
-    scn::scene_node_ptr  insert_scene_node_at(scn::scene_node_name const&  name, vector3 const&  origin, quaternion const&  orientation)
-    { return get_scene().insert_scene_node(name, origin, orientation, nullptr); }
+    scn::scene_node_ptr  insert_scene_node_at(scn::scene_node_id const&  id, vector3 const&  origin, quaternion const&  orientation)
+    { return get_scene().insert_scene_node(id, origin, orientation); }
 
-    scn::scene_node_ptr  insert_child_scene_node(scn::scene_node_name const&  name, scn::scene_node_name const&  parent_name)
-    { return insert_child_scene_node_at(name, vector3_zero(), quaternion_identity(), parent_name); }
-
-    scn::scene_node_ptr  insert_child_scene_node_at(
-            scn::scene_node_name const&  name,
-            vector3 const&  origin,
-            quaternion const&  orientation,
-            std::string const&  parent_name
-            )
-    { return get_scene().insert_scene_node(name, origin, orientation, get_scene_node(parent_name)); }
-
-    void  erase_scene_node(scn::scene_node_name const&  name);
+    void  erase_scene_node(scn::scene_node_id const&  id);
 
     void  insert_batch_to_scene_node(
             scn::scene_node::record_name const&  batch_name,
             boost::filesystem::path const&  batch_pathname,
-            scn::scene_node_name const&  scene_node_name
+            scn::scene_node_id const&  scene_node_id
             );
 
     void  erase_batch_from_scene_node(
             scn::scene_node::record_name const&  batch_name,
-            scn::scene_node_name const&  scene_node_name
+            scn::scene_node_id const&  scene_node_id
             );
 
     void  insert_collision_sphere_to_scene_node(
@@ -157,55 +147,55 @@ struct simulator : public qtgl::real_time_simulator
             vector3 const&  angular_velocity,
             vector3 const&  external_linear_acceleration,
             vector3 const&  external_angular_acceleration,
-            scn::scene_node_name const&  scene_node_name
+            scn::scene_node_id const&  id
             );
 
     void  erase_rigid_body_from_scene_node(
-            scn::scene_node_name const&  scene_node_name
+            scn::scene_node_id const&  id
             );
 
     void  get_rigid_body_info(
-            scn::scene_node_name const&  scene_node_name,
+            scn::scene_node_id const&  id,
             vector3&  linear_velocity,
             vector3&  angular_velocity,
             vector3&  external_linear_acceleration,
             vector3&  external_angular_acceleration
             );
 
-    void  load_collider(boost::property_tree::ptree const&  data, scn::scene_node_name const&  scene_node_name);
+    void  load_collider(boost::property_tree::ptree const&  data, scn::scene_node_id const&  id);
     void  save_collider(scn::collider const&  collider, boost::property_tree::ptree&  data);
 
-    void  load_rigid_body(boost::property_tree::ptree const&  data, scn::scene_node_name const&  scene_node_name);
+    void  load_rigid_body(boost::property_tree::ptree const&  data, scn::scene_node_id const&  id);
     void  save_rigid_body(angeo::rigid_body_id const  rb_id, boost::property_tree::ptree&  data);
 
     void  clear_scene();
 
     scn::scene_history_ptr  get_scene_history() { return m_scene_history; }
 
-    void  translate_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  shift);
-    void  rotate_scene_node(scn::scene_node_name const&  scene_node_name, quaternion const&  rotation);
-    void  set_position_of_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  new_origin);
-    void  set_orientation_of_scene_node(scn::scene_node_name const&  scene_node_name, quaternion const&  new_orientation);
-    void  relocate_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation);
+    void  translate_scene_node(scn::scene_node_id const&  id, vector3 const&  shift);
+    void  rotate_scene_node(scn::scene_node_id const&  id, quaternion const&  rotation);
+    void  set_position_of_scene_node(scn::scene_node_id const&  id, vector3 const&  new_origin);
+    void  set_orientation_of_scene_node(scn::scene_node_id const&  id, quaternion const&  new_orientation);
+    void  relocate_scene_node(scn::scene_node_id const&  id, vector3 const&  new_origin, quaternion const&  new_orientation);
 
     void  on_relocation_of_scene_node(scn::scene_node_ptr const  node_ptr);
-    void  on_relocation_of_scene_node(scn::scene_node_name const&  scene_node_name)
-    { on_relocation_of_scene_node(get_scene().get_scene_node(scene_node_name)); }
+    void  on_relocation_of_scene_node(scn::scene_node_id const&  id)
+    { on_relocation_of_scene_node(get_scene().get_scene_node(id)); }
 
     void  set_scene_selection(
-            std::unordered_set<scn::scene_node_name> const&  selected_scene_nodes,
+            std::unordered_set<scn::scene_node_id> const&  selected_scene_nodes,
             std::unordered_set<scn::scene_record_id> const&  selected_records
             );
     void  insert_to_scene_selection(
-            std::unordered_set<scn::scene_node_name> const&  selected_scene_nodes,
+            std::unordered_set<scn::scene_node_id> const&  selected_scene_nodes,
             std::unordered_set<scn::scene_record_id> const&  selected_records
             );
     void  erase_from_scene_selection(
-            std::unordered_set<scn::scene_node_name> const&  selected_scene_nodes,
+            std::unordered_set<scn::scene_node_id> const&  selected_scene_nodes,
             std::unordered_set<scn::scene_record_id> const&  selected_records
             );
     void  get_scene_selection(
-            std::unordered_set<scn::scene_node_name>&  selected_scene_nodes,
+            std::unordered_set<scn::scene_node_id>&  selected_scene_nodes,
             std::unordered_set<scn::scene_record_id>&  selected_records
             ) const;
 
@@ -217,7 +207,7 @@ struct simulator : public qtgl::real_time_simulator
     qtgl::effects_config const&  get_effects_config() const { return m_effects_config; }
     qtgl::effects_config&  effects_config_ref() { return m_effects_config; }
 
-    std::unordered_map<scn::scene_node_name, angeo::coordinate_system> const&
+    std::unordered_map<scn::scene_node_id, angeo::coordinate_system> const&
     get_scene_nodes_relocated_during_simulation() const { return m_scene_nodes_relocated_during_simulation; }
     std::unordered_set<scn::scene_record_id> const&  get_scene_records_inserted_during_simulation() const
     { return m_scene_records_inserted_during_simulation; }
@@ -264,16 +254,16 @@ private:
             );
 
     scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_ptr  node_ptr);
-    scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_name const&  node_name)
-    { return find_nearest_rigid_body_node(get_scene().get_scene_node(node_name)); }
+    scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_id const&  id)
+    { return find_nearest_rigid_body_node(get_scene().get_scene_node(id)); }
 
     void  invalidate_rigid_body_at_node(scn::scene_node_ptr  node_ptr, bool const  collider_change);
     void  invalidate_rigid_body_controling_node(scn::scene_node_ptr  node_ptr, bool const  collider_change);
-    void  invalidate_rigid_body_controling_node(scn::scene_node_name const&  node_name, bool const  collider_change)
-    { return invalidate_rigid_body_controling_node(get_scene().get_scene_node(node_name), collider_change); }
+    void  invalidate_rigid_body_controling_node(scn::scene_node_id const&  id, bool const  collider_change)
+    { return invalidate_rigid_body_controling_node(get_scene().get_scene_node(id), collider_change); }
     void  invalidate_rigid_bodies_in_subtree(scn::scene_node_ptr  node_ptr, bool const  collider_change);
-    void  invalidate_rigid_bodies_in_subtree(scn::scene_node_name const&  node_name, bool const  collider_change)
-    { return invalidate_rigid_bodies_in_subtree(get_scene().get_scene_node(node_name), collider_change); }
+    void  invalidate_rigid_bodies_in_subtree(scn::scene_node_id const&  id, bool const  collider_change)
+    { return invalidate_rigid_bodies_in_subtree(get_scene().get_scene_node(id), collider_change); }
 
     void  foreach_collider_in_subtree(
                 scn::scene_node_ptr const  node_ptr,
@@ -290,8 +280,8 @@ private:
                 std::vector<scn::scene_node_ptr>* const  output_nodes = nullptr
                 );
     void  update_collider_locations_in_subtree(scn::scene_node_ptr  node_ptr);
-    void  update_collider_locations_in_subtree(scn::scene_node_name const&  node_name)
-    { update_collider_locations_in_subtree(get_scene().get_scene_node(node_name)); }
+    void  update_collider_locations_in_subtree(scn::scene_node_id const&  id)
+    { update_collider_locations_in_subtree(get_scene().get_scene_node(id)); }
 
     // Data providing feedback loop between a human user and 3D scene in the tool
 
@@ -320,7 +310,7 @@ private:
     bool  m_do_single_step;
     float_64_bit  m_fixed_time_step_in_seconds;
     scn::scene_ptr  m_scene;
-    std::unordered_map<scn::scene_node_name, angeo::coordinate_system>  m_scene_nodes_relocated_during_simulation;
+    std::unordered_map<scn::scene_node_id, angeo::coordinate_system>  m_scene_nodes_relocated_during_simulation;
     std::unordered_set<scn::scene_record_id>  m_scene_records_inserted_during_simulation;
     std::unordered_set<scn::scene_record_id>  m_scene_records_erased_during_simulation;
 
@@ -341,7 +331,7 @@ private:
     scn::scene_history_ptr  m_scene_history;
     scn::scene_edit_data  m_scene_edit_data;
     qtgl::batch  m_batch_coord_system;
-    std::unordered_map<scn::scene_node_name, bool>  m_invalidated_nodes_of_rigid_bodies;
+    std::unordered_map<scn::scene_node_id, bool>  m_invalidated_nodes_of_rigid_bodies;
 
     // Simulation mode data
 

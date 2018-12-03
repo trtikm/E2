@@ -18,7 +18,7 @@ scene_node::record_holder const*  get_record_holder_ptr(scene_node const&  n, sc
 
 scene_node::record_holder const*  get_record_holder_ptr(scene const&  s, scene_record_id const&  id)
 {
-    scene_node_ptr const  node_ptr = get_node(s, id.get_node_name());
+    scene_node_ptr const  node_ptr = get_node(s, id.get_node_id());
     return (node_ptr == nullptr) ? nullptr : get_record_holder_ptr(*node_ptr, { id.get_folder_name(), id.get_record_name() });
 }
 
@@ -33,7 +33,7 @@ scene_node::record_bbox_getter const*  get_record_bbox_getter_ptr(scene_node con
 
 scene_node::record_bbox_getter const*  get_record_bbox_getter_ptr(scene const&  s, scene_record_id const&  id)
 {
-    scene_node_ptr const  node_ptr = get_node(s, id.get_node_name());
+    scene_node_ptr const  node_ptr = get_node(s, id.get_node_id());
     return (node_ptr == nullptr) ? nullptr : get_record_bbox_getter_ptr(*node_ptr, { id.get_folder_name(), id.get_record_name() });
 }
 
@@ -147,95 +147,90 @@ bool  collision_scene_record_vs_line(
 
 
 void  collision_scene_vs_line(
-        scene const&  scene,
+        scene const&  s,
         vector3 const&  line_start_point,
         vector3 const&  line_end_point,
-        std::multimap<scalar, scn::scene_node_name>&  output_nodes
+        std::multimap<scalar, scn::scene_node_id>&  output_nodes
         )
 {
-    for (auto const& name_and_node : scene.get_all_scene_nodes())
-    {
-        scn::scene_node_name  winner_name;
-        float_32_bit  winner_param = 1.0f;
-        {
-            float_32_bit  param;
-            for (auto const&  name_and_folder : name_and_node.second->get_folders())
-                for (auto const& name_and_holder : name_and_folder.second.get_records())
-                    if (collision_scene_record_vs_line(
-                            *name_and_node.second,
-                            { name_and_folder.first, name_and_holder.first },
-                            line_start_point,
-                            line_end_point,
-                            &param
-                            ))
-                    {
-                        if (param < winner_param)
-                        {
-                            winner_name = name_and_node.first;
-                            winner_param = param;
-                        }
-                    }
-            if (winner_param == 1.0f && collision_scene_node_vs_line(
-                                                *name_and_node.second,
-                                                line_start_point,
-                                                line_end_point,
-                                                &param))
-            {
-                winner_name = name_and_node.first;
-                winner_param = param;
-            }
-        }
-        if (winner_param < 1.0f)
-            output_nodes.insert({winner_param, winner_name});
-    }
+    s.foreach_node(
+        [&line_start_point, &line_end_point, &output_nodes](scene_node_ptr const  node_ptr) -> bool {
+                float_32_bit  winner_param = 1.0f;
+                {
+                    float_32_bit  param;
+                    for (auto const&  name_and_folder : node_ptr->get_folders())
+                        for (auto const& name_and_holder : name_and_folder.second.get_records())
+                            if (collision_scene_record_vs_line(
+                                    *node_ptr,
+                                    { name_and_folder.first, name_and_holder.first },
+                                    line_start_point,
+                                    line_end_point,
+                                    &param
+                                    ))
+                            {
+                                if (param < winner_param)
+                                    winner_param = param;
+                            }
+                    if (winner_param == 1.0f && collision_scene_node_vs_line(*node_ptr, line_start_point, line_end_point, &param))
+                        winner_param = param;
+                }
+                if (winner_param < 1.0f)
+                    output_nodes.insert({winner_param, node_ptr->get_id()});
+                return true;
+            },
+        false
+        );
 }
 
 
 void  collision_scene_vs_line(
-        scene const&  scene,
+        scene const&  s,
         vector3 const&  line_start_point,
         vector3 const&  line_end_point,
-        std::multimap<scalar, scn::scene_node_name>* const  output_nodes_ptr,
+        std::multimap<scalar, scn::scene_node_id>* const  output_nodes_ptr,
         std::multimap<scalar, scn::scene_record_id>* const  output_records_ptr
         )
 {
-    for (auto const& name_and_node : scene.get_all_scene_nodes())
-    {
-        scalar  param;
-        if (output_nodes_ptr != nullptr &&
-                collision_scene_node_vs_line(*name_and_node.second, line_start_point, line_end_point, &param))
-            output_nodes_ptr->insert({param, name_and_node.first});
-        if (output_records_ptr != nullptr)
-            for (auto const&  name_and_folder : name_and_node.second->get_folders())
-                for (auto const& name_and_holder : name_and_folder.second.get_records())
-                    if (collision_scene_record_vs_line(
-                            *name_and_node.second,
-                            { name_and_folder.first, name_and_holder.first },
-                            line_start_point,
-                            line_end_point,
-                            &param
-                            ))
-                        output_records_ptr->insert({
-                                param, { name_and_node.first, name_and_folder.first, name_and_holder.first }
-                                });
-    }
+    s.foreach_node(
+        [&line_start_point, &line_end_point, output_nodes_ptr, output_records_ptr](scene_node_ptr const  node_ptr) -> bool {
+                scalar  param;
+                if (output_nodes_ptr != nullptr &&
+                        collision_scene_node_vs_line(*node_ptr, line_start_point, line_end_point, &param))
+                    output_nodes_ptr->insert({param, node_ptr->get_id()});
+                if (output_records_ptr != nullptr)
+                    for (auto const&  name_and_folder : node_ptr->get_folders())
+                        for (auto const& name_and_holder : name_and_folder.second.get_records())
+                            if (collision_scene_record_vs_line(
+                                    *node_ptr,
+                                    { name_and_folder.first, name_and_holder.first },
+                                    line_start_point,
+                                    line_end_point,
+                                    &param
+                                    ))
+                                output_records_ptr->insert({
+                                        param, { node_ptr->get_id(), name_and_folder.first, name_and_holder.first }
+                                        });
+                return true;
+            },
+        false
+        );
 }
 
 
 void  collect_nearest_scene_objects_on_line_within_parameter_range(
-        std::multimap<scalar, scn::scene_node_name> const* const  nodes_on_line_ptr,
+        std::multimap<scalar, scn::scene_node_id> const* const  nodes_on_line_ptr,
         std::multimap<scalar, scn::scene_record_id> const* const  records_on_line_ptr,
         float_32_bit const  param_region_size,
         std::vector<scn::scene_record_id>&  output_nearnest_records_in_range,
         std::vector<scalar>*  output_params_of_records_in_range_ptr
         )
 {
-    static std::multimap<scalar, scn::scene_node_name>  dummy_nodes;
+    static std::multimap<scalar, scn::scene_node_id>  dummy_nodes;
     static std::multimap<scalar, scn::scene_record_id>  dummy_records;
 
-    std::multimap<scalar, scn::scene_node_name>::const_iterator  nodes_it =
+    std::multimap<scalar, scn::scene_node_id>::const_iterator  nodes_it =
         (nodes_on_line_ptr == nullptr) ? dummy_nodes.cbegin() : nodes_on_line_ptr->cbegin();
-    std::multimap<scalar, scn::scene_node_name>::const_iterator  nodes_end =
+    std::multimap<scalar, scn::scene_node_id>::const_iterator  nodes_end =
         (nodes_on_line_ptr == nullptr) ? dummy_nodes.cend() : nodes_on_line_ptr->cend();
 
     std::multimap<scalar, scn::scene_record_id>::const_iterator  records_it =

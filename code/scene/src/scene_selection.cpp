@@ -7,10 +7,10 @@
 namespace scn {
 
 
-void  scene_selection::insert_node(scene_node_name const&  name)
+void  scene_selection::insert_node(scene_node_id const&  id)
 {
-    ASSUMPTION(has_node(*m_scene, name));
-    m_nodes.insert(name);
+    ASSUMPTION(has_node(*m_scene, id));
+    m_nodes.insert(id);
 }
 
 void  scene_selection::insert_record(scene_record_id const&  id)
@@ -19,22 +19,22 @@ void  scene_selection::insert_record(scene_record_id const&  id)
     m_records.insert(id);
 }
 
-void  scene_selection::insert_records_of_node(scene_node_name const&  name)
+void  scene_selection::insert_records_of_node(scene_node_id const&  id)
 {
     TMPROF_BLOCK();
 
-    scene_node_ptr const  node_ptr = m_scene->get_scene_node(name);
+    scene_node_ptr const  node_ptr = m_scene->get_scene_node(id);
     ASSUMPTION(node_ptr != nullptr);
     for (auto const& name_records : node_ptr->get_folders())
         for (auto const& name_record : name_records.second.get_records())
-            m_records.insert({ name, name_records.first, name_record.first });
+            m_records.insert({ id, name_records.first, name_record.first });
 }
 
 
-void  scene_selection::erase_node(scene_node_name const&  name)
+void  scene_selection::erase_node(scene_node_id const&  id)
 {
-    ASSUMPTION(has_node(*m_scene, name));
-    m_nodes.erase(name);
+    ASSUMPTION(has_node(*m_scene, id));
+    m_nodes.erase(id);
 }
 
 void  scene_selection::erase_record(scene_record_id const&  id)
@@ -43,17 +43,17 @@ void  scene_selection::erase_record(scene_record_id const&  id)
     m_records.erase(id);
 }
 
-void  scene_selection::erase_records_of_node(scene_node_name const&  name)
+void  scene_selection::erase_records_of_node(scene_node_id const&  id)
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(has_node(*m_scene, name));
+    ASSUMPTION(has_node(*m_scene, id));
     std::vector<scene_record_id>  records_to_erase;
-    for (auto const& id : m_records)
-        if (id.get_node_name() == name)
-            records_to_erase.push_back(id);
-    for (auto const& id : records_to_erase)
-        m_records.erase(id);
+    for (auto const& rid : m_records)
+        if (rid.get_node_id() == id)
+            records_to_erase.push_back(rid);
+    for (auto const& rid : records_to_erase)
+        m_records.erase(rid);
 }
 
 
@@ -63,7 +63,7 @@ vector3  get_center_of_selected_scene_nodes(scene_selection const&  selection)
 
     ASSUMPTION(!selection.empty());
 
-    std::unordered_set<scene_node_name>  nodes(selection.get_nodes());
+    std::unordered_set<scene_node_id>  nodes(selection.get_nodes());
     get_nodes_of_selected_records(selection, nodes);
 
     vector3 center = vector3_zero();
@@ -74,10 +74,10 @@ vector3  get_center_of_selected_scene_nodes(scene_selection const&  selection)
 }
 
 
-void  get_nodes_of_selected_records(scene_selection const&  selection, std::unordered_set<scene_node_name>&  nodes)
+void  get_nodes_of_selected_records(scene_selection const&  selection, std::unordered_set<scene_node_id>&  nodes)
 {
     for (auto const&  node_records : selection.get_records())
-        nodes.insert(node_records.get_node_name());
+        nodes.insert(node_records.get_node_id());
 }
 
 

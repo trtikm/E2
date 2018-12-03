@@ -488,9 +488,11 @@ void  simulator::on_simulation_resumed()
                     else
                         node_ptr->translate(origin_shift_in_world_space);
                     node_ptr->foreach_child(
-                            [&origin_shift_in_local_space](scn::scene_node_ptr const  child_node_ptr) -> void {
+                            [&origin_shift_in_local_space](scn::scene_node_ptr const  child_node_ptr) -> bool {
                                     child_node_ptr->translate(-origin_shift_in_local_space);
-                                }
+                                    return true;
+                                },
+                            false
                             );
                 }
                 else
@@ -550,17 +552,22 @@ void  simulator::on_simulation_resumed()
     for (auto const&  key : to_remove)
         m_gfx_animated_objects.erase(key);
 
-    for (auto const& name_node : scn::get_all_nodes(get_scene()))
-        for (auto const& name_holder : scn::get_batch_holders(*name_node.second))
-        {
-            qtgl::batch const  batch = scn::as_batch(name_holder.second);
-            if (batch.ready() && batch.get_available_resources().skeletal().size() == 1UL)
-            {
-                scn::scene_record_id const  key = scn::make_batch_record_id(name_node.first, name_holder.first);
-                if (m_gfx_animated_objects.count(key) == 0UL)
-                    m_gfx_animated_objects.emplace(key, gfx_animated_object(batch));
-            }
-        }
+    get_scene().foreach_node(
+        [this](scn::scene_node_ptr const  node_ptr) -> bool {
+                for (auto const& name_holder : scn::get_batch_holders(*node_ptr))
+                {
+                    qtgl::batch const  batch = scn::as_batch(name_holder.second);
+                    if (batch.ready() && batch.get_available_resources().skeletal().size() == 1UL)
+                    {
+                        scn::scene_record_id const  key = scn::make_batch_record_id(node_ptr->get_id(), name_holder.first);
+                        if (m_gfx_animated_objects.count(key) == 0UL)
+                            m_gfx_animated_objects.emplace(key, gfx_animated_object(batch));
+                    }
+                }
+                return true;
+            },
+        false
+        );
 }
 
 
@@ -672,7 +679,7 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
 
         scn::scene_node_ptr const  rb_node_ptr = rb_id_and_node_ptr.second;
 
-        m_scene_nodes_relocated_during_simulation.insert({ rb_node_ptr->get_name(), *rb_node_ptr->get_coord_system()});
+        m_scene_nodes_relocated_during_simulation.insert({ rb_node_ptr->get_id(), *rb_node_ptr->get_coord_system()});
 
         if (rb_node_ptr->has_parent())
         {
@@ -716,21 +723,26 @@ void  simulator::render_simulation_state(
                     qtgl::batch,
                     std::vector<std::pair<scn::scene_node_const_ptr,gfx_animated_object const*> > > >
             batches;
-        for (auto const& name_node : scn::get_all_nodes(get_scene()))
-            for (auto const& name_holder : scn::get_batch_holders(*name_node.second))
-            {
-                qtgl::batch const  batch = scn::as_batch(name_holder.second);
-                auto&  record = batches[batch.path_component_of_uid()];
-                if (record.first.empty())
-                    record.first = batch;
-                INVARIANT(record.first == batch);
-                auto const  it = m_gfx_animated_objects.find(scn::make_batch_record_id(name_node.first, name_holder.first));
-                INVARIANT(it == m_gfx_animated_objects.cend() || it->second.get_batch() == record.first);
-                record.second.push_back({
-                    name_node.second,
-                    it != m_gfx_animated_objects.cend() ? &it->second : nullptr
-                    });
-            }
+        get_scene().foreach_node(
+            [this, &batches](scn::scene_node_ptr const  node_ptr) -> bool {
+                    for (auto const& name_holder : scn::get_batch_holders(*node_ptr))
+                    {
+                        qtgl::batch const  batch = scn::as_batch(name_holder.second);
+                        auto&  record = batches[batch.path_component_of_uid()];
+                        if (record.first.empty())
+                            record.first = batch;
+                        INVARIANT(record.first == batch);
+                        auto const  it = m_gfx_animated_objects.find(scn::make_batch_record_id(node_ptr->get_id(), name_holder.first));
+                        INVARIANT(it == m_gfx_animated_objects.cend() || it->second.get_batch() == record.first);
+                        record.second.push_back({
+                            node_ptr,
+                            it != m_gfx_animated_objects.cend() ? &it->second : nullptr
+                            });
+                    }
+                    return true;
+                },
+            false
+            );
         for (auto const& elem : batches)
             if (qtgl::make_current(elem.second.first, draw_state))
             {
@@ -845,7 +857,7 @@ void  simulator::select_scene_objects(float_64_bit const  time_to_simulate_in_se
 
     scn::scene_record_id const*  chosen_scene_object;
     {
-        std::multimap<scalar, scn::scene_node_name>  nodes_on_line;
+        std::multimap<scalar, scn::scene_node_id>  nodes_on_line;
         scn::collision_scene_vs_line(get_scene(), ray_begin, ray_end, nodes_on_line);
 
         constexpr float_32_bit  RANGE_FROM_CLOSEST_IN_METERS = 2.0f;
@@ -871,10 +883,10 @@ void  simulator::select_scene_objects(float_64_bit const  time_to_simulate_in_se
 
         if (chosen_scene_object->is_node_reference())
         {
-            if (m_scene_selection.is_node_selected(chosen_scene_object->get_node_name()))
-                m_scene_selection.erase_node(chosen_scene_object->get_node_name());
+            if (m_scene_selection.is_node_selected(chosen_scene_object->get_node_id()))
+                m_scene_selection.erase_node(chosen_scene_object->get_node_id());
             else
-                m_scene_selection.insert_node(chosen_scene_object->get_node_name());
+                m_scene_selection.insert_node(chosen_scene_object->get_node_id());
         }
         else
         {
@@ -891,7 +903,7 @@ void  simulator::select_scene_objects(float_64_bit const  time_to_simulate_in_se
         if (chosen_scene_object != nullptr)
         {
             if (chosen_scene_object->is_node_reference())
-                m_scene_selection.insert_node(chosen_scene_object->get_node_name());
+                m_scene_selection.insert_node(chosen_scene_object->get_node_id());
             else
                 m_scene_selection.insert_record(*chosen_scene_object);
         }
@@ -917,9 +929,9 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
         return;
     if (get_scene_edit_data().are_data_invalidated())
     {
-        if (m_scene_selection.is_node_selected(scn::get_pivot_node_name()))
+        if (m_scene_selection.is_node_selected(scn::get_pivot_node_id()))
             m_scene_edit_data.initialise_translation_data({ 
-                get_scene().get_scene_node(scn::get_pivot_node_name())->get_coord_system()->origin()
+                get_scene().get_scene_node(scn::get_pivot_node_id())->get_coord_system()->origin()
                 });
         else
             m_scene_edit_data.initialise_translation_data(scn::get_center_of_selected_scene_nodes(m_scene_selection));
@@ -958,15 +970,15 @@ void  simulator::translate_scene_selected_objects(float_64_bit const  time_to_si
 
     vector3 const  raw_shift = m_scene_edit_data.get_translation_data().get_shift(new_plane_point);
 
-    std::unordered_set<scn::scene_node_name> nodes_to_translate = m_scene_selection.get_nodes();
+    std::unordered_set<scn::scene_node_id> nodes_to_translate = m_scene_selection.get_nodes();
     for (auto const& record_id : m_scene_selection.get_records())
-        nodes_to_translate.insert(record_id.get_node_name());
+        nodes_to_translate.insert(record_id.get_node_id());
     if (nodes_to_translate.size() > 1UL)
-        nodes_to_translate.erase(scn::get_pivot_node_name());
+        nodes_to_translate.erase(scn::get_pivot_node_id());
     vector3 const  shift =
-        m_scene_selection.is_node_selected(scn::get_pivot_node_name())
-        && nodes_to_translate.count(scn::get_pivot_node_name()) == 0UL ?
-                contract43(get_scene().get_scene_node(scn::get_pivot_node_name())->get_world_matrix()
+        m_scene_selection.is_node_selected(scn::get_pivot_node_id())
+        && nodes_to_translate.count(scn::get_pivot_node_id()) == 0UL ?
+                contract43(get_scene().get_scene_node(scn::get_pivot_node_id())->get_world_matrix()
                     * expand34(raw_shift, 0.0f)) :
                 raw_shift;
     for (auto const& node_name : nodes_to_translate)
@@ -1002,9 +1014,9 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
 
     if (get_scene_edit_data().are_data_invalidated())
     {
-        if (m_scene_selection.is_node_selected(scn::get_pivot_node_name()))
+        if (m_scene_selection.is_node_selected(scn::get_pivot_node_id()))
             m_scene_edit_data.initialise_rotation_data({
-                get_scene().get_scene_node(scn::get_pivot_node_name())->get_coord_system()->origin()
+                get_scene().get_scene_node(scn::get_pivot_node_id())->get_coord_system()->origin()
                 });
         else
             m_scene_edit_data.initialise_rotation_data(scn::get_center_of_selected_scene_nodes(m_scene_selection));
@@ -1047,18 +1059,18 @@ void  simulator::rotate_scene_selected_objects(float_64_bit const  time_to_simul
     vector3  raw_axis;
     scalar const  angle = quaternion_to_angle_axis(raw_rotation, raw_axis);
 
-    std::unordered_set<scn::scene_node_name> nodes_to_rotate = m_scene_selection.get_nodes();
+    std::unordered_set<scn::scene_node_id> nodes_to_rotate = m_scene_selection.get_nodes();
     for (auto const& record_id : m_scene_selection.get_records())
-        nodes_to_rotate.insert(record_id.get_node_name());
+        nodes_to_rotate.insert(record_id.get_node_id());
     if (nodes_to_rotate.size() > 1UL)
-        nodes_to_rotate.erase(scn::get_pivot_node_name());
+        nodes_to_rotate.erase(scn::get_pivot_node_id());
     bool const  rotate_around_pivot =
-        m_scene_selection.is_node_selected(scn::get_pivot_node_name())
-        && nodes_to_rotate.count(scn::get_pivot_node_name()) == 0UL;
+        m_scene_selection.is_node_selected(scn::get_pivot_node_id())
+        && nodes_to_rotate.count(scn::get_pivot_node_id()) == 0UL;
     bool const  is_alternative_rotation_enabled =
         nodes_to_rotate.size() > 1UL && mouse_props().is_pressed(qtgl::RIGHT_MOUSE_BUTTON());
     vector3 const  axis = rotate_around_pivot ?
-        contract43(get_scene().get_scene_node(scn::get_pivot_node_name())->get_world_matrix() * expand34(raw_axis, 0.0f)) :
+        contract43(get_scene().get_scene_node(scn::get_pivot_node_id())->get_world_matrix() * expand34(raw_axis, 0.0f)) :
         raw_axis;
     matrix33 const  radius_vector_rotation_matrix = is_alternative_rotation_enabled ?
         quaternion_to_rotation_matrix(angle_axis_to_quaternion(angle, axis)) :
@@ -1101,12 +1113,17 @@ void  simulator::render_scene_batches(
 
     std::unordered_map<std::string, std::vector<std::pair<qtgl::batch, scn::scene_node_const_ptr> > >
             batches;
-    for (auto const& name_node : scn::get_all_nodes(get_scene()))
-        for (auto const& name_holder : scn::get_batch_holders(*name_node.second))
-        {
-            qtgl::batch const  batch = scn::as_batch(name_holder.second);
-            batches[batch.path_component_of_uid()].push_back({batch, name_node.second});
-        }
+    get_scene().foreach_node(
+        [this, &batches](scn::scene_node_ptr const  node_ptr) -> bool {
+                for (auto const& name_holder : scn::get_batch_holders(*node_ptr))
+                {
+                    qtgl::batch const  batch = scn::as_batch(name_holder.second);
+                    batches[batch.path_component_of_uid()].push_back({batch, node_ptr});
+                }
+                return true;
+            },
+        false
+        );
     for (auto const& path_and_pairs : batches)
         if (qtgl::make_current(path_and_pairs.second.front().first, draw_state))
         {
@@ -1155,10 +1172,10 @@ void  simulator::render_scene_coord_systems(
     //auto const  old_depth_test_state = qtgl::glapi().glIsEnabled(GL_DEPTH_TEST);
     //qtgl::glapi().glDisable(GL_DEPTH_TEST);
 
-    std::unordered_set<scn::scene_node_name>  nodes_to_draw = m_scene_selection.get_nodes();
+    std::unordered_set<scn::scene_node_id>  nodes_to_draw = m_scene_selection.get_nodes();
     scn::get_nodes_of_selected_records(m_scene_selection, nodes_to_draw);
-    if (scn::has_node(get_scene(), scn::get_pivot_node_name())) // The pivot may be missing, if the scene is not completely initialised yet.
-        nodes_to_draw.insert(scn::get_pivot_node_name());
+    if (scn::has_node(get_scene(), scn::get_pivot_node_id())) // The pivot may be missing, if the scene is not completely initialised yet.
+        nodes_to_draw.insert(scn::get_pivot_node_id());
     for (auto const& node_name : nodes_to_draw)
         qtgl::render_batch(
             m_batch_coord_system,
@@ -1195,76 +1212,82 @@ void  simulator::render_colliders(
     qtgl::glapi().glGetIntegerv(GL_POLYGON_MODE, &backup_polygon_mode[0]);
     qtgl::glapi().glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    for (auto const& name_node : scn::get_all_nodes(get_scene()))
-        if (auto const collider_ptr = scn::get_collider(*name_node.second))
-        {
-            qtgl::batch  batch;
-            {
-                angeo::collision_object_id const  coid = collider_ptr->id();
-                switch (angeo::get_shape_type(coid))
+    get_scene().foreach_node(
+        [this, &matrix_from_world_to_camera, &matrix_from_camera_to_clipspace, &draw_state](scn::scene_node_ptr const  node_ptr)
+            -> bool {
+                if (auto const collider_ptr = scn::get_collider(*node_ptr))
                 {
-                case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+                    qtgl::batch  batch;
                     {
-                        std::pair<float_32_bit, float_32_bit> const  key {
-                                m_collision_scene.get_capsule_half_distance_between_end_points(coid),
-                                m_collision_scene.get_capsule_thickness_from_central_line(coid)
-                                };
-                        auto  it = m_cache_of_batches_of_colliders.capsules.find(key);
-                        if (it == m_cache_of_batches_of_colliders.capsules.end())
-                            it = m_cache_of_batches_of_colliders.capsules.insert({
-                                        key,
-                                        qtgl::create_wireframe_capsule(key.first, key.second, 5U, m_colliders_colour)
-                                        }).first;
-                        batch = it->second;
+                        angeo::collision_object_id const  coid = collider_ptr->id();
+                        switch (angeo::get_shape_type(coid))
+                        {
+                        case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+                            {
+                                std::pair<float_32_bit, float_32_bit> const  key {
+                                        m_collision_scene.get_capsule_half_distance_between_end_points(coid),
+                                        m_collision_scene.get_capsule_thickness_from_central_line(coid)
+                                        };
+                                auto  it = m_cache_of_batches_of_colliders.capsules.find(key);
+                                if (it == m_cache_of_batches_of_colliders.capsules.end())
+                                    it = m_cache_of_batches_of_colliders.capsules.insert({
+                                                key,
+                                                qtgl::create_wireframe_capsule(key.first, key.second, 5U, m_colliders_colour)
+                                                }).first;
+                                batch = it->second;
+                            }
+                            break;
+                        case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+                            {
+                                float_32_bit const  key = m_collision_scene.get_sphere_radius(coid);
+                                auto  it = m_cache_of_batches_of_colliders.spheres.find(key);
+                                if (it == m_cache_of_batches_of_colliders.spheres.end())
+                                    it = m_cache_of_batches_of_colliders.spheres.insert({
+                                                key,
+                                                qtgl::create_wireframe_sphere(key, 5U, m_colliders_colour)
+                                                }).first;
+                                batch = it->second;
+                            }
+                            break;
+                        case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
+                            {
+                                detail::collider_triangle_mesh_vertex_getter const* const  vertices_getter_ptr =
+                                    m_collision_scene.get_triangle_points_getter(coid)
+                                                     .target<detail::collider_triangle_mesh_vertex_getter>();
+                                std::string const  key =
+                                    boost::filesystem::path(vertices_getter_ptr->get_vertex_buffer().key().get_unique_id())
+                                            .parent_path().string();
+                                auto  it = m_cache_of_batches_of_colliders.triangle_meshes.find(key);
+                                if (it == m_cache_of_batches_of_colliders.triangle_meshes.end())
+                                    it = m_cache_of_batches_of_colliders.triangle_meshes.insert({
+                                                key,
+                                                qtgl::create_triangle_mesh(
+                                                        vertices_getter_ptr->get_vertex_buffer(),
+                                                        vertices_getter_ptr->get_index_buffer(),
+                                                        m_colliders_colour
+                                                        )
+                                                }).first;
+                                batch = it->second;
+                            }
+                            break;
+                        default:
+                            NOT_IMPLEMENTED_YET();
+                        }
                     }
-                    break;
-                case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+                    if (qtgl::make_current(batch, draw_state))
                     {
-                        float_32_bit const  key = m_collision_scene.get_sphere_radius(coid);
-                        auto  it = m_cache_of_batches_of_colliders.spheres.find(key);
-                        if (it == m_cache_of_batches_of_colliders.spheres.end())
-                            it = m_cache_of_batches_of_colliders.spheres.insert({
-                                        key,
-                                        qtgl::create_wireframe_sphere(key, 5U, m_colliders_colour)
-                                        }).first;
-                        batch = it->second;
+                        qtgl::render_batch(
+                                batch,
+                                matrix_from_world_to_camera * node_ptr->get_world_matrix(),
+                                matrix_from_camera_to_clipspace
+                                );
+                        draw_state = batch.get_draw_state();
                     }
-                    break;
-                case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
-                    {
-                        detail::collider_triangle_mesh_vertex_getter const* const  vertices_getter_ptr =
-                            m_collision_scene.get_triangle_points_getter(coid)
-                                             .target<detail::collider_triangle_mesh_vertex_getter>();
-                        std::string const  key =
-                            boost::filesystem::path(vertices_getter_ptr->get_vertex_buffer().key().get_unique_id())
-                                    .parent_path().string();
-                        auto  it = m_cache_of_batches_of_colliders.triangle_meshes.find(key);
-                        if (it == m_cache_of_batches_of_colliders.triangle_meshes.end())
-                            it = m_cache_of_batches_of_colliders.triangle_meshes.insert({
-                                        key,
-                                        qtgl::create_triangle_mesh(
-                                                vertices_getter_ptr->get_vertex_buffer(),
-                                                vertices_getter_ptr->get_index_buffer(),
-                                                m_colliders_colour
-                                                )
-                                        }).first;
-                        batch = it->second;
-                    }
-                    break;
-                default:
-                    NOT_IMPLEMENTED_YET();
                 }
-            }
-            if (qtgl::make_current(batch, draw_state))
-            {
-                qtgl::render_batch(
-                        batch,
-                        matrix_from_world_to_camera * name_node.second->get_world_matrix(),
-                        matrix_from_camera_to_clipspace
-                        );
-                draw_state = batch.get_draw_state();
-            }
-        }
+                return true;
+            },
+        false
+        );
 
     qtgl::glapi().glPolygonMode(GL_FRONT_AND_BACK, backup_polygon_mode[0]);
 }
@@ -1304,23 +1327,23 @@ void  simulator::render_contact_normals(
 }
 
 
-void  simulator::erase_scene_node(scn::scene_node_name const&  name)
+void  simulator::erase_scene_node(scn::scene_node_id const&  id)
 {
     TMPROF_BLOCK();
 
-    auto const  node_ptr = get_scene().get_scene_node(name);
+    auto const  node_ptr = get_scene().get_scene_node(id);
 
     if (scn::has_rigid_body(*node_ptr))
-        erase_rigid_body_from_scene_node(name);
+        erase_rigid_body_from_scene_node(id);
     if (scn::has_collider(*node_ptr))
-        erase_collision_object_from_scene_node(scn::make_collider_record_id(name, get_collider_record_name(*node_ptr)));
+        erase_collision_object_from_scene_node(scn::make_collider_record_id(id, get_collider_record_name(*node_ptr)));
 
-    m_scene_selection.erase_node(name);
-    m_scene_selection.erase_records_of_node(name);
+    m_scene_selection.erase_node(id);
+    m_scene_selection.erase_records_of_node(id);
 
     m_scene_edit_data.invalidate_data();
 
-    get_scene().erase_scene_node(name);
+    get_scene().erase_scene_node(id);
 }
 
 
@@ -1338,11 +1361,11 @@ void  simulator::invalidate_rigid_body_at_node(scn::scene_node_ptr  node_ptr, bo
 {
     TMPROF_BLOCK();
 
-    auto const  invalidation_it = m_invalidated_nodes_of_rigid_bodies.find(node_ptr->get_name());
+    auto const  invalidation_it = m_invalidated_nodes_of_rigid_bodies.find(node_ptr->get_id());
     if (invalidation_it != m_invalidated_nodes_of_rigid_bodies.end())
         invalidation_it->second = invalidation_it->second || collider_change;
     else
-        m_invalidated_nodes_of_rigid_bodies.insert({ node_ptr->get_name(), collider_change });
+        m_invalidated_nodes_of_rigid_bodies.insert({ node_ptr->get_id(), collider_change });
 }
 
 
@@ -1421,25 +1444,25 @@ void  simulator::update_collider_locations_in_subtree(scn::scene_node_ptr  node_
 void  simulator::insert_batch_to_scene_node(
         scn::scene_node::record_name const&  batch_name,
         boost::filesystem::path const&  batch_pathname,
-        scn::scene_node_name const&  scene_node_name
+        scn::scene_node_id const&  id
         )
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(scn::has_node(get_scene(), scene_node_name));
+    ASSUMPTION(scn::has_node(get_scene(), id));
     auto const  batch = qtgl::batch(canonical_path(batch_pathname), get_effects_config());
-    scn::insert_batch(*get_scene_node(scene_node_name), batch_name, batch);
+    scn::insert_batch(*get_scene_node(id), batch_name, batch);
 }
 
 void  simulator::erase_batch_from_scene_node(
         scn::scene_node::record_name const&  batch_name,
-        scn::scene_node_name const&  scene_node_name
+        scn::scene_node_id const&  id
         )
 {
     TMPROF_BLOCK();
 
-    m_scene_selection.erase_record(scn::make_batch_record_id(scene_node_name, batch_name));
-    scn::erase_batch(*get_scene_node(scene_node_name), batch_name);
+    m_scene_selection.erase_record(scn::make_batch_record_id(id, batch_name));
+    scn::erase_batch(*get_scene_node(id), batch_name);
 }
 
 
@@ -1453,7 +1476,7 @@ void  simulator::insert_collision_sphere_to_scene_node(
 {
     TMPROF_BLOCK();
 
-    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_name());
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     angeo::collision_object_id const  collider_id =
             m_collision_scene.insert_sphere(radius, node_ptr->get_world_matrix(), material, as_dynamic);
     scn::insert_collider(*node_ptr, id.get_record_name(), collider_id, density_multiplier);
@@ -1471,7 +1494,7 @@ void  simulator::insert_collision_capsule_to_scene_node(
 {
     TMPROF_BLOCK();
 
-    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_name());
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     angeo::collision_object_id const  collider_id =
             m_collision_scene.insert_capsule(
                     half_distance_between_end_points,
@@ -1494,29 +1517,11 @@ void  simulator::insert_collision_trianle_mesh_to_scene_node(
 {
     TMPROF_BLOCK();
 
-    //ASSUMPTION(vertex_buffer.loaded_successfully() && index_buffer.loaded_successfully());
-    //ASSUMPTION(
-    //        vertex_buffer.num_bytes_per_component() == sizeof(float_32_bit) &&
-    //        vertex_buffer.num_components_per_primitive() == 3U &&
-    //        vertex_buffer.has_integral_components() == false
-    //        );
-    //ASSUMPTION(
-    //        index_buffer.num_bytes_per_component() == sizeof(natural_32_bit) &&
-    //        vertex_buffer.num_components_per_primitive() == 3U &&
-    //        vertex_buffer.has_integral_components() == true
-    //        );
-
-    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_name());
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     std::vector<angeo::collision_object_id>  collider_ids;
     m_collision_scene.insert_triangle_mesh(
             index_buffer.num_primitives(),
             detail::collider_triangle_mesh_vertex_getter(vertex_buffer, index_buffer),
-            //[vertex_buffer, index_buffer](natural_32_bit const  triangle_index, natural_8_bit const  vertex_index) -> vector3 {
-            //        return vector3(
-            //            ((float_32_bit const*)vertex_buffer.data().data())
-            //                + *(((natural_32_bit const*)index_buffer.data().data()) + 3U * triangle_index + vertex_index) 
-            //            );
-            //    },
             node_ptr->get_world_matrix(),
             material,
             false,
@@ -1532,7 +1537,7 @@ void  simulator::erase_collision_object_from_scene_node(
 {
     TMPROF_BLOCK();
 
-    auto const  node_ptr = get_scene_node(id.get_node_name());
+    auto const  node_ptr = get_scene_node(id.get_node_id());
     if (auto const  collider_ptr = scn::get_collider(*node_ptr))
     {
         for (auto  coid : collider_ptr->ids()) {
@@ -1555,7 +1560,7 @@ void  simulator::get_collision_sphere_info(
         bool&  is_dynamic
         )
 {
-    scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_name()));
+    scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_id()));
     ASSUMPTION(collider != nullptr);
     radius = m_collision_scene.get_sphere_radius(collider->id());
     material = m_collision_scene.get_material(collider->id());
@@ -1572,7 +1577,7 @@ void  simulator::get_collision_capsule_info(
         bool&  is_dynamic
         )
 {
-    scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_name()));
+    scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_id()));
     ASSUMPTION(collider != nullptr);
     half_distance_between_end_points = m_collision_scene.get_capsule_half_distance_between_end_points(collider->id());
     thickness_from_central_line = m_collision_scene.get_capsule_thickness_from_central_line(collider->id());
@@ -1590,7 +1595,7 @@ void  simulator::get_collision_triangle_mesh_info(
         float_32_bit&  density_multiplier
         )
 {
-    scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_name()));
+    scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_id()));
     ASSUMPTION(collider != nullptr);
     detail::collider_triangle_mesh_vertex_getter const* const  vertices_getter_ptr =
             m_collision_scene.get_triangle_points_getter(collider->id()).target<detail::collider_triangle_mesh_vertex_getter>();
@@ -1606,12 +1611,12 @@ void  simulator::insert_rigid_body_to_scene_node(
         vector3 const&  angular_velocity,
         vector3 const&  external_linear_acceleration,
         vector3 const&  external_angular_acceleration,
-        scn::scene_node_name const&  scene_node_name
+        scn::scene_node_id const&  id
         )
 {
     TMPROF_BLOCK();
 
-    scn::scene_node_ptr const  node_ptr = get_scene_node(scene_node_name);
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id);
 
     ASSUMPTION(find_nearest_rigid_body_node(node_ptr->get_parent()) == nullptr);
 
@@ -1634,12 +1639,12 @@ void  simulator::insert_rigid_body_to_scene_node(
 }
 
 void  simulator::erase_rigid_body_from_scene_node(
-        scn::scene_node_name const&  scene_node_name
+        scn::scene_node_id const&  id
         )
 {
     TMPROF_BLOCK();
 
-    auto const  node_ptr = get_scene_node(scene_node_name);
+    auto const  node_ptr = get_scene_node(id);
     if (auto const  rb_ptr = scn::get_rigid_body(*node_ptr))
     {
         std::vector<angeo::collision_object_id>  coids;
@@ -1662,7 +1667,7 @@ void  simulator::erase_rigid_body_from_scene_node(
         m_binding_of_rigid_bodies.erase(rb_ptr->id());
         m_static_rigid_body_backups.erase(rb_ptr->id());
 
-        m_scene_selection.erase_record(scn::make_rigid_body_record_id(scene_node_name));
+        m_scene_selection.erase_record(scn::make_rigid_body_record_id(id));
         scn::erase_rigid_body(*node_ptr);
 
         invalidate_rigid_body_controling_node(node_ptr, true);
@@ -1671,14 +1676,14 @@ void  simulator::erase_rigid_body_from_scene_node(
 
 
 void  simulator::get_rigid_body_info(
-        scn::scene_node_name const&  scene_node_name,
+        scn::scene_node_id const&  id,
         vector3&  linear_velocity,
         vector3&  angular_velocity,
         vector3&  external_linear_acceleration,
         vector3&  external_angular_acceleration
         )
 {
-    scn::scene_node_const_ptr const  node_ptr = get_scene_node(scene_node_name);
+    scn::scene_node_const_ptr const  node_ptr = get_scene_node(id);
     scn::rigid_body const* const  rb_ptr = scn::get_rigid_body(*node_ptr);
     ASSUMPTION(rb_ptr != nullptr);
     linear_velocity = m_rigid_body_simulator.get_linear_velocity(rb_ptr->id());
@@ -1688,7 +1693,7 @@ void  simulator::get_rigid_body_info(
 }
 
 
-void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::scene_node_name const&  scene_node_name)
+void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::scene_node_id const&  id)
 {
     std::string const  shape_type = data.get<std::string>("shape_type");
     if (shape_type == "capsule")
@@ -1698,7 +1703,7 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
                 angeo::read_collison_material_from_string(data.get<std::string>("material")),
                 data.get<float_32_bit>("density_multiplier"),
                 data.get<bool>("is_dynamic"),
-                scn::make_collider_record_id(scene_node_name, shape_type)
+                scn::make_collider_record_id(id, shape_type)
                 );
     else if (shape_type == "sphere")
         insert_collision_sphere_to_scene_node(
@@ -1706,7 +1711,7 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
                 angeo::read_collison_material_from_string(data.get<std::string>("material")),
                 data.get<float_32_bit>("density_multiplier"),
                 data.get<bool>("is_dynamic"),
-                scn::make_collider_record_id(scene_node_name, shape_type)
+                scn::make_collider_record_id(id, shape_type)
                 );
     else if (shape_type == "triangle mesh")
     {
@@ -1722,7 +1727,7 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
                 index_buffer,
                 angeo::read_collison_material_from_string(data.get<std::string>("material")),
                 data.get<float_32_bit>("density_multiplier"),
-                scn::make_collider_record_id(scene_node_name, shape_type)
+                scn::make_collider_record_id(id, shape_type)
                 );
     }
     else
@@ -1768,7 +1773,7 @@ void  simulator::save_collider(scn::collider const&  collider, boost::property_t
 
 void  simulator::load_rigid_body(
         boost::property_tree::ptree const&  data,
-        scn::scene_node_name const&  scene_node_name
+        scn::scene_node_id const&  id
         )
 {
     auto const  load_vector = [&data](std::string const&  key) -> vector3 {
@@ -1782,7 +1787,7 @@ void  simulator::load_rigid_body(
             load_vector("angular_velocity"),
             load_vector("external_linear_acceleration"),
             load_vector("external_angular_acceleration"),
-            scene_node_name
+            id
             );
 }
 
@@ -1821,41 +1826,41 @@ void  simulator::clear_scene()
     m_gfx_animated_objects.clear();
 }
 
-void  simulator::translate_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  shift)
+void  simulator::translate_scene_node(scn::scene_node_id const&  id, vector3 const&  shift)
 {
-    auto const  node_ptr = get_scene_node(scene_node_name);
+    auto const  node_ptr = get_scene_node(id);
     node_ptr->translate(shift);
     m_scene_edit_data.invalidate_data();
     on_relocation_of_scene_node(node_ptr);
 }
 
-void  simulator::rotate_scene_node(scn::scene_node_name const&  scene_node_name, quaternion const&  rotation)
+void  simulator::rotate_scene_node(scn::scene_node_id const&  id, quaternion const&  rotation)
 {
-    auto const  node_ptr = get_scene_node(scene_node_name);
+    auto const  node_ptr = get_scene_node(id);
     node_ptr->rotate(rotation);
     m_scene_edit_data.invalidate_data();
     on_relocation_of_scene_node(node_ptr);
 }
 
-void  simulator::set_position_of_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  new_origin)
+void  simulator::set_position_of_scene_node(scn::scene_node_id const&  id, vector3 const&  new_origin)
 {
-    auto const  node_ptr = get_scene_node(scene_node_name);
+    auto const  node_ptr = get_scene_node(id);
     node_ptr->set_origin(new_origin);
     m_scene_edit_data.invalidate_data();
     on_relocation_of_scene_node(node_ptr);
 }
 
-void  simulator::set_orientation_of_scene_node(scn::scene_node_name const&  scene_node_name, quaternion const&  new_orientation)
+void  simulator::set_orientation_of_scene_node(scn::scene_node_id const&  id, quaternion const&  new_orientation)
 {
-    auto const  node_ptr = get_scene_node(scene_node_name);
+    auto const  node_ptr = get_scene_node(id);
     node_ptr->set_orientation(new_orientation);
     m_scene_edit_data.invalidate_data();
     on_relocation_of_scene_node(node_ptr);
 }
 
-void  simulator::relocate_scene_node(scn::scene_node_name const&  scene_node_name, vector3 const&  new_origin, quaternion const&  new_orientation)
+void  simulator::relocate_scene_node(scn::scene_node_id const&  id, vector3 const&  new_origin, quaternion const&  new_orientation)
 {
-    auto const  node_ptr = get_scene_node(scene_node_name);
+    auto const  node_ptr = get_scene_node(id);
     node_ptr->relocate(new_origin, new_orientation);
     m_scene_edit_data.invalidate_data();
     on_relocation_of_scene_node(node_ptr);
@@ -1881,7 +1886,7 @@ void  simulator::on_relocation_of_scene_node(scn::scene_node_ptr const  node_ptr
 
 
 void  simulator::set_scene_selection(
-        std::unordered_set<scn::scene_node_name> const&  selected_scene_nodes,
+        std::unordered_set<scn::scene_node_id> const&  selected_scene_nodes,
         std::unordered_set<scn::scene_record_id> const&  selected_records
         )
 {
@@ -1892,7 +1897,7 @@ void  simulator::set_scene_selection(
 }
 
 void  simulator::insert_to_scene_selection(
-        std::unordered_set<scn::scene_node_name> const&  selected_scene_nodes,
+        std::unordered_set<scn::scene_node_id> const&  selected_scene_nodes,
         std::unordered_set<scn::scene_record_id> const&  selected_records
         )
 {
@@ -1907,7 +1912,7 @@ void  simulator::insert_to_scene_selection(
 }
 
 void  simulator::erase_from_scene_selection(
-        std::unordered_set<scn::scene_node_name> const&  selected_scene_nodes,
+        std::unordered_set<scn::scene_node_id> const&  selected_scene_nodes,
         std::unordered_set<scn::scene_record_id> const&  selected_records
         )
 {
@@ -1922,7 +1927,7 @@ void  simulator::erase_from_scene_selection(
 }
 
 void  simulator::get_scene_selection(
-        std::unordered_set<scn::scene_node_name>&  selected_scene_nodes,
+        std::unordered_set<scn::scene_node_id>&  selected_scene_nodes,
         std::unordered_set<scn::scene_record_id>&  selected_records
         ) const
 {

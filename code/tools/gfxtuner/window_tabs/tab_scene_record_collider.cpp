@@ -328,7 +328,7 @@ void  register_record_handler_for_load_scene_record(
                     w->wnd()->glwindow().call_now(
                             &simulator::load_collider,
                             std::cref(data),
-                            id.get_node_name()
+                            id.get_node_id()
                             );
                     insert_record_to_tree_widget(
                             w->scene_tree(),

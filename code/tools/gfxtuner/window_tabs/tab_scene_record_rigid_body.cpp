@@ -258,7 +258,7 @@ void  register_record_undo_redo_processors(widgets* const  w)
             INVARIANT(history_node.get_id().get_folder_name() == scn::get_rigid_body_folder_name());
             w->wnd()->glwindow().call_now(
                     &simulator::erase_rigid_body_from_scene_node,
-                    std::cref(history_node.get_id().get_node_name())
+                    std::cref(history_node.get_id().get_node_id())
                     );
             remove_record_from_tree_widget(w->scene_tree(), history_node.get_id());
         });
@@ -271,7 +271,7 @@ void  register_record_undo_redo_processors(widgets* const  w)
                     std::cref(history_node.get_props().m_angular_velocity),
                     std::cref(history_node.get_props().m_external_linear_acceleration),
                     std::cref(history_node.get_props().m_external_angular_acceleration),
-                    std::cref(history_node.get_id().get_node_name())
+                    std::cref(history_node.get_id().get_node_id())
                     );
             insert_record_to_tree_widget(
                     w->scene_tree(),
@@ -286,7 +286,7 @@ void  register_record_undo_redo_processors(widgets* const  w)
             INVARIANT(history_node.get_id().get_folder_name() == scn::get_rigid_body_folder_name());
             w->wnd()->glwindow().call_now(
                     &simulator::erase_rigid_body_from_scene_node,
-                    std::cref(history_node.get_id().get_node_name())
+                    std::cref(history_node.get_id().get_node_id())
                     );
             w->wnd()->glwindow().call_now(
                     &simulator::insert_rigid_body_to_scene_node,
@@ -294,7 +294,7 @@ void  register_record_undo_redo_processors(widgets* const  w)
                     std::cref(history_node.get_old_props().m_angular_velocity),
                     std::cref(history_node.get_old_props().m_external_linear_acceleration),
                     std::cref(history_node.get_old_props().m_external_angular_acceleration),
-                    std::cref(history_node.get_id().get_node_name())
+                    std::cref(history_node.get_id().get_node_id())
                     );
         });
     scn::scene_history_rigid_body_update_props::set_redo_processor(
@@ -302,7 +302,7 @@ void  register_record_undo_redo_processors(widgets* const  w)
             INVARIANT(history_node.get_id().get_folder_name() == scn::get_rigid_body_folder_name());
             w->wnd()->glwindow().call_now(
                     &simulator::erase_rigid_body_from_scene_node,
-                    std::cref(history_node.get_id().get_node_name())
+                    std::cref(history_node.get_id().get_node_id())
                     );
             w->wnd()->glwindow().call_now(
                     &simulator::insert_rigid_body_to_scene_node,
@@ -310,7 +310,7 @@ void  register_record_undo_redo_processors(widgets* const  w)
                     std::cref(history_node.get_new_props().m_angular_velocity),
                     std::cref(history_node.get_new_props().m_external_linear_acceleration),
                     std::cref(history_node.get_new_props().m_external_angular_acceleration),
-                    std::cref(history_node.get_id().get_node_name())
+                    std::cref(history_node.get_id().get_node_id())
                     );
         });
 }
@@ -353,7 +353,7 @@ void  register_record_handler_for_insert_scene_record(
                                             std::cref(rb_props->m_angular_velocity),
                                             std::cref(rb_props->m_external_linear_acceleration),
                                             std::cref(rb_props->m_external_angular_acceleration),
-                                            std::cref(record_id.get_node_name())
+                                            std::cref(record_id.get_node_id())
                                             );
                                     w->get_scene_history()->insert<scn::scene_history_rigid_body_insert>(record_id, *rb_props, false);
                                 }
@@ -374,7 +374,7 @@ void  register_record_handler_for_update_scene_record(
                     scn::rigid_body_props  rb_props;
                     w->wnd()->glwindow().call_now(
                             &simulator::get_rigid_body_info,
-                            std::cref(record_id.get_node_name()),
+                            std::cref(record_id.get_node_id()),
                             std::ref(rb_props.m_linear_velocity),
                             std::ref(rb_props.m_angular_velocity),
                             std::ref(rb_props.m_external_linear_acceleration),
@@ -388,7 +388,7 @@ void  register_record_handler_for_update_scene_record(
                     w->get_scene_history()->insert<scn::scene_history_rigid_body_update_props>(record_id, rb_old_props, rb_props, false);
                     w->wnd()->glwindow().call_now(
                             &simulator::erase_rigid_body_from_scene_node,
-                            std::cref(record_id.get_node_name())
+                            std::cref(record_id.get_node_id())
                             );
                     w->wnd()->glwindow().call_now(
                             &simulator::insert_rigid_body_to_scene_node,
@@ -396,7 +396,7 @@ void  register_record_handler_for_update_scene_record(
                             std::cref(rb_props.m_angular_velocity),
                             std::cref(rb_props.m_external_linear_acceleration),
                             std::cref(rb_props.m_external_angular_acceleration),
-                            std::cref(record_id.get_node_name())
+                            std::cref(record_id.get_node_id())
                             );
                 }
             });
@@ -414,7 +414,7 @@ void  register_record_handler_for_duplicate_scene_record(
                     scn::rigid_body_props  rb_props;
                     w->wnd()->glwindow().call_now(
                             &simulator::get_rigid_body_info,
-                            std::cref(src_record_id.get_node_name()),
+                            std::cref(src_record_id.get_node_id()),
                             std::ref(rb_props.m_linear_velocity),
                             std::ref(rb_props.m_angular_velocity),
                             std::ref(rb_props.m_external_linear_acceleration),
@@ -426,7 +426,7 @@ void  register_record_handler_for_duplicate_scene_record(
                             std::cref(rb_props.m_angular_velocity),
                             std::cref(rb_props.m_external_linear_acceleration),
                             std::cref(rb_props.m_external_angular_acceleration),
-                            std::cref(dst_record_id.get_node_name())
+                            std::cref(dst_record_id.get_node_id())
                             );
                     w->get_scene_history()->insert<scn::scene_history_rigid_body_insert>(dst_record_id, rb_props, false);
                 }
@@ -445,7 +445,7 @@ void  register_record_handler_for_erase_scene_record(
                     scn::rigid_body_props  props;
                     w->wnd()->glwindow().call_now(
                             &simulator::get_rigid_body_info,
-                            id.get_node_name(),
+                            id.get_node_id(),
                             std::ref(props.m_linear_velocity),
                             std::ref(props.m_angular_velocity),
                             std::ref(props.m_external_linear_acceleration),
@@ -454,7 +454,7 @@ void  register_record_handler_for_erase_scene_record(
                     w->get_scene_history()->insert<scn::scene_history_rigid_body_insert>(id, props, true);
                     w->wnd()->glwindow().call_now(
                             &simulator::erase_rigid_body_from_scene_node,
-                            std::cref(id.get_node_name())
+                            std::cref(id.get_node_id())
                             );
                 }
             });
@@ -474,7 +474,7 @@ void  register_record_handler_for_load_scene_record(
                     w->wnd()->glwindow().call_now(
                             &simulator::load_rigid_body,
                             std::cref(data),
-                            std::cref(id.get_node_name())
+                            std::cref(id.get_node_id())
                             );
                     insert_record_to_tree_widget(
                             w->scene_tree(),

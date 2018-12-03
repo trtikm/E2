@@ -113,13 +113,13 @@ inline bool  represents_record(QTreeWidgetItem const* const  item)
 
 
 tree_widget_item*  find_nearest_coord_system_item(
-        tree_widget_item*  tree_item,
+        tree_widget_item const*  tree_item,
         std::function<void(std::string const&)> const&  names_acceptor = [](std::string const&) {}
         );
 
 
 inline tree_widget_item*  find_nearest_coord_system_item(
-        QTreeWidgetItem*  tree_item,
+        QTreeWidgetItem const*  tree_item,
         std::function<void(std::string const&)> const&  names_acceptor = [](std::string const&) {}
         )
 {
