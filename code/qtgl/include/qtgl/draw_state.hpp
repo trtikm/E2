@@ -4,6 +4,7 @@
 #   include <qtgl/glapi.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <utility/async_resource_load.hpp>
+#   include <boost/property_tree/ptree.hpp>
 #   include <memory>
 #   include <string>
 
@@ -103,6 +104,9 @@ private:
             natural_32_bit const  cull_face_mode
             );
 };
+
+
+draw_state  create_draw_state(boost::property_tree::ptree const&  props);
 
 
 bool  make_current(draw_state const&  state);

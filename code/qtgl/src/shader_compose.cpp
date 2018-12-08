@@ -135,7 +135,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                 {
                 case SHADER_DATA_INPUT_TYPE::UNIFORM:
                     {
-                        if (resources.skeletal().empty())
+                        if (resources.skeletal() == nullptr)
                         {
                             vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                 "#version 420",
@@ -203,7 +203,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                     }
                     else
                     {
-                        if (resources.skeletal().empty())
+                        if (resources.skeletal() == nullptr)
                         {
                             vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                 "#version 420",
@@ -321,7 +321,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                     }
                     else
                     {
-                        if (resources.skeletal().empty())
+                        if (resources.skeletal() == nullptr)
                         {
                             vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                 "#version 420",
@@ -441,7 +441,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                     {
                                     case SHADER_DATA_INPUT_TYPE::UNIFORM:
                                         {
-                                            if (resources.skeletal().empty())
+                                            if (resources.skeletal() == nullptr)
                                             {
                                                 vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                                     "#version 420",
@@ -535,7 +535,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                         }
                                         else
                                         {
-                                            if (resources.skeletal().empty())
+                                            if (resources.skeletal() == nullptr)
                                             {
                                                 vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                                     "#version 420",
@@ -680,7 +680,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                         }
                                         else
                                         {
-                                            if (resources.skeletal().empty())
+                                            if (resources.skeletal() == nullptr)
                                             {
                                                 vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                                     "#version 420",
@@ -842,7 +842,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                         }
                                         else
                                         {
-                                            if (resources.skeletal().empty())
+                                            if (resources.skeletal() == nullptr)
                                             {
                                                 vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                                     "#version 420",

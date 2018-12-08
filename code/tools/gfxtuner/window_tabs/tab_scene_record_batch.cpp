@@ -72,26 +72,35 @@ void  register_record_handler_for_insert_scene_record(
                     -> std::pair<std::string, std::function<void(scn::scene_record_id const&)>> {
                     boost::filesystem::path const&  root_dir =
                             canonical_path(boost::filesystem::absolute(
-                                boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "meshes"
+                                boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "batches"
                                 ));
                     QFileDialog  dialog(w->wnd());
                     dialog.setDirectory(root_dir.string().c_str());
-                    dialog.setFileMode(QFileDialog::DirectoryOnly);
+                    dialog.setFileMode(QFileDialog::ExistingFile);
                     if (!dialog.exec())
                         return {"", {}};
                     QStringList const  selected = dialog.selectedFiles();
                     if (selected.size() != 1)
                     {
-                        w->wnd()->print_status_message("ERROR: Exactly one folder must be selected/provided.", 10000);
+                        w->wnd()->print_status_message("ERROR: Exactly one file must be provided.", 10000);
                         return {"", {}};
                     }
                     boost::filesystem::path const  pathname = qtgl::to_string(selected.front());
-                    boost::filesystem::path const  batch_dir = pathname.parent_path().filename();
-                    boost::filesystem::path  batch_name = pathname.filename();
-                    if (batch_name.has_extension())
-                        batch_name.replace_extension("");
+                    std::string  batch_name;
+                    {
+                        std::string const  batch_dir = pathname.parent_path().filename().string();
+                        if (batch_dir != "batches")
+                        {
+                            batch_name.append(batch_dir);
+                            batch_name.push_back('/');
+                        }
+                        boost::filesystem::path  batch_file_name = pathname.filename();
+                        if (batch_file_name.has_extension())
+                            batch_file_name.replace_extension("");
+                        batch_name.append(batch_file_name.string());
+                    }
                     return {
-                        batch_dir.string() + "/" + batch_name.string(),
+                        batch_name,
                         [pathname, w](scn::scene_record_id const&  record_id) -> void {
                                 w->wnd()->glwindow().call_now(
                                         &simulator::insert_batch_to_scene_node,

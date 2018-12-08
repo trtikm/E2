@@ -1,2 +1,0 @@
-0
-textures\ship\ship_diffuse.txt

@@ -23,8 +23,7 @@ struct batch_data
     batch_data(
             async::finalise_load_on_destroy_ptr const  finaliser,
             boost::filesystem::path const&  path,
-            effects_config const&  effects,
-            std::string const&  skeleton_name
+            effects_config const&  effects
             );
 
     batch_data(
@@ -78,7 +77,6 @@ private:
 
     void  load(
             effects_config const&  effects,
-            std::string const&  skeleton_name,
             async::finalise_load_on_destroy_ptr const  finaliser
             );
 
@@ -115,15 +113,13 @@ struct batch : public async::resource_accessor<detail::batch_data>
 
     batch(  boost::filesystem::path const&  path,
             effects_config const&  effects,
-            std::string const&  skeleton_name = "",
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::batch_data>(
             {"qtgl::batch", path.string()},
             parent_finaliser,
             path,
-            effects,
-            skeleton_name
+            effects
             )
     {}
 

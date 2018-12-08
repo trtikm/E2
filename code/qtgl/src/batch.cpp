@@ -24,15 +24,14 @@ namespace qtgl { namespace detail {
 batch_data::batch_data(
         async::finalise_load_on_destroy_ptr const  finaliser,
         boost::filesystem::path const&  path,
-        effects_config const&  effects,
-        std::string const&  skeleton_name
+        effects_config const&  effects
         )
 {
     TMPROF_BLOCK();
 
     async::finalise_load_on_destroy_ptr const  available_resources_finaliser =
         async::finalise_load_on_destroy::create(
-                std::bind(&batch_data::load, this, effects, skeleton_name, std::placeholders::_1),
+                std::bind(&batch_data::load, this, effects, std::placeholders::_1),
                 finaliser
                 );
     m_available_resources.insert_load_request(path.string(), available_resources_finaliser);
@@ -117,31 +116,12 @@ batch_data::~batch_data()
 
 void  batch_data::load(
         effects_config const&  effects,
-        std::string const&  skeleton_name,
         async::finalise_load_on_destroy_ptr const  finaliser
         )
 {
     TMPROF_BLOCK();
 
     ASSUMPTION(get_available_resources().loaded_successfully());
-
-    batch_available_resources::skeletal_dictionary_type::const_iterator  skeletal_info =
-        get_available_resources().skeletal().cend();
-    if (skeleton_name.empty() && !get_available_resources().skeletal().empty())
-    {
-        if (get_available_resources().skeletal().size() != 1UL)
-            throw std::runtime_error(
-                    msgstream() << "Passed empty skeleton name to batch '"
-                                << get_available_resources().root_dir()
-                                << "' associated with multiple skeletons.");
-        skeletal_info = get_available_resources().skeletal().cbegin();
-    }
-    else
-        for (auto  skeletal_info = get_available_resources().skeletal().cbegin();
-                skeletal_info != get_available_resources().skeletal().cend();
-                ++skeletal_info)
-            if (boost::filesystem::path(skeletal_info->first).filename().string() == skeleton_name)
-                break;
 
     std::vector<std::string>  vs_source;
     std::string  vs_uid;
@@ -205,12 +185,10 @@ void  batch_data::load(
             buffer_paths.insert({ location, get_available_resources().buffers().at(location) });
             break;
         case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INDICES_OF_MATRICES:
-            INVARIANT(skeletal_info != get_available_resources().skeletal().cend());
-            buffer_paths.insert({location, skeletal_info->second.indices()});
+            buffer_paths.insert({location, get_available_resources().skeletal()->indices()});
             break;
         case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_WEIGHTS_OF_MATRICES:
-            INVARIANT(skeletal_info != get_available_resources().skeletal().cend());
-            buffer_paths.insert({location, skeletal_info->second.weights()});
+            buffer_paths.insert({location, get_available_resources().skeletal()->weights()});
             break;
         case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0:
         case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD1:
@@ -240,12 +218,26 @@ void  batch_data::load(
     }
 
     initialise(
-        buffers_binding(
-            get_available_resources().index_buffer(),
-            buffer_paths,
-            get_available_resources().root_dir(),
-            finaliser
-            ),
+        get_available_resources().has_index_buffer() ?
+            buffers_binding(
+                (boost::filesystem::path(get_available_resources().data_root_dir())
+                    / get_available_resources().mesh_path()
+                    / "indices.txt"
+                    ).string(),
+                buffer_paths,
+                (boost::filesystem::path(get_available_resources().data_root_dir())
+                    / get_available_resources().mesh_path()
+                    ).string(),
+                finaliser
+                ):
+            buffers_binding(
+                get_available_resources().num_indices_per_primitive(),
+                buffer_paths,
+                (boost::filesystem::path(get_available_resources().data_root_dir())
+                    / get_available_resources().mesh_path()
+                    ).string(),
+                finaliser
+                ),
         shaders_binding{
             vertex_shader(vs_input, vs_output, vs_uniforms, vs_source, vs_uid, finaliser),
             fragment_shader(fs_input, fs_output, fs_uniforms, fs_source, fs_uid, finaliser),
@@ -253,13 +245,19 @@ void  batch_data::load(
             finaliser
             },
         textures_binding(texture_paths, "", finaliser),
-        draw_state(get_available_resources().draw_state_file(), finaliser),
-        skeletal_info == get_available_resources().skeletal().cend() ?
+        get_available_resources().get_draw_state(),
+        get_available_resources().skeletal() == nullptr ?
             modelspace() :
-            modelspace(boost::filesystem::path(skeletal_info->first) / "pose.txt", finaliser),
-        skeletal_info == get_available_resources().skeletal().cend() ?
+            modelspace(
+                boost::filesystem::path(get_available_resources().data_root_dir())
+                    / "animations"
+                    / "skeletal"
+                    / get_available_resources().skeletal()->skeleton_name()
+                    / "pose.txt",
+                finaliser),
+        get_available_resources().skeletal() == nullptr ?
             skeleton_alignment() :
-            skeleton_alignment(skeletal_info->second.alignment(), finaliser),
+            skeleton_alignment(get_available_resources().skeletal()->alignment(), finaliser),
         get_available_resources()
         );
 }

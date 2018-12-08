@@ -2,6 +2,7 @@
 #   define QTGL_BATCH_AVAILABLE_RESOURCES_HPP_INCLUDED
 
 #   include <qtgl/shader_data_bindings.hpp>
+#   include <qtgl/draw_state.hpp>
 #   include <utility/async_resource_load.hpp>
 #   include <string>
 #   include <unordered_map>
@@ -57,33 +58,30 @@ struct  batch_available_resources_data  final
     struct  skeletal_info
     {
         skeletal_info(
-                std::string const&  alignment_,     // Pathname of the spatial alignment file.
-                std::string const&  indices_,       // Pathname of the indices of matrices file.
-                std::string const&  weights_        // Pathname of the weights of matrices file.
+                std::string const&  skeleton_name_, // Name of the skeleton the files below correspond to.
+                std::string const&  alignment_,     // Full path-name of the spatial alignment file.
+                std::string const&  indices_,       // Full path-name of the indices of matrices file.
+                std::string const&  weights_        // Full path-name of the weights of matrices file.
                 )
-            : m_alignment(alignment_)
+            : m_skeleton_name(skeleton_name_)
+            , m_alignment(alignment_)
             , m_indices(indices_)
             , m_weights(weights_)
         {}
 
+        std::string const&  skeleton_name() const { return m_skeleton_name; }
         std::string const&  alignment() const { return m_alignment; }
         std::string const&  indices() const { return m_indices; }
         std::string const&  weights() const { return  m_weights; }
 
     private:
+        std::string  m_skeleton_name;
         std::string  m_alignment;
         std::string  m_indices;
         std::string  m_weights;
     };
 
-    using  skeletal_dictionary_type =
-                std::unordered_map<
-                    std::string,
-                        // A full pathname of a directory under which is a skeleton and its animations.
-                        // Typically, the directory is of the form '<some-path>/animation/skeletal/<skeleton-name>'.
-                    skeletal_info
-                        // Holds pathnames of files containing batch-specific data related to the skeleton above.
-                    >;
+    using  skeletal_info_const_ptr = std::shared_ptr<skeletal_info const>;
 
     enum struct SHADER_PROGRAM_TYPE : natural_32_bit
     {
@@ -98,35 +96,30 @@ struct  batch_available_resources_data  final
             , m_alpha_test_constant(0.0f)
             , m_lighting_algo_location(SHADER_PROGRAM_TYPE::VERTEX)
             , m_fog_algo_location(SHADER_PROGRAM_TYPE::VERTEX)
-            , m_effects_file()
         {}
 
         shaders_effects_config_type(
                 bool const  use_alpha_testing,
                 float_32_bit const  alpha_test_constant,
                 SHADER_PROGRAM_TYPE  lighting_algo_location,
-                SHADER_PROGRAM_TYPE  fog_algo_location,
-                std::string const&  effects_file
+                SHADER_PROGRAM_TYPE  fog_algo_location
                 )
             : m_use_alpha_testing(use_alpha_testing)
             , m_alpha_test_constant(alpha_test_constant)
             , m_lighting_algo_location(lighting_algo_location)
             , m_fog_algo_location(fog_algo_location)
-            , m_effects_file(effects_file)
         {}
 
         bool  use_alpha_testing() const { return m_use_alpha_testing; }
         float_32_bit  alpha_test_constant() const { return m_alpha_test_constant; }
         SHADER_PROGRAM_TYPE  lighting_algo_location() const { return m_lighting_algo_location; }
         SHADER_PROGRAM_TYPE  fog_algo_location() const { return m_fog_algo_location; }
-        std::string const&  effects_file() const { return m_effects_file; }
 
     private:
         bool  m_use_alpha_testing;
         float_32_bit  m_alpha_test_constant;
         SHADER_PROGRAM_TYPE  m_lighting_algo_location;
         SHADER_PROGRAM_TYPE  m_fog_algo_location;
-        std::string  m_effects_file;
     };
 
     batch_available_resources_data(async::finalise_load_on_destroy_ptr const  finaliser);
@@ -135,28 +128,36 @@ struct  batch_available_resources_data  final
             async::finalise_load_on_destroy_ptr,
             buffers_dictionaty_type const&  buffers_,
             textures_dictionary_type const&  textures_,
-            skeletal_dictionary_type const&  skeletal_,
-            std::string const&  index_buffer,
-            std::string const&  draw_state_file,
+            skeletal_info_const_ptr const&  skeletal_,
+            std::string const&  batch_pathname_,
+            std::string const&  data_root_dir_,
+            std::string const&  mesh_path_,
+            natural_8_bit const  num_indices_per_primitive_,
+            draw_state const  draw_state_,
             shaders_effects_config_type const&  shaders_effects_config_
             );
 
     buffers_dictionaty_type const&  buffers() const { return m_buffers; }
     textures_dictionary_type const&  textures() const { return m_textures; }
-    skeletal_dictionary_type const&  skeletal() const { return m_skeletal; }
-    std::string const&  index_buffer() const { return m_index_buffer; }
-    std::string const&  get_root_dir() const { return m_root_dir; }
-    std::string const&  draw_state_file() const { return m_draw_state_file; }
+    skeletal_info_const_ptr const&  skeletal() const { return m_skeletal; }
+    std::string const&  batch_pathname() const { return m_batch_pathname; }
+    std::string const&  data_root_dir() const { return m_data_root_dir; }
+    std::string const&  mesh_path() const { return m_mesh_path; }
+    natural_8_bit  num_indices_per_primitive() const { return m_num_indices_per_primitive; }
+    bool  has_index_buffer() const { return m_num_indices_per_primitive == 0U; }
+    draw_state  get_draw_state() const { return m_draw_state; }
     shaders_effects_config_type const&  shaders_effects_config() const { return m_shaders_effects_config; }
 
 private:
 
     buffers_dictionaty_type  m_buffers;
     textures_dictionary_type  m_textures;
-    skeletal_dictionary_type  m_skeletal;
-    std::string  m_index_buffer;
-    std::string  m_root_dir;
-    std::string  m_draw_state_file;
+    skeletal_info_const_ptr  m_skeletal;
+    std::string  m_batch_pathname;  // Full path-name
+    std::string  m_data_root_dir;   // Full path-name 
+    std::string  m_mesh_path;       // A path-name relative to m_data_root_dir
+    natural_8_bit  m_num_indices_per_primitive;  // 0 (index buffer), 1 (points), 2 (lines), or 3 (triangles)
+    draw_state  m_draw_state;
     shaders_effects_config_type  m_shaders_effects_config;
 };
 
@@ -171,7 +172,7 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
     using  buffers_dictionaty_type = detail::batch_available_resources_data::buffers_dictionaty_type;
     using  textures_dictionary_type = detail::batch_available_resources_data::textures_dictionary_type;
     using  skeletal_info = detail::batch_available_resources_data::skeletal_info;
-    using  skeletal_dictionary_type = detail::batch_available_resources_data::skeletal_dictionary_type;
+    using  skeletal_info_const_ptr = detail::batch_available_resources_data::skeletal_info_const_ptr;
     using  SHADER_PROGRAM_TYPE = detail::batch_available_resources_data::SHADER_PROGRAM_TYPE;
     using  shaders_effects_config_type = detail::batch_available_resources_data::shaders_effects_config_type;
 
@@ -203,9 +204,12 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
     batch_available_resources(
             buffers_dictionaty_type const&  buffers_,
             textures_dictionary_type const&  textures_,
-            skeletal_dictionary_type const&  skeletal_,
-            std::string const&  index_buffer,
-            std::string const&  draw_state_file,
+            skeletal_info_const_ptr const&  skeletal_,
+            std::string const&  batch_pathname_,
+            std::string const&  data_root_dir_,
+            std::string const&  mesh_path_,
+            natural_8_bit const  num_indices_per_primitive_,
+            draw_state const  draw_state_,
             shaders_effects_config_type const&  shaders_effects_config_,
             std::string const&  key = "",
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
@@ -217,8 +221,11 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
                 buffers_,
                 textures_,
                 skeletal_,
-                index_buffer,
-                draw_state_file,
+                batch_pathname_,
+                data_root_dir_,
+                mesh_path_,
+                num_indices_per_primitive_,
+                draw_state_,
                 shaders_effects_config_
                 )
     {}
@@ -251,19 +258,25 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
                         }
                         return result;
                     }(),
-                skeletal_dictionary_type{},
+                skeletal_info_const_ptr{},
                 std::string(),
                 std::string(),
+                std::string(),
+                0U,
+                draw_state(),
                 shaders_effects_config_type()
                 )
     {}
 
     buffers_dictionaty_type const&  buffers() const { return resource().buffers(); }
     textures_dictionary_type const&  textures() const { return resource().textures(); }
-    skeletal_dictionary_type const&  skeletal() const { return resource().skeletal(); }
-    std::string const&  index_buffer() const { return resource().index_buffer(); }
-    std::string const&  root_dir() const { return resource().get_root_dir(); }
-    std::string const&  draw_state_file() const { return resource().draw_state_file(); }
+    skeletal_info_const_ptr const&  skeletal() const { return resource().skeletal(); }
+    std::string const&  batch_pathname() const { return resource().batch_pathname(); }
+    std::string const&  data_root_dir() const { return resource().data_root_dir(); }
+    std::string const&  mesh_path() const { return resource().mesh_path(); }
+    natural_8_bit  num_indices_per_primitive() const { return resource().num_indices_per_primitive(); }
+    bool  has_index_buffer() const { return resource().has_index_buffer(); }
+    draw_state  get_draw_state() const { return resource().get_draw_state(); }
     shaders_effects_config_type const&  shaders_effects_config() const { return resource().shaders_effects_config(); }
 };
 

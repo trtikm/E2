@@ -557,7 +557,7 @@ void  simulator::on_simulation_resumed()
                 for (auto const& name_holder : scn::get_batch_holders(*node_ptr))
                 {
                     qtgl::batch const  batch = scn::as_batch(name_holder.second);
-                    if (batch.ready() && batch.get_available_resources().skeletal().size() == 1UL)
+                    if (batch.ready() && batch.get_available_resources().skeletal() != nullptr)
                     {
                         scn::scene_record_id const  key = scn::make_batch_record_id(node_ptr->get_id(), name_holder.first);
                         if (m_gfx_animated_objects.count(key) == 0UL)

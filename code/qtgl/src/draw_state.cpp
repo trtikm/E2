@@ -79,6 +79,23 @@ std::unordered_map<std::string, natural_32_bit> const&  get_map_from_cull_mode_n
 }
 
 
+natural_32_bit  read_property(
+        boost::property_tree::ptree const&  props,
+        std::string const&  name,
+        std::unordered_map<std::string, natural_32_bit> const&  map
+        )
+{
+    try
+    {
+        return map.at(props.get<std::string>(name));
+    }
+    catch (...)
+    {
+        throw std::runtime_error(msgstream() << "Missing or invalid value for required key '" << name << "'.");
+    }
+};
+
+
 }
 
 namespace qtgl { namespace detail {
@@ -100,28 +117,12 @@ draw_state_data::draw_state_data(async::finalise_load_on_destroy_ptr const  fina
     boost::property_tree::ptree draw_state_ptree;
     boost::property_tree::read_info(pathname.string(), draw_state_ptree);
 
-    auto const  read_property =
-        [&draw_state_ptree](
-                std::string const&  name,
-                std::unordered_map<std::string, natural_32_bit> const&  map
-                ) -> natural_32_bit
-        {
-            try
-            {
-                return map.at(draw_state_ptree.get<std::string>(name));
-            }
-            catch(...)
-            {
-                throw std::runtime_error(msgstream() << "Missing or invalid value for required key '" << name << "'.");
-            }
-    };
-
     m_use_alpha_blending = draw_state_ptree.get("use_alpha_blending", false);
     m_alpha_blending_src_function = 
-        read_property("alpha_blending_src_function", get_map_from_alpha_blending_function_names_to_gl_values());
+        read_property(draw_state_ptree, "alpha_blending_src_function", get_map_from_alpha_blending_function_names_to_gl_values());
     m_alpha_blending_dst_function =
-        read_property("alpha_blending_dst_function", get_map_from_alpha_blending_function_names_to_gl_values());
-    m_cull_face_mode = read_property("cull_face_mode", get_map_from_cull_mode_names_to_gl_values());
+        read_property(draw_state_ptree, "alpha_blending_dst_function", get_map_from_alpha_blending_function_names_to_gl_values());
+    m_cull_face_mode = read_property(draw_state_ptree, "cull_face_mode", get_map_from_cull_mode_names_to_gl_values());
 }
 
 
@@ -143,6 +144,17 @@ std::string  draw_state::compute_generic_unique_id(
         << ", BLEND_DST_FUNC=" << get_map_from_alpha_blending_functions_to_names().at(alpha_blending_dst_function)
         << ", CULL=" << get_map_from_cull_modes_to_names().at(cull_face_mode)
         ;
+}
+
+
+draw_state  create_draw_state(boost::property_tree::ptree const&  props)
+{
+    return{
+        nullptr,
+        props.get("use_alpha_blending", false),
+        read_property(props, "alpha_blending_src_function", get_map_from_alpha_blending_function_names_to_gl_values()),
+        read_property(props, "alpha_blending_dst_function", get_map_from_alpha_blending_function_names_to_gl_values())
+        };
 }
 
 

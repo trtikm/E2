@@ -17,9 +17,13 @@ gfx_animated_object::gfx_animated_object(qtgl::batch const  batch_)
 
     ASSUMPTION(get_batch().ready());
 
-    ASSUMPTION(get_batch().get_available_resources().skeletal().size() == 1UL);
+    ASSUMPTION(get_batch().get_available_resources().skeletal() != nullptr);
     boost::filesystem::path  anim_root_dir =
-        canonical_path(get_batch().get_available_resources().skeletal().cbegin()->first);
+        canonical_path(get_batch().get_available_resources().data_root_dir())
+            / "animations"
+            / "skeletal"
+            / get_batch().get_available_resources().skeletal()->skeleton_name()
+            ;
     for (boost::filesystem::directory_entry& entry : boost::filesystem::directory_iterator(anim_root_dir))
         if (boost::filesystem::is_directory(entry.path()))
             m_animation_names.push_back(entry.path().string());

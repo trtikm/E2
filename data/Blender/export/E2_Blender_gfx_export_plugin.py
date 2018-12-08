@@ -76,6 +76,19 @@ def get_number_precision_string():
     return ".6f"
 
 
+def disk_path_to_string(disk_path):
+    parts = []
+    while len(disk_path) > 0:
+        disk_path, part = os.path.split(disk_path)
+        if len(part) > 0:
+            parts.append(part)
+    parts.reverse()
+    result = "/".join(parts)
+    if " " in result:
+        result = "\"" + result + "\""
+    return result
+
+
 def float_to_string(number):
     assert isinstance(number, float)
     return format(number, get_number_precision_string())
@@ -574,7 +587,7 @@ class render_buffers:
             if vector3_length(tangent) < 0.001:
                 print("WARNING: The main algorithm for tangent space computation has FAILED at point:")
                 print("         " + str(elem.vertex_coords()))
-                print("         Generation a randomly chosen tangent space at that point.")
+                print("         => Generating a randomly chosen tangent space at that point.")
                 tangent = vector3_perpendicular(vector3_any_linear_independent(elem.normal_coords()), elem.normal_coords())
             tangent = vector3_normalised(tangent)
             bitangent = vector3_cross(elem.normal_coords(), tangent)
@@ -750,10 +763,9 @@ def save_render_buffers(
 
         buffers_export_info = export_info["render_buffers"][-1]
 
-        buffers_root_dir = os.path.join(mesh_root_dir, "buffers")
+        buffers_root_dir = mesh_root_dir
         os.makedirs(buffers_root_dir, exist_ok=True)
 
-        buffers_export_info["root_dir"] = buffers_root_dir
         buffers_export_info["mesh_root_dir"] = mesh_root_dir
 
         buffers_export_info["index_buffer"] = os.path.join(buffers_root_dir, "indices.txt")
@@ -856,7 +868,7 @@ def save_render_buffers(
         if buffers.num_weights_of_matrices_per_vertex() > 0:
             assert armature_name is not None and isinstance(armature_name, str) and len(armature_name) > 0
 
-            skeletal_root_dir = os.path.join(mesh_root_dir, "skeletal", armature_name)
+            skeletal_root_dir = os.path.join(mesh_root_dir, "skeletal")
             os.makedirs(skeletal_root_dir, exist_ok=True)
 
             buffers_export_info["skeletal_root_dir"] = skeletal_root_dir
@@ -900,31 +912,24 @@ def save_mesh_spatial_alignment_to_armature(
             f.write(float_to_string(orientation[i]) + "\n")
 
 
-def save_mesh_links_to_textures(
+def compute_mesh_links_to_textures(
         mtl_index,              # Index of material for which the links should be generated.
         buffers_export_info,    # A dictionary holding properties related to the buffers export.
         export_info             # A dictionary holding properties related to the export.
         ):
-    texture_links_output_dir = os.path.join(buffers_export_info["mesh_root_dir"], "textures")
-
     texture_file_name = ["diffuse", "specular", "normal"]
     if len(buffers_export_info["texcoord_buffers"]) > len(texture_file_name):
         print("WARNING: The mesh uses too many texture coordinates. So, only first " + str(len(texture_file_name)) +
               "will be used.")
-    buffers_export_info["texture_links"] = []
+    buffers_export_info["texture_links"] = {}
     for tex_idx in range(len(texture_file_name)):
         key = (mtl_index, texture_file_name[tex_idx])
         if key not in export_info["textures"]:
             continue
-        buffers_export_info["texture_links"].append(
-            os.path.join(texture_links_output_dir, texture_file_name[tex_idx] + ".txt")
-            )
-        os.makedirs(texture_links_output_dir, exist_ok=True)
-        with open(buffers_export_info["texture_links"][-1], "w") as f:
-            print("Saving texture link: " +
-                  os.path.relpath(buffers_export_info["texture_links"][-1], export_info["root_dir"]))
-            f.write(str(tex_idx if tex_idx < len(buffers_export_info["texcoord_buffers"]) else 0) + "\n")
-            f.write(os.path.relpath(export_info["textures"][key], export_info["root_dir"]) + "\n")
+        buffers_export_info["texture_links"][texture_file_name[tex_idx]] = [
+                tex_idx if tex_idx < len(buffers_export_info["texcoord_buffers"]) else 0,
+                os.path.relpath(export_info["textures"][key], export_info["root_dir"])
+                ]
 
 
 def save_textures(
@@ -1162,27 +1167,56 @@ def save_keyframe_coord_systems_of_bones(
             frame_idx += 1
 
 
-def save_draw_state_file(export_info, buffers_index):
-    buffers_export_info = export_info["render_buffers"][buffers_index]
-    with open(os.path.join(buffers_export_info["mesh_root_dir"], "draw_state.txt"), "w") as ofile:
-        ofile.write(
-            "use_alpha_blending              false\n"
-            "alpha_blending_src_function     SRC_ALPHA\n"
-            "alpha_blending_dst_function     ONE_MINUS_CONSTANT_ALPHA\n"
-            "cull_face_mode                  BACK\n"
-            )
+def save_batch(
+        material_name,  # Material name of that part of the exported mash having the material.
+        armature_name,  # Name of the armature deforming the mesh. It can be None (when no armature exists).
+        export_info,    # A dictionary holding properties related to the export.
+        mtl_index       # Index of material for which the links should be generated.
+        ):
+    assert material_name is None or (isinstance(material_name, str) and len(material_name) > 0)
 
-
-def save_effects_file(export_info, buffers_index):
-    buffers_export_info = export_info["render_buffers"][buffers_index]
-    with open(os.path.join(buffers_export_info["mesh_root_dir"], "effects.txt"), "w") as ofile:
-        ofile.write(
-            "use_alpha_testing               false\n"
-            "alpha_test_constant             0.0\n"
-            "lighting_algo_location          fragment_program\n"
-            "fog_algo_location               vertex_program\n"
-            )
-
+    with TimeProf.instance().start("save_batch"):
+        buffers_export_info = export_info["render_buffers"][mtl_index]
+        if material_name is None:
+            batch_pathname = os.path.join(export_info["root_dir"], "batches", export_info["mesh_name"] + ".txt")
+        else:
+            batch_pathname = os.path.join(export_info["root_dir"], "batches", export_info["mesh_name"], material_name + ".txt")
+        print("Saving batch file: " + os.path.relpath(batch_pathname, export_info["root_dir"]))
+        os.makedirs(os.path.dirname(batch_pathname), exist_ok=True)
+        with open(batch_pathname, "w") as ofile:
+            ofile.write("mesh " + disk_path_to_string(os.path.relpath(buffers_export_info["mesh_root_dir"], export_info["root_dir"])) + "\n")
+            if armature_name is not None:
+                ofile.write("skeleton " + armature_name + "\n")
+            if "texture_links" in buffers_export_info:
+                ofile.write("textures\n{\n")
+                for texture_type in buffers_export_info["texture_links"]:
+                    texture_info = buffers_export_info["texture_links"][texture_type]
+                    ofile.write(
+                        "    " + texture_type + "\n"
+                        "    {\n"
+                        "        texcoord_index " + str(texture_info[0]) + "\n"
+                        "        pathname " + disk_path_to_string(texture_info[1]) + "\n"
+                        "    }\n"
+                        )
+                ofile.write("}\n")
+            ofile.write(
+                "draw_state\n"
+                "{\n"
+                "   use_alpha_blending              false\n"
+                "   alpha_blending_src_function     SRC_ALPHA\n"
+                "   alpha_blending_dst_function     ONE_MINUS_CONSTANT_ALPHA\n"
+                "   cull_face_mode                  BACK\n"
+                "}\n"
+                )
+            ofile.write(
+                "effects\n"
+                "{\n"
+                "   use_alpha_testing               false\n"
+                "   alpha_test_constant             0.0\n"
+                "   lighting_algo_location          fragment_program\n"
+                "   fog_algo_location               vertex_program\n"
+                "}\n"
+                )
 
 
 def export_object_mesh(
@@ -1240,25 +1274,22 @@ def export_object_mesh(
         for idx in range(len(buffers_list)):
             if len(buffers_list) > 1:
                 if mesh.materials[idx] is not None:
-                    print("--- Exporting a batch for material '" + mesh.materials[idx].name  + "' ---")
+                    print("--- Exporting a batch for material '" + mesh.materials[idx].name + "' ---")
                 else:
                     print("--- WARNING: Skipping export of a batch for material #" + str(idx) + ", because the material is None.")
                     continue
-            save_render_buffers(
-                buffers_list[idx],
-                remove_ignored_part_of_name(mesh.materials[idx].name, "BUFFERS")
-                    if len(buffers_list) > 1 and mesh.materials[idx] is not None else None,
-                remove_ignored_part_of_name(armature.name, "BUFFERS") if armature is not None else None,
-                export_info
-                )
-            buffers_export_info = export_info["render_buffers"][-1]
+            material_name = remove_ignored_part_of_name(mesh.materials[idx].name, "BUFFERS")\
+                            if len(buffers_list) > 1 and mesh.materials[idx] is not None else None
+            armature_name = remove_ignored_part_of_name(armature.name, "BUFFERS") if armature is not None else None
+
+            save_render_buffers(buffers_list[idx], material_name, armature_name, export_info)
+            buffers_export_info = export_info["render_buffers"][idx]
             if armature is not None:
                 save_mesh_spatial_alignment_to_armature(obj, buffers_export_info, export_info["root_dir"])
             if buffers_list[idx].num_texture_coords() > 0:
-                save_mesh_links_to_textures(idx, buffers_export_info, export_info)
+                compute_mesh_links_to_textures(idx, buffers_export_info, export_info)
 
-            save_draw_state_file(export_info, idx)
-            save_effects_file(export_info, idx)
+            save_batch(material_name, armature_name, export_info, idx)
 
 
 def export_object_armature(
