@@ -295,12 +295,14 @@ void  make_menu_bar_content(menu_bar const&  w)
     w.get_menu_edit()->addAction(w.get_edit_action_duplicate_selected());
     w.get_edit_action_duplicate_selected()->setShortcut(QString("Ctrl+D"));
     w.get_edit_action_duplicate_selected()->setToolTip(
-        "Duplicates a selected coordinate systems node in the scene, including all its folders, records, and child\n"
+        "Duplicates a selected coordinate system nodes in the scene, including all its folders, records, and child\n"
         "nodes recursively (if any). The '@pivot' coordinate system cannot be duplicated. You will be asked how many\n"
         "copies of the selected node to create. The i-th copy will be placed at the position 'origin(selected_node) +\n"
         "i * (origin(@pivot) - origin(selected_node)). All copies will have the same orientation as '@pivot'.\n"
         "If the selected node has a parent, then all duplicate nodes will have the same parent. Otherwise, duplicate\n"
-        "nodes will be without a parent too."
+        "nodes will be without a parent too. If exactly one coordinate system node is selected for duplication, then\n"
+        "you are also asked for the name of the duplicated node. In case of multiple nodes are selected, then each\n"
+        "duplicated node has the name of the source node suffixed by a unique number."
         );
     QObject::connect(w.get_edit_action_duplicate_selected(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_duplicate_selected);
 
