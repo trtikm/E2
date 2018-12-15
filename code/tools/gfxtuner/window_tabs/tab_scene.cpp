@@ -932,61 +932,50 @@ void  widgets::on_scene_duplicate_selected()
         wnd()->print_status_message("ERROR: Scene editing is disabled.", 10000);
         return;
     }
+
     QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
-    if (old_selection.size() != 1)
+    std::unordered_map<QTreeWidgetItem const*, scn::scene_node_const_ptr>  source_nodes;
+    vector3  world_source_origin = vector3_zero();
     {
-        wnd()->print_status_message("ERROR: Not exactly 1 coordinate system node is selected.", 10000);
-        return;
+        if (old_selection.size() == 0)
+        {
+            wnd()->print_status_message("ERROR: No coordinate system node is selected for duplicaation.", 10000);
+            return;
+        }
+
+        std::unordered_set<QTreeWidgetItem const*>  selection;
+        for (QTreeWidgetItem const*  item_ptr : old_selection)
+            selection.insert(item_ptr);
+
+        for (QTreeWidgetItem const* item_ptr : old_selection)
+        {
+            if (!represents_coord_system(item_ptr))
+            {
+                wnd()->print_status_message("ERROR: A selected scene object to duplicate is NOT a coordinate system.", 10000);
+                return;
+            }
+            scn::scene_node_id const  item_id = scene_record_id_reverse_builder::run(item_ptr).get_node_id();
+            if (scene_record_id_reverse_builder::run(item_ptr).get_node_id() == scn::get_pivot_node_id())
+            {
+                wnd()->print_status_message("ERROR: Cannot duplicate '@pivot' coordinate system.", 10000);
+                return;
+            }
+            for (QTreeWidgetItem const* ptr = item_ptr->parent(); ptr != nullptr; ptr = ptr->parent())
+                if (selection.count(ptr) != 0UL)
+                {
+                    wnd()->print_status_message("ERROR: Sub-trees of selected coord. systems overlap.", 10000);
+                    return;
+                }
+            scn::scene_node_const_ptr const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, item_id);
+            source_nodes.insert({ item_ptr, node_ptr });
+            world_source_origin += translation_vector(node_ptr->get_world_matrix());
+        }
+        world_source_origin /= source_nodes.size();
     }
-    tree_widget_item* const  source_item = as_tree_widget_item(old_selection.front());
-    scn::scene_node_id const  source_item_id = scene_record_id_reverse_builder::run(source_item).get_node_id();
-    if (source_item_id == scn::get_pivot_node_id())
-    {
-        wnd()->print_status_message("ERROR: Cannot duplicate '@pivot' coordinate system.", 10000);
-        return;
-    }
-    if (!represents_coord_system(source_item))
-    {
-        wnd()->print_status_message("ERROR: The selected scene object to duplicate is NOT a coordinate system.", 10000);
-        return;
-    }
-
-    std::string const  source_item_name = get_tree_widget_item_name(source_item); // TODO: use the choose name dialog instead.
-
-    QTreeWidgetItem*  parent_tree_item = source_item->parent();
-    scn::scene_node_id const  parent_item_id = source_item_id.get_direct_parent_id();
-
-    natural_64_bit  old_counter;
-    scn::scene_node_id  duplicate_item_id;
-    std::string  name;
-    do
-    {
-        name = msgstream() << source_item_name << g_new_coord_system_id_counter;
-        duplicate_item_id = parent_item_id / name;
-        old_counter = g_new_coord_system_id_counter;
-        ++g_new_coord_system_id_counter;
-    }
-    while (wnd()->glwindow().call_now(&simulator::get_scene_node, duplicate_item_id) != nullptr);
-    insert_name_dialog  dlg(wnd(), name,
-        [this, &parent_item_id](std::string const&  name) {
-        return wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) == nullptr;
-    });
-    dlg.exec();
-    name = dlg.get_name();
-    if (name.empty())
-        return;
-
-    scn::scene_node_const_ptr const  source_node = wnd()->glwindow().call_now(&simulator::get_scene_node, source_item_id);
-
-    scn::scene_node_const_ptr const  parent_node =
-        (parent_tree_item == nullptr) ? nullptr : wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id);
 
     scn::scene_node_ptr const  pivot = wnd()->glwindow().call_now(&simulator::get_scene_node, scn::get_pivot_node_id());
-    vector3  pivot_origin = pivot->get_coord_system()->origin();
-    quaternion  pivot_orientation = pivot->get_coord_system()->orientation();
-    if (parent_node != nullptr)
-        transform_origin_and_orientation_from_world_to_scene_node(parent_node, pivot_origin, pivot_orientation);
-    vector3 const  origin_shift = pivot_origin - source_node->get_coord_system()->origin();
+    vector3 const  world_pivot_origin = pivot->get_coord_system()->origin();
+    quaternion const  world_pivot_orientation = pivot->get_coord_system()->orientation();
 
     natural_32_bit const  num_copies = 1U; // TODO: open a dialog where a user may insert a number of copies to create.
 
@@ -1000,31 +989,76 @@ void  widgets::on_scene_duplicate_selected()
             std::unordered_set<scn::scene_record_id>()
             );
 
-    for (natural_32_bit  i = 0U; i != num_copies; ++i)
+    for (auto const&  item_and_source_node : source_nodes)
     {
-        if (i != 0U)
-            do
-            {
-                name = msgstream() << source_item_name << g_new_coord_system_id_counter;
-                ++g_new_coord_system_id_counter;
-            }
-            while (wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) != nullptr);
+        QTreeWidgetItem const* const  source_item = item_and_source_node.first;
+        scn::scene_node_const_ptr const  source_node = item_and_source_node.second;
+        
+        QTreeWidgetItem*  parent_tree_item = source_item->parent();
+        scn::scene_node_const_ptr const  parent_node = source_node->has_parent() ? source_node->get_parent() : nullptr;
+        scn::scene_node_id const  parent_item_id = source_node->get_id().get_direct_parent_id();
 
-        vector3 const  shifted_origin = source_node->get_coord_system()->origin() + (float_32_bit)(i + 1U) * origin_shift;
-        auto const  tree_item = insert_coord_system(parent_item_id / name, shifted_origin, pivot_orientation, parent_tree_item);
-        get_scene_history()->insert<scn::scene_history_coord_system_insert>(
-                parent_item_id / name,
-                shifted_origin,
-                pivot_orientation,
-                false
-                );
-        duplicate_subtree(source_item, tree_item);
+        INVARIANT((parent_tree_item == nullptr) == (parent_node == nullptr));
 
-        std::unordered_set<scn::scene_node_id>  selected_scene_nodes{ parent_item_id / name };
-        std::unordered_set<scn::scene_record_id>  selected_records;
-        m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_records));
+        natural_64_bit  counter = 0UL;
+        std::string  base_name;
+        do
+        {
+            base_name = msgstream() << source_node->get_name() << '#' << counter;
+            ++counter;
+        }
+        while (wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / base_name) != nullptr);
 
-        add_tree_item_to_selection(tree_item);
+        if (source_nodes.size() == 1UL)
+        {
+            insert_name_dialog  dlg(wnd(), base_name,
+                [this, &parent_item_id](std::string const&  name) {
+                return wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) == nullptr;
+            });
+            dlg.exec();
+            base_name = dlg.get_name();
+            if (base_name.empty())
+                return;
+        }
+
+        vector3  pivot_origin = world_pivot_origin;
+        quaternion  pivot_orientation = world_pivot_orientation;
+        vector3  source_origin = world_source_origin;
+        if (parent_node != nullptr)
+        {
+            matrix44 const  to_parent_space = inverse44(parent_node->get_world_matrix());
+            scn::transform_origin_and_orientation(to_parent_space, pivot_origin, pivot_orientation);
+            source_origin = transform_point(world_source_origin, to_parent_space);
+        }
+        vector3 const  origin_shift = pivot_origin - source_origin;
+
+        for (natural_32_bit  i = 0U; i != num_copies; ++i)
+        {
+            std::string  name = base_name;
+            if (i != 0U)
+                do
+                {
+                    name = msgstream() << base_name << '#' << counter;
+                    ++counter;
+                }
+                while (wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) != nullptr);
+
+            vector3 const  shifted_origin = source_node->get_coord_system()->origin() + (float_32_bit)(i + 1U) * origin_shift;
+            auto const  tree_item = insert_coord_system(parent_item_id / name, shifted_origin, pivot_orientation, parent_tree_item);
+            get_scene_history()->insert<scn::scene_history_coord_system_insert>(
+                    parent_item_id / name,
+                    shifted_origin,
+                    pivot_orientation,
+                    false
+                    );
+            duplicate_subtree(source_item, tree_item);
+
+            std::unordered_set<scn::scene_node_id>  selected_scene_nodes{ parent_item_id / name };
+            std::unordered_set<scn::scene_record_id>  selected_records;
+            m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_records));
+
+            add_tree_item_to_selection(tree_item);
+        }
     }
 
     update_history_according_to_change_in_selection(old_selection, m_scene_tree->selectedItems(), get_scene_history(), false);
