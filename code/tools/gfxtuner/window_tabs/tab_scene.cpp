@@ -32,6 +32,7 @@
 #include <QIntValidator>
 #include <QDoubleValidator>
 #include <QFileDialog>
+#include <locale>
 
 namespace window_tabs { namespace tab_scene {
 
@@ -990,6 +991,34 @@ void  widgets::on_scene_duplicate_selected()
             std::unordered_set<scn::scene_record_id>()
             );
 
+    auto const choose_name =
+        [this](std::string const&  orig_name, scn::scene_node_id const&  parent_item_id) -> std::string {
+            natural_64_bit  counter = 1UL;
+            std::string  base = orig_name;
+            {
+                std::string  counter_text;
+                while (!base.empty() && std::isdigit(base.back(), std::locale::classic()))
+                {
+                    counter_text.push_back(base.back());
+                    base.pop_back();
+                }
+                if (!base.empty() && base.back() != '_' && base.back() != '#')
+                    base.push_back('_');
+                if (!counter_text.empty())
+                {
+                    std::reverse(counter_text.begin(), counter_text.end());
+                    counter = std::atol(counter_text.c_str());
+                }
+            }
+            std::string  name;
+            do
+            {
+                name = msgstream() << base << counter;
+                ++counter;
+            } while (wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) != nullptr);
+            return name;
+        };
+
     for (auto const&  item_and_source_node : source_nodes)
     {
         QTreeWidgetItem const* const  source_item = item_and_source_node.first;
@@ -1001,14 +1030,7 @@ void  widgets::on_scene_duplicate_selected()
 
         INVARIANT((parent_tree_item == nullptr) == (parent_node == nullptr));
 
-        natural_64_bit  counter = 0UL;
-        std::string  base_name;
-        do
-        {
-            base_name = msgstream() << source_node->get_name() << '#' << counter;
-            ++counter;
-        }
-        while (wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / base_name) != nullptr);
+        std::string  base_name = choose_name(source_node->get_name(), parent_item_id);
 
         if (source_nodes.size() == 1UL)
         {
@@ -1016,7 +1038,8 @@ void  widgets::on_scene_duplicate_selected()
                 [this, &parent_item_id](std::string const&  name) {
                 return wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) == nullptr;
             });
-            dlg.exec();
+            if (dlg.exec() == 0)
+                return;
             base_name = dlg.get_name();
             if (base_name.empty())
                 return;
@@ -1035,14 +1058,7 @@ void  widgets::on_scene_duplicate_selected()
 
         for (natural_32_bit  i = 0U; i != num_copies; ++i)
         {
-            std::string  name = base_name;
-            if (i != 0U)
-                do
-                {
-                    name = msgstream() << base_name << '#' << counter;
-                    ++counter;
-                }
-                while (wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) != nullptr);
+            std::string const  name = i == 0U ? base_name : choose_name(base_name, parent_item_id);
 
             vector3 const  shifted_origin = source_node->get_coord_system()->origin() + (float_32_bit)(i + 1U) * origin_shift;
             auto const  tree_item = insert_coord_system(parent_item_id / name, shifted_origin, pivot_orientation, parent_tree_item);
