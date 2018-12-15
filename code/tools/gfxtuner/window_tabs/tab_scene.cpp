@@ -1,6 +1,7 @@
 #include <gfxtuner/window_tabs/tab_scene.hpp>
 #include <gfxtuner/window_tabs/tab_scene_bool_lock.hpp>
 #include <gfxtuner/window_tabs/tab_scene_insert_name_dialog.hpp>
+#include <gfxtuner/window_tabs/tab_scene_insert_number_dialog.hpp>
 #include <gfxtuner/window_tabs/tab_scene_record_id_reverse_builder.hpp>
 #include <gfxtuner/window_tabs/tab_scene_records_integration.hpp>
 #include <gfxtuner/window_tabs/tab_scene_tree_widget.hpp>
@@ -977,10 +978,10 @@ void  widgets::on_scene_duplicate_selected()
     vector3 const  world_pivot_origin = pivot->get_coord_system()->origin();
     quaternion const  world_pivot_orientation = pivot->get_coord_system()->orientation();
 
-    natural_32_bit const  num_copies = 1U; // TODO: open a dialog where a user may insert a number of copies to create.
-
-    if (num_copies == 0U)
+    insert_number_dialog  dlg(wnd(), "Duplications count", 1, 1, 10000, true);
+    if (dlg.exec() == 0)
         return;
+    natural_32_bit const  num_copies = (natural_32_bit)dlg.get_value();
 
     m_scene_tree->clearSelection();
     wnd()->glwindow().call_now(
