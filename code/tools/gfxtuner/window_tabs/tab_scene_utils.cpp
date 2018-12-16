@@ -8,11 +8,13 @@
 namespace window_tabs { namespace tab_scene {
 
 
-bool  correspond(scn::scene_node_id  id, QTreeWidgetItem const*  tree_item)
+bool  correspond(scn::scene_node_id  id, tree_widget_item const*  tree_item)
 {
+    TMPROF_BLOCK();
+
     if (!id.valid() || tree_item == nullptr)
         return false;
-    for ( ; id.valid(); id = id.get_direct_parent_id(), tree_item = tree_item->parent())
+    for ( ; id.valid(); id = id.get_direct_parent_id(), tree_item = as_tree_widget_item(tree_item->parent()))
         if (tree_item == nullptr ||
             !represents_coord_system(tree_item) ||
             get_tree_widget_item_name(tree_item) != id.path_last_element()
@@ -24,20 +26,81 @@ bool  correspond(scn::scene_node_id  id, QTreeWidgetItem const*  tree_item)
 
 
 void  find_all_coord_system_widgets(
-        QTreeWidget* const  scene_tree,
+        tree_widget* const  scene_tree,
         scn::scene_node_id const&  node_id,
         std::vector<tree_widget_item*>&  output
         )
 {
     TMPROF_BLOCK();
 
+    //{
+    //    TMPROF_BLOCK();
+    //    scene_tree->findItems(QString(node_id.path_last_element().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0);
+    //}
+    //{
+    //    TMPROF_BLOCK();
+    //    int k = 0;
+    //    QTreeWidgetItem* item = nullptr;
+    //    for (int k = 0; k != node_id.path().size(); ++k)
+    //    {
+    //        if (k == 0)
+    //        {
+    //            TMPROF_BLOCK();
+    //            QTreeWidgetItem* item_ptr = nullptr;
+    //            for (int i = 0; i != scene_tree->topLevelItemCount(); ++i)
+    //            {
+    //                TMPROF_BLOCK();
+    //                if (QString(node_id.path().at(k).c_str()) == scene_tree->topLevelItem(i)->text(0))
+    //                {
+    //                    item_ptr = scene_tree->topLevelItem(i);
+    //                    break;
+    //                }
+    //            }
+    //            if (item_ptr == nullptr)
+    //            {
+    //                item = nullptr;
+    //                break;
+    //            }
+    //            item = item_ptr;
+    //        }
+    //        else
+    //        {
+    //            TMPROF_BLOCK();
+    //            QTreeWidgetItem* item_ptr = nullptr;
+    //            for (int i = 0, n = item->childCount(); i != n; ++i)
+    //            {
+    //                TMPROF_BLOCK();
+    //                if (QString(node_id.path().at(k).c_str()) == item->child(i)->text(0))
+    //                {
+    //                    item_ptr = item->child(i);
+    //                    break;
+    //                }
+    //            }
+    //            if (item_ptr == nullptr)
+    //            {
+    //                item = nullptr;
+    //                break;
+    //            }
+    //            item = item_ptr;
+    //        }
+    //    }
+    //    if (item != nullptr)
+    //        output.push_back(as_tree_widget_item(item));
+    //}
+
     for (auto item_ptr : scene_tree->findItems(QString(node_id.path_last_element().c_str()), Qt::MatchFlag::MatchExactly | Qt::MatchFlag::MatchRecursive, 0))
-        if (correspond(node_id, item_ptr))
+        if (correspond(node_id, as_tree_widget_item(item_ptr)))
             output.push_back(as_tree_widget_item(item_ptr));
 }
 
 
-void  remove_record_from_tree_widget(QTreeWidget* const  scene_tree, scn::scene_record_id const&  record_id)
+//tree_widget_item*  find_coord_system_widget(tree_widget* const  scene_tree, scn::scene_node_id const&  node_id)
+//{
+//    TMPROF_BLOCK();
+//}
+
+
+void  remove_record_from_tree_widget(tree_widget* const  scene_tree, scn::scene_record_id const&  record_id)
 {
     TMPROF_BLOCK();
 
@@ -67,15 +130,9 @@ void  remove_record_from_tree_widget(QTreeWidget* const  scene_tree, scn::scene_
                 if (record_name == record_id.get_record_name())
                 {
                     ASSUMPTION(!record_item->isSelected());
-                    auto  taken_item = folder_item->takeChild(j);
-                    INVARIANT(taken_item == record_item); (void)taken_item;
-                    delete taken_item;
+                    scene_tree->erase(record_item);
                     if (folder_item->childCount() == 0)
-                    {
-                        taken_item = coord_system_item->takeChild(i);
-                        INVARIANT(taken_item == folder_item); (void)taken_item;
-                        delete taken_item;
-                    }
+                        scene_tree->erase(folder_item);
                     return;
                 }
             }
@@ -86,32 +143,24 @@ void  remove_record_from_tree_widget(QTreeWidget* const  scene_tree, scn::scene_
 }
 
 
-QTreeWidgetItem*  insert_coord_system_to_tree_widget(
-        QTreeWidget* const  scene_tree,
+tree_widget_item*  insert_coord_system_to_tree_widget(
+        tree_widget* const  scene_tree,
         scn::scene_node_id const&  id,
         vector3 const&  origin,
         quaternion const&  orientation,
         QIcon const&  icon,
-        QTreeWidgetItem* const  parent_tree_item
+        tree_widget_item* const  parent_tree_item
         )
 {
     TMPROF_BLOCK();
 
     ASSUMPTION(parent_tree_item == nullptr || correspond(id.get_direct_parent_id(), parent_tree_item));
-
-    std::unique_ptr<tree_widget_item>  tree_node(new tree_widget_item(true));
-    tree_node->setText(0, QString(id.path_last_element().c_str()));
-    tree_node->setIcon(0, icon);
-    if (parent_tree_item == nullptr)
-        scene_tree->addTopLevelItem(tree_node.get());
-    else
-        parent_tree_item->addChild(tree_node.get());
-    return tree_node.release();
+    return scene_tree->insert(id.path_last_element(), icon, true, parent_tree_item);
 }
 
 
 tree_widget_item*  insert_record_to_tree_widget(
-        QTreeWidget* const  scene_tree,
+        tree_widget* const  scene_tree,
         scn::scene_record_id const&  record_id,
         QIcon const&  icon,
         QIcon const&  folder_icon
@@ -170,23 +219,14 @@ tree_widget_item*  insert_record_to_tree_widget(
     }
     if (folder_item == nullptr)
     {
-        std::unique_ptr<tree_widget_item>  tree_node(new tree_widget_item(false));
-        tree_node->setText(0, QString(record_id.get_folder_name().c_str()));
-        tree_node->setIcon(0, folder_icon);
-        folder_item = tree_node.release();
-        coord_system_item->addChild(folder_item);
+        folder_item = scene_tree->insert(record_id.get_folder_name(), folder_icon, false, coord_system_item);
         INVARIANT(folder_item->isSelected() == false);
     }
-    std::unique_ptr<tree_widget_item>  tree_node(new tree_widget_item(false));
-    tree_node->setText(0, QString(record_id.get_record_name().c_str()));
-    tree_node->setIcon(0, icon);
-    folder_item->addChild(tree_node.get());
-    INVARIANT(tree_node->isSelected() == false);
-    return tree_node.release();
+    return scene_tree->insert(record_id.get_record_name(), icon, false, folder_item);
 }
 
 
-tree_widget_item*  get_active_coord_system_item_in_tree_widget(QTreeWidget const&  tree_widget)
+tree_widget_item*  get_active_coord_system_item_in_tree_widget(tree_widget const&  tree_widget)
 {
     TMPROF_BLOCK();
 
@@ -206,7 +246,7 @@ tree_widget_item*  get_active_coord_system_item_in_tree_widget(QTreeWidget const
 }
 
 
-bool  is_active_coord_system_in_tree_widget(QTreeWidget const&  tree_widget, scn::scene_node_id const&  id)
+bool  is_active_coord_system_in_tree_widget(tree_widget const&  tree_widget, scn::scene_node_id const&  id)
 {
     TMPROF_BLOCK();
 

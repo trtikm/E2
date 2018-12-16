@@ -3,6 +3,7 @@
 
 #   include <qtgl/gui_utils.hpp>
 #   include <QTreeWidget>
+#   include <QIcon>
 #   include <functional>
 #   include <string>
 #   include <QtGui>
@@ -10,37 +11,7 @@
 namespace window_tabs { namespace tab_scene {
 
 
-struct tree_widget : public QTreeWidget {
-private:
-    Q_OBJECT
-public:
-    tree_widget(
-            std::function<void()> const&  on_selection_changed,
-            std::function<void(QTreeWidgetItem*)> const&  on_item_double_clicked
-            )
-        : QTreeWidget()
-        , m_on_selection_changed(on_selection_changed)
-        , m_on_item_double_clicked(on_item_double_clicked)
-    {
-        connect(this, SIGNAL(itemSelectionChanged()), this, SLOT(on_selection_changed()));
-        connect(this, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), this, SLOT(on_item_double_clicked(QTreeWidgetItem*, int)));
-    }
-public slots:
-
-    void on_selection_changed()
-    {
-        m_on_selection_changed();
-    }
-
-    void on_item_double_clicked(QTreeWidgetItem* item, int )
-    {
-        m_on_item_double_clicked(item);
-    }
-
-private:
-    std::function<void()>  m_on_selection_changed;
-    std::function<void(QTreeWidgetItem*)>  m_on_item_double_clicked;
-};
+struct tree_widget;
 
 
 struct  tree_widget_item : public QTreeWidgetItem
@@ -53,6 +24,10 @@ struct  tree_widget_item : public QTreeWidgetItem
     bool  represents_coord_system() const { return m_represents_coord_system; }
 
 private:
+    friend struct tree_widget;
+
+    using QTreeWidgetItem::addChild;
+    using QTreeWidgetItem::takeChild;
 
     bool  m_represents_coord_system;
 };
@@ -68,6 +43,46 @@ inline tree_widget_item const*  as_tree_widget_item(QTreeWidgetItem const* const
 {
     return  dynamic_cast<tree_widget_item const*>(tree_item);
 }
+
+
+struct tree_widget : public QTreeWidget {
+private:
+    Q_OBJECT
+public:
+    tree_widget(
+            std::function<void()> const&  on_selection_changed,
+            std::function<void(tree_widget_item*)> const&  on_item_double_clicked_
+            )
+        : QTreeWidget()
+        , m_on_selection_changed(on_selection_changed)
+        , m_on_item_double_clicked(on_item_double_clicked_)
+    {
+        connect(this, SIGNAL(itemSelectionChanged()), this, SLOT(on_selection_changed()));
+        connect(this, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), this, SLOT(on_item_double_clicked(QTreeWidgetItem*, int)));
+    }
+
+    tree_widget_item*  insert(std::string const&  text, QIcon const&  icon, bool const  represents_coord_system, tree_widget_item* const  parent_tree_item);
+    void  erase(tree_widget_item* const  item_ptr);
+
+public slots:
+
+    void on_selection_changed()
+    {
+        m_on_selection_changed();
+    }
+
+    void on_item_double_clicked(QTreeWidgetItem* item, int )
+    {
+        m_on_item_double_clicked(as_tree_widget_item(item));
+    }
+
+private:
+    using QTreeWidget::addTopLevelItem;
+    using QTreeWidget::takeTopLevelItem;
+
+    std::function<void()>  m_on_selection_changed;
+    std::function<void(tree_widget_item*)>  m_on_item_double_clicked;
+};
 
 
 inline std::string  get_tree_widget_item_name(QTreeWidgetItem const* const  tree_item)

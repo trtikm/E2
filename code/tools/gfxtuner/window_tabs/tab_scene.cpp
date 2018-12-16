@@ -4,7 +4,6 @@
 #include <gfxtuner/window_tabs/tab_scene_insert_number_dialog.hpp>
 #include <gfxtuner/window_tabs/tab_scene_record_id_reverse_builder.hpp>
 #include <gfxtuner/window_tabs/tab_scene_records_integration.hpp>
-#include <gfxtuner/window_tabs/tab_scene_tree_widget.hpp>
 #include <gfxtuner/window_tabs/tab_scene_utils.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
@@ -191,15 +190,7 @@ widgets::widgets(program_window* const  wnd)
             ASSUMPTION(items_list.size() == 1UL);
             tree_widget_item* const  tree_item = as_tree_widget_item(items_list.front());
             ASSUMPTION(!tree_item->isSelected());
-            ASSUMPTION(represents_coord_system(tree_item));
-            ASSUMPTION(correspond(history_node.get_id(), tree_item));
-            m_wnd->glwindow().call_now(&simulator::erase_scene_node, history_node.get_id());
-            auto const  taken_item = tree_item->parent() != nullptr ?
-                tree_item->parent()->takeChild(tree_item->parent()->indexOfChild(tree_item)) :
-                m_scene_tree->takeTopLevelItem(m_scene_tree->indexOfTopLevelItem(tree_item))
-                ;
-            INVARIANT(taken_item == tree_item); (void)taken_item;
-            delete tree_item;
+            erase_coord_system(history_node.get_id(), tree_item);
         });
     scn::scene_history_coord_system_insert::set_redo_processor(
         [this](scn::scene_history_coord_system_insert const& history_node) {
@@ -363,7 +354,7 @@ widgets::widgets(program_window* const  wnd)
 }
 
 
-void  widgets::add_tree_item_to_selection(QTreeWidgetItem* const  item)
+void  widgets::add_tree_item_to_selection(tree_widget_item* const  item)
 {
     m_scene_tree->setItemSelected(item, true);
     m_scene_tree->scrollToItem(item);
@@ -446,7 +437,7 @@ void  widgets::on_scene_hierarchy_item_selected()
     wnd()->set_focus_to_glwindow(false);
 }
 
-void  widgets::on_scene_hierarchy_item_update_action(QTreeWidgetItem* const  item)
+void  widgets::on_scene_hierarchy_item_update_action(tree_widget_item* const  item)
 {
     if (!represents_record(item))
         return;
@@ -542,15 +533,23 @@ void  widgets::selection_changed_listener()
 }
 
 
-QTreeWidgetItem*  widgets::insert_coord_system(
+tree_widget_item*  widgets::insert_coord_system(
             scn::scene_node_id const&  id,
             vector3 const&  origin,
             quaternion const&  orientation,
-            QTreeWidgetItem* const  parent_tree_item
+            tree_widget_item* const  parent_tree_item
             )
 {
     wnd()->glwindow().call_now(&simulator::insert_scene_node_at, id, origin, orientation);
     return insert_coord_system_to_tree_widget(m_scene_tree, id, origin, orientation, m_node_icon, parent_tree_item);
+}
+
+void  widgets::erase_coord_system(scn::scene_node_id const&  id, tree_widget_item* const  tree_item)
+{
+    ASSUMPTION(represents_coord_system(tree_item));
+    ASSUMPTION(correspond(id, tree_item));
+    m_wnd->glwindow().call_now(&simulator::erase_scene_node, id);
+    m_scene_tree->erase(tree_item);
 }
 
 void  widgets::on_scene_insert_coord_system()
@@ -565,7 +564,7 @@ void  widgets::on_scene_insert_coord_system()
     }
 
     bool  use_pivot = false;
-    QTreeWidgetItem*  parent_tree_item = nullptr;
+    tree_widget_item*  parent_tree_item = nullptr;
     foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
     {
         tree_widget_item*  tree_item = as_tree_widget_item(item);
@@ -777,7 +776,7 @@ void  widgets::on_scene_erase_selected()
         return;
     }
 
-    std::unordered_set<QTreeWidgetItem*>  to_erase_items;
+    std::unordered_set<tree_widget_item*>  to_erase_items;
     foreach(QTreeWidgetItem* const  item, m_scene_tree->selectedItems())
     {
         if (scene_record_id_reverse_builder::run(item).get_node_id() == scn::get_pivot_node_id())
@@ -785,10 +784,10 @@ void  widgets::on_scene_erase_selected()
             wnd()->print_status_message("ERROR: Cannot erase '@pivot' coordinate system.", 10000);
             return;
         }
-        to_erase_items.insert(item);
+        to_erase_items.insert(as_tree_widget_item(item));
     }
 
-    std::unordered_set<QTreeWidgetItem*>  erased_items;
+    std::unordered_set<void*>  erased_items;
     for (auto const  item : to_erase_items)
         if (erased_items.count(item) == 0UL)
             erase_subtree_at_root_item(item, erased_items);
@@ -806,15 +805,15 @@ void  widgets::erase_scene_record(scn::scene_record_id const&  id)
     m_erase_record_handlers.at(id.get_folder_name())(this, id);
 }
 
-void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std::unordered_set<QTreeWidgetItem*>&  erased_items, bool const  is_root)
+void  widgets::erase_subtree_at_root_item(tree_widget_item* const  root_item, std::unordered_set<void*>&  erased_items, bool const  is_root)
 {
     tree_widget_item* const  item = as_tree_widget_item(root_item);
     INVARIANT(item != nullptr);
-    QTreeWidgetItem*  folder_item = nullptr;
+    tree_widget_item*  folder_item = nullptr;
     if (item->represents_coord_system())
     {
         while (item->childCount() > 0)
-            erase_subtree_at_root_item(item->child(0), erased_items, false);
+            erase_subtree_at_root_item(as_tree_widget_item(item->child(0)), erased_items, false);
 
         scn::scene_node_id const  coord_system_id = scene_record_id_reverse_builder::run(item).get_node_id();
 
@@ -837,7 +836,7 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
     else if (represents_folder(item))
     {
         while (item->childCount() > 0)
-            erase_subtree_at_root_item(item->child(0), erased_items, false);
+            erase_subtree_at_root_item(as_tree_widget_item(item->child(0)), erased_items, false);
     }
     else
     {
@@ -852,32 +851,25 @@ void  widgets::erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std
 
         erase_scene_record(id);
 
-        folder_item = item->parent();
+        folder_item = as_tree_widget_item(item->parent());
         INVARIANT(represents_folder(folder_item));
     }
 
-    auto const  taken_item = item->parent() != nullptr ?
-        item->parent()->takeChild(item->parent()->indexOfChild(item)) :
-        m_scene_tree->takeTopLevelItem(m_scene_tree->indexOfTopLevelItem(item))
-        ;
-    INVARIANT(taken_item == item); (void)taken_item;
-    delete taken_item;
-    erased_items.insert(taken_item);
+    m_scene_tree->erase(item);
+    erased_items.insert(item);
 
     if (is_root && folder_item != nullptr && folder_item->childCount() == 0)
     {
-        QTreeWidgetItem* const  node_item = folder_item->parent();
+        tree_widget_item* const  node_item = as_tree_widget_item(folder_item->parent());
         INVARIANT(represents_coord_system(node_item));
 
-        auto const  taken_item = node_item->takeChild(node_item->indexOfChild(folder_item));
-        INVARIANT(taken_item == folder_item); (void)taken_item;
-        delete taken_item;
-        erased_items.insert(taken_item);
+        m_scene_tree->erase(folder_item);
+        erased_items.insert(folder_item);
     }
 }
 
 
-void  widgets::duplicate_subtree(QTreeWidgetItem const* const  source_item, QTreeWidgetItem* const  target_item)
+void  widgets::duplicate_subtree(tree_widget_item const* const  source_item, tree_widget_item* const  target_item)
 {
     ASSUMPTION(represents_coord_system(source_item) && represents_coord_system(target_item));
     scn::scene_node_id const  source_coord_system_id = scene_record_id_reverse_builder::run(source_item).get_node_id();
@@ -936,7 +928,7 @@ void  widgets::on_scene_duplicate_selected()
     }
 
     QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
-    std::unordered_map<QTreeWidgetItem const*, scn::scene_node_const_ptr>  source_nodes;
+    std::unordered_map<tree_widget_item const*, scn::scene_node_const_ptr>  source_nodes;
     vector3  world_source_origin = vector3_zero();
     {
         if (old_selection.size() == 0)
@@ -945,9 +937,9 @@ void  widgets::on_scene_duplicate_selected()
             return;
         }
 
-        std::unordered_set<QTreeWidgetItem const*>  selection;
+        std::unordered_set<tree_widget_item const*>  selection;
         for (QTreeWidgetItem const*  item_ptr : old_selection)
-            selection.insert(item_ptr);
+            selection.insert(as_tree_widget_item(item_ptr));
 
         for (QTreeWidgetItem const* item_ptr : old_selection)
         {
@@ -963,13 +955,13 @@ void  widgets::on_scene_duplicate_selected()
                 return;
             }
             for (QTreeWidgetItem const* ptr = item_ptr->parent(); ptr != nullptr; ptr = ptr->parent())
-                if (selection.count(ptr) != 0UL)
+                if (selection.count(as_tree_widget_item(ptr)) != 0UL)
                 {
                     wnd()->print_status_message("ERROR: Sub-trees of selected coord. systems overlap.", 10000);
                     return;
                 }
             scn::scene_node_const_ptr const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, item_id);
-            source_nodes.insert({ item_ptr, node_ptr });
+            source_nodes.insert({ as_tree_widget_item(item_ptr), node_ptr });
             world_source_origin += translation_vector(node_ptr->get_world_matrix());
         }
         world_source_origin /= source_nodes.size();
@@ -1021,10 +1013,10 @@ void  widgets::on_scene_duplicate_selected()
 
     for (auto const&  item_and_source_node : source_nodes)
     {
-        QTreeWidgetItem const* const  source_item = item_and_source_node.first;
+        tree_widget_item const* const  source_item = item_and_source_node.first;
         scn::scene_node_const_ptr const  source_node = item_and_source_node.second;
         
-        QTreeWidgetItem*  parent_tree_item = source_item->parent();
+        tree_widget_item*  parent_tree_item = as_tree_widget_item(source_item->parent());
         scn::scene_node_const_ptr const  parent_node = source_node->has_parent() ? source_node->get_parent() : nullptr;
         scn::scene_node_id const  parent_item_id = source_node->get_id().get_direct_parent_id();
 
@@ -1122,10 +1114,10 @@ void  widgets::save_scene_record(
 }
 
 
-QTreeWidgetItem*  widgets::load_scene_node(
+tree_widget_item*  widgets::load_scene_node(
         scn::scene_node_id const&  id,
         boost::property_tree::ptree const&  node_tree,
-        QTreeWidgetItem*  parent_item
+        tree_widget_item*  parent_item
         )
 {
     boost::property_tree::ptree const&  origin_tree = node_tree.find("origin")->second;
@@ -1150,7 +1142,7 @@ QTreeWidgetItem*  widgets::load_scene_node(
         return nullptr;
     }
 
-    QTreeWidgetItem* const  current_node_item = insert_coord_system(id, origin, orientation, parent_item);
+    tree_widget_item* const  current_node_item = insert_coord_system(id, origin, orientation, parent_item);
 
     boost::property_tree::ptree const&  folders = node_tree.find("folders")->second;
     for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
@@ -1199,7 +1191,7 @@ void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
 }
 
 void  widgets::save_scene_node(
-        QTreeWidgetItem* const  node_item_ptr,
+        tree_widget_item* const  node_item_ptr,
         boost::property_tree::ptree& save_tree
         )
 {
@@ -1231,17 +1223,17 @@ void  widgets::save_scene_node(
     boost::property_tree::ptree  children;
     for (int i = 0, n = node_item_ptr->childCount(); i != n; ++i)
         if (represents_coord_system(node_item_ptr->child(i)))
-            save_scene_node(node_item_ptr->child(i), children);
+            save_scene_node(as_tree_widget_item(node_item_ptr->child(i)), children);
         else
         {
-            QTreeWidgetItem* const  folder_ptr = node_item_ptr->child(i);
+            tree_widget_item* const  folder_ptr = as_tree_widget_item(node_item_ptr->child(i));
             INVARIANT(represents_folder(folder_ptr));
             std::string const  folder_name = get_tree_widget_item_name(folder_ptr);
 
             boost::property_tree::ptree  records;
             for (int j = 0, m = folder_ptr->childCount(); j != m; ++j)
             {
-                QTreeWidgetItem* const  record_ptr = folder_ptr->child(j);
+                tree_widget_item* const  record_ptr = as_tree_widget_item(folder_ptr->child(j));
                 INVARIANT(represents_record(record_ptr));
                 std::string const  record_name = get_tree_widget_item_name(record_ptr);
 

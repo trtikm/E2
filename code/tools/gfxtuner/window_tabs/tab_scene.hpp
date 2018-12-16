@@ -1,6 +1,7 @@
 #ifndef E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_SCENE_HPP_INCLUDED
 #   define E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_SCENE_HPP_INCLUDED
 
+#   include <gfxtuner/window_tabs/tab_scene_tree_widget.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <scene/scene.hpp>
 #   include <scene/scene_history.hpp>
@@ -32,7 +33,7 @@ struct  widgets
 
     program_window*  wnd() const { return m_wnd; }
 
-    QTreeWidget*  scene_tree() const { return m_scene_tree; }
+    tree_widget*  scene_tree() const { return m_scene_tree; }
 
     QLineEdit* coord_system_pos_x() const { return m_coord_system_pos_x; }
     QLineEdit* coord_system_pos_y() const { return m_coord_system_pos_y; }
@@ -50,7 +51,7 @@ struct  widgets
     void  on_simulator_started() { clear_scene(); }
 
     void  on_scene_hierarchy_item_selected();
-    void  on_scene_hierarchy_item_update_action(QTreeWidgetItem* const  item);
+    void  on_scene_hierarchy_item_update_action(tree_widget_item* const  item);
     void  on_scene_insert_coord_system();
     void  on_scene_insert_record(std::string const&  record_kind, std::string const&  mode);
     void  on_scene_erase_selected();
@@ -102,19 +103,21 @@ struct  widgets
     void  save();
 
 private:
-    void  duplicate_subtree(QTreeWidgetItem const* const  source_item, QTreeWidgetItem* const  target_item);
+    void  duplicate_subtree(tree_widget_item const* const  source_item, tree_widget_item* const  target_item);
 
-    QTreeWidgetItem*  insert_coord_system(
+    tree_widget_item*  insert_coord_system(
                 scn::scene_node_id const&  id,
                 vector3 const&  origin,
                 quaternion const&  orientation,
-                QTreeWidgetItem* const  parent_tree_item
+                tree_widget_item* const  parent_tree_item
                 );
 
-    void  add_tree_item_to_selection(QTreeWidgetItem* const  item);
+    void  erase_coord_system(scn::scene_node_id const&  id, tree_widget_item* const  tree_item);
+
+    void  add_tree_item_to_selection(tree_widget_item* const  item);
 
     void  erase_scene_record(scn::scene_record_id const&  id);
-    void  erase_subtree_at_root_item(QTreeWidgetItem* const  root_item, std::unordered_set<QTreeWidgetItem*>&  erased_items, bool const  is_root = true);
+    void  erase_subtree_at_root_item(tree_widget_item* const  root_item, std::unordered_set<void*>&  erased_items, bool const  is_root = true);
 
     void  load_scene_record(scn::scene_record_id const&  id, boost::property_tree::ptree const&  data);
     void  save_scene_record(
@@ -123,14 +126,14 @@ private:
             boost::property_tree::ptree&  data
             );
 
-    QTreeWidgetItem*  load_scene_node(
+    tree_widget_item*  load_scene_node(
             scn::scene_node_id const&  id,
             boost::property_tree::ptree const&  node_tree,
-            QTreeWidgetItem*  parent_item
+            tree_widget_item*  parent_item
             );
 
     void  save_scene_node(
-            QTreeWidgetItem* const  item_ptr,
+            tree_widget_item* const  item_ptr,
             boost::property_tree::ptree& save_tree
             );
 
@@ -143,7 +146,7 @@ private:
 
     program_window*  m_wnd;
 
-    QTreeWidget*  m_scene_tree;
+    tree_widget*  m_scene_tree;
     QIcon  m_node_icon;
     QIcon  m_folder_icon;
     std::unordered_map<std::string, QIcon> m_icons_of_records;
