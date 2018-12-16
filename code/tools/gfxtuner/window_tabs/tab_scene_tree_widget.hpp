@@ -1,11 +1,14 @@
 #ifndef E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_SCENE_TREE_WIDGET_HPP_INCLUDED
 #   define E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_SCENE_TREE_WIDGET_HPP_INCLUDED
 
+#   include <scene/scene_node_id.hpp>
+#   include <scene/scene_record_id.hpp>
 #   include <qtgl/gui_utils.hpp>
 #   include <QTreeWidget>
 #   include <QIcon>
 #   include <functional>
 #   include <string>
+#   include <unordered_map>
 #   include <QtGui>
 
 namespace window_tabs { namespace tab_scene {
@@ -56,6 +59,8 @@ public:
         : QTreeWidget()
         , m_on_selection_changed(on_selection_changed)
         , m_on_item_double_clicked(on_item_double_clicked_)
+        , m_from_nodes_to_widgets()
+        , m_from_widgets_to_nodes()
     {
         connect(this, SIGNAL(itemSelectionChanged()), this, SLOT(on_selection_changed()));
         connect(this, SIGNAL(itemDoubleClicked(QTreeWidgetItem*, int)), this, SLOT(on_item_double_clicked(QTreeWidgetItem*, int)));
@@ -63,6 +68,12 @@ public:
 
     tree_widget_item*  insert(std::string const&  text, QIcon const&  icon, bool const  represents_coord_system, tree_widget_item* const  parent_tree_item);
     void  erase(tree_widget_item* const  item_ptr);
+
+    void  clear();
+
+    tree_widget_item*  find(scn::scene_record_id const&  id) const;
+    tree_widget_item*  find(scn::scene_node_id const&  id, std::string const&  folder_name) const { return find(scn::scene_record_id{ id, folder_name }); }
+    tree_widget_item*  find(scn::scene_node_id const&  id) const { return find(id, ""); }
 
 public slots:
 
@@ -77,11 +88,17 @@ public slots:
     }
 
 private:
+    using QTreeWidget::clear;
     using QTreeWidget::addTopLevelItem;
     using QTreeWidget::takeTopLevelItem;
 
     std::function<void()>  m_on_selection_changed;
     std::function<void(tree_widget_item*)>  m_on_item_double_clicked;
+
+    using  from_nodes_to_widgets_map = std::unordered_map<scn::scene_record_id, tree_widget_item*>;
+    using  from_widgets_to_nodes_map = std::unordered_map<tree_widget_item*, from_nodes_to_widgets_map::iterator>;
+    from_nodes_to_widgets_map  m_from_nodes_to_widgets;
+    from_widgets_to_nodes_map  m_from_widgets_to_nodes;
 };
 
 

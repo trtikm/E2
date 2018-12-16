@@ -15,12 +15,6 @@ namespace window_tabs { namespace tab_scene {
 
 bool  correspond(scn::scene_node_id  id, tree_widget_item const*  tree_item);
 
-void  find_all_coord_system_widgets(
-        tree_widget* const  scene_tree,
-        scn::scene_node_id const&  id,
-        std::vector<tree_widget_item*>&  output
-        );
-
 void  remove_record_from_tree_widget(tree_widget* const  scene_tree, scn::scene_record_id const&  record_id);
 
 tree_widget_item*  insert_coord_system_to_tree_widget(

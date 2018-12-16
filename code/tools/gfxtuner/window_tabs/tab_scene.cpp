@@ -186,9 +186,7 @@ widgets::widgets(program_window* const  wnd)
     scn::scene_history_coord_system_insert::set_undo_processor(
         [this](scn::scene_history_coord_system_insert const&  history_node) {
             std::vector<tree_widget_item*>  items_list;
-            find_all_coord_system_widgets(m_scene_tree, history_node.get_id(), items_list);
-            ASSUMPTION(items_list.size() == 1UL);
-            tree_widget_item* const  tree_item = as_tree_widget_item(items_list.front());
+            tree_widget_item* const  tree_item = m_scene_tree->find(history_node.get_id());
             ASSUMPTION(!tree_item->isSelected());
             erase_coord_system(history_node.get_id(), tree_item);
         });
@@ -197,12 +195,8 @@ widgets::widgets(program_window* const  wnd)
             tree_widget_item*  parent_tree_item = nullptr;
             if (!history_node.get_id().is_root())
             {
-                std::vector<tree_widget_item*>  items_list;
-                find_all_coord_system_widgets(m_scene_tree, history_node.get_id(), items_list);
-                ASSUMPTION(items_list.empty());
-                find_all_coord_system_widgets(m_scene_tree, history_node.get_id().get_direct_parent_id(), items_list);
-                ASSUMPTION(items_list.size() == 1UL);
-                parent_tree_item = as_tree_widget_item(items_list.front());
+                ASSUMPTION(m_scene_tree->find(history_node.get_id()) == nullptr);
+                parent_tree_item = m_scene_tree->find(history_node.get_id().get_direct_parent_id());
                 ASSUMPTION(represents_coord_system(parent_tree_item));
             }
             auto const  tree_node = insert_coord_system(
@@ -239,10 +233,7 @@ widgets::widgets(program_window* const  wnd)
 
     scn::scene_history_coord_system_insert_to_selection::set_undo_processor(
         [this](scn::scene_history_coord_system_insert_to_selection const&  history_node) {
-            std::vector<tree_widget_item*>  items_list;
-            find_all_coord_system_widgets(m_scene_tree, history_node.get_id(), items_list);
-            ASSUMPTION(items_list.size() == 1UL);
-            tree_widget_item* const  tree_item = as_tree_widget_item(items_list.front());
+            tree_widget_item* const  tree_item = m_scene_tree->find(history_node.get_id());
             ASSUMPTION(represents_coord_system(tree_item));
             ASSUMPTION(tree_item->isSelected());
             tree_item->setSelected(false);
@@ -253,10 +244,7 @@ widgets::widgets(program_window* const  wnd)
         });
     scn::scene_history_coord_system_insert_to_selection::set_redo_processor(
         [this](scn::scene_history_coord_system_insert_to_selection const&  history_node) {
-            std::vector<tree_widget_item*>  items_list;
-            find_all_coord_system_widgets(m_scene_tree, history_node.get_id(), items_list);
-            ASSUMPTION(items_list.size() == 1UL);
-            tree_widget_item* const  tree_item = as_tree_widget_item(items_list.front());
+            tree_widget_item* const  tree_item = m_scene_tree->find(history_node.get_id());
             ASSUMPTION(represents_coord_system(tree_item));
             ASSUMPTION(!tree_item->isSelected());
             tree_item->setSelected(true);
@@ -269,78 +257,24 @@ widgets::widgets(program_window* const  wnd)
 
     scn::scene_history_record_insert_to_selection::set_undo_processor(
         [this](scn::scene_history_record_insert_to_selection const&  history_node) {
-            std::vector<tree_widget_item*>  items_list;
-            find_all_coord_system_widgets(m_scene_tree, history_node.get_id().get_node_id(), items_list);
-            ASSUMPTION(items_list.size() == 1UL);
-            auto const  coord_system_item = as_tree_widget_item(items_list.front());
-            ASSUMPTION(represents_coord_system(coord_system_item));
-            for (int i = 0, n = coord_system_item->childCount(); i != n; ++i)
-            {
-                auto const  item = as_tree_widget_item(coord_system_item->child(i));
-                if (represents_coord_system(item))
-                    continue;
-                INVARIANT(represents_folder(item));
-                std::string const  item_name = get_tree_widget_item_name(item);
-                if (item_name == history_node.get_id().get_folder_name())
-                {
-                    for (int j = 0, m = item->childCount(); j != m; ++j)
-                    {
-                        auto const  record_item = as_tree_widget_item(item->child(j));
-                        INVARIANT(represents_record(record_item));
-                        std::string const  record_item_name = get_tree_widget_item_name(record_item);
-                        if (record_item_name == history_node.get_id().get_record_name())
-                        {
-                            ASSUMPTION(record_item->isSelected());
-                            record_item->setSelected(false);
-                            std::unordered_set<scn::scene_node_id>  selected_scene_nodes;
-                            std::unordered_set<scn::scene_record_id>  selected_records{ history_node.get_id() };
-                            m_wnd->glwindow().call_now(&simulator::erase_from_scene_selection, std::ref(selected_scene_nodes), std::ref(selected_records));
-                            update_coord_system_location_widgets();
-                            return;
-                        }
-                    }
-                    UNREACHABLE();
-                }
-            }
-            UNREACHABLE();
+            auto const  record_item = m_scene_tree->find(history_node.get_id());
+            ASSUMPTION(record_item != nullptr && record_item->isSelected());
+            record_item->setSelected(false);
+            std::unordered_set<scn::scene_node_id>  selected_scene_nodes;
+            std::unordered_set<scn::scene_record_id>  selected_records{ history_node.get_id() };
+            m_wnd->glwindow().call_now(&simulator::erase_from_scene_selection, std::ref(selected_scene_nodes), std::ref(selected_records));
+            update_coord_system_location_widgets();
         });
     scn::scene_history_record_insert_to_selection::set_redo_processor(
         [this](scn::scene_history_record_insert_to_selection const&  history_node) {
-            std::vector<tree_widget_item*>  items_list;
-            find_all_coord_system_widgets(m_scene_tree, history_node.get_id().get_node_id(), items_list);
-            ASSUMPTION(items_list.size() == 1UL);
-            auto const  coord_system_item = as_tree_widget_item(items_list.front());
-            ASSUMPTION(coord_system_item != nullptr && coord_system_item->represents_coord_system());
-            for (int i = 0, n = coord_system_item->childCount(); i != n; ++i)
-            {
-                auto const  item = as_tree_widget_item(coord_system_item->child(i));
-                if (represents_coord_system(item))
-                    continue;
-                INVARIANT(represents_folder(item));
-                std::string const  item_name = get_tree_widget_item_name(item);
-                if (item_name == history_node.get_id().get_folder_name())
-                {
-                    for (int j = 0, m = item->childCount(); j != m; ++j)
-                    {
-                        auto const  record_item = as_tree_widget_item(item->child(j));
-                        INVARIANT(represents_record(record_item));
-                        std::string const  record_item_name = get_tree_widget_item_name(record_item);
-                        if (record_item_name == history_node.get_id().get_record_name())
-                        {
-                            ASSUMPTION(!record_item->isSelected());
-                            record_item->setSelected(true);
-                            m_scene_tree->scrollToItem(record_item);
-                            std::unordered_set<scn::scene_node_id>  selected_scene_nodes;
-                            std::unordered_set<scn::scene_record_id>  selected_records{ history_node.get_id() };
-                            m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::ref(selected_scene_nodes), std::ref(selected_records));
-                            update_coord_system_location_widgets();
-                            return;
-                        }
-                    }
-                    UNREACHABLE();
-                }
-            }
-            UNREACHABLE();
+            auto const  record_item = m_scene_tree->find(history_node.get_id());
+            ASSUMPTION(record_item != nullptr && !record_item->isSelected());
+            record_item->setSelected(true);
+            m_scene_tree->scrollToItem(record_item);
+            std::unordered_set<scn::scene_node_id>  selected_scene_nodes;
+            std::unordered_set<scn::scene_record_id>  selected_records{ history_node.get_id() };
+            m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::ref(selected_scene_nodes), std::ref(selected_records));
+            update_coord_system_location_widgets();
         });
 
     register_record_icons(m_icons_of_records);
@@ -373,42 +307,15 @@ void  widgets::on_scene_hierarchy_item_selected()
         wnd()->glwindow().call_now(&simulator::get_scene_selection, std::ref(selected_scene_nodes), std::ref(selected_records));
         for (auto const& node_name : selected_scene_nodes)
         {
-            std::vector<tree_widget_item*>  items_list;
-            find_all_coord_system_widgets(m_scene_tree, node_name, items_list);
-            INVARIANT(items_list.size() == 1 && represents_coord_system(items_list.front()));
-            old_selection.push_back(items_list.front());
+            tree_widget_item* const  item_ptr = m_scene_tree->find(node_name);
+            INVARIANT(item_ptr != nullptr && represents_coord_system(item_ptr));
+            old_selection.push_back(item_ptr);
         }
         for (scn::scene_record_id const&  record_id : selected_records)
         {
-            std::vector<tree_widget_item*>  items_list;
-            find_all_coord_system_widgets(m_scene_tree, record_id.get_node_id(), items_list);
-            INVARIANT(items_list.size() == 1 && represents_coord_system(items_list.front()));
-            bool  record_found = false;
-            for (int i = 0, n = items_list.front()->childCount(); i != n; ++i)
-            {
-                auto const  item = as_tree_widget_item(items_list.front()->child(i));
-                if (represents_coord_system(item))
-                    continue;
-                INVARIANT(represents_folder(item));
-                std::string const  item_name = get_tree_widget_item_name(item);
-                if (item_name == record_id.get_folder_name())
-                {
-                    for (int j = 0, m = item->childCount(); j != m; ++j)
-                    {
-                        auto const  record_item = as_tree_widget_item(item->child(j));
-                        INVARIANT(represents_record(record_item));
-                        std::string const  record_item_name = get_tree_widget_item_name(record_item);
-                        if (record_item_name == record_id.get_record_name())
-                        {
-                            old_selection.push_back(record_item);
-                            record_found = true;
-                            break;
-                        }
-                    }
-                    break;
-                }
-            }
-            INVARIANT(record_found == true);
+            tree_widget_item* const  item_ptr = m_scene_tree->find(record_id);
+            INVARIANT(item_ptr != nullptr && represents_coord_system(item_ptr));
+            old_selection.push_back(item_ptr);
         }
     }
     std::unordered_set<scn::scene_node_id>  selected_scene_nodes;
@@ -476,54 +383,23 @@ void  widgets::selection_changed_listener()
     m_scene_tree->clearSelection();
     for (auto const&  node_name : selected_scene_nodes)
     {
-        std::vector<tree_widget_item*>  items_list;
-        find_all_coord_system_widgets(m_scene_tree, node_name, items_list);
-        if (items_list.size() != 1 || !represents_coord_system(items_list.front()))
+        tree_widget_item* const  item_ptr = m_scene_tree->find(node_name);
+        if (item_ptr ==nullptr || !represents_coord_system(item_ptr))
         {
             recover_from_failure();
             return;
         }
-        add_tree_item_to_selection(items_list.front());
+        add_tree_item_to_selection(item_ptr);
     }
     for (scn::scene_record_id const&  record_id : selected_records)
     {
-        std::vector<tree_widget_item*>  items_list;
-        find_all_coord_system_widgets(m_scene_tree, record_id.get_node_id(), items_list);
-        if (items_list.size() != 1 || !represents_coord_system(items_list.front()))
+        tree_widget_item* const  item_ptr = m_scene_tree->find(record_id);
+        if (item_ptr == nullptr || !represents_record(item_ptr))
         {
             recover_from_failure();
             return;
         }
-        bool  record_found = false;
-        for (int i = 0, n = items_list.front()->childCount(); i != n; ++i)
-        {
-            auto const  item = as_tree_widget_item(items_list.front()->child(i));
-            if (represents_coord_system(item))
-                continue;
-            INVARIANT(represents_folder(item));
-            std::string const  item_name = get_tree_widget_item_name(item);
-            if (item_name == record_id.get_folder_name())
-            {
-                for (int j = 0, m = item->childCount(); j != m; ++j)
-                {
-                    auto const  record_item = as_tree_widget_item(item->child(j));
-                    INVARIANT(represents_record(record_item));
-                    std::string const  record_item_name = get_tree_widget_item_name(record_item);
-                    if (record_item_name == record_id.get_record_name())
-                    {
-                        add_tree_item_to_selection(record_item);
-                        record_found = true;
-                        break;
-                    }
-                }
-                break;
-            }
-        }
-        if (record_found == false)
-        {
-            recover_from_failure();
-            return;
-        }
+        add_tree_item_to_selection(item_ptr);
     }
     update_coord_system_location_widgets();
 
@@ -674,29 +550,18 @@ void  widgets::on_scene_insert_record(std::string const&  record_kind, std::stri
         INVARIANT(tree_item != nullptr);
         if (!represents_coord_system(tree_item))
             tree_item = find_nearest_coord_system_item(tree_item);
-        if (scene_record_id_reverse_builder::run(tree_item).get_node_id() != scn::get_pivot_node_id())
-        {
-            nodes.insert(tree_item);
-            for (int i = 0, n = tree_item->childCount(); i != n; ++i)
+        scn::scene_node_id const  node_id = scene_record_id_reverse_builder::run(tree_item).get_node_id();
+        if (node_id == scn::get_pivot_node_id())
+            continue;
+        tree_widget_item* const  folder_item = m_scene_tree->find(scn::get_pivot_node_id(), record_kind);
+        if (folder_item != nullptr)
+            for (int j = 0, m = folder_item->childCount(); j != m; ++j)
             {
-                auto const  item = as_tree_widget_item(tree_item->child(i));
-                if (represents_coord_system(item))
-                    continue;
-                INVARIANT(represents_folder(item));
-                std::string const  item_name = get_tree_widget_item_name(item);
-                if (item_name == record_kind)
-                {
-                    for (int j = 0, m = item->childCount(); j != m; ++j)
-                    {
-                        auto const  record_item = as_tree_widget_item(item->child(j));
-                        INVARIANT(represents_record(record_item));
-                        std::string const  record_item_name = get_tree_widget_item_name(record_item);
-                        used_names.insert(record_item_name);
-                    }
-                    break;
-                }
+                auto const  record_item = as_tree_widget_item(folder_item->child(j));
+                INVARIANT(represents_record(record_item));
+                std::string const  record_item_name = get_tree_widget_item_name(record_item);
+                used_names.insert(record_item_name);
             }
-        }
     }
     if (nodes.empty())
     {
@@ -807,6 +672,8 @@ void  widgets::erase_scene_record(scn::scene_record_id const&  id)
 
 void  widgets::erase_subtree_at_root_item(tree_widget_item* const  root_item, std::unordered_set<void*>&  erased_items, bool const  is_root)
 {
+    TMPROF_BLOCK();
+
     tree_widget_item* const  item = as_tree_widget_item(root_item);
     INVARIANT(item != nullptr);
     tree_widget_item*  folder_item = nullptr;
@@ -871,6 +738,8 @@ void  widgets::erase_subtree_at_root_item(tree_widget_item* const  root_item, st
 
 void  widgets::duplicate_subtree(tree_widget_item const* const  source_item, tree_widget_item* const  target_item)
 {
+    TMPROF_BLOCK();
+
     ASSUMPTION(represents_coord_system(source_item) && represents_coord_system(target_item));
     scn::scene_node_id const  source_coord_system_id = scene_record_id_reverse_builder::run(source_item).get_node_id();
     scn::scene_node_id const  target_coord_system_id = scene_record_id_reverse_builder::run(target_item).get_node_id();
@@ -918,6 +787,8 @@ void  widgets::duplicate_subtree(tree_widget_item const* const  source_item, tre
 
 void  widgets::on_scene_duplicate_selected()
 {
+    TMPROF_BLOCK();
+
     ASSUMPTION(!processing_selection_change());
     lock_bool const  _(&m_processing_selection_change);
 
@@ -1158,6 +1029,8 @@ tree_widget_item*  widgets::load_scene_node(
 
 void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
 {
+    TMPROF_BLOCK();
+
     if (!is_editing_enabled())
     {
         wnd()->print_status_message("ERROR: Scene load is disabled.", 10000);
@@ -1249,6 +1122,8 @@ void  widgets::save_scene_node(
 
 void  widgets::save_scene(boost::filesystem::path const&  scene_root_dir)
 {
+    TMPROF_BLOCK();
+
     if (!is_editing_enabled())
     {
         wnd()->print_status_message("ERROR: Scene save is disabled.", 10000);
@@ -1457,10 +1332,7 @@ void  widgets::on_scene_toggle_pivot_selection()
 
     QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
 
-    std::vector<tree_widget_item*>  items_list;
-    find_all_coord_system_widgets(m_scene_tree, scn::get_pivot_node_id(), items_list);
-    ASSUMPTION(items_list.size() == 1UL);
-    tree_widget_item* const  tree_item = as_tree_widget_item(items_list.front());
+    tree_widget_item* const  tree_item = m_scene_tree->find(scn::get_pivot_node_id());
     ASSUMPTION(represents_coord_system(tree_item));
     std::unordered_set<scn::scene_node_id>  selected_scene_nodes{ scn::get_pivot_node_id() };
     std::unordered_set<scn::scene_record_id>  selected_records;

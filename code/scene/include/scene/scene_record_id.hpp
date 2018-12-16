@@ -20,9 +20,7 @@ struct  scene_record_id
         : m_node_id(node_id)
         , m_folder_name(folder_name)
         , m_record_name(record_name)
-    {
-        ASSUMPTION(!m_record_name.empty());
-    }
+    {}
 
     scene_record_id(scene_node_id const&  node_id, scene_node::folder_name const&  folder_name)
         : m_node_id(node_id)
