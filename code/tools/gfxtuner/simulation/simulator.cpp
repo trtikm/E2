@@ -1777,9 +1777,10 @@ void  simulator::load_rigid_body(
         )
 {
     auto const  load_vector = [&data](std::string const&  key) -> vector3 {
-        return vector3(data.get<float_32_bit>(key + ".x"),
-                       data.get<float_32_bit>(key + ".y"),
-                       data.get<float_32_bit>(key + ".z"));
+        boost::property_tree::path const  key_path(key, '/');
+        return vector3(data.get<float_32_bit>(key_path / "x"),
+                       data.get<float_32_bit>(key_path / "y"),
+                       data.get<float_32_bit>(key_path / "z"));
     };
 
     insert_rigid_body_to_scene_node(
@@ -1794,9 +1795,10 @@ void  simulator::load_rigid_body(
 void  simulator::save_rigid_body(angeo::rigid_body_id const  rb_id, boost::property_tree::ptree&  data)
 {
     auto const  save_vector = [&data](std::string const&  key, vector3 const&  u) -> void {
-        data.put(key + ".x", u(0));
-        data.put(key + ".y", u(1));
-        data.put(key + ".z", u(2));
+        boost::property_tree::path const  key_path(key, '/');
+        data.put(key_path / "x", u(0));
+        data.put(key_path / "y", u(1));
+        data.put(key_path / "z", u(2));
     };
 
     save_vector("linear_velocity", m_rigid_body_simulator.get_linear_velocity(rb_id));

@@ -24,7 +24,7 @@ insert_name_dialog::insert_name_dialog(program_window* const  wnd,
             return new s(dlg, initial_name);
         }(this, initial_name)
         )
-    , m_name_taken_indicator(new QLabel("WARNING: The name is already in use."))
+    , m_name_taken_indicator(new QLabel("WARNING: The name has wrong format or it is already in use."))
     , m_OK_button(
         [](insert_name_dialog* wnd) {
             struct Open : public QPushButton {
@@ -76,12 +76,12 @@ void  insert_name_dialog::on_name_changed(QString const&  qname)
 {
     if (!m_is_name_valid_function(qtgl::to_string(qname)))
     {
-        m_name_taken_indicator->setText(QString("WARNING: the name is already in use."));
+        m_name_taken_indicator->setText(QString("WARNING: the name has wrong format or it is already in use."));
         m_OK_button->setEnabled(false);
     }
     else
     {
-        m_name_taken_indicator->setText(QString("OK: The name is fresh."));
+        m_name_taken_indicator->setText(QString("OK: The name can be used."));
         m_OK_button->setEnabled(true);
     }
 }

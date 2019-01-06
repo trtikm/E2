@@ -475,7 +475,8 @@ void  widgets::on_scene_insert_coord_system()
     while (wnd()->glwindow().call_now(&simulator::get_scene_node, inserted_item_id) != nullptr);
     insert_name_dialog  dlg(wnd(), name,
         [this, &parent_item_id](std::string const&  name) {
-            return wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) == nullptr;
+            return name.find('/') == std::string::npos &&
+                   wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) == nullptr;
         });
     dlg.exec();
     if (!dlg.get_name().empty())
@@ -553,7 +554,7 @@ void  widgets::on_scene_insert_record(std::string const&  record_kind, std::stri
         scn::scene_node_id const  node_id = scene_record_id_reverse_builder::run(tree_item).get_node_id();
         if (node_id == scn::get_pivot_node_id())
             continue;
-        tree_widget_item* const  folder_item = m_scene_tree->find(scn::get_pivot_node_id(), record_kind);
+        tree_widget_item* const  folder_item = m_scene_tree->find(node_id, record_kind);
         if (folder_item != nullptr)
             for (int j = 0, m = folder_item->childCount(); j != m; ++j)
             {
@@ -562,6 +563,7 @@ void  widgets::on_scene_insert_record(std::string const&  record_kind, std::stri
                 std::string const  record_item_name = get_tree_widget_item_name(record_item);
                 used_names.insert(record_item_name);
             }
+        nodes.insert(tree_item);
     }
     if (nodes.empty())
     {
@@ -591,7 +593,7 @@ void  widgets::on_scene_insert_record(std::string const&  record_kind, std::stri
         }
         insert_name_dialog  dlg(wnd(), record_name,
             [&used_names](std::string const&  name) {
-            return used_names.count(name) == 0UL;
+            return name.find('/') == std::string::npos && used_names.count(name) == 0UL;
         });
         dlg.exec();
         record_name = dlg.get_name();
@@ -899,7 +901,8 @@ void  widgets::on_scene_duplicate_selected()
         {
             insert_name_dialog  dlg(wnd(), base_name,
                 [this, &parent_item_id](std::string const&  name) {
-                return wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) == nullptr;
+                return name.find('/') == std::string::npos &&
+                       wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) == nullptr;
             });
             if (dlg.exec() == 0)
                 return;
@@ -1071,7 +1074,7 @@ void  widgets::save_scene_node(
     ASSUMPTION(node_item_ptr != nullptr);
 
     scn::scene_node_id const  coord_system_id = scene_record_id_reverse_builder::run(node_item_ptr).get_node_id();
-    std::string const  node_name = get_tree_widget_item_name(node_item_ptr);
+    boost::property_tree::path const  node_name_path(get_tree_widget_item_name(node_item_ptr), '/');
     scn::scene_node_ptr const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, coord_system_id);
     
     {
@@ -1080,7 +1083,7 @@ void  widgets::save_scene_node(
         origin_tree.put("x", origin(0));
         origin_tree.put("y", origin(1));
         origin_tree.put("z", origin(2));
-        save_tree.put_child(node_name + ".origin", origin_tree);
+        save_tree.put_child(node_name_path / "origin", origin_tree);
     }
     {
         boost::property_tree::ptree  orientation_tree;
@@ -1089,7 +1092,7 @@ void  widgets::save_scene_node(
         orientation_tree.put("y", orientation(1));
         orientation_tree.put("z", orientation(2));
         orientation_tree.put("w", orientation(3));
-        save_tree.put_child(node_name + ".orientation", orientation_tree);
+        save_tree.put_child(node_name_path / "orientation", orientation_tree);
     }
 
     boost::property_tree::ptree  folders;
@@ -1102,6 +1105,7 @@ void  widgets::save_scene_node(
             tree_widget_item* const  folder_ptr = as_tree_widget_item(node_item_ptr->child(i));
             INVARIANT(represents_folder(folder_ptr));
             std::string const  folder_name = get_tree_widget_item_name(folder_ptr);
+            boost::property_tree::path const  folder_name_path(folder_name, '/');
 
             boost::property_tree::ptree  records;
             for (int j = 0, m = folder_ptr->childCount(); j != m; ++j)
@@ -1109,15 +1113,16 @@ void  widgets::save_scene_node(
                 tree_widget_item* const  record_ptr = as_tree_widget_item(folder_ptr->child(j));
                 INVARIANT(represents_record(record_ptr));
                 std::string const  record_name = get_tree_widget_item_name(record_ptr);
+                boost::property_tree::path const  record_name_path(record_name, '/');
 
                 boost::property_tree::ptree  record;
                 save_scene_record(node_ptr, { folder_name, record_name }, record);
-                records.put_child(record_name, record);
+                records.put_child(record_name_path, record);
             }
-            folders.put_child(folder_name, records);
+            folders.put_child(folder_name_path, records);
         }
-    save_tree.put_child(node_name + ".folders", folders);
-    save_tree.put_child(node_name + ".children", children);
+    save_tree.put_child(node_name_path / "folders", folders);
+    save_tree.put_child(node_name_path / "children", children);
 }
 
 void  widgets::save_scene(boost::filesystem::path const&  scene_root_dir)
