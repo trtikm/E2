@@ -1265,9 +1265,9 @@ def export_object_mesh(
         }
 
         save_textures(mesh.materials, export_info)
-        if len(mesh.uv_layers) > len(export_info["textures"]):
-            print("ERROR: len(mesh.uv_layers) > texture slots in materials.")
-            return
+        # if len(mesh.uv_layers) > len(export_info["textures"]):
+        #     print("ERROR: len(mesh.uv_layers) > texture slots in materials.")
+        #     return
 
         buffers_list = build_render_buffers(obj, armature)
         assert len(buffers_list) <= 1 or len(buffers_list) <= len(mesh.materials)
