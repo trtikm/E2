@@ -974,6 +974,7 @@ def save_textures(
 
                 texture_output_dir = os.path.join(
                     textures_root_dir,
+                    remove_ignored_part_of_name(export_info["mesh_name"], "TEXTURES"),
                     remove_ignored_part_of_name(materials[mat_idx].name, "TEXTURES")
                     )
 
