@@ -92,7 +92,7 @@ void  register_record_handler_for_insert_scene_record(
                         if (batch_dir != "batches")
                         {
                             batch_name.append(batch_dir);
-                            batch_name.push_back('/');
+                            batch_name.push_back('.');
                         }
                         boost::filesystem::path  batch_file_name = pathname.filename();
                         if (batch_file_name.has_extension())
