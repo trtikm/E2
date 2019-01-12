@@ -111,8 +111,8 @@ def remove_ignored_part_of_name(name, phase=None):
         suffix = rest[rest.find("}") + 1:]
         if ":" not in command:
             return [name]
-        where_use = command[:rest.find(":")]
-        what_use = command[rest.find(":") + 1:]
+        where_use = command[:command.find(":")]
+        what_use = command[command.find(":") + 1:]
         if where_use == "IGNOREME" or phase is None or phase not in where_use:
             what_use = ""
         return [prefix] + [what_use] + process_name(suffix, phase)
@@ -751,7 +751,7 @@ def save_render_buffers(
         mesh_root_dir = os.path.join(
             export_info["root_dir"],
             "meshes",
-            export_info["mesh_name"],
+            remove_ignored_part_of_name(export_info["mesh_name"], "BUFFERS"),
             material_name if material_name is not None else ""
             )
         os.makedirs(mesh_root_dir, exist_ok=True)
@@ -977,6 +977,8 @@ def save_textures(
                     remove_ignored_part_of_name(export_info["mesh_name"], "TEXTURES"),
                     remove_ignored_part_of_name(materials[mat_idx].name, "TEXTURES")
                     )
+                if os.path.basename(os.path.dirname(texture_output_dir)) == os.path.basename(texture_output_dir):
+                    texture_output_dir = os.path.dirname(texture_output_dir)
 
                 os.makedirs(texture_output_dir, exist_ok=True)
 
@@ -1179,9 +1181,9 @@ def save_batch(
     with TimeProf.instance().start("save_batch"):
         buffers_export_info = export_info["render_buffers"][mtl_index]
         if material_name is None:
-            batch_pathname = os.path.join(export_info["root_dir"], "batches", export_info["mesh_name"] + ".txt")
+            batch_pathname = os.path.join(export_info["root_dir"], "batches", remove_ignored_part_of_name(export_info["mesh_name"], "BATCHES") + ".txt")
         else:
-            batch_pathname = os.path.join(export_info["root_dir"], "batches", export_info["mesh_name"], material_name + ".txt")
+            batch_pathname = os.path.join(export_info["root_dir"], "batches", remove_ignored_part_of_name(export_info["mesh_name"], "BATCHES"), material_name + ".txt")
         print("Saving batch file: " + os.path.relpath(batch_pathname, export_info["root_dir"]))
         os.makedirs(os.path.dirname(batch_pathname), exist_ok=True)
         with open(batch_pathname, "w") as ofile:
@@ -1262,7 +1264,7 @@ def export_object_mesh(
 
         export_info = {
             "root_dir": export_dir,
-            "mesh_name": mesh_name
+            "mesh_name": mesh.name
         }
 
         save_textures(mesh.materials, export_info)
