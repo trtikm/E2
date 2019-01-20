@@ -54,6 +54,7 @@ struct  widgets
     void  on_scene_hierarchy_item_update_action(tree_widget_item* const  item);
     void  on_scene_insert_coord_system();
     void  on_scene_insert_record(std::string const&  record_kind, std::string const&  mode);
+    void  on_scene_load_skeleton();
     void  on_scene_erase_selected();
     void  on_scene_duplicate_selected();
 

@@ -63,6 +63,7 @@ menu_bar::menu_bar(program_window* const  wnd)
     , m_menu_edit(new detail::menu("&Edit", wnd))
     , m_edit_action_insert_coord_system(new QAction(QString("Insert &coord system"), wnd))
     , m_record_menu_items()
+    , m_edit_action_load_skeleton(new QAction(QString("Load s&keleton"), wnd))
     , m_edit_action_erase_selected(new QAction(QString("&Erase selected"), wnd))
     , m_edit_action_duplicate_selected(new QAction(QString("&Duplicate selected"), wnd))
     , m_edit_action_mode_select(new QAction(QString("&Selection"), wnd))
@@ -174,6 +175,7 @@ void  menu_bar::toggle_enable_state_of_menu_items_for_simulation_mode(bool const
     get_edit_action_insert_coord_system()->setDisabled(simulation_resumed);
     for (auto const& record_kind_and_action : get_edit_actions_of_records())
         record_kind_and_action.second.first->setDisabled(simulation_resumed);
+    get_edit_action_load_skeleton()->setDisabled(simulation_resumed);
     get_edit_action_erase_selected()->setDisabled(simulation_resumed);
     get_edit_action_duplicate_selected()->setDisabled(simulation_resumed);
     get_edit_action_mode_select()->setDisabled(simulation_resumed);
@@ -279,6 +281,16 @@ void  make_menu_bar_content(menu_bar const&  w)
                     )
                 );
     }
+
+    w.get_menu_edit()->addSeparator();
+
+    w.get_menu_edit()->addAction(w.get_edit_action_load_skeleton());
+    w.get_edit_action_load_skeleton()->setShortcut(QString("Ctrl+Alt+K"));
+    w.get_edit_action_load_skeleton()->setToolTip(
+        "Creates a hierarchy of scene nodes (coordinate systems) under a selected non-pivot scene node corresponding to bones\n"
+        "of a skeleton. You will be asked (via a dialog) for a directory under consisting of data files of the desired skeleton."
+        );
+    QObject::connect(w.get_edit_action_load_skeleton(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_load_skeleton);
 
     w.get_menu_edit()->addSeparator();
 

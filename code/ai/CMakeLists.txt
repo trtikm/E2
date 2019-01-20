@@ -3,6 +3,8 @@ set(THIS_TARGET_NAME ai)
 add_library(${THIS_TARGET_NAME}
     ./include/ai/agent.hpp
     ./src/agent.cpp
+    ./include/ai/skeleton_utils.hpp
+    ./src/skeleton_utils.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

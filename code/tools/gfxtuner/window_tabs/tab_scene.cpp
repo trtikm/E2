@@ -12,6 +12,7 @@
 #include <scene/scene_utils_specialised.hpp>
 #include <scene/scene_editing.hpp>
 #include <angeo/axis_aligned_bounding_box.hpp>
+#include <ai/skeleton_utils.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <utility/std_pair_hash.hpp>
 #include <utility/msgstream.hpp>
@@ -626,6 +627,80 @@ void  widgets::on_scene_insert_record(std::string const&  record_kind, std::stri
         get_scene_history()->commit();
         set_window_title();
     }
+}
+
+
+void  widgets::on_scene_load_skeleton()
+{
+    ASSUMPTION(!processing_selection_change());
+    lock_bool const  _(&m_processing_selection_change);
+
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Scene editing is disabled.", 10000);
+        return;
+    }
+
+    if (m_scene_tree->selectedItems().size() != 1)
+    {
+        wnd()->print_status_message("ERROR: Exactly one non-pivot coord. system node must be selected for loading of a skeleton.", 10000);
+        return;
+    }
+    tree_widget_item* const  root_tree_item = find_nearest_coord_system_item(m_scene_tree->selectedItems().front());
+    scn::scene_node_id const  root_node_id = scene_record_id_reverse_builder::run(root_tree_item).get_node_id();
+    if (root_node_id == scn::get_pivot_node_id())
+    {
+        wnd()->print_status_message("ERROR: Cannot load a skeleton under the pivot coord. system node.", 10000);
+        return;
+    }
+
+    QFileDialog  dialog(wnd());
+    dialog.setDirectory(
+            canonical_path(boost::filesystem::absolute(
+                    boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "animations" / "skeletal"
+                    )).string().c_str()
+            );
+    dialog.setFileMode(QFileDialog::Directory);
+    if (!dialog.exec())
+        return;
+    QStringList const  selected_dirs = dialog.selectedFiles();
+    if (selected_dirs.size() != 1)
+    {
+        wnd()->print_status_message("ERROR: Exactly one skeleton directory must be provided.", 10000);
+        return;
+    }
+    boost::filesystem::path const  skeleton_dir = qtgl::to_string(selected_dirs.front());
+
+    std::vector<angeo::coordinate_system>  local_coord_systems_of_bones;
+    std::vector<std::string>  names_of_bones;
+    std::vector<integer_32_bit>  parent_of_bones;
+    std::string const  error_msg = ai::load_skeleton(skeleton_dir, local_coord_systems_of_bones, names_of_bones, parent_of_bones);
+    if (!error_msg.empty())
+    {
+        wnd()->print_status_message("ERROR: " + error_msg, 10000);
+        return;
+    }
+    std::vector<std::pair<scn::scene_node_id, tree_widget_item*> >  inserted_nodes{ { root_node_id, root_tree_item } };
+    for (natural_32_bit i = 0U; i != local_coord_systems_of_bones.size(); ++i)
+    {
+        scn::scene_node_id const  bone_node_id = inserted_nodes.at(parent_of_bones.at(i) + 1U).first / names_of_bones.at(i);
+        auto const  bone_tree_item = insert_coord_system(
+                bone_node_id,
+                local_coord_systems_of_bones.at(i).origin(),
+                local_coord_systems_of_bones.at(i).orientation(),
+                inserted_nodes.at(parent_of_bones.at(i) + 1U).second
+                );
+        get_scene_history()->insert<scn::scene_history_coord_system_insert>(
+                bone_node_id,
+                local_coord_systems_of_bones.at(i).origin(),
+                local_coord_systems_of_bones.at(i).orientation(),
+                false
+                );
+        inserted_nodes.push_back({ bone_node_id, bone_tree_item });
+    }
+    get_scene_history()->commit();
+    update_coord_system_location_widgets();
+    set_window_title();
 }
 
 
