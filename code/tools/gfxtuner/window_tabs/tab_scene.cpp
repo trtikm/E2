@@ -314,7 +314,7 @@ void  widgets::on_scene_hierarchy_item_selected()
         for (scn::scene_record_id const&  record_id : selected_records)
         {
             tree_widget_item* const  item_ptr = m_scene_tree->find(record_id);
-            INVARIANT(item_ptr != nullptr && represents_coord_system(item_ptr));
+            INVARIANT(item_ptr != nullptr && represents_record(item_ptr));
             old_selection.push_back(item_ptr);
         }
     }
