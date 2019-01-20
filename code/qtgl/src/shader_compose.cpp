@@ -907,7 +907,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "        result_normal = result_normal + in_weights_of_matrices[i] * normal;",
 
                                                     "        const vec3 tangent = (vec4(in_tangent,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]).xyz;",
-                                                    "        result_tangent = result_result + in_weights_of_matrices[i] * tangent;",
+                                                    "        result_tangent = result_tangent + in_weights_of_matrices[i] * tangent;",
 
                                                     "        const vec3 bitangent = (vec4(in_bitangent,0.0f) * MATRICES_FROM_MODEL_TO_CAMERA[in_indices_of_matrices[i]]).xyz;",
                                                     "        result_bitangent = result_bitangent + in_weights_of_matrices[i] * bitangent;",
