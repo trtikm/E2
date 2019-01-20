@@ -1170,6 +1170,72 @@ def save_keyframe_coord_systems_of_bones(
             frame_idx += 1
 
 
+def save_hierarchy_of_bones(
+        armature,       # An instance of "bpy.types.Armature"
+        export_info     # A dictionary holding properties of the export. Both keys and values are strings.
+        ):
+    with TimeProf.instance().start("save_hierarchy_of_bones"):
+
+        pose_bones = {}
+        for bone in armature.pose.bones:
+            pose_bones[bone.name] = bone
+        names = []
+        for bone in armature.data.bones:
+            if bone.use_deform is True:
+                names.append(bone.name)
+        parents = []
+        for bone in armature.data.bones:
+            if bone.use_deform is False:
+                continue
+            parent_idx = -1    # i.e. no parent
+            # dbg_name = ""
+            if bone.parent is not None:
+                # dbg_name = bone.parent.name
+                if bone.parent.use_deform:
+                    try:
+                        parent_idx = names.index(bone.parent.name)
+                    except: pass
+                elif bone.name in pose_bones:
+                    for constr in pose_bones[bone.name].constraints:
+                        if isinstance(constr, bpy.types.CopyLocationConstraint) \
+                                and constr.target is not None \
+                                and constr.target.name == armature.name \
+                                and constr.subtarget is not None \
+                                and len(constr.subtarget) > 0:
+                            try:
+                                # dbg_name = constr.subtarget
+                                parent_idx = names.index(constr.subtarget)
+                            except: pass
+            # parents.append(str(parent_idx) + " // " + dbg_name)
+            parents.append(parent_idx)
+
+        export_info["bone_names"] = os.path.join(
+            export_info["root_dir"],
+            "animations",
+            "skeletal",
+            remove_ignored_part_of_name(armature.name, "SKELETAL"),
+            "names.txt"
+            )
+        export_info["bone_parents"] = os.path.join(
+            export_info["root_dir"],
+            "animations",
+            "skeletal",
+            remove_ignored_part_of_name(armature.name, "SKELETAL"),
+            "parents.txt"
+            )
+        os.makedirs(os.path.dirname(export_info["bone_names"]), exist_ok=True)
+        with open(export_info["bone_names"], "w") as f:
+            print("Saving names of bones: " + os.path.relpath(export_info["bone_names"], export_info["root_dir"]))
+            f.write(str(len(names)) + "\n")
+            for name in names:
+                f.write(name + "\n")
+        with open(export_info["bone_parents"], "w") as f:
+            print("Saving parents of bones: " + os.path.relpath(export_info["bone_parents"], export_info["root_dir"]))
+            f.write(str(len(parents)) + "\n")
+            for parent in parents:
+                f.write(str(parent) + "\n")
+
+
 def save_batch(
         material_name,  # Material name of that part of the exported mash having the material.
         armature_name,  # Name of the armature deforming the mesh. It can be None (when no armature exists).
@@ -1227,7 +1293,7 @@ def export_object_mesh(
         export_dir      # A directory under which all exported files will be saved.
         ):
     assert obj.type == "MESH"
-    with TimeProf.instance().start("export_object_armature"):
+    with TimeProf.instance().start("export_object_mesh"):
         print("Exporting MESH: " + obj.name)
 
         mesh = obj.data
@@ -1240,7 +1306,7 @@ def export_object_mesh(
                 armature = mod.object
                 num_armatures += 1
 
-        with TimeProf.instance().start("export_object_armature [consistency checks]"):
+        with TimeProf.instance().start("export_object_mesh [consistency checks]"):
             if mesh_name is None or len(mesh_name) == 0:
                 print("ERROR: The mesh has invalid name.")
                 return
@@ -1313,6 +1379,7 @@ def export_object_armature(
 
         save_coord_systems_of_bones(obj, export_info)
         save_keyframe_coord_systems_of_bones(obj, export_info)
+        save_hierarchy_of_bones(obj, export_info)
 
 
 def export_object(
@@ -1364,12 +1431,17 @@ class E2_gfx_exporter(bpy.types.Operator):
 
     def execute(self, context):
         try:
+            success = True
             for obj in bpy.context.selected_objects:
                 if obj.type not in ["MESH", "ARMATURE"]:
                     print("ERROR: The object '" + obj.name + "' is of an unsupported type '" + str(obj.type) + "'.")
+                    success = False
                     break
                 if export_object(obj, os.path.normpath(self.directory)) is False:
+                    success = False
                     break
+            if success is True:
+                pass    # print(TimeProf.instance().to_json())
         except Exception as e:
             print("EXCEPTION (unhandled): " + str(e))
             print(traceback.format_exc())
