@@ -34,11 +34,11 @@ modelspace_data::modelspace_data(async::finalise_load_on_destroy_ptr const  fina
     {
         std::string  line;
         if (!read_line(istr,line))
-            throw std::runtime_error(msgstream() << "Cannot read time point in the file '" << pathname << "'.");
+            throw std::runtime_error(msgstream() << "Cannot read number of coord systems in the file '" << pathname << "'.");
         std::istringstream istr(line);
         istr >> num_coord_systems;
         if (num_coord_systems == 0U)
-            throw std::runtime_error(msgstream() << "The the file '" << pathname << "' does not contain any coodinate system.");
+            throw std::runtime_error(msgstream() << "The file '" << pathname << "' does not contain any coodinate system.");
     }
 
     for (natural_32_bit  i = 0U; i != num_coord_systems; ++i)
