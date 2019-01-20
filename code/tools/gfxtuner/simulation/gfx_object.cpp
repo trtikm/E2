@@ -27,7 +27,8 @@ gfx_animated_object::gfx_animated_object(qtgl::batch const  batch_)
     for (boost::filesystem::directory_entry& entry : boost::filesystem::directory_iterator(anim_root_dir))
         if (boost::filesystem::is_directory(entry.path()))
             m_animation_names.push_back(entry.path().string());
-    ASSUMPTION(!m_animation_names.empty());
+    if (m_animation_names.empty())
+        return;
 
     m_keyframes.insert_load_request(m_animation_names.at(m_animation_index));
     ASSUMPTION(!m_keyframes.empty());
@@ -38,7 +39,7 @@ void  gfx_animated_object::next_round(float_64_bit const  time_to_simulate_in_se
 {
     TMPROF_BLOCK();
 
-    if (!get_keyframes().loaded_successfully())
+    if (m_animation_names.empty() || !get_keyframes().loaded_successfully())
         return;
 
     m_animation_time = qtgl::update_animation_time(
