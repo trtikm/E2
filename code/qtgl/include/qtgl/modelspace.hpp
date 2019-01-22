@@ -5,6 +5,7 @@
 #   include <angeo/coordinate_system.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <vector>
+#   include <string>
 #   include <memory>
 
 namespace qtgl { namespace detail {
@@ -53,6 +54,22 @@ struct  modelspace : public async::resource_accessor<detail::modelspace_data>
         return boost::filesystem::path(key().get_unique_id()).parent_path();
     }
 };
+
+
+/**
+ * The 'pose_file_pathname' is a path-name of a 'pose.txt' file.
+ *
+ * Each loaded coord. system correspond to one bone, i.e a bone is an index to the vector.
+ * The bones are in the same topological order as the related file 'names.txt' and 'parents.txt'
+ * in the same directory (however, these two files are not used here; see ai::load_skeleton for more
+ * details).
+ *
+ * The function returns the empty string on succeess and error message otherwise.
+ */
+std::string  load_modelspace_coordinate_systems(
+        boost::filesystem::path const&  pose_file_pathname,
+        std::vector<angeo::coordinate_system>&  output_coord_systems
+        );
 
 
 }

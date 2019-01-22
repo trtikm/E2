@@ -29,6 +29,31 @@ std::string  load_skeleton(
         std::vector<integer_32_bit>&  parent_of_bones
         );
 
+/**
+ * The following four functions are used by the function 'load_skeleton' above
+ * for loading individual vectors. Note however, that function 'load_skeleton_bone_world_coord_systems'
+ * loads the coord systems in 'WORLD' space instead of 'LOCAL' (i.e. relative to
+ * parent bone space). The function 'load_skeleton' above then applies transformation
+ * of the coord systems from world to local spaces by calling function 'transform_skeleton_coord_systems_from_world_to_local_space' below.
+ */
+std::string  load_skeleton_bone_world_coord_systems(
+        boost::filesystem::path const&  skeleton_pose_file,
+        std::vector<angeo::coordinate_system>&  world_space_coord_systems
+        );
+std::string  load_skeleton_bone_names(
+        boost::filesystem::path const&  skeleton_names_file,
+        std::vector<std::string>&  names_of_bones
+        );
+std::string  load_skeleton_bone_parents(
+        boost::filesystem::path const&  skeleton_parents_file,
+        std::vector<integer_32_bit>&  parent_of_bones
+        );
+void  transform_skeleton_coord_systems_from_world_to_local_space(
+        std::vector<angeo::coordinate_system> const&  world_space_coord_systems,
+        std::vector<integer_32_bit> const&  parent_of_bones,
+        std::vector<angeo::coordinate_system>&  local_coord_systems_of_bones
+        );
+
 
 }
 

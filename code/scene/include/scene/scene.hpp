@@ -147,6 +147,7 @@ struct scene_node final
 
     children_map const&  get_children() const { return m_children; }
     children_map::const_iterator  find_child(node_name const&  name) const { return get_children().find(name); }
+    scene_node_ptr  find_child(scene_node_id const&  id, scene_node_ptr const  ret_value_on_failure = nullptr) const;
     bool  has_parent() const { return !m_parent.expired(); }
     scene_node_ptr  get_parent() const { return m_parent.lock(); }
 

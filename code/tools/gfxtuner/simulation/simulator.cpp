@@ -18,7 +18,7 @@
 #include <utility/canonical_path.hpp>
 #include <utility/msgstream.hpp>
 #include <utility/development.hpp>
-
+#include <boost/filesystem.hpp>
 #include <vector>
 #include <map>
 #include <algorithm>
@@ -213,6 +213,7 @@ simulator::simulator()
     , m_scene_records_inserted_during_simulation()
     , m_scene_records_erased_during_simulation()
     , m_cache_of_batches_of_colliders()
+    , m_skeletons()
 
     // Editing mode data
 
@@ -716,101 +717,7 @@ void  simulator::render_simulation_state(
     TMPROF_BLOCK();
 
     if (m_do_show_batches)
-    {
-        std::unordered_map<
-                std::string,    // batch ID
-                std::pair<
-                    qtgl::batch,
-                    std::vector<std::pair<scn::scene_node_const_ptr,gfx_animated_object const*> > > >
-            batches;
-        get_scene().foreach_node(
-            [this, &batches](scn::scene_node_ptr const  node_ptr) -> bool {
-                    for (auto const& name_holder : scn::get_batch_holders(*node_ptr))
-                    {
-                        qtgl::batch const  batch = scn::as_batch(name_holder.second);
-                        auto&  record = batches[batch.path_component_of_uid()];
-                        if (record.first.empty())
-                            record.first = batch;
-                        INVARIANT(record.first == batch);
-                        auto const  it = m_gfx_animated_objects.find(scn::make_batch_record_id(node_ptr->get_id(), name_holder.first));
-                        INVARIANT(it == m_gfx_animated_objects.cend() || it->second.get_batch() == record.first);
-                        record.second.push_back({
-                            node_ptr,
-                            it != m_gfx_animated_objects.cend() ? &it->second : nullptr
-                            });
-                    }
-                    return true;
-                },
-            false
-            );
-        for (auto const& elem : batches)
-            if (qtgl::make_current(elem.second.first, draw_state))
-            {
-                for (auto const& node_and_anim : elem.second.second)
-                    if (node_and_anim.second == nullptr)
-                        qtgl::render_batch(
-                            elem.second.first,
-                            qtgl::vertex_shader_uniform_data_provider(
-                                elem.second.first,
-                                { matrix_from_world_to_camera * node_and_anim.first->get_world_matrix() },
-                                matrix_from_camera_to_clipspace,
-                                m_diffuse_colour,
-                                m_ambient_colour,
-                                m_specular_colour,
-                                transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                                m_directional_light_colour,
-                                m_fog_colour,
-                                m_fog_near,
-                                m_fog_far
-                                ),
-                            qtgl::fragment_shader_uniform_data_provider(
-                                m_diffuse_colour,
-                                m_ambient_colour,
-                                m_specular_colour,
-                                transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                                m_directional_light_colour,
-                                m_fog_colour,
-                                m_fog_near,
-                                m_fog_far
-                                )
-                            );
-                    else
-                    {
-                        std::vector<matrix44>  frame;
-                        node_and_anim.second->get_transformations(
-                                frame,
-                                matrix_from_world_to_camera * node_and_anim.first->get_world_matrix()
-                                );
-                        qtgl::render_batch(
-                                elem.second.first,
-                                qtgl::vertex_shader_uniform_data_provider(
-                                    elem.second.first,
-                                    frame,
-                                    matrix_from_camera_to_clipspace,
-                                    m_diffuse_colour,
-                                    m_ambient_colour,
-                                    m_specular_colour,
-                                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                                    m_directional_light_colour,
-                                    m_fog_colour,
-                                    m_fog_near,
-                                    m_fog_far
-                                    ),
-                                qtgl::fragment_shader_uniform_data_provider(
-                                    m_diffuse_colour,
-                                    m_ambient_colour,
-                                    m_specular_colour,
-                                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                                    m_directional_light_colour,
-                                    m_fog_colour,
-                                    m_fog_near,
-                                    m_fog_far
-                                    )
-                            );
-                    }
-                draw_state = elem.second.first.get_draw_state();
-            }
-    }
+        render_scene_batches(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
 }
 
 
@@ -1111,28 +1018,56 @@ void  simulator::render_scene_batches(
 {
     TMPROF_BLOCK();
 
-    std::unordered_map<std::string, std::vector<std::pair<qtgl::batch, scn::scene_node_const_ptr> > >
-            batches;
+    std::unordered_map<
+            std::string,    // batch ID
+            std::pair<qtgl::batch, std::vector<std::pair<scn::scene_node_ptr, gfx_animated_object const*> > > >
+        batches;
     get_scene().foreach_node(
         [this, &batches](scn::scene_node_ptr const  node_ptr) -> bool {
                 for (auto const& name_holder : scn::get_batch_holders(*node_ptr))
                 {
                     qtgl::batch const  batch = scn::as_batch(name_holder.second);
-                    batches[batch.path_component_of_uid()].push_back({batch, node_ptr});
+                    auto&  record = batches[batch.path_component_of_uid()];
+                    if (record.first.empty())
+                        record.first = batch;
+                    INVARIANT(record.first == batch);
+                    //auto const  it = m_gfx_animated_objects.find(scn::make_batch_record_id(node_ptr->get_id(), name_holder.first));
+                    //INVARIANT(it == m_gfx_animated_objects.cend() || it->second.get_batch() == record.first);
+                    record.second.push_back({
+                        node_ptr,
+                        nullptr //it != m_gfx_animated_objects.cend() ? &it->second : nullptr
+                        });
                 }
                 return true;
             },
         false
         );
-    for (auto const& path_and_pairs : batches)
-        if (qtgl::make_current(path_and_pairs.second.front().first, draw_state))
+    for (auto const& elem : batches)
+        if (qtgl::make_current(elem.second.first, draw_state))
         {
-            for (auto const& batch_and_node : path_and_pairs.second)
-                qtgl::render_batch(
-                        batch_and_node.first,
+            skeleton  bones;
+            if (elem.second.first.get_available_resources().skeletal() != nullptr)
+            {
+                TMPROF_BLOCK();
+
+                boost::filesystem::path const  skeleton_directory =
+                        boost::filesystem::path(elem.second.first.get_available_resources().data_root_dir())
+                                / "animations"
+                                / "skeletal"
+                                / elem.second.first.get_available_resources().skeletal()->skeleton_name()
+                                ;
+                auto const  skeleton_iter = m_skeletons.find(skeleton_directory.string());
+                bones = (skeleton_iter != m_skeletons.cend()) ?
+                                skeleton_iter->second :
+                                m_skeletons.insert({skeleton_directory.string(), skeleton(skeleton_directory)}).first->second;
+            }
+            for (auto const& node_and_anim : elem.second.second)
+                if (!bones.loaded_successfully()) // || node_and_anim.second == nullptr)
+                    qtgl::render_batch(
+                        elem.second.first,
                         qtgl::vertex_shader_uniform_data_provider(
-                            batch_and_node.first,
-                            { matrix_from_world_to_camera * batch_and_node.second->get_world_matrix() },
+                            elem.second.first,
+                            { matrix_from_world_to_camera * node_and_anim.first->get_world_matrix() },
                             matrix_from_camera_to_clipspace,
                             m_diffuse_colour,
                             m_ambient_colour,
@@ -1154,7 +1089,56 @@ void  simulator::render_scene_batches(
                             m_fog_far
                             )
                         );
-            draw_state = path_and_pairs.second.front().first.get_draw_state();
+                else
+                {
+                    //node_and_anim.second->get_transformations(
+                    //        frame,
+                    //        matrix_from_world_to_camera * node_and_anim.first->get_world_matrix()
+                    //        );
+                    std::vector<matrix44>  frame;
+                    {
+                        std::vector<scn::scene_node_id> const&  relative_node_ids = bones.get_relative_node_ids();
+                        std::vector<angeo::coordinate_system> const&  coord_systems = elem.second.first.get_modelspace().get_coord_systems();
+                        INVARIANT(relative_node_ids.size() == coord_systems.size());
+                        for (natural_32_bit  bone = 0U; bone != relative_node_ids.size(); ++bone)
+                            if (scn::scene_node_ptr const  bone_node_ptr = node_and_anim.first->find_child(relative_node_ids.at(bone)))
+                                frame.push_back(matrix_from_world_to_camera * bone_node_ptr->get_world_matrix());
+                            else
+                            {
+                                matrix44 M;
+                                angeo::from_base_matrix(coord_systems.at(bone), M);
+                                frame.push_back(matrix_from_world_to_camera * node_and_anim.first->get_world_matrix() * M);
+                            }
+                    }
+
+                    qtgl::render_batch(
+                            elem.second.first,
+                            qtgl::vertex_shader_uniform_data_provider(
+                                elem.second.first,
+                                frame,
+                                matrix_from_camera_to_clipspace,
+                                m_diffuse_colour,
+                                m_ambient_colour,
+                                m_specular_colour,
+                                transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                                m_directional_light_colour,
+                                m_fog_colour,
+                                m_fog_near,
+                                m_fog_far
+                                ),
+                            qtgl::fragment_shader_uniform_data_provider(
+                                m_diffuse_colour,
+                                m_ambient_colour,
+                                m_specular_colour,
+                                transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                                m_directional_light_colour,
+                                m_fog_colour,
+                                m_fog_near,
+                                m_fog_far
+                                )
+                        );
+                }
+            draw_state = elem.second.first.get_draw_state();
         }
 }
 
@@ -1818,6 +1802,7 @@ void  simulator::clear_scene()
     m_cache_of_batches_of_colliders.triangle_meshes.clear();
     m_cache_of_batches_of_colliders.collision_normals_points.release();
     m_cache_of_batches_of_colliders.collision_normals_batch.release();
+    m_skeletons.clear();
 
     get_scene().clear();
 

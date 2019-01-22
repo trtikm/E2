@@ -10,6 +10,7 @@
 #   include <scene/records/collider/collider.hpp>
 #   include <scene/records/rigid_body/rigid_body.hpp>
 #   include <gfxtuner/simulation/gfx_object.hpp>
+#   include <gfxtuner/simulation/skeleton.hpp>
 #   include <qtgl/real_time_simulator.hpp>
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>
@@ -324,6 +325,8 @@ private:
         qtgl::batch  collision_normals_batch;
     };
     cache_of_batches_of_colliders  m_cache_of_batches_of_colliders;
+
+    std::unordered_map<std::string, skeleton>  m_skeletons;
 
     // Editing mode data
 

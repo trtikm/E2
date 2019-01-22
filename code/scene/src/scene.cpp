@@ -78,6 +78,23 @@ bool  scene_node::foreach_child(std::function<bool(scene_node_ptr)> const&  acti
 }
 
 
+scene_node_ptr  scene_node::find_child(scene_node_id const&  id, scene_node_ptr const  ret_value_on_failure) const
+{
+    auto const  it = find_child(id.path().front());
+    if (it == get_children().cend())
+        return ret_value_on_failure;
+    scene_node_ptr  node = it->second;
+    for (natural_32_bit i = 1U, n = id.depth(); i != n; ++i)
+    {
+        auto const  child_it = node->find_child(id.path_element(i));
+        if (child_it == node->get_children().cend())
+            return ret_value_on_failure;
+        node = child_it->second;
+    }
+    return node;
+}
+
+
 matrix44 const&  scene_node::get_world_matrix() const
 {
     TMPROF_BLOCK();

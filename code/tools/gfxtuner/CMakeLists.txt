@@ -70,6 +70,9 @@ add_executable(${THIS_TARGET_NAME}
 
     simulation/gfx_object.hpp
     simulation/gfx_object.cpp
+
+    simulation/skeleton.hpp
+    simulation/skeleton.cpp
     )
 
 target_link_libraries(${THIS_TARGET_NAME}
