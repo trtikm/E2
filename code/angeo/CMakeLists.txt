@@ -48,6 +48,9 @@ add_library(${THIS_TARGET_NAME}
     
     ./include/angeo/mass_and_inertia_tensor.hpp
     ./src/mass_and_inertia_tensor.cpp
+
+    ./include/angeo/skeleton_kinematics.hpp
+    ./src/skeleton_kinematics.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
