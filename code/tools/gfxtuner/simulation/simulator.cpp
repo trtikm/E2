@@ -5,6 +5,7 @@
 #include <scene/scene_utils_specialised.hpp>
 #include <angeo/collide.hpp>
 #include <angeo/mass_and_inertia_tensor.hpp>
+#include <angeo/skeleton_kinematics.hpp>
 #include <angeo/utility.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
@@ -266,6 +267,102 @@ void  simulator::set_camera_speed(float_32_bit const  speed)
 }
 
 
+void  __agent_look_at_object(
+        std::string const&  agent_name,
+        std::string const&  object_name,
+        scn::scene const&  scene,
+        float_64_bit const  seconds_from_previous_call
+        )
+{
+    std::vector<scn::scene_node_ptr> const  agent_nodes{                                                                                // bone:
+        scene.get_scene_node(scn::scene_node_id(agent_name) / "lower_body" / "middle_body" / "upper_body" / "neck"),                    // 0
+        scene.get_scene_node(scn::scene_node_id(agent_name) / "lower_body" / "middle_body" / "upper_body" / "neck" / "head"),           // 1
+        scene.get_scene_node(scn::scene_node_id(agent_name) / "lower_body" / "middle_body" / "upper_body" / "neck" / "head" / "eye.L"), // 2
+        scene.get_scene_node(scn::scene_node_id(agent_name) / "lower_body" / "middle_body" / "upper_body" / "neck" / "head" / "eye.R"), // 3
+    };
+    std::vector<integer_32_bit> const  parents {
+            // bone:
+        -1, // 0
+         0, // 1
+         1, // 2
+         1, // 3
+    };
+    std::vector<angeo::coordinate_system>  frames;
+    for (auto const&  node_ptr : agent_nodes)
+    {
+        if (node_ptr == nullptr)
+            return;
+        frames.push_back(*node_ptr->get_coord_system());
+    }
+    std::vector<std::vector<angeo::joint_rotation_props> > const  rotation_props {
+        { // bone 0
+            // TODO!
+        },
+        { // bone 1
+            // TODO!
+        },
+        { // bone 2
+            {
+                vector3_unit_y(),               // m_axis
+                true,                           // m_axis_in_parent_space
+                PI() * 2.0f,                    // m_max_angular_speed
+                
+                vector3_unit_x(),               // m_zero_angle_direction
+                vector3_unit_y(),               // m_direction
+
+                PI() * 50.0f / 180.0f           // m_max_angle
+            },
+            {
+                vector3_unit_x(),               // m_axis
+                false,                          // m_axis_in_parent_space
+                PI() * 2.0f,                    // m_max_angular_speed
+
+                vector3_unit_y(),               // m_zero_angle_direction
+                vector3_unit_z(),               // m_direction
+                
+                PI() * 30.0f / 180.0f           // m_max_angle
+            }
+        },
+        { // bone 3
+            {
+                vector3_unit_y(),               // m_axis
+                true,                           // m_axis_in_parent_space
+                PI() * 2.0f,                    // m_max_angular_speed
+                
+                vector3_unit_x(),               // m_zero_angle_direction
+                vector3_unit_y(),               // m_direction
+
+                PI() * 50.0f / 180.0f           // m_max_angle
+            },
+            {
+                vector3_unit_x(),               // m_axis
+                false,                          // m_axis_in_parent_space
+                PI() * 2.0f,                    // m_max_angular_speed
+
+                vector3_unit_y(),               // m_zero_angle_direction
+                vector3_unit_z(),               // m_direction
+                
+                PI() * 30.0f / 180.0f           // m_max_angle
+            }
+        },
+    };
+    scn::scene_node_const_ptr const  target_node = scene.get_scene_node(scn::scene_node_id(object_name));
+    if (target_node == nullptr)
+        return;
+    vector3 const  target =
+        transform_point(vector3_zero(), inverse44(agent_nodes.at(0)->get_parent()->get_world_matrix()) * target_node->get_world_matrix());
+    angeo::bone_look_at_targets const  look_at_targets {
+        { 2, { vector3_unit_y(), target } },
+        { 3, { vector3_unit_y(), target } },
+    };
+
+    angeo::skeleton_bones_move_towards_targets(frames, parents, rotation_props, look_at_targets, seconds_from_previous_call);
+
+    for (natural_32_bit  i = 0U; i != agent_nodes.size(); ++i)
+        agent_nodes.at(i)->relocate(frames.at(i).origin(), frames.at(i).orientation());
+}
+
+
 void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
                             bool const  is_this_pure_redraw_request)
 {
@@ -294,6 +391,8 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
 
         if (!m_do_single_step && keyboard_props().was_just_released(qtgl::KEY_PAUSE()))
             m_paused = !m_paused;
+
+//__agent_look_at_object("agent", "apple", get_scene(), seconds_from_previous_call);
 
         if (!paused())
         {
