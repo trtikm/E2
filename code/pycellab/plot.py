@@ -4,6 +4,7 @@ import mpl_toolkits.mplot3d.axes3d as axes3d
 from matplotlib import cm
 import argparse
 import numpy
+import math
 import json
 import distribution
 
@@ -366,6 +367,132 @@ def histogram(distrib, pathname, normalised=True, colours=None, title=None, xaxi
         points, pathname, title, xaxis_name, faxis_name)
 
 
+def _plot_points_2d_impl(points, line_style, point_style):
+    fig = plt.figure(figsize=(7, 7), dpi=100)
+    ax = fig.gca()
+    fx = [p[0] for p in points]
+    fy = [p[1] for p in points]
+    ax.plot(fx, fy, linestyle=line_style, marker=point_style)
+    plt.show()
+
+
+def plot_points_2d(points):
+    _plot_points_2d_impl(points, "None", ".")
+
+
+def plot_lines_2d(points):
+    _plot_points_2d_impl(points, "-", "None")
+
+
+def plot_points_and_lines_2d(plot_data):
+    _plot_points_2d_impl(plot_data, "-", ".")
+
+
+#########################################################################################################
+#########################################################################################################
+#########################################################################################################
+
+
+def ik_rotate_line_to_look_at_point():
+    """It is an "experiment" function"""
+    R = 1.0
+    q = 2.0
+    beta = math.pi / 4.0
+
+    if R <= 0.0:
+        print("ERROR: Bad input R (must be > 0).")
+        return
+
+    if q <= 0.0:
+        print("ERROR: Bad input q (must be > 0).")
+        return
+
+    S = [0, 0]
+    P = [q, 0]
+
+    print("INPUT:")
+    print("    R=" + str(R))
+    print("    q=" + str(q))
+    print("    beta=" + str(beta))
+    print("    ---------------")
+    print("    S" + str(S))
+    print("    P" + str(P))
+
+    sin_beta = math.sin(beta)
+    cos_beta = math.cos(beta)
+
+    D = q**2 - R**2 * sin_beta**2
+    if D < 0.0:
+        print("ERROR D < 0.0")
+        return
+
+    cos_alphas = [
+        (R * sin_beta**2 + cos_beta * math.sqrt(D)) / q,
+        (R * sin_beta**2 - cos_beta * math.sqrt(D)) / q
+        ]
+
+    gfx_points = [S, P, [0, q]]
+    gfx_lines = [S, P, [0, q], [0, q]]
+
+    print("RESULTS:")
+    for i in range(len(cos_alphas)):
+        if cos_alphas[i] < -1.0 or cos_alphas[i] > 1.0:
+            print("WARNING: cos_alpha[" + str(i) + "] is out of range  <-1, 1>: " + str(cos_alphas[i]))
+            print("         So, skipping the computation for the angle.")
+            continue
+        alpha = math.acos(cos_alphas[i])
+
+        cos_alpha = cos_alphas[i]
+        sin_alpha = math.sin(alpha)
+
+        X = [R*cos_alpha, R*sin_alpha]
+        T = [q*cos_alpha**2, q*sin_alpha*cos_alpha]
+
+        print("    for alpha[" + str(i) + "]=" + str(alpha) + ":")
+        print("        X" + str(X))
+        print("        T" + str(T))
+
+        if i == 2:
+            gfx_points.append(X)
+            gfx_points.append(T)
+
+            gfx_lines.append(S)
+            gfx_lines.append(X)
+
+            gfx_lines.append(X)
+            gfx_lines.append(T)
+
+            gfx_lines.append(X)
+            gfx_lines.append(P)
+
+            gfx_lines.append(T)
+            gfx_lines.append(P)
+
+        # verifying angle between 'XT' and 'XP', which must be equal to 'beta'
+        XT = [T[0]-X[0], T[1]-X[1]]
+        XP = [P[0]-X[0], P[1]-X[1]]
+        dot_XTXT = XT[0]*XT[0] + XT[1]*XT[1]
+        dot_XPXP = XP[0]*XP[0] + XP[1]*XP[1]
+        dot_XTXP = XT[0]*XP[0] + XT[1]*XP[1]
+        if dot_XTXT * dot_XPXP <= 0.00000001:
+            print("ERROR: verifivation: dot_XTXT * dot_XPXP < 0.00000001.")
+            continue
+        cos_beta_verify = dot_XTXP / math.sqrt(dot_XTXT * dot_XPXP)
+        if cos_beta_verify < -1.0 or cos_beta_verify > 1.0:
+            print("ERROR: cos_beta_verify is out of range  <-1, 1>: " + str(cos_beta_verify))
+            continue
+        beta_verify = math.acos(cos_beta_verify)
+
+        print("        beta=" + str(beta_verify))
+        print("        beta[error]=" + str(beta - beta_verify))
+
+    # plot_points_2d(gfx_points)
+    # plot_lines_2d(gfx_lines)
+
+
+#########################################################################################################
+
+
 def _autodetect_plot_kind(plot_data):
     if isinstance(plot_data, dict):
         if "points" in plot_data and isinstance(plot_data["points"], list):
@@ -530,6 +657,11 @@ def _get_plot_kinds_bindings():
 
 
 def _main(cmdline):
+    if cmdline.experiment is not None:
+        print("*** EXPERIMENT[" + str(cmdline.experiment) + "] ***")
+        eval(cmdline.experiment)()
+        print("*** DONE ***")
+        return 0
     if cmdline.function is not None:
         plot_data = _compute_points_of_function_2d(cmdline.function, cmdline.dom_x)\
                         if cmdline.dom_y is None\
@@ -585,7 +717,14 @@ def _parse_command_line_options():
              "containing a tuple (lo, hi, n), where [lo, hi) is the interval along the axis and n is a number of "
              "samples in that interval to be considered. We require that lo < hi and n >= 2."
         )
+    parser.add_argument(
+        "--experiment", type=str,
+        help="Runs an experiment function hard-coded in this script."
+        )
     cmdline = parser.parse_args()
+
+    if cmdline.experiment is not None:
+        return cmdline
 
     if cmdline.function is not None:
         if not cmdline.function.startswith("lambda "):
