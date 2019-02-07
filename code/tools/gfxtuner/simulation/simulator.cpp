@@ -274,11 +274,16 @@ void  __agent_look_at_object(
         float_64_bit const  seconds_from_previous_call
         )
 {
-    std::vector<scn::scene_node_ptr> const  agent_nodes{                                                                                // bone:
-        scene.get_scene_node(scn::scene_node_id(agent_name) / "lower_body" / "middle_body" / "upper_body" / "neck"),                    // 0
-        scene.get_scene_node(scn::scene_node_id(agent_name) / "lower_body" / "middle_body" / "upper_body" / "neck" / "head"),           // 1
-        scene.get_scene_node(scn::scene_node_id(agent_name) / "lower_body" / "middle_body" / "upper_body" / "neck" / "head" / "eye.L"), // 2
-        scene.get_scene_node(scn::scene_node_id(agent_name) / "lower_body" / "middle_body" / "upper_body" / "neck" / "head" / "eye.R"), // 3
+    TMPROF_BLOCK();
+
+    scn::scene_node_ptr const  agent_node_ptr = scene.get_scene_node(scn::scene_node_id(agent_name));
+    if (agent_node_ptr == nullptr)
+        return;
+    std::vector<scn::scene_node_ptr> const  agent_nodes{                                                                            // bone:
+        agent_node_ptr->find_child(scn::scene_node_id() / "lower_body" / "middle_body" / "upper_body" / "neck"),                    // 0
+        agent_node_ptr->find_child(scn::scene_node_id() / "lower_body" / "middle_body" / "upper_body" / "neck" / "head"),           // 1
+        agent_node_ptr->find_child(scn::scene_node_id() / "lower_body" / "middle_body" / "upper_body" / "neck" / "head" / "eye.L"), // 2
+        agent_node_ptr->find_child(scn::scene_node_id() / "lower_body" / "middle_body" / "upper_body" / "neck" / "head" / "eye.R"), // 3
     };
     std::vector<integer_32_bit> const  parents {
             // bone:
@@ -287,6 +292,8 @@ void  __agent_look_at_object(
          1, // 2
          1, // 3
     };
+    std::vector<std::vector<integer_32_bit> >  children;
+    angeo::skeleton_compute_child_bones(parents, children);
     std::vector<angeo::coordinate_system>  frames;
     for (auto const&  node_ptr : agent_nodes)
     {
@@ -294,19 +301,42 @@ void  __agent_look_at_object(
             return;
         frames.push_back(*node_ptr->get_coord_system());
     }
+    auto vector_to_bone_space = [agent_node_ptr, &agent_nodes, &parents](vector3 const&  v, integer_32_bit const  bone) -> vector3 {
+        matrix44 const M = inverse44(agent_nodes.at(bone)->get_world_matrix()) * agent_node_ptr->get_world_matrix();
+        return (bone < 0) ? v : normalised(transform_vector(v, M));
+    };
     std::vector<std::vector<angeo::joint_rotation_props> > const  rotation_props {
         { // bone 0
             // TODO!
         },
         { // bone 1
-            // TODO!
+            {
+                vector_to_bone_space(vector3_unit_z(), parents.at(1)),    // m_axis
+                true,                           // m_axis_in_parent_space
+                PI() / 2.0f,                    // m_max_angular_speed
+
+                vector_to_bone_space(-vector3_unit_y(), parents.at(1)),    // m_zero_angle_direction
+                vector3_unit_x(),               // m_direction
+
+                PI() * 120.0f / 180.0f           // m_max_angle
+            },
+            {
+                vector3_unit_z(),               // m_axis
+                false,                          // m_axis_in_parent_space
+                PI() / 2.0f,                    // m_max_angular_speed
+
+                normalised(vector3{ -0.207483f, 0.978231f, -0.00315839f }),   // m_zero_angle_direction
+                vector3_unit_y(),               // m_direction
+                
+                PI() * 90.0f / 180.0f           // m_max_angle
+            }
         },
         { // bone 2
             {
                 vector3_unit_y(),               // m_axis
                 true,                           // m_axis_in_parent_space
                 PI() * 2.0f,                    // m_max_angular_speed
-                
+
                 vector3_unit_x(),               // m_zero_angle_direction
                 vector3_unit_y(),               // m_direction
 
@@ -319,7 +349,7 @@ void  __agent_look_at_object(
 
                 vector3_unit_y(),               // m_zero_angle_direction
                 vector3_unit_z(),               // m_direction
-                
+
                 PI() * 30.0f / 180.0f           // m_max_angle
             }
         },
@@ -356,7 +386,7 @@ void  __agent_look_at_object(
         { 3, { vector3_unit_y(), target } },
     };
 
-    angeo::skeleton_bones_move_towards_targets(frames, parents, rotation_props, look_at_targets, seconds_from_previous_call);
+    angeo::skeleton_bones_move_towards_targets(frames, parents, children, rotation_props, look_at_targets, seconds_from_previous_call, 1U);
 
     for (natural_32_bit  i = 0U; i != agent_nodes.size(); ++i)
         agent_nodes.at(i)->relocate(frames.at(i).origin(), frames.at(i).orientation());
