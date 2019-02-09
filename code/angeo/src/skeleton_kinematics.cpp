@@ -148,17 +148,16 @@ float_32_bit  compute_look_at_rotation_angle_of_inner_bone( // I.e. for bone whi
 }
 
 
-float_32_bit  bone_look_at_target(
+void  bone_look_at_target(
         skeleton_look_at_props&  props,
         integer_32_bit const  bone,
         std::unordered_set<integer_32_bit>&  output_targets,
-        std::unordered_set<integer_32_bit>&  visited
+        std::unordered_set<integer_32_bit>&  visited,
+        bool const  is_intermediate_iteration
         )
 {
-    float_32_bit  absolute_angle_change = 0.0f;
-
     if (visited.count(bone) != 0UL)
-        return absolute_angle_change;
+        return;
     visited.insert(bone);
 
     bool const  is_look_at_target_bone = props.look_at_targets->count(bone) != 0UL;
@@ -167,10 +166,10 @@ float_32_bit  bone_look_at_target(
         if (is_look_at_target_bone)
             targets.insert(bone);
         for (integer_32_bit  child_bone : props.children->at(bone))
-            absolute_angle_change += bone_look_at_target(props, child_bone, targets, visited);
+            bone_look_at_target(props, child_bone, targets, visited, is_intermediate_iteration);
     }
     if (targets.empty())
-        return absolute_angle_change;
+        return;
     output_targets.insert(targets.cbegin(), targets.cend());
 
     matrix44  from_world_to_parent_frame;
@@ -203,31 +202,27 @@ float_32_bit  bone_look_at_target(
                                         eye_vector_in_parent_bone,
                                         eye_center_in_parent_bone
                                         );
-            rotate(target_frame, angle_axis_to_quaternion(rot_angle, axis));
+            float_32_bit const  convergence_coef = is_intermediate_iteration ? rot_props.m_convergence_coef : 1.0f;
+            rotate(target_frame, angle_axis_to_quaternion(convergence_coef * rot_angle, axis));
         }
 
-        absolute_angle_change +=
-                clip_all_joint_rotations_to_allowed_limits(
-                        current_frame,
-                        props.rotation_props->at(bone),
-                        props.start_angles->at(bone),
-                        props.dt,
-                        target_frame
-                        );
+        clip_all_joint_rotations_to_allowed_limits(
+                current_frame,
+                props.rotation_props->at(bone),
+                props.start_angles->at(bone),
+                props.dt,
+                target_frame
+                );
     }
-
-    return absolute_angle_change;
 }
 
 
-float_32_bit  look_at_targets(skeleton_look_at_props&  props)
+void  look_at_targets(skeleton_look_at_props&  props, bool const  is_intermediate_iteration)
 {
     std::unordered_set<integer_32_bit>  targets;
     std::unordered_set<integer_32_bit>  visited;
-    float_32_bit  absolute_angle_change = 0.0f;
     for (integer_32_bit  base_bone : *props.look_at_bases)
-        absolute_angle_change += bone_look_at_target(props, base_bone, targets, visited);
-    return absolute_angle_change;
+        bone_look_at_target(props, base_bone, targets, visited, is_intermediate_iteration);
 }
 
 
@@ -256,8 +251,7 @@ void  skeleton_bones_move_towards_targets(
         std::vector<std::vector<joint_rotation_props> > const&  rotation_props,
         bone_look_at_targets const&  look_at_targets,
         float_32_bit const  dt,
-        natural_32_bit const  max_num_iterations,
-        float_32_bit const  angle_change_epsilon
+        natural_32_bit const  num_sub_iterations
         )
 {
     TMPROF_BLOCK();
@@ -302,15 +296,9 @@ void  skeleton_bones_move_towards_targets(
         dt
     };
 
-    for (natural_32_bit  iteration = 0U; iteration < max_num_iterations; ++iteration)
-    {
-        float_32_bit  absolute_angle_change = 0.0f;
-
-        absolute_angle_change += detail::look_at_targets(look_at_props);
-
-        if (absolute_angle_change <= angle_change_epsilon)
-            break;
-    }
+    for (natural_32_bit  iteration = 0U; iteration != num_sub_iterations; ++iteration)
+        detail::look_at_targets(look_at_props, true);
+    detail::look_at_targets(look_at_props, false);
 }
 
 

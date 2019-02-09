@@ -21,6 +21,8 @@ struct  joint_rotation_props
     vector3  m_direction;               // unit vector; in bone's cood system.
 
     float_32_bit  m_max_angle;
+
+    float_32_bit  m_convergence_coef;   // in range (0.0, 1.0>; how quickly the joint should converge to target angle computed a skeletal algo.
 };
 
 
@@ -38,8 +40,7 @@ void  skeleton_bones_move_towards_targets(
         std::vector<std::vector<joint_rotation_props> > const&  rotation_props,
         bone_look_at_targets const&  look_at_targets,
         float_32_bit const  dt,                         // simulation time step.
-        natural_32_bit const  max_num_iterations = 1U,
-        float_32_bit const  angle_change_epsilon = PI() / 180.0f
+        natural_32_bit const  num_sub_iterations = 1U
         );
 
 
