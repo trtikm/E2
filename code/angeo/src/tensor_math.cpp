@@ -10,6 +10,13 @@
 #else
 
 
+scalar  cos_angle_2d(vector2 const& u, vector2 const& v)
+{
+    scalar const  denom = length_2d(u) * length_2d(v);
+    return denom < 1e-5f ? 0.0f : std::min(std::max(-1.0f, dot_product_2d(u, v) / denom), 1.0f);
+}
+
+
 vector3  orthogonal(vector3 const&  u)
 {
     scalar const x = std::abs(u(0));
@@ -26,6 +33,13 @@ vector3  orthogonal(vector3 const&  u)
             return cross_product(u, vector3_unit_y());
         else
             return cross_product(u, vector3_unit_z());
+}
+
+
+scalar  cos_angle(vector3 const& u, vector3 const& v)
+{
+    scalar const  denom = length(u) * length(v);
+    return denom < 1e-5f ? 0.0f : std::min(std::max(-1.0f, dot_product(u, v) / denom), 1.0f);
 }
 
 
