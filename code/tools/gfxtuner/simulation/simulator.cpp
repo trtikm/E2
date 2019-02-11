@@ -276,9 +276,15 @@ void  __agent_look_at_object(
 {
     TMPROF_BLOCK();
 
+    static std::vector<std::vector<angeo::joint_rotation_props> > rotation_props;
+
     scn::scene_node_ptr const  agent_node_ptr = scene.get_scene_node(scn::scene_node_id(agent_name));
-    if (agent_node_ptr == nullptr)
+    scn::scene_node_const_ptr const  target_node = scene.get_scene_node(scn::scene_node_id(object_name));
+    if (agent_node_ptr == nullptr || target_node == nullptr)
+    {
+        rotation_props.clear();
         return;
+    }
     scn::scene_node_ptr const  ske_root_ptr = agent_node_ptr->find_child(scn::scene_node_id() / "lower_body" / "middle_body" / "upper_body");
     if (ske_root_ptr == nullptr)
         return;
@@ -288,6 +294,13 @@ void  __agent_look_at_object(
         ske_root_ptr->find_child(scn::scene_node_id() / "neck" / "head" / "eye.L"),   // 2
         ske_root_ptr->find_child(scn::scene_node_id() / "neck" / "head" / "eye.R"),   // 3
     };
+    std::vector<angeo::coordinate_system>  frames;
+    for (auto const&  node_ptr : agent_nodes)
+    {
+        if (node_ptr == nullptr)
+            return;
+        frames.push_back(*node_ptr->get_coord_system());
+    }
     std::vector<integer_32_bit> const  parents {
             // bone:
         -1, // 0
@@ -297,131 +310,117 @@ void  __agent_look_at_object(
     };
     std::vector<std::vector<integer_32_bit> >  children;
     angeo::skeleton_compute_child_bones(parents, children);
-    std::vector<angeo::coordinate_system>  frames;
-    for (auto const&  node_ptr : agent_nodes)
-    {
-        if (node_ptr == nullptr)
-            return;
-        frames.push_back(*node_ptr->get_coord_system());
-    }
-    auto vector_from_parent_bone = [&frames](vector3 const&  v, integer_32_bit const bone) -> vector3 {
-        matrix44  M;
-        angeo::from_base_matrix(frames.at(bone), M);
-        return transform_vector(vector3_unit_y(), M);
-    };
     auto vector_to_bone_space = [agent_node_ptr, ske_root_ptr, &agent_nodes, &parents](vector3 const&  v, integer_32_bit const  bone) -> vector3 {
         matrix44 const M = inverse44((bone < 0 ? ske_root_ptr : agent_nodes.at(bone))->get_world_matrix()) * agent_node_ptr->get_world_matrix();
         return normalised(transform_vector(v, M));
     };
-    std::vector<std::vector<angeo::joint_rotation_props> > const  rotation_props {
-        { // bone 0
-            {
-                vector_to_bone_space(vector3_unit_z(), parents.at(0)),    // m_axis
-                true,                           // m_axis_in_parent_space
-                PI() * 0.5f,                    // m_max_angular_speed
+    if (rotation_props.empty())
+        rotation_props = std::vector<std::vector<angeo::joint_rotation_props> > {
+            { // bone 0
+                {
+                    vector_to_bone_space(vector3_unit_z(), parents.at(0)),    // m_axis
+                    true,                           // m_axis_in_parent_space
+                    PI() * 1.0f,                    // m_max_angular_speed
 
-                vector_to_bone_space(-vector3_unit_y(), parents.at(0)),    // m_zero_angle_direction
-                vector3_unit_x(),               // m_direction
+                    vector_to_bone_space(-vector3_unit_y(), parents.at(0)),    // m_zero_angle_direction
+                    vector3_unit_x(),               // m_direction
 
-                PI() * 20.0f / 180.0f,          // m_max_angle
+                    PI() * 20.0f / 180.0f,          // m_max_angle
 
-                0.5f,                           // m_convergence_coef
-            },
-            //{
-            //    vector3_unit_z(),               // m_axis
-            //    false,                          // m_axis_in_parent_space
-            //    PI() * 2.0f,                    // m_max_angular_speed
+                    0.5f,                           // m_convergence_coef
+                },
+                {
+                    vector3_unit_z(),               // m_axis
+                    false,                          // m_axis_in_parent_space
+                    PI() * 1.0f,                    // m_max_angular_speed
 
-            //    normalised(vector3{ -0.207483f, 0.978231f, -0.00315839f }),   // m_zero_angle_direction
-            //    vector3_unit_y(),               // m_direction
-            //    
-            //    PI() * 90.0f / 180.0f,          // m_max_angle
-
-            //    0.5f,                           // m_convergence_coef
-            //}
-        },
-        { // bone 1
-            {
-                vector_to_bone_space(vector3_unit_z(), parents.at(1)),    // m_axis
-                true,                           // m_axis_in_parent_space
-                PI() * 2.0f,                    // m_max_angular_speed
-
-                vector_to_bone_space(-vector3_unit_y(), parents.at(1)),    // m_zero_angle_direction
-                vector3_unit_x(),               // m_direction
-
-                PI() * 120.0f / 180.0f,         // m_max_angle
-
-                0.5f,                           // m_convergence_coef
-            },
-            {
-                vector3_unit_z(),               // m_axis
-                false,                          // m_axis_in_parent_space
-                PI() * 2.0f,                    // m_max_angular_speed
-
-                normalised(vector3{ -0.207483f, 0.978231f, -0.00315839f }),   // m_zero_angle_direction
-                vector3_unit_y(),               // m_direction
+                    vector_to_bone_space(vector3{0.0f, -0.2f, 1.0f}, parents.at(0)),   // m_zero_angle_direction
+                    vector3_unit_y(),               // m_direction
                 
-                PI() * 90.0f / 180.0f,          // m_max_angle
+                    PI() * 20.0f / 180.0f,          // m_max_angle
 
-                0.5f,                           // m_convergence_coef
-            }
-        },
-        { // bone 2
-            {
-                vector3_unit_y(),               // m_axis
-                true,                           // m_axis_in_parent_space
-                PI() * 4.0f,                    // m_max_angular_speed
-
-                vector3_unit_x(),               // m_zero_angle_direction
-                vector3_unit_y(),               // m_direction
-
-                PI() * 50.0f / 180.0f,          // m_max_angle
-
-                0.75f,                          // m_convergence_coef
+                    0.5f,                           // m_convergence_coef
+                }
             },
-            {
-                vector3_unit_x(),               // m_axis
-                false,                          // m_axis_in_parent_space
-                PI() * 4.0f,                    // m_max_angular_speed
+            { // bone 1
+                {
+                    vector_to_bone_space(vector3_unit_z(), parents.at(1)),    // m_axis
+                    true,                           // m_axis_in_parent_space
+                    PI() * 2.0f,                    // m_max_angular_speed
 
-                vector3_unit_y(),               // m_zero_angle_direction
-                vector3_unit_z(),               // m_direction
+                    vector_to_bone_space(-vector3_unit_y(), parents.at(1)),    // m_zero_angle_direction
+                    vector3_unit_x(),               // m_direction
 
-                PI() * 30.0f / 180.0f,          // m_max_angle
+                    PI() * 120.0f / 180.0f,         // m_max_angle
 
-                0.25f,                          // m_convergence_coef
-            }
-        },
-        { // bone 3
-            {
-                vector3_unit_y(),               // m_axis
-                true,                           // m_axis_in_parent_space
-                PI() * 4.0f,                    // m_max_angular_speed
-                
-                vector3_unit_x(),               // m_zero_angle_direction
-                vector3_unit_y(),               // m_direction
+                    0.5f,                           // m_convergence_coef
+                },
+                {
+                    vector3_unit_z(),               // m_axis
+                    false,                          // m_axis_in_parent_space
+                    PI() * 2.0f,                    // m_max_angular_speed
 
-                PI() * 50.0f / 180.0f,          // m_max_angle
+                    normalised(vector3{ -0.207483f, 0.978231f, -0.00315839f }),   // m_zero_angle_direction
+                    vector3_unit_y(),               // m_direction
+                    
+                    PI() * 90.0f / 180.0f,          // m_max_angle
 
-                0.75f,                          // m_convergence_coef
+                    0.5f,                           // m_convergence_coef
+                }
             },
-            {
-                vector3_unit_x(),               // m_axis
-                false,                          // m_axis_in_parent_space
-                PI() * 4.0f,                    // m_max_angular_speed
+            { // bone 2
+                {
+                    vector3_unit_y(),               // m_axis
+                    true,                           // m_axis_in_parent_space
+                    PI() * 4.0f,                    // m_max_angular_speed
 
-                vector3_unit_y(),               // m_zero_angle_direction
-                vector3_unit_z(),               // m_direction
+                    vector3_unit_x(),               // m_zero_angle_direction
+                    vector3_unit_y(),               // m_direction
+
+                    PI() * 50.0f / 180.0f,          // m_max_angle
+
+                    0.75f,                          // m_convergence_coef
+                },
+                {
+                    vector3_unit_x(),               // m_axis
+                    false,                          // m_axis_in_parent_space
+                    PI() * 4.0f,                    // m_max_angular_speed
+
+                    vector3_unit_y(),               // m_zero_angle_direction
+                    vector3_unit_z(),               // m_direction
+
+                    PI() * 30.0f / 180.0f,          // m_max_angle
+
+                    0.25f,                          // m_convergence_coef
+                }
+            },
+            { // bone 3
+                {
+                    vector3_unit_y(),               // m_axis
+                    true,                           // m_axis_in_parent_space
+                    PI() * 4.0f,                    // m_max_angular_speed
                 
-                PI() * 30.0f / 180.0f,          // m_max_angle
+                    vector3_unit_x(),               // m_zero_angle_direction
+                    vector3_unit_y(),               // m_direction
 
-                0.25f,                          // m_convergence_coef
-            }
-        },
-    };
-    scn::scene_node_const_ptr const  target_node = scene.get_scene_node(scn::scene_node_id(object_name));
-    if (target_node == nullptr)
-        return;
+                    PI() * 50.0f / 180.0f,          // m_max_angle
+
+                    0.75f,                          // m_convergence_coef
+                },
+                {
+                    vector3_unit_x(),               // m_axis
+                    false,                          // m_axis_in_parent_space
+                    PI() * 4.0f,                    // m_max_angular_speed
+
+                    vector3_unit_y(),               // m_zero_angle_direction
+                    vector3_unit_z(),               // m_direction
+                
+                    PI() * 30.0f / 180.0f,          // m_max_angle
+
+                    0.25f,                          // m_convergence_coef
+                }
+            },
+        };
     vector3 const  target =
         transform_point(vector3_zero(), inverse44(agent_nodes.at(0)->get_parent()->get_world_matrix()) * target_node->get_world_matrix());
     angeo::bone_look_at_targets const  look_at_targets {
