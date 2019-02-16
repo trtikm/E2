@@ -33,13 +33,13 @@ using  bone_look_at_targets =
             > >;
 
 
-void  skeleton_bones_move_towards_targets(
-        std::vector<coordinate_system>&  frames,        // coordinate systems, i.e. reference frames, of bones
-        std::vector<integer_32_bit> const&  parents,    // value -1 at index 'i' means, the bone 'i' does not have a parent
-        std::vector<std::vector<integer_32_bit> > const&  children,   // use function 'compute_rotation_angle' to compute children from parents.
-        std::vector<std::vector<joint_rotation_props> > const&  rotation_props,
-        bone_look_at_targets const&  look_at_targets,
-        float_32_bit const  dt,                         // simulation time step.
+void  skeleton_look_at(
+        std::vector<coordinate_system>&  output_frames,     // output coordinate systems of bones rotated so that they look at the target.
+        bone_look_at_targets const&  look_at_targets,       // the targets to look at.
+        std::vector<coordinate_system> const&  pose_frames, // pose coordinate systems of bones, i.e. in a neutral position from which to start the look at algo; DO NOT PASS THE CURRENT COORDINATE SYSTEMS OF BONES.
+        std::vector<integer_32_bit> const&  parents,        // value -1 at index 'i' means, the bone 'i' does not have a parent
+        std::vector<std::vector<integer_32_bit> > const&  children, // use function 'compute_rotation_angle' to compute children from parents.
+        std::vector<std::vector<joint_rotation_props> > const&  rotation_props, // specification of rotation props of each bone at joint to its parent bone.
         natural_32_bit const  num_sub_iterations = 1U
         );
 
@@ -48,7 +48,6 @@ float_32_bit  clip_all_joint_rotations_to_allowed_limits(
         coordinate_system&  frame,
         std::vector<joint_rotation_props> const&  rotation_props,
         std::vector<float_32_bit> const&  start_angles,
-        float_32_bit const  dt,
         coordinate_system const&  target_frame
         );
 
@@ -57,7 +56,6 @@ float_32_bit  clip_joint_rotation_to_allowed_limits(
         coordinate_system&  frame,
         joint_rotation_props const&  props,
         float_32_bit const  start_angle,
-        float_32_bit const  dt,
         coordinate_system const&  target_frame
         );
 

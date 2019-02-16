@@ -276,13 +276,13 @@ void  __agent_look_at_object(
 {
     TMPROF_BLOCK();
 
-    static std::vector<std::vector<angeo::joint_rotation_props> > rotation_props;
+    static bool  initialise_static_data = true;
 
     scn::scene_node_ptr const  agent_node_ptr = scene.get_scene_node(scn::scene_node_id(agent_name));
     scn::scene_node_const_ptr const  target_node = scene.get_scene_node(scn::scene_node_id(object_name));
     if (agent_node_ptr == nullptr || target_node == nullptr)
     {
-        rotation_props.clear();
+        initialise_static_data = true;
         return;
     }
     scn::scene_node_ptr const  ske_root_ptr = agent_node_ptr->find_child(scn::scene_node_id() / "lower_body" / "middle_body" / "upper_body");
@@ -294,28 +294,39 @@ void  __agent_look_at_object(
         ske_root_ptr->find_child(scn::scene_node_id() / "neck" / "head" / "eye.L"),   // 2
         ske_root_ptr->find_child(scn::scene_node_id() / "neck" / "head" / "eye.R"),   // 3
     };
-    std::vector<angeo::coordinate_system>  frames;
-    for (auto const&  node_ptr : agent_nodes)
-    {
+    for (auto const& node_ptr : agent_nodes)
         if (node_ptr == nullptr)
             return;
-        frames.push_back(*node_ptr->get_coord_system());
-    }
-    std::vector<integer_32_bit> const  parents {
-            // bone:
-        -1, // 0
-         0, // 1
-         1, // 2
-         1, // 3
-    };
-    std::vector<std::vector<integer_32_bit> >  children;
-    angeo::skeleton_compute_child_bones(parents, children);
-    auto vector_to_bone_space = [agent_node_ptr, ske_root_ptr, &agent_nodes, &parents](vector3 const&  v, integer_32_bit const  bone) -> vector3 {
-        matrix44 const M = inverse44((bone < 0 ? ske_root_ptr : agent_nodes.at(bone))->get_world_matrix()) * agent_node_ptr->get_world_matrix();
-        return normalised(transform_vector(v, M));
-    };
-    if (rotation_props.empty())
-        rotation_props = std::vector<std::vector<angeo::joint_rotation_props> > {
+
+    static std::vector<angeo::coordinate_system>  pose_frames;
+    static std::vector<integer_32_bit>  parents;
+    static std::vector<std::vector<integer_32_bit> >  children;
+    static std::vector<std::vector<angeo::joint_rotation_props> > rotation_props;
+
+    if (initialise_static_data)
+    {
+        initialise_static_data = false;
+
+        parents = {
+               // bone:
+           -1, // 0
+            0, // 1
+            1, // 2
+            1, // 3
+        };
+
+        children.clear();
+        angeo::skeleton_compute_child_bones(parents, children);
+
+        pose_frames.clear();
+        for (auto const& node_ptr : agent_nodes)
+            pose_frames.push_back(*node_ptr->get_coord_system());
+
+        auto vector_to_bone_space = [agent_node_ptr, ske_root_ptr, &agent_nodes](vector3 const&  v, integer_32_bit const  bone) -> vector3 {
+            matrix44 const M = inverse44((bone < 0 ? ske_root_ptr : agent_nodes.at(bone))->get_world_matrix()) * agent_node_ptr->get_world_matrix();
+            return normalised(transform_vector(v, M));
+        };
+        rotation_props = {
             { // bone 0
                 {
                     vector_to_bone_space(vector3_unit_z(), parents.at(0)),    // m_axis
@@ -421,6 +432,8 @@ void  __agent_look_at_object(
                 }
             },
         };
+    }
+
     vector3 const  target =
         transform_point(vector3_zero(), inverse44(agent_nodes.at(0)->get_parent()->get_world_matrix()) * target_node->get_world_matrix());
     angeo::bone_look_at_targets const  look_at_targets {
@@ -428,7 +441,8 @@ void  __agent_look_at_object(
         { 3, { vector3_unit_y(), target } },
     };
 
-    angeo::skeleton_bones_move_towards_targets(frames, parents, children, rotation_props, look_at_targets, seconds_from_previous_call, 1U);
+    std::vector<angeo::coordinate_system>  frames;
+    angeo::skeleton_look_at(frames, look_at_targets, pose_frames, parents, children, rotation_props, 1U);
 
     for (natural_32_bit  i = 0U; i != agent_nodes.size(); ++i)
         agent_nodes.at(i)->relocate(frames.at(i).origin(), frames.at(i).orientation());
