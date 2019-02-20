@@ -11,18 +11,15 @@ namespace angeo {
 
 struct  joint_rotation_props
 {
-    // definition of the rotation axis
     vector3  m_axis;                    // unit vector
     bool  m_axis_in_parent_space;       // true if 'm_axis' is expressed in bone's parent cood system.
-    float_32_bit  m_max_angular_speed;  // in rad/s; must be a positive number.
-
-    // definition of rotation angle around the axis (see function 'compute_angle_default' for interpatation of members):
     vector3  m_zero_angle_direction;    // unit vector; in bone's parent cood system.
     vector3  m_direction;               // unit vector; in bone's cood system.
-
-    float_32_bit  m_max_angle;
-
-    float_32_bit  m_convergence_coef;   // in range (0.0, 1.0>; how quickly the joint should converge to target angle computed a skeletal algo.
+    float_32_bit  m_max_angle;          // In range <0, 2*PI>; Defines an interval <-m_max_angle/2, +m_max_angle/2> of allowed
+                                        // rotation angles along m_axis from m_zero_angle_direction to m_direction (projected to
+                                        // the rotation plane).
+    float_32_bit  m_stiffness_with_parent_bone;    // In range <0,1>; How a rotation of a bone affect a rotation of the parent bone.
+    float_32_bit  m_max_angular_speed;  // in rad/s; must be a positive number.
 };
 
 
@@ -38,25 +35,10 @@ void  skeleton_look_at(
         bone_look_at_targets const&  look_at_targets,       // the targets to look at.
         std::vector<coordinate_system> const&  pose_frames, // pose coordinate systems of bones, i.e. in a neutral position from which to start the look at algo; DO NOT PASS THE CURRENT COORDINATE SYSTEMS OF BONES.
         std::vector<integer_32_bit> const&  parents,        // value -1 at index 'i' means, the bone 'i' does not have a parent
-        std::vector<std::vector<integer_32_bit> > const&  children, // use function 'compute_rotation_angle' to compute children from parents.
         std::vector<std::vector<joint_rotation_props> > const&  rotation_props, // specification of rotation props of each bone at joint to its parent bone.
-        natural_32_bit const  num_sub_iterations = 1U
-        );
-
-
-float_32_bit  clip_all_joint_rotations_to_allowed_limits(
-        coordinate_system&  frame,
-        std::vector<joint_rotation_props> const&  rotation_props,
-        std::vector<float_32_bit> const&  start_angles,
-        coordinate_system const&  target_frame
-        );
-
-
-float_32_bit  clip_joint_rotation_to_allowed_limits(
-        coordinate_system&  frame,
-        joint_rotation_props const&  props,
-        float_32_bit const  start_angle,
-        coordinate_system const&  target_frame
+        std::unordered_map<integer_32_bit, std::vector<float_32_bit> >* const  output_angles = nullptr,
+        natural_32_bit const  max_iterations = 25U,
+        float_32_bit const  angle_range_epsilon = 0.1f * (PI() / 180.0f)
         );
 
 

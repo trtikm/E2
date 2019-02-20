@@ -47,215 +47,14 @@ vector3  point_to_bone_frame(vector3 const&  p, matrix44 const&  to_parent_frame
 }
 
 
-float_32_bit  clip_rotation_to_allowed_limits(
-        float_32_bit  target_angle,
-        float_32_bit const  current_angle,
-        float_32_bit const  start_angle,
-        float_32_bit const  max_angle
-        )
-{
-    float_32_bit  angle_delta = target_angle - current_angle;
-    if (angle_delta >= 0.0f)
-    {
-        float_32_bit const  limit_angle = 0.5f * max_angle;
-        if (target_angle > limit_angle)
-            angle_delta = std::max(0.0f, limit_angle - current_angle);
-    }
-    else
-    {
-        float_32_bit const  limit_angle = -0.5f * max_angle;
-        if (target_angle < limit_angle)
-            angle_delta = std::min(0.0f, limit_angle - current_angle);
-    }
-    return angle_delta;
-}
-
-
 struct  skeleton_look_at_props
 {
     std::vector<coordinate_system>*  frames;
     bone_look_at_targets const*  look_at_targets;
     std::vector<coordinate_system> const*  pose_frames;
     std::vector<integer_32_bit> const*  parents;
-    std::vector<std::vector<integer_32_bit> > const*  children;
     std::vector<std::vector<joint_rotation_props> > const*  rotation_props;
-    std::unordered_set<integer_32_bit> const*  look_at_bases;
-    std::vector<std::vector<float_32_bit> > const*  start_angles;
-    float_32_bit const*  convergence_coef_override;
 };
-
-
-float_32_bit  compute_look_at_rotation_angle_of_inner_bone( // I.e. for bone which is NOT end-effector (for end-effector we have faster algo).
-        vector3 const&  bone_origin,    // The origin of the bone's coord. system => in the parent bone space of rotated bone.
-        vector3 const&  axis,           // Unit vector; rotation axis; in the parent bone space of rotated bone. (the rotation angle is computed).
-        vector3 const&  target,         // The look at target point; in the parent bone space of rotated bone.
-        vector3 const&  eye_vector,     // The direction of vector of the end-effector bone; in the parent bone space of rotated bone.
-        vector3 const&  eye_center      // The origin point of the end-effector bone; in the parent bone space of rotated bone.
-        )
-{
-    vector3 const  to_target_projected = detail::project_vector_to_plane(axis, target - bone_origin);
-    vector3 const  to_eye_center_projected = detail::project_vector_to_plane(axis, eye_center - bone_origin);
-    vector3 const  eye_vector_projected = detail::project_vector_to_plane(axis, eye_vector);
-
-    float_32_bit  q;
-    {
-        q = length(to_target_projected);
-        if (q < 1e-3f)
-            return 0.0f;
-    }
-
-    float_32_bit  R;
-    {
-        R = length(to_eye_center_projected);
-        if (R < 1e-3f || q < R + 1e-3f)
-            return 0.0f;
-    }
-
-    float_32_bit const  beta =
-        compute_rotation_angle_of_projected_vector(to_eye_center_projected, eye_vector_projected, R, length(eye_vector_projected), axis);
-
-    float_32_bit const  gamma =
-            compute_rotation_angle_of_projected_vector(to_eye_center_projected, to_target_projected, R, q, axis);
-
-    float_32_bit  alpha;
-    {
-        float_32_bit const  sin_beta = std::sinf(std::fabsf(beta));
-        float_32_bit const  cos_beta = std::cosf(std::fabsf(beta));
-
-        float_32_bit const  D = q*q - R*R * sin_beta*sin_beta;
-        //INVARIANT(D >= 0.0f);
-        float_32_bit const  sin_alpha = (sin_beta / q) * (std::sqrt(D) - R*cos_beta);
-        //INVARIANT(sin_alpha >= 0.0f);
-        alpha = sin_alpha >= 1.0f ? PI() * 0.5f : std::asinf(sin_alpha);
-        //INVARIANT(0.0f <= alpha && alpha <= PI() * 0.5f);
-
-        float_32_bit const  cos_alpha = std::cosf(alpha);
-
-        auto  compute_beta_from_cos_alpha = [q, R, sin_alpha](float_32_bit const  cos_alpha) -> float_32_bit {
-            vector2 const  E{ R * cos_alpha, R * sin_alpha };
-            float_32_bit const  cos_beta = cos_angle_2d(vector2{ q, 0.0f } - E, E);
-            float_32_bit const  beta = std::acosf(cos_beta);
-            //INVARIANT(0.0f <= beta && beta <= PI());
-            return beta;
-        };
-
-        float_32_bit const  beta_from_alpha = compute_beta_from_cos_alpha(cos_alpha);
-        if (std::fabs(beta_from_alpha - std::fabsf(beta)) > PI() / 180.0f)
-        {
-            //INVARIANT(std::fabs(compute_beta_from_cos_alpha(-cos_alpha) - std::fabsf(beta)) <= PI() / 180.0f);
-            alpha = PI() - alpha;
-        }
-        if (beta > 0.0f)
-            alpha = -alpha;
-    }
-
-    float_32_bit  phi = alpha + gamma;
-    if (phi > PI())
-        phi = -2.0f * PI() + phi;
-    else if (phi < -PI())
-        phi =  2.0f * PI() + phi;
-
-    return phi;
-}
-
-
-void  bone_look_at_target(
-        skeleton_look_at_props&  props,
-        integer_32_bit const  bone,
-        std::unordered_set<integer_32_bit>&  output_targets,
-        std::unordered_set<integer_32_bit>&  visited
-        )
-{
-    if (visited.count(bone) != 0UL)
-        return;
-    visited.insert(bone);
-
-    bool const  is_look_at_target_bone = props.look_at_targets->count(bone) != 0UL;
-    std::unordered_set<integer_32_bit>  targets;
-    {
-        if (is_look_at_target_bone)
-            targets.insert(bone);
-        for (integer_32_bit  child_bone : props.children->at(bone))
-            bone_look_at_target(props, child_bone, targets, visited);
-    }
-    if (targets.empty())
-        return;
-    output_targets.insert(targets.cbegin(), targets.cend());
-
-    matrix44  from_world_to_parent_frame;
-    compute_to_bone_space_matrix(props.parents->at(bone), *props.frames, *props.parents, from_world_to_parent_frame);
-
-    coordinate_system  frame = props.frames->at(bone);
-
-    for (auto const& rot_props : props.rotation_props->at(bone))
-    {
-        vector3 const  axis = rot_props.m_axis_in_parent_space ? rot_props.m_axis : detail::vector_from_frame(rot_props.m_axis, frame);
-
-        float_32_bit  rot_angle;
-        {
-            float_32_bit  min_alpha = std::numeric_limits<float_32_bit>::max();
-            float_32_bit  max_alpha = std::numeric_limits<float_32_bit>::lowest();
-            for (integer_32_bit  target_bone : targets)
-            {
-                vector3 const  target_in_parent_bone = transform_point(props.look_at_targets->at(target_bone).second, from_world_to_parent_frame);
-
-                matrix44  from_target_to_bone_frame;
-                compute_from_child_to_parent_bone_space_matrix(target_bone, bone, *props.frames, *props.parents, from_target_to_bone_frame);
-                vector3 const  eye_vector = transform_vector(props.look_at_targets->at(target_bone).first, from_target_to_bone_frame);
-                vector3 const  eye_center = transform_point(vector3_zero(), from_target_to_bone_frame);
-                vector3 const  eye_vector_in_parent_bone = detail::vector_from_frame(eye_vector, frame);
-                vector3 const  eye_center_in_parent_bone = detail::point_from_frame(eye_center, frame);
-                float_32_bit const  alpha =
-                        is_look_at_target_bone
-                            ? compute_rotation_angle(axis, eye_vector_in_parent_bone, target_in_parent_bone - eye_center_in_parent_bone)
-                            : detail::compute_look_at_rotation_angle_of_inner_bone(
-                                        frame.origin(),
-                                        axis,
-                                        target_in_parent_bone,
-                                        eye_vector_in_parent_bone,
-                                        eye_center_in_parent_bone
-                                        );
-
-                min_alpha = std::min(alpha, min_alpha);
-                max_alpha = std::max(alpha, max_alpha);
-            }
-
-            if (min_alpha >= 0.0f)
-                rot_angle = max_alpha;
-            else if (max_alpha <= 0.0f)
-                rot_angle = min_alpha;
-            else
-                rot_angle = 0.5f * (min_alpha + max_alpha);
-        }
-
-        float_32_bit const  convergence_coef =
-                props.convergence_coef_override != nullptr ? *props.convergence_coef_override : rot_props.m_convergence_coef;
-        rotate(frame, angle_axis_to_quaternion(convergence_coef * rot_angle, axis));
-    }
-
-    clip_all_joint_rotations_to_allowed_limits(
-            props.frames->at(bone),
-            props.rotation_props->at(bone),
-            props.start_angles->at(bone),
-            frame
-            );
-}
-
-
-void  look_at_targets(
-        skeleton_look_at_props&  props,
-        bool const override_convergence_coef = false
-        )
-{
-    float_32_bit const  convergence_coef_override = 1.0f;
-    std::unordered_set<integer_32_bit>  targets;
-    std::unordered_set<integer_32_bit>  visited;
-    for (integer_32_bit  base_bone : *props.look_at_bases)
-    {
-        props.convergence_coef_override = override_convergence_coef ? &convergence_coef_override : nullptr;
-        bone_look_at_target(props, base_bone, targets, visited);
-    }
-}
 
 
 }}
@@ -281,9 +80,10 @@ void  skeleton_look_at(
         bone_look_at_targets const&  look_at_targets,
         std::vector<coordinate_system> const&  pose_frames,
         std::vector<integer_32_bit> const&  parents,
-        std::vector<std::vector<integer_32_bit> > const&  children,
         std::vector<std::vector<joint_rotation_props> > const&  rotation_props,
-        natural_32_bit const  num_sub_iterations
+        std::unordered_map<integer_32_bit, std::vector<float_32_bit> >* const  output_angles,
+        natural_32_bit const  max_iterations,
+        float_32_bit const  angle_range_epsilon
         )
 {
     TMPROF_BLOCK();
@@ -291,100 +91,292 @@ void  skeleton_look_at(
     ASSUMPTION(!pose_frames.empty() && pose_frames.size() == parents.size() && pose_frames.size() == rotation_props.size());
     ASSUMPTION(!look_at_targets.empty());
 
-    std::unordered_set<integer_32_bit>  look_at_bases;
-    for (auto const& bone_and_target : look_at_targets)
-    {
-        integer_32_bit bone_idx = bone_and_target.first;
-        while (true)
-        {
-            integer_32_bit const  parent_bone_idx = parents.at(bone_idx);
-            if (parent_bone_idx < 0)
-                break;
-            bone_idx = parent_bone_idx;
-        }
-        look_at_bases.insert(bone_idx);
-    }
-
-    std::vector<std::vector<float_32_bit> >  start_angles(rotation_props.size());
-    for (natural_32_bit i = 0U; i != rotation_props.size(); ++i)
-        for (auto const& props : rotation_props.at(i))
-            start_angles.at(i).push_back(
-                    compute_rotation_angle(
-                            props.m_axis_in_parent_space ? props.m_axis : detail::vector_from_frame(props.m_axis, pose_frames.at(i)),
-                            props.m_zero_angle_direction,
-                            detail::vector_from_frame(props.m_direction, pose_frames.at(i))
-                            )
-                    );
-
     output_frames = pose_frames;
 
-    detail::skeleton_look_at_props  look_at_props {
+    detail::skeleton_look_at_props  props {
         &output_frames,
         &look_at_targets,
         &pose_frames,
         &parents,
-        &children,
         &rotation_props,
-        &look_at_bases,
-        &start_angles,
-        nullptr
     };
 
-    detail::look_at_targets(look_at_props);
-    for (natural_32_bit  iteration = 1U; iteration < num_sub_iterations; ++iteration)
-        detail::look_at_targets(look_at_props);
-    detail::look_at_targets(look_at_props, true);
-}
-
-
-float_32_bit  clip_all_joint_rotations_to_allowed_limits(
-        coordinate_system&  frame,
-        std::vector<joint_rotation_props> const&  rotation_props,
-        std::vector<float_32_bit> const&  start_angles,
-        coordinate_system const&  target_frame
-        )
-{
-    float_32_bit  absolute_angle_change = 0.0f;
-    for (natural_32_bit i = 0U; i != rotation_props.size(); ++i)
+    // Compute rotation angles for all inner bones, independently for each target.
+    // (Note: later we compute averages to merge results for individual targets).
+    std::unordered_map<integer_32_bit, std::vector<std::vector<float_32_bit> > > angles_for_inner_bones;
+    for (auto const&  target_info : *props.look_at_targets)
     {
-        float_32_bit const  rot_angle =
-                clip_joint_rotation_to_allowed_limits(frame, rotation_props.at(i), start_angles.at(i), target_frame);
-        absolute_angle_change += std::fabs(rot_angle);
+        std::unordered_map<integer_32_bit, std::vector<float_32_bit> >  angles;
+        {
+            for (integer_32_bit  bone = target_info.first; bone >= 0; bone = props.parents->at(bone))
+                angles[bone].resize(props.rotation_props->at(bone).size());
+
+            std::vector<std::pair<vector2, vector2> >  angle_convergence_lines;
+            {
+                coordinate_system const&  frame = props.frames->at(target_info.first);
+
+                vector3  to_target_vector;
+                {
+                    matrix44  from_world_to_parent_frame;
+                    compute_to_bone_space_matrix(props.parents->at(target_info.first), *props.frames, *props.parents, from_world_to_parent_frame);
+                    vector3 const  target_in_parent_bone = transform_point(target_info.second.second, from_world_to_parent_frame);
+                    to_target_vector = target_in_parent_bone - frame.origin();
+                }
+
+                auto const&  rotations = props.rotation_props->at(target_info.first);
+                for (natural_32_bit  i = 0U; i != rotations.size(); ++i)
+                {
+                    auto const& rot_props = rotations.at(i);
+                    vector3 const  axis = rot_props.m_axis_in_parent_space ? rot_props.m_axis : detail::vector_from_frame(rot_props.m_axis, frame);
+                    vector3 const  eye_vector = detail::vector_from_frame(target_info.second.first, frame);
+                    float_32_bit const  angle = compute_rotation_angle(axis, eye_vector, to_target_vector);
+                    float_32_bit const  angle_clipped = std::max(-0.5f * rot_props.m_max_angle, std::min(angle, 0.5f * rot_props.m_max_angle));
+                    angle_convergence_lines.push_back({{ 0.0f, angle }, { angle_clipped, 0.0f }});
+                }
+            }
+
+            for (natural_32_bit  iteration = 0U; iteration < max_iterations; ++iteration)
+            {
+                // 1. Copy candidate rotation angles of the target bone.
+                {
+                    auto const&  rotations = props.rotation_props->at(target_info.first);
+                    auto&  target_angles = angles.at(target_info.first);
+                    for (natural_32_bit  i = 0U; i != rotations.size(); ++i)
+                        target_angles.at(i) = angle_convergence_lines.at(i).second(0);
+                }
+
+                // 2. Apply candidate rotation angles to the target bone.
+                {
+                    coordinate_system&  frame = props.frames->at(target_info.first);
+                    frame = props.pose_frames->at(target_info.first);
+
+                    auto const&  rotations = props.rotation_props->at(target_info.first);
+                    auto const&  target_angles = angles.at(target_info.first);
+                    for (natural_32_bit i = 0U; i != rotations.size(); ++i)
+                    {
+                        auto const&  rot_props = rotations.at(i);
+                        vector3 const  axis = rot_props.m_axis_in_parent_space ? rot_props.m_axis : detail::vector_from_frame(rot_props.m_axis, frame);
+            
+                        rotate(frame, angle_axis_to_quaternion(target_angles.at(i), axis));
+                    }
+                }
+
+                // 3. Compute rotation angles and apply them to frames of all inner bones (i.e. to all parents of the target bone).
+                for (integer_32_bit  child_bone = target_info.first, bone = props.parents->at(target_info.first);
+                     bone >= 0;
+                     child_bone = bone, bone = props.parents->at(bone))
+                {
+                    coordinate_system&  frame = props.frames->at(bone);
+                    frame = props.pose_frames->at(bone);
+
+                    auto const&  rotations = props.rotation_props->at(bone);
+                    for (natural_32_bit i = 0U; i != rotations.size(); ++i)
+                    {
+                        auto const&  rot_props = rotations.at(i);
+
+                        vector3 const  axis = rot_props.m_axis_in_parent_space ? rot_props.m_axis : detail::vector_from_frame(rot_props.m_axis, frame);
+
+                        std::vector<float_32_bit> weights;
+                        std::vector<float_32_bit> coefs;
+                        {
+                            float_32_bit  sum_weights = 0.0f;
+                            auto const&  child_rotations = props.rotation_props->at(child_bone);
+                            for (natural_32_bit j = 0U; j != child_rotations.size(); ++j)
+                            {
+                                auto const&  child_rot_props = child_rotations.at(j);
+                                vector3 const  child_axis =
+                                    child_rot_props.m_axis_in_parent_space ?
+                                    child_rot_props.m_axis :
+                                    detail::vector_from_frame(child_rot_props.m_axis, props.frames->at(child_bone))
+                                    ;
+
+                                float_32_bit const  weight = cos_angle(axis, detail::vector_from_frame(child_axis, frame));
+                                weights.push_back(std::fabsf(weight));
+                                sum_weights += weights.back();
+
+                                float_32_bit  angle_ratio;
+                                {
+                                    angle_ratio = 2.0f * angles.at(child_bone).at(j) / child_rot_props.m_max_angle;
+                                    if (weight < 0.0f)
+                                        angle_ratio = -angle_ratio;
+                                }
+
+                                float_32_bit const  stiffness_exponent =
+                                        std::max(0.0f, std::min(2.0f * (1.0f - child_rot_props.m_stiffness_with_parent_bone), 2.0f));
+                                float_32_bit const  stiffness_coef = std::powf(std::fabsf(angle_ratio), stiffness_exponent);
+                                coefs.push_back(stiffness_coef * angle_ratio);
+                            }
+                            if (sum_weights > 1e-5f)
+                                for (natural_32_bit i = 0U; i != weights.size(); ++i)
+                                    weights.at(i) /= sum_weights;
+                        }
+
+                        // Compute the rotation angle from all rotations of the child bone.
+                        {
+                            float_32_bit  angle = 0.0f;
+                            for (natural_32_bit i = 0U; i != weights.size(); ++i)
+                                angle += weights.at(i) * coefs.at(i) * (0.5f * rot_props.m_max_angle);
+                            angle = std::max(-0.5f * rot_props.m_max_angle, std::min(angle, 0.5f * rot_props.m_max_angle));
+
+                            angles.at(bone).at(i) = angle;
+                        }
+
+                        rotate(frame, angle_axis_to_quaternion(angles.at(bone).at(i), axis));
+                    }
+                }
+            
+                // 4. Compute y-coord of the second point in the angle_convergence_lines for each rotation axis of the target bone.
+                {
+                    coordinate_system const&  frame = props.frames->at(target_info.first);
+
+                    vector3  to_target_vector;
+                    {
+                        matrix44  from_world_to_parent_frame;
+                        compute_to_bone_space_matrix(props.parents->at(target_info.first), *props.frames, *props.parents, from_world_to_parent_frame);
+                        vector3 const  target_in_parent_bone = transform_point(target_info.second.second, from_world_to_parent_frame);
+                        to_target_vector = target_in_parent_bone - frame.origin();
+                    }
+
+                    bool  needs_next_iteration = false;
+
+                    auto const&  rotations = props.rotation_props->at(target_info.first);
+                    for (natural_32_bit  i = 0U; i != rotations.size(); ++i)
+                    {
+                        auto const&  rot_props = rotations.at(i);
+                        vector3 const  axis = rot_props.m_axis_in_parent_space ? rot_props.m_axis : detail::vector_from_frame(rot_props.m_axis, frame);
+                        vector3 const  eye_vector = detail::vector_from_frame(target_info.second.first, frame);
+                        angle_convergence_lines.at(i).second(1) = compute_rotation_angle(axis, eye_vector, to_target_vector);
+
+                        if (std::fabsf(angle_convergence_lines.at(i).second(1)) > angle_range_epsilon)
+                        {
+                            float_32_bit const  dist = length_2d(angle_convergence_lines.at(i).second - angle_convergence_lines.at(i).first);
+                            if (std::fabsf(dist) > angle_range_epsilon)
+                                needs_next_iteration = true;
+                        }
+                    }
+
+                    if (needs_next_iteration == false)
+                        break;
+                }
+
+                // 5. Find intersection of angle_convergence_lines with x axit to obtain new line for each rotation axis of the target bone.
+                {
+                    auto const&  rotations = props.rotation_props->at(target_info.first);
+                    for (natural_32_bit i = 0U; i != rotations.size(); ++i)
+                    {
+                        vector2&  Q = angle_convergence_lines.at(i).second;
+                        if (std::fabsf(Q(1)) > angle_range_epsilon)
+                        {
+                            vector2&  P = angle_convergence_lines.at(i).first;
+                            float_32_bit const  angle =
+                                    std::fabs(Q(1) - P(1)) > 1e-3f ? P(0) - P(1) * ((Q(0) - P(0)) / ((Q(1) - P(1))))
+                                                                   : 0.5f * (P(0) + Q(0)) ;
+                            auto const&  rot_props = rotations.at(i);
+                            float_32_bit  angle_clipped = std::max(-0.5f * rot_props.m_max_angle, std::min(angle, 0.5f * rot_props.m_max_angle));
+                            if (std::fabs(Q(0) - P(0)) < 1e-3f)
+                            {
+                                // We got to almost horisontal convergence line; this situation is particularly bad
+                                // at angle limits when we cannot recover from initial over-shooting towards the limit
+                                // and now we cannot go back. So, we detect these situations and resolve them by reseting
+                                // the new angle toward the center of the valid angle range of the rotation axis.
+                                if (Q(0) > 0.5f * rot_props.m_max_angle - 1e-3f && Q(1) < -10.0f * angle_range_epsilon)
+                                    angle_clipped = 0.25f * rot_props.m_max_angle;
+                                else if (Q(0) < -0.5f * rot_props.m_max_angle + 1e-3f && Q(1) > 10.0f * angle_range_epsilon)
+                                    angle_clipped = -0.25f * rot_props.m_max_angle;
+                            }
+
+                            P = Q;
+                            Q(0) = angle_clipped;
+                        }
+                    }
+                }
+            }
+
+            angles.erase(target_info.first);
+        }
+        for (auto const&  bone_and_angles : angles)
+        {
+            angles_for_inner_bones[bone_and_angles.first].resize(bone_and_angles.second.size());
+            for (natural_32_bit i = 0U; i != bone_and_angles.second.size(); ++i)
+                angles_for_inner_bones[bone_and_angles.first].at(i).push_back(bone_and_angles.second.at(i));
+        }
+
+        // And reset rotated frames.
+        props.frames->at(target_info.first) = props.pose_frames->at(target_info.first);
+        for (auto const& bone_and_angles : angles)
+            props.frames->at(bone_and_angles.first) = props.pose_frames->at(bone_and_angles.first);
     }
-    return absolute_angle_change;
-}
 
+    // Apply computed rotations of all inner bones. (Note: for each bone we compute average of angles computed for the bone for individual targets).
+    for (auto const&  bone_and_angles : angles_for_inner_bones)
+    {
+        coordinate_system&  frame = props.frames->at(bone_and_angles.first);
 
-float_32_bit  clip_joint_rotation_to_allowed_limits(
-        coordinate_system&  frame,
-        joint_rotation_props const&  props,
-        float_32_bit const  start_angle,
-        coordinate_system const&  target_frame
-        )
-{
-    float_32_bit const  target_rot_angle =
-            compute_rotation_angle(
-                    props.m_axis_in_parent_space ? props.m_axis : detail::vector_from_frame(props.m_axis, target_frame),
-                    props.m_zero_angle_direction,
-                    detail::vector_from_frame(props.m_direction, target_frame)
-                    );
-    vector3 const  axis = props.m_axis_in_parent_space ? props.m_axis : detail::vector_from_frame(props.m_axis, frame);
-    float_32_bit const  current_rot_angle =
-            compute_rotation_angle(
-                    axis,
-                    props.m_zero_angle_direction,
-                    detail::vector_from_frame(props.m_direction, frame)
-                    );
-    float_32_bit const  rot_angle =
-            detail::clip_rotation_to_allowed_limits(
-                    target_rot_angle,
-                    current_rot_angle,
-                    start_angle,
-                    props.m_max_angle
-                    );
-    rotate(frame, angle_axis_to_quaternion(rot_angle, axis));
+        std::vector<joint_rotation_props> const&  rotations = props.rotation_props->at(bone_and_angles.first);
 
-    return rot_angle;
+        if (output_angles != nullptr)
+            (*output_angles)[bone_and_angles.first].resize(rotations.size());
+
+        for (natural_32_bit  rot_idx = 0U; rot_idx != rotations.size(); ++rot_idx)
+        {
+            joint_rotation_props const&  rot_props = rotations.at(rot_idx);
+
+            vector3 const  axis = rot_props.m_axis_in_parent_space ? rot_props.m_axis : detail::vector_from_frame(rot_props.m_axis, frame);
+
+            float_32_bit  angle;
+            {
+                angle = 0.0f;
+                std::vector<float_32_bit> const&  angles = bone_and_angles.second.at(rot_idx);
+                for (natural_32_bit i = 0U; i != angles.size(); ++i)
+                    angle += angles.at(i);
+                INVARIANT(!angles.empty());
+                angle /= (float_32_bit)angles.size();
+            }
+
+            rotate(frame, angle_axis_to_quaternion(angle, axis));
+
+            if (output_angles != nullptr)
+                (*output_angles)[bone_and_angles.first].at(rot_idx) = angle;
+        }
+    }
+
+    // Compute and apply rotations of all target bones (note: all inner bones are already rotated to best possible positions).
+    for (auto target_it = props.look_at_targets->cbegin(); target_it != props.look_at_targets->cend(); ++target_it)
+    {
+        coordinate_system&  frame = props.frames->at(target_it->first);
+
+        vector3  to_target_vector;
+        {
+            matrix44  from_world_to_parent_frame;
+            compute_to_bone_space_matrix(props.parents->at(target_it->first), *props.frames, *props.parents, from_world_to_parent_frame);
+            vector3 const  target_in_parent_bone = transform_point(target_it->second.second, from_world_to_parent_frame);
+            to_target_vector = target_in_parent_bone - frame.origin();
+        }
+
+        auto const& rotations = props.rotation_props->at(target_it->first);
+
+        if (output_angles != nullptr)
+            (*output_angles)[target_it->first].resize(rotations.size());
+
+        for (natural_32_bit  i = 0U; i != rotations.size(); ++i)
+        {
+            auto const& rot_props = rotations.at(i);
+
+            vector3 const  axis = rot_props.m_axis_in_parent_space ? rot_props.m_axis : detail::vector_from_frame(rot_props.m_axis, frame);
+
+            float_32_bit  angle;
+            {
+                vector3 const  eye_vector = detail::vector_from_frame(target_it->second.first, frame);
+                angle = compute_rotation_angle(axis, eye_vector, to_target_vector);
+                angle = std::max(-0.5f * rot_props.m_max_angle, std::min(angle, 0.5f * rot_props.m_max_angle));
+            }
+
+            rotate(frame, angle_axis_to_quaternion(angle, axis));
+
+            if (output_angles != nullptr)
+                (*output_angles)[target_it->first].at(i) = angle;
+        }
+    }
 }
 
 

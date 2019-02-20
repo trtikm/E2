@@ -331,104 +331,80 @@ void  __agent_look_at_object(
                 {
                     vector_to_bone_space(vector3_unit_z(), parents.at(0)),    // m_axis
                     true,                           // m_axis_in_parent_space
-                    PI() * 1.0f,                    // m_max_angular_speed
-
                     vector_to_bone_space(-vector3_unit_y(), parents.at(0)),    // m_zero_angle_direction
                     vector3_unit_x(),               // m_direction
-
-                    PI() * 20.0f / 180.0f,          // m_max_angle
-
-                    0.5f,                           // m_convergence_coef
+                    PI() * 30.0f / 180.0f,          // m_max_angle
+                    1.0f,                           // m_stiffness_with_parent_bone
+                    PI() * 1.0f,                    // m_max_angular_speed
                 },
                 {
                     vector3_unit_z(),               // m_axis
                     false,                          // m_axis_in_parent_space
-                    PI() * 1.0f,                    // m_max_angular_speed
-
                     vector_to_bone_space(vector3{0.0f, -0.2f, 1.0f}, parents.at(0)),   // m_zero_angle_direction
                     vector3_unit_y(),               // m_direction
-                
-                    PI() * 20.0f / 180.0f,          // m_max_angle
-
-                    0.5f,                           // m_convergence_coef
+                    PI() * 30.0f / 180.0f,          // m_max_angle
+                    1.0f,                           // m_stiffness_with_parent_bone
+                    PI() * 1.0f,                    // m_max_angular_speed
                 }
             },
             { // bone 1
                 {
                     vector_to_bone_space(vector3_unit_z(), parents.at(1)),    // m_axis
                     true,                           // m_axis_in_parent_space
-                    PI() * 2.0f,                    // m_max_angular_speed
-
                     vector_to_bone_space(-vector3_unit_y(), parents.at(1)),    // m_zero_angle_direction
                     vector3_unit_x(),               // m_direction
-
                     PI() * 120.0f / 180.0f,         // m_max_angle
-
-                    0.5f,                           // m_convergence_coef
+                    1.0f,                           // m_stiffness_with_parent_bone
+                    PI() * 2.0f,                    // m_max_angular_speed
                 },
                 {
                     vector3_unit_z(),               // m_axis
                     false,                          // m_axis_in_parent_space
-                    PI() * 2.0f,                    // m_max_angular_speed
-
                     normalised(vector3{ -0.207483f, 0.978231f, -0.00315839f }),   // m_zero_angle_direction
                     vector3_unit_y(),               // m_direction
-                    
-                    PI() * 90.0f / 180.0f,          // m_max_angle
-
-                    0.5f,                           // m_convergence_coef
+                    PI() * 80.0f / 180.0f,          // m_max_angle
+                    1.0f,                           // m_stiffness_with_parent_bone
+                    PI() * 2.0f,                    // m_max_angular_speed
                 }
             },
             { // bone 2
                 {
                     vector3_unit_y(),               // m_axis
                     true,                           // m_axis_in_parent_space
-                    PI() * 4.0f,                    // m_max_angular_speed
-
                     vector3_unit_x(),               // m_zero_angle_direction
                     vector3_unit_y(),               // m_direction
-
                     PI() * 50.0f / 180.0f,          // m_max_angle
-
-                    0.75f,                          // m_convergence_coef
+                    1.0f,                           // m_stiffness_with_parent_bone
+                    PI() * 4.0f,                    // m_max_angular_speed
                 },
                 {
                     vector3_unit_x(),               // m_axis
                     false,                          // m_axis_in_parent_space
-                    PI() * 4.0f,                    // m_max_angular_speed
-
                     vector3_unit_y(),               // m_zero_angle_direction
                     vector3_unit_z(),               // m_direction
-
                     PI() * 30.0f / 180.0f,          // m_max_angle
-
-                    0.25f,                          // m_convergence_coef
+                    1.0f,                           // m_stiffness_with_parent_bone
+                    PI() * 4.0f,                    // m_max_angular_speed
                 }
             },
             { // bone 3
                 {
                     vector3_unit_y(),               // m_axis
                     true,                           // m_axis_in_parent_space
-                    PI() * 4.0f,                    // m_max_angular_speed
-                
                     vector3_unit_x(),               // m_zero_angle_direction
                     vector3_unit_y(),               // m_direction
-
                     PI() * 50.0f / 180.0f,          // m_max_angle
-
-                    0.75f,                          // m_convergence_coef
+                    1.0f,                           // m_stiffness_with_parent_bone
+                    PI() * 4.0f,                    // m_max_angular_speed
                 },
                 {
                     vector3_unit_x(),               // m_axis
                     false,                          // m_axis_in_parent_space
-                    PI() * 4.0f,                    // m_max_angular_speed
-
                     vector3_unit_y(),               // m_zero_angle_direction
                     vector3_unit_z(),               // m_direction
-                
                     PI() * 30.0f / 180.0f,          // m_max_angle
-
-                    0.25f,                          // m_convergence_coef
+                    1.0f,                           // m_stiffness_with_parent_bone
+                    PI() * 4.0f,                    // m_max_angular_speed
                 }
             },
         };
@@ -442,7 +418,7 @@ void  __agent_look_at_object(
     };
 
     std::vector<angeo::coordinate_system>  frames;
-    angeo::skeleton_look_at(frames, look_at_targets, pose_frames, parents, children, rotation_props, 1U);
+    angeo::skeleton_look_at(frames, look_at_targets, pose_frames, parents, rotation_props);
 
     for (natural_32_bit  i = 0U; i != agent_nodes.size(); ++i)
         agent_nodes.at(i)->relocate(frames.at(i).origin(), frames.at(i).orientation());
