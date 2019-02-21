@@ -417,8 +417,15 @@ void  __agent_look_at_object(
         { 3, { vector3_unit_y(), target } },
     };
 
+    std::vector<angeo::coordinate_system>  target_frames;
+    std::unordered_map<integer_32_bit, std::vector<natural_32_bit> >  bones_to_rotate;
+    angeo::skeleton_look_at(target_frames, look_at_targets, pose_frames, parents, rotation_props, &bones_to_rotate);
+
     std::vector<angeo::coordinate_system>  frames;
-    angeo::skeleton_look_at(frames, look_at_targets, pose_frames, parents, rotation_props);
+    for (auto const& node_ptr : agent_nodes)
+        frames.push_back(*node_ptr->get_coord_system());
+
+    angeo::skeleton_rotate_bones_towards_target_pose(frames, target_frames, rotation_props, bones_to_rotate, seconds_from_previous_call);
 
     for (natural_32_bit  i = 0U; i != agent_nodes.size(); ++i)
         agent_nodes.at(i)->relocate(frames.at(i).origin(), frames.at(i).orientation());

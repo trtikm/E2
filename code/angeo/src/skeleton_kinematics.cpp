@@ -81,7 +81,7 @@ void  skeleton_look_at(
         std::vector<coordinate_system> const&  pose_frames,
         std::vector<integer_32_bit> const&  parents,
         std::vector<std::vector<joint_rotation_props> > const&  rotation_props,
-        std::unordered_map<integer_32_bit, std::vector<float_32_bit> >* const  output_angles,
+        std::unordered_map<integer_32_bit, std::vector<natural_32_bit> >* const  involved_rotations_of_bones,
         natural_32_bit const  max_iterations,
         float_32_bit const  angle_range_epsilon
         )
@@ -314,9 +314,6 @@ void  skeleton_look_at(
 
         std::vector<joint_rotation_props> const&  rotations = props.rotation_props->at(bone_and_angles.first);
 
-        if (output_angles != nullptr)
-            (*output_angles)[bone_and_angles.first].resize(rotations.size());
-
         for (natural_32_bit  rot_idx = 0U; rot_idx != rotations.size(); ++rot_idx)
         {
             joint_rotation_props const&  rot_props = rotations.at(rot_idx);
@@ -335,8 +332,8 @@ void  skeleton_look_at(
 
             rotate(frame, angle_axis_to_quaternion(angle, axis));
 
-            if (output_angles != nullptr)
-                (*output_angles)[bone_and_angles.first].at(rot_idx) = angle;
+            if (involved_rotations_of_bones != nullptr)
+                (*involved_rotations_of_bones)[bone_and_angles.first].push_back(rot_idx);
         }
     }
 
@@ -355,9 +352,6 @@ void  skeleton_look_at(
 
         auto const& rotations = props.rotation_props->at(target_it->first);
 
-        if (output_angles != nullptr)
-            (*output_angles)[target_it->first].resize(rotations.size());
-
         for (natural_32_bit  i = 0U; i != rotations.size(); ++i)
         {
             auto const& rot_props = rotations.at(i);
@@ -373,8 +367,59 @@ void  skeleton_look_at(
 
             rotate(frame, angle_axis_to_quaternion(angle, axis));
 
-            if (output_angles != nullptr)
-                (*output_angles)[target_it->first].at(i) = angle;
+            if (involved_rotations_of_bones != nullptr)
+                (*involved_rotations_of_bones)[target_it->first].push_back(i);
+        }
+    }
+}
+
+
+void  skeleton_rotate_bones_towards_target_pose(
+        std::vector<coordinate_system>&  frames,
+        std::vector<coordinate_system> const&  target_pose_frames,
+        std::vector<std::vector<joint_rotation_props> > const&  rotation_props,
+        std::unordered_map<integer_32_bit, std::vector<natural_32_bit> > const&  bones_to_rotate,
+        float_32_bit const  dt
+        )
+{
+    TMPROF_BLOCK();
+
+    for (auto const&  bone_and_rotations : bones_to_rotate)
+    {
+        coordinate_system&  frame = frames.at(bone_and_rotations.first);
+        coordinate_system const&  target_frame = target_pose_frames.at(bone_and_rotations.first);
+
+        auto const&  rotations = rotation_props.at(bone_and_rotations.first);
+
+        for (natural_32_bit  idx : bone_and_rotations.second)
+        {
+            joint_rotation_props const&  rot_props = rotations.at(idx);
+
+            vector3 const  axis = rot_props.m_axis_in_parent_space ? rot_props.m_axis : detail::vector_from_frame(rot_props.m_axis, frame);
+
+            float_32_bit  angle;
+            {
+                float_32_bit const  current_angle =
+                    compute_rotation_angle(
+                            axis,
+                            rot_props.m_zero_angle_direction,
+                            detail::vector_from_frame(rot_props.m_direction, frame)
+                            );
+            
+                float_32_bit const  target_angle =
+                    compute_rotation_angle(
+                            rot_props.m_axis_in_parent_space ? rot_props.m_axis : detail::vector_from_frame(rot_props.m_axis, target_frame),
+                            rot_props.m_zero_angle_direction,
+                            detail::vector_from_frame(rot_props.m_direction, target_frame)
+                            );
+
+                float_32_bit const  angle_delta = target_angle - current_angle;
+
+                angle = angle_delta < 0.0f ? std::max(angle_delta, -rot_props.m_max_angular_speed * dt) :
+                                             std::min(angle_delta,  rot_props.m_max_angular_speed * dt) ;
+            }
+
+            rotate(frame, angle_axis_to_quaternion(angle, axis));
         }
     }
 }

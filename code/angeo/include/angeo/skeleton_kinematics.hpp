@@ -36,10 +36,20 @@ void  skeleton_look_at(
         std::vector<coordinate_system> const&  pose_frames, // pose coordinate systems of bones, i.e. in a neutral position from which to start the look at algo; DO NOT PASS THE CURRENT COORDINATE SYSTEMS OF BONES.
         std::vector<integer_32_bit> const&  parents,        // value -1 at index 'i' means, the bone 'i' does not have a parent
         std::vector<std::vector<joint_rotation_props> > const&  rotation_props, // specification of rotation props of each bone at joint to its parent bone.
-        std::unordered_map<integer_32_bit, std::vector<float_32_bit> >* const  output_angles = nullptr,
+        std::unordered_map<integer_32_bit, std::vector<natural_32_bit> >* const  involved_rotations_of_bones = nullptr,
         natural_32_bit const  max_iterations = 25U,
         float_32_bit const  angle_range_epsilon = 0.1f * (PI() / 180.0f)
         );
+
+
+void  skeleton_rotate_bones_towards_target_pose(
+        std::vector<coordinate_system>&  frames,    // coordinate systems of bones in the current pose which (some of them) will be moved towards the target pose frames 'target_pose_frames'.
+        std::vector<coordinate_system> const&  target_pose_frames,  // coordinate systems of bones in the target pose.
+        std::vector<std::vector<joint_rotation_props> > const&  rotation_props, // specification of rotation props of each bone at joint to its parent bone.
+        std::unordered_map<integer_32_bit, std::vector<natural_32_bit> > const&  bones_to_rotate,
+        float_32_bit const  dt
+        );
+
 
 
 /// Given a parent for a bone (-1 when no parent), the function computes children the bone.
