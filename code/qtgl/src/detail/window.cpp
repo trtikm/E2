@@ -137,6 +137,7 @@ window::window(std::function<std::shared_ptr<real_time_simulator>()> const  crea
     , m_context()
     , m_is_gl_debug_mode_enabled(enable_gl_debug_mode)
     , m_gl_logger()
+    , m_text_manager(std::make_unique<text_manager>())
 
     , m_round_id(0ULL)
     , m_start_time(std::chrono::high_resolution_clock::now())
@@ -215,6 +216,7 @@ window::~window()
     LOG(debug,"qtgl::window::~window()");
 
     make_current_window_guard const  make_current_window{this};
+    m_text_manager.reset();
     m_simulator.reset();
     on_window_destroy();
 }
@@ -295,6 +297,13 @@ void window::render_now(bool const  is_this_pure_redraw_request)
             m_has_focus,
             m_just_resized
     };
+
+    get_text_manager().set_viewport(
+        -window_width_in_meters(m_window_props) / 2.0f,
+        window_width_in_meters(m_window_props) / 2.0f,
+        -window_height_in_meters(m_window_props) / 2.0f,
+        window_height_in_meters(m_window_props) / 2.0f
+        );
 
     if (m_just_focus_changed)
     {

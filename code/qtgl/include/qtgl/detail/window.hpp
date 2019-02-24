@@ -7,6 +7,7 @@
 #   include <qtgl/keyboard_props.hpp>
 #   include <qtgl/mouse_props.hpp>
 #   include <qtgl/notification_listener.hpp>
+#   include <qtgl/text_manager.hpp>
 #   include <QWindow>
 #   include <QKeyEvent>
 #   include <QMouseEvent>
@@ -74,6 +75,9 @@ struct window : public QWindow
     opengl_context&  glcontext();
     opengl_context const&  glcontext() const;
 
+    text_manager&  get_text_manager() { return *m_text_manager; }
+    text_manager const&  get_text_manager() const { return *m_text_manager; }
+
     natural_64_bit  round_id() const { return m_round_id; }
     std::chrono::high_resolution_clock::time_point  start_time() const { return m_start_time; }
     float_64_bit  total_simulation_time() const { return m_total_simulation_time; }
@@ -110,6 +114,7 @@ private:
     std::shared_ptr<opengl_context>  m_context;
     bool  m_is_gl_debug_mode_enabled;
     std::shared_ptr<QOpenGLDebugLogger>  m_gl_logger;
+    std::unique_ptr<text_manager>  m_text_manager;
 
     natural_64_bit  m_round_id;
     std::chrono::high_resolution_clock::time_point  m_start_time;
