@@ -160,12 +160,25 @@ void  camera_perspective::set_top(float_32_bit const  top)
 
 void  camera_perspective::projection_matrix(matrix44&  output) const
 {
-    output <<
-        (2.0f * m_near) / (m_right - m_left), 0.0f, (m_right + m_left) / (m_right - m_left), 0.0f,
-        0.0f, 2.0f * m_near / (m_top - m_bottom), (m_top + m_bottom) / (m_top - m_bottom), 0.0f,
-        0.0f, 0.0f, -(m_far + m_near) / (m_far - m_near), -(2.0f * m_far * m_near) / (m_far - m_near),
-        0.0f, 0.0f, -1.0f, 0.0f
-        ;
+    projection_matrix_perspective(output);
+}
+
+
+void  camera_perspective::projection_matrix_perspective(matrix44&  output) const
+{
+    qtgl::projection_matrix_perspective(m_near, m_far, m_left, m_right, m_bottom, m_top, output);
+}
+
+
+void  camera_perspective::projection_matrix_orthogonal(matrix44&  output) const
+{
+    qtgl::projection_matrix_orthogonal(m_near, m_far, m_left, m_right, m_bottom, m_top, output);
+}
+
+
+void  camera_perspective::projection_matrix_orthogonal_2d(matrix44&  output) const
+{
+    qtgl::projection_matrix_orthogonal_2d(m_left, m_right, m_bottom, m_top, output);
 }
 
 
@@ -185,6 +198,100 @@ void  adjust(camera_perspective&  camera_ref, window_props const&  window_info)
     camera_ref.set_right(window_width_in_meters(window_info) / 2.0f);
     camera_ref.set_bottom(-window_height_in_meters(window_info) / 2.0f);
     camera_ref.set_top(window_height_in_meters(window_info) / 2.0f);
+}
+
+
+void  projection_matrix_perspective(
+        float_32_bit const  near_,
+        float_32_bit const  far_,
+        float_32_bit const  left,
+        float_32_bit const  right,
+        float_32_bit const  bottom,
+        float_32_bit const  top,
+        matrix44&  output
+        )
+{
+    output(0, 0) = (2.0f * near_) / (right - left);
+    output(0, 1) = 0.0f;
+    output(0, 2) = (right + left) / (right - left);
+    output(0, 3) = 0.0f;
+
+    output(1, 0) = 0.0f;
+    output(1, 1) = 2.0f * near_ / (top - bottom);
+    output(1, 2) = (top + bottom) / (top - bottom);
+    output(1, 3) = 0.0f;
+
+    output(2, 0) = 0.0f;
+    output(2, 1) = 0.0f;
+    output(2, 2) = -(far_ + near_) / (far_ - near_);
+    output(2, 3) = -(2.0f * far_ * near_) / (far_ - near_);
+
+    output(3, 0) = 0.0f;
+    output(3, 1) = 0.0f;
+    output(3, 2) = -1.0f;
+    output(3, 3) = 0.0f;
+}
+
+
+void  projection_matrix_orthogonal(
+        float_32_bit const  near_,
+        float_32_bit const  far_,
+        float_32_bit const  left,
+        float_32_bit const  right,
+        float_32_bit const  bottom,
+        float_32_bit const  top,
+        matrix44&  output
+        )
+{
+    output(0, 0) = 2.0f / (right - left);
+    output(0, 1) = 0.0f;
+    output(0, 2) = 0.0f;
+    output(0, 3) = -(right + left) / (right - left);
+
+    output(1, 0) = 0.0f;
+    output(1, 1) = 2.0f / (top - bottom);
+    output(1, 2) = 0.0f;
+    output(1, 3) = -(top + bottom) / (top - bottom);
+
+    output(2, 0) = 0.0f;
+    output(2, 1) = 0.0f;
+    output(2, 2) = -2.0f / (far_ - near_);
+    output(2, 3) = -(far_ + near_) / (far_ - near_);
+
+    output(3, 0) = 0.0f;
+    output(3, 1) = 0.0f;
+    output(3, 2) = 0.0f;
+    output(3, 3) = 1.0f;
+}
+
+
+void  projection_matrix_orthogonal_2d(
+        float_32_bit const  left,
+        float_32_bit const  right,
+        float_32_bit const  bottom,
+        float_32_bit const  top,
+        matrix44&  output
+        )
+{
+    output(0, 0) = 2.0f / (right - left);
+    output(0, 1) = 0.0f;
+    output(0, 2) = 0.0f;
+    output(0, 3) = -(right + left) / (right - left);
+
+    output(1, 0) = 0.0f;
+    output(1, 1) = 2.0f / (top - bottom);
+    output(1, 2) = 0.0f;
+    output(1, 3) = -(top + bottom) / (top - bottom);
+
+    output(2, 0) = 0.0f;
+    output(2, 1) = 0.0f;
+    output(2, 2) = 0.0f;
+    output(2, 3) = 0.0f;
+
+    output(3, 0) = 0.0f;
+    output(3, 1) = 0.0f;
+    output(3, 2) = 0.0f;
+    output(3, 3) = 1.0f;
 }
 
 

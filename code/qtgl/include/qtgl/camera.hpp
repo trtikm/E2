@@ -98,6 +98,10 @@ struct camera_perspective : public camera
 
     void  projection_matrix(matrix44&  output) const;
 
+    void  projection_matrix_perspective(matrix44&  output) const;
+    void  projection_matrix_orthogonal(matrix44&  output) const;
+    void  projection_matrix_orthogonal_2d(matrix44&  output) const;
+
 private:
 
     float_32_bit  m_near;
@@ -110,6 +114,34 @@ private:
 
 
 void  adjust(camera_perspective&  camera_ref, window_props const&  window_info);
+
+
+void  projection_matrix_perspective(
+        float_32_bit const  near_,
+        float_32_bit const  far_,
+        float_32_bit const  left,
+        float_32_bit const  right,
+        float_32_bit const  bottom,
+        float_32_bit const  top,
+        matrix44&  output
+        );
+void  projection_matrix_orthogonal(
+        float_32_bit const  near_,
+        float_32_bit const  far_,
+        float_32_bit const  left,
+        float_32_bit const  right,
+        float_32_bit const  bottom,
+        float_32_bit const  top,
+        matrix44&  output
+        );
+
+void  projection_matrix_orthogonal_2d(
+        float_32_bit const  left,
+        float_32_bit const  right,
+        float_32_bit const  bottom,
+        float_32_bit const  top,
+        matrix44&  output
+        );
 
 
 }
