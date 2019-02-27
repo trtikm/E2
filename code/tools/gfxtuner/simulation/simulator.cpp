@@ -509,9 +509,10 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
         {
             render_batch(
                 m_batch_grid,
+                matrix_from_world_to_camera,
                 qtgl::vertex_shader_uniform_data_provider(
                     m_batch_grid,
-                    { matrix_from_world_to_camera },
+                    {},
                     matrix_from_camera_to_clipspace,
                     m_diffuse_colour,
                     m_ambient_colour,
@@ -1239,7 +1240,35 @@ void  simulator::render_scene_batches(
                                 m_skeletons.insert({skeleton_directory.string(), skeleton(skeleton_directory)}).first->second;
             }
             for (auto const& node_and_anim : elem.second.second)
-                if (!bones.loaded_successfully()) // || node_and_anim.second == nullptr)
+                if (bones.empty())
+                    qtgl::render_batch(
+                        elem.second.first,
+                        matrix_from_world_to_camera * node_and_anim.first->get_world_matrix(),
+                        qtgl::vertex_shader_uniform_data_provider(
+                            elem.second.first,
+                            {},
+                            matrix_from_camera_to_clipspace,
+                            m_diffuse_colour,
+                            m_ambient_colour,
+                            m_specular_colour,
+                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                            m_directional_light_colour,
+                            m_fog_colour,
+                            m_fog_near,
+                            m_fog_far
+                            ),
+                        qtgl::fragment_shader_uniform_data_provider(
+                            m_diffuse_colour,
+                            m_ambient_colour,
+                            m_specular_colour,
+                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                            m_directional_light_colour,
+                            m_fog_colour,
+                            m_fog_near,
+                            m_fog_far
+                            )
+                        );
+                else if (!bones.loaded_successfully()) // || node_and_anim.second == nullptr)
                     qtgl::render_batch(
                         elem.second.first,
                         qtgl::vertex_shader_uniform_data_provider(
@@ -1340,9 +1369,10 @@ void  simulator::render_scene_coord_systems(
     for (auto const& node_name : nodes_to_draw)
         qtgl::render_batch(
             m_batch_coord_system,
+            matrix_from_world_to_camera * get_scene().get_scene_node(node_name)->get_world_matrix(),
             qtgl::vertex_shader_uniform_data_provider(
                 m_batch_coord_system,
-                { matrix_from_world_to_camera * get_scene().get_scene_node(node_name)->get_world_matrix() },
+                {},
                 matrix_from_camera_to_clipspace,
                 m_diffuse_colour,
                 m_ambient_colour,

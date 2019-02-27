@@ -2,6 +2,8 @@
 #include <utility/invariants.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/timeprof.hpp>
+#include <algorithm>
+#include <iterator>
 
 namespace qtgl {
 
@@ -57,6 +59,135 @@ void  compose_skeleton_binding_data_with_frame_of_keyframe_animation(
 namespace qtgl {
 
 
+vertex_shader_instanced_data_provider::vertex_shader_instanced_data_provider()
+    : m_batch()
+    , m_from_model_to_camera_matrices()
+    , m_diffuse_colours()
+    , m_buffers()
+    , m_num_instances(0U)
+{}
+
+
+vertex_shader_instanced_data_provider::vertex_shader_instanced_data_provider(batch const  batch_)
+    : m_batch(batch_)
+    , m_from_model_to_camera_matrices(std::make_unique<std::vector<natural_8_bit> >())
+    , m_diffuse_colours(std::make_unique<std::vector<natural_8_bit> >())
+    , m_buffers()
+    , m_num_instances(0U)
+{
+    ASSUMPTION(!get_batch().is_attached_to_skeleton());
+}
+
+
+void  vertex_shader_instanced_data_provider::insert_from_model_to_camera_matrix(matrix44 const&  from_model_to_camera_matrix)
+{
+    ASSUMPTION(m_batch.get_instanced_buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA) != 0UL);
+    matrix44  Z = transpose44(from_model_to_camera_matrix);
+    std::copy(
+        (natural_8_bit const*)Z.data(),
+        (natural_8_bit const*)Z.data() + 16U * sizeof(float_32_bit),
+        std::back_inserter(*m_from_model_to_camera_matrices)
+        );
+}
+
+
+void  vertex_shader_instanced_data_provider::insert_diffuse_colour(vector4 const&  diffuse_colour)
+{
+    ASSUMPTION(m_batch.get_instanced_buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR) != 0UL);
+    std::copy(
+        (natural_8_bit const*)diffuse_colour.data(),
+        (natural_8_bit const*)diffuse_colour.data() + 4U * sizeof(float_32_bit),
+        std::back_inserter(*m_diffuse_colours)
+        );
+}
+
+
+bool  vertex_shader_instanced_data_provider::make_current() const
+{
+    if (m_batch.empty() || !m_batch.uses_instanced_buffers())
+        return true;
+
+    if (m_buffers.empty())
+    {
+        if (compute_num_instances() == false)
+            return false; // The provider has inconsistent data -> cannot compute number of instances -> failure.
+
+        for (auto const buffer_type : m_batch.get_instanced_buffers())
+            switch (buffer_type)
+            {
+            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
+                m_buffers.insert({
+                    buffer_type,
+                    buffer(
+                        0U,
+                        16U,
+                        (natural_32_bit)(m_from_model_to_camera_matrices->size() / (16U * sizeof(float_32_bit))),
+                        sizeof(float_32_bit),
+                        false,
+                        m_from_model_to_camera_matrices,
+                        nullptr
+                        )
+                    });
+                break;
+            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
+                m_buffers.insert({
+                    buffer_type,
+                    buffer(
+                        0U,
+                        4U,
+                        (natural_32_bit)(m_diffuse_colours->size() / (4U * sizeof(float_32_bit))),
+                        sizeof(float_32_bit),
+                        false,
+                        m_diffuse_colours,
+                        nullptr
+                        )
+                    });
+                break;
+            default: UNREACHABLE();
+            }
+    }
+    for (auto const&  location_and_buffer : m_buffers)
+        if (location_and_buffer.second.make_current(location_and_buffer.first, true) == false)
+            return false;
+
+    return true;
+}
+
+
+bool  vertex_shader_instanced_data_provider::compute_num_instances() const
+{
+    if (!m_batch.uses_instanced_buffers() || !m_buffers.empty())
+        return true;
+
+    integer_32_bit  common_size = -1;
+    for (auto const  buffer_type : m_batch.get_instanced_buffers())
+    {
+        integer_32_bit  current_size;
+        switch (buffer_type)
+        {
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
+            current_size = (integer_32_bit)m_from_model_to_camera_matrices->size() / (16 * sizeof(float_32_bit));
+            break;
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
+            current_size = (integer_32_bit)m_diffuse_colours->size() / (4 * sizeof(float_32_bit));
+            break;
+        default: UNREACHABLE();
+        }
+        if (common_size == -1)
+            common_size = current_size;
+        else if (common_size != current_size)
+            return false;
+    }
+    m_num_instances = (natural_32_bit)common_size;
+    return true;
+}
+
+
+}
+
+namespace qtgl {
+
+
 vertex_shader_uniform_data_provider::vertex_shader_uniform_data_provider(
         batch const  batch_,
         std::vector<matrix44> const&  matrices_from_model_to_camera,
@@ -97,10 +228,14 @@ vertex_shader_uniform_data_provider::vertex_shader_uniform_data_provider(
                     m_matrices_from_model_to_camera
                     );
     }
-    else
+    else if (batch_.get_available_resources().skeletal() != nullptr)
     {
         ASSUMPTION(matrices_from_model_to_camera.size() == 1UL);
         m_matrices_from_model_to_camera.push_back(matrices_from_model_to_camera.front());
+    }
+    else
+    {
+        ASSUMPTION(matrices_from_model_to_camera.size() == 0UL); // The matrices must be set via instanced data provider, i.e. not here.
     }
 }
 

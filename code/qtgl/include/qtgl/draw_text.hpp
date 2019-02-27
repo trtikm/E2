@@ -11,14 +11,6 @@ namespace qtgl {
 void  set_font_directory(std::string const&  font_directory);
 
 
-void  print_character(
-        char const  character,
-        matrix44 const&  size_and_position_matrix,
-        matrix44 const&  from_camera_to_clipspace_matrix,
-        vector4 const&  diffuse_colour
-        );
-
-
 // In the beginning of each simulation round is the viewport automatically reset to fit whole area of the GL window.
 void  set_text_viewport(
         float_32_bit const  left,

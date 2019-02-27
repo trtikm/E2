@@ -13,6 +13,7 @@ enum struct  SHADER_DATA_INPUT_TYPE : natural_8_bit
     UNIFORM     = 0,    // stored in vertex/fragment program's 'uniform' variable of any type, except 'sampler?D'
     BUFFER      = 1,    // passed to a vertex/fragment program via a varying 'in' variable.
     TEXTURE     = 2,    // stored in a ?D texture (always per fragment data), i.e. in a uniform of a 'sampler?D' type
+    INSTANCE    = 3,    // passed to a vertex/fragment program via a varying 'in' variable; bata changes only per instance.
 };
 
 

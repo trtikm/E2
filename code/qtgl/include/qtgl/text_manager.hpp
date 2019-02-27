@@ -3,11 +3,13 @@
 
 #   include <qtgl/batch.hpp>
 #   include <qtgl/effects_config.hpp>
+#   include <qtgl/shader_data_linkers.hpp>
 #   include <angeo/coordinate_system.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <unordered_map>
 #   include <vector>
 #   include <string>
+#   include <mutex>
 
 namespace qtgl {
 
@@ -15,14 +17,6 @@ namespace qtgl {
 struct text_manager
 {
     text_manager();
-
-    // Returns false in case of failure - when the passed character does not have any representation in the font, or it was not loaded yet.
-    bool  insert(
-            char const  character,
-            matrix44 const&  size_and_position_matrix,
-            matrix44 const&  from_camera_to_clipspace_matrix,
-            vector4 const&  diffuse_colour
-            );
 
     void  set_font_directory(std::string const&  font_directory);
 
@@ -37,6 +31,7 @@ struct text_manager
     void  set_cursor(vector2 const&  position) { m_cursor = position; }
     void  enable_depth_testing(bool const  state) { m_depth_test_enabled = state; }
 
+    // Returns false in case of failure - when the passed character does not have any representation in the font, or it was not loaded yet.
     bool  insert(char const  character, float_32_bit const  z_coord);
 
     void  flush();
@@ -49,10 +44,11 @@ private:
         vector4  diffuse_colour;
     };
 
+    matrix44 build_from_camera_to_clipspace_matrix() const;
     vector2  move_cursor(char  character);
 
     std::unordered_map<char, batch>  m_font;
-    std::unordered_map<char, std::vector<character_draw_info> >  m_text;
+    std::vector<std::pair<matrix44, std::unordered_map<char, vertex_shader_instanced_data_provider> > >  m_text;
     float_32_bit  m_left;
     float_32_bit  m_right;
     float_32_bit  m_bottom;
@@ -61,6 +57,7 @@ private:
     vector4  m_colour;
     float_32_bit  m_size;
     bool  m_depth_test_enabled;
+    std::mutex  m_mutex;
 };
 
 

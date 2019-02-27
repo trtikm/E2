@@ -36,28 +36,22 @@ void  draw();
 // together with a desired 'batch' instance.
 void  render_batch(
         batch const  batch_,
+        vertex_shader_instanced_data_provider const&  vertex_instanced_data_provider,
         vertex_shader_uniform_data_provider_base const&  vertex_uniform_provider,
-        fragment_shader_uniform_data_provider_base const&  fragment_uniform_provider
-                = fragment_shader_uniform_data_provider(),
-        fragment_shader_output_texture_provider_base const&  fragment_output_textures
-                = fragment_shader_output_texture_provider()
+        fragment_shader_uniform_data_provider_base const&  fragment_uniform_provider = fragment_shader_uniform_data_provider(),
+        fragment_shader_output_texture_provider_base const&  fragment_output_textures = fragment_shader_output_texture_provider()
         );
 
 
 // And next follow few helper functions for simpler calling of render_batch.
 
 
-inline void  render_batch(
+void  render_batch(
         batch const  batch_,
         matrix44 const&  matrix_from_model_to_camera,
-        matrix44 const&  matrix_from_camera_to_clipspace
-        )
-{
-    render_batch(
-        batch_,
-        vertex_shader_uniform_data_provider(batch_, { matrix_from_model_to_camera }, matrix_from_camera_to_clipspace)
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        vector4 const&  diffuse_colour = { 0.0f, 0.0f, 0.0f, 1.0f }
         );
-}
 
 
 void  render_batch(
@@ -66,6 +60,28 @@ void  render_batch(
         matrix44 const&  matrix_from_camera_to_clipspace,
         angeo::coordinate_system const&  coord_system,
         vector4 const&  diffuse_colour = { 0.0f, 0.0f, 0.0f, 1.0f }
+        );
+
+
+void  render_batch(
+        batch const  batch_,
+        matrix44 const&  matrix_from_model_to_camera,
+        vertex_shader_uniform_data_provider_base const&  vertex_uniform_provider,
+        fragment_shader_uniform_data_provider_base const&  fragment_uniform_provider = fragment_shader_uniform_data_provider()
+        );
+
+
+void  render_batch(
+        batch const  batch_,
+        vertex_shader_uniform_data_provider_base const&  vertex_uniform_provider,
+        fragment_shader_uniform_data_provider_base const&  fragment_uniform_provider = fragment_shader_uniform_data_provider()
+        );
+
+
+void  render_batch_instances(
+        batch const  batch_,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        vertex_shader_instanced_data_provider const&  instanced_data_provider
         );
 
 

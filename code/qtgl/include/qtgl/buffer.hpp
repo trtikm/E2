@@ -35,6 +35,17 @@ struct  buffer_file_data
 
     buffer_file_data(
             async::finalise_load_on_destroy_ptr,
+            GLuint const  id, 
+            natural_8_bit const  num_components_per_primitive,
+            natural_32_bit const  num_primitives,
+            natural_8_bit const  num_bytes_per_component,
+            bool const  has_integral_components,
+            std::unique_ptr<std::vector<natural_8_bit> >&  data_ptr, // WARNING! the instance will acquire the passed vector!!!!
+            spatial_boundary const* const  boundary = nullptr
+            );
+
+    buffer_file_data(
+            async::finalise_load_on_destroy_ptr,
             std::vector< std::array<float_32_bit,2> > const&  data
             );
     buffer_file_data(
@@ -74,6 +85,8 @@ struct  buffer_file_data
     void  create_gl_buffer();
     void  destroy_gl_buffer();
 
+    bool  make_current(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  start_location, bool const  use_per_instance);
+
 private:
     void  initialise(
             GLuint const  id, 
@@ -83,6 +96,15 @@ private:
             bool const   has_integral_components,
             natural_8_bit const* const  data_begin,
             natural_8_bit const* const  data_end,
+            spatial_boundary const* const  boundary
+            );
+    void  initialise(
+            GLuint const  id, 
+            natural_8_bit const  num_components_per_primitive,
+            natural_32_bit const  num_primitives,
+            natural_8_bit const  num_bytes_per_component,
+            bool const   has_integral_components,
+            std::unique_ptr< std::vector<natural_8_bit> >&  data_ptr,
             spatial_boundary const* const  boundary
             );
 
@@ -150,6 +172,26 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
                 )
     {}
 
+    buffer( GLuint const  id, 
+            natural_8_bit const  num_components_per_primitive,
+            natural_32_bit const  num_primitives,
+            natural_8_bit const  num_bytes_per_component,
+            bool const  has_integral_components,
+            std::unique_ptr<std::vector<natural_8_bit> >&  data_ptr, // WARNING! the instance will acquire the passed vector!!!!
+            spatial_boundary const* const  boundary,
+            std::string const&  key = "",
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
+            )
+        : async::resource_accessor<detail::buffer_file_data>(
+                key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
+                parent_finaliser,
+                id,
+                num_components_per_primitive, num_primitives, num_bytes_per_component, has_integral_components,
+                std::ref(data_ptr),
+                boundary
+                )
+    {}
+
     buffer(std::vector< std::array<float_32_bit,2> > const&  data, std::string const&  key = "")
         : async::resource_accessor<detail::buffer_file_data>(
                 key.empty() ? async::key_type("qtgl::buffer") : async::key_type{ "qtgl::buffer", key },
@@ -213,6 +255,9 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
 
     void  create_gl_buffer() const { resource().create_gl_buffer(); }
     void  destroy_gl_buffer() const { resource().destroy_gl_buffer(); }
+
+    bool  make_current(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  start_location, bool const  use_per_instance) const
+    { return resource().make_current(start_location, use_per_instance); }
 };
 
 

@@ -20,23 +20,6 @@ text_manager::text_manager()
 {}
 
 
-bool  text_manager::insert(
-        char const  character,
-        matrix44 const&  size_and_position_matrix,
-        matrix44 const&  from_camera_to_clipspace_matrix,
-        vector4 const&  diffuse_colour
-        )
-{
-    TMPROF_BLOCK();
-
-    auto const  it = m_font.find(character);
-    if (it == m_font.cend() || !it->second.loaded_successfully())
-        return false;
-    m_text[character].push_back({ size_and_position_matrix, from_camera_to_clipspace_matrix, diffuse_colour });
-    return true;
-}
-
-
 void  text_manager::set_font_directory(std::string const&  font_directory)
 {
     TMPROF_BLOCK();
@@ -45,7 +28,7 @@ void  text_manager::set_font_directory(std::string const&  font_directory)
     {
         effects_config const  config(
                 qtgl::effects_config::light_types{},
-                qtgl::effects_config::lighting_data_types{},
+                qtgl::effects_config::lighting_data_types{ { LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::INSTANCE } },
                 qtgl::effects_config::shader_output_types{ qtgl::SHADER_DATA_OUTPUT_TYPE::DEFAULT },
                 qtgl::FOG_TYPE::NONE
                 );
@@ -69,16 +52,30 @@ void  text_manager::set_viewport(
         float_32_bit const  top
         )
 {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     m_left = left;
     m_right = right;
     m_bottom = bottom;
     m_top = top;
+
+    m_text.push_back({});
+    m_text.back().first = build_from_camera_to_clipspace_matrix();
 }
 
 
 bool  text_manager::insert(char const  character, float_32_bit const  z_coord)
 {
+    TMPROF_BLOCK();
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+
     vector2 const  pos_xy = move_cursor(character);
+
+    auto const  font_char_it = m_font.find(character);
+    if (font_char_it == m_font.cend() || !font_char_it->second.loaded_successfully())
+        return false;
+
     matrix44  size_and_position_matrix;
     {
         size_and_position_matrix = matrix44_identity();
@@ -87,13 +84,21 @@ bool  text_manager::insert(char const  character, float_32_bit const  z_coord)
         size_and_position_matrix(1, 3) = pos_xy(1);
         size_and_position_matrix(2, 3) = z_coord;
     }
-    matrix44  from_camera_to_clipspace_matrix;
-    if (m_depth_test_enabled)
-        projection_matrix_orthogonal(-1000.0f, 1000.0f, m_left, m_right, m_bottom, m_top, from_camera_to_clipspace_matrix);
-    else
-        projection_matrix_orthogonal_2d(m_left, m_right, m_bottom, m_top, from_camera_to_clipspace_matrix);
-    bool const  retval = insert(character, size_and_position_matrix, from_camera_to_clipspace_matrix, m_colour);
-    return retval;
+
+    if (m_text.empty())
+    {
+        m_text.push_back({});
+        m_text.back().first = build_from_camera_to_clipspace_matrix();
+    }
+
+    auto it = m_text.back().second.find(character);
+    if (it == m_text.back().second.end())
+        it = m_text.back().second.insert({character, vertex_shader_instanced_data_provider(font_char_it->second) }).first;
+
+    it->second.insert_from_model_to_camera_matrix(size_and_position_matrix);
+    it->second.insert_diffuse_colour(m_colour);
+
+    return true;
 }
 
 
@@ -111,24 +116,26 @@ void  text_manager::flush()
     }
 
     qtgl::draw_state  dstate;
-    for (auto const&  char_and_instances : m_text)
-    {
-        batch const  char_batch = m_font.at(char_and_instances.first);
-        if (qtgl::make_current(char_batch, dstate))
+    for (auto const&  matrix_and_chars : m_text)
+        for (auto const& char_and_provider : matrix_and_chars.second)
         {
-            for (auto const& character_info : char_and_instances.second)
+            TMPROF_BLOCK();
+
+            batch const  char_batch = m_font.at(char_and_provider.first);
+            if (qtgl::make_current(char_batch, dstate))
+            {
                 render_batch(
                         char_batch,
+                        char_and_provider.second,
                         qtgl::vertex_shader_uniform_data_provider(
                             char_batch,
-                            { character_info.size_and_position_matrix },
-                            character_info.from_camera_to_clipspace_matrix,
-                            character_info.diffuse_colour
+                            {},
+                            matrix_and_chars.first
                             )
                         );
-            dstate = char_batch.get_draw_state();
+                dstate = char_batch.get_draw_state();
+            }
         }
-    }
 
     if (old_depth_test_state != m_depth_test_enabled)
     {
@@ -140,6 +147,17 @@ void  text_manager::flush()
 
     m_text.clear();
     m_cursor = vector2{ m_left, m_top - m_size  };
+}
+
+
+matrix44 text_manager::build_from_camera_to_clipspace_matrix() const
+{
+    matrix44  from_camera_to_clipspace_matrix;
+    if (m_depth_test_enabled)
+        projection_matrix_orthogonal(-1000.0f, 1000.0f, m_left, m_right, m_bottom, m_top, from_camera_to_clipspace_matrix);
+    else
+        projection_matrix_orthogonal_2d(m_left, m_right, m_bottom, m_top, from_camera_to_clipspace_matrix);
+    return from_camera_to_clipspace_matrix;
 }
 
 

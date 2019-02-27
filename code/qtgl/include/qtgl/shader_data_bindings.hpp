@@ -21,14 +21,9 @@ enum struct VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION : natural_8_bit
     BINDING_IN_WEIGHTS_OF_MATRICES  = 7,    // float[VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::NUM_MATRICES_PER_VERTEX]; weights (in range <0,1> each) of matrices in the array VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME::MATRICES_FROM_MODEL_TO_CAMERA
     BINDING_IN_TEXCOORD0            = 8,    // vec2; texture uv coordinates
     BINDING_IN_TEXCOORD1            = 9,    // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD2            = 10,   // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD3            = 11,   // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD4            = 12,   // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD5            = 13,   // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD6            = 14,   // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD7            = 15,   // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD8            = 16,   // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD9            = 17,   // vec2; texture uv coordinates
+    BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA = 10,  // mat4=4*vec4; matrices for individual instances
+    BINDING_IN_INSTANCED_DIFFUSE_COLOUR              = 14,  // vec4; diffuse colours for individual instances
+
 };
 
 inline natural_32_bit  value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  location)
@@ -37,7 +32,7 @@ std::string  name(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  location);
 std::string  type_name(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  location);
 inline natural_8_bit  get_num_texcoord_binding_locations()
 {
-    return value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD9) -
+    return value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD1) -
            value(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0) + 1U;
 }
 inline VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION  get_texcoord_binding_location(natural_8_bit const  texcood_index)
@@ -49,7 +44,7 @@ inline VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION  get_texcoord_binding_locatio
 inline constexpr VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION  min_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION() noexcept
 { return VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION; }
 inline constexpr VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION  max_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION() noexcept
-{ return VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD9; }
+{ return VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR; }
 inline constexpr natural_8_bit  num_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATIONs() noexcept
 { return static_cast<natural_8_bit>(max_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION()) -
          static_cast<natural_8_bit>(min_VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION()) +
@@ -66,14 +61,6 @@ enum struct VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION : natural_8_bit
     BINDING_OUT_BITANGENT           = 5,    // vec3; Always in camera space; normalised (unit vector)
     BINDING_OUT_TEXCOORD0           = 6,    // vec2; texture uv coordinates
     BINDING_OUT_TEXCOORD1           = 7,    // vec2; texture uv coordinates
-    BINDING_OUT_TEXCOORD2           = 8,    // vec2; texture uv coordinates
-    BINDING_OUT_TEXCOORD3           = 9,    // vec2; texture uv coordinates
-    BINDING_OUT_TEXCOORD4           = 10,   // vec2; texture uv coordinates
-    BINDING_OUT_TEXCOORD5           = 11,   // vec2; texture uv coordinates
-    BINDING_OUT_TEXCOORD6           = 12,   // vec2; texture uv coordinates
-    BINDING_OUT_TEXCOORD7           = 13,   // vec2; texture uv coordinates
-    BINDING_OUT_TEXCOORD8           = 14,   // vec2; texture uv coordinates
-    BINDING_OUT_TEXCOORD9           = 15,   // vec2; texture uv coordinates
 };
 
 inline natural_32_bit  value(VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION const  location)
@@ -126,14 +113,6 @@ enum struct FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION : natural_8_bit
     BINDING_IN_BITANGENT            = 5,    // vec3; Always in camera space; normalised (unit vector)
     BINDING_IN_TEXCOORD0            = 6,    // vec2; texture uv coordinates
     BINDING_IN_TEXCOORD1            = 7,    // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD2            = 8,    // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD3            = 9,    // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD4            = 10,   // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD5            = 11,   // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD6            = 12,   // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD7            = 13,   // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD8            = 14,   // vec2; texture uv coordinates
-    BINDING_IN_TEXCOORD9            = 15,   // vec2; texture uv coordinates
 };
 
 inline natural_32_bit  value(FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION const  location)

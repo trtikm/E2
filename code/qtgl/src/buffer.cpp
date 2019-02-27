@@ -206,6 +206,26 @@ buffer_file_data::buffer_file_data(
 
 buffer_file_data::buffer_file_data(
         async::finalise_load_on_destroy_ptr,
+        GLuint const  id, 
+        natural_8_bit const  num_components_per_primitive,
+        natural_32_bit const  num_primitives,
+        natural_8_bit const  num_bytes_per_component,
+        bool const  has_integral_components,
+        std::unique_ptr<std::vector<natural_8_bit> >&  data_ptr,
+        spatial_boundary const* const  boundary
+        )
+{
+    initialise(
+        id,
+        num_components_per_primitive, num_primitives, num_bytes_per_component, has_integral_components,
+        data_ptr,
+        boundary
+        );
+}
+
+
+buffer_file_data::buffer_file_data(
+        async::finalise_load_on_destroy_ptr,
         std::vector< std::array<float_32_bit,2> > const&  data
         )
 {
@@ -338,15 +358,41 @@ void  buffer_file_data::initialise(
         (data_begin != nullptr && data_end != nullptr && data_begin < data_end)
         );
 
+    std::unique_ptr< std::vector<natural_8_bit> >  data_ptr;
+    data_ptr = data_begin == nullptr ? nullptr :
+                                       std::unique_ptr< std::vector<natural_8_bit> >(
+                                                new std::vector<natural_8_bit>(data_begin, data_end)
+                                                );
+    initialise(
+        id,
+        num_components_per_primitive,
+        num_primitives,
+        num_bytes_per_component,
+        has_integral_components,
+        data_ptr,
+        boundary
+        );
+}
+
+
+void  buffer_file_data::initialise(
+        GLuint const  id,
+        natural_8_bit const  num_components_per_primitive,
+        natural_32_bit const  num_primitives,
+        natural_8_bit const  num_bytes_per_component,
+        bool const  has_integral_components,
+        std::unique_ptr<std::vector<natural_8_bit> >&  data_ptr,
+        spatial_boundary const* const  boundary
+        )
+{
+    ASSUMPTION(data_ptr != nullptr && data_ptr->size() == num_bytes_per_component * num_components_per_primitive * num_primitives);
+
     m_id = id;
     m_num_primitives = num_primitives;
     m_num_components_per_primitive = num_components_per_primitive;
     m_num_bytes_per_component = num_bytes_per_component;
     m_has_integral_components = has_integral_components;
-    m_data_ptr = data_begin == nullptr ? nullptr :
-                                         std::unique_ptr< std::vector<natural_8_bit> >(
-                                                new std::vector<natural_8_bit>(data_begin, data_end)
-                                                );
+    m_data_ptr.swap(data_ptr);
     m_boundary = boundary == nullptr ? nullptr :
                                        std::unique_ptr<spatial_boundary>(new spatial_boundary(*boundary));
 
@@ -354,7 +400,6 @@ void  buffer_file_data::initialise(
     ASSUMPTION(m_num_primitives > 0U);
     ASSUMPTION((m_has_integral_components && m_num_bytes_per_component == (natural_8_bit)sizeof(natural_32_bit)) ||
                (!m_has_integral_components && m_num_bytes_per_component == sizeof(float_32_bit)));
-    ASSUMPTION(m_data_ptr->size() == m_num_bytes_per_component * m_num_components_per_primitive * m_num_primitives);
 }
 
 
@@ -391,6 +436,32 @@ void  buffer_file_data::destroy_gl_buffer()
     INVARIANT(glapi().glGetError() == 0U);
 }
 
+
+bool  buffer_file_data::make_current(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  start_location, bool const  use_per_instance)
+{
+    create_gl_buffer();
+
+    glapi().glBindBuffer(GL_ARRAY_BUFFER, id());
+    for (natural_32_bit  location_shift = 0U; location_shift * 4U < num_components_per_primitive(); ++location_shift)
+    {
+        natural_32_bit const  location = value(start_location) + location_shift;
+        natural_32_bit const  num_components = std::min(4U, num_components_per_primitive() - location_shift * 4U);
+        glapi().glEnableVertexAttribArray(location);
+        glapi().glVertexAttribPointer(
+                location,
+                num_components,
+                GL_FLOAT,
+                GL_FALSE,
+                num_components_per_primitive() * sizeof(float_32_bit),
+                (void*)(location_shift * (4U * sizeof(float_32_bit)))
+                );
+        glapi().glVertexAttribDivisor(location, use_per_instance ? 1 : 0);
+
+        INVARIANT(glapi().glGetError() == 0U);
+    }
+
+    return true;
+}
 
 
 }}
@@ -552,21 +623,8 @@ bool  buffers_binding::ready() const
             get_index_buffer().create_gl_buffer();
 
         for (auto const& location_and_buffer : get_buffers())
-        {
-            location_and_buffer.second.create_gl_buffer();
-
-            glapi().glBindBuffer(GL_ARRAY_BUFFER, location_and_buffer.second.id());
-            glapi().glEnableVertexAttribArray(value(location_and_buffer.first));
-            glapi().glVertexAttribPointer(
-                        value(location_and_buffer.first),
-                        location_and_buffer.second.num_components_per_primitive(),
-                        GL_FLOAT,
-                        GL_FALSE,
-                        0U,
-                        nullptr
-                        );
-            INVARIANT(glapi().glGetError() == 0U);
-        }
+            if (location_and_buffer.second.make_current(location_and_buffer.first, false) == false)
+                return false;
 
         mutable_this->set_ready();
     }

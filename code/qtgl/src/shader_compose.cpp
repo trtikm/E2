@@ -141,14 +141,14 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 "#version 420",
 
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input),
                                 varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
 
                                 uniform(VS_UNIFORM::DIFFUSE_COLOUR, vs_uniforms),
-                                uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
                                 uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
-                                "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
+                                "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
                                 "    gl_Position = vec4(in_position,1.0f) * T;",
                                 "    out_colour = DIFFUSE_COLOUR;",
                                 "}",
@@ -209,14 +209,14 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 "#version 420",
 
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input),
                                 varying("in_colour", VS_IN::BINDING_IN_DIFFUSE, vs_input),
                                 varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
 
-                                uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
                                 uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
-                                "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
+                                "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
                                 "    gl_Position = vec4(in_position,1.0f) * T;",
                                 "    out_colour = in_colour;",
                                 "}",
@@ -327,14 +327,14 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 "#version 420",
 
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input),
                                 varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
                                 varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
 
-                                uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
                                 uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                 "void main() {",
-                                "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
+                                "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
                                 "    gl_Position = vec4(in_position,1.0f) * T;",
                                 "    out_texture_coords = in_texture_coords;",
                                 "}",
@@ -405,6 +405,67 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         }
                     }
                     break;
+                case SHADER_DATA_INPUT_TYPE::INSTANCE:
+                    {
+                        if (resources.skeletal() == nullptr)
+                        {
+                            vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                "#version 420",
+
+                                varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input),
+                                varying("in_colour", VS_IN::BINDING_IN_INSTANCED_DIFFUSE_COLOUR, vs_input),
+                                varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
+
+                                uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
+
+                                "void main() {",
+                                "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
+                                "    gl_Position = vec4(in_position,1.0f) * T;",
+                                "    out_colour = in_colour;",
+                                "}",
+                            };
+                            if (resources.shaders_effects_config().use_alpha_testing())
+                            {
+                                fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                    "#version 420",
+
+                                    varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                    varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                    uniform(FS_UNIFORM::ALPHA_TEST_CONSTANT, fs_uniforms),
+
+                                    "void main() {",
+                                    "    if (in_colour.a < ALPHA_TEST_CONSTANT)",
+                                    "        discard;",
+                                    "    out_colour = in_colour;",
+                                    "}",
+                                };
+                            }
+                            else
+                            {
+                                fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                    "#version 420",
+
+                                    varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                    varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                    "void main() {",
+                                    "    out_colour = in_colour;",
+                                    "}",
+                                };
+                            }
+                        }
+                        else
+                        {
+                            result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Instancing is not supported for skeletal-animated objects.";
+                            result.second.get_lighting_data_types().begin()->second =
+                                    resources.buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE) == 0UL ?
+                                            SHADER_DATA_INPUT_TYPE::UNIFORM :
+                                            SHADER_DATA_INPUT_TYPE::BUFFER  ;
+                        }
+                    }
+                    break;
                 }
             }
             else
@@ -447,6 +508,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "#version 420",
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                                    varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
                                                     varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
 
@@ -454,15 +516,14 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     uniform(VS_UNIFORM::DIFFUSE_COLOUR, vs_uniforms),
                                                     uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, vs_uniforms),
                                                     uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, vs_uniforms),
-                                                    uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
                                                     uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                     "void main() {",
-                                                    "    gl_Position = vec4(in_position,1.0f) * (MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE);",
+                                                    "    gl_Position = vec4(in_position,1.0f) * (in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE);",
                                                     "    const vec4 colour_mult = ambient_and_directional_lighting(",
-                                                    "        vec3(vec4(in_normal, 0.0f) * MATRIX_FROM_MODEL_TO_CAMERA),",
+                                                    "        vec3(vec4(in_normal, 0.0f) * in_from_model_to_camera),",
                                                     "        DIRECTIONAL_LIGHT_DIRECTION,",
                                                     "        AMBIENT_COLOUR,",
                                                     "        DIRECTIONAL_LIGHT_COLOUR",
@@ -541,6 +602,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "#version 420",
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                                    varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
                                                     varying("in_colour", VS_IN::BINDING_IN_DIFFUSE, vs_input),
                                                     varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
@@ -548,16 +610,15 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     uniform(VS_UNIFORM::AMBIENT_COLOUR, vs_uniforms),
                                                     uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, vs_uniforms),
                                                     uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, vs_uniforms),
-                                                    uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
                                                     uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                     "void main() {",
-                                                    "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
+                                                    "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
                                                     "    gl_Position = vec4(in_position,1.0f) * T;",
                                                     "    const vec4 colour_mult = ambient_and_directional_lighting(",
-                                                    "        vec3(vec4(in_normal, 0.0f) * MATRIX_FROM_MODEL_TO_CAMERA),",
+                                                    "        vec3(vec4(in_normal, 0.0f) * in_from_model_to_camera),",
                                                     "        DIRECTIONAL_LIGHT_DIRECTION,",
                                                     "        AMBIENT_COLOUR,",
                                                     "        DIRECTIONAL_LIGHT_COLOUR",
@@ -686,6 +747,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "#version 420",
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                                    varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
                                                     varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
                                                     varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
@@ -694,17 +756,16 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     uniform(VS_UNIFORM::AMBIENT_COLOUR, vs_uniforms),
                                                     uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, vs_uniforms),
                                                     uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, vs_uniforms),
-                                                    uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
                                                     uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                                     DEFINE_FUNCTION_ambient_and_directional_lighting(),
 
                                                     "void main() {",
-                                                    "    const mat4 T = MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
+                                                    "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
                                                     "    gl_Position = vec4(in_position,1.0f) * T;",
                                                     "    out_texture_coords = in_texture_coords;",
                                                     "    out_colour_mult = ambient_and_directional_lighting(",
-                                                    "        vec3(vec4(in_normal, 0.0f) * MATRIX_FROM_MODEL_TO_CAMERA),",
+                                                    "        vec3(vec4(in_normal, 0.0f) * in_from_model_to_camera),",
                                                     "        DIRECTIONAL_LIGHT_DIRECTION,",
                                                     "        AMBIENT_COLOUR,",
                                                     "        DIRECTIONAL_LIGHT_COLOUR",
@@ -796,6 +857,79 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             }
                                         }
                                         break;
+                                    case SHADER_DATA_INPUT_TYPE::INSTANCE:
+                                        {
+                                            if (resources.skeletal() == nullptr)
+                                            {
+                                                vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
+                                                    "#version 420",
+
+                                                    varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                                    varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input),
+                                                    varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
+                                                    varying("in_colour", VS_IN::BINDING_IN_INSTANCED_DIFFUSE_COLOUR, vs_input),
+                                                    varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
+
+                                                    uniform(VS_UNIFORM::AMBIENT_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_COLOUR, vs_uniforms),
+                                                    uniform(VS_UNIFORM::DIRECTIONAL_LIGHT_DIRECTION, vs_uniforms),
+                                                    uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
+
+                                                    DEFINE_FUNCTION_ambient_and_directional_lighting(),
+
+                                                    "void main() {",
+                                                    "    const mat4 T = in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;"
+                                                    "    gl_Position = vec4(in_position,1.0f) * T;",
+                                                    "    const vec4 colour_mult = ambient_and_directional_lighting(",
+                                                    "        vec3(vec4(in_normal, 0.0f) * in_from_model_to_camera),",
+                                                    "        DIRECTIONAL_LIGHT_DIRECTION,",
+                                                    "        AMBIENT_COLOUR,",
+                                                    "        DIRECTIONAL_LIGHT_COLOUR",
+                                                    "        );",
+                                                    "    out_colour = colour_mult * in_colour;",
+                                                    "}",
+                                                };
+                                                if (resources.shaders_effects_config().use_alpha_testing())
+                                                {
+                                                    fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                                        "#version 420",
+
+                                                        varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                                        varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                                        uniform(FS_UNIFORM::ALPHA_TEST_CONSTANT, fs_uniforms),
+
+                                                        "void main() {",
+                                                        "    if (in_colour.a < ALPHA_TEST_CONSTANT)",
+                                                        "        discard;",
+                                                        "    out_colour = in_colour;",
+                                                        "}",
+                                                    };
+                                                }
+                                                else
+                                                {
+                                                    fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
+                                                        "#version 420",
+
+                                                        varying("in_colour", FS_IN::BINDING_IN_DIFFUSE, fs_input),
+                                                        varying("out_colour", FS_OUT::BINDING_OUT_COLOUR, fs_output),
+
+                                                        "void main() {",
+                                                        "    out_colour = in_colour;",
+                                                        "}",
+                                                    };
+                                                }
+                                            }
+                                            else
+                                            {
+                                                result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Instancing is not supported for skeletal-deformed objects.";
+                                                result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::DIFFUSE] =
+                                                        resources.buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_DIFFUSE) == 0UL ?
+                                                                SHADER_DATA_INPUT_TYPE::UNIFORM :
+                                                                SHADER_DATA_INPUT_TYPE::BUFFER  ;
+                                            }
+                                        }
+                                        break;
                                     }
                                 }
                             }
@@ -848,6 +982,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "#version 420",
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
+                                                    varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
                                                     varying("in_tangent", VS_IN::BINDING_IN_TANGENT, vs_input),
                                                     varying("in_bitangent", VS_IN::BINDING_IN_BITANGENT, vs_input),
@@ -858,14 +993,13 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     varying("out_bitangent", VS_OUT::BINDING_OUT_BITANGENT, vs_output),
                                                     varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
 
-                                                    uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
                                                     uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms),
 
                                                     "void main() {",
-                                                    "    gl_Position = vec4(in_position,1.0f) * MATRIX_FROM_MODEL_TO_CAMERA * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
-                                                    "    out_normal = (vec4(in_normal,0.0f) * MATRIX_FROM_MODEL_TO_CAMERA).xyz;",
-                                                    "    out_tangent = (vec4(in_tangent,0.0f) * MATRIX_FROM_MODEL_TO_CAMERA).xyz;",
-                                                    "    out_bitangent = (vec4(in_bitangent,0.0f) * MATRIX_FROM_MODEL_TO_CAMERA).xyz;",
+                                                    "    gl_Position = vec4(in_position,1.0f) * in_from_model_to_camera * MATRIX_FROM_CAMERA_TO_CLIPSPACE;",
+                                                    "    out_normal = (vec4(in_normal,0.0f) * in_from_model_to_camera).xyz;",
+                                                    "    out_tangent = (vec4(in_tangent,0.0f) * in_from_model_to_camera).xyz;",
+                                                    "    out_bitangent = (vec4(in_bitangent,0.0f) * in_from_model_to_camera).xyz;",
                                                     "    out_texture_coords = in_texture_coords;",
                                                     "}",
                                                 };
@@ -990,6 +1124,10 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                 };
                                             }
                                         }
+                                        break;
+                                    case SHADER_DATA_INPUT_TYPE::INSTANCE:
+                                        result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Instancing of diffuse colours for normals in texture is not implemented yet.";
+                                        result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::NORMAL] = SHADER_DATA_INPUT_TYPE::BUFFER;
                                         break;
                                     }
                                 }

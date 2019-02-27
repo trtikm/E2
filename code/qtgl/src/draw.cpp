@@ -11,6 +11,7 @@ static bool  s_are_buffers_ready = false;
 static GLuint  s_id = 0U;
 static natural_8_bit  s_num_components_per_primitive = 0U;
 static natural_32_bit  s_num_primitives = 0U;
+static natural_32_bit  s_num_instances = 0U;
 
 void  set_are_buffers_ready(bool const  are_buffers_ready)
 {
@@ -37,6 +38,12 @@ void  set_num_primitives(natural_32_bit const  num_primitives)
 }
 
 
+void  set_num_instances(natural_32_bit const  num_instances)
+{
+    s_num_instances = num_instances;
+}
+
+
 }}}
 
 namespace qtgl {
@@ -56,9 +63,24 @@ void  draw()
     if (s_id == 0U)
         switch (s_num_components_per_primitive)
         {
-        case 1U: glapi().glDrawArrays(GL_POINTS,0U,s_num_primitives); break;
-        case 2U: glapi().glDrawArrays(GL_LINES,0U,s_num_primitives); break;
-        case 3U: glapi().glDrawArrays(GL_TRIANGLES,0U,s_num_primitives); break;
+        case 1U:
+            if (s_num_instances == 0U)
+                glapi().glDrawArrays(GL_POINTS,0U,s_num_primitives);
+            else
+                glapi().glDrawArraysInstanced(GL_POINTS, 0U, s_num_primitives, s_num_instances);
+            break;
+        case 2U:
+            if (s_num_instances == 0U)
+                glapi().glDrawArrays(GL_LINES,0U,s_num_primitives);
+            else
+                glapi().glDrawArraysInstanced(GL_LINES, 0U, s_num_primitives, s_num_instances);
+            break;
+        case 3U:
+            if (s_num_instances == 0U)
+                glapi().glDrawArrays(GL_TRIANGLES,0U,s_num_primitives);
+            else
+                glapi().glDrawArraysInstanced(GL_TRIANGLES, 0U, s_num_primitives, s_num_instances);
+            break;
         default: UNREACHABLE();
         }
     else
@@ -66,9 +88,24 @@ void  draw()
         glapi().glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,s_id);
         switch (s_num_components_per_primitive)
         {
-        case 1U: glapi().glDrawElements(GL_POINTS,1U * s_num_primitives,GL_UNSIGNED_INT,nullptr); break;
-        case 2U: glapi().glDrawElements(GL_LINES,2U * s_num_primitives,GL_UNSIGNED_INT,nullptr); break;
-        case 3U: glapi().glDrawElements(GL_TRIANGLES,3U * s_num_primitives,GL_UNSIGNED_INT,nullptr); break;
+        case 1U:
+            if (s_num_instances == 0U)
+                glapi().glDrawElements(GL_POINTS,1U * s_num_primitives,GL_UNSIGNED_INT,nullptr);
+            else
+                glapi().glDrawElementsInstanced(GL_POINTS, 1U * s_num_primitives, GL_UNSIGNED_INT, nullptr, s_num_instances);
+            break;
+        case 2U:
+            if (s_num_instances == 0U)
+                glapi().glDrawElements(GL_LINES,2U * s_num_primitives,GL_UNSIGNED_INT,nullptr);
+            else
+                glapi().glDrawElementsInstanced(GL_LINES, 2U * s_num_primitives, GL_UNSIGNED_INT, nullptr, s_num_instances);
+            break;
+        case 3U:
+            if (s_num_instances == 0U)
+                glapi().glDrawElements(GL_TRIANGLES,3U * s_num_primitives,GL_UNSIGNED_INT,nullptr);
+            else
+                glapi().glDrawElementsInstanced(GL_TRIANGLES, 3U * s_num_primitives, GL_UNSIGNED_INT, nullptr, s_num_instances);
+            break;
         default: UNREACHABLE();
         }
     }
@@ -77,12 +114,17 @@ void  draw()
 
 void  render_batch(
         batch const  batch_,
+        vertex_shader_instanced_data_provider const&  vertex_instanced_data_provider,
         vertex_shader_uniform_data_provider_base const&  vertex_uniform_provider,
         fragment_shader_uniform_data_provider_base const&  fragment_uniform_provider,
         fragment_shader_output_texture_provider_base const&  fragment_output_textures
         )
 {
     TMPROF_BLOCK();
+
+    if (vertex_instanced_data_provider.make_current() == false)
+        return;
+    detail::current_draw::set_num_instances(vertex_instanced_data_provider.get_num_instances());
 
     {
         vertex_shader  shader = batch_.get_shaders_binding().get_vertex_shader();
@@ -196,23 +238,100 @@ void  render_batch(
 
 void  render_batch(
         batch const  batch_,
+        matrix44 const&  matrix_from_model_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        vector4 const&  diffuse_colour
+        )
+{
+    if (batch_.uses_instanced_buffers())
+    {
+        vertex_shader_instanced_data_provider  instanced_data_provider(batch_);
+        if (batch_.get_instanced_buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA) != 0UL)
+            instanced_data_provider.insert_from_model_to_camera_matrix(matrix_from_model_to_camera);
+        if (batch_.get_instanced_buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR) != 0UL)
+            instanced_data_provider.insert_diffuse_colour(diffuse_colour);
+        render_batch_instances(batch_, matrix_from_camera_to_clipspace, instanced_data_provider);
+    }
+    else
+        render_batch(
+            batch_,
+            vertex_shader_instanced_data_provider(),
+            vertex_shader_uniform_data_provider(batch_, { matrix_from_model_to_camera }, matrix_from_camera_to_clipspace, diffuse_colour)
+            );
+}
+
+
+
+void  render_batch(
+        batch const  batch_,
         matrix44 const&  matrix_from_world_to_camera,
         matrix44 const&  matrix_from_camera_to_clipspace,
         angeo::coordinate_system const&  coord_system,
         vector4 const&  diffuse_colour
         )
 {
-    matrix44  matrix_from_model_to_world;
-    angeo::from_base_matrix(coord_system, matrix_from_model_to_world);
+    matrix44  matrix_from_model_to_camera;
+    {
+        matrix44  matrix_from_model_to_world;
+        angeo::from_base_matrix(coord_system, matrix_from_model_to_world);
+        matrix_from_model_to_camera = matrix_from_world_to_camera * matrix_from_model_to_world;
+    }
+    render_batch(batch_, matrix_from_model_to_camera, matrix_from_camera_to_clipspace, diffuse_colour);
+}
+
+
+void  render_batch(
+        batch const  batch_,
+        matrix44 const&  matrix_from_model_to_camera,
+        vertex_shader_uniform_data_provider_base const&  vertex_uniform_provider,
+        fragment_shader_uniform_data_provider_base const&  fragment_uniform_provider
+        )
+{
+    ASSUMPTION(batch_.get_instanced_buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA) != 0UL);
+
+    vertex_shader_instanced_data_provider  instanced_data_provider(batch_);
+    instanced_data_provider.insert_from_model_to_camera_matrix(matrix_from_model_to_camera);
+
     render_batch(
         batch_,
-        vertex_shader_uniform_data_provider(
-                batch_,
-                { matrix_from_world_to_camera * matrix_from_model_to_world },
-                matrix_from_camera_to_clipspace, diffuse_colour
-                )
+        instanced_data_provider,
+        vertex_uniform_provider,
+        fragment_uniform_provider
         );
 }
+
+
+void  render_batch(
+        batch const  batch_,
+        vertex_shader_uniform_data_provider_base const&  vertex_uniform_provider,
+        fragment_shader_uniform_data_provider_base const&  fragment_uniform_provider
+        )
+{
+    ASSUMPTION(batch_.get_instanced_buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA) == 0UL);
+
+    render_batch(
+        batch_,
+        vertex_shader_instanced_data_provider(),
+        vertex_uniform_provider,
+        fragment_uniform_provider
+        );
+}
+
+
+void  render_batch_instances(
+        batch const  batch_,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        vertex_shader_instanced_data_provider const&  instanced_data_provider
+        )
+{
+    render_batch(
+        batch_,
+        instanced_data_provider,
+        vertex_shader_uniform_data_provider(batch_, {}, matrix_from_camera_to_clipspace)
+        );
+}
+
+
 
 
 }

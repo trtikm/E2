@@ -3,9 +3,11 @@
 
 #   include <qtgl/shader_data_bindings.hpp>
 #   include <qtgl/batch.hpp>
+#   include <qtgl/buffer.hpp>
 #   include <qtgl/texture.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <vector>
+#   include <unordered_map>
 
 namespace qtgl {
 
@@ -23,6 +25,36 @@ void  compose_skeleton_binding_data_with_frame_of_keyframe_animation(
         skeleton_alignment const  alignment,
         std::vector<matrix44>&  frame  // the results will be composed with the current data.
         );
+
+
+}
+
+namespace qtgl {
+
+
+struct vertex_shader_instanced_data_provider
+{
+    vertex_shader_instanced_data_provider();
+    explicit vertex_shader_instanced_data_provider(batch const  batch_);
+
+    batch  get_batch() const { return m_batch; }
+
+    void  insert_from_model_to_camera_matrix(matrix44 const&  from_model_to_camera_matrix);
+    void  insert_diffuse_colour(vector4 const&  diffuse_colour);
+
+    natural_32_bit  get_num_instances() const { return m_num_instances; }
+
+    bool  make_current() const;
+
+private:
+    bool  compute_num_instances() const;
+
+    batch  m_batch;
+    mutable std::unique_ptr<std::vector<natural_8_bit> >  m_from_model_to_camera_matrices;
+    mutable std::unique_ptr<std::vector<natural_8_bit> >  m_diffuse_colours;
+    mutable std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, buffer>  m_buffers;
+    mutable natural_32_bit  m_num_instances;
+};
 
 
 }

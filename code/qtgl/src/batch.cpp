@@ -104,7 +104,20 @@ batch_data::batch_data(
         "{" + vs_uid + "}{" + fs_uid + "}",
         finaliser
     };
-    initialise(buffers_binding_,shaders_binding_,textures_binding_,draw_state_,modelspace_,skeleton_alignment_,resources);
+
+    std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>  instanced_buffers;
+    for (auto const& location : vs_input)
+    {
+        switch (location)
+        {
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
+            instanced_buffers.insert(location);
+            break;
+        }
+    }
+
+    initialise(buffers_binding_,shaders_binding_,textures_binding_,draw_state_,modelspace_,skeleton_alignment_,resources,instanced_buffers);
 }
 
 
@@ -167,6 +180,7 @@ void  batch_data::load(
     }
 
     std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path>  buffer_paths;
+    std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>  instanced_buffers;
     std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, boost::filesystem::path>  texture_paths;
     for (auto const& location : vs_input)
     {
@@ -192,14 +206,6 @@ void  batch_data::load(
             break;
         case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0:
         case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD1:
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD2:
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD3:
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD4:
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD5:
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD6:
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD7:
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD8:
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD9:
             {
                 buffer_paths.insert({location, get_available_resources().buffers().at(location)});
                 bool  used = false;
@@ -211,6 +217,10 @@ void  batch_data::load(
                     }
                 INVARIANT(used == true);
             }
+            break;
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
+        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
+            instanced_buffers.insert(location);
             break;
         default:
             UNREACHABLE();
@@ -258,7 +268,8 @@ void  batch_data::load(
         get_available_resources().skeletal() == nullptr ?
             skeleton_alignment() :
             skeleton_alignment(get_available_resources().skeletal()->alignment(), finaliser),
-        get_available_resources()
+        get_available_resources(),
+        instanced_buffers
         );
 }
 
@@ -270,7 +281,8 @@ void  batch_data::initialise(
         draw_state const  draw_state_,
         modelspace const  modelspace_,
         skeleton_alignment const  skeleton_alignment_,
-        batch_available_resources const  available_resources_
+        batch_available_resources const  available_resources_,
+        std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  instanced_buffers
         )
 {
     TMPROF_BLOCK();
@@ -284,6 +296,7 @@ void  batch_data::initialise(
     m_modelspace = modelspace_;
     m_skeleton_alignment = skeleton_alignment_;
     m_available_resources = available_resources_;
+    m_instanced_buffers = instanced_buffers;
     m_ready = false;
 }
 
