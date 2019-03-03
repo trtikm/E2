@@ -329,6 +329,7 @@ namespace qtgl { namespace detail {
 struct textures_binding_data
 {
     using  binding_map_type = std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, texture>;
+    using  binding_paths_map_type = std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, boost::filesystem::path>;
 
     textures_binding_data(
             async::finalise_load_on_destroy_ptr,
@@ -355,7 +356,7 @@ struct textures_binding_data
 
     textures_binding_data(
             async::finalise_load_on_destroy_ptr finaliser,
-            std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, boost::filesystem::path> const&  texture_paths
+            binding_paths_map_type const&  texture_paths
             );
 
     binding_map_type const&  bindings_map() const { return m_bindings; }
@@ -378,6 +379,7 @@ namespace qtgl {
 struct textures_binding : public async::resource_accessor<detail::textures_binding_data>
 {
     using  binding_map_type = detail::textures_binding_data::binding_map_type;
+    using  binding_paths_map_type = detail::textures_binding_data::binding_paths_map_type;
 
     textures_binding()
         : async::resource_accessor<detail::textures_binding_data>()
@@ -396,7 +398,7 @@ struct textures_binding : public async::resource_accessor<detail::textures_bindi
     {}
 
     textures_binding(
-            std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, boost::filesystem::path> const&  texture_paths,
+            binding_paths_map_type const&  texture_paths,
             std::string const&  key = "",
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
@@ -419,6 +421,7 @@ private:
 
 
 using  textures_binding_map_type = textures_binding::binding_map_type;
+using  textures_binding_paths_map_type = textures_binding::binding_paths_map_type;
 
 
 bool  make_current(textures_binding const&  binding);

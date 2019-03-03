@@ -68,6 +68,36 @@ struct batch_data
             draw_state const  draw_state_,
             modelspace const  modelspace_,
             skeleton_alignment const  skeleton_alignment_
+            )
+        : batch_data(
+                finaliser,
+                buffers_binding_,
+                textures_binding_,
+                texcoord_binding_,
+                effects,
+                draw_state_,
+                modelspace_,
+                skeleton_alignment_,
+                batch_available_resources(
+                        buffers_binding_.get_buffers(),
+                        textures_binding_.empty() ? textures_binding::binding_map_type{} : textures_binding_.bindings_map(),
+                        texcoord_binding_,
+                        draw_state(),
+                        shaders_effects_config_type()
+                        )
+                )
+    {}
+
+    batch_data(
+            async::finalise_load_on_destroy_ptr const  finaliser,
+            buffers_binding const  buffers_binding_,
+            textures_binding const  textures_binding_,
+            texcoord_binding const&  texcoord_binding_,
+            effects_config const&  effects,
+            draw_state const  draw_state_,
+            modelspace const  modelspace_,
+            skeleton_alignment const  skeleton_alignment_,
+            batch_available_resources const&  resources
             );
 
     ~batch_data();
@@ -187,6 +217,31 @@ struct batch : public async::resource_accessor<detail::batch_data>
             draw_state_,
             modelspace_,
             skeleton_alignment_
+            )
+    {}
+
+    batch(  std::string const&  id,
+            buffers_binding const  buffers_binding_,
+            textures_binding const  textures_binding_,
+            texcoord_binding const&  texcoord_binding_,
+            effects_config const&  effects,
+            draw_state const  draw_state_,
+            modelspace const  modelspace_,
+            skeleton_alignment const  skeleton_alignment_,
+            batch_available_resources const&  resources,
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
+            )
+        : async::resource_accessor<detail::batch_data>(
+            id.empty() ? async::key_type("qtgl::batch") : async::key_type{ "qtgl::batch", id },
+            parent_finaliser,
+            buffers_binding_,
+            textures_binding_,
+            texcoord_binding_,
+            effects,
+            draw_state_,
+            modelspace_,
+            skeleton_alignment_,
+            resources
             )
     {}
 

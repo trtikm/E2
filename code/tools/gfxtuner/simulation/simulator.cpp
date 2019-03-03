@@ -9,7 +9,6 @@
 #include <angeo/utility.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
-#include <qtgl/draw_text.hpp>
 #include <qtgl/batch_generators.hpp>
 #include <qtgl/texture_generators.hpp>
 #include <qtgl/camera_utils.hpp>
@@ -235,15 +234,7 @@ simulator::simulator()
 
     , m_gfx_animated_objects()
 
-{
-    //qtgl::set_font_directory(
-    //        canonical_path(boost::filesystem::absolute(
-    //            boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "batches" / "font"
-    //            )).string()
-    //        );
-    //qtgl::set_text_size(0.0025f);
-    //qtgl::set_text_colour({1.0f, 1.0f, 1.0f, 1.0f});
-}
+{}
 
 simulator::~simulator()
 {

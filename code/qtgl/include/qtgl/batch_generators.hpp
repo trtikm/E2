@@ -5,6 +5,8 @@
 #   include <angeo/tensor_math.hpp>
 #   include <array>
 #   include <vector>
+#   include <string>
+#   include <boost/filesystem/path.hpp>
 
 namespace qtgl {
 
@@ -122,6 +124,41 @@ batch  create_wireframe_perspective_frustum(
         float_32_bit const  bottom_plane,
         vector4 const&  colour,
         FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
+        std::string const&  id = ""
+        );
+
+
+struct  font_mono_props
+{
+    std::string  font_texture;
+
+    natural_8_bit  min_ascii_code;
+    natural_8_bit  max_ascii_code;
+
+    // Matrix of characters in the texture
+    natural_8_bit  max_chars_in_row;
+    float_32_bit  min_u;    // u-coord where the matrix of chars starts in the texture
+    float_32_bit  min_v;    // v-coord where the matrix of chars starts in the texture 
+    float_32_bit  char_uv_width;
+    float_32_bit  char_uv_height;
+
+    // Text formating in camera space; all values are in meters.
+    float_32_bit  char_width;
+    float_32_bit  char_height;
+    float_32_bit  space_size;
+    float_32_bit  tab_size;
+    float_32_bit  char_separ_dist_x;
+    float_32_bit  char_separ_dist_y;
+};
+
+
+std::string  load_font_mono_props(boost::filesystem::path const  pathname, font_mono_props&  output);
+
+
+batch  create_text(
+        std::string const&  text,
+        font_mono_props const&  props,
+        float_32_bit const  max_text_width = 0.0f, // When positive, the text will be wrapped not to exceed that width.
         std::string const&  id = ""
         );
 

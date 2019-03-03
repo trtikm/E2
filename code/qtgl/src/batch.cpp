@@ -46,16 +46,12 @@ batch_data::batch_data(
         effects_config const&  effects,
         draw_state const  draw_state_,
         modelspace const  modelspace_,
-        skeleton_alignment const  skeleton_alignment_
+        skeleton_alignment const  skeleton_alignment_,
+        batch_available_resources const&  resources
         )
 {
     TMPROF_BLOCK();
 
-    batch_available_resources const  resources(
-            buffers_binding_.get_buffers(),
-            textures_binding_.empty() ? textures_binding::binding_map_type{} : textures_binding_.bindings_map(),
-            texcoord_binding_
-            );
     std::vector<std::string>  vs_source;
     std::vector<std::string>  vs_source_instancing;
     std::string  vs_uid;

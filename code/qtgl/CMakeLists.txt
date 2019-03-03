@@ -22,9 +22,6 @@ add_library(${THIS_TARGET_NAME}
     ./include/qtgl/draw.hpp
     ./src/draw.cpp
 
-    ./include/qtgl/draw_text.hpp
-    ./src/draw_text.cpp
-
     ./include/qtgl/draw_state.hpp
     ./src/draw_state.cpp
 
@@ -65,6 +62,7 @@ add_library(${THIS_TARGET_NAME}
     ./src/batch_generator_wireframe_box.cpp
     ./src/batch_generator_wireframe_capsule.cpp
     ./src/batch_generator_wireframe_sphere.cpp
+    ./src/batch_generator_text.cpp
     ./src/batch_generator_triangle_mesh.cpp
     ./src/batch_generator_perspective_frustum.cpp
 
@@ -97,9 +95,6 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/qtgl/spatial_boundary.hpp 
     
-    ./include/qtgl/text_manager.hpp
-    ./src/text_manager.cpp
-
     ./include/qtgl/skeleton_alignment.hpp
     ./src/skeleton_alignment.cpp
 

@@ -235,6 +235,8 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
             std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, B> const&  buffers_binding_,
             std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, T> const&  textures_binding_,
             texcoord_binding const& texcoord_binding_,
+            draw_state const&  draw_state_,
+            shaders_effects_config_type const& shaders_effects_config_type_,
             std::string const&  key = "",
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
@@ -263,8 +265,8 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
                 std::string(),
                 std::string(),
                 0U,
-                draw_state(),
-                shaders_effects_config_type()
+                draw_state_,
+                shaders_effects_config_type_
                 )
     {}
 
@@ -279,6 +281,10 @@ struct  batch_available_resources : public async::resource_accessor<detail::batc
     draw_state  get_draw_state() const { return resource().get_draw_state(); }
     shaders_effects_config_type const&  shaders_effects_config() const { return resource().shaders_effects_config(); }
 };
+
+
+using  shaders_effects_config_type = batch_available_resources::shaders_effects_config_type;
+using  SHADER_PROGRAM_TYPE = batch_available_resources::SHADER_PROGRAM_TYPE;
 
 
 }
