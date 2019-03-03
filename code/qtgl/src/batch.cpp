@@ -57,10 +57,14 @@ batch_data::batch_data(
             texcoord_binding_
             );
     std::vector<std::string>  vs_source;
+    std::vector<std::string>  vs_source_instancing;
     std::string  vs_uid;
+    std::string  vs_uid_instancing;
     std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>  vs_input;
+    std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>  vs_input_instancing;
     std::unordered_set<VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION>  vs_output;
     std::unordered_set<VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME>  vs_uniforms;
+    std::unordered_set<VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME>  vs_uniforms_instancing;
     std::vector<std::string>  fs_source;
     std::string  fs_uid;
     std::unordered_set<FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION>  fs_input;
@@ -74,10 +78,14 @@ batch_data::batch_data(
                         resources,
                         old_effects,
                         vs_source,
+                        vs_source_instancing,
                         vs_uid,
+                        vs_uid_instancing,
                         vs_input,
+                        vs_input_instancing,
                         vs_output,
                         vs_uniforms,
+                        vs_uniforms_instancing,
                         fs_source,
                         fs_uid,
                         fs_input,
@@ -98,26 +106,54 @@ batch_data::batch_data(
                                             // and the error message (in result.first) must have been produced.
         result.first.clear();
     }
-    shaders_binding const  shaders_binding_{
-        vertex_shader{vs_input, vs_output, vs_uniforms, vs_source, vs_uid, finaliser },
-        fragment_shader{fs_input, fs_output, fs_uniforms, fs_source, fs_uid, finaliser },
-        "{" + vs_uid + "}{" + fs_uid + "}",
-        finaliser
-    };
 
-    std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>  instanced_buffers;
-    for (auto const& location : vs_input)
+    fragment_shader const  frag_shader{ fs_input, fs_output, fs_uniforms, fs_source, fs_uid, finaliser };
+
+    shaders_binding  shaders_binding_;
+    if (!vs_source.empty())
+        shaders_binding_ =
+            {
+                vertex_shader{vs_input, vs_output, vs_uniforms, vs_source, vs_uid, finaliser },
+                frag_shader,
+                "{" + vs_uid + "}{" + fs_uid + "}",
+                finaliser
+            };
+
+    batch_instancing_data  instancing_data;
+    if (resources.skeletal() == nullptr && !vs_source_instancing.empty())
     {
-        switch (location)
+        for (auto const& location : vs_input_instancing)
         {
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
-        case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
-            instanced_buffers.insert(location);
-            break;
+            switch (location)
+            {
+            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
+            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
+                instancing_data.m_buffers.insert(location);
+                break;
+            }
         }
+        if (!instancing_data.m_buffers.empty())
+            instancing_data.m_shaders_binding =
+                {
+                    vertex_shader{ vs_input_instancing, vs_output, vs_uniforms_instancing, vs_source_instancing, vs_uid_instancing, finaliser },
+                    frag_shader,
+                    "{" + vs_uid_instancing + "}{" + fs_uid + "}",
+                    finaliser
+                };
     }
 
-    initialise(buffers_binding_,shaders_binding_,textures_binding_,draw_state_,modelspace_,skeleton_alignment_,resources,instanced_buffers);
+    INVARIANT(!shaders_binding_.empty() || !instancing_data.m_shaders_binding.empty());
+
+    initialise(
+            buffers_binding_,
+            shaders_binding_,
+            textures_binding_,
+            draw_state_,
+            modelspace_,
+            skeleton_alignment_,
+            resources,
+            instancing_data
+            );
 }
 
 
@@ -137,10 +173,14 @@ void  batch_data::load(
     ASSUMPTION(get_available_resources().loaded_successfully());
 
     std::vector<std::string>  vs_source;
+    std::vector<std::string>  vs_source_instancing;
     std::string  vs_uid;
+    std::string  vs_uid_instancing;
     std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>  vs_input;
+    std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>  vs_input_instancing;
     std::unordered_set<VERTEX_SHADER_OUTPUT_BUFFER_BINDING_LOCATION>  vs_output;
     std::unordered_set<VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME>  vs_uniforms;
+    std::unordered_set<VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME>  vs_uniforms_instancing;
     std::vector<std::string>  fs_source;
     std::string  fs_uid;
     std::unordered_set<FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION>  fs_input;
@@ -154,10 +194,14 @@ void  batch_data::load(
                         get_available_resources(),
                         old_effects,
                         vs_source,
+                        vs_source_instancing,
                         vs_uid,
+                        vs_uid_instancing,
                         vs_input,
+                        vs_input_instancing,
                         vs_output,
                         vs_uniforms,
+                        vs_uniforms_instancing,
                         fs_source,
                         fs_uid,
                         fs_input,
@@ -180,7 +224,6 @@ void  batch_data::load(
     }
 
     std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path>  buffer_paths;
-    std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>  instanced_buffers;
     std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, boost::filesystem::path>  texture_paths;
     for (auto const& location : vs_input)
     {
@@ -220,12 +263,49 @@ void  batch_data::load(
             break;
         case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
         case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
-            instanced_buffers.insert(location);
+            UNREACHABLE();
             break;
         default:
             UNREACHABLE();
         }
     }
+
+    fragment_shader const  frag_shader(fs_input, fs_output, fs_uniforms, fs_source, fs_uid, finaliser);
+
+    shaders_binding  shaders_binding_;
+    if (!vs_source.empty())
+        shaders_binding_ =
+            {
+                vertex_shader(vs_input, vs_output, vs_uniforms, vs_source, vs_uid, finaliser),
+                frag_shader,
+                "{" + vs_uid + "}{" + fs_uid + "}",
+                finaliser
+            };
+
+    batch_instancing_data  instancing_data;
+    if (get_available_resources().skeletal() == nullptr && !vs_source_instancing.empty())
+    {
+        for (auto const& location : vs_input_instancing)
+        {
+            switch (location)
+            {
+            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
+            case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR:
+                instancing_data.m_buffers.insert(location);
+                break;
+            }
+        }
+        if (!instancing_data.m_buffers.empty())
+            instancing_data.m_shaders_binding =
+                {
+                    vertex_shader{ vs_input_instancing, vs_output, vs_uniforms_instancing, vs_source_instancing, vs_uid_instancing, finaliser },
+                    frag_shader,
+                    "{" + vs_uid_instancing + "}{" + fs_uid + "}",
+                    finaliser
+                };
+    }
+
+    INVARIANT(!shaders_binding_.empty() || !instancing_data.m_shaders_binding.empty());
 
     initialise(
         get_available_resources().has_index_buffer() ?
@@ -248,12 +328,7 @@ void  batch_data::load(
                     ).string(),
                 finaliser
                 ),
-        shaders_binding{
-            vertex_shader(vs_input, vs_output, vs_uniforms, vs_source, vs_uid, finaliser),
-            fragment_shader(fs_input, fs_output, fs_uniforms, fs_source, fs_uid, finaliser),
-            "{" + vs_uid + "}{" + fs_uid + "}",
-            finaliser
-            },
+        shaders_binding_,
         textures_binding(texture_paths, "", finaliser),
         get_available_resources().get_draw_state(),
         get_available_resources().skeletal() == nullptr ?
@@ -269,7 +344,7 @@ void  batch_data::load(
             skeleton_alignment() :
             skeleton_alignment(get_available_resources().skeletal()->alignment(), finaliser),
         get_available_resources(),
-        instanced_buffers
+        instancing_data
         );
 }
 
@@ -282,7 +357,7 @@ void  batch_data::initialise(
         modelspace const  modelspace_,
         skeleton_alignment const  skeleton_alignment_,
         batch_available_resources const  available_resources_,
-        std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  instanced_buffers
+        batch_instancing_data const&  instancing_data
         )
 {
     TMPROF_BLOCK();
@@ -296,7 +371,8 @@ void  batch_data::initialise(
     m_modelspace = modelspace_;
     m_skeleton_alignment = skeleton_alignment_;
     m_available_resources = available_resources_;
-    m_instanced_buffers = instanced_buffers;
+    m_instancing_data = instancing_data.m_buffers.empty() || instancing_data.m_shaders_binding.empty() ?
+                                nullptr : std::make_unique<batch_instancing_data>(instancing_data);
     m_ready = false;
 }
 
@@ -320,7 +396,8 @@ bool  batch::ready() const
             !get_draw_state().loaded_successfully() ||
             (is_attached_to_skeleton() && (
                 !get_modelspace().loaded_successfully() ||
-                !get_skeleton_alignment().loaded_successfully() )))
+                !get_skeleton_alignment().loaded_successfully() )) ||
+            (has_instancing_data() && !get_instancing_data_ptr()->m_shaders_binding.ready()))
             return false;
 
         const_cast<batch*>(this)->set_ready();
@@ -330,7 +407,7 @@ bool  batch::ready() const
 }
 
 
-bool  batch::make_current(draw_state const&  previous_state) const
+bool  batch::make_current(draw_state const&  previous_state, bool  for_instancing) const
 {
     TMPROF_BLOCK();
 
@@ -342,7 +419,9 @@ bool  batch::make_current(draw_state const&  previous_state) const
     result = get_buffers_binding().make_current();
     INVARIANT(result == true);
 
-    result = get_shaders_binding().make_current();
+    ASSUMPTION((!for_instancing || has_instancing_data()) && (for_instancing || !get_shaders_binding().empty()));
+    result = for_instancing ? get_instancing_data_ptr()->m_shaders_binding.make_current() :
+                              get_shaders_binding().make_current();
     INVARIANT(result == true);
 
     result = get_textures_binding().make_current();
@@ -358,14 +437,14 @@ bool  batch::make_current(draw_state const&  previous_state) const
 }
 
 
-bool  make_current(batch const&  batch)
+bool  make_current(batch const&  batch, bool const  for_instancing)
 {
-    return batch.make_current(draw_state());
+    return batch.make_current(draw_state(), for_instancing);
 }
 
-bool  make_current(batch const&  batch, draw_state const&  previous_state)
+bool  make_current(batch const&  batch, draw_state const&  previous_state, bool const  for_instancing)
 {
-    return batch.make_current(previous_state);
+    return batch.make_current(previous_state, for_instancing);
 }
 
 

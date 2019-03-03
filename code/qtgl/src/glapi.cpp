@@ -64,7 +64,7 @@ void  swap_buffers()
 {
     TMPROF_BLOCK();
 
-    detail::current_window()->get_text_manager().flush();
+    //detail::current_window()->get_text_manager().flush();
 
     detail::current_context()->swapBuffers(detail::current_window());
 }

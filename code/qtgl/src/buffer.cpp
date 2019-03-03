@@ -439,6 +439,8 @@ void  buffer_file_data::destroy_gl_buffer()
 
 bool  buffer_file_data::make_current(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  start_location, bool const  use_per_instance)
 {
+    TMPROF_BLOCK();
+
     create_gl_buffer();
 
     glapi().glBindBuffer(GL_ARRAY_BUFFER, id());

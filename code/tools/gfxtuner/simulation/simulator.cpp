@@ -236,13 +236,13 @@ simulator::simulator()
     , m_gfx_animated_objects()
 
 {
-    qtgl::set_font_directory(
-            canonical_path(boost::filesystem::absolute(
-                boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "batches" / "font"
-                )).string()
-            );
-    qtgl::set_text_size(0.0025f);
-    qtgl::set_text_colour({1.0f, 1.0f, 1.0f, 1.0f});
+    //qtgl::set_font_directory(
+    //        canonical_path(boost::filesystem::absolute(
+    //            boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "batches" / "font"
+    //            )).string()
+    //        );
+    //qtgl::set_text_size(0.0025f);
+    //qtgl::set_text_colour({1.0f, 1.0f, 1.0f, 1.0f});
 }
 
 simulator::~simulator()
@@ -507,12 +507,11 @@ void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
     if (m_do_show_grid)
         if (qtgl::make_current(m_batch_grid, draw_state))
         {
-            render_batch(
+            qtgl::render_batch(
                 m_batch_grid,
-                matrix_from_world_to_camera,
                 qtgl::vertex_shader_uniform_data_provider(
                     m_batch_grid,
-                    {},
+                    { matrix_from_world_to_camera },
                     matrix_from_camera_to_clipspace,
                     m_diffuse_colour,
                     m_ambient_colour,
@@ -1205,6 +1204,8 @@ void  simulator::render_scene_batches(
                 for (auto const& name_holder : scn::get_batch_holders(*node_ptr))
                 {
                     qtgl::batch const  batch = scn::as_batch(name_holder.second);
+                    if (!batch.loaded_successfully())
+                        continue;
                     auto&  record = batches[batch.path_component_of_uid()];
                     if (record.first.empty())
                         record.first = batch;
@@ -1221,131 +1222,141 @@ void  simulator::render_scene_batches(
         false
         );
     for (auto const& elem : batches)
-        if (qtgl::make_current(elem.second.first, draw_state))
+    {
+        skeleton  bones;
+        if (elem.second.first.get_available_resources().skeletal() != nullptr)
         {
-            skeleton  bones;
-            if (elem.second.first.get_available_resources().skeletal() != nullptr)
-            {
-                TMPROF_BLOCK();
+            TMPROF_BLOCK();
 
-                boost::filesystem::path const  skeleton_directory =
-                        boost::filesystem::path(elem.second.first.get_available_resources().data_root_dir())
-                                / "animations"
-                                / "skeletal"
-                                / elem.second.first.get_available_resources().skeletal()->skeleton_name()
-                                ;
-                auto const  skeleton_iter = m_skeletons.find(skeleton_directory.string());
-                bones = (skeleton_iter != m_skeletons.cend()) ?
-                                skeleton_iter->second :
-                                m_skeletons.insert({skeleton_directory.string(), skeleton(skeleton_directory)}).first->second;
-            }
-            for (auto const& node_and_anim : elem.second.second)
-                if (bones.empty())
-                    qtgl::render_batch(
-                        elem.second.first,
-                        matrix_from_world_to_camera * node_and_anim.first->get_world_matrix(),
-                        qtgl::vertex_shader_uniform_data_provider(
-                            elem.second.first,
-                            {},
-                            matrix_from_camera_to_clipspace,
-                            m_diffuse_colour,
-                            m_ambient_colour,
-                            m_specular_colour,
-                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                            m_directional_light_colour,
-                            m_fog_colour,
-                            m_fog_near,
-                            m_fog_far
-                            ),
-                        qtgl::fragment_shader_uniform_data_provider(
-                            m_diffuse_colour,
-                            m_ambient_colour,
-                            m_specular_colour,
-                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                            m_directional_light_colour,
-                            m_fog_colour,
-                            m_fog_near,
-                            m_fog_far
-                            )
-                        );
-                else if (!bones.loaded_successfully()) // || node_and_anim.second == nullptr)
-                    qtgl::render_batch(
-                        elem.second.first,
-                        qtgl::vertex_shader_uniform_data_provider(
-                            elem.second.first,
-                            { matrix_from_world_to_camera * node_and_anim.first->get_world_matrix() },
-                            matrix_from_camera_to_clipspace,
-                            m_diffuse_colour,
-                            m_ambient_colour,
-                            m_specular_colour,
-                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                            m_directional_light_colour,
-                            m_fog_colour,
-                            m_fog_near,
-                            m_fog_far
-                            ),
-                        qtgl::fragment_shader_uniform_data_provider(
-                            m_diffuse_colour,
-                            m_ambient_colour,
-                            m_specular_colour,
-                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                            m_directional_light_colour,
-                            m_fog_colour,
-                            m_fog_near,
-                            m_fog_far
-                            )
-                        );
-                else
-                {
-                    //node_and_anim.second->get_transformations(
-                    //        frame,
-                    //        matrix_from_world_to_camera * node_and_anim.first->get_world_matrix()
-                    //        );
-                    std::vector<matrix44>  frame;
-                    {
-                        std::vector<scn::scene_node_id> const&  relative_node_ids = bones.get_relative_node_ids();
-                        std::vector<angeo::coordinate_system> const&  coord_systems = elem.second.first.get_modelspace().get_coord_systems();
-                        INVARIANT(relative_node_ids.size() == coord_systems.size());
-                        for (natural_32_bit  bone = 0U; bone != relative_node_ids.size(); ++bone)
-                            if (scn::scene_node_ptr const  bone_node_ptr = node_and_anim.first->find_child(relative_node_ids.at(bone)))
-                                frame.push_back(matrix_from_world_to_camera * bone_node_ptr->get_world_matrix());
-                            else
-                            {
-                                matrix44 M;
-                                angeo::from_base_matrix(coord_systems.at(bone), M);
-                                frame.push_back(matrix_from_world_to_camera * node_and_anim.first->get_world_matrix() * M);
-                            }
-                    }
-
-                    qtgl::render_batch(
-                            elem.second.first,
-                            qtgl::vertex_shader_uniform_data_provider(
-                                elem.second.first,
-                                frame,
-                                matrix_from_camera_to_clipspace,
-                                m_diffuse_colour,
-                                m_ambient_colour,
-                                m_specular_colour,
-                                transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                                m_directional_light_colour,
-                                m_fog_colour,
-                                m_fog_near,
-                                m_fog_far
-                                ),
-                            qtgl::fragment_shader_uniform_data_provider(
-                                m_diffuse_colour,
-                                m_ambient_colour,
-                                m_specular_colour,
-                                transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                                m_directional_light_colour,
-                                m_fog_colour,
-                                m_fog_near,
-                                m_fog_far
-                                )
-                        );
-                }
-            draw_state = elem.second.first.get_draw_state();
+            boost::filesystem::path const  skeleton_directory =
+                    boost::filesystem::path(elem.second.first.get_available_resources().data_root_dir())
+                            / "animations"
+                            / "skeletal"
+                            / elem.second.first.get_available_resources().skeletal()->skeleton_name()
+                            ;
+            auto const  skeleton_iter = m_skeletons.find(skeleton_directory.string());
+            bones = (skeleton_iter != m_skeletons.cend()) ?
+                            skeleton_iter->second :
+                            m_skeletons.insert({skeleton_directory.string(), skeleton(skeleton_directory)}).first->second;
         }
+
+        bool const  use_instancing = bones.empty() && elem.second.first.has_instancing_data() && elem.second.second.size() > 1UL;
+        if (!qtgl::make_current(elem.second.first, draw_state, use_instancing))
+            continue;
+
+        if (use_instancing)
+        {
+            qtgl::vertex_shader_instanced_data_provider  instanced_data_provider(elem.second.first);
+            for (auto const& node_and_anim : elem.second.second)
+                instanced_data_provider.insert_from_model_to_camera_matrix(matrix_from_world_to_camera * node_and_anim.first->get_world_matrix());
+            qtgl::render_batch(
+                elem.second.first,
+                instanced_data_provider,
+                qtgl::vertex_shader_uniform_data_provider(
+                    elem.second.first,
+                    {},
+                    matrix_from_camera_to_clipspace,
+                    m_diffuse_colour,
+                    m_ambient_colour,
+                    m_specular_colour,
+                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                    m_directional_light_colour,
+                    m_fog_colour,
+                    m_fog_near,
+                    m_fog_far
+                    ),
+                qtgl::fragment_shader_uniform_data_provider(
+                    m_diffuse_colour,
+                    m_ambient_colour,
+                    m_specular_colour,
+                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                    m_directional_light_colour,
+                    m_fog_colour,
+                    m_fog_near,
+                    m_fog_far
+                    )
+                );
+        }
+        else if (!bones.loaded_successfully()) // || node_and_anim.second == nullptr)
+            for (auto const& node_and_anim : elem.second.second)
+                qtgl::render_batch(
+                    elem.second.first,
+                    qtgl::vertex_shader_uniform_data_provider(
+                        elem.second.first,
+                        { matrix_from_world_to_camera * node_and_anim.first->get_world_matrix() },
+                        matrix_from_camera_to_clipspace,
+                        m_diffuse_colour,
+                        m_ambient_colour,
+                        m_specular_colour,
+                        transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                        m_directional_light_colour,
+                        m_fog_colour,
+                        m_fog_near,
+                        m_fog_far
+                        ),
+                    qtgl::fragment_shader_uniform_data_provider(
+                        m_diffuse_colour,
+                        m_ambient_colour,
+                        m_specular_colour,
+                        transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                        m_directional_light_colour,
+                        m_fog_colour,
+                        m_fog_near,
+                        m_fog_far
+                        )
+                    );
+        else
+            for (auto const& node_and_anim : elem.second.second)
+            {
+                //node_and_anim.second->get_transformations(
+                //        frame,
+                //        matrix_from_world_to_camera * node_and_anim.first->get_world_matrix()
+                //        );
+                std::vector<matrix44>  frame;
+                {
+                    std::vector<scn::scene_node_id> const&  relative_node_ids = bones.get_relative_node_ids();
+                    std::vector<angeo::coordinate_system> const&  coord_systems = elem.second.first.get_modelspace().get_coord_systems();
+                    INVARIANT(relative_node_ids.size() == coord_systems.size());
+                    for (natural_32_bit  bone = 0U; bone != relative_node_ids.size(); ++bone)
+                        if (scn::scene_node_ptr const  bone_node_ptr = node_and_anim.first->find_child(relative_node_ids.at(bone)))
+                            frame.push_back(matrix_from_world_to_camera * bone_node_ptr->get_world_matrix());
+                        else
+                        {
+                            matrix44 M;
+                            angeo::from_base_matrix(coord_systems.at(bone), M);
+                            frame.push_back(matrix_from_world_to_camera * node_and_anim.first->get_world_matrix() * M);
+                        }
+                }
+
+                qtgl::render_batch(
+                        elem.second.first,
+                        qtgl::vertex_shader_uniform_data_provider(
+                            elem.second.first,
+                            frame,
+                            matrix_from_camera_to_clipspace,
+                            m_diffuse_colour,
+                            m_ambient_colour,
+                            m_specular_colour,
+                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                            m_directional_light_colour,
+                            m_fog_colour,
+                            m_fog_near,
+                            m_fog_far
+                            ),
+                        qtgl::fragment_shader_uniform_data_provider(
+                            m_diffuse_colour,
+                            m_ambient_colour,
+                            m_specular_colour,
+                            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                            m_directional_light_colour,
+                            m_fog_colour,
+                            m_fog_near,
+                            m_fog_far
+                            )
+                    );
+            }
+        draw_state = elem.second.first.get_draw_state();
+    }
 }
 
 void  simulator::render_scene_coord_systems(
@@ -1356,9 +1367,6 @@ void  simulator::render_scene_coord_systems(
 {
     TMPROF_BLOCK();
 
-    if (!qtgl::make_current(m_batch_coord_system, draw_state))
-        return;
-
     //auto const  old_depth_test_state = qtgl::glapi().glIsEnabled(GL_DEPTH_TEST);
     //qtgl::glapi().glDisable(GL_DEPTH_TEST);
 
@@ -1366,24 +1374,35 @@ void  simulator::render_scene_coord_systems(
     scn::get_nodes_of_selected_records(m_scene_selection, nodes_to_draw);
     if (scn::has_node(get_scene(), scn::get_pivot_node_id())) // The pivot may be missing, if the scene is not completely initialised yet.
         nodes_to_draw.insert(scn::get_pivot_node_id());
+
+    if (nodes_to_draw.empty())
+        return;
+
+    if (!qtgl::make_current(m_batch_coord_system, draw_state, true))
+        return;
+
+    qtgl::vertex_shader_instanced_data_provider  instanced_data_provider(m_batch_coord_system);
     for (auto const& node_name : nodes_to_draw)
-        qtgl::render_batch(
+        instanced_data_provider.insert_from_model_to_camera_matrix(
+                matrix_from_world_to_camera * get_scene().get_scene_node(node_name)->get_world_matrix()
+                );
+    qtgl::render_batch(
+        m_batch_coord_system,
+        instanced_data_provider,
+        qtgl::vertex_shader_uniform_data_provider(
             m_batch_coord_system,
-            matrix_from_world_to_camera * get_scene().get_scene_node(node_name)->get_world_matrix(),
-            qtgl::vertex_shader_uniform_data_provider(
-                m_batch_coord_system,
-                {},
-                matrix_from_camera_to_clipspace,
-                m_diffuse_colour,
-                m_ambient_colour,
-                m_specular_colour,
-                transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                m_directional_light_colour,
-                m_fog_colour,
-                m_fog_near,
-                m_fog_far
-                )
-            );
+            {},
+            matrix_from_camera_to_clipspace,
+            m_diffuse_colour,
+            m_ambient_colour,
+            m_specular_colour,
+            transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+            m_directional_light_colour,
+            m_fog_colour,
+            m_fog_near,
+            m_fog_far
+            )
+        );
 
     //if (old_depth_test_state)
     //    qtgl::glapi().glEnable(GL_DEPTH_TEST);

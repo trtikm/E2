@@ -81,7 +81,8 @@ vertex_shader_instanced_data_provider::vertex_shader_instanced_data_provider(bat
 
 void  vertex_shader_instanced_data_provider::insert_from_model_to_camera_matrix(matrix44 const&  from_model_to_camera_matrix)
 {
-    ASSUMPTION(m_batch.get_instanced_buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA) != 0UL);
+    TMPROF_BLOCK();
+    ASSUMPTION(m_batch.get_instancing_data_ptr()->m_buffers.count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA) != 0UL);
     matrix44  Z = transpose44(from_model_to_camera_matrix);
     std::copy(
         (natural_8_bit const*)Z.data(),
@@ -93,7 +94,8 @@ void  vertex_shader_instanced_data_provider::insert_from_model_to_camera_matrix(
 
 void  vertex_shader_instanced_data_provider::insert_diffuse_colour(vector4 const&  diffuse_colour)
 {
-    ASSUMPTION(m_batch.get_instanced_buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR) != 0UL);
+    TMPROF_BLOCK();
+    ASSUMPTION(m_batch.get_instancing_data_ptr()->m_buffers.count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR) != 0UL);
     std::copy(
         (natural_8_bit const*)diffuse_colour.data(),
         (natural_8_bit const*)diffuse_colour.data() + 4U * sizeof(float_32_bit),
@@ -104,7 +106,9 @@ void  vertex_shader_instanced_data_provider::insert_diffuse_colour(vector4 const
 
 bool  vertex_shader_instanced_data_provider::make_current() const
 {
-    if (m_batch.empty() || !m_batch.uses_instanced_buffers())
+    TMPROF_BLOCK();
+
+    if (m_batch.empty() || !m_batch.has_instancing_data())
         return true;
 
     if (m_buffers.empty())
@@ -112,7 +116,7 @@ bool  vertex_shader_instanced_data_provider::make_current() const
         if (compute_num_instances() == false)
             return false; // The provider has inconsistent data -> cannot compute number of instances -> failure.
 
-        for (auto const buffer_type : m_batch.get_instanced_buffers())
+        for (auto const buffer_type : m_batch.get_instancing_data_ptr()->m_buffers)
             switch (buffer_type)
             {
             case VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA:
@@ -156,11 +160,13 @@ bool  vertex_shader_instanced_data_provider::make_current() const
 
 bool  vertex_shader_instanced_data_provider::compute_num_instances() const
 {
-    if (!m_batch.uses_instanced_buffers() || !m_buffers.empty())
+    TMPROF_BLOCK();
+
+    if (!m_batch.has_instancing_data() || !m_buffers.empty())
         return true;
 
     integer_32_bit  common_size = -1;
-    for (auto const  buffer_type : m_batch.get_instanced_buffers())
+    for (auto const  buffer_type : m_batch.get_instancing_data_ptr()->m_buffers)
     {
         integer_32_bit  current_size;
         switch (buffer_type)
@@ -228,14 +234,12 @@ vertex_shader_uniform_data_provider::vertex_shader_uniform_data_provider(
                     m_matrices_from_model_to_camera
                     );
     }
-    else if (batch_.get_available_resources().skeletal() != nullptr)
-    {
-        ASSUMPTION(matrices_from_model_to_camera.size() == 1UL);
+    else if (matrices_from_model_to_camera.size() == 1UL)
         m_matrices_from_model_to_camera.push_back(matrices_from_model_to_camera.front());
-    }
     else
     {
-        ASSUMPTION(matrices_from_model_to_camera.size() == 0UL); // The matrices must be set via instanced data provider, i.e. not here.
+        // The case of instancing: The matrices must be set via instanced data provider, i.e. not here.
+        ASSUMPTION(matrices_from_model_to_camera.empty());
     }
 }
 

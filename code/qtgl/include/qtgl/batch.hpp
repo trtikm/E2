@@ -18,6 +18,15 @@
 namespace qtgl { namespace detail {
 
 
+struct  batch_instancing_data
+{
+    shaders_binding  m_shaders_binding;
+    std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>  m_buffers;
+};
+
+using  batch_instancing_data_ptr = std::unique_ptr<batch_instancing_data>;
+
+
 struct batch_data
 {
     batch_data(
@@ -35,7 +44,7 @@ struct batch_data
             modelspace const  modelspace_,
             skeleton_alignment const  skeleton_alignment_,
             batch_available_resources const  available_resources_,
-            std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  instanced_buffers
+            batch_instancing_data const&  instancing_data
             )
     {
         initialise(
@@ -46,7 +55,7 @@ struct batch_data
                 modelspace_,
                 skeleton_alignment_,
                 available_resources_,
-                instanced_buffers
+                instancing_data
                 );
     }
 
@@ -70,9 +79,10 @@ struct batch_data
     modelspace  get_modelspace() const { return m_modelspace; }
     skeleton_alignment  get_skeleton_alignment() const { return m_skeleton_alignment; }
     batch_available_resources  get_available_resources() const { return m_available_resources; }
-    std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  get_instanced_buffers() const { return m_instanced_buffers; }
+    batch_instancing_data const*  get_instancing_data_ptr() const { return m_instancing_data.get(); }
 
-    bool  is_attached_to_skeleton() { return !get_modelspace().empty(); }
+    bool  is_attached_to_skeleton() const { return !get_modelspace().empty(); }
+    bool  has_instancing_data() const { return m_instancing_data != nullptr; }
     bool  ready() const { return m_ready; }
     void  set_ready() { m_ready = true; }
 
@@ -91,7 +101,7 @@ private:
             modelspace const  modelspace_,
             skeleton_alignment const  skeleton_alignment_,
             batch_available_resources const  available_resources_,
-            std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  instanced_buffers
+            batch_instancing_data const&  instancing_data
             );
 
     buffers_binding  m_buffers_binding;
@@ -101,7 +111,7 @@ private:
     modelspace  m_modelspace;
     skeleton_alignment  m_skeleton_alignment;
     batch_available_resources  m_available_resources;
-    std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION>  m_instanced_buffers;
+    batch_instancing_data_ptr  m_instancing_data;
     bool  m_ready;
 };
 
@@ -109,6 +119,10 @@ private:
 }}
 
 namespace qtgl {
+
+
+using batch_instancing_data = detail::batch_instancing_data;
+using batch_instancing_data_ptr = detail::batch_instancing_data_ptr;
 
 
 struct batch : public async::resource_accessor<detail::batch_data>
@@ -136,7 +150,7 @@ struct batch : public async::resource_accessor<detail::batch_data>
             modelspace const  modelspace_,
             skeleton_alignment const  skeleton_alignment_,
             batch_available_resources const  available_resources_,
-            std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  instanced_buffers,
+            batch_instancing_data const&  instancing_data,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
             )
         : async::resource_accessor<detail::batch_data>(
@@ -149,7 +163,7 @@ struct batch : public async::resource_accessor<detail::batch_data>
             modelspace_,
             skeleton_alignment_,
             available_resources_,
-            instanced_buffers
+            instancing_data
             )
     {}
 
@@ -183,16 +197,16 @@ struct batch : public async::resource_accessor<detail::batch_data>
     modelspace  get_modelspace() const { return resource().get_modelspace(); }
     skeleton_alignment  get_skeleton_alignment() const { return resource().get_skeleton_alignment(); }
     batch_available_resources  get_available_resources() const { return resource().get_available_resources(); }
-    std::unordered_set<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION> const&  get_instanced_buffers() const { return resource().get_instanced_buffers(); }
-    bool uses_instanced_buffers() const { return !get_instanced_buffers().empty(); }
+    batch_instancing_data const*  get_instancing_data_ptr() const { return resource().get_instancing_data_ptr(); }
 
     std::string  uid() const { return key().get_data_type_name() + key().get_unique_id(); }
     std::string const&  path_component_of_uid() const { return key().get_unique_id(); }
 
     bool  is_attached_to_skeleton() const { return resource().is_attached_to_skeleton(); }
+    bool  has_instancing_data() const { return resource().has_instancing_data(); }
     bool  ready() const;
 
-    bool  make_current(draw_state const&  previous_state) const;
+    bool  make_current(draw_state const&  previous_state, bool const  for_instancing) const;
 
 private:
 
@@ -200,8 +214,8 @@ private:
 };
 
 
-bool  make_current(batch const&  binding);
-bool  make_current(batch const&  binding, draw_state const&  previous_state);
+bool  make_current(batch const&  binding, bool const  for_instancing = false);
+bool  make_current(batch const&  binding, draw_state const&  previous_state, bool const  for_instancing = false);
 
 
 }

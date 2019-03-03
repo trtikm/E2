@@ -127,7 +127,9 @@ void  render_batch(
     detail::current_draw::set_num_instances(vertex_instanced_data_provider.get_num_instances());
 
     {
-        vertex_shader  shader = batch_.get_shaders_binding().get_vertex_shader();
+        vertex_shader  shader = vertex_instanced_data_provider.get_num_instances() > 0U ?
+                                        batch_.get_instancing_data_ptr()->m_shaders_binding.get_vertex_shader() :
+                                        batch_.get_shaders_binding().get_vertex_shader();
         for (VERTEX_SHADER_UNIFORM_SYMBOLIC_NAME const uniform : shader.get_symbolic_names_of_used_uniforms())
             switch (uniform)
             {
@@ -243,21 +245,11 @@ void  render_batch(
         vector4 const&  diffuse_colour
         )
 {
-    if (batch_.uses_instanced_buffers())
-    {
-        vertex_shader_instanced_data_provider  instanced_data_provider(batch_);
-        if (batch_.get_instanced_buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA) != 0UL)
-            instanced_data_provider.insert_from_model_to_camera_matrix(matrix_from_model_to_camera);
-        if (batch_.get_instanced_buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_DIFFUSE_COLOUR) != 0UL)
-            instanced_data_provider.insert_diffuse_colour(diffuse_colour);
-        render_batch_instances(batch_, matrix_from_camera_to_clipspace, instanced_data_provider);
-    }
-    else
-        render_batch(
-            batch_,
-            vertex_shader_instanced_data_provider(),
-            vertex_shader_uniform_data_provider(batch_, { matrix_from_model_to_camera }, matrix_from_camera_to_clipspace, diffuse_colour)
-            );
+    render_batch(
+        batch_,
+        vertex_shader_instanced_data_provider(),
+        vertex_shader_uniform_data_provider(batch_, { matrix_from_model_to_camera }, matrix_from_camera_to_clipspace, diffuse_colour)
+        );
 }
 
 
@@ -287,7 +279,7 @@ void  render_batch(
         fragment_shader_uniform_data_provider_base const&  fragment_uniform_provider
         )
 {
-    ASSUMPTION(batch_.get_instanced_buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA) != 0UL);
+    ASSUMPTION(batch_.has_instancing_data());
 
     vertex_shader_instanced_data_provider  instanced_data_provider(batch_);
     instanced_data_provider.insert_from_model_to_camera_matrix(matrix_from_model_to_camera);
@@ -307,8 +299,6 @@ void  render_batch(
         fragment_shader_uniform_data_provider_base const&  fragment_uniform_provider
         )
 {
-    ASSUMPTION(batch_.get_instanced_buffers().count(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA) == 0UL);
-
     render_batch(
         batch_,
         vertex_shader_instanced_data_provider(),
