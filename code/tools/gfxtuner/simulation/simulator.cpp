@@ -220,7 +220,7 @@ simulator::simulator()
                 / "shared"
                 / "gfx"
                 / "textures"
-                / "font"
+                / "fonts"
                 / "Liberation_Mono.txt"
                 ).string(),             // texture
 
