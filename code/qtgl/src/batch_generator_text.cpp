@@ -36,22 +36,30 @@ batch  create_text(
             switch (character)
             {
             case ' ':
-                cursor(0) += props.space_size;
+                cursor(0) += props.space_size + props.char_separ_dist_x;
                 continue;
             case '\t':
-                cursor(0) += props.tab_size;
+                for (natural_32_bit  i = 0U; i != props.tab_size; ++i)
+                {
+                    if (max_text_width > 0.0f && cursor(0) + props.char_width > max_text_width)
+                    {
+                        cursor(0) = 0.0f;
+                        cursor(1) -= props.char_height + props.char_separ_dist_y;
+                    }
+                    cursor(0) += props.space_size + props.char_separ_dist_x;
+                }
                 continue;
             case '\r':
                 cursor(0) = 0.0f;
                 continue;
             case '\n':
                 cursor(0) = 0.0f;
-                cursor(0) -= props.char_height + props.char_separ_dist_y;
+                cursor(1) -= props.char_height + props.char_separ_dist_y;
                 continue;
             default:
                 if (character < props.min_ascii_code || character > props.max_ascii_code)
                 {
-                    cursor(0) += props.space_size;
+                    cursor(0) += props.space_size + props.char_separ_dist_x;
                     continue;
                 }
                 break;
@@ -60,18 +68,21 @@ batch  create_text(
             if (max_text_width > 0.0f && cursor(0) + props.char_width > max_text_width)
             {
                 cursor(0) = 0.0f;
-                cursor(0) -= props.char_height + props.char_separ_dist_y;
+                cursor(1) -= props.char_height + props.char_separ_dist_y;
             }
 
-            vector2 const  hi_xy{ cursor(0) + props.char_width, cursor(1) - props.char_height };
+            vector2 const  hi_xy{ cursor(0) + props.char_width, cursor(1) + props.char_height };
 
             // Coords of the character in the characters-matrix in the texture.
             natural_32_bit const  char_row = (character - props.min_ascii_code) / props.max_chars_in_row;
             natural_32_bit const  char_column = (character - props.min_ascii_code) % props.max_chars_in_row;
 
             // uv-coords of the character in the texture.
-            vector2 const  lo_uv{ props.min_u + char_column * props.char_width, props.min_v + (char_row + 1U) * props.char_height, };
-            vector2 const  hi_uv{ lo_uv(0) + props.char_uv_width, lo_uv(1) - props.char_uv_height };
+            vector2 const  lo_uv{
+                props.min_u + char_column * (props.char_uv_width + props.char_separ_u),
+                1.0f - (props.min_v + (char_row + 1U) * (props.char_uv_height + props.char_separ_v)),
+            };
+            vector2 const  hi_uv{ lo_uv(0) + props.char_uv_width, lo_uv(1) + props.char_uv_height };
 
             // Low triangle
             xyz.push_back({ cursor(0), cursor(1), 0.0f }); uv.push_back({ lo_uv(0), lo_uv(1) });
@@ -82,6 +93,8 @@ batch  create_text(
             xyz.push_back({ cursor(0), cursor(1), 0.0f }); uv.push_back({ lo_uv(0), lo_uv(1) });
             xyz.push_back({  hi_xy(0),  hi_xy(1), 0.0f }); uv.push_back({ hi_uv(0), hi_uv(1) });
             xyz.push_back({ cursor(0),  hi_xy(1), 0.0f }); uv.push_back({ lo_uv(0), hi_uv(1) });
+
+            cursor(0) += props.char_width + props.char_separ_dist_x;
         }
     }
 
@@ -97,9 +110,12 @@ batch  create_text(
         id.empty() ? id : "/generic/text/buffers_binding/" + id
         );
 
-    textures_binding const  textures_binding_(textures_binding_paths_map_type{
+    textures_binding_paths_map_type const textures_binding_paths{
         { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, boost::filesystem::path(props.font_texture) }
-        });
+    };
+
+    if (props.__font_texture__.empty())
+        props.__font_texture__ = textures_binding(textures_binding_paths);
 
     texcoord_binding const  texcoord_binding_({
         { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0 }
@@ -108,7 +124,7 @@ batch  create_text(
     batch const  pbatch = batch(
         id.empty() ? id : "/generic/text/batch/" + id,
         buffers_binding_,
-        textures_binding_,
+        props.__font_texture__,
         texcoord_binding_,
         effects_config{
             {}, // Light types.
@@ -121,7 +137,7 @@ batch  create_text(
         skeleton_alignment(),
         batch_available_resources(
             buffers_binding_.get_buffers(),
-            textures_binding_.empty() ? textures_binding::binding_map_type{} : textures_binding_.bindings_map(),
+            textures_binding_paths,
             texcoord_binding_,
             draw_state(),
             shaders_effects_config_type(

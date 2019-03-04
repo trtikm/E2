@@ -215,6 +215,35 @@ simulator::simulator()
     , m_scene_records_erased_during_simulation()
     , m_cache_of_batches_of_colliders()
     , m_skeletons()
+    , m_font_props{
+            (boost::filesystem::path(get_program_options()->dataRoot())
+                / "shared"
+                / "gfx"
+                / "textures"
+                / "font"
+                / "Liberation_Mono.txt"
+                ).string(),             // texture
+
+            33U,                        // min_ascii_code
+            126U,                       // max_ascii_code;
+
+            // Matrix of characters in the texture
+            14U,                        // max_chars_in_row;
+            0.027f,                     // min_u;
+            0.027f,                     // min_v;
+            0.0352f,                    // char_uv_width
+            0.1194f,                    // char_uv_height
+            0.0352f,                    // char_separ_u
+            0.0134f,                    // char_separ_v
+
+            // Text formating in camera space; all values are in meters.
+            0.002f,                     // space_size;
+            4U,                         // tab_size;
+            0.002f,                     // char_width;
+            0.003f,                     // char_height;
+            0.0f,                       // char_separ_dist_x;
+            0.0f,                       // char_separ_dist_y;
+        }
 
     // Editing mode data
 

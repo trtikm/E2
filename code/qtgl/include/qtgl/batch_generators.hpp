@@ -2,6 +2,7 @@
 #   define QTGL_BATCH_GENERATORS_HPP_INCLUDED
 
 #   include <qtgl/batch.hpp>
+#   include <qtgl/texture.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <array>
 #   include <vector>
@@ -141,14 +142,20 @@ struct  font_mono_props
     float_32_bit  min_v;    // v-coord where the matrix of chars starts in the texture 
     float_32_bit  char_uv_width;
     float_32_bit  char_uv_height;
+    float_32_bit  char_separ_u;
+    float_32_bit  char_separ_v;
 
     // Text formating in camera space; all values are in meters.
+    float_32_bit  space_size;
+    natural_32_bit  tab_size;   // How many space ' ' characters it represents.
     float_32_bit  char_width;
     float_32_bit  char_height;
-    float_32_bit  space_size;
-    float_32_bit  tab_size;
     float_32_bit  char_separ_dist_x;
     float_32_bit  char_separ_dist_y;
+
+    // Next follow PRIVATE DATA; DEFAULT-INITIALISE AND DO NOT MODIFY!
+    mutable textures_binding  __font_texture__; // Used to prevent discarding the font texture from the memory when there is no batch using it.
+                                                // The field is set by 'create_text' function below (when it is empty).
 };
 
 

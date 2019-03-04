@@ -15,6 +15,7 @@
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>
 #   include <qtgl/draw.hpp>
+#   include <qtgl/batch_generators.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/collision_scene.hpp>
 #   include <angeo/rigid_body_simulator.hpp>
@@ -327,6 +328,8 @@ private:
     cache_of_batches_of_colliders  m_cache_of_batches_of_colliders;
 
     std::unordered_map<std::string, skeleton>  m_skeletons;
+
+    qtgl::font_mono_props  m_font_props;
 
     // Editing mode data
 
