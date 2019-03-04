@@ -154,8 +154,10 @@ struct  font_mono_props
     float_32_bit  char_separ_dist_y;
 
     // Next follow PRIVATE DATA; DEFAULT-INITIALISE AND DO NOT MODIFY!
-    mutable textures_binding  __font_texture__; // Used to prevent discarding the font texture from the memory when there is no batch using it.
-                                                // The field is set by 'create_text' function below (when it is empty).
+    mutable batch  __batch_template__;  // Used to prevent re-creating those components of batch which are common for all batchech returned
+                                        // from the function 'create_text'. This is especially important for reusing the font texture
+                                        // instead in loading it from the disk over and over
+                                        // The field is set by 'create_text' function below (when it is empty).
 };
 
 

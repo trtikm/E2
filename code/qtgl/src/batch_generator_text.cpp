@@ -98,58 +98,85 @@ batch  create_text(
         }
     }
 
-    buffers_binding const buffers_binding_(
-        0U,
-        3U,
-        {
-            { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
-              buffer(xyz, true, (id.empty() ? id : "/generic/text/buffer/vertices/" + id)) },
-            { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0,
-              buffer(uv, (id.empty() ? id : "/generic/text/buffer/texcoord/" + id)) },
-        },
-        id.empty() ? id : "/generic/text/buffers_binding/" + id
-        );
+    if (xyz.empty())
+        return batch();
 
-    textures_binding_paths_map_type const textures_binding_paths{
-        { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, boost::filesystem::path(props.font_texture) }
-    };
+    if (props.__batch_template__.empty())
+    {
+        std::vector< std::array<float_32_bit, 3> > const  xyz { { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 0.0f } };
+        std::vector< std::array<float_32_bit, 2> > const  uv { { 0.0f, 0.0f }, { 0.0f, 0.0f }, { 0.0f, 0.0f } };
 
-    if (props.__font_texture__.empty())
-        props.__font_texture__ = textures_binding(textures_binding_paths);
-
-    texcoord_binding const  texcoord_binding_({
-        { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0 }
-        });
-
-    batch const  pbatch = batch(
-        id.empty() ? id : "/generic/text/batch/" + id,
-        buffers_binding_,
-        props.__font_texture__,
-        texcoord_binding_,
-        effects_config{
-            {}, // Light types.
-            {}, // Lighting data types.
-            {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
-            FOG_TYPE::NONE
+        buffers_binding const buffers_binding_(
+            0U,
+            3U,
+            {
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
+                  buffer(xyz, true, (id.empty() ? id : "/generic/text/buffer/vertices/" + id)) },
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0,
+                  buffer(uv, (id.empty() ? id : "/generic/text/buffer/texcoord/" + id)) },
             },
-        draw_state(nullptr),
-        modelspace(),
-        skeleton_alignment(),
-        batch_available_resources(
-            buffers_binding_.get_buffers(),
-            textures_binding_paths,
-            texcoord_binding_,
-            draw_state(),
-            shaders_effects_config_type(
-                true,
-                0.2f,
-                SHADER_PROGRAM_TYPE::VERTEX,
-                SHADER_PROGRAM_TYPE::VERTEX
-                )
-            )
-        );
+            id.empty() ? id : "/generic/text/buffers_binding/" + id
+            );
 
-    return pbatch;
+        textures_binding_paths_map_type const textures_binding_paths{
+            { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, boost::filesystem::path(props.font_texture) }
+        };
+
+        texcoord_binding const  texcoord_binding_({
+            { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0 }
+            });
+
+        props.__batch_template__ = batch(
+            id.empty() ? id : "/generic/text/batch/" + id,
+            buffers_binding_,
+            textures_binding(textures_binding_paths),
+            texcoord_binding_,
+            effects_config{
+                {}, // Light types.
+                {}, // Lighting data types.
+                {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
+                FOG_TYPE::NONE
+                },
+            draw_state(nullptr),
+            modelspace(),
+            skeleton_alignment(),
+            batch_available_resources(
+                buffers_binding_.get_buffers(),
+                textures_binding_paths,
+                texcoord_binding_,
+                draw_state(),
+                shaders_effects_config_type(
+                    true,
+                    0.2f,
+                    SHADER_PROGRAM_TYPE::VERTEX,
+                    SHADER_PROGRAM_TYPE::VERTEX
+                    )
+                )
+            );
+    }
+
+    return batch(
+        id.empty() ? id : "/generic/text/batch/" + id,
+        buffers_binding(
+            0U,
+            3U,
+            {
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
+                buffer(xyz, true, (id.empty() ? id : "/generic/text/buffer/vertices/" + id)) },
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0,
+            buffer(uv, (id.empty() ? id : "/generic/text/buffer/texcoord/" + id)) },
+            },
+            id.empty() ? id : "/generic/text/buffers_binding/" + id
+            ),
+        props.__batch_template__.get_shaders_binding(),
+        props.__batch_template__.get_textures_binding(),
+        props.__batch_template__.get_draw_state(),
+        props.__batch_template__.get_modelspace(),
+        props.__batch_template__.get_skeleton_alignment(),
+        props.__batch_template__.get_available_resources(),
+        *props.__batch_template__.get_instancing_data_ptr(),
+        nullptr
+        );
 }
 
 
