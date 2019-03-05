@@ -168,8 +168,8 @@ batch  create_text(
             textures_binding(textures_binding_paths),
             texcoord_binding_,
             effects_config{
-                {}, // Light types.
-                {}, // Lighting data types.
+                { LIGHT_TYPE::AMBIENT }, // Light types.
+                { { LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::TEXTURE} }, // Lighting data types.
                 {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
                 FOG_TYPE::NONE
                 },

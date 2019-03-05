@@ -56,6 +56,14 @@ void  render_batch(
 
 void  render_batch(
         batch const  batch_,
+        matrix44 const&  matrix_from_model_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        vector3 const&  ambient_light_colour
+        );
+
+
+void  render_batch(
+        batch const  batch_,
         matrix44 const&  matrix_from_world_to_camera,
         matrix44 const&  matrix_from_camera_to_clipspace,
         angeo::coordinate_system const&  coord_system,

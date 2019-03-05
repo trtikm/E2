@@ -253,6 +253,25 @@ void  render_batch(
 }
 
 
+void  render_batch(
+        batch const  batch_,
+        matrix44 const&  matrix_from_model_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        vector3 const&  ambient_light_colour
+        )
+{
+    render_batch(
+        batch_,
+        vertex_shader_instanced_data_provider(),
+        vertex_shader_uniform_data_provider(
+                batch_,
+                { matrix_from_model_to_camera }, matrix_from_camera_to_clipspace,
+                { 0.0f, 0.0f, 0.0f, 1.0f },
+                ambient_light_colour
+                )
+        );
+}
+
 
 void  render_batch(
         batch const  batch_,
