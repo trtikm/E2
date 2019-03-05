@@ -1,17 +1,53 @@
 #include <qtgl/batch_generators.hpp>
 #include <qtgl/batch.hpp>
 #include <qtgl/texture.hpp>
+#include <utility/msgstream.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
-#include <boost/filesystem/path.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/property_tree/info_parser.hpp>
+#include <stdexcept>
 
 namespace qtgl {
 
 
-std::string  load_font_mono_props(boost::filesystem::path const  pathname, font_mono_props&  output)
+void  load_font_mono_props(boost::filesystem::path const&  pathname, font_mono_props&  output)
 {
-    return "NOT IMPLEMENTED YET!";
+    if (!boost::filesystem::is_regular_file(pathname))
+        throw std::runtime_error(msgstream() << "Cannot access the passed font file '" << pathname << "'.");
+
+    boost::filesystem::path  data_root_dir = pathname.parent_path();
+    while (true)
+    {
+        if (data_root_dir.empty())
+            throw std::runtime_error(msgstream() << "Cannot find 'fonts' parent directory in path: " << pathname);
+        boost::filesystem::path const  current_dir = data_root_dir.filename();
+        data_root_dir = data_root_dir.parent_path();
+        if (current_dir == "fonts")
+            break;
+    }
+
+    boost::property_tree::ptree  ptree;
+    boost::property_tree::read_info(pathname.string(), ptree);
+
+    output.font_texture = (data_root_dir / ptree.get<std::string>("font_texture")).string();
+    output.min_ascii_code = ptree.get<natural_8_bit>("min_ascii_code");
+    output.max_ascii_code = ptree.get<natural_8_bit>("max_ascii_code");
+    output.max_chars_in_row = ptree.get<float_32_bit>("max_chars_in_row");
+    output.min_u = ptree.get<float_32_bit>("min_u");
+    output.min_v = ptree.get<float_32_bit>("min_v");
+    output.char_uv_width = ptree.get<float_32_bit>("char_uv_width");
+    output.char_uv_height = ptree.get<float_32_bit>("char_uv_height");
+    output.char_separ_u = ptree.get<float_32_bit>("char_separ_u");
+    output.char_separ_v = ptree.get<float_32_bit>("char_separ_v");
+    output.space_size = ptree.get<float_32_bit>("space_size");
+    output.tab_size = ptree.get<natural_8_bit>("tab_size");
+    output.char_width = ptree.get<float_32_bit>("char_width");
+    output.char_height = ptree.get<float_32_bit>("char_height");
+    output.char_separ_dist_x = ptree.get<float_32_bit>("char_separ_dist_x");
+    output.char_separ_dist_y = ptree.get<float_32_bit>("char_separ_dist_y");
+    output.__batch_template__ = batch();
 }
 
 

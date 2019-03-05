@@ -161,7 +161,7 @@ struct  font_mono_props
 };
 
 
-std::string  load_font_mono_props(boost::filesystem::path const  pathname, font_mono_props&  output);
+void  load_font_mono_props(boost::filesystem::path const&  pathname, font_mono_props&  output);
 
 
 batch  create_text(
