@@ -341,6 +341,34 @@ void  render_batch_instances(
 }
 
 
+void  render_batch(
+        batch const  batch_,
+        vector3 const&  position_in_camera_space,
+        float_32_bit const  scale,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        vector3 const&  ambient_light_colour
+        )
+{
+    matrix44 mat_pos = matrix44_identity();
+    mat_pos(0, 3) = position_in_camera_space(0);
+    mat_pos(1, 3) = position_in_camera_space(1);
+    mat_pos(2, 3) = position_in_camera_space(2);
+
+    matrix44 mat_scale = matrix44_identity();
+    mat_scale(0, 0) = mat_scale(1, 1) = scale;
+
+    render_batch(
+        batch_,
+        vertex_shader_instanced_data_provider(),
+        vertex_shader_uniform_data_provider(
+                batch_,
+                { mat_pos * mat_scale },
+                matrix_from_camera_to_clipspace,
+                { 0.0f, 0.0f, 0.0f, 1.0f },
+                ambient_light_colour
+                )
+        );
+}
 
 
 }

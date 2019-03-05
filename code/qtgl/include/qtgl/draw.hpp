@@ -93,6 +93,15 @@ void  render_batch_instances(
         );
 
 
+void  render_batch(
+        batch const  batch_,
+        vector3 const&  position_in_camera_space,
+        float_32_bit const  scale,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        vector3 const&  ambient_light_colour
+        );
+
+
 }
 
 #endif
