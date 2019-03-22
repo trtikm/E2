@@ -1,4 +1,0 @@
-filename = "c:/Users/Marek/root/E2qtgl/data/Blender/export/blender_mesh_dump.py"
-filename = "c:/Users/Marek/root/E2qtgl/data/Blender/export/E2_qtgl_buffers__Blender_console_export.py"
-filename = "c:/Users/Marek/root/E2qtgl/data/Blender/export/textures_test.py"
-exec(compile(open(filename).read(), filename, 'exec'))
