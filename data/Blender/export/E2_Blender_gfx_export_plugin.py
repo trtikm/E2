@@ -311,19 +311,39 @@ def vertices_have_correct_weights(
     """
 
     with TimeProf.instance().start("vertices_have_correct_weights"):
+        has_weights_per_vertex = False
+        for idx in range(len(vertices)):
+            if len(vertices[idx].groups) > 0:
+                has_weights_per_vertex = True
+                break
         for idx in range(0, len(vertices)):
             num_weights = len(vertices[idx].groups)
             if num_weights > 4:
-                print("ERROR: The vertex no." + str(idx) + " of the mesh has more than 4 weights, namely " +
+                print("ERROR: The vertex no." + str(idx) +
+                      " [" + str(vertices[idx].co[0]) + ", " + str(vertices[idx].co[1]) + ", " + str(vertices[idx].co[2]) + "] " +
+                      " of the mesh has more than 4 weights, namely " +
                       str(num_weights) + ". You can fix the issue by 1. switching to 'Wight Paint' mode "
-                     "(select armature, then mesh, and press Ctrl+TAB), 2. Select menu option 'Weights/Limit Total'.")
+                      "(select armature, then mesh, and press Ctrl+TAB), 2. Select menu option 'Weights/Limit Total'.")
+                return False
+            if has_weights_per_vertex and num_weights < 1:
+                print("ERROR: The vertex no." + str(idx) +
+                      " [" + str(vertices[idx].co[0]) + ", " + str(vertices[idx].co[1]) + ", " + str(vertices[idx].co[2]) + "] " +
+                      " of the mesh has 0 weights. You can fix the issue by "
+                      "1. switching to 'Wight Paint' mode (select armature, then mesh, and press Ctrl+TAB), "
+                      "2. Select a bone you want to assign to the vertex. "
+                      "3. Press TAB to switch to the Edit mode and select the vertex (ideally using the script E2_Blender_select_vertices_without_weight.py). "
+                      "4. In the 'Properties' window activate tab 'Data' and under 'Vertex groups' section press the "
+                      "button 'Assign'."
+                      )
                 return False
             if num_weights > 1:
                 sum_of_weights = 0
                 for i in range(0, num_weights):
                     sum_of_weights += vertices[idx].groups[i].weight
                 if abs(sum_of_weights - 1.0) > 0.001:
-                    print("ERROR: Sum of weights of vertex " + str(idx) + " of the mesh is " +
+                    print("ERROR: Sum of weights of vertex " + str(idx) +
+                          " [" + str(vertices[idx].co[0]) + ", " + str(vertices[idx].co[1]) + ", " + str(vertices[idx].co[2]) + "] " +
+                          " of the mesh is " +
                           str(sum_of_weights) + ". To normalise the weights (so that the sum is 1) do this: 1. "
                           "switching to 'Wight Paint' mode (select armature, then mesh, and press Ctrl+TAB), 2. Select "
                           "menu option 'Weights/Normalize All'.")
