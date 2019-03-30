@@ -1575,6 +1575,19 @@ scn::scene_node_ptr  simulator::find_nearest_rigid_body_node(scn::scene_node_ptr
     return node_ptr;
 }
 
+
+void  simulator::find_nearest_rigid_body_nodes_in_subtree(scn::scene_node_ptr  node_ptr, std::vector<scn::scene_node_ptr>&  output)
+{
+    TMPROF_BLOCK();
+
+    if (scn::has_rigid_body(*node_ptr))
+        output.push_back(node_ptr);
+    else
+        for (auto const&  name_and_node : node_ptr->get_children())
+            find_nearest_rigid_body_nodes_in_subtree(name_and_node.second, output);
+}
+
+
 void  simulator::invalidate_rigid_body_at_node(scn::scene_node_ptr  node_ptr, bool const  collider_change)
 {
     TMPROF_BLOCK();
@@ -2090,19 +2103,23 @@ void  simulator::relocate_scene_node(scn::scene_node_id const&  id, vector3 cons
 
 void  simulator::on_relocation_of_scene_node(scn::scene_node_ptr const  node_ptr)
 {
-    scn::scene_node_ptr const  phs_node_ptr = find_nearest_rigid_body_node(node_ptr);
-    if (phs_node_ptr != nullptr)
+    std::vector<scn::scene_node_ptr>  phs_nodes;
+    phs_nodes.push_back(find_nearest_rigid_body_node(node_ptr));
+    bool  full_reset = false;
+    if (phs_nodes.back() == nullptr)
     {
-        if (phs_node_ptr == node_ptr)
-            invalidate_rigid_body_at_node(phs_node_ptr, false);
-        else
-        {
-            std::vector<angeo::collision_object_id>  coids;
-            collect_colliders_in_subtree(node_ptr, coids);
-            if (!coids.empty())
-                invalidate_rigid_body_at_node(phs_node_ptr, true);
-        }
+        phs_nodes.clear();
+        find_nearest_rigid_body_nodes_in_subtree(node_ptr, phs_nodes);
     }
+    else if (phs_nodes.back() != node_ptr)
+    {
+        std::vector<angeo::collision_object_id>  coids;
+        collect_colliders_in_subtree(node_ptr, coids);
+        if (!coids.empty())
+            full_reset = true;
+    }
+    for (scn::scene_node_ptr const  phs_node_ptr : phs_nodes)
+        invalidate_rigid_body_at_node(phs_node_ptr, full_reset);
 }
 
 

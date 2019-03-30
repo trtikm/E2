@@ -260,6 +260,7 @@ private:
     scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_ptr  node_ptr);
     scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_id const&  id)
     { return find_nearest_rigid_body_node(get_scene().get_scene_node(id)); }
+    void  find_nearest_rigid_body_nodes_in_subtree(scn::scene_node_ptr  node_ptr, std::vector<scn::scene_node_ptr>&  output);
 
     void  invalidate_rigid_body_at_node(scn::scene_node_ptr  node_ptr, bool const  collider_change);
     void  invalidate_rigid_body_controling_node(scn::scene_node_ptr  node_ptr, bool const  collider_change);
