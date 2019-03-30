@@ -52,12 +52,16 @@ void  scene_nodes_translation_data::choose_normal_and_reduction(vector3 const&  
 {
     if (m_x_down && !m_y_down && !m_z_down)
     {
-        m_normal = vector3_unit_z();
+        m_normal = std::fabsf(dot_product(vector3_unit_y(), camera_origin)) > std::fabsf(dot_product(vector3_unit_z(), camera_origin)) ?
+                        vector3_unit_y() :
+                        vector3_unit_z();
         m_reduction = vector3_unit_x();
     }
     else if (!m_x_down && m_y_down && !m_z_down)
     {
-        m_normal = vector3_unit_z();
+        m_normal = std::fabsf(dot_product(vector3_unit_x(), camera_origin)) > std::fabsf(dot_product(vector3_unit_z(), camera_origin)) ?
+                        vector3_unit_x() :
+                        vector3_unit_z();
         m_reduction = vector3_unit_y();
     }
     else if (!m_x_down && !m_y_down && m_z_down)
