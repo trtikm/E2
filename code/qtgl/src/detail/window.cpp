@@ -375,6 +375,8 @@ void window::render_now(bool const  is_this_pure_redraw_request)
         m_simulator = m_create_simulator_fn();
         INVARIANT(m_simulator.operator bool());
 
+        m_simulator->synchronise_with_dependent_modules();
+
         m_initialised = true;
     }
 

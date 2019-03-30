@@ -15,6 +15,8 @@ struct real_time_simulator
 {
     virtual ~real_time_simulator() {}
 
+    virtual void synchronise_with_dependent_modules() {}
+
     virtual void next_round(float_64_bit const  seconds_from_previous_call,
                             bool const  is_this_pure_redraw_request) {}
 

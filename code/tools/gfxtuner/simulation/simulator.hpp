@@ -32,6 +32,8 @@ struct simulator : public qtgl::real_time_simulator
     simulator();
     ~simulator();
 
+    void synchronise_with_dependent_modules();
+
     // Simulation
 
     void next_round(

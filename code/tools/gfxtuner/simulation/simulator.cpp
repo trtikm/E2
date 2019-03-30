@@ -215,7 +215,16 @@ simulator::simulator()
     , m_scene_records_erased_during_simulation()
     , m_cache_of_batches_of_colliders()
     , m_skeletons()
-    , m_font_props()
+    , m_font_props(
+            []() -> qtgl::font_mono_props {
+                qtgl::font_mono_props  props;
+                qtgl::load_font_mono_props(
+                    boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "fonts" / "Liberation_Mono.txt",
+                    props
+                    );
+                return props;
+            }()        
+            )
 
     // Editing mode data
 
@@ -236,14 +245,16 @@ simulator::simulator()
     , m_gfx_animated_objects()
 
 {
-    qtgl::load_font_mono_props(
-        boost::filesystem::path(get_program_options()->dataRoot()) / "shared" / "gfx" / "fonts" / "Liberation_Mono.txt",
-        m_font_props
-        );
 }
 
 simulator::~simulator()
 {
+}
+
+
+void  simulator::synchronise_with_dependent_modules()
+{
+    call_listeners(simulator_notifications::scene_edit_mode_changed());
 }
 
 
