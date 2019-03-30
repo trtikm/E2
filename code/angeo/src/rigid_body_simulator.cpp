@@ -143,6 +143,8 @@ void  rigid_body_simulator::insert_contact_constraints(
         std::vector<motion_constraint_system::constraint_id>* const  output_constraint_ids_ptr
         )
 {
+    TMPROF_BLOCK();
+
     rigid_body const&  rb0 = m_rigid_bodies.at(rb_0);
     rigid_body const&  rb1 = m_rigid_bodies.at(rb_1);
 
@@ -246,6 +248,8 @@ void  rigid_body_simulator::do_simulation_step(
 
     for (rigid_body_id  id = 0U; id != m_rigid_bodies.size(); ++id)
     {
+        TMPROF_BLOCK();
+
         if (m_invalid_rigid_body_ids.count(id) != 0U)
             continue;
 
@@ -287,6 +291,8 @@ void  rigid_body_simulator::do_simulation_step(
 
 void  rigid_body_simulator::update_dependent_variables_of_rigid_body(rigid_body_id const  id)
 {
+    TMPROF_BLOCK();
+
     rigid_body&  rb = m_rigid_bodies.at(id);
 
     matrix33 const  R = quaternion_to_rotation_matrix(rb.m_orientation);
@@ -304,6 +310,8 @@ float_32_bit  rigid_body_simulator::read_contact_cache(
         float_32_bit const  value_on_cache_miss
         ) const
 {
+    TMPROF_BLOCK();
+
     if (m_invalidated_rigid_bodies_in_contact_cache.count(rb_ids.first) != 0U ||
         m_invalidated_rigid_bodies_in_contact_cache.count(rb_ids.second) != 0U)
     {
@@ -335,6 +343,8 @@ float_32_bit  rigid_body_simulator::read_contact_cache(
 
 void  rigid_body_simulator::update_contact_cache()
 {
+    TMPROF_BLOCK();
+
     m_contact_cache.clear();
     for (auto const& constraint_and_contact_and_vector_ids : m_from_constraints_to_contact_ids)
         m_contact_cache
