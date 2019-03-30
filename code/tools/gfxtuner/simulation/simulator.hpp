@@ -349,14 +349,8 @@ private:
     std::unordered_map<angeo::collision_object_id, angeo::rigid_body_id>  m_binding_of_collision_objects;
     std::unordered_map<angeo::rigid_body_id, scn::scene_node_ptr>  m_binding_of_rigid_bodies;
 
-    struct  static_rigid_body_backup
-    {
-        vector3  m_linear_velocity;
-        vector3  m_angular_velocity;
-        vector3  m_external_linear_acceleration;
-        vector3  m_external_angular_acceleration;
-    };
-    std::unordered_map<angeo::rigid_body_id, static_rigid_body_backup>  m_static_rigid_body_backups;
+    std::unordered_map<angeo::rigid_body_id, scn::rigid_body_props>  m_static_rigid_body_backups;
+    std::unordered_map<angeo::rigid_body_id, scn::rigid_body_props>  m_dynamic_rigid_body_backups;
 
     // TODO: The member below should be removed at some point.
     std::unordered_map<scn::scene_record_id, gfx_animated_object>  m_gfx_animated_objects;

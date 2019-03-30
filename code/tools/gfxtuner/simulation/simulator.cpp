@@ -241,6 +241,7 @@ simulator::simulator()
     , m_binding_of_collision_objects()
     , m_binding_of_rigid_bodies()
     , m_static_rigid_body_backups()
+    , m_dynamic_rigid_body_backups()
 
     , m_gfx_animated_objects()
 
@@ -602,13 +603,13 @@ void  simulator::on_simulation_resumed()
             {
                 m_binding_of_rigid_bodies.erase(rb_ptr->id());
                 m_static_rigid_body_backups.erase(rb_ptr->id());
+                m_dynamic_rigid_body_backups.erase(rb_ptr->id());
 
-                vector3  linear_velocity = m_rigid_body_simulator.get_linear_velocity(rb_ptr->id());
-                vector3  angular_velocity = m_rigid_body_simulator.get_angular_velocity(rb_ptr->id());
-                vector3  external_linear_acceleration = m_rigid_body_simulator.get_external_linear_acceleration(rb_ptr->id());
-                vector3  external_angular_acceleration = m_rigid_body_simulator.get_external_angular_acceleration(rb_ptr->id());
-
-                static_rigid_body_backup  rb_backup;
+                scn::rigid_body_props  rb_backup;
+                rb_backup.m_linear_velocity = m_rigid_body_simulator.get_linear_velocity(rb_ptr->id());
+                rb_backup.m_angular_velocity = m_rigid_body_simulator.get_angular_velocity(rb_ptr->id());
+                rb_backup.m_external_linear_acceleration = m_rigid_body_simulator.get_external_linear_acceleration(rb_ptr->id());
+                rb_backup.m_external_angular_acceleration = m_rigid_body_simulator.get_external_angular_acceleration(rb_ptr->id());
 
                 m_rigid_body_simulator.erase_rigid_body(rb_ptr->id());
 
@@ -681,13 +682,6 @@ void  simulator::on_simulation_resumed()
                             false
                             );
                 }
-                else
-                {
-                    rb_backup.m_linear_velocity = linear_velocity;
-                    rb_backup.m_angular_velocity = angular_velocity;
-                    rb_backup.m_external_linear_acceleration = external_linear_acceleration;
-                    rb_backup.m_external_angular_acceleration = external_angular_acceleration;
-                }
 
                 matrix44 const  world_matrix = node_ptr->get_world_matrix();
 
@@ -697,10 +691,10 @@ void  simulator::on_simulation_resumed()
                                     rotation_matrix_to_quaternion(rotation_matrix(world_matrix)),
                                     inverted_mass,
                                     inverted_inertia_tensor_in_local_space,
-                                    linear_velocity,
-                                    angular_velocity,
-                                    external_linear_acceleration,
-                                    external_angular_acceleration
+                                    rb_backup.m_linear_velocity,
+                                    rb_backup.m_angular_velocity,
+                                    rb_backup.m_external_linear_acceleration,
+                                    rb_backup.m_external_angular_acceleration
                                     )
                         );
                 m_binding_of_rigid_bodies[rb_ptr->id()] = node_ptr;
@@ -710,6 +704,8 @@ void  simulator::on_simulation_resumed()
 
                 if (has_static_collider)
                     m_static_rigid_body_backups.insert({rb_ptr->id(), rb_backup});
+                else
+                    m_dynamic_rigid_body_backups.insert({rb_ptr->id(), rb_backup});
             }
             else
             {
@@ -720,14 +716,14 @@ void  simulator::on_simulation_resumed()
         }
     m_invalidated_nodes_of_rigid_bodies.clear();
 
-    for (auto const& rbid_and_backup : m_static_rigid_body_backups)
-        if (m_rigid_body_simulator.contains(rbid_and_backup.first))
-        {
-            m_rigid_body_simulator.set_linear_velocity(rbid_and_backup.first, vector3_zero());
-            m_rigid_body_simulator.set_angular_velocity(rbid_and_backup.first, vector3_zero());
-            m_rigid_body_simulator.set_external_linear_acceleration(rbid_and_backup.first, vector3_zero());
-            m_rigid_body_simulator.set_external_angular_acceleration(rbid_and_backup.first, vector3_zero());
-        }
+    //for (auto const& rbid_and_backup : m_static_rigid_body_backups)
+    //    if (m_rigid_body_simulator.contains(rbid_and_backup.first))
+    //    {
+    //        m_rigid_body_simulator.set_linear_velocity(rbid_and_backup.first, vector3_zero());
+    //        m_rigid_body_simulator.set_angular_velocity(rbid_and_backup.first, vector3_zero());
+    //        m_rigid_body_simulator.set_external_linear_acceleration(rbid_and_backup.first, vector3_zero());
+    //        m_rigid_body_simulator.set_external_angular_acceleration(rbid_and_backup.first, vector3_zero());
+    //    }
 
     // TODO: The code below should be removed at some point.
 
@@ -1897,6 +1893,7 @@ void  simulator::erase_rigid_body_from_scene_node(
         m_rigid_body_simulator.erase_rigid_body(rb_ptr->id());
         m_binding_of_rigid_bodies.erase(rb_ptr->id());
         m_static_rigid_body_backups.erase(rb_ptr->id());
+        m_dynamic_rigid_body_backups.erase(rb_ptr->id());
 
         m_scene_selection.erase_record(scn::make_rigid_body_record_id(id));
         scn::erase_rigid_body(*node_ptr);
