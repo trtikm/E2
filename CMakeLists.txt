@@ -8,7 +8,7 @@ project(E2)
 #   - online session: https://rawgit.com/trtikm/E2/master/index.html
 #
 
-cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.11 FATAL_ERROR)
 
 if(NOT CMAKE_BUILD_TYPE)
     message("Build type not set => setting 'Release' as default.")
