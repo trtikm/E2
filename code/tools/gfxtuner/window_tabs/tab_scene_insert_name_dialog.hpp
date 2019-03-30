@@ -39,6 +39,9 @@ private:
 };
 
 
+bool  is_scene_forbidden_name(std::string const&  name);
+
+
 }}
 
 #endif

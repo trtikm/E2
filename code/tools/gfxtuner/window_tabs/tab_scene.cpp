@@ -476,7 +476,7 @@ void  widgets::on_scene_insert_coord_system()
     while (wnd()->glwindow().call_now(&simulator::get_scene_node, inserted_item_id) != nullptr);
     insert_name_dialog  dlg(wnd(), name,
         [this, &parent_item_id](std::string const&  name) {
-            return name.find('/') == std::string::npos &&
+            return !is_scene_forbidden_name(name) &&
                    wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) == nullptr;
         });
     dlg.exec();
@@ -594,7 +594,7 @@ void  widgets::on_scene_insert_record(std::string const&  record_kind, std::stri
         }
         insert_name_dialog  dlg(wnd(), record_name,
             [&used_names](std::string const&  name) {
-            return name.find('/') == std::string::npos && used_names.count(name) == 0UL;
+            return !is_scene_forbidden_name(name) && used_names.count(name) == 0UL;
         });
         dlg.exec();
         record_name = dlg.get_name();
@@ -976,7 +976,7 @@ void  widgets::on_scene_duplicate_selected()
         {
             insert_name_dialog  dlg(wnd(), base_name,
                 [this, &parent_item_id](std::string const&  name) {
-                return name.find('/') == std::string::npos &&
+                return !is_scene_forbidden_name(name) &&
                        wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) == nullptr;
             });
             if (dlg.exec() == 0)

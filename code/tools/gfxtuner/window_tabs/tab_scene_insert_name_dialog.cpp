@@ -74,9 +74,9 @@ insert_name_dialog::insert_name_dialog(program_window* const  wnd,
 
 void  insert_name_dialog::on_name_changed(QString const&  qname)
 {
-    if (!m_is_name_valid_function(qtgl::to_string(qname)))
+    if (qname.isEmpty() || !m_is_name_valid_function(qtgl::to_string(qname)))
     {
-        m_name_taken_indicator->setText(QString("WARNING: the name has wrong format or it is already in use."));
+        m_name_taken_indicator->setText(QString("WARNING: the name is either forbidden or already in use."));
         m_OK_button->setEnabled(false);
     }
     else
@@ -96,6 +96,17 @@ void  insert_name_dialog::accept()
 void  insert_name_dialog::reject()
 {
     QDialog::reject();
+}
+
+
+bool  is_scene_forbidden_name(std::string const&  name)
+{
+    return  name == "."
+            || name == ".."
+            || name == "*"
+            || name.find('/') != std::string::npos
+            || name.find('\\') != std::string::npos
+            ;
 }
 
 
