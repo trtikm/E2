@@ -1735,24 +1735,141 @@ void  widgets::on_look_at_selection(std::function<void(vector3 const&, float_32_
 
 void  widgets::on_simulation_paused()
 {
+    TMPROF_BLOCK();
+
     scene_tree()->setEnabled(true);
     enable_coord_system_location_widgets(true, true);
 
-    std::unordered_map<scn::scene_node_id, angeo::coordinate_system> const&  relocated_nodes =
-            wnd()->glwindow().call_now(&simulator::get_scene_nodes_relocated_during_simulation);
-    for (auto const&  name_and_system : relocated_nodes)
+    transition_data_from_simulation_to_edit const&  transition_data =
+            wnd()->glwindow().call_now(&simulator::get_transition_data_from_simulation_to_edit);
+    bool  changed = false;
+
+    for (auto it = transition_data.m_nodes_erased.crbegin(); it != transition_data.m_nodes_erased.crend(); ++it)
     {
-        auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, name_and_system.first);
+        auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, it->first);
         INVARIANT(node_ptr != nullptr);
-        get_scene_history()->insert<scn::scene_history_coord_system_relocate>(
-                name_and_system.first,
-                name_and_system.second.origin(),
-                name_and_system.second.orientation(),
+
+        if (transition_data.m_nodes_inserted.count(it->first) != 0U)
+        {
+            // It is acctually only a relocation.
+
+            get_scene_history()->insert<scn::scene_history_coord_system_relocate>(
+                it->first,
+                it->second.origin(),
+                it->second.orientation(),
                 node_ptr->get_coord_system()->origin(),
                 node_ptr->get_coord_system()->orientation()
                 );
+        }
+        else
+        {
+            // It is really the erase.
+
+            tree_widget_item* const  item_ptr = m_scene_tree->find(it->first);
+            INVARIANT(item_ptr != nullptr);
+            m_scene_tree->erase(item_ptr);
+            get_scene_history()->insert<scn::scene_history_coord_system_insert>(
+                it->first,
+                it->second.origin(),
+                it->second.orientation(),
+                true
+                );
+        }
+        changed = true;
     }
-    if (!relocated_nodes.empty())
+    for (auto it = transition_data.m_nodes_inserted.cbegin(); it != transition_data.m_nodes_inserted.cend(); ++it)
+        if (transition_data.m_nodes_erased.count(*it) == 0U)
+        {
+            // It is really the insert.
+
+            auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, *it);
+            INVARIANT(node_ptr != nullptr);
+
+            INVARIANT(m_scene_tree->find(node_ptr->get_id()) == nullptr);
+            auto  node_tree_item =
+                    insert_coord_system_to_tree_widget(
+                            m_scene_tree,
+                            *it, 
+                            node_ptr->get_coord_system()->origin(),
+                            node_ptr->get_coord_system()->orientation(),
+                            m_node_icon,
+                            node_ptr->has_parent() ? m_scene_tree->find(node_ptr->get_parent()->get_id()) : nullptr
+                            );
+            INVARIANT(node_tree_item != nullptr);
+
+            get_scene_history()->insert<scn::scene_history_coord_system_insert>(
+                *it,
+                node_ptr->get_coord_system()->origin(),
+                node_ptr->get_coord_system()->orientation(),
+                false
+                );
+
+            changed = true;
+        }
+
+    for (scn::scene_record_id const&  id : transition_data.m_rigid_bodies_erased)
+    {
+        auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, id.get_node_id());
+        INVARIANT(node_ptr != nullptr);
+
+        scn::rigid_body_props const&  old_props =
+            transition_data.m_dynamic_rigid_body_backups.at(scn::get_rigid_body(*node_ptr)->id());
+
+        if (transition_data.m_rigid_bodies_inserted.count(id) != 0U)
+        {
+            // It is acctually only an update.
+
+            scn::rigid_body_props  new_props;
+            wnd()->glwindow().call_now(
+                    &simulator::get_rigid_body_info,
+                    std::cref(id.get_node_id()),
+                    std::ref(new_props.m_linear_velocity),
+                    std::ref(new_props.m_angular_velocity),
+                    std::ref(new_props.m_external_linear_acceleration),
+                    std::ref(new_props.m_external_angular_acceleration)
+                    );
+            get_scene_history()->insert<scn::scene_history_rigid_body_update_props>(id, old_props, new_props, false);
+        }
+        else
+        {
+            // It is really the erase.
+
+            tree_widget_item* const  item_ptr = m_scene_tree->find(id);
+            INVARIANT(item_ptr != nullptr);
+            m_scene_tree->erase(item_ptr);
+            get_scene_history()->insert<scn::scene_history_rigid_body_insert>(id, old_props, true);
+        }
+
+        changed = true;
+    }
+    for (scn::scene_record_id const& id : transition_data.m_rigid_bodies_inserted)
+        if (transition_data.m_rigid_bodies_erased.count(id) == 0U)
+        {
+            // It is really the insert.
+
+            scn::rigid_body_props  new_props;
+            wnd()->glwindow().call_now(
+                &simulator::get_rigid_body_info,
+                std::cref(id.get_node_id()),
+                std::ref(new_props.m_linear_velocity),
+                std::ref(new_props.m_angular_velocity),
+                std::ref(new_props.m_external_linear_acceleration),
+                std::ref(new_props.m_external_angular_acceleration)
+                );
+
+            INVARIANT(m_scene_tree->find(id) == nullptr);
+            auto const  record_item =
+                insert_record_to_tree_widget(m_scene_tree, id, m_icons_of_records.at(scn::get_rigid_body_record_name()), m_folder_icon);
+            INVARIANT(record_item != nullptr);
+
+            get_scene_history()->insert<scn::scene_history_rigid_body_insert>(id, new_props, false);
+
+            changed = true;
+        }
+
+    // TODO: Add missing code for handling changes in colliders and batches !
+
+    if (changed)
     {
         get_scene_history()->commit();
         set_window_title();

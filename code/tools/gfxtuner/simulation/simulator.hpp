@@ -11,6 +11,7 @@
 #   include <scene/records/rigid_body/rigid_body.hpp>
 #   include <gfxtuner/simulation/gfx_object.hpp>
 #   include <gfxtuner/simulation/skeleton.hpp>
+#   include <gfxtuner/simulation/transition_data_from_simulation_to_edit.hpp>
 #   include <qtgl/real_time_simulator.hpp>
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>
@@ -211,12 +212,8 @@ struct simulator : public qtgl::real_time_simulator
     qtgl::effects_config const&  get_effects_config() const { return m_effects_config; }
     qtgl::effects_config&  effects_config_ref() { return m_effects_config; }
 
-    std::unordered_map<scn::scene_node_id, angeo::coordinate_system> const&
-    get_scene_nodes_relocated_during_simulation() const { return m_scene_nodes_relocated_during_simulation; }
-    std::unordered_set<scn::scene_record_id> const&  get_scene_records_inserted_during_simulation() const
-    { return m_scene_records_inserted_during_simulation; }
-    std::unordered_set<scn::scene_record_id> const&  get_scene_records_erased_during_simulation() const
-    { return m_scene_records_erased_during_simulation; }
+    transition_data_from_simulation_to_edit const&  get_transition_data_from_simulation_to_edit() const
+    { return m_transition_data_from_simulation_to_edit; }
 
     void  on_simulation_paused();
     void  on_simulation_resumed();
@@ -315,9 +312,6 @@ private:
     bool  m_do_single_step;
     float_64_bit  m_fixed_time_step_in_seconds;
     scn::scene_ptr  m_scene;
-    std::unordered_map<scn::scene_node_id, angeo::coordinate_system>  m_scene_nodes_relocated_during_simulation;
-    std::unordered_set<scn::scene_record_id>  m_scene_records_inserted_during_simulation;
-    std::unordered_set<scn::scene_record_id>  m_scene_records_erased_during_simulation;
 
     struct  cache_of_batches_of_colliders
     {
@@ -340,7 +334,6 @@ private:
     scn::scene_history_ptr  m_scene_history;
     scn::scene_edit_data  m_scene_edit_data;
     qtgl::batch  m_batch_coord_system;
-    std::unordered_map<scn::scene_node_id, bool>  m_invalidated_nodes_of_rigid_bodies;
 
     // Simulation mode data
 
@@ -349,8 +342,10 @@ private:
     std::unordered_map<angeo::collision_object_id, angeo::rigid_body_id>  m_binding_of_collision_objects;
     std::unordered_map<angeo::rigid_body_id, scn::scene_node_ptr>  m_binding_of_rigid_bodies;
 
-    std::unordered_map<angeo::rigid_body_id, scn::rigid_body_props>  m_static_rigid_body_backups;
-    std::unordered_map<angeo::rigid_body_id, scn::rigid_body_props>  m_dynamic_rigid_body_backups;
+    // Data for handling trasitions between edit and simulation modes
+
+    std::unordered_map<scn::scene_node_id, bool>  m_invalidated_nodes_of_rigid_bodies;
+    transition_data_from_simulation_to_edit  m_transition_data_from_simulation_to_edit;
 
     // TODO: The member below should be removed at some point.
     std::unordered_map<scn::scene_record_id, gfx_animated_object>  m_gfx_animated_objects;

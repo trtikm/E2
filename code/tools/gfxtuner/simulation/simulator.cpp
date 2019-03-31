@@ -210,9 +210,6 @@ simulator::simulator()
     , m_do_single_step(false)
     , m_fixed_time_step_in_seconds(1.0 / 25.0)
     , m_scene(new scn::scene)
-    , m_scene_nodes_relocated_during_simulation()
-    , m_scene_records_inserted_during_simulation()
-    , m_scene_records_erased_during_simulation()
     , m_cache_of_batches_of_colliders()
     , m_skeletons()
     , m_font_props(
@@ -232,7 +229,6 @@ simulator::simulator()
     , m_scene_history(new scn::scene_history)
     , m_scene_edit_data(scn::SCENE_EDIT_MODE::SELECT_SCENE_OBJECT)
     , m_batch_coord_system(qtgl::create_basis_vectors())
-    , m_invalidated_nodes_of_rigid_bodies()
 
     // Simulation mode data
 
@@ -240,9 +236,13 @@ simulator::simulator()
     , m_rigid_body_simulator()
     , m_binding_of_collision_objects()
     , m_binding_of_rigid_bodies()
-    , m_static_rigid_body_backups()
-    , m_dynamic_rigid_body_backups()
 
+    // Data for handling trasitions between edit and simulation modes
+
+    , m_invalidated_nodes_of_rigid_bodies()
+    , m_transition_data_from_simulation_to_edit()
+
+    // TODO: The member below should be removed at some point.
     , m_gfx_animated_objects()
 
 {
@@ -557,7 +557,7 @@ void  simulator::on_simulation_paused()
 {
     TMPROF_BLOCK();
 
-    for (auto const&  rbid_and_backup : m_static_rigid_body_backups)
+    for (auto const&  rbid_and_backup : m_transition_data_from_simulation_to_edit.m_static_rigid_body_backups)
         if (m_rigid_body_simulator.contains(rbid_and_backup.first))
         {
             m_rigid_body_simulator.set_linear_velocity(rbid_and_backup.first, rbid_and_backup.second.m_linear_velocity);
@@ -568,14 +568,7 @@ void  simulator::on_simulation_paused()
 
     call_listeners(simulator_notifications::paused());
 
-    // TODO: process these before clear:
-    //    m_scene_nodes_relocated_during_simulation
-    //    m_scene_records_inserted_during_simulation
-    //    m_scene_records_erased_during_simulation
-
-    m_scene_nodes_relocated_during_simulation.clear();
-    m_scene_records_inserted_during_simulation.clear();
-    m_scene_records_erased_during_simulation.clear();
+    m_transition_data_from_simulation_to_edit.clear(false);
 }
 
 
@@ -584,6 +577,23 @@ void  simulator::on_simulation_resumed()
     TMPROF_BLOCK();
 
     call_listeners(simulator_notifications::resumed());
+
+    for (auto&  rbid_and_backup : m_transition_data_from_simulation_to_edit.m_static_rigid_body_backups)
+        if (m_rigid_body_simulator.contains(rbid_and_backup.first))
+        {
+            rbid_and_backup.second.m_linear_velocity = m_rigid_body_simulator.get_linear_velocity(rbid_and_backup.first);
+            rbid_and_backup.second.m_angular_velocity = m_rigid_body_simulator.get_angular_velocity(rbid_and_backup.first);
+            rbid_and_backup.second.m_external_linear_acceleration = m_rigid_body_simulator.get_external_linear_acceleration(rbid_and_backup.first);
+            rbid_and_backup.second.m_external_angular_acceleration = m_rigid_body_simulator.get_external_angular_acceleration(rbid_and_backup.first);
+        }
+    for (auto& rbid_and_backup : m_transition_data_from_simulation_to_edit.m_dynamic_rigid_body_backups)
+        if (m_rigid_body_simulator.contains(rbid_and_backup.first))
+        {
+            rbid_and_backup.second.m_linear_velocity = m_rigid_body_simulator.get_linear_velocity(rbid_and_backup.first);
+            rbid_and_backup.second.m_angular_velocity = m_rigid_body_simulator.get_angular_velocity(rbid_and_backup.first);
+            rbid_and_backup.second.m_external_linear_acceleration = m_rigid_body_simulator.get_external_linear_acceleration(rbid_and_backup.first);
+            rbid_and_backup.second.m_external_angular_acceleration = m_rigid_body_simulator.get_external_angular_acceleration(rbid_and_backup.first);
+        }
 
     for (auto const&  node_name_and_collider_change : m_invalidated_nodes_of_rigid_bodies)
         if (auto  node_ptr = get_scene().get_scene_node(node_name_and_collider_change.first))
@@ -602,8 +612,7 @@ void  simulator::on_simulation_resumed()
             if (node_name_and_collider_change.second)
             {
                 m_binding_of_rigid_bodies.erase(rb_ptr->id());
-                m_static_rigid_body_backups.erase(rb_ptr->id());
-                m_dynamic_rigid_body_backups.erase(rb_ptr->id());
+                m_transition_data_from_simulation_to_edit.erase_backup_for_rigid_body(rb_ptr->id());
 
                 scn::rigid_body_props  rb_backup;
                 rb_backup.m_linear_velocity = m_rigid_body_simulator.get_linear_velocity(rb_ptr->id());
@@ -702,10 +711,7 @@ void  simulator::on_simulation_resumed()
                 for (angeo::collision_object_id coid : coids)
                     m_binding_of_collision_objects[coid] = rb_ptr->id();
 
-                if (has_static_collider)
-                    m_static_rigid_body_backups.insert({rb_ptr->id(), rb_backup});
-                else
-                    m_dynamic_rigid_body_backups.insert({rb_ptr->id(), rb_backup});
+                m_transition_data_from_simulation_to_edit.insert_backup_for_rigid_body(rb_ptr->id(), rb_backup, has_static_collider);
             }
             else
             {
@@ -715,15 +721,6 @@ void  simulator::on_simulation_resumed()
             }
         }
     m_invalidated_nodes_of_rigid_bodies.clear();
-
-    //for (auto const& rbid_and_backup : m_static_rigid_body_backups)
-    //    if (m_rigid_body_simulator.contains(rbid_and_backup.first))
-    //    {
-    //        m_rigid_body_simulator.set_linear_velocity(rbid_and_backup.first, vector3_zero());
-    //        m_rigid_body_simulator.set_angular_velocity(rbid_and_backup.first, vector3_zero());
-    //        m_rigid_body_simulator.set_external_linear_acceleration(rbid_and_backup.first, vector3_zero());
-    //        m_rigid_body_simulator.set_external_angular_acceleration(rbid_and_backup.first, vector3_zero());
-    //    }
 
     // TODO: The code below should be removed at some point.
 
@@ -856,12 +853,13 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
     for (auto const&  rb_id_and_node_ptr : m_binding_of_rigid_bodies)
     {
         angeo::rigid_body_id const  rb_id = rb_id_and_node_ptr.first;
-        if (m_static_rigid_body_backups.count(rb_id) != 0UL)
+        if (m_transition_data_from_simulation_to_edit.has_static_backup(rb_id))
             continue; // The rigid body 'rb_id' is static => does not move => no need to update positions of its node and colliders.
 
         scn::scene_node_ptr const  rb_node_ptr = rb_id_and_node_ptr.second;
 
-        m_scene_nodes_relocated_during_simulation.insert({ rb_node_ptr->get_id(), *rb_node_ptr->get_coord_system()});
+        m_transition_data_from_simulation_to_edit.on_node_relocation(rb_node_ptr->get_id(), *rb_node_ptr->get_coord_system());
+        m_transition_data_from_simulation_to_edit.on_rigid_body_props_changed(scn::make_rigid_body_record_id(rb_node_ptr->get_id()));
 
         if (rb_node_ptr->has_parent())
         {
@@ -1892,8 +1890,7 @@ void  simulator::erase_rigid_body_from_scene_node(
 
         m_rigid_body_simulator.erase_rigid_body(rb_ptr->id());
         m_binding_of_rigid_bodies.erase(rb_ptr->id());
-        m_static_rigid_body_backups.erase(rb_ptr->id());
-        m_dynamic_rigid_body_backups.erase(rb_ptr->id());
+        m_transition_data_from_simulation_to_edit.erase_backup_for_rigid_body(rb_ptr->id());
 
         m_scene_selection.erase_record(scn::make_rigid_body_record_id(id));
         scn::erase_rigid_body(*node_ptr);
