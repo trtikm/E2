@@ -728,6 +728,15 @@ void  simulator::on_simulation_resumed()
         }
     m_invalidated_nodes_of_rigid_bodies.clear();
 
+    for (auto const& rbid_and_backup : m_transition_data_from_simulation_to_edit.m_static_rigid_body_backups)
+        if (m_rigid_body_simulator_ptr->contains(rbid_and_backup.first))
+        {
+            m_rigid_body_simulator_ptr->set_linear_velocity(rbid_and_backup.first, vector3_zero());
+            m_rigid_body_simulator_ptr->set_angular_velocity(rbid_and_backup.first, vector3_zero());
+            m_rigid_body_simulator_ptr->set_external_linear_acceleration(rbid_and_backup.first, vector3_zero());
+            m_rigid_body_simulator_ptr->set_external_angular_acceleration(rbid_and_backup.first, vector3_zero());
+        }
+
     // TODO: The code below should be removed at some point.
 
     std::unordered_set<scn::scene_record_id>  to_remove;
