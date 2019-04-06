@@ -18,6 +18,9 @@ struct  linear_and_angular_vector
 using  rigid_body_id = natural_32_bit;
 
 
+inline rigid_body_id  invalid_rigid_body_id() { return 0xFFFFFFFFU; }
+
+
 using  pair_of_rigid_body_ids = std::pair<rigid_body_id, rigid_body_id>;
 
 

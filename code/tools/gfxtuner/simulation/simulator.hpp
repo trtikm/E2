@@ -20,6 +20,7 @@
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/collision_scene.hpp>
 #   include <angeo/rigid_body_simulator.hpp>
+#   include <ai/agents.hpp>
 #   include <utility/std_pair_hash.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <vector>
@@ -215,6 +216,9 @@ struct simulator : public qtgl::real_time_simulator
     transition_data_from_simulation_to_edit const&  get_transition_data_from_simulation_to_edit() const
     { return m_transition_data_from_simulation_to_edit; }
 
+    void  on_create_scene_object(ai::agent_id const  agent_id, ai::environment_models::scene_action_name const&  scene_action_name);
+    void  on_destroy_scene_object(angeo::rigid_body_id const  rigid_body_id);
+
     void  on_simulation_paused();
     void  on_simulation_resumed();
 
@@ -337,8 +341,9 @@ private:
 
     // Simulation mode data
 
-    angeo::collision_scene  m_collision_scene;
-    angeo::rigid_body_simulator  m_rigid_body_simulator;
+    std::shared_ptr<angeo::collision_scene>  m_collision_scene_ptr;
+    std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
+    std::shared_ptr<ai::agents>  m_agents_ptr;
     std::unordered_map<angeo::collision_object_id, angeo::rigid_body_id>  m_binding_of_collision_objects;
     std::unordered_map<angeo::rigid_body_id, scn::scene_node_ptr>  m_binding_of_rigid_bodies;
 

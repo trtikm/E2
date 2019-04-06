@@ -4,6 +4,17 @@
 namespace qtgl {
 
 
+window_props::window_props()
+    : m_width_in_pixels(1)
+    , m_height_in_pixels(1)
+    , m_pixel_width_in_milimeters(1.0f)
+    , m_pixel_height_in_milimeters(1.0f)
+    , m_is_whole_program_active(true)
+    , m_has_focus(true)
+    , m_just_resized(false)
+{}
+
+
 window_props::window_props(
         natural_32_bit const  width_in_pixels,
         natural_32_bit const  height_in_pixels,

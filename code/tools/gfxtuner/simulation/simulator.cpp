@@ -232,8 +232,14 @@ simulator::simulator()
 
     // Simulation mode data
 
-    , m_collision_scene()
-    , m_rigid_body_simulator()
+    , m_collision_scene_ptr(std::make_shared<angeo::collision_scene>())
+    , m_rigid_body_simulator_ptr(std::make_shared<angeo::rigid_body_simulator>())
+    , m_agents_ptr(std::make_shared<ai::agents>(
+            m_collision_scene_ptr,
+            m_rigid_body_simulator_ptr,
+            std::bind(&simulator::on_create_scene_object, this, std::placeholders::_1, std::placeholders::_2),
+            std::bind(&simulator::on_destroy_scene_object, this, std::placeholders::_1)
+            ))  
     , m_binding_of_collision_objects()
     , m_binding_of_rigid_bodies()
 
@@ -558,12 +564,12 @@ void  simulator::on_simulation_paused()
     TMPROF_BLOCK();
 
     for (auto const&  rbid_and_backup : m_transition_data_from_simulation_to_edit.m_static_rigid_body_backups)
-        if (m_rigid_body_simulator.contains(rbid_and_backup.first))
+        if (m_rigid_body_simulator_ptr->contains(rbid_and_backup.first))
         {
-            m_rigid_body_simulator.set_linear_velocity(rbid_and_backup.first, rbid_and_backup.second.m_linear_velocity);
-            m_rigid_body_simulator.set_angular_velocity(rbid_and_backup.first, rbid_and_backup.second.m_angular_velocity);
-            m_rigid_body_simulator.set_external_linear_acceleration(rbid_and_backup.first, rbid_and_backup.second.m_external_linear_acceleration);
-            m_rigid_body_simulator.set_external_angular_acceleration(rbid_and_backup.first, rbid_and_backup.second.m_external_angular_acceleration);
+            m_rigid_body_simulator_ptr->set_linear_velocity(rbid_and_backup.first, rbid_and_backup.second.m_linear_velocity);
+            m_rigid_body_simulator_ptr->set_angular_velocity(rbid_and_backup.first, rbid_and_backup.second.m_angular_velocity);
+            m_rigid_body_simulator_ptr->set_external_linear_acceleration(rbid_and_backup.first, rbid_and_backup.second.m_external_linear_acceleration);
+            m_rigid_body_simulator_ptr->set_external_angular_acceleration(rbid_and_backup.first, rbid_and_backup.second.m_external_angular_acceleration);
         }
 
     call_listeners(simulator_notifications::paused());
@@ -579,20 +585,20 @@ void  simulator::on_simulation_resumed()
     call_listeners(simulator_notifications::resumed());
 
     for (auto&  rbid_and_backup : m_transition_data_from_simulation_to_edit.m_static_rigid_body_backups)
-        if (m_rigid_body_simulator.contains(rbid_and_backup.first))
+        if (m_rigid_body_simulator_ptr->contains(rbid_and_backup.first))
         {
-            rbid_and_backup.second.m_linear_velocity = m_rigid_body_simulator.get_linear_velocity(rbid_and_backup.first);
-            rbid_and_backup.second.m_angular_velocity = m_rigid_body_simulator.get_angular_velocity(rbid_and_backup.first);
-            rbid_and_backup.second.m_external_linear_acceleration = m_rigid_body_simulator.get_external_linear_acceleration(rbid_and_backup.first);
-            rbid_and_backup.second.m_external_angular_acceleration = m_rigid_body_simulator.get_external_angular_acceleration(rbid_and_backup.first);
+            rbid_and_backup.second.m_linear_velocity = m_rigid_body_simulator_ptr->get_linear_velocity(rbid_and_backup.first);
+            rbid_and_backup.second.m_angular_velocity = m_rigid_body_simulator_ptr->get_angular_velocity(rbid_and_backup.first);
+            rbid_and_backup.second.m_external_linear_acceleration = m_rigid_body_simulator_ptr->get_external_linear_acceleration(rbid_and_backup.first);
+            rbid_and_backup.second.m_external_angular_acceleration = m_rigid_body_simulator_ptr->get_external_angular_acceleration(rbid_and_backup.first);
         }
     for (auto& rbid_and_backup : m_transition_data_from_simulation_to_edit.m_dynamic_rigid_body_backups)
-        if (m_rigid_body_simulator.contains(rbid_and_backup.first))
+        if (m_rigid_body_simulator_ptr->contains(rbid_and_backup.first))
         {
-            rbid_and_backup.second.m_linear_velocity = m_rigid_body_simulator.get_linear_velocity(rbid_and_backup.first);
-            rbid_and_backup.second.m_angular_velocity = m_rigid_body_simulator.get_angular_velocity(rbid_and_backup.first);
-            rbid_and_backup.second.m_external_linear_acceleration = m_rigid_body_simulator.get_external_linear_acceleration(rbid_and_backup.first);
-            rbid_and_backup.second.m_external_angular_acceleration = m_rigid_body_simulator.get_external_angular_acceleration(rbid_and_backup.first);
+            rbid_and_backup.second.m_linear_velocity = m_rigid_body_simulator_ptr->get_linear_velocity(rbid_and_backup.first);
+            rbid_and_backup.second.m_angular_velocity = m_rigid_body_simulator_ptr->get_angular_velocity(rbid_and_backup.first);
+            rbid_and_backup.second.m_external_linear_acceleration = m_rigid_body_simulator_ptr->get_external_linear_acceleration(rbid_and_backup.first);
+            rbid_and_backup.second.m_external_angular_acceleration = m_rigid_body_simulator_ptr->get_external_angular_acceleration(rbid_and_backup.first);
         }
 
     for (auto const&  node_name_and_collider_change : m_invalidated_nodes_of_rigid_bodies)
@@ -607,7 +613,7 @@ void  simulator::on_simulation_resumed()
             collect_colliders_in_subtree(node_ptr, coids, &coid_nodes);
 
             for (std::size_t  i = 0UL; i != coids.size(); ++i)
-                m_collision_scene.on_position_changed(coids.at(i), coid_nodes.at(i)->get_world_matrix());
+                m_collision_scene_ptr->on_position_changed(coids.at(i), coid_nodes.at(i)->get_world_matrix());
             
             if (node_name_and_collider_change.second)
             {
@@ -615,19 +621,19 @@ void  simulator::on_simulation_resumed()
                 m_transition_data_from_simulation_to_edit.erase_backup_for_rigid_body(rb_ptr->id());
 
                 scn::rigid_body_props  rb_backup;
-                rb_backup.m_linear_velocity = m_rigid_body_simulator.get_linear_velocity(rb_ptr->id());
-                rb_backup.m_angular_velocity = m_rigid_body_simulator.get_angular_velocity(rb_ptr->id());
-                rb_backup.m_external_linear_acceleration = m_rigid_body_simulator.get_external_linear_acceleration(rb_ptr->id());
-                rb_backup.m_external_angular_acceleration = m_rigid_body_simulator.get_external_angular_acceleration(rb_ptr->id());
+                rb_backup.m_linear_velocity = m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id());
+                rb_backup.m_angular_velocity = m_rigid_body_simulator_ptr->get_angular_velocity(rb_ptr->id());
+                rb_backup.m_external_linear_acceleration = m_rigid_body_simulator_ptr->get_external_linear_acceleration(rb_ptr->id());
+                rb_backup.m_external_angular_acceleration = m_rigid_body_simulator_ptr->get_external_angular_acceleration(rb_ptr->id());
 
-                m_rigid_body_simulator.erase_rigid_body(rb_ptr->id());
+                m_rigid_body_simulator_ptr->erase_rigid_body(rb_ptr->id());
 
                 float_32_bit  inverted_mass = 0.0f;
                 matrix33  inverted_inertia_tensor_in_local_space = matrix33_zero();
 
                 bool  has_static_collider = false;
                 for (angeo::collision_object_id  coid : coids)
-                    if (!m_collision_scene.is_dynamic(coid))
+                    if (!m_collision_scene_ptr->is_dynamic(coid))
                     {
                         has_static_collider = true;
                         break;
@@ -636,7 +642,7 @@ void  simulator::on_simulation_resumed()
                 {
                     for (std::size_t i = 0U; i < coids.size(); ++i)
                         for (std::size_t j = i + 1U; j < coids.size(); ++j)
-                            m_collision_scene.disable_colliding(coids.at(i), coids.at(j));
+                            m_collision_scene_ptr->disable_colliding(coids.at(i), coids.at(j));
 
                     angeo::mass_and_inertia_tensor_builder  builder;
                     for (std::size_t i = 0UL; i != coids.size(); ++i)
@@ -647,18 +653,18 @@ void  simulator::on_simulation_resumed()
                         {
                         case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
                             builder.insert_capsule(
-                                    m_collision_scene.get_capsule_half_distance_between_end_points(coid),
-                                    m_collision_scene.get_capsule_thickness_from_central_line(coid),
+                                    m_collision_scene_ptr->get_capsule_half_distance_between_end_points(coid),
+                                    m_collision_scene_ptr->get_capsule_thickness_from_central_line(coid),
                                     coid_node_ptr->get_world_matrix(),
-                                    m_collision_scene.get_material(coid),
+                                    m_collision_scene_ptr->get_material(coid),
                                     1.0f // TODO!
                                     );
                             break;
                         case angeo::COLLISION_SHAPE_TYPE::SPHERE:
                             builder.insert_sphere(
                                     translation_vector(coid_node_ptr->get_world_matrix()),
-                                    m_collision_scene.get_sphere_radius(coid),
-                                    m_collision_scene.get_material(coid),
+                                    m_collision_scene_ptr->get_sphere_radius(coid),
+                                    m_collision_scene_ptr->get_material(coid),
                                     1.0f // TODO!
                                     );
                             break;
@@ -695,7 +701,7 @@ void  simulator::on_simulation_resumed()
                 matrix44 const  world_matrix = node_ptr->get_world_matrix();
 
                 rb_ptr->set_id(
-                        m_rigid_body_simulator.insert_rigid_body(
+                        m_rigid_body_simulator_ptr->insert_rigid_body(
                                     translation_vector(world_matrix),
                                     rotation_matrix_to_quaternion(rotation_matrix(world_matrix)),
                                     inverted_mass,
@@ -716,8 +722,8 @@ void  simulator::on_simulation_resumed()
             else
             {
                 matrix44 const  world_matrix = node_ptr->get_world_matrix();
-                m_rigid_body_simulator.set_position_of_mass_centre(rb_ptr->id(), translation_vector(world_matrix));
-                m_rigid_body_simulator.set_orientation(rb_ptr->id(), rotation_matrix_to_quaternion(rotation_matrix(world_matrix))); 
+                m_rigid_body_simulator_ptr->set_position_of_mass_centre(rb_ptr->id(), translation_vector(world_matrix));
+                m_rigid_body_simulator_ptr->set_orientation(rb_ptr->id(), rotation_matrix_to_quaternion(rotation_matrix(world_matrix))); 
             }
         }
     m_invalidated_nodes_of_rigid_bodies.clear();
@@ -764,6 +770,8 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
         m_cache_of_batches_of_colliders.collision_normals_batch.release();
     }
 
+    m_agents_ptr->next_round((float_32_bit)time_to_simulate_in_seconds, keyboard_props(), mouse_props(), window_props());
+
     constexpr float_64_bit  min_micro_time_step_in_seconds = 0.001;
     constexpr float_64_bit  max_micro_time_step_in_seconds = 0.04;
     static float_64_bit  time_buffer_in_seconds = 0.0f;
@@ -805,7 +813,7 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
 {
     TMPROF_BLOCK();
 
-    m_collision_scene.compute_contacts_of_all_dynamic_objects(
+    m_collision_scene_ptr->compute_contacts_of_all_dynamic_objects(
             [this, is_last_micro_step](
                 angeo::contact_id const& cid,
                 vector3 const& contact_point,
@@ -831,14 +839,14 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                             false,
                             0.001f
                     };
-                    m_rigid_body_simulator.insert_contact_constraints(
+                    m_rigid_body_simulator_ptr->insert_contact_constraints(
                             rb_1_it->second,
                             rb_2_it->second,
                             cid,
                             contact_point,
                             unit_normal,
-                            m_collision_scene.get_material(coid_1),
-                            m_collision_scene.get_material(coid_2),
+                            m_collision_scene_ptr->get_material(coid_1),
+                            m_collision_scene_ptr->get_material(coid_2),
                             &friction_info,
                             penetration_depth,
                             20.0f,
@@ -849,7 +857,7 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                 },
             true
             );
-    m_rigid_body_simulator.do_simulation_step(time_to_simulate_in_seconds, time_to_simulate_in_seconds);
+    m_rigid_body_simulator_ptr->do_simulation_step(time_to_simulate_in_seconds, time_to_simulate_in_seconds);
     for (auto const&  rb_id_and_node_ptr : m_binding_of_rigid_bodies)
     {
         angeo::rigid_body_id const  rb_id = rb_id_and_node_ptr.first;
@@ -865,8 +873,8 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
         {
             matrix44  rb_world_matrix;
             compose_from_base_matrix(
-                    m_rigid_body_simulator.get_position_of_mass_centre(rb_id),
-                    quaternion_to_rotation_matrix(m_rigid_body_simulator.get_orientation(rb_id)),
+                    m_rigid_body_simulator_ptr->get_position_of_mass_centre(rb_id),
+                    quaternion_to_rotation_matrix(m_rigid_body_simulator_ptr->get_orientation(rb_id)),
                     rb_world_matrix
                     );
             matrix44 const  parent_to_base_matrix = inverse44(rb_node_ptr->get_parent()->get_world_matrix());
@@ -878,8 +886,8 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
         }
         else
             rb_node_ptr->relocate(
-                    m_rigid_body_simulator.get_position_of_mass_centre(rb_id),
-                    m_rigid_body_simulator.get_orientation(rb_id)
+                    m_rigid_body_simulator_ptr->get_position_of_mass_centre(rb_id),
+                    m_rigid_body_simulator_ptr->get_orientation(rb_id)
                     );
 
         update_collider_locations_in_subtree(rb_node_ptr);
@@ -1437,8 +1445,8 @@ void  simulator::render_colliders(
                         case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
                             {
                                 std::pair<float_32_bit, float_32_bit> const  key {
-                                        m_collision_scene.get_capsule_half_distance_between_end_points(coid),
-                                        m_collision_scene.get_capsule_thickness_from_central_line(coid)
+                                        m_collision_scene_ptr->get_capsule_half_distance_between_end_points(coid),
+                                        m_collision_scene_ptr->get_capsule_thickness_from_central_line(coid)
                                         };
                                 auto  it = m_cache_of_batches_of_colliders.capsules.find(key);
                                 if (it == m_cache_of_batches_of_colliders.capsules.end())
@@ -1451,7 +1459,7 @@ void  simulator::render_colliders(
                             break;
                         case angeo::COLLISION_SHAPE_TYPE::SPHERE:
                             {
-                                float_32_bit const  key = m_collision_scene.get_sphere_radius(coid);
+                                float_32_bit const  key = m_collision_scene_ptr->get_sphere_radius(coid);
                                 auto  it = m_cache_of_batches_of_colliders.spheres.find(key);
                                 if (it == m_cache_of_batches_of_colliders.spheres.end())
                                     it = m_cache_of_batches_of_colliders.spheres.insert({
@@ -1464,7 +1472,7 @@ void  simulator::render_colliders(
                         case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
                             {
                                 detail::collider_triangle_mesh_vertex_getter const* const  vertices_getter_ptr =
-                                    m_collision_scene.get_triangle_points_getter(coid)
+                                    m_collision_scene_ptr->get_triangle_points_getter(coid)
                                                      .target<detail::collider_triangle_mesh_vertex_getter>();
                                 std::string const  key =
                                     boost::filesystem::path(vertices_getter_ptr->get_vertex_buffer().key().get_unique_id())
@@ -1660,7 +1668,7 @@ void  simulator::update_collider_locations_in_subtree(scn::scene_node_ptr  node_
             node_ptr,
             [this](scn::collider& collider, scn::scene_node_ptr const  node_ptr) {
                     for (auto  coid : collider.ids())
-                        m_collision_scene.on_position_changed(coid, node_ptr->get_world_matrix());
+                        m_collision_scene_ptr->on_position_changed(coid, node_ptr->get_world_matrix());
                 }
             );
 }
@@ -1703,7 +1711,7 @@ void  simulator::insert_collision_sphere_to_scene_node(
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     angeo::collision_object_id const  collider_id =
-            m_collision_scene.insert_sphere(radius, node_ptr->get_world_matrix(), material, as_dynamic);
+            m_collision_scene_ptr->insert_sphere(radius, node_ptr->get_world_matrix(), material, as_dynamic);
     scn::insert_collider(*node_ptr, id.get_record_name(), collider_id, density_multiplier);
     invalidate_rigid_body_controling_node(node_ptr, true);
 }
@@ -1721,7 +1729,7 @@ void  simulator::insert_collision_capsule_to_scene_node(
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     angeo::collision_object_id const  collider_id =
-            m_collision_scene.insert_capsule(
+            m_collision_scene_ptr->insert_capsule(
                     half_distance_between_end_points,
                     thickness_from_central_line,
                     node_ptr->get_world_matrix(),
@@ -1744,7 +1752,7 @@ void  simulator::insert_collision_trianle_mesh_to_scene_node(
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     std::vector<angeo::collision_object_id>  collider_ids;
-    m_collision_scene.insert_triangle_mesh(
+    m_collision_scene_ptr->insert_triangle_mesh(
             index_buffer.num_primitives(),
             detail::collider_triangle_mesh_vertex_getter(vertex_buffer, index_buffer),
             node_ptr->get_world_matrix(),
@@ -1766,7 +1774,7 @@ void  simulator::erase_collision_object_from_scene_node(
     if (auto const  collider_ptr = scn::get_collider(*node_ptr))
     {
         for (auto  coid : collider_ptr->ids()) {
-            m_collision_scene.erase_object(coid);
+            m_collision_scene_ptr->erase_object(coid);
             m_binding_of_collision_objects.erase(coid);
         }
         m_scene_selection.erase_record(id);
@@ -1787,10 +1795,10 @@ void  simulator::get_collision_sphere_info(
 {
     scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_id()));
     ASSUMPTION(collider != nullptr);
-    radius = m_collision_scene.get_sphere_radius(collider->id());
-    material = m_collision_scene.get_material(collider->id());
+    radius = m_collision_scene_ptr->get_sphere_radius(collider->id());
+    material = m_collision_scene_ptr->get_material(collider->id());
     density_multiplier = collider->get_density_multiplier();
-    is_dynamic = m_collision_scene.is_dynamic(collider->id());
+    is_dynamic = m_collision_scene_ptr->is_dynamic(collider->id());
 }
 
 void  simulator::get_collision_capsule_info(
@@ -1804,11 +1812,11 @@ void  simulator::get_collision_capsule_info(
 {
     scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_id()));
     ASSUMPTION(collider != nullptr);
-    half_distance_between_end_points = m_collision_scene.get_capsule_half_distance_between_end_points(collider->id());
-    thickness_from_central_line = m_collision_scene.get_capsule_thickness_from_central_line(collider->id());
-    material = m_collision_scene.get_material(collider->id());
+    half_distance_between_end_points = m_collision_scene_ptr->get_capsule_half_distance_between_end_points(collider->id());
+    thickness_from_central_line = m_collision_scene_ptr->get_capsule_thickness_from_central_line(collider->id());
+    material = m_collision_scene_ptr->get_material(collider->id());
     density_multiplier = collider->get_density_multiplier();
-    is_dynamic = m_collision_scene.is_dynamic(collider->id());
+    is_dynamic = m_collision_scene_ptr->is_dynamic(collider->id());
 }
 
 
@@ -1823,10 +1831,10 @@ void  simulator::get_collision_triangle_mesh_info(
     scn::collider const* const  collider = scn::get_collider(*get_scene_node(id.get_node_id()));
     ASSUMPTION(collider != nullptr);
     detail::collider_triangle_mesh_vertex_getter const* const  vertices_getter_ptr =
-            m_collision_scene.get_triangle_points_getter(collider->id()).target<detail::collider_triangle_mesh_vertex_getter>();
+            m_collision_scene_ptr->get_triangle_points_getter(collider->id()).target<detail::collider_triangle_mesh_vertex_getter>();
     vertex_buffer = vertices_getter_ptr->get_vertex_buffer();
     index_buffer = vertices_getter_ptr->get_index_buffer();
-    material = m_collision_scene.get_material(collider->id());
+    material = m_collision_scene_ptr->get_material(collider->id());
     density_multiplier = collider->get_density_multiplier();
 }
 
@@ -1846,7 +1854,7 @@ void  simulator::insert_rigid_body_to_scene_node(
     ASSUMPTION(find_nearest_rigid_body_node(node_ptr->get_parent()) == nullptr);
 
     angeo::rigid_body_id const  rb_id =
-            m_rigid_body_simulator.insert_rigid_body(
+            m_rigid_body_simulator_ptr->insert_rigid_body(
                     vector3_zero(),
                     quaternion_identity(),
                     1.0f,
@@ -1878,7 +1886,7 @@ void  simulator::erase_rigid_body_from_scene_node(
             m_binding_of_collision_objects.erase(coid);
         bool  has_static_collider = false;
         for (angeo::collision_object_id coid : coids)
-            if (!m_collision_scene.is_dynamic(coid))
+            if (!m_collision_scene_ptr->is_dynamic(coid))
             {
                 has_static_collider = true;
                 break;
@@ -1886,9 +1894,9 @@ void  simulator::erase_rigid_body_from_scene_node(
         if (!has_static_collider)
             for (std::size_t i = 0U; i < coids.size(); ++i)
                 for (std::size_t j = i + 1U; j < coids.size(); ++j)
-                    m_collision_scene.enable_colliding(coids.at(i), coids.at(j));
+                    m_collision_scene_ptr->enable_colliding(coids.at(i), coids.at(j));
 
-        m_rigid_body_simulator.erase_rigid_body(rb_ptr->id());
+        m_rigid_body_simulator_ptr->erase_rigid_body(rb_ptr->id());
         m_binding_of_rigid_bodies.erase(rb_ptr->id());
         m_transition_data_from_simulation_to_edit.erase_backup_for_rigid_body(rb_ptr->id());
 
@@ -1911,10 +1919,10 @@ void  simulator::get_rigid_body_info(
     scn::scene_node_const_ptr const  node_ptr = get_scene_node(id);
     scn::rigid_body const* const  rb_ptr = scn::get_rigid_body(*node_ptr);
     ASSUMPTION(rb_ptr != nullptr);
-    linear_velocity = m_rigid_body_simulator.get_linear_velocity(rb_ptr->id());
-    angular_velocity = m_rigid_body_simulator.get_angular_velocity(rb_ptr->id());
-    external_linear_acceleration = m_rigid_body_simulator.get_external_linear_acceleration(rb_ptr->id());
-    external_angular_acceleration = m_rigid_body_simulator.get_external_angular_acceleration(rb_ptr->id());
+    linear_velocity = m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id());
+    angular_velocity = m_rigid_body_simulator_ptr->get_angular_velocity(rb_ptr->id());
+    external_linear_acceleration = m_rigid_body_simulator_ptr->get_external_linear_acceleration(rb_ptr->id());
+    external_angular_acceleration = m_rigid_body_simulator_ptr->get_external_angular_acceleration(rb_ptr->id());
 }
 
 
@@ -1967,18 +1975,18 @@ void  simulator::save_collider(scn::collider const&  collider, boost::property_t
     {
     case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
         data.put("shape_type", "capsule");
-        data.put("half_distance_between_end_points", m_collision_scene.get_capsule_half_distance_between_end_points(collider.id()));
-        data.put("thickness_from_central_line", m_collision_scene.get_capsule_thickness_from_central_line(collider.id()));
+        data.put("half_distance_between_end_points", m_collision_scene_ptr->get_capsule_half_distance_between_end_points(collider.id()));
+        data.put("thickness_from_central_line", m_collision_scene_ptr->get_capsule_thickness_from_central_line(collider.id()));
         break;
     case angeo::COLLISION_SHAPE_TYPE::SPHERE:
         data.put("shape_type", "sphere");
-        data.put("radius", m_collision_scene.get_sphere_radius(collider.id()));
+        data.put("radius", m_collision_scene_ptr->get_sphere_radius(collider.id()));
         break;
     case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
         {
             data.put("shape_type", "triangle mesh");
             detail::collider_triangle_mesh_vertex_getter const* const  vertices_getter_ptr =
-                m_collision_scene.get_triangle_points_getter(collider.id()).target<detail::collider_triangle_mesh_vertex_getter>();
+                m_collision_scene_ptr->get_triangle_points_getter(collider.id()).target<detail::collider_triangle_mesh_vertex_getter>();
             data.put(
                 "buffers_directory",
                 boost::filesystem::path(vertices_getter_ptr->get_vertex_buffer().key().get_unique_id()).parent_path().string()
@@ -1990,8 +1998,8 @@ void  simulator::save_collider(scn::collider const&  collider, boost::property_t
         break;
     }
 
-    data.put("material", to_string(m_collision_scene.get_material(collider.id())));
-    data.put("is_dynamic", m_collision_scene.is_dynamic(collider.id()));
+    data.put("material", to_string(m_collision_scene_ptr->get_material(collider.id())));
+    data.put("is_dynamic", m_collision_scene_ptr->is_dynamic(collider.id()));
     data.put("density_multiplier", collider.get_density_multiplier());
 }
 
@@ -2026,10 +2034,26 @@ void  simulator::save_rigid_body(angeo::rigid_body_id const  rb_id, boost::prope
         data.put(key_path / "z", u(2));
     };
 
-    save_vector("linear_velocity", m_rigid_body_simulator.get_linear_velocity(rb_id));
-    save_vector("angular_velocity", m_rigid_body_simulator.get_angular_velocity(rb_id));
-    save_vector("external_linear_acceleration", m_rigid_body_simulator.get_external_linear_acceleration(rb_id));
-    save_vector("external_angular_acceleration", m_rigid_body_simulator.get_external_angular_acceleration(rb_id));
+    save_vector("linear_velocity", m_rigid_body_simulator_ptr->get_linear_velocity(rb_id));
+    save_vector("angular_velocity", m_rigid_body_simulator_ptr->get_angular_velocity(rb_id));
+    save_vector("external_linear_acceleration", m_rigid_body_simulator_ptr->get_external_linear_acceleration(rb_id));
+    save_vector("external_angular_acceleration", m_rigid_body_simulator_ptr->get_external_angular_acceleration(rb_id));
+}
+
+
+void  simulator::on_create_scene_object(ai::agent_id const  agent_id, ai::environment_models::scene_action_name const&  scene_action_name)
+{
+    TMPROF_BLOCK();
+
+
+}
+
+
+void  simulator::on_destroy_scene_object(angeo::rigid_body_id const  rigid_body_id)
+{
+    TMPROF_BLOCK();
+
+
 }
 
 
@@ -2047,8 +2071,8 @@ void  simulator::clear_scene()
 
     get_scene().clear();
 
-    m_collision_scene.clear();
-    m_rigid_body_simulator.clear();
+    m_collision_scene_ptr->clear();
+    m_rigid_body_simulator_ptr->clear();
     m_binding_of_collision_objects.clear();
     m_binding_of_rigid_bodies.clear();
     m_gfx_animated_objects.clear();

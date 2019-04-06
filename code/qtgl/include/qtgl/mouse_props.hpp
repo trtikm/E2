@@ -19,6 +19,7 @@ mouse_button_name  MIDDLE_MOUSE_BUTTON();
 
 struct mouse_props
 {
+    mouse_props();
     mouse_props(
             float_32_bit const  x,                      // Current mouse x-position
             float_32_bit const  y,                      // Current mouse y-position

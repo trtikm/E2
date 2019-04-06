@@ -9,6 +9,19 @@ mouse_button_name  RIGHT_MOUSE_BUTTON() { return "RMOUSE"; }
 mouse_button_name  MIDDLE_MOUSE_BUTTON() { return "MMOUSE"; }
 
 
+mouse_props::mouse_props()
+    : m_x(0.0f)
+    , m_y(0.0f)
+    , m_x_delta(0.0f)
+    , m_y_delta(0.0f)
+    , m_wheel_delta_x(0.0f)
+    , m_wheel_delta_y(0.0f)
+    , m_pressed()
+    , m_just_pressed()
+    , m_just_released()
+{}
+
+
 mouse_props::mouse_props(
         float_32_bit const  x,
         float_32_bit const  y,

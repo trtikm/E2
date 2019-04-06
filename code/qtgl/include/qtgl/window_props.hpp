@@ -8,6 +8,7 @@ namespace qtgl {
 
 struct window_props
 {
+    window_props();
     window_props(
             natural_32_bit const  width_in_pixels,
             natural_32_bit const  height_in_pixels,
