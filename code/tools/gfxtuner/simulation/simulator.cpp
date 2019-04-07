@@ -631,7 +631,7 @@ void  simulator::on_simulation_resumed()
                 float_32_bit  inverted_mass = 0.0f;
                 matrix33  inverted_inertia_tensor_in_local_space = matrix33_zero();
 
-                bool  has_static_collider = false;
+                bool  has_static_collider = coids.empty();
                 for (angeo::collision_object_id  coid : coids)
                     if (!m_collision_scene_ptr->is_dynamic(coid))
                     {
