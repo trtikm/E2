@@ -1200,9 +1200,11 @@ def save_hierarchy_of_bones(
         for bone in armature.pose.bones:
             pose_bones[bone.name] = bone
         names = []
+        lengths = []
         for bone in armature.data.bones:
             if bone.use_deform is True:
                 names.append(bone.name)
+                lengths.append((bone.tail - bone.head).length)
         parents = []
         for bone in armature.data.bones:
             if bone.use_deform is False:
@@ -1236,6 +1238,13 @@ def save_hierarchy_of_bones(
             remove_ignored_part_of_name(armature.name, "SKELETAL"),
             "names.txt"
             )
+        export_info["bone_lengths"] = os.path.join(
+            export_info["root_dir"],
+            "animations",
+            "skeletal",
+            remove_ignored_part_of_name(armature.name, "SKELETAL"),
+            "lengths.txt"
+            )
         export_info["bone_parents"] = os.path.join(
             export_info["root_dir"],
             "animations",
@@ -1249,6 +1258,11 @@ def save_hierarchy_of_bones(
             f.write(str(len(names)) + "\n")
             for name in names:
                 f.write(name + "\n")
+        with open(export_info["bone_lengths"], "w") as f:
+            print("Saving lengths of bones: " + os.path.relpath(export_info["bone_lengths"], export_info["root_dir"]))
+            f.write(str(len(lengths)) + "\n")
+            for l in lengths:
+                f.write(float_to_string(l) + "\n")
         with open(export_info["bone_parents"], "w") as f:
             print("Saving parents of bones: " + os.path.relpath(export_info["bone_parents"], export_info["root_dir"]))
             f.write(str(len(parents)) + "\n")
