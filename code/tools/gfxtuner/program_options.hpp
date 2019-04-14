@@ -17,6 +17,9 @@ public:
     
     std::string  dataRoot() const { return vm["data"].as<std::string>(); }
 
+    bool  has_scene_dir() const { return vm.count("scene") != 0UL; }
+    std::string  scene_dir() const { return vm["scene"].as<std::string>(); }
+
     // Add more option access/query functions here, if needed.
 
     std::ostream& operator<<(std::ostream& ostr) const;

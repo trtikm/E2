@@ -16,6 +16,13 @@ program_options::program_options(int argc, char* argv[])
         ("data,D",
             bpo::value<std::string>()->default_value("../data"),
             "A root directory under which program's data are stored.")
+        ("scene,s",
+            bpo::value<std::string>(),
+            "A directory of a scene to be loaded. A scene directory "
+            "always contains a file 'hierarchy.info'. The scene can either "
+            "be absolute disk path, or relative path to either the "
+            "current working directory or to the data root directory "
+            "(see --data option).")
         // Specify more options here, if needed.
         ;
 

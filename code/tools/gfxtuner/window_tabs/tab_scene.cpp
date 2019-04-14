@@ -345,6 +345,25 @@ void  widgets::on_scene_hierarchy_item_selected()
     wnd()->set_focus_to_glwindow(false);
 }
 
+void  widgets::on_simulator_started()
+{
+    if (get_program_options()->has_scene_dir())
+    {
+        boost::filesystem::path  scene_dir = get_program_options()->scene_dir();
+        if (!boost::filesystem::is_directory(scene_dir))
+            scene_dir = get_program_options()->dataRoot() / scene_dir;
+        if (boost::filesystem::is_directory(scene_dir) && boost::filesystem::is_regular_file(scene_dir / "hierarchy.info"))
+            open_scene(scene_dir);
+        else
+        {
+            clear_scene();
+            wnd()->print_status_message("ERROR: Scene directory passed via command-line is wrong.", 10000);
+        }
+    }
+    else
+        clear_scene();
+}
+
 void  widgets::on_scene_hierarchy_item_update_action(tree_widget_item* const  item)
 {
     if (!represents_record(item))
