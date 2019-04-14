@@ -1,6 +1,8 @@
 #ifndef AI_SKELETON_UTILS_HPP_INCLUDED
 #   define AI_SKELETON_UTILS_HPP_INCLUDED
 
+#   include <ai/skeleton_composition.hpp>
+#   include <ai/skeletal_motion_templates.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/coordinate_system.hpp>
 #   include <boost/filesystem/path.hpp>
@@ -8,6 +10,10 @@
 #   include <string>
 
 namespace ai {
+
+
+skeleton_composition_ptr   load_skeleton_composition(boost::filesystem::path const&  skeleton_dir, std::string&  error_message);
+skeletal_motion_templates_ptr  load_skeletal_motion_templates(boost::filesystem::path const&  skeleton_dir, std::string&  error_message);
 
 
 /**

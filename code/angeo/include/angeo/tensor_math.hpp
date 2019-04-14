@@ -143,7 +143,7 @@ void  basis_to_rotation_matrix(
         matrix33&  R);
 void  compose_from_base_matrix(
         vector3 const&  origin,
-        matrix33 const&  rotation_matrix,
+        matrix33 const&  rot_matrix,
         matrix44&  result
         );
 void  compose_from_base_matrix(
@@ -153,21 +153,9 @@ void  compose_from_base_matrix(
         vector3 const&  z_axis_unit_vector,
         matrix44&  M
         );
-void  decompose_from_base_matrix(
-        matrix44 const&  M,
-        vector3&  origin,
-        matrix33&  rotation_matrix
-        );
-void  decompose_from_base_matrix(
-        matrix44 const&  M,
-        vector3&  origin,
-        vector3&  x_axis_unit_vector,
-        vector3&  y_axis_unit_vector,
-        vector3&  z_axis_unit_vector
-        );
 void  compose_to_base_matrix(
         vector3 const&  origin,
-        matrix33 const&  rotation_matrix,   // Not transposed! The function applies the transpose automatically
+        matrix33 const&  rot_matrix,   // Not transposed! The function applies the transpose automatically
         matrix44&  result
         );
 void  compose_to_base_matrix(
@@ -177,17 +165,10 @@ void  compose_to_base_matrix(
         vector3 const&  z_axis_unit_vector,
         matrix44&  M
         );
-void  decompose_to_base_matrix(
+void  decompose_matrix44(
         matrix44 const&  M,
         vector3&  origin,
-        matrix33&  rotation_matrix   // The result is normal rotation matrix, i.e. NOT transposed!
-        );
-void  decompose_to_base_matrix(
-        matrix44 const&  M,
-        vector3&  origin,
-        vector3&  x_axis_unit_vector,
-        vector3&  y_axis_unit_vector,
-        vector3&  z_axis_unit_vector
+        matrix33&  rot_matrix
         );
 inline quaternion  angle_axis_to_quaternion(scalar const  angle, vector3 const&  axis) {
     return quaternion(Eigen::AngleAxis<scalar>(angle,axis));
@@ -201,6 +182,7 @@ matrix33  yaw_pitch_roll_to_rotation(scalar const  yaw, scalar const  pitch, sca
 void  rotation_to_yaw_pitch_roll(matrix33 const&  R, scalar&  yaw, scalar&  pitch, scalar&  roll);
 
 inline vector3  translation_vector(matrix44 const&  M) { return vector3(M(0, 3), M(1, 3), M(2, 3)); }
+matrix33&  rotation_matrix(matrix44 const&  M, matrix33&  R);
 matrix33  rotation_matrix(matrix44 const&  M);
 
 //template<typename T, int nrows, int ncols>

@@ -30,6 +30,8 @@ add_executable(${THIS_TARGET_NAME}
     menu_bar_record_collider.cpp
     menu_bar_record_rigid_body.hpp
     menu_bar_record_rigid_body.cpp
+    menu_bar_record_agent.hpp
+    menu_bar_record_agent.cpp
     
     window_tabs/tab_draw.hpp
     window_tabs/tab_draw.cpp
@@ -57,6 +59,8 @@ add_executable(${THIS_TARGET_NAME}
     window_tabs/tab_scene_record_collider_props_dialog.cpp 
     window_tabs/tab_scene_record_rigid_body.hpp
     window_tabs/tab_scene_record_rigid_body.cpp
+    window_tabs/tab_scene_record_agent.hpp
+    window_tabs/tab_scene_record_agent.cpp
 
     window_tabs/tab_statistics.hpp
     window_tabs/tab_statistics.cpp

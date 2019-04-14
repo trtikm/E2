@@ -1,4 +1,5 @@
 #include <ai/agents.hpp>
+#include <angeo/skeleton_kinematics.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -39,11 +40,26 @@ agents::agents(
 
 
 agent_id  agents::insert(
+        std::vector<angeo::coordinate_system> const&  current_frames,
         skeleton_composition_const_ptr const  skeleton,
         skeletal_motion_templates_const_ptr const  motion_templates
         )
 {
     TMPROF_BLOCK();
+
+    ASSUMPTION(skeleton != nullptr);
+    ASSUMPTION(
+        !skeleton->pose_frames.empty() &&
+        skeleton->pose_frames.size() == current_frames.size() &&
+        skeleton->pose_frames.size() == skeleton->names.size() &&
+        skeleton->pose_frames.size() == skeleton->parents.size() &&
+        (skeleton->children.empty() || skeleton->pose_frames.size() == skeleton->children.size())
+        );
+    ASSUMPTION(skeleton->parents.at(0U) == -1);
+    ASSUMPTION(motion_templates != nullptr);
+
+    if (skeleton->children.empty())
+        angeo::skeleton_compute_child_bones(skeleton->parents, std::const_pointer_cast<skeleton_composition>(skeleton)->children);
 
     agent_id  id = 0U;
     for ( ; id != m_agents.size(); ++id)
@@ -53,6 +69,7 @@ agent_id  agents::insert(
         m_agents.resize(m_agents.size() + 1U, nullptr);
 
     blackboard_ptr const  bb = std::make_shared<blackboard>();
+    bb->m_frames = current_frames;
     bb->m_environment_models = m_environment_models;
     bb->m_skeleton_composition = skeleton;
     bb->m_motion_templates = motion_templates;

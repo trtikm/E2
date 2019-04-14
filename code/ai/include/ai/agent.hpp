@@ -8,6 +8,7 @@
 #   include <ai/sensory_controller.hpp>
 #   include <ai/action_controller.hpp>
 #   include <ai/blackboard.hpp>
+#   include <vector>
 #   include <memory>
 
 namespace ai {
@@ -23,6 +24,9 @@ struct agent
     
     void  set_use_cortex_mock(bool const  state) { if (state != uses_cortex_mock()) m_cortex_primary.swap(m_cortex_secondary); }
     bool  uses_cortex_mock() const { return dynamic_cast<cortex_mock*>(m_cortex_primary.get()) != nullptr; }
+
+    std::vector<angeo::coordinate_system> const& get_current_frames() const { return m_blackboard->m_frames; }
+    std::vector<angeo::coordinate_system>&  get_current_frames() { return m_blackboard->m_frames; }
 
 private:
     std::unique_ptr<cortex>  m_cortex_primary;

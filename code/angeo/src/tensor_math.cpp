@@ -124,15 +124,15 @@ void  basis_to_rotation_matrix(
 
 void  compose_from_base_matrix(
         vector3 const&  origin,
-        matrix33 const&  rotation_matrix,
+        matrix33 const&  rot_matrix,
         matrix44&  result
         )
 {
     result <<
-        rotation_matrix(0, 0), rotation_matrix(0, 1), rotation_matrix(0, 2), origin(0),
-        rotation_matrix(1, 0), rotation_matrix(1, 1), rotation_matrix(1, 2), origin(1),
-        rotation_matrix(2, 0), rotation_matrix(2, 1), rotation_matrix(2, 2), origin(2),
-        0.0f,                  0.0f,                  0.0f,                  1.0f
+        rot_matrix(0, 0), rot_matrix(0, 1), rot_matrix(0, 2), origin(0),
+        rot_matrix(1, 0), rot_matrix(1, 1), rot_matrix(1, 2), origin(1),
+        rot_matrix(2, 0), rot_matrix(2, 1), rot_matrix(2, 2), origin(2),
+        0.0f,             0.0f,             0.0f,             1.0f
         ;
 }
 
@@ -152,44 +152,22 @@ void  compose_from_base_matrix(
 }
 
 
-void  decompose_from_base_matrix(
-        matrix44 const&  M,
-        vector3&  origin,
-        matrix33&  rotation_matrix
-        )
-{
-    NOT_IMPLEMENTED_YET();
-}
-
-
-void  decompose_from_base_matrix(
-        matrix44 const&  M,
-        vector3&  origin,
-        vector3&  x_axis_unit_vector,
-        vector3&  y_axis_unit_vector,
-        vector3&  z_axis_unit_vector
-        )
-{
-    NOT_IMPLEMENTED_YET();
-}
-
-
 void  compose_to_base_matrix(
         vector3 const&  origin,
-        matrix33 const&  rotation_matrix,
+        matrix33 const&  rot_matrix,
         matrix44&  result
         )
 {
     vector3 const  p {
-        -(rotation_matrix(0, 0) * origin(0) + rotation_matrix(1, 0) * origin(1) + rotation_matrix(2, 0) * origin(2)),
-        -(rotation_matrix(0, 1) * origin(0) + rotation_matrix(1, 1) * origin(1) + rotation_matrix(2, 1) * origin(2)),
-        -(rotation_matrix(0, 2) * origin(0) + rotation_matrix(1, 2) * origin(1) + rotation_matrix(2, 2) * origin(2))
+        -(rot_matrix(0, 0) * origin(0) + rot_matrix(1, 0) * origin(1) + rot_matrix(2, 0) * origin(2)),
+        -(rot_matrix(0, 1) * origin(0) + rot_matrix(1, 1) * origin(1) + rot_matrix(2, 1) * origin(2)),
+        -(rot_matrix(0, 2) * origin(0) + rot_matrix(1, 2) * origin(1) + rot_matrix(2, 2) * origin(2))
     };
     result <<
-        rotation_matrix(0, 0), rotation_matrix(1, 0), rotation_matrix(2, 0), p(0),
-        rotation_matrix(0, 1), rotation_matrix(1, 1), rotation_matrix(2, 1), p(1),
-        rotation_matrix(0, 2), rotation_matrix(1, 2), rotation_matrix(2, 2), p(2),
-        0.0f,                  0.0f,                  0.0f,                  1.0f
+        rot_matrix(0, 0), rot_matrix(1, 0), rot_matrix(2, 0), p(0),
+        rot_matrix(0, 1), rot_matrix(1, 1), rot_matrix(2, 1), p(1),
+        rot_matrix(0, 2), rot_matrix(1, 2), rot_matrix(2, 2), p(2),
+        0.0f,             0.0f,             0.0f,             1.0f
         ;
 }
 
@@ -209,25 +187,14 @@ void  compose_to_base_matrix(
 }
 
 
-void  decompose_to_base_matrix(
+void  decompose_matrix44(
         matrix44 const&  M,
         vector3&  origin,
-        matrix33&  rotation_matrix
+        matrix33&  rot_matrix
         )
 {
-    NOT_IMPLEMENTED_YET();
-}
-
-
-void  decompose_to_base_matrix(
-        matrix44 const&  M,
-        vector3&  origin,
-        vector3&  x_axis_unit_vector,
-        vector3&  y_axis_unit_vector,
-        vector3&  z_axis_unit_vector
-        )
-{
-    NOT_IMPLEMENTED_YET();
+    origin = translation_vector(M);
+    rotation_matrix(M, rot_matrix);
 }
 
 
@@ -256,12 +223,19 @@ void  rotation_to_yaw_pitch_roll(matrix33 const&  R, scalar&  yaw, scalar&  pitc
 }
 
 
-matrix33  rotation_matrix(matrix44 const&  M)
+matrix33&  rotation_matrix(matrix44 const&  M, matrix33&  R)
 {
-    matrix33  R;
     R(0, 0) = M(0, 0);  R(0, 1) = M(0, 1);  R(0, 2) = M(0, 2);
     R(1, 0) = M(1, 0);  R(1, 1) = M(1, 1);  R(1, 2) = M(1, 2);
     R(2, 0) = M(2, 0);  R(2, 1) = M(2, 1);  R(2, 2) = M(2, 2);
+    return R;
+}
+
+
+matrix33  rotation_matrix(matrix44 const&  M)
+{
+    matrix33  R;
+    rotation_matrix(M, R);
     return R;
 }
 

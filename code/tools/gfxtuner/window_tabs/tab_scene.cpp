@@ -1093,14 +1093,14 @@ tree_widget_item*  widgets::load_scene_node(
 
     tree_widget_item* const  current_node_item = insert_coord_system(id, origin, orientation, parent_item);
 
+    boost::property_tree::ptree const&  children = node_tree.find("children")->second;
+    for (auto it = children.begin(); it != children.end(); ++it)
+        load_scene_node(id / it->first, it->second, current_node_item);
+
     boost::property_tree::ptree const&  folders = node_tree.find("folders")->second;
     for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
         for (auto record_it = folder_it->second.begin(); record_it != folder_it->second.end(); ++record_it)
             load_scene_record({ id, folder_it->first, record_it->first }, record_it->second);
-
-    boost::property_tree::ptree const&  children = node_tree.find("children")->second;
-    for (auto it = children.begin(); it != children.end(); ++it)
-        load_scene_node(id / it->first, it->second, current_node_item);
 
     return current_node_item;
 }

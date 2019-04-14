@@ -6,6 +6,7 @@
 #   include <angeo/rigid_body.hpp>
 #   include <angeo/skeleton_kinematics.hpp>
 #   include <angeo/tensor_math.hpp>
+#   include <string>
 #   include <memory>
 
 namespace ai {
@@ -14,7 +15,8 @@ namespace ai {
 struct  skeleton_composition
 {
     std::vector<angeo::coordinate_system>  pose_frames; // For each bone a coord. system in the local space of the parent bone (if any).
-    std::vector<integer_32_bit>  parents;
+    std::vector<std::string>  names;
+    std::vector<integer_32_bit>  parents;   // INVARIANT(parents.at(0)==-1); The first bone must be the 'pivot/root' bone of the skeleton, like 'hips'.
     std::vector<std::vector<integer_32_bit> >  children;
 
     std::vector<std::vector<angeo::joint_rotation_props> > rotation_props;
@@ -27,6 +29,8 @@ struct  skeleton_composition
                                                                 // vector 'rigid_bodies') is equal to 'invalid_rigid_body_id()'.
 };
 
+
+using  skeleton_composition_ptr = std::shared_ptr<skeleton_composition>;
 using  skeleton_composition_const_ptr = std::shared_ptr<skeleton_composition const>;
 
 

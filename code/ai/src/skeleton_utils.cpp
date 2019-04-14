@@ -9,6 +9,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <unordered_set>
+#include <memory>
 
 namespace ai { namespace detail {
 
@@ -19,6 +20,40 @@ namespace ai { namespace detail {
 }}
 
 namespace ai {
+
+
+skeleton_composition_ptr   load_skeleton_composition(boost::filesystem::path const&  skeleton_dir, std::string&  error_message)
+{
+    skeleton_composition_ptr const  composition = std::make_shared<skeleton_composition>();
+    {
+        error_message =
+                load_skeleton(
+                        skeleton_dir,
+                        composition->pose_frames,
+                        composition->names,
+                        composition->parents
+                        );
+        if (!error_message.empty())
+            return nullptr;
+        angeo::skeleton_compute_child_bones(composition->parents, composition->children);
+    }
+    return composition;
+}
+
+
+skeletal_motion_templates_ptr  load_skeletal_motion_templates(boost::filesystem::path const&  skeleton_dir, std::string&  error_message)
+{
+    skeletal_motion_templates_ptr const  motion_templates = std::make_shared<skeletal_motion_templates>();
+    {
+        for (boost::filesystem::directory_entry& entry : boost::filesystem::directory_iterator(skeleton_dir))
+            if (boost::filesystem::is_directory(entry.path()))
+                motion_templates->motions_map.insert({
+                        boost::filesystem::basename(entry.path()),
+                        skeletal_motion_templates::keyframes()
+                        }).first->second.insert_load_request(entry.path());
+    }
+    return motion_templates;
+}
 
 
 std::string  load_skeleton(

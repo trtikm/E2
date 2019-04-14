@@ -14,9 +14,11 @@ struct skeletal_motion_templates
     using  keyframe = qtgl::keyframe;
     using  keyframes = qtgl::keyframes;
     
-    std::unordered_map<std::string, keyframes>  m_motions_map;
+    std::unordered_map<std::string, keyframes>  motions_map;
 };
 
+
+using  skeletal_motion_templates_ptr = std::shared_ptr<skeletal_motion_templates>;
 using  skeletal_motion_templates_const_ptr = std::shared_ptr<skeletal_motion_templates const>;
 
 

@@ -14,6 +14,9 @@ namespace ai {
 ///       Only the idea of a shared storage is used here.
 struct blackboard
 {
+    std::vector<angeo::coordinate_system>  m_frames;    // For each bone a coord. system in the local space of the parent bone if any,
+                                                        // otherwise in the world space. 'm_frames.at(0)' is ALWAYS in the world space,
+                                                        // because 'INVARIANT(m_skeleton_composition->parents.at(0) == -1)'.
     environment_models_ptr  m_environment_models;
     skeleton_composition_const_ptr  m_skeleton_composition;
     skeletal_motion_templates_const_ptr  m_motion_templates;

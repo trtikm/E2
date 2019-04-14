@@ -9,8 +9,7 @@
 #   include <scene/scene_editing.hpp>
 #   include <scene/records/collider/collider.hpp>
 #   include <scene/records/rigid_body/rigid_body.hpp>
-#   include <gfxtuner/simulation/gfx_object.hpp>
-#   include <gfxtuner/simulation/skeleton.hpp>
+#   include <scene/records/agent/agent.hpp>
 #   include <gfxtuner/simulation/transition_data_from_simulation_to_edit.hpp>
 #   include <qtgl/real_time_simulator.hpp>
 #   include <qtgl/camera.hpp>
@@ -168,11 +167,17 @@ struct simulator : public qtgl::real_time_simulator
             vector3&  external_angular_acceleration
             );
 
+    void  insert_agent(scn::scene_record_id const&  id, scn::skeleton_props_ptr const  props);
+    void  erase_agent(scn::scene_record_id const&  id);
+
     void  load_collider(boost::property_tree::ptree const&  data, scn::scene_node_id const&  id);
     void  save_collider(scn::collider const&  collider, boost::property_tree::ptree&  data);
 
     void  load_rigid_body(boost::property_tree::ptree const&  data, scn::scene_node_id const&  id);
     void  save_rigid_body(angeo::rigid_body_id const  rb_id, boost::property_tree::ptree&  data);
+
+    void  load_agent(boost::property_tree::ptree const&  data, scn::scene_record_id const&  id);
+    void  save_agent(scn::scene_node_ptr const  node_ptr, boost::property_tree::ptree&  data);
 
     void  clear_scene();
 
@@ -328,8 +333,6 @@ private:
     };
     cache_of_batches_of_colliders  m_cache_of_batches_of_colliders;
 
-    std::unordered_map<std::string, skeleton>  m_skeletons;
-
     qtgl::font_mono_props  m_font_props;
 
     // Editing mode data
@@ -344,16 +347,15 @@ private:
     std::shared_ptr<angeo::collision_scene>  m_collision_scene_ptr;
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
     std::shared_ptr<ai::agents>  m_agents_ptr;
+
     std::unordered_map<angeo::collision_object_id, angeo::rigid_body_id>  m_binding_of_collision_objects;
     std::unordered_map<angeo::rigid_body_id, scn::scene_node_ptr>  m_binding_of_rigid_bodies;
+    std::unordered_map<ai::agent_id, scn::scene_node_id>  m_binding_of_agents_to_scene;
 
     // Data for handling trasitions between edit and simulation modes
 
     std::unordered_map<scn::scene_node_id, bool>  m_invalidated_nodes_of_rigid_bodies;
     transition_data_from_simulation_to_edit  m_transition_data_from_simulation_to_edit;
-
-    // TODO: The member below should be removed at some point.
-    std::unordered_map<scn::scene_record_id, gfx_animated_object>  m_gfx_animated_objects;
 };
 
 

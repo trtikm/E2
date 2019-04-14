@@ -34,6 +34,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/scene/records/rigid_body/rigid_body.hpp
     ./include/scene/records/rigid_body/utils.hpp
     ./include/scene/records/rigid_body/history_nodes.hpp
+    ./include/scene/records/agent/agent.hpp
+    ./include/scene/records/agent/utils.hpp
+    ./include/scene/records/agent/history_nodes.hpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

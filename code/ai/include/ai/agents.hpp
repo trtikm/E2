@@ -24,7 +24,10 @@ struct agents
            );
 
     agent_id  insert(
-            skeleton_composition_const_ptr const  skeleton,
+            std::vector<angeo::coordinate_system> const&  current_frames, // For each bone a coord. system either in the local space of the
+                                                                          // parent bone (if has one) or in the world space (otherwise).
+            skeleton_composition_const_ptr const  skeleton, // INVARIANT(skeleton->parents.at(0) == -1)
+                                                            // INVARIANT(skeleton->pose_frames.size() == current_frames.size())
             skeletal_motion_templates_const_ptr const  motion_templates
             );
     void  erase(agent_id const  id) { m_agents.at(id) = nullptr; }

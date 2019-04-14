@@ -7,6 +7,7 @@
 #include <angeo/mass_and_inertia_tensor.hpp>
 #include <angeo/skeleton_kinematics.hpp>
 #include <angeo/utility.hpp>
+#include <ai/skeleton_utils.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
 #include <qtgl/batch_generators.hpp>
@@ -64,6 +65,37 @@ private:
     qtgl::buffer  vertex_buffer;
     qtgl::buffer  index_buffer;
 };
+
+
+void  skeleton_enumerate_nodes_of_bones(
+        scn::scene_node_ptr const  agent_node_ptr,
+        ai::skeleton_composition const&  skeleton_composition,
+        std::function<
+                bool(    // Continue in the enumeration of the remaining bones? I.e. 'false' early terminates the enumeration.
+                    natural_32_bit,         // bone index
+                    scn::scene_node_ptr,    // the corresponding node in the scene; can be 'nullptr', if the node is not in the scene.
+                    bool                    // True if the bone has a parent bone, and False otherwise.
+                    )> const&  callback // Called for each bone, in the fixed increasing order of the bone index: 0,1,2,...
+        )
+{
+    std::vector<scn::scene_node_ptr>  nodes{ agent_node_ptr };
+    for (natural_32_bit bone = 0U; bone != skeleton_composition.pose_frames.size(); ++bone)
+    {
+        scn::scene_node_ptr  child_node_ptr = nullptr;
+        {
+            scn::scene_node_ptr const  parent_node_ptr = nodes.at(skeleton_composition.parents.at(bone) + 1);
+            if (parent_node_ptr != nullptr)
+            {
+                auto const  child_node_it = parent_node_ptr->find_child(skeleton_composition.names.at(bone));
+                if (child_node_it != parent_node_ptr->get_children().cend())
+                    child_node_ptr = child_node_it->second;
+            }
+        }
+        if (callback(bone, child_node_ptr, skeleton_composition.parents.at(bone) >= 0) == false)
+            break;
+        nodes.push_back(child_node_ptr);
+    }
+}
 
 
 }
@@ -211,7 +243,6 @@ simulator::simulator()
     , m_fixed_time_step_in_seconds(1.0 / 25.0)
     , m_scene(new scn::scene)
     , m_cache_of_batches_of_colliders()
-    , m_skeletons()
     , m_font_props(
             []() -> qtgl::font_mono_props {
                 qtgl::font_mono_props  props;
@@ -240,16 +271,15 @@ simulator::simulator()
             std::bind(&simulator::on_create_scene_object, this, std::placeholders::_1, std::placeholders::_2),
             std::bind(&simulator::on_destroy_scene_object, this, std::placeholders::_1)
             ))  
+
     , m_binding_of_collision_objects()
     , m_binding_of_rigid_bodies()
+    , m_binding_of_agents_to_scene()
 
     // Data for handling trasitions between edit and simulation modes
 
     , m_invalidated_nodes_of_rigid_bodies()
     , m_transition_data_from_simulation_to_edit()
-
-    // TODO: The member below should be removed at some point.
-    , m_gfx_animated_objects()
 
 {
 }
@@ -737,31 +767,34 @@ void  simulator::on_simulation_resumed()
             m_rigid_body_simulator_ptr->set_external_angular_acceleration(rbid_and_backup.first, vector3_zero());
         }
 
-    // TODO: The code below should be removed at some point.
-
-    std::unordered_set<scn::scene_record_id>  to_remove;
-    for (auto& elem : m_gfx_animated_objects)
-        if (!scn::has_record(get_scene(), elem.first))
-            to_remove.insert(elem.first);
-    for (auto const&  key : to_remove)
-        m_gfx_animated_objects.erase(key);
-
-    get_scene().foreach_node(
-        [this](scn::scene_node_ptr const  node_ptr) -> bool {
-                for (auto const& name_holder : scn::get_batch_holders(*node_ptr))
-                {
-                    qtgl::batch const  batch = scn::as_batch(name_holder.second);
-                    if (batch.ready() && batch.get_available_resources().skeletal() != nullptr)
+    for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
+    {
+        scn::scene_node_ptr const  node_ptr = get_scene_node(agent_id_and_node_id.second);
+        INVARIANT(node_ptr != nullptr);
+        scn::agent* const  agent_ptr = scn::get_agent(*node_ptr);
+        INVARIANT(agent_ptr != nullptr);
+        ai::skeleton_composition_const_ptr const  skeleton_composition = agent_ptr->get_skeleton_props()->skeleton_composition;
+        std::vector<angeo::coordinate_system>&  current_frames = m_agents_ptr->at(agent_ptr->id()).get_current_frames();
+        detail::skeleton_enumerate_nodes_of_bones(
+                node_ptr,
+                *skeleton_composition,
+                [&current_frames, skeleton_composition](
+                    natural_32_bit const bone, scn::scene_node_ptr const  bone_node_ptr, bool const  has_parent) -> bool
                     {
-                        scn::scene_record_id const  key = scn::make_batch_record_id(node_ptr->get_id(), name_holder.first);
-                        if (m_gfx_animated_objects.count(key) == 0UL)
-                            m_gfx_animated_objects.emplace(key, gfx_animated_object(batch));
+                        if (bone_node_ptr != nullptr)
+                            if (has_parent)
+                                current_frames.at(bone) = *bone_node_ptr->get_coord_system();
+                            else
+                            {
+                                vector3  origin;
+                                matrix33  rot_matrix;
+                                decompose_matrix44(bone_node_ptr->get_world_matrix(), origin, rot_matrix);
+                                current_frames.at(bone) = { origin, normalised(rotation_matrix_to_quaternion(rot_matrix)) };
+                            }
+                        return true;
                     }
-                }
-                return true;
-            },
-        false
-        );
+                );
+    }
 }
 
 
@@ -811,10 +844,38 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
         max_computation_time_in_seconds -= duration_of_last_simulation_step_in_seconds;
     }
 
-    // TODO: The code below should be removed at some point.
-
-    for (auto&  elem : m_gfx_animated_objects)
-        elem.second.next_round(time_to_simulate_in_seconds);
+    for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
+    {
+        scn::scene_node_ptr const  node_ptr = get_scene_node(agent_id_and_node_id.second);
+        INVARIANT(node_ptr != nullptr);
+        scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
+        INVARIANT(agent_ptr != nullptr);
+        ai::skeleton_composition_const_ptr const  skeleton_composition = agent_ptr->get_skeleton_props()->skeleton_composition;
+        std::vector<angeo::coordinate_system> const&  current_frames = m_agents_ptr->at(agent_ptr->id()).get_current_frames();
+        node_ptr->set_origin(current_frames.front().origin());
+        matrix33 const  agent_node_rotation_inverse =
+                transpose33(quaternion_to_rotation_matrix(node_ptr->get_coord_system()->orientation()));
+        detail::skeleton_enumerate_nodes_of_bones(
+                node_ptr,
+                *skeleton_composition,
+                [&current_frames, &agent_node_rotation_inverse](
+                    natural_32_bit const bone, scn::scene_node_ptr const  bone_node_ptr, bool const  has_parent) -> bool
+                    {
+                        if (bone_node_ptr != nullptr)
+                            if (has_parent)
+                                bone_node_ptr->relocate(current_frames.at(bone).origin(), current_frames.at(bone).orientation());
+                            else
+                                bone_node_ptr->relocate(
+                                        current_frames.at(bone).origin() - current_frames.front().origin(),
+                                        rotation_matrix_to_quaternion(
+                                                agent_node_rotation_inverse *
+                                                quaternion_to_rotation_matrix(current_frames.at(bone).orientation())
+                                                )
+                                        );
+                        return true;
+                    }
+                );
+    }
 }
 
 
@@ -1216,7 +1277,7 @@ void  simulator::render_scene_batches(
 
     std::unordered_map<
             std::string,    // batch ID
-            std::pair<qtgl::batch, std::vector<std::pair<scn::scene_node_ptr, gfx_animated_object const*> > > >
+            std::pair<qtgl::batch, std::vector<scn::scene_node_ptr> > >
         batches;
     get_scene().foreach_node(
         [this, &batches](scn::scene_node_ptr const  node_ptr) -> bool {
@@ -1229,12 +1290,7 @@ void  simulator::render_scene_batches(
                     if (record.first.empty())
                         record.first = batch;
                     INVARIANT(record.first == batch);
-                    //auto const  it = m_gfx_animated_objects.find(scn::make_batch_record_id(node_ptr->get_id(), name_holder.first));
-                    //INVARIANT(it == m_gfx_animated_objects.cend() || it->second.get_batch() == record.first);
-                    record.second.push_back({
-                        node_ptr,
-                        nullptr //it != m_gfx_animated_objects.cend() ? &it->second : nullptr
-                        });
+                    record.second.push_back(node_ptr);
                 }
                 return true;
             },
@@ -1242,116 +1298,27 @@ void  simulator::render_scene_batches(
         );
     for (auto const& elem : batches)
     {
-        skeleton  bones;
-        if (elem.second.first.get_available_resources().skeletal() != nullptr)
-        {
-            TMPROF_BLOCK();
-
-            boost::filesystem::path const  skeleton_directory =
-                    boost::filesystem::path(elem.second.first.get_available_resources().data_root_dir())
-                            / "animations"
-                            / "skeletal"
-                            / elem.second.first.get_available_resources().skeletal()->skeleton_name()
-                            ;
-            auto const  skeleton_iter = m_skeletons.find(skeleton_directory.string());
-            bones = (skeleton_iter != m_skeletons.cend()) ?
-                            skeleton_iter->second :
-                            m_skeletons.insert({skeleton_directory.string(), skeleton(skeleton_directory)}).first->second;
-        }
-
-        bool const  use_instancing = bones.empty() && elem.second.first.has_instancing_data() && elem.second.second.size() > 1UL;
+        bool const  use_instancing =
+                elem.second.first.get_available_resources().skeletal() == nullptr &&
+                elem.second.first.has_instancing_data() &&
+                elem.second.second.size() > 1UL
+                ;
         if (!qtgl::make_current(elem.second.first, draw_state, use_instancing))
             continue;
 
         if (use_instancing)
         {
             qtgl::vertex_shader_instanced_data_provider  instanced_data_provider(elem.second.first);
-            for (auto const& node_and_anim : elem.second.second)
-                instanced_data_provider.insert_from_model_to_camera_matrix(matrix_from_world_to_camera * node_and_anim.first->get_world_matrix());
+            for (auto const& node_ptr : elem.second.second)
+                instanced_data_provider.insert_from_model_to_camera_matrix(
+                        matrix_from_world_to_camera * node_ptr->get_world_matrix()
+                        );
             qtgl::render_batch(
-                elem.second.first,
-                instanced_data_provider,
-                qtgl::vertex_shader_uniform_data_provider(
                     elem.second.first,
-                    {},
-                    matrix_from_camera_to_clipspace,
-                    m_diffuse_colour,
-                    m_ambient_colour,
-                    m_specular_colour,
-                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                    m_directional_light_colour,
-                    m_fog_colour,
-                    m_fog_near,
-                    m_fog_far
-                    ),
-                qtgl::fragment_shader_uniform_data_provider(
-                    m_diffuse_colour,
-                    m_ambient_colour,
-                    m_specular_colour,
-                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                    m_directional_light_colour,
-                    m_fog_colour,
-                    m_fog_near,
-                    m_fog_far
-                    )
-                );
-        }
-        else if (!bones.loaded_successfully()) // || node_and_anim.second == nullptr)
-            for (auto const& node_and_anim : elem.second.second)
-                qtgl::render_batch(
-                    elem.second.first,
+                    instanced_data_provider,
                     qtgl::vertex_shader_uniform_data_provider(
-                        elem.second.first,
-                        { matrix_from_world_to_camera * node_and_anim.first->get_world_matrix() },
-                        matrix_from_camera_to_clipspace,
-                        m_diffuse_colour,
-                        m_ambient_colour,
-                        m_specular_colour,
-                        transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                        m_directional_light_colour,
-                        m_fog_colour,
-                        m_fog_near,
-                        m_fog_far
-                        ),
-                    qtgl::fragment_shader_uniform_data_provider(
-                        m_diffuse_colour,
-                        m_ambient_colour,
-                        m_specular_colour,
-                        transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                        m_directional_light_colour,
-                        m_fog_colour,
-                        m_fog_near,
-                        m_fog_far
-                        )
-                    );
-        else
-            for (auto const& node_and_anim : elem.second.second)
-            {
-                //node_and_anim.second->get_transformations(
-                //        frame,
-                //        matrix_from_world_to_camera * node_and_anim.first->get_world_matrix()
-                //        );
-                std::vector<matrix44>  frame;
-                {
-                    std::vector<scn::scene_node_id> const&  relative_node_ids = bones.get_relative_node_ids();
-                    std::vector<angeo::coordinate_system> const&  coord_systems = elem.second.first.get_modelspace().get_coord_systems();
-                    INVARIANT(relative_node_ids.size() == coord_systems.size());
-                    for (natural_32_bit  bone = 0U; bone != relative_node_ids.size(); ++bone)
-                        if (scn::scene_node_ptr const  bone_node_ptr = node_and_anim.first->find_child(relative_node_ids.at(bone)))
-                            frame.push_back(matrix_from_world_to_camera * bone_node_ptr->get_world_matrix());
-                        else
-                        {
-                            matrix44 M;
-                            angeo::from_base_matrix(coord_systems.at(bone), M);
-                            frame.push_back(matrix_from_world_to_camera * node_and_anim.first->get_world_matrix() * M);
-                        }
-                }
-
-                qtgl::render_batch(
-                        elem.second.first,
-                        qtgl::vertex_shader_uniform_data_provider(
                             elem.second.first,
-                            frame,
+                            {},
                             matrix_from_camera_to_clipspace,
                             m_diffuse_colour,
                             m_ambient_colour,
@@ -1362,7 +1329,7 @@ void  simulator::render_scene_batches(
                             m_fog_near,
                             m_fog_far
                             ),
-                        qtgl::fragment_shader_uniform_data_provider(
+                    qtgl::fragment_shader_uniform_data_provider(
                             m_diffuse_colour,
                             m_ambient_colour,
                             m_specular_colour,
@@ -1373,6 +1340,91 @@ void  simulator::render_scene_batches(
                             m_fog_far
                             )
                     );
+        }
+        else
+            for (auto const& node_ptr : elem.second.second)
+            {
+                scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
+                if (agent_ptr == nullptr)
+                {
+                    qtgl::render_batch(
+                            elem.second.first,
+                            qtgl::vertex_shader_uniform_data_provider(
+                                    elem.second.first,
+                                    { matrix_from_world_to_camera * node_ptr->get_world_matrix() },
+                                    matrix_from_camera_to_clipspace,
+                                    m_diffuse_colour,
+                                    m_ambient_colour,
+                                    m_specular_colour,
+                                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                                    m_directional_light_colour,
+                                    m_fog_colour,
+                                    m_fog_near,
+                                    m_fog_far
+                                    ),
+                            qtgl::fragment_shader_uniform_data_provider(
+                                    m_diffuse_colour,
+                                    m_ambient_colour,
+                                    m_specular_colour,
+                                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                                    m_directional_light_colour,
+                                    m_fog_colour,
+                                    m_fog_near,
+                                    m_fog_far
+                                    )
+                            );
+                    continue;
+                }
+
+                std::vector<matrix44>  frame;
+                {
+                    scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
+                    ai::skeleton_composition_const_ptr const  skeleton_composition = agent_ptr->get_skeleton_props()->skeleton_composition;
+                    detail::skeleton_enumerate_nodes_of_bones(
+                            node_ptr,
+                            *skeleton_composition,
+                            [&frame, &matrix_from_world_to_camera, skeleton_composition](
+                                natural_32_bit const bone, scn::scene_node_ptr const  bone_node_ptr, bool const  has_parent) -> bool
+                                {
+                                    if (bone_node_ptr != nullptr)
+                                        frame.push_back(matrix_from_world_to_camera * bone_node_ptr->get_world_matrix());
+                                    else
+                                    {
+                                        matrix44 M;
+                                        angeo::from_base_matrix(skeleton_composition->pose_frames.at(bone), M);
+                                        frame.push_back(matrix_from_world_to_camera * bone_node_ptr->get_world_matrix() * M);
+                                    }
+                                    return true;
+                                }
+                            );
+                }
+
+                qtgl::render_batch(
+                        elem.second.first,
+                        qtgl::vertex_shader_uniform_data_provider(
+                                elem.second.first,
+                                frame,
+                                matrix_from_camera_to_clipspace,
+                                m_diffuse_colour,
+                                m_ambient_colour,
+                                m_specular_colour,
+                                transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                                m_directional_light_colour,
+                                m_fog_colour,
+                                m_fog_near,
+                                m_fog_far
+                                ),
+                        qtgl::fragment_shader_uniform_data_provider(
+                                m_diffuse_colour,
+                                m_ambient_colour,
+                                m_specular_colour,
+                                transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                                m_directional_light_colour,
+                                m_fog_colour,
+                                m_fog_near,
+                                m_fog_far
+                                )
+                        );
             }
         draw_state = elem.second.first.get_draw_state();
     }
@@ -1925,6 +1977,8 @@ void  simulator::get_rigid_body_info(
         vector3&  external_angular_acceleration
         )
 {
+    TMPROF_BLOCK();
+
     scn::scene_node_const_ptr const  node_ptr = get_scene_node(id);
     scn::rigid_body const* const  rb_ptr = scn::get_rigid_body(*node_ptr);
     ASSUMPTION(rb_ptr != nullptr);
@@ -1935,8 +1989,55 @@ void  simulator::get_rigid_body_info(
 }
 
 
+void  simulator::insert_agent(scn::scene_record_id const&  id, scn::skeleton_props_ptr const  props)
+{
+    TMPROF_BLOCK();
+
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
+    std::vector<angeo::coordinate_system>  current_frames;
+    detail::skeleton_enumerate_nodes_of_bones(
+            node_ptr,
+            *props->skeleton_composition,
+            [&current_frames, props](natural_32_bit const bone, scn::scene_node_ptr const  bone_node_ptr, bool const  has_parent) -> bool {
+                    if (bone_node_ptr == nullptr)
+                        current_frames.push_back(props->skeleton_composition->pose_frames.at(bone));
+                    else if (has_parent)
+                        current_frames.push_back(*bone_node_ptr->get_coord_system());
+                    else
+                    {
+                        vector3  origin;
+                        matrix33  rot_matrix;
+                        decompose_matrix44(bone_node_ptr->get_world_matrix(), origin, rot_matrix);
+                        current_frames.push_back({ origin, rotation_matrix_to_quaternion(rot_matrix) });
+                    }
+                    return true;
+                }
+            );
+    ai::agent_id const  agent_id = m_agents_ptr->insert(current_frames, props->skeleton_composition, props->skeletal_motion_templates);
+    scn::insert_agent(*node_ptr, agent_id, props);
+    m_binding_of_agents_to_scene[agent_id] = id.get_node_id();
+}
+
+
+void  simulator::erase_agent(scn::scene_record_id const&  id)
+{
+    TMPROF_BLOCK();
+
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
+    scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
+
+    m_agents_ptr->erase(agent_ptr->id());
+    m_binding_of_agents_to_scene.erase(agent_ptr->id());
+
+    m_scene_selection.erase_record(id);
+    scn::erase_agent(*node_ptr);
+}
+
+
 void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::scene_node_id const&  id)
 {
+    TMPROF_BLOCK();
+
     std::string const  shape_type = data.get<std::string>("shape_type");
     if (shape_type == "capsule")
         insert_collision_capsule_to_scene_node(
@@ -1980,6 +2081,8 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
 
 void  simulator::save_collider(scn::collider const&  collider, boost::property_tree::ptree&  data)
 {
+    TMPROF_BLOCK();
+
     switch (angeo::get_shape_type(collider.id()))
     {
     case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
@@ -2018,6 +2121,8 @@ void  simulator::load_rigid_body(
         scn::scene_node_id const&  id
         )
 {
+    TMPROF_BLOCK();
+
     auto const  load_vector = [&data](std::string const&  key) -> vector3 {
         boost::property_tree::path const  key_path(key, '/');
         return vector3(data.get<float_32_bit>(key_path / "x"),
@@ -2036,6 +2141,8 @@ void  simulator::load_rigid_body(
 
 void  simulator::save_rigid_body(angeo::rigid_body_id const  rb_id, boost::property_tree::ptree&  data)
 {
+    TMPROF_BLOCK();
+
     auto const  save_vector = [&data](std::string const&  key, vector3 const&  u) -> void {
         boost::property_tree::path const  key_path(key, '/');
         data.put(key_path / "x", u(0));
@@ -2047,6 +2154,34 @@ void  simulator::save_rigid_body(angeo::rigid_body_id const  rb_id, boost::prope
     save_vector("angular_velocity", m_rigid_body_simulator_ptr->get_angular_velocity(rb_id));
     save_vector("external_linear_acceleration", m_rigid_body_simulator_ptr->get_external_linear_acceleration(rb_id));
     save_vector("external_angular_acceleration", m_rigid_body_simulator_ptr->get_external_angular_acceleration(rb_id));
+}
+
+
+void  simulator::load_agent(boost::property_tree::ptree const&  data, scn::scene_record_id const&  id)
+{
+    TMPROF_BLOCK();
+
+    boost::filesystem::path const  skeleton_dir = data.get<std::string>("skeleton_dir");
+    std::string  error_msg;
+    ai::skeleton_composition_ptr const  skeleton_composition =
+        ai::load_skeleton_composition(skeleton_dir, error_msg);
+    ASSUMPTION(skeleton_composition != nullptr && error_msg.empty());
+    ai::skeletal_motion_templates_ptr const skeletal_motion_templates =
+        ai::load_skeletal_motion_templates(skeleton_dir, error_msg);
+    ASSUMPTION(skeletal_motion_templates != nullptr && error_msg.empty());
+    scn::skeleton_props_ptr const  props =
+        scn::create_skeleton_props(skeleton_dir, skeleton_composition, skeletal_motion_templates);
+    insert_agent(id, props);
+}
+
+
+void  simulator::save_agent(scn::scene_node_ptr const  node_ptr, boost::property_tree::ptree&  data)
+{
+    TMPROF_BLOCK();
+
+    scn::agent* const  agent_ptr = scn::get_agent(*node_ptr);
+    ASSUMPTION(agent_ptr != nullptr);
+    data.put("skeleton_dir", agent_ptr->get_skeleton_props()->skeleton_directory.string());
 }
 
 
@@ -2076,7 +2211,6 @@ void  simulator::clear_scene()
     m_cache_of_batches_of_colliders.triangle_meshes.clear();
     m_cache_of_batches_of_colliders.collision_normals_points.release();
     m_cache_of_batches_of_colliders.collision_normals_batch.release();
-    m_skeletons.clear();
 
     get_scene().clear();
 
@@ -2084,7 +2218,6 @@ void  simulator::clear_scene()
     m_rigid_body_simulator_ptr->clear();
     m_binding_of_collision_objects.clear();
     m_binding_of_rigid_bodies.clear();
-    m_gfx_animated_objects.clear();
 }
 
 void  simulator::translate_scene_node(scn::scene_node_id const&  id, vector3 const&  shift)

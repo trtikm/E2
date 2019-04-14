@@ -6,5 +6,6 @@
 #   include <scene/records/batch/utils.hpp>
 #   include <scene/records/collider/utils.hpp>
 #   include <scene/records/rigid_body/utils.hpp>
+#   include <scene/records/agent/utils.hpp>
 
 #endif
