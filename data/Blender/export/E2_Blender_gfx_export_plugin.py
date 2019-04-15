@@ -1126,68 +1126,74 @@ def save_keyframe_coord_systems_of_bones(
     :return: None
     """
     with TimeProf.instance().start("save_keyframe_coord_systems_of_bones"):
-        coord_systems_of_frames = {}
 
         if not armature.animation_data:
             return
-        if not armature.animation_data.action:
-            return
+        active_action = armature.animation_data.action
 
-        scene = bpy.context.scene
+        for action in bpy.data.actions:
+            if not (action.name.startswith(armature.name + "/") or (active_action is not None and action.name == active_action.name)):
+                continue
 
-        keyframes = set()
-        action = armature.animation_data.action
-        for fcurve in action.fcurves:
-            for point in fcurve.keyframe_points:
-                keyframes.add(round(point.co[0]))
-        start_frame = min(keyframes)
+            action_name = action.name[len(armature.name + "/"):] if action.name.startswith(armature.name + "/") else action.name
+            action_name = action_name.replace("/", ".").replace("\\", '.').replace(":", '.')
 
-        frame_current_backup = scene.frame_current
+            coord_systems_of_frames = {}
 
-        for frame in keyframes:
-            scene.frame_set(frame)
-            coord_systems = []
-            for armature_bone in armature.data.bones:
-                if not armature_bone.use_deform:
-                    continue
-                bone = armature.pose.bones[armature_bone.name]
-                coord_systems.append({
-                    "position": bone.matrix * mathutils.Vector((0.0, 0.0, 0.0, 1.0)),
-                    "orientation": bone.matrix.to_quaternion()
-                    })
-            coord_systems_of_frames[(frame - start_frame) * 0.041666666] = coord_systems
+            scene = bpy.context.scene
 
-        scene.frame_set(frame_current_backup)
+            keyframes = set()
+            for fcurve in action.fcurves:
+                for point in fcurve.keyframe_points:
+                    keyframes.add(round(point.co[0]))
+            start_frame = min(keyframes)
 
-        # It remains to save the computed coordinate systems of bones in individual frames to disc.
-        # We store each frame into a separate file. But all files will be written into the same output directory:
+            frame_current_backup = scene.frame_current
 
-        keyframes_output_dir = os.path.join(
-            export_info["root_dir"],
-            "animations",
-            "skeletal",
-            remove_ignored_part_of_name(armature.name, "SKELETAL"),
-            remove_ignored_part_of_name(action.name, "SKELETAL")
-            )
-        os.makedirs(keyframes_output_dir, exist_ok=True)
+            for frame in keyframes:
+                scene.frame_set(frame)
+                coord_systems = []
+                for armature_bone in armature.data.bones:
+                    if not armature_bone.use_deform:
+                        continue
+                    bone = armature.pose.bones[armature_bone.name]
+                    coord_systems.append({
+                        "position": bone.matrix * mathutils.Vector((0.0, 0.0, 0.0, 1.0)),
+                        "orientation": bone.matrix.to_quaternion()
+                        })
+                coord_systems_of_frames[(frame - start_frame) * 0.041666666] = coord_systems
 
-        export_info["keyframes"] = []  # Here we store pathnames of all saved files.
-        frame_idx = 0
-        for time_stamp in sorted(coord_systems_of_frames.keys()):
-            export_info["keyframes"].append(
-                os.path.join(keyframes_output_dir, "keyframe" + str(frame_idx) + ".txt")
+            scene.frame_set(frame_current_backup)
+
+            # It remains to save the computed coordinate systems of bones in individual frames to disc.
+            # We store each frame into a separate file. But all files will be written into the same output directory:
+
+            keyframes_output_dir = os.path.join(
+                export_info["root_dir"],
+                "animations",
+                "skeletal",
+                remove_ignored_part_of_name(armature.name, "SKELETAL"),
+                remove_ignored_part_of_name(action_name, "SKELETAL")
                 )
-            with open(export_info["keyframes"][-1], "w") as f:
-                print("Saving keyframe " + str(frame_idx + 1) + "/" + str(len(coord_systems_of_frames)) + ": " +
-                      os.path.relpath(export_info["keyframes"][-1], export_info["root_dir"]))
-                f.write(float_to_string(time_stamp) + "\n")
-                f.write(str(len(coord_systems_of_frames[time_stamp])) + "\n")
-                for system in coord_systems_of_frames[time_stamp]:
-                    for i in range(3):
-                        f.write(float_to_string(system["position"][i]) + "\n")
-                    for i in range(4):
-                        f.write(float_to_string(system["orientation"][i]) + "\n")
-            frame_idx += 1
+            os.makedirs(keyframes_output_dir, exist_ok=True)
+
+            export_info["keyframes"] = []  # Here we store pathnames of all saved files.
+            frame_idx = 0
+            for time_stamp in sorted(coord_systems_of_frames.keys()):
+                export_info["keyframes"].append(
+                    os.path.join(keyframes_output_dir, "keyframe" + str(frame_idx) + ".txt")
+                    )
+                with open(export_info["keyframes"][-1], "w") as f:
+                    print("Saving keyframe " + str(frame_idx + 1) + "/" + str(len(coord_systems_of_frames)) + ": " +
+                          os.path.relpath(export_info["keyframes"][-1], export_info["root_dir"]))
+                    f.write(float_to_string(time_stamp) + "\n")
+                    f.write(str(len(coord_systems_of_frames[time_stamp])) + "\n")
+                    for system in coord_systems_of_frames[time_stamp]:
+                        for i in range(3):
+                            f.write(float_to_string(system["position"][i]) + "\n")
+                        for i in range(4):
+                            f.write(float_to_string(system["orientation"][i]) + "\n")
+                frame_idx += 1
 
 
 def save_hierarchy_of_bones(
