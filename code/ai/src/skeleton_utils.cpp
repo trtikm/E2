@@ -49,8 +49,8 @@ skeletal_motion_templates_ptr  load_skeletal_motion_templates(boost::filesystem:
             if (boost::filesystem::is_directory(entry.path()))
                 motion_templates->motions_map.insert({
                         boost::filesystem::basename(entry.path()),
-                        skeletal_motion_templates::keyframes()
-                        }).first->second.insert_load_request(entry.path());
+                        skeletal_motion_templates::keyframes(entry.path())
+                        });
     }
     return motion_templates;
 }
