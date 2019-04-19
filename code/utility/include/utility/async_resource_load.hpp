@@ -89,92 +89,7 @@ std::ostream&  operator<<(std::ostream&  ostr, key_type const&  key);
 
 }}
 
-namespace std
-{
-
-
-template<>
-struct hash<async::detail::key_type>
-{
-    size_t operator()(async::detail::key_type const&  key) const
-    {
-        size_t seed = 0;
-        ::hash_combine(seed, key.get_data_type_name());
-        ::hash_combine(seed, key.get_unique_id());
-        return seed;
-    }
-};
-
-
-}
-
-
 namespace async { namespace detail {
-
-
-using  resource_loader_type = std::function<void()>;
-using  resource_load_priority_type = natural_32_bit;
-
-
-struct  resource_load_planner  final
-{
-    static resource_load_planner&  instance();
-
-    ~resource_load_planner();
-
-    void clear();
-
-    void  insert_load_request(
-            key_type const&  key,
-            resource_loader_type const&  loader,
-            resource_load_priority_type const  priority
-            );
-
-    void  cancel_load_request(key_type const&  key);
-
-    std::mutex&  mutex() { return m_mutex; }
-
-    key_type const&  resource_just_being_loaded() { return m_resource_just_being_loaded; }
-
-private:
-
-    using  queue_value_type = std::tuple<resource_load_priority_type, key_type, resource_loader_type>;
-    using  queue_storage_type = std::vector<queue_value_type>;
-    using  queus_less_than_type = std::function<bool(queue_value_type const&, queue_value_type const&)>;
-
-    struct  queue_type : public std::priority_queue<queue_value_type,queue_storage_type,queus_less_than_type>
-    {
-        using  super_type = std::priority_queue<queue_value_type,queue_storage_type,queus_less_than_type>;
-        queue_type()
-            : super_type(
-                [](queue_value_type const& l, queue_value_type const& r) -> bool {
-                    return std::get<0>(l) < std::get<0>(r);
-                    }
-                )
-        {}
-        queue_storage_type::const_iterator  cbegin() { return c.cbegin(); }
-        queue_storage_type::const_iterator  cend() { return c.cend(); }
-        queue_storage_type::iterator  begin() { return c.begin(); }
-        queue_storage_type::iterator  end() { return c.end(); }
-        void  clear() { c.clear(); }
-    };
-
-    resource_load_planner();
-
-    resource_load_planner(resource_load_planner const&) = delete;
-    resource_load_planner& operator=(resource_load_planner const&) = delete;
-    resource_load_planner(resource_load_planner&&) = delete;
-
-    void  start_worker_if_not_running();
-
-    void  worker();
-
-    queue_type  m_queue;
-    std::mutex  m_mutex;
-    key_type  m_resource_just_being_loaded;
-    std::thread  m_worker_thread;
-    std::atomic<bool>  m_worker_finished;
-};
 
 
 struct  finalise_load_on_destroy;
@@ -223,14 +138,96 @@ private:
 };
 
 
-using  pointer_to_resource_type = void*;
+}}
 
+namespace std
+{
+
+
+template<>
+struct hash<async::detail::key_type>
+{
+    size_t operator()(async::detail::key_type const&  key) const
+    {
+        size_t seed = 0;
+        ::hash_combine(seed, key.get_data_type_name());
+        ::hash_combine(seed, key.get_unique_id());
+        return seed;
+    }
+};
+
+
+}
+
+
+namespace async { namespace detail {
+
+
+using  resource_load_priority_type = natural_32_bit;
+
+using  resource_load_data_type = std::pair<key_type, std::function<void()> >;
+inline  resource_load_data_type  get_invalid_resource_load_data() { return resource_load_data_type{ key_type::get_invalid_key(),{} }; }
+inline  key_type const&  get_key_of_resource_load_data(resource_load_data_type const&  data) { return data.first; }
+inline  void  perform_load_of_resource_load_data(resource_load_data_type const&  data) { data.second(); }
+
+
+struct  resource_load_planner  final
+{
+    static resource_load_planner&  instance();
+
+    ~resource_load_planner();
+
+    void clear();
+
+    void  insert_load_request(resource_load_priority_type const  priority, resource_load_data_type const&  data);
+
+    std::mutex&  mutex() { return m_mutex; }
+
+    resource_load_data_type const&  resource_just_being_loaded() { return m_resource_just_being_loaded; }
+
+private:
+
+    using  queue_value_type = std::pair<resource_load_priority_type, resource_load_data_type>;
+    using  queue_storage_type = std::vector<queue_value_type>;
+    using  queus_less_than_type = std::function<bool(queue_value_type const&, queue_value_type const&)>;
+
+    struct  queue_type : public std::priority_queue<queue_value_type,queue_storage_type,queus_less_than_type>
+    {
+        using  super_type = std::priority_queue<queue_value_type,queue_storage_type,queus_less_than_type>;
+        queue_type() : super_type([](queue_value_type const& l, queue_value_type const& r) -> bool { return l.first < r.first; }) {}
+        queue_storage_type::const_iterator  cbegin() { return c.cbegin(); }
+        queue_storage_type::const_iterator  cend() { return c.cend(); }
+        queue_storage_type::iterator  begin() { return c.begin(); }
+        queue_storage_type::iterator  end() { return c.end(); }
+        void  clear() { c.clear(); }
+    };
+
+    resource_load_planner();
+
+    resource_load_planner(resource_load_planner const&) = delete;
+    resource_load_planner& operator=(resource_load_planner const&) = delete;
+    resource_load_planner(resource_load_planner&&) = delete;
+
+    void  start_worker_if_not_running();
+
+    void  worker();
+
+    queue_type  m_queue;
+    std::mutex  m_mutex;
+    resource_load_data_type  m_resource_just_being_loaded;
+    std::thread  m_worker_thread;
+    std::atomic<bool>  m_worker_finished;
+};
+
+
+using  pointer_to_resource_type = void*;
+using  ref_counter_type = natural_32_bit;
 
 struct  resource_holder_type  final
 {
     resource_holder_type();
 
-    natural_64_bit  ref_count() const
+    ref_counter_type  ref_count() const
     {
         return m_ref_count;
     }
@@ -254,87 +251,26 @@ struct  resource_holder_type  final
         return m_resource_ptr;
     }
 
+    void  set_resource_ptr(pointer_to_resource_type const  ptr)
+    {
+        m_resource_ptr = ptr;
+    }
+
     std::string const&  error_message() const
     {
         return m_error_message;
     }
 
-    template<typename resource_type>
-    static void  resource_loader(
-            resource_holder_type&  resource_holder,
-            finalise_load_on_destroy_ptr const  load_finaliser
-            );
-
-    template<typename resource_type, typename... arg_types>
-    static void  resource_constructor(
-            resource_holder_type&  resource_holder,
-            finalise_load_on_destroy_ptr const  load_finaliser,
-            arg_types... args_for_constructor_of_the_resource
-            );
-
     void  finalise_load(std::string const&  force_error_message);
-
-    template<typename resource_type>
-    static void  destroy_resource(pointer_to_resource_type const  resource_ptr);
 
 private:
 
-    std::atomic<natural_64_bit>  m_ref_count;
+    std::atomic<ref_counter_type>  m_ref_count;
     pointer_to_resource_type  m_resource_ptr;
     std::string  m_error_message;
     std::atomic<LOAD_STATE>  m_load_state;
 };
 
-
-template<typename resource_type>
-void  resource_holder_type::resource_loader(
-        resource_holder_type&  resource_holder,
-        finalise_load_on_destroy_ptr const  load_finaliser
-        )
-{
-    TMPROF_BLOCK();
-
-    try
-    {
-        std::unique_ptr<resource_type> resource_ptr(new resource_type(load_finaliser));
-        resource_holder.m_resource_ptr = resource_ptr.release();
-    }
-    catch (std::exception const&  e)
-    {
-        load_finaliser->force_finalisation_as_failure( msgstream() << "ERROR: " << e.what() );
-    }
-}
-
-
-template<typename resource_type, typename... arg_types>
-void  resource_holder_type::resource_constructor(
-        resource_holder_type&  resource_holder,
-        finalise_load_on_destroy_ptr const  load_finaliser,
-        arg_types... args_for_constructor_of_the_resource)
-{
-    TMPROF_BLOCK();
-
-    try
-    {
-        std::unique_ptr<resource_type> resource_ptr(
-                new resource_type(load_finaliser, args_for_constructor_of_the_resource...)
-                );
-        resource_holder.m_resource_ptr = resource_ptr.release();
-    }
-    catch (std::exception const&  e)
-    {
-        load_finaliser->force_finalisation_as_failure(msgstream() << "ERROR: " << e.what());
-    }
-}
-
-
-template<typename resource_type>
-void  resource_holder_type::destroy_resource(pointer_to_resource_type const  resource_ptr)
-{
-    TMPROF_BLOCK();
-
-    delete reinterpret_cast<resource_type*>(resource_ptr);
-}
 
 using  resources_holder_unique_ptr = std::unique_ptr<resource_holder_type>;
 using  resources_cache_type = std::unordered_map<key_type, resources_holder_unique_ptr>;
@@ -351,6 +287,9 @@ struct  resource_cache  final
             finalise_load_on_destroy_ptr const  parent_finaliser,
             resources_cache_type::value_type*&  output
             );
+
+    template<typename resource_type>
+    void  load_resource(finalise_load_on_destroy_ptr const  load_finaliser);
 
     template<typename resource_type, typename... arg_types>
     void  insert_resource(
@@ -421,14 +360,50 @@ void  resource_cache::insert_load_request(
     }
 
     resource_load_planner::instance().insert_load_request(
-        key,
-        std::bind(
-            &resource_holder_type::resource_loader<resource_type>,
-            std::ref(*output->second),
-            finalise_load_on_destroy::create(key, parent_finaliser)
-            ),
-        priority
-        );
+            priority,
+            {key, std::bind(&resource_cache::load_resource<resource_type>, this, finalise_load_on_destroy::create(key, parent_finaliser))}
+            );
+}
+
+
+template<typename resource_type>
+void  resource_cache::load_resource(finalise_load_on_destroy_ptr const  load_finaliser)
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(load_finaliser->get_key() != key_type::get_invalid_key());
+
+    {
+        std::lock_guard<std::mutex> const  lock(mutex());
+        resources_cache_type::value_type* const  resource_ptr = find_resource(load_finaliser->get_key());
+        if (resource_ptr == nullptr)
+        {
+            load_finaliser->force_finalisation_as_failure(msgstream() <<
+                "ERROR: The resource " << load_finaliser->get_key() << " was destroyed even before the load was started."
+                );
+            return;
+        }
+    }
+
+    try
+    {
+        std::unique_ptr<resource_type>  data_ptr(new resource_type(load_finaliser));
+
+        std::lock_guard<std::mutex> const  lock(mutex());
+        resources_cache_type::value_type* const  resource_ptr = find_resource(load_finaliser->get_key());
+        if (resource_ptr == nullptr)
+        {
+            load_finaliser->force_finalisation_as_failure(msgstream() <<
+                "ERROR: The resource " << load_finaliser->get_key() << " was destroyed during the load of its data."
+                );
+            return;
+        }
+        resource_ptr->second->set_resource_ptr(data_ptr.release());
+    }
+    catch (std::exception const&  e)
+    {
+        load_finaliser->force_finalisation_as_failure(msgstream() << "ERROR: " << e.what());
+    }
 }
 
 
@@ -443,6 +418,8 @@ void  resource_cache::insert_resource(
     TMPROF_BLOCK();
 
     ASSUMPTION(key != key_type::get_invalid_key());
+
+    output = nullptr;
 
     {
         std::lock_guard<std::mutex> const  lock(mutex());
@@ -461,15 +438,38 @@ void  resource_cache::insert_resource(
                 });
         INVARIANT(iter_and_bool.second);
 
-        output = &*iter_and_bool.first;
-        output->second->inc_ref_count();
+        iter_and_bool.first->second->inc_ref_count();
     }
 
-    resource_holder_type::resource_constructor<resource_type>(
-        *output->second,
-        finalise_load_on_destroy::create(key, parent_finaliser),
-        args_for_constructor_of_the_resource...
-        );
+    finalise_load_on_destroy_ptr const  load_finaliser = finalise_load_on_destroy::create(key, parent_finaliser);
+    try
+    {
+        std::unique_ptr<resource_type> data_ptr(
+            new resource_type(load_finaliser, args_for_constructor_of_the_resource...)
+            );
+        std::lock_guard<std::mutex> const  lock(mutex());
+        resources_cache_type::value_type* const  resource_ptr = find_resource(key);
+        if (resource_ptr == nullptr)
+        {
+            load_finaliser->force_finalisation_as_failure(msgstream() <<
+                "ERROR: The resource " << key << " was destroyed during the construction of its data."
+                );
+            return;
+        }
+        if (resource_ptr->second->resource_ptr() != nullptr)
+        {
+            load_finaliser->force_finalisation_as_failure(msgstream() <<
+                "ERROR: The resource " << key << " was assigned data before their load was finished."
+                );
+            return;
+        }
+        resource_ptr->second->set_resource_ptr(data_ptr.release());
+        output = resource_ptr;
+    }
+    catch (std::exception const&  e)
+    {
+        load_finaliser->force_finalisation_as_failure(msgstream() << "ERROR: " << e.what());
+    }
 }
 
 
@@ -485,15 +485,13 @@ void  resource_cache::erase_resource(key_type const&  key)
         if (it == m_cache.end())
             return;
 
-        resource_load_planner::instance().cancel_load_request(key);
-
         ASSUMPTION(it->second->ref_count() == 0UL);
         destroy_resource_ptr = it->second->resource_ptr();
 
         m_cache.erase(it);
     }
     if (destroy_resource_ptr != nullptr)
-        resource_holder_type::destroy_resource<resource_type>(destroy_resource_ptr);
+        delete reinterpret_cast<resource_type*>(destroy_resource_ptr);
 }
 
 
@@ -506,6 +504,7 @@ using  key_type = detail::key_type;
 using  load_priority_type = detail::resource_load_priority_type;
 using  finalise_load_on_destroy = detail::finalise_load_on_destroy;
 using  finalise_load_on_destroy_ptr = detail::finalise_load_on_destroy_ptr;
+using  ref_counter_type = detail::ref_counter_type;
 
 
 template<typename resource_type__>
@@ -545,7 +544,25 @@ struct  resource_accessor
             m_data_ptr->second->inc_ref_count();
     }
 
+    resource_accessor(resource_accessor<resource_type>&&  other)
+        : m_data_ptr(other.m_data_ptr)
+    {
+        if (m_data_ptr != nullptr)
+            m_data_ptr->second->inc_ref_count();
+    }
+
     resource_accessor<resource_type>& operator=(resource_accessor<resource_type> const&  other)
+    {
+        if (this == &other)
+            return *this;
+        release();
+        m_data_ptr = other.m_data_ptr;
+        if (m_data_ptr != nullptr)
+            m_data_ptr->second->inc_ref_count();
+        return *this;
+    }
+
+    resource_accessor<resource_type>& operator=(resource_accessor<resource_type>&&  other)
     {
         if (this == &other)
             return *this;
@@ -700,7 +717,7 @@ struct cached_resource_info
 {
     cached_resource_info(
             LOAD_STATE const  load_state,
-            natural_64_bit const  ref_count,
+            ref_counter_type const  ref_count,
             std::string const&  error_message
             )
         : m_load_state(load_state)
@@ -709,14 +726,14 @@ struct cached_resource_info
     {}
 
     LOAD_STATE  get_load_state() const { return m_load_state; }
-    natural_64_bit  get_ref_count() const { return m_ref_count; }
+    ref_counter_type  get_ref_count() const { return m_ref_count; }
 
     /// Returns a non-empty string only if 'get_load_state() == LOAD_STATE::FINISHED_WITH_ERROR'
     std::string const&  get_error_message() const { return m_error_message; }
 
 private:
     LOAD_STATE  m_load_state;
-    natural_64_bit  m_ref_count;
+    ref_counter_type  m_ref_count;
     std::string  m_error_message;
 };
 

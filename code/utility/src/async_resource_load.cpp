@@ -33,137 +33,6 @@ std::ostream&  operator<<(std::ostream&  ostr, key_type const&  key)
 namespace async { namespace detail {
 
 
-resource_load_planner&  resource_load_planner::instance()
-{
-    static resource_load_planner planner;
-    return planner;
-}
-
-
-resource_load_planner::~resource_load_planner()
-{
-    assert(m_worker_finished == true);
-    assert(m_resource_just_being_loaded == key_type::get_invalid_key());
-    assert(m_queue.empty());
-
-    if (m_worker_thread.joinable()) // This must be here, because although the worker can be terminated
-        m_worker_thread.join();     // we still need to join with it.
-}
-
-
-void  resource_load_planner::clear()
-{
-    TMPROF_BLOCK();
-
-    if (m_worker_thread.joinable())
-        m_worker_thread.join();
-    std::lock_guard<std::mutex> const  lock(mutex());
-    m_worker_finished = true;
-    m_queue.clear();
-    m_resource_just_being_loaded = key_type::get_invalid_key();
-}
-
-
-void  resource_load_planner::insert_load_request(
-        key_type const&  key,
-        resource_loader_type const&  loader,
-        resource_load_priority_type const  priority
-        )
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(key != key_type::get_invalid_key());
-
-    std::lock_guard<std::mutex> const  lock(mutex());
-    m_queue.push(queue_value_type{priority,key,loader});
-    start_worker_if_not_running();
-}
-
-
-void  resource_load_planner::cancel_load_request(key_type const&  key)
-{
-    TMPROF_BLOCK();
-
-    while (true)
-    {
-        std::lock_guard<std::mutex> const  lock(mutex());
-        if (resource_just_being_loaded() != key)
-        {
-            for (queue_storage_type::iterator  it = m_queue.begin(); it != m_queue.end(); ++it)
-                if (std::get<1>(*it) == key)
-                {
-                    *it = queue_value_type{ std::get<0>(*it), key_type::get_invalid_key(), std::get<2>(*it) };
-                    break;
-                }
-            break;
-        }
-    }
-}
-
-
-resource_load_planner::resource_load_planner()
-    : m_queue()
-    , m_mutex()
-    , m_resource_just_being_loaded(key_type::get_invalid_key())
-    , m_worker_thread()
-    , m_worker_finished(true)
-{}
-
-
-void  resource_load_planner::start_worker_if_not_running()
-{
-    TMPROF_BLOCK();
-
-    if (m_worker_finished)
-    {
-        if (m_worker_thread.joinable())
-            m_worker_thread.join();
-        m_worker_finished = false;
-        m_worker_thread = std::thread(&resource_load_planner::worker,this);
-    }
-}
-
-
-void  resource_load_planner::worker()
-{
-    TMPROF_BLOCK();
-
-    while (true)
-    {
-        TMPROF_BLOCK();
-
-        bool  done;
-        queue_value_type  task;
-        {
-            std::lock_guard<std::mutex> const  lock(mutex());
-            if (m_queue.empty())
-                done = true;
-            else
-            {
-                done = false;
-
-                task = m_queue.top();
-                m_queue.pop();
-
-                m_resource_just_being_loaded = std::get<1>(task);
-            }
-        }
-        if (done)
-            break;
-
-        if (std::get<1>(task) != key_type::get_invalid_key())
-        {
-            TMPROF_BLOCK();
-            std::get<2>(task)();
-        }
-
-        std::lock_guard<std::mutex> const  lock(mutex());
-        m_resource_just_being_loaded = key_type::get_invalid_key();
-    }
-
-    m_worker_finished = true;
-}
-
 finalise_load_on_destroy_ptr  finalise_load_on_destroy::create(
         key_type const&  key,
         finalise_load_on_destroy_ptr const  parent
@@ -196,7 +65,8 @@ finalise_load_on_destroy::~finalise_load_on_destroy()
 
             try
             {
-                get_callback()(get_parent());
+                if (get_parent()->get_error_message().empty())
+                    get_callback()(get_parent());
             }
             catch (std::exception const&  e)
             {
@@ -226,6 +96,115 @@ void  finalise_load_on_destroy::force_finalisation_as_failure(std::string const&
         m_error_message += " " + error_message_addon;
 }
 
+
+}}
+
+namespace async { namespace detail {
+
+
+resource_load_planner&  resource_load_planner::instance()
+{
+    static resource_load_planner planner;
+    return planner;
+}
+
+
+resource_load_planner::~resource_load_planner()
+{
+    assert(m_worker_finished == true);
+    assert(get_key_of_resource_load_data(m_resource_just_being_loaded) == key_type::get_invalid_key());
+    assert(m_queue.empty());
+
+    if (m_worker_thread.joinable()) // This must be here, because although the worker can be terminated
+        m_worker_thread.join();     // we still need to join with it.
+}
+
+
+void  resource_load_planner::clear()
+{
+    TMPROF_BLOCK();
+
+    if (m_worker_thread.joinable())
+        m_worker_thread.join();
+    std::lock_guard<std::mutex> const  lock(mutex());
+    m_worker_finished = true;
+    m_queue.clear();
+    m_resource_just_being_loaded = get_invalid_resource_load_data();
+}
+
+
+void  resource_load_planner::insert_load_request(resource_load_priority_type const  priority, resource_load_data_type const&  data)
+{
+    TMPROF_BLOCK();
+
+    std::lock_guard<std::mutex> const  lock(mutex());
+    m_queue.push(queue_value_type{priority, data});
+    start_worker_if_not_running();
+}
+
+
+resource_load_planner::resource_load_planner()
+    : m_queue()
+    , m_mutex()
+    , m_resource_just_being_loaded(get_invalid_resource_load_data())
+    , m_worker_thread()
+    , m_worker_finished(true)
+{}
+
+
+void  resource_load_planner::start_worker_if_not_running()
+{
+    TMPROF_BLOCK();
+
+    if (m_worker_finished)
+    {
+        if (m_worker_thread.joinable())
+            m_worker_thread.join();
+        m_worker_finished = false;
+        m_worker_thread = std::thread(&resource_load_planner::worker,this);
+    }
+}
+
+
+void  resource_load_planner::worker()
+{
+    TMPROF_BLOCK();
+
+    while (true)
+    {
+        TMPROF_BLOCK();
+
+        bool  done;
+        {
+            std::lock_guard<std::mutex> const  lock(mutex());
+            if (m_queue.empty())
+                done = true;
+            else
+            {
+                done = false;
+
+                m_resource_just_being_loaded = m_queue.top().second;
+                m_queue.pop();
+            }
+        }
+        if (done)
+            break;
+
+        {
+            TMPROF_BLOCK();
+            perform_load_of_resource_load_data(m_resource_just_being_loaded);
+        }
+
+        resource_load_data_type const  auto_delete_resource_in_the_end_of_the_interation = m_resource_just_being_loaded;
+
+        {
+            std::lock_guard<std::mutex> const  lock(mutex());
+            m_resource_just_being_loaded = get_invalid_resource_load_data();
+        }
+    }
+
+    m_worker_finished = true;
+}
 
 
 resource_holder_type::resource_holder_type()
@@ -338,7 +317,7 @@ key_type  get_statistics_of_cached_resources(statistics_of_cached_resources&  ou
     key_type  just_being_loaded = get_invalid_key();
     {
         std::lock_guard<std::mutex> const  lock(detail::resource_cache::instance().mutex());
-        just_being_loaded = detail::resource_load_planner::instance().resource_just_being_loaded();
+        just_being_loaded = get_key_of_resource_load_data(detail::resource_load_planner::instance().resource_just_being_loaded());
     }
 
     // This is mecessary, because loading is on a different 'worker' thread and so many other
