@@ -1993,6 +1993,9 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::skeleton_pro
 {
     TMPROF_BLOCK();
 
+    props->skeletal_motion_templates->wait_till_loaded_is_finished();
+    ASSUMPTION(props->skeletal_motion_templates->is_ready());
+
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     std::vector<angeo::coordinate_system>  current_frames;
     detail::skeleton_enumerate_nodes_of_bones(

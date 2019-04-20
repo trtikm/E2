@@ -39,6 +39,7 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/environment_models.hpp
     ./include/ai/skeleton_composition.hpp
     ./include/ai/skeletal_motion_templates.hpp
+    ./src/skeletal_motion_templates.cpp
 
     ./include/ai/skeleton_utils.hpp
     ./src/skeleton_utils.cpp

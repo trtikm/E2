@@ -56,17 +56,10 @@ agent_id  agents::insert(
         (skeleton->children.empty() || skeleton->pose_frames.size() == skeleton->children.size())
         );
     ASSUMPTION(skeleton->parents.at(0U) == -1);
-    ASSUMPTION(motion_templates != nullptr);
+    ASSUMPTION(motion_templates != nullptr && motion_templates->is_ready());
 
     if (skeleton->children.empty())
         angeo::skeleton_compute_child_bones(skeleton->parents, std::const_pointer_cast<skeleton_composition>(skeleton)->children);
-
-    agent_id  id = 0U;
-    for ( ; id != m_agents.size(); ++id)
-        if (m_agents.at(id) == nullptr)
-            break;
-    if (id == m_agents.size())
-        m_agents.resize(m_agents.size() + 1U, nullptr);
 
     blackboard_ptr const  bb = std::make_shared<blackboard>();
     bb->m_frames = current_frames;
@@ -74,7 +67,16 @@ agent_id  agents::insert(
     bb->m_skeleton_composition = skeleton;
     bb->m_motion_templates = motion_templates;
 
-    m_agents.at(id) = std::make_shared<agent>(bb, m_input_devices);
+    auto  agent_ptr = std::make_shared<agent>(bb, m_input_devices);
+
+    agent_id  id = 0U;
+    for (; id != m_agents.size(); ++id)
+        if (m_agents.at(id) == nullptr)
+            break;
+    if (id == m_agents.size())
+        m_agents.resize(m_agents.size() + 1U, nullptr);
+
+    m_agents.at(id) = agent_ptr;
     
     return id;    
 }

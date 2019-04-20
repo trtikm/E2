@@ -16,7 +16,7 @@ struct  action_controller
 
     virtual ~action_controller() {}
 
-    virtual void  next_round(float_32_bit const  time_step_in_seconds) {}
+    virtual void  next_round(float_32_bit  time_step_in_seconds) {}
 
     blackboard_ptr  get_blackboard() const { return m_blackboard; }
 

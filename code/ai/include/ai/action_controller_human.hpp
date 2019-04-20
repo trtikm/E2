@@ -11,11 +11,13 @@ namespace ai {
 
 struct  action_controller_human : public action_controller
 {
-    action_controller_human(blackboard_ptr const  blackboard_)
-        : action_controller(blackboard_)
-    {}
+    explicit action_controller_human(blackboard_ptr const  blackboard_);
 
-    void  next_round(float_32_bit const  time_step_in_seconds) override;
+    void  next_round(float_32_bit  time_step_in_seconds) override;
+
+private:
+    skeletal_motion_templates::template_cursor  m_template_cursor;
+    skeletal_motion_templates::template_motion_info  m_template_motion_info;
 };
 
 

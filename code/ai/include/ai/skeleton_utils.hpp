@@ -61,6 +61,43 @@ void  transform_skeleton_coord_systems_from_world_to_local_space(
         );
 
 
+void  transform_skeleton_coord_systems_from_local_space_to_world(
+        std::vector<angeo::coordinate_system> const&  bone_local_frames,
+        std::vector<integer_32_bit> const&  bone_parents,
+        angeo::coordinate_system const& reference_frame_in_world_space,
+        std::vector<angeo::coordinate_system>&  output_bone_frames_in_world_space
+        );
+
+
+void  transform_skeleton_coord_systems_from_common_reference_frame_to_world(
+        std::vector<angeo::coordinate_system> const&  bone_frames_in_reference_frame,
+        angeo::coordinate_system const& reference_frame_in_world_space,
+        std::vector<angeo::coordinate_system>&  output_bone_frames_in_world_space
+        );
+
+
+void  interpolate_keyframes(
+        std::vector<angeo::coordinate_system> const&  src_frames,
+        std::vector<angeo::coordinate_system> const&  dst_frames,
+        float_32_bit const  interpolation_param, // in range <0,1>
+        std::vector<angeo::coordinate_system>&  output
+        );
+
+
+void  infer_parent_frame_from_local_and_world_frames(
+        angeo::coordinate_system const&  local_frame,
+        matrix44 const&  world_frame,
+        angeo::coordinate_system&  output_parent_frame
+        );
+
+
+void  infer_parent_frame_from_local_and_world_frames(
+        angeo::coordinate_system const&  local_frame,
+        angeo::coordinate_system const&  world_frame,
+        angeo::coordinate_system&  output_parent_frame
+        );
+
+
 }
 
 #endif
