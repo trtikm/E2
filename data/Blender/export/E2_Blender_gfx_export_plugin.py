@@ -1129,26 +1129,28 @@ def save_keyframe_coord_systems_of_bones(
 
         if not armature.animation_data:
             return
-        active_action = armature.animation_data.action
+
+        active_action_backup = armature.animation_data.action
+
+        scene = bpy.context.scene
+        frame_current_backup = bpy.context.scene.frame_current
 
         for action in bpy.data.actions:
-            if not (action.name.startswith(armature.name + "/") or (active_action is not None and action.name == active_action.name)):
+            if not (action.name.startswith(armature.name + "/") or (active_action_backup is not None and action.name == active_action_backup.name)):
                 continue
 
             action_name = action.name[len(armature.name + "/"):] if action.name.startswith(armature.name + "/") else action.name
             action_name = action_name.replace("/", ".").replace("\\", '.').replace(":", '.')
 
-            coord_systems_of_frames = {}
+            armature.animation_data.action = action
 
-            scene = bpy.context.scene
+            coord_systems_of_frames = {}
 
             keyframes = set()
             for fcurve in action.fcurves:
                 for point in fcurve.keyframe_points:
                     keyframes.add(round(point.co[0]))
             start_frame = min(keyframes)
-
-            frame_current_backup = scene.frame_current
 
             for frame in keyframes:
                 scene.frame_set(frame)
@@ -1162,8 +1164,6 @@ def save_keyframe_coord_systems_of_bones(
                         "orientation": bone.matrix.to_quaternion()
                         })
                 coord_systems_of_frames[(frame - start_frame) * 0.041666666] = coord_systems
-
-            scene.frame_set(frame_current_backup)
 
             # It remains to save the computed coordinate systems of bones in individual frames to disc.
             # We store each frame into a separate file. But all files will be written into the same output directory:
@@ -1194,6 +1194,9 @@ def save_keyframe_coord_systems_of_bones(
                         for i in range(4):
                             f.write(float_to_string(system["orientation"][i]) + "\n")
                 frame_idx += 1
+
+        armature.animation_data.action = active_action_backup
+        scene.frame_set(frame_current_backup)
 
 
 def save_hierarchy_of_bones(
