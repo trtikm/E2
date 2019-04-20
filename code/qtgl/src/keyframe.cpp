@@ -117,7 +117,7 @@ keyframes_data::keyframes_data(
 
     async::finalise_load_on_destroy_ptr const  keyframes_finaliser =
         async::finalise_load_on_destroy::create(
-                [this, &keyframes_dir](async::finalise_load_on_destroy_ptr) {
+                [this, keyframes_dir](async::finalise_load_on_destroy_ptr) {
                     // All keyframes are loaded. So, let's check for their consistency and sort them by time.
 
                     if (m_keyframes.empty())
