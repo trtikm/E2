@@ -339,7 +339,7 @@ void  transform_skeleton_coord_systems_from_common_reference_frame_to_world(
 }
 
 
-void  interpolate_keyframes(
+void  interpolate_keyframes_spherical(
         std::vector<angeo::coordinate_system> const&  src_frames,
         std::vector<angeo::coordinate_system> const&  dst_frames,
         float_32_bit const  interpolation_param, // in range <0,1>
@@ -352,40 +352,6 @@ void  interpolate_keyframes(
     output.resize(src_frames.size());
     for (std::size_t i = 0UL; i != src_frames.size(); ++i)
         angeo::interpolate_spherical(src_frames.at(i), dst_frames.at(i), interpolation_param, output.at(i));
-}
-
-
-void  infer_parent_frame_from_local_and_world_frames(
-        angeo::coordinate_system const&  local_frame,
-        matrix44 const&  world_frame,
-        angeo::coordinate_system&  output_parent_frame
-        )
-{
-    TMPROF_BLOCK();
-
-    vector3  u;
-    matrix33  R;
-    {
-        matrix44  N;
-        angeo::to_base_matrix(local_frame, N);
-        decompose_matrix44(world_frame * N, u, R);
-    }
-    output_parent_frame.set_origin(u);
-    output_parent_frame.set_orientation(normalised(rotation_matrix_to_quaternion(R)));
-}
-
-
-void  infer_parent_frame_from_local_and_world_frames(
-        angeo::coordinate_system const&  local_frame,
-        angeo::coordinate_system const&  world_frame,
-        angeo::coordinate_system&  output_parent_frame
-        )
-{
-    TMPROF_BLOCK();
-
-    matrix44  M;
-    angeo::from_base_matrix(world_frame, M);
-    infer_parent_frame_from_local_and_world_frames(local_frame, M, output_parent_frame);
 }
 
 

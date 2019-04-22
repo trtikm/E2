@@ -17,19 +17,18 @@ struct skeletal_motion_templates
     using  keyframe = qtgl::keyframe;
     using  keyframes = qtgl::keyframes;
 
-    struct  template_motion_info
+    struct  motion_template_cursor
     {
-        std::vector<angeo::coordinate_system>  current_frames_in_world_space;
-        std::vector<angeo::coordinate_system>  dst_frames_in_world_space;
-        float_32_bit  time_to_reach_dst_frames_in_seconds;
+        std::string  motion_name;
+        natural_32_bit  keyframe_index;
     };
 
-    struct  template_cursor
+    struct  template_motion_info
     {
-        angeo::coordinate_system  frame_in_world_space;
-        std::string  name;
-        natural_32_bit  keyframe_index;
-        bool  repeat;
+        motion_template_cursor  src_pose;
+        motion_template_cursor  dst_pose;
+        float_32_bit  total_interpolation_time_in_seconds;
+        float_32_bit  consumed_time_in_seconds;
     };
 
     skeletal_motion_templates();
@@ -45,19 +44,6 @@ private:
 
 using  skeletal_motion_templates_ptr = std::shared_ptr<skeletal_motion_templates>;
 using  skeletal_motion_templates_const_ptr = std::shared_ptr<skeletal_motion_templates const>;
-
-
-}
-
-namespace ai {
-
-
-void  update_motion_using_templates(
-        float_32_bit  time_step_in_seconds,
-        skeletal_motion_templates const&  smt,
-        skeletal_motion_templates::template_motion_info&  motion_info,
-        skeletal_motion_templates::template_cursor&  cursor
-        );
 
 
 }

@@ -2003,9 +2003,6 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::skeleton_pro
 {
     TMPROF_BLOCK();
 
-    props->skeletal_motion_templates->wait_till_loaded_is_finished();
-    ASSUMPTION(props->skeletal_motion_templates->is_ready());
-
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     std::vector<angeo::coordinate_system>  current_frames;
     detail::skeleton_enumerate_nodes_of_bones(
@@ -2026,7 +2023,15 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::skeleton_pro
                     return true;
                 }
             );
-    ai::agent_id const  agent_id = m_agents_ptr->insert(current_frames, props->skeleton_composition, props->skeletal_motion_templates);
+    ai::skeletal_motion_templates::motion_template_cursor const  cursor{ "idle.stand", 0U };
+    ai::agent_id const  agent_id =
+            m_agents_ptr->insert(
+                    current_frames,
+                    { current_frames.front().origin(), node_ptr->get_coord_system()->orientation() },
+                    cursor,
+                    props->skeleton_composition,
+                    props->skeletal_motion_templates
+                    );
     scn::insert_agent(*node_ptr, agent_id, props);
     m_binding_of_agents_to_scene[agent_id] = id.get_node_id();
 }

@@ -9,54 +9,110 @@
 namespace ai {
 
 
-action_controller_human::action_controller_human(blackboard_ptr const  blackboard_)
+action_controller_human::action_controller_human(
+            blackboard_ptr const  blackboard_,
+            angeo::coordinate_system const&  start_reference_frame_in_world_space,
+            skeletal_motion_templates::motion_template_cursor const&  start_pose
+            )
     : action_controller(blackboard_)
-    , m_template_cursor({
-            {},                 // frames_in_world_space (initialised below)
-            "idle.stand",       // template_name
-            1U,                 // keyframe_index
-            true                // repeat
+    , m_template_motion_info({
+            start_pose,     // src_pose
+            start_pose,     // dst_pose
+            0.0f,           // total_interpolation_time_in_seconds
+            0.0f            // consumed_time_in_seconds
             })
-    , m_template_motion_info()  // initialised below
-{
-    skeletal_motion_templates::keyframes const&  animation =
-            get_blackboard()->m_motion_templates->motions_map.at(m_template_cursor.name);
-
-    infer_parent_frame_from_local_and_world_frames(
-            get_blackboard()->m_skeleton_composition->pose_frames.front(),
-            get_blackboard()->m_frames.front(),
-            m_template_cursor.frame_in_world_space
-            );
-
-    m_template_motion_info.current_frames_in_world_space = get_blackboard()->m_frames;
-    transform_skeleton_coord_systems_from_common_reference_frame_to_world(
-            animation.keyframe_at(m_template_cursor.keyframe_index - 1U).get_coord_systems(),
-            m_template_cursor.frame_in_world_space,
-            m_template_motion_info.current_frames_in_world_space
-            );
-    transform_skeleton_coord_systems_from_common_reference_frame_to_world(
-            animation.keyframe_at(m_template_cursor.keyframe_index).get_coord_systems(),
-            m_template_cursor.frame_in_world_space,
-            m_template_motion_info.dst_frames_in_world_space
-            );
-    m_template_motion_info.time_to_reach_dst_frames_in_seconds =
-            animation.keyframe_at(m_template_cursor.keyframe_index).get_time_point() -
-            animation.keyframe_at(m_template_cursor.keyframe_index - 1U).get_time_point();
-}
+    , m_reference_frame_in_world_space(start_reference_frame_in_world_space)
+{}
 
 
 void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
-    update_motion_using_templates(
-            time_step_in_seconds,
-            *get_blackboard()->m_motion_templates,
-            m_template_motion_info,
-            m_template_cursor
+    if (m_template_motion_info.consumed_time_in_seconds + time_step_in_seconds > m_template_motion_info.total_interpolation_time_in_seconds)
+    {
+        time_step_in_seconds -= m_template_motion_info.total_interpolation_time_in_seconds - m_template_motion_info.consumed_time_in_seconds;
+
+        m_template_motion_info.src_pose = m_template_motion_info.dst_pose;
+        m_template_motion_info.consumed_time_in_seconds = 0.0f;
+        m_template_motion_info.total_interpolation_time_in_seconds = 0.0f;
+
+        skeletal_motion_templates::keyframes const&  src_animation =
+                get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.src_pose.motion_name
+                );
+        skeletal_motion_templates::keyframes const&  dst_animation =
+                get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.dst_pose.motion_name
+                );
+        do
+        {
+            if (m_template_motion_info.dst_pose.keyframe_index + 1U == dst_animation.get_keyframes().size())
+                if (true) // do repeat?
+                    m_template_motion_info.dst_pose.keyframe_index = 0U;
+                else
+                {
+                    time_step_in_seconds = m_template_motion_info.total_interpolation_time_in_seconds;
+                    break;
+                }
+            ++m_template_motion_info.dst_pose.keyframe_index;
+            m_template_motion_info.total_interpolation_time_in_seconds +=
+                    dst_animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index).get_time_point() -
+                    dst_animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index - 1U).get_time_point();
+        }
+        while (time_step_in_seconds > m_template_motion_info.total_interpolation_time_in_seconds);
+    }
+
+    m_template_motion_info.consumed_time_in_seconds += time_step_in_seconds;
+    INVARIANT(m_template_motion_info.consumed_time_in_seconds <= m_template_motion_info.total_interpolation_time_in_seconds);
+
+    float_32_bit const  interpolation_param =
+            m_template_motion_info.consumed_time_in_seconds / m_template_motion_info.total_interpolation_time_in_seconds;
+
+    skeletal_motion_templates::keyframes const&  src_animation =
+            get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.src_pose.motion_name
             );
+    skeletal_motion_templates::keyframes const&  dst_animation =
+            get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.dst_pose.motion_name
+            );
+
+    std::vector<angeo::coordinate_system>  interpolated_frames_in_animation_space;
+    interpolate_keyframes_spherical(
+            src_animation.keyframe_at(m_template_motion_info.src_pose.keyframe_index).get_coord_systems(),
+            dst_animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index).get_coord_systems(),
+            interpolation_param,
+            interpolated_frames_in_animation_space
+            );
+
+    angeo::coordinate_system  reference_frame_in_animation_space;
+    angeo::interpolate_spherical(
+            src_animation.get_meta_reference_frames().at(m_template_motion_info.src_pose.keyframe_index),
+            dst_animation.get_meta_reference_frames().at(m_template_motion_info.dst_pose.keyframe_index),
+            interpolation_param,
+            reference_frame_in_animation_space
+            );
+
+    std::vector<angeo::coordinate_system>  interpolated_frames_in_world_space;
+    {
+        interpolated_frames_in_world_space.reserve(interpolated_frames_in_animation_space.size());
+
+        matrix44  W, Ainv, M;
+        angeo::from_base_matrix(m_reference_frame_in_world_space, W);
+        angeo::to_base_matrix(reference_frame_in_animation_space, Ainv);
+        M = W * Ainv;
+        for (angeo::coordinate_system const&  frame : interpolated_frames_in_animation_space)
+        {
+            vector3  u;
+            matrix33  R;
+            {
+                matrix44  N;
+                angeo::from_base_matrix(frame, N);
+                decompose_matrix44(M * N, u, R);
+            }
+            interpolated_frames_in_world_space.push_back({ u, normalised(rotation_matrix_to_quaternion(R)) });
+        }
+    }
+
     transform_skeleton_coord_systems_from_world_to_local_space(
-            m_template_motion_info.current_frames_in_world_space,
+            interpolated_frames_in_world_space,
             get_blackboard()->m_skeleton_composition->parents,
             get_blackboard()->m_frames
             );

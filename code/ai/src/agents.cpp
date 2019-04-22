@@ -41,6 +41,8 @@ agents::agents(
 
 agent_id  agents::insert(
         std::vector<angeo::coordinate_system> const&  current_frames,
+        angeo::coordinate_system const&  start_reference_frame_in_world_space,
+        skeletal_motion_templates::motion_template_cursor const&  start_pose,
         skeleton_composition_const_ptr const  skeleton,
         skeletal_motion_templates_const_ptr const  motion_templates
         )
@@ -56,7 +58,7 @@ agent_id  agents::insert(
         (skeleton->children.empty() || skeleton->pose_frames.size() == skeleton->children.size())
         );
     ASSUMPTION(skeleton->parents.at(0U) == -1);
-    ASSUMPTION(motion_templates != nullptr && motion_templates->is_ready());
+    ASSUMPTION(motion_templates != nullptr);
 
     if (skeleton->children.empty())
         angeo::skeleton_compute_child_bones(skeleton->parents, std::const_pointer_cast<skeleton_composition>(skeleton)->children);
@@ -67,7 +69,7 @@ agent_id  agents::insert(
     bb->m_skeleton_composition = skeleton;
     bb->m_motion_templates = motion_templates;
 
-    auto  agent_ptr = std::make_shared<agent>(bb, m_input_devices);
+    auto  agent_ptr = std::make_shared<agent>(bb, m_input_devices, start_reference_frame_in_world_space, start_pose);
 
     agent_id  id = 0U;
     for (; id != m_agents.size(); ++id)
