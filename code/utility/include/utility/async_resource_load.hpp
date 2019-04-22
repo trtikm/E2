@@ -708,6 +708,9 @@ resource_accessor<resource_type__>  insert_resource(
 }
 
 
+key_type  get_key_of_resource_just_being_loaded();
+
+
 }
 
 namespace async {

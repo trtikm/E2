@@ -2,6 +2,7 @@
 #   define E2_TOOL_GFXTUNER_STATUS_BAR_HPP_INCLUDED
 
 #   include <angeo/tensor_math.hpp>
+#   include <utility/async_resource_load.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <QWidget>
 #   include <QLabel>
@@ -36,6 +37,8 @@ private:
     QLabel*  m_state;
     QLabel*  m_mode;
     QLabel*  m_FPS;
+
+    async::key_type  m_currently_loaded_resource;
 };
 
 

@@ -301,6 +301,18 @@ resource_cache::~resource_cache()
 namespace async {
 
 
+key_type  get_key_of_resource_just_being_loaded()
+{
+    std::lock_guard<std::mutex> const  lock(detail::resource_load_planner::instance().mutex());
+    return detail::resource_load_planner::instance().resource_just_being_loaded().first;
+}
+
+
+}
+
+namespace async {
+
+
 key_type  get_statistics_of_cached_resources(statistics_of_cached_resources&  output_statistics)
 {
     TMPROF_BLOCK();

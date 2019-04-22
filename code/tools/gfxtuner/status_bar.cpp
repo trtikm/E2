@@ -54,6 +54,7 @@ status_bar::status_bar(program_window* const  wnd)
     , m_state(new QLabel(" STARTING "))
     , m_mode(new QLabel(" PAUSED "))
     , m_FPS(new QLabel(" FPS: 0 "))
+    , m_currently_loaded_resource(async::get_invalid_key())
 {}
 
 
@@ -86,7 +87,20 @@ void status_bar::update()
         sstr << " FPS: " << wnd()->glwindow().call_now(&qtgl::real_time_simulator::FPS) << " ";
         m_FPS->setText(sstr.str().c_str());
     }
+
+    async::key_type const  currently_loaded_resource = async::get_key_of_resource_just_being_loaded();
+    if (currently_loaded_resource != m_currently_loaded_resource)
+    {
+        m_currently_loaded_resource = currently_loaded_resource;
+        std::stringstream  sstr;
+        if (m_currently_loaded_resource == async::get_invalid_key())
+            sstr << "Asynchronous load: All requests have been processed.";
+        else
+            sstr << "Asynchronous load: Loading '" << m_currently_loaded_resource << "'.";
+        print_status_message(sstr.str(), 10000U);
+    }
 }
+
 
 void status_bar::print_status_message(std::string const&  msg, natural_32_bit const  num_miliseconds_to_show)
 {
