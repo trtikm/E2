@@ -35,7 +35,9 @@ struct agents
             skeletal_motion_templates_const_ptr const  motion_templates
             );
     void  erase(agent_id const  id) { m_agents.at(id) = nullptr; }
-    
+
+    void  clear() { m_agents.clear(); }
+
     agent&  at(agent_id const  id) { return *m_agents.at(id); }
     agent const&  at(agent_id const  id) const { return *m_agents.at(id); }
 

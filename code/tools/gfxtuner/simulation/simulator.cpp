@@ -2232,8 +2232,11 @@ void  simulator::clear_scene()
 
     get_scene().clear();
 
+    m_agents_ptr->clear();
     m_collision_scene_ptr->clear();
     m_rigid_body_simulator_ptr->clear();
+
+    m_binding_of_agents_to_scene.clear();
     m_binding_of_collision_objects.clear();
     m_binding_of_rigid_bodies.clear();
 }
