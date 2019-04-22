@@ -79,10 +79,12 @@ struct  keyframes_data
     ~keyframes_data();
 
     std::vector<keyframe> const&  keyframes() const { return m_keyframes; }
+    std::vector<angeo::coordinate_system> const&  meta_reference_frames() const { return m_meta_reference_frames; }
 
 private:
 
     std::vector<keyframe>  m_keyframes;
+    std::vector<angeo::coordinate_system>  m_meta_reference_frames;
 };
 
 
@@ -120,6 +122,7 @@ struct  keyframes : public async::resource_accessor<detail::keyframes_data>
     }
 
     std::vector<keyframe> const&  get_keyframes() const { return resource().keyframes(); }
+    std::vector<angeo::coordinate_system> const&  get_meta_reference_frames() const { return resource().meta_reference_frames(); }
 
     float_32_bit  start_time_point() const { return get_keyframes().front().get_time_point(); }
     float_32_bit  end_time_point() const { return get_keyframes().back().get_time_point(); }

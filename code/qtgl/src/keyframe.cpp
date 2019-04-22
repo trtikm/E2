@@ -13,46 +13,14 @@
 namespace qtgl { namespace detail {
 
 
-keyframe_data::keyframe_data(async::finalise_load_on_destroy_ptr const  finaliser)
-    : m_time_point(0.0)
-    , m_coord_systems()
+void  read_coord_systems(
+        std::ifstream&  istr,
+        boost::filesystem::path const&  pathname,
+        natural_32_bit const  num_coord_systems_to_read,
+        std::vector<angeo::coordinate_system>&  coord_systems
+        )
 {
-    TMPROF_BLOCK();
-
-    boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
-
-    if (!boost::filesystem::exists(pathname))
-        throw std::runtime_error(msgstream() << "The passed file '" << pathname << "' does not exist.");
-
-    if (boost::filesystem::file_size(pathname) < 4ULL)
-        throw std::runtime_error(msgstream() << "The passed file '" << pathname << "' is not a qtgl file (wrong size).");
-
-    std::ifstream  istr(pathname.string(),std::ios_base::binary);
-    if (!istr.good())
-        throw std::runtime_error(msgstream() << "Cannot open the keyframe file '" << pathname << "'.");
-
-    {
-        std::string  line;
-        if (!read_line(istr,line))
-            throw std::runtime_error(msgstream() << "Cannot read time point in the file '" << pathname << "'.");
-        std::istringstream istr(line);
-        istr >> m_time_point;
-        if (m_time_point < 0.0f)
-            throw std::runtime_error(msgstream() << "The time point in the file '" << pathname << "' is negative.");
-    }
-
-    natural_32_bit  num_coord_systems;
-    {
-        std::string  line;
-        if (!read_line(istr,line))
-            throw std::runtime_error(msgstream() << "Cannot read time point in the file '" << pathname << "'.");
-        std::istringstream istr(line);
-        istr >> num_coord_systems;
-        if (num_coord_systems == 0U)
-            throw std::runtime_error(msgstream() << "The the file '" << pathname << "' does not contain any coodinate system.");
-    }
-
-    for (natural_32_bit  i = 0U; i != num_coord_systems; ++i)
+    for (natural_32_bit  i = 0U; i != num_coord_systems_to_read; ++i)
     {
         vector3  position;
         {
@@ -88,8 +56,66 @@ keyframe_data::keyframe_data(async::finalise_load_on_destroy_ptr const  finalise
             orientation = quaternion(coords[0],coords[1],coords[2],coords[3]);
             orientation.normalize();
         }
-        m_coord_systems.push_back({position,orientation});
+        coord_systems.push_back({position,orientation});
     }
+}
+
+
+natural_32_bit  read_all_coord_systems(
+        std::ifstream&  istr,
+        boost::filesystem::path const&  pathname,
+        std::vector<angeo::coordinate_system>&  coord_systems
+        )
+{
+    natural_32_bit  num_coord_systems;
+    {
+        std::string  line;
+        if (!read_line(istr,line))
+            throw std::runtime_error(msgstream() << "Cannot read number of coord. systems in the file '" << pathname << "'.");
+        std::istringstream istr(line);
+        istr >> num_coord_systems;
+        if (num_coord_systems == 0U)
+            throw std::runtime_error(msgstream() << "The the file '" << pathname << "' does not contain any coodinate system.");
+    }
+    read_coord_systems(istr, pathname, num_coord_systems, coord_systems);
+    return num_coord_systems;
+}
+
+
+}}
+
+namespace qtgl { namespace detail {
+
+
+keyframe_data::keyframe_data(async::finalise_load_on_destroy_ptr const  finaliser)
+    : m_time_point(0.0)
+    , m_coord_systems()
+{
+    TMPROF_BLOCK();
+
+    boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
+
+    if (!boost::filesystem::exists(pathname))
+        throw std::runtime_error(msgstream() << "The passed file '" << pathname << "' does not exist.");
+
+    if (boost::filesystem::file_size(pathname) < 4ULL)
+        throw std::runtime_error(msgstream() << "The passed file '" << pathname << "' is not a qtgl file (wrong size).");
+
+    std::ifstream  istr(pathname.string(),std::ios_base::binary);
+    if (!istr.good())
+        throw std::runtime_error(msgstream() << "Cannot open the keyframe file '" << pathname << "'.");
+
+    {
+        std::string  line;
+        if (!read_line(istr,line))
+            throw std::runtime_error(msgstream() << "Cannot read time point in the file '" << pathname << "'.");
+        std::istringstream istr(line);
+        istr >> m_time_point;
+        if (m_time_point < 0.0f)
+            throw std::runtime_error(msgstream() << "The time point in the file '" << pathname << "' is negative.");
+    }
+
+    read_all_coord_systems(istr, pathname, m_coord_systems);
 }
 
 
@@ -145,11 +171,19 @@ keyframes_data::keyframes_data(
         std::string const  filename = entry.path().filename().string();
         std::string const  extension = entry.path().filename().extension().string();
 
-        if ( !(filename.find("keyframe") == 0UL && extension == ".txt") )
-            continue;
-
-        m_keyframes.push_back(keyframe());
-        m_keyframes.back().insert_load_request(canonical_path(entry.path()), keyframes_finaliser);
+        if (filename.find("keyframe") == 0UL && extension == ".txt")
+        {
+            m_keyframes.push_back(keyframe());
+            m_keyframes.back().insert_load_request(canonical_path(entry.path()), keyframes_finaliser);
+        }
+        else if (filename == "meta_reference_frames.txt")
+        {
+            boost::filesystem::path const  pathname = keyframes_dir / filename;
+            std::ifstream  istr(pathname.string(),std::ios_base::binary);
+            if (!istr.good())
+                throw std::runtime_error(msgstream() << "Cannot open the meta_reference_frames file '" << pathname << "'.");
+            read_all_coord_systems(istr, pathname, m_meta_reference_frames);
+        }
     }
 }
 
