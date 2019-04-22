@@ -66,7 +66,20 @@ finalise_load_on_destroy::~finalise_load_on_destroy()
             try
             {
                 if (get_parent()->get_error_message().empty())
-                    get_callback()(get_parent());
+                {
+                    bool  is_resource_valid = true;
+                    if (get_parent()->get_key() != key_type::get_invalid_key())
+                    {
+                        std::lock_guard<std::mutex> const  lock(resource_cache::instance().mutex());
+                        is_resource_valid = resource_cache::instance().find_resource(get_parent()->get_key()) != nullptr;
+                    }
+                    if (is_resource_valid)
+                        get_callback()(get_parent());
+                    else
+                        get_parent()->force_finalisation_as_failure(
+                                msgstream() << "The resource '" << get_parent()->get_key() << "' is no longer valid."
+                                );
+                }
             }
             catch (std::exception const&  e)
             {
