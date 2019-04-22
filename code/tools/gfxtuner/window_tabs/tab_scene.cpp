@@ -353,7 +353,10 @@ void  widgets::on_simulator_started()
         if (!boost::filesystem::is_directory(scene_dir))
             scene_dir = get_program_options()->dataRoot() / scene_dir;
         if (boost::filesystem::is_directory(scene_dir) && boost::filesystem::is_regular_file(scene_dir / "hierarchy.info"))
-            open_scene(scene_dir);
+        {
+            wnd()->get_current_scene_dir() = canonical_path(scene_dir);
+            open_scene(wnd()->get_current_scene_dir());
+        }
         else
         {
             clear_scene();
