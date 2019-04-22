@@ -38,7 +38,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
     {
         float_32_bit const  time_till_dst_pose =
                 m_template_motion_info.total_interpolation_time_in_seconds - m_template_motion_info.consumed_time_in_seconds;
-        time_step_in_seconds -= time_till_dst_pose;
+        INVARIANT(time_till_dst_pose >= 0.0f);
 
         m_reference_frame_in_world_space.set_origin(
                 m_reference_frame_in_world_space.origin() + time_till_dst_pose * m_desired_linear_velocity_in_world_space
@@ -61,6 +61,9 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                             )
                     );
         }
+
+        time_step_in_seconds -= time_till_dst_pose;
+        INVARIANT(time_step_in_seconds >= 0.0f);
 
         m_template_motion_info.src_pose = m_template_motion_info.dst_pose;
         m_template_motion_info.consumed_time_in_seconds = 0.0f;
@@ -92,14 +95,17 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
             float_32_bit const  time_delta =
                     dst_animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index).get_time_point() -
                     dst_animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index - 1U).get_time_point();
+            INVARIANT(time_delta > 0.0f);
             m_template_motion_info.total_interpolation_time_in_seconds += time_delta;
 
             vector3 const  position_delta =
-                    dst_animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index).get_coord_systems().at(0).origin() -
-                    dst_animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index - 1U).get_coord_systems().at(0).origin();
+                    dst_animation.get_meta_reference_frames().at(m_template_motion_info.dst_pose.keyframe_index).origin() -
+                    dst_animation.get_meta_reference_frames().at(m_template_motion_info.dst_pose.keyframe_index - 1U).origin();
             desired_linear_velocity_in_animation_space += position_delta / std::max(time_delta, 0.0001f);
         }
         while (time_step_in_seconds > m_template_motion_info.total_interpolation_time_in_seconds);
+
+        INVARIANT(m_template_motion_info.total_interpolation_time_in_seconds > 0.0f);
 
         m_desired_linear_velocity_in_world_space =
                 quaternion_to_rotation_matrix(m_reference_frame_in_world_space.orientation())
