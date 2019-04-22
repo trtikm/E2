@@ -1,4 +1,5 @@
 #include <ai/agents.hpp>
+#include <ai/blackboard_human.hpp>
 #include <angeo/skeleton_kinematics.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -63,7 +64,7 @@ agent_id  agents::insert(
     if (skeleton->children.empty())
         angeo::skeleton_compute_child_bones(skeleton->parents, std::const_pointer_cast<skeleton_composition>(skeleton)->children);
 
-    blackboard_ptr const  bb = std::make_shared<blackboard>();
+    blackboard_ptr const  bb = std::make_shared<blackboard_human>();
     bb->m_frames = current_frames;
     bb->m_environment_models = m_environment_models;
     bb->m_skeleton_composition = skeleton;

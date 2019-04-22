@@ -14,6 +14,8 @@ namespace ai {
 ///       Only the idea of a shared storage is used here.
 struct blackboard
 {
+    virtual ~blackboard() {}
+
     std::vector<angeo::coordinate_system>  m_frames;    // For each bone a coord. system in the local space of the parent bone if any,
                                                         // otherwise in the world space. 'm_frames.at(0)' is ALWAYS in the world space,
                                                         // because 'INVARIANT(m_skeleton_composition->parents.at(0) == -1)'.
@@ -25,6 +27,13 @@ struct blackboard
 
 using  blackboard_ptr = std::shared_ptr<blackboard>;
 using  blackboard_const_ptr = std::shared_ptr<blackboard const>;
+
+
+template<typename T>
+inline std::shared_ptr<T>  as(blackboard_ptr const  ptr) { return std::dynamic_pointer_cast<T>(ptr); }
+
+template<typename T>
+inline std::shared_ptr<T const>  as(blackboard_const_ptr const  ptr) { return std::dynamic_pointer_cast<T const>(ptr); }
 
 
 }

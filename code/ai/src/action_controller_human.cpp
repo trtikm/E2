@@ -23,13 +23,16 @@ action_controller_human::action_controller_human(
             })
     , m_reference_frame_in_world_space(start_reference_frame_in_world_space)
     , m_desired_linear_velocity_in_world_space(vector3_zero())
-    , m_desired_angular_velocity_in_world_space(vector3_zero())
+    , m_desired_angular_speed_in_world_space(0.0f)
 {}
 
 
 void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
 {
     TMPROF_BLOCK();
+
+    m_desired_angular_speed_in_world_space =
+            get_blackboard()->m_cortex_cmd_turn_intensity * get_blackboard()->m_max_turn_speed_in_radians_per_second;
 
     if (m_template_motion_info.consumed_time_in_seconds + time_step_in_seconds > m_template_motion_info.total_interpolation_time_in_seconds)
     {
@@ -40,15 +43,33 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         m_reference_frame_in_world_space.set_origin(
                 m_reference_frame_in_world_space.origin() + time_till_dst_pose * m_desired_linear_velocity_in_world_space
                 );
+        {
+            matrix33 const  reference_frame_rotation = quaternion_to_rotation_matrix(m_reference_frame_in_world_space.orientation());
+            vector3  turn_axis;
+            {
+                vector3  x, y;
+                rotation_matrix_to_basis(reference_frame_rotation, x, y, turn_axis);
+            }
+            m_reference_frame_in_world_space.set_orientation(
+                    normalised(
+                            rotation_matrix_to_quaternion(
+                                    quaternion_to_rotation_matrix(
+                                            angle_axis_to_quaternion(time_till_dst_pose * m_desired_angular_speed_in_world_space, turn_axis)
+                                            )
+                                    * reference_frame_rotation
+                                    )
+                            )
+                    );
+        }
 
         m_template_motion_info.src_pose = m_template_motion_info.dst_pose;
         m_template_motion_info.consumed_time_in_seconds = 0.0f;
         m_template_motion_info.total_interpolation_time_in_seconds = 0.0f;
 
         m_desired_linear_velocity_in_world_space = vector3_zero();
-        m_desired_angular_velocity_in_world_space = vector3_zero();
+        m_desired_angular_speed_in_world_space = 0.0f;
         vector3  desired_linear_velocity_in_animation_space = vector3_zero();
-        vector3  desired_angular_velocity_in_animation_space = vector3_zero();
+        float_32_bit  desired_angular_speed_in_animation_space = 0.0f;
 
         skeletal_motion_templates::keyframes const&  src_animation =
                 get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.src_pose.motion_name
@@ -80,14 +101,32 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         }
         while (time_step_in_seconds > m_template_motion_info.total_interpolation_time_in_seconds);
 
-        matrix44  W;
-        angeo::from_base_matrix(m_reference_frame_in_world_space, W);
-        m_desired_linear_velocity_in_world_space = transform_vector(desired_linear_velocity_in_animation_space, W);
+        m_desired_linear_velocity_in_world_space =
+                quaternion_to_rotation_matrix(m_reference_frame_in_world_space.orientation())
+                * desired_linear_velocity_in_animation_space;
     }
 
     m_reference_frame_in_world_space.set_origin(
             m_reference_frame_in_world_space.origin() + time_step_in_seconds * m_desired_linear_velocity_in_world_space
             );
+    {
+        matrix33 const  reference_frame_rotation = quaternion_to_rotation_matrix(m_reference_frame_in_world_space.orientation());
+        vector3  turn_axis;
+        {
+            vector3  x, y;
+            rotation_matrix_to_basis(reference_frame_rotation, x, y, turn_axis);
+        }
+        m_reference_frame_in_world_space.set_orientation(
+                normalised(
+                        rotation_matrix_to_quaternion(
+                                quaternion_to_rotation_matrix(
+                                        angle_axis_to_quaternion(time_step_in_seconds * m_desired_angular_speed_in_world_space, turn_axis)
+                                        )
+                                * reference_frame_rotation
+                                )
+                        )
+                );
+    }
 
     m_template_motion_info.consumed_time_in_seconds += time_step_in_seconds;
     INVARIANT(m_template_motion_info.consumed_time_in_seconds <= m_template_motion_info.total_interpolation_time_in_seconds);

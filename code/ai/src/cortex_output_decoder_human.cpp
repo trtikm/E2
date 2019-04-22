@@ -12,7 +12,7 @@ void  cortex_output_decoder_human::run()
 {    
     TMPROF_BLOCK();
 
-
+    get_blackboard()->m_cortex_cmd_turn_intensity = -get_io()->output.front();
 }
 
 

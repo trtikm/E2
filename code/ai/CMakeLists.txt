@@ -36,6 +36,8 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/input_devices.hpp
 
     ./include/ai/blackboard.hpp
+    ./include/ai/blackboard_human.hpp
+
     ./include/ai/environment_models.hpp
     ./include/ai/skeleton_composition.hpp
     ./include/ai/skeletal_motion_templates.hpp
