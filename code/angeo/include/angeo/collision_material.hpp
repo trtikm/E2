@@ -22,9 +22,11 @@ enum struct  COLLISION_MATERIAL_TYPE : natural_8_bit
     RUBBER              = 10,
     STEEL               = 11,
     WOOD                = 12,
+
+    NO_FRINCTION_NO_BOUNCING,
 };
 
-constexpr natural_8_bit  get_num_collision_materials() { return 1U + (natural_8_bit)COLLISION_MATERIAL_TYPE::WOOD;}
+constexpr natural_8_bit  get_num_collision_materials() { return 1U + (natural_8_bit)COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING;}
 inline natural_8_bit  as_number(COLLISION_MATERIAL_TYPE const  material) { return (natural_8_bit)material; }
 COLLISION_MATERIAL_TYPE  as_material(natural_8_bit  const  material);
 char const*  to_string(COLLISION_MATERIAL_TYPE const  material);

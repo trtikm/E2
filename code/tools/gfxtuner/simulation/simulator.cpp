@@ -902,22 +902,32 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                     auto const  rb_2_it = m_binding_of_collision_objects.find(coid_2);
                     if (rb_2_it == m_binding_of_collision_objects.cend())
                         return true;
-                    vector3  unit_tangent, unit_bitangent;
-                    angeo::compute_tangent_space_of_unit_vector(unit_normal, unit_tangent, unit_bitangent);
-                    angeo::rigid_body_simulator::contact_friction_constraints_info  friction_info {
-                            { unit_tangent, unit_bitangent },
-                            false,
-                            0.001f
-                    };
+                    angeo::COLLISION_MATERIAL_TYPE const  material_1 = m_collision_scene_ptr->get_material(coid_1);
+                    angeo::COLLISION_MATERIAL_TYPE const  material_2 = m_collision_scene_ptr->get_material(coid_2);
+                    bool const  use_friction =
+                            material_1 != angeo::COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING &&
+                            material_2 != angeo::COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING ;
+                    angeo::rigid_body_simulator::contact_friction_constraints_info  friction_info;
+                    if (use_friction)
+                    {
+                        friction_info.m_unit_tangent_plane_vectors.resize(2UL);
+                        angeo::compute_tangent_space_of_unit_vector(
+                                unit_normal,
+                                friction_info.m_unit_tangent_plane_vectors.front(),
+                                friction_info.m_unit_tangent_plane_vectors.back()
+                                );
+                        friction_info.m_suppress_negative_directions = false;
+                        friction_info.m_max_tangent_relative_speed_for_static_friction = 0.001f;
+                    }
                     m_rigid_body_simulator_ptr->insert_contact_constraints(
                             rb_1_it->second,
                             rb_2_it->second,
                             cid,
                             contact_point,
                             unit_normal,
-                            m_collision_scene_ptr->get_material(coid_1),
-                            m_collision_scene_ptr->get_material(coid_2),
-                            &friction_info,
+                            material_1,
+                            material_2,
+                            use_friction ? &friction_info : nullptr,
                             penetration_depth,
                             20.0f,
                             nullptr
