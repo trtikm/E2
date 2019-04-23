@@ -773,8 +773,9 @@ void  simulator::on_simulation_resumed()
         INVARIANT(node_ptr != nullptr);
         scn::agent* const  agent_ptr = scn::get_agent(*node_ptr);
         INVARIANT(agent_ptr != nullptr);
+        //m_agents_ptr->at(agent_ptr->id()).set_reference_frame_in_world_space(*node_ptr->get_coord_system());
         ai::skeleton_composition_const_ptr const  skeleton_composition = agent_ptr->get_skeleton_props()->skeleton_composition;
-        std::vector<angeo::coordinate_system>&  current_frames = m_agents_ptr->at(agent_ptr->id()).get_current_frames();
+        std::vector<angeo::coordinate_system>&  current_frames = m_agents_ptr->at(agent_ptr->id()).current_frames_ref();
         detail::skeleton_enumerate_nodes_of_bones(
                 node_ptr,
                 *skeleton_composition,
@@ -850,28 +851,34 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
         INVARIANT(node_ptr != nullptr);
         scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
         INVARIANT(agent_ptr != nullptr);
+        node_ptr->relocate(
+                m_agents_ptr->at(agent_ptr->id()).get_reference_frame_in_world_space().origin(),
+                m_agents_ptr->at(agent_ptr->id()).get_reference_frame_in_world_space().orientation()
+                );
         ai::skeleton_composition_const_ptr const  skeleton_composition = agent_ptr->get_skeleton_props()->skeleton_composition;
         std::vector<angeo::coordinate_system> const&  current_frames = m_agents_ptr->at(agent_ptr->id()).get_current_frames();
-        node_ptr->set_origin(current_frames.front().origin());
-        matrix33 const  agent_node_rotation_inverse =
-                transpose33(quaternion_to_rotation_matrix(node_ptr->get_coord_system()->orientation()));
+        matrix44 to_agent_node_matrix;
+        angeo::to_base_matrix(*node_ptr->get_coord_system(), to_agent_node_matrix);
         detail::skeleton_enumerate_nodes_of_bones(
                 node_ptr,
                 *skeleton_composition,
-                [&current_frames, &agent_node_rotation_inverse](
+                [&current_frames, &to_agent_node_matrix, node_ptr](
                     natural_32_bit const bone, scn::scene_node_ptr const  bone_node_ptr, bool const  has_parent) -> bool
                     {
                         if (bone_node_ptr != nullptr)
                             if (has_parent)
                                 bone_node_ptr->relocate(current_frames.at(bone).origin(), current_frames.at(bone).orientation());
                             else
-                                bone_node_ptr->relocate(
-                                        current_frames.at(bone).origin() - current_frames.front().origin(),
-                                        rotation_matrix_to_quaternion(
-                                                agent_node_rotation_inverse *
-                                                quaternion_to_rotation_matrix(current_frames.at(bone).orientation())
-                                                )
-                                        );
+                            {
+                                vector3  u;
+                                matrix33  R;
+                                {
+                                    matrix44 B;
+                                    angeo::from_base_matrix(current_frames.at(bone), B);
+                                    decompose_matrix44(to_agent_node_matrix * B, u, R);
+                                }
+                                bone_node_ptr->relocate(u, normalised(rotation_matrix_to_quaternion(R)));
+                            }
                         return true;
                     }
                 );

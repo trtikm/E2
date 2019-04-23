@@ -29,7 +29,10 @@ struct agent
     bool  uses_cortex_mock() const { return dynamic_cast<cortex_mock*>(m_cortex_primary.get()) != nullptr; }
 
     std::vector<angeo::coordinate_system> const& get_current_frames() const { return m_blackboard->m_frames; }
-    std::vector<angeo::coordinate_system>&  get_current_frames() { return m_blackboard->m_frames; }
+    std::vector<angeo::coordinate_system>&  current_frames_ref() { return m_blackboard->m_frames; }
+
+    angeo::coordinate_system const&  get_reference_frame_in_world_space() const { return m_action_controller->get_reference_frame_in_world_space(); }
+    void  set_reference_frame_in_world_space(angeo::coordinate_system const&  frame) { m_action_controller->reference_frame_in_world_space_ref() = frame; }
 
 private:
     std::unique_ptr<cortex>  m_cortex_primary;

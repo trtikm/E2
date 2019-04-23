@@ -14,14 +14,13 @@ action_controller_human::action_controller_human(
             angeo::coordinate_system const&  start_reference_frame_in_world_space,
             skeletal_motion_templates::motion_template_cursor const&  start_pose
             )
-    : action_controller(blackboard_)
+    : action_controller(blackboard_, start_reference_frame_in_world_space)
     , m_template_motion_info({
             start_pose,     // src_pose
             start_pose,     // dst_pose
             0.0f,           // total_interpolation_time_in_seconds
             0.0f            // consumed_time_in_seconds
             })
-    , m_reference_frame_in_world_space(start_reference_frame_in_world_space)
     , m_desired_linear_velocity_in_world_space(vector3_zero())
     , m_desired_angular_speed_in_world_space(0.0f)
 {}
@@ -40,17 +39,17 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                 m_template_motion_info.total_interpolation_time_in_seconds - m_template_motion_info.consumed_time_in_seconds;
         INVARIANT(time_till_dst_pose >= 0.0f);
 
-        m_reference_frame_in_world_space.set_origin(
-                m_reference_frame_in_world_space.origin() + time_till_dst_pose * m_desired_linear_velocity_in_world_space
+        reference_frame_in_world_space_ref().set_origin(
+                get_reference_frame_in_world_space().origin() + time_till_dst_pose * m_desired_linear_velocity_in_world_space
                 );
         {
-            matrix33 const  reference_frame_rotation = quaternion_to_rotation_matrix(m_reference_frame_in_world_space.orientation());
+            matrix33 const  reference_frame_rotation = quaternion_to_rotation_matrix(get_reference_frame_in_world_space().orientation());
             vector3  turn_axis;
             {
                 vector3  x, y;
                 rotation_matrix_to_basis(reference_frame_rotation, x, y, turn_axis);
             }
-            m_reference_frame_in_world_space.set_orientation(
+            reference_frame_in_world_space_ref().set_orientation(
                     normalised(
                             rotation_matrix_to_quaternion(
                                     quaternion_to_rotation_matrix(
@@ -108,21 +107,21 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         INVARIANT(m_template_motion_info.total_interpolation_time_in_seconds > 0.0f);
 
         m_desired_linear_velocity_in_world_space =
-                quaternion_to_rotation_matrix(m_reference_frame_in_world_space.orientation())
+                quaternion_to_rotation_matrix(get_reference_frame_in_world_space().orientation())
                 * desired_linear_velocity_in_animation_space;
     }
 
-    m_reference_frame_in_world_space.set_origin(
-            m_reference_frame_in_world_space.origin() + time_step_in_seconds * m_desired_linear_velocity_in_world_space
+    reference_frame_in_world_space_ref().set_origin(
+        get_reference_frame_in_world_space().origin() + time_step_in_seconds * m_desired_linear_velocity_in_world_space
             );
     {
-        matrix33 const  reference_frame_rotation = quaternion_to_rotation_matrix(m_reference_frame_in_world_space.orientation());
+        matrix33 const  reference_frame_rotation = quaternion_to_rotation_matrix(get_reference_frame_in_world_space().orientation());
         vector3  turn_axis;
         {
             vector3  x, y;
             rotation_matrix_to_basis(reference_frame_rotation, x, y, turn_axis);
         }
-        m_reference_frame_in_world_space.set_orientation(
+        reference_frame_in_world_space_ref().set_orientation(
                 normalised(
                         rotation_matrix_to_quaternion(
                                 quaternion_to_rotation_matrix(
@@ -168,7 +167,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         interpolated_frames_in_world_space.reserve(interpolated_frames_in_animation_space.size());
 
         matrix44  W, Ainv, M;
-        angeo::from_base_matrix(m_reference_frame_in_world_space, W);
+        angeo::from_base_matrix(get_reference_frame_in_world_space(), W);
         angeo::to_base_matrix(reference_frame_in_animation_space, Ainv);
         M = W * Ainv;
         for (angeo::coordinate_system const&  frame : interpolated_frames_in_animation_space)

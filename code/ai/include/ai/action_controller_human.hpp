@@ -24,7 +24,6 @@ struct  action_controller_human : public action_controller
 
 private:
     skeletal_motion_templates::template_motion_info  m_template_motion_info;
-    angeo::coordinate_system  m_reference_frame_in_world_space;
     vector3  m_desired_linear_velocity_in_world_space;
     float_32_bit  m_desired_angular_speed_in_world_space;   // Only the magnitude, because the axis is the z-axis of
                                                             // 'm_reference_frame_in_world_space'.
