@@ -38,14 +38,19 @@ inline bool  has_rigid_body(scene_node const&  node)
     return get_rigid_body(node) != nullptr;
 }
 
-inline void  insert_rigid_body(scene_node&  n, angeo::rigid_body_id const  rb_id)
+inline void  insert_rigid_body(scene_node&  n, angeo::rigid_body_id const  rb_id, bool const  auto_compute_mass_and_inertia_tensor)
 {
-    insert_record<rigid_body>(n, make_rigid_body_node_record_id(), rigid_body(rb_id));
+    insert_record<rigid_body>(n, make_rigid_body_node_record_id(), rigid_body(rb_id, auto_compute_mass_and_inertia_tensor));
 }
 
-inline void  insert_rigid_body(scene&  s, scene_node_id const&  node_id, angeo::rigid_body_id const  rb_id)
+inline void  insert_rigid_body(
+        scene&  s,
+        scene_node_id const&  node_id,
+        angeo::rigid_body_id const  rb_id,
+        bool const  auto_compute_mass_and_inertia_tensor
+        )
 {
-    insert_record<rigid_body>(s, make_rigid_body_record_id(node_id), rigid_body(rb_id));
+    insert_record<rigid_body>(s, make_rigid_body_record_id(node_id), rigid_body(rb_id, auto_compute_mass_and_inertia_tensor));
 }
 
 inline void  erase_rigid_body(scene_node&  n)

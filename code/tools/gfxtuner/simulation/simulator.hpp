@@ -155,6 +155,16 @@ struct simulator : public qtgl::real_time_simulator
             scn::scene_node_id const&  id
             );
 
+    void  insert_rigid_body_to_scene_node_ex(
+            vector3 const&  linear_velocity,
+            vector3 const&  angular_velocity,
+            vector3 const&  external_linear_acceleration,
+            vector3 const&  external_angular_acceleration,
+            float_32_bit const  mass_inverted,
+            matrix33 const&  inertia_tensor_inverted,
+            scn::scene_node_id const&  id
+            );
+
     void  erase_rigid_body_from_scene_node(
             scn::scene_node_id const&  id
             );
@@ -174,7 +184,7 @@ struct simulator : public qtgl::real_time_simulator
     void  save_collider(scn::collider const&  collider, boost::property_tree::ptree&  data);
 
     void  load_rigid_body(boost::property_tree::ptree const&  data, scn::scene_node_id const&  id);
-    void  save_rigid_body(angeo::rigid_body_id const  rb_id, boost::property_tree::ptree&  data);
+    void  save_rigid_body(scn::scene_node_id const&  id, boost::property_tree::ptree&  data);
 
     void  load_agent(boost::property_tree::ptree const&  data, scn::scene_record_id const&  id);
     void  save_agent(scn::scene_node_ptr const  node_ptr, boost::property_tree::ptree&  data);
@@ -221,13 +231,14 @@ struct simulator : public qtgl::real_time_simulator
     transition_data_from_simulation_to_edit const&  get_transition_data_from_simulation_to_edit() const
     { return m_transition_data_from_simulation_to_edit; }
 
-    void  on_create_scene_object(ai::agent_id const  agent_id, ai::environment_models::scene_action_name const&  scene_action_name);
-    void  on_destroy_scene_object(angeo::rigid_body_id const  rigid_body_id);
+    scn::scene_node_id const&  get_scene_node_of_agent(ai::agent_id const  id) const { return m_binding_of_agents_to_scene.at(id); }
 
     void  on_simulation_paused();
     void  on_simulation_resumed();
 
 private:
+
+    void  validate_nodes_of_rigid_bodies();
 
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
     void  perform_simulation_micro_step(float_64_bit const  time_to_simulate_in_seconds, bool const  is_last_micro_step);

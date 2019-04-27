@@ -1,5 +1,6 @@
 #include <gfxtuner/simulation/simulator.hpp>
 #include <gfxtuner/simulation/simulator_notifications.hpp>
+#include <gfxtuner/simulation/bind_ai_scene_to_simulator.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <scene/scene_utils.hpp>
 #include <scene/scene_utils_specialised.hpp>
@@ -265,12 +266,7 @@ simulator::simulator()
 
     , m_collision_scene_ptr(std::make_shared<angeo::collision_scene>())
     , m_rigid_body_simulator_ptr(std::make_shared<angeo::rigid_body_simulator>())
-    , m_agents_ptr(std::make_shared<ai::agents>(
-            m_collision_scene_ptr,
-            m_rigid_body_simulator_ptr,
-            std::bind(&simulator::on_create_scene_object, this, std::placeholders::_1, std::placeholders::_2),
-            std::bind(&simulator::on_destroy_scene_object, this, std::placeholders::_1)
-            ))  
+    , m_agents_ptr(std::make_shared<ai::agents>(std::make_shared<bind_ai_scene_to_simulator>(this)))
 
     , m_binding_of_collision_objects()
     , m_binding_of_rigid_bodies()
@@ -631,6 +627,53 @@ void  simulator::on_simulation_resumed()
             rbid_and_backup.second.m_external_angular_acceleration = m_rigid_body_simulator_ptr->get_external_angular_acceleration(rbid_and_backup.first);
         }
 
+    validate_nodes_of_rigid_bodies();
+
+    for (auto const& rbid_and_backup : m_transition_data_from_simulation_to_edit.m_static_rigid_body_backups)
+        if (m_rigid_body_simulator_ptr->contains(rbid_and_backup.first))
+        {
+            m_rigid_body_simulator_ptr->set_linear_velocity(rbid_and_backup.first, vector3_zero());
+            m_rigid_body_simulator_ptr->set_angular_velocity(rbid_and_backup.first, vector3_zero());
+            m_rigid_body_simulator_ptr->set_external_linear_acceleration(rbid_and_backup.first, vector3_zero());
+            m_rigid_body_simulator_ptr->set_external_angular_acceleration(rbid_and_backup.first, vector3_zero());
+        }
+
+    for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
+    {
+        scn::scene_node_ptr const  node_ptr = get_scene_node(agent_id_and_node_id.second);
+        INVARIANT(node_ptr != nullptr);
+        scn::agent* const  agent_ptr = scn::get_agent(*node_ptr);
+        INVARIANT(agent_ptr != nullptr);
+        //m_agents_ptr->at(agent_ptr->id()).set_reference_frame_in_world_space(*node_ptr->get_coord_system());
+        ai::skeleton_composition_const_ptr const  skeleton_composition = agent_ptr->get_skeleton_props()->skeleton_composition;
+        std::vector<angeo::coordinate_system>&  current_frames = m_agents_ptr->at(agent_ptr->id()).current_frames_ref();
+        detail::skeleton_enumerate_nodes_of_bones(
+                node_ptr,
+                *skeleton_composition,
+                [&current_frames, skeleton_composition](
+                    natural_32_bit const bone, scn::scene_node_ptr const  bone_node_ptr, bool const  has_parent) -> bool
+                    {
+                        if (bone_node_ptr != nullptr)
+                            if (has_parent)
+                                current_frames.at(bone) = *bone_node_ptr->get_coord_system();
+                            else
+                            {
+                                vector3  origin;
+                                matrix33  rot_matrix;
+                                decompose_matrix44(bone_node_ptr->get_world_matrix(), origin, rot_matrix);
+                                current_frames.at(bone) = { origin, normalised(rotation_matrix_to_quaternion(rot_matrix)) };
+                            }
+                        return true;
+                    }
+                );
+    }
+}
+
+
+void  simulator::validate_nodes_of_rigid_bodies()
+{
+    TMPROF_BLOCK();
+
     for (auto const&  node_name_and_collider_change : m_invalidated_nodes_of_rigid_bodies)
         if (auto  node_ptr = get_scene().get_scene_node(node_name_and_collider_change.first))
         {
@@ -645,7 +688,7 @@ void  simulator::on_simulation_resumed()
             for (std::size_t  i = 0UL; i != coids.size(); ++i)
                 m_collision_scene_ptr->on_position_changed(coids.at(i), coid_nodes.at(i)->get_world_matrix());
             
-            if (node_name_and_collider_change.second)
+            if (rb_ptr->auto_compute_mass_and_inertia_tensor() && node_name_and_collider_change.second)
             {
                 m_binding_of_rigid_bodies.erase(rb_ptr->id());
                 m_transition_data_from_simulation_to_edit.erase_backup_for_rigid_body(rb_ptr->id());
@@ -757,45 +800,6 @@ void  simulator::on_simulation_resumed()
             }
         }
     m_invalidated_nodes_of_rigid_bodies.clear();
-
-    for (auto const& rbid_and_backup : m_transition_data_from_simulation_to_edit.m_static_rigid_body_backups)
-        if (m_rigid_body_simulator_ptr->contains(rbid_and_backup.first))
-        {
-            m_rigid_body_simulator_ptr->set_linear_velocity(rbid_and_backup.first, vector3_zero());
-            m_rigid_body_simulator_ptr->set_angular_velocity(rbid_and_backup.first, vector3_zero());
-            m_rigid_body_simulator_ptr->set_external_linear_acceleration(rbid_and_backup.first, vector3_zero());
-            m_rigid_body_simulator_ptr->set_external_angular_acceleration(rbid_and_backup.first, vector3_zero());
-        }
-
-    for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
-    {
-        scn::scene_node_ptr const  node_ptr = get_scene_node(agent_id_and_node_id.second);
-        INVARIANT(node_ptr != nullptr);
-        scn::agent* const  agent_ptr = scn::get_agent(*node_ptr);
-        INVARIANT(agent_ptr != nullptr);
-        //m_agents_ptr->at(agent_ptr->id()).set_reference_frame_in_world_space(*node_ptr->get_coord_system());
-        ai::skeleton_composition_const_ptr const  skeleton_composition = agent_ptr->get_skeleton_props()->skeleton_composition;
-        std::vector<angeo::coordinate_system>&  current_frames = m_agents_ptr->at(agent_ptr->id()).current_frames_ref();
-        detail::skeleton_enumerate_nodes_of_bones(
-                node_ptr,
-                *skeleton_composition,
-                [&current_frames, skeleton_composition](
-                    natural_32_bit const bone, scn::scene_node_ptr const  bone_node_ptr, bool const  has_parent) -> bool
-                    {
-                        if (bone_node_ptr != nullptr)
-                            if (has_parent)
-                                current_frames.at(bone) = *bone_node_ptr->get_coord_system();
-                            else
-                            {
-                                vector3  origin;
-                                matrix33  rot_matrix;
-                                decompose_matrix44(bone_node_ptr->get_world_matrix(), origin, rot_matrix);
-                                current_frames.at(bone) = { origin, normalised(rotation_matrix_to_quaternion(rot_matrix)) };
-                            }
-                        return true;
-                    }
-                );
-    }
 }
 
 
@@ -814,6 +818,8 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
     }
 
     m_agents_ptr->next_round((float_32_bit)time_to_simulate_in_seconds, keyboard_props(), mouse_props(), window_props());
+
+    validate_nodes_of_rigid_bodies();
 
     constexpr float_64_bit  min_micro_time_step_in_seconds = 0.001;
     constexpr float_64_bit  max_micro_time_step_in_seconds = 0.04;
@@ -1630,6 +1636,8 @@ void  simulator::erase_scene_node(scn::scene_node_id const&  id)
     TMPROF_BLOCK();
 
     auto const  node_ptr = get_scene().get_scene_node(id);
+    for (auto const&  elem : node_ptr->get_children())
+        erase_scene_node(elem.second->get_id());
 
     if (scn::has_rigid_body(*node_ptr))
         erase_rigid_body_from_scene_node(id);
@@ -1788,6 +1796,7 @@ void  simulator::insert_collision_sphere_to_scene_node(
     TMPROF_BLOCK();
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
+    ASSUMPTION(node_ptr != nullptr);
     angeo::collision_object_id const  collider_id =
             m_collision_scene_ptr->insert_sphere(radius, node_ptr->get_world_matrix(), material, as_dynamic);
     scn::insert_collider(*node_ptr, id.get_record_name(), collider_id, density_multiplier);
@@ -1806,6 +1815,7 @@ void  simulator::insert_collision_capsule_to_scene_node(
     TMPROF_BLOCK();
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
+    ASSUMPTION(node_ptr != nullptr);
     angeo::collision_object_id const  collider_id =
             m_collision_scene_ptr->insert_capsule(
                     half_distance_between_end_points,
@@ -1829,6 +1839,7 @@ void  simulator::insert_collision_trianle_mesh_to_scene_node(
     TMPROF_BLOCK();
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
+    ASSUMPTION(node_ptr != nullptr);
     std::vector<angeo::collision_object_id>  collider_ids;
     m_collision_scene_ptr->insert_triangle_mesh(
             index_buffer.num_primitives(),
@@ -1849,6 +1860,7 @@ void  simulator::erase_collision_object_from_scene_node(
     TMPROF_BLOCK();
 
     auto const  node_ptr = get_scene_node(id.get_node_id());
+    ASSUMPTION(node_ptr != nullptr);
     if (auto const  collider_ptr = scn::get_collider(*node_ptr))
     {
         for (auto  coid : collider_ptr->ids()) {
@@ -1928,6 +1940,7 @@ void  simulator::insert_rigid_body_to_scene_node(
     TMPROF_BLOCK();
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id);
+    ASSUMPTION(node_ptr != nullptr);
 
     ASSUMPTION(find_nearest_rigid_body_node(node_ptr->get_parent()) == nullptr);
 
@@ -1943,11 +1956,47 @@ void  simulator::insert_rigid_body_to_scene_node(
                     external_angular_acceleration
                     );
 
-    scn::insert_rigid_body(*node_ptr, rb_id);
+    scn::insert_rigid_body(*node_ptr, rb_id, true);
     m_binding_of_rigid_bodies[rb_id] = node_ptr;
 
     invalidate_rigid_body_controling_node(node_ptr, true);
 }
+
+void  simulator::insert_rigid_body_to_scene_node_ex(
+        vector3 const&  linear_velocity,
+        vector3 const&  angular_velocity,
+        vector3 const&  external_linear_acceleration,
+        vector3 const&  external_angular_acceleration,
+        float_32_bit const  mass_inverted,
+        matrix33 const&  inertia_tensor_inverted,
+        scn::scene_node_id const&  id
+        )
+{
+    TMPROF_BLOCK();
+
+    scn::scene_node_ptr const  node_ptr = get_scene_node(id);
+    ASSUMPTION(node_ptr != nullptr);
+
+    ASSUMPTION(find_nearest_rigid_body_node(node_ptr->get_parent()) == nullptr);
+
+    angeo::rigid_body_id const  rb_id =
+            m_rigid_body_simulator_ptr->insert_rigid_body(
+                    vector3_zero(),
+                    quaternion_identity(),
+                    mass_inverted,
+                    inertia_tensor_inverted,
+                    linear_velocity,
+                    angular_velocity,
+                    external_linear_acceleration,
+                    external_angular_acceleration
+                    );
+
+    scn::insert_rigid_body(*node_ptr, rb_id, false);
+    m_binding_of_rigid_bodies[rb_id] = node_ptr;
+
+    invalidate_rigid_body_controling_node(node_ptr, false);
+}
+
 
 void  simulator::erase_rigid_body_from_scene_node(
         scn::scene_node_id const&  id
@@ -1956,6 +2005,7 @@ void  simulator::erase_rigid_body_from_scene_node(
     TMPROF_BLOCK();
 
     auto const  node_ptr = get_scene_node(id);
+    ASSUMPTION(node_ptr != nullptr);
     if (auto const  rb_ptr = scn::get_rigid_body(*node_ptr))
     {
         std::vector<angeo::collision_object_id>  coids;
@@ -1997,6 +2047,7 @@ void  simulator::get_rigid_body_info(
     TMPROF_BLOCK();
 
     scn::scene_node_const_ptr const  node_ptr = get_scene_node(id);
+    ASSUMPTION(node_ptr != nullptr);
     scn::rigid_body const* const  rb_ptr = scn::get_rigid_body(*node_ptr);
     ASSUMPTION(rb_ptr != nullptr);
     linear_velocity = m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id());
@@ -2011,6 +2062,7 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::skeleton_pro
     TMPROF_BLOCK();
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
+    ASSUMPTION(node_ptr != nullptr);
     std::vector<angeo::coordinate_system>  current_frames;
     detail::skeleton_enumerate_nodes_of_bones(
             node_ptr,
@@ -2033,6 +2085,7 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::skeleton_pro
     ai::skeletal_motion_templates::motion_template_cursor const  cursor{ "idle.stand", 0U };
     ai::agent_id const  agent_id =
             m_agents_ptr->insert(
+                    id.get_node_id(),
                     current_frames,
                     { current_frames.front().origin(), node_ptr->get_coord_system()->orientation() },
                     cursor,
@@ -2049,7 +2102,9 @@ void  simulator::erase_agent(scn::scene_record_id const&  id)
     TMPROF_BLOCK();
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
+    ASSUMPTION(node_ptr != nullptr);
     scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
+    ASSUMPTION(agent_ptr != nullptr);
 
     m_agents_ptr->erase(agent_ptr->id());
     m_binding_of_agents_to_scene.erase(agent_ptr->id());
@@ -2155,18 +2210,50 @@ void  simulator::load_rigid_body(
                        data.get<float_32_bit>(key_path / "z"));
     };
 
-    insert_rigid_body_to_scene_node(
-            load_vector("linear_velocity"),
-            load_vector("angular_velocity"),
-            load_vector("external_linear_acceleration"),
-            load_vector("external_angular_acceleration"),
-            id
-            );
+    auto const  load_matrix33 = [&data](std::string const&  key, matrix33&  M) -> void {
+        boost::property_tree::path const  key_path(key, '/');
+        M(0,0) = data.get<float_32_bit>(key_path / "00");
+        M(0,1) = data.get<float_32_bit>(key_path / "00");
+        M(0,2) = data.get<float_32_bit>(key_path / "00");
+        M(1,0) = data.get<float_32_bit>(key_path / "10");
+        M(1,1) = data.get<float_32_bit>(key_path / "11");
+        M(1,2) = data.get<float_32_bit>(key_path / "12");
+        M(2,0) = data.get<float_32_bit>(key_path / "20");
+        M(2,1) = data.get<float_32_bit>(key_path / "21");
+        M(2,2) = data.get<float_32_bit>(key_path / "22");
+    };
+
+    if (data.count("mass_inverted") != 0)
+    {
+        matrix33  inertia_inverted;
+        load_matrix33("inertia_tensor_inverted", inertia_inverted);
+        insert_rigid_body_to_scene_node_ex(
+                load_vector("linear_velocity"),
+                load_vector("angular_velocity"),
+                load_vector("external_linear_acceleration"),
+                load_vector("external_angular_acceleration"),
+                data.get<float_32_bit>("mass_invertex"),
+                inertia_inverted,
+                id
+                );
+    }
+    else
+        insert_rigid_body_to_scene_node(
+                load_vector("linear_velocity"),
+                load_vector("angular_velocity"),
+                load_vector("external_linear_acceleration"),
+                load_vector("external_angular_acceleration"),
+                id
+                );
 }
 
-void  simulator::save_rigid_body(angeo::rigid_body_id const  rb_id, boost::property_tree::ptree&  data)
+void  simulator::save_rigid_body(scn::scene_node_id const&  id, boost::property_tree::ptree&  data)
 {
     TMPROF_BLOCK();
+
+    auto const  node_ptr = get_scene_node(id);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    INVARIANT(rb_ptr != nullptr);
 
     auto const  save_vector = [&data](std::string const&  key, vector3 const&  u) -> void {
         boost::property_tree::path const  key_path(key, '/');
@@ -2175,10 +2262,29 @@ void  simulator::save_rigid_body(angeo::rigid_body_id const  rb_id, boost::prope
         data.put(key_path / "z", u(2));
     };
 
-    save_vector("linear_velocity", m_rigid_body_simulator_ptr->get_linear_velocity(rb_id));
-    save_vector("angular_velocity", m_rigid_body_simulator_ptr->get_angular_velocity(rb_id));
-    save_vector("external_linear_acceleration", m_rigid_body_simulator_ptr->get_external_linear_acceleration(rb_id));
-    save_vector("external_angular_acceleration", m_rigid_body_simulator_ptr->get_external_angular_acceleration(rb_id));
+    auto const  save_matrix33 = [&data](std::string const&  key, matrix33 const&  M) -> void {
+        boost::property_tree::path const  key_path(key, '/');
+        data.put(key_path / "00", M(0,0));
+        data.put(key_path / "00", M(0,1));
+        data.put(key_path / "00", M(0,2));
+        data.put(key_path / "10", M(1,0));
+        data.put(key_path / "11", M(1,1));
+        data.put(key_path / "12", M(1,2));
+        data.put(key_path / "20", M(2,0));
+        data.put(key_path / "21", M(2,1));
+        data.put(key_path / "22", M(2,2));
+    };
+
+    if (rb_ptr->auto_compute_mass_and_inertia_tensor() == false)
+    {
+        data.put("mass_inverted", m_rigid_body_simulator_ptr->get_inverted_mass(rb_ptr->id()));
+        data.put("inertia_tensor_inverted", m_rigid_body_simulator_ptr->get_inverted_inertia_tensor_in_local_space(rb_ptr->id()));
+    }
+
+    save_vector("linear_velocity", m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id()));
+    save_vector("angular_velocity", m_rigid_body_simulator_ptr->get_angular_velocity(rb_ptr->id()));
+    save_vector("external_linear_acceleration", m_rigid_body_simulator_ptr->get_external_linear_acceleration(rb_ptr->id()));
+    save_vector("external_angular_acceleration", m_rigid_body_simulator_ptr->get_external_angular_acceleration(rb_ptr->id()));
 }
 
 
@@ -2207,22 +2313,6 @@ void  simulator::save_agent(scn::scene_node_ptr const  node_ptr, boost::property
     scn::agent* const  agent_ptr = scn::get_agent(*node_ptr);
     ASSUMPTION(agent_ptr != nullptr);
     data.put("skeleton_dir", agent_ptr->get_skeleton_props()->skeleton_directory.string());
-}
-
-
-void  simulator::on_create_scene_object(ai::agent_id const  agent_id, ai::environment_models::scene_action_name const&  scene_action_name)
-{
-    TMPROF_BLOCK();
-
-
-}
-
-
-void  simulator::on_destroy_scene_object(angeo::rigid_body_id const  rigid_body_id)
-{
-    TMPROF_BLOCK();
-
-
 }
 
 

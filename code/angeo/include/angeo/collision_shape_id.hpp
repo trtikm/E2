@@ -29,6 +29,8 @@ inline natural_8_bit  as_number(COLLISION_SHAPE_TYPE const  cst)
     return static_cast<natural_8_bit>(cst);
 }
 
+char const*  as_string(COLLISION_SHAPE_TYPE const  cst);
+
 inline constexpr natural_8_bit  get_max_collision_shape_type_id()
 { 
     return static_cast<natural_8_bit>(COLLISION_SHAPE_TYPE::TRIANGLE);

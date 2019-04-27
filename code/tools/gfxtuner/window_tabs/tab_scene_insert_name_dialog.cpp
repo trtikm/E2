@@ -101,9 +101,11 @@ void  insert_name_dialog::reject()
 
 bool  is_scene_forbidden_name(std::string const&  name)
 {
-    return  name == "."
+    return  name.empty()
+            || name == "."
             || name == ".."
             || name == "*"
+            || name.front() == '@'
             || name.find('/') != std::string::npos
             || name.find('\\') != std::string::npos
             ;

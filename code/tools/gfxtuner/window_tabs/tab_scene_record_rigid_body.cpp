@@ -503,7 +503,7 @@ void  register_record_handler_for_save_scene_record(
                 boost::property_tree::ptree&  data) -> void {
                     w->wnd()->glwindow().call_now(
                             &simulator::save_rigid_body,
-                            scn::get_rigid_body(*node_ptr)->id(),
+                            node_ptr->get_id(),
                             std::ref(data)
                             );
                 }

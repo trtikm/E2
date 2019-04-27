@@ -9,15 +9,19 @@ namespace scn {
 
 struct  rigid_body final
 {
-    rigid_body(angeo::rigid_body_id const&  id)
+    rigid_body(angeo::rigid_body_id const&  id, bool const  auto_compute_mass_and_inertia_tensor_)
         : m_id(id)
+        , m_auto_compute_mass_and_inertia_tensor(auto_compute_mass_and_inertia_tensor_)
     {}
 
     angeo::rigid_body_id  id() const { return m_id; }
     void  set_id(angeo::rigid_body_id const  new_id) { m_id = new_id; }
 
+    bool auto_compute_mass_and_inertia_tensor() const { return m_auto_compute_mass_and_inertia_tensor; }
+
 private:
     angeo::rigid_body_id  m_id;
+    bool  m_auto_compute_mass_and_inertia_tensor;
 };
 
 

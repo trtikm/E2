@@ -75,6 +75,7 @@ struct  rigid_body_simulator
     void  set_inverted_mass(rigid_body_id const  id, float_32_bit const  inverted_mass) { m_rigid_bodies.at(id).m_inverted_mass = inverted_mass; }
 
     matrix33 const&  get_inverted_inertia_tensor_in_world_space(rigid_body_id const  id) const { return m_rigid_bodies.at(id).m_inverted_inertia_tensor; }
+    matrix33 const&  get_inverted_inertia_tensor_in_local_space(rigid_body_id const  id) const { return m_inverted_inertia_tensors.at(id); }
     void  set_inverted_inertia_tensor_in_local_space(rigid_body_id const  id, matrix33 const&  inverted_inertia_tensor_in_local_space);
 
     motion_constraint_system&  get_constraint_system() { return m_constraint_system; }

@@ -21,6 +21,8 @@ add_library(${THIS_TARGET_NAME}
     ./src/axis_aligned_bounding_box.cpp
 
     ./include/angeo/collision_shape_id.hpp
+    ./src/collision_shape_id.cpp
+
     ./include/angeo/collision_shape_feature_id.hpp
     ./include/angeo/collision_object_id.hpp
     ./include/angeo/collision_object_id_pair.hpp

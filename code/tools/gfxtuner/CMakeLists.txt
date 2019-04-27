@@ -80,6 +80,9 @@ add_executable(${THIS_TARGET_NAME}
 
     simulation/skeleton.hpp
     simulation/skeleton.cpp
+    
+    simulation/bind_ai_scene_to_simulator.hpp
+    simulation/bind_ai_scene_to_simulator.cpp
     )
 
 target_link_libraries(${THIS_TARGET_NAME}

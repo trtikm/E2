@@ -10,37 +10,18 @@
 namespace ai {
 
 
-agents::agents(
-        environment_models::collision_scene_ptr const  collisions,
-        environment_models::rigid_body_simulator_ptr const  physics,
-        environment_models::create_scene_object_callback const&  create_scene_object_handler,
-        environment_models::destroy_scene_object_callback const&  destroy_scene_object_handler
-        )
+agents::agents(scene_ptr const  scene_)
     : m_agents()
-    , m_environment_models()
+    , m_scene(scene_)
     , m_input_devices(std::make_shared<input_devices>())
     , m_scene_update_events()
-    , m_create_scene_object_handler(create_scene_object_handler)
-    , m_destroy_scene_object_handler(destroy_scene_object_handler)
 {
-    m_environment_models.swap(std::make_shared<environment_models>(
-            collisions,
-            physics,
-            [this](agent_id const  id, environment_models::scene_action_name const&  name) -> void {
-                    this->m_scene_update_events.push_back(std::make_unique<std::function<void()> >(
-                        std::bind(this->m_create_scene_object_handler, id, name))
-                        );
-                     },
-            [this](angeo::rigid_body_id const  id) -> void {
-                    this->m_scene_update_events.push_back(std::make_unique<std::function<void()> >(
-                        std::bind(this->m_destroy_scene_object_handler, id))
-                        );
-                    }
-            ));
+    ASSUMPTION(m_scene != nullptr);
 }
 
 
 agent_id  agents::insert(
+        scene::node_id const&  agent_nid,
         std::vector<angeo::coordinate_system> const&  current_frames,
         angeo::coordinate_system const&  start_reference_frame_in_world_space,
         skeletal_motion_templates::motion_template_cursor const&  start_pose,
@@ -65,23 +46,24 @@ agent_id  agents::insert(
         angeo::skeleton_compute_child_bones(skeleton->parents, std::const_pointer_cast<skeleton_composition>(skeleton)->children);
 
     blackboard_ptr const  bb = std::make_shared<blackboard_human>();
+    bb->m_agent_id = 0U; // Is computed below.
+    bb->m_scene = m_scene;
+    bb->m_agent_nid = agent_nid;
     bb->m_frames = current_frames;
-    bb->m_environment_models = m_environment_models;
     bb->m_skeleton_composition = skeleton;
     bb->m_motion_templates = motion_templates;
 
+    for (; bb->m_agent_id != m_agents.size(); ++bb->m_agent_id)
+        if (m_agents.at(bb->m_agent_id) == nullptr)
+            break;
+
     auto  agent_ptr = std::make_shared<agent>(bb, m_input_devices, start_reference_frame_in_world_space, start_pose);
 
-    agent_id  id = 0U;
-    for (; id != m_agents.size(); ++id)
-        if (m_agents.at(id) == nullptr)
-            break;
-    if (id == m_agents.size())
+    if (bb->m_agent_id == m_agents.size())
         m_agents.resize(m_agents.size() + 1U, nullptr);
-
-    m_agents.at(id) = agent_ptr;
+    m_agents.at(bb->m_agent_id) = agent_ptr;
     
-    return id;    
+    return bb->m_agent_id;
 }
 
 

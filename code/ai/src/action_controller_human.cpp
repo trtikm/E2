@@ -1,10 +1,55 @@
 #include <ai/action_controller_human.hpp>
 #include <ai/skeleton_utils.hpp>
+#include <scene/scene_node_id.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
+
+namespace ai { namespace detail {
+
+
+scene::node_id  get_motion_capsule_nid(scene_ptr const  s, scene::node_id const  agent_nid)
+{
+    return s->get_aux_root_node_for_agent(agent_nid, "motion_capsule");
+}
+
+
+void  create_motion_capsule(scene_ptr const  s, scene::node_id const  agent_nid, angeo::coordinate_system const&  frame_in_world_space)
+{
+    scene::node_id const  motion_capsule_nid(get_motion_capsule_nid(s, agent_nid));
+    s->insert_scene_node(motion_capsule_nid, frame_in_world_space, false);
+    s->insert_collision_capsule_to_scene_node(
+            motion_capsule_nid,
+            0.83f,
+            0.25f,
+            angeo::COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING,
+            1.0f,
+            true
+            );
+    s->insert_rigid_body_to_scene_node(
+            motion_capsule_nid,
+            vector3_zero(),
+            vector3_zero(),
+            vector3(0.0f, 0.0f, -9.81f),
+            vector3_zero(),
+            1.0f / 60.0f,
+            matrix33_zero()
+            );
+}
+
+
+void  destroy_motion_capsule(scene_ptr const  s, scene::node_id const  agent_nid)
+{
+    scene::node_id const  motion_capsule_nid(get_motion_capsule_nid(s, agent_nid));
+    s->erase_rigid_body_from_scene_node(motion_capsule_nid);
+    s->erase_collision_object_from_scene_node(motion_capsule_nid);
+    s->erase_scene_node(motion_capsule_nid);
+}
+
+
+}}
 
 namespace ai {
 
@@ -23,7 +68,15 @@ action_controller_human::action_controller_human(
             })
     , m_desired_linear_velocity_in_world_space(vector3_zero())
     , m_desired_angular_speed_in_world_space(0.0f)
-{}
+{
+    detail::create_motion_capsule(get_blackboard()->m_scene, get_blackboard()->m_agent_nid, get_reference_frame_in_world_space());
+}
+
+
+action_controller_human::~action_controller_human()
+{
+    detail::destroy_motion_capsule(get_blackboard()->m_scene, get_blackboard()->m_agent_nid);
+}
 
 
 void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)

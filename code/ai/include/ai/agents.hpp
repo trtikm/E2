@@ -4,7 +4,7 @@
 #   include <ai/agent.hpp>
 #   include <ai/agent_id.hpp>
 #   include <ai/input_devices.hpp>
-#   include <ai/environment_models.hpp>
+#   include <ai/scene.hpp>
 #   include <ai/skeleton_composition.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <ai/action_controller.hpp>
@@ -17,13 +17,10 @@ namespace ai {
 
 struct agents
 {
-    agents(environment_models::collision_scene_ptr const  collisions,
-           environment_models::rigid_body_simulator_ptr const  physics,
-           environment_models::create_scene_object_callback const&  create_scene_object_handler,
-           environment_models::destroy_scene_object_callback const&  destroy_scene_object_handler
-           );
+    explicit agents(scene_ptr const  scene_);
 
     agent_id  insert(
+            scene::node_id const&  agent_nid,
             std::vector<angeo::coordinate_system> const&  current_frames, // For each bone a coord. system either in the local space of the
                                                                           // parent bone (if has one) or in the world space (otherwise).
             angeo::coordinate_system const&  start_reference_frame_in_world_space,  // A coordinate system defining start position and
@@ -50,11 +47,9 @@ struct agents
 
 private:
     std::vector<std::shared_ptr<agent> >  m_agents; // Should be 'std::vector<std::unique_ptr<agent> >', but does not compile :-(
-    environment_models_ptr  m_environment_models;
+    scene_ptr  m_scene;
     input_devices_ptr  m_input_devices;
     std::vector<std::unique_ptr<std::function<void()> > >  m_scene_update_events;
-    environment_models::create_scene_object_callback   m_create_scene_object_handler;
-    environment_models::destroy_scene_object_callback  m_destroy_scene_object_handler;
 };
 
 
