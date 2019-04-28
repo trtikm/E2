@@ -148,6 +148,9 @@ void program_window::timerEvent(QTimerEvent* const event)
 
     // Here put time-dependent updates...
 
+    if (!glwindow().has_simulator())
+        return;
+
     m_status_bar.update();
 
     std::string const  current_tab = qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex()));

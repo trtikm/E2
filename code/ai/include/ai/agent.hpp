@@ -20,19 +20,12 @@ struct agent
 
     agent(blackboard_ptr const  blackboard_,
           input_devices_const_ptr const  input_devices_,
-          angeo::coordinate_system const&  start_reference_frame_in_world_space,
           skeletal_motion_templates::motion_template_cursor const&  start_pose);
 
     void  next_round(float_32_bit const  time_step_in_seconds);
     
     void  set_use_cortex_mock(bool const  state) { if (state != uses_cortex_mock()) m_cortex_primary.swap(m_cortex_secondary); }
     bool  uses_cortex_mock() const { return dynamic_cast<cortex_mock*>(m_cortex_primary.get()) != nullptr; }
-
-    std::vector<angeo::coordinate_system> const& get_current_frames() const { return m_blackboard->m_frames; }
-    std::vector<angeo::coordinate_system>&  current_frames_ref() { return m_blackboard->m_frames; }
-
-    angeo::coordinate_system const&  get_reference_frame_in_world_space() const { return m_action_controller->get_reference_frame_in_world_space(); }
-    void  set_reference_frame_in_world_space(angeo::coordinate_system const&  frame) { m_action_controller->reference_frame_in_world_space_ref() = frame; }
 
 private:
     std::unique_ptr<cortex>  m_cortex_primary;

@@ -6,6 +6,7 @@
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
+#include <algorithm>
 
 namespace ai {
 
@@ -22,8 +23,6 @@ agents::agents(scene_ptr const  scene_)
 
 agent_id  agents::insert(
         scene::node_id const&  agent_nid,
-        std::vector<angeo::coordinate_system> const&  current_frames,
-        angeo::coordinate_system const&  start_reference_frame_in_world_space,
         skeletal_motion_templates::motion_template_cursor const&  start_pose,
         skeleton_composition_const_ptr const  skeleton,
         skeletal_motion_templates_const_ptr const  motion_templates
@@ -34,7 +33,6 @@ agent_id  agents::insert(
     ASSUMPTION(skeleton != nullptr);
     ASSUMPTION(
         !skeleton->pose_frames.empty() &&
-        skeleton->pose_frames.size() == current_frames.size() &&
         skeleton->pose_frames.size() == skeleton->names.size() &&
         skeleton->pose_frames.size() == skeleton->parents.size() &&
         (skeleton->children.empty() || skeleton->pose_frames.size() == skeleton->children.size())
@@ -46,18 +44,28 @@ agent_id  agents::insert(
         angeo::skeleton_compute_child_bones(skeleton->parents, std::const_pointer_cast<skeleton_composition>(skeleton)->children);
 
     blackboard_ptr const  bb = std::make_shared<blackboard_human>();
+    bb->m_skeleton_composition = skeleton;
+    bb->m_motion_templates = motion_templates;
     bb->m_agent_id = 0U; // Is computed below.
     bb->m_scene = m_scene;
     bb->m_agent_nid = agent_nid;
-    bb->m_frames = current_frames;
-    bb->m_skeleton_composition = skeleton;
-    bb->m_motion_templates = motion_templates;
+    bb->m_bone_nids.resize(skeleton->pose_frames.size());
+    for (natural_32_bit  bone = 0U; bone != bb->m_bone_nids.size(); ++bone)
+    {
+        scene::node_id::path_type  path;
+        for (integer_32_bit parent_bone = (integer_32_bit)bone;
+                parent_bone >= 0;
+                parent_bone = bb->m_skeleton_composition->parents.at(parent_bone))
+            path.push_back(bb->m_skeleton_composition->names.at(parent_bone));
+        std::reverse(path.begin(), path.end());
+        bb->m_bone_nids.at(bone) = agent_nid / scene::node_id(path);
+    }
 
     for (; bb->m_agent_id != m_agents.size(); ++bb->m_agent_id)
         if (m_agents.at(bb->m_agent_id) == nullptr)
             break;
 
-    auto  agent_ptr = std::make_shared<agent>(bb, m_input_devices, start_reference_frame_in_world_space, start_pose);
+    auto  agent_ptr = std::make_shared<agent>(bb, m_input_devices, start_pose);
 
     if (bb->m_agent_id == m_agents.size())
         m_agents.resize(m_agents.size() + 1U, nullptr);

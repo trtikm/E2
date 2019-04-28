@@ -10,7 +10,6 @@
 #   include <scene/records/collider/collider.hpp>
 #   include <scene/records/rigid_body/rigid_body.hpp>
 #   include <scene/records/agent/agent.hpp>
-#   include <gfxtuner/simulation/transition_data_from_simulation_to_edit.hpp>
 #   include <qtgl/real_time_simulator.hpp>
 #   include <qtgl/camera.hpp>
 #   include <qtgl/free_fly.hpp>
@@ -169,6 +168,8 @@ struct simulator : public qtgl::real_time_simulator
             scn::scene_node_id const&  id
             );
 
+    void  rebuild_rigid_body_due_to_change_in_subtree(scn::scene_node_ptr const  phs_node_ptr);
+
     void  get_rigid_body_info(
             scn::scene_node_id const&  id,
             vector3&  linear_velocity,
@@ -192,9 +193,10 @@ struct simulator : public qtgl::real_time_simulator
     void  clear_scene();
 
     scn::scene_history_ptr  get_scene_history() { return m_scene_history; }
+    std::shared_ptr<angeo::collision_scene>  get_collision_scene() const { return m_collision_scene_ptr; }
+    std::shared_ptr<angeo::rigid_body_simulator>  get_rigid_body_simulator() const { return m_rigid_body_simulator_ptr; }
+    std::shared_ptr<ai::agents>  get_agents() const { return m_agents_ptr; }
 
-    void  translate_scene_node(scn::scene_node_id const&  id, vector3 const&  shift);
-    void  rotate_scene_node(scn::scene_node_id const&  id, quaternion const&  rotation);
     void  set_position_of_scene_node(scn::scene_node_id const&  id, vector3 const&  new_origin);
     void  set_orientation_of_scene_node(scn::scene_node_id const&  id, quaternion const&  new_orientation);
     void  relocate_scene_node(scn::scene_node_id const&  id, vector3 const&  new_origin, quaternion const&  new_orientation);
@@ -228,17 +230,17 @@ struct simulator : public qtgl::real_time_simulator
     qtgl::effects_config const&  get_effects_config() const { return m_effects_config; }
     qtgl::effects_config&  effects_config_ref() { return m_effects_config; }
 
-    transition_data_from_simulation_to_edit const&  get_transition_data_from_simulation_to_edit() const
-    { return m_transition_data_from_simulation_to_edit; }
-
     scn::scene_node_id const&  get_scene_node_of_agent(ai::agent_id const  id) const { return m_binding_of_agents_to_scene.at(id); }
+
+    scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_ptr  node_ptr);
+    scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_id const&  id)
+    { return find_nearest_rigid_body_node(get_scene().get_scene_node(id)); }
+    void  find_nearest_rigid_body_nodes_in_subtree(scn::scene_node_ptr  node_ptr, std::vector<scn::scene_node_ptr>&  output);
 
     void  on_simulation_paused();
     void  on_simulation_resumed();
 
 private:
-
-    void  validate_nodes_of_rigid_bodies();
 
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
     void  perform_simulation_micro_step(float_64_bit const  time_to_simulate_in_seconds, bool const  is_last_micro_step);
@@ -273,19 +275,6 @@ private:
             matrix44 const&  matrix_from_camera_to_clipspace,
             qtgl::draw_state&  draw_state
             );
-
-    scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_ptr  node_ptr);
-    scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_id const&  id)
-    { return find_nearest_rigid_body_node(get_scene().get_scene_node(id)); }
-    void  find_nearest_rigid_body_nodes_in_subtree(scn::scene_node_ptr  node_ptr, std::vector<scn::scene_node_ptr>&  output);
-
-    void  invalidate_rigid_body_at_node(scn::scene_node_ptr  node_ptr, bool const  collider_change);
-    void  invalidate_rigid_body_controling_node(scn::scene_node_ptr  node_ptr, bool const  collider_change);
-    void  invalidate_rigid_body_controling_node(scn::scene_node_id const&  id, bool const  collider_change)
-    { return invalidate_rigid_body_controling_node(get_scene().get_scene_node(id), collider_change); }
-    void  invalidate_rigid_bodies_in_subtree(scn::scene_node_ptr  node_ptr, bool const  collider_change);
-    void  invalidate_rigid_bodies_in_subtree(scn::scene_node_id const&  id, bool const  collider_change)
-    { return invalidate_rigid_bodies_in_subtree(get_scene().get_scene_node(id), collider_change); }
 
     void  foreach_collider_in_subtree(
                 scn::scene_node_ptr const  node_ptr,
@@ -362,11 +351,6 @@ private:
     std::unordered_map<angeo::collision_object_id, angeo::rigid_body_id>  m_binding_of_collision_objects;
     std::unordered_map<angeo::rigid_body_id, scn::scene_node_ptr>  m_binding_of_rigid_bodies;
     std::unordered_map<ai::agent_id, scn::scene_node_id>  m_binding_of_agents_to_scene;
-
-    // Data for handling trasitions between edit and simulation modes
-
-    std::unordered_map<scn::scene_node_id, bool>  m_invalidated_nodes_of_rigid_bodies;
-    transition_data_from_simulation_to_edit  m_transition_data_from_simulation_to_edit;
 };
 
 

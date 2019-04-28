@@ -22,8 +22,8 @@ void  create_motion_capsule(scene_ptr const  s, scene::node_id const  agent_nid,
     s->insert_scene_node(motion_capsule_nid, frame_in_world_space, false);
     s->insert_collision_capsule_to_scene_node(
             motion_capsule_nid,
-            0.83f,
-            0.25f,
+            0.65f,
+            0.2f,
             angeo::COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING,
             1.0f,
             true
@@ -56,10 +56,9 @@ namespace ai {
 
 action_controller_human::action_controller_human(
             blackboard_ptr const  blackboard_,
-            angeo::coordinate_system const&  start_reference_frame_in_world_space,
             skeletal_motion_templates::motion_template_cursor const&  start_pose
             )
-    : action_controller(blackboard_, start_reference_frame_in_world_space)
+    : action_controller(blackboard_)
     , m_template_motion_info({
             start_pose,     // src_pose
             start_pose,     // dst_pose
@@ -69,7 +68,15 @@ action_controller_human::action_controller_human(
     , m_desired_linear_velocity_in_world_space(vector3_zero())
     , m_desired_angular_speed_in_world_space(0.0f)
 {
-    detail::create_motion_capsule(get_blackboard()->m_scene, get_blackboard()->m_agent_nid, get_reference_frame_in_world_space());
+    angeo::coordinate_system  agent_frame;
+    {
+        angeo::coordinate_system  tmp;
+        get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_bone_nids.front(), false, tmp);
+        agent_frame.set_origin(tmp.origin());
+        get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_agent_nid, false, tmp);
+        agent_frame.set_orientation(tmp.orientation());
+    }
+    detail::create_motion_capsule(get_blackboard()->m_scene, get_blackboard()->m_agent_nid, agent_frame);
 }
 
 
@@ -92,26 +99,29 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                 m_template_motion_info.total_interpolation_time_in_seconds - m_template_motion_info.consumed_time_in_seconds;
         INVARIANT(time_till_dst_pose >= 0.0f);
 
-        reference_frame_in_world_space_ref().set_origin(
-                get_reference_frame_in_world_space().origin() + time_till_dst_pose * m_desired_linear_velocity_in_world_space
-                );
+        angeo::coordinate_system  agent_frame;
         {
-            matrix33 const  reference_frame_rotation = quaternion_to_rotation_matrix(get_reference_frame_in_world_space().orientation());
-            vector3  turn_axis;
+            get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_agent_nid, false, agent_frame);
+            agent_frame.set_origin(agent_frame.origin() + time_till_dst_pose * m_desired_linear_velocity_in_world_space);
             {
-                vector3  x, y;
-                rotation_matrix_to_basis(reference_frame_rotation, x, y, turn_axis);
+                matrix33 const  reference_frame_rotation = quaternion_to_rotation_matrix(agent_frame.orientation());
+                vector3  turn_axis;
+                {
+                    vector3  x, y;
+                    rotation_matrix_to_basis(reference_frame_rotation, x, y, turn_axis);
+                }
+                agent_frame.set_orientation(
+                        normalised(
+                                rotation_matrix_to_quaternion(
+                                        quaternion_to_rotation_matrix(
+                                                angle_axis_to_quaternion(time_till_dst_pose * m_desired_angular_speed_in_world_space, turn_axis)
+                                                )
+                                        * reference_frame_rotation
+                                        )
+                                )
+                        );
             }
-            reference_frame_in_world_space_ref().set_orientation(
-                    normalised(
-                            rotation_matrix_to_quaternion(
-                                    quaternion_to_rotation_matrix(
-                                            angle_axis_to_quaternion(time_till_dst_pose * m_desired_angular_speed_in_world_space, turn_axis)
-                                            )
-                                    * reference_frame_rotation
-                                    )
-                            )
-                    );
+            get_blackboard()->m_scene->set_frame_of_scene_node(get_blackboard()->m_agent_nid, false, agent_frame);
         }
 
         time_step_in_seconds -= time_till_dst_pose;
@@ -160,30 +170,33 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         INVARIANT(m_template_motion_info.total_interpolation_time_in_seconds > 0.0f);
 
         m_desired_linear_velocity_in_world_space =
-                quaternion_to_rotation_matrix(get_reference_frame_in_world_space().orientation())
+                quaternion_to_rotation_matrix(agent_frame.orientation())
                 * desired_linear_velocity_in_animation_space;
     }
 
-    reference_frame_in_world_space_ref().set_origin(
-        get_reference_frame_in_world_space().origin() + time_step_in_seconds * m_desired_linear_velocity_in_world_space
-            );
+    angeo::coordinate_system  agent_frame;
     {
-        matrix33 const  reference_frame_rotation = quaternion_to_rotation_matrix(get_reference_frame_in_world_space().orientation());
-        vector3  turn_axis;
+        get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_agent_nid, false, agent_frame);
+        agent_frame.set_origin(agent_frame.origin() + time_step_in_seconds * m_desired_linear_velocity_in_world_space);
         {
-            vector3  x, y;
-            rotation_matrix_to_basis(reference_frame_rotation, x, y, turn_axis);
+            matrix33 const  reference_frame_rotation = quaternion_to_rotation_matrix(agent_frame.orientation());
+            vector3  turn_axis;
+            {
+                vector3  x, y;
+                rotation_matrix_to_basis(reference_frame_rotation, x, y, turn_axis);
+            }
+            agent_frame.set_orientation(
+                    normalised(
+                            rotation_matrix_to_quaternion(
+                                    quaternion_to_rotation_matrix(
+                                            angle_axis_to_quaternion(time_step_in_seconds * m_desired_angular_speed_in_world_space, turn_axis)
+                                            )
+                                    * reference_frame_rotation
+                                    )
+                            )
+                    );
         }
-        reference_frame_in_world_space_ref().set_orientation(
-                normalised(
-                        rotation_matrix_to_quaternion(
-                                quaternion_to_rotation_matrix(
-                                        angle_axis_to_quaternion(time_step_in_seconds * m_desired_angular_speed_in_world_space, turn_axis)
-                                        )
-                                * reference_frame_rotation
-                                )
-                        )
-                );
+        get_blackboard()->m_scene->set_frame_of_scene_node(get_blackboard()->m_agent_nid, false, agent_frame);
     }
 
     m_template_motion_info.consumed_time_in_seconds += time_step_in_seconds;
@@ -220,7 +233,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         interpolated_frames_in_world_space.reserve(interpolated_frames_in_animation_space.size());
 
         matrix44  W, Ainv, M;
-        angeo::from_base_matrix(get_reference_frame_in_world_space(), W);
+        angeo::from_base_matrix(agent_frame, W);
         angeo::to_base_matrix(reference_frame_in_animation_space, Ainv);
         M = W * Ainv;
         for (angeo::coordinate_system const&  frame : interpolated_frames_in_animation_space)
@@ -236,11 +249,12 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         }
     }
 
-    transform_skeleton_coord_systems_from_world_to_local_space(
-            interpolated_frames_in_world_space,
-            get_blackboard()->m_skeleton_composition->parents,
-            get_blackboard()->m_frames
-            );
+    for (natural_32_bit  bone = 0; bone != interpolated_frames_in_world_space.size(); ++bone)
+        get_blackboard()->m_scene->set_frame_of_scene_node(
+                get_blackboard()->m_bone_nids.at(bone),
+                false,
+                interpolated_frames_in_world_space.at(bone)
+                );
 }
 
 

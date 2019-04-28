@@ -72,9 +72,6 @@ add_executable(${THIS_TARGET_NAME}
     simulation/simulator.cpp
     simulation/simulator_notifications.hpp
     
-    simulation/transition_data_from_simulation_to_edit.hpp
-    simulation/transition_data_from_simulation_to_edit.cpp
-
     simulation/gfx_object.hpp
     simulation/gfx_object.cpp
 

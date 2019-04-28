@@ -148,5 +148,4 @@ bool  update_history_according_to_change_in_selection(
 }
 
 
-
 }}

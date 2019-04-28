@@ -17,16 +17,14 @@ struct blackboard
 {
     virtual ~blackboard() {}
 
+    skeleton_composition_const_ptr  m_skeleton_composition;
+    skeletal_motion_templates_const_ptr  m_motion_templates;
+
     agent_id  m_agent_id;
 
     scene_ptr  m_scene;
     scene::node_id  m_agent_nid;
-
-    std::vector<angeo::coordinate_system>  m_frames;    // For each bone a coord. system in the local space of the parent bone if any,
-                                                        // otherwise in the world space. 'm_frames.at(0)' is ALWAYS in the world space,
-                                                        // because 'INVARIANT(m_skeleton_composition->parents.at(0) == -1)'.
-    skeleton_composition_const_ptr  m_skeleton_composition;
-    skeletal_motion_templates_const_ptr  m_motion_templates;
+    std::vector<scene::node_id>  m_bone_nids;
 };
 
 

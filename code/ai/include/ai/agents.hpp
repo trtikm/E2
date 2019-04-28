@@ -21,10 +21,6 @@ struct agents
 
     agent_id  insert(
             scene::node_id const&  agent_nid,
-            std::vector<angeo::coordinate_system> const&  current_frames, // For each bone a coord. system either in the local space of the
-                                                                          // parent bone (if has one) or in the world space (otherwise).
-            angeo::coordinate_system const&  start_reference_frame_in_world_space,  // A coordinate system defining start position and
-                                                                                    // orientation of the agent in the world space.
             skeletal_motion_templates::motion_template_cursor const&  start_pose,   // Defines the start pose (animation name and keyframe
                                                                                     // index) in which the agent should start the simulation. 
             skeleton_composition_const_ptr const  skeleton, // INVARIANT(skeleton->parents.at(0) == -1)

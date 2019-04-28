@@ -27,8 +27,8 @@ void  relocate_node(scn::scene_node_ptr const  node_ptr, angeo::coordinate_syste
             compose_to_base_matrix(u, R, to_parent_space_matrix);
         }
         node_ptr->relocate(
-            transform_point(node_ptr->get_coord_system()->origin(), to_parent_space_matrix),
-            transform(node_ptr->get_coord_system()->orientation(), to_parent_space_matrix)
+            transform_point(frame.origin(), to_parent_space_matrix),
+            normalised(transform(frame.orientation(), to_parent_space_matrix))
             );
     }
 }
@@ -96,6 +96,19 @@ void  bind_ai_scene_to_simulator::set_frame_of_scene_node(
     auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
     ASSUMPTION(node_ptr != nullptr);
     detail::relocate_node(node_ptr, frame, frame_is_in_parent_space);
+
+    if (auto const  collider_ptr = scn::get_collider(*node_ptr))
+    {
+        ASSUMPTION(m_simulator_ptr->find_nearest_rigid_body_node(node_ptr) == nullptr);
+        for (auto const  coid : collider_ptr->ids())
+            m_simulator_ptr->get_collision_scene()->on_position_changed(coid, node_ptr->get_world_matrix());
+    }
+    else if (auto  rb_ptr = scn::get_rigid_body(*node_ptr))
+    {
+        INVARIANT(!node_ptr->has_parent());
+        m_simulator_ptr->get_rigid_body_simulator()->set_position_of_mass_centre(rb_ptr->id(), node_ptr->get_coord_system()->origin());
+        m_simulator_ptr->get_rigid_body_simulator()->set_orientation(rb_ptr->id(), node_ptr->get_coord_system()->orientation());
+    }
 }
 
 
@@ -104,9 +117,13 @@ void  bind_ai_scene_to_simulator::erase_scene_node(node_id const&  nid)
     ASSUMPTION((
             m_simulator_ptr != nullptr &&
             [this, &nid]() -> bool {
-                if (auto const  node_ptr = m_simulator_ptr->get_scene_node(nid))
-                    return node_ptr->get_children().empty() && node_ptr->get_folders().empty();
-                return false;
+                auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+                if (node_ptr == nullptr || !node_ptr->get_children().empty())
+                    return false;
+                for (auto const&  folder : node_ptr->get_folders())
+                    if (!folder.second.get_records().empty())
+                        return false;
+                return true;
             }()
         ));
     m_simulator_ptr->erase_scene_node(nid);
@@ -123,6 +140,7 @@ void  bind_ai_scene_to_simulator::insert_collision_capsule_to_scene_node(
         )
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
+    ASSUMPTION(m_simulator_ptr->find_nearest_rigid_body_node(m_simulator_ptr->get_scene_node(nid)) == nullptr);
     m_simulator_ptr->insert_collision_capsule_to_scene_node(
             half_distance_between_end_points,
             thickness_from_central_line,
@@ -139,6 +157,7 @@ void  bind_ai_scene_to_simulator::erase_collision_object_from_scene_node(node_id
     ASSUMPTION(m_simulator_ptr != nullptr);
     auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
     ASSUMPTION(node_ptr != nullptr);
+    ASSUMPTION(m_simulator_ptr->find_nearest_rigid_body_node(node_ptr) == nullptr);
     auto const  collider_ptr = scn::get_collider(*node_ptr);
     ASSUMPTION(collider_ptr != nullptr && collider_ptr->ids().size() == 1UL);
     m_simulator_ptr->erase_collision_object_from_scene_node(

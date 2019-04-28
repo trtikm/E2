@@ -255,6 +255,9 @@ void  rigid_body_simulator::do_simulation_step(
 
         rigid_body&  rb = m_rigid_bodies.at(id);
 
+        if (rb.m_inverted_mass < 0.0001f)
+            continue;
+
         rb.m_velocity.m_linear += time_step_in_seconds * (
                 rb.m_acceleration_from_constraints.m_linear + rb.m_acceleration_from_external_forces.m_linear
                 );

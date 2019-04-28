@@ -85,9 +85,15 @@ inline void  insert_collider(
     insert_record<collider>(s, make_collider_record_id(node_id, shape_type), collider(collider_ids, density_multiplier));
 }
 
-inline void  erase_collider(scene_node&  n)
+inline void  erase_collider(scene_node&  n, scene_node::record_name const&  name)
 {
-    erase_folder(n, get_collider_folder_name());
+    erase_record(n, make_collider_node_record_id(name));
+}
+
+inline void  erase_collider(scene&  s, scene_record_id const&  id)
+{
+    ASSUMPTION(id.get_folder_name() == get_collider_folder_name());
+    erase_record(s, id);
 }
 
 

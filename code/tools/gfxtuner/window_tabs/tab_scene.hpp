@@ -145,6 +145,11 @@ private:
 
     void  set_window_title();
 
+    void  rebuild_tree_widget_according_to_scene(
+            scn::scene_node_ptr const  node_ptr,
+            tree_widget_item* const  parent_tree_item
+            );
+
     program_window*  m_wnd;
 
     tree_widget*  m_scene_tree;

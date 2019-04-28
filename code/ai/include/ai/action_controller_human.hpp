@@ -14,7 +14,6 @@ struct  action_controller_human : public action_controller
 {
     action_controller_human(
             blackboard_ptr const  blackboard_,
-            angeo::coordinate_system const&  start_reference_frame_in_world_space,
             skeletal_motion_templates::motion_template_cursor const&  start_pose
             );
     ~action_controller_human();

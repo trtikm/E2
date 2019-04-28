@@ -16,7 +16,6 @@ namespace ai {
 agent::agent(
         blackboard_ptr const  blackboard_,
         input_devices_const_ptr const  input_devices_,
-        angeo::coordinate_system const&  start_reference_frame_in_world_space,
         skeletal_motion_templates::motion_template_cursor const&  start_pose
         )
     : m_cortex_primary()
@@ -39,7 +38,7 @@ agent::agent(
     m_cortex_output_decoder.reset(std::make_unique<cortex_output_decoder_human>(io, m_blackboard).release());
 
     m_sensory_controller.reset(std::make_unique<sensory_controller_human>(m_blackboard).release());
-    m_action_controller.reset(std::make_unique<action_controller_human>(m_blackboard, start_reference_frame_in_world_space, start_pose).release());
+    m_action_controller.reset(std::make_unique<action_controller_human>(m_blackboard, start_pose).release());
 }
 
 

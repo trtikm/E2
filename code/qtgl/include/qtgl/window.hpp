@@ -84,6 +84,8 @@ struct window
 
     QWindow& qtbase() { return *m_window.get(); }
 
+    bool  has_simulator() const { return m_window->simulator() != nullptr; }
+
 private:
 
     simulator_type*  simulator_ptr()
