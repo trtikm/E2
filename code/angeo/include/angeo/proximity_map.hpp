@@ -650,7 +650,8 @@ void  proximity_map<object_type__>::apply_node_split(split_node* const  node_ptr
     node_ptr->m_front_child_node.reset(new split_node);
     node_ptr->m_back_child_node.reset(new split_node);
 
-    std::vector<vector3>  object_centers(objects->size());
+    std::vector<vector3>  object_centers;
+    object_centers.reserve(objects->size());
     for (object_type object : *objects)
     {
         object_centers.push_back(0.5f * (m_get_bbox_min_corner(object) + m_get_bbox_max_corner(object)));
