@@ -60,6 +60,8 @@ struct bind_ai_scene_to_simulator : public ai::scene
             float_32_bit const  mass_inverted,
             matrix33 const&  inertia_tensor_inverted
             ) override;
+    vector3  get_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid) override;
+    void  set_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_velocity) override;
     void  erase_rigid_body_from_scene_node(node_id const&  nid) override;
 
 private:

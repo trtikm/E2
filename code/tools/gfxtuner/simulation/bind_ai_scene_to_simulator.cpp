@@ -189,6 +189,28 @@ void  bind_ai_scene_to_simulator::insert_rigid_body_to_scene_node(
 }
 
 
+vector3  bind_ai_scene_to_simulator::get_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    return m_simulator_ptr->get_rigid_body_simulator()->get_linear_velocity(rb_ptr->id());
+}
+
+
+void  bind_ai_scene_to_simulator::set_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_velocity)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    m_simulator_ptr->get_rigid_body_simulator()->set_linear_velocity(rb_ptr->id(), linear_velocity);
+}
+
+
 void  bind_ai_scene_to_simulator::erase_rigid_body_from_scene_node(node_id const&  nid)
 {
     ASSUMPTION(m_simulator_ptr != nullptr);

@@ -93,6 +93,10 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
     m_desired_angular_speed_in_world_space =
             get_blackboard()->m_cortex_cmd_turn_intensity * get_blackboard()->m_max_turn_speed_in_radians_per_second;
 
+    scene::node_id const  motion_capsule_nid(detail::get_motion_capsule_nid(get_blackboard()->m_scene, get_blackboard()->m_agent_nid));
+    angeo::coordinate_system  motion_capsule_frame;
+    get_blackboard()->m_scene->get_frame_of_scene_node(motion_capsule_nid, false, motion_capsule_frame);
+
     if (m_template_motion_info.consumed_time_in_seconds + time_step_in_seconds > m_template_motion_info.total_interpolation_time_in_seconds)
     {
         float_32_bit const  time_till_dst_pose =
@@ -102,7 +106,8 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         angeo::coordinate_system  agent_frame;
         {
             get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_agent_nid, false, agent_frame);
-            agent_frame.set_origin(agent_frame.origin() + time_till_dst_pose * m_desired_linear_velocity_in_world_space);
+            //agent_frame.set_origin(agent_frame.origin() + time_till_dst_pose * m_desired_linear_velocity_in_world_space);
+            agent_frame.set_origin(motion_capsule_frame.origin());
             {
                 matrix33 const  reference_frame_rotation = quaternion_to_rotation_matrix(agent_frame.orientation());
                 vector3  turn_axis;
@@ -177,7 +182,8 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
     angeo::coordinate_system  agent_frame;
     {
         get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_agent_nid, false, agent_frame);
-        agent_frame.set_origin(agent_frame.origin() + time_step_in_seconds * m_desired_linear_velocity_in_world_space);
+        //agent_frame.set_origin(agent_frame.origin() + time_step_in_seconds * m_desired_linear_velocity_in_world_space);
+        agent_frame.set_origin(motion_capsule_frame.origin());
         {
             matrix33 const  reference_frame_rotation = quaternion_to_rotation_matrix(agent_frame.orientation());
             vector3  turn_axis;
@@ -198,6 +204,11 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         }
         get_blackboard()->m_scene->set_frame_of_scene_node(get_blackboard()->m_agent_nid, false, agent_frame);
     }
+
+    get_blackboard()->m_scene->set_linear_velocity_of_rigid_body_of_scene_node(
+            motion_capsule_nid,
+            m_desired_linear_velocity_in_world_space
+            );
 
     m_template_motion_info.consumed_time_in_seconds += time_step_in_seconds;
     INVARIANT(m_template_motion_info.consumed_time_in_seconds <= m_template_motion_info.total_interpolation_time_in_seconds);
