@@ -5,6 +5,7 @@
 #   include <ai/scene.hpp>
 #   include <ai/skeleton_composition.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
+#   include <unordered_map>
 #   include <memory>
 
 namespace ai {
@@ -25,6 +26,7 @@ struct blackboard
     scene_ptr  m_scene;
     scene::node_id  m_agent_nid;
     std::vector<scene::node_id>  m_bone_nids;
+    std::unordered_multimap<scene::node_id, scene::collicion_contant_info>  m_collision_contacts;
 };
 
 

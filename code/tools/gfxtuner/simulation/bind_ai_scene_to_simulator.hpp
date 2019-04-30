@@ -6,6 +6,7 @@
 #   include <scene/scene_record_id.hpp>
 #   include <angeo/collision_scene.hpp>
 #   include <angeo/rigid_body_simulator.hpp>
+#   include <unordered_map>
 
 
 struct  simulator;
@@ -15,10 +16,12 @@ struct bind_ai_scene_to_simulator : public ai::scene
 {
     explicit  bind_ai_scene_to_simulator(simulator* const  simulator_ptr)
         : m_simulator_ptr(simulator_ptr)
+        , m_collision_contacts_stream()
     {}
 
     ~bind_ai_scene_to_simulator()
     {
+        m_collision_contacts_stream.clear();
         m_simulator_ptr = nullptr;
     }
 
@@ -62,10 +65,31 @@ struct bind_ai_scene_to_simulator : public ai::scene
             ) override;
     vector3  get_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid) override;
     void  set_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_velocity) override;
+    vector3  get_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) override;
+    void  set_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_acceleration) override;
     void  erase_rigid_body_from_scene_node(node_id const&  nid) override;
 
+    vector3  get_gravity_acceleration_at_point(vector3 const&  position) const override; // Always in the world space.
+
+    void  register_to_collision_contacts_stream(
+            node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to capture.
+            ai::agent_id const  agent_id    // Identifies an agent which will receive the contancts of the collider to its blackboard.
+            ) override;
+    void  unregister_to_collision_contacts_stream(
+            node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to stop capturing.
+            ai::agent_id const  agent_id    // Identifies an agent which will stop receiving the contancts of the collider to its blackboard.
+            ) override;
+    void  on_collision_contact(
+            angeo::collision_object_id const  coid_1,
+            angeo::collision_object_id const  coid_2,
+            vector3 const&  contact_point,
+            vector3 const&  unit_normal
+            ) const;
+
 private:
+
     simulator*  m_simulator_ptr;
+    std::unordered_map<angeo::collision_object_id, std::pair<node_id, ai::agent_id> >  m_collision_contacts_stream;
 };
 
 

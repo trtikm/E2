@@ -34,11 +34,20 @@ struct agents
     agent&  at(agent_id const  id) { return *m_agents.at(id); }
     agent const&  at(agent_id const  id) const { return *m_agents.at(id); }
 
+    scene_ptr  get_scene_ptr() const { return m_scene; }
+
     void  next_round(
             float_32_bit const  time_step_in_seconds,
             input_devices::keyboard_props const&  keyboard,
             input_devices::mouse_props const&  mouse,
             input_devices::window_props const&  window
+            );
+
+    void  on_collision_contact(
+            agent_id const  agent_id,
+            scene::node_id const&  collider_nid,
+            vector3 const&  contact_point,
+            vector3 const&  unit_normal
             );
 
 private:

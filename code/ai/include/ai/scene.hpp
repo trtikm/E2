@@ -16,6 +16,16 @@ struct  scene
 {
     using  node_id = scn::scene_node_id;
 
+    struct  collicion_contant_info
+    {
+        collicion_contant_info(vector3 const&  contact_point_, vector3 const&  unit_normal_)
+            : contact_point(contact_point_)
+            , unit_normal(unit_normal_)
+        {}
+        vector3  contact_point;
+        vector3  unit_normal;
+    };
+
     virtual ~scene() = 0 {}
 
     // When an agent wants to create auxiliary scene nodes outside the subtree under its agent node,
@@ -64,7 +74,20 @@ struct  scene
             ) = 0;
     virtual vector3  get_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid) = 0;
     virtual void  set_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_velocity) = 0;
+    virtual vector3  get_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) = 0;
+    virtual void  set_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_acceleration) = 0;
     virtual void  erase_rigid_body_from_scene_node(node_id const&  nid) = 0;
+
+    virtual vector3  get_gravity_acceleration_at_point(vector3 const&  position) const = 0; // Always in the world space.
+
+    virtual void  register_to_collision_contacts_stream(
+            node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to capture.
+            agent_id const  agent_id        // Identifies an agent which will receive the contancts of the collider to its blackboard.
+            ) = 0;
+    virtual void  unregister_to_collision_contacts_stream(
+            node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to stop capturing.
+            agent_id const  agent_id        // Identifies an agent which will stop receiving the contancts of the collider to its blackboard.
+            ) = 0;
 };
 
 

@@ -27,6 +27,8 @@ struct agent
     void  set_use_cortex_mock(bool const  state) { if (state != uses_cortex_mock()) m_cortex_primary.swap(m_cortex_secondary); }
     bool  uses_cortex_mock() const { return dynamic_cast<cortex_mock*>(m_cortex_primary.get()) != nullptr; }
 
+    blackboard_ptr  get_blackboard() { return m_blackboard; }
+
 private:
     std::unique_ptr<cortex>  m_cortex_primary;
     std::unique_ptr<cortex>  m_cortex_secondary;

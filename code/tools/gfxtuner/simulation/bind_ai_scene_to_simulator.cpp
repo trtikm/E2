@@ -160,6 +160,7 @@ void  bind_ai_scene_to_simulator::erase_collision_object_from_scene_node(node_id
     ASSUMPTION(m_simulator_ptr->find_nearest_rigid_body_node(node_ptr) == nullptr);
     auto const  collider_ptr = scn::get_collider(*node_ptr);
     ASSUMPTION(collider_ptr != nullptr && collider_ptr->ids().size() == 1UL);
+    ASSUMPTION(m_collision_contacts_stream.count(collider_ptr->id()) == 0UL);
     m_simulator_ptr->erase_collision_object_from_scene_node(
             scn::make_collider_record_id(nid, angeo::as_string(angeo::get_shape_type(collider_ptr->id())))
             );
@@ -211,8 +212,85 @@ void  bind_ai_scene_to_simulator::set_linear_velocity_of_rigid_body_of_scene_nod
 }
 
 
+vector3  bind_ai_scene_to_simulator::get_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    return m_simulator_ptr->get_rigid_body_simulator()->get_external_linear_acceleration(rb_ptr->id());
+}
+
+
+void  bind_ai_scene_to_simulator::set_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_acceleration)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    m_simulator_ptr->get_rigid_body_simulator()->set_external_linear_acceleration(rb_ptr->id(), linear_acceleration);
+}
+
+
 void  bind_ai_scene_to_simulator::erase_rigid_body_from_scene_node(node_id const&  nid)
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
     m_simulator_ptr->erase_rigid_body_from_scene_node(nid);
+}
+
+
+vector3  bind_ai_scene_to_simulator::get_gravity_acceleration_at_point(vector3 const&  position) const
+{
+    return -9.81f * vector3_unit_z();
+}
+
+
+void  bind_ai_scene_to_simulator::register_to_collision_contacts_stream(
+        node_id const&  collider_nid,
+        ai::agent_id const  agent_id
+        )
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(collider_nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  collider_ptr = scn::get_collider(*node_ptr);
+    ASSUMPTION(collider_ptr != nullptr && collider_ptr->ids().size() == 1UL);
+    ASSUMPTION(m_collision_contacts_stream.count(collider_ptr->id()) == 0UL);
+    m_collision_contacts_stream.insert({ collider_ptr->id() , {collider_nid, agent_id} });
+}
+
+
+void  bind_ai_scene_to_simulator::unregister_to_collision_contacts_stream(
+        node_id const&  collider_nid,
+        ai::agent_id const  agent_id
+        )
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(collider_nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  collider_ptr = scn::get_collider(*node_ptr);
+    ASSUMPTION(collider_ptr != nullptr && collider_ptr->ids().size() == 1UL);
+    ASSUMPTION(m_collision_contacts_stream.count(collider_ptr->id()) != 0UL);
+    m_collision_contacts_stream.erase(collider_ptr->id());
+}
+
+
+void  bind_ai_scene_to_simulator::on_collision_contact(
+        angeo::collision_object_id const  coid_1,
+        angeo::collision_object_id const  coid_2,
+        vector3 const&  contact_point,
+        vector3 const&  unit_normal
+        ) const
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+
+    auto  it = m_collision_contacts_stream.find(coid_1);
+    if (it != m_collision_contacts_stream.cend())
+        m_simulator_ptr->get_agents()->on_collision_contact(it->second.second, it->second.first, contact_point, unit_normal);
+
+    it = m_collision_contacts_stream.find(coid_2);
+    if (it != m_collision_contacts_stream.cend())
+        m_simulator_ptr->get_agents()->on_collision_contact(it->second.second, it->second.first, contact_point, -unit_normal);
 }

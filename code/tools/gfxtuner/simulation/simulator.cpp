@@ -657,8 +657,10 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
 {
     TMPROF_BLOCK();
 
+    auto const  ai_scene_bonding = std::dynamic_pointer_cast<bind_ai_scene_to_simulator>(m_agents_ptr->get_scene_ptr());
+
     m_collision_scene_ptr->compute_contacts_of_all_dynamic_objects(
-            [this, is_last_micro_step](
+            [this, is_last_micro_step, ai_scene_bonding](
                 angeo::contact_id const& cid,
                 vector3 const& contact_point,
                 vector3 const& unit_normal,
@@ -669,10 +671,13 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                                 });
 
                     angeo::collision_object_id const  coid_1 = angeo::get_object_id(angeo::get_first_collider_id(cid));
+                    angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
+
+                    ai_scene_bonding->on_collision_contact(coid_1, coid_2, contact_point, unit_normal);
+
                     auto const  rb_1_it = m_binding_of_collision_objects.find(coid_1);
                     if (rb_1_it == m_binding_of_collision_objects.cend())
                         return true;
-                    angeo::collision_object_id const  coid_2 = angeo::get_object_id(angeo::get_second_collider_id(cid));
                     auto const  rb_2_it = m_binding_of_collision_objects.find(coid_2);
                     if (rb_2_it == m_binding_of_collision_objects.cend())
                         return true;

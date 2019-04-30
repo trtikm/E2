@@ -94,7 +94,21 @@ void  agents::next_round(
 
     for (auto&  agent_ptr : m_agents)
         if (agent_ptr != nullptr)
+        {
             agent_ptr->next_round(time_step_in_seconds);
+            agent_ptr->get_blackboard()->m_collision_contacts.clear();
+        }
+}
+
+
+void  agents::on_collision_contact(
+        agent_id const  agent_id,
+        scene::node_id const&  collider_nid,
+        vector3 const&  contact_point,
+        vector3 const&  unit_normal
+        )
+{
+    m_agents.at(agent_id)->get_blackboard()->m_collision_contacts.insert({collider_nid, {contact_point, unit_normal}});
 }
 
 
