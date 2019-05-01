@@ -105,6 +105,8 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
     angeo::coordinate_system  motion_capsule_frame;
     get_blackboard()->m_scene->get_frame_of_scene_node(motion_capsule_nid, false, motion_capsule_frame);
     vector3 const  gravity = get_blackboard()->m_scene->get_gravity_acceleration_at_point(motion_capsule_frame.origin());
+    vector3 const  current_linear_velocity_in_world_space =
+            get_blackboard()->m_scene->get_linear_velocity_of_rigid_body_of_scene_node(motion_capsule_nid);
 
     bool  has_contact_with_ground = false;
     {
@@ -116,6 +118,19 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                 break;
             }
     }
+
+    vector3  agent_linear_acceleration = vector3_zero();
+    if (has_contact_with_ground == true)
+    {
+        agent_linear_acceleration =
+                (m_desired_linear_velocity_in_world_space - current_linear_velocity_in_world_space) / time_step_in_seconds;
+        float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
+        float_32_bit constexpr  MAX_AGENT_LINEAR_ACCELERATION = 20.0f;
+        if (agent_linear_acceleration_magnitude > MAX_AGENT_LINEAR_ACCELERATION)
+            agent_linear_acceleration *= MAX_AGENT_LINEAR_ACCELERATION / agent_linear_acceleration_magnitude;
+    }
+
+    get_blackboard()->m_scene->set_linear_acceleration_of_rigid_body_of_scene_node(motion_capsule_nid, agent_linear_acceleration + gravity);
 
     if (m_template_motion_info.consumed_time_in_seconds + time_step_in_seconds > m_template_motion_info.total_interpolation_time_in_seconds)
     {
@@ -197,6 +212,13 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         m_desired_linear_velocity_in_world_space =
                 quaternion_to_rotation_matrix(agent_frame.orientation())
                 * desired_linear_velocity_in_animation_space;
+
+        float_32_bit const  linear_acceleration_ratio =
+                (length(current_linear_velocity_in_world_space) + 0.001f) / (length(m_desired_linear_velocity_in_world_space) + 0.001f);
+        float_32_bit const  animation_speed_coef = std::max(0.5f, std::min(2.0f, linear_acceleration_ratio));
+        m_template_motion_info.total_interpolation_time_in_seconds /= animation_speed_coef;
+
+        time_step_in_seconds = std::min(time_step_in_seconds, m_template_motion_info.total_interpolation_time_in_seconds);
     }
 
     angeo::coordinate_system  agent_frame;
@@ -224,21 +246,6 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         }
         get_blackboard()->m_scene->set_frame_of_scene_node(get_blackboard()->m_agent_nid, false, agent_frame);
     }
-
-    vector3  agent_linear_acceleration = vector3_zero();
-    if (has_contact_with_ground == true)
-    {
-        vector3 const  current_linear_velocity_in_world_space =
-                get_blackboard()->m_scene->get_linear_velocity_of_rigid_body_of_scene_node(motion_capsule_nid);
-        agent_linear_acceleration =
-                (m_desired_linear_velocity_in_world_space - current_linear_velocity_in_world_space) / time_step_in_seconds;
-        float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
-        float_32_bit constexpr  MAX_AGENT_LINEAR_ACCELERATION = 20.0f;
-        if (agent_linear_acceleration_magnitude > MAX_AGENT_LINEAR_ACCELERATION)
-            agent_linear_acceleration *= MAX_AGENT_LINEAR_ACCELERATION / agent_linear_acceleration_magnitude;
-    }
-
-    get_blackboard()->m_scene->set_linear_acceleration_of_rigid_body_of_scene_node(motion_capsule_nid, agent_linear_acceleration + gravity);
 
     m_template_motion_info.consumed_time_in_seconds += time_step_in_seconds;
     INVARIANT(m_template_motion_info.consumed_time_in_seconds <= m_template_motion_info.total_interpolation_time_in_seconds);
