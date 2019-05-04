@@ -1,6 +1,7 @@
 import os
 import sys
 import numpy
+import math
 import argparse
 import json
 import traceback
@@ -39,6 +40,7 @@ class Config:
             self.anim_dir = None
             self.bone_idx = 0
             self.pivot = [0.0, 0.0, 0.83]
+            self.shape = "capsule"
             self.length = 0.6
             self.radius = 0.2
             self.vec_down = [0.0, 0.0, -1.0]
@@ -117,6 +119,39 @@ class Config:
         self.state_pathname = os.path.join(self.script_dir, "animeta_state.json")
         self.state = Config.State.load(self.state_pathname)
         self.save_state = True
+
+
+def _vector_length(vector):
+    return math.sqrt(numpy.dot(vector, vector))
+
+
+def _normalised_vector(vector):
+    l = _vector_length(vector)
+    if l < 0.000001:
+        return [0.0, 0.0, 1.0]
+    return (1.0/l) * numpy.array(vector)
+
+
+def _normalised_quaternion(q):
+    l = _vector_length(q)
+    if l < 0.000001:
+        return [1.0, 0.0, 0.0, 0.0]
+    return (1.0/l) * numpy.array(q)
+
+
+def _axis_angle_to_quaternion(axis_unit_vector, angle_in_radians):
+    t = math.sin(0.5 * angle_in_radians)
+    return [math.cos(0.5 * angle_in_radians), t * axis_unit_vector[0], t * axis_unit_vector[1], t * axis_unit_vector[2]]
+
+
+def _basis_vectors_to_quaternion(x_axis_unit_vector, y_axis_unit_vector, z_axis_unit_vector):
+    s = math.sqrt(1.0 + x_axis_unit_vector[0] + y_axis_unit_vector[1] + z_axis_unit_vector[2]) / 2.0
+    return _normalised_quaternion(numpy.array([
+            s,
+            (y_axis_unit_vector[2] - z_axis_unit_vector[1]) / (4.0 * s),
+            (z_axis_unit_vector[0] - x_axis_unit_vector[2]) / (4.0 * s),
+            (x_axis_unit_vector[1] - y_axis_unit_vector[0]) / (4.0 * s)
+            ]))
 
 
 def _get_keyframes_dir(check_exists=True):
@@ -207,7 +242,7 @@ move_straight
     For each keyframe in the work_dir/anim_dir computes a frame
         frame {
             "pos": pivot + t * vec_fwd
-            "rot": quaternion_from_axis_vectors(
+            "rot": basis_vectors_to_quaternion(
                         cross_product(vec_fwd_mult * vec_fwd, vec_down_mult * vec_down),
                         vec_fwd_mult * vec_fwd,
                         vec_down_mult * vec_down
@@ -228,7 +263,11 @@ def command_move_straight():
     state = Config.instance.state
     motion_direction = numpy.array(state.vec_fwd)
     motion_direction_dot = numpy.dot(motion_direction, motion_direction)
-    rot = [1.0, 0.0, 0.0, 0.0]
+    rot = _basis_vectors_to_quaternion(
+                numpy.cross(state.vec_fwd_mult * motion_direction, state.vec_down_mult * numpy.array(state.vec_down)),
+                state.vec_fwd_mult * motion_direction,
+                state.vec_down_mult * numpy.array(state.vec_down)
+                )
     meta_reference_frames = []
     for keyframe in _load_keyframes():
         t = numpy.dot(motion_direction, numpy.subtract(keyframe["frames_of_bones"][state.bone_idx]["pos"], state.pivot)) / motion_direction_dot
