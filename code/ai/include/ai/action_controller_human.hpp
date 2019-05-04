@@ -3,6 +3,7 @@
 
 #   include <ai/action_controller.hpp>
 #   include <ai/blackboard_human.hpp>
+#   include <scene/scene_node_id.hpp>
 #   include <angeo/coordinate_system.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <string>
@@ -24,6 +25,7 @@ private:
     vector3  m_desired_linear_velocity_in_world_space;
     float_32_bit  m_desired_angular_speed_in_world_space;   // Only the magnitude, because the axis is the z-axis of
                                                             // 'm_reference_frame_in_world_space'.
+    scene::node_id  m_motion_capsule_nid;
 };
 
 

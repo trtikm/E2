@@ -75,16 +75,30 @@ namespace qtgl { namespace detail {
 
 struct  keyframes_data
 {
+    struct  meta_data
+    {
+        std::vector<angeo::coordinate_system>  m_reference_frames;
+
+        struct  record
+        {
+            std::string  keyword;
+            std::vector<float_32_bit>  arguments;
+        };
+
+        std::vector<record>  m_constraints;
+        std::vector<record>  m_motion_colliders;
+    };
+
     keyframes_data(async::finalise_load_on_destroy_ptr const  finaliser);
     ~keyframes_data();
 
     std::vector<keyframe> const&  keyframes() const { return m_keyframes; }
-    std::vector<angeo::coordinate_system> const&  meta_reference_frames() const { return m_meta_reference_frames; }
+    meta_data const&  get_meta_data() const { return m_meta_data; }
 
 private:
 
     std::vector<keyframe>  m_keyframes;
-    std::vector<angeo::coordinate_system>  m_meta_reference_frames;
+    meta_data  m_meta_data;
 };
 
 
@@ -95,6 +109,8 @@ namespace qtgl {
 
 struct  keyframes : public async::resource_accessor<detail::keyframes_data>
 {
+    using  meta_data = detail::keyframes_data::meta_data;
+
     keyframes()
         : async::resource_accessor<detail::keyframes_data>()
     {}
@@ -122,7 +138,7 @@ struct  keyframes : public async::resource_accessor<detail::keyframes_data>
     }
 
     std::vector<keyframe> const&  get_keyframes() const { return resource().keyframes(); }
-    std::vector<angeo::coordinate_system> const&  get_meta_reference_frames() const { return resource().meta_reference_frames(); }
+    meta_data const&  get_meta_data() const { return resource().get_meta_data(); }
 
     float_32_bit  start_time_point() const { return get_keyframes().front().get_time_point(); }
     float_32_bit  end_time_point() const { return get_keyframes().back().get_time_point(); }

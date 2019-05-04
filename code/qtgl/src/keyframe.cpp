@@ -5,10 +5,12 @@
 #include <utility/canonical_path.hpp>
 #include <utility/msgstream.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/algorithm/string/trim.hpp>
 #include <sstream>
 #include <iostream>
 #include <fstream>
 #include <iomanip>
+#include <locale>
 
 namespace qtgl { namespace detail {
 
@@ -79,6 +81,61 @@ natural_32_bit  read_all_coord_systems(
     }
     read_coord_systems(istr, pathname, num_coord_systems, coord_systems);
     return num_coord_systems;
+}
+
+
+natural_32_bit  read_meta_data_records(
+    std::ifstream&  istr,
+    boost::filesystem::path const&  pathname,
+    std::vector<keyframes_data::meta_data::record>&  output
+    )
+{
+    natural_32_bit  num_records;
+    {
+        std::string  line;
+        if (!read_line(istr,line))
+            throw std::runtime_error(msgstream() << "Cannot read number of records in the file '" << pathname << "'.");
+        std::istringstream istr(line);
+        istr >> num_records;
+        if (num_records == 0U)
+            throw std::runtime_error(msgstream() << "The the file '" << pathname << "' does not contain any records.");
+    }
+
+    output.resize(num_records);
+
+    natural_32_bit  num_loaded_records = -1;
+    while (true)
+    {
+        std::string const  line = read_line(istr);
+        if (line.empty())
+            break;
+        if (line.front() == '+' || line.front() == '-' || std::isdigit(line.front(), std::locale::classic()))
+        {
+            std::istringstream istr(line);
+            float_32_bit  value;
+            istr >> value;
+            output.at(num_loaded_records).arguments.push_back(value);
+        }
+        else
+        {
+            ++num_loaded_records;
+            if (num_records == num_loaded_records)
+                throw std::runtime_error(msgstream() << "The first line in the file '" << pathname << "' says there is "
+                                                     << num_records << " records, but there was at least " << num_loaded_records
+                                                     << " actually encountered in the file.");
+
+            output.at(num_loaded_records).keyword = line;
+            boost::algorithm::trim(output.at(num_loaded_records).keyword);
+            output.at(num_loaded_records).arguments.clear();
+        }
+    }
+
+    if (num_records != num_loaded_records + 1)
+        throw std::runtime_error(msgstream() << "The first line in the file '" << pathname << "' says there is "
+                                             << num_records << " records, but there was " << num_loaded_records
+                                             << " actually encountered in the file.");
+
+    return num_records;
 }
 
 
@@ -162,6 +219,16 @@ keyframes_data::keyframes_data(
                             return left.get_time_point() < right.get_time_point();
                             }
                         );
+
+                    if (m_meta_data.m_reference_frames.size() != m_keyframes.size())
+                        throw std::runtime_error("Number of loaded meta-data 'm_reference_frames' differs from the counts of keyframes "
+                                                 "in the animation.");
+                    if (m_meta_data.m_constraints.size() != m_keyframes.size())
+                        throw std::runtime_error("Number of loaded meta-data 'm_constraints' differs from the counts of keyframes "
+                                                 "in the animation.");
+                    if (m_meta_data.m_motion_colliders.size() != m_keyframes.size())
+                        throw std::runtime_error("Number of loaded meta-data 'm_motion_colliders' differs from the counts of keyframes "
+                                                 "in the animation.");
                     },
                 finaliser
                 );
@@ -181,8 +248,24 @@ keyframes_data::keyframes_data(
             boost::filesystem::path const  pathname = keyframes_dir / filename;
             std::ifstream  istr(pathname.string(),std::ios_base::binary);
             if (!istr.good())
-                throw std::runtime_error(msgstream() << "Cannot open the meta_reference_frames file '" << pathname << "'.");
-            read_all_coord_systems(istr, pathname, m_meta_reference_frames);
+                throw std::runtime_error(msgstream() << "Cannot open the meta data file '" << pathname << "'.");
+            read_all_coord_systems(istr, pathname, m_meta_data.m_reference_frames);
+        }
+        else if (filename == "meta_constraints.txt")
+        {
+            boost::filesystem::path const  pathname = keyframes_dir / filename;
+            std::ifstream  istr(pathname.string(), std::ios_base::binary);
+            if (!istr.good())
+                throw std::runtime_error(msgstream() << "Cannot open the meta data file '" << pathname << "'.");
+            read_meta_data_records(istr, pathname, m_meta_data.m_constraints);
+        }
+        else if (filename == "meta_motion_colliders.txt")
+        {
+            boost::filesystem::path const  pathname = keyframes_dir / filename;
+            std::ifstream  istr(pathname.string(), std::ios_base::binary);
+            if (!istr.good())
+                throw std::runtime_error(msgstream() << "Cannot open the meta data file '" << pathname << "'.");
+            read_meta_data_records(istr, pathname, m_meta_data.m_motion_colliders);
         }
     }
 }

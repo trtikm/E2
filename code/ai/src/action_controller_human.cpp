@@ -16,7 +16,11 @@ scene::node_id  get_motion_capsule_nid(scene_ptr const  s, scene::node_id const 
 }
 
 
-void  create_motion_capsule(scene_ptr const  s, scene::node_id const  agent_nid, angeo::coordinate_system const&  frame_in_world_space)
+scene::node_id  create_motion_capsule(
+        scene_ptr const  s,
+        scene::node_id const  agent_nid,
+        angeo::coordinate_system const&  frame_in_world_space
+        )
 {
     scene::node_id const  motion_capsule_nid(get_motion_capsule_nid(s, agent_nid));
     s->insert_scene_node(motion_capsule_nid, frame_in_world_space, false);
@@ -37,12 +41,12 @@ void  create_motion_capsule(scene_ptr const  s, scene::node_id const  agent_nid,
             1.0f / 60.0f,
             matrix33_zero()
             );
+    return motion_capsule_nid;
 }
 
 
-void  destroy_motion_capsule(scene_ptr const  s, scene::node_id const  agent_nid)
+void  destroy_motion_capsule(scene_ptr const  s, scene::node_id const&  motion_capsule_nid)
 {
-    scene::node_id const  motion_capsule_nid(get_motion_capsule_nid(s, agent_nid));
     s->erase_rigid_body_from_scene_node(motion_capsule_nid);
     s->erase_collision_object_from_scene_node(motion_capsule_nid);
     s->erase_scene_node(motion_capsule_nid);
@@ -57,37 +61,25 @@ namespace ai {
 action_controller_human::action_controller_human(blackboard_ptr const  blackboard_)
     : action_controller(blackboard_)
     , m_template_motion_info({
-            {blackboard_->m_motion_templates->motions_map.begin()->first, 0U},     // src_pose
-            {blackboard_->m_motion_templates->motions_map.begin()->first, 0U},     // dst_pose
+            {"", 0U},       // src_pose
+            {"", 0U},       // dst_pose
             0.0f,           // total_interpolation_time_in_seconds
             0.0f            // consumed_time_in_seconds
             })
     , m_desired_linear_velocity_in_world_space(vector3_zero())
     , m_desired_angular_speed_in_world_space(0.0f)
+    , m_motion_capsule_nid()
 {
-    angeo::coordinate_system  agent_frame;
-    {
-        angeo::coordinate_system  tmp;
-        get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_bone_nids.front(), false, tmp);
-        agent_frame.set_origin(tmp.origin());
-        get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_agent_nid, false, tmp);
-        agent_frame.set_orientation(tmp.orientation());
-    }
-    detail::create_motion_capsule(get_blackboard()->m_scene, get_blackboard()->m_agent_nid, agent_frame);
-    get_blackboard()->m_scene->register_to_collision_contacts_stream(
-            detail::get_motion_capsule_nid(get_blackboard()->m_scene, get_blackboard()->m_agent_nid),
-            get_blackboard()->m_agent_id
-            );
 }
 
 
 action_controller_human::~action_controller_human()
 {
-    get_blackboard()->m_scene->unregister_to_collision_contacts_stream(
-            detail::get_motion_capsule_nid(get_blackboard()->m_scene, get_blackboard()->m_agent_nid),
-            get_blackboard()->m_agent_id
-            );
-    detail::destroy_motion_capsule(get_blackboard()->m_scene, get_blackboard()->m_agent_nid);
+    if (m_motion_capsule_nid.valid())
+    {
+        get_blackboard()->m_scene->unregister_to_collision_contacts_stream(m_motion_capsule_nid, get_blackboard()->m_agent_id);
+        detail::destroy_motion_capsule(get_blackboard()->m_scene, m_motion_capsule_nid);
+    }
 }
 
 
@@ -95,19 +87,38 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
+    if (m_template_motion_info.src_pose.motion_name.empty())
+    {
+        m_template_motion_info.src_pose.motion_name = get_blackboard()->m_motion_templates->motions_map.begin()->first;
+        m_template_motion_info.dst_pose.motion_name = get_blackboard()->m_motion_templates->motions_map.begin()->first;
+
+        angeo::coordinate_system  agent_frame;
+        {
+            angeo::coordinate_system  tmp;
+            get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_bone_nids.front(), false, tmp);
+            agent_frame.set_origin(tmp.origin());
+            get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_agent_nid, false, tmp);
+            agent_frame.set_orientation(tmp.orientation());
+        }
+        m_motion_capsule_nid = detail::create_motion_capsule(get_blackboard()->m_scene, get_blackboard()->m_agent_nid, agent_frame);
+        get_blackboard()->m_scene->register_to_collision_contacts_stream(
+                detail::get_motion_capsule_nid(get_blackboard()->m_scene, get_blackboard()->m_agent_nid),
+                get_blackboard()->m_agent_id
+                );
+    }
+
     m_desired_angular_speed_in_world_space =
             get_blackboard()->m_cortex_cmd_turn_intensity * get_blackboard()->m_max_turn_speed_in_radians_per_second;
 
-    scene::node_id const  motion_capsule_nid(detail::get_motion_capsule_nid(get_blackboard()->m_scene, get_blackboard()->m_agent_nid));
     angeo::coordinate_system  motion_capsule_frame;
-    get_blackboard()->m_scene->get_frame_of_scene_node(motion_capsule_nid, false, motion_capsule_frame);
+    get_blackboard()->m_scene->get_frame_of_scene_node(m_motion_capsule_nid, false, motion_capsule_frame);
     vector3 const  gravity = get_blackboard()->m_scene->get_gravity_acceleration_at_point(motion_capsule_frame.origin());
     vector3 const  current_linear_velocity_in_world_space =
-            get_blackboard()->m_scene->get_linear_velocity_of_rigid_body_of_scene_node(motion_capsule_nid);
+            get_blackboard()->m_scene->get_linear_velocity_of_rigid_body_of_scene_node(m_motion_capsule_nid);
 
     bool  has_contact_with_ground = false;
     {
-        auto const  begin_and_end = get_blackboard()->m_collision_contacts.equal_range(motion_capsule_nid);
+        auto const  begin_and_end = get_blackboard()->m_collision_contacts.equal_range(m_motion_capsule_nid);
         for (auto  it = begin_and_end.first; it != begin_and_end.second; ++it)
             if (angle(it->second.unit_normal, -gravity) < PI() / 4.0f)
             {
@@ -127,7 +138,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
             agent_linear_acceleration *= MAX_AGENT_LINEAR_ACCELERATION / agent_linear_acceleration_magnitude;
     }
 
-    get_blackboard()->m_scene->set_linear_acceleration_of_rigid_body_of_scene_node(motion_capsule_nid, agent_linear_acceleration + gravity);
+    get_blackboard()->m_scene->set_linear_acceleration_of_rigid_body_of_scene_node(m_motion_capsule_nid, agent_linear_acceleration + gravity);
 
     if (m_template_motion_info.consumed_time_in_seconds + time_step_in_seconds > m_template_motion_info.total_interpolation_time_in_seconds)
     {
@@ -198,8 +209,8 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
             m_template_motion_info.total_interpolation_time_in_seconds += time_delta;
 
             vector3 const  position_delta =
-                    dst_animation.get_meta_reference_frames().at(m_template_motion_info.dst_pose.keyframe_index).origin() -
-                    dst_animation.get_meta_reference_frames().at(m_template_motion_info.dst_pose.keyframe_index - 1U).origin();
+                    dst_animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index).origin() -
+                    dst_animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index - 1U).origin();
             desired_linear_velocity_in_animation_space += position_delta / std::max(time_delta, 0.0001f);
         }
         while (time_step_in_seconds > m_template_motion_info.total_interpolation_time_in_seconds);
@@ -267,8 +278,8 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
 
     angeo::coordinate_system  reference_frame_in_animation_space;
     angeo::interpolate_spherical(
-            src_animation.get_meta_reference_frames().at(m_template_motion_info.src_pose.keyframe_index),
-            dst_animation.get_meta_reference_frames().at(m_template_motion_info.dst_pose.keyframe_index),
+            src_animation.get_meta_data().m_reference_frames.at(m_template_motion_info.src_pose.keyframe_index),
+            dst_animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index),
             interpolation_param,
             reference_frame_in_animation_space
             );
