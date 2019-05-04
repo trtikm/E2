@@ -1895,11 +1895,9 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::skeleton_pro
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     ASSUMPTION(node_ptr != nullptr && !node_ptr->has_parent());
-    ai::skeletal_motion_templates::motion_template_cursor const  cursor{ "idle.stand", 0U };
     ai::agent_id const  agent_id =
             m_agents_ptr->insert(
                     id.get_node_id(),
-                    cursor,
                     props->skeleton_composition,
                     props->skeletal_motion_templates
                     );

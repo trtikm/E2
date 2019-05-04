@@ -21,8 +21,6 @@ struct agents
 
     agent_id  insert(
             scene::node_id const&  agent_nid,
-            skeletal_motion_templates::motion_template_cursor const&  start_pose,   // Defines the start pose (animation name and keyframe
-                                                                                    // index) in which the agent should start the simulation. 
             skeleton_composition_const_ptr const  skeleton, // INVARIANT(skeleton->parents.at(0) == -1)
                                                             // INVARIANT(skeleton->pose_frames.size() == current_frames.size())
             skeletal_motion_templates_const_ptr const  motion_templates

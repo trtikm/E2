@@ -18,9 +18,7 @@ struct agent
 {
     agent() {}
 
-    agent(blackboard_ptr const  blackboard_,
-          input_devices_const_ptr const  input_devices_,
-          skeletal_motion_templates::motion_template_cursor const&  start_pose);
+    agent(blackboard_ptr const  blackboard_, input_devices_const_ptr const  input_devices_);
 
     void  next_round(float_32_bit const  time_step_in_seconds);
     

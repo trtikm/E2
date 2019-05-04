@@ -54,14 +54,11 @@ void  destroy_motion_capsule(scene_ptr const  s, scene::node_id const  agent_nid
 namespace ai {
 
 
-action_controller_human::action_controller_human(
-            blackboard_ptr const  blackboard_,
-            skeletal_motion_templates::motion_template_cursor const&  start_pose
-            )
+action_controller_human::action_controller_human(blackboard_ptr const  blackboard_)
     : action_controller(blackboard_)
     , m_template_motion_info({
-            start_pose,     // src_pose
-            start_pose,     // dst_pose
+            {blackboard_->m_motion_templates->motions_map.begin()->first, 0U},     // src_pose
+            {blackboard_->m_motion_templates->motions_map.begin()->first, 0U},     // dst_pose
             0.0f,           // total_interpolation_time_in_seconds
             0.0f            // consumed_time_in_seconds
             })

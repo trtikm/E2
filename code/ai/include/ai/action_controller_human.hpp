@@ -12,10 +12,7 @@ namespace ai {
 
 struct  action_controller_human : public action_controller
 {
-    action_controller_human(
-            blackboard_ptr const  blackboard_,
-            skeletal_motion_templates::motion_template_cursor const&  start_pose
-            );
+    explicit action_controller_human(blackboard_ptr const  blackboard_);
     ~action_controller_human();
 
     blackboard_human_ptr  get_blackboard() const { return as<blackboard_human>(action_controller::get_blackboard()); }

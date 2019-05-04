@@ -23,7 +23,6 @@ agents::agents(scene_ptr const  scene_)
 
 agent_id  agents::insert(
         scene::node_id const&  agent_nid,
-        skeletal_motion_templates::motion_template_cursor const&  start_pose,
         skeleton_composition_const_ptr const  skeleton,
         skeletal_motion_templates_const_ptr const  motion_templates
         )
@@ -65,7 +64,7 @@ agent_id  agents::insert(
         if (m_agents.at(bb->m_agent_id) == nullptr)
             break;
 
-    auto  agent_ptr = std::make_shared<agent>(bb, m_input_devices, start_pose);
+    auto  agent_ptr = std::make_shared<agent>(bb, m_input_devices);
 
     if (bb->m_agent_id == m_agents.size())
         m_agents.resize(m_agents.size() + 1U, nullptr);
