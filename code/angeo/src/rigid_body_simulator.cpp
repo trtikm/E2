@@ -224,7 +224,7 @@ void  rigid_body_simulator::insert_contact_constraints(
 }
 
 
-void  rigid_body_simulator::do_simulation_step(
+void  rigid_body_simulator::solve_constraint_system(
         float_32_bit const  time_step_in_seconds,
         float_32_bit const  max_computation_time_in_seconds
         )
@@ -242,6 +242,12 @@ void  rigid_body_simulator::do_simulation_step(
                     ),
             time_step_in_seconds
             );
+}
+
+
+void  rigid_body_simulator::integrate_motion_of_rigid_bodies(float_32_bit const  time_step_in_seconds)
+{
+    TMPROF_BLOCK();
 
     std::chrono::high_resolution_clock::time_point const  rb_update_start_time_point =
             std::chrono::high_resolution_clock::now();
@@ -274,21 +280,36 @@ void  rigid_body_simulator::do_simulation_step(
         update_dependent_variables_of_rigid_body(id);
     }
 
-    std::chrono::high_resolution_clock::time_point const  contact_cache_start_time_point =
-            std::chrono::high_resolution_clock::now();
-
-    update_contact_cache();
-
-    get_constraint_system().clear();
-
-    std::chrono::high_resolution_clock::time_point const  end_time_point =
-            std::chrono::high_resolution_clock::now();
+    std::chrono::high_resolution_clock::time_point const  end_time_point = std::chrono::high_resolution_clock::now();
 
     m_statistics.m_duration_of_rigid_body_update_in_seconds =
-            std::chrono::duration<float_64_bit>(contact_cache_start_time_point - rb_update_start_time_point).count();
+            std::chrono::duration<float_64_bit>(end_time_point - rb_update_start_time_point).count();
+}
+
+
+void  rigid_body_simulator::prepare_contact_cache_and_constraint_system_for_next_frame()
+{
+    std::chrono::high_resolution_clock::time_point const  contact_cache_start_time_point = std::chrono::high_resolution_clock::now();
+
+    update_contact_cache();
+    get_constraint_system().clear();
+
+    std::chrono::high_resolution_clock::time_point const  end_time_point = std::chrono::high_resolution_clock::now();
+
     m_statistics.m_duration_of_contact_cache_update_in_seconds =
-            std::chrono::duration<float_64_bit>(end_time_point - contact_cache_start_time_point).count();
+        std::chrono::duration<float_64_bit>(end_time_point - contact_cache_start_time_point).count();
     ++m_statistics.m_performed_simulation_steps;
+}
+
+
+void  rigid_body_simulator::do_simulation_step(
+        float_32_bit const  time_step_in_seconds,
+        float_32_bit const  max_computation_time_in_seconds
+        )
+{
+    solve_constraint_system(time_step_in_seconds, max_computation_time_in_seconds);
+    integrate_motion_of_rigid_bodies(time_step_in_seconds);
+    prepare_contact_cache_and_constraint_system_for_next_frame();
 }
 
 

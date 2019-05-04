@@ -136,6 +136,13 @@ struct  rigid_body_simulator
                                     // in 'friction_info_ptr->m_unit_tangent_plane_vectors' one friction constraint).
             );
 
+    void  solve_constraint_system(
+            float_32_bit const  time_step_in_seconds,
+            float_32_bit const  max_computation_time_in_seconds
+            );
+    void  integrate_motion_of_rigid_bodies(float_32_bit const  time_step_in_seconds);
+    void  prepare_contact_cache_and_constraint_system_for_next_frame();
+
     void  do_simulation_step(
             float_32_bit const  time_step_in_seconds,
             float_32_bit const  max_computation_time_in_seconds

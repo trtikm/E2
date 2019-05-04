@@ -277,20 +277,28 @@ void  bind_ai_scene_to_simulator::unregister_to_collision_contacts_stream(
 }
 
 
+bool  bind_ai_scene_to_simulator::do_tracking_collision_contact_of_collision_object(angeo::collision_object_id const  coid) const
+{
+    return m_collision_contacts_stream.find(coid) != m_collision_contacts_stream.cend();
+}
+
+
 void  bind_ai_scene_to_simulator::on_collision_contact(
-        angeo::collision_object_id const  coid_1,
-        angeo::collision_object_id const  coid_2,
+        angeo::collision_object_id const  coid,
         vector3 const&  contact_point,
-        vector3 const&  unit_normal
+        vector3 const&  unit_normal,
+        angeo::COLLISION_MATERIAL_TYPE const  material,
+        float_32_bit const  normal_force_magnitude
         ) const
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
 
-    auto  it = m_collision_contacts_stream.find(coid_1);
-    if (it != m_collision_contacts_stream.cend())
-        m_simulator_ptr->get_agents()->on_collision_contact(it->second.second, it->second.first, contact_point, unit_normal);
+    auto  it = m_collision_contacts_stream.find(coid);
+    ASSUMPTION(it != m_collision_contacts_stream.cend());
 
-    it = m_collision_contacts_stream.find(coid_2);
-    if (it != m_collision_contacts_stream.cend())
-        m_simulator_ptr->get_agents()->on_collision_contact(it->second.second, it->second.first, contact_point, -unit_normal);
+    m_simulator_ptr->get_agents()->on_collision_contact(
+            it->second.second,
+            it->second.first,
+            ai::scene::collicion_contant_info(contact_point, unit_normal, material, normal_force_magnitude)
+            );
 }

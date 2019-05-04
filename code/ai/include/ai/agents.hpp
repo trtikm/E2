@@ -44,8 +44,7 @@ struct agents
     void  on_collision_contact(
             agent_id const  agent_id,
             scene::node_id const&  collider_nid,
-            vector3 const&  contact_point,
-            vector3 const&  unit_normal
+            scene::collicion_contant_info const&  contact_info
             );
 
 private:

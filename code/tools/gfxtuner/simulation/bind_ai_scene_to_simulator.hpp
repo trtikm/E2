@@ -79,11 +79,13 @@ struct bind_ai_scene_to_simulator : public ai::scene
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to stop capturing.
             ai::agent_id const  agent_id    // Identifies an agent which will stop receiving the contancts of the collider to its blackboard.
             ) override;
+    bool  do_tracking_collision_contact_of_collision_object(angeo::collision_object_id const  coid) const;
     void  on_collision_contact(
-            angeo::collision_object_id const  coid_1,
-            angeo::collision_object_id const  coid_2,
+            angeo::collision_object_id const  coid,
             vector3 const&  contact_point,
-            vector3 const&  unit_normal
+            vector3 const&  unit_normal,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            float_32_bit const  normal_force_magnitude
             ) const;
 
 private:
