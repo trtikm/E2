@@ -41,8 +41,10 @@ class Config:
             self.bone_idx = 0
             self.pivot = [0.0, 0.0, 0.83]
             self.shape = "capsule"
-            self.length = 0.6
+            self.length = 0.615
             self.radius = 0.2
+            self.angle = math.pi / 4.0
+            self.constraint_type = "contact_normal_cone"
             self.vec_down = [0.0, 0.0, -1.0]
             self.vec_fwd = [0.0, -1.0, 0.0]
             self.vec_fwd_end = [0.0, -1.0, 0.0]
@@ -121,6 +123,11 @@ class Config:
         self.save_state = True
 
 
+def _float_to_string(number, precision=6):
+    assert isinstance(number, float)
+    return format(number, "." + str(precision) + "f")
+
+
 def _vector_length(vector):
     return math.sqrt(numpy.dot(vector, vector))
 
@@ -166,6 +173,10 @@ def _get_keyframes_dir(check_exists=True):
     return keyframes_dir
 
 
+def _get_meta_meta_reference_frames_pathname():
+    return os.path.join(_get_keyframes_dir(), "meta_reference_frames.txt")
+
+
 def _load_keyframes():
     keyframes_dir = _get_keyframes_dir()
     keyframes = []
@@ -186,6 +197,80 @@ def _load_keyframes():
     return sorted(keyframes, key=lambda x: x["time"])
 
 
+def command_colliders_help():
+    return """
+colliders
+    Assigns to each keyframe in the work_dir/anim_dir a collider defined
+    by state variable 'shape'. Depending on the value of the variable
+    other state variables will be used. Namely:
+    * shape is 'capsule':
+        - 'length' distance between the half spheres.
+        - 'radius' radius of both half spheres.
+        The axis of the capsule is parallel to z-axis.
+    Each collider is assumed to be in the coordinate system of the reference
+    frame of the animation (see the command 'reference_frames').
+    The computed colliders are always saved into file:
+        work_dir/anim_dir/meta_motion_colliders.txt
+    If the file exists, them it will be overwritten.
+"""
+
+
+def command_colliders():
+    if not os.path.isfile(_get_meta_meta_reference_frames_pathname()):
+        raise Exception("The file '" + _get_meta_meta_reference_frames_pathname() + "' does not exist. "
+                        "Please, run the command 'reference_frames' first.")
+    with open(_get_meta_meta_reference_frames_pathname(), "r") as f:
+        num_frames = int(f.readline().strip())
+    state = Config.instance.state
+    with open(os.path.join(_get_keyframes_dir(), "meta_motion_colliders.txt"), "w") as f:
+        f.write(str(num_frames) + "\n")
+        for _ in range(num_frames):
+            f.write(state.shape + "\n")
+            if state.shape == "capsule":
+                f.write(_float_to_string(state.length) + "\n")
+                f.write(_float_to_string(state.radius) + "\n")
+            else:
+                raise Exception("Unknown shape '" + state.shape + "' in the state variable 'shape'.")
+
+
+def command_constraints_help():
+    return """
+constraints
+    Assigns to each keyframe in the work_dir/anim_dir a constraint defined
+    by state variable 'constraint_type'. Depending on the value of the variable
+    other state variables will be used. Namely:
+    * constraint_type is 'contact_normal_cone':
+        - 'vec_down_mult' and 'vec_down' define together the axis of cone.
+        - 'angle' defines a maximal angle between a current normal and the axis
+                  of the cone.
+    Each constraint is assumed to be in the coordinate system of the reference
+    frame of the animation (see the command 'reference_frames').
+    The computed constraints are always saved into file:
+        work_dir/anim_dir/meta_constraints.txt
+    If the file exists, them it will be overwritten.
+"""
+
+
+def command_constraints():
+    if not os.path.isfile(_get_meta_meta_reference_frames_pathname()):
+        raise Exception("The file '" + _get_meta_meta_reference_frames_pathname() + "' does not exist. "
+                        "Please, run the command 'reference_frames' first.")
+    with open(_get_meta_meta_reference_frames_pathname(), "r") as f:
+        num_frames = int(f.readline().strip())
+    state = Config.instance.state
+    with open(os.path.join(_get_keyframes_dir(), "meta_constraints.txt"), "w") as f:
+        f.write(str(num_frames) + "\n")
+        for _ in range(num_frames):
+            f.write(state.constraint_type + "\n")
+            if state.constraint_type == "contact_normal_cone":
+                f.write(_float_to_string(state.vec_down_mult * state.vec_down[0]) + "\n")
+                f.write(_float_to_string(state.vec_down_mult * state.vec_down[1]) + "\n")
+                f.write(_float_to_string(state.vec_down_mult * state.vec_down[2]) + "\n")
+                f.write(_float_to_string(state.angle) + "\n")
+            else:
+                raise Exception("Unknown constraint type '" + state.constraint_type + "' in the state variable 'constraint_type'.")
+
+
 def command_get_help():
     return """
 get <var_name>+
@@ -196,8 +281,11 @@ get <var_name>+
 
 def command_get():
     var_names = Config.instance.state.vars() if len(Config.instance.cmdline.arguments) == 0 else Config.instance.cmdline.arguments
-    for var in sorted(var_names):
-        print(var + ": " + str(Config.instance.state.get(var)))
+    if len(var_names) == 1:
+        print(str(Config.instance.state.get(var_names[0])))
+    else:
+        for var in sorted(var_names):
+            print(var + ": " + str(Config.instance.state.get(var)))
 
 
 def command_help_help():
@@ -236,22 +324,29 @@ def command_set():
             )
 
 
-def command_move_straight_help():
+def command_reference_frames_help():
     return """
-move_straight
-    For each keyframe in the work_dir/anim_dir computes a frame
-        frame {
-            "pos": pivot + t * vec_fwd
-            "rot": basis_vectors_to_quaternion(
-                        cross_product(vec_fwd_mult * vec_fwd, vec_down_mult * vec_down),
-                        vec_fwd_mult * vec_fwd,
-                        vec_down_mult * vec_down
-                        )
-        }
-    where t is computed for each keyframe as a solution of equations:
-        X = pivot + t * vec_fwd
-        vec_fwd * (X - keyframe["frames_of_bones"][bone_idx]["pos"]) = 0
-    The computed frames are then saved into file:
+reference_frames  move_straight|
+    For each keyframe in the work_dir/anim_dir computes a reference frame
+    using a procedure identified by the argument. Here is description of
+    the available procedures:
+    * move_straight:
+        for each keyframe the computed reference frame looks as this
+            reference_frame {
+                "pos": pivot + t * vec_fwd
+                "rot": basis_vectors_to_quaternion(
+                            cross_product(
+                                vec_fwd_mult * vec_fwd,
+                                vec_down_mult * vec_down
+                                ),
+                            vec_fwd_mult * vec_fwd,
+                            vec_down_mult * vec_down
+                            )
+            }
+        where t is a solution of equations:
+            X = pivot + t * vec_fwd
+            vec_fwd * (X - keyframe["frames_of_bones"][bone_idx]["pos"]) = 0
+    The computed frames (by any procedure) are always saved into file:
         work_dir/anim_dir/meta_reference_frames.txt
     If the file exists, them it will be overwritten.
     NOTE: The command depends on values of these state variables:
@@ -259,30 +354,35 @@ move_straight
 """
 
 
-def command_move_straight():
+def command_reference_frames():
+    if len(Config.instance.cmdline.arguments) != 1:
+        raise Exception("Wrong number of arguments. Exactly 1 argument is expected.")
     state = Config.instance.state
-    motion_direction = numpy.array(state.vec_fwd)
-    motion_direction_dot = numpy.dot(motion_direction, motion_direction)
-    rot = _basis_vectors_to_quaternion(
-                numpy.cross(state.vec_fwd_mult * motion_direction, state.vec_down_mult * numpy.array(state.vec_down)),
-                state.vec_fwd_mult * motion_direction,
-                state.vec_down_mult * numpy.array(state.vec_down)
-                )
     meta_reference_frames = []
-    for keyframe in _load_keyframes():
-        t = numpy.dot(motion_direction, numpy.subtract(keyframe["frames_of_bones"][state.bone_idx]["pos"], state.pivot)) / motion_direction_dot
-        pos = numpy.add(state.pivot, t * motion_direction)
-        meta_reference_frames.append({"pos": pos, "rot": rot})
-    with open(os.path.join(_get_keyframes_dir(), "meta_reference_frames.txt"), "w") as f:
+    if Config.instance.cmdline.arguments[0] == "move_straight":
+        motion_direction = numpy.array(state.vec_fwd)
+        motion_direction_dot = numpy.dot(motion_direction, motion_direction)
+        rot = _basis_vectors_to_quaternion(
+                    numpy.cross(state.vec_fwd_mult * motion_direction, state.vec_down_mult * numpy.array(state.vec_down)),
+                    state.vec_fwd_mult * motion_direction,
+                    state.vec_down_mult * numpy.array(state.vec_down)
+                    )
+        for keyframe in _load_keyframes():
+            t = numpy.dot(motion_direction, numpy.subtract(keyframe["frames_of_bones"][state.bone_idx]["pos"], state.pivot)) / motion_direction_dot
+            pos = numpy.add(state.pivot, t * motion_direction)
+            meta_reference_frames.append({"pos": pos, "rot": rot})
+    else:
+        raise Exception("Unknown argument '" + Config.instance.cmdline.arguments[0] + "'.")
+    with open(_get_meta_meta_reference_frames_pathname(), "w") as f:
         f.write(str(len(meta_reference_frames)) + "\n")
         for frame in meta_reference_frames:
-            f.write(str(frame["pos"][0]) + "\n")
-            f.write(str(frame["pos"][1]) + "\n")
-            f.write(str(frame["pos"][2]) + "\n")
-            f.write(str(frame["rot"][0]) + "\n")
-            f.write(str(frame["rot"][1]) + "\n")
-            f.write(str(frame["rot"][2]) + "\n")
-            f.write(str(frame["rot"][3]) + "\n")
+            f.write(_float_to_string(frame["pos"][0]) + "\n")
+            f.write(_float_to_string(frame["pos"][1]) + "\n")
+            f.write(_float_to_string(frame["pos"][2]) + "\n")
+            f.write(_float_to_string(frame["rot"][0]) + "\n")
+            f.write(_float_to_string(frame["rot"][1]) + "\n")
+            f.write(_float_to_string(frame["rot"][2]) + "\n")
+            f.write(_float_to_string(frame["rot"][3]) + "\n")
 
 
 def _main():
