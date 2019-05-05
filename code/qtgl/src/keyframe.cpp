@@ -187,6 +187,17 @@ keyframe_data::~keyframe_data()
 namespace qtgl { namespace detail {
 
 
+bool  keyframes_data::meta_data::record::operator==(record const&  other) const
+{
+    if (keyword != other.keyword || arguments.size() != other.arguments.size())
+        return false;
+    for (natural_32_bit  i = 0U; i != arguments.size(); ++i)
+        if (std::fabsf(arguments.at(i) - other.arguments.at(i)) > 0.001f)
+            return false;
+    return true;
+}
+
+
 keyframes_data::keyframes_data(
         async::finalise_load_on_destroy_ptr const  finaliser)
     : m_keyframes()
