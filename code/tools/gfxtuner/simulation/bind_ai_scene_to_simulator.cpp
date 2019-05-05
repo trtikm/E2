@@ -212,6 +212,28 @@ void  bind_ai_scene_to_simulator::set_linear_velocity_of_rigid_body_of_scene_nod
 }
 
 
+vector3  bind_ai_scene_to_simulator::get_angular_velocity_of_rigid_body_of_scene_node(node_id const&  nid)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    return m_simulator_ptr->get_rigid_body_simulator()->get_angular_velocity(rb_ptr->id());
+}
+
+
+void  bind_ai_scene_to_simulator::set_angular_velocity_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  angular_velocity)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    m_simulator_ptr->get_rigid_body_simulator()->set_angular_velocity(rb_ptr->id(), angular_velocity);
+}
+
+
 vector3  bind_ai_scene_to_simulator::get_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid)
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
@@ -231,6 +253,72 @@ void  bind_ai_scene_to_simulator::set_linear_acceleration_of_rigid_body_of_scene
     auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
     ASSUMPTION(rb_ptr != nullptr);
     m_simulator_ptr->get_rigid_body_simulator()->set_external_linear_acceleration(rb_ptr->id(), linear_acceleration);
+}
+
+
+vector3  bind_ai_scene_to_simulator::get_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    return m_simulator_ptr->get_rigid_body_simulator()->get_external_angular_acceleration(rb_ptr->id());
+}
+
+
+void  bind_ai_scene_to_simulator::set_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  angular_acceleration)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    m_simulator_ptr->get_rigid_body_simulator()->set_external_angular_acceleration(rb_ptr->id(), angular_acceleration);
+}
+
+
+float_32_bit  bind_ai_scene_to_simulator::get_inverted_mass_of_rigid_body_of_scene_node(node_id const&  nid)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    return m_simulator_ptr->get_rigid_body_simulator()->get_inverted_mass(rb_ptr->id());
+}
+
+
+void  bind_ai_scene_to_simulator::set_inverted_mass_of_rigid_body_of_scene_node(node_id const&  nid, float_32_bit const  inverted_mass)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    return m_simulator_ptr->get_rigid_body_simulator()->set_inverted_mass(rb_ptr->id(), inverted_mass);
+}
+
+
+matrix33  bind_ai_scene_to_simulator::get_inverted_inertia_tensor_of_rigid_body_of_scene_node(node_id const&  nid)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    return m_simulator_ptr->get_rigid_body_simulator()->get_inverted_inertia_tensor_in_local_space(rb_ptr->id());
+}
+
+
+void  bind_ai_scene_to_simulator::set_inverted_inertia_tensor_of_rigid_body_of_scene_node(node_id const&  nid, matrix33 const&  inverted_inertia_tensor)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    return m_simulator_ptr->get_rigid_body_simulator()->set_inverted_inertia_tensor_in_local_space(rb_ptr->id(), inverted_inertia_tensor);
 }
 
 

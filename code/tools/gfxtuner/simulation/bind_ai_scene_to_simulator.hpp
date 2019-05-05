@@ -65,8 +65,16 @@ struct bind_ai_scene_to_simulator : public ai::scene
             ) override;
     vector3  get_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid) override;
     void  set_linear_velocity_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_velocity) override;
+    vector3  get_angular_velocity_of_rigid_body_of_scene_node(node_id const&  nid) override;
+    void  set_angular_velocity_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_velocity) override;
     vector3  get_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) override;
     void  set_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_acceleration) override;
+    vector3  get_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid) override;
+    void  set_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  angular_acceleration) override;
+    float_32_bit  get_inverted_mass_of_rigid_body_of_scene_node(node_id const&  nid) override;
+    void  set_inverted_mass_of_rigid_body_of_scene_node(node_id const&  nid, float_32_bit const  inverted_mass) override;
+    matrix33  get_inverted_inertia_tensor_of_rigid_body_of_scene_node(node_id const&  nid) override;
+    void  set_inverted_inertia_tensor_of_rigid_body_of_scene_node(node_id const&  nid, matrix33 const&  inverted_inertia_tensor) override;
     void  erase_rigid_body_from_scene_node(node_id const&  nid) override;
 
     vector3  get_gravity_acceleration_at_point(vector3 const&  position) const override; // Always in the world space.

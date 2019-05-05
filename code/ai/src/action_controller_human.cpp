@@ -10,6 +10,41 @@
 namespace ai { namespace detail {
 
 
+struct  rigid_body_motion
+{
+    rigid_body_motion()
+        : velocity({vector3_zero(),vector3_zero()})
+        , acceleration({vector3(0.0f, 0.0f, -9.81f),vector3_zero()})
+        , inverted_mass(1.0f / 60.0f)
+        , inverted_inertia_tensor(matrix33_zero())
+    {}
+
+    rigid_body_motion(scene_ptr const  s, scene::node_id const&  motion_object_nid)
+        : velocity({ s->get_linear_velocity_of_rigid_body_of_scene_node(motion_object_nid),
+                     s->get_angular_velocity_of_rigid_body_of_scene_node(motion_object_nid) })
+        , acceleration({ s->get_linear_acceleration_of_rigid_body_of_scene_node(motion_object_nid),
+                         s->get_angular_acceleration_of_rigid_body_of_scene_node(motion_object_nid) })
+        , inverted_mass(s->get_inverted_mass_of_rigid_body_of_scene_node(motion_object_nid))
+        , inverted_inertia_tensor(s->get_inverted_inertia_tensor_of_rigid_body_of_scene_node(motion_object_nid))
+    {}
+
+    void restore(scene_ptr const  s, scene::node_id const&  motion_object_nid)
+    {
+        s->set_linear_velocity_of_rigid_body_of_scene_node(motion_object_nid, velocity.m_linear);
+        s->set_angular_velocity_of_rigid_body_of_scene_node(motion_object_nid, velocity.m_angular);
+        s->set_linear_acceleration_of_rigid_body_of_scene_node(motion_object_nid, acceleration.m_linear);
+        s->set_angular_acceleration_of_rigid_body_of_scene_node(motion_object_nid, acceleration.m_angular);
+        s->set_inverted_mass_of_rigid_body_of_scene_node(motion_object_nid, inverted_mass);
+        s->set_inverted_inertia_tensor_of_rigid_body_of_scene_node(motion_object_nid, inverted_inertia_tensor);
+    }
+
+    angeo::linear_and_angular_vector  velocity;
+    angeo::linear_and_angular_vector  acceleration;
+    float_32_bit  inverted_mass;
+    matrix33  inverted_inertia_tensor;
+};
+
+
 scene::node_id  get_motion_object_nid(scene_ptr const  s, scene::node_id const  agent_nid)
 {
     return s->get_aux_root_node_for_agent(agent_nid, "motion_object");
@@ -19,7 +54,8 @@ scene::node_id  get_motion_object_nid(scene_ptr const  s, scene::node_id const  
 void  create_collider_and_rigid_body_of_motion_scene_node(
         scene_ptr const  s,
         scene::node_id const&  motion_object_nid,
-        skeletal_motion_templates::keyframes::meta_data::record const&  collider_props
+        skeletal_motion_templates::keyframes::meta_data::record const&  collider_props,
+        rigid_body_motion const&  rb_motion
         )
 {
     if (collider_props.keyword == "capsule")
@@ -37,12 +73,12 @@ void  create_collider_and_rigid_body_of_motion_scene_node(
     }
     s->insert_rigid_body_to_scene_node(
             motion_object_nid,
-            vector3_zero(),
-            vector3_zero(),
-            vector3(0.0f, 0.0f, -9.81f),
-            vector3_zero(),
-            1.0f / 60.0f,
-            matrix33_zero()
+            rb_motion.velocity.m_linear,
+            rb_motion.velocity.m_angular,
+            rb_motion.acceleration.m_linear,
+            rb_motion.acceleration.m_angular,
+            rb_motion.inverted_mass,
+            rb_motion.inverted_inertia_tensor
             );
 }
 
@@ -58,12 +94,13 @@ scene::node_id  create_motion_scene_node(
         scene_ptr const  s,
         scene::node_id const  agent_nid,
         angeo::coordinate_system const&  frame_in_world_space,
-        skeletal_motion_templates::keyframes::meta_data::record const&  collider_props
+        skeletal_motion_templates::keyframes::meta_data::record const&  collider_props,
+        rigid_body_motion const&  rb_motion
         )
 {
     scene::node_id const  motion_object_nid(get_motion_object_nid(s, agent_nid));
     s->insert_scene_node(motion_object_nid, frame_in_world_space, false);
-    create_collider_and_rigid_body_of_motion_scene_node(s, motion_object_nid, collider_props);
+    create_collider_and_rigid_body_of_motion_scene_node(s, motion_object_nid, collider_props, rb_motion);
     return motion_object_nid;
 }
 
@@ -131,7 +168,8 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                     get_blackboard()->m_scene,
                     get_blackboard()->m_agent_nid,
                     agent_frame,
-                    m_motion_object_collider_props
+                    m_motion_object_collider_props,
+                    detail::rigid_body_motion()
                     );
         get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_nid, get_blackboard()->m_agent_id);
     }
@@ -355,8 +393,13 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         m_motion_object_collider_props = dst_meta_data;
 
         get_blackboard()->m_scene->unregister_to_collision_contacts_stream(m_motion_object_nid, get_blackboard()->m_agent_id);
+        detail::rigid_body_motion const  rb_motion(get_blackboard()->m_scene, m_motion_object_nid);
         detail::destroy_collider_and_rigid_bofy_of_motion_scene_node(get_blackboard()->m_scene, m_motion_object_nid);
-        detail::create_collider_and_rigid_body_of_motion_scene_node(get_blackboard()->m_scene, m_motion_object_nid, m_motion_object_collider_props);
+        detail::create_collider_and_rigid_body_of_motion_scene_node(
+                get_blackboard()->m_scene,
+                m_motion_object_nid,
+                m_motion_object_collider_props,
+                rb_motion);
         get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_nid, get_blackboard()->m_agent_id);
     }
 }
