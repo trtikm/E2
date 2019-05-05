@@ -25,7 +25,8 @@ private:
     vector3  m_desired_linear_velocity_in_world_space;
     float_32_bit  m_desired_angular_speed_in_world_space;   // Only the magnitude, because the axis is the z-axis of
                                                             // 'm_reference_frame_in_world_space'.
-    scene::node_id  m_motion_capsule_nid;
+    scene::node_id  m_motion_object_nid;
+    skeletal_motion_templates::keyframes::meta_data::record  m_motion_object_collider_props;
 };
 
 
