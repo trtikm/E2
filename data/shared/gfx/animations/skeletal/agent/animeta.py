@@ -43,6 +43,7 @@ class Config:
             self.shape = "capsule"
             self.length = 0.615
             self.radius = 0.2
+            self.weight = 1.0
             self.angle = math.pi / 4.0
             self.constraint_type = "contact_normal_cone"
             self.vec_down = [0.0, 0.0, -1.0]
@@ -207,6 +208,7 @@ colliders
         - 'length' distance between the half spheres.
         - 'radius' radius of both half spheres.
         The axis of the capsule is parallel to z-axis.
+    Each collider is assigned an weight, which is always its last value.
     Each collider is assumed to be in the coordinate system of the reference
     frame of the animation (see the command 'reference_frames').
     The computed colliders are always saved into file:
@@ -231,6 +233,7 @@ def command_colliders():
                 f.write(_float_to_string(state.radius) + "\n")
             else:
                 raise Exception("Unknown shape '" + state.shape + "' in the state variable 'shape'.")
+            f.write(_float_to_string(state.weight) + "\n")
 
 
 def command_constraints_help():
