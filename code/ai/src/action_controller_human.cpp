@@ -129,6 +129,7 @@ action_controller_human::action_controller_human(blackboard_ptr const  blackboar
     , m_desired_angular_speed_in_world_space(0.0f)
     , m_motion_object_nid()
     , m_motion_object_collider_props()
+    , m_motion_object_constraint_props()
 {
 }
 
@@ -164,6 +165,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                 get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.src_pose.motion_name
                 );
         m_motion_object_collider_props = src_animation.get_meta_data().m_motion_colliders.at(m_template_motion_info.src_pose.keyframe_index);
+        m_motion_object_constraint_props = src_animation.get_meta_data().m_constraints.at(m_template_motion_info.src_pose.keyframe_index);
         m_motion_object_nid = detail::create_motion_scene_node(
                     get_blackboard()->m_scene,
                     get_blackboard()->m_agent_nid,
@@ -183,19 +185,35 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
     vector3 const  current_linear_velocity_in_world_space =
             get_blackboard()->m_scene->get_linear_velocity_of_rigid_body_of_scene_node(m_motion_object_nid);
 
-    bool  has_contact_with_ground = false;
+    bool  is_motion_constraint_satisfied;
     {
-        auto const  begin_and_end = get_blackboard()->m_collision_contacts.equal_range(m_motion_object_nid);
-        for (auto  it = begin_and_end.first; it != begin_and_end.second; ++it)
-            if (angle(it->second.unit_normal, -gravity) < PI() / 4.0f)
-            {
-                has_contact_with_ground = true;
-                break;
-            }
+        is_motion_constraint_satisfied = false;
+        if (m_motion_object_constraint_props.keyword == "contact_normal_cone")
+        {
+            vector3 const  cone_unit_axis_vector_in_anim_space(
+                    m_motion_object_constraint_props.arguments.at(0),
+                    m_motion_object_constraint_props.arguments.at(1),
+                    m_motion_object_constraint_props.arguments.at(2)
+                    );
+            vector3 const  cone_unit_axis_vector_in_world_space =
+                    quaternion_to_rotation_matrix(motion_object_frame.orientation()) * cone_unit_axis_vector_in_anim_space;
+            float_32_bit const  max_angle_between_cone_axis_and_collision_normal_in_radians =
+                    m_motion_object_constraint_props.arguments.back();
+            auto const  begin_and_end = get_blackboard()->m_collision_contacts.equal_range(m_motion_object_nid);
+            for (auto  it = begin_and_end.first; it != begin_and_end.second; ++it)
+                if (it->second.normal_force_magnitude > 0.001f &&
+                    angle(it->second.unit_normal, cone_unit_axis_vector_in_world_space) < max_angle_between_cone_axis_and_collision_normal_in_radians)
+                {
+                    is_motion_constraint_satisfied = true;
+                    break;
+                }
+        }
+        else
+            NOT_IMPLEMENTED_YET();
     }
 
     vector3  agent_linear_acceleration = vector3_zero();
-    if (has_contact_with_ground == true)
+    if (is_motion_constraint_satisfied == true)
     {
         agent_linear_acceleration =
                 (m_desired_linear_velocity_in_world_space - current_linear_velocity_in_world_space) / time_step_in_seconds;
@@ -391,6 +409,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
     if (motion_object_interpolation_param <= interpolation_param && m_motion_object_collider_props != dst_meta_data)
     {
         m_motion_object_collider_props = dst_meta_data;
+        m_motion_object_constraint_props == dst_animation.get_meta_data().m_constraints.at(m_template_motion_info.dst_pose.keyframe_index);
 
         get_blackboard()->m_scene->unregister_to_collision_contacts_stream(m_motion_object_nid, get_blackboard()->m_agent_id);
         detail::rigid_body_motion const  rb_motion(get_blackboard()->m_scene, m_motion_object_nid);

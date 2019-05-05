@@ -27,6 +27,7 @@ private:
                                                             // 'm_reference_frame_in_world_space'.
     scene::node_id  m_motion_object_nid;
     skeletal_motion_templates::keyframes::meta_data::record  m_motion_object_collider_props;
+    skeletal_motion_templates::keyframes::meta_data::record  m_motion_object_constraint_props;
 };
 
 
