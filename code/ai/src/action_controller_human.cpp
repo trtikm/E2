@@ -14,8 +14,8 @@ struct  rigid_body_motion
 {
     rigid_body_motion()
         : velocity({vector3_zero(),vector3_zero()})
-        , acceleration({vector3(0.0f, 0.0f, -9.81f),vector3_zero()})
-        , inverted_mass(1.0f / 60.0f)
+        , acceleration({vector3_zero(),vector3_zero()})
+        , inverted_mass(0.0f)
         , inverted_inertia_tensor(matrix33_zero())
     {}
 
@@ -27,6 +27,39 @@ struct  rigid_body_motion
         , inverted_mass(s->get_inverted_mass_of_rigid_body_of_scene_node(motion_object_nid))
         , inverted_inertia_tensor(s->get_inverted_inertia_tensor_of_rigid_body_of_scene_node(motion_object_nid))
     {}
+
+    rigid_body_motion(
+            scene_ptr const  s,
+            scene::node_id const&  motion_object_nid,
+            skeletal_motion_templates::keyframes::meta_data::record const&  mass_distribution
+            )
+        : velocity({ s->get_linear_velocity_of_rigid_body_of_scene_node(motion_object_nid),
+            s->get_angular_velocity_of_rigid_body_of_scene_node(motion_object_nid) })
+        , acceleration({ s->get_linear_acceleration_of_rigid_body_of_scene_node(motion_object_nid),
+            s->get_angular_acceleration_of_rigid_body_of_scene_node(motion_object_nid) })
+        , inverted_mass()
+        , inverted_inertia_tensor()
+    {
+        set_inverted_mass(mass_distribution);
+        set_inverted_inertia_tensor(mass_distribution);
+    }
+
+    void  set_linear_acceleration(vector3 const&  linear_acceleration)
+    {
+        acceleration.m_linear = linear_acceleration;
+    }
+
+    void  set_inverted_mass(skeletal_motion_templates::keyframes::meta_data::record const&  mass_distribution)
+    {
+        inverted_mass = mass_distribution.arguments.at(0);
+    }
+
+    void  set_inverted_inertia_tensor(skeletal_motion_templates::keyframes::meta_data::record const&  mass_distribution)
+    {
+        for (int i = 0; i != 3; ++i)
+            for (int j = 0; j != 3; ++j)
+                inverted_inertia_tensor(i,j) = mass_distribution.arguments.at(1 + 3*i + j);
+    }
 
     void restore(scene_ptr const  s, scene::node_id const&  motion_object_nid)
     {
@@ -95,10 +128,14 @@ scene::node_id  create_motion_scene_node(
         scene::node_id const&  motion_object_nid,
         angeo::coordinate_system const&  frame_in_world_space,
         skeletal_motion_templates::keyframes::meta_data::record const&  collider_props,
-        rigid_body_motion const&  rb_motion
+        skeletal_motion_templates::keyframes::meta_data::record const&  mass_distribution
         )
 {
     s->insert_scene_node(motion_object_nid, frame_in_world_space, false);
+    rigid_body_motion  rb_motion;
+    rb_motion.set_linear_acceleration(s->get_gravity_acceleration_at_point(frame_in_world_space.origin()));
+    rb_motion.set_inverted_mass(mass_distribution);
+    rb_motion.set_inverted_inertia_tensor(mass_distribution);
     create_collider_and_rigid_body_of_motion_scene_node(s, motion_object_nid, collider_props, rb_motion);
     return motion_object_nid;
 }
@@ -164,6 +201,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                 get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.src_pose.motion_name
                 );
         m_motion_object_collider_props = src_animation.get_meta_data().m_motion_colliders.at(m_template_motion_info.src_pose.keyframe_index);
+        m_motion_object_mass_distribution_props = src_animation.get_meta_data().m_mass_distributions.at(m_template_motion_info.src_pose.keyframe_index);
         m_motion_object_constraint_props = src_animation.get_meta_data().m_constraints.at(m_template_motion_info.src_pose.keyframe_index);
         m_motion_object_nid = detail::get_motion_object_nid(get_blackboard()->m_scene, get_blackboard()->m_agent_nid);
         if (!get_blackboard()->m_scene->has_scene_node(m_motion_object_nid))
@@ -172,7 +210,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                         m_motion_object_nid,
                         agent_frame,
                         m_motion_object_collider_props,
-                        detail::rigid_body_motion()
+                        m_motion_object_mass_distribution_props
                         );
         get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_nid, get_blackboard()->m_agent_id);
     }
@@ -398,29 +436,42 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                 interpolated_frames_in_world_space.at(bone)
                 );
 
-    auto const&  src_meta_data = src_animation.get_meta_data().m_motion_colliders.at(m_template_motion_info.src_pose.keyframe_index);
-    auto const&  dst_meta_data = dst_animation.get_meta_data().m_motion_colliders.at(m_template_motion_info.dst_pose.keyframe_index);
+    auto const&  src_meta_data_colliders = src_animation.get_meta_data().m_motion_colliders.at(m_template_motion_info.src_pose.keyframe_index);
+    auto const&  dst_meta_data_colliders = dst_animation.get_meta_data().m_motion_colliders.at(m_template_motion_info.dst_pose.keyframe_index);
 
-    float_32_bit const  src_weight = src_meta_data.arguments.back();
-    float_32_bit const  dst_weight = dst_meta_data.arguments.back();
+    float_32_bit const  src_weight = src_meta_data_colliders.arguments.back();
+    float_32_bit const  dst_weight = dst_meta_data_colliders.arguments.back();
 
     float_32_bit const  motion_object_interpolation_param =
             (src_weight + dst_weight < 0.0001f) ? 0.5f : src_weight / (src_weight + dst_weight);
 
-    if (motion_object_interpolation_param <= interpolation_param && m_motion_object_collider_props != dst_meta_data)
+    if (motion_object_interpolation_param <= interpolation_param)
     {
-        m_motion_object_collider_props = dst_meta_data;
-        m_motion_object_constraint_props == dst_animation.get_meta_data().m_constraints.at(m_template_motion_info.dst_pose.keyframe_index);
+        auto const&  dst_meta_data_mass_distributions =
+                dst_animation.get_meta_data().m_mass_distributions.at(m_template_motion_info.dst_pose.keyframe_index);
 
-        get_blackboard()->m_scene->unregister_to_collision_contacts_stream(m_motion_object_nid, get_blackboard()->m_agent_id);
-        detail::rigid_body_motion const  rb_motion(get_blackboard()->m_scene, m_motion_object_nid);
-        detail::destroy_collider_and_rigid_bofy_of_motion_scene_node(get_blackboard()->m_scene, m_motion_object_nid);
-        detail::create_collider_and_rigid_body_of_motion_scene_node(
-                get_blackboard()->m_scene,
-                m_motion_object_nid,
-                m_motion_object_collider_props,
-                rb_motion);
-        get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_nid, get_blackboard()->m_agent_id);
+        if (m_motion_object_collider_props != dst_meta_data_colliders || m_motion_object_mass_distribution_props != dst_meta_data_mass_distributions)
+        {
+            m_motion_object_collider_props = dst_meta_data_colliders;
+            m_motion_object_mass_distribution_props = dst_meta_data_mass_distributions;
+
+            detail::rigid_body_motion const  rb_motion(
+                    get_blackboard()->m_scene,
+                    m_motion_object_nid,
+                    m_motion_object_mass_distribution_props
+                    );
+
+            get_blackboard()->m_scene->unregister_to_collision_contacts_stream(m_motion_object_nid, get_blackboard()->m_agent_id);
+            detail::destroy_collider_and_rigid_bofy_of_motion_scene_node(get_blackboard()->m_scene, m_motion_object_nid);
+            detail::create_collider_and_rigid_body_of_motion_scene_node(
+                    get_blackboard()->m_scene,
+                    m_motion_object_nid,
+                    m_motion_object_collider_props,
+                    rb_motion);
+            get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_nid, get_blackboard()->m_agent_id);
+        }
+
+        m_motion_object_constraint_props == dst_animation.get_meta_data().m_constraints.at(m_template_motion_info.dst_pose.keyframe_index);
     }
 }
 

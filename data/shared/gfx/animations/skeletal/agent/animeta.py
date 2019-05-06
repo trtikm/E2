@@ -44,6 +44,12 @@ class Config:
             self.length = 0.615
             self.radius = 0.2
             self.weight = 1.0
+            self.mass_inverted = 1.0 / 60.0
+            self.inertia_tensor_inverted = [
+                [0.0, 0.0, 0.0],        # Row 0
+                [0.0, 0.0, 0.0],        # Row 1
+                [0.0, 0.0, 0.455],      # Row 2
+            ]
             self.angle = math.pi / 4.0
             self.constraint_type = "contact_normal_cone"
             self.vec_down = [0.0, 0.0, -1.0]
@@ -311,20 +317,37 @@ def command_help():
         print(Config.instance.help_commands[cmd]())
 
 
-def command_set_help():
+def command_mass_distributions_help():
     return """
-set <var_name> <value>+
-    Sets value of a given state variable to the passed value(s).
+mass_distributions
+    Assigns to each keyframe in the work_dir/anim_dir inverted mass and
+    inverted inertia tensor (3x3 matrix) of the rigid body associated
+    with the collider (see the command 'colliders') in that keyframe.
+    The inverted mass and the inverted inertia tensor are defined by state
+    variables 'mass_inverted' and 'inertia_tensor_inverted'. Each inverted
+    inertia tensor must be defined in the coordinate system of the reference
+    frame of the animation (see the command 'reference_frames').
+    The computed values are always saved into file:
+        work_dir/anim_dir/meta_mass_distributions.txt
+    If the file exists, them it will be overwritten.
 """
 
 
-def command_set():
-    if len(Config.instance.cmdline.arguments) < 2:
-        raise Exception("Wrong number of arguments. At least 2 arguments are expected.")
-    Config.instance.state.set(
-            Config.instance.cmdline.arguments[0],
-            Config.instance.state.value_from_list_of_strings(Config.instance.cmdline.arguments[0], Config.instance.cmdline.arguments[1:])
-            )
+def command_mass_distributions():
+    if not os.path.isfile(_get_meta_meta_reference_frames_pathname()):
+        raise Exception("The file '" + _get_meta_meta_reference_frames_pathname() + "' does not exist. "
+                        "Please, run the command 'reference_frames' first.")
+    with open(_get_meta_meta_reference_frames_pathname(), "r") as f:
+        num_frames = int(f.readline().strip())
+    state = Config.instance.state
+    with open(os.path.join(_get_keyframes_dir(), "meta_mass_distributions.txt"), "w") as f:
+        f.write(str(num_frames) + "\n")
+        for _ in range(num_frames):
+            f.write("@\n")
+            f.write(_float_to_string(state.mass_inverted) + "\n")
+            for i in range(3):
+                for j in range(3):
+                    f.write(_float_to_string(state.inertia_tensor_inverted[i][j]) + "\n")
 
 
 def command_reference_frames_help():
@@ -386,6 +409,22 @@ def command_reference_frames():
             f.write(_float_to_string(frame["rot"][1]) + "\n")
             f.write(_float_to_string(frame["rot"][2]) + "\n")
             f.write(_float_to_string(frame["rot"][3]) + "\n")
+
+
+def command_set_help():
+    return """
+set <var_name> <value>+
+    Sets value of a given state variable to the passed value(s).
+"""
+
+
+def command_set():
+    if len(Config.instance.cmdline.arguments) < 2:
+        raise Exception("Wrong number of arguments. At least 2 arguments are expected.")
+    Config.instance.state.set(
+            Config.instance.cmdline.arguments[0],
+            Config.instance.state.value_from_list_of_strings(Config.instance.cmdline.arguments[0], Config.instance.cmdline.arguments[1:])
+            )
 
 
 def _main():

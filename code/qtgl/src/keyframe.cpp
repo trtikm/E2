@@ -192,7 +192,7 @@ bool  keyframes_data::meta_data::record::operator==(record const&  other) const
     if (keyword != other.keyword || arguments.size() != other.arguments.size())
         return false;
     for (natural_32_bit  i = 0U; i != arguments.size(); ++i)
-        if (std::fabsf(arguments.at(i) - other.arguments.at(i)) > 0.001f)
+        if (std::fabsf(arguments.at(i) - other.arguments.at(i)) > 0.0001f)
             return false;
     return true;
 }
@@ -201,6 +201,7 @@ bool  keyframes_data::meta_data::record::operator==(record const&  other) const
 keyframes_data::keyframes_data(
         async::finalise_load_on_destroy_ptr const  finaliser)
     : m_keyframes()
+    , m_meta_data()
 {
     TMPROF_BLOCK();
 
@@ -277,6 +278,14 @@ keyframes_data::keyframes_data(
             if (!istr.good())
                 throw std::runtime_error(msgstream() << "Cannot open the meta data file '" << pathname << "'.");
             read_meta_data_records(istr, pathname, m_meta_data.m_motion_colliders);
+        }
+        else if (filename == "meta_mass_distributions.txt")
+        {
+            boost::filesystem::path const  pathname = keyframes_dir / filename;
+            std::ifstream  istr(pathname.string(), std::ios_base::binary);
+            if (!istr.good())
+                throw std::runtime_error(msgstream() << "Cannot open the meta data file '" << pathname << "'.");
+            read_meta_data_records(istr, pathname, m_meta_data.m_mass_distributions);
         }
     }
 }

@@ -90,6 +90,7 @@ struct  keyframes_data
 
         std::vector<record>  m_constraints;
         std::vector<record>  m_motion_colliders;
+        std::vector<record>  m_mass_distributions;
     };
 
     keyframes_data(async::finalise_load_on_destroy_ptr const  finaliser);
