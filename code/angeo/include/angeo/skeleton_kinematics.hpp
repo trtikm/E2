@@ -55,7 +55,7 @@ void  skeleton_rotate_bones_towards_target_pose(
 /// Given a parent for a bone (-1 when no parent), the function computes children the bone.
 void  skeleton_compute_child_bones(std::vector<integer_32_bit> const&  parents, std::vector<std::vector<integer_32_bit> >&  children);
 
-/// Computes an angle for rotation along 'axis' so that 'axis x rotated(current)' and 'axis x target' will be linearly dependent.
+/// Computes an angle for rotation 'current' vector along 'axis' so that distance of the rotated 'current' to 'target' will be minimal.
 /// 'axis' must be a unit vector.
 float_32_bit  compute_rotation_angle(vector3 const&  unit_axis, vector3 const&  current, vector3 const&  target);
 
