@@ -13,6 +13,7 @@ struct  blackboard_human : public blackboard
 {
     blackboard_human()
         : m_cortex_cmd_turn_intensity(0.0f)
+        , m_max_forward_speed_in_meters_per_second(1.0f)
         , m_max_turn_speed_in_radians_per_second(PI() * 0.25f)
     {}
 
@@ -20,6 +21,7 @@ struct  blackboard_human : public blackboard
 
     // Constants:
 
+    float_32_bit  m_max_forward_speed_in_meters_per_second;
     float_32_bit  m_max_turn_speed_in_radians_per_second;
 };
 
