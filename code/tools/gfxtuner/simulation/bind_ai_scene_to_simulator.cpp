@@ -51,6 +51,13 @@ ai::scene::node_id  bind_ai_scene_to_simulator::get_aux_root_node_for_agent(
 }
 
 
+bool  bind_ai_scene_to_simulator::has_scene_node(node_id const&  nid) const
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    return m_simulator_ptr->get_scene_node(nid) != nullptr;
+}
+
+
 void  bind_ai_scene_to_simulator::insert_scene_node(
         node_id const&  nid,
         angeo::coordinate_system const&  frame,

@@ -478,10 +478,12 @@ void  __agent_look_at_object(
 }
 
 
-void  simulator::next_round(float_64_bit const  seconds_from_previous_call,
+void  simulator::next_round(float_64_bit  seconds_from_previous_call,
                             bool const  is_this_pure_redraw_request)
 {
     TMPROF_BLOCK();
+
+    seconds_from_previous_call = std::min(seconds_from_previous_call, m_fixed_time_step_in_seconds);
 
     bool  is_simulation_round = false;
     if (!is_this_pure_redraw_request)
@@ -1915,10 +1917,8 @@ void  simulator::rebuild_rigid_body_due_to_change_in_subtree(scn::scene_node_ptr
 
 void  simulator::get_rigid_body_info(
         scn::scene_node_id const&  id,
-        vector3&  linear_velocity,
-        vector3&  angular_velocity,
-        vector3&  external_linear_acceleration,
-        vector3&  external_angular_acceleration
+        bool&  auto_compute_mass_and_inertia_tensor,
+        scn::rigid_body_props&  props
         )
 {
     TMPROF_BLOCK();
@@ -1927,10 +1927,13 @@ void  simulator::get_rigid_body_info(
     ASSUMPTION(node_ptr != nullptr);
     scn::rigid_body const* const  rb_ptr = scn::get_rigid_body(*node_ptr);
     ASSUMPTION(rb_ptr != nullptr);
-    linear_velocity = m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id());
-    angular_velocity = m_rigid_body_simulator_ptr->get_angular_velocity(rb_ptr->id());
-    external_linear_acceleration = m_rigid_body_simulator_ptr->get_external_linear_acceleration(rb_ptr->id());
-    external_angular_acceleration = m_rigid_body_simulator_ptr->get_external_angular_acceleration(rb_ptr->id());
+    auto_compute_mass_and_inertia_tensor = rb_ptr->auto_compute_mass_and_inertia_tensor();
+    props.m_linear_velocity = m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id());
+    props.m_angular_velocity = m_rigid_body_simulator_ptr->get_angular_velocity(rb_ptr->id());
+    props.m_external_linear_acceleration = m_rigid_body_simulator_ptr->get_external_linear_acceleration(rb_ptr->id());
+    props.m_external_angular_acceleration = m_rigid_body_simulator_ptr->get_external_angular_acceleration(rb_ptr->id());
+    props.m_mass_inverted = m_rigid_body_simulator_ptr->get_inverted_mass(rb_ptr->id());
+    props.m_inertia_tensor_inverted = m_rigid_body_simulator_ptr->get_inverted_inertia_tensor_in_local_space(rb_ptr->id());
 }
 
 
@@ -2086,7 +2089,7 @@ void  simulator::load_rigid_body(
                 load_vector("angular_velocity"),
                 load_vector("external_linear_acceleration"),
                 load_vector("external_angular_acceleration"),
-                data.get<float_32_bit>("mass_invertex"),
+                data.get<float_32_bit>("mass_inverted"),
                 inertia_inverted,
                 id
                 );
@@ -2132,7 +2135,7 @@ void  simulator::save_rigid_body(scn::scene_node_id const&  id, boost::property_
     if (rb_ptr->auto_compute_mass_and_inertia_tensor() == false)
     {
         data.put("mass_inverted", m_rigid_body_simulator_ptr->get_inverted_mass(rb_ptr->id()));
-        data.put("inertia_tensor_inverted", m_rigid_body_simulator_ptr->get_inverted_inertia_tensor_in_local_space(rb_ptr->id()));
+        save_matrix33("inertia_tensor_inverted", m_rigid_body_simulator_ptr->get_inverted_inertia_tensor_in_local_space(rb_ptr->id()));
     }
 
     save_vector("linear_velocity", m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id()));

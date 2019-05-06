@@ -31,6 +31,8 @@ struct  rigid_body_props
     vector3  m_angular_velocity;
     vector3  m_external_linear_acceleration;
     vector3  m_external_angular_acceleration;
+    float_32_bit  m_mass_inverted;
+    matrix33  m_inertia_tensor_inverted;
 };
 
 

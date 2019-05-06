@@ -45,12 +45,6 @@ struct  rigid_body_motion
 };
 
 
-scene::node_id  get_motion_object_nid(scene_ptr const  s, scene::node_id const  agent_nid)
-{
-    return s->get_aux_root_node_for_agent(agent_nid, "motion_object");
-}
-
-
 void  create_collider_and_rigid_body_of_motion_scene_node(
         scene_ptr const  s,
         scene::node_id const&  motion_object_nid,
@@ -90,15 +84,20 @@ void  destroy_collider_and_rigid_bofy_of_motion_scene_node(scene_ptr const  s, s
 }
 
 
+scene::node_id  get_motion_object_nid(scene_ptr const  s, scene::node_id const  agent_nid)
+{
+    return s->get_aux_root_node_for_agent(agent_nid, "motion_object");
+}
+
+
 scene::node_id  create_motion_scene_node(
         scene_ptr const  s,
-        scene::node_id const  agent_nid,
+        scene::node_id const&  motion_object_nid,
         angeo::coordinate_system const&  frame_in_world_space,
         skeletal_motion_templates::keyframes::meta_data::record const&  collider_props,
         rigid_body_motion const&  rb_motion
         )
 {
-    scene::node_id const  motion_object_nid(get_motion_object_nid(s, agent_nid));
     s->insert_scene_node(motion_object_nid, frame_in_world_space, false);
     create_collider_and_rigid_body_of_motion_scene_node(s, motion_object_nid, collider_props, rb_motion);
     return motion_object_nid;
@@ -166,13 +165,15 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                 );
         m_motion_object_collider_props = src_animation.get_meta_data().m_motion_colliders.at(m_template_motion_info.src_pose.keyframe_index);
         m_motion_object_constraint_props = src_animation.get_meta_data().m_constraints.at(m_template_motion_info.src_pose.keyframe_index);
-        m_motion_object_nid = detail::create_motion_scene_node(
-                    get_blackboard()->m_scene,
-                    get_blackboard()->m_agent_nid,
-                    agent_frame,
-                    m_motion_object_collider_props,
-                    detail::rigid_body_motion()
-                    );
+        m_motion_object_nid = detail::get_motion_object_nid(get_blackboard()->m_scene, get_blackboard()->m_agent_nid);
+        if (!get_blackboard()->m_scene->has_scene_node(m_motion_object_nid))
+            m_motion_object_nid = detail::create_motion_scene_node(
+                        get_blackboard()->m_scene,
+                        m_motion_object_nid,
+                        agent_frame,
+                        m_motion_object_collider_props,
+                        detail::rigid_body_motion()
+                        );
         get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_nid, get_blackboard()->m_agent_id);
     }
 

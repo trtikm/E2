@@ -37,7 +37,7 @@ struct simulator : public qtgl::real_time_simulator
     // Simulation
 
     void next_round(
-            float_64_bit const  seconds_from_previous_call,
+            float_64_bit  seconds_from_previous_call,
             bool const  is_this_pure_redraw_request
             ) override;
 
@@ -172,10 +172,8 @@ struct simulator : public qtgl::real_time_simulator
 
     void  get_rigid_body_info(
             scn::scene_node_id const&  id,
-            vector3&  linear_velocity,
-            vector3&  angular_velocity,
-            vector3&  external_linear_acceleration,
-            vector3&  external_angular_acceleration
+            bool&  auto_compute_mass_and_inertia_tensor,
+            scn::rigid_body_props&  props
             );
 
     void  insert_agent(scn::scene_record_id const&  id, scn::skeleton_props_ptr const  props);

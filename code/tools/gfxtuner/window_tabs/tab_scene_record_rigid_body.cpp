@@ -28,11 +28,37 @@
 namespace window_tabs { namespace tab_scene { namespace record_rigid_body { namespace detail {
 
 
+bool  is_valid(matrix33 const&  M)
+{
+    for (int i = 0; i != 3; ++i)
+        for (int j = 0; j != 3; ++j)
+            if (std::isnan(M(i, j)) || std::isinf(M(i, j)))
+                return false;
+    return true;
+}
+
+
+bool  is_zero(matrix33 const&  M)
+{
+    for (int i = 0; i != 3; ++i)
+        for (int j = 0; j != 3; ++j)
+            if (std::fabsf(M(i,j)) > 0.0001f)
+                return false;
+    return true;
+}
+
+
 struct  rigid_body_props_dialog : public QDialog
 {
-    rigid_body_props_dialog(program_window* const  wnd, struct  scn::rigid_body_props* const  props);
+    rigid_body_props_dialog(
+            program_window* const  wnd,
+            bool* const  auto_compute_mass_and_inertia_tensor,
+            struct  scn::rigid_body_props* const  props
+            );
 
     bool  ok() const { return m_ok; }
+
+    void on_auto_compute_mass_and_inertia_tensor_changed(int const  state);
 
 public slots:
 
@@ -41,8 +67,11 @@ public slots:
 
 private:
     program_window*  m_wnd;
+    bool*  m_auto_compute_mass_and_inertia_tensor;
     scn::rigid_body_props*  m_props;
     bool  m_ok;
+
+    void  set_enable_state_of_mass_and_inertia_tensor(bool const set_enabled);
 
     QLineEdit*  m_widget_linear_velocity_x;
     QLineEdit*  m_widget_linear_velocity_y;
@@ -59,12 +88,23 @@ private:
     QLineEdit*  m_widget_external_angular_acceleration_x;
     QLineEdit*  m_widget_external_angular_acceleration_y;
     QLineEdit*  m_widget_external_angular_acceleration_z;
+
+    QCheckBox*  m_widget_auto_compute_mass_and_inertia_tensor;
+
+    QLineEdit*  m_widget_mass;
+
+    std::array<std::array<QLineEdit*, 3>, 3>  m_widget_inertia_tensor;
 };
 
 
-rigid_body_props_dialog::rigid_body_props_dialog(program_window* const  wnd, scn::rigid_body_props* const  props)
+rigid_body_props_dialog::rigid_body_props_dialog(
+        program_window* const  wnd,
+        bool* const  auto_compute_mass_and_inertia_tensor,
+        scn::rigid_body_props* const  props
+        )
     : QDialog(wnd)
     , m_wnd(wnd)
+    , m_auto_compute_mass_and_inertia_tensor(auto_compute_mass_and_inertia_tensor)
     , m_props(props)
     , m_ok(false)
 
@@ -83,8 +123,32 @@ rigid_body_props_dialog::rigid_body_props_dialog(program_window* const  wnd, scn
     , m_widget_external_angular_acceleration_x(new QLineEdit)
     , m_widget_external_angular_acceleration_y(new QLineEdit)
     , m_widget_external_angular_acceleration_z(new QLineEdit)
+
+    , m_widget_auto_compute_mass_and_inertia_tensor(
+        [](rigid_body_props_dialog* dlg, bool const  auto_compute_mass_and_inertia_tensor) {
+            struct s : public QCheckBox {
+                s(rigid_body_props_dialog* dlg, bool const  auto_compute_mass_and_inertia_tensor)
+                    : QCheckBox("Compute mass and inertia tensor from colliders.")
+                {
+                    setChecked(auto_compute_mass_and_inertia_tensor);
+                    QObject::connect(this, &QCheckBox::stateChanged, dlg, &rigid_body_props_dialog::on_auto_compute_mass_and_inertia_tensor_changed);
+                }
+            };
+            return new s(dlg, auto_compute_mass_and_inertia_tensor);
+        }(this, auto_compute_mass_and_inertia_tensor)
+        
+        )
+
+    , m_widget_mass(new QLineEdit)
+
+    , m_widget_inertia_tensor()
 {
+    ASSUMPTION(m_auto_compute_mass_and_inertia_tensor != nullptr);
     ASSUMPTION(m_props != nullptr);
+
+    for (int i = 0; i != 3; ++i)
+        for (int j = 0; j != 3; ++j)
+            m_widget_inertia_tensor[i][j] = new QLineEdit;
 
     m_widget_linear_velocity_x->setText(QString::number(m_props->m_linear_velocity(0)));
     m_widget_linear_velocity_y->setText(QString::number(m_props->m_linear_velocity(1)));
@@ -102,6 +166,25 @@ rigid_body_props_dialog::rigid_body_props_dialog(program_window* const  wnd, scn
     m_widget_external_angular_acceleration_y->setText(QString::number(m_props->m_external_angular_acceleration(1)));
     m_widget_external_angular_acceleration_z->setText(QString::number(m_props->m_external_angular_acceleration(2)));
 
+    m_widget_auto_compute_mass_and_inertia_tensor->setChecked(*m_auto_compute_mass_and_inertia_tensor);
+
+    if (m_props->m_mass_inverted < 0.0001f)
+        m_widget_mass->setText("0.0");
+    else
+        m_widget_mass->setText(QString::number(1.0f / m_props->m_mass_inverted));
+
+    if (is_zero(m_props->m_inertia_tensor_inverted))
+        for (int i = 0; i != 3; ++i)
+            for (int j = 0; j != 3; ++j)
+                m_widget_inertia_tensor[i][j]->setText("0.0");
+    else
+    {
+        matrix33  M = inverse33(m_props->m_inertia_tensor_inverted);
+        for (int i = 0; i != 3; ++i)
+            for (int j = 0; j != 3; ++j)
+                m_widget_inertia_tensor[i][j]->setText(QString::number(M(i,j)));
+    }
+    
     m_widget_linear_velocity_x->setToolTip("x coordinate in world space.");
     m_widget_linear_velocity_y->setToolTip("y coordinate in world space.");
     m_widget_linear_velocity_z->setToolTip("z coordinate in world space.");
@@ -117,6 +200,23 @@ rigid_body_props_dialog::rigid_body_props_dialog(program_window* const  wnd, scn
     m_widget_external_angular_acceleration_x->setToolTip("x coordinate in world space.");
     m_widget_external_angular_acceleration_y->setToolTip("y coordinate in world space.");
     m_widget_external_angular_acceleration_z->setToolTip("z coordinate in world space.");
+
+    m_widget_auto_compute_mass_and_inertia_tensor->setToolTip(
+            "Whether to automatically compute mass and innertia\n"
+            "tensor from colliders under the scene node with this\n"
+            "rigid body, or to manually specify the mass and the\n"
+            "inertia tensor using the widgets below."
+            );
+
+    m_widget_mass->setToolTip("Mass of the rigid body.");
+    for (int i = 0; i != 3; ++i)
+        for (int j = 0; j != 3; ++j)
+        {
+            std::string const  msg = msgstream() << "Element (" << i << "," << j << ") of the inertia tensor.";
+            m_widget_inertia_tensor[i][j]->setToolTip(QString(msg.c_str()));
+        }
+
+    set_enable_state_of_mass_and_inertia_tensor(!*m_auto_compute_mass_and_inertia_tensor);
 
     QVBoxLayout* const dlg_layout = new QVBoxLayout;
     {
@@ -165,6 +265,46 @@ rigid_body_props_dialog::rigid_body_props_dialog(program_window* const  wnd, scn
                 m_widget_external_angular_acceleration_z
                 ));
 
+        dlg_layout->addWidget(m_widget_auto_compute_mass_and_inertia_tensor);
+
+        QWidget* const mass_and_inertia_tensor_group = new QGroupBox("Mass and inertia tensor");
+        {
+            QVBoxLayout* const group_layout = new QVBoxLayout;
+            {
+                QHBoxLayout* const mass_layout = new QHBoxLayout;
+                {
+                    mass_layout->addWidget(new QLabel("Mass [kg]: "));
+                    mass_layout->addWidget(m_widget_mass);
+                }
+                group_layout->addLayout(mass_layout);
+
+                group_layout->addWidget(new QLabel("Inertia tensor:"));
+                QHBoxLayout* const inertia_tensor_row_1_layout = new QHBoxLayout;
+                {
+                    inertia_tensor_row_1_layout->addWidget(m_widget_inertia_tensor[0][0]);
+                    inertia_tensor_row_1_layout->addWidget(m_widget_inertia_tensor[0][1]);
+                    inertia_tensor_row_1_layout->addWidget(m_widget_inertia_tensor[0][2]);
+                }
+                group_layout->addLayout(inertia_tensor_row_1_layout);
+                QHBoxLayout* const inertia_tensor_row_2_layout = new QHBoxLayout;
+                {
+                    inertia_tensor_row_2_layout->addWidget(m_widget_inertia_tensor[1][0]);
+                    inertia_tensor_row_2_layout->addWidget(m_widget_inertia_tensor[1][1]);
+                    inertia_tensor_row_2_layout->addWidget(m_widget_inertia_tensor[1][2]);
+                }
+                group_layout->addLayout(inertia_tensor_row_2_layout);
+                QHBoxLayout* const inertia_tensor_row_3_layout = new QHBoxLayout;
+                {
+                    inertia_tensor_row_3_layout->addWidget(m_widget_inertia_tensor[2][0]);
+                    inertia_tensor_row_3_layout->addWidget(m_widget_inertia_tensor[2][1]);
+                    inertia_tensor_row_3_layout->addWidget(m_widget_inertia_tensor[2][2]);
+                }
+                group_layout->addLayout(inertia_tensor_row_3_layout);
+            }
+            mass_and_inertia_tensor_group->setLayout(group_layout);
+        }
+        dlg_layout->addWidget(mass_and_inertia_tensor_group);
+
         QHBoxLayout* const buttons_layout = new QHBoxLayout;
         {
             buttons_layout->addWidget(
@@ -200,6 +340,22 @@ rigid_body_props_dialog::rigid_body_props_dialog(program_window* const  wnd, scn
 }
 
 
+void rigid_body_props_dialog::on_auto_compute_mass_and_inertia_tensor_changed(int const  state)
+{
+    *m_auto_compute_mass_and_inertia_tensor = (state != 0);
+    set_enable_state_of_mass_and_inertia_tensor(!*m_auto_compute_mass_and_inertia_tensor);
+}
+
+
+void  rigid_body_props_dialog::set_enable_state_of_mass_and_inertia_tensor(bool const  set_enabled)
+{
+    m_widget_mass->setEnabled(set_enabled);
+    for (int i = 0; i != 3; ++i)
+        for (int j = 0; j != 3; ++j)
+            m_widget_inertia_tensor[i][j]->setEnabled(set_enabled);
+}
+
+
 void  rigid_body_props_dialog::accept()
 {
     m_props->m_linear_velocity = {
@@ -225,6 +381,27 @@ void  rigid_body_props_dialog::accept()
             (float_32_bit)std::atof(qtgl::to_string(m_widget_external_angular_acceleration_y->text()).c_str()),
             (float_32_bit)std::atof(qtgl::to_string(m_widget_external_angular_acceleration_z->text()).c_str())
             };
+
+    *m_auto_compute_mass_and_inertia_tensor = m_widget_auto_compute_mass_and_inertia_tensor->isChecked();
+
+    if (*m_auto_compute_mass_and_inertia_tensor == false)
+    {
+        float_32_bit const  mass = (float_32_bit)std::atof(qtgl::to_string(m_widget_mass->text()).c_str());
+        if (mass < 0.0001f)
+            m_props->m_mass_inverted = 0.0f;
+        else
+            m_props->m_mass_inverted = 1.0f / (float_32_bit)std::atof(qtgl::to_string(m_widget_mass->text()).c_str());
+
+        matrix33  M;
+        for (int i = 0; i != 3; ++i)
+            for (int j = 0; j != 3; ++j)
+                M(i,j) = (float_32_bit)std::atof(qtgl::to_string(m_widget_inertia_tensor[i][j]->text()).c_str());
+        matrix33  Minv = inverse33(M);
+        if (!is_valid(Minv) || is_zero(M))
+            m_props->m_inertia_tensor_inverted = matrix33_zero();
+        else
+            m_props->m_inertia_tensor_inverted = Minv;
+    }        
 
     m_ok = true;
 
@@ -265,14 +442,26 @@ void  register_record_undo_redo_processors(widgets* const  w)
     scn::scene_history_rigid_body_insert::set_redo_processor(
         [w](scn::scene_history_rigid_body_insert const&  history_node) {
             INVARIANT(history_node.get_id().get_folder_name() == scn::get_rigid_body_folder_name());
-            w->wnd()->glwindow().call_now(
-                    &simulator::insert_rigid_body_to_scene_node,
-                    std::cref(history_node.get_props().m_linear_velocity),
-                    std::cref(history_node.get_props().m_angular_velocity),
-                    std::cref(history_node.get_props().m_external_linear_acceleration),
-                    std::cref(history_node.get_props().m_external_angular_acceleration),
-                    std::cref(history_node.get_id().get_node_id())
-                    );
+            if (history_node.auto_compute_mass_and_inertia_tensor())
+                w->wnd()->glwindow().call_now(
+                        &simulator::insert_rigid_body_to_scene_node,
+                        std::cref(history_node.get_props().m_linear_velocity),
+                        std::cref(history_node.get_props().m_angular_velocity),
+                        std::cref(history_node.get_props().m_external_linear_acceleration),
+                        std::cref(history_node.get_props().m_external_angular_acceleration),
+                        std::cref(history_node.get_id().get_node_id())
+                        );
+            else
+                w->wnd()->glwindow().call_now(
+                        &simulator::insert_rigid_body_to_scene_node_ex,
+                        std::cref(history_node.get_props().m_linear_velocity),
+                        std::cref(history_node.get_props().m_angular_velocity),
+                        std::cref(history_node.get_props().m_external_linear_acceleration),
+                        std::cref(history_node.get_props().m_external_angular_acceleration),
+                        history_node.get_props().m_mass_inverted,
+                        std::cref(history_node.get_props().m_inertia_tensor_inverted),
+                        std::cref(history_node.get_id().get_node_id())
+                        );
             insert_record_to_tree_widget(
                     w->scene_tree(),
                     history_node.get_id(),
@@ -288,14 +477,26 @@ void  register_record_undo_redo_processors(widgets* const  w)
                     &simulator::erase_rigid_body_from_scene_node,
                     std::cref(history_node.get_id().get_node_id())
                     );
-            w->wnd()->glwindow().call_now(
-                    &simulator::insert_rigid_body_to_scene_node,
-                    std::cref(history_node.get_old_props().m_linear_velocity),
-                    std::cref(history_node.get_old_props().m_angular_velocity),
-                    std::cref(history_node.get_old_props().m_external_linear_acceleration),
-                    std::cref(history_node.get_old_props().m_external_angular_acceleration),
-                    std::cref(history_node.get_id().get_node_id())
-                    );
+            if (history_node.get_old_auto_compute_mass_and_inertia_tensor())
+                w->wnd()->glwindow().call_now(
+                        &simulator::insert_rigid_body_to_scene_node,
+                        std::cref(history_node.get_old_props().m_linear_velocity),
+                        std::cref(history_node.get_old_props().m_angular_velocity),
+                        std::cref(history_node.get_old_props().m_external_linear_acceleration),
+                        std::cref(history_node.get_old_props().m_external_angular_acceleration),
+                        std::cref(history_node.get_id().get_node_id())
+                        );
+            else
+                w->wnd()->glwindow().call_now(
+                        &simulator::insert_rigid_body_to_scene_node_ex,
+                        std::cref(history_node.get_old_props().m_linear_velocity),
+                        std::cref(history_node.get_old_props().m_angular_velocity),
+                        std::cref(history_node.get_old_props().m_external_linear_acceleration),
+                        std::cref(history_node.get_old_props().m_external_angular_acceleration),
+                        history_node.get_old_props().m_mass_inverted,
+                        std::cref(history_node.get_old_props().m_inertia_tensor_inverted),
+                        std::cref(history_node.get_id().get_node_id())
+                        );
         });
     scn::scene_history_rigid_body_update_props::set_redo_processor(
         [w](scn::scene_history_rigid_body_update_props const&  history_node) {
@@ -304,14 +505,26 @@ void  register_record_undo_redo_processors(widgets* const  w)
                     &simulator::erase_rigid_body_from_scene_node,
                     std::cref(history_node.get_id().get_node_id())
                     );
-            w->wnd()->glwindow().call_now(
-                    &simulator::insert_rigid_body_to_scene_node,
-                    std::cref(history_node.get_new_props().m_linear_velocity),
-                    std::cref(history_node.get_new_props().m_angular_velocity),
-                    std::cref(history_node.get_new_props().m_external_linear_acceleration),
-                    std::cref(history_node.get_new_props().m_external_angular_acceleration),
-                    std::cref(history_node.get_id().get_node_id())
-                    );
+            if (history_node.get_new_auto_compute_mass_and_inertia_tensor())
+                w->wnd()->glwindow().call_now(
+                        &simulator::insert_rigid_body_to_scene_node,
+                        std::cref(history_node.get_new_props().m_linear_velocity),
+                        std::cref(history_node.get_new_props().m_angular_velocity),
+                        std::cref(history_node.get_new_props().m_external_linear_acceleration),
+                        std::cref(history_node.get_new_props().m_external_angular_acceleration),
+                        std::cref(history_node.get_id().get_node_id())
+                        );
+            else
+                w->wnd()->glwindow().call_now(
+                        &simulator::insert_rigid_body_to_scene_node_ex,
+                        std::cref(history_node.get_new_props().m_linear_velocity),
+                        std::cref(history_node.get_new_props().m_angular_velocity),
+                        std::cref(history_node.get_new_props().m_external_linear_acceleration),
+                        std::cref(history_node.get_new_props().m_external_angular_acceleration),
+                        history_node.get_new_props().m_mass_inverted,
+                        std::cref(history_node.get_new_props().m_inertia_tensor_inverted),
+                        std::cref(history_node.get_id().get_node_id())
+                        );
         });
 }
 
@@ -340,22 +553,42 @@ void  register_record_handler_for_insert_scene_record(
                         rb_props->m_angular_velocity ={ 0.0f, 0.0f, 0.0f };
                         rb_props->m_external_linear_acceleration = { 0.0f, 0.0f, -9.81f };
                         rb_props->m_external_angular_acceleration ={ 0.0f, 0.0f, 0.0f };
-                        detail::rigid_body_props_dialog  dlg(w->wnd(), rb_props.get());
+                        rb_props->m_mass_inverted = 0.0f;
+                        rb_props->m_inertia_tensor_inverted = matrix33_zero();
+                        bool  auto_compute_mass_and_inertia_tensor = true;
+                        detail::rigid_body_props_dialog  dlg(w->wnd(), &auto_compute_mass_and_inertia_tensor, rb_props.get());
                         dlg.exec();
                         if (!dlg.ok())
                             return{ "",{} };
                         return {
                             scn::get_rigid_body_record_name(),
-                            [w, rb_props](scn::scene_record_id const&  record_id) -> void {
-                                    w->wnd()->glwindow().call_now(
-                                            &simulator::insert_rigid_body_to_scene_node,
-                                            std::cref(rb_props->m_linear_velocity),
-                                            std::cref(rb_props->m_angular_velocity),
-                                            std::cref(rb_props->m_external_linear_acceleration),
-                                            std::cref(rb_props->m_external_angular_acceleration),
-                                            std::cref(record_id.get_node_id())
+                            [w, auto_compute_mass_and_inertia_tensor, rb_props](scn::scene_record_id const&  record_id) -> void {
+                                    if (auto_compute_mass_and_inertia_tensor)
+                                        w->wnd()->glwindow().call_now(
+                                                &simulator::insert_rigid_body_to_scene_node,
+                                                std::cref(rb_props->m_linear_velocity),
+                                                std::cref(rb_props->m_angular_velocity),
+                                                std::cref(rb_props->m_external_linear_acceleration),
+                                                std::cref(rb_props->m_external_angular_acceleration),
+                                                std::cref(record_id.get_node_id())
+                                                );
+                                    else
+                                        w->wnd()->glwindow().call_now(
+                                                &simulator::insert_rigid_body_to_scene_node_ex,
+                                                std::cref(rb_props->m_linear_velocity),
+                                                std::cref(rb_props->m_angular_velocity),
+                                                std::cref(rb_props->m_external_linear_acceleration),
+                                                std::cref(rb_props->m_external_angular_acceleration),
+                                                rb_props->m_mass_inverted,
+                                                std::cref(rb_props->m_inertia_tensor_inverted),
+                                                std::cref(record_id.get_node_id())
+                                                );
+                                    w->get_scene_history()->insert<scn::scene_history_rigid_body_insert>(
+                                            record_id,
+                                            auto_compute_mass_and_inertia_tensor,
+                                            *rb_props,
+                                            false
                                             );
-                                    w->get_scene_history()->insert<scn::scene_history_rigid_body_insert>(record_id, *rb_props, false);
                                 }
                             };
                     }
@@ -371,33 +604,51 @@ void  register_record_handler_for_update_scene_record(
     update_record_handlers.insert({
             scn::get_rigid_body_folder_name(),
             [](widgets* const  w, scn::scene_record_id const&  record_id) -> void {
+                    bool  auto_compute_mass_and_inertia_tensor;
                     scn::rigid_body_props  rb_props;
                     w->wnd()->glwindow().call_now(
                             &simulator::get_rigid_body_info,
                             std::cref(record_id.get_node_id()),
-                            std::ref(rb_props.m_linear_velocity),
-                            std::ref(rb_props.m_angular_velocity),
-                            std::ref(rb_props.m_external_linear_acceleration),
-                            std::ref(rb_props.m_external_angular_acceleration)
+                            std::ref(auto_compute_mass_and_inertia_tensor),
+                            std::ref(rb_props)
                             );
+                    bool const  old_auto_compute_mass_and_inertia_tensor = auto_compute_mass_and_inertia_tensor;
                     scn::rigid_body_props  rb_old_props = rb_props;
-                    detail::rigid_body_props_dialog  dlg(w->wnd(), &rb_props);
+                    detail::rigid_body_props_dialog  dlg(w->wnd(), &auto_compute_mass_and_inertia_tensor, &rb_props);
                     dlg.exec();
                     if (!dlg.ok())
                         return;
-                    w->get_scene_history()->insert<scn::scene_history_rigid_body_update_props>(record_id, rb_old_props, rb_props, false);
+                    w->get_scene_history()->insert<scn::scene_history_rigid_body_update_props>(
+                            record_id,
+                            old_auto_compute_mass_and_inertia_tensor,
+                            rb_old_props,
+                            auto_compute_mass_and_inertia_tensor,
+                            rb_props,
+                            false);
                     w->wnd()->glwindow().call_now(
                             &simulator::erase_rigid_body_from_scene_node,
                             std::cref(record_id.get_node_id())
                             );
-                    w->wnd()->glwindow().call_now(
-                            &simulator::insert_rigid_body_to_scene_node,
-                            std::cref(rb_props.m_linear_velocity),
-                            std::cref(rb_props.m_angular_velocity),
-                            std::cref(rb_props.m_external_linear_acceleration),
-                            std::cref(rb_props.m_external_angular_acceleration),
-                            std::cref(record_id.get_node_id())
-                            );
+                    if (auto_compute_mass_and_inertia_tensor)
+                        w->wnd()->glwindow().call_now(
+                                &simulator::insert_rigid_body_to_scene_node,
+                                std::cref(rb_props.m_linear_velocity),
+                                std::cref(rb_props.m_angular_velocity),
+                                std::cref(rb_props.m_external_linear_acceleration),
+                                std::cref(rb_props.m_external_angular_acceleration),
+                                std::cref(record_id.get_node_id())
+                                );
+                    else
+                        w->wnd()->glwindow().call_now(
+                                &simulator::insert_rigid_body_to_scene_node_ex,
+                                std::cref(rb_props.m_linear_velocity),
+                                std::cref(rb_props.m_angular_velocity),
+                                std::cref(rb_props.m_external_linear_acceleration),
+                                std::cref(rb_props.m_external_angular_acceleration),
+                                std::cref(rb_props.m_mass_inverted),
+                                std::cref(rb_props.m_inertia_tensor_inverted),
+                                std::cref(record_id.get_node_id())
+                                );
                 }
             });
 }
@@ -411,24 +662,40 @@ void  register_record_handler_for_duplicate_scene_record(
     duplicate_record_handlers.insert({
             scn::get_rigid_body_folder_name(),
             [](widgets* const  w, scn::scene_record_id const&  src_record_id, scn::scene_record_id const&  dst_record_id) -> void {
+                    bool  auto_compute_mass_and_inertia_tensor;
                     scn::rigid_body_props  rb_props;
                     w->wnd()->glwindow().call_now(
                             &simulator::get_rigid_body_info,
                             std::cref(src_record_id.get_node_id()),
-                            std::ref(rb_props.m_linear_velocity),
-                            std::ref(rb_props.m_angular_velocity),
-                            std::ref(rb_props.m_external_linear_acceleration),
-                            std::ref(rb_props.m_external_angular_acceleration)
+                            std::ref(auto_compute_mass_and_inertia_tensor),
+                            std::ref(rb_props)
                             );
-                    w->wnd()->glwindow().call_now(
-                            &simulator::insert_rigid_body_to_scene_node,
-                            std::cref(rb_props.m_linear_velocity),
-                            std::cref(rb_props.m_angular_velocity),
-                            std::cref(rb_props.m_external_linear_acceleration),
-                            std::cref(rb_props.m_external_angular_acceleration),
-                            std::cref(dst_record_id.get_node_id())
+                    if (auto_compute_mass_and_inertia_tensor)
+                        w->wnd()->glwindow().call_now(
+                                &simulator::insert_rigid_body_to_scene_node,
+                                std::cref(rb_props.m_linear_velocity),
+                                std::cref(rb_props.m_angular_velocity),
+                                std::cref(rb_props.m_external_linear_acceleration),
+                                std::cref(rb_props.m_external_angular_acceleration),
+                                std::cref(dst_record_id.get_node_id())
+                                );
+                    else
+                        w->wnd()->glwindow().call_now(
+                                &simulator::insert_rigid_body_to_scene_node_ex,
+                                std::cref(rb_props.m_linear_velocity),
+                                std::cref(rb_props.m_angular_velocity),
+                                std::cref(rb_props.m_external_linear_acceleration),
+                                std::cref(rb_props.m_external_angular_acceleration),
+                                std::cref(rb_props.m_mass_inverted),
+                                std::cref(rb_props.m_inertia_tensor_inverted),
+                                std::cref(dst_record_id.get_node_id())
+                                );
+                    w->get_scene_history()->insert<scn::scene_history_rigid_body_insert>(
+                            dst_record_id,
+                            auto_compute_mass_and_inertia_tensor,
+                            rb_props,
+                            false
                             );
-                    w->get_scene_history()->insert<scn::scene_history_rigid_body_insert>(dst_record_id, rb_props, false);
                 }
             });
 }
@@ -442,16 +709,20 @@ void  register_record_handler_for_erase_scene_record(
     erase_record_handlers.insert({
             scn::get_rigid_body_folder_name(),
             [](widgets* const  w, scn::scene_record_id const&  id) -> void {
-                    scn::rigid_body_props  props;
+                    bool  auto_compute_mass_and_inertia_tensor;
+                    scn::rigid_body_props  rb_props;
                     w->wnd()->glwindow().call_now(
                             &simulator::get_rigid_body_info,
-                            id.get_node_id(),
-                            std::ref(props.m_linear_velocity),
-                            std::ref(props.m_angular_velocity),
-                            std::ref(props.m_external_linear_acceleration),
-                            std::ref(props.m_external_angular_acceleration)
+                            std::cref(id.get_node_id()),
+                            std::ref(auto_compute_mass_and_inertia_tensor),
+                            std::ref(rb_props)
                             );
-                    w->get_scene_history()->insert<scn::scene_history_rigid_body_insert>(id, props, true);
+                    w->get_scene_history()->insert<scn::scene_history_rigid_body_insert>(
+                            id,
+                            auto_compute_mass_and_inertia_tensor,
+                            rb_props,
+                            true
+                            );
                     w->wnd()->glwindow().call_now(
                             &simulator::erase_rigid_body_from_scene_node,
                             std::cref(id.get_node_id())

@@ -42,6 +42,7 @@ struct  scene
     // for the agent.
     virtual node_id  get_aux_root_node_for_agent(node_id const&  agent_nid, std::string const&  aux_root_node_name) = 0;
 
+    virtual bool  has_scene_node(node_id const&  nid) const = 0;
     virtual void  insert_scene_node(
             node_id const&  nid,
             angeo::coordinate_system const&  frame,
