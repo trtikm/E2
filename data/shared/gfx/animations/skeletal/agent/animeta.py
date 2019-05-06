@@ -46,9 +46,9 @@ class Config:
             self.weight = 1.0
             self.mass_inverted = 1.0 / 60.0
             self.inertia_tensor_inverted = [
-                [0.0, 0.0, 0.0],        # Row 0
-                [0.0, 0.0, 0.0],        # Row 1
-                [0.0, 0.0, 0.455],      # Row 2
+                0.0, 0.0, 0.0,        # Row 0
+                0.0, 0.0, 0.0,        # Row 1
+                0.0, 0.0, 1.0         # Row 2
             ]
             self.angle = math.pi / 4.0
             self.constraint_type = "contact_normal_cone"
@@ -347,7 +347,7 @@ def command_mass_distributions():
             f.write(_float_to_string(state.mass_inverted) + "\n")
             for i in range(3):
                 for j in range(3):
-                    f.write(_float_to_string(state.inertia_tensor_inverted[i][j]) + "\n")
+                    f.write(_float_to_string(state.inertia_tensor_inverted[3*i + j]) + "\n")
 
 
 def command_reference_frames_help():
