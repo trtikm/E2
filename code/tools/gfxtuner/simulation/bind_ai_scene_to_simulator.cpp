@@ -263,6 +263,20 @@ void  bind_ai_scene_to_simulator::set_linear_acceleration_of_rigid_body_of_scene
 }
 
 
+void  bind_ai_scene_to_simulator::add_to_linear_acceleration_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  linear_acceleration)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    m_simulator_ptr->get_rigid_body_simulator()->set_external_linear_acceleration(
+            rb_ptr->id(),
+            m_simulator_ptr->get_rigid_body_simulator()->get_external_linear_acceleration(rb_ptr->id()) + linear_acceleration
+            );
+}
+
+
 vector3  bind_ai_scene_to_simulator::get_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid)
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
@@ -282,6 +296,20 @@ void  bind_ai_scene_to_simulator::set_angular_acceleration_of_rigid_body_of_scen
     auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
     ASSUMPTION(rb_ptr != nullptr);
     m_simulator_ptr->get_rigid_body_simulator()->set_external_angular_acceleration(rb_ptr->id(), angular_acceleration);
+}
+
+
+void  bind_ai_scene_to_simulator::add_to_angular_acceleration_of_rigid_body_of_scene_node(node_id const&  nid, vector3 const&  angular_acceleration)
+{
+    ASSUMPTION(m_simulator_ptr != nullptr);
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    ASSUMPTION(node_ptr != nullptr);
+    auto const  rb_ptr = scn::get_rigid_body(*node_ptr);
+    ASSUMPTION(rb_ptr != nullptr);
+    m_simulator_ptr->get_rigid_body_simulator()->set_external_angular_acceleration(
+            rb_ptr->id(),
+            m_simulator_ptr->get_rigid_body_simulator()->get_external_angular_acceleration(rb_ptr->id()) + angular_acceleration
+            );
 }
 
 
