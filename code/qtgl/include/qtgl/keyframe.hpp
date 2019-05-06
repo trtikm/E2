@@ -84,6 +84,8 @@ struct  keyframes_data
             std::string  keyword;
             std::vector<float_32_bit>  arguments;
 
+            bool  is_valid() const { return !keyword.empty(); }
+
             bool  operator==(record const&  other) const;
             bool  operator!=(record const&  other) const { return !(*this == other); }
         };
