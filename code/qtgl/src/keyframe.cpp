@@ -87,7 +87,7 @@ natural_32_bit  read_all_coord_systems(
 natural_32_bit  read_meta_data_records(
     std::ifstream&  istr,
     boost::filesystem::path const&  pathname,
-    std::vector<keyframes_data::meta_data::record>&  output
+    std::vector<keyframes_data::meta_data::records>&  output
     )
 {
     natural_32_bit  num_records;
@@ -101,38 +101,47 @@ natural_32_bit  read_meta_data_records(
             throw std::runtime_error(msgstream() << "The the file '" << pathname << "' does not contain any records.");
     }
 
-    output.resize(num_records);
+    output.clear();
 
-    natural_32_bit  num_loaded_records = -1;
+    natural_32_bit  line_index = 0U;
     while (true)
     {
-        std::string const  line = read_line(istr);
+        std::string  line = read_line(istr);
         if (line.empty())
             break;
+        ++line_index;
+
+        boost::algorithm::trim(line);
+        if (line.empty())
+            continue;
+
         if (line.front() == '+' || line.front() == '-' || std::isdigit(line.front(), std::locale::classic()))
         {
+            if (output.empty() || output.back().m_records.empty())
+                throw std::runtime_error(msgstream() << "Number is not expected at line " << line_index << "in the file '" << pathname << "'.");
+
             std::istringstream istr(line);
             float_32_bit  value;
             istr >> value;
-            output.at(num_loaded_records).arguments.push_back(value);
+            output.back().m_records.back().arguments.push_back(value);
         }
         else
         {
-            ++num_loaded_records;
-            if (num_records == num_loaded_records)
-                throw std::runtime_error(msgstream() << "The first line in the file '" << pathname << "' says there is "
-                                                     << num_records << " records, but there was at least " << num_loaded_records
-                                                     << " actually encountered in the file.");
+            if (line.front() == '@')
+            {
+                output.push_back({});
+                line = line.substr(1U);
+            }
+            if (output.empty())
+                throw std::runtime_error(msgstream() << "A keyword without '@' prefix is not expected at line " << line_index << "in the file '" << pathname << "'.");
 
-            output.at(num_loaded_records).keyword = line;
-            boost::algorithm::trim(output.at(num_loaded_records).keyword);
-            output.at(num_loaded_records).arguments.clear();
+            output.back().m_records.push_back({ line, {} });
         }
     }
 
-    if (num_records != num_loaded_records + 1)
+    if (num_records != output.size())
         throw std::runtime_error(msgstream() << "The first line in the file '" << pathname << "' says there is "
-                                             << num_records << " records, but there was " << num_loaded_records
+                                             << num_records << " records, but there was " << output.size()
                                              << " actually encountered in the file.");
 
     return num_records;
@@ -193,6 +202,17 @@ bool  keyframes_data::meta_data::record::operator==(record const&  other) const
         return false;
     for (natural_32_bit  i = 0U; i != arguments.size(); ++i)
         if (std::fabsf(arguments.at(i) - other.arguments.at(i)) > 0.0001f)
+            return false;
+    return true;
+}
+
+
+bool  keyframes_data::meta_data::records::operator==(records const&  other) const
+{
+    if (m_records.size() != other.m_records.size())
+        return false;
+    for (natural_32_bit  i = 0U; i != m_records.size(); ++i)
+        if (m_records.at(i) != other.m_records.at(i))
             return false;
     return true;
 }
@@ -270,6 +290,14 @@ keyframes_data::keyframes_data(
             if (!istr.good())
                 throw std::runtime_error(msgstream() << "Cannot open the meta data file '" << pathname << "'.");
             read_meta_data_records(istr, pathname, m_meta_data.m_constraints);
+        }
+        else if (filename == "meta_motion_actions.txt")
+        {
+            boost::filesystem::path const  pathname = keyframes_dir / filename;
+            std::ifstream  istr(pathname.string(), std::ios_base::binary);
+            if (!istr.good())
+                throw std::runtime_error(msgstream() << "Cannot open the meta data file '" << pathname << "'.");
+            read_meta_data_records(istr, pathname, m_meta_data.m_motion_actions);
         }
         else if (filename == "meta_motion_colliders.txt")
         {

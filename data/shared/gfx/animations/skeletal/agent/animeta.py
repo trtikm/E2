@@ -51,12 +51,17 @@ class Config:
                 0.0, 0.0, 1.0         # Row 2
             ]
             self.angle = math.pi / 4.0
-            self.constraint_type = "contact_normal_cone"
             self.vec_down = [0.0, 0.0, -1.0]
             self.vec_fwd = [0.0, -1.0, 0.0]
             self.vec_fwd_end = [0.0, -1.0, 0.0]
             self.vec_down_mult = -1.0
             self.vec_fwd_mult = -1.0
+            self.min_linear_speed = 0.5
+            self.max_linear_speed = 1.5
+            self.max_linear_accel = 20.0
+            self.min_angular_speed = 0.0
+            self.max_angular_speed = 2.0 * math.pi / 3.0
+            self.max_angular_accel = 20.0
             self.debug_mode = True
 
         def typeof(self, var_name):
@@ -214,7 +219,7 @@ colliders
         - 'length' distance between the half spheres.
         - 'radius' radius of both half spheres.
         The axis of the capsule is parallel to z-axis.
-    Each collider is assigned an weight, which is always its last value.
+    Each collider is assigned an 'weight', which is always its last value.
     Each collider is assumed to be in the coordinate system of the reference
     frame of the animation (see the command 'reference_frames').
     The computed colliders are always saved into file:
@@ -233,7 +238,7 @@ def command_colliders():
     with open(os.path.join(_get_keyframes_dir(), "meta_motion_colliders.txt"), "w") as f:
         f.write(str(num_frames) + "\n")
         for _ in range(num_frames):
-            f.write(state.shape + "\n")
+            f.write("@" + state.shape + "\n")
             if state.shape == "capsule":
                 f.write(_float_to_string(state.length) + "\n")
                 f.write(_float_to_string(state.radius) + "\n")
@@ -244,17 +249,17 @@ def command_colliders():
 
 def command_constraints_help():
     return """
-constraints
+constraints <constraint-type>
     Assigns to each keyframe in the work_dir/anim_dir a constraint defined
-    by state variable 'constraint_type'. Depending on the value of the variable
-    other state variables will be used. Namely:
-    * constraint_type is 'contact_normal_cone':
-        - 'vec_down_mult' and 'vec_down' define together the axis of cone.
+    by the passed constraint type. Here are descriptions of available
+    constraint types:
+    * 'contact_normal_cone':
+        - 'vec_down_mult * vec_down' defines the axis of cone (unit vector).
         - 'angle' defines a maximal angle between a current normal and the axis
                   of the cone.
     Each constraint is assumed to be in the coordinate system of the reference
     frame of the animation (see the command 'reference_frames').
-    The computed constraints are always saved into file:
+    The computed constraints are saved into file:
         work_dir/anim_dir/meta_constraints.txt
     If the file exists, them it will be overwritten.
 """
@@ -264,20 +269,22 @@ def command_constraints():
     if not os.path.isfile(_get_meta_meta_reference_frames_pathname()):
         raise Exception("The file '" + _get_meta_meta_reference_frames_pathname() + "' does not exist. "
                         "Please, run the command 'reference_frames' first.")
+    if len(Config.instance.cmdline.arguments) != 1:
+        raise Exception("Wrong number of argument. A single constraint type must be provided.")
     with open(_get_meta_meta_reference_frames_pathname(), "r") as f:
         num_frames = int(f.readline().strip())
     state = Config.instance.state
     with open(os.path.join(_get_keyframes_dir(), "meta_constraints.txt"), "w") as f:
         f.write(str(num_frames) + "\n")
         for _ in range(num_frames):
-            f.write(state.constraint_type + "\n")
-            if state.constraint_type == "contact_normal_cone":
+            f.write("@" + str(Config.instance.cmdline.arguments[0]) + "\n")
+            if Config.instance.cmdline.arguments[0] == "contact_normal_cone":
                 f.write(_float_to_string(state.vec_down_mult * state.vec_down[0]) + "\n")
                 f.write(_float_to_string(state.vec_down_mult * state.vec_down[1]) + "\n")
                 f.write(_float_to_string(state.vec_down_mult * state.vec_down[2]) + "\n")
                 f.write(_float_to_string(state.angle) + "\n")
             else:
-                raise Exception("Unknown constraint type '" + state.constraint_type + "' in the state variable 'constraint_type'.")
+                raise Exception("Unknown constraint type '" + Config.instance.cmdline.arguments[0] + "'.")
 
 
 def command_get_help():
@@ -343,11 +350,80 @@ def command_mass_distributions():
     with open(os.path.join(_get_keyframes_dir(), "meta_mass_distributions.txt"), "w") as f:
         f.write(str(num_frames) + "\n")
         for _ in range(num_frames):
-            f.write("@\n")
+            f.write("@_\n")
             f.write(_float_to_string(state.mass_inverted) + "\n")
             for i in range(3):
                 for j in range(3):
                     f.write(_float_to_string(state.inertia_tensor_inverted[3*i + j]) + "\n")
+
+
+def command_motion_actions_help():
+    return """
+motion_actions <action-name>+
+    Assigns to each keyframe in the work_dir/anim_dir passed identifiers of
+    motion actions together with their corresponding data. Motion actions
+    implement the motion defined by the keyframes. Here are descriptions of
+    available actions:
+    * 'accelerate_towards_clipped_desired_linear_velocity':
+        Clips the target linear velocity to the clipping cone and then
+        introduces a linear acceleration to get closer to the clipped liner
+        velocity. Here are parameters (state variables) of the action:
+            - 'vec_fwd' as axis of the clipping cone
+            - 'angle' defines a maximal angle between a linear velocity and
+                      the axis of the cone.
+            - 'min_linear_speed' minimal magnitude of the linear velocity
+            - 'max_linear_speed' maximal magnitude of the linear velocity
+            - 'max_linear_accel' maximal magnitude of the linear acceleration
+    * 'chase_linear_velocity_by_forward_vector':
+        Rotates the reference frame in the world so that distance between
+        the linear velocity and the forward direction is minimal. Here are
+        parameters (state variables) of the action:
+            - 'vec_fwd' the forward vector chasing the linear velocity
+            - 'vec_down_mult * vec_down' defines rotation axis (unit vector)
+            - 'max_angular_speed' maximal magnitude of the angular velocity
+            - 'max_angular_accel' maximal magnitude of the angular acceleration
+    All motion actions are saved into file:
+        work_dir/anim_dir/meta_motion_actions.txt
+    If the file exists, them it will be overwritten.
+"""
+
+
+def command_motion_actions():
+    if not os.path.isfile(_get_meta_meta_reference_frames_pathname()):
+        raise Exception("The file '" + _get_meta_meta_reference_frames_pathname() + "' does not exist. "
+                        "Please, run the command 'reference_frames' first.")
+    if len(Config.instance.cmdline.arguments) == 0:
+        raise Exception("Wrong number of argument. At least one action must be provided.")
+    with open(_get_meta_meta_reference_frames_pathname(), "r") as f:
+        num_frames = int(f.readline().strip())
+    state = Config.instance.state
+    with open(os.path.join(_get_keyframes_dir(), "meta_motion_actions.txt"), "w") as f:
+        f.write(str(num_frames) + "\n")
+        for _ in range(num_frames):
+            prefix = "@"
+            for action in Config.instance.cmdline.arguments:
+                f.write(prefix)
+                prefix = ""
+                f.write(str(action) + "\n")
+                if action == "accelerate_towards_clipped_desired_linear_velocity":
+                    f.write(_float_to_string(state.vec_fwd[0]) + "\n")
+                    f.write(_float_to_string(state.vec_fwd[1]) + "\n")
+                    f.write(_float_to_string(state.vec_fwd[2]) + "\n")
+                    f.write(_float_to_string(state.angle) + "\n")
+                    f.write(_float_to_string(state.min_linear_speed) + "\n")
+                    f.write(_float_to_string(state.max_linear_speed) + "\n")
+                    f.write(_float_to_string(state.max_linear_accel) + "\n")
+                elif action == "chase_linear_velocity_by_forward_vector":
+                    f.write(_float_to_string(state.vec_fwd[0]) + "\n")
+                    f.write(_float_to_string(state.vec_fwd[1]) + "\n")
+                    f.write(_float_to_string(state.vec_fwd[2]) + "\n")
+                    f.write(_float_to_string(state.vec_down_mult * state.vec_down[0]) + "\n")
+                    f.write(_float_to_string(state.vec_down_mult * state.vec_down[1]) + "\n")
+                    f.write(_float_to_string(state.vec_down_mult * state.vec_down[2]) + "\n")
+                    f.write(_float_to_string(state.max_angular_speed) + "\n")
+                    f.write(_float_to_string(state.max_angular_accel) + "\n")
+                else:
+                    raise Exception("Unknown action name '" + str(action) + "'")
 
 
 def command_reference_frames_help():

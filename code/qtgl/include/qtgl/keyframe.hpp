@@ -90,9 +90,20 @@ struct  keyframes_data
             bool  operator!=(record const&  other) const { return !(*this == other); }
         };
 
-        std::vector<record>  m_constraints;
-        std::vector<record>  m_motion_colliders;
-        std::vector<record>  m_mass_distributions;
+        struct  records
+        {
+            std::vector<record>  m_records;
+
+            bool  is_valid() const { return !m_records.empty(); }
+
+            bool  operator==(records const&  other) const;
+            bool  operator!=(records const&  other) const { return !(*this == other); }
+        };
+
+        std::vector<records>  m_constraints;
+        std::vector<records>  m_motion_actions;
+        std::vector<records>  m_motion_colliders;
+        std::vector<records>  m_mass_distributions;
     };
 
     keyframes_data(async::finalise_load_on_destroy_ptr const  finaliser);

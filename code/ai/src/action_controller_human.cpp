@@ -52,14 +52,24 @@ struct  rigid_body_motion
 
     void  set_inverted_mass(skeletal_motion_templates::keyframes::meta_data::record const&  mass_distribution)
     {
-        inverted_mass = mass_distribution.arguments.at(0);
+        enum INDICES_OF_ARGUMENTS
+        {
+            INVERTED_MASS           = 0,
+            INVERTED_INERTIA_TENSOR = 1,
+        };
+        inverted_mass = mass_distribution.arguments.at(INVERTED_MASS);
     }
 
     void  set_inverted_inertia_tensor(skeletal_motion_templates::keyframes::meta_data::record const&  mass_distribution)
     {
+        enum INDICES_OF_ARGUMENTS
+        {
+            INVERTED_MASS           = 0,
+            INVERTED_INERTIA_TENSOR = 1,
+        };
         for (int i = 0; i != 3; ++i)
             for (int j = 0; j != 3; ++j)
-                inverted_inertia_tensor(i,j) = mass_distribution.arguments.at(1 + 3*i + j);
+                inverted_inertia_tensor(i,j) = mass_distribution.arguments.at(INVERTED_INERTIA_TENSOR + 3*i + j);
     }
 
     void restore(scene_ptr const  s, scene::node_id const&  motion_object_nid)
@@ -87,14 +97,22 @@ void  create_collider_and_rigid_body_of_motion_scene_node(
         )
 {
     if (collider_props.keyword == "capsule")
+    {
+        enum INDICES_OF_ARGUMENTS
+        {
+            LENGTH = 0,
+            RADIUS = 1,
+            WEIGHT = 2,
+        };
         s->insert_collision_capsule_to_scene_node(
                 motion_object_nid,
-                collider_props.arguments.at(0),
-                collider_props.arguments.at(1),
+                collider_props.arguments.at(LENGTH),
+                collider_props.arguments.at(RADIUS),
                 angeo::COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING,
                 1.0f,
                 true
                 );
+    }
     else
     {
         NOT_IMPLEMENTED_YET();
@@ -167,6 +185,7 @@ action_controller_human::action_controller_human(blackboard_ptr const  blackboar
     , m_motion_object_collider_props()
     , m_motion_object_mass_distribution_props()
     , m_motion_object_constraint_props()
+    , m_motion_object_action_props()
 {
 }
 
@@ -205,14 +224,15 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         m_motion_object_collider_props = src_animation.get_meta_data().m_motion_colliders.at(m_template_motion_info.src_pose.keyframe_index);
         m_motion_object_mass_distribution_props = src_animation.get_meta_data().m_mass_distributions.at(m_template_motion_info.src_pose.keyframe_index);
         m_motion_object_constraint_props = src_animation.get_meta_data().m_constraints.at(m_template_motion_info.src_pose.keyframe_index);
+        m_motion_object_action_props = src_animation.get_meta_data().m_motion_actions.at(m_template_motion_info.src_pose.keyframe_index);
         m_motion_object_nid = detail::get_motion_object_nid(get_blackboard()->m_scene, get_blackboard()->m_agent_nid);
         if (!get_blackboard()->m_scene->has_scene_node(m_motion_object_nid))
             m_motion_object_nid = detail::create_motion_scene_node(
                         get_blackboard()->m_scene,
                         m_motion_object_nid,
                         agent_frame,
-                        m_motion_object_collider_props,
-                        m_motion_object_mass_distribution_props
+                        m_motion_object_collider_props.m_records.front(),
+                        m_motion_object_mass_distribution_props.m_records.front()
                         );
         get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_nid, get_blackboard()->m_agent_id);
     }
@@ -258,21 +278,26 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
     bool  is_motion_constraint_satisfied;
     {
         is_motion_constraint_satisfied = false;
-        if (m_motion_object_constraint_props.keyword == "contact_normal_cone")
+        if (m_motion_object_constraint_props.m_records.front().keyword == "contact_normal_cone")
         {
+            enum INDICES_OF_ARGUMENTS
+            {
+                UNIT_AXIS   = 0,
+                ANGLE       = 3,
+            };
+
             vector3 const  cone_unit_axis_vector_in_anim_space(
-                    m_motion_object_constraint_props.arguments.at(0),
-                    m_motion_object_constraint_props.arguments.at(1),
-                    m_motion_object_constraint_props.arguments.at(2)
+                    m_motion_object_constraint_props.m_records.front().arguments.at(UNIT_AXIS + 0),
+                    m_motion_object_constraint_props.m_records.front().arguments.at(UNIT_AXIS + 1),
+                    m_motion_object_constraint_props.m_records.front().arguments.at(UNIT_AXIS + 2)
                     );
             vector3 const  cone_unit_axis_vector_in_world_space =
                     quaternion_to_rotation_matrix(motion_object_frame.orientation()) * cone_unit_axis_vector_in_anim_space;
-            float_32_bit const  max_angle_between_cone_axis_and_collision_normal_in_radians =
-                    m_motion_object_constraint_props.arguments.back();
             auto const  begin_and_end = get_blackboard()->m_collision_contacts.equal_range(m_motion_object_nid);
             for (auto  it = begin_and_end.first; it != begin_and_end.second; ++it)
                 if (it->second.normal_force_magnitude > 0.001f &&
-                    angle(it->second.unit_normal, cone_unit_axis_vector_in_world_space) < max_angle_between_cone_axis_and_collision_normal_in_radians)
+                    angle(it->second.unit_normal, cone_unit_axis_vector_in_world_space)
+                        < m_motion_object_constraint_props.m_records.front().arguments.at(ANGLE))
                 {
                     is_motion_constraint_satisfied = true;
                     break;
@@ -285,56 +310,88 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
     // Apply forces towards the desired motion, if the condition for doing so is satified.
     if (is_motion_constraint_satisfied == true)
     {
-        vector3 const  current_linear_velocity_in_world_space =
-                get_blackboard()->m_scene->get_linear_velocity_of_rigid_body_of_scene_node(m_motion_object_nid);
+        for (auto const&  action_props : m_motion_object_action_props.m_records)
+            if (action_props.keyword == "accelerate_towards_clipped_desired_linear_velocity")
+            {
+                enum INDICES_OF_ARGUMENTS
+                {
+                    VEC_FWD             = 0,
+                    ANGLE               = 3,
+                    MIN_LINEAR_SPEED    = 4,
+                    MAX_LINEAR_SPEED    = 5,
+                    MAX_LINEAR_ACCEL    = 6,
+                };
 
-        {
-            vector3  agent_linear_acceleration =
-                    (m_desired_linear_velocity_in_world_space - current_linear_velocity_in_world_space) / time_step_in_seconds;
-            float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
-            float_32_bit constexpr  MAX_AGENT_LINEAR_ACCELERATION = 20.0f;
-            if (agent_linear_acceleration_magnitude > MAX_AGENT_LINEAR_ACCELERATION)
-                agent_linear_acceleration *= MAX_AGENT_LINEAR_ACCELERATION / agent_linear_acceleration_magnitude;
-            get_blackboard()->m_scene->add_to_linear_acceleration_of_rigid_body_of_scene_node(m_motion_object_nid, agent_linear_acceleration);
-        }
+                vector3  clipped_linear_velocity_in_world_space;
+                {
+                    vector3 const  current_linear_velocity_in_world_space =
+                            get_blackboard()->m_scene->get_linear_velocity_of_rigid_body_of_scene_node(m_motion_object_nid);
+                    // TODO!
+                    clipped_linear_velocity_in_world_space = current_linear_velocity_in_world_space;
+                }
+                vector3  agent_linear_acceleration =
+                        (m_desired_linear_velocity_in_world_space - clipped_linear_velocity_in_world_space) / time_step_in_seconds;
+                float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
+                if (agent_linear_acceleration_magnitude > action_props.arguments.at(MAX_LINEAR_ACCEL))
+                    agent_linear_acceleration *= action_props.arguments.at(MAX_LINEAR_ACCEL) / agent_linear_acceleration_magnitude;
+                get_blackboard()->m_scene->add_to_linear_acceleration_of_rigid_body_of_scene_node(m_motion_object_nid, agent_linear_acceleration);
+            }
+            else if (action_props.keyword == "chase_linear_velocity_by_forward_vector")
+            {
+                enum INDICES_OF_ARGUMENTS
+                {
+                    VEC_FWD             = 0,
+                    UNIT_AXIS           = 3,
+                    MAX_ANGULAR_SPEED   = 6,
+                    MAX_ANGULAR_ACCEL   = 7,
+                };
 
-        vector3 const  current_angular_velocity_in_world_space =
-                get_blackboard()->m_scene->get_angular_velocity_of_rigid_body_of_scene_node(m_motion_object_nid);
+                vector3 const  current_linear_velocity_in_world_space =
+                        get_blackboard()->m_scene->get_linear_velocity_of_rigid_body_of_scene_node(m_motion_object_nid);
+                vector3 const  current_angular_velocity_in_world_space =
+                        get_blackboard()->m_scene->get_angular_velocity_of_rigid_body_of_scene_node(m_motion_object_nid);
 
-        {
-            vector3 const  rot_axis_in_anim_space = vector3_unit_z();
-            vector3 const  source_linear_velocity_direction_in_anim_space = -vector3_unit_y();
+                vector3 const  source_linear_velocity_direction_in_anim_space(
+                        action_props.arguments.at(VEC_FWD + 0),
+                        action_props.arguments.at(VEC_FWD + 1),
+                        action_props.arguments.at(VEC_FWD + 2)
+                        );
+                vector3 const  rot_axis_in_anim_space(
+                        action_props.arguments.at(UNIT_AXIS + 0),
+                        action_props.arguments.at(UNIT_AXIS + 1),
+                        action_props.arguments.at(UNIT_AXIS + 2)
+                        );
 
-            matrix33 const  from_motion_to_world_rot_matrix = quaternion_to_rotation_matrix(motion_object_frame.orientation());
+                matrix33 const  from_motion_to_world_rot_matrix = quaternion_to_rotation_matrix(motion_object_frame.orientation());
 
-            vector3 const  rot_axis_in_world_space = from_motion_to_world_rot_matrix * rot_axis_in_anim_space;
-            vector3 const  source_linear_velocity_direction_in_world_space =
-                    from_motion_to_world_rot_matrix * source_linear_velocity_direction_in_anim_space;
+                vector3 const  rot_axis_in_world_space = from_motion_to_world_rot_matrix * rot_axis_in_anim_space;
+                vector3 const  source_linear_velocity_direction_in_world_space =
+                        from_motion_to_world_rot_matrix * source_linear_velocity_direction_in_anim_space;
 
-            float_32_bit const  rot_angle =
-                    angeo::compute_rotation_angle(
-                            normalised(rot_axis_in_world_space),
-                            source_linear_velocity_direction_in_world_space,
-                            current_linear_velocity_in_world_space
-                            );
+                float_32_bit const  rot_angle =
+                        angeo::compute_rotation_angle(
+                                normalised(rot_axis_in_world_space),
+                                source_linear_velocity_direction_in_world_space,
+                                current_linear_velocity_in_world_space
+                                );
         
-            float_32_bit constexpr  MAX_AGENT_ANGULAR_VELOCITY = 2.0f;
-            float_32_bit  desired_angular_velocity_magnitude = rot_angle / time_step_in_seconds;
-            if (desired_angular_velocity_magnitude >= 0.0f && desired_angular_velocity_magnitude > MAX_AGENT_ANGULAR_VELOCITY)
-                desired_angular_velocity_magnitude = MAX_AGENT_ANGULAR_VELOCITY;
-            if (desired_angular_velocity_magnitude < 0.0f && desired_angular_velocity_magnitude < -MAX_AGENT_ANGULAR_VELOCITY)
-                desired_angular_velocity_magnitude = -MAX_AGENT_ANGULAR_VELOCITY;
+                float_32_bit  desired_angular_velocity_magnitude = rot_angle / time_step_in_seconds;
+                if (desired_angular_velocity_magnitude >= 0.0f && desired_angular_velocity_magnitude > action_props.arguments.at(MAX_ANGULAR_SPEED))
+                    desired_angular_velocity_magnitude = action_props.arguments.at(MAX_ANGULAR_SPEED);
+                if (desired_angular_velocity_magnitude < 0.0f && desired_angular_velocity_magnitude < -action_props.arguments.at(MAX_ANGULAR_SPEED))
+                    desired_angular_velocity_magnitude = -action_props.arguments.at(MAX_ANGULAR_SPEED);
 
-            vector3 const  desired_angular_velocity = desired_angular_velocity_magnitude * normalised(rot_axis_in_world_space);
+                vector3 const  desired_angular_velocity = desired_angular_velocity_magnitude * normalised(rot_axis_in_world_space);
 
-            vector3  agent_angular_acceleration =
-                    (desired_angular_velocity - current_angular_velocity_in_world_space) / time_step_in_seconds;
-            float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
-            float_32_bit constexpr  MAX_AGENT_ANGULAR_ACCELERATION = 20.0f;
-            if (agent_angular_acceleration_magnitude > MAX_AGENT_ANGULAR_ACCELERATION)
-                agent_angular_acceleration *= MAX_AGENT_ANGULAR_ACCELERATION / agent_angular_acceleration_magnitude;
-            get_blackboard()->m_scene->add_to_angular_acceleration_of_rigid_body_of_scene_node(m_motion_object_nid, agent_angular_acceleration);
-        }
+                vector3  agent_angular_acceleration =
+                        (desired_angular_velocity - current_angular_velocity_in_world_space) / time_step_in_seconds;
+                float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
+                if (agent_angular_acceleration_magnitude > action_props.arguments.at(MAX_ANGULAR_ACCEL))
+                    agent_angular_acceleration *= action_props.arguments.at(MAX_ANGULAR_ACCEL) / agent_angular_acceleration_magnitude;
+                get_blackboard()->m_scene->add_to_angular_acceleration_of_rigid_body_of_scene_node(m_motion_object_nid, agent_angular_acceleration);
+            }
+            else
+                NOT_IMPLEMENTED_YET();
     }
 
     // Choose another pair of keyframes to interpolate, if we exhaused all interpolation time of the previous pair.
@@ -469,8 +526,8 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         auto const&  src_meta_data_colliders = src_animation.get_meta_data().m_motion_colliders.at(m_template_motion_info.src_pose.keyframe_index);
         auto const&  dst_meta_data_colliders = dst_animation.get_meta_data().m_motion_colliders.at(m_template_motion_info.dst_pose.keyframe_index);
 
-        float_32_bit const  src_weight = src_meta_data_colliders.arguments.back();
-        float_32_bit const  dst_weight = dst_meta_data_colliders.arguments.back();
+        float_32_bit const  src_weight = src_meta_data_colliders.m_records.front().arguments.back();
+        float_32_bit const  dst_weight = dst_meta_data_colliders.m_records.front().arguments.back();
 
         float_32_bit const  motion_object_interpolation_param =
                 (src_weight + dst_weight < 0.0001f) ? 0.5f : src_weight / (src_weight + dst_weight);
@@ -488,7 +545,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                 detail::rigid_body_motion const  rb_motion(
                         get_blackboard()->m_scene,
                         m_motion_object_nid,
-                        m_motion_object_mass_distribution_props
+                        m_motion_object_mass_distribution_props.m_records.front()
                         );
 
                 get_blackboard()->m_scene->unregister_to_collision_contacts_stream(m_motion_object_nid, get_blackboard()->m_agent_id);
@@ -496,12 +553,13 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                 detail::create_collider_and_rigid_body_of_motion_scene_node(
                         get_blackboard()->m_scene,
                         m_motion_object_nid,
-                        m_motion_object_collider_props,
+                        m_motion_object_collider_props.m_records.front(),
                         rb_motion);
                 get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_nid, get_blackboard()->m_agent_id);
             }
 
-            m_motion_object_constraint_props == dst_animation.get_meta_data().m_constraints.at(m_template_motion_info.dst_pose.keyframe_index);
+            m_motion_object_constraint_props = dst_animation.get_meta_data().m_constraints.at(m_template_motion_info.dst_pose.keyframe_index);
+            m_motion_object_action_props = dst_animation.get_meta_data().m_motion_actions.at(m_template_motion_info.dst_pose.keyframe_index);
         }
     }
 }
