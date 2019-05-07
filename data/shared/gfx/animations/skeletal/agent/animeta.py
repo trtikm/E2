@@ -62,6 +62,29 @@ class Config:
             self.min_angular_speed = 0.0
             self.max_angular_speed = 2.0 * math.pi / 3.0
             self.max_angular_accel = 20.0
+            self.bones_filter = [
+                "lower_body",
+                "middle_body",
+                "upper_body",
+                "neck",
+                "head",
+                "to_arm.L",
+                "upper_arm.L",
+                "lower_arm.L",
+                "to_arm.R",
+                "upper_arm.R",
+                "lower_arm.R",
+                "upper_leg.L",
+                "lower_leg.L",
+                "upper_leg.R",
+                "lower_leg.R",
+                "hand.L",
+                "upper_foot.L",
+                "lower_foot.L",
+                "hand.R",
+                "upper_foot.R",
+                "lower_foot.R",
+            ]
             self.debug_mode = True
 
         def typeof(self, var_name):
@@ -158,6 +181,46 @@ def _normalised_quaternion(q):
     return (1.0/l) * numpy.array(q)
 
 
+def _scale_vector(scalar, vector):
+    return scalar * numpy.array(vector)
+
+
+def _add_vectors(u, v):
+    return numpy.array(u) + numpy.array(v)
+
+
+def _subtract_vectors(u, v):
+    return numpy.array(u) - numpy.array(v)
+
+
+def _dot_product(u, v):
+    return numpy.dot(u, v)
+
+
+def _cross_product(u, v):
+    return numpy.cross(u, v)
+
+
+def _multiply_matrix_by_matrix(A, B):
+    return numpy.dot(A, B)
+
+
+def _multiply_matrix_by_vector(A, u):
+    return numpy.dot(A, u)
+
+
+def _transform_point(A, p):
+    return list(_multiply_matrix_by_vector(A, list(p) + [1.0]))[:-1]
+
+
+def _transform_vector(A, u):
+    return list(_multiply_matrix_by_vector(A, list(u) + [0.0]))[:-1]
+
+
+def _distance_between_points(p1, p2):
+    return _vector_length(_subtract_vectors(p2, p1))
+
+
 def _axis_angle_to_quaternion(axis_unit_vector, angle_in_radians):
     t = math.sin(0.5 * angle_in_radians)
     return [math.cos(0.5 * angle_in_radians), t * axis_unit_vector[0], t * axis_unit_vector[1], t * axis_unit_vector[2]]
@@ -171,6 +234,83 @@ def _basis_vectors_to_quaternion(x_axis_unit_vector, y_axis_unit_vector, z_axis_
             (z_axis_unit_vector[0] - x_axis_unit_vector[2]) / (4.0 * s),
             (x_axis_unit_vector[1] - y_axis_unit_vector[0]) / (4.0 * s)
             ]))
+
+
+def _quaternion_to_rotation_matrix(q):
+    R = numpy.array([
+        [0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0],
+        [0.0, 0.0, 0.0]
+    ])
+
+    R[0][0] = 1.0 - 2.0 * (q[2] * q[2] + q[3] * q[3])
+    R[1][1] = 1.0 - 2.0 * (q[1] * q[1] + q[3] * q[3])
+    R[2][2] = 1.0 - 2.0 * (q[1] * q[1] + q[2] * q[2])
+
+    a = 2.0 * q[1] * q[2]
+    b = 2.0 * q[0] * q[3]
+    R[0][1] = a - b
+    R[1][0] = a + b
+
+    a = 2.0 * q[1] * q[3]
+    b = 2.0 * q[0] * q[2]
+    R[0][2] = a + b
+    R[2][0] = a - b
+
+    a = 2.0 * q[2] * q[3]
+    b = 2.0 * q[0] * q[1]
+    R[1][2] = a - b
+    R[2][1] = a + b
+
+    return R
+
+
+def _from_base_matrix(pos, rot_matrix):
+    return numpy.array([
+        [rot_matrix[0][0], rot_matrix[0][1], rot_matrix[0][2], pos[0]],
+        [rot_matrix[1][0], rot_matrix[1][1], rot_matrix[1][2], pos[1]],
+        [rot_matrix[2][0], rot_matrix[2][1], rot_matrix[2][2], pos[2]],
+        [0.0,              0.0,              0.0,              1.0   ]
+    ])
+
+
+def _to_base_matrix(pos, rot_matrix):
+    p = [
+        -(rot_matrix[0][0] * pos[0] + rot_matrix[1][0] * pos[1] + rot_matrix[2][0] * pos[2]),
+        -(rot_matrix[0][1] * pos[0] + rot_matrix[1][1] * pos[1] + rot_matrix[2][1] * pos[2]),
+        -(rot_matrix[0][2] * pos[0] + rot_matrix[1][2] * pos[1] + rot_matrix[2][2] * pos[2])
+    ]
+    return numpy.array([
+        [rot_matrix[0][0], rot_matrix[1][0], rot_matrix[2][0], p[0]],
+        [rot_matrix[0][1], rot_matrix[1][1], rot_matrix[2][1], p[1]],
+        [rot_matrix[0][2], rot_matrix[1][2], rot_matrix[2][2], p[2]],
+        [0.0,              0.0,              0.0,              1.0 ]
+    ])
+
+
+def _get_bone_joints_in_anim_space(frames_of_bones):
+    return [_transform_point(_from_base_matrix(frame["pos"], _quaternion_to_rotation_matrix(frame["rot"])), [0.0, 0.0, 0.0])
+            for frame in frames_of_bones]
+
+
+def _get_bone_joints_in_meta_reference_frame(frames_of_bones, reference_frame):
+    F = _to_base_matrix(reference_frame["pos"], _quaternion_to_rotation_matrix(reference_frame["rot"]))
+    return [_transform_point(F, p) for p in _get_bone_joints_in_anim_space(frames_of_bones)]
+
+
+def _compute_weights_of_bones(parents_of_bones, coef=1.5, switch_to_addition=False):
+    bone_weights = []
+    for i in range(len(parents_of_bones)):
+        weight = 1.0
+        idx = i
+        while parents_of_bones[idx] >= 0:
+            if switch_to_addition is False:
+                weight *= coef
+            else:
+                weight += coef
+            idx = parents_of_bones[idx]
+        bone_weights.append(weight)
+    return bone_weights
 
 
 def _get_keyframes_dir(check_exists=True):
@@ -207,6 +347,68 @@ def _load_keyframes():
                 keyframe.append({"pos": pos, "rot": rot})
             keyframes.append({"time": time_point, "frames_of_bones": keyframe})
     return sorted(keyframes, key=lambda x: x["time"])
+
+
+def _load_bone_parents():
+    pathname = os.path.join(os.path.dirname(_get_keyframes_dir()), "parents.txt")
+    if not os.path.isfile(pathname):
+        raise Exception("Cannot access file '" + pathname + "'.")
+    with open(pathname, "r") as f:
+        lines = f.readlines()
+    if len(lines) == 0:
+        raise Exception("Invalid file '" + pathname + "'. At least 1 line must be there.")
+    num_bones = int(lines[0])
+    if num_bones < 0:
+        raise Exception("Invalid file '" + pathname + "'. The number of bones is negative.")
+    if num_bones > len(lines):
+        raise Exception("Invalid file '" + pathname + "'. The number of bones bigger than number of lines.")
+    parents = []
+    for i in range(num_bones):
+        if len(lines[i+1].strip()) == 0:
+            raise Exception("Invalid file '" + pathname + "'. Empty lines are not allowed.")
+        bone = int(lines[i+1])
+        if bone < -1 or bone >= i:
+            raise Exception("Invalid file '" + pathname + "'. Wrong parent bone index at line " + str(i+1) + ".")
+        parents.append(bone)
+    return parents
+
+
+def _load_bone_names():
+    pathname = os.path.join(os.path.dirname(_get_keyframes_dir()), "names.txt")
+    if not os.path.isfile(pathname):
+        raise Exception("Cannot access file '" + pathname + "'.")
+    with open(pathname, "r") as f:
+        lines = f.readlines()
+    if len(lines) == 0:
+        raise Exception("Invalid file '" + pathname + "'. At least 1 line must be there.")
+    num_bones = int(lines[0])
+    if num_bones < 0:
+        raise Exception("Invalid file '" + pathname + "'. The number of bones is negative.")
+    if num_bones > len(lines):
+        raise Exception("Invalid file '" + pathname + "'. The number of bones bigger than number of lines.")
+    names = []
+    for i in range(num_bones):
+        if len(lines[i+1].strip()) == 0:
+            raise Exception("Invalid file '" + pathname + "'. Empty lines are not allowed.")
+        names.append(lines[i+1].strip())
+    return names
+
+
+def _load_meta_reference_frames():
+    if not os.path.isfile(_get_meta_meta_reference_frames_pathname()):
+        raise Exception("The file '" + _get_meta_meta_reference_frames_pathname() + "' does not exist. "
+                        "Please, run the command 'reference_frames' first.")
+    with open(_get_meta_meta_reference_frames_pathname(), "r") as f:
+        lines = f.readlines()
+    num_frames = int(lines[0])
+    frames = []
+    for i in range(num_frames):
+        idx = 1+i*7
+        pos = [float(lines[idx+0]), float(lines[idx+1]), float(lines[idx+2])]
+        idx += 3
+        rot = [float(lines[idx+0]), float(lines[idx+1]), float(lines[idx+2]), float(lines[idx+3])]
+        frames.append({"pos": pos, "rot": rot})
+    return frames
 
 
 def command_colliders_help():
@@ -285,6 +487,83 @@ def command_constraints():
                 f.write(_float_to_string(state.angle) + "\n")
             else:
                 raise Exception("Unknown constraint type '" + Config.instance.cmdline.arguments[0] + "'.")
+
+
+def command_joint_distances_help():
+    return """
+joint_distances
+    TODO
+"""
+
+
+def command_joint_distances():
+    state = Config.instance.state
+
+    parents = _load_bone_parents()
+    names = _load_bone_names()
+    if len(names) != len(parents):
+        raise Exception("Inconsistency between names of bones and parent bone definitions.")
+    bone_weights = _compute_weights_of_bones(parents)
+
+    keyframes = _load_keyframes()
+    reference_frames = _load_meta_reference_frames()
+    if len(keyframes) != len(reference_frames):
+        raise Exception("Inconsistency between number of keyframes and corresponding meta reference frames.")
+
+    joints_in_reference_frames = []
+    for i in range(len(keyframes)):
+        frames = keyframes[i]["frames_of_bones"]
+        if len(frames) != len(parents):
+            raise Exception("Inconsistency between number of bones in keyframes and parent bone definitions.")
+        joints_in_reference_frames.append(_get_bone_joints_in_meta_reference_frame(frames, reference_frames[i]))
+
+
+    # joints = []
+    # for i in range(len(keyframes)):
+    #     frames = keyframes[i]["frames_of_bones"]
+    #     if len(frames) != len(parents):
+    #         raise Exception("Inconsistency between number of bones in keyframes and parent bone definitions.")
+    #     joints.append(_get_bone_joints_in_anim_space(frames))
+    #
+    # joints_at_front = joints[0]
+    # for j in range(len(joints_at_front)):
+    #     if names[j] not in state.bones_filter:
+    #         continue
+    #     print("[" + ", ".join([_float_to_string(x) for x in joints_at_front[j]]) + "]    " + names[j])
+    #
+    # joints_at_front = joints[0]
+    # joints_at_back = joints[-1]
+    # for j in range(len(joints_at_front)):
+    #     if names[j] not in state.bones_filter:
+    #         continue
+    #     print(names[j])
+    #     for p in [joints_at_front[j], joints_at_back[j]]:
+    #         print("[" + ", ".join([_float_to_string(x) for x in p]) + "]")
+
+    # joints_at_front = joints_in_reference_frames[0]
+    # joints_at_back = joints_in_reference_frames[-1]
+    # for j in range(len(joints_at_front)):
+    #     if names[j] not in state.bones_filter:
+    #         continue
+    #     print(_float_to_string(_distance_between_points(joints_at_front[j], joints_at_back[j])) + "    " + names[j])
+    #     for p in [joints_at_front[j], joints_at_back[j]]:
+    #         print("            [" + ", ".join([_float_to_string(x) for x in p]) + "]")
+
+    # joints_at_0 = joints_in_reference_frames[0]
+    # for i in range(1, len(joints_in_reference_frames)):
+    #     joints_at_i = joints_in_reference_frames[i]
+    #     distances = []
+    #     for j in range(len(joints_at_0)):
+    #         if names[j] not in state.bones_filter:
+    #             continue
+    #         distances.append(_distance_between_points(joints_at_0[j], joints_at_i[j]))
+    #     print("   ".join([_float_to_string(x) for x in distances]))
+
+    joints_at_0 = joints_in_reference_frames[0]
+    for i in range(1, len(joints_in_reference_frames)):
+        joints_at_i = joints_in_reference_frames[i]
+        print(_float_to_string(sum(_distance_between_points(joints_at_0[j], joints_at_i[j]) * bone_weights[j]
+                                   for j in range(len(joints_at_0)) if names[j] in state.bones_filter)))
 
 
 def command_get_help():
