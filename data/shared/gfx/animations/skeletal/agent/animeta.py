@@ -38,6 +38,7 @@ class Config:
         def __init__(self, pathname):
             self.work_dir = pathname
             self.anim_dir = None
+            self.anim_dir2 = None
             self.bone_idx = 0
             self.pivot = [0.0, 0.0, 0.83]
             self.shape = "capsule"
@@ -85,6 +86,7 @@ class Config:
                 "upper_foot.R",
                 "lower_foot.R",
             ]
+            self.distance_threshold = 1.0
             self.debug_mode = True
 
         def typeof(self, var_name):
@@ -313,24 +315,29 @@ def _compute_weights_of_bones(parents_of_bones, coef=1.5, switch_to_addition=Fal
     return bone_weights
 
 
-def _get_keyframes_dir(check_exists=True):
-    if Config.instance.state.anim_dir is None:
-        raise Exception("Cannot load keyframes because the state variable 'anim_dir' was not set. Please, use the "
-                        "command 'set' first.")
-    keyframes_dir = os.path.abspath(os.path.join(Config.instance.state.work_dir, Config.instance.state.anim_dir))
+def _get_keyframes_dir(primary=True, check_exists=True):
+    anim_dir = Config.instance.state.anim_dir if primary is True else Config.instance.state.anim_dir2
+    if anim_dir is None:
+        raise Exception("Cannot load keyframes because the state variable 'anim_dir" +
+                        ("" if primary is True else "2") + "' was not set. Please, use the command 'set' first.")
+    keyframes_dir = os.path.abspath(os.path.join(Config.instance.state.work_dir, anim_dir))
     if check_exists is True and not os.path.isdir(keyframes_dir):
         raise Exception("Cannot access keyframes directory '" + keyframes_dir + "'. Please, check whether state "
-                        "variables 'work_dir' and 'anim_dir' have proper values so that 'work_dir/anim_dir' form "
-                        "the desired disk path.")
+                        "variables 'work_dir' and 'anim_dir" + ("" if primary is True else "2") +
+                        "' have proper values so that 'work_dir/anim_dir" + ("" if primary is True else "2") +
+                        "' forms the desired disk path.")
     return keyframes_dir
 
 
-def _get_meta_meta_reference_frames_pathname():
-    return os.path.join(_get_keyframes_dir(), "meta_reference_frames.txt")
+def _get_meta_meta_reference_frames_pathname(primary=True, check_exists=False):
+    pathname = os.path.join(_get_keyframes_dir(primary, True), "meta_reference_frames.txt")
+    if check_exists is True and not os.path.isfile(_get_meta_meta_reference_frames_pathname()):
+        raise Exception("The file '" + pathname + "' does not exist. Please, run the command 'reference_frames' first.")
+    return pathname
 
 
-def _load_keyframes():
-    keyframes_dir = _get_keyframes_dir()
+def _load_keyframes(primary=True):
+    keyframes_dir = _get_keyframes_dir(primary, True)
     keyframes = []
     for fname in os.listdir(keyframes_dir):
         if fname.startswith("keyframe") and fname.endswith(".txt"):
@@ -347,6 +354,20 @@ def _load_keyframes():
                 keyframe.append({"pos": pos, "rot": rot})
             keyframes.append({"time": time_point, "frames_of_bones": keyframe})
     return sorted(keyframes, key=lambda x: x["time"])
+
+
+def _load_meta_reference_frames(primary=True):
+    with open(_get_meta_meta_reference_frames_pathname(primary, True), "r") as f:
+        lines = f.readlines()
+    num_frames = int(lines[0])
+    frames = []
+    for i in range(num_frames):
+        idx = 1+i*7
+        pos = [float(lines[idx+0]), float(lines[idx+1]), float(lines[idx+2])]
+        idx += 3
+        rot = [float(lines[idx+0]), float(lines[idx+1]), float(lines[idx+2]), float(lines[idx+3])]
+        frames.append({"pos": pos, "rot": rot})
+    return frames
 
 
 def _load_bone_parents():
@@ -392,23 +413,6 @@ def _load_bone_names():
             raise Exception("Invalid file '" + pathname + "'. Empty lines are not allowed.")
         names.append(lines[i+1].strip())
     return names
-
-
-def _load_meta_reference_frames():
-    if not os.path.isfile(_get_meta_meta_reference_frames_pathname()):
-        raise Exception("The file '" + _get_meta_meta_reference_frames_pathname() + "' does not exist. "
-                        "Please, run the command 'reference_frames' first.")
-    with open(_get_meta_meta_reference_frames_pathname(), "r") as f:
-        lines = f.readlines()
-    num_frames = int(lines[0])
-    frames = []
-    for i in range(num_frames):
-        idx = 1+i*7
-        pos = [float(lines[idx+0]), float(lines[idx+1]), float(lines[idx+2])]
-        idx += 3
-        rot = [float(lines[idx+0]), float(lines[idx+1]), float(lines[idx+2]), float(lines[idx+3])]
-        frames.append({"pos": pos, "rot": rot})
-    return frames
 
 
 def command_colliders_help():
@@ -505,17 +509,73 @@ def command_joint_distances():
         raise Exception("Inconsistency between names of bones and parent bone definitions.")
     bone_weights = _compute_weights_of_bones(parents)
 
-    keyframes = _load_keyframes()
-    reference_frames = _load_meta_reference_frames()
-    if len(keyframes) != len(reference_frames):
-        raise Exception("Inconsistency between number of keyframes and corresponding meta reference frames.")
+    joints_in_reference_frames = {}
+    for kind, kind_name in [(True, "primary"), (False, "secondary")]:
+        keyframes = _load_keyframes(primary=kind)
+        reference_frames = _load_meta_reference_frames(primary=kind)
+        if len(keyframes) != len(reference_frames):
+            raise Exception("Inconsistency between number of keyframes and corresponding meta reference frames "
+                            "of the " + kind_name + " animation.")
+        joints_in_reference_frames[kind_name] = []
+        for i in range(len(keyframes)):
+            frames = keyframes[i]["frames_of_bones"]
+            if len(frames) != len(parents):
+                raise Exception("Inconsistency between number of bones in keyframes and parent bone definitions.")
+            joints_in_reference_frames[kind_name].append(_get_bone_joints_in_meta_reference_frame(frames, reference_frames[i]))
 
-    joints_in_reference_frames = []
-    for i in range(len(keyframes)):
-        frames = keyframes[i]["frames_of_bones"]
-        if len(frames) != len(parents):
-            raise Exception("Inconsistency between number of bones in keyframes and parent bone definitions.")
-        joints_in_reference_frames.append(_get_bone_joints_in_meta_reference_frame(frames, reference_frames[i]))
+    distances = []
+    for i in range(len(joints_in_reference_frames["primary"])):
+        joints_primary = joints_in_reference_frames["primary"][i]
+        for j in range(len(joints_in_reference_frames["secondary"])):
+            joints_secondary = joints_in_reference_frames["secondary"][j]
+            if len(joints_primary) != len(joints_secondary):
+                raise Exception("Inconsistency between number of bones in keyframes of primary and secondary animation.")
+            distance = sum(_distance_between_points(joints_primary[k], joints_secondary[k]) * bone_weights[k]
+                           for k in range(len(joints_primary)) if names[k] in state.bones_filter)
+            distances.append([distance, i, j])
+    threshold_line_printed = False
+    for props in sorted(distances, key=lambda props: -props[0]):
+        if threshold_line_printed is False and props[0] <= Config.instance.state.distance_threshold:
+            print("----------------------------------------------------")
+            threshold_line_printed = True
+        print(_float_to_string(props[0]) + "\t" +
+              Config.instance.state.anim_dir + ":" + str(props[1]) + " vs. " +
+              Config.instance.state.anim_dir2 + ":" + str(props[2])
+              )
+
+    # distances = []
+    # for joints_primary in joints_in_reference_frames["primary"]:
+    #     distances.append([])
+    #     for joints_secondary in joints_in_reference_frames["secondary"]:
+    #         if len(joints_primary) != len(joints_secondary):
+    #             raise Exception("Inconsistency between number of bones in keyframes of primary and secondary animation.")
+    #         distances[-1].append(
+    #             sum(_distance_between_points(joints_primary[k], joints_secondary[k]) * bone_weights[k]
+    #                 for k in range(len(joints_primary)) if names[k] in state.bones_filter)
+    #             )
+    # for ds in distances:
+    #     print("\t".join(_float_to_string(x) for x in ds))
+
+    # keyframes = []
+    # reference_frames = []
+    # for
+
+    # keyframes_1 = _load_keyframes(primary=True)
+    # reference_frames_1 = _load_meta_reference_frames(primary=True)
+    # if len(keyframes_1) != len(reference_frames_1):
+    #     raise Exception("Inconsistency between number of keyframes and corresponding meta reference frames of the primary animation.")
+    #
+    # keyframes_2 = _load_keyframes(primary=False)
+    # reference_frames_2 = _load_meta_reference_frames(primary=False)
+    # if len(keyframes_2) != len(reference_frames_2):
+    #     raise Exception("Inconsistency between number of keyframes and corresponding meta reference frames of the secondary animation.")
+    #
+    # joints_in_reference_frames = []
+    # for i in range(len(keyframes)):
+    #     frames = keyframes[i]["frames_of_bones"]
+    #     if len(frames) != len(parents):
+    #         raise Exception("Inconsistency between number of bones in keyframes and parent bone definitions.")
+    #     joints_in_reference_frames.append(_get_bone_joints_in_meta_reference_frame(frames, reference_frames[i]))
 
 
     # joints = []
@@ -559,11 +619,24 @@ def command_joint_distances():
     #         distances.append(_distance_between_points(joints_at_0[j], joints_at_i[j]))
     #     print("   ".join([_float_to_string(x) for x in distances]))
 
-    joints_at_0 = joints_in_reference_frames[0]
-    for i in range(1, len(joints_in_reference_frames)):
-        joints_at_i = joints_in_reference_frames[i]
-        print(_float_to_string(sum(_distance_between_points(joints_at_0[j], joints_at_i[j]) * bone_weights[j]
-                                   for j in range(len(joints_at_0)) if names[j] in state.bones_filter)))
+    # joints_at_0 = joints_in_reference_frames[0]
+    # for i in range(1, len(joints_in_reference_frames)):
+    #     joints_at_i = joints_in_reference_frames[i]
+    #     print(_float_to_string(sum(_distance_between_points(joints_at_0[j], joints_at_i[j]) * bone_weights[j]
+    #                                for j in range(len(joints_at_0)) if names[j] in state.bones_filter)))
+
+    # distances = []
+    # for i in range(0, len(joints_in_reference_frames)):
+    #     joints_at_i = joints_in_reference_frames[i]
+    #     distances.append([])
+    #     for j in range(0, len(joints_in_reference_frames)):
+    #         joints_at_j = joints_in_reference_frames[j]
+    #         distances[-1].append(
+    #             sum(_distance_between_points(joints_at_i[k], joints_at_j[k]) * bone_weights[k]
+    #                 for k in range(len(joints_at_i)) if names[k] in state.bones_filter)
+    #             )
+    # for ds in distances:
+    #     print("\t".join(_float_to_string(x) for x in ds))
 
 
 def command_get_help():
