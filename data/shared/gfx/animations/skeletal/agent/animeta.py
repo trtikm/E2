@@ -95,6 +95,12 @@ class Config:
                 default_value = ""
             return type(default_value)
 
+        def elemtypeof(self, var_name):
+            default_value = Config.State("").get(var_name)
+            if default_value is None or not isinstance(default_value, list):
+                return None
+            return type(default_value[0])
+
         def has(self, var_name):
             return var_name in self.__dict__
 
@@ -114,11 +120,23 @@ class Config:
             if var_type == list:
                 if type(list_of_strings) != list:
                     raise Exception("Wrong value type. Expected type a list.")
-                return [float(x) for x in list_of_strings]
+                if self.elemtypeof(var_name) is float:
+                    return [float(x) for x in list_of_strings]
+                else:
+                    result = []
+                    for x in list_of_strings:
+                        if x == "@@":
+                            for y in self.get(var_name):
+                                result.append(y)
+                        else:
+                            result.append(x)
+                    return result
             else:
                 if len(list_of_strings) > 1:
                     raise Exception("Wrong value type. Expected a single value, but passed a list.")
                 if var_type == str:
+                    if var_name == "work_dir":
+                        return os.path.abspath(list_of_strings[0].replace("@@", self.get(var_name)))
                     return list_of_strings[0]
                 if var_type == int:
                     return int(list_of_strings[0])
@@ -674,6 +692,32 @@ def command_help():
                             "the list of all available commands.")
         assert cmd in Config.instance.help_commands
         print(Config.instance.help_commands[cmd]())
+
+
+def command_list_help():
+    return """
+list
+    List animation directories under the working directory (see
+    command 'work_dir'), You can use the output of this command to set
+    state variables 'anim_dir' and/or 'anim_dir2'.
+"""
+
+
+def command_list():
+    result = []
+    for elem_name in os.listdir(Config.instance.state.work_dir):
+        dir_path = os.path.join(Config.instance.state.work_dir, elem_name)
+        if not os.path.isdir(dir_path):
+            continue
+        has_keyframe = False
+        for key_frame in os.listdir(dir_path):
+            if key_frame.startswith("keyframe") and key_frame.endswith(".txt"):
+                has_keyframe = True
+                break
+        if has_keyframe:
+            result.append(elem_name)
+    for anim_name in sorted(result):
+        print(anim_name)
 
 
 def command_mass_distributions_help():
