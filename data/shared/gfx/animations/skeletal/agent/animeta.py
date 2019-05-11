@@ -347,9 +347,9 @@ def _get_keyframes_dir(primary=True, check_exists=True):
     return keyframes_dir
 
 
-def _get_meta_meta_reference_frames_pathname(primary=True, check_exists=False):
+def _get_meta_reference_frames_pathname(primary=True, check_exists=False):
     pathname = os.path.join(_get_keyframes_dir(primary, True), "meta_reference_frames.txt")
-    if check_exists is True and not os.path.isfile(_get_meta_meta_reference_frames_pathname()):
+    if check_exists is True and not os.path.isfile(pathname):
         raise Exception("The file '" + pathname + "' does not exist. Please, run the command 'reference_frames' first.")
     return pathname
 
@@ -375,7 +375,7 @@ def _load_keyframes(primary=True):
 
 
 def _load_meta_reference_frames(primary=True):
-    with open(_get_meta_meta_reference_frames_pathname(primary, True), "r") as f:
+    with open(_get_meta_reference_frames_pathname(primary, True), "r") as f:
         lines = f.readlines()
     num_frames = int(lines[0])
     frames = []
@@ -453,10 +453,10 @@ colliders
 
 
 def command_colliders():
-    if not os.path.isfile(_get_meta_meta_reference_frames_pathname()):
-        raise Exception("The file '" + _get_meta_meta_reference_frames_pathname() + "' does not exist. "
+    if not os.path.isfile(_get_meta_reference_frames_pathname()):
+        raise Exception("The file '" + _get_meta_reference_frames_pathname() + "' does not exist. "
                         "Please, run the command 'reference_frames' first.")
-    with open(_get_meta_meta_reference_frames_pathname(), "r") as f:
+    with open(_get_meta_reference_frames_pathname(), "r") as f:
         num_frames = int(f.readline().strip())
     state = Config.instance.state
     with open(os.path.join(_get_keyframes_dir(), "meta_motion_colliders.txt"), "w") as f:
@@ -490,12 +490,12 @@ constraints <constraint-type>
 
 
 def command_constraints():
-    if not os.path.isfile(_get_meta_meta_reference_frames_pathname()):
-        raise Exception("The file '" + _get_meta_meta_reference_frames_pathname() + "' does not exist. "
+    if not os.path.isfile(_get_meta_reference_frames_pathname()):
+        raise Exception("The file '" + _get_meta_reference_frames_pathname() + "' does not exist. "
                         "Please, run the command 'reference_frames' first.")
     if len(Config.instance.cmdline.arguments) != 1:
         raise Exception("Wrong number of argument. A single constraint type must be provided.")
-    with open(_get_meta_meta_reference_frames_pathname(), "r") as f:
+    with open(_get_meta_reference_frames_pathname(), "r") as f:
         num_frames = int(f.readline().strip())
     state = Config.instance.state
     with open(os.path.join(_get_keyframes_dir(), "meta_constraints.txt"), "w") as f:
@@ -737,10 +737,10 @@ mass_distributions
 
 
 def command_mass_distributions():
-    if not os.path.isfile(_get_meta_meta_reference_frames_pathname()):
-        raise Exception("The file '" + _get_meta_meta_reference_frames_pathname() + "' does not exist. "
+    if not os.path.isfile(_get_meta_reference_frames_pathname()):
+        raise Exception("The file '" + _get_meta_reference_frames_pathname() + "' does not exist. "
                         "Please, run the command 'reference_frames' first.")
-    with open(_get_meta_meta_reference_frames_pathname(), "r") as f:
+    with open(_get_meta_reference_frames_pathname(), "r") as f:
         num_frames = int(f.readline().strip())
     state = Config.instance.state
     with open(os.path.join(_get_keyframes_dir(), "meta_mass_distributions.txt"), "w") as f:
@@ -785,12 +785,12 @@ motion_actions <action-name>+
 
 
 def command_motion_actions():
-    if not os.path.isfile(_get_meta_meta_reference_frames_pathname()):
-        raise Exception("The file '" + _get_meta_meta_reference_frames_pathname() + "' does not exist. "
+    if not os.path.isfile(_get_meta_reference_frames_pathname()):
+        raise Exception("The file '" + _get_meta_reference_frames_pathname() + "' does not exist. "
                         "Please, run the command 'reference_frames' first.")
     if len(Config.instance.cmdline.arguments) == 0:
         raise Exception("Wrong number of argument. At least one action must be provided.")
-    with open(_get_meta_meta_reference_frames_pathname(), "r") as f:
+    with open(_get_meta_reference_frames_pathname(), "r") as f:
         num_frames = int(f.readline().strip())
     state = Config.instance.state
     with open(os.path.join(_get_keyframes_dir(), "meta_motion_actions.txt"), "w") as f:
@@ -871,7 +871,7 @@ def command_reference_frames():
             meta_reference_frames.append({"pos": pos, "rot": rot})
     else:
         raise Exception("Unknown argument '" + Config.instance.cmdline.arguments[0] + "'.")
-    with open(_get_meta_meta_reference_frames_pathname(), "w") as f:
+    with open(_get_meta_reference_frames_pathname(), "w") as f:
         f.write(str(len(meta_reference_frames)) + "\n")
         for frame in meta_reference_frames:
             f.write(_float_to_string(frame["pos"][0]) + "\n")
