@@ -513,12 +513,36 @@ def command_constraints():
 
 def command_joint_distances_help():
     return """
-joint_distances
-    TODO
+joint_distances [<keyframe-index>|* <keyframe-index>|*]
+    Computes weighted distances between related bone-joints in (different)
+    keyframes of (different) animations. The state variables 'anim_dir' and
+    'anim_dir2' denote animations, whose keyframes will be considered. The
+    first argument is related to 'anim_dir' and the second one to 'anim_dir2'.
+    The command can compute joint distances between two concrete keyframes, or
+    between a concrete keyframe from one animation with all keyframes of the
+    other, or between all keyframe from one animation with all keyframes from
+    the other. The special value '*' for an argument allows you to specify
+    the use of all keyframes of the corresponding animation.
+    When no argument is passed or at least one argument is '*', then summary
+    distances (i.e. sum of distances between corresponding joint) are computed
+    between keyframes.
+    When both arguments are numbers (i.e. indices of concrete keyframes), then
+    there are printed distances per individual joint, and also the summary
+    distance.
+    NOTE: By 'joint' we actually mean the origin of the coordinate system in
+          a keyframe file.
+    NOTE: The Euclidean distance between corresponding joints is multiplied by
+          weight, equal to number 1.5^<bone_chain>, where <bone_chain> is the
+          number of parent bones in the chain from the bone in the joint down
+          to a bone without any parent.
+    NOTE: Use the command 'list keyframes' to see valid ranges for arguments.
 """
 
 
 def command_joint_distances():
+    if len(Config.instance.cmdline.arguments) != 0 and len(Config.instance.cmdline.arguments) != 2:
+        raise Exception("Wrong number of argument. Either zero or two arguments are expected.")
+
     state = Config.instance.state
 
     parents = _load_bone_parents()
@@ -541,120 +565,50 @@ def command_joint_distances():
                 raise Exception("Inconsistency between number of bones in keyframes and parent bone definitions.")
             joints_in_reference_frames[kind_name].append(_get_bone_joints_in_meta_reference_frame(frames, reference_frames[i]))
 
-    distances = []
-    for i in range(len(joints_in_reference_frames["primary"])):
-        joints_primary = joints_in_reference_frames["primary"][i]
-        for j in range(len(joints_in_reference_frames["secondary"])):
-            joints_secondary = joints_in_reference_frames["secondary"][j]
-            if len(joints_primary) != len(joints_secondary):
-                raise Exception("Inconsistency between number of bones in keyframes of primary and secondary animation.")
-            distance = sum(_distance_between_points(joints_primary[k], joints_secondary[k]) * bone_weights[k]
-                           for k in range(len(joints_primary)) if names[k] in state.bones_filter)
-            distances.append([distance, i, j])
-    threshold_line_printed = False
-    for props in sorted(distances, key=lambda props: -props[0]):
-        if threshold_line_printed is False and props[0] <= Config.instance.state.distance_threshold:
-            print("----------------------------------------------------")
-            threshold_line_printed = True
-        print(_float_to_string(props[0]) + "\t" +
-              Config.instance.state.anim_dir + ":" + str(props[1]) + " vs. " +
-              Config.instance.state.anim_dir2 + ":" + str(props[2])
-              )
+    index_filters = {"primary": -1, "secondary": -1}
+    if len(Config.instance.cmdline.arguments) == 2:
+        for idx, kind_name in [(0, "primary"), (1, "secondary")]:
+            if Config.instance.cmdline.arguments[idx] != "*":
+                index_filters[kind_name] = int(Config.instance.cmdline.arguments[idx])
+                if index_filters[kind_name] < 0 or index_filters[kind_name] >= len(joints_in_reference_frames[kind_name]):
+                    raise Exception("Illegal argument " + str(idx) + ": " + Config.instance.cmdline.arguments[idx] + ". " +
+                                    "Use the command 'list keyframes' to see valid range for the argument.")
 
-    # distances = []
-    # for joints_primary in joints_in_reference_frames["primary"]:
-    #     distances.append([])
-    #     for joints_secondary in joints_in_reference_frames["secondary"]:
-    #         if len(joints_primary) != len(joints_secondary):
-    #             raise Exception("Inconsistency between number of bones in keyframes of primary and secondary animation.")
-    #         distances[-1].append(
-    #             sum(_distance_between_points(joints_primary[k], joints_secondary[k]) * bone_weights[k]
-    #                 for k in range(len(joints_primary)) if names[k] in state.bones_filter)
-    #             )
-    # for ds in distances:
-    #     print("\t".join(_float_to_string(x) for x in ds))
-
-    # keyframes = []
-    # reference_frames = []
-    # for
-
-    # keyframes_1 = _load_keyframes(primary=True)
-    # reference_frames_1 = _load_meta_reference_frames(primary=True)
-    # if len(keyframes_1) != len(reference_frames_1):
-    #     raise Exception("Inconsistency between number of keyframes and corresponding meta reference frames of the primary animation.")
-    #
-    # keyframes_2 = _load_keyframes(primary=False)
-    # reference_frames_2 = _load_meta_reference_frames(primary=False)
-    # if len(keyframes_2) != len(reference_frames_2):
-    #     raise Exception("Inconsistency between number of keyframes and corresponding meta reference frames of the secondary animation.")
-    #
-    # joints_in_reference_frames = []
-    # for i in range(len(keyframes)):
-    #     frames = keyframes[i]["frames_of_bones"]
-    #     if len(frames) != len(parents):
-    #         raise Exception("Inconsistency between number of bones in keyframes and parent bone definitions.")
-    #     joints_in_reference_frames.append(_get_bone_joints_in_meta_reference_frame(frames, reference_frames[i]))
-
-
-    # joints = []
-    # for i in range(len(keyframes)):
-    #     frames = keyframes[i]["frames_of_bones"]
-    #     if len(frames) != len(parents):
-    #         raise Exception("Inconsistency between number of bones in keyframes and parent bone definitions.")
-    #     joints.append(_get_bone_joints_in_anim_space(frames))
-    #
-    # joints_at_front = joints[0]
-    # for j in range(len(joints_at_front)):
-    #     if names[j] not in state.bones_filter:
-    #         continue
-    #     print("[" + ", ".join([_float_to_string(x) for x in joints_at_front[j]]) + "]    " + names[j])
-    #
-    # joints_at_front = joints[0]
-    # joints_at_back = joints[-1]
-    # for j in range(len(joints_at_front)):
-    #     if names[j] not in state.bones_filter:
-    #         continue
-    #     print(names[j])
-    #     for p in [joints_at_front[j], joints_at_back[j]]:
-    #         print("[" + ", ".join([_float_to_string(x) for x in p]) + "]")
-
-    # joints_at_front = joints_in_reference_frames[0]
-    # joints_at_back = joints_in_reference_frames[-1]
-    # for j in range(len(joints_at_front)):
-    #     if names[j] not in state.bones_filter:
-    #         continue
-    #     print(_float_to_string(_distance_between_points(joints_at_front[j], joints_at_back[j])) + "    " + names[j])
-    #     for p in [joints_at_front[j], joints_at_back[j]]:
-    #         print("            [" + ", ".join([_float_to_string(x) for x in p]) + "]")
-
-    # joints_at_0 = joints_in_reference_frames[0]
-    # for i in range(1, len(joints_in_reference_frames)):
-    #     joints_at_i = joints_in_reference_frames[i]
-    #     distances = []
-    #     for j in range(len(joints_at_0)):
-    #         if names[j] not in state.bones_filter:
-    #             continue
-    #         distances.append(_distance_between_points(joints_at_0[j], joints_at_i[j]))
-    #     print("   ".join([_float_to_string(x) for x in distances]))
-
-    # joints_at_0 = joints_in_reference_frames[0]
-    # for i in range(1, len(joints_in_reference_frames)):
-    #     joints_at_i = joints_in_reference_frames[i]
-    #     print(_float_to_string(sum(_distance_between_points(joints_at_0[j], joints_at_i[j]) * bone_weights[j]
-    #                                for j in range(len(joints_at_0)) if names[j] in state.bones_filter)))
-
-    # distances = []
-    # for i in range(0, len(joints_in_reference_frames)):
-    #     joints_at_i = joints_in_reference_frames[i]
-    #     distances.append([])
-    #     for j in range(0, len(joints_in_reference_frames)):
-    #         joints_at_j = joints_in_reference_frames[j]
-    #         distances[-1].append(
-    #             sum(_distance_between_points(joints_at_i[k], joints_at_j[k]) * bone_weights[k]
-    #                 for k in range(len(joints_at_i)) if names[k] in state.bones_filter)
-    #             )
-    # for ds in distances:
-    #     print("\t".join(_float_to_string(x) for x in ds))
+    if len(Config.instance.cmdline.arguments) == 0 or any(index_filters[kind_name] == -1 for kind_name in ["primary", "secondary"]):
+        distances = []
+        for i in range(len(joints_in_reference_frames["primary"])):
+            if index_filters["primary"] > -1 and i != index_filters["primary"]:
+                continue
+            joints_primary = joints_in_reference_frames["primary"][i]
+            for j in range(len(joints_in_reference_frames["secondary"])):
+                if index_filters["secondary"] > -1 and j != index_filters["secondary"]:
+                    continue
+                joints_secondary = joints_in_reference_frames["secondary"][j]
+                if len(joints_primary) != len(joints_secondary):
+                    raise Exception("Inconsistency between number of bones in keyframes of primary and secondary animation.")
+                distance = sum(_distance_between_points(joints_primary[k], joints_secondary[k]) * bone_weights[k]
+                               for k in range(len(joints_primary)) if names[k] in state.bones_filter)
+                distances.append([distance, i, j])
+        threshold_line_printed = False
+        for props in sorted(distances, key=lambda props: -props[0]):
+            if threshold_line_printed is False and props[0] <= Config.instance.state.distance_threshold:
+                print("----------------------------------------------------")
+                threshold_line_printed = True
+            print(_float_to_string(props[0]) + "\t" +
+                  Config.instance.state.anim_dir + ":" + str(props[1]) + " vs. " +
+                  Config.instance.state.anim_dir2 + ":" + str(props[2])
+                  )
+    else:
+        distances = {}
+        joints_primary = joints_in_reference_frames["primary"][index_filters["primary"]]
+        joints_secondary = joints_in_reference_frames["secondary"][index_filters["secondary"]]
+        for k in range(len(joints_primary)):
+            if names[k] in state.bones_filter:
+                distances[names[k]] = _distance_between_points(joints_primary[k], joints_secondary[k]) * bone_weights[k]
+        for bone_name in sorted(distances.keys(), key=lambda x: -distances[x]):
+            print(bone_name + ": " + _float_to_string(distances[bone_name]))
+        print("--------------")
+        print("sum: " + _float_to_string(sum(distances[bone_name] for bone_name in distances.keys())))
 
 
 def command_get_help():
@@ -696,28 +650,50 @@ def command_help():
 
 def command_list_help():
     return """
-list
-    List animation directories under the working directory (see
-    command 'work_dir'), You can use the output of this command to set
-    state variables 'anim_dir' and/or 'anim_dir2'.
+list [animations|keyframes]
+    For the argument 'animations' the command lists animation directories
+    under the working directory (see command 'work_dir'), You can use the
+    output of this command to set state variables 'anim_dir' and/or
+    'anim_dir2'.
+    For the argument 'animations' the command prints count of keyframes
+    under animation directories defined by variables 'anim_dir' and
+    'anim_dir2', in that order.
+    When no argument is passed the effect of the command is the same as
+    passing the argument 'animations'.
 """
 
 
 def command_list():
-    result = []
-    for elem_name in os.listdir(Config.instance.state.work_dir):
-        dir_path = os.path.join(Config.instance.state.work_dir, elem_name)
-        if not os.path.isdir(dir_path):
-            continue
-        has_keyframe = False
-        for key_frame in os.listdir(dir_path):
-            if key_frame.startswith("keyframe") and key_frame.endswith(".txt"):
-                has_keyframe = True
-                break
-        if has_keyframe:
-            result.append(elem_name)
-    for anim_name in sorted(result):
-        print(anim_name)
+    if len(Config.instance.cmdline.arguments) > 1:
+        raise Exception("Wrong number of arguments. At most one argument is expected.")
+    if len(Config.instance.cmdline.arguments) == 0 or Config.instance.cmdline.arguments[0] == "animations":
+        result = []
+        for elem_name in os.listdir(Config.instance.state.work_dir):
+            dir_path = os.path.join(Config.instance.state.work_dir, elem_name)
+            if not os.path.isdir(dir_path):
+                continue
+            has_keyframe = False
+            for keyframe in os.listdir(dir_path):
+                if os.path.isfile(os.path.join(dir_path, keyframe)) and keyframe.startswith("keyframe") and keyframe.endswith(".txt"):
+                    has_keyframe = True
+                    break
+            if has_keyframe:
+                result.append(elem_name)
+        for anim_name in sorted(result):
+            print(anim_name)
+    elif Config.instance.cmdline.arguments[0] == "keyframes":
+        for anim_dir in [Config.instance.state.anim_dir, Config.instance.state.anim_dir2]:
+            if anim_dir is None:
+                continue
+            dir_path = os.path.join(Config.instance.state.work_dir, anim_dir)
+            num_keyframes = 0
+            for keyframe in os.listdir(dir_path):
+                if os.path.isfile(os.path.join(dir_path, keyframe)) and keyframe.startswith("keyframe") and keyframe.endswith(".txt"):
+                    num_keyframes += 1
+            print(anim_dir + ": " + str(num_keyframes))
+    else:
+        raise Exception("Unknown argument '" + Config.instance.cmdline.arguments[0] + "'.")
+
 
 
 def command_mass_distributions_help():
@@ -760,6 +736,9 @@ motion_actions <action-name>+
     motion actions together with their corresponding data. Motion actions
     implement the motion defined by the keyframes. Here are descriptions of
     available actions:
+    * 'none':
+        Do nothing, i.e. ignore desired motion of agent's cortex.
+        This action is useful for 'idle' animations.
     * 'accelerate_towards_clipped_desired_linear_velocity':
         Clips the target linear velocity to the clipping cone and then
         introduces a linear acceleration to get closer to the clipped liner
@@ -801,7 +780,9 @@ def command_motion_actions():
                 f.write(prefix)
                 prefix = ""
                 f.write(str(action) + "\n")
-                if action == "accelerate_towards_clipped_desired_linear_velocity":
+                if action == "none":
+                    pass
+                elif action == "accelerate_towards_clipped_desired_linear_velocity":
                     f.write(_float_to_string(state.vec_fwd[0]) + "\n")
                     f.write(_float_to_string(state.vec_fwd[1]) + "\n")
                     f.write(_float_to_string(state.vec_fwd[2]) + "\n")
@@ -844,6 +825,7 @@ reference_frames  move_straight|
         where t is a solution of equations:
             X = pivot + t * vec_fwd
             vec_fwd * (X - keyframe["frames_of_bones"][bone_idx]["pos"]) = 0
+        NOTE: Standing can be considered as a special case of this motion.
     The computed frames (by any procedure) are always saved into file:
         work_dir/anim_dir/meta_reference_frames.txt
     If the file exists, them it will be overwritten.
