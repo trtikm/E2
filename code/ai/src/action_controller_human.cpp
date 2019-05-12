@@ -32,7 +32,7 @@ struct  rigid_body_motion
     rigid_body_motion(
             scene_ptr const  s,
             scene::node_id const&  motion_object_nid,
-            skeletal_motion_templates::keyframes::meta_data::record const&  mass_distribution
+            skeletal_motion_templates::meta_record_real const&  mass_distribution
             )
         : velocity({ s->get_linear_velocity_of_rigid_body_of_scene_node(motion_object_nid),
             s->get_angular_velocity_of_rigid_body_of_scene_node(motion_object_nid) })
@@ -50,7 +50,7 @@ struct  rigid_body_motion
         acceleration.m_linear = linear_acceleration;
     }
 
-    void  set_inverted_mass(skeletal_motion_templates::keyframes::meta_data::record const&  mass_distribution)
+    void  set_inverted_mass(skeletal_motion_templates::meta_record_real const&  mass_distribution)
     {
         enum INDICES_OF_ARGUMENTS
         {
@@ -60,7 +60,7 @@ struct  rigid_body_motion
         inverted_mass = mass_distribution.arguments.at(INVERTED_MASS);
     }
 
-    void  set_inverted_inertia_tensor(skeletal_motion_templates::keyframes::meta_data::record const&  mass_distribution)
+    void  set_inverted_inertia_tensor(skeletal_motion_templates::meta_record_real const&  mass_distribution)
     {
         enum INDICES_OF_ARGUMENTS
         {
@@ -92,7 +92,7 @@ struct  rigid_body_motion
 void  create_collider_and_rigid_body_of_motion_scene_node(
         scene_ptr const  s,
         scene::node_id const&  motion_object_nid,
-        skeletal_motion_templates::keyframes::meta_data::record const&  collider_props,
+        skeletal_motion_templates::meta_record_real const&  collider_props,
         rigid_body_motion const&  rb_motion
         )
 {
@@ -146,8 +146,8 @@ scene::node_id  create_motion_scene_node(
         scene_ptr const  s,
         scene::node_id const&  motion_object_nid,
         angeo::coordinate_system const&  frame_in_world_space,
-        skeletal_motion_templates::keyframes::meta_data::record const&  collider_props,
-        skeletal_motion_templates::keyframes::meta_data::record const&  mass_distribution
+        skeletal_motion_templates::meta_record_real const&  collider_props,
+        skeletal_motion_templates::meta_record_real const&  mass_distribution
         )
 {
     s->insert_scene_node(motion_object_nid, frame_in_world_space, false);

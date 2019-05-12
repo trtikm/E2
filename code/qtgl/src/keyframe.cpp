@@ -84,10 +84,11 @@ natural_32_bit  read_all_coord_systems(
 }
 
 
+template<typename elem_type>
 natural_32_bit  read_meta_data_records(
     std::ifstream&  istr,
     boost::filesystem::path const&  pathname,
-    std::vector<keyframes_data::meta_data::records>&  output
+    std::vector<keyframes_data::meta_data::records<elem_type> >&  output
     )
 {
     natural_32_bit  num_records;
@@ -112,7 +113,7 @@ natural_32_bit  read_meta_data_records(
         ++line_index;
 
         boost::algorithm::trim(line);
-        if (line.empty())
+        if (line.empty() || (line.size() >= 2U && line.at(0) == '%' && line.at(1) == '%'))
             continue;
 
         if (line.front() == '+' || line.front() == '-' || std::isdigit(line.front(), std::locale::classic()))
@@ -121,7 +122,7 @@ natural_32_bit  read_meta_data_records(
                 throw std::runtime_error(msgstream() << "Number is not expected at line " << line_index << "in the file '" << pathname << "'.");
 
             std::istringstream istr(line);
-            float_32_bit  value;
+            elem_type  value;
             istr >> value;
             output.back().m_records.back().arguments.push_back(value);
         }
@@ -196,23 +197,13 @@ keyframe_data::~keyframe_data()
 namespace qtgl { namespace detail {
 
 
-bool  keyframes_data::meta_data::record::operator==(record const&  other) const
+template<>
+bool  keyframes_data::meta_data::record<float_32_bit>::operator==(record<float_32_bit> const&  other) const
 {
     if (keyword != other.keyword || arguments.size() != other.arguments.size())
         return false;
     for (natural_32_bit  i = 0U; i != arguments.size(); ++i)
         if (std::fabsf(arguments.at(i) - other.arguments.at(i)) > 0.0001f)
-            return false;
-    return true;
-}
-
-
-bool  keyframes_data::meta_data::records::operator==(records const&  other) const
-{
-    if (m_records.size() != other.m_records.size())
-        return false;
-    for (natural_32_bit  i = 0U; i != m_records.size(); ++i)
-        if (m_records.at(i) != other.m_records.at(i))
             return false;
     return true;
 }

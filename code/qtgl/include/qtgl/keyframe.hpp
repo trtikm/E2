@@ -8,6 +8,7 @@
 #   include <vector>
 #   include <algorithm>
 #   include <utility>
+#   include <type_traits>
 
 namespace qtgl { namespace detail {
 
@@ -79,10 +80,16 @@ struct  keyframes_data
     {
         std::vector<angeo::coordinate_system>  m_reference_frames;
 
+        template<typename T>
         struct  record
         {
+            using  element_type = T;
+
+            static_assert(std::is_floating_point<element_type>::value || std::is_integral<element_type>::value,
+                          "Only numeric types are allowed for the template parameter.");
+
             std::string  keyword;
-            std::vector<float_32_bit>  arguments;
+            std::vector<element_type>  arguments;
 
             bool  is_valid() const { return !keyword.empty(); }
 
@@ -90,9 +97,11 @@ struct  keyframes_data
             bool  operator!=(record const&  other) const { return !(*this == other); }
         };
 
+        template<typename T>
         struct  records
         {
-            std::vector<record>  m_records;
+            using  element_type = T;
+            std::vector<record<element_type> >  m_records;
 
             bool  is_valid() const { return !m_records.empty(); }
 
@@ -100,10 +109,10 @@ struct  keyframes_data
             bool  operator!=(records const&  other) const { return !(*this == other); }
         };
 
-        std::vector<records>  m_constraints;
-        std::vector<records>  m_motion_actions;
-        std::vector<records>  m_motion_colliders;
-        std::vector<records>  m_mass_distributions;
+        std::vector<records<float_32_bit> >  m_constraints;
+        std::vector<records<float_32_bit> >  m_motion_actions;
+        std::vector<records<float_32_bit> >  m_motion_colliders;
+        std::vector<records<float_32_bit> >  m_mass_distributions;
     };
 
     keyframes_data(async::finalise_load_on_destroy_ptr const  finaliser);
@@ -117,6 +126,34 @@ private:
     std::vector<keyframe>  m_keyframes;
     meta_data  m_meta_data;
 };
+
+
+template<>
+bool  keyframes_data::meta_data::record<float_32_bit>::operator==(record const&  other) const;
+
+
+template<typename T>
+bool  keyframes_data::meta_data::record<T>::operator==(record<T> const&  other) const
+{
+    if (keyword != other.keyword || arguments.size() != other.arguments.size())
+        return false;
+    for (natural_32_bit i = 0U; i != arguments.size(); ++i)
+        if (arguments.at(i) != other.arguments.at(i))
+            return false;
+    return true;
+}
+
+
+template<typename T>
+bool  keyframes_data::meta_data::records<T>::operator==(records<T> const&  other) const
+{
+    if (m_records.size() != other.m_records.size())
+        return false;
+    for (natural_32_bit i = 0U; i != m_records.size(); ++i)
+        if (m_records.at(i) != other.m_records.at(i))
+            return false;
+    return true;
+}
 
 
 }}

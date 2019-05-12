@@ -17,6 +17,12 @@ struct skeletal_motion_templates
     using  keyframe = qtgl::keyframe;
     using  keyframes = qtgl::keyframes;
 
+    using  meta_records_real = keyframes::meta_data::records<float_32_bit>;
+    using  meta_record_real = keyframes::meta_data::record<float_32_bit>;
+
+    using  meta_records_natural = keyframes::meta_data::records<natural_32_bit>;
+    using  meta_record_natural = keyframes::meta_data::record<natural_32_bit>;
+
     struct  motion_template_cursor
     {
         std::string  motion_name;

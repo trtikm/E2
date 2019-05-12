@@ -24,10 +24,10 @@ private:
     skeletal_motion_templates::template_motion_info  m_template_motion_info;
     vector3  m_desired_linear_velocity_in_world_space;
     scene::node_id  m_motion_object_nid;
-    skeletal_motion_templates::keyframes::meta_data::records  m_motion_object_collider_props;
-    skeletal_motion_templates::keyframes::meta_data::records  m_motion_object_mass_distribution_props;
-    skeletal_motion_templates::keyframes::meta_data::records  m_motion_object_constraint_props;
-    skeletal_motion_templates::keyframes::meta_data::records  m_motion_object_action_props;
+    skeletal_motion_templates::meta_records_real  m_motion_object_collider_props;
+    skeletal_motion_templates::meta_records_real  m_motion_object_mass_distribution_props;
+    skeletal_motion_templates::meta_records_real  m_motion_object_constraint_props;
+    skeletal_motion_templates::meta_records_real  m_motion_object_action_props;
 };
 
 
