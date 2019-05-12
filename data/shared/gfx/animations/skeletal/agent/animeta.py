@@ -1,3 +1,4 @@
+from gettext import translation
 import os
 import sys
 import numpy
@@ -354,23 +355,34 @@ def _get_meta_reference_frames_pathname(primary=True, check_exists=False):
     return pathname
 
 
-def _load_keyframes(primary=True):
+def _is_keyframe_file(pathname):
+    return os.path.isfile(pathname) and os.path.basename(pathname).startswith("keyframe") and os.path.basename(pathname).endswith(".txt")
+
+
+def _get_keyframes_files(primary=True):
     keyframes_dir = _get_keyframes_dir(primary, True)
-    keyframes = []
+    pathnames = []
     for fname in os.listdir(keyframes_dir):
-        if fname.startswith("keyframe") and fname.endswith(".txt"):
-            with open(os.path.join(keyframes_dir, fname), "r") as f:
-                lines = f.readlines()
-            time_point = float(lines[0])
-            num_frames = int(lines[1])
-            keyframe = []
-            for i in range(num_frames):
-                idx = 2+i*7
-                pos = [float(lines[idx+0]), float(lines[idx+1]), float(lines[idx+2])]
-                idx += 3
-                rot = [float(lines[idx+0]), float(lines[idx+1]), float(lines[idx+2]), float(lines[idx+3])]
-                keyframe.append({"pos": pos, "rot": rot})
-            keyframes.append({"time": time_point, "frames_of_bones": keyframe})
+        if _is_keyframe_file(os.path.join(keyframes_dir, fname)):
+            pathnames.append(os.path.join(keyframes_dir, fname))
+    return pathnames
+
+
+def _load_keyframes(primary=True):
+    keyframes = []
+    for pathname in _get_keyframes_files(primary):
+        with open(pathname, "r") as f:
+            lines = f.readlines()
+        time_point = float(lines[0])
+        num_frames = int(lines[1])
+        keyframe = []
+        for i in range(num_frames):
+            idx = 2+i*7
+            pos = [float(lines[idx+0]), float(lines[idx+1]), float(lines[idx+2])]
+            idx += 3
+            rot = [float(lines[idx+0]), float(lines[idx+1]), float(lines[idx+2]), float(lines[idx+3])]
+            keyframe.append({"pos": pos, "rot": rot})
+        keyframes.append({"time": time_point, "frames_of_bones": keyframe})
     return sorted(keyframes, key=lambda x: x["time"])
 
 
@@ -461,7 +473,8 @@ def command_colliders():
     state = Config.instance.state
     with open(os.path.join(_get_keyframes_dir(), "meta_motion_colliders.txt"), "w") as f:
         f.write(str(num_frames) + "\n")
-        for _ in range(num_frames):
+        for i in range(num_frames):
+            f.write("%% " + str(i) + "\n")
             f.write("@" + state.shape + "\n")
             if state.shape == "capsule":
                 f.write(_float_to_string(state.length) + "\n")
@@ -500,7 +513,8 @@ def command_constraints():
     state = Config.instance.state
     with open(os.path.join(_get_keyframes_dir(), "meta_constraints.txt"), "w") as f:
         f.write(str(num_frames) + "\n")
-        for _ in range(num_frames):
+        for i in range(num_frames):
+            f.write("%% " + str(i) + "\n")
             f.write("@" + str(Config.instance.cmdline.arguments[0]) + "\n")
             if Config.instance.cmdline.arguments[0] == "contact_normal_cone":
                 f.write(_float_to_string(state.vec_down_mult * state.vec_down[0]) + "\n")
@@ -513,7 +527,7 @@ def command_constraints():
 
 def command_joint_distances_help():
     return """
-joint_distances [<keyframe-index>|* <keyframe-index>|*]
+joint_distances [<keyframe-index>|* <keyframe-index>|*] [write|extend]
     Computes weighted distances between related bone-joints in (different)
     keyframes of (different) animations. The state variables 'anim_dir' and
     'anim_dir2' denote animations, whose keyframes will be considered. The
@@ -523,12 +537,25 @@ joint_distances [<keyframe-index>|* <keyframe-index>|*]
     other, or between all keyframe from one animation with all keyframes from
     the other. The special value '*' for an argument allows you to specify
     the use of all keyframes of the corresponding animation.
-    When no argument is passed or at least one argument is '*', then summary
-    distances (i.e. sum of distances between corresponding joint) are computed
-    between keyframes.
-    When both arguments are numbers (i.e. indices of concrete keyframes), then
-    there are printed distances per individual joint, and also the summary
-    distance.
+    The command accepts two kinds of arguments: A keyframe specifier
+    '<keyframe-index>|*' or write modifier 'write|extend'.
+    When no keyframe specifier argument is passed or at least one keyframe
+    specifier argument is '*', then summary distances (i.e. sum of distances
+    between corresponding joint) are computed between keyframes.
+    When both keyframe specifier arguments are numbers (i.e. indices of
+    concrete keyframes), then there are printed distances per individual
+    joint, and also the summary distance.
+    When no write modifier is passed, then the results are not written to the
+    meta files of the animations. Otherwise, the meta files of the animations,
+    namely the files:
+        work_dir/anim_dir/meta_keyframe_equivalences.txt
+        work_dir/anim_dir2/meta_keyframe_equivalences.txt
+    are updated by the computed results. The modifier 'write' replaces results
+    of a previous call to this command on the animations by the currently
+    computed ones. The modifier 'extend' extends the files by the currently
+    computed result, i.e. preserving results from the receding calls of this
+    command, except that replaced are old records colliding with the currently
+    computed ones.
     NOTE: By 'joint' we actually mean the origin of the coordinate system in
           a keyframe file.
     NOTE: The Euclidean distance between corresponding joints is multiplied by
@@ -540,8 +567,15 @@ joint_distances [<keyframe-index>|* <keyframe-index>|*]
 
 
 def command_joint_distances():
-    if len(Config.instance.cmdline.arguments) != 0 and len(Config.instance.cmdline.arguments) != 2:
-        raise Exception("Wrong number of argument. Either zero or two arguments are expected.")
+    do_write = True if len(Config.instance.cmdline.arguments) > 0 and Config.instance.cmdline.arguments[-1] in ["write", "extend"] else False
+    do_extend = True if do_write and Config.instance.cmdline.arguments[-1] == "extend" else False
+    arguments = Config.instance.cmdline.arguments if do_write is False else Config.instance.cmdline.arguments[:-1]
+    if "write" in arguments:
+        raise Exception("The 'write' argument must be the last argument.")
+    if len(arguments) != 0 and len(arguments) != 2:
+        raise Exception("Wrong number of argument. Either zero or two keyframe index arguments are expected.")
+    if len(arguments) == 0:
+        arguments = ["*", "*"]
 
     state = Config.instance.state
 
@@ -566,14 +600,14 @@ def command_joint_distances():
             joints_in_reference_frames[kind_name].append(_get_bone_joints_in_meta_reference_frame(frames, reference_frames[i]))
 
     index_filters = {"primary": -1, "secondary": -1}
-    if len(Config.instance.cmdline.arguments) == 2:
-        for idx, kind_name in [(0, "primary"), (1, "secondary")]:
-            if Config.instance.cmdline.arguments[idx] != "*":
-                index_filters[kind_name] = int(Config.instance.cmdline.arguments[idx])
-                if index_filters[kind_name] < 0 or index_filters[kind_name] >= len(joints_in_reference_frames[kind_name]):
-                    raise Exception("Illegal argument " + str(idx) + ": " + Config.instance.cmdline.arguments[idx] + ". " +
-                                    "Use the command 'list keyframes' to see valid range for the argument.")
+    for idx, kind_name in [(0, "primary"), (1, "secondary")]:
+        if arguments[idx] != "*":
+            index_filters[kind_name] = int(arguments[idx])
+            if index_filters[kind_name] < 0 or index_filters[kind_name] >= len(joints_in_reference_frames[kind_name]):
+                raise Exception("Illegal argument " + str(idx) + ": " + Config.instance.cmdline.arguments[idx] + ". " +
+                                "Use the command 'list keyframes' to see valid range for the argument.")
 
+    equality_groups = {"primary": {}, "secondary": {}}
     if len(Config.instance.cmdline.arguments) == 0 or any(index_filters[kind_name] == -1 for kind_name in ["primary", "secondary"]):
         distances = []
         for i in range(len(joints_in_reference_frames["primary"])):
@@ -598,6 +632,12 @@ def command_joint_distances():
                   Config.instance.state.anim_dir + ":" + str(props[1]) + " vs. " +
                   Config.instance.state.anim_dir2 + ":" + str(props[2])
                   )
+            if do_write is True and threshold_line_printed is True:
+                for idx, kind_name, other_idx in [(1, "primary", 2), (2, "secondary", 1)]:
+                    if props[idx] in equality_groups[kind_name]:
+                        equality_groups[kind_name][props[idx]].add(props[other_idx])
+                    else:
+                        equality_groups[kind_name][props[idx]] = {props[other_idx]}
     else:
         distances = {}
         joints_primary = joints_in_reference_frames["primary"][index_filters["primary"]]
@@ -607,8 +647,96 @@ def command_joint_distances():
                 distances[names[k]] = _distance_between_points(joints_primary[k], joints_secondary[k]) * bone_weights[k]
         for bone_name in sorted(distances.keys(), key=lambda x: -distances[x]):
             print(bone_name + ": " + _float_to_string(distances[bone_name]))
-        print("--------------")
-        print("sum: " + _float_to_string(sum(distances[bone_name] for bone_name in distances.keys())))
+        summary_distance = sum(distances[bone_name] for bone_name in distances.keys())
+        print("--------------\nsum: " + _float_to_string(summary_distance))
+        if do_write is True and summary_distance <= Config.instance.state.distance_threshold:
+            equality_groups["primary"][index_filters["primary"]] = {index_filters["secondary"]}
+            equality_groups["secondary"][index_filters["secondary"]] = {index_filters["primary"]}
+
+    if do_write is False:
+        return
+
+    def transitive_closure(orig_set, map_fwd, map_bwd):
+        processed = set()
+        closure = orig_set.copy()
+        work_list = list(orig_set)
+        while len(work_list) > 0:
+            elem = work_list[0]
+            work_list = work_list[1:]
+            closure.add(elem)
+            if elem in processed:
+                continue
+            processed.add(elem)
+            if elem in map_bwd:
+                for y in map_bwd[elem]:
+                    if y in map_fwd:
+                        for x in map_fwd[y]:
+                            work_list.append(x)
+        return closure
+
+    for x in equality_groups["primary"]:
+        equality_groups["primary"][x] = transitive_closure(equality_groups["primary"][x], equality_groups["primary"], equality_groups["secondary"])
+    for y in equality_groups["secondary"]:
+        equality_groups["secondary"][y] = transitive_closure(equality_groups["secondary"][y], equality_groups["secondary"], equality_groups["primary"])
+
+    for kind, kind_name, other_anim_name in [(True, "primary", os.path.basename(state.anim_dir2)),
+                                             (False, "secondary", os.path.basename(state.anim_dir))]:
+
+        # First load keyframe equivalences file, if exists.
+
+        keyframe_equivalences = {i: {} for i in range(len(joints_in_reference_frames[kind_name]))}
+        pathname = os.path.join(_get_keyframes_dir(kind, True), "meta_keyframe_equivalences.txt")
+        if os.path.isfile(pathname):
+            with open(pathname, "r") as f:
+                lines = f.readlines()
+            num_keyframes = int(lines[0])
+            bone = -1
+            anim_name = None
+            for i in range(1, len(lines)):
+                line = lines[i].strip()
+                if len(line) == 0 or line.startswith("%%"):
+                    continue
+                if line[0] in ["+", "-"] or line[0].isdigit():
+                    if bone not in keyframe_equivalences or anim_name is None or anim_name not in keyframe_equivalences[bone]:
+                        raise Exception("A number is not expected at line " + str(i) + " in the file " + pathname)
+                    keyframe_equivalences[bone][anim_name].add(int(line))
+                else:
+                    if line[0] == "@":
+                        bone += 1
+                        if bone >= num_keyframes:
+                            raise Exception("The file '" + pathname + "' contains more records than declared on the first line.")
+                        line = line[1:]
+                    if len(line) == 0:
+                        anim_name = None
+                    else:
+                        anim_name = line
+                        keyframe_equivalences[bone][anim_name] = set()
+
+        # Next write the computed equivalence groups over the loaded keyfame_equivalences.
+
+        if do_extend is False:
+            for bone in keyframe_equivalences:
+                if other_anim_name in keyframe_equivalences[bone] and (state.anim_dir != state.anim_dir2 or kind is True):
+                    del keyframe_equivalences[bone][other_anim_name]
+        for idx, group in equality_groups[kind_name].items():
+            if idx in keyframe_equivalences:
+                keyframe_equivalences[idx][other_anim_name] = group
+            else:
+                keyframe_equivalences[idx] = {other_anim_name: group}
+
+        # Finally, save the updated keyfame_equivalences back to the disk.
+
+        with open(pathname, "w") as f:
+            f.write(str(len(keyframe_equivalences)) + "\n")
+            for i in range(len(keyframe_equivalences)):
+                f.write("%% " + str(i) + "\n@")
+                if len(keyframe_equivalences[i]) == 0:
+                    f.write("\n")
+                    continue
+                for anim_name in sorted(list(keyframe_equivalences[i].keys())):
+                    f.write(anim_name + "\n")
+                    for idx in sorted(list(keyframe_equivalences[i][anim_name])):
+                        f.write(str(idx) + "\n")
 
 
 def command_get_help():
@@ -674,7 +802,7 @@ def command_list():
                 continue
             has_keyframe = False
             for keyframe in os.listdir(dir_path):
-                if os.path.isfile(os.path.join(dir_path, keyframe)) and keyframe.startswith("keyframe") and keyframe.endswith(".txt"):
+                if _is_keyframe_file(os.path.join(dir_path, keyframe)):
                     has_keyframe = True
                     break
             if has_keyframe:
@@ -688,7 +816,7 @@ def command_list():
             dir_path = os.path.join(Config.instance.state.work_dir, anim_dir)
             num_keyframes = 0
             for keyframe in os.listdir(dir_path):
-                if os.path.isfile(os.path.join(dir_path, keyframe)) and keyframe.startswith("keyframe") and keyframe.endswith(".txt"):
+                if _is_keyframe_file(os.path.join(dir_path, keyframe)):
                     num_keyframes += 1
             print(anim_dir + ": " + str(num_keyframes))
     else:
@@ -721,7 +849,8 @@ def command_mass_distributions():
     state = Config.instance.state
     with open(os.path.join(_get_keyframes_dir(), "meta_mass_distributions.txt"), "w") as f:
         f.write(str(num_frames) + "\n")
-        for _ in range(num_frames):
+        for i in range(num_frames):
+            f.write("%% " + str(i) + "\n")
             f.write("@_\n")
             f.write(_float_to_string(state.mass_inverted) + "\n")
             for i in range(3):
@@ -774,11 +903,9 @@ def command_motion_actions():
     state = Config.instance.state
     with open(os.path.join(_get_keyframes_dir(), "meta_motion_actions.txt"), "w") as f:
         f.write(str(num_frames) + "\n")
-        for _ in range(num_frames):
-            prefix = "@"
+        for i in range(num_frames):
+            f.write("%% " + str(i) + "\n@")
             for action in Config.instance.cmdline.arguments:
-                f.write(prefix)
-                prefix = ""
                 f.write(str(action) + "\n")
                 if action == "none":
                     pass
