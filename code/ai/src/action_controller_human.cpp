@@ -311,26 +311,77 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
     if (is_motion_constraint_satisfied == true)
     {
         for (auto const&  action_props : m_motion_object_action_props.m_records)
-            if (action_props.keyword == "accelerate_towards_clipped_desired_linear_velocity")
+            if (action_props.keyword == "none")
+                continue;
+            else if (action_props.keyword == "accelerate_towards_clipped_desired_linear_velocity")
             {
                 enum INDICES_OF_ARGUMENTS
                 {
                     VEC_FWD             = 0,
                     ANGLE               = 3,
-                    MIN_LINEAR_SPEED    = 4,
-                    MAX_LINEAR_SPEED    = 5,
-                    MAX_LINEAR_ACCEL    = 6,
+                    MAX_LINEAR_ACCEL    = 4,
                 };
 
-                vector3  clipped_linear_velocity_in_world_space;
+                vector3  clipped_desired_linear_velocity_in_world_space;
                 {
-                    vector3 const  current_linear_velocity_in_world_space =
-                            get_blackboard()->m_scene->get_linear_velocity_of_rigid_body_of_scene_node(m_motion_object_nid);
-                    // TODO!
-                    clipped_linear_velocity_in_world_space = current_linear_velocity_in_world_space;
+                    vector3 const  cone_unit_axis_vector_in_anim_space(
+                            action_props.arguments.at(VEC_FWD + 0),
+                            action_props.arguments.at(VEC_FWD + 1),
+                            action_props.arguments.at(VEC_FWD + 2)
+                            );
+                    vector3 const  cone_unit_axis_vector_in_world_space =
+                            quaternion_to_rotation_matrix(motion_object_frame.orientation()) * cone_unit_axis_vector_in_anim_space;
+                    vector3  rot_axis = cross_product(cone_unit_axis_vector_in_world_space, m_desired_linear_velocity_in_world_space);
+                    float_32_bit const  rot_axis_length = length(rot_axis);
+
+                    float_32_bit  ideal_linear_speed;
+                    {
+                        skeletal_motion_templates::keyframes const&  src_animation =
+                                get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.src_pose.motion_name
+                                );
+                        skeletal_motion_templates::keyframes const&  dst_animation =
+                                get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.dst_pose.motion_name
+                                );
+                        vector3 const  position_delta =
+                                dst_animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index).origin() -
+                                src_animation.get_meta_data().m_reference_frames.at(m_template_motion_info.src_pose.keyframe_index).origin();
+                        float_32_bit const  time_delta =
+                                dst_animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index).get_time_point() -
+                                src_animation.keyframe_at(m_template_motion_info.src_pose.keyframe_index).get_time_point() ;
+                        ideal_linear_speed = length(position_delta) / std::max(time_delta, 0.0001f);
+                    }
+
+                    if (rot_axis_length < 0.001f)
+                        clipped_desired_linear_velocity_in_world_space =
+                            (ideal_linear_speed / length(cone_unit_axis_vector_in_world_space)) * cone_unit_axis_vector_in_world_space;
+                    else
+                    {
+                        rot_axis /= rot_axis_length;
+                        float_32_bit  rot_angle;
+                        {
+                            float_32_bit const  full_rot_angle =
+                                    angeo::compute_rotation_angle(
+                                            rot_axis,
+                                            cone_unit_axis_vector_in_world_space,
+                                            m_desired_linear_velocity_in_world_space
+                                            );
+                            if (std::fabs(full_rot_angle) <= action_props.arguments.at(ANGLE))
+                                rot_angle = full_rot_angle;
+                            else
+                                rot_angle = (full_rot_angle >= 0.0f ? 1.0f : -1.0f) * action_props.arguments.at(ANGLE);
+                        }
+                        clipped_desired_linear_velocity_in_world_space =
+                                quaternion_to_rotation_matrix(angle_axis_to_quaternion(rot_angle, rot_axis))
+                                * cone_unit_axis_vector_in_world_space;
+
+                        clipped_desired_linear_velocity_in_world_space *=
+                                ideal_linear_speed / length(clipped_desired_linear_velocity_in_world_space);
+                    }
                 }
+                vector3 const  current_linear_velocity_in_world_space =
+                        get_blackboard()->m_scene->get_linear_velocity_of_rigid_body_of_scene_node(m_motion_object_nid);
                 vector3  agent_linear_acceleration =
-                        (m_desired_linear_velocity_in_world_space - clipped_linear_velocity_in_world_space) / time_step_in_seconds;
+                        (clipped_desired_linear_velocity_in_world_space - current_linear_velocity_in_world_space) / time_step_in_seconds;
                 float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
                 if (agent_linear_acceleration_magnitude > action_props.arguments.at(MAX_LINEAR_ACCEL))
                     agent_linear_acceleration *= action_props.arguments.at(MAX_LINEAR_ACCEL) / agent_linear_acceleration_magnitude;
