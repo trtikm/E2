@@ -113,6 +113,7 @@ struct  keyframes_data
         std::vector<records<float_32_bit> >  m_motion_actions;
         std::vector<records<float_32_bit> >  m_motion_colliders;
         std::vector<records<float_32_bit> >  m_mass_distributions;
+        std::vector<records<natural_32_bit> >  m_keyframe_equivalences;
     };
 
     keyframes_data(async::finalise_load_on_destroy_ptr const  finaliser);

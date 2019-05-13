@@ -306,6 +306,14 @@ keyframes_data::keyframes_data(
                 throw std::runtime_error(msgstream() << "Cannot open the meta data file '" << pathname << "'.");
             read_meta_data_records(istr, pathname, m_meta_data.m_mass_distributions);
         }
+        else if (filename == "meta_keyframe_equivalences.txt")
+        {
+            boost::filesystem::path const  pathname = keyframes_dir / filename;
+            std::ifstream  istr(pathname.string(), std::ios_base::binary);
+            if (!istr.good())
+                throw std::runtime_error(msgstream() << "Cannot open the meta data file '" << pathname << "'.");
+            read_meta_data_records(istr, pathname, m_meta_data.m_keyframe_equivalences);
+        }
     }
 }
 
