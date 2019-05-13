@@ -875,8 +875,6 @@ motion_actions <action-name>+
             - 'vec_fwd' as axis of the clipping cone
             - 'angle' defines a maximal angle between a linear velocity and
                       the axis of the cone.
-            - 'min_linear_speed' minimal magnitude of the linear velocity
-            - 'max_linear_speed' maximal magnitude of the linear velocity
             - 'max_linear_accel' maximal magnitude of the linear acceleration
     * 'chase_linear_velocity_by_forward_vector':
         Rotates the reference frame in the world so that distance between
@@ -914,8 +912,6 @@ def command_motion_actions():
                     f.write(_float_to_string(state.vec_fwd[1]) + "\n")
                     f.write(_float_to_string(state.vec_fwd[2]) + "\n")
                     f.write(_float_to_string(state.angle) + "\n")
-                    f.write(_float_to_string(state.min_linear_speed) + "\n")
-                    f.write(_float_to_string(state.max_linear_speed) + "\n")
                     f.write(_float_to_string(state.max_linear_accel) + "\n")
                 elif action == "chase_linear_velocity_by_forward_vector":
                     f.write(_float_to_string(state.vec_fwd[0]) + "\n")
