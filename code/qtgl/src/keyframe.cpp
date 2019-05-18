@@ -22,6 +22,8 @@ void  read_coord_systems(
         std::vector<angeo::coordinate_system>&  coord_systems
         )
 {
+    TMPROF_BLOCK();
+
     for (natural_32_bit  i = 0U; i != num_coord_systems_to_read; ++i)
     {
         vector3  position;
@@ -69,6 +71,8 @@ natural_32_bit  read_all_coord_systems(
         std::vector<angeo::coordinate_system>&  coord_systems
         )
 {
+    TMPROF_BLOCK();
+
     natural_32_bit  num_coord_systems;
     {
         std::string  line;
@@ -91,6 +95,8 @@ natural_32_bit  read_meta_data_records(
     std::vector<keyframes_data::meta_data::records<elem_type> >&  output
     )
 {
+    TMPROF_BLOCK();
+
     natural_32_bit  num_records;
     {
         std::string  line;
