@@ -10,6 +10,7 @@
 #include <limits>
 #include <queue>
 #include <unordered_map>
+#include <functional>
 
 namespace ai { namespace detail {
 
@@ -242,12 +243,6 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
 }
 
 
-inline bool  operator<(find_best_keyframe_queue_record const&  left, find_best_keyframe_queue_record const&  right)
-{
-    return left.cost < right.cost;
-}
-
-
 float_32_bit  find_best_keyframe(
         skeletal_motion_templates::motion_template_cursor const&  src_cursor,
         find_best_keyframe_constants const&  constants,
@@ -269,7 +264,14 @@ float_32_bit  find_best_keyframe(
             >
         visited;
 
-    std::priority_queue<find_best_keyframe_queue_record>  queue;
+    std::priority_queue<
+            find_best_keyframe_queue_record,
+            std::vector<find_best_keyframe_queue_record>,
+            std::function<bool(find_best_keyframe_queue_record const&, find_best_keyframe_queue_record const&)>
+            >
+        queue([](find_best_keyframe_queue_record const&  left, find_best_keyframe_queue_record const&  right) -> bool {
+                return left.cost > right.cost; // We need inverse order: obtain lower costs first.
+                });
     queue.push(find_best_keyframe_queue_record(src_cursor));
 
     float_32_bit  best_total_interpolation_time_in_seconds = 0.0f;
