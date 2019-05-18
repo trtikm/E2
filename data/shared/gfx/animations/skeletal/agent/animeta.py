@@ -937,7 +937,7 @@ reference_frames  move_straight|
     * move_straight:
         for each keyframe the computed reference frame looks as this
             reference_frame {
-                "pos": pivot + t * vec_fwd
+                "pos": pivot + t * vec_fwd,
                 "rot": basis_vectors_to_quaternion(
                             cross_product(
                                 vec_fwd_mult * vec_fwd,
@@ -951,6 +951,19 @@ reference_frames  move_straight|
             X = pivot + t * vec_fwd
             vec_fwd * (X - keyframe["frames_of_bones"][bone_idx]["pos"]) = 0
         NOTE: Standing can be considered as a special case of this motion.
+    * all_same:
+        for each keyframe the computed reference frame looks as this:
+            reference_frame {
+                "pos": pivot,
+                "rot": basis_vectors_to_quaternion(
+                            cross_product(
+                                vec_fwd_mult * vec_fwd,
+                                vec_down_mult * vec_down
+                                ),
+                            vec_fwd_mult * vec_fwd,
+                            vec_down_mult * vec_down
+                            )
+            }
     The computed frames (by any procedure) are always saved into file:
         work_dir/anim_dir/meta_reference_frames.txt
     If the file exists, them it will be overwritten.
@@ -975,6 +988,18 @@ def command_reference_frames():
         for keyframe in _load_keyframes():
             t = numpy.dot(motion_direction, numpy.subtract(keyframe["frames_of_bones"][state.bone_idx]["pos"], state.pivot)) / motion_direction_dot
             pos = numpy.add(state.pivot, t * motion_direction)
+            meta_reference_frames.append({"pos": pos, "rot": rot})
+    elif Config.instance.cmdline.arguments[0] == "all_same":
+        motion_direction = numpy.array(state.vec_fwd)
+        rot = _basis_vectors_to_quaternion(
+                    numpy.cross(state.vec_fwd_mult * motion_direction, state.vec_down_mult * numpy.array(state.vec_down)),
+                    state.vec_fwd_mult * motion_direction,
+                    state.vec_down_mult * numpy.array(state.vec_down)
+                    )
+        keyframes = _load_keyframes()
+        t = numpy.dot(motion_direction, numpy.subtract(keyframes[0]["frames_of_bones"][state.bone_idx]["pos"], state.pivot)) / numpy.dot(motion_direction, motion_direction)
+        pos = numpy.add(state.pivot, t * motion_direction)
+        for _ in range(len(keyframes)):
             meta_reference_frames.append({"pos": pos, "rot": rot})
     else:
         raise Exception("Unknown argument '" + Config.instance.cmdline.arguments[0] + "'.")
