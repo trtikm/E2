@@ -1,5 +1,6 @@
 #include <ai/skeletal_motion_templates.hpp>
 #include <ai/skeleton_utils.hpp>
+#include <utility/hash_combine.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -41,6 +42,35 @@ bool  skeletal_motion_templates::wait_till_loaded_is_finished() const
         is_loaded = true;
     }
     return true;
+}
+
+
+bool  operator==(
+        skeletal_motion_templates::motion_template_cursor const&  left,
+        skeletal_motion_templates::motion_template_cursor const&  right
+        )
+{
+    return left.motion_name == right.motion_name && left.keyframe_index == right.keyframe_index;
+}
+
+
+bool  operator<(
+        skeletal_motion_templates::motion_template_cursor const&  left,
+        skeletal_motion_templates::motion_template_cursor const&  right
+        )
+{
+    return left.motion_name < right.motion_name || (left.motion_name == right.motion_name && left.keyframe_index < right.keyframe_index);
+}
+
+
+std::size_t skeletal_motion_templates::motion_template_cursor::hasher::operator()(
+        skeletal_motion_templates::motion_template_cursor const&  value
+        ) const
+{
+    std::size_t seed = 0;
+    ::hash_combine(seed, value.motion_name);
+    ::hash_combine(seed, value.keyframe_index);
+    return seed;
 }
 
 

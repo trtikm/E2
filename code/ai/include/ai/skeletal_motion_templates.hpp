@@ -27,6 +27,8 @@ struct skeletal_motion_templates
     {
         std::string  motion_name;
         natural_32_bit  keyframe_index;
+
+        struct  hasher { std::size_t operator()(motion_template_cursor const&  value) const; };
     };
 
     struct  template_motion_info
@@ -50,6 +52,16 @@ private:
 
 using  skeletal_motion_templates_ptr = std::shared_ptr<skeletal_motion_templates>;
 using  skeletal_motion_templates_const_ptr = std::shared_ptr<skeletal_motion_templates const>;
+
+
+bool  operator==(
+        skeletal_motion_templates::motion_template_cursor const&  left,
+        skeletal_motion_templates::motion_template_cursor const&  right
+        );
+bool  operator<(
+        skeletal_motion_templates::motion_template_cursor const&  left,
+        skeletal_motion_templates::motion_template_cursor const&  right
+        );
 
 
 }
