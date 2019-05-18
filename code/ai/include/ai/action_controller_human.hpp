@@ -22,6 +22,7 @@ struct  action_controller_human : public action_controller
 
 private:
     skeletal_motion_templates::template_motion_info  m_template_motion_info;
+    vector3  m_desired_linear_velocity_unit_direction_in_world_space;
     vector3  m_desired_linear_velocity_in_world_space;
     scene::node_id  m_motion_object_nid;
     skeletal_motion_templates::meta_records_real  m_motion_object_collider_props;
