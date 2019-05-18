@@ -7,6 +7,9 @@
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
+#include <limits>
+#include <queue>
+#include <unordered_map>
 
 namespace ai { namespace detail {
 
@@ -164,6 +167,172 @@ void  destroy_motion_scene_node(scene_ptr const  s, scene::node_id const&  motio
 {
     destroy_collider_and_rigid_bofy_of_motion_scene_node(s, motion_object_nid);
     s->erase_scene_node(motion_object_nid);
+}
+
+
+struct  find_best_keyframe_constants
+{
+    skeletal_motion_templates_const_ptr  motion_templates;
+    float_32_bit  time_to_consume_in_seconds;
+    float_32_bit  search_time_horizon_in_seconds;
+    vector3  desired_linear_velocity_in_world_space;
+};
+
+
+struct  find_best_keyframe_queue_record
+{
+    explicit find_best_keyframe_queue_record(skeletal_motion_templates::motion_template_cursor const&  start);
+
+    find_best_keyframe_queue_record(
+            find_best_keyframe_queue_record const&  predecessor,
+            skeletal_motion_templates::motion_template_cursor const&  cursor_override,
+            find_best_keyframe_constants const&  constants
+            );
+
+    skeletal_motion_templates::motion_template_cursor  cursor;
+    float_32_bit  distance_travelled_in_meters;
+    float_32_bit  time_taken_in_seconds;
+    float_32_bit  cost;
+    integer_32_bit  start_record_index;
+};
+
+
+find_best_keyframe_queue_record::find_best_keyframe_queue_record(skeletal_motion_templates::motion_template_cursor const&  start)
+    : cursor(start)
+    , distance_travelled_in_meters(0.0f)
+    , time_taken_in_seconds(0.0f)
+    , cost(std::numeric_limits<float_32_bit>::max())
+    , start_record_index(-1)
+{}
+
+
+find_best_keyframe_queue_record::find_best_keyframe_queue_record(
+        find_best_keyframe_queue_record const&  predecessor,
+        skeletal_motion_templates::motion_template_cursor const&  cursor_override,
+        find_best_keyframe_constants const&  constants
+        )
+    : cursor{ cursor_override.motion_name, cursor_override.keyframe_index + 1U }
+    , distance_travelled_in_meters(predecessor.distance_travelled_in_meters)
+    , time_taken_in_seconds(predecessor.time_taken_in_seconds)
+    , cost()
+    , start_record_index(predecessor.start_record_index)
+{
+    skeletal_motion_templates::keyframes const&  animation = constants.motion_templates->motions_map.at(cursor.motion_name);
+
+    float_32_bit const  time_delta_in_seconds =
+            animation.keyframe_at(cursor.keyframe_index).get_time_point() -
+            animation.keyframe_at(cursor.keyframe_index - 1U).get_time_point();
+    INVARIANT(time_delta_in_seconds > 0.0001f);
+
+    time_taken_in_seconds += time_delta_in_seconds;
+
+    vector3 const  position_delta_in_anim_space =
+            animation.get_meta_data().m_reference_frames.at(cursor.keyframe_index).origin() -
+            animation.get_meta_data().m_reference_frames.at(cursor.keyframe_index - 1).origin();
+
+    distance_travelled_in_meters += length(position_delta_in_anim_space);
+
+    float_32_bit const  average_linear_speed_in_anim_space = distance_travelled_in_meters / time_taken_in_seconds;
+
+    float_32_bit const  speed_distance =
+            std::fabs(length(constants.desired_linear_velocity_in_world_space) - distance_travelled_in_meters / time_taken_in_seconds);
+    float_32_bit const  time_distance = 1.0f + time_taken_in_seconds / constants.search_time_horizon_in_seconds;
+
+    cost = time_distance * speed_distance;
+}
+
+
+inline bool  operator<(find_best_keyframe_queue_record const&  left, find_best_keyframe_queue_record const&  right)
+{
+    return left.cost < right.cost;
+}
+
+
+float_32_bit  find_best_keyframe(
+        skeletal_motion_templates::motion_template_cursor const&  src_cursor,
+        find_best_keyframe_constants const&  constants,
+        skeletal_motion_templates::motion_template_cursor&  best_cursor
+        )
+{
+    TMPROF_BLOCK();
+    ASSUMPTION(constants.time_to_consume_in_seconds >= 0.0f);
+    ASSUMPTION(constants.search_time_horizon_in_seconds > 0.0001f);
+    ASSUMPTION(constants.time_to_consume_in_seconds < constants.search_time_horizon_in_seconds);
+
+    using start_record = std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit>;
+    std::vector<start_record>  start_records;
+
+    std::unordered_map<
+            skeletal_motion_templates::motion_template_cursor,
+            float_32_bit,
+            skeletal_motion_templates::motion_template_cursor::hasher
+            >
+        visited;
+
+    std::priority_queue<find_best_keyframe_queue_record>  queue;
+    queue.push(find_best_keyframe_queue_record(src_cursor));
+
+    float_32_bit  best_total_interpolation_time_in_seconds = 0.0f;
+    float_32_bit  best_cost = std::numeric_limits<float_32_bit>::max();
+
+    do
+    {
+        find_best_keyframe_queue_record const  current = queue.top();
+        queue.pop();
+
+        auto const  visited_it = visited.find(current.cursor);
+        if (visited_it != visited.cend())
+        {
+            if (visited_it->second <= current.cost)
+                continue;
+            else
+                visited_it->second = current.cost;
+        }
+        else
+            visited.insert({ current.cursor, current.cost });
+
+        if (current.start_record_index >= 0 && current.cost < best_cost)
+        {
+            auto const&  record = start_records.at(current.start_record_index);
+            best_cursor = record.first;
+            best_total_interpolation_time_in_seconds = record.second;
+            best_cost = current.cost;
+        }
+
+        if (current.time_taken_in_seconds > constants.search_time_horizon_in_seconds)
+            continue;
+
+        std::vector<skeletal_motion_templates::motion_template_cursor>  cursors{ current.cursor };
+        {
+            skeletal_motion_templates::keyframes const&  animation = constants.motion_templates->motions_map.at(current.cursor.motion_name);
+            for (auto const& equivalence_info : animation.get_meta_data().m_keyframe_equivalences.at(current.cursor.keyframe_index).m_records)
+                for (auto const& index : equivalence_info.arguments)
+                    cursors.push_back({ equivalence_info.keyword, index });
+        }
+
+        bool  was_at_least_one_successor_processed = false;
+        for (auto const&  cursor : cursors)
+        {
+            auto const&  keyframes = constants.motion_templates->motions_map.at(cursor.motion_name).get_keyframes();
+            if (cursor.keyframe_index + 1U < keyframes.size())
+            {
+                find_best_keyframe_queue_record  successor(current, cursor, constants);
+                if (successor.start_record_index < 0 && successor.time_taken_in_seconds >= constants.time_to_consume_in_seconds)
+                {
+                    successor.start_record_index = (integer_32_bit)start_records.size();
+                    start_records.push_back({ successor.cursor, successor.time_taken_in_seconds });
+                }
+
+                queue.push(successor);
+
+                was_at_least_one_successor_processed = true;
+            }
+        }
+        INVARIANT(was_at_least_one_successor_processed == true);
+    }
+    while (!queue.empty());
+
+    return best_total_interpolation_time_in_seconds;
 }
 
 
@@ -455,50 +624,72 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         time_step_in_seconds -= time_till_dst_pose;
         INVARIANT(time_step_in_seconds >= 0.0f);
 
+        vector3 const  current_linear_velocity_in_world_space =
+                get_blackboard()->m_scene->get_linear_velocity_of_rigid_body_of_scene_node(m_motion_object_nid);
+
+        vector3  target_linear_velocity_in_world_space;
+        {
+            if (m_template_motion_info.dst_pose.keyframe_index == 0U)
+                target_linear_velocity_in_world_space = current_linear_velocity_in_world_space;
+            else
+            {
+                skeletal_motion_templates::keyframes const&  animation =
+                        get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.dst_pose.motion_name
+                        );
+                float_32_bit const  time_delta =
+                        animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index).get_time_point() -
+                        animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index - 1U).get_time_point();
+                INVARIANT(time_delta > 0.0f);
+                vector3 const  position_delta =
+                        animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index).origin() -
+                        animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index - 1U).origin();
+
+                vector3 const  average_linear_velocity_in_anim_space = position_delta / std::max(time_delta, 0.0001f);
+
+                float_32_bit const  speed_distance =
+                        std::fabs(length(current_linear_velocity_in_world_space) - length(average_linear_velocity_in_anim_space));
+
+                if (speed_distance < 0.5f * length(average_linear_velocity_in_anim_space))
+                    target_linear_velocity_in_world_space = m_desired_linear_velocity_in_world_space;
+                else
+                    target_linear_velocity_in_world_space = current_linear_velocity_in_world_space;
+            }
+        }
+
         m_template_motion_info.src_pose = m_template_motion_info.dst_pose;
         m_template_motion_info.consumed_time_in_seconds = 0.0f;
-        m_template_motion_info.total_interpolation_time_in_seconds = 0.0f;
+        m_template_motion_info.total_interpolation_time_in_seconds =
+                detail::find_best_keyframe(
+                        m_template_motion_info.src_pose,
+                        detail::find_best_keyframe_constants{
+                                get_blackboard()->m_motion_templates,       // motion_templates
+                                time_step_in_seconds,                       // time_to_consume
+                                1.0f,                                       // search_time_horizon
+                                target_linear_velocity_in_world_space       // desired_linear_velocity
+                                },
+                        m_template_motion_info.dst_pose
+                        );
 
-        vector3  ideal_linear_velocity_in_animation_space = vector3_zero();
-        float_32_bit  desired_angular_speed_in_animation_space = 0.0f;
-
-        skeletal_motion_templates::keyframes const&  src_animation =
-                get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.src_pose.motion_name
-                );
-        skeletal_motion_templates::keyframes const&  dst_animation =
-                get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.dst_pose.motion_name
-                );
-        do
+        float_32_bit  animation_speed_coef;
         {
-            if (m_template_motion_info.dst_pose.keyframe_index + 1U == dst_animation.get_keyframes().size())
-                if (true) // do repeat?
-                    m_template_motion_info.dst_pose.keyframe_index = 0U;
-                else
-                {
-                    time_step_in_seconds = m_template_motion_info.total_interpolation_time_in_seconds;
-                    break;
-                }
-            ++m_template_motion_info.dst_pose.keyframe_index;
-
-            float_32_bit const  time_delta =
-                    dst_animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index).get_time_point() -
-                    dst_animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index - 1U).get_time_point();
-            INVARIANT(time_delta > 0.0f);
-            m_template_motion_info.total_interpolation_time_in_seconds += time_delta;
-
-            vector3 const  position_delta =
-                    dst_animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index).origin() -
-                    dst_animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index - 1U).origin();
-            ideal_linear_velocity_in_animation_space += position_delta / std::max(time_delta, 0.0001f);
+            skeletal_motion_templates::keyframes const&  animation =
+                    get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.dst_pose.motion_name
+                    );
+            float_32_bit const  time_delta_in_seconds =
+                    animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index).get_time_point() -
+                    animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index - 1U).get_time_point();
+            INVARIANT(time_delta_in_seconds > 0.0f);
+            vector3 const  position_delta_in_anim_space =
+                    animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index).origin() -
+                    animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index - 1U).origin();
+            vector3 const  average_linear_velocity_in_anim_space =
+                    position_delta_in_anim_space / std::max(time_delta_in_seconds, 0.0001f);
+            float_32_bit const  linear_acceleration_ratio =
+                    (length(current_linear_velocity_in_world_space) + 0.001f) / (length(average_linear_velocity_in_anim_space) + 0.001f);
+            
+            animation_speed_coef = std::max(0.5f, std::min(2.0f, linear_acceleration_ratio));
         }
-        while (time_step_in_seconds > m_template_motion_info.total_interpolation_time_in_seconds);
 
-        INVARIANT(m_template_motion_info.total_interpolation_time_in_seconds > 0.0f);
-
-        float_32_bit const  linear_acceleration_ratio =
-                (length(get_blackboard()->m_scene->get_linear_velocity_of_rigid_body_of_scene_node(m_motion_object_nid)) + 0.001f)
-                / (length(ideal_linear_velocity_in_animation_space) + 0.001f);
-        float_32_bit const  animation_speed_coef = std::max(0.5f, std::min(2.0f, linear_acceleration_ratio));
         m_template_motion_info.total_interpolation_time_in_seconds /= animation_speed_coef;
 
         time_step_in_seconds = std::min(time_step_in_seconds, m_template_motion_info.total_interpolation_time_in_seconds);
