@@ -886,6 +886,16 @@ motion_actions <action-name>+
             - 'vec_down_mult * vec_down' defines rotation axis (unit vector)
             - 'max_angular_speed' maximal magnitude of the angular velocity
             - 'max_angular_accel' maximal magnitude of the angular acceleration
+    * 'dont_move':
+        Creates a linear acceleration on the agent's rigid body so that its
+        linear velocity gets smaller and smaller. Parameters:
+            - 'max_linear_accel' maximal magnitude of the linear acceleration
+    * 'dont_rotate':
+        Creates an angular acceleration on the agent's rigid body so that its
+        angular velocity along the given axis (see below) decreases.
+        Parameters:
+            - 'vec_down_mult * vec_down' defines rotation axis (unit vector)
+            - 'max_angular_accel' maximal magnitude of the angular acceleration
     All motion actions are saved into file:
         work_dir/anim_dir/meta_motion_actions.txt
     If the file exists, them it will be overwritten.
@@ -923,6 +933,13 @@ def command_motion_actions():
                     f.write(_float_to_string(state.vec_down_mult * state.vec_down[1]) + "\n")
                     f.write(_float_to_string(state.vec_down_mult * state.vec_down[2]) + "\n")
                     f.write(_float_to_string(state.max_angular_speed) + "\n")
+                    f.write(_float_to_string(state.max_angular_accel) + "\n")
+                elif action == "dont_move":
+                    f.write(_float_to_string(state.max_linear_accel) + "\n")
+                elif action == "dont_rotate":
+                    f.write(_float_to_string(state.vec_down_mult * state.vec_down[0]) + "\n")
+                    f.write(_float_to_string(state.vec_down_mult * state.vec_down[1]) + "\n")
+                    f.write(_float_to_string(state.vec_down_mult * state.vec_down[2]) + "\n")
                     f.write(_float_to_string(state.max_angular_accel) + "\n")
                 else:
                     raise Exception("Unknown action name '" + str(action) + "'")
