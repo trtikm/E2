@@ -615,6 +615,8 @@ def command_joint_distances():
                 continue
             joints_primary = joints_in_reference_frames["primary"][i]
             for j in range(len(joints_in_reference_frames["secondary"])):
+                if state.anim_dir == state.anim_dir2 and j <= i:
+                    continue
                 if index_filters["secondary"] > -1 and j != index_filters["secondary"]:
                     continue
                 joints_secondary = joints_in_reference_frames["secondary"][j]
