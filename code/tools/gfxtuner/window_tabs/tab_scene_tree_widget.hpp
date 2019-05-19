@@ -54,11 +54,13 @@ private:
 public:
     tree_widget(
             std::function<void()> const&  on_selection_changed,
-            std::function<void(tree_widget_item*)> const&  on_item_double_clicked_
+            std::function<void(tree_widget_item*)> const&  on_item_double_clicked_,
+            std::function<void()> const&  on_escape_widget_
             )
         : QTreeWidget()
         , m_on_selection_changed(on_selection_changed)
         , m_on_item_double_clicked(on_item_double_clicked_)
+        , m_on_escape_widget(on_escape_widget_)
         , m_from_nodes_to_widgets()
         , m_from_widgets_to_nodes()
     {
@@ -92,8 +94,11 @@ private:
     using QTreeWidget::addTopLevelItem;
     using QTreeWidget::takeTopLevelItem;
 
+    void  keyReleaseEvent(QKeyEvent* const event) override;
+
     std::function<void()>  m_on_selection_changed;
     std::function<void(tree_widget_item*)>  m_on_item_double_clicked;
+    std::function<void()>  m_on_escape_widget;
 
     using  from_nodes_to_widgets_map = std::unordered_map<scn::scene_record_id, tree_widget_item*>;
     using  from_widgets_to_nodes_map = std::unordered_map<tree_widget_item*, from_nodes_to_widgets_map::iterator>;

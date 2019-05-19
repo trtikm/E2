@@ -45,7 +45,8 @@ widgets::widgets(program_window* const  wnd)
 
     , m_scene_tree(new tree_widget(
             std::bind(&widgets::on_scene_hierarchy_item_selected, this),
-            std::bind(&widgets::on_scene_hierarchy_item_update_action, this, std::placeholders::_1)
+            std::bind(&widgets::on_scene_hierarchy_item_update_action, this, std::placeholders::_1),
+            std::bind(&widgets::on_scene_escape_widget, this)
             ))
 
     , m_node_icon((boost::filesystem::path{ get_program_options()->dataRoot() } /
@@ -342,7 +343,6 @@ void  widgets::on_scene_hierarchy_item_selected()
 
     update_history_according_to_change_in_selection(old_selection, new_selection, get_scene_history());
     set_window_title();
-    wnd()->set_focus_to_glwindow(false);
 }
 
 void  widgets::on_simulator_started()
@@ -1821,6 +1821,12 @@ void  widgets::on_simulation_resumed()
 {
     scene_tree()->setEnabled(false);
     enable_coord_system_location_widgets(false, true);
+}
+
+
+void  widgets::on_scene_escape_widget()
+{
+    wnd()->set_focus_to_glwindow(false);
 }
 
 
