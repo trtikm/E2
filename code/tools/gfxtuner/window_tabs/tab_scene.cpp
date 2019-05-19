@@ -367,7 +367,6 @@ void  widgets::on_timer_event()
             scene_dir = get_program_options()->dataRoot() / scene_dir;
         if (boost::filesystem::is_directory(scene_dir) && boost::filesystem::is_regular_file(scene_dir / "hierarchy.info"))
         {
-            wnd()->print_status_message("Loading scene '" + scene_dir.string() + "' ...", 10000);
             wnd()->get_current_scene_dir() = canonical_path(scene_dir);
             open_scene(wnd()->get_current_scene_dir());
         }
@@ -1150,7 +1149,11 @@ void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
         return;
     }
 
+    wnd()->print_status_message("Clearing the old scene ...", 10000);
+
     clear_scene();
+
+    wnd()->print_status_message("Loading scene '" + scene_root_dir.string() + "' ...", 10000);
 
     try
     {
@@ -1161,6 +1164,7 @@ void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
             load_scene_node(scn::scene_node_id(it->first), it->second, nullptr);
         //m_scene_tree->expandAll();
         wnd()->set_title(scene_root_dir.string());
+        wnd()->print_status_message("Loading of the scene has finished.", 10000);
     }
     catch (boost::property_tree::ptree_error const&  e)
     {
