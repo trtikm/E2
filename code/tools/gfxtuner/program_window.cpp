@@ -145,26 +145,28 @@ void program_window::timerEvent(QTimerEvent* const event)
 
         m_tab_scene_widgets.on_simulator_started();
     }
-
-    // Here put time-dependent updates...
-
-    if (!glwindow().has_simulator())
-        return;
-
-    m_status_bar.update();
-
-    std::string const  current_tab = qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex()));
-    if (current_tab == tab_names::DRAW())
+    else
     {
-        // Nothing to do...
-    }
-    else if (current_tab == tab_names::SCENE())
-    {
-        // Nothing to do...
-    }
-    else if (current_tab == tab_names::STATISTICS())
-    {
-        m_tab_statistics_widgets->on_timer_event();
+        // Here put time-dependent updates...
+
+        if (!glwindow().has_simulator())
+            return;
+
+        m_status_bar.update();
+
+        std::string const  current_tab = qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex()));
+        if (current_tab == tab_names::DRAW())
+        {
+            // Nothing to do...
+        }
+        else if (current_tab == tab_names::SCENE())
+        {
+            m_tab_scene_widgets.on_timer_event();
+        }
+        else if (current_tab == tab_names::STATISTICS())
+        {
+            m_tab_statistics_widgets->on_timer_event();
+        }
     }
 
     if (m_focus_just_received)

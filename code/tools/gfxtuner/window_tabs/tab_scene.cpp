@@ -347,13 +347,25 @@ void  widgets::on_scene_hierarchy_item_selected()
 
 void  widgets::on_simulator_started()
 {
+    clear_scene();
+
     if (get_program_options()->has_scene_dir())
+        m_pending_scene_dir_to_load = get_program_options()->scene_dir();
+}
+
+
+void  widgets::on_timer_event()
+{
+    if (!m_pending_scene_dir_to_load.empty())
     {
-        boost::filesystem::path  scene_dir = get_program_options()->scene_dir();
+        boost::filesystem::path  scene_dir = m_pending_scene_dir_to_load;
+        m_pending_scene_dir_to_load.clear();
+
         if (!boost::filesystem::is_directory(scene_dir))
             scene_dir = get_program_options()->dataRoot() / scene_dir;
         if (boost::filesystem::is_directory(scene_dir) && boost::filesystem::is_regular_file(scene_dir / "hierarchy.info"))
         {
+            wnd()->print_status_message("Loading scene '" + scene_dir.string() + "' ...", 10000);
             wnd()->get_current_scene_dir() = canonical_path(scene_dir);
             open_scene(wnd()->get_current_scene_dir());
         }
@@ -363,9 +375,8 @@ void  widgets::on_simulator_started()
             wnd()->print_status_message("ERROR: Scene directory passed via command-line is wrong.", 10000);
         }
     }
-    else
-        clear_scene();
 }
+
 
 void  widgets::on_scene_hierarchy_item_update_action(tree_widget_item* const  item)
 {

@@ -49,6 +49,7 @@ struct  widgets
     QLineEdit* coord_system_roll() const { return m_coord_system_roll; }
 
     void  on_simulator_started();
+    void  on_timer_event();
 
     void  on_scene_hierarchy_item_selected();
     void  on_scene_hierarchy_item_update_action(tree_widget_item* const  item);
@@ -193,6 +194,8 @@ private:
     QLineEdit*  m_coord_system_roll;
 
     std::unordered_map<scn::scene_node_id, angeo::coordinate_system>  m_coord_system_location_backup_buffer;
+
+    boost::filesystem::path  m_pending_scene_dir_to_load;
 };
 
 

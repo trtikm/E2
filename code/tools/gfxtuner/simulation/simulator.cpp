@@ -1996,8 +1996,8 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
     else if (shape_type == "triangle mesh")
     {
         boost::filesystem::path const  buffers_dir = data.get<std::string>("buffers_directory");
-        qtgl::buffer  vertex_buffer(buffers_dir / "vertices.txt");
-        qtgl::buffer  index_buffer(buffers_dir / "indices.txt");
+        qtgl::buffer  vertex_buffer(buffers_dir / "vertices.txt", std::numeric_limits<async::load_priority_type>::max());
+        qtgl::buffer  index_buffer(buffers_dir / "indices.txt", std::numeric_limits<async::load_priority_type>::max());
         if (!vertex_buffer.wait_till_load_is_finished())
             throw std::runtime_error("Load of file 'vertices.txt' under directory '" + buffers_dir.string() + "' for 'triangle mesh' collider.");
         if (!index_buffer.wait_till_load_is_finished())

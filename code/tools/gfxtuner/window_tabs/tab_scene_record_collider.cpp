@@ -87,8 +87,10 @@ void  insert_collider_to_simulator(widgets* const  w, scn::collider_props const&
     }
     else if (props.m_shape_type == "triangle mesh")
     {
-        qtgl::buffer  vertex_buffer(props.m_triangle_mesh_buffers_directory / "vertices.txt");
-        qtgl::buffer  index_buffer(props.m_triangle_mesh_buffers_directory / "indices.txt");
+        TMPROF_BLOCK();
+
+        qtgl::buffer  vertex_buffer(props.m_triangle_mesh_buffers_directory / "vertices.txt", std::numeric_limits<async::load_priority_type>::max());
+        qtgl::buffer  index_buffer(props.m_triangle_mesh_buffers_directory / "indices.txt", std::numeric_limits<async::load_priority_type>::max());
 
         if (!vertex_buffer.wait_till_load_is_finished())
         {

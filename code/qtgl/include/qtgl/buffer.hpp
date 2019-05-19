@@ -129,6 +129,17 @@ struct buffer : public async::resource_accessor<detail::buffer_file_data>
         : async::resource_accessor<detail::buffer_file_data>()
     {}
 
+    buffer( boost::filesystem::path const&  path,
+            async::load_priority_type const  priority,
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
+            )
+        : async::resource_accessor<detail::buffer_file_data>(
+            {"qtgl::buffer",path.string()},
+            priority,
+            parent_finaliser
+            )
+    {}
+
     explicit buffer(
             boost::filesystem::path const&  path,
             async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
