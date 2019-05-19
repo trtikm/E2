@@ -15,6 +15,7 @@
 #   include <QColor>
 #   include <QIcon>
 #   include <string>
+#   include <vector>
 #   include <unordered_set>
 #   include <unordered_map>
 #   include <functional>
@@ -198,6 +199,8 @@ private:
     std::unordered_map<scn::scene_node_id, angeo::coordinate_system>  m_coord_system_location_backup_buffer;
 
     boost::filesystem::path  m_pending_scene_dir_to_load;
+
+    std::vector<scn::scene_record_id>  m_selected_tree_items_on_simulation_resumed_event;
 };
 
 

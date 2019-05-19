@@ -179,6 +179,8 @@ widgets::widgets(program_window* const  wnd)
         )
 
     , m_coord_system_location_backup_buffer()
+    , m_pending_scene_dir_to_load()
+    , m_selected_tree_items_on_simulation_resumed_event()
 {
     m_scene_tree->setSelectionMode(QAbstractItemView::SelectionMode::ExtendedSelection);
     m_scene_tree->setSortingEnabled(true);
@@ -1801,7 +1803,6 @@ void  widgets::on_simulation_paused()
     scene_tree()->setEnabled(true);
     scene_tree()->clear();
     enable_coord_system_location_widgets(true, true);
-    update_coord_system_location_widgets();
 
     get_scene_history()->clear();
     m_save_commit_id = get_scene_history()->get_active_commit_id();
@@ -1814,11 +1815,31 @@ void  widgets::on_simulation_paused()
     set_window_title();
 
     g_new_coord_system_id_counter = 0UL;
+
+    std::unordered_set<scn::scene_node_id>  selected_scene_nodes;
+    std::unordered_set<scn::scene_record_id>  selected_records;
+    for (auto const&  record_id : m_selected_tree_items_on_simulation_resumed_event)
+        if (auto const  item_ptr = scene_tree()->find(record_id))
+        {
+            if (represents_coord_system(item_ptr))
+                selected_scene_nodes.insert(record_id.get_node_id());
+            else if (represents_record(item_ptr))
+                selected_records.insert(record_id);
+            item_ptr->setSelected(true);
+            scene_tree()->scrollToItem(item_ptr);
+        }
+    m_selected_tree_items_on_simulation_resumed_event.clear();
+    wnd()->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_records));
+
+    update_coord_system_location_widgets();
 }
 
 
 void  widgets::on_simulation_resumed()
 {
+    for (auto  item_ptr : scene_tree()->selectedItems())
+        m_selected_tree_items_on_simulation_resumed_event.push_back(scene_record_id_reverse_builder::run(item_ptr).get_record_id());
+
     scene_tree()->setEnabled(false);
     enable_coord_system_location_widgets(false, true);
 }
