@@ -50,7 +50,7 @@ struct  widgets
     QLineEdit* coord_system_roll() const { return m_coord_system_roll; }
 
     void  on_simulator_started();
-    void  on_timer_event();
+    void  process_pending_scene_load_requst_if_any();
 
     void  on_scene_hierarchy_item_selected();
     void  on_scene_hierarchy_item_update_action(tree_widget_item* const  item);

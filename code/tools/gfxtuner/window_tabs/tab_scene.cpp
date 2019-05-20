@@ -356,7 +356,7 @@ void  widgets::on_simulator_started()
 }
 
 
-void  widgets::on_timer_event()
+void  widgets::process_pending_scene_load_requst_if_any()
 {
     if (!m_pending_scene_dir_to_load.empty())
     {

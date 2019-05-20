@@ -161,12 +161,16 @@ void program_window::timerEvent(QTimerEvent* const event)
         }
         else if (current_tab == tab_names::SCENE())
         {
-            m_tab_scene_widgets.on_timer_event();
+            // Nothing to do...
         }
         else if (current_tab == tab_names::STATISTICS())
         {
             m_tab_statistics_widgets->on_timer_event();
         }
+
+        // Process pending requests, which are independet on current tab.
+
+        m_tab_scene_widgets.process_pending_scene_load_requst_if_any();
     }
 
     if (m_focus_just_received)
