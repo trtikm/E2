@@ -33,7 +33,9 @@ skeleton_composition_ptr   load_skeleton_composition(boost::filesystem::path con
                         skeleton_dir,
                         composition->pose_frames,
                         composition->names,
-                        composition->parents
+                        composition->parents,
+                        &composition->forward_direction_in_anim_space,
+                        &composition->up_direction_in_anim_space
                         );
         if (!error_message.empty())
             return nullptr;
@@ -64,10 +66,18 @@ std::string  load_skeleton(
         boost::filesystem::path const&  skeleton_directory,
         std::vector<angeo::coordinate_system>&  local_coord_systems_of_bones,
         std::vector<std::string>&  names_of_bones,
-        std::vector<integer_32_bit>&  parent_of_bones
+        std::vector<integer_32_bit>&  parent_of_bones,
+        vector3* const  forward_direction_in_anim_space,
+        vector3* const  up_direction_in_anim_space
         )
 {
     TMPROF_BLOCK();
+
+    ASSUMPTION(
+        (forward_direction_in_anim_space != nullptr && up_direction_in_anim_space != nullptr)
+        ||
+        (forward_direction_in_anim_space == nullptr && up_direction_in_anim_space == nullptr)
+        );
 
     if (!boost::filesystem::is_directory(skeleton_directory))
         return "Cannot access the passed skeleton directory.";
@@ -90,6 +100,17 @@ std::string  load_skeleton(
         return "The number of name in the file 'parents.txt' differs from number of coodinate systems in the file 'pose.txt'.";
 
     transform_skeleton_coord_systems_from_world_to_local_space(world_space_coord_systems, parent_of_bones, local_coord_systems_of_bones);
+
+    if (forward_direction_in_anim_space != nullptr)
+    {
+        error_message = load_skeleton_forward_and_up_directions(
+                skeleton_directory / "directions.txt",
+                forward_direction_in_anim_space,
+                up_direction_in_anim_space
+                );
+        if (!error_message.empty())
+            return error_message;
+    }
 
     return "";
 }
@@ -130,8 +151,8 @@ std::string  load_skeleton_bone_world_coord_systems(
                 std::string  line;
                 if (!read_line(istr,line))
                     return msgstream() << "Cannot read coordinate #" << j
-                                        << " of position of coodinate system #" << i
-                                        << " in the file '" << skeleton_pose_file << "'.";
+                                       << " of position of coodinate system #" << i
+                                       << " in the file '" << skeleton_pose_file << "'.";
                 std::istringstream istr(line);
                 istr >> position(j);
             }
@@ -145,8 +166,8 @@ std::string  load_skeleton_bone_world_coord_systems(
                 std::string  line;
                 if (!read_line(istr,line))
                     return msgstream() << "Cannot read coordinate #" << j
-                                        << " of orientation of coodinate system #" << i
-                                        << " in the file '" << skeleton_pose_file << "'.";
+                                       << " of orientation of coodinate system #" << i
+                                       << " in the file '" << skeleton_pose_file << "'.";
                 std::istringstream istr(line);
                 istr >> coords[j];
                 sum += coords[j] * coords[j];
@@ -249,6 +270,39 @@ std::string  load_skeleton_bone_parents(
         parent_of_bones.push_back(parent_index);
     }
 
+    return "";
+}
+
+
+std::string  load_skeleton_forward_and_up_directions(
+        boost::filesystem::path const&  skeleton_forward_and_up_directions_file,
+        vector3* const  forward_direction_in_anim_space,
+        vector3* const  up_direction_in_anim_space
+        )
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(forward_direction_in_anim_space != nullptr && up_direction_in_anim_space != nullptr);
+
+    if (!boost::filesystem::is_regular_file(skeleton_forward_and_up_directions_file))
+        return msgstream() << "Cannot access file '" << skeleton_forward_and_up_directions_file << "'.";
+
+    std::ifstream  istr(skeleton_forward_and_up_directions_file.string(), std::ios_base::binary);
+    ASSUMPTION(istr.good());
+
+    char const* const  direction_names[2] = { "forward", "up" };
+    vector3* const  directions[2] = { forward_direction_in_anim_space, up_direction_in_anim_space };
+    for (natural_32_bit  i = 0U; i != 2U; ++i)
+        for (natural_32_bit  j = 0U; j != 3U; ++j)
+        {
+            std::string  line;
+            if (!read_line(istr,line))
+                return msgstream() << "Cannot read coordinate #" << j
+                                   << " of " << direction_names[i] << " direction vector "
+                                   << " in the file '" << skeleton_forward_and_up_directions_file << "'.";
+            std::istringstream istr(line);
+            istr >> (*directions[i])(j);
+        }
     return "";
 }
 

@@ -32,7 +32,10 @@ std::string  load_skeleton(
         boost::filesystem::path const&  skeleton_directory,
         std::vector<angeo::coordinate_system>&  local_coord_systems_of_bones,
         std::vector<std::string>&  names_of_bones,
-        std::vector<integer_32_bit>&  parent_of_bones
+        std::vector<integer_32_bit>&  parent_of_bones,
+        // Either both pointers below are 'nullptr' on none of them.
+        vector3* const  forward_direction_in_anim_space = nullptr,
+        vector3* const  up_direction_in_anim_space = nullptr
         );
 
 /**
@@ -54,6 +57,13 @@ std::string  load_skeleton_bone_parents(
         boost::filesystem::path const&  skeleton_parents_file,
         std::vector<integer_32_bit>&  parent_of_bones
         );
+std::string  load_skeleton_forward_and_up_directions(
+        boost::filesystem::path const&  skeleton_forward_and_up_directions_file,
+        vector3* const  forward_direction_in_anim_space,    // must be != nullptr
+        vector3* const  up_direction_in_anim_space          // must be != nullptr
+        );
+
+
 void  transform_skeleton_coord_systems_from_world_to_local_space(
         std::vector<angeo::coordinate_system> const&  world_space_coord_systems,
         std::vector<integer_32_bit> const&  parent_of_bones,

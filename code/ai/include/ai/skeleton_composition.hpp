@@ -27,6 +27,12 @@ struct  skeleton_composition
                                                                 // in the centre of mass) in frame of the corresponding bone. Ignored
                                                                 // are coord. systems where the corrensponding rigid_body_id (in the
                                                                 // vector 'rigid_bodies') is equal to 'invalid_rigid_body_id()'.
+
+    // NOTE: 'anim' space is the space in which pose bones without a parent are defined. In other words, it is the common frame of reference
+    //       of coord. systems of all pose bones without parent bones. Note also that all keyframes are defined in this 'anim' space.
+
+    vector3  forward_direction_in_anim_space;
+    vector3  up_direction_in_anim_space;
 };
 
 
