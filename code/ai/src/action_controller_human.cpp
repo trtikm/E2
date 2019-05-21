@@ -392,6 +392,12 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
 
     angeo::coordinate_system  motion_object_frame;
     get_blackboard()->m_scene->get_frame_of_scene_node(m_motion_object_nid, false, motion_object_frame);
+    matrix44  motion_object_from_base_matrix;
+    angeo::from_base_matrix(motion_object_frame, motion_object_from_base_matrix);
+    vector3 const  motion_object_forward_direction_in_world_space =
+            transform_vector(get_blackboard()->m_skeleton_composition->forward_direction_in_anim_space, motion_object_from_base_matrix);
+    vector3 const  motion_object_up_direction_in_world_space =
+            transform_vector(get_blackboard()->m_skeleton_composition->up_direction_in_anim_space, motion_object_from_base_matrix);
 
     // Clear all forces on the agent's motion object from the previous time step.
     {
@@ -417,7 +423,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                                         get_blackboard()->m_cortex_cmd_turn_intensity
                                             * get_blackboard()->m_max_turn_speed_in_radians_per_second
                                             * time_step_in_seconds,
-                                        vector3_unit_z()
+                                        motion_object_up_direction_in_world_space
                                         )
                                 )
                         * m_desired_linear_velocity_unit_direction_in_world_space
