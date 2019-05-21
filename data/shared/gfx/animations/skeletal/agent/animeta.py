@@ -871,19 +871,18 @@ motion_actions <action-name>+
         Do nothing, i.e. ignore desired motion of agent's cortex.
         This action is useful for 'idle' animations.
     * 'accelerate_towards_clipped_desired_linear_velocity':
-        Clips the target linear velocity to the clipping cone and then
-        introduces a linear acceleration to get closer to the clipped liner
-        velocity. Here are parameters (state variables) of the action:
-            - 'vec_fwd' as axis of the clipping cone
+        Clips the target linear velocity to the clipping cone, whose axis is
+        the forward direction of the agent (see the file 'directions.txt'),
+        and then introduces a linear acceleration to get closer to the clipped
+        liner velocity. Here are parameters (state variables) of the action:
             - 'angle' defines a maximal angle between a linear velocity and
                       the axis of the cone.
             - 'max_linear_accel' maximal magnitude of the linear acceleration
     * 'chase_linear_velocity_by_forward_vector':
         Rotates the reference frame in the world so that distance between
-        the linear velocity and the forward direction is minimal. Here are
-        parameters (state variables) of the action:
-            - 'vec_fwd' the forward vector chasing the linear velocity
-            - 'vec_down_mult * vec_down' defines rotation axis (unit vector)
+        the linear velocity and the forward direction is minimal. The rotation
+        axis is the up direction of the agent (see the file 'directions.txt').
+        Here are parameters (state variables) of the action:
             - 'max_angular_speed' maximal magnitude of the angular velocity
             - 'max_angular_accel' maximal magnitude of the angular acceleration
     * 'dont_move':
@@ -893,8 +892,8 @@ motion_actions <action-name>+
     * 'dont_rotate':
         Creates an angular acceleration on the agent's rigid body so that its
         angular velocity along the given axis (see below) decreases.
-        Parameters:
-            - 'vec_down_mult * vec_down' defines rotation axis (unit vector)
+        The rotation axis is the up direction of the agent (see the file
+        'directions.txt'). Parameters:
             - 'max_angular_accel' maximal magnitude of the angular acceleration
     All motion actions are saved into file:
         work_dir/anim_dir/meta_motion_actions.txt
@@ -920,26 +919,14 @@ def command_motion_actions():
                 if action == "none":
                     pass
                 elif action == "accelerate_towards_clipped_desired_linear_velocity":
-                    f.write(_float_to_string(state.vec_fwd[0]) + "\n")
-                    f.write(_float_to_string(state.vec_fwd[1]) + "\n")
-                    f.write(_float_to_string(state.vec_fwd[2]) + "\n")
                     f.write(_float_to_string(state.angle) + "\n")
                     f.write(_float_to_string(state.max_linear_accel) + "\n")
                 elif action == "chase_linear_velocity_by_forward_vector":
-                    f.write(_float_to_string(state.vec_fwd[0]) + "\n")
-                    f.write(_float_to_string(state.vec_fwd[1]) + "\n")
-                    f.write(_float_to_string(state.vec_fwd[2]) + "\n")
-                    f.write(_float_to_string(state.vec_down_mult * state.vec_down[0]) + "\n")
-                    f.write(_float_to_string(state.vec_down_mult * state.vec_down[1]) + "\n")
-                    f.write(_float_to_string(state.vec_down_mult * state.vec_down[2]) + "\n")
                     f.write(_float_to_string(state.max_angular_speed) + "\n")
                     f.write(_float_to_string(state.max_angular_accel) + "\n")
                 elif action == "dont_move":
                     f.write(_float_to_string(state.max_linear_accel) + "\n")
                 elif action == "dont_rotate":
-                    f.write(_float_to_string(state.vec_down_mult * state.vec_down[0]) + "\n")
-                    f.write(_float_to_string(state.vec_down_mult * state.vec_down[1]) + "\n")
-                    f.write(_float_to_string(state.vec_down_mult * state.vec_down[2]) + "\n")
                     f.write(_float_to_string(state.max_angular_accel) + "\n")
                 else:
                     raise Exception("Unknown action name '" + str(action) + "'")
