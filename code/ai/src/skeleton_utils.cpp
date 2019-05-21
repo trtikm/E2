@@ -293,6 +293,7 @@ std::string  load_skeleton_forward_and_up_directions(
     char const* const  direction_names[2] = { "forward", "up" };
     vector3* const  directions[2] = { forward_direction_in_anim_space, up_direction_in_anim_space };
     for (natural_32_bit  i = 0U; i != 2U; ++i)
+    {
         for (natural_32_bit  j = 0U; j != 3U; ++j)
         {
             std::string  line;
@@ -303,6 +304,8 @@ std::string  load_skeleton_forward_and_up_directions(
             std::istringstream istr(line);
             istr >> (*directions[i])(j);
         }
+        normalise(*directions[i]);
+    }
     return "";
 }
 
