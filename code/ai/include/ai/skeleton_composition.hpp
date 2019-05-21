@@ -30,9 +30,10 @@ struct  skeleton_composition
 
     // NOTE: 'anim' space is the space in which pose bones without a parent are defined. In other words, it is the common frame of reference
     //       of coord. systems of all pose bones without parent bones. Note also that all keyframes are defined in this 'anim' space.
+    // NOTE: The two vectors below should also represent forward and up directions in each meta-reference-frame of each keyframe.
 
-    vector3  forward_direction_in_anim_space;
-    vector3  up_direction_in_anim_space;
+    vector3  forward_direction_in_anim_space;   // Must be unit vector.
+    vector3  up_direction_in_anim_space;        // Must be unit vector.
 };
 
 
