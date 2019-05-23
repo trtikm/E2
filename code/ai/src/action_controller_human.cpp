@@ -171,6 +171,184 @@ void  destroy_motion_scene_node(scene_ptr const  s, scene::node_id const&  motio
 }
 
 
+struct  motion_action_data__dont_move : public action_controller_human::motion_action_data
+{
+    explicit  motion_action_data__dont_move(vector3 const&  position_)
+        : position(position_)
+    {}
+    vector3  position;
+};
+
+
+void  compute_motion_object_acceleration_from_motion_actions(
+        float_32_bit const  time_step_in_seconds,
+        skeletal_motion_templates::keyframes const&  animation,
+        natural_32_bit const  keyframe_index,
+        skeletal_motion_templates::meta_records_real const&  motion_object_action_props,
+        angeo::coordinate_system const&  motion_object_frame,
+        vector3 const&  motion_object_forward_direction_in_world_space,
+        vector3 const&  motion_object_up_direction_in_world_space,
+        vector3 const&  motion_object_linear_velocity_in_world_space,
+        vector3 const&  motion_object_angular_velocity_in_world_space,
+        vector3 const&  gravity_accel,
+        vector3 const&  desired_linear_velocity_unit_direction_in_world_space,
+        float_32_bit const  desired_linear_speed,
+        std::unordered_map<std::string, std::unique_ptr<action_controller_human::motion_action_data> >&  motion_action_data,
+        vector3&  output_motion_object_linear_acceleration,
+        vector3&  output_motion_object_angular_acceleration
+        )
+{
+    float_32_bit const  motion_object_linear_speed = length(motion_object_linear_velocity_in_world_space);
+
+    for (auto const&  action_props : motion_object_action_props.m_records)
+        if (action_props.keyword == "none")
+            continue;
+        else if (action_props.keyword == "accelerate_towards_clipped_desired_linear_velocity")
+        {
+            enum INDICES_OF_ARGUMENTS
+            {
+                ANGLE               = 0,
+                MAX_LINEAR_ACCEL    = 1,
+            };
+
+            vector3  clipped_desired_linear_velocity_in_world_space;
+            {
+                float_32_bit  ideal_linear_speed;
+                {
+                    vector3 const  position_delta =
+                            animation.get_meta_data().m_reference_frames.at(keyframe_index).origin() -
+                            animation.get_meta_data().m_reference_frames.at(keyframe_index - 1U).origin();
+                    float_32_bit const  time_delta =
+                            animation.keyframe_at(keyframe_index).get_time_point() -
+                            animation.keyframe_at(keyframe_index - 1U).get_time_point() ;
+                    ideal_linear_speed = length(position_delta) / std::max(time_delta, 0.0001f);
+                }
+
+                float_32_bit  rot_angle;
+                {
+                    float_32_bit const  full_rot_angle =
+                            angeo::compute_rotation_angle(
+                                    motion_object_up_direction_in_world_space,
+                                    motion_object_forward_direction_in_world_space,
+                                    desired_linear_velocity_unit_direction_in_world_space
+                                    );
+                    if (std::fabs(full_rot_angle) <= action_props.arguments.at(ANGLE))
+                        rot_angle = full_rot_angle;
+                    else
+                        rot_angle = (full_rot_angle >= 0.0f ? 1.0f : -1.0f) * action_props.arguments.at(ANGLE);
+                }
+                clipped_desired_linear_velocity_in_world_space =
+                        quaternion_to_rotation_matrix(angle_axis_to_quaternion(rot_angle, motion_object_up_direction_in_world_space))
+                        * motion_object_forward_direction_in_world_space;
+
+                clipped_desired_linear_velocity_in_world_space *=
+                        ideal_linear_speed / length(clipped_desired_linear_velocity_in_world_space);
+            }
+            vector3  agent_linear_acceleration =
+                    (clipped_desired_linear_velocity_in_world_space - motion_object_linear_velocity_in_world_space) / time_step_in_seconds;
+            float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
+            if (agent_linear_acceleration_magnitude > action_props.arguments.at(MAX_LINEAR_ACCEL))
+                agent_linear_acceleration *= action_props.arguments.at(MAX_LINEAR_ACCEL) / agent_linear_acceleration_magnitude;
+            output_motion_object_linear_acceleration += agent_linear_acceleration;
+        }
+        else if (action_props.keyword == "chase_linear_velocity_by_forward_vector")
+        {
+            enum INDICES_OF_ARGUMENTS
+            {
+                MAX_ANGULAR_SPEED   = 0,
+                MAX_ANGULAR_ACCEL   = 1,
+            };
+
+            bool const  is_current_linear_velocity_too_slow =
+                    motion_object_linear_speed < length(gravity_accel) * time_step_in_seconds;
+
+            float_32_bit const  rot_angle =
+                    angeo::compute_rotation_angle(
+                            motion_object_up_direction_in_world_space,
+                            motion_object_forward_direction_in_world_space,
+                            is_current_linear_velocity_too_slow ?
+                                desired_linear_velocity_unit_direction_in_world_space :
+                                motion_object_linear_velocity_in_world_space
+                            );
+        
+            float_32_bit  desired_angular_velocity_magnitude = rot_angle / time_step_in_seconds;
+            if (desired_angular_velocity_magnitude >= 0.0f && desired_angular_velocity_magnitude > action_props.arguments.at(MAX_ANGULAR_SPEED))
+                desired_angular_velocity_magnitude = action_props.arguments.at(MAX_ANGULAR_SPEED);
+            if (desired_angular_velocity_magnitude < 0.0f && desired_angular_velocity_magnitude < -action_props.arguments.at(MAX_ANGULAR_SPEED))
+                desired_angular_velocity_magnitude = -action_props.arguments.at(MAX_ANGULAR_SPEED);
+
+            vector3 const  desired_angular_velocity = desired_angular_velocity_magnitude * motion_object_up_direction_in_world_space;
+
+            vector3  agent_angular_acceleration =
+                    (desired_angular_velocity - motion_object_angular_velocity_in_world_space) / time_step_in_seconds;
+            float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
+            if (agent_angular_acceleration_magnitude > action_props.arguments.at(MAX_ANGULAR_ACCEL))
+                agent_angular_acceleration *= action_props.arguments.at(MAX_ANGULAR_ACCEL) / agent_angular_acceleration_magnitude;
+            output_motion_object_angular_acceleration += agent_angular_acceleration;
+        }
+        else if (action_props.keyword == "dont_move")
+        {
+            enum INDICES_OF_ARGUMENTS
+            {
+                MAX_LINEAR_ACCEL = 0,
+            };
+
+            detail::motion_action_data__dont_move const*  data_ptr;
+            {
+                auto  data_it = motion_action_data.find(action_props.keyword);
+                if (data_it == motion_action_data.end())
+                    data_it = motion_action_data.insert({
+                            action_props.keyword,
+                            std::make_unique<detail::motion_action_data__dont_move>(motion_object_frame.origin())
+                            }).first;
+                data_ptr = dynamic_cast<detail::motion_action_data__dont_move const*>(data_it->second.get());
+                INVARIANT(data_ptr != nullptr);
+            }
+
+            vector3 const  sliding_prevention_accel =
+                    2.0f * (data_ptr->position - motion_object_frame.origin()) / (time_step_in_seconds * time_step_in_seconds);
+            vector3  agent_linear_acceleration =
+                    -motion_object_linear_velocity_in_world_space / time_step_in_seconds + sliding_prevention_accel;
+            float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
+            if (agent_linear_acceleration_magnitude > action_props.arguments.at(MAX_LINEAR_ACCEL))
+                agent_linear_acceleration *= action_props.arguments.at(MAX_LINEAR_ACCEL) / agent_linear_acceleration_magnitude;
+            output_motion_object_linear_acceleration += agent_linear_acceleration;
+        }
+        else if (action_props.keyword == "dont_rotate")
+        {
+            enum INDICES_OF_ARGUMENTS
+            {
+                MAX_ANGULAR_ACCEL   = 0,
+            };
+
+            matrix33 const  from_motion_to_world_rot_matrix = quaternion_to_rotation_matrix(motion_object_frame.orientation());
+
+            vector3 const  angular_velocity_to_cancel_in_world_space =
+                    dot_product(motion_object_up_direction_in_world_space, motion_object_angular_velocity_in_world_space)
+                    * motion_object_up_direction_in_world_space
+                    ;
+
+            vector3  agent_angular_acceleration = -angular_velocity_to_cancel_in_world_space / time_step_in_seconds;
+            float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
+            if (agent_angular_acceleration_magnitude > action_props.arguments.at(MAX_ANGULAR_ACCEL))
+                agent_angular_acceleration *= action_props.arguments.at(MAX_ANGULAR_ACCEL) / agent_angular_acceleration_magnitude;
+            output_motion_object_angular_acceleration += agent_angular_acceleration;
+        }
+        else
+            NOT_IMPLEMENTED_YET();
+
+    std::unordered_map<std::string, std::unique_ptr<action_controller_human::motion_action_data> >  new_motion_action_data;
+    for (auto const& action_props : motion_object_action_props.m_records)
+    {
+        auto const  it = motion_action_data.find(action_props.keyword);
+        if (it != motion_action_data.end())
+            it->second.swap(new_motion_action_data[action_props.keyword]);
+    }
+    motion_action_data.swap(new_motion_action_data);
+}
+
+
+
 struct  find_best_keyframe_constants
 {
     skeletal_motion_templates_const_ptr  motion_templates;
@@ -308,16 +486,6 @@ float_32_bit  find_best_keyframe(
 }
 
 
-struct  motion_action_data__dont_move : public action_controller_human::motion_action_data
-{
-    explicit  motion_action_data__dont_move(vector3 const&  position_)
-        : position(position_)
-    {}
-    vector3  position;
-};
-
-
-
 }}
 
 namespace ai {
@@ -332,7 +500,7 @@ action_controller_human::action_controller_human(blackboard_ptr const  blackboar
             0.0f            // consumed_time_in_seconds
             })
     , m_desired_linear_velocity_unit_direction_in_world_space(vector3_unit_x())
-    , m_desired_linear_velocity_in_world_space(vector3_zero())
+    , m_desired_linear_speed(0.0f)
     , m_motion_object_nid()
     , m_motion_object_collider_props()
     , m_motion_object_mass_distribution_props()
@@ -442,9 +610,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                                 )
                         * m_desired_linear_velocity_unit_direction_in_world_space
                         );
-        m_desired_linear_velocity_in_world_space =
-                (get_blackboard()->m_cortex_cmd_move_intensity * get_blackboard()->m_max_forward_speed_in_meters_per_second)
-                * m_desired_linear_velocity_unit_direction_in_world_space;
+        m_desired_linear_speed = get_blackboard()->m_cortex_cmd_move_intensity * get_blackboard()->m_max_forward_speed_in_meters_per_second;
     }
 
     // Check whether the condition for applying forces towards the desired motion of the agent is satisfied or not.
@@ -483,145 +649,27 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
     // Apply forces towards the desired motion, if the condition for doing so is satified.
     if (is_motion_constraint_satisfied == true)
     {
-        for (auto const&  action_props : m_motion_object_action_props.m_records)
-            if (action_props.keyword == "none")
-                continue;
-            else if (action_props.keyword == "accelerate_towards_clipped_desired_linear_velocity")
-            {
-                enum INDICES_OF_ARGUMENTS
-                {
-                    ANGLE               = 0,
-                    MAX_LINEAR_ACCEL    = 1,
-                };
-
-                vector3  clipped_desired_linear_velocity_in_world_space;
-                {
-                    float_32_bit  ideal_linear_speed;
-                    {
-                        skeletal_motion_templates::keyframes const&  animation =
-                                get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.dst_pose.motion_name
-                                );
-                        vector3 const  position_delta =
-                                animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index).origin() -
-                                animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index - 1U).origin();
-                        float_32_bit const  time_delta =
-                                animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index).get_time_point() -
-                                animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index - 1U).get_time_point() ;
-                        ideal_linear_speed = length(position_delta) / std::max(time_delta, 0.0001f);
-                    }
-
-                    float_32_bit  rot_angle;
-                    {
-                        float_32_bit const  full_rot_angle =
-                                angeo::compute_rotation_angle(
-                                        motion_object_up_direction_in_world_space,
-                                        motion_object_forward_direction_in_world_space,
-                                        m_desired_linear_velocity_unit_direction_in_world_space
-                                        );
-                        if (std::fabs(full_rot_angle) <= action_props.arguments.at(ANGLE))
-                            rot_angle = full_rot_angle;
-                        else
-                            rot_angle = (full_rot_angle >= 0.0f ? 1.0f : -1.0f) * action_props.arguments.at(ANGLE);
-                    }
-                    clipped_desired_linear_velocity_in_world_space =
-                            quaternion_to_rotation_matrix(angle_axis_to_quaternion(rot_angle, motion_object_up_direction_in_world_space))
-                            * motion_object_forward_direction_in_world_space;
-
-                    clipped_desired_linear_velocity_in_world_space *=
-                            ideal_linear_speed / length(clipped_desired_linear_velocity_in_world_space);
-                }
-                vector3  agent_linear_acceleration =
-                        (clipped_desired_linear_velocity_in_world_space - motion_object_linear_velocity_in_world_space) / time_step_in_seconds;
-                float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
-                if (agent_linear_acceleration_magnitude > action_props.arguments.at(MAX_LINEAR_ACCEL))
-                    agent_linear_acceleration *= action_props.arguments.at(MAX_LINEAR_ACCEL) / agent_linear_acceleration_magnitude;
-                get_blackboard()->m_scene->add_to_linear_acceleration_of_rigid_body_of_scene_node(m_motion_object_nid, agent_linear_acceleration);
-            }
-            else if (action_props.keyword == "chase_linear_velocity_by_forward_vector")
-            {
-                enum INDICES_OF_ARGUMENTS
-                {
-                    MAX_ANGULAR_SPEED   = 0,
-                    MAX_ANGULAR_ACCEL   = 1,
-                };
-
-                bool const  is_current_linear_velocity_too_slow =
-                        motion_object_linear_speed < length(gravity_accel) * time_step_in_seconds;
-
-                float_32_bit const  rot_angle =
-                        angeo::compute_rotation_angle(
-                                motion_object_up_direction_in_world_space,
-                                motion_object_forward_direction_in_world_space,
-                                is_current_linear_velocity_too_slow ?
-                                    m_desired_linear_velocity_unit_direction_in_world_space :
-                                    motion_object_linear_velocity_in_world_space
-                                );
-        
-                float_32_bit  desired_angular_velocity_magnitude = rot_angle / time_step_in_seconds;
-                if (desired_angular_velocity_magnitude >= 0.0f && desired_angular_velocity_magnitude > action_props.arguments.at(MAX_ANGULAR_SPEED))
-                    desired_angular_velocity_magnitude = action_props.arguments.at(MAX_ANGULAR_SPEED);
-                if (desired_angular_velocity_magnitude < 0.0f && desired_angular_velocity_magnitude < -action_props.arguments.at(MAX_ANGULAR_SPEED))
-                    desired_angular_velocity_magnitude = -action_props.arguments.at(MAX_ANGULAR_SPEED);
-
-                vector3 const  desired_angular_velocity = desired_angular_velocity_magnitude * motion_object_up_direction_in_world_space;
-
-                vector3  agent_angular_acceleration =
-                        (desired_angular_velocity - motion_object_angular_velocity_in_world_space) / time_step_in_seconds;
-                float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
-                if (agent_angular_acceleration_magnitude > action_props.arguments.at(MAX_ANGULAR_ACCEL))
-                    agent_angular_acceleration *= action_props.arguments.at(MAX_ANGULAR_ACCEL) / agent_angular_acceleration_magnitude;
-                get_blackboard()->m_scene->add_to_angular_acceleration_of_rigid_body_of_scene_node(m_motion_object_nid, agent_angular_acceleration);
-            }
-            else if (action_props.keyword == "dont_move")
-            {
-                enum INDICES_OF_ARGUMENTS
-                {
-                    MAX_LINEAR_ACCEL = 0,
-                };
-
-                detail::motion_action_data__dont_move const*  data_ptr;
-                {
-                    auto  data_it = m_motion_action_data.find(action_props.keyword);
-                    if (data_it == m_motion_action_data.end())
-                        data_it = m_motion_action_data.insert({
-                                action_props.keyword,
-                                std::make_unique<detail::motion_action_data__dont_move>(motion_object_frame.origin())
-                                }).first;
-                    data_ptr = dynamic_cast<detail::motion_action_data__dont_move const*>(data_it->second.get());
-                    INVARIANT(data_ptr != nullptr);
-                }
-
-                vector3 const  sliding_prevention_accel =
-                        2.0f * (data_ptr->position - motion_object_frame.origin()) / (time_step_in_seconds * time_step_in_seconds);
-                vector3  agent_linear_acceleration =
-                        -motion_object_linear_velocity_in_world_space / time_step_in_seconds + sliding_prevention_accel;
-                float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
-                if (agent_linear_acceleration_magnitude > action_props.arguments.at(MAX_LINEAR_ACCEL))
-                    agent_linear_acceleration *= action_props.arguments.at(MAX_LINEAR_ACCEL) / agent_linear_acceleration_magnitude;
-                get_blackboard()->m_scene->add_to_linear_acceleration_of_rigid_body_of_scene_node(m_motion_object_nid, agent_linear_acceleration);
-            }
-            else if (action_props.keyword == "dont_rotate")
-            {
-                enum INDICES_OF_ARGUMENTS
-                {
-                    MAX_ANGULAR_ACCEL   = 0,
-                };
-
-                matrix33 const  from_motion_to_world_rot_matrix = quaternion_to_rotation_matrix(motion_object_frame.orientation());
-
-                vector3 const  angular_velocity_to_cancel_in_world_space =
-                        dot_product(motion_object_up_direction_in_world_space, motion_object_angular_velocity_in_world_space)
-                        * motion_object_up_direction_in_world_space
-                        ;
-
-                vector3  agent_angular_acceleration = -angular_velocity_to_cancel_in_world_space / time_step_in_seconds;
-                float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
-                if (agent_angular_acceleration_magnitude > action_props.arguments.at(MAX_ANGULAR_ACCEL))
-                    agent_angular_acceleration *= action_props.arguments.at(MAX_ANGULAR_ACCEL) / agent_angular_acceleration_magnitude;
-                get_blackboard()->m_scene->add_to_angular_acceleration_of_rigid_body_of_scene_node(m_motion_object_nid, agent_angular_acceleration);
-            }
-            else
-                NOT_IMPLEMENTED_YET();
+        vector3  motion_object_linear_acceleration = vector3_zero();
+        vector3  motion_object_angular_acceleration = vector3_zero();
+        detail::compute_motion_object_acceleration_from_motion_actions(
+                time_step_in_seconds,
+                get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.dst_pose.motion_name),
+                m_template_motion_info.dst_pose.keyframe_index,
+                m_motion_object_action_props,
+                motion_object_frame,
+                motion_object_forward_direction_in_world_space,
+                motion_object_up_direction_in_world_space,
+                motion_object_linear_velocity_in_world_space,
+                motion_object_angular_velocity_in_world_space,
+                gravity_accel,
+                m_desired_linear_velocity_unit_direction_in_world_space,
+                m_desired_linear_speed,
+                m_motion_action_data,
+                motion_object_linear_acceleration,
+                motion_object_angular_acceleration
+                );
+        get_blackboard()->m_scene->add_to_linear_acceleration_of_rigid_body_of_scene_node(m_motion_object_nid, motion_object_linear_acceleration);
+        get_blackboard()->m_scene->add_to_angular_acceleration_of_rigid_body_of_scene_node(m_motion_object_nid, motion_object_angular_acceleration);
     }
     else
         m_motion_action_data.clear();
@@ -661,7 +709,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                 float_32_bit const  max_speed_distance = std::max(0.25f, 0.5f * length(average_linear_velocity_in_anim_space));
 
                 if (speed_distance <= max_speed_distance)
-                    target_linear_velocity_in_world_space = m_desired_linear_velocity_in_world_space;
+                    target_linear_velocity_in_world_space = m_desired_linear_speed * m_desired_linear_velocity_unit_direction_in_world_space;
                 else
                     target_linear_velocity_in_world_space = motion_object_linear_velocity_in_world_space;
             }
