@@ -625,8 +625,15 @@ float_32_bit  find_best_keyframe(
                 });
     queue.push(std::make_shared<find_best_keyframe_queue_record>(start_record));
 
+//natural_32_bit  max_queue_size = 0U;
+//natural_32_bit  num_iterations = 0U;
+
     do
     {
+//++num_iterations;
+//if (max_queue_size < queue.size())
+//    max_queue_size = (natural_32_bit)queue.size();
+
         find_best_keyframe_queue_record_ptr const  current = queue.top();
         queue.pop();
 
@@ -673,6 +680,8 @@ float_32_bit  find_best_keyframe(
         }
     }
     while (!queue.empty());
+
+//std::cout << "|Q|=" << max_queue_size << "\tN=" << num_iterations << "\t|P|=" << pivot_records.size() << std::endl;
 
     INVARIANT(!pivot_records.empty());
     find_best_keyframe_queue_record_ptr  winner = nullptr;
