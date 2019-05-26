@@ -88,6 +88,7 @@ class Config:
                 "lower_foot.R",
             ]
             self.distance_threshold = 1.0
+            self.delta_time_in_seconds = 0.25
             self.debug_mode = True
 
         def typeof(self, var_name):
@@ -586,6 +587,7 @@ def command_joint_distances():
     bone_weights = _compute_weights_of_bones(parents)
 
     joints_in_reference_frames = {}
+    time_points = {}
     for kind, kind_name in [(True, "primary"), (False, "secondary")]:
         keyframes = _load_keyframes(primary=kind)
         reference_frames = _load_meta_reference_frames(primary=kind)
@@ -593,11 +595,13 @@ def command_joint_distances():
             raise Exception("Inconsistency between number of keyframes and corresponding meta reference frames "
                             "of the " + kind_name + " animation.")
         joints_in_reference_frames[kind_name] = []
+        time_points[kind_name] = {}
         for i in range(len(keyframes)):
             frames = keyframes[i]["frames_of_bones"]
             if len(frames) != len(parents):
                 raise Exception("Inconsistency between number of bones in keyframes and parent bone definitions.")
             joints_in_reference_frames[kind_name].append(_get_bone_joints_in_meta_reference_frame(frames, reference_frames[i]))
+            time_points[kind_name][i] = keyframes[i]["time"]
 
     index_filters = {"primary": -1, "secondary": -1}
     for idx, kind_name in [(0, "primary"), (1, "secondary")]:
@@ -634,7 +638,7 @@ def command_joint_distances():
                   Config.instance.state.anim_dir + ":" + str(props[1]) + " vs. " +
                   Config.instance.state.anim_dir2 + ":" + str(props[2])
                   )
-            if do_write is True and threshold_line_printed is True:
+            if threshold_line_printed is True:
                 for idx, kind_name, other_idx in [(1, "primary", 2), (2, "secondary", 1)]:
                     if props[idx] in equality_groups[kind_name]:
                         equality_groups[kind_name][props[idx]].add(props[other_idx])
@@ -651,12 +655,29 @@ def command_joint_distances():
             print(bone_name + ": " + _float_to_string(distances[bone_name]))
         summary_distance = sum(distances[bone_name] for bone_name in distances.keys())
         print("--------------\nsum: " + _float_to_string(summary_distance))
-        if do_write is True and summary_distance <= Config.instance.state.distance_threshold:
+        if summary_distance <= Config.instance.state.distance_threshold:
             equality_groups["primary"][index_filters["primary"]] = {index_filters["secondary"]}
             equality_groups["secondary"][index_filters["secondary"]] = {index_filters["primary"]}
 
-    if do_write is False:
-        return
+    for kind_name, other_kind_name in [("primary", "secondary"), ("secondary", "primary")]:
+        to_erase = set()
+        pivot_idx = None
+        for idx in sorted(list(equality_groups[kind_name])):
+            if pivot_idx is None or time_points[kind_name][idx] - time_points[kind_name][pivot_idx] >= state.delta_time_in_seconds:
+                pivot_idx = idx
+            else:
+                to_erase.add(idx)
+        for idx in to_erase:
+            del equality_groups[kind_name][idx]
+        other_to_erase = set()
+        for idx in equality_groups[other_kind_name]:
+            subtraction = equality_groups[other_kind_name][idx] - to_erase
+            if len(subtraction) == 0:
+                other_to_erase.add(idx)
+            else:
+                equality_groups[other_kind_name][idx] = subtraction
+        for idx in other_to_erase:
+            del equality_groups[other_kind_name][idx]
 
     def transitive_closure(orig_set, map_fwd, map_bwd):
         processed = set()
@@ -680,6 +701,15 @@ def command_joint_distances():
         equality_groups["primary"][x] = transitive_closure(equality_groups["primary"][x], equality_groups["primary"], equality_groups["secondary"])
     for y in equality_groups["secondary"]:
         equality_groups["secondary"][y] = transitive_closure(equality_groups["secondary"][y], equality_groups["secondary"], equality_groups["primary"])
+
+    print("==============================================")
+    for kind_name, anim_dir, anim_dir2 in [("primary", state.anim_dir, state.anim_dir2), ("secondary", state.anim_dir2, state.anim_dir)]:
+        print("--- " + anim_dir + " -> " + anim_dir2 + " ---")
+        for idx in sorted(list(equality_groups[kind_name])):
+            print(str(idx) + " -> " + ", ".join([str(x) for x in sorted(list(equality_groups[kind_name][idx]))]))
+
+    if do_write is False:
+        return
 
     for kind, kind_name, other_anim_name in [(True, "primary", os.path.basename(state.anim_dir2)),
                                              (False, "secondary", os.path.basename(state.anim_dir))]:
