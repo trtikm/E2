@@ -908,6 +908,10 @@ motion_actions <action-name>+
             - 'angle' defines a maximal angle between a linear velocity and
                       the axis of the cone.
             - 'max_linear_accel' maximal magnitude of the linear acceleration
+            - 'min_linear_speed' is used to compute a multiplier for the
+                    angle: min(1.0f, max(0.0f, <speed>^2 / min_linear_speed))
+                    where '<speed>' is the actual linear speed of the motion
+                    object of the agent. The 'peek_linear_speed' must be > 0.
     * 'chase_linear_velocity_by_forward_vector':
         Rotates the reference frame in the world so that distance between
         the linear velocity and the forward direction is minimal. The rotation
@@ -915,6 +919,11 @@ motion_actions <action-name>+
         Here are parameters (state variables) of the action:
             - 'max_angular_speed' maximal magnitude of the angular velocity
             - 'max_angular_accel' maximal magnitude of the angular acceleration
+            - 'min_linear_speed' is used to compute a multiplier for the
+                    angular speed:
+                        min(1.0f, max(0.0f, <speed>^2 / min_linear_speed))
+                    where '<speed>' is the actual linear speed of the motion
+                    object of the agent. The 'min_linear_speed' must be > 0.
     * 'dont_move':
         Creates a linear acceleration on the agent's rigid body so that its
         linear velocity gets smaller and smaller. Parameters:
@@ -951,9 +960,11 @@ def command_motion_actions():
                 elif action == "accelerate_towards_clipped_desired_linear_velocity":
                     f.write(_float_to_string(state.angle) + "\n")
                     f.write(_float_to_string(state.max_linear_accel) + "\n")
+                    f.write(_float_to_string(state.min_linear_speed) + "\n")
                 elif action == "chase_linear_velocity_by_forward_vector":
                     f.write(_float_to_string(state.max_angular_speed) + "\n")
                     f.write(_float_to_string(state.max_angular_accel) + "\n")
+                    f.write(_float_to_string(state.min_linear_speed) + "\n")
                 elif action == "dont_move":
                     f.write(_float_to_string(state.max_linear_accel) + "\n")
                 elif action == "dont_rotate":

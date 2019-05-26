@@ -252,6 +252,7 @@ void  compute_motion_object_acceleration_from_motion_actions(
             {
                 ANGLE               = 0,
                 MAX_LINEAR_ACCEL    = 1,
+                MIN_LINEAR_SPEED    = 2,
             };
 
             vector3  clipped_desired_linear_velocity_in_world_space;
@@ -269,16 +270,25 @@ void  compute_motion_object_acceleration_from_motion_actions(
 
                 float_32_bit  rot_angle;
                 {
+                    float_32_bit const  max_rot_angle = 
+                            action_props.arguments.at(ANGLE) *
+                            std::min(1.0f, std::max(0.0f,
+                                motion_object_linear_speed * motion_object_linear_speed / action_props.arguments.at(MIN_LINEAR_SPEED)
+                                ))
+                            ;
+
                     float_32_bit const  full_rot_angle =
                             angeo::compute_rotation_angle(
                                     motion_object_up_direction_in_world_space,
                                     motion_object_forward_direction_in_world_space,
                                     desired_linear_velocity_unit_direction_in_world_space
                                     );
-                    if (std::fabs(full_rot_angle) <= action_props.arguments.at(ANGLE))
-                        rot_angle = full_rot_angle;
+                    if (full_rot_angle > max_rot_angle)
+                        rot_angle = max_rot_angle;
+                    else if (full_rot_angle < -max_rot_angle)
+                        rot_angle = -max_rot_angle;
                     else
-                        rot_angle = (full_rot_angle >= 0.0f ? 1.0f : -1.0f) * action_props.arguments.at(ANGLE);
+                        rot_angle = full_rot_angle;
                 }
                 clipped_desired_linear_velocity_in_world_space =
                         quaternion_to_rotation_matrix(angle_axis_to_quaternion(rot_angle, motion_object_up_direction_in_world_space))
@@ -300,25 +310,28 @@ void  compute_motion_object_acceleration_from_motion_actions(
             {
                 MAX_ANGULAR_SPEED   = 0,
                 MAX_ANGULAR_ACCEL   = 1,
+                MIN_LINEAR_SPEED    = 2,
             };
 
-            bool const  is_current_linear_velocity_too_slow =
-                    motion_object_linear_speed < length(gravity_accel) * time_step_in_seconds;
+            float_32_bit const  max_anglular_speed = 
+                    action_props.arguments.at(MAX_ANGULAR_SPEED) *
+                    std::min(1.0f, std::max(0.0f,
+                        motion_object_linear_speed * motion_object_linear_speed / action_props.arguments.at(MIN_LINEAR_SPEED)
+                        ))
+                    ;
 
             float_32_bit const  rot_angle =
                     angeo::compute_rotation_angle(
                             motion_object_up_direction_in_world_space,
                             motion_object_forward_direction_in_world_space,
-                            is_current_linear_velocity_too_slow ?
-                                desired_linear_velocity_unit_direction_in_world_space :
-                                motion_object_linear_velocity_in_world_space
+                            desired_linear_velocity_unit_direction_in_world_space
                             );
         
             float_32_bit  desired_angular_velocity_magnitude = rot_angle / time_step_in_seconds;
-            if (desired_angular_velocity_magnitude >= 0.0f && desired_angular_velocity_magnitude > action_props.arguments.at(MAX_ANGULAR_SPEED))
-                desired_angular_velocity_magnitude = action_props.arguments.at(MAX_ANGULAR_SPEED);
-            if (desired_angular_velocity_magnitude < 0.0f && desired_angular_velocity_magnitude < -action_props.arguments.at(MAX_ANGULAR_SPEED))
-                desired_angular_velocity_magnitude = -action_props.arguments.at(MAX_ANGULAR_SPEED);
+            if (desired_angular_velocity_magnitude > max_anglular_speed)
+                desired_angular_velocity_magnitude = max_anglular_speed;
+            else if (desired_angular_velocity_magnitude < -max_anglular_speed)
+                desired_angular_velocity_magnitude = -max_anglular_speed;
 
             vector3 const  desired_angular_velocity = desired_angular_velocity_magnitude * motion_object_up_direction_in_world_space;
 
