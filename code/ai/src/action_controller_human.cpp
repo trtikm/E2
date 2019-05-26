@@ -222,7 +222,8 @@ struct  motion_action_data__dont_move : public action_controller_human::motion_a
 void  compute_motion_object_acceleration_from_motion_actions(
         float_32_bit const  time_step_in_seconds,
         skeletal_motion_templates::keyframes const&  animation,
-        natural_32_bit const  keyframe_index,
+        natural_32_bit const  current_keyframe_index,
+        natural_32_bit const  previous_keyframe_index,
         skeletal_motion_templates::meta_records_real const&  motion_object_action_props,
         vector3 const&  motion_object_origin,
         vector3 const&  motion_object_forward_direction_in_world_space,
@@ -258,11 +259,11 @@ void  compute_motion_object_acceleration_from_motion_actions(
                 float_32_bit  ideal_linear_speed;
                 {
                     vector3 const  position_delta =
-                            animation.get_meta_data().m_reference_frames.at(keyframe_index).origin() -
-                            animation.get_meta_data().m_reference_frames.at(keyframe_index - 1U).origin();
+                            animation.get_meta_data().m_reference_frames.at(current_keyframe_index).origin() -
+                            animation.get_meta_data().m_reference_frames.at(previous_keyframe_index).origin();
                     float_32_bit const  time_delta =
-                            animation.keyframe_at(keyframe_index).get_time_point() -
-                            animation.keyframe_at(keyframe_index - 1U).get_time_point() ;
+                            animation.keyframe_at(current_keyframe_index).get_time_point() -
+                            animation.keyframe_at(previous_keyframe_index).get_time_point() ;
                     ideal_linear_speed = length(position_delta) / std::max(time_delta, 0.0001f);
                 }
 
@@ -383,6 +384,7 @@ struct  find_best_keyframe_constants
             skeletal_motion_templates_const_ptr const  motion_templates_,
             float_32_bit const  time_to_consume_in_seconds_,
             float_32_bit const  search_time_horizon_in_seconds_,
+            float_32_bit const  time_step_for_motion_actions_in_seconds_,
             vector3 const&  gravity_acceleration_in_world_space_,
             vector3 const&  motion_object_origin_in_world_space_,
             vector3 const&  desired_linear_velocity_unit_direction_in_world_space_,
@@ -391,6 +393,7 @@ struct  find_best_keyframe_constants
         : motion_templates(motion_templates_)
         , time_to_consume_in_seconds(time_to_consume_in_seconds_)
         , search_time_horizon_in_seconds(search_time_horizon_in_seconds_)
+        , time_step_for_motion_actions_in_seconds(time_step_for_motion_actions_in_seconds_)
         , gravity_acceleration_in_world_space(gravity_acceleration_in_world_space_)
         , motion_object_origin_in_world_space(motion_object_origin_in_world_space_)
         , desired_linear_velocity_unit_direction_in_world_space(desired_linear_velocity_unit_direction_in_world_space_)
@@ -400,6 +403,7 @@ struct  find_best_keyframe_constants
     skeletal_motion_templates_const_ptr  motion_templates;
     float_32_bit  time_to_consume_in_seconds;
     float_32_bit  search_time_horizon_in_seconds;
+    float_32_bit  time_step_for_motion_actions_in_seconds;
     vector3  gravity_acceleration_in_world_space;
     vector3  motion_object_origin_in_world_space;
     vector3  desired_linear_velocity_unit_direction_in_world_space;
@@ -505,9 +509,36 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
 
     skeletal_motion_templates::keyframes const&  animation = constants.motion_templates->motions_map.at(cursor.motion_name);
 
-    float_32_bit const  time_delta_in_seconds =
+    float_32_bit  time_delta_in_seconds =
             animation.keyframe_at(cursor.keyframe_index).get_time_point() -
             animation.keyframe_at(cursor.keyframe_index - 1U).get_time_point();
+    if (!pivot.first.motion_name.empty())
+        while (true)
+        {
+            if (cursor.keyframe_index + 1U >= animation.get_keyframes().size())
+                break;
+
+            if (time_delta_in_seconds >= constants.time_step_for_motion_actions_in_seconds)
+                break;
+
+            if (time_taken_in_seconds + time_delta_in_seconds >= constants.search_time_horizon_in_seconds)
+                break;
+
+            bool  is_branching = false;
+            for (auto const& equivalence_info : animation.get_meta_data().m_keyframe_equivalences.at(cursor.keyframe_index).m_records)
+                if (!equivalence_info.arguments.empty())
+                {
+                    is_branching = true;
+                    break;
+                }
+            if (is_branching)
+                break;
+
+            ++cursor.keyframe_index;
+            time_delta_in_seconds +=
+                    animation.keyframe_at(cursor.keyframe_index).get_time_point() -
+                    animation.keyframe_at(cursor.keyframe_index - 1U).get_time_point();
+        }
     INVARIANT(time_delta_in_seconds > 0.0001f);
 
     // --- UPDATING MOTION OBJECT LOCATION AND MOTION DATA ACCORDING TO MOTION ACTIONS --------------------------------
@@ -519,6 +550,7 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
             time_delta_in_seconds,
             animation,
             cursor.keyframe_index,
+            cursor_override.keyframe_index,
             animation.get_meta_data().m_motion_actions.at(cursor.keyframe_index),
             motion_object_origin_in_world_space,
             motion_object_forward_direction_in_world_space,
@@ -821,6 +853,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                 time_step_in_seconds,
                 get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.dst_pose.motion_name),
                 m_template_motion_info.dst_pose.keyframe_index,
+                m_template_motion_info.dst_pose.keyframe_index - 1U,
                 m_motion_object_action_props,
                 motion_object_frame.origin(),
                 motion_object_forward_direction_in_world_space,
@@ -890,6 +923,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                                 get_blackboard()->m_motion_templates,
                                 time_step_in_seconds,
                                 1.0f,
+                                0.25f,
                                 gravity_accel,
                                 motion_object_frame.origin(),
                                 m_desired_linear_velocity_unit_direction_in_world_space,
