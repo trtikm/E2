@@ -6,6 +6,7 @@
 #   include <scene/scene_node_id.hpp>
 #   include <angeo/coordinate_system.hpp>
 #   include <utility/basic_numeric_types.hpp>
+#   include <utility/invariants.hpp>
 #   include <string>
 #   include <memory>
 #   include <unordered_map>
@@ -15,7 +16,12 @@ namespace ai {
 
 struct  action_controller_human : public action_controller
 {
-    struct  motion_action_data { virtual ~motion_action_data() {} };
+    struct  motion_action_data
+    { 
+        virtual ~motion_action_data() {}
+        virtual std::unique_ptr<motion_action_data>  clone() const { UNREACHABLE(); }
+    };
+    using  motion_action_data_map = std::unordered_map<std::string, std::unique_ptr<motion_action_data> >;
 
     explicit action_controller_human(blackboard_ptr const  blackboard_);
     ~action_controller_human();
@@ -33,7 +39,7 @@ private:
     skeletal_motion_templates::meta_records_real  m_motion_object_mass_distribution_props;
     skeletal_motion_templates::meta_records_real  m_motion_object_constraint_props;
     skeletal_motion_templates::meta_records_real  m_motion_object_action_props;
-    std::unordered_map<std::string, std::unique_ptr<motion_action_data> >  m_motion_action_data;
+    motion_action_data_map  m_motion_action_data;
 };
 
 
