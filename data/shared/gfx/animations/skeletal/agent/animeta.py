@@ -310,6 +310,38 @@ def _to_base_matrix(pos, rot_matrix):
     ])
 
 
+def _get_perpendicular_component(decomposed_vector, pivot_vector):
+    # result = decomposed_vector + t * pivot_vector
+    # result * pivot_vector = 0
+    # ---------------------------
+    # (decomposed_vector + t * pivot_vector) * pivot_vector = 0
+    # t = - (decomposed_vector * pivot_vector) / (pivot_vector * pivot_vector)
+    t = -numpy.dot(decomposed_vector, pivot_vector) / numpy.dot(pivot_vector, pivot_vector)
+    return numpy.array(decomposed_vector) + t * numpy.array(pivot_vector)
+
+
+def _angle_between_vectors(u, v):
+    denom = _vector_length(u) * _vector_length(v)
+    if denom < 0.00001:
+        return 0.0
+    cos_angle = numpy.dot(u, v) / denom
+    if cos_angle <= -1.0:
+        return math.pi
+    elif cos_angle >= 1.0:
+        return 0.0
+    return math.acos(cos_angle)
+
+
+def _computer_rotation_angle(axis_vector, src_vector, dst_vector):
+    u = _get_perpendicular_component(src_vector, axis_vector)
+    v = _get_perpendicular_component(dst_vector, axis_vector)
+    w = numpy.cross(axis_vector, src_vector)
+    angle = _angle_between_vectors(u, v)
+    if numpy.dot(v, w) < 0.0:
+        angle = -angle
+    return angle
+
+
 def _get_bone_joints_in_anim_space(frames_of_bones):
     return [_transform_point(_from_base_matrix(frame["pos"], _quaternion_to_rotation_matrix(frame["rot"])), [0.0, 0.0, 0.0])
             for frame in frames_of_bones]
@@ -528,7 +560,7 @@ def command_constraints():
 
 def command_joint_distances_help():
     return """
-joint_distances [<keyframe-index>|* <keyframe-index>|*] [write|extend]
+joint_distances [<keyframe-index>|* <keyframe-index>|*] [write|extend|extend!]
     Computes weighted distances between related bone-joints in (different)
     keyframes of (different) animations. The state variables 'anim_dir' and
     'anim_dir2' denote animations, whose keyframes will be considered. The
@@ -539,7 +571,7 @@ joint_distances [<keyframe-index>|* <keyframe-index>|*] [write|extend]
     the other. The special value '*' for an argument allows you to specify
     the use of all keyframes of the corresponding animation.
     The command accepts two kinds of arguments: A keyframe specifier
-    '<keyframe-index>|*' or write modifier 'write|extend'.
+    '<keyframe-index>|*' or write modifier 'write|extend|extend!'.
     When no keyframe specifier argument is passed or at least one keyframe
     specifier argument is '*', then summary distances (i.e. sum of distances
     between corresponding joint) are computed between keyframes.
@@ -553,10 +585,10 @@ joint_distances [<keyframe-index>|* <keyframe-index>|*] [write|extend]
         work_dir/anim_dir2/meta_keyframe_equivalences.txt
     are updated by the computed results. The modifier 'write' replaces results
     of a previous call to this command on the animations by the currently
-    computed ones. The modifier 'extend' extends the files by the currently
-    computed result, i.e. preserving results from the receding calls of this
-    command, except that replaced are old records colliding with the currently
-    computed ones.
+    computed ones. The modifiers 'extend||extend!' extends the files by the
+    currently computed result, i.e. preserving results from the receding calls
+    of this command; however, 'extend' version replaces old records colliding
+    with the currently computed ones.
     NOTE: By 'joint' we actually mean the origin of the coordinate system in
           a keyframe file.
     NOTE: The Euclidean distance between corresponding joints is multiplied by
@@ -564,12 +596,20 @@ joint_distances [<keyframe-index>|* <keyframe-index>|*] [write|extend]
           number of parent bones in the chain from the bone in the joint down
           to a bone without any parent.
     NOTE: Use the command 'list keyframes' to see valid ranges for arguments.
+    NOTE: '<keyframe-index>' can be negative, in which case the index is
+          assumed in the direction from the last keyframe to the first one.
+          Use the symbol '!' instead of minus sign (to prevent confusion
+          with dash character for recognition of options). So, for example,
+          '!1' represents the number -1 and it refers to the last keyframe;
+          '!2' represents the number -2 and it refers to the keyframe preceding
+          the last one; and so on.
 """
 
 
 def command_joint_distances():
-    do_write = True if len(Config.instance.cmdline.arguments) > 0 and Config.instance.cmdline.arguments[-1] in ["write", "extend"] else False
-    do_extend = True if do_write and Config.instance.cmdline.arguments[-1] == "extend" else False
+    do_write = True if len(Config.instance.cmdline.arguments) > 0 and Config.instance.cmdline.arguments[-1] in ["write", "extend", "extend!"] else False
+    do_extend = True if do_write and Config.instance.cmdline.arguments[-1] in ["extend", "extend!"] else False
+    do_extend_incremental = True if do_extend is True and Config.instance.cmdline.arguments[-1] == "extend!" else False
     arguments = Config.instance.cmdline.arguments if do_write is False else Config.instance.cmdline.arguments[:-1]
     if "write" in arguments:
         raise Exception("The 'write' argument must be the last argument.")
@@ -577,6 +617,17 @@ def command_joint_distances():
         raise Exception("Wrong number of argument. Either zero or two keyframe index arguments are expected.")
     if len(arguments) == 0:
         arguments = ["*", "*"]
+    for i in range(2):
+        try:
+            if arguments[i][0] == "!":
+                int_value = -int(arguments[i][1:])
+                arguments[i] = str(int_value)
+            else:
+                int(arguments[i])
+        except Exception as e:
+            if arguments[i] != "*":
+                raise Exception("Wrong argument " + str(i+1) + "Expected is either a positive integer, possibly "
+                                "preffixed with '!' (to make the number negative), or the symbol '*'.")
 
     state = Config.instance.state
 
@@ -607,6 +658,8 @@ def command_joint_distances():
     for idx, kind_name in [(0, "primary"), (1, "secondary")]:
         if arguments[idx] != "*":
             index_filters[kind_name] = int(arguments[idx])
+            if index_filters[kind_name] < 0:
+                index_filters[kind_name] += len(joints_in_reference_frames[kind_name])
             if index_filters[kind_name] < 0 or index_filters[kind_name] >= len(joints_in_reference_frames[kind_name]):
                 raise Exception("Illegal argument " + str(idx) + ": " + Config.instance.cmdline.arguments[idx] + ". " +
                                 "Use the command 'list keyframes' to see valid range for the argument.")
@@ -651,6 +704,8 @@ def command_joint_distances():
         for k in range(len(joints_primary)):
             if names[k] in state.bones_filter:
                 distances[names[k]] = _distance_between_points(joints_primary[k], joints_secondary[k]) * bone_weights[k]
+        print("=== " + Config.instance.state.anim_dir + ":" + str(index_filters["primary"]) + " vs. " +
+              Config.instance.state.anim_dir2 + ":" + str(index_filters["secondary"]) + " ============================")
         for bone_name in sorted(distances.keys(), key=lambda x: -distances[x]):
             print(bone_name + ": " + _float_to_string(distances[bone_name]))
         summary_distance = sum(distances[bone_name] for bone_name in distances.keys())
@@ -702,11 +757,12 @@ def command_joint_distances():
     for y in equality_groups["secondary"]:
         equality_groups["secondary"][y] = transitive_closure(equality_groups["secondary"][y], equality_groups["secondary"], equality_groups["primary"])
 
-    print("==============================================")
     for kind_name, anim_dir, anim_dir2 in [("primary", state.anim_dir, state.anim_dir2), ("secondary", state.anim_dir2, state.anim_dir)]:
-        print("--- " + anim_dir + " -> " + anim_dir2 + " ---")
+        print("--- " + anim_dir + " -> " + anim_dir2 + " ------------------------------")
         for idx in sorted(list(equality_groups[kind_name])):
             print(str(idx) + " -> " + ", ".join([str(x) for x in sorted(list(equality_groups[kind_name][idx]))]))
+        if anim_dir == anim_dir2:
+            break
 
     if do_write is False:
         return
@@ -751,10 +807,13 @@ def command_joint_distances():
                 if other_anim_name in keyframe_equivalences[bone] and (state.anim_dir != state.anim_dir2 or kind is True):
                     del keyframe_equivalences[bone][other_anim_name]
         for idx, group in equality_groups[kind_name].items():
+            values = group
+            if do_extend_incremental is True and other_anim_name in keyframe_equivalences[idx]:
+                values |= keyframe_equivalences[idx][other_anim_name]
             if idx in keyframe_equivalences:
-                keyframe_equivalences[idx][other_anim_name] = group
+                keyframe_equivalences[idx][other_anim_name] = values
             else:
-                keyframe_equivalences[idx] = {other_anim_name: group}
+                keyframe_equivalences[idx] = {other_anim_name: values}
 
         # Finally, save the updated keyfame_equivalences back to the disk.
 
@@ -855,7 +914,6 @@ def command_list():
         raise Exception("Unknown argument '" + Config.instance.cmdline.arguments[0] + "'.")
 
 
-
 def command_mass_distributions_help():
     return """
 mass_distributions
@@ -899,7 +957,6 @@ motion_actions <action-name>+
     available actions:
     * 'none':
         Do nothing, i.e. ignore desired motion of agent's cortex.
-        This action is useful for 'idle' animations.
     * 'accelerate_towards_clipped_desired_linear_velocity':
         Clips the target linear velocity to the clipping cone, whose axis is
         the forward direction of the agent (see the file 'directions.txt'),
@@ -924,6 +981,12 @@ motion_actions <action-name>+
                         min(1.0f, max(0.0f, <speed>^2 / min_linear_speed))
                     where '<speed>' is the actual linear speed of the motion
                     object of the agent. The 'min_linear_speed' must be > 0.
+    * 'turn_around':
+        Rotates the reference frame along the 'up' direction vector by angle
+        inferred from the related animation. The goal is to rotate agent's
+        forward vector to a desired forward vector (wished by the cortex).
+        Here are parameters (state variables) of the action:
+            - 'max_angular_accel' maximal magnitude of the angular acceleration
     * 'dont_move':
         Creates a linear acceleration on the agent's rigid body so that its
         linear velocity gets smaller and smaller. Parameters:
@@ -956,7 +1019,7 @@ def command_motion_actions():
             for action in Config.instance.cmdline.arguments:
                 f.write(str(action) + "\n")
                 if action == "none":
-                    pass
+                    pass     # The action has no arguments
                 elif action == "accelerate_towards_clipped_desired_linear_velocity":
                     f.write(_float_to_string(state.angle) + "\n")
                     f.write(_float_to_string(state.max_linear_accel) + "\n")
@@ -965,6 +1028,8 @@ def command_motion_actions():
                     f.write(_float_to_string(state.max_angular_speed) + "\n")
                     f.write(_float_to_string(state.max_angular_accel) + "\n")
                     f.write(_float_to_string(state.min_linear_speed) + "\n")
+                elif action == "turn_around":
+                    f.write(_float_to_string(state.max_angular_accel) + "\n")
                 elif action == "dont_move":
                     f.write(_float_to_string(state.max_linear_accel) + "\n")
                 elif action == "dont_rotate":
@@ -996,6 +1061,27 @@ reference_frames  move_straight|
             X = pivot + t * vec_fwd
             vec_fwd * (X - keyframe["frames_of_bones"][bone_idx]["pos"]) = 0
         NOTE: Standing can be considered as a special case of this motion.
+    * turn_around
+        for each keyframe the computed reference frame looks as this
+            reference_frame {
+                "pos": pivot,
+                "rot": basis_vectors_to_quaternion(
+                            cross_product(
+                                R * vec_fwd_mult * vec_fwd,
+                                vec_down_mult * vec_down
+                                ),
+                            R * vec_fwd_mult * vec_fwd,
+                            vec_down_mult * vec_down
+                            )
+            }
+        where 'R' is a rotation matrix representing rotation along the axis
+        'vec_down_mult * vec_down' by the angle between vectors 'vec_fwd'
+        and 'F * T * (vec_fwd, 0)' both projected to the plane perpendicular to
+        the axis. The matrix 'T' is the to-base-matrix of
+            keyframe_0["frames_of_bones"][bone_idx]
+        i.e. of the first keyframe, and 'F' is the from-base-matrix of
+            keyframe["frames_of_bones"][bone_idx]
+        i.e. of the current keyframe.
     * all_same:
         for each keyframe the computed reference frame looks as this:
             reference_frame {
@@ -1034,6 +1120,17 @@ def command_reference_frames():
             t = numpy.dot(motion_direction, numpy.subtract(keyframe["frames_of_bones"][state.bone_idx]["pos"], state.pivot)) / motion_direction_dot
             pos = numpy.add(state.pivot, t * motion_direction)
             meta_reference_frames.append({"pos": pos, "rot": rot})
+    elif Config.instance.cmdline.arguments[0] == "turn_around":
+        keyframes = _load_keyframes()
+        rot_axis = _normalised_vector(state.vec_down_mult * numpy.array(state.vec_down))
+        T = _to_base_matrix(state.pivot, _quaternion_to_rotation_matrix(keyframes[0]["frames_of_bones"][state.bone_idx]["rot"]))
+        vec_fwd_in_bone_space = _transform_vector(T, state.vec_fwd)
+        for keyframe in keyframes:
+            F = _from_base_matrix(state.pivot, _quaternion_to_rotation_matrix(keyframe["frames_of_bones"][state.bone_idx]["rot"]))
+            rotated_vec_fwd = _transform_vector(F, vec_fwd_in_bone_space)
+            angle = _computer_rotation_angle(rot_axis, state.vec_fwd, rotated_vec_fwd)
+            rot = _normalised_quaternion(_axis_angle_to_quaternion(rot_axis, angle))
+            meta_reference_frames.append({"pos": state.pivot, "rot": rot})
     elif Config.instance.cmdline.arguments[0] == "all_same":
         motion_direction = numpy.array(state.vec_fwd)
         rot = _basis_vectors_to_quaternion(
