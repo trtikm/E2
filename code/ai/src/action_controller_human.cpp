@@ -247,6 +247,7 @@ void  compute_motion_object_acceleration_from_motion_actions(
 {
     TMPROF_BLOCK();
 
+    natural_32_bit const  multi_step_coef = current_keyframe_index - previous_keyframe_index;
     float_32_bit const  motion_object_linear_speed = length(motion_object_linear_velocity_in_world_space);
     action_controller_human::motion_action_data_map  new_motion_action_data;
     for (auto const&  action_props : motion_object_action_props.m_records)
@@ -276,11 +277,14 @@ void  compute_motion_object_acceleration_from_motion_actions(
             {
                 float_32_bit  rot_angle;
                 {
-                    float_32_bit const  max_rot_angle = 
+                    float_32_bit const  max_rot_angle =
+                            multi_step_coef *
                             action_props.arguments.at(ANGLE) *
-                            std::min(1.0f, std::max(0.0f,
-                                motion_object_linear_speed * motion_object_linear_speed / action_props.arguments.at(MIN_LINEAR_SPEED)
-                                ))
+                            (multi_step_coef > 1 ?
+                                1.0f :
+                                std::min(1.0f, std::max(0.0f,
+                                    motion_object_linear_speed * motion_object_linear_speed / action_props.arguments.at(MIN_LINEAR_SPEED)
+                                    )))
                             ;
 
                     float_32_bit const  full_rot_angle =
@@ -306,8 +310,8 @@ void  compute_motion_object_acceleration_from_motion_actions(
             vector3  agent_linear_acceleration =
                     (clipped_desired_linear_velocity_in_world_space - motion_object_linear_velocity_in_world_space) / time_step_in_seconds;
             float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
-            if (agent_linear_acceleration_magnitude > action_props.arguments.at(MAX_LINEAR_ACCEL))
-                agent_linear_acceleration *= action_props.arguments.at(MAX_LINEAR_ACCEL) / agent_linear_acceleration_magnitude;
+            if (agent_linear_acceleration_magnitude > multi_step_coef * action_props.arguments.at(MAX_LINEAR_ACCEL))
+                agent_linear_acceleration *= multi_step_coef * action_props.arguments.at(MAX_LINEAR_ACCEL) / agent_linear_acceleration_magnitude;
             output_motion_object_linear_acceleration += agent_linear_acceleration;
 
             if (output_linear_motion_error_wrt_ideal != nullptr)
@@ -328,10 +332,13 @@ void  compute_motion_object_acceleration_from_motion_actions(
             };
 
             float_32_bit const  max_anglular_speed = 
+                    multi_step_coef * 
                     action_props.arguments.at(MAX_ANGULAR_SPEED) *
-                    std::min(1.0f, std::max(0.0f,
-                        motion_object_linear_speed * motion_object_linear_speed / action_props.arguments.at(MIN_LINEAR_SPEED)
-                        ))
+                    (multi_step_coef > 1U ?
+                        1.0f :
+                        std::min(1.0f, std::max(0.0f,
+                            motion_object_linear_speed * motion_object_linear_speed / action_props.arguments.at(MIN_LINEAR_SPEED)
+                            )))
                     ;
 
             float_32_bit const  rot_angle =
@@ -352,8 +359,8 @@ void  compute_motion_object_acceleration_from_motion_actions(
             vector3  agent_angular_acceleration =
                     (desired_angular_velocity - motion_object_angular_velocity_in_world_space) / time_step_in_seconds;
             float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
-            if (agent_angular_acceleration_magnitude > action_props.arguments.at(MAX_ANGULAR_ACCEL))
-                agent_angular_acceleration *= action_props.arguments.at(MAX_ANGULAR_ACCEL) / agent_angular_acceleration_magnitude;
+            if (agent_angular_acceleration_magnitude > multi_step_coef * action_props.arguments.at(MAX_ANGULAR_ACCEL))
+                agent_angular_acceleration *= multi_step_coef * action_props.arguments.at(MAX_ANGULAR_ACCEL) / agent_angular_acceleration_magnitude;
             output_motion_object_angular_acceleration += agent_angular_acceleration;
 
             if (output_angular_motion_error_wrt_ideal != nullptr)
@@ -397,8 +404,8 @@ void  compute_motion_object_acceleration_from_motion_actions(
             vector3  agent_angular_acceleration =
                 (ideal_angular_velocity - motion_object_angular_velocity_in_world_space) / time_step_in_seconds;
             float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
-            if (agent_angular_acceleration_magnitude > action_props.arguments.at(MAX_ANGULAR_ACCEL))
-                agent_angular_acceleration *= action_props.arguments.at(MAX_ANGULAR_ACCEL) / agent_angular_acceleration_magnitude;
+            if (agent_angular_acceleration_magnitude > multi_step_coef * action_props.arguments.at(MAX_ANGULAR_ACCEL))
+                agent_angular_acceleration *= multi_step_coef * action_props.arguments.at(MAX_ANGULAR_ACCEL) / agent_angular_acceleration_magnitude;
             output_motion_object_angular_acceleration += agent_angular_acceleration;
 
             if (output_angular_motion_error_wrt_ideal != nullptr)
@@ -435,8 +442,8 @@ void  compute_motion_object_acceleration_from_motion_actions(
             vector3  agent_linear_acceleration =
                     -motion_object_linear_velocity_in_world_space / time_step_in_seconds + sliding_prevention_accel;
             float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
-            if (agent_linear_acceleration_magnitude > action_props.arguments.at(MAX_LINEAR_ACCEL))
-                agent_linear_acceleration *= action_props.arguments.at(MAX_LINEAR_ACCEL) / agent_linear_acceleration_magnitude;
+            if (agent_linear_acceleration_magnitude > multi_step_coef * action_props.arguments.at(MAX_LINEAR_ACCEL))
+                agent_linear_acceleration *= multi_step_coef * action_props.arguments.at(MAX_LINEAR_ACCEL) / agent_linear_acceleration_magnitude;
             output_motion_object_linear_acceleration += agent_linear_acceleration;
 
             if (output_linear_motion_error_wrt_ideal != nullptr)
@@ -460,8 +467,8 @@ void  compute_motion_object_acceleration_from_motion_actions(
 
             vector3  agent_angular_acceleration = -angular_velocity_to_cancel_in_world_space / time_step_in_seconds;
             float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
-            if (agent_angular_acceleration_magnitude > action_props.arguments.at(MAX_ANGULAR_ACCEL))
-                agent_angular_acceleration *= action_props.arguments.at(MAX_ANGULAR_ACCEL) / agent_angular_acceleration_magnitude;
+            if (agent_angular_acceleration_magnitude > multi_step_coef * action_props.arguments.at(MAX_ANGULAR_ACCEL))
+                agent_angular_acceleration *= multi_step_coef * action_props.arguments.at(MAX_ANGULAR_ACCEL) / agent_angular_acceleration_magnitude;
             output_motion_object_angular_acceleration += agent_angular_acceleration;
 
             if (output_angular_motion_error_wrt_ideal != nullptr)
@@ -631,7 +638,7 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
 
     float_32_bit  time_delta_in_seconds =
             animation.keyframe_at(cursor.keyframe_index).get_time_point() -
-            animation.keyframe_at(cursor.keyframe_index - 1U).get_time_point();
+            animation.keyframe_at(cursor_override.keyframe_index).get_time_point();
     if (!pivot.cursor.motion_name.empty())
         while (true)
         {
@@ -710,14 +717,16 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
 
     // --- COMPUTATION OF THE COST --------------------------------
 
+    float_32_bit const  desired_distance = time_taken_in_seconds * constants.desired_linear_speed;
     vector3 const  desired_position =
             constants.motion_object_origin_in_world_space +
-            (time_taken_in_seconds * constants.desired_linear_speed) * constants.desired_linear_velocity_unit_direction_in_world_space;
+            desired_distance * constants.desired_linear_velocity_unit_direction_in_world_space;
 
-    float_32_bit const  position_error = length(desired_position - motion_object_origin_in_world_space);
+    float_32_bit const  position_error =
+            length(desired_position - motion_object_origin_in_world_space) / (desired_distance + 0.0001f);
 
     float_32_bit const  orientation_error =
-            angle(motion_object_forward_direction_in_world_space, constants.desired_forward_unit_vector_in_world_space);
+            angle(motion_object_forward_direction_in_world_space, constants.desired_forward_unit_vector_in_world_space) / PI();
 
     cost = position_error + orientation_error;
 }
