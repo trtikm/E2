@@ -31,9 +31,11 @@ struct  action_controller_human : public action_controller
     void  next_round(float_32_bit  time_step_in_seconds) override;
 
 private:
-    skeletal_motion_templates::template_motion_info  m_template_motion_info;
+    vector3  m_desired_forward_unit_vector_in_world_space;
     vector3  m_desired_linear_velocity_unit_direction_in_world_space;
     float_32_bit  m_desired_linear_speed;
+
+    skeletal_motion_templates::template_motion_info  m_template_motion_info;
     scene::node_id  m_motion_object_nid;
     skeletal_motion_templates::meta_records_real  m_motion_object_collider_props;
     skeletal_motion_templates::meta_records_real  m_motion_object_mass_distribution_props;

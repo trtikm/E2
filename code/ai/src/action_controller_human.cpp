@@ -220,23 +220,29 @@ struct  motion_action_data__dont_move : public action_controller_human::motion_a
 
 
 void  compute_motion_object_acceleration_from_motion_actions(
+        vector3 const&  desired_forward_unit_vector_in_world_space,
+        vector3 const&  desired_linear_velocity_unit_direction_in_world_space,
+        float_32_bit const  desired_linear_speed,
+        //----------------------------------------------
         float_32_bit const  time_step_in_seconds,
         skeletal_motion_templates::keyframes const&  animation,
         natural_32_bit const  current_keyframe_index,
         natural_32_bit const  previous_keyframe_index,
         skeletal_motion_templates::meta_records_real const&  motion_object_action_props,
+        vector3 const&  forward_direction_in_anim_space,
+        vector3 const&  up_direction_in_anim_space,
         vector3 const&  motion_object_origin,
         vector3 const&  motion_object_forward_direction_in_world_space,
         vector3 const&  motion_object_up_direction_in_world_space,
         vector3 const&  motion_object_linear_velocity_in_world_space,
         vector3 const&  motion_object_angular_velocity_in_world_space,
         vector3 const&  gravity_accel,
-        vector3 const&  desired_linear_velocity_unit_direction_in_world_space,
-        float_32_bit const  desired_linear_speed,
         action_controller_human::motion_action_data_map const&  motion_action_data,
         vector3&  output_motion_object_linear_acceleration,
         vector3&  output_motion_object_angular_acceleration,
-        action_controller_human::motion_action_data_map&  output_motion_action_data // can alias with 'motion_action_data'
+        action_controller_human::motion_action_data_map&  output_motion_action_data,    // can alias with 'motion_action_data'
+        float_32_bit*  output_linear_motion_error_wrt_ideal = nullptr,
+        float_32_bit*  output_angular_motion_error_wrt_ideal = nullptr      // can alias with 'output_linear_motion_error_wrt_ideal'
         )
 {
     TMPROF_BLOCK();
@@ -255,19 +261,19 @@ void  compute_motion_object_acceleration_from_motion_actions(
                 MIN_LINEAR_SPEED    = 2,
             };
 
+            float_32_bit  ideal_linear_speed;
+            {
+                vector3 const  position_delta =
+                        animation.get_meta_data().m_reference_frames.at(current_keyframe_index).origin() -
+                        animation.get_meta_data().m_reference_frames.at(previous_keyframe_index).origin();
+                float_32_bit const  time_delta =
+                        animation.keyframe_at(current_keyframe_index).get_time_point() -
+                        animation.keyframe_at(previous_keyframe_index).get_time_point() ;
+                ideal_linear_speed = length(position_delta) / std::max(time_delta, 0.0001f);
+            }
+
             vector3  clipped_desired_linear_velocity_in_world_space;
             {
-                float_32_bit  ideal_linear_speed;
-                {
-                    vector3 const  position_delta =
-                            animation.get_meta_data().m_reference_frames.at(current_keyframe_index).origin() -
-                            animation.get_meta_data().m_reference_frames.at(previous_keyframe_index).origin();
-                    float_32_bit const  time_delta =
-                            animation.keyframe_at(current_keyframe_index).get_time_point() -
-                            animation.keyframe_at(previous_keyframe_index).get_time_point() ;
-                    ideal_linear_speed = length(position_delta) / std::max(time_delta, 0.0001f);
-                }
-
                 float_32_bit  rot_angle;
                 {
                     float_32_bit const  max_rot_angle = 
@@ -303,6 +309,14 @@ void  compute_motion_object_acceleration_from_motion_actions(
             if (agent_linear_acceleration_magnitude > action_props.arguments.at(MAX_LINEAR_ACCEL))
                 agent_linear_acceleration *= action_props.arguments.at(MAX_LINEAR_ACCEL) / agent_linear_acceleration_magnitude;
             output_motion_object_linear_acceleration += agent_linear_acceleration;
+
+            if (output_linear_motion_error_wrt_ideal != nullptr)
+            {
+                float_32_bit const  speed_ratio =
+                        ((length(motion_object_linear_velocity_in_world_space) + 0.001f) / (ideal_linear_speed + 0.001f)) - 1.0f;
+                if (std::fabs(*output_linear_motion_error_wrt_ideal) < fabs(speed_ratio))
+                    *output_linear_motion_error_wrt_ideal = speed_ratio;
+            }
         }
         else if (action_props.keyword == "chase_linear_velocity_by_forward_vector")
         {
@@ -341,6 +355,65 @@ void  compute_motion_object_acceleration_from_motion_actions(
             if (agent_angular_acceleration_magnitude > action_props.arguments.at(MAX_ANGULAR_ACCEL))
                 agent_angular_acceleration *= action_props.arguments.at(MAX_ANGULAR_ACCEL) / agent_angular_acceleration_magnitude;
             output_motion_object_angular_acceleration += agent_angular_acceleration;
+
+            if (output_angular_motion_error_wrt_ideal != nullptr)
+            {
+                // This action does not have any motion error wrt an ideal one (beacause the is no ideal motion to compare with).
+            }
+        }
+        else if (action_props.keyword == "turn_around")
+        {
+            enum INDICES_OF_ARGUMENTS
+            {
+                MAX_ANGULAR_ACCEL = 0,
+            };
+
+            float_32_bit  ideal_angular_speed;
+            vector3  ideal_angular_velocity;
+            {
+                matrix44  M;
+
+                angeo::from_base_matrix(animation.get_meta_data().m_reference_frames.at(current_keyframe_index), M);
+                vector3 const  current_keyframe_forward_direction_in_world_space = transform_vector(forward_direction_in_anim_space, M);
+
+                angeo::from_base_matrix(animation.get_meta_data().m_reference_frames.at(previous_keyframe_index), M);
+                vector3 const  previous_keyframe_forward_direction_in_world_space = transform_vector(forward_direction_in_anim_space, M);
+
+                float_32_bit const  rot_angle =
+                        angeo::compute_rotation_angle(
+                                motion_object_up_direction_in_world_space,
+                                previous_keyframe_forward_direction_in_world_space,
+                                current_keyframe_forward_direction_in_world_space
+                                );
+
+                float_32_bit const  time_delta =
+                        animation.keyframe_at(current_keyframe_index).get_time_point() -
+                        animation.keyframe_at(previous_keyframe_index).get_time_point() ;
+
+                ideal_angular_speed = rot_angle / std::max(time_delta, 0.0001f);
+                ideal_angular_velocity = ideal_angular_speed * motion_object_up_direction_in_world_space;
+            }
+
+            vector3  agent_angular_acceleration =
+                (ideal_angular_velocity - motion_object_angular_velocity_in_world_space) / time_step_in_seconds;
+            float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
+            if (agent_angular_acceleration_magnitude > action_props.arguments.at(MAX_ANGULAR_ACCEL))
+                agent_angular_acceleration *= action_props.arguments.at(MAX_ANGULAR_ACCEL) / agent_angular_acceleration_magnitude;
+            output_motion_object_angular_acceleration += agent_angular_acceleration;
+
+            if (output_angular_motion_error_wrt_ideal != nullptr)
+            {
+                // TODO!!
+
+                //float_32_bit const  rot_angle =
+                //        angeo::compute_rotation_angle(
+                //                motion_object_up_direction_in_world_space,
+                //                motion_object_forward_direction_in_world_space,
+                //                desired_linear_velocity_unit_direction_in_world_space
+                //                );
+                //float_32_bit const  desired_angular_speed = rot_angle / time_step_in_seconds;
+                //vector3 const  desired_angular_velocity = desired_angular_speed * motion_object_up_direction_in_world_space;
+            }
         }
         else if (action_props.keyword == "dont_move")
         {
@@ -365,6 +438,13 @@ void  compute_motion_object_acceleration_from_motion_actions(
             if (agent_linear_acceleration_magnitude > action_props.arguments.at(MAX_LINEAR_ACCEL))
                 agent_linear_acceleration *= action_props.arguments.at(MAX_LINEAR_ACCEL) / agent_linear_acceleration_magnitude;
             output_motion_object_linear_acceleration += agent_linear_acceleration;
+
+            if (output_linear_motion_error_wrt_ideal != nullptr)
+            {
+                float_32_bit const  speed_ratio = length(motion_object_linear_velocity_in_world_space);
+                if (std::fabs(*output_linear_motion_error_wrt_ideal) < speed_ratio)
+                    *output_linear_motion_error_wrt_ideal = speed_ratio;
+            }
         }
         else if (action_props.keyword == "dont_rotate")
         {
@@ -383,6 +463,13 @@ void  compute_motion_object_acceleration_from_motion_actions(
             if (agent_angular_acceleration_magnitude > action_props.arguments.at(MAX_ANGULAR_ACCEL))
                 agent_angular_acceleration *= action_props.arguments.at(MAX_ANGULAR_ACCEL) / agent_angular_acceleration_magnitude;
             output_motion_object_angular_acceleration += agent_angular_acceleration;
+
+            if (output_angular_motion_error_wrt_ideal != nullptr)
+            {
+                float_32_bit const  speed_ratio = length(angular_velocity_to_cancel_in_world_space);
+                if (std::fabs(*output_angular_motion_error_wrt_ideal) < speed_ratio)
+                    *output_angular_motion_error_wrt_ideal = speed_ratio;
+            }
         }
         else
             NOT_IMPLEMENTED_YET();
@@ -394,38 +481,54 @@ void  compute_motion_object_acceleration_from_motion_actions(
 struct  find_best_keyframe_constants
 {
     find_best_keyframe_constants(
+            vector3 const&  desired_forward_unit_vector_in_world_space_,
+            vector3 const&  desired_linear_velocity_unit_direction_in_world_space_,
+            float_32_bit const  desired_linear_speed_,
+            //---------------------------------
             skeletal_motion_templates_const_ptr const  motion_templates_,
+            skeleton_composition_const_ptr const  skeleton_composition_,
             float_32_bit const  time_to_consume_in_seconds_,
             float_32_bit const  search_time_horizon_in_seconds_,
             float_32_bit const  time_step_for_motion_actions_in_seconds_,
             vector3 const&  gravity_acceleration_in_world_space_,
-            vector3 const&  motion_object_origin_in_world_space_,
-            vector3 const&  desired_linear_velocity_unit_direction_in_world_space_,
-            float_32_bit const  desired_linear_speed_
+            vector3 const&  motion_object_origin_in_world_space_
             )
-        : motion_templates(motion_templates_)
+        : desired_forward_unit_vector_in_world_space(desired_forward_unit_vector_in_world_space_)
+        , desired_linear_velocity_unit_direction_in_world_space(desired_linear_velocity_unit_direction_in_world_space_)
+        , desired_linear_speed(desired_linear_speed_)
+
+        , motion_templates(motion_templates_)
+        , skeleton_composition(skeleton_composition_)
         , time_to_consume_in_seconds(time_to_consume_in_seconds_)
         , search_time_horizon_in_seconds(search_time_horizon_in_seconds_)
         , time_step_for_motion_actions_in_seconds(time_step_for_motion_actions_in_seconds_)
         , gravity_acceleration_in_world_space(gravity_acceleration_in_world_space_)
         , motion_object_origin_in_world_space(motion_object_origin_in_world_space_)
-        , desired_linear_velocity_unit_direction_in_world_space(desired_linear_velocity_unit_direction_in_world_space_)
-        , desired_linear_speed(desired_linear_speed_)
     {}
 
+    vector3  desired_forward_unit_vector_in_world_space;
+    vector3  desired_linear_velocity_unit_direction_in_world_space;
+    float_32_bit  desired_linear_speed;
+
     skeletal_motion_templates_const_ptr  motion_templates;
+    skeleton_composition_const_ptr  skeleton_composition;
     float_32_bit  time_to_consume_in_seconds;
     float_32_bit  search_time_horizon_in_seconds;
     float_32_bit  time_step_for_motion_actions_in_seconds;
     vector3  gravity_acceleration_in_world_space;
     vector3  motion_object_origin_in_world_space;
-    vector3  desired_linear_velocity_unit_direction_in_world_space;
-    float_32_bit  desired_linear_speed;
 };
 
 
 struct  find_best_keyframe_queue_record
 {
+    struct  pivot_props
+    {
+        skeletal_motion_templates::motion_template_cursor  cursor;
+        float_32_bit  time_delta_in_seconds;
+        float_32_bit  motion_error_wrt_ideal;
+    };
+
     find_best_keyframe_queue_record(
             skeletal_motion_templates::motion_template_cursor const&  start_cursor,
             vector3 const&  start_motion_object_origin_in_world_space,
@@ -442,9 +545,10 @@ struct  find_best_keyframe_queue_record
             );
 
     float_32_bit  cost;
-    std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit>  pivot;
+    pivot_props  pivot;
     skeletal_motion_templates::motion_template_cursor  cursor;
     float_32_bit  time_taken_in_seconds;
+    float_32_bit  motion_error_wrt_ideal;
     // Next follow motion object data (they represent basis for the computation of the cost)
     vector3  motion_object_origin_in_world_space;
     vector3  motion_object_forward_direction_in_world_space;
@@ -473,6 +577,7 @@ void  find_best_keyframe_queue_record::_assign(
     self.pivot = other.pivot;
     self.cursor = other.cursor;
     self.time_taken_in_seconds = other.time_taken_in_seconds;
+    self.motion_error_wrt_ideal = other.motion_error_wrt_ideal;
 
     self.motion_object_origin_in_world_space = other.motion_object_origin_in_world_space;
     self.motion_object_forward_direction_in_world_space = other.motion_object_forward_direction_in_world_space;
@@ -493,6 +598,7 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
     , pivot()
     , cursor(start_cursor)
     , time_taken_in_seconds(0.0f)
+    , motion_error_wrt_ideal(0.0f)
 
     , motion_object_origin_in_world_space(start_motion_object_origin_in_world_space)
     , motion_object_forward_direction_in_world_space(start_motion_object_forward_direction_in_world_space)
@@ -511,6 +617,7 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
     , pivot(predecessor.pivot)
     , cursor{ cursor_override.motion_name, cursor_override.keyframe_index + 1U }
     , time_taken_in_seconds(predecessor.time_taken_in_seconds)
+    , motion_error_wrt_ideal(predecessor.motion_error_wrt_ideal)
 
     , motion_object_origin_in_world_space(predecessor.motion_object_origin_in_world_space)
     , motion_object_forward_direction_in_world_space(predecessor.motion_object_forward_direction_in_world_space)
@@ -525,7 +632,7 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
     float_32_bit  time_delta_in_seconds =
             animation.keyframe_at(cursor.keyframe_index).get_time_point() -
             animation.keyframe_at(cursor.keyframe_index - 1U).get_time_point();
-    if (!pivot.first.motion_name.empty())
+    if (!pivot.cursor.motion_name.empty())
         while (true)
         {
             if (cursor.keyframe_index + 1U >= animation.get_keyframes().size())
@@ -559,24 +666,30 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
     vector3  motion_object_linear_acceleration = vector3_zero();
     vector3  motion_object_angular_acceleration = vector3_zero();
     action_controller_human::motion_action_data_map  motion_action_data;    // Not used (but still must be passed)
+    float_32_bit* const  motion_error_ptr = pivot.cursor.motion_name.empty() ? &motion_error_wrt_ideal : nullptr;
     detail::compute_motion_object_acceleration_from_motion_actions(
+            constants.desired_forward_unit_vector_in_world_space,
+            constants.desired_linear_velocity_unit_direction_in_world_space,
+            constants.desired_linear_speed,
             time_delta_in_seconds,
             animation,
             cursor.keyframe_index,
             cursor_override.keyframe_index,
             animation.get_meta_data().m_motion_actions.at(cursor.keyframe_index),
+            constants.skeleton_composition->forward_direction_in_anim_space,
+            constants.skeleton_composition->up_direction_in_anim_space,
             motion_object_origin_in_world_space,
             motion_object_forward_direction_in_world_space,
             motion_object_up_direction_in_world_space,
             motion_object_linear_velocity_in_world_space,
             motion_object_angular_velocity_in_world_space,
             constants.gravity_acceleration_in_world_space,
-            constants.desired_linear_velocity_unit_direction_in_world_space,
-            constants.desired_linear_speed,
             motion_action_data,
             motion_object_linear_acceleration,
             motion_object_angular_acceleration,
-            motion_action_data
+            motion_action_data,
+            motion_error_ptr,
+            motion_error_ptr
             );
 
     motion_object_linear_velocity_in_world_space += time_delta_in_seconds * motion_object_linear_acceleration;
@@ -603,7 +716,10 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
 
     float_32_bit const  position_error = length(desired_position - motion_object_origin_in_world_space);
 
-    cost = position_error;
+    float_32_bit const  orientation_error =
+            angle(motion_object_forward_direction_in_world_space, constants.desired_forward_unit_vector_in_world_space);
+
+    cost = position_error + orientation_error;
 }
 
 
@@ -653,15 +769,15 @@ float_32_bit  find_best_keyframe(
         {
             if (current->time_taken_in_seconds >= constants.search_time_horizon_in_seconds)
             {
-                INVARIANT(!current->pivot.first.motion_name.empty());
-                auto const  pivot_it = pivot_records.find(current->pivot.first);
+                INVARIANT(!current->pivot.cursor.motion_name.empty());
+                auto const  pivot_it = pivot_records.find(current->pivot.cursor);
                 if (pivot_it == pivot_records.end())
-                    pivot_records.insert({ current->pivot.first, current });
+                    pivot_records.insert({ current->pivot.cursor, current });
                 else if (current->cost < pivot_it->second->cost)
                     pivot_it->second = current;
                 continue;
             }
-            else if (!current->pivot.first.motion_name.empty() && pivot_records.find(current->pivot.first) != pivot_records.end())
+            else if (!current->pivot.cursor.motion_name.empty() && pivot_records.find(current->pivot.cursor) != pivot_records.end())
                 continue;
         }
 
@@ -681,11 +797,11 @@ float_32_bit  find_best_keyframe(
                 std::shared_ptr<find_best_keyframe_queue_record> const  successor =
                         std::make_shared<find_best_keyframe_queue_record>(*current, cursor, constants);
 
-                if (successor->pivot.first.motion_name.empty() && successor->time_taken_in_seconds >= constants.time_to_consume_in_seconds)
+                if (successor->pivot.cursor.motion_name.empty() && successor->time_taken_in_seconds >= constants.time_to_consume_in_seconds)
                 {
                     if (pivot_records.find(successor->cursor) != pivot_records.end())
                         continue;
-                    successor->pivot = {successor->cursor, successor->time_taken_in_seconds};
+                    successor->pivot = { successor->cursor, successor->time_taken_in_seconds, successor->motion_error_wrt_ideal };
                 }
 
                 queue.push(successor);
@@ -701,8 +817,9 @@ float_32_bit  find_best_keyframe(
     for (auto const&  pivot : pivot_records)
         if (winner == nullptr || pivot.second->cost < winner->cost)
             winner = pivot.second;
-    best_cursor = winner->pivot.first;
-    return winner->pivot.second;
+    best_cursor = winner->pivot.cursor;
+    float_32_bit const  animation_speed_coef = std::max(0.5f, std::min(2.0f, 1.0f + winner->pivot.motion_error_wrt_ideal));
+    return winner->pivot.time_delta_in_seconds / animation_speed_coef;
 }
 
 
@@ -713,14 +830,16 @@ namespace ai {
 
 action_controller_human::action_controller_human(blackboard_ptr const  blackboard_)
     : action_controller(blackboard_)
+    , m_desired_forward_unit_vector_in_world_space(vector3_unit_x())
+    , m_desired_linear_velocity_unit_direction_in_world_space(vector3_unit_x())
+    , m_desired_linear_speed(0.0f)
+
     , m_template_motion_info({
             {"", 0U},       // src_pose
             {"", 0U},       // dst_pose
             0.0f,           // total_interpolation_time_in_seconds
             0.0f            // consumed_time_in_seconds
             })
-    , m_desired_linear_velocity_unit_direction_in_world_space(vector3_unit_x())
-    , m_desired_linear_speed(0.0f)
     , m_motion_object_nid()
     , m_motion_object_collider_props()
     , m_motion_object_mass_distribution_props()
@@ -831,6 +950,11 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                         * m_desired_linear_velocity_unit_direction_in_world_space
                         );
         m_desired_linear_speed = get_blackboard()->m_cortex_cmd_move_intensity * get_blackboard()->m_max_forward_speed_in_meters_per_second;
+
+        // Currently we do not support motions where m_desired_forward_unit_vector_in_world_space and
+        // m_desired_linear_velocity_unit_direction_in_world_space could be different. Also there is
+        // distinguishing output from the cortex.
+        m_desired_forward_unit_vector_in_world_space = m_desired_linear_velocity_unit_direction_in_world_space;
     }
 
     // Check whether the condition for applying forces towards the desired motion of the agent is satisfied or not.
@@ -872,19 +996,22 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         vector3  motion_object_linear_acceleration = vector3_zero();
         vector3  motion_object_angular_acceleration = vector3_zero();
         detail::compute_motion_object_acceleration_from_motion_actions(
+                m_desired_forward_unit_vector_in_world_space,
+                m_desired_linear_velocity_unit_direction_in_world_space,
+                m_desired_linear_speed,
                 time_step_in_seconds,
                 get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.dst_pose.motion_name),
                 m_template_motion_info.dst_pose.keyframe_index,
                 m_template_motion_info.dst_pose.keyframe_index - 1U,
                 m_motion_object_action_props,
+                get_blackboard()->m_skeleton_composition->forward_direction_in_anim_space,
+                get_blackboard()->m_skeleton_composition->up_direction_in_anim_space,
                 motion_object_frame.origin(),
                 motion_object_forward_direction_in_world_space,
                 motion_object_up_direction_in_world_space,
                 motion_object_linear_velocity_in_world_space,
                 motion_object_angular_velocity_in_world_space,
                 gravity_accel,
-                m_desired_linear_velocity_unit_direction_in_world_space,
-                m_desired_linear_speed,
                 m_motion_action_data,
                 motion_object_linear_acceleration,
                 motion_object_angular_acceleration,
@@ -906,50 +1033,21 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         time_step_in_seconds -= time_till_dst_pose;
         INVARIANT(time_step_in_seconds >= 0.0f);
 
-        vector3  target_linear_velocity_in_world_space;
-        {
-            if (m_template_motion_info.dst_pose.keyframe_index == 0U)
-                target_linear_velocity_in_world_space = motion_object_linear_velocity_in_world_space;
-            else
-            {
-                skeletal_motion_templates::keyframes const&  animation =
-                        get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.dst_pose.motion_name
-                        );
-                float_32_bit const  time_delta =
-                        animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index).get_time_point() -
-                        animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index - 1U).get_time_point();
-                INVARIANT(time_delta > 0.0f);
-                vector3 const  position_delta =
-                        animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index).origin() -
-                        animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index - 1U).origin();
-
-                vector3 const  average_linear_velocity_in_anim_space = position_delta / std::max(time_delta, 0.0001f);
-
-                float_32_bit const  speed_distance =
-                        std::fabs(motion_object_linear_speed - length(average_linear_velocity_in_anim_space));
-
-                float_32_bit const  max_speed_distance = std::max(0.25f, 0.5f * length(average_linear_velocity_in_anim_space));
-
-                if (speed_distance <= max_speed_distance)
-                    target_linear_velocity_in_world_space = m_desired_linear_speed * m_desired_linear_velocity_unit_direction_in_world_space;
-                else
-                    target_linear_velocity_in_world_space = motion_object_linear_velocity_in_world_space;
-            }
-        }
-
         m_template_motion_info.src_pose = m_template_motion_info.dst_pose;
         m_template_motion_info.consumed_time_in_seconds = 0.0f;
         m_template_motion_info.total_interpolation_time_in_seconds =
                 detail::find_best_keyframe(
                         detail::find_best_keyframe_constants(
+                                m_desired_forward_unit_vector_in_world_space,
+                                m_desired_linear_velocity_unit_direction_in_world_space,
+                                m_desired_linear_speed,
                                 get_blackboard()->m_motion_templates,
+                                get_blackboard()->m_skeleton_composition,
                                 time_step_in_seconds,
                                 1.0f,
                                 0.25f,
                                 gravity_accel,
-                                motion_object_frame.origin(),
-                                m_desired_linear_velocity_unit_direction_in_world_space,
-                                m_desired_linear_speed
+                                motion_object_frame.origin()
                                 ),
                         detail::find_best_keyframe_queue_record(
                                 m_template_motion_info.src_pose,
@@ -961,28 +1059,6 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                                 ),
                         m_template_motion_info.dst_pose
                         );
-
-        float_32_bit  animation_speed_coef;
-        {
-            skeletal_motion_templates::keyframes const&  animation =
-                    get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.dst_pose.motion_name
-                    );
-            float_32_bit const  time_delta_in_seconds =
-                    animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index).get_time_point() -
-                    animation.keyframe_at(m_template_motion_info.dst_pose.keyframe_index - 1U).get_time_point();
-            INVARIANT(time_delta_in_seconds > 0.0f);
-            vector3 const  position_delta_in_anim_space =
-                    animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index).origin() -
-                    animation.get_meta_data().m_reference_frames.at(m_template_motion_info.dst_pose.keyframe_index - 1U).origin();
-            vector3 const  average_linear_velocity_in_anim_space =
-                    position_delta_in_anim_space / std::max(time_delta_in_seconds, 0.0001f);
-            float_32_bit const  linear_acceleration_ratio =
-                    (motion_object_linear_speed + 0.001f) / (length(average_linear_velocity_in_anim_space) + 0.001f);
-            
-            animation_speed_coef = std::max(0.5f, std::min(2.0f, linear_acceleration_ratio));
-        }
-
-        m_template_motion_info.total_interpolation_time_in_seconds /= animation_speed_coef;
 
         time_step_in_seconds = std::min(time_step_in_seconds, m_template_motion_info.total_interpolation_time_in_seconds);
     }
