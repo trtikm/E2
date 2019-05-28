@@ -1082,6 +1082,24 @@ reference_frames  move_straight|
         i.e. of the first keyframe, and 'F' is the from-base-matrix of
             keyframe["frames_of_bones"][bone_idx]
         i.e. of the current keyframe.
+    * turn_around_uniform
+        for each keyframe the computed reference frame looks as this
+            reference_frame {
+                "pos": pivot,
+                "rot": basis_vectors_to_quaternion(
+                            cross_product(
+                                R(i) * vec_fwd_mult * vec_fwd,
+                                vec_down_mult * vec_down
+                                ),
+                            R(i) * vec_fwd_mult * vec_fwd,
+                            vec_down_mult * vec_down
+                            )
+            }
+        where 'R(i) = _quaternion_to_rotation_matrix(
+        _axis_angle_to_quaternion(vec_down_mult * vec_down, i * angle /
+        <num-keyframes>))', where 'vec_down_mult', 'vec_down', and
+        'angle' are state variables and the <num-keyframes> is automatically
+        inferred from the animation in the 'anim_dir'.
     * all_same:
         for each keyframe the computed reference frame looks as this:
             reference_frame {
@@ -1130,6 +1148,19 @@ def command_reference_frames():
             rotated_vec_fwd = _transform_vector(F, vec_fwd_in_bone_space)
             angle = _computer_rotation_angle(rot_axis, state.vec_fwd, rotated_vec_fwd)
             rot = _normalised_quaternion(_axis_angle_to_quaternion(rot_axis, angle))
+            meta_reference_frames.append({"pos": state.pivot, "rot": rot})
+    elif Config.instance.cmdline.arguments[0] == "turn_around_uniform":
+        keyframes = _load_keyframes()
+        rot_axis = _normalised_vector(state.vec_down_mult * numpy.array(state.vec_down))
+        uniform_angle = state.angle / (len(keyframes) - 1 if len(keyframes) > 1 else 1)
+        for i, keyframe in enumerate(keyframes):
+            R = _quaternion_to_rotation_matrix(_axis_angle_to_quaternion(rot_axis, i * uniform_angle))
+            rotated_fwd_vector = _normalised_vector(_multiply_matrix_by_vector(R, state.vec_fwd_mult * numpy.array(state.vec_fwd)))
+            rot = _basis_vectors_to_quaternion(
+                        numpy.cross(rotated_fwd_vector, rot_axis),
+                        rotated_fwd_vector,
+                        rot_axis
+                        )
             meta_reference_frames.append({"pos": state.pivot, "rot": rot})
     elif Config.instance.cmdline.arguments[0] == "all_same":
         motion_direction = numpy.array(state.vec_fwd)
