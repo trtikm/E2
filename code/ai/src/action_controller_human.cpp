@@ -1069,6 +1069,11 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                         m_template_motion_info.dst_pose
                         );
 
+        skeletal_motion_templates::keyframes const&  dst_animation =
+                get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.dst_pose.motion_name
+                );
+        m_motion_object_action_props = dst_animation.get_meta_data().m_motion_actions.at(m_template_motion_info.dst_pose.keyframe_index);
+
         time_step_in_seconds = std::min(time_step_in_seconds, m_template_motion_info.total_interpolation_time_in_seconds);
     }
 
@@ -1177,7 +1182,6 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
             }
 
             m_motion_object_constraint_props = dst_animation.get_meta_data().m_constraints.at(m_template_motion_info.dst_pose.keyframe_index);
-            m_motion_object_action_props = dst_animation.get_meta_data().m_motion_actions.at(m_template_motion_info.dst_pose.keyframe_index);
         }
     }
 }
