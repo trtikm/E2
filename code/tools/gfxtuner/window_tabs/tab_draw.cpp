@@ -268,7 +268,18 @@ widgets::widgets(program_window* const  wnd)
             return new s(wnd);
         }(m_wnd)
         )
-
+    , m_show_ai_action_control(
+        [](program_window* wnd) {
+            struct s : public QCheckBox {
+                s(program_window* wnd) : QCheckBox("AI action control")
+                {
+                    setChecked(wnd->ptree().get("draw.show.ai_action_control", false));
+                    QObject::connect(this, SIGNAL(stateChanged(int)), wnd, SLOT(on_draw_show_ai_action_control_changed(int)));
+                }
+            };
+            return new s(wnd);
+        }(m_wnd)
+        )
     , m_colliders_colour_component_red(
         [](program_window* wnd) {
             struct s : public QLineEdit {
@@ -491,6 +502,12 @@ void widgets::on_show_contact_normals_changed(int const  value)
     wnd()->set_focus_to_glwindow();
 }
 
+void widgets::on_show_ai_action_control_changed(int const  value)
+{
+    wnd()->glwindow().call_later(&simulator::set_show_ai_action_controller_props, m_show_ai_action_control->isChecked());
+    wnd()->set_focus_to_glwindow();
+}
+
 void widgets::on_colliders_colour_changed()
 {
     vector3 const  colour(
@@ -614,6 +631,7 @@ void  widgets::save()
     wnd()->ptree().put("draw.show.batches", m_show_batches->isChecked());
     wnd()->ptree().put("draw.show.colliders", m_show_colliders->isChecked());
     wnd()->ptree().put("draw.show.contact_normals", m_show_contact_normals->isChecked());
+    wnd()->ptree().put("draw.show.ai_action_control", m_show_ai_action_control->isChecked());
 
     wnd()->ptree().put("draw.colliders_colour.red", m_colliders_colour_component_red->text().toInt());
     wnd()->ptree().put("draw.colliders_colour.green", m_colliders_colour_component_green->text().toInt());
@@ -831,6 +849,14 @@ QWidget*  make_draw_tab_content(widgets const&  w)
                             "      contact normals are not shown."
                             );
                         w.wnd()->on_draw_show_contact_normals_changed(0);
+
+                        show_layout->addWidget(w.show_ai_action_control());
+                        w.show_ai_action_control()->setToolTip(
+                            "For each AI agent in the scene show its desire motion vectors, forward\n"
+                            "direction vector, and the current motion in the space (linear and angular\n"
+                            "velocities)."
+                            );
+                        w.wnd()->on_draw_show_ai_action_control_changed(0);
                     }
                     show_group->setLayout(show_layout);
                 }

@@ -50,6 +50,7 @@ struct simulator : public qtgl::real_time_simulator
     void  set_show_batches(bool const  state) { m_do_show_batches = state; }
     void  set_show_colliders(bool const  state) { m_do_show_colliders = state; }
     void  set_show_contact_normals(bool const  state) { m_do_show_contact_normals = state; }
+    void  set_show_ai_action_controller_props(bool const  state) { m_do_show_ai_action_controller_props = state; }
     void  set_colliders_color(vector3 const&  colour) { m_colliders_colour = expand34(colour); }
     void  set_render_in_wireframe(bool const  state) { m_render_in_wireframe = state; }
 
@@ -273,6 +274,12 @@ private:
             matrix44 const&  matrix_from_camera_to_clipspace,
             qtgl::draw_state&  draw_state
             );
+    void  render_ai_action_controller_props(
+            matrix44 const&  matrix_from_world_to_camera,
+            matrix44 const&  matrix_from_camera_to_clipspace,
+            qtgl::draw_state&  draw_state
+            );
+
 
     void  foreach_collider_in_subtree(
                 scn::scene_node_ptr const  node_ptr,
@@ -310,6 +317,7 @@ private:
     bool  m_do_show_batches;
     bool  m_do_show_colliders;
     bool  m_do_show_contact_normals;
+    bool  m_do_show_ai_action_controller_props;
     vector4  m_colliders_colour;
     bool  m_render_in_wireframe;
 
@@ -330,6 +338,13 @@ private:
         qtgl::batch  collision_normals_batch;
     };
     cache_of_batches_of_colliders  m_cache_of_batches_of_colliders;
+
+    struct  cache_of_batches_of_ai_agents
+    {
+        std::unique_ptr<std::pair<std::vector< std::pair<vector3, vector3> >, std::vector<vector4> > >  lines;
+        qtgl::batch  lines_batch;
+    };
+    cache_of_batches_of_ai_agents  m_cache_of_batches_of_ai_agents;
 
     qtgl::font_mono_props  m_font_props;
 

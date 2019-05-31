@@ -9,6 +9,7 @@
 #include <angeo/skeleton_kinematics.hpp>
 #include <angeo/utility.hpp>
 #include <ai/skeleton_utils.hpp>
+#include <ai/action_controller_human.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
 #include <qtgl/batch_generators.hpp>
@@ -234,6 +235,7 @@ simulator::simulator()
     , m_do_show_batches(true)
     , m_do_show_colliders(true)
     , m_do_show_contact_normals(false)
+    , m_do_show_ai_action_controller_props(false)
     , m_colliders_colour{ 0.75f, 0.75f, 1.0f, 1.0f }
     , m_render_in_wireframe(false)
 
@@ -244,6 +246,7 @@ simulator::simulator()
     , m_fixed_time_step_in_seconds(1.0 / 25.0)
     , m_scene(new scn::scene)
     , m_cache_of_batches_of_colliders()
+    , m_cache_of_batches_of_ai_agents()
     , m_font_props(
             []() -> qtgl::font_mono_props {
                 qtgl::font_mono_props  props;
@@ -569,6 +572,8 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
         render_colliders(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
     if (m_do_show_contact_normals)
         render_contact_normals(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
+    if (m_do_show_ai_action_controller_props)
+        render_ai_action_controller_props(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
 
     if (is_simulation_round)
         render_simulation_state(matrix_from_world_to_camera, matrix_from_camera_to_clipspace ,draw_state);
@@ -601,6 +606,9 @@ void  simulator::on_simulation_resumed()
     m_cache_of_batches_of_colliders.collision_normals_points.release();
     m_cache_of_batches_of_colliders.collision_normals_batch.release();
 
+    m_cache_of_batches_of_ai_agents.lines.release();
+    m_cache_of_batches_of_ai_agents.lines_batch.release();
+
     call_listeners(simulator_notifications::resumed());
 }
 
@@ -617,6 +625,18 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
             m_cache_of_batches_of_colliders.collision_normals_points =
                     std::make_unique<std::vector< std::pair<vector3, vector3> > >();
         m_cache_of_batches_of_colliders.collision_normals_batch.release();
+    }
+    if (m_do_show_ai_action_controller_props)
+    {
+        if (m_cache_of_batches_of_ai_agents.lines.operator bool())
+        {
+            m_cache_of_batches_of_ai_agents.lines->first.clear();
+            m_cache_of_batches_of_ai_agents.lines->second.clear();
+        }
+        else
+            m_cache_of_batches_of_ai_agents.lines =
+                    std::make_unique<std::pair<std::vector< std::pair<vector3, vector3> >, std::vector<vector4> > >();
+        m_cache_of_batches_of_ai_agents.lines_batch.release();
     }
 
     m_agents_ptr->next_round((float_32_bit)time_to_simulate_in_seconds, keyboard_props(), mouse_props(), window_props());
@@ -652,6 +672,76 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
     //            std::chrono::duration<float_64_bit>(std::chrono::high_resolution_clock::now() - start_time_point).count();
     //    max_computation_time_in_seconds -= duration_of_last_simulation_step_in_seconds;
     //}
+
+    if (m_do_show_ai_action_controller_props)
+    {
+        for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
+            if (m_agents_ptr->at(agent_id_and_node_id.first).ready())
+            {
+                ai::action_controller const* const  action_controller_ptr =
+                        &m_agents_ptr->at(agent_id_and_node_id.first).get_action_controller();
+                if (auto const  ach_ptr = dynamic_cast<ai::action_controller_human const*>(action_controller_ptr))
+                {
+                    scn::scene_node_ptr const  node_ptr = get_scene_node(ach_ptr->get_motion_object_node_id());
+                    if (auto const  rb_ptr = scn::get_rigid_body(*node_ptr))
+                    {
+                        matrix44  motion_object_from_base_matrix;
+                        angeo::from_base_matrix(*node_ptr->get_coord_system(), motion_object_from_base_matrix);
+
+                        vector3 const  motion_object_forward_direction_in_world_space =
+                            transform_vector(ach_ptr->get_blackboard()->m_skeleton_composition->forward_direction_in_anim_space, motion_object_from_base_matrix);
+                        vector3 const  motion_object_up_direction_in_world_space =
+                            transform_vector(ach_ptr->get_blackboard()->m_skeleton_composition->up_direction_in_anim_space, motion_object_from_base_matrix);
+
+                        m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                                node_ptr->get_coord_system()->origin(),
+                                node_ptr->get_coord_system()->origin() + motion_object_forward_direction_in_world_space
+                                });
+                        m_cache_of_batches_of_ai_agents.lines->second.push_back({0.25f, 0.75f, 0.75f, 1.0f});
+
+                        m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                                node_ptr->get_coord_system()->origin(),
+                                node_ptr->get_coord_system()->origin() + motion_object_up_direction_in_world_space
+                                });
+                        m_cache_of_batches_of_ai_agents.lines->second.push_back({0.25f, 0.5f, 0.75f, 1.0f});
+
+                        m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                                node_ptr->get_coord_system()->origin(),
+                                node_ptr->get_coord_system()->origin() + m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id())
+                                });
+                        m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 1.0f, 0.25f, 1.0f});
+
+                        m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                                node_ptr->get_coord_system()->origin(),
+                                node_ptr->get_coord_system()->origin() + m_rigid_body_simulator_ptr->get_angular_velocity(rb_ptr->id())
+                                });
+                        m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 0.5f, 0.25f, 1.0f});
+                    }
+
+                    m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                            node_ptr->get_coord_system()->origin() + 0.005f * vector3_unit_z(),
+                            node_ptr->get_coord_system()->origin() + 0.005f * vector3_unit_z()
+                                + ach_ptr->get_desired_props().forward_unit_vector_in_world_space
+                            });
+                    m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 1.0f, 1.0f, 1.0f});
+
+                    m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                            node_ptr->get_coord_system()->origin() + 0.0075f * vector3_unit_z(),
+                            node_ptr->get_coord_system()->origin() + 0.0075f * vector3_unit_z()
+                                + 0.75f * ach_ptr->get_desired_props().linear_velocity_unit_direction_in_world_space
+                            });
+                    m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 0.5f, 1.0f, 1.0f});
+
+                    m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                            node_ptr->get_coord_system()->origin() + 0.01f * vector3_unit_z(),
+                            node_ptr->get_coord_system()->origin() + 0.01f * vector3_unit_z()
+                                + ach_ptr->get_desired_props().linear_speed
+                                  * ach_ptr->get_desired_props().linear_velocity_unit_direction_in_world_space
+                            });
+                    m_cache_of_batches_of_ai_agents.lines->second.push_back({0.75f, 0.25f, 0.75f, 1.0f});
+                }
+            }
+    }
 }
 
 
@@ -1424,6 +1514,47 @@ void  simulator::render_contact_normals(
 }
 
 
+void  simulator::render_ai_action_controller_props(
+        matrix44 const&  matrix_from_world_to_camera,
+        matrix44 const&  matrix_from_camera_to_clipspace,
+        qtgl::draw_state&  draw_state
+        )
+{
+    TMPROF_BLOCK();
+
+    if (m_cache_of_batches_of_ai_agents.lines.operator bool())
+    {
+        if (m_cache_of_batches_of_ai_agents.lines->first.empty())
+            m_cache_of_batches_of_ai_agents.lines_batch.release();
+        else
+            m_cache_of_batches_of_ai_agents.lines_batch = qtgl::create_lines3d(
+                m_cache_of_batches_of_ai_agents.lines->first,
+                m_cache_of_batches_of_ai_agents.lines->second
+                );
+        m_cache_of_batches_of_ai_agents.lines.release();
+    }
+
+    if (!m_do_show_ai_action_controller_props)
+    {
+        m_cache_of_batches_of_ai_agents.lines.release();
+        m_cache_of_batches_of_ai_agents.lines_batch.release();
+    }
+
+    if (m_cache_of_batches_of_ai_agents.lines_batch.empty())
+        return;
+
+    if (qtgl::make_current(m_cache_of_batches_of_ai_agents.lines_batch, draw_state))
+    {
+        qtgl::render_batch(
+                m_cache_of_batches_of_ai_agents.lines_batch,
+                matrix_from_world_to_camera,
+                matrix_from_camera_to_clipspace
+                );
+        draw_state = m_cache_of_batches_of_ai_agents.lines_batch.get_draw_state();
+    }
+}
+
+
 void  simulator::erase_scene_node(scn::scene_node_id const&  id)
 {
     TMPROF_BLOCK();
@@ -2182,6 +2313,9 @@ void  simulator::clear_scene()
     m_cache_of_batches_of_colliders.triangle_meshes.clear();
     m_cache_of_batches_of_colliders.collision_normals_points.release();
     m_cache_of_batches_of_colliders.collision_normals_batch.release();
+
+    m_cache_of_batches_of_ai_agents.lines.release();
+    m_cache_of_batches_of_ai_agents.lines_batch.release();
 
     m_agents_ptr->clear();
     m_binding_of_agents_to_scene.clear();

@@ -43,7 +43,7 @@ void  agent::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
-    if (!m_blackboard->m_motion_templates->is_ready())
+    if (!ready())
         return;
 
     m_sensory_controller->next_round(time_step_in_seconds);

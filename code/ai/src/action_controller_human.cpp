@@ -220,10 +220,7 @@ struct  motion_action_data__dont_move : public action_controller_human::motion_a
 
 
 void  compute_motion_object_acceleration_from_motion_actions(
-        vector3 const&  desired_forward_unit_vector_in_world_space,
-        vector3 const&  desired_linear_velocity_unit_direction_in_world_space,
-        float_32_bit const  desired_linear_speed,
-        //----------------------------------------------
+        action_controller_human::desired_props const&  desire,
         float_32_bit const  time_step_in_seconds,
         skeletal_motion_templates::keyframes const&  animation,
         natural_32_bit const  current_keyframe_index,
@@ -291,7 +288,7 @@ void  compute_motion_object_acceleration_from_motion_actions(
                             angeo::compute_rotation_angle(
                                     motion_object_up_direction_in_world_space,
                                     motion_object_forward_direction_in_world_space,
-                                    desired_linear_velocity_unit_direction_in_world_space
+                                    desire.linear_velocity_unit_direction_in_world_space
                                     );
                     if (full_rot_angle > max_rot_angle)
                         rot_angle = max_rot_angle;
@@ -345,7 +342,7 @@ void  compute_motion_object_acceleration_from_motion_actions(
                     angeo::compute_rotation_angle(
                             motion_object_up_direction_in_world_space,
                             motion_object_forward_direction_in_world_space,
-                            desired_linear_velocity_unit_direction_in_world_space
+                            desire.linear_velocity_unit_direction_in_world_space
                             );
         
             float_32_bit  desired_angular_velocity_magnitude = rot_angle / time_step_in_seconds;
@@ -488,10 +485,7 @@ void  compute_motion_object_acceleration_from_motion_actions(
 struct  find_best_keyframe_constants
 {
     find_best_keyframe_constants(
-            vector3 const&  desired_forward_unit_vector_in_world_space_,
-            vector3 const&  desired_linear_velocity_unit_direction_in_world_space_,
-            float_32_bit const  desired_linear_speed_,
-            //---------------------------------
+            action_controller_human::desired_props const* const  desire_,
             skeletal_motion_templates_const_ptr const  motion_templates_,
             skeleton_composition_const_ptr const  skeleton_composition_,
             float_32_bit const  time_to_consume_in_seconds_,
@@ -500,10 +494,7 @@ struct  find_best_keyframe_constants
             vector3 const&  gravity_acceleration_in_world_space_,
             vector3 const&  motion_object_origin_in_world_space_
             )
-        : desired_forward_unit_vector_in_world_space(desired_forward_unit_vector_in_world_space_)
-        , desired_linear_velocity_unit_direction_in_world_space(desired_linear_velocity_unit_direction_in_world_space_)
-        , desired_linear_speed(desired_linear_speed_)
-
+        : desire(desire_)
         , motion_templates(motion_templates_)
         , skeleton_composition(skeleton_composition_)
         , time_to_consume_in_seconds(time_to_consume_in_seconds_)
@@ -513,10 +504,7 @@ struct  find_best_keyframe_constants
         , motion_object_origin_in_world_space(motion_object_origin_in_world_space_)
     {}
 
-    vector3  desired_forward_unit_vector_in_world_space;
-    vector3  desired_linear_velocity_unit_direction_in_world_space;
-    float_32_bit  desired_linear_speed;
-
+    action_controller_human::desired_props const*  desire;
     skeletal_motion_templates_const_ptr  motion_templates;
     skeleton_composition_const_ptr  skeleton_composition;
     float_32_bit  time_to_consume_in_seconds;
@@ -675,9 +663,7 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
     action_controller_human::motion_action_data_map  motion_action_data;    // Not used (but still must be passed)
     float_32_bit* const  motion_error_ptr = pivot.cursor.motion_name.empty() ? &motion_error_wrt_ideal : nullptr;
     detail::compute_motion_object_acceleration_from_motion_actions(
-            constants.desired_forward_unit_vector_in_world_space,
-            constants.desired_linear_velocity_unit_direction_in_world_space,
-            constants.desired_linear_speed,
+            *constants.desire,
             time_delta_in_seconds,
             animation,
             cursor.keyframe_index,
@@ -717,16 +703,16 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
 
     // --- COMPUTATION OF THE COST --------------------------------
 
-    float_32_bit const  desired_distance = time_taken_in_seconds * constants.desired_linear_speed;
+    float_32_bit const  desired_distance = time_taken_in_seconds * constants.desire->linear_speed;
     vector3 const  desired_position =
             constants.motion_object_origin_in_world_space +
-            desired_distance * constants.desired_linear_velocity_unit_direction_in_world_space;
+            desired_distance * constants.desire->linear_velocity_unit_direction_in_world_space;
 
     float_32_bit const  position_error =
             length(desired_position - motion_object_origin_in_world_space) / (desired_distance + 0.0001f);
 
     float_32_bit const  orientation_error =
-            angle(motion_object_forward_direction_in_world_space, constants.desired_forward_unit_vector_in_world_space) / PI();
+            angle(motion_object_forward_direction_in_world_space, constants.desire->forward_unit_vector_in_world_space) / PI();
 
     cost = position_error + orientation_error;
 }
@@ -839,10 +825,7 @@ namespace ai {
 
 action_controller_human::action_controller_human(blackboard_ptr const  blackboard_)
     : action_controller(blackboard_)
-    , m_desired_forward_unit_vector_in_world_space(vector3_unit_x())
-    , m_desired_linear_velocity_unit_direction_in_world_space(vector3_unit_x())
-    , m_desired_linear_speed(0.0f)
-
+    , m_desire()
     , m_template_motion_info({
             {"", 0U},       // src_pose
             {"", 0U},       // dst_pose
@@ -946,7 +929,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
 
     // Update desired motion of the agent, as the cortex wants it.
     {
-        m_desired_linear_velocity_unit_direction_in_world_space =
+        m_desire.linear_velocity_unit_direction_in_world_space =
                 normalised(
                         quaternion_to_rotation_matrix(
                                 angle_axis_to_quaternion(
@@ -956,14 +939,14 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                                         motion_object_up_direction_in_world_space
                                         )
                                 )
-                        * m_desired_linear_velocity_unit_direction_in_world_space
+                        * m_desire.linear_velocity_unit_direction_in_world_space
                         );
-        m_desired_linear_speed = get_blackboard()->m_cortex_cmd_move_intensity * get_blackboard()->m_max_forward_speed_in_meters_per_second;
+        m_desire.linear_speed = get_blackboard()->m_cortex_cmd_move_intensity * get_blackboard()->m_max_forward_speed_in_meters_per_second;
 
         // Currently we do not support motions where m_desired_forward_unit_vector_in_world_space and
         // m_desired_linear_velocity_unit_direction_in_world_space could be different. Also there is
         // distinguishing output from the cortex.
-        m_desired_forward_unit_vector_in_world_space = m_desired_linear_velocity_unit_direction_in_world_space;
+        m_desire.forward_unit_vector_in_world_space = m_desire.linear_velocity_unit_direction_in_world_space;
     }
 
     // Check whether the condition for applying forces towards the desired motion of the agent is satisfied or not.
@@ -1005,9 +988,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         vector3  motion_object_linear_acceleration = vector3_zero();
         vector3  motion_object_angular_acceleration = vector3_zero();
         detail::compute_motion_object_acceleration_from_motion_actions(
-                m_desired_forward_unit_vector_in_world_space,
-                m_desired_linear_velocity_unit_direction_in_world_space,
-                m_desired_linear_speed,
+                m_desire,
                 time_step_in_seconds,
                 get_blackboard()->m_motion_templates->motions_map.at(m_template_motion_info.dst_pose.motion_name),
                 m_template_motion_info.dst_pose.keyframe_index,
@@ -1047,9 +1028,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         m_template_motion_info.total_interpolation_time_in_seconds =
                 detail::find_best_keyframe(
                         detail::find_best_keyframe_constants(
-                                m_desired_forward_unit_vector_in_world_space,
-                                m_desired_linear_velocity_unit_direction_in_world_space,
-                                m_desired_linear_speed,
+                                &m_desire,
                                 get_blackboard()->m_motion_templates,
                                 get_blackboard()->m_skeleton_composition,
                                 time_step_in_seconds,

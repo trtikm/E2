@@ -46,6 +46,7 @@ struct  widgets
     QCheckBox* show_batches() const { return m_show_batches; }
     QCheckBox* show_colliders() const { return m_show_colliders; }
     QCheckBox* show_contact_normals() const { return m_show_contact_normals; }
+    QCheckBox* show_ai_action_control() const { return m_show_ai_action_control; }
 
     QLineEdit*  colliders_colour_component_red() const { return m_colliders_colour_component_red; }
     QLineEdit*  colliders_colour_component_green() const { return m_colliders_colour_component_green; }
@@ -74,6 +75,7 @@ struct  widgets
     void  on_show_batches_changed(int const  value);
     void  on_show_colliders_changed(int const  value);
     void  on_show_contact_normals_changed(int const  value);
+    void  on_show_ai_action_control_changed(int const  value);
 
     void  on_colliders_colour_changed();
     void  on_colliders_colour_set(QColor const&  colour);
@@ -121,6 +123,7 @@ private:
     QCheckBox*  m_show_batches;
     QCheckBox*  m_show_colliders;
     QCheckBox*  m_show_contact_normals;
+    QCheckBox*  m_show_ai_action_control;
 
     QLineEdit*  m_colliders_colour_component_red;
     QLineEdit*  m_colliders_colour_component_green;
