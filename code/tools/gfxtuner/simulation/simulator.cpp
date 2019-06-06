@@ -205,7 +205,7 @@ simulator::simulator()
     , m_diffuse_colour{ 1.0f, 1.0f, 1.0f, 1.0f }
     , m_ambient_colour{ 0.5f, 0.5f, 0.5f }
     , m_specular_colour{ 1.0f, 1.0f, 1.0f, 2.0f }
-    , m_directional_light_direction(normalised(-vector3(1.0f, 1.0f, 1.0f)))
+    , m_directional_light_direction(normalised(-vector3(2.0f, 1.0f, 3.0f)))
     , m_directional_light_colour{ 1.0f, 1.0f, 1.0f }
     , m_fog_colour{ 0.25f, 0.25f, 0.25f, 2.0f }
     , m_fog_near(0.25f)
