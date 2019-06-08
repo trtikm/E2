@@ -87,6 +87,8 @@ collision_scene::collision_scene()
     , m_triangles_material()
     , m_triangles_end_point_getters()
     , m_triangles_indices_of_invalidated_end_point_getters()
+
+    , m_statistics(m_proximity_static_objects, m_proximity_dynamic_objects)
 {}
 
 
@@ -139,6 +141,9 @@ collision_object_id  collision_scene::insert_capsule(
         }
     }
     insert_object(coid, is_dynamic);
+
+    ++m_statistics.num_capsules;
+
     return coid;
 }
 
@@ -187,6 +192,9 @@ collision_object_id  collision_scene::insert_line(
         }
     }
     insert_object(coid, is_dynamic);
+
+    ++m_statistics.num_lines;
+
     return coid;
 }
 
@@ -223,6 +231,9 @@ collision_object_id  collision_scene::insert_point(
         }
     }
     insert_object(coid, is_dynamic);
+
+    ++m_statistics.num_points;
+
     return coid;
 }
 
@@ -260,6 +271,9 @@ collision_object_id  collision_scene::insert_sphere(
         }
     }
     insert_object(coid, is_dynamic);
+
+    ++m_statistics.num_spheres;
+
     return coid;
 }
 
@@ -338,6 +352,8 @@ void  collision_scene::insert_triangle_mesh(
         }
         insert_object(coid, is_dynamic);
         output_coids_of_individual_triangles.push_back(coid);
+
+        ++m_statistics.num_triangles;
     }
 }
 
@@ -362,6 +378,15 @@ void  collision_scene::erase_object(collision_object_id const  coid)
     }
 
     m_invalid_object_ids.at(as_number(get_shape_type(coid))).push_back(get_instance_index(coid));
+
+    switch (get_shape_type(coid))
+    {
+    case COLLISION_SHAPE_TYPE::CAPSULE: --m_statistics.num_capsules; break;
+    case COLLISION_SHAPE_TYPE::LINE: --m_statistics.num_lines; break;
+    case COLLISION_SHAPE_TYPE::POINT: --m_statistics.num_points; break;
+    case COLLISION_SHAPE_TYPE::SPHERE: --m_statistics.num_spheres; break;
+    case COLLISION_SHAPE_TYPE::TRIANGLE: --m_statistics.num_triangles; break;
+    }
 }
 
 
@@ -400,6 +425,8 @@ void  collision_scene::clear()
     m_triangles_material.clear();
     m_triangles_end_point_getters.clear();
     m_triangles_indices_of_invalidated_end_point_getters.clear();
+
+    m_statistics.clear();
 }
 
 
@@ -449,6 +476,8 @@ void  collision_scene::enable_colliding(
 void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor const&  acceptor, bool  with_static)
 {
     TMPROF_BLOCK();
+
+    m_statistics.on_next_frame();
 
     {
         rebalance_dynamic_proximity_map_if_needed();
@@ -867,6 +896,8 @@ bool  collision_scene::compute_contacts(
         )
 {
     TMPROF_BLOCK();
+
+    ++m_statistics.num_compute_contacts_calls_in_last_frame;
 
     COLLISION_SHAPE_TYPE const  shape_type_1 = get_shape_type(cop.first);
     COLLISION_SHAPE_TYPE const  shape_type_2 = get_shape_type(cop.second);

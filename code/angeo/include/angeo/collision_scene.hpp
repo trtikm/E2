@@ -163,6 +163,55 @@ struct  collision_scene
 
     COLLISION_MATERIAL_TYPE  get_material(collision_object_id const  coid) const;
 
+    struct  statistics
+    {
+        statistics(
+                proximity_map<collision_object_id> const& static_proximity_map,
+                proximity_map<collision_object_id> const& dynamic_proximity_map
+                )
+            : num_capsules(0U)
+            , num_lines(0U)
+            , num_points(0U)
+            , num_spheres(0U)
+            , num_triangles(0U)
+            , num_compute_contacts_calls_in_last_frame(0U)
+            , max_num_compute_contacts_calls_till_last_frame(0U)
+            , static_objects_proximity(&static_proximity_map.get_statistics())
+            , dynamic_objects_proximity(&dynamic_proximity_map.get_statistics())
+        {}
+
+        void  clear()
+        {
+            num_capsules = 0U;
+            num_lines = 0U;
+            num_points = 0U;
+            num_spheres = 0U;
+            num_triangles = 0U;
+            num_compute_contacts_calls_in_last_frame = 0U;
+            max_num_compute_contacts_calls_till_last_frame = 0U;
+        }
+
+        // By "frame" we mean a period between subsequent calls to the method 'compute_contacts_of_all_dynamic_objects'.
+        void  on_next_frame()
+        {
+            if (max_num_compute_contacts_calls_till_last_frame < num_compute_contacts_calls_in_last_frame)
+                max_num_compute_contacts_calls_till_last_frame = num_compute_contacts_calls_in_last_frame;
+            num_compute_contacts_calls_in_last_frame = 0U;
+        }
+
+        natural_32_bit  num_capsules;
+        natural_32_bit  num_lines;
+        natural_32_bit  num_points;
+        natural_32_bit  num_spheres;
+        natural_32_bit  num_triangles;
+        natural_32_bit  num_compute_contacts_calls_in_last_frame;
+        natural_32_bit  max_num_compute_contacts_calls_till_last_frame;  // I.e. the last frame is not included; see 'num_computed_contacts_in_last_frame' for the last frame.
+
+        proximity_map<collision_object_id>::statistics const*  static_objects_proximity;
+        proximity_map<collision_object_id>::statistics const*  dynamic_objects_proximity;
+    };
+    statistics const&  get_statistics() const { return m_statistics; }
+
 private:
 
     void  release_data_of_erased_object(collision_object_id const  coid);
@@ -210,8 +259,8 @@ private:
     /////////////////////////////////////////////////////////////////////////////////
 
 
-    angeo::proximity_map<collision_object_id>  m_proximity_static_objects;  ///< These do not collide amongst each other.
-    angeo::proximity_map<collision_object_id>  m_proximity_dynamic_objects; ///< These collide amongst each other, plus with
+    proximity_map<collision_object_id>  m_proximity_static_objects;  ///< These do not collide amongst each other.
+    proximity_map<collision_object_id>  m_proximity_dynamic_objects; ///< These collide amongst each other, plus with
                                                                             ///< those in 'm_proximity_static_objects' map.
     std::unordered_set<collision_object_id>  m_dynamic_object_ids;
     bool  m_does_proximity_static_need_rebalancing;
@@ -300,6 +349,11 @@ private:
     std::vector<std::pair<std::function<vector3(natural_32_bit, natural_8_bit)>, natural_32_bit> >
             m_triangles_end_point_getters;
     std::vector<natural_32_bit>  m_triangles_indices_of_invalidated_end_point_getters;
+
+
+    /////////////////////////////////////////////////////////////////////////////////
+
+    statistics  m_statistics;
 };
 
 

@@ -146,6 +146,60 @@ struct proximity_map
 
     void  enumerate(std::function<bool(object_type, natural_32_bit)> const&  output_collector);
 
+    struct  statistics
+    {
+        statistics()
+            : num_objects(0U)
+            , num_split_nodes_in_last_frame(0U)
+            , num_searches_by_bbox_in_last_frame(0U)
+            , max_num_searches_by_bbox_till_last_frame(0U)
+            , num_searches_by_line_in_last_frame(0U)
+            , max_num_searches_by_line_till_last_frame(0U)
+            , num_enumerate_calls_in_last_frame(0U)
+            , max_num_enumerate_calls_till_last_frame(0U)
+        {}
+
+        void  clear()
+        {
+            num_objects = 0U;
+            num_split_nodes_in_last_frame = 0U;
+            num_searches_by_bbox_in_last_frame = 0U;
+            max_num_searches_by_bbox_till_last_frame = 0U;
+            num_searches_by_line_in_last_frame = 0U;
+            max_num_searches_by_line_till_last_frame = 0U;
+            num_enumerate_calls_in_last_frame = 0U;
+            max_num_enumerate_calls_till_last_frame = 0U;
+        }
+
+        // By "frame" we mean a period between subsequent calls to the method 'rebalance'.
+        void  on_next_frame()
+        {
+            num_split_nodes_in_last_frame = 0U;
+
+            if (max_num_searches_by_bbox_till_last_frame < num_searches_by_bbox_in_last_frame)
+                max_num_searches_by_bbox_till_last_frame = num_searches_by_bbox_in_last_frame;
+            num_searches_by_bbox_in_last_frame = 0U;
+
+            if (max_num_searches_by_line_till_last_frame < num_searches_by_line_in_last_frame)
+                max_num_searches_by_line_till_last_frame = num_searches_by_line_in_last_frame;
+            num_searches_by_line_in_last_frame = 0U;
+
+            if (max_num_enumerate_calls_till_last_frame < num_enumerate_calls_in_last_frame)
+                max_num_enumerate_calls_till_last_frame = num_enumerate_calls_in_last_frame;
+            num_enumerate_calls_in_last_frame = 0U;
+        }
+
+        natural_32_bit  num_objects;
+        natural_32_bit  num_split_nodes_in_last_frame;
+        natural_32_bit  num_searches_by_bbox_in_last_frame; 
+        natural_32_bit  max_num_searches_by_bbox_till_last_frame;   // I.e. the last frame is not included; see'num_searches_by_bbox_in_last_frame' for the last frame.
+        natural_32_bit  num_searches_by_line_in_last_frame;
+        natural_32_bit  max_num_searches_by_line_till_last_frame;   // I.e. the last frame is not included; see 'num_searches_by_line_in_last_frame' for the last frame.
+        natural_32_bit  num_enumerate_calls_in_last_frame;
+        natural_32_bit  max_num_enumerate_calls_till_last_frame;    // I.e. the last frame is not included; see 'num_enumerate_calls_in_last_frame' for the last frame.
+    };
+    statistics const&  get_statistics() const { return m_statistics; }
+
 private:
 
     struct split_node
@@ -226,6 +280,8 @@ private:
     float_32_bit  m_min_ratio_for_applycation_balancing_rotation;
 
     std::unique_ptr<split_node>  m_root;
+
+    statistics  m_statistics;
 };
 
 
@@ -243,6 +299,7 @@ proximity_map<object_type__>::proximity_map(
             0.5f + (1.0f - treashold_for_applying_node_balancing_rotations) * (1.0f - 0.5f)
             )
     , m_root(new split_node)
+    , m_statistics()
 {
     ASSUMPTION(m_max_num_objects_in_leaf_before_split > 0U);
     ASSUMPTION(m_min_ratio_for_applycation_balancing_rotation > 0.5f);
@@ -269,7 +326,12 @@ bool  proximity_map<object_type__>::insert(object_type const object)
 
     vector3 const  min_corner = m_get_bbox_min_corner(object);
     vector3 const  max_corner = m_get_bbox_max_corner(object);
-    return insert(m_root.get(), object, min_corner, max_corner);
+    if (insert(m_root.get(), object, min_corner, max_corner))
+    {
+        ++m_statistics.num_objects;
+        return true;
+    }
+    return false;
 }
 
 
@@ -337,7 +399,12 @@ bool  proximity_map<object_type__>::erase(object_type const object)
 
     vector3 const  min_corner = m_get_bbox_min_corner(object);
     vector3 const  max_corner = m_get_bbox_max_corner(object);
-    return erase(m_root.get(), object, min_corner, max_corner);
+    if (erase(m_root.get(), object, min_corner, max_corner))
+    {
+        --m_statistics.num_objects;
+        return true;
+    }
+    return false;
 }
 
 
@@ -401,6 +468,8 @@ bool  proximity_map<object_type__>::erase(
 template<typename  object_type__>
 void  proximity_map<object_type__>::clear()
 {
+    m_statistics.clear();
+
     m_root.reset(new split_node);
 }
 
@@ -409,6 +478,8 @@ template<typename  object_type__>
 void  proximity_map<object_type__>::rebalance(natural_32_bit const  num_threads_available)
 {
     TMPROF_BLOCK();
+
+    m_statistics.on_next_frame();
 
     rebalance(m_root.get(), nullptr, num_threads_available);
 }
@@ -421,6 +492,8 @@ void  proximity_map<object_type__>::rebalance(
         natural_32_bit const  num_threads_available
         )
 {
+    ++m_statistics.num_split_nodes_in_last_frame;
+
     if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
     {
         if (node_ptr->m_num_objects <= m_max_num_objects_in_leaf_before_split ||
@@ -437,6 +510,9 @@ void  proximity_map<object_type__>::rebalance(
 
     if (node_ptr->m_num_objects < m_max_num_objects_in_leaf_before_split)
     {
+        INVARIANT(m_statistics.num_split_nodes_in_last_frame > 2U);
+        m_statistics.num_split_nodes_in_last_frame -= 2U;
+
         apply_node_merge(node_ptr);
         return;
     }
@@ -466,6 +542,8 @@ void  proximity_map<object_type__>::find_by_bbox(
         )
 {
     TMPROF_BLOCK();
+
+    ++m_statistics.max_num_searches_by_bbox_till_last_frame;
 
     find_by_bbox(m_root.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector);
 }
@@ -524,6 +602,8 @@ void  proximity_map<object_type__>::find_by_line(
         )
 {
     TMPROF_BLOCK();
+
+    ++m_statistics.max_num_searches_by_line_till_last_frame;
 
     find_by_line(m_root.get(), line_begin, line_end, output_collector);
 }
@@ -612,6 +692,8 @@ template<typename  object_type__>
 void  proximity_map<object_type__>::enumerate(std::function<bool(object_type, natural_32_bit)> const&  output_collector)
 {
     TMPROF_BLOCK();
+
+    ++m_statistics.num_enumerate_calls_in_last_frame;
 
     natural_32_bit  leaf_node_index = 0U;
     enumerate(m_root.get(), leaf_node_index, output_collector);
