@@ -130,301 +130,335 @@ std::string  get_tooltip()
 
 QWidget*  make_tab_content(widgets const&  w)
 {
+    auto const  create_colliders_group = [&w]() -> QWidget* {
+        QWidget* const colliders_group = new QGroupBox("Counts of colliders");
+        {
+            QVBoxLayout* const colliders_layout = new QVBoxLayout;
+            {
+                QHBoxLayout* hbox_layout;
+
+                hbox_layout = new QHBoxLayout;
+                {
+                    hbox_layout->addWidget(new QLabel("Capsules:"));
+                    hbox_layout->addWidget(w.num_capsules());
+                    hbox_layout->addStretch(1);
+                }
+                colliders_layout->addLayout(hbox_layout);
+
+                hbox_layout = new QHBoxLayout;
+                {
+                    hbox_layout->addWidget(new QLabel("Lines:"));
+                    hbox_layout->addWidget(w.num_lines());
+                    hbox_layout->addStretch(1);
+                }
+                colliders_layout->addLayout(hbox_layout);
+
+                hbox_layout = new QHBoxLayout;
+                {
+                    hbox_layout->addWidget(new QLabel("Points:"));
+                    hbox_layout->addWidget(w.num_points());
+                    hbox_layout->addStretch(1);
+                }
+                colliders_layout->addLayout(hbox_layout);
+
+                hbox_layout = new QHBoxLayout;
+                {
+                    hbox_layout->addWidget(new QLabel("Spheres:"));
+                    hbox_layout->addWidget(w.num_spheres());
+                    hbox_layout->addStretch(1);
+                }
+                colliders_layout->addLayout(hbox_layout);
+
+                hbox_layout = new QHBoxLayout;
+                {
+                    hbox_layout->addWidget(new QLabel("Triangles:"));
+                    hbox_layout->addWidget(w.num_triangles());
+                    hbox_layout->addStretch(1);
+                }
+                colliders_layout->addLayout(hbox_layout);
+
+                colliders_layout->addStretch(1);
+            }
+            colliders_group->setLayout(colliders_layout);
+        }
+        return colliders_group;
+    };
+    auto const  create_contacts_calls_group= [&w]() -> QWidget* {
+        QWidget* const contacts_calls_group = new QGroupBox("Calls to 'compute_contacts' function");
+        {
+            QVBoxLayout* const contacts_calls_layout = new QVBoxLayout;
+            {
+                QHBoxLayout* hbox_layout;
+
+                hbox_layout = new QHBoxLayout;
+                {
+                    hbox_layout->addWidget(new QLabel("Last frame:"));
+                    hbox_layout->addWidget(w.num_compute_contacts_calls_in_last_frame());
+                    hbox_layout->addStretch(1);
+                }
+                contacts_calls_layout->addLayout(hbox_layout);
+
+                hbox_layout = new QHBoxLayout;
+                {
+                    hbox_layout->addWidget(new QLabel("Maximum till last frame:"));
+                    hbox_layout->addWidget(w.max_num_compute_contacts_calls_till_last_frame());
+                    hbox_layout->addStretch(1);
+                }
+                contacts_calls_layout->addLayout(hbox_layout);
+
+                contacts_calls_layout->addStretch(1);
+            }
+            contacts_calls_group->setLayout(contacts_calls_layout);
+        }
+        return contacts_calls_group;
+    };
+    auto const  create_contacts_group = [&w]() -> QWidget* {
+        QWidget* const contacts_group = new QGroupBox("Contacts computed");
+        {
+            QVBoxLayout* const contacts_layout = new QVBoxLayout;
+            {
+                QHBoxLayout* hbox_layout;
+
+                hbox_layout = new QHBoxLayout;
+                {
+                    hbox_layout->addWidget(new QLabel("Last frame:"));
+                    hbox_layout->addWidget(w.num_contacts_in_last_frame());
+                    hbox_layout->addStretch(1);
+                }
+                contacts_layout->addLayout(hbox_layout);
+
+                hbox_layout = new QHBoxLayout;
+                {
+                    hbox_layout->addWidget(new QLabel("Maximum till last frame:"));
+                    hbox_layout->addWidget(w.max_num_contacts_till_last_frame());
+                    hbox_layout->addStretch(1);
+                }
+                contacts_layout->addLayout(hbox_layout);
+
+                contacts_layout->addStretch(1);
+            }
+            contacts_group->setLayout(contacts_layout);
+        }
+        return contacts_group;
+    };
+    auto const  create_proximity_static_group = [&w]() -> QWidget* {
+        QWidget* const proximity_static_group = new QGroupBox("Proximity map of static colliders");
+        {
+            QVBoxLayout* const proximity_static_layout = new QVBoxLayout;
+            {
+                QHBoxLayout* hbox_layout;
+
+                hbox_layout = new QHBoxLayout;
+                {
+                    hbox_layout->addWidget(new QLabel("Colliders:"));
+                    hbox_layout->addWidget(w.proximity_static_num_objects());
+                    hbox_layout->addStretch(1);
+                }
+                proximity_static_layout->addLayout(hbox_layout);
+
+                hbox_layout = new QHBoxLayout;
+                {
+                    hbox_layout->addWidget(new QLabel("Split nodes:"));
+                    hbox_layout->addWidget(w.proximity_static_num_split_nodes());
+                    hbox_layout->addStretch(1);
+                }
+                proximity_static_layout->addLayout(hbox_layout);
+
+                QWidget* const last_frame_group = new QGroupBox("Last frame");
+                {
+                    QVBoxLayout* const last_frame_layout = new QVBoxLayout;
+                    {
+                        hbox_layout = new QHBoxLayout;
+                        {
+                            hbox_layout->addWidget(new QLabel("Setches by bbox:"));
+                            hbox_layout->addWidget(w.proximity_static_num_searches_by_bbox_in_last_frame());
+                            hbox_layout->addStretch(1);
+                        }
+                        last_frame_layout->addLayout(hbox_layout);
+
+                        hbox_layout = new QHBoxLayout;
+                        {
+                            hbox_layout->addWidget(new QLabel("Searches by line:"));
+                            hbox_layout->addWidget(w.proximity_static_num_searches_by_line_in_last_frame());
+                            hbox_layout->addStretch(1);
+                        }
+                        last_frame_layout->addLayout(hbox_layout);
+
+                        hbox_layout = new QHBoxLayout;
+                        {
+                            hbox_layout->addWidget(new QLabel("Enumerations:"));
+                            hbox_layout->addWidget(w.proximity_static_num_enumerate_calls_in_last_frame());
+                            hbox_layout->addStretch(1);
+                        }
+                        last_frame_layout->addLayout(hbox_layout);
+
+                        last_frame_layout->addStretch(1);
+                    }
+                    last_frame_group->setLayout(last_frame_layout);
+                }
+                proximity_static_layout->addWidget(last_frame_group);
+
+                QWidget* const till_last_frame_group = new QGroupBox("Max. till last frame");
+                {
+                    QVBoxLayout* const till_last_frame_layout = new QVBoxLayout;
+                    {
+                        hbox_layout = new QHBoxLayout;
+                        {
+                            hbox_layout->addWidget(new QLabel("Searches by bbox:"));
+                            hbox_layout->addWidget(w.proximity_static_max_num_searches_by_bbox_till_last_frame());
+                            hbox_layout->addStretch(1);
+                        }
+                        till_last_frame_layout->addLayout(hbox_layout);
+
+                        hbox_layout = new QHBoxLayout;
+                        {
+                            hbox_layout->addWidget(new QLabel("Searches by line:"));
+                            hbox_layout->addWidget(w.proximity_static_max_num_searches_by_line_till_last_frame());
+                            hbox_layout->addStretch(1);
+                        }
+                        till_last_frame_layout->addLayout(hbox_layout);
+
+                        hbox_layout = new QHBoxLayout;
+                        {
+                            hbox_layout->addWidget(new QLabel("Enumerations:"));
+                            hbox_layout->addWidget(w.proximity_static_max_num_enumerate_calls_till_last_frame());
+                            hbox_layout->addStretch(1);
+                        }
+                        till_last_frame_layout->addLayout(hbox_layout);
+
+                        till_last_frame_layout->addStretch(1);
+                    }
+                    till_last_frame_group->setLayout(till_last_frame_layout);
+                }
+                proximity_static_layout->addWidget(till_last_frame_group);
+
+                proximity_static_layout->addStretch(1);
+            }
+            proximity_static_group->setLayout(proximity_static_layout);
+        }
+        return proximity_static_group;
+    };
+    auto const  create_proximity_dynamic_group = [&w]() -> QWidget* {
+        QWidget* const proximity_dynamic_group = new QGroupBox("Proximity map of dynamic colliders");
+        {
+            QVBoxLayout* const proximity_dynamic_layout = new QVBoxLayout;
+            {
+                QHBoxLayout* hbox_layout;
+
+                hbox_layout = new QHBoxLayout;
+                {
+                    hbox_layout->addWidget(new QLabel("Colliders:"));
+                    hbox_layout->addWidget(w.proximity_dynamic_num_objects());
+                    hbox_layout->addStretch(1);
+                }
+                proximity_dynamic_layout->addLayout(hbox_layout);
+
+                hbox_layout = new QHBoxLayout;
+                {
+                    hbox_layout->addWidget(new QLabel("Split nodes:"));
+                    hbox_layout->addWidget(w.proximity_dynamic_num_split_nodes());
+                    hbox_layout->addStretch(1);
+                }
+                proximity_dynamic_layout->addLayout(hbox_layout);
+
+                QWidget* const last_frame_group = new QGroupBox("Last frame");
+                {
+                    QVBoxLayout* const last_frame_layout = new QVBoxLayout;
+                    {
+                        hbox_layout = new QHBoxLayout;
+                        {
+                            hbox_layout->addWidget(new QLabel("Setches by bbox:"));
+                            hbox_layout->addWidget(w.proximity_dynamic_num_searches_by_bbox_in_last_frame());
+                            hbox_layout->addStretch(1);
+                        }
+                        last_frame_layout->addLayout(hbox_layout);
+
+                        hbox_layout = new QHBoxLayout;
+                        {
+                            hbox_layout->addWidget(new QLabel("Searches by line:"));
+                            hbox_layout->addWidget(w.proximity_dynamic_num_searches_by_line_in_last_frame());
+                            hbox_layout->addStretch(1);
+                        }
+                        last_frame_layout->addLayout(hbox_layout);
+
+                        hbox_layout = new QHBoxLayout;
+                        {
+                            hbox_layout->addWidget(new QLabel("Enumerations:"));
+                            hbox_layout->addWidget(w.proximity_dynamic_num_enumerate_calls_in_last_frame());
+                            hbox_layout->addStretch(1);
+                        }
+                        last_frame_layout->addLayout(hbox_layout);
+
+                        last_frame_layout->addStretch(1);
+                    }
+                    last_frame_group->setLayout(last_frame_layout);
+                }
+                proximity_dynamic_layout->addWidget(last_frame_group);
+
+                QWidget* const till_last_frame_group = new QGroupBox("Max. till last frame");
+                {
+                    QVBoxLayout* const till_last_frame_layout = new QVBoxLayout;
+                    {
+                        hbox_layout = new QHBoxLayout;
+                        {
+                            hbox_layout->addWidget(new QLabel("Searches by bbox:"));
+                            hbox_layout->addWidget(w.proximity_dynamic_max_num_searches_by_bbox_till_last_frame());
+                            hbox_layout->addStretch(1);
+                        }
+                        till_last_frame_layout->addLayout(hbox_layout);
+
+                        hbox_layout = new QHBoxLayout;
+                        {
+                            hbox_layout->addWidget(new QLabel("Searches by line:"));
+                            hbox_layout->addWidget(w.proximity_dynamic_max_num_searches_by_line_till_last_frame());
+                            hbox_layout->addStretch(1);
+                        }
+                        till_last_frame_layout->addLayout(hbox_layout);
+
+                        hbox_layout = new QHBoxLayout;
+                        {
+                            hbox_layout->addWidget(new QLabel("Enumerations:"));
+                            hbox_layout->addWidget(w.proximity_dynamic_max_num_enumerate_calls_till_last_frame());
+                            hbox_layout->addStretch(1);
+                        }
+                        till_last_frame_layout->addLayout(hbox_layout);
+
+                        till_last_frame_layout->addStretch(1);
+                    }
+                    till_last_frame_group->setLayout(till_last_frame_layout);
+                }
+                proximity_dynamic_layout->addWidget(till_last_frame_group);
+
+                proximity_dynamic_layout->addStretch(1);
+            }
+            proximity_dynamic_group->setLayout(proximity_dynamic_layout);
+        }
+        return proximity_dynamic_group;
+    };
+
     QWidget* const  tab = new QWidget;
     {
         QVBoxLayout* const tab_layout = new QVBoxLayout;
         {
-            QHBoxLayout* hbox_layout;
-            
-            QWidget* const colliders_group = new QGroupBox("Counts of colliders");
+            QHBoxLayout* const scene_layout = new QHBoxLayout;
             {
-                QVBoxLayout* const colliders_layout = new QVBoxLayout;
-                {
-                    hbox_layout = new QHBoxLayout;
-                    {
-                        hbox_layout->addWidget(new QLabel("Capsules:"));
-                        hbox_layout->addWidget(w.num_capsules());
-                        hbox_layout->addStretch(1);
-                    }
-                    colliders_layout->addLayout(hbox_layout);
+                scene_layout->addWidget(create_colliders_group());
 
-                    hbox_layout = new QHBoxLayout;
-                    {
-                        hbox_layout->addWidget(new QLabel("Lines:"));
-                        hbox_layout->addWidget(w.num_lines());
-                        hbox_layout->addStretch(1);
-                    }
-                    colliders_layout->addLayout(hbox_layout);
-
-                    hbox_layout = new QHBoxLayout;
-                    {
-                        hbox_layout->addWidget(new QLabel("Points:"));
-                        hbox_layout->addWidget(w.num_points());
-                        hbox_layout->addStretch(1);
-                    }
-                    colliders_layout->addLayout(hbox_layout);
-
-                    hbox_layout = new QHBoxLayout;
-                    {
-                        hbox_layout->addWidget(new QLabel("Spheres:"));
-                        hbox_layout->addWidget(w.num_spheres());
-                        hbox_layout->addStretch(1);
-                    }
-                    colliders_layout->addLayout(hbox_layout);
-
-                    hbox_layout = new QHBoxLayout;
-                    {
-                        hbox_layout->addWidget(new QLabel("Triangles:"));
-                        hbox_layout->addWidget(w.num_triangles());
-                        hbox_layout->addStretch(1);
-                    }
-                    colliders_layout->addLayout(hbox_layout);
-
-                    colliders_layout->addStretch(1);
-                }
-                colliders_group->setLayout(colliders_layout);
-            }
-            tab_layout->addWidget(colliders_group);
-
-            QWidget* const contacts_calls_group = new QGroupBox("Calls to 'compute_contacts' function");
-            {
-                QVBoxLayout* const contacts_calls_layout = new QVBoxLayout;
-                {
-                    hbox_layout = new QHBoxLayout;
-                    {
-                        hbox_layout->addWidget(new QLabel("Last frame:"));
-                        hbox_layout->addWidget(w.num_compute_contacts_calls_in_last_frame());
-                        hbox_layout->addStretch(1);
-                    }
-                    contacts_calls_layout->addLayout(hbox_layout);
-
-                    hbox_layout = new QHBoxLayout;
-                    {
-                        hbox_layout->addWidget(new QLabel("Maximum till last frame:"));
-                        hbox_layout->addWidget(w.max_num_compute_contacts_calls_till_last_frame());
-                        hbox_layout->addStretch(1);
-                    }
-                    contacts_calls_layout->addLayout(hbox_layout);
-
-                    contacts_calls_layout->addStretch(1);
-                }
-                contacts_calls_group->setLayout(contacts_calls_layout);
-            }
-            tab_layout->addWidget(contacts_calls_group);
-
-            QWidget* const contacts_group = new QGroupBox("Contacts computed");
-            {
                 QVBoxLayout* const contacts_layout = new QVBoxLayout;
                 {
-                    hbox_layout = new QHBoxLayout;
-                    {
-                        hbox_layout->addWidget(new QLabel("Last frame:"));
-                        hbox_layout->addWidget(w.num_contacts_in_last_frame());
-                        hbox_layout->addStretch(1);
-                    }
-                    contacts_layout->addLayout(hbox_layout);
-
-                    hbox_layout = new QHBoxLayout;
-                    {
-                        hbox_layout->addWidget(new QLabel("Maximum till last frame:"));
-                        hbox_layout->addWidget(w.max_num_contacts_till_last_frame());
-                        hbox_layout->addStretch(1);
-                    }
-                    contacts_layout->addLayout(hbox_layout);
-
-                    contacts_layout->addStretch(1);
+                    contacts_layout->addWidget(create_contacts_calls_group());
+                    contacts_layout->addWidget(create_contacts_group());
                 }
-                contacts_group->setLayout(contacts_layout);
+                scene_layout->addLayout(contacts_layout);
             }
-            tab_layout->addWidget(contacts_group);
+            tab_layout->addLayout(scene_layout);
 
-            QWidget* const proximity_static_group = new QGroupBox("Proximity map of static colliders");
+            QHBoxLayout* const proximity_layout = new QHBoxLayout;
             {
-                QVBoxLayout* const proximity_static_layout = new QVBoxLayout;
-                {
-                    hbox_layout = new QHBoxLayout;
-                    {
-                        hbox_layout->addWidget(new QLabel("Colliders:"));
-                        hbox_layout->addWidget(w.proximity_static_num_objects());
-                        hbox_layout->addStretch(1);
-                    }
-                    proximity_static_layout->addLayout(hbox_layout);
-
-                    hbox_layout = new QHBoxLayout;
-                    {
-                        hbox_layout->addWidget(new QLabel("Split nodes:"));
-                        hbox_layout->addWidget(w.proximity_static_num_split_nodes());
-                        hbox_layout->addStretch(1);
-                    }
-                    proximity_static_layout->addLayout(hbox_layout);
-
-                    QWidget* const last_frame_group = new QGroupBox("Last frame");
-                    {
-                        QVBoxLayout* const last_frame_layout = new QVBoxLayout;
-                        {
-                            hbox_layout = new QHBoxLayout;
-                            {
-                                hbox_layout->addWidget(new QLabel("Setches by bbox:"));
-                                hbox_layout->addWidget(w.proximity_static_num_searches_by_bbox_in_last_frame());
-                                hbox_layout->addStretch(1);
-                            }
-                            last_frame_layout->addLayout(hbox_layout);
-
-                            hbox_layout = new QHBoxLayout;
-                            {
-                                hbox_layout->addWidget(new QLabel("Searches by line:"));
-                                hbox_layout->addWidget(w.proximity_static_num_searches_by_line_in_last_frame());
-                                hbox_layout->addStretch(1);
-                            }
-                            last_frame_layout->addLayout(hbox_layout);
-
-                            hbox_layout = new QHBoxLayout;
-                            {
-                                hbox_layout->addWidget(new QLabel("Enumerations:"));
-                                hbox_layout->addWidget(w.proximity_static_num_enumerate_calls_in_last_frame());
-                                hbox_layout->addStretch(1);
-                            }
-                            last_frame_layout->addLayout(hbox_layout);
-
-                            last_frame_layout->addStretch(1);
-                        }
-                        last_frame_group->setLayout(last_frame_layout);
-                    }
-                    proximity_static_layout->addWidget(last_frame_group);
-
-                    QWidget* const till_last_frame_group = new QGroupBox("Max. till last frame");
-                    {
-                        QVBoxLayout* const till_last_frame_layout = new QVBoxLayout;
-                        {
-                            hbox_layout = new QHBoxLayout;
-                            {
-                                hbox_layout->addWidget(new QLabel("Searches by bbox:"));
-                                hbox_layout->addWidget(w.proximity_static_max_num_searches_by_bbox_till_last_frame());
-                                hbox_layout->addStretch(1);
-                            }
-                            till_last_frame_layout->addLayout(hbox_layout);
-
-                            hbox_layout = new QHBoxLayout;
-                            {
-                                hbox_layout->addWidget(new QLabel("Searches by line:"));
-                                hbox_layout->addWidget(w.proximity_static_max_num_searches_by_line_till_last_frame());
-                                hbox_layout->addStretch(1);
-                            }
-                            till_last_frame_layout->addLayout(hbox_layout);
-
-                            hbox_layout = new QHBoxLayout;
-                            {
-                                hbox_layout->addWidget(new QLabel("Enumerations:"));
-                                hbox_layout->addWidget(w.proximity_static_max_num_enumerate_calls_till_last_frame());
-                                hbox_layout->addStretch(1);
-                            }
-                            till_last_frame_layout->addLayout(hbox_layout);
-
-                            till_last_frame_layout->addStretch(1);
-                        }
-                        till_last_frame_group->setLayout(till_last_frame_layout);
-                    }
-                    proximity_static_layout->addWidget(till_last_frame_group);
-
-                    proximity_static_layout->addStretch(1);
-                }
-                proximity_static_group->setLayout(proximity_static_layout);
+                proximity_layout->addWidget(create_proximity_static_group());
+                proximity_layout->addWidget(create_proximity_dynamic_group());
             }
-            tab_layout->addWidget(proximity_static_group);
-
-            QWidget* const proximity_dynamic_group = new QGroupBox("Proximity map of dynamic colliders");
-            {
-                QVBoxLayout* const proximity_dynamic_layout = new QVBoxLayout;
-                {
-                    hbox_layout = new QHBoxLayout;
-                    {
-                        hbox_layout->addWidget(new QLabel("Colliders:"));
-                        hbox_layout->addWidget(w.proximity_dynamic_num_objects());
-                        hbox_layout->addStretch(1);
-                    }
-                    proximity_dynamic_layout->addLayout(hbox_layout);
-
-                    hbox_layout = new QHBoxLayout;
-                    {
-                        hbox_layout->addWidget(new QLabel("Split nodes:"));
-                        hbox_layout->addWidget(w.proximity_dynamic_num_split_nodes());
-                        hbox_layout->addStretch(1);
-                    }
-                    proximity_dynamic_layout->addLayout(hbox_layout);
-
-                    QWidget* const last_frame_group = new QGroupBox("Last frame");
-                    {
-                        QVBoxLayout* const last_frame_layout = new QVBoxLayout;
-                        {
-                            hbox_layout = new QHBoxLayout;
-                            {
-                                hbox_layout->addWidget(new QLabel("Setches by bbox:"));
-                                hbox_layout->addWidget(w.proximity_dynamic_num_searches_by_bbox_in_last_frame());
-                                hbox_layout->addStretch(1);
-                            }
-                            last_frame_layout->addLayout(hbox_layout);
-
-                            hbox_layout = new QHBoxLayout;
-                            {
-                                hbox_layout->addWidget(new QLabel("Searches by line:"));
-                                hbox_layout->addWidget(w.proximity_dynamic_num_searches_by_line_in_last_frame());
-                                hbox_layout->addStretch(1);
-                            }
-                            last_frame_layout->addLayout(hbox_layout);
-
-                            hbox_layout = new QHBoxLayout;
-                            {
-                                hbox_layout->addWidget(new QLabel("Enumerations:"));
-                                hbox_layout->addWidget(w.proximity_dynamic_num_enumerate_calls_in_last_frame());
-                                hbox_layout->addStretch(1);
-                            }
-                            last_frame_layout->addLayout(hbox_layout);
-
-                            last_frame_layout->addStretch(1);
-                        }
-                        last_frame_group->setLayout(last_frame_layout);
-                    }
-                    proximity_dynamic_layout->addWidget(last_frame_group);
-
-                    QWidget* const till_last_frame_group = new QGroupBox("Max. till last frame");
-                    {
-                        QVBoxLayout* const till_last_frame_layout = new QVBoxLayout;
-                        {
-                            hbox_layout = new QHBoxLayout;
-                            {
-                                hbox_layout->addWidget(new QLabel("Searches by bbox:"));
-                                hbox_layout->addWidget(w.proximity_dynamic_max_num_searches_by_bbox_till_last_frame());
-                                hbox_layout->addStretch(1);
-                            }
-                            till_last_frame_layout->addLayout(hbox_layout);
-
-                            hbox_layout = new QHBoxLayout;
-                            {
-                                hbox_layout->addWidget(new QLabel("Searches by line:"));
-                                hbox_layout->addWidget(w.proximity_dynamic_max_num_searches_by_line_till_last_frame());
-                                hbox_layout->addStretch(1);
-                            }
-                            till_last_frame_layout->addLayout(hbox_layout);
-
-                            hbox_layout = new QHBoxLayout;
-                            {
-                                hbox_layout->addWidget(new QLabel("Enumerations:"));
-                                hbox_layout->addWidget(w.proximity_dynamic_max_num_enumerate_calls_till_last_frame());
-                                hbox_layout->addStretch(1);
-                            }
-                            till_last_frame_layout->addLayout(hbox_layout);
-
-                            till_last_frame_layout->addStretch(1);
-                        }
-                        till_last_frame_group->setLayout(till_last_frame_layout);
-                    }
-                    proximity_dynamic_layout->addWidget(till_last_frame_group);
-
-                    proximity_dynamic_layout->addStretch(1);
-                }
-                proximity_dynamic_group->setLayout(proximity_dynamic_layout);
-            }
-            tab_layout->addWidget(proximity_dynamic_group);
+            tab_layout->addLayout(proximity_layout);
 
             tab_layout->addStretch(1);
         }
