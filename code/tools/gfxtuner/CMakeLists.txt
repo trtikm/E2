@@ -64,9 +64,16 @@ add_executable(${THIS_TARGET_NAME}
 
     window_tabs/tab_statistics.hpp
     window_tabs/tab_statistics.cpp
-    
     window_tabs/tab_statistics_resources.hpp
     window_tabs/tab_statistics_resources.cpp
+    window_tabs/tab_statistics_draw.hpp
+    window_tabs/tab_statistics_draw.cpp
+    window_tabs/tab_statistics_collisions.hpp
+    window_tabs/tab_statistics_collisions.cpp
+    window_tabs/tab_statistics_physics.hpp
+    window_tabs/tab_statistics_physics.cpp
+    window_tabs/tab_statistics_ai.hpp
+    window_tabs/tab_statistics_ai.cpp
 
     simulation/simulator.hpp
     simulation/simulator.cpp

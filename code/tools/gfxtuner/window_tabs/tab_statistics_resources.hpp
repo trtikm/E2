@@ -5,6 +5,7 @@
 #   include <QWidget>
 #   include <QTreeWidget>
 #   include <QIcon>
+#   include <string>
 
 
 struct  program_window;
@@ -53,6 +54,9 @@ private:
     async::statistics_of_cached_resources  m_records;
     async::key_type  m_just_being_loaded;
 };
+
+
+std::string  get_tooltip();
 
 
 }}}

@@ -319,4 +319,11 @@ QIcon const*  widgets::choose_icon(async::LOAD_STATE const  load_state, bool con
 }
 
 
+std::string  get_tooltip()
+{
+    return "Statistics of asynchronously loaded shared resources, like\n"
+           "textures, shaders, vertex buffers, keyframes, etc.";
+}
+
+
 }}}

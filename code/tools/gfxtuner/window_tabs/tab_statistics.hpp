@@ -2,6 +2,10 @@
 #   define E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_STATISTICS_HPP_INCLUDED
 
 #   include <gfxtuner/window_tabs/tab_statistics_resources.hpp>
+#   include <gfxtuner/window_tabs/tab_statistics_draw.hpp>
+#   include <gfxtuner/window_tabs/tab_statistics_collisions.hpp>
+#   include <gfxtuner/window_tabs/tab_statistics_physics.hpp>
+#   include <gfxtuner/window_tabs/tab_statistics_ai.hpp>
 #   include <QWidget>
 #   include <QTabWidget>
 
@@ -18,6 +22,8 @@ struct  widgets : public QTabWidget
 
     program_window*  wnd() const { return m_wnd; }
 
+    void  save();
+
 public slots:
 
     void  on_tab_changed(int const  tab_index);
@@ -30,6 +36,10 @@ private:
     program_window*  m_wnd;
 
     tab_resources::widgets*  m_tab_resources;
+    tab_draw::widgets  m_tab_draw;
+    tab_collisions::widgets  m_tab_collisions;
+    tab_physics::widgets  m_tab_physics;
+    tab_ai::widgets  m_tab_ai;
 };
 
 

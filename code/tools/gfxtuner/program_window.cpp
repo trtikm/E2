@@ -195,6 +195,7 @@ void  program_window::closeEvent(QCloseEvent* const  event)
     ptree().put("window.active_tab", qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex())));
 
     m_tab_draw_widgets.save();
+    m_tab_statistics_widgets->save();
 
     m_menu_bar.save();
 
