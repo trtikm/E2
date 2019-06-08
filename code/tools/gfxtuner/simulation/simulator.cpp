@@ -1694,9 +1694,8 @@ void  simulator::insert_collision_sphere_to_scene_node(
             m_collision_scene_ptr->insert_sphere(radius, node_ptr->get_world_matrix(), material, as_dynamic);
     scn::insert_collider(*node_ptr, id.get_record_name(), collider_id, density_multiplier);
 
-    if (as_dynamic)
-        if (scn::scene_node_ptr const  phs_node = find_nearest_rigid_body_node(node_ptr))
-            rebuild_rigid_body_due_to_change_in_subtree(phs_node);
+    if (scn::scene_node_ptr const  phs_node = find_nearest_rigid_body_node(node_ptr))
+        rebuild_rigid_body_due_to_change_in_subtree(phs_node);
 }
 
 void  simulator::insert_collision_capsule_to_scene_node(
@@ -1722,9 +1721,8 @@ void  simulator::insert_collision_capsule_to_scene_node(
                     );
     scn::insert_collider(*node_ptr, id.get_record_name(), collider_id, density_multiplier);
 
-    if (as_dynamic)
-        if (scn::scene_node_ptr const  phs_node = find_nearest_rigid_body_node(node_ptr))
-            rebuild_rigid_body_due_to_change_in_subtree(phs_node);
+    if (scn::scene_node_ptr const  phs_node = find_nearest_rigid_body_node(node_ptr))
+        rebuild_rigid_body_due_to_change_in_subtree(phs_node);
 }
 
 void  simulator::insert_collision_trianle_mesh_to_scene_node(
@@ -1749,6 +1747,9 @@ void  simulator::insert_collision_trianle_mesh_to_scene_node(
             collider_ids
             );
     scn::insert_collider(*node_ptr, id.get_record_name(), collider_ids, density_multiplier);
+
+    if (scn::scene_node_ptr const  phs_node = find_nearest_rigid_body_node(node_ptr))
+        rebuild_rigid_body_due_to_change_in_subtree(phs_node);
 }
 
 void  simulator::erase_collision_object_from_scene_node(
@@ -2027,7 +2028,13 @@ void  simulator::rebuild_rigid_body_due_to_change_in_subtree(scn::scene_node_ptr
     auto  rb_ptr = scn::get_rigid_body(*phs_node_ptr);
     ASSUMPTION(rb_ptr != nullptr);
     if (!rb_ptr->auto_compute_mass_and_inertia_tensor())
+    {
+        std::vector<angeo::collision_object_id>  coids;
+        collect_colliders_in_subtree(phs_node_ptr, coids, nullptr);
+        for (angeo::collision_object_id coid : coids)
+            m_binding_of_collision_objects[coid] = rb_ptr->id();
         return;
+    }
 
     scn::rigid_body_props  rb_backup;
     rb_backup.m_linear_velocity = m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id());
