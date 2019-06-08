@@ -269,43 +269,10 @@ void  compute_motion_object_acceleration_from_motion_actions(
                         animation.keyframe_at(previous_keyframe_index).get_time_point() ;
                 ideal_linear_speed = length(position_delta) / std::max(time_delta, 0.0001f);
             }
+            vector3 const  ideal_linear_velocity_in_world_space = ideal_linear_speed * motion_object_forward_direction_in_world_space;
 
-            vector3  clipped_desired_linear_velocity_in_world_space;
-            {
-                float_32_bit  rot_angle;
-                {
-                    float_32_bit const  max_rot_angle =
-                            multi_step_coef *
-                            action_props.arguments.at(ANGLE) *
-                            (multi_step_coef > 1 ?
-                                1.0f :
-                                std::min(1.0f, std::max(0.0f,
-                                    motion_object_linear_speed * motion_object_linear_speed / action_props.arguments.at(MIN_LINEAR_SPEED)
-                                    )))
-                            ;
-
-                    float_32_bit const  full_rot_angle =
-                            angeo::compute_rotation_angle(
-                                    motion_object_up_direction_in_world_space,
-                                    motion_object_forward_direction_in_world_space,
-                                    desire.linear_velocity_unit_direction_in_world_space
-                                    );
-                    if (full_rot_angle > max_rot_angle)
-                        rot_angle = max_rot_angle;
-                    else if (full_rot_angle < -max_rot_angle)
-                        rot_angle = -max_rot_angle;
-                    else
-                        rot_angle = full_rot_angle;
-                }
-                clipped_desired_linear_velocity_in_world_space =
-                        quaternion_to_rotation_matrix(angle_axis_to_quaternion(rot_angle, motion_object_up_direction_in_world_space))
-                        * motion_object_forward_direction_in_world_space;
-
-                clipped_desired_linear_velocity_in_world_space *=
-                        ideal_linear_speed / length(clipped_desired_linear_velocity_in_world_space);
-            }
             vector3  agent_linear_acceleration =
-                    (clipped_desired_linear_velocity_in_world_space - motion_object_linear_velocity_in_world_space) / time_step_in_seconds;
+                    (ideal_linear_velocity_in_world_space - motion_object_linear_velocity_in_world_space) / time_step_in_seconds;
             float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
             if (agent_linear_acceleration_magnitude > multi_step_coef * action_props.arguments.at(MAX_LINEAR_ACCEL))
                 agent_linear_acceleration *= multi_step_coef * action_props.arguments.at(MAX_LINEAR_ACCEL) / agent_linear_acceleration_magnitude;
@@ -328,14 +295,22 @@ void  compute_motion_object_acceleration_from_motion_actions(
                 MIN_LINEAR_SPEED    = 2,
             };
 
+            float_32_bit  ideal_linear_speed;
+            {
+                vector3 const  position_delta =
+                        animation.get_meta_data().m_reference_frames.at(current_keyframe_index).origin() -
+                        animation.get_meta_data().m_reference_frames.at(previous_keyframe_index).origin();
+                float_32_bit const  time_delta =
+                        animation.keyframe_at(current_keyframe_index).get_time_point() -
+                        animation.keyframe_at(previous_keyframe_index).get_time_point() ;
+                ideal_linear_speed = length(position_delta) / std::max(time_delta, 0.0001f);
+            }
             float_32_bit const  max_anglular_speed = 
                     multi_step_coef * 
                     action_props.arguments.at(MAX_ANGULAR_SPEED) *
                     (multi_step_coef > 1U ?
                         1.0f :
-                        std::min(1.0f, std::max(0.0f,
-                            motion_object_linear_speed * motion_object_linear_speed / action_props.arguments.at(MIN_LINEAR_SPEED)
-                            )))
+                        std::min(1.0f, std::max(0.0f, ideal_linear_speed / action_props.arguments.at(MIN_LINEAR_SPEED))))
                     ;
 
             float_32_bit const  rot_angle =
@@ -887,6 +862,14 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                         m_motion_object_mass_distribution_props.m_records.front()
                         );
         get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_nid, get_blackboard()->m_agent_id);
+
+        {
+            matrix44  motion_object_from_base_matrix;
+            angeo::from_base_matrix(agent_frame, motion_object_from_base_matrix);
+            m_desire.forward_unit_vector_in_world_space = 
+                    transform_vector(get_blackboard()->m_skeleton_composition->forward_direction_in_anim_space, motion_object_from_base_matrix);
+            m_desire.linear_velocity_unit_direction_in_world_space = m_desire.forward_unit_vector_in_world_space;
+        }
     }
 
     // Computing basic positional and motional properties of the motion object.
