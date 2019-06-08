@@ -1214,7 +1214,8 @@ bool  collision_scene::compute_contacts__capsule_vs_triangle(
             &capsule_closest_point_2,
             &capsule_shape_feature_id_2
             );
-
+    if (num_collision_point_pairs == 0U)
+        return true;
     {
         vector3 const  u = capsule_closest_point_1 - triangle_closest_point_1;
         float_32_bit const  u_len = length(u);
