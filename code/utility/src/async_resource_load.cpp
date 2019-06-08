@@ -57,6 +57,15 @@ finalise_load_on_destroy::~finalise_load_on_destroy()
 {
     TMPROF_BLOCK();
 
+    if (is_terminated())
+    {
+        if (get_parent() != nullptr && get_parent()->get_error_message().empty())
+            get_parent()->force_finalisation_as_failure(msgstream() <<
+                "ERROR: Resource loading was terminated. So, terminating also load of the resource " << get_parent()->get_key() << "."
+                );
+        return;
+    }
+
     if (get_key() == key_type::get_invalid_key())
     {
         if (get_error_message().empty())
@@ -115,6 +124,27 @@ void  finalise_load_on_destroy::force_finalisation_as_failure(std::string const&
 namespace async { namespace detail {
 
 
+static bool  is_in_terminated_state = false;
+
+void terminate()
+{
+    const bool do_clear = !is_terminated();
+    is_in_terminated_state = true;
+    if (do_clear)
+        resource_load_planner::instance().clear();
+}
+
+bool is_terminated()
+{
+    return is_in_terminated_state;
+}
+
+
+}}
+
+namespace async { namespace detail {
+
+
 resource_load_planner&  resource_load_planner::instance()
 {
     static resource_load_planner planner;
@@ -124,6 +154,8 @@ resource_load_planner&  resource_load_planner::instance()
 
 resource_load_planner::~resource_load_planner()
 {
+    terminate();
+
     assert(m_worker_finished == true);
     assert(get_key_of_resource_load_data(m_resource_just_being_loaded) == key_type::get_invalid_key());
     assert(m_queue.empty());
@@ -149,6 +181,9 @@ void  resource_load_planner::clear()
 void  resource_load_planner::insert_load_request(resource_load_priority_type const  priority, resource_load_data_type const&  data)
 {
     TMPROF_BLOCK();
+
+    if (is_terminated())
+        return;
 
     std::lock_guard<std::mutex> const  lock(mutex());
     m_queue.push(queue_value_type{priority, data});
@@ -305,6 +340,7 @@ key_type  resource_cache::generate_fresh_key()
 
 resource_cache::~resource_cache()
 {
+    terminate();
     assert(m_cache.empty());
 }
 

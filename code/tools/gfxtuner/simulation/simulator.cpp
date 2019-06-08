@@ -281,6 +281,7 @@ simulator::simulator()
 simulator::~simulator()
 {
     this->clear_scene();
+    async::terminate();
 }
 
 

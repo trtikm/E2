@@ -159,6 +159,14 @@ struct hash<async::detail::key_type>
 
 }
 
+namespace async { namespace detail {
+
+
+void terminate();
+bool is_terminated();
+
+
+}}
 
 namespace async { namespace detail {
 
@@ -338,6 +346,14 @@ void  resource_cache::insert_load_request(
 {
     TMPROF_BLOCK();
 
+    if (is_terminated())
+    {
+        parent_finaliser->force_finalisation_as_failure(msgstream() <<
+            "ERROR: Resource loading was terminated. So, terminating also load of the resource " << parent_finaliser->get_key() << "."
+            );
+        return;
+    }
+
     {
         std::lock_guard<std::mutex> const  lock(mutex());
 
@@ -372,6 +388,14 @@ void  resource_cache::load_resource(finalise_load_on_destroy_ptr const  load_fin
     TMPROF_BLOCK();
 
     ASSUMPTION(load_finaliser->get_key() != key_type::get_invalid_key());
+
+    if (is_terminated())
+    {
+        load_finaliser->force_finalisation_as_failure(msgstream() <<
+            "ERROR: Resource loading was terminated. So, terminating also load of the resource " << load_finaliser->get_key() << "."
+            );
+        return;
+    }
 
     {
         std::lock_guard<std::mutex> const  lock(mutex());
@@ -416,6 +440,14 @@ void  resource_cache::insert_resource(
         )
 {
     TMPROF_BLOCK();
+
+    if (is_terminated())
+    {
+        parent_finaliser->force_finalisation_as_failure(msgstream() <<
+            "ERROR: Resource loading was terminated. So, terminating also load of the resource " << parent_finaliser->get_key() << "."
+            );
+        return;
+    }
 
     ASSUMPTION(key != key_type::get_invalid_key());
 
@@ -709,6 +741,16 @@ resource_accessor<resource_type__>  insert_resource(
 
 
 key_type  get_key_of_resource_just_being_loaded();
+
+
+}
+
+namespace async {
+
+
+inline void  clear() { detail::resource_load_planner::instance().clear(); }
+inline void  terminate() { detail::terminate(); }
+inline bool  is_terminated() { return detail::is_terminated(); }
 
 
 }
