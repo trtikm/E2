@@ -513,6 +513,8 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
         if (!m_do_single_step && keyboard_props().was_just_released(qtgl::KEY_PAUSE()))
             m_paused = !m_paused;
 
+        get_collision_scene()->get_statistics().on_next_frame();
+
 //__agent_look_at_object("agent", "apple", get_scene(), seconds_from_previous_call);
 
         if (!paused())

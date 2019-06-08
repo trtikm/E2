@@ -176,6 +176,8 @@ struct  collision_scene
             , num_triangles(0U)
             , num_compute_contacts_calls_in_last_frame(0U)
             , max_num_compute_contacts_calls_till_last_frame(0U)
+            , num_contacts_in_last_frame(0U)
+            , max_num_contacts_till_last_frame(0U)
             , static_objects_proximity(&static_proximity_map.get_statistics())
             , dynamic_objects_proximity(&dynamic_proximity_map.get_statistics())
         {}
@@ -189,14 +191,28 @@ struct  collision_scene
             num_triangles = 0U;
             num_compute_contacts_calls_in_last_frame = 0U;
             max_num_compute_contacts_calls_till_last_frame = 0U;
+            num_contacts_in_last_frame = 0U;
+            max_num_contacts_till_last_frame = 0U;
+
+            const_cast<proximity_map<collision_object_id>::statistics*>(static_objects_proximity)->clear();
+            const_cast<proximity_map<collision_object_id>::statistics*>(dynamic_objects_proximity)->clear();
         }
 
-        // By "frame" we mean a period between subsequent calls to the method 'compute_contacts_of_all_dynamic_objects'.
-        void  on_next_frame()
+        // Call this method in the beginning of each simulation step.
+        void  on_next_frame() const
         {
+            auto const  mutable_self = const_cast<statistics*>(this);
+
             if (max_num_compute_contacts_calls_till_last_frame < num_compute_contacts_calls_in_last_frame)
-                max_num_compute_contacts_calls_till_last_frame = num_compute_contacts_calls_in_last_frame;
-            num_compute_contacts_calls_in_last_frame = 0U;
+                mutable_self->max_num_compute_contacts_calls_till_last_frame = num_compute_contacts_calls_in_last_frame;
+            mutable_self->num_compute_contacts_calls_in_last_frame = 0U;
+
+            if (max_num_contacts_till_last_frame < num_contacts_in_last_frame)
+                mutable_self->max_num_contacts_till_last_frame = num_contacts_in_last_frame;
+            mutable_self->num_contacts_in_last_frame = 0U;
+
+            static_objects_proximity->on_next_frame();
+            dynamic_objects_proximity->on_next_frame();
         }
 
         natural_32_bit  num_capsules;
@@ -206,6 +222,8 @@ struct  collision_scene
         natural_32_bit  num_triangles;
         natural_32_bit  num_compute_contacts_calls_in_last_frame;
         natural_32_bit  max_num_compute_contacts_calls_till_last_frame;  // I.e. the last frame is not included; see 'num_computed_contacts_in_last_frame' for the last frame.
+        natural_32_bit  num_contacts_in_last_frame;
+        natural_32_bit  max_num_contacts_till_last_frame;   // I.e. the last frame is not included; see 'num_contacts_in_last_frame' for the last frame.
 
         proximity_map<collision_object_id>::statistics const*  static_objects_proximity;
         proximity_map<collision_object_id>::statistics const*  dynamic_objects_proximity;
@@ -230,7 +248,7 @@ private:
 
     bool  compute_contacts(
             collision_object_id_pair  cop,
-            contact_acceptor const&  acceptor,
+            contact_acceptor const&  contact_acceptor_,
             bool const  bboxes_of_objects_surely_intersect = false
             );
 

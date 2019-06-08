@@ -477,8 +477,6 @@ void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor 
 {
     TMPROF_BLOCK();
 
-    m_statistics.on_next_frame();
-
     {
         rebalance_dynamic_proximity_map_if_needed();
 
@@ -891,7 +889,7 @@ void  collision_scene::rebalance_dynamic_proximity_map_if_needed()
 
 bool  collision_scene::compute_contacts(
         collision_object_id_pair  cop,
-        contact_acceptor const&  acceptor,
+        contact_acceptor const&  contact_acceptor_,
         bool const  bboxes_of_objects_surely_intersect
         )
 {
@@ -914,13 +912,24 @@ bool  collision_scene::compute_contacts(
             return true; // I.e. do not stop a high-level contact search algorithm.
     }
 
-    auto const  swap_acceptor =
-            [&acceptor](contact_id const& cid,
+    auto const  acceptor =
+            [this, &contact_acceptor_](contact_id const& cid,
                         vector3 const& contact_point,
                         vector3 const& unit_normal,
                         float_32_bit const  penetration_depth)
                         -> bool {
-                return acceptor(contact_id(cid.second, cid.first), contact_point, -unit_normal, penetration_depth);
+                ++m_statistics.num_contacts_in_last_frame;
+                return contact_acceptor_(cid, contact_point, unit_normal, penetration_depth);
+            };
+
+    auto const  swap_acceptor =
+            [this, &contact_acceptor_](contact_id const& cid,
+                        vector3 const& contact_point,
+                        vector3 const& unit_normal,
+                        float_32_bit const  penetration_depth)
+                        -> bool {
+                ++m_statistics.num_contacts_in_last_frame;
+                return contact_acceptor_(contact_id(cid.second, cid.first), contact_point, -unit_normal, penetration_depth);
             };
 
     switch (shape_type_1)

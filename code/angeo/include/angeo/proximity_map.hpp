@@ -171,22 +171,24 @@ struct proximity_map
             max_num_enumerate_calls_till_last_frame = 0U;
         }
 
-        // By "frame" we mean a period between subsequent calls to the method 'rebalance'.
-        void  on_next_frame()
+        // Call this method in the beginning of each simulation step.
+        void  on_next_frame() const
         {
-            num_split_nodes_in_last_frame = 0U;
+            auto const  mutable_self = const_cast<statistics*>(this);
+
+            mutable_self->num_split_nodes_in_last_frame = 0U;
 
             if (max_num_searches_by_bbox_till_last_frame < num_searches_by_bbox_in_last_frame)
-                max_num_searches_by_bbox_till_last_frame = num_searches_by_bbox_in_last_frame;
-            num_searches_by_bbox_in_last_frame = 0U;
+                mutable_self->max_num_searches_by_bbox_till_last_frame = num_searches_by_bbox_in_last_frame;
+            mutable_self->num_searches_by_bbox_in_last_frame = 0U;
 
             if (max_num_searches_by_line_till_last_frame < num_searches_by_line_in_last_frame)
-                max_num_searches_by_line_till_last_frame = num_searches_by_line_in_last_frame;
-            num_searches_by_line_in_last_frame = 0U;
+                mutable_self->max_num_searches_by_line_till_last_frame = num_searches_by_line_in_last_frame;
+            mutable_self->num_searches_by_line_in_last_frame = 0U;
 
             if (max_num_enumerate_calls_till_last_frame < num_enumerate_calls_in_last_frame)
-                max_num_enumerate_calls_till_last_frame = num_enumerate_calls_in_last_frame;
-            num_enumerate_calls_in_last_frame = 0U;
+                mutable_self->max_num_enumerate_calls_till_last_frame = num_enumerate_calls_in_last_frame;
+            mutable_self->num_enumerate_calls_in_last_frame = 0U;
         }
 
         natural_32_bit  num_objects;
@@ -479,8 +481,6 @@ void  proximity_map<object_type__>::rebalance(natural_32_bit const  num_threads_
 {
     TMPROF_BLOCK();
 
-    m_statistics.on_next_frame();
-
     rebalance(m_root.get(), nullptr, num_threads_available);
 }
 
@@ -543,7 +543,7 @@ void  proximity_map<object_type__>::find_by_bbox(
 {
     TMPROF_BLOCK();
 
-    ++m_statistics.max_num_searches_by_bbox_till_last_frame;
+    ++m_statistics.num_searches_by_bbox_in_last_frame;
 
     find_by_bbox(m_root.get(), query_bbox_min_corner, query_bbox_max_corner, output_collector);
 }
@@ -603,7 +603,7 @@ void  proximity_map<object_type__>::find_by_line(
 {
     TMPROF_BLOCK();
 
-    ++m_statistics.max_num_searches_by_line_till_last_frame;
+    ++m_statistics.num_searches_by_line_in_last_frame;
 
     find_by_line(m_root.get(), line_begin, line_end, output_collector);
 }
