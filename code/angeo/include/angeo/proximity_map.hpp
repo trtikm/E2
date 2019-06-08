@@ -150,7 +150,7 @@ struct proximity_map
     {
         statistics()
             : num_objects(0U)
-            , num_split_nodes_in_last_frame(0U)
+            , num_split_nodes(0U)
             , num_searches_by_bbox_in_last_frame(0U)
             , max_num_searches_by_bbox_till_last_frame(0U)
             , num_searches_by_line_in_last_frame(0U)
@@ -162,7 +162,7 @@ struct proximity_map
         void  clear()
         {
             num_objects = 0U;
-            num_split_nodes_in_last_frame = 0U;
+            num_split_nodes = 0U;
             num_searches_by_bbox_in_last_frame = 0U;
             max_num_searches_by_bbox_till_last_frame = 0U;
             num_searches_by_line_in_last_frame = 0U;
@@ -175,8 +175,6 @@ struct proximity_map
         void  on_next_frame() const
         {
             auto const  mutable_self = const_cast<statistics*>(this);
-
-            mutable_self->num_split_nodes_in_last_frame = 0U;
 
             if (max_num_searches_by_bbox_till_last_frame < num_searches_by_bbox_in_last_frame)
                 mutable_self->max_num_searches_by_bbox_till_last_frame = num_searches_by_bbox_in_last_frame;
@@ -192,7 +190,7 @@ struct proximity_map
         }
 
         natural_32_bit  num_objects;
-        natural_32_bit  num_split_nodes_in_last_frame;
+        natural_32_bit  num_split_nodes;
         natural_32_bit  num_searches_by_bbox_in_last_frame; 
         natural_32_bit  max_num_searches_by_bbox_till_last_frame;   // I.e. the last frame is not included; see'num_searches_by_bbox_in_last_frame' for the last frame.
         natural_32_bit  num_searches_by_line_in_last_frame;
@@ -482,6 +480,14 @@ void  proximity_map<object_type__>::rebalance(natural_32_bit const  num_threads_
     TMPROF_BLOCK();
 
     rebalance(m_root.get(), nullptr, num_threads_available);
+
+    struct  local {
+        static natural_32_bit  count_nodes(split_node* const  node_ptr) {
+            return node_ptr == nullptr ? 0U: 1U + count_nodes(node_ptr->m_front_child_node.get())
+                                                + count_nodes(node_ptr->m_back_child_node.get());
+        }
+    };
+    m_statistics.num_split_nodes = local::count_nodes(m_root.get());
 }
 
 
@@ -492,8 +498,6 @@ void  proximity_map<object_type__>::rebalance(
         natural_32_bit const  num_threads_available
         )
 {
-    ++m_statistics.num_split_nodes_in_last_frame;
-
     if (node_ptr->m_split_plane_normal_direction == split_node::SPLIT_PLANE_NORMAL_DIRECTION::NOT_SET)
     {
         if (node_ptr->m_num_objects <= m_max_num_objects_in_leaf_before_split ||
@@ -510,9 +514,6 @@ void  proximity_map<object_type__>::rebalance(
 
     if (node_ptr->m_num_objects < m_max_num_objects_in_leaf_before_split)
     {
-        INVARIANT(m_statistics.num_split_nodes_in_last_frame > 2U);
-        m_statistics.num_split_nodes_in_last_frame -= 2U;
-
         apply_node_merge(node_ptr);
         return;
     }

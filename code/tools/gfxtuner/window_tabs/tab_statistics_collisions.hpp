@@ -2,7 +2,7 @@
 #   define E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_STATISTICS_TAB_COLLISIONS_HPP_INCLUDED
 
 #   include <QWidget>
-#   include <QLabel>
+#   include <QLineEdit>
 #   include <string>
 
 
@@ -20,69 +20,69 @@ struct  widgets
 
     void  on_time_event();
 
-    QLabel* num_capsules() const { return m_num_capsules; }
-    QLabel* num_lines() const { return m_num_lines; }
-    QLabel* num_points() const { return m_num_points; }
-    QLabel* num_spheres() const { return m_num_spheres; }
-    QLabel* num_triangles() const { return m_num_triangles; }
+    QLineEdit* num_capsules() const { return m_num_capsules; }
+    QLineEdit* num_lines() const { return m_num_lines; }
+    QLineEdit* num_points() const { return m_num_points; }
+    QLineEdit* num_spheres() const { return m_num_spheres; }
+    QLineEdit* num_triangles() const { return m_num_triangles; }
 
-    QLabel* num_compute_contacts_calls_in_last_frame() const { return m_num_compute_contacts_calls_in_last_frame; }
-    QLabel* max_num_compute_contacts_calls_till_last_frame() const { return m_max_num_compute_contacts_calls_till_last_frame; }
+    QLineEdit* num_compute_contacts_calls_in_last_frame() const { return m_num_compute_contacts_calls_in_last_frame; }
+    QLineEdit* max_num_compute_contacts_calls_till_last_frame() const { return m_max_num_compute_contacts_calls_till_last_frame; }
 
-    QLabel* num_contacts_in_last_frame() const { return m_num_contacts_in_last_frame; }
-    QLabel* max_num_contacts_till_last_frame() const { return m_max_num_contacts_till_last_frame; }
+    QLineEdit* num_contacts_in_last_frame() const { return m_num_contacts_in_last_frame; }
+    QLineEdit* max_num_contacts_till_last_frame() const { return m_max_num_contacts_till_last_frame; }
 
-    QLabel* proximity_static_num_objects() const { return m_proximity_static_num_objects; }
-    QLabel* proximity_static_num_split_nodes_in_last_frame() const { return m_proximity_static_num_split_nodes_in_last_frame; }
-    QLabel* proximity_static_num_searches_by_bbox_in_last_frame() const { return m_proximity_static_num_searches_by_bbox_in_last_frame; }
-    QLabel* proximity_static_max_num_searches_by_bbox_till_last_frame() const { return m_proximity_static_max_num_searches_by_bbox_till_last_frame; }
-    QLabel* proximity_static_num_searches_by_line_in_last_frame() const { return m_proximity_static_num_searches_by_line_in_last_frame; }
-    QLabel* proximity_static_max_num_searches_by_line_till_last_frame() const { return m_proximity_static_max_num_searches_by_line_till_last_frame; }
-    QLabel* proximity_static_num_enumerate_calls_in_last_frame() const { return m_proximity_static_num_enumerate_calls_in_last_frame; }
-    QLabel* proximity_static_max_num_enumerate_calls_till_last_frame() const { return m_proximity_static_max_num_enumerate_calls_till_last_frame; }
+    QLineEdit* proximity_static_num_objects() const { return m_proximity_static_num_objects; }
+    QLineEdit* proximity_static_num_split_nodes() const { return m_proximity_static_num_split_nodes; }
+    QLineEdit* proximity_static_num_searches_by_bbox_in_last_frame() const { return m_proximity_static_num_searches_by_bbox_in_last_frame; }
+    QLineEdit* proximity_static_max_num_searches_by_bbox_till_last_frame() const { return m_proximity_static_max_num_searches_by_bbox_till_last_frame; }
+    QLineEdit* proximity_static_num_searches_by_line_in_last_frame() const { return m_proximity_static_num_searches_by_line_in_last_frame; }
+    QLineEdit* proximity_static_max_num_searches_by_line_till_last_frame() const { return m_proximity_static_max_num_searches_by_line_till_last_frame; }
+    QLineEdit* proximity_static_num_enumerate_calls_in_last_frame() const { return m_proximity_static_num_enumerate_calls_in_last_frame; }
+    QLineEdit* proximity_static_max_num_enumerate_calls_till_last_frame() const { return m_proximity_static_max_num_enumerate_calls_till_last_frame; }
 
-    QLabel* proximity_dynamic_num_objects() const { return m_proximity_dynamic_num_objects; }
-    QLabel* proximity_dynamic_num_split_nodes_in_last_frame() const { return m_proximity_dynamic_num_split_nodes_in_last_frame; }
-    QLabel* proximity_dynamic_num_searches_by_bbox_in_last_frame() const { return m_proximity_dynamic_num_searches_by_bbox_in_last_frame; }
-    QLabel* proximity_dynamic_max_num_searches_by_bbox_till_last_frame() const { return m_proximity_dynamic_max_num_searches_by_bbox_till_last_frame; }
-    QLabel* proximity_dynamic_num_searches_by_line_in_last_frame() const { return m_proximity_dynamic_num_searches_by_line_in_last_frame; }
-    QLabel* proximity_dynamic_max_num_searches_by_line_till_last_frame() const { return m_proximity_dynamic_max_num_searches_by_line_till_last_frame; }
-    QLabel* proximity_dynamic_num_enumerate_calls_in_last_frame() const { return m_proximity_dynamic_num_enumerate_calls_in_last_frame; }
-    QLabel* proximity_dynamic_max_num_enumerate_calls_till_last_frame() const { return m_proximity_dynamic_max_num_enumerate_calls_till_last_frame; }
+    QLineEdit* proximity_dynamic_num_objects() const { return m_proximity_dynamic_num_objects; }
+    QLineEdit* proximity_dynamic_num_split_nodes() const { return m_proximity_dynamic_num_split_nodes; }
+    QLineEdit* proximity_dynamic_num_searches_by_bbox_in_last_frame() const { return m_proximity_dynamic_num_searches_by_bbox_in_last_frame; }
+    QLineEdit* proximity_dynamic_max_num_searches_by_bbox_till_last_frame() const { return m_proximity_dynamic_max_num_searches_by_bbox_till_last_frame; }
+    QLineEdit* proximity_dynamic_num_searches_by_line_in_last_frame() const { return m_proximity_dynamic_num_searches_by_line_in_last_frame; }
+    QLineEdit* proximity_dynamic_max_num_searches_by_line_till_last_frame() const { return m_proximity_dynamic_max_num_searches_by_line_till_last_frame; }
+    QLineEdit* proximity_dynamic_num_enumerate_calls_in_last_frame() const { return m_proximity_dynamic_num_enumerate_calls_in_last_frame; }
+    QLineEdit* proximity_dynamic_max_num_enumerate_calls_till_last_frame() const { return m_proximity_dynamic_max_num_enumerate_calls_till_last_frame; }
 
 private:
 
     program_window*  m_wnd;
 
-    QLabel* m_num_capsules;
-    QLabel* m_num_lines;
-    QLabel* m_num_points;
-    QLabel* m_num_spheres;
-    QLabel* m_num_triangles;
+    QLineEdit* m_num_capsules;
+    QLineEdit* m_num_lines;
+    QLineEdit* m_num_points;
+    QLineEdit* m_num_spheres;
+    QLineEdit* m_num_triangles;
 
-    QLabel* m_num_compute_contacts_calls_in_last_frame;
-    QLabel* m_max_num_compute_contacts_calls_till_last_frame;
+    QLineEdit* m_num_compute_contacts_calls_in_last_frame;
+    QLineEdit* m_max_num_compute_contacts_calls_till_last_frame;
 
-    QLabel* m_num_contacts_in_last_frame;
-    QLabel* m_max_num_contacts_till_last_frame;
+    QLineEdit* m_num_contacts_in_last_frame;
+    QLineEdit* m_max_num_contacts_till_last_frame;
 
-    QLabel* m_proximity_static_num_objects;
-    QLabel* m_proximity_static_num_split_nodes_in_last_frame;
-    QLabel* m_proximity_static_num_searches_by_bbox_in_last_frame;
-    QLabel* m_proximity_static_max_num_searches_by_bbox_till_last_frame;
-    QLabel* m_proximity_static_num_searches_by_line_in_last_frame;
-    QLabel* m_proximity_static_max_num_searches_by_line_till_last_frame;
-    QLabel* m_proximity_static_num_enumerate_calls_in_last_frame;
-    QLabel* m_proximity_static_max_num_enumerate_calls_till_last_frame;
+    QLineEdit* m_proximity_static_num_objects;
+    QLineEdit* m_proximity_static_num_split_nodes;
+    QLineEdit* m_proximity_static_num_searches_by_bbox_in_last_frame;
+    QLineEdit* m_proximity_static_max_num_searches_by_bbox_till_last_frame;
+    QLineEdit* m_proximity_static_num_searches_by_line_in_last_frame;
+    QLineEdit* m_proximity_static_max_num_searches_by_line_till_last_frame;
+    QLineEdit* m_proximity_static_num_enumerate_calls_in_last_frame;
+    QLineEdit* m_proximity_static_max_num_enumerate_calls_till_last_frame;
 
-    QLabel* m_proximity_dynamic_num_objects;
-    QLabel* m_proximity_dynamic_num_split_nodes_in_last_frame;
-    QLabel* m_proximity_dynamic_num_searches_by_bbox_in_last_frame;
-    QLabel* m_proximity_dynamic_max_num_searches_by_bbox_till_last_frame;
-    QLabel* m_proximity_dynamic_num_searches_by_line_in_last_frame;
-    QLabel* m_proximity_dynamic_max_num_searches_by_line_till_last_frame;
-    QLabel* m_proximity_dynamic_num_enumerate_calls_in_last_frame;
-    QLabel* m_proximity_dynamic_max_num_enumerate_calls_till_last_frame;
+    QLineEdit* m_proximity_dynamic_num_objects;
+    QLineEdit* m_proximity_dynamic_num_split_nodes;
+    QLineEdit* m_proximity_dynamic_num_searches_by_bbox_in_last_frame;
+    QLineEdit* m_proximity_dynamic_max_num_searches_by_bbox_till_last_frame;
+    QLineEdit* m_proximity_dynamic_num_searches_by_line_in_last_frame;
+    QLineEdit* m_proximity_dynamic_max_num_searches_by_line_till_last_frame;
+    QLineEdit* m_proximity_dynamic_num_enumerate_calls_in_last_frame;
+    QLineEdit* m_proximity_dynamic_max_num_enumerate_calls_till_last_frame;
 };
 
 
