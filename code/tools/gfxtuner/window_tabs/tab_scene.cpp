@@ -1728,8 +1728,21 @@ void  widgets::on_look_at_selection(std::function<void(vector3 const&, float_32_
             angeo::axis_aligned_bounding_box  bbox;
             if (scn::get_bbox(*node_ptr, id_builder.get_node_record_id(), bbox))
             {
+                if (scn::has_agent(*node_ptr))
+                {
+                    // Position of the object is perhaps affected by agent's current
+                    // skeletal animation. We thus only guess (estimate )a space where
+                    // the object might possibly be...
+                    float_32_bit const  radius = std::max(length(bbox.min_corner), length(bbox.max_corner));
+                    for (int i = 0; i != 3; ++i)
+                    {
+                        bbox.min_corner(i) = -radius;
+                        bbox.max_corner(i) = radius;
+                    }
+                }
+
                 selection.push_back(angeo::transform_bbox(bbox, node_ptr->get_world_matrix()));
-                visited_coord_systems.insert(tree_item);
+                visited_coord_systems.insert(coord_system_item);
             }
         }
     }
