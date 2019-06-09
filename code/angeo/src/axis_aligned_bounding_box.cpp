@@ -74,6 +74,15 @@ void  compute_union_bbox(
 }
 
 
+void  extend_union_bbox(
+        axis_aligned_bounding_box&  union_bbox,
+        vector3 const&  point
+        )
+{
+    compute_union_bbox(union_bbox, { point, point }, union_bbox);
+}
+
+
 void  transform_bbox(
         axis_aligned_bounding_box const&  bbox,
         matrix44 const&  transformation,

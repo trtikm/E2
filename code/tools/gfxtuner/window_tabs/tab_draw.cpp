@@ -648,6 +648,23 @@ QWidget*  make_draw_tab_content(widgets const&  w)
         {
             QWidget* const camera_group = new QGroupBox("Camera");
             {
+                camera_group->setToolTip(
+                    "In 'edit mode', i.e. when the simulation is paused, there are\n"
+                    "two camera controllers available: Free-fly, and Orbit.\n"
+                    "    In Free-fly use keys 'W', 'S', 'A', 'D', 'E', and 'Q' for moving\n"
+                    "camera forward,backward, left, right, up, and down, respectively.\n"
+                    "Use menu 'View' to control movement speed. To rotate camera around\n"
+                    "its center press and hold 'MIDDLE_MOUSE_BUTTON' and move the mouse.\n"
+                    "    To switch to Orbit camera controller press and hold the key\n"
+                    "'CTRL' (left or right). Now to rotate the camera around the center\n"
+                    "of selected scene nodes, or '@pivot' node when nothing is selected,\n"
+                    "press and hold 'MIDDLE_MOUSE_BUTTON' and move the mouse. To switch\n"
+                    "back to the Free-fly controller release the key 'CTRL'.\n"
+                    "In 'simulation mode', i.e. when the simulation is resumed, there is\n"
+                    "currently only one camera controller available: Free-fly.\n"
+                    "    The Free-fly controller is used exactly the same way as in the\n"
+                    "edit mode."
+                    );
                 QVBoxLayout* const camera_layout = new QVBoxLayout;
                 {
                     QWidget* const position_group = new QGroupBox("Position in meters [xyz]");

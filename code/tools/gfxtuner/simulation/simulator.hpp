@@ -303,6 +303,7 @@ private:
 
     qtgl::camera_perspective_ptr  m_camera;
     qtgl::free_fly_config  m_free_fly_config;
+    qtgl::free_fly_config  m_orbit_config;
     qtgl::effects_config  m_effects_config;
     vector4  m_diffuse_colour;
     vector3  m_ambient_colour;

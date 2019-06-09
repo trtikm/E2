@@ -75,6 +75,12 @@ inline void  extend_union_bbox(
 }
 
 
+void  extend_union_bbox(
+        axis_aligned_bounding_box&  union_bbox,
+        vector3 const&  point
+        );
+
+
 inline vector3  center_of_bbox(axis_aligned_bounding_box const&  bbox) { return 0.5f * (bbox.min_corner + bbox.max_corner); }
 inline float_32_bit  radius_of_bbox(axis_aligned_bounding_box const&  bbox) { return 0.5f * length(bbox.min_corner - bbox.max_corner); }
 
