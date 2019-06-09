@@ -51,6 +51,7 @@ status_bar::status_bar(program_window* const  wnd)
 
     , m_spent_real_time(new QLabel(" RT: N/A "))
     , m_num_passed_simulation_steps(new QLabel(" #0 "))
+    , m_camera_controller_type(new QLabel(" N/A "))
     , m_state(new QLabel(" STARTING "))
     , m_mode(new QLabel(" PAUSED "))
     , m_FPS(new QLabel(" FPS: 0 "))
@@ -70,6 +71,21 @@ void  status_bar::edit_mode_listener()
 }
 
 
+void  status_bar::camera_controller_changed_listener()
+{
+    auto const  camera_controller_type = m_wnd->glwindow().call_now(&simulator::get_camera_controller_type);
+    switch (camera_controller_type)
+    {
+    case CAMERA_CONTROLLER_FREE_FLY: m_camera_controller_type->setText(" FREE FLY "); break;
+    case CAMERA_CONTROLLER_ORBIT: m_camera_controller_type->setText(" ORBIT "); break;
+    case CAMERA_CONTROLLER_FOLLOW: m_camera_controller_type->setText(" FOLLOW "); break;
+    case CAMERA_CONTROLLER_LOOK_AT: m_camera_controller_type->setText(" LOOK AT "); break;
+    case CAMERA_CONTROLLER_FOLLOW_AND_LOOK_AT: m_camera_controller_type->setText(" FOLLOW & LOOK AT "); break;
+    default: UNREACHABLE(); break;
+    }
+}
+
+
 void status_bar::update()
 {
     float_64_bit const  real_time = wnd()->glwindow().call_now(&qtgl::real_time_simulator::total_simulation_time);
@@ -79,6 +95,9 @@ void status_bar::update()
     natural_64_bit const  num_steps = wnd()->glwindow().call_now(&qtgl::real_time_simulator::round_id);
     msg = msgstream() << " #" << num_steps << " ";
     m_num_passed_simulation_steps->setText(msg.c_str());
+
+    if (m_camera_controller_type->text() == " N/A ")
+        camera_controller_changed_listener();
 
     m_mode->setText(wnd()->glwindow().call_now(&simulator::paused) ? " PAUSED " : " RUNNING ");
 
@@ -112,6 +131,7 @@ void  make_status_bar_content(status_bar const&  w)
 {
     w.wnd()->statusBar()->addPermanentWidget(w.spent_real_time());
     w.wnd()->statusBar()->addPermanentWidget(w.num_passed_simulation_steps());
+    w.wnd()->statusBar()->addPermanentWidget(w.camera_controller_type());
     w.wnd()->statusBar()->addPermanentWidget(w.state());
     w.wnd()->statusBar()->addPermanentWidget(w.mode());
     w.wnd()->statusBar()->addPermanentWidget(w.FPS());
@@ -123,4 +143,8 @@ void  make_status_bar_content(status_bar const&  w)
         { &program_window::status_bar_edit_mode_listener, w.wnd() }
     );
 
+    w.wnd()->glwindow().register_listener(
+        simulator_notifications::camera_controller_changed(),
+        { &program_window::status_bar_camera_controller_changed_listener, w.wnd() }
+    );
 }

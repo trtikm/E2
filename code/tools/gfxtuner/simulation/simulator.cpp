@@ -119,6 +119,8 @@ simulator::simulator()
                     window_props()
                     )
             )
+    , m_camera_controller_type_in_edit_mode(CAMERA_CONTROLLER_FREE_FLY)
+    , m_camera_controller_type_in_simulation_mode(CAMERA_CONTROLLER_FREE_FLY)
     , m_free_fly_config
             {
                 {
@@ -204,6 +206,9 @@ simulator::simulator()
                     qtgl::free_fly_controler::mouse_button_pressed(qtgl::MIDDLE_MOUSE_BUTTON()),
                 }
             }
+    , m_camera_target_node_id()
+    , m_camera_target_vector_in_camera_space(vector3_zero())
+
     , m_effects_config(
             qtgl::effects_config::light_types{
                 qtgl::LIGHT_TYPE::AMBIENT,
@@ -512,50 +517,155 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
     {
         qtgl::adjust(*m_camera,window_props());
 
+        bool  camera_controller_changed = false;
         std::pair<bool, bool>  translated_rotated{false, false};
-        if (paused() && (keyboard_props().is_pressed(qtgl::KEY_LCTRL()) || keyboard_props().is_pressed(qtgl::KEY_RCTRL())))
+        if (paused())
         {
-            vector3  center;
+            m_camera_target_node_id =
+                    m_scene_selection.get_records().empty() &&
+                    m_scene_selection.get_nodes().size() == 1UL && 
+                    scn::has_rigid_body(*get_scene_node(*m_scene_selection.get_nodes().begin())) ?
+                        *m_scene_selection.get_nodes().begin() :
+                        scn::scene_node_id() ;
+
+            if (keyboard_props().is_pressed(qtgl::KEY_LCTRL()) || keyboard_props().is_pressed(qtgl::KEY_RCTRL()))
             {
-                std::vector<vector3> origins;
+                if (m_camera_controller_type_in_edit_mode != CAMERA_CONTROLLER_ORBIT)
                 {
-                    for (auto const& node_id : m_scene_selection.get_nodes())
-                        origins.push_back(transform_point(vector3_zero(), get_scene_node(node_id)->get_world_matrix()));
-                    for (auto const& record_id : m_scene_selection.get_records())
-                        origins.push_back(transform_point(vector3_zero(), get_scene_node(record_id.get_node_id())->get_world_matrix()));
+                    m_camera_controller_type_in_edit_mode = CAMERA_CONTROLLER_ORBIT;
+                    camera_controller_changed = true;
                 }
-                if (origins.empty())
-                    center = get_scene_node(scn::get_pivot_node_id())->get_coord_system()->origin();
-                else
+
+                vector3  center;
                 {
-                    angeo::axis_aligned_bounding_box  bbox{ origins.back(), origins.back()};
-                    origins.pop_back();
-                    for (vector3 const& origin : origins)
-                        angeo::extend_union_bbox(bbox, origin);
-                    center = angeo::center_of_bbox(bbox);
+                    std::vector<vector3> origins;
+                    {
+                        for (auto const& node_id : m_scene_selection.get_nodes())
+                            origins.push_back(transform_point(vector3_zero(), get_scene_node(node_id)->get_world_matrix()));
+                        for (auto const& record_id : m_scene_selection.get_records())
+                            origins.push_back(transform_point(vector3_zero(), get_scene_node(record_id.get_node_id())->get_world_matrix()));
+                    }
+                    if (origins.empty())
+                        center = get_scene_node(scn::get_pivot_node_id())->get_coord_system()->origin();
+                    else
+                    {
+                        angeo::axis_aligned_bounding_box  bbox{ origins.back(), origins.back()};
+                        origins.pop_back();
+                        for (vector3 const& origin : origins)
+                            angeo::extend_union_bbox(bbox, origin);
+                        center = angeo::center_of_bbox(bbox);
+                    }
                 }
+
+                vector3 const d = center - m_camera->coordinate_system()->origin();
+
+                matrix44 T;
+                angeo::to_base_matrix(*m_camera->coordinate_system(), T);
+
+                translated_rotated =
+                    qtgl::free_fly(*m_camera->coordinate_system(), m_orbit_config,
+                                   seconds_from_previous_call, mouse_props(), keyboard_props());
+                if (translated_rotated.second == true)
+                    translated_rotated.first = true;
+
+                matrix44 F;
+                angeo::from_base_matrix(*m_camera->coordinate_system(), F);
+
+                m_camera->coordinate_system()->set_origin(center - transform_vector(transform_vector(d, T), F));
             }
-
-            vector3 const d = center - m_camera->coordinate_system()->origin();
-            float_32_bit const distance = length(d);
-
-            matrix44 T;
-            angeo::to_base_matrix(*m_camera->coordinate_system(), T);
-
-            translated_rotated =
-                qtgl::free_fly(*m_camera->coordinate_system(), m_orbit_config,
-                               seconds_from_previous_call, mouse_props(), keyboard_props());
-            if (translated_rotated.second == true)
-                translated_rotated.first = true;
-
-            matrix44 F;
-            angeo::from_base_matrix(*m_camera->coordinate_system(), F);
-
-            m_camera->coordinate_system()->set_origin(center - transform_vector(transform_vector(d, T), F));
+            else
+            {
+                if (m_camera_controller_type_in_edit_mode != CAMERA_CONTROLLER_FREE_FLY)
+                {
+                    m_camera_controller_type_in_edit_mode = CAMERA_CONTROLLER_FREE_FLY;
+                    camera_controller_changed = true;
+                }
+                translated_rotated = qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
+                                                     seconds_from_previous_call, mouse_props(), keyboard_props());
+            }
         }
         else
-            translated_rotated = qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
-                                                 seconds_from_previous_call, mouse_props(), keyboard_props());
+        {
+            if (mouse_props().was_just_released(qtgl::MIDDLE_MOUSE_BUTTON()) && (keyboard_props().is_pressed(qtgl::KEY_LCTRL()) ||
+                                                                                 keyboard_props().is_pressed(qtgl::KEY_RCTRL())))
+            {
+                camera_controller_changed = true;
+                if (keyboard_props().is_pressed(qtgl::KEY_LSHIFT()) || keyboard_props().is_pressed(qtgl::KEY_RSHIFT()))
+                    m_camera_controller_type_in_simulation_mode = (CAMERA_CONTROLLER_TYPE)
+                        ((m_camera_controller_type_in_simulation_mode + NUM_CAMERA_CONTROLLER_TYPES - 1) % NUM_CAMERA_CONTROLLER_TYPES);
+                else
+                    m_camera_controller_type_in_simulation_mode = (CAMERA_CONTROLLER_TYPE)
+                        ((m_camera_controller_type_in_simulation_mode + 1) % NUM_CAMERA_CONTROLLER_TYPES);
+            }
+
+            scn::scene_node_const_ptr const  node_ptr = get_scene_node(m_camera_target_node_id);
+            if (node_ptr == nullptr)
+                m_camera_controller_type_in_simulation_mode = CAMERA_CONTROLLER_FREE_FLY;
+
+            if (m_camera_controller_type_in_simulation_mode == CAMERA_CONTROLLER_FREE_FLY)
+                translated_rotated = qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
+                                                    seconds_from_previous_call, mouse_props(), keyboard_props());
+            else
+            {
+                vector3 const  center = transform_point(vector3_zero(), node_ptr->get_world_matrix());
+                if (camera_controller_changed)
+                {
+                    vector3 const d = center - m_camera->coordinate_system()->origin();
+                    matrix44 T;
+                    angeo::to_base_matrix(*m_camera->coordinate_system(), T);
+                    m_camera_target_vector_in_camera_space = transform_vector(d, T);
+                }
+
+                switch (m_camera_controller_type_in_simulation_mode)
+                {
+                case CAMERA_CONTROLLER_ORBIT:
+                    {
+                        translated_rotated = qtgl::free_fly(*m_camera->coordinate_system(), m_orbit_config,
+                                                            seconds_from_previous_call, mouse_props(), keyboard_props());
+                        if (translated_rotated.second == true)
+                            translated_rotated.first = true;
+
+                        matrix44 F;
+                        angeo::from_base_matrix(*m_camera->coordinate_system(), F);
+
+                        m_camera->coordinate_system()->set_origin(center - transform_vector(m_camera_target_vector_in_camera_space, F));
+                    }
+                    break;
+                case CAMERA_CONTROLLER_FOLLOW:
+                    {
+                        translated_rotated = qtgl::free_fly(*m_camera->coordinate_system(), m_orbit_config,
+                                                            seconds_from_previous_call, mouse_props(), keyboard_props());
+
+                        translated_rotated.first = true;
+                        vector3  d = m_camera->coordinate_system()->origin() - center;
+                        float_32_bit const  d_len = length(d);
+                        if (d_len > 0.0001f)
+                            d *= length(m_camera_target_vector_in_camera_space) / d_len;
+
+                        m_camera->coordinate_system()->set_origin(center + d);
+                    }
+                    break;
+                case CAMERA_CONTROLLER_LOOK_AT:
+                    {
+                        translated_rotated.second = true;
+                        vector3  d = m_camera->coordinate_system()->origin() - center;
+                        qtgl::look_at(*m_camera->coordinate_system(), center, length(d));
+                    }
+                    break;
+                case CAMERA_CONTROLLER_FOLLOW_AND_LOOK_AT:
+                    {
+                        translated_rotated.first = true;
+                        translated_rotated.second = true;
+                        qtgl::look_at(*m_camera->coordinate_system(), center, length(m_camera_target_vector_in_camera_space));
+                }
+                    break;
+                default: UNREACHABLE(); break;
+                }
+            }
+        }
+
+        if (camera_controller_changed)
+            call_listeners(simulator_notifications::camera_controller_changed());
         if (translated_rotated.first)
             call_listeners(simulator_notifications::camera_position_updated());
         if (translated_rotated.second)

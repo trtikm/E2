@@ -105,6 +105,7 @@ public slots:
 
     /// Status bar
     void  status_bar_edit_mode_listener() { m_status_bar.edit_mode_listener(); }
+    void  status_bar_camera_controller_changed_listener() { m_status_bar.camera_controller_changed_listener(); }
 
     /// Slots for menu actions
     void  on_menu_new_scene() { m_menu_bar.on_file_action_new_scene(); m_tab_scene_widgets.clear_scene(); }

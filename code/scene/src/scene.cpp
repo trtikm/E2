@@ -170,6 +170,8 @@ bool  scene::foreach_node(std::function<bool(scene_node_ptr)> const&  action, bo
 
 scene_node_ptr scene::get_scene_node(scene_node_id const&  id) const
 {
+    if (id.path().empty())
+        return nullptr;
     auto const  it = m_scene.find(id.path().front());
     if (it == m_scene.cend())
         return nullptr;

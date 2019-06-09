@@ -27,6 +27,19 @@
 #   include <string>
 #   include <list>
 
+
+enum  CAMERA_CONTROLLER_TYPE
+{
+    CAMERA_CONTROLLER_FREE_FLY              = 0,
+    CAMERA_CONTROLLER_ORBIT                 = 1,
+    CAMERA_CONTROLLER_FOLLOW                = 2,
+    CAMERA_CONTROLLER_LOOK_AT               = 3,
+    CAMERA_CONTROLLER_FOLLOW_AND_LOOK_AT    = 4,
+
+    NUM_CAMERA_CONTROLLER_TYPES
+};
+
+
 struct simulator : public qtgl::real_time_simulator
 {
     simulator();
@@ -239,6 +252,9 @@ struct simulator : public qtgl::real_time_simulator
     void  on_simulation_paused();
     void  on_simulation_resumed();
 
+    CAMERA_CONTROLLER_TYPE  get_camera_controller_type() const
+    { return paused() ? m_camera_controller_type_in_edit_mode : m_camera_controller_type_in_simulation_mode; }
+
 private:
 
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
@@ -302,8 +318,13 @@ private:
     // Data providing feedback loop between a human user and 3D scene in the tool
 
     qtgl::camera_perspective_ptr  m_camera;
+    CAMERA_CONTROLLER_TYPE  m_camera_controller_type_in_edit_mode;
+    CAMERA_CONTROLLER_TYPE  m_camera_controller_type_in_simulation_mode;
     qtgl::free_fly_config  m_free_fly_config;
     qtgl::free_fly_config  m_orbit_config;
+    scn::scene_node_id  m_camera_target_node_id;
+    vector3  m_camera_target_vector_in_camera_space;
+
     qtgl::effects_config  m_effects_config;
     vector4  m_diffuse_colour;
     vector3  m_ambient_colour;

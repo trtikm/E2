@@ -11,6 +11,7 @@ inline std::string  resumed() { return "RESUMED"; }
 
 inline std::string  camera_position_updated() { return "CAMERA_POSITION_UPDATED"; }
 inline std::string  camera_orientation_updated() { return "CAMERA_ORIENTATION_UPDATED"; }
+inline std::string  camera_controller_changed() { return "CAMERA_CONTROLLER_CHANGED"; }
 
 inline std::string  scene_node_position_update_started() { return "SCENE_NODE_POSITION_UPDATE_STARTED"; }
 inline std::string  scene_node_position_updated() { return "SCENE_NODE_POSITION_UPDATED"; }

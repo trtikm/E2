@@ -19,11 +19,13 @@ struct  status_bar
 
     QLabel* spent_real_time() const { return m_spent_real_time; }
     QLabel* num_passed_simulation_steps() const { return m_num_passed_simulation_steps; }
+    QLabel* camera_controller_type() const { return m_camera_controller_type; }
     QLabel* state() const { return m_state; }
     QLabel* mode() const { return m_mode; }
     QLabel* FPS() const { return m_FPS; }
 
     void  edit_mode_listener();
+    void  camera_controller_changed_listener();
 
     void  update();
 
@@ -34,6 +36,7 @@ private:
 
     QLabel*  m_spent_real_time;
     QLabel*  m_num_passed_simulation_steps;
+    QLabel*  m_camera_controller_type;
     QLabel*  m_state;
     QLabel*  m_mode;
     QLabel*  m_FPS;
