@@ -208,6 +208,7 @@ simulator::simulator()
             }
     , m_camera_target_node_id()
     , m_camera_target_vector_in_camera_space(vector3_zero())
+    , m_camera_target_vector_invalidated(true)
 
     , m_effects_config(
             qtgl::effects_config::light_types{
@@ -521,12 +522,14 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
         std::pair<bool, bool>  translated_rotated{false, false};
         if (paused())
         {
-            m_camera_target_node_id =
-                    m_scene_selection.get_records().empty() &&
-                    m_scene_selection.get_nodes().size() == 1UL && 
-                    scn::has_rigid_body(*get_scene_node(*m_scene_selection.get_nodes().begin())) ?
-                        *m_scene_selection.get_nodes().begin() :
-                        scn::scene_node_id() ;
+            if (m_scene_selection.get_records().empty()
+                    && m_scene_selection.get_nodes().size() == 1UL
+                    && scn::has_rigid_body(*get_scene_node(*m_scene_selection.get_nodes().begin()))
+                    )
+            {
+                m_camera_target_node_id = *m_scene_selection.get_nodes().begin();
+                m_camera_target_vector_invalidated = true;
+            }
 
             if (keyboard_props().is_pressed(qtgl::KEY_LCTRL()) || keyboard_props().is_pressed(qtgl::KEY_RCTRL()))
             {
@@ -584,12 +587,13 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
                                                      seconds_from_previous_call, mouse_props(), keyboard_props());
             }
         }
-        else
+        else if (scn::scene_node_const_ptr const  node_ptr = get_scene_node(m_camera_target_node_id))
         {
             if (mouse_props().was_just_released(qtgl::MIDDLE_MOUSE_BUTTON()) && (keyboard_props().is_pressed(qtgl::KEY_LCTRL()) ||
                                                                                  keyboard_props().is_pressed(qtgl::KEY_RCTRL())))
             {
                 camera_controller_changed = true;
+                m_camera_target_vector_invalidated = true;
                 if (keyboard_props().is_pressed(qtgl::KEY_LSHIFT()) || keyboard_props().is_pressed(qtgl::KEY_RSHIFT()))
                     m_camera_controller_type_in_simulation_mode = (CAMERA_CONTROLLER_TYPE)
                         ((m_camera_controller_type_in_simulation_mode + NUM_CAMERA_CONTROLLER_TYPES - 1) % NUM_CAMERA_CONTROLLER_TYPES);
@@ -598,22 +602,19 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
                         ((m_camera_controller_type_in_simulation_mode + 1) % NUM_CAMERA_CONTROLLER_TYPES);
             }
 
-            scn::scene_node_const_ptr const  node_ptr = get_scene_node(m_camera_target_node_id);
-            if (node_ptr == nullptr)
-                m_camera_controller_type_in_simulation_mode = CAMERA_CONTROLLER_FREE_FLY;
-
             if (m_camera_controller_type_in_simulation_mode == CAMERA_CONTROLLER_FREE_FLY)
                 translated_rotated = qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
                                                     seconds_from_previous_call, mouse_props(), keyboard_props());
             else
             {
                 vector3 const  center = transform_point(vector3_zero(), node_ptr->get_world_matrix());
-                if (camera_controller_changed)
+                if (m_camera_target_vector_invalidated)
                 {
                     vector3 const d = center - m_camera->coordinate_system()->origin();
                     matrix44 T;
                     angeo::to_base_matrix(*m_camera->coordinate_system(), T);
                     m_camera_target_vector_in_camera_space = transform_vector(d, T);
+                    m_camera_target_vector_invalidated = false;
                 }
 
                 switch (m_camera_controller_type_in_simulation_mode)
@@ -663,6 +664,9 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
                 }
             }
         }
+        else
+            translated_rotated = qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
+                                                seconds_from_previous_call, mouse_props(), keyboard_props());
 
         if (camera_controller_changed)
             call_listeners(simulator_notifications::camera_controller_changed());

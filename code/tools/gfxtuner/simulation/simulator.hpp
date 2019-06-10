@@ -253,7 +253,15 @@ struct simulator : public qtgl::real_time_simulator
     void  on_simulation_resumed();
 
     CAMERA_CONTROLLER_TYPE  get_camera_controller_type() const
-    { return paused() ? m_camera_controller_type_in_edit_mode : m_camera_controller_type_in_simulation_mode; }
+    {
+        return paused() ? m_camera_controller_type_in_edit_mode :
+                          get_scene_node(m_camera_target_node_id) != nullptr ? m_camera_controller_type_in_simulation_mode :
+                                                                               CAMERA_CONTROLLER_FREE_FLY;
+    }
+    CAMERA_CONTROLLER_TYPE  get_camera_controller_type_in_simulation_mode() const { return m_camera_controller_type_in_simulation_mode; }
+    void  set_camera_controller_type_in_simulation_mode(CAMERA_CONTROLLER_TYPE const  type) { m_camera_controller_type_in_simulation_mode = type; }
+    scn::scene_node_id const& get_camera_target_node_id() const { return m_camera_target_node_id; }
+    void  set_camera_target_node_id(scn::scene_node_id const&  id) { m_camera_target_node_id = id; m_camera_target_vector_invalidated = true; }
 
 private:
 
@@ -324,6 +332,7 @@ private:
     qtgl::free_fly_config  m_orbit_config;
     scn::scene_node_id  m_camera_target_node_id;
     vector3  m_camera_target_vector_in_camera_space;
+    bool  m_camera_target_vector_invalidated;
 
     qtgl::effects_config  m_effects_config;
     vector4  m_diffuse_colour;

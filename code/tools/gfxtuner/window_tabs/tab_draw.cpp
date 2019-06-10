@@ -338,6 +338,24 @@ widgets::widgets(program_window* const  wnd)
     m_camera_rot_y->setEnabled(false);
     m_camera_rot_z->setEnabled(false);
     m_camera_pitch->setEnabled(false);
+
+    CAMERA_CONTROLLER_TYPE  camera_controller_type;
+    {
+        std::string const  camera_controller_type_name = wnd->ptree().get("camera.controller_type_in_simulation_mode", "FREE FLY");
+        if (camera_controller_type_name == "FREE FLY") camera_controller_type = CAMERA_CONTROLLER_FREE_FLY;
+        else if (camera_controller_type_name == "ORBIT") camera_controller_type = CAMERA_CONTROLLER_ORBIT;
+        else if (camera_controller_type_name == "FOLLOW") camera_controller_type = CAMERA_CONTROLLER_FOLLOW;
+        else if (camera_controller_type_name == "LOOK_AT") camera_controller_type = CAMERA_CONTROLLER_LOOK_AT;
+        else if (camera_controller_type_name == "FOLLOW_AND_LOOK_AT") camera_controller_type = CAMERA_CONTROLLER_FOLLOW_AND_LOOK_AT;
+        else UNREACHABLE();
+    }
+    wnd->glwindow().call_later(&simulator::set_camera_controller_type_in_simulation_mode, camera_controller_type);
+
+    scn::scene_node_id::path_type  camera_target_node_path;
+    if (wnd->ptree().get_child_optional("camera.camera_target_node_id"))
+        for (auto const&  tree_node : wnd->ptree().get_child("camera.camera_target_node_id"))
+            camera_target_node_path.push_back(tree_node.second.data());
+    wnd->glwindow().call_later(&simulator::set_camera_target_node_id, scn::scene_node_id{camera_target_node_path});
 }
 
 
@@ -622,6 +640,23 @@ void  widgets::save()
     wnd()->ptree().put("camera.save_pos_rot", m_camera_save_pos_rot->isChecked());
     wnd()->ptree().put("camera.far_plane", m_camera_far_plane->text().toFloat());
     wnd()->ptree().put("camera.speed", m_camera_speed->text().toFloat());
+
+    std::string  camera_controller_type_name;
+    switch (wnd()->glwindow().call_now(&simulator::get_camera_controller_type_in_simulation_mode))
+    {
+    case CAMERA_CONTROLLER_FREE_FLY: camera_controller_type_name = "FREE FLY"; break;
+    case CAMERA_CONTROLLER_ORBIT: camera_controller_type_name = "ORBIT"; break;
+    case CAMERA_CONTROLLER_FOLLOW: camera_controller_type_name = "FOLLOW"; break;
+    case CAMERA_CONTROLLER_LOOK_AT: camera_controller_type_name = "LOOK_AT"; break;
+    case CAMERA_CONTROLLER_FOLLOW_AND_LOOK_AT: camera_controller_type_name = "FOLLOW_AND_LOOK_AT"; break;
+    default: UNREACHABLE(); break;
+    }
+    wnd()->ptree().put("camera.controller_type_in_simulation_mode", camera_controller_type_name);
+
+    scn::scene_node_id const  camera_target_node_id = wnd()->glwindow().call_now(&simulator::get_camera_target_node_id);
+    wnd()->ptree().get_child("camera").erase("camera_target_node_id");
+    for (auto const&  elem : camera_target_node_id.path())
+        wnd()->ptree().add("camera.camera_target_node_id.path_elem", elem);
 
     wnd()->ptree().put("draw.clear_colour.red", m_clear_colour_component_red->text().toInt());
     wnd()->ptree().put("draw.clear_colour.green", m_clear_colour_component_green->text().toInt());
