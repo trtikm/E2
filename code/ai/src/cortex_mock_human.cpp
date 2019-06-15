@@ -16,7 +16,10 @@ void  cortex_mock_human::next_round(float_32_bit const  time_step_in_seconds)
         value_ref = 0.0f;
 
     if (get_input_devices()->keyboard.is_pressed(qtgl::KEY_UP()))
-        get_io()->output.front() = 1.0f;
+        if (get_input_devices()->keyboard.is_pressed(qtgl::KEY_LSHIFT()) || get_input_devices()->keyboard.is_pressed(qtgl::KEY_RSHIFT()))
+            get_io()->output.front() = 0.4f;
+        else
+            get_io()->output.front() = 0.13f;
 
     bool const  turn_left = get_input_devices()->keyboard.is_pressed(qtgl::KEY_LEFT());
     bool const  turn_right = get_input_devices()->keyboard.is_pressed(qtgl::KEY_RIGHT());
