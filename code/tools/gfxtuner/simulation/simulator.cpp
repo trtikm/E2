@@ -874,25 +874,27 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                                 node_ptr->get_coord_system()->origin(),
                                 node_ptr->get_coord_system()->origin() + motion_object_forward_direction_in_world_space
                                 });
-                        m_cache_of_batches_of_ai_agents.lines->second.push_back({0.25f, 0.75f, 0.75f, 1.0f});
+                        m_cache_of_batches_of_ai_agents.lines->second.push_back({0.25f, 0.75f, 0.75f, 1.0f}); // AQUA
 
                         m_cache_of_batches_of_ai_agents.lines->first.push_back({
                                 node_ptr->get_coord_system()->origin(),
                                 node_ptr->get_coord_system()->origin() + motion_object_up_direction_in_world_space
                                 });
-                        m_cache_of_batches_of_ai_agents.lines->second.push_back({0.25f, 0.5f, 0.75f, 1.0f});
+                        m_cache_of_batches_of_ai_agents.lines->second.push_back({0.25f, 0.5f, 0.75f, 1.0f}); // AZURE
 
                         m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                                node_ptr->get_coord_system()->origin(),
-                                node_ptr->get_coord_system()->origin() + m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id())
+                                node_ptr->get_coord_system()->origin() + 0.0025f * vector3_unit_z(),
+                                node_ptr->get_coord_system()->origin() + 0.0025f * vector3_unit_z()
+                                    + m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id())
                                 });
-                        m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 1.0f, 0.25f, 1.0f});
+                        m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 1.0f, 0.25f, 1.0f}); // YELLOW
 
                         m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                                node_ptr->get_coord_system()->origin(),
-                                node_ptr->get_coord_system()->origin() + m_rigid_body_simulator_ptr->get_angular_velocity(rb_ptr->id())
+                                node_ptr->get_coord_system()->origin() - 0.0025f * motion_object_forward_direction_in_world_space,
+                                node_ptr->get_coord_system()->origin() - 0.0025f * motion_object_forward_direction_in_world_space
+                                    + m_rigid_body_simulator_ptr->get_angular_velocity(rb_ptr->id())
                                 });
-                        m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 0.5f, 0.25f, 1.0f});
+                        m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 0.5f, 0.25f, 1.0f}); // ORANGE
                     }
 
                     m_cache_of_batches_of_ai_agents.lines->first.push_back({
@@ -900,14 +902,14 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                             node_ptr->get_coord_system()->origin() + 0.005f * vector3_unit_z()
                                 + ach_ptr->get_desired_props().forward_unit_vector_in_world_space
                             });
-                    m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 1.0f, 1.0f, 1.0f});
+                    m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 1.0f, 1.0f, 1.0f}); // WHITE
 
                     m_cache_of_batches_of_ai_agents.lines->first.push_back({
                             node_ptr->get_coord_system()->origin() + 0.0075f * vector3_unit_z(),
                             node_ptr->get_coord_system()->origin() + 0.0075f * vector3_unit_z()
                                 + 0.75f * ach_ptr->get_desired_props().linear_velocity_unit_direction_in_world_space
                             });
-                    m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 0.5f, 1.0f, 1.0f});
+                    m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 0.5f, 1.0f, 1.0f}); // PINK
 
                     m_cache_of_batches_of_ai_agents.lines->first.push_back({
                             node_ptr->get_coord_system()->origin() + 0.01f * vector3_unit_z(),
@@ -915,7 +917,7 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                                 + ach_ptr->get_desired_props().linear_speed
                                   * ach_ptr->get_desired_props().linear_velocity_unit_direction_in_world_space
                             });
-                    m_cache_of_batches_of_ai_agents.lines->second.push_back({0.75f, 0.25f, 0.75f, 1.0f});
+                    m_cache_of_batches_of_ai_agents.lines->second.push_back({0.75f, 0.25f, 0.75f, 1.0f}); // PURPLE
                 }
             }
     }

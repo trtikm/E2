@@ -921,8 +921,15 @@ QWidget*  make_draw_tab_content(widgets const&  w)
                         show_layout->addWidget(w.show_ai_action_control());
                         w.show_ai_action_control()->setToolTip(
                             "For each AI agent in the scene show its desire motion vectors, forward\n"
-                            "direction vector, and the current motion in the space (linear and angular\n"
-                            "velocities)."
+                            "and up direction vectors, and the current motion in the space (linear\n"
+                            "and angular velocities). The vectors are drawn with these colours:\n"
+                            "   forward-dir: AQUA\n"
+                            "   up-dir: AZURE\n"
+                            "   linear-velocity: YELLOW\n"
+                            "   angular-velocity: ORANGE\n"
+                            "   desired-forward-dir: WHITE\n"
+                            "   desired-linear-velocity-dir: PINK\n"
+                            "   desired-linear-velocity: PURPLE"
                             );
                         w.wnd()->on_draw_show_ai_action_control_changed(0);
                     }
