@@ -1071,31 +1071,39 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                 reference_frame_in_animation_space
                 );
 
-        std::vector<angeo::coordinate_system>  interpolated_frames_in_world_space;
+        std::vector<angeo::coordinate_system>  interpolated_frames_in_local_space;
         {
-            interpolated_frames_in_world_space.reserve(interpolated_frames_in_animation_space.size());
+            interpolated_frames_in_local_space.reserve(interpolated_frames_in_animation_space.size());
 
-            matrix44  Ainv, M;
+            matrix44  Ainv;
             angeo::to_base_matrix(reference_frame_in_animation_space, Ainv);
-            M = motion_object_from_base_matrix * Ainv;
-            for (angeo::coordinate_system const&  frame : interpolated_frames_in_animation_space)
+
+            auto const&  parents = get_blackboard()->m_skeleton_composition->parents;
+            auto const&  pose_frames = get_blackboard()->m_skeleton_composition->pose_frames;
+
+            for (natural_32_bit  bone = 0; bone != interpolated_frames_in_animation_space.size(); ++bone)
             {
-                vector3  u;
-                matrix33  R;
+                auto const&  frame = interpolated_frames_in_animation_space.at(bone);
+                interpolated_frames_in_local_space.push_back({ frame.origin() + pose_frames.at(bone).origin(), frame.orientation() });
+                if (parents.at(bone) < 0)
                 {
-                    matrix44  N;
-                    angeo::from_base_matrix(frame, N);
-                    decompose_matrix44(M * N, u, R);
+                    vector3  u;
+                    matrix33  R;
+                    {
+                        matrix44  N;
+                        angeo::from_base_matrix(interpolated_frames_in_local_space.back(), N);
+                        decompose_matrix44(Ainv * N, u, R);
+                    }
+                    interpolated_frames_in_local_space.back() = { u, normalised(rotation_matrix_to_quaternion(R)) };
                 }
-                interpolated_frames_in_world_space.push_back({ u, normalised(rotation_matrix_to_quaternion(R)) });
             }
         }
 
-        for (natural_32_bit  bone = 0; bone != interpolated_frames_in_world_space.size(); ++bone)
+        for (natural_32_bit  bone = 0; bone != interpolated_frames_in_local_space.size(); ++bone)
             get_blackboard()->m_scene->set_frame_of_scene_node(
                     get_blackboard()->m_bone_nids.at(bone),
-                    false,
-                    interpolated_frames_in_world_space.at(bone)
+                    true,
+                    interpolated_frames_in_local_space.at(bone)
                     );
     }
     

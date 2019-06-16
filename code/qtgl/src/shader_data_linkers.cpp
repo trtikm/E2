@@ -227,12 +227,7 @@ vertex_shader_uniform_data_provider::vertex_shader_uniform_data_provider(
                     matrices_from_model_to_camera.front()
                     );
         else
-            compose_skeleton_binding_data_with_frame_of_keyframe_animation(
-                    get_batch().get_modelspace(),
-                    get_batch().get_skeleton_alignment(),
-                    matrices_from_model_to_camera,
-                    m_matrices_from_model_to_camera
-                    );
+            m_matrices_from_model_to_camera = matrices_from_model_to_camera;
     }
     else if (matrices_from_model_to_camera.size() == 1UL)
         m_matrices_from_model_to_camera.push_back(matrices_from_model_to_camera.front());

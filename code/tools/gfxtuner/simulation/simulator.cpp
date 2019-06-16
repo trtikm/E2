@@ -1465,19 +1465,48 @@ void  simulator::render_scene_batches(
                 {
                     scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
                     ai::skeleton_composition_const_ptr const  skeleton_composition = agent_ptr->get_skeleton_props()->skeleton_composition;
+
+                    matrix44 alignment_matrix;
+                    angeo::from_base_matrix(elem.second.first.get_skeleton_alignment().get_skeleton_alignment(), alignment_matrix);
+
+                    std::vector<matrix44>  to_bone_matrices;
+                    {
+                        to_bone_matrices.resize(skeleton_composition->pose_frames.size());
+                        for (natural_32_bit  bone = 0U; bone != skeleton_composition->pose_frames.size(); ++bone)
+                        {
+                            angeo::to_base_matrix(skeleton_composition->pose_frames.at(bone), to_bone_matrices.at(bone));
+                            if (skeleton_composition->parents.at(bone) >= 0)
+                                to_bone_matrices.at(bone) *= to_bone_matrices.at(skeleton_composition->parents.at(bone));
+                        }
+                    }
+
                     detail::skeleton_enumerate_nodes_of_bones(
                             node_ptr,
                             *skeleton_composition,
-                            [&frame, &matrix_from_world_to_camera, skeleton_composition](
+                            [&frame, &matrix_from_world_to_camera, skeleton_composition, &alignment_matrix, &to_bone_matrices](
                                 natural_32_bit const bone, scn::scene_node_ptr const  bone_node_ptr, bool const  has_parent) -> bool
                                 {
                                     if (bone_node_ptr != nullptr)
-                                        frame.push_back(matrix_from_world_to_camera * bone_node_ptr->get_world_matrix());
+                                        frame.push_back(
+                                                matrix_from_world_to_camera *
+                                                bone_node_ptr->get_world_matrix() *
+                                                to_bone_matrices.at(bone) *
+                                                alignment_matrix
+                                                );
                                     else
                                     {
-                                        matrix44 M;
-                                        angeo::from_base_matrix(skeleton_composition->pose_frames.at(bone), M);
-                                        frame.push_back(matrix_from_world_to_camera * bone_node_ptr->get_world_matrix() * M);
+                                        // This case is mostly for debug purposes. In release, we should never get here.
+                                        matrix44 result;
+                                        angeo::from_base_matrix(skeleton_composition->pose_frames.at(bone), result);
+                                        for (integer_32_bit  bone_idx = skeleton_composition->parents.at(bone);
+                                             bone_idx >= 0;
+                                             bone_idx = skeleton_composition->parents.at(bone_idx))
+                                        {
+                                            matrix44 M;
+                                            angeo::from_base_matrix(skeleton_composition->pose_frames.at(bone_idx), M);
+                                            result = M * result;
+                                        }
+                                        frame.push_back(matrix_from_world_to_camera * result);
                                     }
                                     return true;
                                 }

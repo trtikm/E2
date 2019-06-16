@@ -82,24 +82,21 @@ std::string  load_skeleton(
     if (!boost::filesystem::is_directory(skeleton_directory))
         return "Cannot access the passed skeleton directory.";
 
-    std::vector<angeo::coordinate_system>  world_space_coord_systems;
-    std::string  error_message = load_skeleton_bone_world_coord_systems(skeleton_directory / "pose.txt", world_space_coord_systems);
+    std::string  error_message = load_skeleton_bone_local_coord_systems(skeleton_directory / "pose.txt", local_coord_systems_of_bones);
     if (!error_message.empty())
         return error_message;
 
     error_message = load_skeleton_bone_names(skeleton_directory / "names.txt", names_of_bones);
     if (!error_message.empty())
         return error_message;
-    if (names_of_bones.size() != world_space_coord_systems.size())
+    if (names_of_bones.size() != local_coord_systems_of_bones.size())
         return "The number of name in the file 'names.txt' differs from number of coodinate systems in the file 'pose.txt'.";
 
     error_message = load_skeleton_bone_parents(skeleton_directory / "parents.txt", parent_of_bones);
     if (!error_message.empty())
         return error_message;
-    if (parent_of_bones.size() != world_space_coord_systems.size())
+    if (parent_of_bones.size() != local_coord_systems_of_bones.size())
         return "The number of name in the file 'parents.txt' differs from number of coodinate systems in the file 'pose.txt'.";
-
-    transform_skeleton_coord_systems_from_world_to_local_space(world_space_coord_systems, parent_of_bones, local_coord_systems_of_bones);
 
     if (forward_direction_in_anim_space != nullptr)
     {
@@ -116,9 +113,9 @@ std::string  load_skeleton(
 }
 
 
-std::string  load_skeleton_bone_world_coord_systems(
+std::string  load_skeleton_bone_local_coord_systems(
         boost::filesystem::path const&  skeleton_pose_file,
-        std::vector<angeo::coordinate_system>&  world_space_coord_systems
+        std::vector<angeo::coordinate_system>&  local_coord_systems
         )
 {
     TMPROF_BLOCK();
@@ -177,7 +174,7 @@ std::string  load_skeleton_bone_world_coord_systems(
             orientation = quaternion(coords[0],coords[1],coords[2],coords[3]);
             orientation.normalize();
         }
-        world_space_coord_systems.push_back({position,orientation});
+        local_coord_systems.push_back({position,orientation});
     }
 
     return "";
