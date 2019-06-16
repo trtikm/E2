@@ -1040,165 +1040,6 @@ def save_textures(
                 export_info["textures"][(mat_idx, texture_kind_name)] = dst_texture_pathname
 
 
-def save_coord_systems_of_bones(
-        armature,       # An instance of "bpy.types.Armature"
-        export_info     # A dictionary holding properties of the export. Both keys and values are strings.
-        ):
-    """
-    This function exports coordinate systems of all bones of the passed armature. The function also updates
-    'export_info' so that 'export_info["coord_systems"]' is the pathname of the exported file.
-    :param armature: An instance of 'bpy.types.Armature'.
-    :param export_info: A dictionary holding properties of the export.
-    :return: None
-    """
-    with TimeProf.instance().start("save_coord_systems_of_bones"):
-        # This is the list into which we store coordinate systems of all bones in the armature
-        # in the order as they are listed in the armature (to match their indices in vertex groups).
-        coord_systems = []
-
-        # So, let's compute coordinate systems of individual bones.
-        for bone in armature.data.bones:
-
-            if not bone.use_deform:
-                # The bone is not used for deformation of the child mesh object. It means, that the bone
-                # is some "helper" bone, like inverse kinematic bone, so we have to skip it from the export.
-                continue
-
-            # First we collect the whole chain of parent bones from the root one to this bone.
-            bones_list = []
-            xbone = bone
-            while xbone:
-                bones_list.append(xbone)
-                xbone = xbone.parent
-            bones_list.reverse()
-
-            # Now we compute "to-space" transformation matrix of the bone.
-            # We have to do so by composition with same matrices of all parent bones.
-            # And lastly we have to also include the transformation of the mesh into
-            # the parent armature.
-            transform_matrix = mathutils.Matrix()
-            transform_matrix.identity()
-            parent_tail = mathutils.Vector((0.0, 0.0, 0.0))
-            for xbone in bones_list:
-                bone_to_base_matrix = to_base_matrix(parent_tail + xbone.head, xbone.matrix.to_quaternion())
-                transform_matrix = bone_to_base_matrix * transform_matrix
-                parent_tail = bone_to_base_matrix * (parent_tail + xbone.tail).to_4d()
-                parent_tail.resize_3d()
-
-            # Finally we compute the position (origin) and rotation (orientation) of the
-            # coordinate system of the bone.
-            pos = transform_matrix.inverted() * mathutils.Vector((0.0, 0.0, 0.0, 1.0))
-            pos.resize_3d()
-            rot = transform_matrix.to_3x3().transposed().to_quaternion().normalized()
-
-            # And we store the computed data (i.e. the coordinate system).
-            coord_systems.append({ "position": pos, "orientation": rot })
-
-        export_info["pose"] = os.path.join(
-            export_info["root_dir"],
-            "animations",
-            "skeletal",
-            remove_ignored_part_of_name(armature.name, "SKELETAL"),
-            "pose.txt"
-            )
-        os.makedirs(os.path.dirname(export_info["pose"]), exist_ok=True)
-        with open(export_info["pose"], "w") as f:
-            print("Saving pose coordinate systems: " +
-                  os.path.relpath(export_info["pose"], export_info["root_dir"]))
-            f.write(str(len(coord_systems)) + "\n")
-            for system in coord_systems:
-                for i in range(3):
-                    f.write(float_to_string(system["position"][i]) + "\n")
-                for i in range(4):
-                    f.write(float_to_string(system["orientation"][i]) + "\n")
-
-
-def save_keyframe_coord_systems_of_bones(
-        armature,       # An instance of "bpy.types.Armature".
-        export_info     # A dictionary holding properties related to the export.
-        ):
-    """
-    This function exports coordinate systems of all keyframes of an animation of the bones of the passed armature.
-    The function also updates "export_info" so that 'export_info["keyframe_coord_systems"]' is a list of the pathnames
-    of the exported files (one file per keyframe).
-    :param obj: An instance of "bpy.types.Armature".
-    :param export_info: A dictionary holding properties related to the export.
-    :return: None
-    """
-    with TimeProf.instance().start("save_keyframe_coord_systems_of_bones"):
-
-        if not armature.animation_data:
-            return
-
-        active_action_backup = armature.animation_data.action
-
-        scene = bpy.context.scene
-        frame_current_backup = bpy.context.scene.frame_current
-
-        for action in bpy.data.actions:
-            if not (action.name.startswith(armature.name + "/") or (active_action_backup is not None and action.name == active_action_backup.name)):
-                continue
-
-            action_name = action.name[len(armature.name + "/"):] if action.name.startswith(armature.name + "/") else action.name
-            action_name = action_name.replace("/", ".").replace("\\", '.').replace(":", '.')
-
-            armature.animation_data.action = action
-
-            coord_systems_of_frames = {}
-
-            keyframes = set()
-            for fcurve in action.fcurves:
-                for point in fcurve.keyframe_points:
-                    keyframes.add(round(point.co[0]))
-            start_frame = min(keyframes)
-
-            for frame in keyframes:
-                scene.frame_set(frame)
-                coord_systems = []
-                for armature_bone in armature.data.bones:
-                    if not armature_bone.use_deform:
-                        continue
-                    bone = armature.pose.bones[armature_bone.name]
-                    coord_systems.append({
-                        "position": bone.matrix * mathutils.Vector((0.0, 0.0, 0.0, 1.0)),
-                        "orientation": bone.matrix.to_quaternion()
-                        })
-                coord_systems_of_frames[(frame - start_frame) * 0.041666666] = coord_systems
-
-            # It remains to save the computed coordinate systems of bones in individual frames to disc.
-            # We store each frame into a separate file. But all files will be written into the same output directory:
-
-            keyframes_output_dir = os.path.join(
-                export_info["root_dir"],
-                "animations",
-                "skeletal",
-                remove_ignored_part_of_name(armature.name, "SKELETAL"),
-                remove_ignored_part_of_name(action_name, "SKELETAL")
-                )
-            os.makedirs(keyframes_output_dir, exist_ok=True)
-
-            export_info["keyframes"] = []  # Here we store pathnames of all saved files.
-            frame_idx = 0
-            for time_stamp in sorted(coord_systems_of_frames.keys()):
-                export_info["keyframes"].append(
-                    os.path.join(keyframes_output_dir, "keyframe" + str(frame_idx) + ".txt")
-                    )
-                with open(export_info["keyframes"][-1], "w") as f:
-                    print("Saving keyframe " + str(frame_idx + 1) + "/" + str(len(coord_systems_of_frames)) + ": " +
-                          os.path.relpath(export_info["keyframes"][-1], export_info["root_dir"]))
-                    f.write(float_to_string(time_stamp) + "\n")
-                    f.write(str(len(coord_systems_of_frames[time_stamp])) + "\n")
-                    for system in coord_systems_of_frames[time_stamp]:
-                        for i in range(3):
-                            f.write(float_to_string(system["position"][i]) + "\n")
-                        for i in range(4):
-                            f.write(float_to_string(system["orientation"][i]) + "\n")
-                frame_idx += 1
-
-        armature.animation_data.action = active_action_backup
-        scene.frame_set(frame_current_backup)
-
-
 def save_hierarchy_of_bones(
         armature,       # An instance of "bpy.types.Armature"
         export_info     # A dictionary holding properties of the export. Both keys and values are strings.
@@ -1261,6 +1102,8 @@ def save_hierarchy_of_bones(
             remove_ignored_part_of_name(armature.name, "SKELETAL"),
             "parents.txt"
             )
+        export_info["armature"] = {"bone_parents": parents}
+
         os.makedirs(os.path.dirname(export_info["bone_names"]), exist_ok=True)
         with open(export_info["bone_names"], "w") as f:
             print("Saving names of bones: " + os.path.relpath(export_info["bone_names"], export_info["root_dir"]))
@@ -1277,6 +1120,203 @@ def save_hierarchy_of_bones(
             f.write(str(len(parents)) + "\n")
             for parent in parents:
                 f.write(str(parent) + "\n")
+
+
+def save_coord_systems_of_bones(
+        armature,       # An instance of "bpy.types.Armature"
+        export_info     # A dictionary holding properties of the export. Both keys and values are strings.
+        ):
+    """
+    This function exports coordinate systems of all bones of the passed armature. The function also updates
+    'export_info' so that 'export_info["coord_systems"]' is the pathname of the exported file.
+    IMPORTANT: Depends on data computed by function 'save_hierarchy_of_bones' above!
+    :param armature: An instance of 'bpy.types.Armature'.
+    :param export_info: A dictionary holding properties of the export.
+    :return: None
+    """
+    with TimeProf.instance().start("save_coord_systems_of_bones"):
+
+        parents = export_info["armature"]["bone_parents"]                           # this is computed in 'save_hierarchy_of_bones'
+
+        # Matrices from local spaces of bones directly to the world space. (these is not saved to disk;
+        # they is used later for export of keyframes; see save_keyframe_coord_systems_of_bones)
+        matrices_from_bone_spaces_to_world_space = []
+        for bone in armature.data.bones:
+
+            if not bone.use_deform:
+                # The bone is not used for deformation of the child mesh object. It means, that the bone
+                # is some "helper" bone, like inverse kinematic bone, so we have to skip it from the export.
+                continue
+
+            # First we collect the whole chain of parent bones from the root one to this bone.
+            bones_list = []
+            xbone = bone
+            while xbone:
+                bones_list.append(xbone)
+                xbone = xbone.parent
+            bones_list.reverse()
+
+            transform_matrix = mathutils.Matrix()
+            transform_matrix.identity()
+            parent_tail = mathutils.Vector((0.0, 0.0, 0.0))
+            for xbone in bones_list:
+                bone_to_base_matrix = to_base_matrix(parent_tail + xbone.head, xbone.matrix.to_quaternion())
+                transform_matrix = bone_to_base_matrix * transform_matrix
+                parent_tail = bone_to_base_matrix * (parent_tail + xbone.tail).to_4d()
+                parent_tail.resize_3d()
+
+            matrices_from_bone_spaces_to_world_space.append(transform_matrix.inverted())
+
+        coord_systems = []
+        bone_idx = 0
+        for bone in armature.data.bones:
+            if not bone.use_deform:
+                continue
+
+            from_bone_space_to_parent_bone_space_matrix = matrices_from_bone_spaces_to_world_space[bone_idx] if parents[bone_idx] == -1 else (
+                    matrices_from_bone_spaces_to_world_space[parents[bone_idx]].inverted() * matrices_from_bone_spaces_to_world_space[bone_idx]
+                    )
+            pos = from_bone_space_to_parent_bone_space_matrix * mathutils.Vector((0.0, 0.0, 0.0, 1.0))
+            pos.resize_3d()
+            rot = from_bone_space_to_parent_bone_space_matrix.to_3x3().to_quaternion().normalized()
+
+            coord_systems.append({"position": pos, "orientation": rot})
+
+            bone_idx += 1
+
+        export_info["pose"] = os.path.join(
+            export_info["root_dir"],
+            "animations",
+            "skeletal",
+            remove_ignored_part_of_name(armature.name, "SKELETAL"),
+            "pose.txt"
+            )
+        export_info["armature"]["bone_local_coord_systems"] = coord_systems
+
+        os.makedirs(os.path.dirname(export_info["pose"]), exist_ok=True)
+        with open(export_info["pose"], "w") as f:
+            print("Saving pose coordinate systems: " +
+                  os.path.relpath(export_info["pose"], export_info["root_dir"]))
+            f.write(str(len(coord_systems)) + "\n")
+            for system in coord_systems:
+                for i in range(3):
+                    f.write(float_to_string(system["position"][i]) + "\n")
+                for i in range(4):
+                    f.write(float_to_string(system["orientation"][i]) + "\n")
+
+
+def save_keyframe_coord_systems_of_bones(
+        armature,       # An instance of "bpy.types.Armature".
+        export_info     # A dictionary holding properties related to the export.
+        ):
+    """
+    This function exports coordinate systems of all keyframes of an animation of the bones of the passed armature.
+    The function also updates "export_info" so that 'export_info["keyframe_coord_systems"]' is a list of the pathnames
+    of the exported files (one file per keyframe).
+    IMPORTANT: Depends on data computed by functions 'save_hierarchy_of_bones' and 'save_coord_systems_of_bones' above!
+    :param obj: An instance of "bpy.types.Armature".
+    :param export_info: A dictionary holding properties related to the export.
+    :return: None
+    """
+    with TimeProf.instance().start("save_keyframe_coord_systems_of_bones"):
+
+        if not armature.animation_data:
+            return
+
+        parents = export_info["armature"]["bone_parents"]                           # this is computed in 'save_hierarchy_of_bones'
+        local_coord_systems = export_info["armature"]["bone_local_coord_systems"]   # this is computed in 'save_coord_systems_of_bones'
+
+        active_action_backup = armature.animation_data.action
+
+        scene = bpy.context.scene
+        frame_current_backup = bpy.context.scene.frame_current
+
+        for action in bpy.data.actions:
+            if not (action.name.startswith(armature.name + "/") or (active_action_backup is not None and action.name == active_action_backup.name)):
+                continue
+
+            action_name = action.name[len(armature.name + "/"):] if action.name.startswith(armature.name + "/") else action.name
+            action_name = action_name.replace("/", ".").replace("\\", '.').replace(":", '.')
+
+            armature.animation_data.action = action
+
+            coord_systems_of_frames = {}
+
+            keyframes = set()
+            for fcurve in action.fcurves:
+                for point in fcurve.keyframe_points:
+                    keyframes.add(round(point.co[0]))
+            start_frame = min(keyframes)
+
+            for frame in keyframes:
+                scene.frame_set(frame)
+
+                world_matrices = []
+                for armature_bone in armature.data.bones:
+                    if not armature_bone.use_deform:
+                        continue
+                    world_matrices.append(armature.pose.bones[armature_bone.name].matrix)
+
+                coord_systems = []
+                bone_idx = 0
+                for armature_bone in armature.data.bones:
+                    if not armature_bone.use_deform:
+                        continue
+                    bone = armature.pose.bones[armature_bone.name]
+                    if parents[bone_idx] == -1:
+                        pos = bone.matrix * mathutils.Vector((0.0, 0.0, 0.0, 1.0))
+                        pos.resize_3d()
+                        rot = bone.matrix.to_quaternion()
+                    else:
+                        from_bone_space_to_parent_bone_space_matrix = world_matrices[parents[bone_idx]].inverted() * bone.matrix
+                        pos = from_bone_space_to_parent_bone_space_matrix * mathutils.Vector((0.0, 0.0, 0.0, 1.0))
+                        pos.resize_3d()
+                        rot = from_bone_space_to_parent_bone_space_matrix.to_3x3().to_quaternion().normalized()
+
+                    # we store absolute rotation of the bone in parent space, BUT instead of absolute position
+                    # in parent space we rather store a SHIFT from 'pose' absolute position in parent space.
+                    shift_vector = pos - local_coord_systems[bone_idx]["position"]
+                    if vector3_length(shift_vector) < 0.001:
+                        shift_vector = vector3_zero()
+                    coord_systems.append({
+                        "position": shift_vector,
+                        "orientation": rot
+                        })
+                    bone_idx += 1
+                coord_systems_of_frames[(frame - start_frame) * 0.041666666] = coord_systems
+
+            # It remains to save the computed coordinate systems of bones in individual frames to disc.
+            # We store each frame into a separate file. But all files will be written into the same output directory:
+
+            keyframes_output_dir = os.path.join(
+                export_info["root_dir"],
+                "animations",
+                "skeletal",
+                remove_ignored_part_of_name(armature.name, "SKELETAL"),
+                remove_ignored_part_of_name(action_name, "SKELETAL")
+                )
+            os.makedirs(keyframes_output_dir, exist_ok=True)
+
+            export_info["keyframes"] = []  # Here we store pathnames of all saved files.
+            frame_idx = 0
+            for time_stamp in sorted(coord_systems_of_frames.keys()):
+                export_info["keyframes"].append(
+                    os.path.join(keyframes_output_dir, "keyframe" + str(frame_idx) + ".txt")
+                    )
+                with open(export_info["keyframes"][-1], "w") as f:
+                    print("Saving keyframe " + str(frame_idx + 1) + "/" + str(len(coord_systems_of_frames)) + ": " +
+                          os.path.relpath(export_info["keyframes"][-1], export_info["root_dir"]))
+                    f.write(float_to_string(time_stamp) + "\n")
+                    f.write(str(len(coord_systems_of_frames[time_stamp])) + "\n")
+                    for system in coord_systems_of_frames[time_stamp]:
+                        for i in range(3):
+                            f.write(float_to_string(system["position"][i]) + "\n")
+                        for i in range(4):
+                            f.write(float_to_string(system["orientation"][i]) + "\n")
+                frame_idx += 1
+
+        armature.animation_data.action = active_action_backup
+        scene.frame_set(frame_current_backup)
 
 
 def save_batch(
@@ -1420,9 +1460,9 @@ def export_object_armature(
 
         export_info = {"root_dir": export_dir}
 
+        save_hierarchy_of_bones(obj, export_info)
         save_coord_systems_of_bones(obj, export_info)
         save_keyframe_coord_systems_of_bones(obj, export_info)
-        save_hierarchy_of_bones(obj, export_info)
 
 
 def export_object(
