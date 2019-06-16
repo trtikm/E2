@@ -78,9 +78,6 @@ add_executable(${THIS_TARGET_NAME}
     simulation/simulator.hpp
     simulation/simulator.cpp
     simulation/simulator_notifications.hpp
-    
-    simulation/gfx_object.hpp
-    simulation/gfx_object.cpp
 
     simulation/skeleton.hpp
     simulation/skeleton.cpp
