@@ -249,7 +249,8 @@ def _axis_angle_to_quaternion(axis_unit_vector, angle_in_radians):
 
 
 def _basis_vectors_to_quaternion(x_axis_unit_vector, y_axis_unit_vector, z_axis_unit_vector):
-    s = math.sqrt(1.0 + x_axis_unit_vector[0] + y_axis_unit_vector[1] + z_axis_unit_vector[2]) / 2.0
+    s = 1.0 + x_axis_unit_vector[0] + y_axis_unit_vector[1] + z_axis_unit_vector[2]
+    s = math.sqrt(max(0.0001, s)) / 2.0
     return _normalised_quaternion(numpy.array([
             s,
             (y_axis_unit_vector[2] - z_axis_unit_vector[1]) / (4.0 * s),
@@ -287,6 +288,10 @@ def _quaternion_to_rotation_matrix(q):
     return R
 
 
+def _rotation_matrix_to_quaternion(R):
+    return _basis_vectors_to_quaternion([R[0][0], R[1][0], R[2][0]], [R[0][1], R[1][1], R[2][1]], [R[0][2], R[1][2], R[2][2]])
+
+
 def _from_base_matrix(pos, rot_matrix):
     return numpy.array([
         [rot_matrix[0][0], rot_matrix[0][1], rot_matrix[0][2], pos[0]],
@@ -308,6 +313,17 @@ def _to_base_matrix(pos, rot_matrix):
         [rot_matrix[0][2], rot_matrix[1][2], rot_matrix[2][2], p[2]],
         [0.0,              0.0,              0.0,              1.0 ]
     ])
+
+
+def _decompose_transform_matrix44(matrix44):
+    origin = []
+    rotation_matrix = []
+    for i in range(3):
+        origin.append(matrix44[i][3])
+        rotation_matrix.append([])
+        for j in range(3):
+            rotation_matrix[-1].append(matrix44[i][j])
+    return origin, rotation_matrix
 
 
 def _get_perpendicular_component(decomposed_vector, pivot_vector):
@@ -419,6 +435,36 @@ def _load_keyframes(primary=True):
     return sorted(keyframes, key=lambda x: x["time"])
 
 
+def _transform_one_keyframe_to_world_space(keyframe, parents, pose_frames):
+    assert len(keyframe) == len(pose_frames)
+    world_matrices = []
+    result = []
+    for i in range(len(pose_frames)):
+        result.append({"pos": _add_vectors(keyframe[i]["pos"], pose_frames[i]["pos"]), "rot": keyframe[i]["rot"]})
+        W = _from_base_matrix(result[-1]["pos"], _quaternion_to_rotation_matrix(result[-1]["rot"]))
+        if parents[i] >= 0:
+            W = _multiply_matrix_by_matrix(world_matrices[parents[i]], W)
+            p, R = _decompose_transform_matrix44(W)
+            result[-1]["pos"] = p
+            result[-1]["rot"] = _normalised_quaternion(_rotation_matrix_to_quaternion(R))
+        world_matrices.append(W)
+    return result
+
+
+def _transform_keyframes_to_world_space(keyframes, parents=None, pose_frames=None):
+    if parents is None:
+        parents = _load_bone_parents()
+    if pose_frames is None:
+        pose_frames = _load_bone_pose_frames()
+    result = []
+    for keyframe in keyframes:
+        result.append({
+            "time": keyframe["time"],
+            "frames_of_bones": _transform_one_keyframe_to_world_space(keyframe["frames_of_bones"], parents, pose_frames)
+            })
+    return result
+
+
 def _load_meta_reference_frames(primary=True):
     with open(_get_meta_reference_frames_pathname(primary, True), "r") as f:
         lines = f.readlines()
@@ -476,6 +522,23 @@ def _load_bone_names():
             raise Exception("Invalid file '" + pathname + "'. Empty lines are not allowed.")
         names.append(lines[i+1].strip())
     return names
+
+
+def _load_bone_pose_frames():
+    pathname = os.path.join(os.path.dirname(_get_keyframes_dir()), "pose.txt")
+    if not os.path.isfile(pathname):
+        raise Exception("Cannot access file '" + pathname + "'.")
+    with open(pathname, "r") as f:
+        lines = f.readlines()
+    num_frames = int(lines[0])
+    pose_frames = []
+    for i in range(num_frames):
+        idx = 1+i*7
+        pos = [float(lines[idx+0]), float(lines[idx+1]), float(lines[idx+2])]
+        idx += 3
+        rot = [float(lines[idx+0]), float(lines[idx+1]), float(lines[idx+2]), float(lines[idx+3])]
+        pose_frames.append({"pos": pos, "rot": rot})
+    return pose_frames
 
 
 def command_colliders_help():
@@ -640,7 +703,7 @@ def command_joint_distances():
     joints_in_reference_frames = {}
     time_points = {}
     for kind, kind_name in [(True, "primary"), (False, "secondary")]:
-        keyframes = _load_keyframes(primary=kind)
+        keyframes = _transform_keyframes_to_world_space(_load_keyframes(primary=kind), parents)
         reference_frames = _load_meta_reference_frames(primary=kind)
         if len(keyframes) != len(reference_frames):
             raise Exception("Inconsistency between number of keyframes and corresponding meta reference frames "
@@ -1126,6 +1189,7 @@ def command_reference_frames():
         raise Exception("Wrong number of arguments. Exactly 1 argument is expected.")
     state = Config.instance.state
     meta_reference_frames = []
+    keyframes = _transform_keyframes_to_world_space(_load_keyframes())
     if Config.instance.cmdline.arguments[0] == "move_straight":
         motion_direction = numpy.array(state.vec_fwd)
         motion_direction_dot = numpy.dot(motion_direction, motion_direction)
@@ -1134,12 +1198,11 @@ def command_reference_frames():
                     state.vec_fwd_mult * motion_direction,
                     state.vec_down_mult * numpy.array(state.vec_down)
                     )
-        for keyframe in _load_keyframes():
+        for keyframe in keyframes:
             t = numpy.dot(motion_direction, numpy.subtract(keyframe["frames_of_bones"][state.bone_idx]["pos"], state.pivot)) / motion_direction_dot
             pos = numpy.add(state.pivot, t * motion_direction)
             meta_reference_frames.append({"pos": pos, "rot": rot})
     elif Config.instance.cmdline.arguments[0] == "turn_around":
-        keyframes = _load_keyframes()
         rot_axis = _normalised_vector(state.vec_down_mult * numpy.array(state.vec_down))
         T = _to_base_matrix(state.pivot, _quaternion_to_rotation_matrix(keyframes[0]["frames_of_bones"][state.bone_idx]["rot"]))
         vec_fwd_in_bone_space = _transform_vector(T, state.vec_fwd)
@@ -1150,7 +1213,6 @@ def command_reference_frames():
             rot = _normalised_quaternion(_axis_angle_to_quaternion(rot_axis, angle))
             meta_reference_frames.append({"pos": state.pivot, "rot": rot})
     elif Config.instance.cmdline.arguments[0] == "turn_around_uniform":
-        keyframes = _load_keyframes()
         rot_axis = _normalised_vector(state.vec_down_mult * numpy.array(state.vec_down))
         uniform_angle = state.angle / (len(keyframes) - 1 if len(keyframes) > 1 else 1)
         for i, keyframe in enumerate(keyframes):
@@ -1169,7 +1231,6 @@ def command_reference_frames():
                     state.vec_fwd_mult * motion_direction,
                     state.vec_down_mult * numpy.array(state.vec_down)
                     )
-        keyframes = _load_keyframes()
         t = numpy.dot(motion_direction, numpy.subtract(keyframes[0]["frames_of_bones"][state.bone_idx]["pos"], state.pivot)) / numpy.dot(motion_direction, motion_direction)
         pos = numpy.add(state.pivot, t * motion_direction)
         for _ in range(len(keyframes)):
