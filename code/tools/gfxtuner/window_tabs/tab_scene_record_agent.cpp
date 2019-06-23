@@ -91,19 +91,9 @@ void  register_record_handler_for_insert_scene_record(
                         }
 
                         ai::skeletal_motion_templates const  skeletal_motion_templates(skeleton_dir, 100U);
-                        if (!skeletal_motion_templates.pose_frames().wait_till_load_is_finished())
+                        if (!skeletal_motion_templates.wait_till_load_is_finished())
                         {
-                            w->wnd()->print_status_message("ERROR: Load of pose '" + skeletal_motion_templates.pose_frames().key().get_unique_id() + "' has FAILED!", 10000);
-                            return{ "",{} };
-                        }
-                        if (!skeletal_motion_templates.hierarchy().wait_till_load_is_finished())
-                        {
-                            w->wnd()->print_status_message("ERROR: Load of bone hierarchy '" + skeletal_motion_templates.hierarchy().key().get_unique_id() + "' has FAILED!", 10000);
-                            return{ "",{} };
-                        }
-                        if (!skeletal_motion_templates.names().wait_till_load_is_finished())
-                        {
-                            w->wnd()->print_status_message("ERROR: Load of bone names '" + skeletal_motion_templates.names().key().get_unique_id() + "' has FAILED!", 10000);
+                            w->wnd()->print_status_message("ERROR: Load of skeletal_motion_templates '" + skeletal_motion_templates.key().get_unique_id() + "' has FAILED!", 10000);
                             return{ "",{} };
                         }
 
