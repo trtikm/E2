@@ -3,7 +3,6 @@
 
 #   include <scene/scene_node_id.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
-#   include <ai/skeleton_composition.hpp>
 #   include <ai/agent_id.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <vector>
@@ -15,8 +14,7 @@ namespace scn {
 struct  skeleton_props  final
 {
     boost::filesystem::path  skeleton_directory;
-    ai::skeleton_composition_const_ptr  skeleton_composition;
-    ai::skeletal_motion_templates_const_ptr  skeletal_motion_templates;
+    ai::skeletal_motion_templates  skeletal_motion_templates;
 };
 
 
@@ -26,14 +24,12 @@ using  skeleton_props_const_ptr = std::shared_ptr<skeleton_props const>;
 
 inline skeleton_props_ptr  create_skeleton_props(
         boost::filesystem::path const&  skeleton_dir,
-        ai::skeleton_composition_ptr const  skeleton_composition,
-        ai::skeletal_motion_templates_ptr const  skeletal_motion_templates
+        ai::skeletal_motion_templates const  skeletal_motion_templates
         )
 {
     skeleton_props_ptr const  props = std::make_shared<skeleton_props>();
     {
         props->skeleton_directory = skeleton_dir;
-        props->skeleton_composition = skeleton_composition;
         props->skeletal_motion_templates = skeletal_motion_templates;
     }
     return props;

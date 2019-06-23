@@ -46,6 +46,19 @@ typedef Eigen::Matrix<float_32_bit,3,3>  matrix33;
 typedef Eigen::Matrix<float_32_bit,4,3>  matrix43;
 typedef Eigen::Matrix<float_32_bit,4,4>  matrix44;
 
+bool are_equal_2d(vector2 const&  left, vector2 const&  right, float_32_bit const  epsilon);
+bool are_equal_3d(vector3 const&  left, vector3 const&  right, float_32_bit const  epsilon);
+bool are_equal_4d(vector4 const&  left, vector4 const&  right, float_32_bit const  epsilon);
+bool are_equal_6d(vector6 const&  left, vector6 const&  right, float_32_bit const  epsilon);
+
+bool are_equal(quaternion const&  left, quaternion const&  right, float_32_bit const  epsilon);
+
+bool are_equal_22(matrix22 const&  left, matrix22 const&  right, float_32_bit const  epsilon);
+bool are_equal_32(matrix32 const&  left, matrix32 const&  right, float_32_bit const  epsilon);
+bool are_equal_33(matrix33 const&  left, matrix33 const&  right, float_32_bit const  epsilon);
+bool are_equal_43(matrix43 const&  left, matrix43 const&  right, float_32_bit const  epsilon);
+bool are_equal_44(matrix44 const&  left, matrix44 const&  right, float_32_bit const  epsilon);
+
 inline vector2  vector2_zero() { return vector2::Zero(); }
 inline vector2  vector2_unit_x() { return vector2::UnitX(); }
 inline vector2  vector2_unit_y() { return vector2::UnitY(); }

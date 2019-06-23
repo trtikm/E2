@@ -335,6 +335,7 @@ void  batch_data::load(
                     / "skeletal"
                     / get_available_resources().skeletal()->skeleton_name()
                     / "pose.txt",
+                10U,
                 finaliser),
         get_available_resources().skeletal() == nullptr ?
             skeleton_alignment() :

@@ -5,7 +5,6 @@
 #   include <ai/agent_id.hpp>
 #   include <ai/input_devices.hpp>
 #   include <ai/scene.hpp>
-#   include <ai/skeleton_composition.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <ai/action_controller.hpp>
 #   include <memory>
@@ -21,16 +20,15 @@ struct agents
 
     agent_id  insert(
             scene::node_id const&  agent_nid,
-            skeleton_composition_const_ptr const  skeleton, // INVARIANT(skeleton->parents.at(0) == -1)
-                                                            // INVARIANT(skeleton->pose_frames.size() == current_frames.size())
-            skeletal_motion_templates_const_ptr const  motion_templates
+            skeletal_motion_templates const  motion_templates
             );
     void  erase(agent_id const  id) { m_agents.at(id) = nullptr; }
 
     void  clear() { m_agents.clear(); }
 
-    agent&  at(agent_id const  id) { return *m_agents.at(id); }
-    agent const&  at(agent_id const  id) const { return *m_agents.at(id); }
+    bool  ready(agent_id const  id) { return m_agents.at(id)->agent_ptr.operator bool(); }
+    agent&  at(agent_id const  id) { return *m_agents.at(id)->agent_ptr; }
+    agent const&  at(agent_id const  id) const { return *m_agents.at(id)->agent_ptr; }
 
     scene_ptr  get_scene_ptr() const { return m_scene; }
 
@@ -48,7 +46,17 @@ struct agents
             );
 
 private:
-    std::vector<std::shared_ptr<agent> >  m_agents; // Should be 'std::vector<std::unique_ptr<agent> >', but does not compile :-(
+
+    struct  agent_props
+    {
+        std::unique_ptr<agent>  agent_ptr;
+        scene::node_id  agent_nid;
+        skeletal_motion_templates  motion_templates;
+    };
+
+    void  construct_agent(agent_id const  id, agent_props&  props);
+
+    std::vector<std::shared_ptr<agent_props> >  m_agents; // Should be 'std::vector<std::unique_ptr<agent_props> >', but does not compile :-(
     scene_ptr  m_scene;
     input_devices_ptr  m_input_devices;
     std::vector<std::unique_ptr<std::function<void()> > >  m_scene_update_events;

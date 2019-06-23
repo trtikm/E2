@@ -43,9 +43,6 @@ void  agent::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
-    if (!ready())
-        return;
-
     m_sensory_controller->next_round(time_step_in_seconds);
     m_cortex_input_encoder->run();
     m_cortex_primary->next_round(time_step_in_seconds);

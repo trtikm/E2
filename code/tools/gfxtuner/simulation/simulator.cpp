@@ -71,7 +71,7 @@ private:
 
 void  skeleton_enumerate_nodes_of_bones(
         scn::scene_node_ptr const  agent_node_ptr,
-        ai::skeleton_composition const&  skeleton_composition,
+        ai::skeletal_motion_templates&  motion_templates,
         std::function<
                 bool(    // Continue in the enumeration of the remaining bones? I.e. 'false' early terminates the enumeration.
                     natural_32_bit,         // bone index
@@ -81,19 +81,19 @@ void  skeleton_enumerate_nodes_of_bones(
         )
 {
     std::vector<scn::scene_node_ptr>  nodes{ agent_node_ptr };
-    for (natural_32_bit bone = 0U; bone != skeleton_composition.pose_frames.size(); ++bone)
+    for (natural_32_bit bone = 0U; bone != motion_templates.pose_frames().size(); ++bone)
     {
         scn::scene_node_ptr  child_node_ptr = nullptr;
         {
-            scn::scene_node_ptr const  parent_node_ptr = nodes.at(skeleton_composition.parents.at(bone) + 1);
+            scn::scene_node_ptr const  parent_node_ptr = nodes.at(motion_templates.hierarchy().parents().at(bone) + 1);
             if (parent_node_ptr != nullptr)
             {
-                auto const  child_node_it = parent_node_ptr->find_child(skeleton_composition.names.at(bone));
+                auto const  child_node_it = parent_node_ptr->find_child(motion_templates.names().at(bone));
                 if (child_node_it != parent_node_ptr->get_children().cend())
                     child_node_ptr = child_node_it->second;
             }
         }
-        if (callback(bone, child_node_ptr, skeleton_composition.parents.at(bone) >= 0) == false)
+        if (callback(bone, child_node_ptr, motion_templates.hierarchy().parents().at(bone) >= 0) == false)
             break;
         nodes.push_back(child_node_ptr);
     }
@@ -853,7 +853,7 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
     if (m_do_show_ai_action_controller_props)
     {
         for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
-            if (m_agents_ptr->at(agent_id_and_node_id.first).ready())
+            if (m_agents_ptr->ready(agent_id_and_node_id.first))
             {
                 ai::action_controller const* const  action_controller_ptr =
                         &m_agents_ptr->at(agent_id_and_node_id.first).get_action_controller();
@@ -866,9 +866,9 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                         angeo::from_base_matrix(*node_ptr->get_coord_system(), motion_object_from_base_matrix);
 
                         vector3 const  motion_object_forward_direction_in_world_space =
-                            transform_vector(ach_ptr->get_blackboard()->m_skeleton_composition->forward_direction_in_anim_space, motion_object_from_base_matrix);
+                            transform_vector(ach_ptr->get_blackboard()->m_motion_templates.directions().forward(), motion_object_from_base_matrix);
                         vector3 const  motion_object_up_direction_in_world_space =
-                            transform_vector(ach_ptr->get_blackboard()->m_skeleton_composition->up_direction_in_anim_space, motion_object_from_base_matrix);
+                            transform_vector(ach_ptr->get_blackboard()->m_motion_templates.directions().up(), motion_object_from_base_matrix);
 
                         m_cache_of_batches_of_ai_agents.lines->first.push_back({
                                 node_ptr->get_coord_system()->origin(),
@@ -1429,8 +1429,13 @@ void  simulator::render_scene_batches(
         else
             for (auto const& node_ptr : elem.second.second)
             {
-                scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
-                if (agent_ptr == nullptr)
+                ai::skeletal_motion_templates  motion_templates;
+                {
+                    scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
+                    if (agent_ptr != nullptr && agent_ptr->get_skeleton_props() != nullptr)
+                        motion_templates = agent_ptr->get_skeleton_props()->skeletal_motion_templates;
+                }
+                if (!motion_templates.loaded_successfully())
                 {
                     qtgl::render_batch(
                             elem.second.first,
@@ -1463,27 +1468,24 @@ void  simulator::render_scene_batches(
 
                 std::vector<matrix44>  frame;
                 {
-                    scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
-                    ai::skeleton_composition_const_ptr const  skeleton_composition = agent_ptr->get_skeleton_props()->skeleton_composition;
-
                     matrix44 alignment_matrix;
                     angeo::from_base_matrix(elem.second.first.get_skeleton_alignment().get_skeleton_alignment(), alignment_matrix);
 
                     std::vector<matrix44>  to_bone_matrices;
                     {
-                        to_bone_matrices.resize(skeleton_composition->pose_frames.size());
-                        for (natural_32_bit  bone = 0U; bone != skeleton_composition->pose_frames.size(); ++bone)
+                        to_bone_matrices.resize(motion_templates.pose_frames().size());
+                        for (natural_32_bit  bone = 0U; bone != motion_templates.pose_frames().size(); ++bone)
                         {
-                            angeo::to_base_matrix(skeleton_composition->pose_frames.at(bone), to_bone_matrices.at(bone));
-                            if (skeleton_composition->parents.at(bone) >= 0)
-                                to_bone_matrices.at(bone) *= to_bone_matrices.at(skeleton_composition->parents.at(bone));
+                            angeo::to_base_matrix(motion_templates.pose_frames().at(bone), to_bone_matrices.at(bone));
+                            if (motion_templates.hierarchy().parents().at(bone) >= 0)
+                                to_bone_matrices.at(bone) *= to_bone_matrices.at(motion_templates.hierarchy().parents().at(bone));
                         }
                     }
 
                     detail::skeleton_enumerate_nodes_of_bones(
                             node_ptr,
-                            *skeleton_composition,
-                            [&frame, &matrix_from_world_to_camera, skeleton_composition, &alignment_matrix, &to_bone_matrices](
+                            motion_templates,
+                            [&frame, &matrix_from_world_to_camera, motion_templates, &alignment_matrix, &to_bone_matrices](
                                 natural_32_bit const bone, scn::scene_node_ptr const  bone_node_ptr, bool const  has_parent) -> bool
                                 {
                                     if (bone_node_ptr != nullptr)
@@ -1497,13 +1499,13 @@ void  simulator::render_scene_batches(
                                     {
                                         // This case is mostly for debug purposes. In release, we should never get here.
                                         matrix44 result;
-                                        angeo::from_base_matrix(skeleton_composition->pose_frames.at(bone), result);
-                                        for (integer_32_bit  bone_idx = skeleton_composition->parents.at(bone);
+                                        angeo::from_base_matrix(motion_templates.pose_frames().at(bone), result);
+                                        for (integer_32_bit  bone_idx = motion_templates.hierarchy().parents().at(bone);
                                              bone_idx >= 0;
-                                             bone_idx = skeleton_composition->parents.at(bone_idx))
+                                             bone_idx = motion_templates.hierarchy().parents().at(bone_idx))
                                         {
                                             matrix44 M;
-                                            angeo::from_base_matrix(skeleton_composition->pose_frames.at(bone_idx), M);
+                                            angeo::from_base_matrix(motion_templates.pose_frames().at(bone_idx), M);
                                             result = M * result;
                                         }
                                         frame.push_back(matrix_from_world_to_camera * result);
@@ -2292,7 +2294,6 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::skeleton_pro
     ai::agent_id const  agent_id =
             m_agents_ptr->insert(
                     id.get_node_id(),
-                    props->skeleton_composition,
                     props->skeletal_motion_templates
                     );
     scn::insert_agent(*node_ptr, agent_id, props);
@@ -2496,15 +2497,8 @@ void  simulator::load_agent(boost::property_tree::ptree const&  data, scn::scene
     TMPROF_BLOCK();
 
     boost::filesystem::path const  skeleton_dir = data.get<std::string>("skeleton_dir");
-    std::string  error_msg;
-    ai::skeleton_composition_ptr const  skeleton_composition =
-        ai::load_skeleton_composition(skeleton_dir, error_msg);
-    ASSUMPTION(skeleton_composition != nullptr && error_msg.empty());
-    ai::skeletal_motion_templates_ptr const skeletal_motion_templates =
-        ai::load_skeletal_motion_templates(skeleton_dir, error_msg);
-    ASSUMPTION(skeletal_motion_templates != nullptr && error_msg.empty());
-    scn::skeleton_props_ptr const  props =
-        scn::create_skeleton_props(skeleton_dir, skeleton_composition, skeletal_motion_templates);
+    ai::skeletal_motion_templates const skeletal_motion_templates(skeleton_dir, 75U);
+    scn::skeleton_props_ptr const  props = scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates);
     insert_agent(id, props);
 }
 

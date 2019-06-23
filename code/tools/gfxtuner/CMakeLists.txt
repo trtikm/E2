@@ -79,9 +79,6 @@ add_executable(${THIS_TARGET_NAME}
     simulation/simulator.cpp
     simulation/simulator_notifications.hpp
 
-    simulation/skeleton.hpp
-    simulation/skeleton.cpp
-    
     simulation/bind_ai_scene_to_simulator.hpp
     simulation/bind_ai_scene_to_simulator.cpp
     )

@@ -2,7 +2,11 @@
 #   define ANGEO_UTILITY_HPP_INCLUDED
 
 #   include <angeo/tensor_math.hpp>
+#   include <angeo/coordinate_system.hpp>
 #   include <utility/random.hpp>
+#   include <boost/filesystem/path.hpp>
+#   include <iosfwd>
+#   include <vector>
 
 namespace angeo {
 
@@ -37,6 +41,53 @@ void  compute_tangent_space_of_unit_vector(
         vector3 const&  input_unit_vector,
         vector3&  output_unit_tangent,
         vector3&  output_unit_bitangent
+        );
+
+
+natural_32_bit  read_scalar(
+        float_32_bit&  output,
+        std::ifstream&  istr,
+        natural_32_bit const  line_number = 0U,
+        boost::filesystem::path const&  pathname = ""
+        );
+
+
+natural_32_bit  read_vector3(
+        vector3&  output,
+        std::ifstream&  istr,
+        natural_32_bit const  line_number = 0U,
+        boost::filesystem::path const&  pathname = ""
+        );
+
+
+natural_32_bit  read_unit_quaternion(
+        quaternion&  output,
+        std::ifstream&  istr,
+        natural_32_bit const  line_number = 0U,
+        boost::filesystem::path const&  pathname = ""
+        );
+
+
+natural_32_bit  read_matrix33(
+        matrix33&  output,
+        std::ifstream&  istr,
+        natural_32_bit const  line_number = 0U,
+        boost::filesystem::path const&  pathname = ""
+        );
+
+
+void  read_coord_systems(
+        std::ifstream&  istr,
+        boost::filesystem::path const&  pathname,
+        natural_32_bit const  num_coord_systems_to_read,
+        std::vector<coordinate_system>&  coord_systems
+        );
+
+
+natural_32_bit  read_all_coord_systems(
+        std::ifstream&  istr,
+        boost::filesystem::path const&  pathname,
+        std::vector<coordinate_system>&  coord_systems
         );
 
 

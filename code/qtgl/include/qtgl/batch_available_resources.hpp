@@ -34,20 +34,11 @@ struct  batch_available_resources_data  final
                             //        TEXTURE_SAMPLER_DIFFUSE 
                             //        TEXTURE_SAMPLER_SPECULAR
                             //        TEXTURE_SAMPLER_NORMAL
-                            //        TEXTURE_SAMPLER_POSITION
                         std::pair<
                                 VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION,
                                     // Only allowed values are:
                                     //        BINDING_IN_TEXCOORD0
                                     //        BINDING_IN_TEXCOORD1
-                                    //        BINDING_IN_TEXCOORD2
-                                    //        BINDING_IN_TEXCOORD3
-                                    //        BINDING_IN_TEXCOORD4
-                                    //        BINDING_IN_TEXCOORD5
-                                    //        BINDING_IN_TEXCOORD6
-                                    //        BINDING_IN_TEXCOORD7
-                                    //        BINDING_IN_TEXCOORD8
-                                    //        BINDING_IN_TEXCOORD9
                                 std::string
                                     // Full path-name of the corresponding the texture file on the disk, or any other string
                                     // (typically "") in case of generated texture.

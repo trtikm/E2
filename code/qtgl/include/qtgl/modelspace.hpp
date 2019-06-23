@@ -37,11 +37,13 @@ struct  modelspace : public async::resource_accessor<detail::modelspace_data>
 
     modelspace(
             boost::filesystem::path const&  path,
-            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
+            async::load_priority_type const  priority,
+            async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr,
+            std::string const&  data_type_name = "qtgl::modelspace"
             )
         : async::resource_accessor<detail::modelspace_data>(
-            {"qtgl::modelspace",path.string()},
-            1U,
+            { data_type_name, path.string() },
+            priority,
             parent_finaliser
             )
     {}
@@ -49,27 +51,15 @@ struct  modelspace : public async::resource_accessor<detail::modelspace_data>
     std::vector<angeo::coordinate_system> const&  get_coord_systems() const
     { return resource().coord_systems(); }
 
+    std::size_t size() const { return get_coord_systems().size(); }
+
+    angeo::coordinate_system const&  at(natural_32_bit const  index) const { return get_coord_systems().at(index); }
+
     boost::filesystem::path  get_skeleton_path() const
     {
         return boost::filesystem::path(key().get_unique_id()).parent_path();
     }
 };
-
-
-/**
- * The 'pose_file_pathname' is a path-name of a 'pose.txt' file.
- *
- * Each loaded coord. system correspond to one bone, i.e a bone is an index to the vector.
- * The bones are in the same topological order as the related file 'names.txt' and 'parents.txt'
- * in the same directory (however, these two files are not used here; see ai::load_skeleton for more
- * details).
- *
- * The function returns the empty string on succeess and error message otherwise.
- */
-std::string  load_modelspace_coordinate_systems(
-        boost::filesystem::path const&  pose_file_pathname,
-        std::vector<angeo::coordinate_system>&  output_coord_systems
-        );
 
 
 }

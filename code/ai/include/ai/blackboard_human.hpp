@@ -2,8 +2,6 @@
 #   define AI_BLACKBOARD_HUMAN_HPP_INCLUDED
 
 #   include <ai/blackboard.hpp>
-#   include <ai/skeleton_composition.hpp>
-#   include <ai/skeletal_motion_templates.hpp>
 #   include <memory>
 
 namespace ai {

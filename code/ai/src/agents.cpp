@@ -23,54 +23,53 @@ agents::agents(scene_ptr const  scene_)
 
 agent_id  agents::insert(
         scene::node_id const&  agent_nid,
-        skeleton_composition_const_ptr const  skeleton,
-        skeletal_motion_templates_const_ptr const  motion_templates
+        skeletal_motion_templates const  motion_templates
         )
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(skeleton != nullptr);
-    ASSUMPTION(
-        !skeleton->pose_frames.empty() &&
-        skeleton->pose_frames.size() == skeleton->names.size() &&
-        skeleton->pose_frames.size() == skeleton->parents.size() &&
-        (skeleton->children.empty() || skeleton->pose_frames.size() == skeleton->children.size())
-        );
-    ASSUMPTION(skeleton->parents.at(0U) == -1);
-    ASSUMPTION(motion_templates != nullptr);
+    ASSUMPTION(agent_nid.valid() && !motion_templates.empty());
 
-    if (skeleton->children.empty())
-        angeo::skeleton_compute_child_bones(skeleton->parents, std::const_pointer_cast<skeleton_composition>(skeleton)->children);
+    agent_id  id = 0U;
+    for (; id != m_agents.size(); ++id)
+        if (m_agents.at(id) == nullptr)
+            break;
+
+    auto const  props = std::make_shared<agent_props>();
+    props->agent_ptr = nullptr;
+    props->agent_nid = agent_nid;
+    props->motion_templates = motion_templates;
+
+    if (id == m_agents.size())
+        m_agents.resize(m_agents.size() + 1U, nullptr);
+    m_agents.at(id) = props;
+
+    return id;
+}
+
+
+void  agents::construct_agent(agent_id const  id, agent_props&  props)
+{
+    TMPROF_BLOCK();
 
     blackboard_ptr const  bb = std::make_shared<blackboard_human>();
-    bb->m_skeleton_composition = skeleton;
-    bb->m_motion_templates = motion_templates;
-    bb->m_agent_id = 0U; // Is computed below.
+    bb->m_motion_templates = props.motion_templates;
+    bb->m_agent_id = id;
     bb->m_scene = m_scene;
-    bb->m_agent_nid = agent_nid;
-    bb->m_bone_nids.resize(skeleton->pose_frames.size());
-    for (natural_32_bit  bone = 0U; bone != bb->m_bone_nids.size(); ++bone)
+    bb->m_agent_nid = props.agent_nid;
+    bb->m_bone_nids.resize(props.motion_templates.pose_frames().size());
+    for (natural_32_bit bone = 0U; bone != bb->m_bone_nids.size(); ++bone)
     {
         scene::node_id::path_type  path;
         for (integer_32_bit parent_bone = (integer_32_bit)bone;
                 parent_bone >= 0;
-                parent_bone = bb->m_skeleton_composition->parents.at(parent_bone))
-            path.push_back(bb->m_skeleton_composition->names.at(parent_bone));
+                parent_bone = bb->m_motion_templates.hierarchy().parents().at(parent_bone))
+            path.push_back(bb->m_motion_templates.names().at(parent_bone));
         std::reverse(path.begin(), path.end());
-        bb->m_bone_nids.at(bone) = agent_nid / scene::node_id(path);
+        bb->m_bone_nids.at(bone) = props.agent_nid / scene::node_id(path);
     }
 
-    for (; bb->m_agent_id != m_agents.size(); ++bb->m_agent_id)
-        if (m_agents.at(bb->m_agent_id) == nullptr)
-            break;
-
-    auto  agent_ptr = std::make_shared<agent>(bb, m_input_devices);
-
-    if (bb->m_agent_id == m_agents.size())
-        m_agents.resize(m_agents.size() + 1U, nullptr);
-    m_agents.at(bb->m_agent_id) = agent_ptr;
-    
-    return bb->m_agent_id;
+    props.agent_ptr = std::make_unique<agent>(bb, m_input_devices);
 }
 
 
@@ -91,12 +90,18 @@ void  agents::next_round(
     m_input_devices->mouse = mouse;
     m_input_devices->window = window;
 
-    for (auto&  agent_ptr : m_agents)
-        if (agent_ptr != nullptr)
-        {
-            agent_ptr->next_round(time_step_in_seconds);
-            agent_ptr->get_blackboard()->m_collision_contacts.clear();
-        }
+    for (natural_32_bit  id = 0U; id != m_agents.size(); ++id)
+    {
+        auto const  props = m_agents.at(id);
+        if (props != nullptr)
+            if (props->agent_ptr != nullptr)
+            {
+                props->agent_ptr->next_round(time_step_in_seconds);
+                props->agent_ptr->get_blackboard()->m_collision_contacts.clear();
+            }
+            else if (props->motion_templates.loaded_successfully())
+                construct_agent(id, *props);
+    }
 }
 
 
@@ -106,7 +111,7 @@ void  agents::on_collision_contact(
         scene::collicion_contant_info const&  contact_info
         )
 {
-    m_agents.at(agent_id)->get_blackboard()->m_collision_contacts.insert({collider_nid, contact_info});
+    m_agents.at(agent_id)->agent_ptr->get_blackboard()->m_collision_contacts.insert({collider_nid, contact_info});
 }
 
 

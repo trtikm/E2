@@ -10,6 +10,68 @@
 #else
 
 
+static bool  are_equal(float const* const  left, float const* const  right, int const  n, float_32_bit const  epsilon)
+{
+    for (int i = 0; i != n; ++i)
+        if (!are_equal(left[i], right[i], epsilon))
+            return false;
+    return true;
+}
+
+
+bool are_equal_2d(vector2 const&  left, vector2 const&  right, float_32_bit const  epsilon)
+{
+    return are_equal(left.data(), right.data(), 2, epsilon);
+}
+
+bool are_equal_3d(vector3 const&  left, vector3 const&  right, float_32_bit const  epsilon)
+{
+    return are_equal(left.data(), right.data(), 3, epsilon);
+}
+
+bool are_equal_4d(vector4 const&  left, vector4 const&  right, float_32_bit const  epsilon)
+{
+    return are_equal(left.data(), right.data(), 4, epsilon);
+}
+
+bool are_equal_6d(vector6 const&  left, vector6 const&  right, float_32_bit const  epsilon)
+{
+    return are_equal(left.data(), right.data(), 6, epsilon);
+}
+
+
+bool are_equal(quaternion const&  left, quaternion const&  right, float_32_bit const  epsilon)
+{
+    return are_equal(left.coeffs().data(), right.coeffs().data(), 4, epsilon);
+}
+
+
+bool are_equal_22(matrix22 const&  left, matrix22 const&  right, float_32_bit const  epsilon)
+{
+    return are_equal(left.data(), right.data(), 2 * 2, epsilon);
+}
+
+bool are_equal_32(matrix32 const&  left, matrix32 const&  right, float_32_bit const  epsilon)
+{
+    return are_equal(left.data(), right.data(), 3 * 2, epsilon);
+}
+
+bool are_equal_33(matrix33 const&  left, matrix33 const&  right, float_32_bit const  epsilon)
+{
+    return are_equal(left.data(), right.data(), 3 * 3, epsilon);
+}
+
+bool are_equal_43(matrix43 const&  left, matrix43 const&  right, float_32_bit const  epsilon)
+{
+    return are_equal(left.data(), right.data(), 4 * 3, epsilon);
+}
+
+bool are_equal_44(matrix44 const&  left, matrix44 const&  right, float_32_bit const  epsilon)
+{
+    return are_equal(left.data(), right.data(), 4 * 4, epsilon);
+}
+
+
 scalar  cos_angle_2d(vector2 const& u, vector2 const& v)
 {
     scalar const  denom = length_2d(u) * length_2d(v);

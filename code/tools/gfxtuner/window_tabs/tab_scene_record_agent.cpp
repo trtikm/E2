@@ -90,58 +90,57 @@ void  register_record_handler_for_insert_scene_record(
                             skeleton_dir = qtgl::to_string(selected_dirs.front());
                         }
 
-                        std::string  error_msg;
-
-                        ai::skeleton_composition_ptr const  skeleton_composition =
-                            ai::load_skeleton_composition(skeleton_dir, error_msg);
-                        if (!error_msg.empty())
+                        ai::skeletal_motion_templates const  skeletal_motion_templates(skeleton_dir, 100U);
+                        if (!skeletal_motion_templates.pose_frames().wait_till_load_is_finished())
                         {
-                            w->wnd()->print_status_message("ERROR: " + error_msg, 10000);
+                            w->wnd()->print_status_message("ERROR: Load of pose '" + skeletal_motion_templates.pose_frames().key().get_unique_id() + "' has FAILED!", 10000);
                             return{ "",{} };
                         }
-
-                        ai::skeletal_motion_templates_ptr const skeletal_motion_templates =
-                            ai::load_skeletal_motion_templates(skeleton_dir, error_msg);
-                        if (!error_msg.empty())
+                        if (!skeletal_motion_templates.hierarchy().wait_till_load_is_finished())
                         {
-                            w->wnd()->print_status_message("ERROR: " + error_msg, 10000);
+                            w->wnd()->print_status_message("ERROR: Load of bone hierarchy '" + skeletal_motion_templates.hierarchy().key().get_unique_id() + "' has FAILED!", 10000);
+                            return{ "",{} };
+                        }
+                        if (!skeletal_motion_templates.names().wait_till_load_is_finished())
+                        {
+                            w->wnd()->print_status_message("ERROR: Load of bone names '" + skeletal_motion_templates.names().key().get_unique_id() + "' has FAILED!", 10000);
                             return{ "",{} };
                         }
 
                         return {
                             scn::get_agent_record_name(),
-                            [w, skeleton_dir, skeleton_composition, skeletal_motion_templates](
+                            [w, skeleton_dir, skeletal_motion_templates](
                                 scn::scene_record_id const&  record_id) -> void
                                 {
                                     scn::skeleton_props_ptr const  props =
-                                        scn::create_skeleton_props(skeleton_dir, skeleton_composition, skeletal_motion_templates);
+                                        scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates);
 
                                     std::vector<std::pair<scn::scene_node_id, tree_widget_item*> >  inserted_nodes{
                                             { record_id.get_node_id(), w->scene_tree()->find(record_id.get_node_id()) }
                                             };
-                                    for (natural_32_bit i = 0U; i != skeleton_composition->pose_frames.size(); ++i)
+                                    for (natural_32_bit i = 0U; i != skeletal_motion_templates.pose_frames().size(); ++i)
                                     {
                                         scn::scene_node_id const  bone_node_id =
-                                                inserted_nodes.at(skeleton_composition->parents.at(i) + 1).first / skeleton_composition->names.at(i);
+                                                inserted_nodes.at(skeletal_motion_templates.hierarchy().parents().at(i) + 1).first / skeletal_motion_templates.names().at(i);
                                         w->wnd()->glwindow().call_now(
                                                 &simulator::insert_scene_node_at,
                                                 bone_node_id,
-                                                skeleton_composition->pose_frames.at(i).origin(),
-                                                skeleton_composition->pose_frames.at(i).orientation()
+                                                skeletal_motion_templates.pose_frames().at(i).origin(),
+                                                skeletal_motion_templates.pose_frames().at(i).orientation()
                                                 );
                                         auto const  bone_tree_item =
                                                 insert_coord_system_to_tree_widget(
                                                         w->scene_tree(),
                                                         bone_node_id,
-                                                        skeleton_composition->pose_frames.at(i).origin(),
-                                                        skeleton_composition->pose_frames.at(i).orientation(),
+                                                        skeletal_motion_templates.pose_frames().at(i).origin(),
+                                                        skeletal_motion_templates.pose_frames().at(i).orientation(),
                                                         w->get_node_icon(),
-                                                        inserted_nodes.at(skeleton_composition->parents.at(i) + 1).second
+                                                        inserted_nodes.at(skeletal_motion_templates.hierarchy().parents().at(i) + 1).second
                                                         );
                                         w->get_scene_history()->insert<scn::scene_history_coord_system_insert>(
                                                 bone_node_id,
-                                                skeleton_composition->pose_frames.at(i).origin(),
-                                                skeleton_composition->pose_frames.at(i).orientation(),
+                                                skeletal_motion_templates.pose_frames().at(i).origin(),
+                                                skeletal_motion_templates.pose_frames().at(i).orientation(),
                                                 false
                                                 );
                                         inserted_nodes.push_back({ bone_node_id, bone_tree_item });

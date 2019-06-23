@@ -3,7 +3,6 @@
 
 #   include <ai/agent_id.hpp>
 #   include <ai/scene.hpp>
-#   include <ai/skeleton_composition.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <unordered_map>
 #   include <memory>
@@ -18,8 +17,7 @@ struct blackboard
 {
     virtual ~blackboard() {}
 
-    skeleton_composition_const_ptr  m_skeleton_composition;
-    skeletal_motion_templates_const_ptr  m_motion_templates;
+    skeletal_motion_templates  m_motion_templates;
 
     agent_id  m_agent_id;
 

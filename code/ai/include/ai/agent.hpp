@@ -20,8 +20,6 @@ struct agent
 
     agent(blackboard_ptr const  blackboard_, input_devices_const_ptr const  input_devices_);
 
-    bool  ready() const { return m_blackboard->m_motion_templates->is_ready(); }
-
     void  next_round(float_32_bit const  time_step_in_seconds);
     
     void  set_use_cortex_mock(bool const  state) { if (state != uses_cortex_mock()) m_cortex_primary.swap(m_cortex_secondary); }

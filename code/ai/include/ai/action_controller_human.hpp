@@ -51,11 +51,8 @@ private:
     desired_props  m_desire;
 
     skeletal_motion_templates::template_motion_info  m_template_motion_info;
+    skeletal_motion_templates::motion_template_cursor  m_current_motion_template_cursor;
     scene::node_id  m_motion_object_nid;
-    skeletal_motion_templates::meta_records_real  m_motion_object_collider_props;
-    skeletal_motion_templates::meta_records_real  m_motion_object_mass_distribution_props;
-    skeletal_motion_templates::meta_records_real  m_motion_object_constraint_props;
-    skeletal_motion_templates::meta_records_real  m_motion_object_action_props;
     motion_action_data_map  m_motion_action_data;
 };
 
