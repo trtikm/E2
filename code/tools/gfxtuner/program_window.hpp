@@ -100,8 +100,8 @@ public slots:
 
     void  scene_selection_listener() { m_tab_scene_widgets.selection_changed_listener(); }
 
-    void  scene_listener_simulation_paused() { m_tab_scene_widgets.on_simulation_paused(); }
-    void  scene_listener_simulation_resumed() { m_tab_scene_widgets.on_simulation_resumed(); }
+    void  scene_listener_simulation_paused() { m_tab_scene_widgets.on_simulation_paused(); m_status_bar.camera_controller_changed_listener(); }
+    void  scene_listener_simulation_resumed() { m_tab_scene_widgets.on_simulation_resumed(); m_status_bar.camera_controller_changed_listener(); }
 
     /// Status bar
     void  status_bar_edit_mode_listener() { m_status_bar.edit_mode_listener(); }
