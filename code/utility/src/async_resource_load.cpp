@@ -98,12 +98,21 @@ finalise_load_on_destroy::~finalise_load_on_destroy()
         else
             get_parent()->force_finalisation_as_failure(get_error_message());
     }
-    else if (resource_cache::instance().finalise_load(get_key(), get_error_message()) == LOAD_STATE::FINISHED_WITH_ERROR)
+    else
     {
-        if (get_parent() != nullptr)
-            get_parent()->force_finalisation_as_failure(
-                    msgstream() << "Load of depenedent resource '" << get_key() << "' has FAILED."
-                    );
+        LOAD_STATE const  load_state = resource_cache::instance().finalise_load(get_key(), get_error_message());
+
+        std::vector<finalise_load_on_destroy_ptr>  finalisers;
+        resource_cache::instance().take_finalisers(get_key(), finalisers);
+
+        if (load_state == LOAD_STATE::FINISHED_WITH_ERROR)
+        {
+            std::string const  msg = msgstream() << "Load of depenedent resource '" << get_key() << "' has FAILED.";
+            if (get_parent() != nullptr)
+                get_parent()->force_finalisation_as_failure(msg);
+            for (auto finaliser_ptr : finalisers)
+                finaliser_ptr->force_finalisation_as_failure(msg);
+        }
     }
 }
 
@@ -326,6 +335,20 @@ LOAD_STATE  resource_cache::finalise_load(key_type const  key, std::string const
         return LOAD_STATE::FINISHED_SUCCESSFULLY;
     resource_ptr->second->finalise_load(error_message);
     return resource_ptr->second->get_load_state();
+}
+
+
+void  resource_cache::take_finalisers(key_type const  key, std::vector<finalise_load_on_destroy_ptr>&  output)
+{
+    std::lock_guard<std::mutex> const  lock(mutex());
+    finalisers_cache_type::iterator const  it = m_finalisers.find(key);
+    if (it != m_finalisers.end())
+    {
+        output.swap(it->second);
+        //for (auto  finaliser_ptr : it->second)
+        //    output.push_back(finaliser_ptr);
+        it->second.clear();
+    }
 }
 
 

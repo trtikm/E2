@@ -282,6 +282,7 @@ private:
 
 using  resources_holder_unique_ptr = std::unique_ptr<resource_holder_type>;
 using  resources_cache_type = std::unordered_map<key_type, resources_holder_unique_ptr>;
+using  finalisers_cache_type = std::unordered_map<key_type, std::vector<finalise_load_on_destroy_ptr> >;
 
 
 struct  resource_cache  final
@@ -317,6 +318,8 @@ struct  resource_cache  final
     resources_cache_type const&  get_cache() const { return m_cache; }
     std::mutex&  mutex() { return m_mutex; }
 
+    void  take_finalisers(key_type const  key, std::vector<finalise_load_on_destroy_ptr>&  output);
+
 private:
 
     resource_cache() = default;
@@ -332,6 +335,7 @@ private:
     static natural_64_bit  s_fresh_key_id;
 
     resources_cache_type  m_cache;
+    finalisers_cache_type  m_finalisers;
     std::mutex  m_mutex;
 };
 
@@ -362,6 +366,8 @@ void  resource_cache::insert_load_request(
         {
             output = resource_ptr;
             output->second->inc_ref_count();
+            if (resource_ptr->second->get_load_state() == LOAD_STATE::IN_PROGRESS)
+                m_finalisers[key].push_back(finalise_load_on_destroy::create(key, parent_finaliser));
             return;
         }
 
