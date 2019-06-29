@@ -632,6 +632,43 @@ def command_constraints():
                 raise Exception("Unknown constraint type '" + Config.instance.cmdline.arguments[0] + "'.")
 
 
+def command_get_help():
+    return """
+get <var_name>+
+    Prints values of given state variables. If no variable name is given, then
+    values of all variables are printed.
+"""
+
+
+def command_get():
+    var_names = Config.instance.state.vars() if len(Config.instance.cmdline.arguments) == 0 else Config.instance.cmdline.arguments
+    if len(var_names) == 1:
+        print(str(Config.instance.state.get(var_names[0])))
+    else:
+        for var in sorted(var_names):
+            print(var + ": " + str(Config.instance.state.get(var)))
+
+
+def command_help_help():
+    return """
+help <command>+
+    Prints descriptions of all given commands. If no command is given, then
+    descriptions of all commands are printed.
+"""
+
+
+def command_help():
+    if len(Config.instance.cmdline.arguments) == 0:
+        print(_get_script_description())
+        print("Here is a list of all available commands:\n")
+    for cmd in sorted(Config.instance.commands.keys() if len(Config.instance.cmdline.arguments) == 0 else Config.instance.cmdline.arguments):
+        if cmd not in Config.instance.commands:
+            raise Exception("Unknown command '" + cmd + "'. Use 'help' command without arguments to see "
+                            "the list of all available commands.")
+        assert cmd in Config.instance.help_commands
+        print(Config.instance.help_commands[cmd]())
+
+
 def command_joint_distances_help():
     return """
 joint_distances [<keyframe-index>|* <keyframe-index>|*] [write|extend|extend!]
@@ -902,43 +939,6 @@ def command_joint_distances():
                     f.write(anim_name + "\n")
                     for idx in sorted(list(keyframe_equivalences[i][anim_name])):
                         f.write(str(idx) + "\n")
-
-
-def command_get_help():
-    return """
-get <var_name>+
-    Prints values of given state variables. If no variable name is given, then
-    values of all variables are printed.
-"""
-
-
-def command_get():
-    var_names = Config.instance.state.vars() if len(Config.instance.cmdline.arguments) == 0 else Config.instance.cmdline.arguments
-    if len(var_names) == 1:
-        print(str(Config.instance.state.get(var_names[0])))
-    else:
-        for var in sorted(var_names):
-            print(var + ": " + str(Config.instance.state.get(var)))
-
-
-def command_help_help():
-    return """
-help <command>+
-    Prints descriptions of all given commands. If no command is given, then
-    descriptions of all commands are printed.
-"""
-
-
-def command_help():
-    if len(Config.instance.cmdline.arguments) == 0:
-        print(_get_script_description())
-        print("Here is a list of all available commands:\n")
-    for cmd in sorted(Config.instance.commands.keys() if len(Config.instance.cmdline.arguments) == 0 else Config.instance.cmdline.arguments):
-        if cmd not in Config.instance.commands:
-            raise Exception("Unknown command '" + cmd + "'. Use 'help' command without arguments to see "
-                            "the list of all available commands.")
-        assert cmd in Config.instance.help_commands
-        print(Config.instance.help_commands[cmd]())
 
 
 def command_list_help():
