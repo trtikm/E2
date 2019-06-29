@@ -294,14 +294,13 @@ actions_data::actions_data(async::finalise_load_on_destroy_ptr const  finaliser)
                action_ptr const&  last
                ) -> void
             {
-                if (keyword == "accelerate_towards_clipped_desired_linear_velocity")
+                if (keyword == "chase_ideal_linear_velocity")
                 {
-                    if (params.size() != 3UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for accelerate_towards_clipped_desired_linear_velocity at line " << line_index << "in the file '" << pathname << "'.");
-                    skeletal_motion_templates::action_accelerate_towards_clipped_desired_linear_velocity  action;
-                    action.angle = params.at(0);
-                    action.max_linear_accel = params.at(1);
-                    action.min_linear_speed = params.at(2);
-                    output.push_back(last != nullptr && *last == action ? last : std::make_shared<skeletal_motion_templates::action_accelerate_towards_clipped_desired_linear_velocity>(action));
+                    if (params.size() != 2UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for chase_ideal_linear_velocity at line " << line_index << "in the file '" << pathname << "'.");
+                    skeletal_motion_templates::action_chase_ideal_linear_velocity  action;
+                    action.max_linear_accel = params.at(0);
+                    action.motion_error_multiplier = params.at(1);
+                    output.push_back(last != nullptr && *last == action ? last : std::make_shared<skeletal_motion_templates::action_chase_ideal_linear_velocity>(action));
                 }
                 else if (keyword == "chase_linear_velocity_by_forward_vector")
                 {

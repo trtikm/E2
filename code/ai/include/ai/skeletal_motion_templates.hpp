@@ -519,11 +519,10 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  action = detail::meta::action;
     using  action_ptr = detail::meta::action_ptr;
 
-    struct  action_accelerate_towards_clipped_desired_linear_velocity : public action
+    struct  action_chase_ideal_linear_velocity : public action
     {
-        float_32_bit  angle;
         float_32_bit  max_linear_accel;
-        float_32_bit  min_linear_speed;
+        float_32_bit  motion_error_multiplier;
     };
 
     struct  action_chase_linear_velocity_by_forward_vector : public action

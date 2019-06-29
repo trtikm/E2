@@ -91,6 +91,7 @@ class Config:
             ]
             self.distance_threshold = 1.0
             self.delta_time_in_seconds = 0.25
+            self.motion_error_multiplier = 1.0
             self.debug_mode = True
 
         def typeof(self, var_name):
@@ -1156,18 +1157,15 @@ motion_actions <action-name>+
     available actions:
     * 'none':
         Do nothing, i.e. ignore desired motion of agent's cortex.
-    * 'accelerate_towards_clipped_desired_linear_velocity':
-        Clips the target linear velocity to the clipping cone, whose axis is
-        the forward direction of the agent (see the file 'directions.txt'),
-        and then introduces a linear acceleration to get closer to the clipped
-        liner velocity. Here are parameters (state variables) of the action:
-            - 'angle' defines a maximal angle between a linear velocity and
-                      the axis of the cone.
+    * 'chase_ideal_linear_velocity':
+        Applies a force to agent's motion object so that linear velocity gets
+        closer to the ideal linear velocity as defined by the keyframes. Here
+        are parameters (state variables) of the action:
             - 'max_linear_accel' maximal magnitude of the linear acceleration
-            - 'min_linear_speed' is used to compute a multiplier for the
-                    angle: min(1.0f, max(0.0f, <speed>^2 / min_linear_speed))
-                    where '<speed>' is the actual linear speed of the motion
-                    object of the agent. The 'peek_linear_speed' must be > 0.
+            - 'motion_error_multiplier' a multiplier (any real number) for the
+                    motion error (in this case a difference of ideal and actual
+                    speed of the motion object). The motion error has a direct
+                    impact on increase/decrease of the animation speed.
     * 'chase_linear_velocity_by_forward_vector':
         Rotates the reference frame in the world so that distance between
         the linear velocity and the forward direction is minimal. The rotation
@@ -1219,10 +1217,9 @@ def command_motion_actions():
                 f.write(str(action) + "\n")
                 if action == "none":
                     pass     # The action has no arguments
-                elif action == "accelerate_towards_clipped_desired_linear_velocity":
-                    f.write(_float_to_string(state.angle) + "\n")
+                elif action == "chase_ideal_linear_velocity":
                     f.write(_float_to_string(state.max_linear_accel) + "\n")
-                    f.write(_float_to_string(state.min_linear_speed) + "\n")
+                    f.write(_float_to_string(state.motion_error_multiplier) + "\n")
                 elif action == "chase_linear_velocity_by_forward_vector":
                     f.write(_float_to_string(state.max_angular_speed) + "\n")
                     f.write(_float_to_string(state.max_angular_accel) + "\n")

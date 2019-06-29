@@ -233,7 +233,7 @@ void  compute_motion_object_acceleration_from_motion_actions(
         if (action_props == nullptr)
             continue;
         else if (auto const  action_ptr =
-            std::dynamic_pointer_cast<skeletal_motion_templates::action_accelerate_towards_clipped_desired_linear_velocity const>(action_props))
+            std::dynamic_pointer_cast<skeletal_motion_templates::action_chase_ideal_linear_velocity const>(action_props))
         {
             float_32_bit  ideal_linear_speed;
             {
@@ -256,9 +256,9 @@ void  compute_motion_object_acceleration_from_motion_actions(
 
             if (output_linear_motion_error_wrt_ideal != nullptr)
             {
-                float_32_bit const  speed_ratio =
-                        ((length(motion_object_linear_velocity_in_world_space) + 0.001f) / (ideal_linear_speed + 0.001f)) - 1.0f;
-                if (std::fabs(*output_linear_motion_error_wrt_ideal) < fabs(speed_ratio))
+                float_32_bit const  linear_speed = length(motion_object_linear_velocity_in_world_space);
+                float_32_bit const  speed_ratio = action_ptr->motion_error_multiplier * (linear_speed - ideal_linear_speed) / std::max(1.0f, ideal_linear_speed);
+                if (absolute_value(*output_linear_motion_error_wrt_ideal) < absolute_value(speed_ratio))
                     *output_linear_motion_error_wrt_ideal = speed_ratio;
             }
         }
@@ -383,7 +383,7 @@ void  compute_motion_object_acceleration_from_motion_actions(
             if (output_linear_motion_error_wrt_ideal != nullptr)
             {
                 float_32_bit const  speed_ratio = length(motion_object_linear_velocity_in_world_space);
-                if (std::fabs(*output_linear_motion_error_wrt_ideal) < speed_ratio)
+                if (absolute_value(*output_linear_motion_error_wrt_ideal) < speed_ratio)
                     *output_linear_motion_error_wrt_ideal = speed_ratio;
             }
         }
@@ -404,7 +404,7 @@ void  compute_motion_object_acceleration_from_motion_actions(
             if (output_angular_motion_error_wrt_ideal != nullptr)
             {
                 float_32_bit const  speed_ratio = length(angular_velocity_to_cancel_in_world_space);
-                if (std::fabs(*output_angular_motion_error_wrt_ideal) < speed_ratio)
+                if (absolute_value(*output_angular_motion_error_wrt_ideal) < speed_ratio)
                     *output_angular_motion_error_wrt_ideal = speed_ratio;
             }
         }
