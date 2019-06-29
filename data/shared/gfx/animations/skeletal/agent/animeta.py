@@ -6,6 +6,7 @@ import math
 import argparse
 import json
 import traceback
+import subprocess
 
 
 def _get_script_description():
@@ -490,6 +491,35 @@ def _load_meta_reference_frames(primary=True):
     return frames
 
 
+def _load_meta_keyframe_equivalences(pathname):
+    with open(pathname, "r") as f:
+        raw_lines = f.readlines()
+    lines = []
+    for raw_line in raw_lines:
+        line = raw_line.strip()
+        if len(line) > 0 and not line.startswith("%%"):
+            lines.append(line)
+    assert len(lines) > 1
+    result = {}
+    anim_name = None
+    keyframe_index = -1
+    for line in lines[1:]:
+        if line[0].isdigit():
+            assert anim_name is not None and keyframe_index >= 0 and keyframe_index in result and anim_name in result[keyframe_index]
+            result[keyframe_index][anim_name].add(int(line))
+        else:
+            if line[0] == "@":
+                keyframe_index += 1
+                result[keyframe_index] = {}
+                line = line[1:]
+            if len(line) > 0:
+                anim_name = line
+                assert anim_name not in result[keyframe_index]
+                result[keyframe_index][anim_name] = set()
+    assert int(lines[0]) - 1 in result
+    return result
+
+
 def _load_bone_parents():
     pathname = os.path.join(os.path.dirname(_get_keyframes_dir()), "parents.txt")
     if not os.path.isfile(pathname):
@@ -649,6 +679,97 @@ def command_get():
             print(var + ": " + str(Config.instance.state.get(var)))
 
 
+def command_graph_help():
+    return """
+graph [agent] [pdf]
+    Scans all 'meta_keyframe_equivalences.txt' files in animation directories
+    and builds Graphviz '.animation_transitions.dot' file, representing a
+    graph of transitions between animations.
+    When the modifier 'agent' is passed to the command, then both 'agent_dir'
+    and 'work_dir' are scanned for 'meta_keyframe_equivalences.txt' files and
+    the '.animation_transitions.dot' file is saved under the 'agent_dir'
+    directory. Otherwise, only 'work_dir' is scanned and the
+    '.animation_transitions.dot' file is saved under the 'work_dir'.
+    When the output format specifier (i.e. 'pdf') is passed to the command,
+    the besides '.animation_transitions.dot' file there is also generated
+    '.animation_transitions.pdf' file from the '.animation_transitions.dot'
+    file into the same directory as the '.animation_transitions.dot' file.
+    NOTE: If any of the output files already exists, then it will be
+          overwritten.
+    NOTE: Make sure the Graphviz's 'dot' utility is in the PATH environment
+          variable, if you pass a format specifier (e.g. pdf) to the command.
+"""
+
+
+def command_graph():
+    if "agent" in Config.instance.cmdline.arguments:
+        scan_dirs = [Config.instance.state.agent_dir, Config.instance.state.work_dir]
+        output_dir = Config.instance.state.agent_dir
+    else:
+        scan_dirs = [Config.instance.state.work_dir]
+        output_dir = Config.instance.state.work_dir
+
+    print("Loading 'meta_keyframe_equivalences.txt' files.")
+    equivalences = {}
+    for scan_dir in scan_dirs:
+        for anim_name in os.listdir(scan_dir):
+            pathname = os.path.join(scan_dir, anim_name, 'meta_keyframe_equivalences.txt')
+            if anim_name not in equivalences and os.path.isfile(pathname):
+                if Config.instance.state.debug_mode is True:
+                    print("    Loading: " + pathname)
+                equivalences[anim_name] = _load_meta_keyframe_equivalences(pathname)
+
+    dot_pathname = os.path.join(output_dir, ".animation_transitions.dot")
+    print("Saving: " + dot_pathname)
+    with open(dot_pathname, 'w') as f:
+        f.write(
+"""
+/*
+Type this command to console to get PDF of the graph:
+    dot -o<output-pathname> -Tpdf .animation_transitions.dot
+*/
+
+digraph animation_transitions {
+node [shape=box];
+
+"""
+        )
+        for src_anim_name, src_keyframes in equivalences.items():
+            for src_keyframe_index, dst_animations in src_keyframes.items():
+                for dst_anim_name, dst_keyframe_indices in dst_animations.items():
+                    for dst_keyframe_index in dst_keyframe_indices:
+                        if src_anim_name == dst_anim_name and src_keyframe_index < dst_keyframe_index and src_keyframe_index in src_keyframes[dst_keyframe_index][src_anim_name]:
+                            continue
+                        if dst_keyframe_index == max(equivalences[dst_anim_name].keys()):
+                            continue
+                        src_label = -1 if src_keyframe_index == max(src_keyframes.keys()) else src_keyframe_index
+                        dst_label = dst_keyframe_index
+                        if src_label == -1:
+                            if dst_label == 0:
+                                label = ""
+                            else:
+                                label = ';' + str(dst_label)
+                        else:
+                            label = str(src_label) + ';'
+                            if dst_label != 0:
+                                label += str(dst_label)
+                        line = '"' + src_anim_name + '" -> "' + dst_anim_name + '" [label="' + label + '"]'
+                        if Config.instance.state.debug_mode is True:
+                            print("    " + line)
+                        f.write(line + '\n')
+        f.write(
+"""
+}
+"""
+        )
+    if "pdf" in Config.instance.cmdline.arguments:
+        pdf_pathname = os.path.splitext(dot_pathname)[0] + ".pdf"
+        print("Calling Graphviz's 'dot' utility to generate PDF file:")
+        print("    " + os.path.splitext(dot_pathname)[0] + ".pdf")
+        subprocess.call(['dot', '-o' + pdf_pathname, '-Tpdf', dot_pathname])
+    print("Done.")
+
+
 def command_help_help():
     return """
 help <command>+
@@ -700,6 +821,10 @@ joint_distances [<keyframe-index>|* <keyframe-index>|*] [write|extend|extend!]
     currently computed result, i.e. preserving results from the receding calls
     of this command; however, 'extend' version replaces old records colliding
     with the currently computed ones.
+    In all cases, the state variable 'delta_time_in_seconds' is used to skip
+    equality matching of keyframes whose time from the last considered keyframe
+    is smaller than 'delta_time_in_seconds'. So, set the state variable to 0.0,
+    if you want all keyframes to be considered.
     NOTE: By 'joint' we actually mean the origin of the coordinate system in
           a keyframe file.
     NOTE: The Euclidean distance between corresponding joints is multiplied by
@@ -738,7 +863,7 @@ def command_joint_distances():
         except Exception as e:
             if arguments[i] != "*":
                 raise Exception("Wrong argument " + str(i+1) + "Expected is either a positive integer, possibly "
-                                "preffixed with '!' (to make the number negative), or the symbol '*'.")
+                                "prefixed with '!' (to make the number negative), or the symbol '*'.")
 
     state = Config.instance.state
 
