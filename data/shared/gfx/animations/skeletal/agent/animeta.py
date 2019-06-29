@@ -38,6 +38,7 @@ class Config:
     class State:
         def __init__(self, pathname):
             self.work_dir = pathname
+            self.agent_dir = pathname
             self.anim_dir = None
             self.anim_dir2 = None
             self.bone_idx = 0
@@ -137,7 +138,7 @@ class Config:
                 if len(list_of_strings) > 1:
                     raise Exception("Wrong value type. Expected a single value, but passed a list.")
                 if var_type == str:
-                    if var_name == "work_dir":
+                    if var_name in ["work_dir", "agent_dir"]:
                         return os.path.abspath(list_of_strings[0].replace("@@", self.get(var_name)))
                     return list_of_strings[0]
                 if var_type == int:
@@ -397,6 +398,16 @@ def _get_keyframes_dir(primary=True, check_exists=True):
     return keyframes_dir
 
 
+def _get_agent_dir(check_exists=True, check_for_pose_file=True):
+    if check_exists is True and not os.path.isdir(Config.instance.state.agent_dir):
+        raise Exception("Cannot access agent directory '" + Config.instance.state.agent_dir + "'. Please, check "
+                        "whether the state variable 'agent_dir' represents the desired disk path.")
+    if check_exists is True and not os.path.isfile(os.path.join(Config.instance.state.agent_dir, "pose.txt")):
+        raise Exception("Cannot access 'pose.txt' file under agent directory '" + Config.instance.state.agent_dir +
+                        "'. Please, check whether the state variable 'agent_dir' represents the desired disk path.")
+    return Config.instance.state.agent_dir
+
+
 def _get_meta_reference_frames_pathname(primary=True, check_exists=False):
     pathname = os.path.join(_get_keyframes_dir(primary, True), "meta_reference_frames.txt")
     if check_exists is True and not os.path.isfile(pathname):
@@ -525,7 +536,7 @@ def _load_bone_names():
 
 
 def _load_bone_pose_frames():
-    pathname = os.path.join(os.path.dirname(_get_keyframes_dir()), "pose.txt")
+    pathname = os.path.join(_get_agent_dir(), "pose.txt")
     if not os.path.isfile(pathname):
         raise Exception("Cannot access file '" + pathname + "'.")
     with open(pathname, "r") as f:
