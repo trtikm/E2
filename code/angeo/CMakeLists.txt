@@ -3,6 +3,8 @@ set(THIS_TARGET_NAME angeo)
 add_library(${THIS_TARGET_NAME}
     ./include/angeo/tensor_math.hpp
     ./src/tensor_math.cpp
+    
+    ./include/angeo/tensor_std_specialisations.hpp
 
     ./include/angeo/coordinate_system.hpp
     ./src/coordinate_system.cpp
