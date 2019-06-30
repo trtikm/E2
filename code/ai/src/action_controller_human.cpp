@@ -750,7 +750,7 @@ action_controller_human::action_controller_human(blackboard_ptr const  blackboar
     , m_desire()
     , m_template_motion_info{
             { blackboard_->m_motion_templates.motions_map().begin()->first, 0U },       // src_pose
-            { blackboard_->m_motion_templates.motions_map().begin()->first, 0U },       // dst_pose
+            { blackboard_->m_motion_templates.motions_map().begin()->first, 1U },       // dst_pose
             0.0f,           // total_interpolation_time_in_seconds
             0.0f            // consumed_time_in_seconds
             }
