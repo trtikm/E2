@@ -320,7 +320,8 @@ void  collision_scene::insert_triangle_mesh(
                     normalised(cross_product(end_point_2_in_world_space - end_point_1_in_world_space,
                                              end_point_3_in_world_space - end_point_1_in_world_space)),
                     i,
-                    getter_index
+                    getter_index,
+                    0U
                     };
             axis_aligned_bounding_box const  bbox =
                     compute_aabb_of_triangle(
@@ -743,6 +744,38 @@ std::function<vector3(natural_32_bit, natural_8_bit)> const&  collision_scene::g
     return m_triangles_end_point_getters.at(geometry.end_points_getter_index).first;
 }
 
+natural_32_bit  collision_scene::get_triangle_index(collision_object_id const  coid) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::TRIANGLE);
+    return m_triangles_geometry.at(get_instance_index(coid)).triangle_index;
+}
+
+vector3 const&  collision_scene::get_triangle_end_point_in_world_space(collision_object_id const  coid, natural_8_bit const  end_point_index) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::TRIANGLE);
+    triangle_geometry const&  geometry = m_triangles_geometry.at(get_instance_index(coid));
+    return end_point_index == 0U ? geometry.end_point_1_in_world_space :
+           end_point_index == 1U ? geometry.end_point_2_in_world_space :
+                                   geometry.end_point_3_in_world_space ;
+}
+
+vector3 const&  collision_scene::get_triangle_unit_normal_in_world_space(collision_object_id const  coid) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::TRIANGLE);
+    return m_triangles_geometry.at(get_instance_index(coid)).unit_normal_in_world_space;
+}
+
+natural_8_bit  collision_scene::get_trinagle_edges_ignore_mask(collision_object_id const  coid) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::TRIANGLE);
+    return m_triangles_geometry.at(get_instance_index(coid)).edges_ignore_mask;
+}
+
+void  collision_scene::set_trinagle_edges_ignore_mask(collision_object_id const  coid, natural_8_bit const  mask)
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::TRIANGLE);
+    m_triangles_geometry.at(get_instance_index(coid)).edges_ignore_mask = mask;
+}
 
 COLLISION_MATERIAL_TYPE  collision_scene::get_material(collision_object_id const  coid) const
 {

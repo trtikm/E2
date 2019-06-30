@@ -648,7 +648,9 @@ natural_32_bit  closest_points_of_triangle_and_line(
     vector3*  output_triangle_closest_point_2,
     collision_shape_feature_id*  output_triangle_shape_feature_id_2,
     vector3*  output_line_closest_point_2,
-    collision_shape_feature_id*  output_line_shape_feature_id_2
+    collision_shape_feature_id*  output_line_shape_feature_id_2,
+
+    natural_8_bit const  triangle_edges_ignore_mask
     )
 {
     float_32_bit constexpr  distance_epsilon = 0.0001f;
@@ -728,6 +730,9 @@ natural_32_bit  closest_points_of_triangle_and_line(
 
     if (L1_behind_T12 && L2_behind_T12)
     {
+        if ((triangle_edges_ignore_mask & 1U) != 0U)
+            return 0U;
+
         float_32_bit  triangle_param_1, triangle_param_2, line_param_1, line_param_2;
         natural_32_bit const  num_collisions = closest_points_of_two_lines(
                         triangle_vertex_1,
@@ -762,6 +767,9 @@ natural_32_bit  closest_points_of_triangle_and_line(
 
     if (L1_behind_T23 && L2_behind_T23)
     {
+        if ((triangle_edges_ignore_mask & 2U) != 0U)
+            return 0U;
+
         float_32_bit  triangle_param_1, triangle_param_2, line_param_1, line_param_2;
         natural_32_bit const  num_collisions = closest_points_of_two_lines(
                         triangle_vertex_2,
@@ -796,6 +804,9 @@ natural_32_bit  closest_points_of_triangle_and_line(
 
     if (L1_behind_T31 && L2_behind_T31)
     {
+        if ((triangle_edges_ignore_mask & 4U) != 0U)
+            return 0U;
+
         float_32_bit  triangle_param_1, triangle_param_2, line_param_1, line_param_2;
         natural_32_bit const  num_collisions = closest_points_of_two_lines(
                         triangle_vertex_3,
@@ -940,7 +951,7 @@ natural_32_bit  closest_points_of_triangle_and_line(
         }
     }
 
-    if ((L1_behind_T12 && !L2_below_L1) || (L2_behind_T12 && !L1_below_L2))
+    if ((triangle_edges_ignore_mask & 1U) == 0U && ((L1_behind_T12 && !L2_below_L1) || (L2_behind_T12 && !L1_below_L2)))
     {
         closest_points_of_two_lines(
                 triangle_vertex_1,
@@ -963,7 +974,7 @@ natural_32_bit  closest_points_of_triangle_and_line(
         ++num_closest_point_pairs;
     }
 
-    if ((L1_behind_T23 && !L2_below_L1) || (L2_behind_T23 && !L1_below_L2))
+    if ((triangle_edges_ignore_mask & 2U) == 0U && ((L1_behind_T23 && !L2_below_L1) || (L2_behind_T23 && !L1_below_L2)))
     {
         closest_points_of_two_lines(
                 triangle_vertex_2,
@@ -986,7 +997,7 @@ natural_32_bit  closest_points_of_triangle_and_line(
         ++num_closest_point_pairs;
     }
 
-    if ((L1_behind_T31 && !L2_below_L1) || (L2_behind_T31 && !L1_below_L2))
+    if ((triangle_edges_ignore_mask & 4U) == 0U && ((L1_behind_T31 && !L2_below_L1) || (L2_behind_T31 && !L1_below_L2)))
     {
         closest_points_of_two_lines(
                 triangle_vertex_3,

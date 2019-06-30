@@ -191,6 +191,13 @@ inline bool  closest_point_of_triangle_to_point(
 /**
  * Ensure that 'triangle_unit_normal_vector' agrees with the counter-clock-wise order of triangle's verices.
  *   ASSUMPTION(dot_product(normal_T12, triangle_vertex_3 - triangle_vertex_1) < 0.0f);
+ * Here is interpretation/use of 'triangle_edges_ignore_mask' parameter:
+ *   if ((triangle_edges_ignore_mask & 1U) != 0U)
+ *      ignore contacts with edge (triangle_vertex_1, triangle_vertex_2)
+ *   if ((triangle_edges_ignore_mask & 2U) != 0U)
+ *      ignore contacts with edge (triangle_vertex_2, triangle_vertex_3)
+ *   if ((triangle_edges_ignore_mask & 4U) != 0U)
+ *      ignore contacts with edge (triangle_vertex_3, triangle_vertex_1)
  */
 natural_32_bit  closest_points_of_triangle_and_line(
         vector3 const&  triangle_vertex_1,
@@ -208,7 +215,9 @@ natural_32_bit  closest_points_of_triangle_and_line(
         vector3*  output_triangle_closest_point_2,
         collision_shape_feature_id*  output_triangle_shape_feature_id_2,
         vector3*  output_line_closest_point_2,
-        collision_shape_feature_id*  output_line_shape_feature_id_2
+        collision_shape_feature_id*  output_line_shape_feature_id_2,
+
+        natural_8_bit const  triangle_edges_ignore_mask = 0U
         );
 
 

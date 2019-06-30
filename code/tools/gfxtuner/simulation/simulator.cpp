@@ -54,10 +54,12 @@ struct  collider_triangle_mesh_vertex_getter
 
     vector3  operator()(natural_32_bit const  triangle_index, natural_8_bit const  vertex_index) const
     {
-        return vector3(
-            ((float_32_bit const*)vertex_buffer.data().data())
-            + 3U * *(((natural_32_bit const*)index_buffer.data().data()) + 3U * triangle_index + vertex_index)
-            );
+        return vector3(((float_32_bit const*)vertex_buffer.data().data()) + 3U * read_index_buffer(triangle_index, vertex_index));
+    }
+
+    natural_32_bit  read_index_buffer(natural_32_bit const  triangle_index, natural_8_bit const  vertex_index) const
+    {
+        return *(((natural_32_bit const*)index_buffer.data().data()) + 3U * triangle_index + vertex_index);
     }
 
     qtgl::buffer  get_vertex_buffer() const { return vertex_buffer; }
@@ -1656,14 +1658,32 @@ void  simulator::render_colliders(
                                             .parent_path().string();
                                 auto  it = m_cache_of_batches_of_colliders.triangle_meshes.find(key);
                                 if (it == m_cache_of_batches_of_colliders.triangle_meshes.end())
+                                {
+                                    std::vector<std::pair<vector3,vector3> >  lines;
+                                    std::vector<vector4>  colours_of_lines;
+                                    vector4 const  ignored_edge_colour = expand34(0.5f * contract43(m_colliders_colour), 1.0f);
+                                    for (angeo::collision_object_id const  coid : collider_ptr->ids())
+                                    {
+                                        auto const&  getter = m_collision_scene_ptr->get_triangle_points_getter(coid);
+                                        natural_32_bit const  triangle_index = m_collision_scene_ptr->get_triangle_index(coid);
+                                        natural_8_bit const  edge_ignore_mask = m_collision_scene_ptr->get_trinagle_edges_ignore_mask(coid);
+
+                                        vector3 const  P1 = getter(triangle_index, 0U);
+                                        vector3 const  P2 = getter(triangle_index, 1U);
+                                        vector3 const  P3 = getter(triangle_index, 2U);
+
+                                        lines.push_back({ P1, P2 });
+                                        colours_of_lines.push_back((edge_ignore_mask & 1U) == 0U ? m_colliders_colour : ignored_edge_colour);
+                                        lines.push_back({ P2, P3 });
+                                        colours_of_lines.push_back((edge_ignore_mask & 2U) == 0U ? m_colliders_colour : ignored_edge_colour);
+                                        lines.push_back({ P3, P1 });
+                                        colours_of_lines.push_back((edge_ignore_mask & 4U) == 0U ? m_colliders_colour : ignored_edge_colour);
+                                    }
                                     it = m_cache_of_batches_of_colliders.triangle_meshes.insert({
                                                 key,
-                                                qtgl::create_triangle_mesh(
-                                                        vertices_getter_ptr->get_vertex_buffer(),
-                                                        vertices_getter_ptr->get_index_buffer(),
-                                                        m_colliders_colour
-                                                        )
+                                                qtgl::create_lines3d(lines, colours_of_lines)
                                                 }).first;
+                                }
                                 batch = it->second;
                             }
                             break;
@@ -1947,15 +1967,73 @@ void  simulator::insert_collision_trianle_mesh_to_scene_node(
 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     ASSUMPTION(node_ptr != nullptr);
+    detail::collider_triangle_mesh_vertex_getter const  getter(vertex_buffer, index_buffer);
     std::vector<angeo::collision_object_id>  collider_ids;
     m_collision_scene_ptr->insert_triangle_mesh(
             index_buffer.num_primitives(),
-            detail::collider_triangle_mesh_vertex_getter(vertex_buffer, index_buffer),
+            getter,
             node_ptr->get_world_matrix(),
             material,
             false,
             collider_ids
             );
+    {
+        // The code in this block computes (and sets) 'ignore edges' for each inserted triangle.
+
+        struct  edge_props
+        {
+            angeo::collision_object_id  triangle_coid;
+            natural_8_bit  igonre_mask;
+            natural_8_bit  other_triangle_vertex_index;
+        };
+        std::unordered_map<std::pair<natural_32_bit, natural_32_bit>, std::vector<edge_props> >  edges;
+        for (angeo::collision_object_id  coid : collider_ids)
+        {
+            natural_32_bit const  triangle_index = m_collision_scene_ptr->get_triangle_index(coid);
+            std::vector<natural_32_bit> const  indices{
+                getter.read_index_buffer(triangle_index, 0U),
+                getter.read_index_buffer(triangle_index, 1U),
+                getter.read_index_buffer(triangle_index, 2U),
+                getter.read_index_buffer(triangle_index, 0U),
+            };
+            for (natural_8_bit  i = 0U; i != 3U; ++i)
+                edges[{ std::min(indices[i], indices[i + 1]), std::max(indices[i], indices[i + 1]) }].push_back(
+                        { coid, 1U << i, (i + 2U) % 3U }
+                        );
+        }
+        for (auto const&  elem : edges)
+            if (elem.second.size() > 1UL)
+            {
+                INVARIANT(elem.second.size() == 2UL);
+
+                edge_props const&  ep0 = elem.second.front();
+                edge_props const&  ep1 = elem.second.back();
+
+                float_32_bit  distance_to_plane;
+                {
+                    vector3 const&  plane_origin =
+                            m_collision_scene_ptr->get_triangle_end_point_in_world_space(ep0.triangle_coid, ep0.other_triangle_vertex_index);
+                    vector3 const&  plane_unit_normal = m_collision_scene_ptr->get_triangle_unit_normal_in_world_space(ep0.triangle_coid);
+                    vector3 const&  point =
+                            m_collision_scene_ptr->get_triangle_end_point_in_world_space(ep1.triangle_coid, ep1.other_triangle_vertex_index);
+
+                    angeo::collision_point_and_plane(point, plane_origin, plane_unit_normal, &distance_to_plane, nullptr);
+                }
+
+                if (distance_to_plane > -0.0005f)
+                {
+                    m_collision_scene_ptr->set_trinagle_edges_ignore_mask(
+                            ep0.triangle_coid,
+                            m_collision_scene_ptr->get_trinagle_edges_ignore_mask(ep0.triangle_coid)  | ep0.igonre_mask
+                            );
+                    m_collision_scene_ptr->set_trinagle_edges_ignore_mask(
+                            ep1.triangle_coid,
+                            m_collision_scene_ptr->get_trinagle_edges_ignore_mask(ep1.triangle_coid)  | ep1.igonre_mask
+                            );
+                }
+            }
+    }
+
     scn::insert_collider(*node_ptr, id.get_record_name(), collider_ids, density_multiplier);
 
     if (scn::scene_node_ptr const  phs_node = find_nearest_rigid_body_node(node_ptr))

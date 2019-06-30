@@ -107,6 +107,8 @@ struct  collision_scene
     ///      end_point_2_in_model_space = getter_of_end_points_in_model_space(i, 1U)
     ///      end_point_3_in_model_space = getter_of_end_points_in_model_space(i, 2U)
     /// The front face of each triangle is the one defined by the counter-clock-wise orientation of vertices.
+    /// The 'edges_ignore_mask' of each triangle is set to 0U. If you want to change them, then call the function
+    /// 'set_trinagle_edges_ignore_mask' for 'collision_object_id's obtained from this function.
     void  insert_triangle_mesh(
             natural_32_bit const  num_triangles,
             std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
@@ -160,6 +162,11 @@ struct  collision_scene
     float_32_bit  get_sphere_radius(collision_object_id const  coid) const;
 
     std::function<vector3(natural_32_bit, natural_8_bit)> const&  get_triangle_points_getter(collision_object_id const  coid) const;
+    natural_32_bit  get_triangle_index(collision_object_id const  coid) const;
+    vector3 const&  get_triangle_end_point_in_world_space(collision_object_id const  coid, natural_8_bit const  end_point_index) const;
+    vector3 const&  get_triangle_unit_normal_in_world_space(collision_object_id const  coid) const;
+    natural_8_bit  get_trinagle_edges_ignore_mask(collision_object_id const  coid) const;
+    void  set_trinagle_edges_ignore_mask(collision_object_id const  coid, natural_8_bit const  mask);
 
     COLLISION_MATERIAL_TYPE  get_material(collision_object_id const  coid) const;
 
@@ -359,6 +366,8 @@ private:
 
         natural_32_bit  triangle_index;
         natural_32_bit  end_points_getter_index;
+
+        natural_8_bit  edges_ignore_mask;
     };
 
     std::vector<triangle_geometry>  m_triangles_geometry;
