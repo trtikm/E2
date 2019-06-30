@@ -8,6 +8,7 @@
 #include <angeo/mass_and_inertia_tensor.hpp>
 #include <angeo/skeleton_kinematics.hpp>
 #include <angeo/utility.hpp>
+#include <angeo/tensor_std_specialisations.hpp>
 #include <ai/skeleton_utils.hpp>
 #include <ai/action_controller_human.hpp>
 #include <qtgl/glapi.hpp>
@@ -1986,15 +1987,26 @@ void  simulator::insert_collision_trianle_mesh_to_scene_node(
             natural_8_bit  igonre_mask;
             natural_8_bit  other_triangle_vertex_index;
         };
+        natural_32_bit  vertex_counter = 0U;
+        std::unordered_map<vector3, natural_32_bit>  vertex_ids;
         std::unordered_map<std::pair<natural_32_bit, natural_32_bit>, std::vector<edge_props> >  edges;
         for (angeo::collision_object_id  coid : collider_ids)
         {
-            natural_32_bit const  triangle_index = m_collision_scene_ptr->get_triangle_index(coid);
+            auto  result = vertex_ids.insert({ m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid, 0U), vertex_counter });
+            if (result.second)
+                ++vertex_counter;
+            result = vertex_ids.insert({ m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid, 1U), vertex_counter });
+            if (result.second)
+                ++vertex_counter;
+            result = vertex_ids.insert({ m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid, 2U), vertex_counter });
+            if (result.second)
+                ++vertex_counter;
+
             std::vector<natural_32_bit> const  indices{
-                getter.read_index_buffer(triangle_index, 0U),
-                getter.read_index_buffer(triangle_index, 1U),
-                getter.read_index_buffer(triangle_index, 2U),
-                getter.read_index_buffer(triangle_index, 0U),
+                vertex_ids.at(m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid, 0U)),
+                vertex_ids.at(m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid, 1U)),
+                vertex_ids.at(m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid, 2U)),
+                vertex_ids.at(m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid, 0U)),
             };
             for (natural_8_bit  i = 0U; i != 3U; ++i)
                 edges[{ std::min(indices[i], indices[i + 1]), std::max(indices[i], indices[i + 1]) }].push_back(
