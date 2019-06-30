@@ -686,6 +686,11 @@ void  widgets::on_scene_erase_selected()
             wnd()->print_status_message("ERROR: Cannot erase '@pivot' coordinate system.", 10000);
             return;
         }
+        if (scene_record_id_reverse_builder::run(item).get_node_id().path().front().front() == '@')
+        {
+            wnd()->print_status_message("ERROR: Cannot erase simulation node (starting with '@') nor any of its children.", 10000);
+            return;
+        }
         to_erase_items.insert(as_tree_widget_item(item));
     }
 

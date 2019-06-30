@@ -286,7 +286,8 @@ void  make_menu_bar_content(menu_bar const&  w)
     w.get_edit_action_erase_selected()->setShortcut(QKeySequence::Delete);
     w.get_edit_action_erase_selected()->setToolTip(
         "Erases all selected objects from the scene. If a selected object has children, then they are all erased as well.\n"
-        "The '@pivot' coord. system cannot be erased. It presence in the selection will lead to failure of the operation."
+        "The '@pivot' coord. system cannot be erased. Also no simulation node (starting with '@') nor any of its direct\n"
+        "or indirect children can be erased."
         );
     QObject::connect(w.get_edit_action_erase_selected(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_erase_selected);
 
