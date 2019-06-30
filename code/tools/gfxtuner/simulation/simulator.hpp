@@ -330,6 +330,7 @@ private:
     CAMERA_CONTROLLER_TYPE  m_camera_controller_type_in_simulation_mode;
     qtgl::free_fly_config  m_free_fly_config;
     qtgl::free_fly_config  m_orbit_config;
+    qtgl::free_fly_config  m_only_move_camera_config;
     scn::scene_node_id  m_camera_target_node_id;
     vector3  m_camera_target_vector_in_camera_space;
     bool  m_camera_target_vector_invalidated;

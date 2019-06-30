@@ -209,13 +209,13 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
     TMPROF_BLOCK();
 
     qtgl::adjust(*m_camera,window_props());
-    auto const translated_rotated =
+    auto const free_fly_report =
             qtgl::free_fly(*m_camera->coordinate_system(),m_free_fly_config,
                            miliseconds_from_previous_call,mouse_props(),keyboard_props());
 
-    if (translated_rotated.first)
+    if (free_fly_report.translated)
         call_listeners(notifications::camera_position_updated());
-    if (translated_rotated.second)
+    if (free_fly_report.rotated)
         call_listeners(notifications::camera_orientation_updated());
 
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);

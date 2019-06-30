@@ -374,12 +374,12 @@ void simulator::next_round(float_64_bit const  seconds_from_previous_call,
     if (!is_this_pure_redraw_request)
     {
         qtgl::adjust(*m_camera, window_props());
-        auto const translated_rotated =
+        auto const free_fly_report =
             qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
                            seconds_from_previous_call, mouse_props(), keyboard_props());
-        if (translated_rotated.first)
+        if (free_fly_report.translated)
             call_listeners(simulator_notifications::camera_position_updated());
-        if (translated_rotated.second)
+        if (free_fly_report.rotated)
             call_listeners(simulator_notifications::camera_orientation_updated());
 
         if (!is_network_being_constructed() && g_constructed_network != nullptr)

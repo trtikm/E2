@@ -74,9 +74,7 @@ free_fly_action::free_fly_action(
 }
 
 
-std::pair<bool, // was any translation performed ?
-          bool  // was any rotation performed ?
->  free_fly(angeo::coordinate_system&  coord_system,
+free_fly_report  free_fly(angeo::coordinate_system&  coord_system,
                free_fly_config const&  config,
                float_64_bit const  seconds_from_previous_call,
                mouse_props const&  mouse_info,

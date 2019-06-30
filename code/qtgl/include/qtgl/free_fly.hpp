@@ -63,9 +63,30 @@ typedef std::shared_ptr<free_fly_config>  free_fly_config_ptr;
 typedef std::shared_ptr<free_fly_config const>  free_fly_config_const_ptr;
 
 
-std::pair<bool, // was any translation performed ?
-          bool  // was any rotation performed ?
->  free_fly(angeo::coordinate_system&  coord_system,
+struct  free_fly_report
+{
+    bool  translated;
+    bool  rotated;
+
+    free_fly_report()
+        : translated(false)
+        , rotated(false)
+    {}
+
+    free_fly_report(bool const  translated_, bool const  rotated_)
+        : translated(translated_)
+        , rotated(rotated_)
+    {}
+
+    free_fly_report&  operator+=(free_fly_report const&  other)
+    {
+        translated = translated || other.translated;
+        rotated = rotated || other.rotated;
+        return *this;
+    }
+};
+
+free_fly_report  free_fly(angeo::coordinate_system&  coord_system,
            free_fly_config const&  config,
            float_64_bit const  seconds_from_previous_call,
            mouse_props const&  mouse_info,

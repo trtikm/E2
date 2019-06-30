@@ -209,6 +209,57 @@ simulator::simulator()
                     qtgl::free_fly_controler::mouse_button_pressed(qtgl::MIDDLE_MOUSE_BUTTON()),
                 }
             }
+    , m_only_move_camera_config
+            {
+                {
+                    false,
+                    false,
+                    2U,
+                    2U,
+                    -15.0f,
+                    qtgl::free_fly_controler::keyboard_key_pressed(qtgl::KEY_W()),
+                },
+                {
+                    false,
+                    false,
+                    2U,
+                    2U,
+                    15.0f,
+                    qtgl::free_fly_controler::keyboard_key_pressed(qtgl::KEY_S()),
+                },
+                {
+                    false,
+                    false,
+                    0U,
+                    2U,
+                    -15.0f,
+                    qtgl::free_fly_controler::keyboard_key_pressed(qtgl::KEY_A()),
+                },
+                {
+                    false,
+                    false,
+                    0U,
+                    2U,
+                    15.0f,
+                    qtgl::free_fly_controler::keyboard_key_pressed(qtgl::KEY_D()),
+                },
+                {
+                    false,
+                    false,
+                    1U,
+                    2U,
+                    -15.0f,
+                    qtgl::free_fly_controler::keyboard_key_pressed(qtgl::KEY_Q()),
+                },
+                {
+                    false,
+                    false,
+                    1U,
+                    2U,
+                    15.0f,
+                    qtgl::free_fly_controler::keyboard_key_pressed(qtgl::KEY_E()),
+                },
+            }
     , m_camera_target_node_id()
     , m_camera_target_vector_in_camera_space(vector3_zero())
     , m_camera_target_vector_invalidated(true)
@@ -522,7 +573,7 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
         qtgl::adjust(*m_camera,window_props());
 
         bool  camera_controller_changed = false;
-        std::pair<bool, bool>  translated_rotated{false, false};
+        qtgl::free_fly_report  free_fly_report;
         if (paused())
         {
             if (m_scene_selection.get_records().empty()
@@ -568,11 +619,10 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
                 matrix44 T;
                 angeo::to_base_matrix(*m_camera->coordinate_system(), T);
 
-                translated_rotated =
-                    qtgl::free_fly(*m_camera->coordinate_system(), m_orbit_config,
-                                   seconds_from_previous_call, mouse_props(), keyboard_props());
-                if (translated_rotated.second == true)
-                    translated_rotated.first = true;
+                free_fly_report += qtgl::free_fly(*m_camera->coordinate_system(), m_orbit_config,
+                                                  seconds_from_previous_call, mouse_props(), keyboard_props());
+                if (free_fly_report.rotated == true)
+                    free_fly_report.translated = true;
 
                 matrix44 F;
                 angeo::from_base_matrix(*m_camera->coordinate_system(), F);
@@ -586,8 +636,8 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
                     m_camera_controller_type_in_edit_mode = CAMERA_CONTROLLER_FREE_FLY;
                     camera_controller_changed = true;
                 }
-                translated_rotated = qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
-                                                     seconds_from_previous_call, mouse_props(), keyboard_props());
+                free_fly_report += qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
+                                                  seconds_from_previous_call, mouse_props(), keyboard_props());
             }
         }
         else if (scn::scene_node_const_ptr const  node_ptr = get_scene_node(m_camera_target_node_id))
@@ -606,10 +656,15 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
             }
 
             if (m_camera_controller_type_in_simulation_mode == CAMERA_CONTROLLER_FREE_FLY)
-                translated_rotated = qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
-                                                    seconds_from_previous_call, mouse_props(), keyboard_props());
+                free_fly_report += qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
+                                                  seconds_from_previous_call, mouse_props(), keyboard_props());
             else
             {
+                free_fly_report += qtgl::free_fly(*m_camera->coordinate_system(), m_only_move_camera_config,
+                                                  seconds_from_previous_call, mouse_props(), keyboard_props());
+                if (free_fly_report.translated)
+                    m_camera_target_vector_invalidated =true;
+
                 vector3 const  center = transform_point(vector3_zero(), node_ptr->get_world_matrix());
                 if (m_camera_target_vector_invalidated)
                 {
@@ -624,10 +679,10 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
                 {
                 case CAMERA_CONTROLLER_ORBIT:
                     {
-                        translated_rotated = qtgl::free_fly(*m_camera->coordinate_system(), m_orbit_config,
+                        free_fly_report += qtgl::free_fly(*m_camera->coordinate_system(), m_orbit_config,
                                                             seconds_from_previous_call, mouse_props(), keyboard_props());
-                        if (translated_rotated.second == true)
-                            translated_rotated.first = true;
+                        if (free_fly_report.rotated == true)
+                            free_fly_report.translated = true;
 
                         matrix44 F;
                         angeo::from_base_matrix(*m_camera->coordinate_system(), F);
@@ -637,10 +692,10 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
                     break;
                 case CAMERA_CONTROLLER_FOLLOW:
                     {
-                        translated_rotated = qtgl::free_fly(*m_camera->coordinate_system(), m_orbit_config,
+                        free_fly_report += qtgl::free_fly(*m_camera->coordinate_system(), m_orbit_config,
                                                             seconds_from_previous_call, mouse_props(), keyboard_props());
 
-                        translated_rotated.first = true;
+                        free_fly_report.translated = true;
                         vector3  d = m_camera->coordinate_system()->origin() - center;
                         float_32_bit const  d_len = length(d);
                         if (d_len > 0.0001f)
@@ -651,15 +706,15 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
                     break;
                 case CAMERA_CONTROLLER_LOOK_AT:
                     {
-                        translated_rotated.second = true;
+                        free_fly_report.rotated = true;
                         vector3  d = m_camera->coordinate_system()->origin() - center;
                         qtgl::look_at(*m_camera->coordinate_system(), center, length(d));
                     }
                     break;
                 case CAMERA_CONTROLLER_FOLLOW_AND_LOOK_AT:
                     {
-                        translated_rotated.first = true;
-                        translated_rotated.second = true;
+                        free_fly_report.translated = true;
+                        free_fly_report.rotated = true;
                         qtgl::look_at(*m_camera->coordinate_system(), center, length(m_camera_target_vector_in_camera_space));
                 }
                     break;
@@ -668,14 +723,14 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
             }
         }
         else
-            translated_rotated = qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
-                                                seconds_from_previous_call, mouse_props(), keyboard_props());
+            free_fly_report += qtgl::free_fly(*m_camera->coordinate_system(), m_free_fly_config,
+                                              seconds_from_previous_call, mouse_props(), keyboard_props());
 
         if (camera_controller_changed)
             call_listeners(simulator_notifications::camera_controller_changed());
-        if (translated_rotated.first)
+        if (free_fly_report.translated)
             call_listeners(simulator_notifications::camera_position_updated());
-        if (translated_rotated.second)
+        if (free_fly_report.rotated)
             call_listeners(simulator_notifications::camera_orientation_updated());
 
         bool const  old_paused = paused();
