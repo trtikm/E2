@@ -516,8 +516,20 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
         }
     };
 
+    struct  constraint_no_contact : public constraint
+    {
+        bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_no_contact const&>(other); }
+        bool  operator==(constraint_no_contact const&  other) const { return true; }
+    };
+
     using  action = detail::meta::action;
     using  action_ptr = detail::meta::action_ptr;
+
+    struct  action_none : public action
+    {
+        bool  equals(action const&  other) const override { return *this == dynamic_cast<action_none const&>(other); }
+        bool  operator==(action_none const&  other) const { return true; }
+    };
 
     struct  action_chase_ideal_linear_velocity : public action
     {

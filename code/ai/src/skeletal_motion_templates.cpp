@@ -260,6 +260,11 @@ constraints_data::constraints_data(async::finalise_load_on_destroy_ptr const  fi
                     constraint.angle_in_radians = params.at(3);
                     output.push_back(last != nullptr && *last == constraint ? last : std::make_shared<skeletal_motion_templates::constraint_contact_normal_cone>(constraint));
                 }
+                else if (keyword == "no_contact")
+                {
+                    if (!params.empty()) throw std::runtime_error(msgstream() << "Wrong number of parameters for no_contact at line " << line_index << "in the file '" << pathname << "'.");
+                    output.push_back(last != nullptr && *last == skeletal_motion_templates::constraint_no_contact() ? last : std::make_shared<skeletal_motion_templates::constraint_no_contact>());
+                }
                 else
                     NOT_IMPLEMENTED_YET();
             },
@@ -294,7 +299,12 @@ actions_data::actions_data(async::finalise_load_on_destroy_ptr const  finaliser)
                action_ptr const&  last
                ) -> void
             {
-                if (keyword == "chase_ideal_linear_velocity")
+                if (keyword == "none")
+                {
+                    if (!params.empty()) throw std::runtime_error(msgstream() << "Wrong number of parameters for meta action 'none' at line " << line_index << "in the file '" << pathname << "'.");
+                    output.push_back(last != nullptr && *last == skeletal_motion_templates::action_none() ? last : std::make_shared<skeletal_motion_templates::action_none>());
+                }
+                else if (keyword == "chase_ideal_linear_velocity")
                 {
                     if (params.size() != 2UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for chase_ideal_linear_velocity at line " << line_index << "in the file '" << pathname << "'.");
                     skeletal_motion_templates::action_chase_ideal_linear_velocity  action;
