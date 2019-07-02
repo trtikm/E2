@@ -201,13 +201,55 @@ struct  motion_action_data__dont_move : public action_controller_human::motion_a
 };
 
 
-void  compute_motion_object_acceleration_from_motion_actions(
+skeletal_motion_templates::constraint_ptr  get_first_satisfied_meta_constraint(
+        skeletal_motion_templates::motion_template_cursor const&  cursor,
+        skeletal_motion_templates const&  motion_templates,
+        blackboard::collision_contacts_map  collision_contacts,
+        scene::node_id const&  motion_object_nid,
+        matrix44 const&  motion_object_from_base_matrix
+        )
+{
+    for (auto const  any_constraint_ptr : motion_templates.motions_map().at(cursor.motion_name).constraints.at(cursor.keyframe_index))
+    {
+        if (auto constraint_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::constraint_contact_normal_cone const>(any_constraint_ptr))
+        {
+            vector3 const  cone_unit_axis_vector_in_world_space =
+                    transform_vector(constraint_ptr->unit_axis, motion_object_from_base_matrix);
+            auto const  begin_and_end = collision_contacts.equal_range(motion_object_nid);
+            for (auto  it = begin_and_end.first; it != begin_and_end.second; ++it)
+                if (it->second.normal_force_magnitude > 0.001f &&
+                    angle(it->second.unit_normal, cone_unit_axis_vector_in_world_space) < constraint_ptr->angle_in_radians)
+                {
+                    return constraint_ptr;
+                }
+        }
+        else if (auto constraint_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::constraint_no_contact const>(any_constraint_ptr))
+        {
+            auto const  begin_and_end = collision_contacts.equal_range(motion_object_nid);
+            if (begin_and_end.first == begin_and_end.second)
+            {
+                return constraint_ptr;
+            }
+        }
+        else
+            NOT_IMPLEMENTED_YET();
+    }
+
+    return nullptr;
+}
+
+
+bool  compute_motion_object_acceleration_from_motion_actions(
         action_controller_human::desired_props const&  desire,
         float_32_bit const  time_step_in_seconds,
         skeletal_motion_templates::motion_template const&  motion_template,
         natural_32_bit const  current_keyframe_index,
         natural_32_bit const  previous_keyframe_index,
         std::vector<skeletal_motion_templates::action_ptr> const&  motion_object_action_props,
+        std::vector<skeletal_motion_templates::constraint_ptr> const&  motion_object_constraint_props,
+        std::vector<skeletal_motion_templates::constraint_ptr> const&  satisfied_constraints,
         vector3 const&  forward_direction_in_anim_space,
         vector3 const&  up_direction_in_anim_space,
         vector3 const&  motion_object_origin,
@@ -226,11 +268,28 @@ void  compute_motion_object_acceleration_from_motion_actions(
 {
     TMPROF_BLOCK();
 
+    {
+        bool  is_constraint_satisfied = false;
+        for (auto const  satisfied_constraint : satisfied_constraints)
+        {
+            for (auto const  any_constraint_ptr : motion_object_constraint_props)
+                if (*any_constraint_ptr == *satisfied_constraint)
+                {
+                    is_constraint_satisfied = true;
+                    break;
+                }
+            if (is_constraint_satisfied == true)
+                break;
+        }
+        if (is_constraint_satisfied == false)
+            return false;
+    }
+
     natural_32_bit const  multi_step_coef = current_keyframe_index - previous_keyframe_index;
     float_32_bit const  motion_object_linear_speed = length(motion_object_linear_velocity_in_world_space);
     action_controller_human::motion_action_data_map  new_motion_action_data;
     for (auto const  action_props : motion_object_action_props)
-        if (action_props == nullptr)
+        if (action_props == nullptr || std::dynamic_pointer_cast<skeletal_motion_templates::action_none const>(action_props) != nullptr)
             continue;
         else if (auto const  action_ptr =
             std::dynamic_pointer_cast<skeletal_motion_templates::action_chase_ideal_linear_velocity const>(action_props))
@@ -412,6 +471,8 @@ void  compute_motion_object_acceleration_from_motion_actions(
             NOT_IMPLEMENTED_YET();
 
     output_motion_action_data.swap(new_motion_action_data);
+
+    return true;
 }
 
 
@@ -424,7 +485,8 @@ struct  find_best_keyframe_constants
             float_32_bit const  search_time_horizon_in_seconds_,
             float_32_bit const  time_step_for_motion_actions_in_seconds_,
             vector3 const&  gravity_acceleration_in_world_space_,
-            vector3 const&  motion_object_origin_in_world_space_
+            vector3 const&  motion_object_origin_in_world_space_,
+            std::vector<skeletal_motion_templates::constraint_ptr> const* const  satisfied_constraints_
             )
         : desire(desire_)
         , motion_templates(motion_templates_)
@@ -433,6 +495,7 @@ struct  find_best_keyframe_constants
         , time_step_for_motion_actions_in_seconds(time_step_for_motion_actions_in_seconds_)
         , gravity_acceleration_in_world_space(gravity_acceleration_in_world_space_)
         , motion_object_origin_in_world_space(motion_object_origin_in_world_space_)
+        , satisfied_constraints(satisfied_constraints_)
     {}
 
     action_controller_human::desired_props const*  desire;
@@ -442,6 +505,7 @@ struct  find_best_keyframe_constants
     float_32_bit  time_step_for_motion_actions_in_seconds;
     vector3  gravity_acceleration_in_world_space;
     vector3  motion_object_origin_in_world_space;
+    std::vector<skeletal_motion_templates::constraint_ptr> const*  satisfied_constraints;
 };
 
 
@@ -538,7 +602,7 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
         skeletal_motion_templates::motion_template_cursor const&  cursor_override,
         find_best_keyframe_constants const&  constants
         )
-    : cost()
+    : cost(predecessor.cost)
     , pivot(predecessor.pivot)
     , cursor{ cursor_override.motion_name, cursor_override.keyframe_index + 1U }
     , time_taken_in_seconds(predecessor.time_taken_in_seconds)
@@ -585,13 +649,15 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
     vector3  motion_object_angular_acceleration = vector3_zero();
     action_controller_human::motion_action_data_map  motion_action_data;    // Not used (but still must be passed)
     float_32_bit* const  motion_error_ptr = pivot.cursor.motion_name.empty() ? &motion_error_wrt_ideal : nullptr;
-    detail::compute_motion_object_acceleration_from_motion_actions(
+    bool const  success = detail::compute_motion_object_acceleration_from_motion_actions(
             *constants.desire,
             time_delta_in_seconds,
             motion_template,
             cursor.keyframe_index,
             cursor_override.keyframe_index,
             motion_template.actions.at(cursor.keyframe_index),
+            motion_template.constraints.at(cursor.keyframe_index),
+            *constants.satisfied_constraints,
             constants.motion_templates.directions().forward(),
             constants.motion_templates.directions().up(),
             motion_object_origin_in_world_space,
@@ -637,7 +703,14 @@ find_best_keyframe_queue_record::find_best_keyframe_queue_record(
     float_32_bit const  orientation_error =
             angle(motion_object_forward_direction_in_world_space, constants.desire->forward_unit_vector_in_world_space) / PI();
 
-    cost = position_error + orientation_error;
+    float_32_bit  constraints_error = 0.0f;
+    if (success == false)
+    {
+        float_32_bit const  coef = std::max(constants.search_time_horizon_in_seconds - time_taken_in_seconds, 0.0f);
+        constraints_error = 1e6f * coef;
+    }
+
+    cost += position_error + orientation_error + constraints_error;
 }
 
 
@@ -863,34 +936,21 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
     }
 
     // Check whether the condition for applying forces towards the desired motion of the agent is satisfied or not.
-    bool  is_motion_constraint_satisfied = false;
-    for (auto const  any_constraint_ptr :
-            get_blackboard()->m_motion_templates.motions_map().at(m_current_motion_template_cursor.motion_name).constraints
-                                                              .at(m_current_motion_template_cursor.keyframe_index))
+    std::vector<skeletal_motion_templates::constraint_ptr>  satisfied_constraints;
     {
-        if (auto constraint_ptr =
-                std::dynamic_pointer_cast<skeletal_motion_templates::constraint_contact_normal_cone const>(any_constraint_ptr))
-        {
-            vector3 const  cone_unit_axis_vector_in_world_space =
-                    transform_vector(constraint_ptr->unit_axis, motion_object_from_base_matrix);
-            auto const  begin_and_end = get_blackboard()->m_collision_contacts.equal_range(m_motion_object_nid);
-            for (auto  it = begin_and_end.first; it != begin_and_end.second; ++it)
-                if (it->second.normal_force_magnitude > 0.001f &&
-                    angle(it->second.unit_normal, cone_unit_axis_vector_in_world_space) < constraint_ptr->angle_in_radians)
-                {
-                    is_motion_constraint_satisfied = true;
-                    break;
-                }
-        }
-        else
-            NOT_IMPLEMENTED_YET();
-
-        if (is_motion_constraint_satisfied)
-            break;
+        auto const  satisfied_constraint_ptr = get_first_satisfied_meta_constraint(
+                m_current_motion_template_cursor,
+                get_blackboard()->m_motion_templates,
+                get_blackboard()->m_collision_contacts,
+                m_motion_object_nid,
+                motion_object_from_base_matrix
+                );
+        if (satisfied_constraint_ptr != nullptr)
+            satisfied_constraints.push_back(satisfied_constraint_ptr);
     }
 
     // Apply forces towards the desired motion, if the condition for doing so is satified.
-    if (is_motion_constraint_satisfied == true)
+    if (!satisfied_constraints.empty())
     {
         vector3  motion_object_linear_acceleration = vector3_zero();
         vector3  motion_object_angular_acceleration = vector3_zero();
@@ -902,6 +962,9 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                 m_template_motion_info.dst_pose.keyframe_index - 1U,
                 get_blackboard()->m_motion_templates.motions_map().at(m_current_motion_template_cursor.motion_name).actions
                                                                   .at(m_current_motion_template_cursor.keyframe_index),
+                get_blackboard()->m_motion_templates.motions_map().at(m_current_motion_template_cursor.motion_name).constraints
+                                                                  .at(m_current_motion_template_cursor.keyframe_index),
+                satisfied_constraints,
                 get_blackboard()->m_motion_templates.directions().forward(),
                 get_blackboard()->m_motion_templates.directions().up(),
                 motion_object_frame.origin(),
@@ -931,6 +994,21 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         time_step_in_seconds -= time_till_dst_pose;
         INVARIANT(time_step_in_seconds >= 0.0f);
 
+        for (auto const&  eq_cursor : get_blackboard()->m_motion_templates.motions_map().at(m_template_motion_info.dst_pose.motion_name)
+                                                                                        .keyframe_equivalences
+                                                                                        .at(m_template_motion_info.dst_pose.keyframe_index))
+        {
+            auto const  satisfied_constraint_ptr = get_first_satisfied_meta_constraint(
+                    eq_cursor,
+                    get_blackboard()->m_motion_templates,
+                    get_blackboard()->m_collision_contacts,
+                    m_motion_object_nid,
+                    motion_object_from_base_matrix
+                    );
+            if (satisfied_constraint_ptr != nullptr)
+                satisfied_constraints.push_back(satisfied_constraint_ptr);
+        }
+
         m_template_motion_info.src_pose = m_template_motion_info.dst_pose;
         m_template_motion_info.consumed_time_in_seconds = 0.0f;
         m_template_motion_info.total_interpolation_time_in_seconds =
@@ -942,7 +1020,8 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                                 1.0f,
                                 0.25f,
                                 gravity_accel,
-                                motion_object_frame.origin()
+                                motion_object_frame.origin(),
+                                &satisfied_constraints
                                 ),
                         detail::find_best_keyframe_queue_record(
                                 m_template_motion_info.src_pose,

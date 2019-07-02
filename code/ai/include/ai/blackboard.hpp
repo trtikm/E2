@@ -17,6 +17,8 @@ struct blackboard
 {
     virtual ~blackboard() {}
 
+    using  collision_contacts_map = std::unordered_multimap<scene::node_id, scene::collicion_contant_info>;
+
     skeletal_motion_templates  m_motion_templates;
 
     agent_id  m_agent_id;
@@ -24,7 +26,7 @@ struct blackboard
     scene_ptr  m_scene;
     scene::node_id  m_agent_nid;
     std::vector<scene::node_id>  m_bone_nids;
-    std::unordered_multimap<scene::node_id, scene::collicion_contant_info>  m_collision_contacts;
+    collision_contacts_map  m_collision_contacts;
 };
 
 
