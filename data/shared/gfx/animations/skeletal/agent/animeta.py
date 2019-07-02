@@ -632,6 +632,8 @@ constraints <constraint-type>
         - 'vec_down_mult * vec_down' defines the axis of cone (unit vector).
         - 'angle' defines a maximal angle between a current normal and the axis
                   of the cone.
+    * 'no_contact':
+        - the motion object of the agent cannot have a contact with any object
     Each constraint is assumed to be in the coordinate system of the reference
     frame of the animation (see the command 'reference_frames').
     The computed constraints are saved into file:
@@ -659,6 +661,8 @@ def command_constraints():
                 f.write(_float_to_string(state.vec_down_mult * state.vec_down[1]) + "\n")
                 f.write(_float_to_string(state.vec_down_mult * state.vec_down[2]) + "\n")
                 f.write(_float_to_string(state.angle) + "\n")
+            elif Config.instance.cmdline.arguments[0] == "no_contact":
+                pass    # no arguments
             else:
                 raise Exception("Unknown constraint type '" + Config.instance.cmdline.arguments[0] + "'.")
 
@@ -1237,6 +1241,10 @@ def command_motion_actions():
 def command_reference_frames_help():
     return """
 reference_frames  move_straight|
+                  turn_around|
+                  turn_around_uniform|
+                  all_same_as_first|
+                  all_same
     For each keyframe in the work_dir/anim_dir computes a reference frame
     using a procedure identified by the argument. Here is description of
     the available procedures:
@@ -1296,6 +1304,22 @@ reference_frames  move_straight|
         <num-keyframes>))', where 'vec_down_mult', 'vec_down', and
         'angle' are state variables and the <num-keyframes> is automatically
         inferred from the animation in the 'anim_dir'.
+    * all_same_as_first:
+        for each keyframe the computed reference frame looks as this:
+            reference_frame {
+                "pos": pivot + t * vec_fwd,
+                "rot": basis_vectors_to_quaternion(
+                            cross_product(
+                                vec_fwd_mult * vec_fwd,
+                                vec_down_mult * vec_down
+                                ),
+                            vec_fwd_mult * vec_fwd,
+                            vec_down_mult * vec_down
+                            )
+            }
+        where t is a solution of equations:
+            X = pivot + t * vec_fwd
+            vec_fwd * (X - keyframe["frames_of_bones"][0]["pos"]) = 0
     * all_same:
         for each keyframe the computed reference frame looks as this:
             reference_frame {
@@ -1357,7 +1381,7 @@ def command_reference_frames():
                         rot_axis
                         )
             meta_reference_frames.append({"pos": state.pivot, "rot": rot})
-    elif Config.instance.cmdline.arguments[0] == "all_same":
+    elif Config.instance.cmdline.arguments[0] == "all_same_as_first":
         motion_direction = numpy.array(state.vec_fwd)
         rot = _basis_vectors_to_quaternion(
                     numpy.cross(state.vec_fwd_mult * motion_direction, state.vec_down_mult * numpy.array(state.vec_down)),
@@ -1368,6 +1392,15 @@ def command_reference_frames():
         pos = numpy.add(state.pivot, t * motion_direction)
         for _ in range(len(keyframes)):
             meta_reference_frames.append({"pos": pos, "rot": rot})
+    elif Config.instance.cmdline.arguments[0] == "all_same":
+        motion_direction = numpy.array(state.vec_fwd)
+        rot = _basis_vectors_to_quaternion(
+                    numpy.cross(state.vec_fwd_mult * motion_direction, state.vec_down_mult * numpy.array(state.vec_down)),
+                    state.vec_fwd_mult * motion_direction,
+                    state.vec_down_mult * numpy.array(state.vec_down)
+                    )
+        for _ in range(len(keyframes)):
+            meta_reference_frames.append({"pos": state.pivot, "rot": rot})
     else:
         raise Exception("Unknown argument '" + Config.instance.cmdline.arguments[0] + "'.")
     with open(_get_meta_reference_frames_pathname(), "w") as f:
