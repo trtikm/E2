@@ -3,5 +3,6 @@
 /temp
 /.idea
 /.vscode
+/.vs
 *.user
 animeta_state.json
