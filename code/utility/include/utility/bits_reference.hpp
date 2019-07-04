@@ -76,7 +76,9 @@ struct bits_const_reference
     {}
 
     bits_const_reference(bits_reference const& bits);
+    bits_const_reference(bits_reference&& bits);
     bits_const_reference&  operator=(bits_reference const& bits);
+    bits_const_reference&  operator=(bits_reference&& bits);
 
     natural_8_bit const*  first_byte_ptr() const { return m_data.first_byte_ptr(); }
     natural_8_bit  shift_in_the_first_byte() const { return m_data.shift_in_the_first_byte(); }

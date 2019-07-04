@@ -6,3 +6,4 @@
 /.vs
 *.user
 animeta_state.json
+/CMakeSettings.json

@@ -2,6 +2,7 @@
 #   define NETLAB_NETWORK_INDICES_HPP_INCLUDED
 
 #   include <utility/basic_numeric_types.hpp>
+#   include <functional>
 #   include <limits>
 
 namespace netlab {

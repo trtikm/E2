@@ -4,6 +4,7 @@
 #   include <utility/basic_numeric_types.hpp>
 #   include <map>
 #   include <set>
+#   include <string>
 
 namespace qtgl {
 

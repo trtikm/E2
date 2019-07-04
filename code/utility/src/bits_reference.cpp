@@ -185,7 +185,21 @@ bits_const_reference::bits_const_reference(bits_reference const& bits)
     : m_data(const_cast<natural_8_bit*>(bits.first_byte_ptr()),bits.shift_in_the_first_byte(),bits.num_bits())
 {}
 
+bits_const_reference::bits_const_reference(bits_reference&&  bits)
+    : m_data(const_cast<natural_8_bit*>(bits.first_byte_ptr()), bits.shift_in_the_first_byte(), bits.num_bits())
+{}
+
 bits_const_reference&  bits_const_reference::operator=(bits_reference const& bits)
+{
+    m_data = private_internal_implementation_details::bits_reference_impl(
+                    const_cast<natural_8_bit*>(bits.first_byte_ptr()),
+                    bits.shift_in_the_first_byte(),
+                    bits.num_bits()
+                    );
+    return *this;
+}
+
+bits_const_reference&  bits_const_reference::operator=(bits_reference&&  bits)
 {
     m_data = private_internal_implementation_details::bits_reference_impl(
                     const_cast<natural_8_bit*>(bits.first_byte_ptr()),

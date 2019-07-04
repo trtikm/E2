@@ -6,6 +6,7 @@
 
 struct my_cell
 {
+    my_cell(bits_reference const& bits) : m_count(bits_to_value<natural_32_bit>(bits)) {}
     my_cell(bits_const_reference const& bits) : m_count(bits_to_value<natural_32_bit>(bits)) {}
     void  operator>>(bits_reference const& bits) const { value_to_bits(count(),bits); }
     void  increment() noexcept { ++m_count; }

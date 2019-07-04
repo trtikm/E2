@@ -22,6 +22,9 @@ struct tissue_element
     typedef natural_32_bit counter_type;
     tissue_element() : m_counter(0U) {}
     explicit tissue_element(counter_type const initval) : m_counter(initval) {}
+    explicit tissue_element(bits_reference const& bits)
+        : m_counter(bits_to_value<natural_32_bit>(bits))
+    {}
     explicit tissue_element(bits_const_reference const& bits)
         : m_counter(bits_to_value<natural_32_bit>(bits))
     {}

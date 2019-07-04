@@ -153,10 +153,10 @@ private:
 };
 
 template<typename element_type__>
-functions2d<element_type__>::functions2d(natural_32_bit const  num_functions = 1U)
+functions2d<element_type__>::functions2d(natural_32_bit const  num_functions)
     : m_x_axis_data()
-    , m_functions(num_functions,{})
-    , m_draw_styles(num_functions,{})
+    , m_functions(num_functions,std::vector<element_type__>{})
+    , m_draw_styles(num_functions, std::vector<DRAW_STYLE_2D>{})
     , m_legends(num_functions,"")
 {
     ASSUMPTION(num_functions > 0U);
@@ -167,42 +167,42 @@ functions2d<element_type__>::functions2d(natural_32_bit const  num_functions = 1
 }
 
 template<typename element_type__>
-std::vector<element_type__> const& functions2d<element_type__>::f(natural_32_bit const function_index = 0U) const
+std::vector<element_type__> const& functions2d<element_type__>::f(natural_32_bit const function_index) const
 {
     ASSUMPTION(function_index < m_functions.size());
     return m_functions.at(function_index);
 }
 
 template<typename element_type__>
-std::vector<element_type__>& functions2d<element_type__>::f(natural_32_bit const function_index = 0U)
+std::vector<element_type__>& functions2d<element_type__>::f(natural_32_bit const function_index)
 {
     ASSUMPTION(function_index < m_functions.size());
     return m_functions.at(function_index);
 }
 
 template<typename element_type__>
-std::vector<DRAW_STYLE_2D> const& functions2d<element_type__>::f_style(natural_32_bit const function_index = 0U) const
+std::vector<DRAW_STYLE_2D> const& functions2d<element_type__>::f_style(natural_32_bit const function_index) const
 {
     ASSUMPTION(function_index < m_draw_styles.size());
     return m_draw_styles.at(function_index);
 }
 
 template<typename element_type__>
-std::vector<DRAW_STYLE_2D>& functions2d<element_type__>::f_style(natural_32_bit const function_index = 0U)
+std::vector<DRAW_STYLE_2D>& functions2d<element_type__>::f_style(natural_32_bit const function_index)
 {
     ASSUMPTION(function_index < m_draw_styles.size());
     return m_draw_styles.at(function_index);
 }
 
 template<typename element_type__>
-std::string const& functions2d<element_type__>::f_legend(natural_32_bit const function_index = 0U) const
+std::string const& functions2d<element_type__>::f_legend(natural_32_bit const function_index) const
 {
     ASSUMPTION(function_index < m_legends.size());
     return m_legends.at(function_index);
 }
 
 template<typename element_type__>
-std::string& functions2d<element_type__>::f_legend(natural_32_bit const function_index = 0U)
+std::string& functions2d<element_type__>::f_legend(natural_32_bit const function_index)
 {
     ASSUMPTION(function_index < m_legends.size());
     return m_legends.at(function_index);
