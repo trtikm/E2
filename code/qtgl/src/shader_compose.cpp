@@ -87,6 +87,11 @@ static std::string  uniform(FS_UNIFORM const  symbolic_name, std::unordered_set<
                       + (num_elements < 2U ? std::string() : "[" + std::to_string(num_elements) + "]") + ";";
 }
 
+static std::string  vs_backward_compatibility_declarations()
+{
+    return "out gl_PerVertex { vec4 gl_Position; float gl_PointSize; float gl_ClipDistance[]; };";
+}
+
 static void  add_new_line_terminators(std::vector<std::string>&  lines_of_shader_code)
 {
     for (auto& line : lines_of_shader_code)
@@ -144,6 +149,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                 "#version 420",
 
+                                vs_backward_compatibility_declarations(),
+
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                 varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
 
@@ -159,6 +166,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             };
                             vs_uid_instancing = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
                                 "#version 420",
+
+                                vs_backward_compatibility_declarations(),
 
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input_instancing),
                                 varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input_instancing),
@@ -178,6 +187,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         {
                             vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                 "#version 420",
+
+                                vs_backward_compatibility_declarations(),
 
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                 varying("in_indices_of_matrices", VS_IN::BINDING_IN_INDICES_OF_MATRICES, vs_input),
@@ -228,6 +239,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                 "#version 420",
 
+                                vs_backward_compatibility_declarations(),
+
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                 varying("in_colour", VS_IN::BINDING_IN_DIFFUSE, vs_input),
                                 varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
@@ -243,6 +256,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             };
                             vs_uid_instancing = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
                                 "#version 420",
+
+                                vs_backward_compatibility_declarations(),
 
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input_instancing),
                                 varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input_instancing),
@@ -262,6 +277,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         {
                             vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                 "#version 420",
+
+                                vs_backward_compatibility_declarations(),
 
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                 varying("in_colour", VS_IN::BINDING_IN_DIFFUSE, vs_input),
@@ -362,6 +379,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                 "#version 420",
 
+                                vs_backward_compatibility_declarations(),
+
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                 varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
                                 varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
@@ -377,6 +396,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             };
                             vs_uid_instancing = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
                                 "#version 420",
+
+                                vs_backward_compatibility_declarations(),
 
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input_instancing),
                                 varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input_instancing),
@@ -396,6 +417,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         {
                             vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                 "#version 420",
+
+                                vs_backward_compatibility_declarations(),
 
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                 varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
@@ -463,6 +486,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         {
                             vs_uid_instancing = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
                                 "#version 420",
+
+                                vs_backward_compatibility_declarations(),
 
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input_instancing),
                                 varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input_instancing),
@@ -559,6 +584,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                 vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                                     "#version 420",
 
+                                                    vs_backward_compatibility_declarations(),
+
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
                                                     varying("out_colour", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
@@ -585,6 +612,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                 };
                                                 vs_uid_instancing = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
                                                     "#version 420",
+
+                                                    vs_backward_compatibility_declarations(),
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input_instancing),
                                                     varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input_instancing),
@@ -615,6 +644,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             {
                                                 vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                                     "#version 420",
+
+                                                    vs_backward_compatibility_declarations(),
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
@@ -680,6 +711,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                 vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                                     "#version 420",
 
+                                                    vs_backward_compatibility_declarations(),
+
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
                                                     varying("in_colour", VS_IN::BINDING_IN_DIFFUSE, vs_input),
@@ -707,6 +740,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                 };
                                                 vs_uid_instancing = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
                                                     "#version 420",
+
+                                                    vs_backward_compatibility_declarations(),
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input_instancing),
                                                     varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input_instancing),
@@ -738,6 +773,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             {
                                                 vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                                     "#version 420",
+
+                                                    vs_backward_compatibility_declarations(),
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
@@ -853,6 +890,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                 vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                                     "#version 420",
 
+                                                    vs_backward_compatibility_declarations(),
+
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
                                                     varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
@@ -881,6 +920,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                 };
                                                 vs_uid_instancing = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
                                                     "#version 420",
+
+                                                    vs_backward_compatibility_declarations(),
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input_instancing),
                                                     varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input_instancing),
@@ -913,6 +954,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             {
                                                 vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                                     "#version 420",
+
+                                                    vs_backward_compatibility_declarations(),
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
@@ -999,6 +1042,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             {
                                                 vs_uid_instancing = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
                                                     "#version 420",
+
+                                                    vs_backward_compatibility_declarations(),
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input_instancing),
                                                     varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input_instancing),
@@ -1117,6 +1162,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                 vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                                     "#version 420",
 
+                                                    vs_backward_compatibility_declarations(),
+
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
                                                     varying("in_tangent", VS_IN::BINDING_IN_TANGENT, vs_input),
@@ -1141,6 +1188,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                 };
                                                 vs_uid_instancing = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
                                                     "#version 420",
+
+                                                    vs_backward_compatibility_declarations(),
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input_instancing),
                                                     varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input_instancing),
@@ -1169,6 +1218,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             {
                                                 vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                                     "#version 420",
+
+                                                    vs_backward_compatibility_declarations(),
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
@@ -1334,6 +1385,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                     "#version 420",
 
+                                    vs_backward_compatibility_declarations(),
+
                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                     varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
                                     varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
@@ -1352,6 +1405,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 };
                                 vs_uid_instancing = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source_instancing = {
                                     "#version 420",
+
+                                    vs_backward_compatibility_declarations(),
 
                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input_instancing),
                                     varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input_instancing),
@@ -1374,6 +1429,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                             {
                                 vs_uid = E2_QTGL_GENERATE_VERTEX_SHADER_ID(); vs_source = {
                                     "#version 420",
+
+                                    vs_backward_compatibility_declarations(),
 
                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                     varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
