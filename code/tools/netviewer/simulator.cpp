@@ -304,7 +304,7 @@ simulator::simulator(
         qtgl::batch(
             canonical_path(
                 boost::filesystem::path{get_program_options()->dataRoot()}
-                    / "shared" / "gfx" / "meshes" / "spiker"
+                    / "shared" / "gfx" / "batches" / "spiker.txt"
                 ),
             m_effects_config
             )
@@ -313,7 +313,7 @@ simulator::simulator(
         qtgl::batch(
             canonical_path(
                 boost::filesystem::path{get_program_options()->dataRoot()}
-                    / "shared" / "gfx" / "meshes" / "dock"
+                    / "shared" / "gfx" / "batches" / "dock.txt"
                 ),
             m_effects_config
             )
@@ -322,7 +322,7 @@ simulator::simulator(
         qtgl::batch(
             canonical_path(
                 boost::filesystem::path{get_program_options()->dataRoot()}
-                    / "shared" / "gfx" / "meshes" / "ship"
+                    / "shared" / "gfx" / "batches" / "ship.txt"
                 ),
                 m_effects_config
                 )
