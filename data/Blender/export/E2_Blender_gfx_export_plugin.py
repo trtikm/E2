@@ -1232,11 +1232,15 @@ def save_keyframe_coord_systems_of_bones(
         frame_current_backup = bpy.context.scene.frame_current
 
         for action in bpy.data.actions:
-            if not (action.name.startswith(armature.name + "/") or (active_action_backup is not None and action.name == active_action_backup.name)):
+            if not (action.name.startswith(armature.name + "/")
+                    or action.name.startswith("!")
+                    or (active_action_backup is not None and action.name == active_action_backup.name)
+                    ):
                 continue
 
             action_name = action.name[len(armature.name + "/"):] if action.name.startswith(armature.name + "/") else action.name
             action_name = action_name.replace("/", ".").replace("\\", '.').replace(":", '.')
+            action_name = action_name[1:] if action_name.startswith("!") else action_name
 
             armature.animation_data.action = action
 
