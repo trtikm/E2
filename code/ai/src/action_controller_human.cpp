@@ -455,10 +455,14 @@ bool  compute_motion_object_acceleration_from_motion_actions(
                                 motion_object_origin
                                 );
 
-                vector3 const  sliding_prevention_accel =
-                        0.5f * (2.0f * (action_data_ref.position - motion_object_origin) / (time_step_in_seconds * time_step_in_seconds));
-                vector3  agent_linear_acceleration =
-                        -motion_object_linear_velocity_in_world_space / time_step_in_seconds + sliding_prevention_accel;
+                if (length(action_data_ref.position - motion_object_origin) > action_ptr->radius)
+                    action_data_ref.position = motion_object_origin;
+
+                float_32_bit const  dt = std::max(1.0f / 25.0f, time_step_in_seconds);
+                vector3 const  next_motion_object_origin =
+                        motion_object_origin + dt * motion_object_linear_velocity_in_world_space;
+                vector3 const  position_delta = action_data_ref.position - next_motion_object_origin;
+                vector3  agent_linear_acceleration = (1.0f / (dt * dt)) * position_delta;
                 float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
                 if (agent_linear_acceleration_magnitude > multi_step_coef * action_ptr->max_linear_accel)
                     agent_linear_acceleration *= multi_step_coef * action_ptr->max_linear_accel / agent_linear_acceleration_magnitude;
