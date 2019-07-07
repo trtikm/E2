@@ -11,7 +11,7 @@
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/algorithm/string/trim.hpp>
+#include <boost/algorithm/string.hpp>
 #include <unordered_set>
 #include <deque>
 
@@ -56,8 +56,9 @@ void  read_meta_data_records(
                 std::vector<param_type> const&,
                 boost::filesystem::path const&,
                 natural_32_bit,
-                elem_type const&)
+                elem_type&)
                 > const&  back_inserter,
+        bool const  inform_about_keyframe_end,
         std::vector<elem_type>* const  output_flat,
         std::vector<std::vector<elem_type> >* const  output_composed
         )
@@ -81,6 +82,7 @@ void  read_meta_data_records(
     std::vector<param_type>  params;
 
     elem_type  last;
+    bool  starting_first_elem = true;
 
     while (true)
     {
@@ -118,6 +120,15 @@ void  read_meta_data_records(
 
             if (line.front() == '@')
             {
+                if (inform_about_keyframe_end && !starting_first_elem)
+                {
+                    if (output_flat != nullptr)
+                        back_inserter(*output_flat, "<<@>>", {}, pathname, line_index, last);
+                    if (output_composed != nullptr)
+                        back_inserter(output_composed->back(), "<<@>>", {}, pathname, line_index, last);
+                }
+                starting_first_elem = false;
+
                 if (output_composed != nullptr)
                     output_composed->push_back({});
                 line = line.substr(1U);
@@ -135,6 +146,14 @@ void  read_meta_data_records(
             back_inserter(*output_flat, keyword, params, pathname, line_index, last);
         if (output_composed != nullptr)
             back_inserter(output_composed->back(), keyword, params, pathname, line_index, last);
+    }
+
+    if (inform_about_keyframe_end)
+    {
+        if (output_flat != nullptr)
+            back_inserter(*output_flat, "<<@>>", {}, pathname, line_index, last);
+        if (output_composed != nullptr)
+            back_inserter(output_composed->back(), "<<@>>", {}, pathname, line_index, last);
     }
 
     if (output_flat != nullptr && num_records != output_flat->size())
@@ -165,7 +184,7 @@ mass_distributions_data::mass_distributions_data(async::finalise_load_on_destroy
                std::vector<float_32_bit> const&  params,
                boost::filesystem::path const&  pathname,
                natural_32_bit const  line_index,
-                mass_distribution_ptr const&  last
+               mass_distribution_ptr&  last
                ) -> void
             {
                 if (params.size() != 10UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for mass_distribution at line " << line_index << "in the file '" << pathname << "'.");
@@ -174,8 +193,10 @@ mass_distributions_data::mass_distributions_data(async::finalise_load_on_destroy
                 for (int i = 0; i != 3; ++i)
                     for (int j = 0; j != 3; ++j)
                         md.inertia_tensor_inverted(i, j) = params.at(1 + 3 * i + j);
-                output.push_back(last != nullptr && *last == md ? last : std::make_shared<skeletal_motion_templates::mass_distribution>(md));
+                last = last != nullptr && *last == md ? last : std::make_shared<skeletal_motion_templates::mass_distribution>(md);
+                output.push_back(last);
             },
+            false,
             &data,
             nullptr
             );
@@ -204,7 +225,7 @@ colliders_data::colliders_data(async::finalise_load_on_destroy_ptr const  finali
                std::vector<float_32_bit> const&  params,
                boost::filesystem::path const&  pathname,
                natural_32_bit const  line_index,
-               collider_ptr const&  last
+               collider_ptr&  last
                ) -> void
             {
                 if (keyword == "capsule")
@@ -214,11 +235,13 @@ colliders_data::colliders_data(async::finalise_load_on_destroy_ptr const  finali
                     collider.length = params.at(0);
                     collider.radius = params.at(1);
                     collider.weight = params.at(2);
-                    output.push_back(last != nullptr && *last == collider ? last : std::make_shared<skeletal_motion_templates::collider_capsule>(collider));
+                    last = last != nullptr && *last == collider ? last : std::make_shared<skeletal_motion_templates::collider_capsule>(collider);
+                    output.push_back(last);
                 }
                 else
                     NOT_IMPLEMENTED_YET();
             },
+            false,
             &data,
             nullptr
             );
@@ -235,122 +258,167 @@ colliders_data::~colliders_data()
 namespace ai { namespace detail { namespace meta {
 
 
-constraints_data::constraints_data(async::finalise_load_on_destroy_ptr const  finaliser)
+template<typename data_type, typename base_data_type>
+std::shared_ptr<base_data_type const>  _find_or_create_motion_action_component(
+        data_type const&  key,
+        std::vector<std::shared_ptr<base_data_type const> > const* const  cache
+        )
+{
+    std::shared_ptr<base_data_type const>  data_ptr = nullptr;
+    if (cache != nullptr)
+        for (auto  ptr : *cache)
+            if (*ptr == key)
+            {
+                data_ptr = ptr;
+                break;
+            }
+    return data_ptr != nullptr ? data_ptr : std::make_shared<data_type const>(key);
+}
+
+
+motion_actions_data::motion_actions_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : data()
 {
     TMPROF_BLOCK();
 
-    read_meta_data_records<constraint_ptr, float_32_bit>(
+    using  mutable_guarded_actions_ptr = std::shared_ptr<guarded_actions>;
+
+    bool last_was_action = false;
+    guarded_actions  constructed_actions;
+    read_meta_data_records<mutable_guarded_actions_ptr, float_32_bit>(
             finaliser->get_key().get_unique_id(),
-            [](std::vector<constraint_ptr>&  output,
-               std::string const&  keyword,
-               std::vector<float_32_bit> const&  params,
-               boost::filesystem::path const&  pathname,
-               natural_32_bit const  line_index,
-               constraint_ptr const&  last
-               ) -> void
+            [&last_was_action, &constructed_actions](
+                std::vector<mutable_guarded_actions_ptr>&  output,
+                std::string const&  keyword,
+                std::vector<float_32_bit> const&  params,
+                boost::filesystem::path const&  pathname,
+                natural_32_bit const  line_index,
+                mutable_guarded_actions_ptr&  last
+                ) -> void
             {
-                if (keyword == "contact_normal_cone")
+                ASSUMPTION(keyword.size() > 1UL);
+
+                if (keyword == "<<@>>" || (last_was_action && !boost::starts_with(keyword, "[A]")))
                 {
-                    if (params.size() != 4UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for contact_normal_cone at line " << line_index << "in the file '" << pathname << "'.");
-                    skeletal_motion_templates::constraint_contact_normal_cone  constraint;
-                    constraint.unit_axis(0) = params.at(0);
-                    constraint.unit_axis(1) = params.at(1);
-                    constraint.unit_axis(2) = params.at(2);
-                    constraint.angle_in_radians = params.at(3);
-                    output.push_back(last != nullptr && *last == constraint ? last : std::make_shared<skeletal_motion_templates::constraint_contact_normal_cone>(constraint));
+                    last = last != nullptr && *last == constructed_actions ? last : std::make_shared<guarded_actions>(constructed_actions);
+                    if (last->predicates_positive.empty() && last->predicates_negative.empty())
+                        throw std::runtime_error(msgstream() << "No positive nor negative guard in the motion action around line " << line_index << "in the file '" << pathname << "'.");
+                    if (last->actions.empty())
+                        throw std::runtime_error(msgstream() << "No action in the motion action around line " << line_index << "in the file '" << pathname << "'.");
+                    output.push_back(last);
+                    constructed_actions = guarded_actions();
                 }
-                else if (keyword == "no_contact")
+
+                if (boost::starts_with(keyword, "[GP]") || boost::starts_with(keyword, "[GN]"))
                 {
-                    if (!params.empty()) throw std::runtime_error(msgstream() << "Wrong number of parameters for no_contact at line " << line_index << "in the file '" << pathname << "'.");
-                    output.push_back(last != nullptr && *last == skeletal_motion_templates::constraint_no_contact() ? last : std::make_shared<skeletal_motion_templates::constraint_no_contact>());
+                    last_was_action = false;
+
+                    std::string const  guard_name = keyword.substr(4);
+
+                    bool const  is_positive = boost::starts_with(keyword, "[GP]");
+                    std::vector<constraint_ptr>&  predicates =
+                        is_positive ? constructed_actions.predicates_positive : constructed_actions.predicates_negative ;
+                    std::vector<constraint_ptr> const* const  last_predicates =
+                        last == nullptr ? nullptr : is_positive ? &last->predicates_positive : &last->predicates_negative ;
+
+                    if (guard_name == "contact_normal_cone")
+                    {
+                        if (params.size() != 4UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for contact_normal_cone at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::constraint_contact_normal_cone  constraint;
+                        constraint.unit_axis(0) = params.at(0);
+                        constraint.unit_axis(1) = params.at(1);
+                        constraint.unit_axis(2) = params.at(2);
+                        constraint.angle_in_radians = params.at(3);
+                        predicates.push_back(_find_or_create_motion_action_component(constraint, last_predicates));
+                    }
+                    else if (guard_name == "has_any_contact")
+                    {
+                        if (!params.empty()) throw std::runtime_error(msgstream() << "Wrong number of parameters for has_any_contact at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::constraint_has_any_contact  constraint;
+                        predicates.push_back(_find_or_create_motion_action_component(constraint, last_predicates));
+                    }
+                    else if (guard_name == "linear_velocity_in_falling_cone")
+                    {
+                        if (params.size() != 2UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for linear_velocity_in_falling_cone at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::constraint_linear_velocity_in_falling_cone  constraint;
+                        constraint.cone_angle_in_radians = params.at(0);
+                        constraint.min_linear_speed = params.at(1);
+                        predicates.push_back(_find_or_create_motion_action_component(constraint, last_predicates));
+                    }
+                    else
+                        NOT_IMPLEMENTED_YET();
+                }
+                else if (boost::starts_with(keyword, "[A]"))
+                {
+                    last_was_action = true;
+
+                    std::string const  action_name = keyword.substr(3);
+                    std::vector<action_ptr> const* const  last_actions = last == nullptr ? nullptr : &last->actions;
+
+                    if (action_name == "none")
+                    {
+                        if (!params.empty()) throw std::runtime_error(msgstream() << "Wrong number of parameters for meta action 'none' at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::action_none  action;
+                        constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
+                    }
+                    else if (action_name == "chase_ideal_linear_velocity")
+                    {
+                        if (params.size() != 2UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for chase_ideal_linear_velocity at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::action_chase_ideal_linear_velocity  action;
+                        action.max_linear_accel = params.at(0);
+                        action.motion_error_multiplier = params.at(1);
+                        constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
+                    }
+                    else if (action_name == "chase_linear_velocity_by_forward_vector")
+                    {
+                        if (params.size() != 3UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for chase_linear_velocity_by_forward_vector at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::action_chase_linear_velocity_by_forward_vector  action;
+                        action.max_angular_speed = params.at(0);
+                        action.max_angular_accel = params.at(1);
+                        action.min_linear_speed = params.at(2);
+                        constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
+                    }
+                    else if (action_name == "turn_around")
+                    {
+                        if (params.size() != 1UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for turn_around at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::action_turn_around  action;
+                        action.max_angular_accel = params.at(0);
+                        constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
+                    }
+                    else if (action_name == "dont_move")
+                    {
+                        if (params.size() != 2UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for dont_move at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::action_dont_move  action;
+                        action.max_linear_accel = params.at(0);
+                        action.radius = params.at(1);
+                        constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
+                    }
+                    else if (action_name == "dont_rotate")
+                    {
+                        if (params.size() != 1UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for dont_rotate at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::action_dont_rotate  action;
+                        action.max_angular_accel = params.at(0);
+                        constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
+                    }
+                    else
+                        NOT_IMPLEMENTED_YET();
+                }
+                else if (keyword == "<<@>>")
+                {
+                    last_was_action = false;
+                    if (output.empty())
+                        throw std::runtime_error(msgstream() << "Empty disjunction of guarded actions in the motion action around line " << line_index << "in the file '" << pathname << "'.");
                 }
                 else
-                    NOT_IMPLEMENTED_YET();
+                    UNREACHABLE();
             },
+            true,
             nullptr,
-            &data
+            reinterpret_cast<std::vector<std::vector<mutable_guarded_actions_ptr> >*>(&data)
             );
 }
 
-constraints_data::~constraints_data()
-{
-    TMPROF_BLOCK();
-}
-
-
-}}}
-
-namespace ai { namespace detail { namespace meta {
-
-
-actions_data::actions_data(async::finalise_load_on_destroy_ptr const  finaliser)
-    : data()
-{
-    TMPROF_BLOCK();
-
-    read_meta_data_records<action_ptr, float_32_bit>(
-            finaliser->get_key().get_unique_id(),
-            [](std::vector<action_ptr>&  output,
-               std::string const&  keyword,
-               std::vector<float_32_bit> const&  params,
-               boost::filesystem::path const&  pathname,
-               natural_32_bit const  line_index,
-               action_ptr const&  last
-               ) -> void
-            {
-                if (keyword == "none")
-                {
-                    if (!params.empty()) throw std::runtime_error(msgstream() << "Wrong number of parameters for meta action 'none' at line " << line_index << "in the file '" << pathname << "'.");
-                    output.push_back(last != nullptr && *last == skeletal_motion_templates::action_none() ? last : std::make_shared<skeletal_motion_templates::action_none>());
-                }
-                else if (keyword == "chase_ideal_linear_velocity")
-                {
-                    if (params.size() != 2UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for chase_ideal_linear_velocity at line " << line_index << "in the file '" << pathname << "'.");
-                    skeletal_motion_templates::action_chase_ideal_linear_velocity  action;
-                    action.max_linear_accel = params.at(0);
-                    action.motion_error_multiplier = params.at(1);
-                    output.push_back(last != nullptr && *last == action ? last : std::make_shared<skeletal_motion_templates::action_chase_ideal_linear_velocity>(action));
-                }
-                else if (keyword == "chase_linear_velocity_by_forward_vector")
-                {
-                    if (params.size() != 3UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for chase_linear_velocity_by_forward_vector at line " << line_index << "in the file '" << pathname << "'.");
-                    skeletal_motion_templates::action_chase_linear_velocity_by_forward_vector  action;
-                    action.max_angular_speed = params.at(0);
-                    action.max_angular_accel = params.at(1);
-                    action.min_linear_speed = params.at(2);
-                    output.push_back(last != nullptr && *last == action ? last : std::make_shared<skeletal_motion_templates::action_chase_linear_velocity_by_forward_vector>(action));
-                }
-                else if (keyword == "turn_around")
-                {
-                    if (params.size() != 1UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for turn_around at line " << line_index << "in the file '" << pathname << "'.");
-                    skeletal_motion_templates::action_turn_around  action;
-                    action.max_angular_accel = params.at(0);
-                    output.push_back(last != nullptr && *last == action ? last : std::make_shared<skeletal_motion_templates::action_turn_around>(action));
-                }
-                else if (keyword == "dont_move")
-                {
-                    if (params.size() != 1UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for dont_move at line " << line_index << "in the file '" << pathname << "'.");
-                    skeletal_motion_templates::action_dont_move  action;
-                    action.max_linear_accel = params.at(0);
-                    output.push_back(last != nullptr && *last == action ? last : std::make_shared<skeletal_motion_templates::action_dont_move>(action));
-                }
-                else if (keyword == "dont_rotate")
-                {
-                    if (params.size() != 1UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for dont_rotate at line " << line_index << "in the file '" << pathname << "'.");
-                    skeletal_motion_templates::action_dont_rotate  action;
-                    action.max_angular_accel = params.at(0);
-                    output.push_back(last != nullptr && *last == action ? last : std::make_shared<skeletal_motion_templates::action_dont_rotate>(action));
-                }
-                else
-                    NOT_IMPLEMENTED_YET();
-            },
-            nullptr,
-            &data
-            );
-}
-
-actions_data::~actions_data()
+motion_actions_data::~motion_actions_data()
 {
     TMPROF_BLOCK();
 }
@@ -373,7 +441,7 @@ keyframe_equivalences_data::keyframe_equivalences_data(async::finalise_load_on_d
                std::vector<natural_32_bit> const&  params,
                boost::filesystem::path const&  pathname,
                natural_32_bit const  line_index,
-               motion_template_cursor const&  last
+               motion_template_cursor&
                ) -> void
             {
                 if (params.empty())
@@ -381,6 +449,7 @@ keyframe_equivalences_data::keyframe_equivalences_data(async::finalise_load_on_d
                 for (natural_32_bit  index : params)
                     output.push_back({keyword, index});
             },
+            false,
             nullptr,
             &data
             );
@@ -605,10 +674,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The 'mass_distributions' were not loaded to 'motions_map[" << entry.first << "]'.");
                     if (record.colliders.empty())
                         throw std::runtime_error(msgstream() << "The 'colliders' were not loaded to 'motions_map[" << entry.first << "]'.");
-                    if (record.constraints.empty())
-                        throw std::runtime_error(msgstream() << "The 'constraints' were not loaded to 'motions_map[" << entry.first << "]'.");
                     if (record.actions.empty())
-                        throw std::runtime_error(msgstream() << "The 'actions' were not loaded to 'motions_map[" << entry.first << "]'.");
+                        throw std::runtime_error(msgstream() << "The 'motion_actions' were not loaded to 'motions_map[" << entry.first << "]'.");
                     if (record.keyframe_equivalences.empty())
                         throw std::runtime_error(msgstream() << "The 'keyframe_equivalences' were not loaded to 'motions_map[" << entry.first << "]'.");
 
@@ -620,10 +687,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'mass_distributions' differ in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.colliders.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'colliders' differ in 'motions_map[" << entry.first << "]'.");
-                    if (record.keyframes.num_keyframes() != record.constraints.size())
-                        throw std::runtime_error(msgstream() << "The count of keyframes and 'constraints' differ in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.actions.size())
-                        throw std::runtime_error(msgstream() << "The count of keyframes and 'actions' differ in 'motions_map[" << entry.first << "]'.");
+                        throw std::runtime_error(msgstream() << "The count of keyframes and 'motion_actions' differ in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.keyframe_equivalences.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'keyframe_equivalences' differ in 'motions_map[" << entry.first << "]'.");
                 }
@@ -692,10 +757,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                             record.mass_distributions = meta::mass_distributions(animation_pathname / "meta_mass_distributions.txt", 1U, ultimate_finaliser);
                         if (record.colliders.empty() && boost::filesystem::is_regular_file(animation_pathname / "meta_motion_colliders.txt"))
                             record.colliders = meta::colliders(animation_pathname / "meta_motion_colliders.txt", 1U, ultimate_finaliser);
-                        if (record.constraints.empty() && boost::filesystem::is_regular_file(animation_pathname / "meta_constraints.txt"))
-                            record.constraints = meta::constraints(animation_pathname / "meta_constraints.txt", 1U, ultimate_finaliser);
                         if (record.actions.empty() && boost::filesystem::is_regular_file(animation_pathname / "meta_motion_actions.txt"))
-                            record.actions = meta::actions(animation_pathname / "meta_motion_actions.txt", 1U, ultimate_finaliser);
+                            record.actions = meta::motion_actions(animation_pathname / "meta_motion_actions.txt", 1U, ultimate_finaliser);
                         if (record.keyframe_equivalences.empty() && boost::filesystem::is_regular_file(animation_pathname / "meta_keyframe_equivalences.txt"))
                             record.keyframe_equivalences = meta::keyframe_equivalences(animation_pathname / "meta_keyframe_equivalences.txt", 1U, ultimate_finaliser);
                     }

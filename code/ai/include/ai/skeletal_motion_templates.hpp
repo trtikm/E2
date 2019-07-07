@@ -162,39 +162,6 @@ protected:
 using  constraint_ptr = std::shared_ptr<constraint const>;
 
 
-struct  constraints_data
-{
-    explicit constraints_data(async::finalise_load_on_destroy_ptr const  finaliser);
-    ~constraints_data();
-
-    std::vector<std::vector<constraint_ptr> >  data;
-};
-
-struct  constraints : public async::resource_accessor<constraints_data>
-{
-    constraints() : async::resource_accessor<constraints_data>() {}
-    constraints(
-        boost::filesystem::path const&  path,
-        async::load_priority_type const  priority,
-        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
-        )
-        : async::resource_accessor<constraints_data>(
-    { "ai::skeletal_motion_templates::meta::constraints",path.string() },
-            priority,
-            parent_finaliser
-            )
-    {}
-    std::vector<std::vector<constraint_ptr> > const&  data() const { return resource().data; }
-    std::vector<constraint_ptr> const&  at(natural_32_bit const  index) const { return data().at(index); }
-    std::size_t size() const { return data().size(); }
-};
-
-
-}}}
-
-namespace ai { namespace detail { namespace meta {
-
-
 struct  action
 {
     virtual ~action() = 0 {}
@@ -210,30 +177,72 @@ protected:
 using  action_ptr = std::shared_ptr<action const>;
 
 
-struct  actions_data
+struct  guarded_actions
 {
-    explicit actions_data(async::finalise_load_on_destroy_ptr const  finaliser);
-    ~actions_data();
+    // 'actions' may only be applied, when
+    //      none of the 'predicates_positive' is false
+    //      and
+    //      none of the 'predicates_negative' is true.
 
-    std::vector<std::vector<action_ptr> >  data;
+    std::vector<constraint_ptr>  predicates_positive;
+    std::vector<constraint_ptr>  predicates_negative;
+    std::vector<action_ptr>  actions;
+
+    bool  operator==(guarded_actions const&  other) const
+    {
+        if (this == &other) return true;
+        if (predicates_positive.size() != other.predicates_positive.size()
+            || predicates_negative.size() != other.predicates_negative.size()
+            || actions.size() != other.actions.size())
+            return false;
+        for (natural_64_bit  i = 0UL, n = predicates_positive.size(); i != n; ++i)
+            if (*predicates_positive.at(i) != *other.predicates_positive.at(i))
+                return false;
+        for (natural_64_bit  i = 0UL, n = predicates_negative.size(); i != n; ++i)
+            if (*predicates_negative.at(i) != *other.predicates_negative.at(i))
+                return false;
+        for (natural_64_bit  i = 0UL, n = actions.size(); i != n; ++i)
+            if (*actions.at(i) != *other.actions.at(i))
+                return false;
+        return true;
+    }
+    bool  operator!=(guarded_actions const&  other) const
+    {
+        return !(*this == other);
+    }
+};
+using  guarded_actions_ptr = std::shared_ptr<guarded_actions const>;
+
+
+struct  motion_actions_data
+{
+    using  disjunction_of_guarded_actions = std::vector<guarded_actions_ptr>;
+
+    explicit  motion_actions_data(async::finalise_load_on_destroy_ptr const  finaliser);
+    ~motion_actions_data();
+
+    std::vector<disjunction_of_guarded_actions>  data;
 };
 
-struct  actions : public async::resource_accessor<actions_data>
+
+struct  motion_actions : public async::resource_accessor<motion_actions_data>
 {
-    actions() : async::resource_accessor<actions_data>() {}
-    actions(
+    using  disjunction_of_guarded_actions = motion_actions_data::disjunction_of_guarded_actions;
+
+    motion_actions() : async::resource_accessor<motion_actions_data>() {}
+    motion_actions(
         boost::filesystem::path const&  path,
         async::load_priority_type const  priority,
         async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
         )
-        : async::resource_accessor<actions_data>(
-    { "ai::skeletal_motion_templates::meta::actions",path.string() },
+        : async::resource_accessor<motion_actions_data>(
+    { "ai::skeletal_motion_templates::meta::motion_actions",path.string() },
             priority,
             parent_finaliser
             )
     {}
-    std::vector<std::vector<action_ptr> > const&  data() const { return resource().data; }
-    std::vector<action_ptr> const&  at(natural_32_bit const  index) const { return data().at(index); }
+    std::vector<disjunction_of_guarded_actions> const&  data() const { return resource().data; }
+    disjunction_of_guarded_actions const&  at(natural_32_bit const  index) const { return data().at(index); }
     std::size_t size() const { return data().size(); }
 };
 
@@ -425,14 +434,16 @@ struct  skeletal_motion_templates_data
     using  keyframes = qtgl::keyframes;
     using  modelspace = qtgl::modelspace; 
 
+    using  guarded_actions_ptr = detail::meta::guarded_actions_ptr;
+    using  disjunction_of_guarded_actions = detail::meta::motion_actions::disjunction_of_guarded_actions;
+
     struct  motion_template
     {
         keyframes  keyframes;
         meta::reference_frames  reference_frames;
         meta::mass_distributions  mass_distributions;
         meta::colliders  colliders;
-        meta::constraints  constraints;
-        meta::actions  actions;
+        meta::motion_actions  actions;
         meta::keyframe_equivalences  keyframe_equivalences;
     };
 
@@ -499,6 +510,9 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
 
     using  motion_template = detail::skeletal_motion_templates_data::motion_template;
 
+    using  guarded_actions_ptr = detail::skeletal_motion_templates_data::guarded_actions_ptr;
+    using  disjunction_of_guarded_actions = detail::skeletal_motion_templates_data::disjunction_of_guarded_actions;
+
     using  mass_distribution = detail::meta::mass_distribution;
 
     using  constraint = detail::meta::constraint;
@@ -516,10 +530,22 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
         }
     };
 
-    struct  constraint_no_contact : public constraint
+    struct  constraint_has_any_contact : public constraint
     {
-        bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_no_contact const&>(other); }
-        bool  operator==(constraint_no_contact const&  other) const { return true; }
+        bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_has_any_contact const&>(other); }
+        bool  operator==(constraint_has_any_contact const&  other) const { return true; }
+    };
+
+    struct  constraint_linear_velocity_in_falling_cone : public constraint
+    {
+        float_32_bit  cone_angle_in_radians;
+        float_32_bit  min_linear_speed;
+
+        bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_linear_velocity_in_falling_cone const&>(other); }
+        bool  operator==(constraint_linear_velocity_in_falling_cone const&  other) const
+        {
+            return are_equal(cone_angle_in_radians, other.cone_angle_in_radians, 0.0001f) && are_equal(min_linear_speed, other.min_linear_speed, 0.0001f);
+        }
     };
 
     using  action = detail::meta::action;
@@ -555,9 +581,13 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     struct  action_dont_move : public action
     {
         float_32_bit  max_linear_accel;
+        float_32_bit  radius;
 
         bool  equals(action const&  other) const override { return *this == dynamic_cast<action_dont_move const&>(other); }
-        bool  operator==(action_dont_move const&  other) const { return are_equal(max_linear_accel, other.max_linear_accel, 0.0001f); }
+        bool  operator==(action_dont_move const&  other) const
+        {
+            return are_equal(max_linear_accel, other.max_linear_accel, 0.0001f) && are_equal(radius, other.radius, 0.0001f);
+        }
     };
 
     struct  action_dont_rotate : public action

@@ -583,6 +583,82 @@ def _load_bone_pose_frames():
     return pose_frames
 
 
+class guarded_actions:
+    def __init__(self):
+        self.predicates_positive = []
+        self.predicates_negative = []
+        self.actions = []
+
+
+def _save_meta_motion_actions(motion_actions):
+    with open(os.path.join(_get_keyframes_dir(), "meta_motion_actions.txt"), "w") as f:
+        f.write(str(len(motion_actions.keys())) + "\n")
+        for keyframe_index in sorted(motion_actions.keys()):
+            f.write("%% " + str(keyframe_index) + "\n")
+            f.write("@")
+            for gactions in motion_actions[keyframe_index]:
+                for predicate in gactions.predicates_positive:
+                    f.write("[GP]" + predicate[0] + "\n")
+                    for param in predicate[1:]:
+                        f.write(_float_to_string(param) + "\n")
+                for predicate in gactions.predicates_negative:
+                    f.write("[GN]" + predicate[0] + "\n")
+                    for param in predicate[1:]:
+                        f.write(_float_to_string(param) + "\n")
+                for predicate in gactions.actions:
+                    f.write("[A]" + predicate[0] + "\n")
+                    for param in predicate[1:]:
+                        f.write(_float_to_string(param) + "\n")
+
+
+def _load_or_create_meta_motion_actions(num_keyframes):
+    pathname = os.path.join(_get_keyframes_dir(), "meta_motion_actions.txt")
+    if not os.path.isfile(pathname):
+        return {i: [] for i in range(num_keyframes)}
+    with open(pathname, "r") as f:
+        raw_lines = f.readlines()
+    lines = []
+    for raw_line in raw_lines:
+        line = raw_line.strip()
+        if len(line) > 0 and not line.startswith("%%"):
+            lines.append(line)
+    assert len(lines) > 1
+    result = {}
+    keyword = None
+    keyframe_index = -1
+    for line in lines[1:]:
+        if line[0].isdigit() or line[0] in ['+', '-']:
+            assert keyword is not None and keyframe_index >= 0 and keyframe_index in result and isinstance(result[keyframe_index][-1], guarded_actions)
+            if keyword.startswith("[GP]"):
+                result[keyframe_index][-1].predicates_positive[-1].append(float(line))
+            elif keyword.startswith("[GN]"):
+                result[keyframe_index][-1].predicates_negative[-1].append(float(line))
+            elif keyword.startswith("[A]"):
+                result[keyframe_index][-1].actions[-1].append(float(line))
+            else:
+                raise Exception("Keyword with unknown classification for keyframe " + str(keyframe_index) + " in file " + pathname)
+        else:
+            if line[0] == "@":
+                keyframe_index += 1
+                keyword = None
+                result[keyframe_index] = []
+                line = line[1:]
+            if len(line) > 0:
+                if keyword is None or keyword.startswith("[A]") and not line.startswith("[A]"):
+                    result[keyframe_index].append(guarded_actions())
+                keyword = line
+                if keyword.startswith("[GP]"):
+                    result[keyframe_index][-1].predicates_positive.append([keyword[4:]])
+                elif keyword.startswith("[GN]"):
+                    result[keyframe_index][-1].predicates_negative.append([keyword[4:]])
+                elif keyword.startswith("[A]"):
+                    result[keyframe_index][-1].actions.append([keyword[3:]])
+                else:
+                    raise Exception("Keyword with unknown classification for keyframe " + str(keyframe_index) + " in file " + pathname)
+    assert int(lines[0]) - 1 in result and keyframe_index + 1 == num_keyframes
+    return result
+
+
 def command_colliders_help():
     return """
 colliders
@@ -620,51 +696,6 @@ def command_colliders():
             else:
                 raise Exception("Unknown shape '" + state.shape + "' in the state variable 'shape'.")
             f.write(_float_to_string(state.weight) + "\n")
-
-
-def command_constraints_help():
-    return """
-constraints <constraint-type>
-    Assigns to each keyframe in the work_dir/anim_dir a constraint defined
-    by the passed constraint type. Here are descriptions of available
-    constraint types:
-    * 'contact_normal_cone':
-        - 'vec_down_mult * vec_down' defines the axis of cone (unit vector).
-        - 'angle' defines a maximal angle between a current normal and the axis
-                  of the cone.
-    * 'no_contact':
-        - the motion object of the agent cannot have a contact with any object
-    Each constraint is assumed to be in the coordinate system of the reference
-    frame of the animation (see the command 'reference_frames').
-    The computed constraints are saved into file:
-        work_dir/anim_dir/meta_constraints.txt
-    If the file exists, them it will be overwritten.
-"""
-
-
-def command_constraints():
-    if not os.path.isfile(_get_meta_reference_frames_pathname()):
-        raise Exception("The file '" + _get_meta_reference_frames_pathname() + "' does not exist. "
-                        "Please, run the command 'reference_frames' first.")
-    if len(Config.instance.cmdline.arguments) != 1:
-        raise Exception("Wrong number of argument. A single constraint type must be provided.")
-    with open(_get_meta_reference_frames_pathname(), "r") as f:
-        num_frames = int(f.readline().strip())
-    state = Config.instance.state
-    with open(os.path.join(_get_keyframes_dir(), "meta_constraints.txt"), "w") as f:
-        f.write(str(num_frames) + "\n")
-        for i in range(num_frames):
-            f.write("%% " + str(i) + "\n")
-            f.write("@" + str(Config.instance.cmdline.arguments[0]) + "\n")
-            if Config.instance.cmdline.arguments[0] == "contact_normal_cone":
-                f.write(_float_to_string(state.vec_down_mult * state.vec_down[0]) + "\n")
-                f.write(_float_to_string(state.vec_down_mult * state.vec_down[1]) + "\n")
-                f.write(_float_to_string(state.vec_down_mult * state.vec_down[2]) + "\n")
-                f.write(_float_to_string(state.angle) + "\n")
-            elif Config.instance.cmdline.arguments[0] == "no_contact":
-                pass    # no arguments
-            else:
-                raise Exception("Unknown constraint type '" + Config.instance.cmdline.arguments[0] + "'.")
 
 
 def command_get_help():
@@ -1154,53 +1185,121 @@ def command_mass_distributions():
 
 def command_motion_actions_help():
     return """
-motion_actions <action-name>+
-    Assigns to each keyframe in the work_dir/anim_dir passed identifiers of
-    motion actions together with their corresponding data. Motion actions
-    implement the motion defined by the keyframes. Here are descriptions of
-    available actions:
-    * 'none':
-        Do nothing, i.e. ignore desired motion of agent's cortex.
-    * 'chase_ideal_linear_velocity':
-        Applies a force to agent's motion object so that linear velocity gets
-        closer to the ideal linear velocity as defined by the keyframes. Here
-        are parameters (state variables) of the action:
-            - 'max_linear_accel' maximal magnitude of the linear acceleration
-            - 'motion_error_multiplier' a multiplier (any real number) for the
-                    motion error (in this case a difference of ideal and actual
-                    speed of the motion object). The motion error has a direct
-                    impact on increase/decrease of the animation speed.
-    * 'chase_linear_velocity_by_forward_vector':
-        Rotates the reference frame in the world so that distance between
-        the linear velocity and the forward direction is minimal. The rotation
-        axis is the up direction of the agent (see the file 'directions.txt').
-        Here are parameters (state variables) of the action:
-            - 'max_angular_speed' maximal magnitude of the angular velocity
-            - 'max_angular_accel' maximal magnitude of the angular acceleration
-            - 'min_linear_speed' is used to compute a multiplier for the
-                    angular speed:
-                        min(1.0f, max(0.0f, <speed>^2 / min_linear_speed))
-                    where '<speed>' is the actual linear speed of the motion
-                    object of the agent. The 'min_linear_speed' must be > 0.
-    * 'turn_around':
-        Rotates the reference frame along the 'up' direction vector by angle
-        inferred from the related animation. The goal is to rotate agent's
-        forward vector to a desired forward vector (wished by the cortex).
-        Here are parameters (state variables) of the action:
-            - 'max_angular_accel' maximal magnitude of the angular acceleration
-    * 'dont_move':
-        Creates a linear acceleration on the agent's rigid body so that its
-        linear velocity gets smaller and smaller. Parameters:
-            - 'max_linear_accel' maximal magnitude of the linear acceleration
-    * 'dont_rotate':
-        Creates an angular acceleration on the agent's rigid body so that its
-        angular velocity along the given axis (see below) decreases.
-        The rotation axis is the up direction of the agent (see the file
-        'directions.txt'). Parameters:
-            - 'max_angular_accel' maximal magnitude of the angular acceleration
-    All motion actions are saved into file:
-        work_dir/anim_dir/meta_motion_actions.txt
-    If the file exists, them it will be overwritten.
+motion_actions  <begin> <end>
+                set|add|append
+                guard|guard_neg|action
+                <guard-name>+|<action-name>+
+    Updates or creates the motion actions file
+        <work_dir>/<anim_dir>/meta_motion_actions.txt
+    where <work_dir> and <anim_dir> represent values of the state variables
+    'work_dir' and 'anim_dir' respectively. If the file does not exist yet,
+    then it is created.
+    The numbers <begin> and <end> represent a range of indices of keyframes
+    to be considered in the command. Use numbers prefixed with '!' for
+    defining the range from the back of the keyframes list.
+    The mode 'set'/'add'/'append' replaces/extends/extends the old content
+    of the considered keyframes by the list of <guard-name>s or
+    <action-name>s passed to the command. The difference between 'add' and
+    'append' is that while 'add' extends the last disjunction of guarded
+    actions, the 'append' mode appends a new guarded actions to the
+    disjunction.
+    The specifier 'guard'/'guard_neg' says that next follows a list of
+    positive/negative guards. The specifier 'action' says that next follows
+    a list of actions.
+    Here is a list of supported guards (for <guard-name>s list):
+        * 'contact_normal_cone':
+            The motion object of the agent have a contact with another object
+            and contact lies in the cone.
+            Used state variables:
+                - 'vec_down_mult * vec_down'
+                        defines the axis of cone (unit vector).
+                - 'angle'
+                        defines a maximal angle between a current normal and
+                        the axis of the cone.
+        * 'has_any_contact':
+            The motion object of the agent have a contact with another object.
+            Used state variables: None
+        * 'linear_velocity_in_falling_cone':
+                - 'angle'
+                        defines a maximal angle between current linear
+                        velocity of the agent and the axis of the cone,
+                        which is the unit vector of the gravitational
+                        acceleration. When no gravitational acceleration is
+                        acting on the agent then the constraint is trivially
+                        false.
+                - 'min_linear_speed'
+                        if the linear speed in smaller than minimal linear
+                        linear speed defined here, then the constraint
+                        is trivially false. Otherwise the proper check
+                        of the velocity vector in the cone is applied.
+    Here is a list of supported actions (for <action-name>s list):
+        * 'none':
+            Do nothing, i.e. ignore desired motion of agent's cortex.
+            Used state variables: None
+        * 'chase_ideal_linear_velocity':
+            Applies a force to agent's motion object so that linear velocity
+            gets closer to the ideal linear velocity as defined by the
+            keyframes.
+            Used state variables:
+                - 'max_linear_accel'
+                        maximal magnitude of the linear acceleration
+                - 'motion_error_multiplier'
+                        a multiplier (any real number) for the motion error
+                        (in this case a difference of ideal and actual speed
+                        of the motion object). The motion error has a direct
+                        impact on increase/decrease of the animation speed.
+        * 'chase_linear_velocity_by_forward_vector':
+            Rotates the reference frame in the world so that distance between
+            the linear velocity and the forward direction is minimal. The
+            rotation axis is the up direction of the agent (see the file
+            'directions.txt').
+            Used state variables:
+                - 'max_angular_speed'
+                        maximal magnitude of the angular velocity
+                - 'max_angular_accel'
+                        maximal magnitude of the angular acceleration
+                - 'min_linear_speed'
+                        is used to compute a multiplier for the
+                        angular speed:
+                            min(1.0f, max(0.0f, <speed>^2 / min_linear_speed))
+                        where '<speed>' is the actual linear speed of the
+                        motion object of the agent. The 'min_linear_speed'
+                        must be > 0.
+        * 'turn_around':
+            Rotates the reference frame along the 'up' direction vector by
+            angle inferred from the related animation. The goal is to rotate
+            agent's forward vector to a desired forward vector (wished by
+            the cortex).
+            Used state variables:
+                - 'max_angular_accel'
+                        maximal magnitude of the angular acceleration
+        * 'dont_move':
+            Creates a linear acceleration on the agent's rigid body so that
+            its linear velocity gets smaller and smaller.
+            Used state variables:
+                - 'max_linear_accel'
+                        maximal magnitude of the linear acceleration
+                - 'radius'
+                        if agent's position in the current simulation step is
+                        within a sphere with the center being agent's position
+                        in the previous step and radius defined here, then the
+                        action makes a force to move the agent to the centre
+                        of the sphere. Otherwise, the center of the sphere is
+                        reset to the current agent's position and the force
+                        acts so that agent's linear speed decreases.
+        * 'dont_rotate':
+            Creates an angular acceleration on the agent's rigid body so that
+            its angular velocity along the given axis (see below) decreases.
+            The rotation axis is the up direction of the agent (see the file
+            'directions.txt').
+            Used state variables:
+                - 'max_angular_accel'
+                        maximal magnitude of the angular acceleration
+    NOTE: In the end, each keyframe must have assigned at least one motion
+          action.
+    NOTE: Guards of all keyframes, which form a branching node in the animation
+          graph (due to their equivalence) must capture all possible cases
+          (i.e. the disjunction of their guards must form a tautology).
 """
 
 
@@ -1208,34 +1307,74 @@ def command_motion_actions():
     if not os.path.isfile(_get_meta_reference_frames_pathname()):
         raise Exception("The file '" + _get_meta_reference_frames_pathname() + "' does not exist. "
                         "Please, run the command 'reference_frames' first.")
-    if len(Config.instance.cmdline.arguments) == 0:
-        raise Exception("Wrong number of argument. At least one action must be provided.")
+    args = Config.instance.cmdline.arguments
+    if len(args) < 5:
+        raise Exception("Wrong number of arguments. At least 5 arguments are expected.")
     with open(_get_meta_reference_frames_pathname(), "r") as f:
         num_frames = int(f.readline().strip())
+    motion_actions = _load_or_create_meta_motion_actions(num_frames)
     state = Config.instance.state
-    with open(os.path.join(_get_keyframes_dir(), "meta_motion_actions.txt"), "w") as f:
-        f.write(str(num_frames) + "\n")
-        for i in range(num_frames):
-            f.write("%% " + str(i) + "\n@")
-            for action in Config.instance.cmdline.arguments:
-                f.write(str(action) + "\n")
+    begin = int(args[0].replace("!", "-"))
+    begin = begin if begin >= 0 else num_frames + begin
+    end = int(args[1].replace("!", "-"))
+    end = end if end >= 0 else num_frames + end + 1
+    if end <= begin:
+        raise Exception("The begin index of the range of keyframes is not smaller than the end index.")
+    for keyframe_index in range(begin, end):
+        if args[2] == "set":
+            motion_actions[keyframe_index] = [guarded_actions()]
+        elif args[2] == "add":
+            if len(motion_actions[keyframe_index]) == 0:
+                motion_actions[keyframe_index].append(guarded_actions())
+        elif args[2] == "append":
+            motion_actions[keyframe_index].append(guarded_actions())
+        else:
+            raise Exception("Wrong argument 3. Expected set or add or append.")
+
+        if args[3] in ["guard", "guard_neg"]:
+            if args[3] == "guard":
+                constraints = motion_actions[keyframe_index][-1].predicates_positive
+            else:
+                constraints = motion_actions[keyframe_index][-1].predicates_negative
+            for constraint in args[4:]:
+                constraints.append([constraint])
+                if constraint == "contact_normal_cone":
+                    constraints[-1].append(state.vec_down_mult * state.vec_down[0])
+                    constraints[-1].append(state.vec_down_mult * state.vec_down[1])
+                    constraints[-1].append(state.vec_down_mult * state.vec_down[2])
+                    constraints[-1].append(state.angle)
+                elif constraint == "has_any_contact":
+                    pass    # no arguments
+                elif constraint == "linear_velocity_in_falling_cone":
+                    constraints[-1].append(state.angle)
+                    constraints[-1].append(state.min_linear_speed)
+                else:
+                    raise Exception("Unknown constraint name '" + str(constraint) + "'")
+        elif args[3] == "action":
+            actions = motion_actions[keyframe_index][-1].actions
+            for action in args[4:]:
+                actions.append([action])
                 if action == "none":
-                    pass     # The action has no arguments
+                    pass
                 elif action == "chase_ideal_linear_velocity":
-                    f.write(_float_to_string(state.max_linear_accel) + "\n")
-                    f.write(_float_to_string(state.motion_error_multiplier) + "\n")
+                    actions[-1].append(state.max_linear_accel)
+                    actions[-1].append(state.motion_error_multiplier)
                 elif action == "chase_linear_velocity_by_forward_vector":
-                    f.write(_float_to_string(state.max_angular_speed) + "\n")
-                    f.write(_float_to_string(state.max_angular_accel) + "\n")
-                    f.write(_float_to_string(state.min_linear_speed) + "\n")
+                    actions[-1].append(state.max_angular_speed)
+                    actions[-1].append(state.max_angular_accel)
+                    actions[-1].append(state.min_linear_speed)
                 elif action == "turn_around":
-                    f.write(_float_to_string(state.max_angular_accel) + "\n")
+                    actions[-1].append(state.max_angular_accel)
                 elif action == "dont_move":
-                    f.write(_float_to_string(state.max_linear_accel) + "\n")
+                    actions[-1].append(state.max_linear_accel)
+                    actions[-1].append(state.radius)
                 elif action == "dont_rotate":
-                    f.write(_float_to_string(state.max_angular_accel) + "\n")
+                    actions[-1].append(state.max_angular_accel)
                 else:
                     raise Exception("Unknown action name '" + str(action) + "'")
+        else:
+            raise Exception("Wrong argument 4. Expected guard or guard_neg or action.")
+    _save_meta_motion_actions(motion_actions)
 
 
 def command_reference_frames_help():
