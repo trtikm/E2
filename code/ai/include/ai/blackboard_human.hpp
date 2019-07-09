@@ -18,6 +18,7 @@ struct  blackboard_human : public blackboard
 
     float_32_bit  m_cortex_cmd_move_intensity;  // in range <0,1>; 0 - 0 - no move; 1 - max move forward.
     float_32_bit  m_cortex_cmd_turn_intensity;  // in range <-1,1>; -1 - max turn left; 0 - no turn; 1 - max turn right.
+    float_32_bit  m_cortex_cmd_elevation_intensity;  // in range <-1,1>; -1 - max down; 0 - no elevation; 1 - max up.
 
     // Constants:
 

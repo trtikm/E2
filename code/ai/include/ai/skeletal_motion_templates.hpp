@@ -598,6 +598,12 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
         bool  operator==(action_dont_rotate const&  other) const { return are_equal(max_angular_accel, other.max_angular_accel, 0.0001f); }
     };
 
+    struct  action_set_linear_velocity : public action
+    {
+        vector3  linear_velocity;
+        float_32_bit  max_linear_accel;
+    };
+
     using  collider = detail::meta::collider;
     using  collider_ptr = detail::meta::collider_ptr;
 

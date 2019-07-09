@@ -400,6 +400,16 @@ motion_actions_data::motion_actions_data(async::finalise_load_on_destroy_ptr con
                         action.max_angular_accel = params.at(0);
                         constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
                     }
+                    else if (action_name == "set_linear_velocity")
+                    {
+                        if (params.size() != 4UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for set_linear_velocity at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::action_set_linear_velocity  action;
+                        action.linear_velocity(0) = params.at(0);
+                        action.linear_velocity(1) = params.at(1);
+                        action.linear_velocity(2) = params.at(2);
+                        action.max_linear_accel = params.at(3);
+                        constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
+                    }
                     else
                         NOT_IMPLEMENTED_YET();
                 }

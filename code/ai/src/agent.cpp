@@ -26,7 +26,7 @@ agent::agent(
     cortex_io_ptr const  io = std::make_shared<cortex_io>();
     io->input.resize(2U);
     io->num_inner_inputs = 1U;
-    io->output.resize(2U);
+    io->output.resize(3U);
 
     m_cortex_primary.reset(std::make_unique<cortex_mock_human>(io, input_devices_).release());
     m_cortex_secondary.reset(std::make_unique<cortex>(io).release()); // Not used so far.

@@ -92,6 +92,9 @@ class Config:
             self.distance_threshold = 1.0
             self.delta_time_in_seconds = 0.25
             self.motion_error_multiplier = 1.0
+            self.gravity_accel = -9.81
+            self.vec_transition = [0.0, 0.0, 0.0]
+            self.vec_velocity = [0.0, 0.0, 0.0]
             self.debug_mode = True
 
         def typeof(self, var_name):
@@ -1232,6 +1235,8 @@ motion_actions  <begin> <end>
                         linear speed defined here, then the constraint
                         is trivially false. Otherwise the proper check
                         of the velocity vector in the cone is applied.
+        * 'always':
+            The guard represents true.
     Here is a list of supported actions (for <action-name>s list):
         * 'none':
             Do nothing, i.e. ignore desired motion of agent's cortex.
@@ -1295,6 +1300,20 @@ motion_actions  <begin> <end>
             Used state variables:
                 - 'max_angular_accel'
                         maximal magnitude of the angular acceleration
+        * 'set_linear_velocity':
+            Applies a force so that agent's linear velocity becomes the one
+            specified in this action.
+            Used state variables:
+                - 'vec_velocity'
+                        A linear velocity to be set to agent. Namely, if
+                        'fwd' and 'up' are forward and up direction vectors
+                        of the agent in the world space then the velocity
+                        to set is the vector:
+                            vec_velocity(0) * cross_product(fwd,up) +
+                            vec_velocity(1) * fwd +
+                            vec_velocity(2) * up.
+                - 'max_linear_accel'
+                        maximal magnitude of the linear acceleration
     NOTE: In the end, each keyframe must have assigned at least one motion
           action.
     NOTE: Guards of all keyframes, which form a branching node in the animation
@@ -1348,6 +1367,8 @@ def command_motion_actions():
                 elif constraint == "linear_velocity_in_falling_cone":
                     constraints[-1].append(state.angle)
                     constraints[-1].append(state.min_linear_speed)
+                elif constraint == "always":
+                    pass    # no arguments
                 else:
                     raise Exception("Unknown constraint name '" + str(constraint) + "'")
         elif args[3] == "action":
@@ -1370,6 +1391,11 @@ def command_motion_actions():
                     actions[-1].append(state.radius)
                 elif action == "dont_rotate":
                     actions[-1].append(state.max_angular_accel)
+                elif action == "set_linear_velocity":
+                    actions[-1].append(state.vec_velocity[0])
+                    actions[-1].append(state.vec_velocity[1])
+                    actions[-1].append(state.vec_velocity[2])
+                    actions[-1].append(state.max_linear_accel)
                 else:
                     raise Exception("Unknown action name '" + str(action) + "'")
         else:
@@ -1472,6 +1498,32 @@ reference_frames  move_straight|
                             vec_down_mult * vec_down
                             )
             }
+    * transition_in_gravity_field
+        For each keyframe i the computed reference frame whose origin appears
+        on the trajectory:
+            X = pivot + t[i] * V + 0.5 * t[i]**2 * G
+        where t[i] is the time point of the i-th keyframe, G is the gravity
+        acceleration vector (i.e. gravity_accel* vec_down_mult * vec_down),
+        and V is an initial velocity at pivot computed as follows:
+            V = 1/dt * vec_transition - 0.5 * dt * G
+        where dt is the total time of the animation. Note that 'vec_transition'
+        is the state variable (just like e.g. pivot or vec_down).
+        So, for each keyframe the computed reference frame looks as this:
+            reference_frame {
+                "pos": pivot + t[i] * V + 0.5 t[i]**2 * G,
+                "rot": basis_vectors_to_quaternion(
+                            cross_product(
+                                vec_fwd_mult * vec_fwd,
+                                vec_down_mult * vec_down
+                                ),
+                            vec_fwd_mult * vec_fwd,
+                            vec_down_mult * vec_down
+                            )
+            }
+        NOTE: This procedure is useful for "jump (up/down)" animations.
+        NOTE: This procedure also prints the vector V to the console in a form,
+              so that you can set it to the state variable 'vec_velocity'
+              for the action 'set_linear_velocity'.
     The computed frames (by any procedure) are always saved into file:
         work_dir/anim_dir/meta_reference_frames.txt
     If the file exists, them it will be overwritten.
@@ -1540,6 +1592,25 @@ def command_reference_frames():
                     )
         for _ in range(len(keyframes)):
             meta_reference_frames.append({"pos": state.pivot, "rot": rot})
+    elif Config.instance.cmdline.arguments[0] == "transition_in_gravity_field":
+        vec_fwd = state.vec_fwd_mult * numpy.array(state.vec_fwd)
+        vec_up = state.vec_down_mult * numpy.array(state.vec_down)
+        vec_side = _cross_product(vec_fwd, vec_up)
+        rot = _basis_vectors_to_quaternion(vec_side, vec_fwd, vec_up)
+        dt = keyframes[-1]["time"] - keyframes[0]["time"]
+        G = state.gravity_accel * state.vec_down_mult * numpy.array(state.vec_down)
+        V = 1/dt * numpy.array(state.vec_transition) - 0.5 * dt * G
+        for i in range(len(keyframes)):
+            t = keyframes[i]["time"] - keyframes[0]["time"]
+            pos = numpy.array(state.pivot) + t * V + 0.5 * t**2 * G
+            meta_reference_frames.append({"pos": pos, "rot": rot})
+        V[1] = 1/dt * -state.vec_transition[1] - 0.5 * dt * G[1]
+        coords = [
+            _dot_product(V, vec_side),
+            _dot_product(V, vec_fwd),
+            _dot_product(V, vec_up),
+        ]
+        print("Used initial velocity vector 'V' a.k.a. 'vec_velocity':\n[" + ", ".join([_float_to_string(x) for x in coords]) + "]")
     else:
         raise Exception("Unknown argument '" + Config.instance.cmdline.arguments[0] + "'.")
     with open(_get_meta_reference_frames_pathname(), "w") as f:

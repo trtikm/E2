@@ -17,16 +17,19 @@ void  cortex_mock_human::next_round(float_32_bit const  time_step_in_seconds)
 
     if (get_input_devices()->keyboard.is_pressed(qtgl::KEY_UP()))
         if (get_input_devices()->keyboard.is_pressed(qtgl::KEY_LSHIFT()) || get_input_devices()->keyboard.is_pressed(qtgl::KEY_RSHIFT()))
-            get_io()->output.front() = 0.56f;
+            get_io()->output.at(0) = 0.56f;
         else
-            get_io()->output.front() = 0.2f;
+            get_io()->output.at(0) = 0.2f;
 
     bool const  turn_left = get_input_devices()->keyboard.is_pressed(qtgl::KEY_LEFT());
     bool const  turn_right = get_input_devices()->keyboard.is_pressed(qtgl::KEY_RIGHT());
     if (turn_left == true && turn_right == false)
-        get_io()->output.back() = -1.0f;
+        get_io()->output.at(1) = -1.0f;
     else if (turn_left == false && turn_right == true)
-        get_io()->output.back() = 1.0f;
+        get_io()->output.at(1) = 1.0f;
+
+    if (get_input_devices()->keyboard.is_pressed(qtgl::KEY_LCTRL()) || get_input_devices()->keyboard.is_pressed(qtgl::KEY_RCTRL()))
+        get_io()->output.at(2) = 0.5f;
 }
 
 
