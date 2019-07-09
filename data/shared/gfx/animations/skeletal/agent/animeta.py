@@ -1641,6 +1641,33 @@ def command_set():
             )
 
 
+def command_plot_origins_help():
+    return """
+plot_origins
+    Prints a table of positions of reference frames and the first bone,
+    both in all keyframes. The table is supposed to be copied into
+    LibreOffice and used for plots generation.
+"""
+
+
+def command_plot_origins():
+    reference_frames = _load_meta_reference_frames(primary=True)
+    parents = _load_bone_parents()
+    keyframes = _transform_keyframes_to_world_space(_load_keyframes(primary=True), parents)
+    print("         reference_frames            keyframes")
+    print("time     x        y         z        x        y         z")
+    for i, frame in enumerate(keyframes):
+        print(
+            _float_to_string(frame['time']) + " " +
+            _float_to_string(reference_frames[i]["pos"][0]) + " " +
+            _float_to_string(reference_frames[i]["pos"][1]) + " " +
+            _float_to_string(reference_frames[i]["pos"][2]) + " " +
+            _float_to_string(frame["frames_of_bones"][0]["pos"][0]) + " " +
+            _float_to_string(frame["frames_of_bones"][0]["pos"][1]) + " " +
+            _float_to_string(frame["frames_of_bones"][0]["pos"][2])
+            )
+
+
 def _main():
     if Config.instance.cmdline.command not in Config.instance.commands:
         raise Exception("Unknown command '" + Config.instance.cmdline.command + "'. Use 'help' command to see "
