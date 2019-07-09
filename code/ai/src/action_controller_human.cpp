@@ -12,6 +12,7 @@
 #include <queue>
 #include <unordered_map>
 #include <functional>
+//#include <fstream>
 
 namespace ai { namespace detail {
 
@@ -985,6 +986,33 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
     angeo::coordinate_system  motion_object_frame;
     get_blackboard()->m_scene->get_frame_of_scene_node(m_motion_object_nid, false, motion_object_frame);
 
+//static  bool new_round = false;
+//static  natural_32_bit  last_keyframe = std::numeric_limits<natural_32_bit>::max();
+//if (m_current_motion_template_cursor.motion_name == "todo-anim-name")
+//{
+//
+//    new_round = false;
+//    if (last_keyframe != m_current_motion_template_cursor.keyframe_index)
+//    {
+//        last_keyframe = m_current_motion_template_cursor.keyframe_index;
+//        std::ofstream ostr("todo-pathname", std::ostream::app);
+//        //if (new_round)
+//        //    ostr << "========================================" << std::endl;
+//        //ostr << "--- " << last_keyframe << " ---" << std::endl;
+//        ostr << motion_object_frame.origin()(0) << " "
+//            << motion_object_frame.origin()(1) << " "
+//            << motion_object_frame.origin()(2) << " "
+//            << std::endl;
+//        ostr.flush();
+//        ostr.close();
+//    }
+//}
+//else
+//{
+//new_round = true;
+//last_keyframe = std::numeric_limits<natural_32_bit>::max();
+//}
+//
     matrix44  motion_object_from_base_matrix;
     angeo::from_base_matrix(motion_object_frame, motion_object_from_base_matrix);
 
