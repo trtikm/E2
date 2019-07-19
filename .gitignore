@@ -1,9 +1,9 @@
 /build
 /dist
 /temp
-/.idea
-/.vscode
-/.vs
+.idea
+.vscode
+.vs
 *.user
 animeta_state.json
 /CMakeSettings.json
