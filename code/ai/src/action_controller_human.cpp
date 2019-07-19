@@ -252,6 +252,11 @@ skeletal_motion_templates::guarded_actions_ptr  get_satisfied_motion_guarded_act
                     return false;
                 return angle(motion_object_linear_velocity_in_world_space, gravity_acceleration_in_world_space) <= constraint_ptr->cone_angle_in_radians;
             }
+            else if (auto constraint_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::constraint_always const>(any_constraint_ptr))
+            {
+                return true;
+            }
             else
                 NOT_IMPLEMENTED_YET();
 
@@ -539,6 +544,14 @@ bool  compute_motion_object_acceleration_from_motion_actions(
 
                 if (output_external_acceleration != nullptr)
                     *output_external_acceleration = gravity_accel;
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_cancel_gravity_accel const>(action_props))
+            {
+                if (output_external_acceleration != nullptr)
+                    *output_external_acceleration = vector3_zero();
+                else
+                    output_motion_object_linear_acceleration -= gravity_accel;
             }
             else
                 NOT_IMPLEMENTED_YET();

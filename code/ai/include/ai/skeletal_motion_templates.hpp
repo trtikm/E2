@@ -548,6 +548,12 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
         }
     };
 
+    struct  constraint_always : public constraint
+    {
+        bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_always const&>(other); }
+        bool  operator==(constraint_always const&  other) const { return true; }
+    };
+
     using  action = detail::meta::action;
     using  action_ptr = detail::meta::action_ptr;
 
@@ -602,6 +608,18 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     {
         vector3  linear_velocity;
         float_32_bit  max_linear_accel;
+
+        bool  equals(action const&  other) const override { return *this == dynamic_cast<action_set_linear_velocity const&>(other); }
+        bool  operator==(action_set_linear_velocity const&  other) const
+        {
+            return are_equal(max_linear_accel, other.max_linear_accel, 0.0001f) && are_equal_3d(linear_velocity, other.linear_velocity, 0.0001f);
+        }
+    };
+
+    struct  action_cancel_gravity_accel : public action
+    {
+        bool  equals(action const&  other) const override { return *this == dynamic_cast<action_cancel_gravity_accel const&>(other); }
+        bool  operator==(action_cancel_gravity_accel const&  other) const { return true; }
     };
 
     using  collider = detail::meta::collider;

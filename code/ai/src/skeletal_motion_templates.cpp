@@ -345,6 +345,12 @@ motion_actions_data::motion_actions_data(async::finalise_load_on_destroy_ptr con
                         constraint.min_linear_speed = params.at(1);
                         predicates.push_back(_find_or_create_motion_action_component(constraint, last_predicates));
                     }
+                    else if (guard_name == "always")
+                    {
+                        if (!params.empty()) throw std::runtime_error(msgstream() << "Wrong number of parameters for always at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::constraint_always  constraint;
+                        predicates.push_back(_find_or_create_motion_action_component(constraint, last_predicates));
+                    }
                     else
                         NOT_IMPLEMENTED_YET();
                 }
@@ -408,6 +414,12 @@ motion_actions_data::motion_actions_data(async::finalise_load_on_destroy_ptr con
                         action.linear_velocity(1) = params.at(1);
                         action.linear_velocity(2) = params.at(2);
                         action.max_linear_accel = params.at(3);
+                        constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
+                    }
+                    else if (action_name == "cancel_gravity_accel")
+                    {
+                        if (!params.empty()) throw std::runtime_error(msgstream() << "Wrong number of parameters for meta action 'cancel_gravity_accel' at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::action_cancel_gravity_accel  action;
                         constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
                     }
                     else
