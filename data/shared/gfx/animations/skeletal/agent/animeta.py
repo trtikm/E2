@@ -39,7 +39,6 @@ class Config:
     class State:
         def __init__(self, pathname):
             self.work_dir = pathname
-            self.agent_dir = pathname
             self.anim_dir = None
             self.anim_dir2 = None
             self.bone_idx = 0
@@ -143,7 +142,7 @@ class Config:
                 if len(list_of_strings) > 1:
                     raise Exception("Wrong value type. Expected a single value, but passed a list.")
                 if var_type == str:
-                    if var_name in ["work_dir", "agent_dir"]:
+                    if var_name in ["work_dir"]:
                         return os.path.abspath(list_of_strings[0].replace("@@", self.get(var_name)))
                     return list_of_strings[0]
                 if var_type == int:
@@ -403,16 +402,6 @@ def _get_keyframes_dir(primary=True, check_exists=True):
     return keyframes_dir
 
 
-def _get_agent_dir(check_exists=True, check_for_pose_file=True):
-    if check_exists is True and not os.path.isdir(Config.instance.state.agent_dir):
-        raise Exception("Cannot access agent directory '" + Config.instance.state.agent_dir + "'. Please, check "
-                        "whether the state variable 'agent_dir' represents the desired disk path.")
-    if check_exists is True and not os.path.isfile(os.path.join(Config.instance.state.agent_dir, "pose.txt")):
-        raise Exception("Cannot access 'pose.txt' file under agent directory '" + Config.instance.state.agent_dir +
-                        "'. Please, check whether the state variable 'agent_dir' represents the desired disk path.")
-    return Config.instance.state.agent_dir
-
-
 def _get_meta_reference_frames_pathname(primary=True, check_exists=False):
     pathname = os.path.join(_get_keyframes_dir(primary, True), "meta_reference_frames.txt")
     if check_exists is True and not os.path.isfile(pathname):
@@ -570,7 +559,7 @@ def _load_bone_names():
 
 
 def _load_bone_pose_frames():
-    pathname = os.path.join(_get_agent_dir(), "pose.txt")
+    pathname = os.path.join(Config.instance.state.work_dir, "pose.txt")
     if not os.path.isfile(pathname):
         raise Exception("Cannot access file '" + pathname + "'.")
     with open(pathname, "r") as f:
@@ -720,15 +709,11 @@ def command_get():
 
 def command_graph_help():
     return """
-graph [agent] [pdf]
+graph [pdf]
     Scans all 'meta_keyframe_equivalences.txt' files in animation directories
-    and builds Graphviz '.animation_transitions.dot' file, representing a
-    graph of transitions between animations.
-    When the modifier 'agent' is passed to the command, then both 'agent_dir'
-    and 'work_dir' are scanned for 'meta_keyframe_equivalences.txt' files and
-    the '.animation_transitions.dot' file is saved under the 'agent_dir'
-    directory. Otherwise, only 'work_dir' is scanned and the
-    '.animation_transitions.dot' file is saved under the 'work_dir'.
+    under the 'work_dir' and builds Graphviz '.animation_transitions.dot' file,
+    representing a graph of transitions between animations. The 'dot' file is
+    saved under the 'work_dir'.
     When the output format specifier (i.e. 'pdf') is passed to the command,
     the besides '.animation_transitions.dot' file there is also generated
     '.animation_transitions.pdf' file from the '.animation_transitions.dot'
@@ -741,14 +726,11 @@ graph [agent] [pdf]
 
 
 def command_graph():
-    if "agent" in Config.instance.cmdline.arguments:
-        scan_dirs = [Config.instance.state.agent_dir, Config.instance.state.work_dir]
-        output_dir = Config.instance.state.agent_dir
-    else:
-        scan_dirs = [Config.instance.state.work_dir]
-        output_dir = Config.instance.state.work_dir
+    scan_dirs = [Config.instance.state.work_dir]
+    output_dir = Config.instance.state.work_dir
 
     print("Loading 'meta_keyframe_equivalences.txt' files.")
+
     equivalences = {}
     for scan_dir in scan_dirs:
         for anim_name in os.listdir(scan_dir):
@@ -1314,6 +1296,9 @@ motion_actions  <begin> <end>
                             vec_velocity(2) * up.
                 - 'max_linear_accel'
                         maximal magnitude of the linear acceleration
+        * 'cancel_gravity_accel':
+            Applies a force that cancels the effect of the gravitational
+            acceleration on the agent.
     NOTE: In the end, each keyframe must have assigned at least one motion
           action.
     NOTE: Guards of all keyframes, which form a branching node in the animation
@@ -1376,7 +1361,7 @@ def command_motion_actions():
             for action in args[4:]:
                 actions.append([action])
                 if action == "none":
-                    pass
+                    pass    # no arguments
                 elif action == "chase_ideal_linear_velocity":
                     actions[-1].append(state.max_linear_accel)
                     actions[-1].append(state.motion_error_multiplier)
@@ -1396,6 +1381,8 @@ def command_motion_actions():
                     actions[-1].append(state.vec_velocity[1])
                     actions[-1].append(state.vec_velocity[2])
                     actions[-1].append(state.max_linear_accel)
+                elif action == "cancel_gravity_accel":
+                    pass    # no arguments
                 else:
                     raise Exception("Unknown action name '" + str(action) + "'")
         else:
@@ -1429,6 +1416,23 @@ reference_frames  move_straight|
         where t is a solution of equations:
             X = pivot + t * vec_fwd
             vec_fwd * (X - keyframe["frames_of_bones"][bone_idx]["pos"]) = 0
+        NOTE: Standing can be considered as a special case of this motion.
+    * move_along_vector:
+        for each keyframe the computed reference frame looks as this
+            reference_frame {
+                "pos": pivot + t * vec_transition,
+                "rot": basis_vectors_to_quaternion(
+                            cross_product(
+                                vec_fwd_mult * vec_fwd,
+                                vec_down_mult * vec_down
+                                ),
+                            vec_fwd_mult * vec_fwd,
+                            vec_down_mult * vec_down
+                            )
+            }
+        where t is a solution of equations:
+            X = pivot + t * vec_transition
+            vec_transition * (X - keyframe["frames_of_bones"][bone_idx]["pos"]) = 0
         NOTE: Standing can be considered as a special case of this motion.
     * turn_around
         for each keyframe the computed reference frame looks as this
@@ -1540,6 +1544,18 @@ def command_reference_frames():
     keyframes = _transform_keyframes_to_world_space(_load_keyframes())
     if Config.instance.cmdline.arguments[0] == "move_straight":
         motion_direction = numpy.array(state.vec_fwd)
+        motion_direction_dot = numpy.dot(motion_direction, motion_direction)
+        rot = _basis_vectors_to_quaternion(
+                    numpy.cross(state.vec_fwd_mult * motion_direction, state.vec_down_mult * numpy.array(state.vec_down)),
+                    state.vec_fwd_mult * motion_direction,
+                    state.vec_down_mult * numpy.array(state.vec_down)
+                    )
+        for keyframe in keyframes:
+            t = numpy.dot(motion_direction, numpy.subtract(keyframe["frames_of_bones"][state.bone_idx]["pos"], state.pivot)) / motion_direction_dot
+            pos = numpy.add(state.pivot, t * motion_direction)
+            meta_reference_frames.append({"pos": pos, "rot": rot})
+    elif Config.instance.cmdline.arguments[0] == "move_along_vector":
+        motion_direction = numpy.array(state.vec_transition)
         motion_direction_dot = numpy.dot(motion_direction, motion_direction)
         rot = _basis_vectors_to_quaternion(
                     numpy.cross(state.vec_fwd_mult * motion_direction, state.vec_down_mult * numpy.array(state.vec_down)),
