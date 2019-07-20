@@ -31,6 +31,46 @@
 namespace window_tabs { namespace tab_scene { namespace record_agent { namespace detail {
 
 
+void  insert_skeleton_joint_nodes_under_agent_node(
+        scn::scene_record_id const&  agent_record_id,
+        scn::skeleton_props_const_ptr const  skeleton_props,
+        widgets* const  w
+        )
+{
+    std::vector<std::pair<scn::scene_node_id, tree_widget_item*> >  inserted_nodes{
+            { agent_record_id.get_node_id(), w->scene_tree()->find(agent_record_id.get_node_id()) }
+            };
+    for (natural_32_bit i = 0U; i != skeleton_props->skeletal_motion_templates.pose_frames().size(); ++i)
+    {
+        scn::scene_node_id const  bone_node_id =
+                inserted_nodes.at(skeleton_props->skeletal_motion_templates.hierarchy().parents().at(i) + 1).first
+                / skeleton_props->skeletal_motion_templates.names().at(i);
+        w->wnd()->glwindow().call_now(
+                &simulator::insert_scene_node_at,
+                bone_node_id,
+                skeleton_props->skeletal_motion_templates.pose_frames().at(i).origin(),
+                skeleton_props->skeletal_motion_templates.pose_frames().at(i).orientation()
+                );
+        auto const  bone_tree_item =
+                insert_coord_system_to_tree_widget(
+                        w->scene_tree(),
+                        bone_node_id,
+                        skeleton_props->skeletal_motion_templates.pose_frames().at(i).origin(),
+                        skeleton_props->skeletal_motion_templates.pose_frames().at(i).orientation(),
+                        w->get_node_icon(),
+                        inserted_nodes.at(skeleton_props->skeletal_motion_templates.hierarchy().parents().at(i) + 1).second
+                        );
+        w->get_scene_history()->insert<scn::scene_history_coord_system_insert>(
+                bone_node_id,
+                skeleton_props->skeletal_motion_templates.pose_frames().at(i).origin(),
+                skeleton_props->skeletal_motion_templates.pose_frames().at(i).orientation(),
+                false
+                );
+        inserted_nodes.push_back({ bone_node_id, bone_tree_item });
+    }
+}
+
+
 }}}}
 
 namespace window_tabs { namespace tab_scene { namespace record_agent {
@@ -104,37 +144,7 @@ void  register_record_handler_for_insert_scene_record(
                                 {
                                     scn::skeleton_props_ptr const  props =
                                         scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates);
-
-                                    std::vector<std::pair<scn::scene_node_id, tree_widget_item*> >  inserted_nodes{
-                                            { record_id.get_node_id(), w->scene_tree()->find(record_id.get_node_id()) }
-                                            };
-                                    for (natural_32_bit i = 0U; i != skeletal_motion_templates.pose_frames().size(); ++i)
-                                    {
-                                        scn::scene_node_id const  bone_node_id =
-                                                inserted_nodes.at(skeletal_motion_templates.hierarchy().parents().at(i) + 1).first / skeletal_motion_templates.names().at(i);
-                                        w->wnd()->glwindow().call_now(
-                                                &simulator::insert_scene_node_at,
-                                                bone_node_id,
-                                                skeletal_motion_templates.pose_frames().at(i).origin(),
-                                                skeletal_motion_templates.pose_frames().at(i).orientation()
-                                                );
-                                        auto const  bone_tree_item =
-                                                insert_coord_system_to_tree_widget(
-                                                        w->scene_tree(),
-                                                        bone_node_id,
-                                                        skeletal_motion_templates.pose_frames().at(i).origin(),
-                                                        skeletal_motion_templates.pose_frames().at(i).orientation(),
-                                                        w->get_node_icon(),
-                                                        inserted_nodes.at(skeletal_motion_templates.hierarchy().parents().at(i) + 1).second
-                                                        );
-                                        w->get_scene_history()->insert<scn::scene_history_coord_system_insert>(
-                                                bone_node_id,
-                                                skeletal_motion_templates.pose_frames().at(i).origin(),
-                                                skeletal_motion_templates.pose_frames().at(i).orientation(),
-                                                false
-                                                );
-                                        inserted_nodes.push_back({ bone_node_id, bone_tree_item });
-                                    }
+                                    detail::insert_skeleton_joint_nodes_under_agent_node(record_id, props, w);
                                     w->wnd()->glwindow().call_now(
                                             &simulator::insert_agent,
                                             std::cref(record_id),
@@ -161,6 +171,20 @@ void  register_record_handler_for_duplicate_scene_record(
                 duplicate_record_handlers
         )
 {
+    duplicate_record_handlers.insert({
+            scn::get_agent_folder_name(),
+            [](widgets* const  w, scn::scene_record_id const&  src_record_id, scn::scene_record_id const&  dst_record_id) -> void {
+                    scn::skeleton_props_const_ptr const  skeleton_props =
+                            w->wnd()->glwindow().call_now(&simulator::get_agent_info, std::cref(src_record_id.get_node_id()));
+                    //detail::insert_skeleton_joint_nodes_under_agent_node(dst_record_id, skeleton_props, w);
+                    w->wnd()->glwindow().call_now(
+                            &simulator::insert_agent,
+                            std::cref(dst_record_id),
+                            skeleton_props
+                            );
+                    //w->get_scene_history()->insert<scn::scene_history_agent_insert>(dst_record_id, false);
+                }
+            });
 }
 
 

@@ -2430,7 +2430,7 @@ void  simulator::get_rigid_body_info(
 }
 
 
-void  simulator::insert_agent(scn::scene_record_id const&  id, scn::skeleton_props_ptr const  props)
+void  simulator::insert_agent(scn::scene_record_id const&  id, scn::skeleton_props_const_ptr const  props)
 {
     TMPROF_BLOCK();
 
@@ -2655,6 +2655,12 @@ void  simulator::save_agent(scn::scene_node_ptr const  node_ptr, boost::property
     scn::agent* const  agent_ptr = scn::get_agent(*node_ptr);
     ASSUMPTION(agent_ptr != nullptr);
     data.put("skeleton_dir", agent_ptr->get_skeleton_props()->skeleton_directory.string());
+}
+
+
+scn::skeleton_props_const_ptr  simulator::get_agent_info(scn::scene_node_id const& id)
+{
+    return scn::get_agent(*get_scene_node(id))->get_skeleton_props();
 }
 
 

@@ -810,9 +810,17 @@ void  widgets::duplicate_subtree(tree_widget_item const* const  source_item, tre
                     false
                     );
             duplicate_subtree(item, duplicate_item);
-            continue;
         }
+    }
+    for (int i = 0, n = source_item->childCount(); i != n; ++i)
+    {
+        auto const  item = as_tree_widget_item(source_item->child(i));
+        std::string const  item_name = get_tree_widget_item_name(item);
+
+        if (represents_coord_system(item))
+            continue;
         INVARIANT(represents_folder(item));
+
         for (int j = 0, m = item->childCount(); j != m; ++j)
         {
             auto const  record_item = as_tree_widget_item(item->child(j));
