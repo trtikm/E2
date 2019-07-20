@@ -1145,84 +1145,90 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         m_template_motion_info.consumed_time_in_seconds = 0.0f;
         m_template_motion_info.src_pose = m_template_motion_info.dst_pose;
 
-        auto const&  motion_template = get_blackboard()->m_motion_templates.motions_map().at(m_template_motion_info.src_pose.motion_name);
-        auto const&  keyframe_equivalences = motion_template.keyframe_equivalences;
+        auto const*  motion_template = &get_blackboard()->m_motion_templates.motions_map().at(m_template_motion_info.src_pose.motion_name);
+        auto const*  keyframe_equivalences = &motion_template->keyframe_equivalences;
 
-        if (keyframe_equivalences.at(m_template_motion_info.src_pose.keyframe_index).empty() && satisfied_guarded_actions != nullptr)
+        if (keyframe_equivalences->at(m_template_motion_info.src_pose.keyframe_index).empty() && satisfied_guarded_actions != nullptr)
         {
             ++m_template_motion_info.dst_pose.keyframe_index;
 
             m_template_motion_info.total_interpolation_time_in_seconds =
-                    motion_template.keyframes.keyframe_at(m_template_motion_info.dst_pose.keyframe_index).get_time_point() -
-                    motion_template.keyframes.keyframe_at(m_template_motion_info.src_pose.keyframe_index).get_time_point() ;
+                    motion_template->keyframes.keyframe_at(m_template_motion_info.dst_pose.keyframe_index).get_time_point() -
+                    motion_template->keyframes.keyframe_at(m_template_motion_info.src_pose.keyframe_index).get_time_point() ;
             m_template_motion_info.total_interpolation_time_in_seconds /= detail::compute_animation_speed_coef_from_motion_error(motion_error);
         }
         else
         {
             skeletal_motion_templates::motion_template_cursor  src_pose_cursor = m_template_motion_info.src_pose;
-
-            for ( ; keyframe_equivalences.at(src_pose_cursor.keyframe_index).empty(); ++src_pose_cursor.keyframe_index)
-                ;
-
-            std::vector<std::shared_ptr<detail::find_best_keyframe_queue_record> >  candidate_records;
+            std::string const start_motion_name = src_pose_cursor.motion_name;
+            while (true)
             {
-                auto const  push_back_satisfied_motion_guarded_actions =
-                    [this, &motion_object_from_base_matrix, &gravity_accel, &motion_object_frame,
-                    &motion_object_forward_direction_in_world_space, &motion_object_up_direction_in_world_space,
-                    &motion_object_linear_velocity_in_world_space, &motion_object_angular_velocity_in_world_space,
-                    &candidate_records] (skeletal_motion_templates::motion_template_cursor const&  cursor) -> void {
-                        skeletal_motion_templates::guarded_actions_ptr const  satisfied_guarded_actions =
-                                get_satisfied_motion_guarded_actions(
-                                        cursor,
-                                        get_blackboard()->m_motion_templates,
-                                        get_blackboard()->m_collision_contacts,
-                                        m_motion_object_nid,
-                                        motion_object_linear_velocity_in_world_space,
-                                        motion_object_from_base_matrix,
-                                        gravity_accel
-                                        );
-                        if (satisfied_guarded_actions != nullptr)
-                            candidate_records.push_back(
-                                    std::make_shared<detail::find_best_keyframe_queue_record>(
+                for ( ; keyframe_equivalences->at(src_pose_cursor.keyframe_index).empty(); ++src_pose_cursor.keyframe_index)
+                    ;
+
+                std::vector<std::shared_ptr<detail::find_best_keyframe_queue_record> >  candidate_records;
+                {
+                    auto const  push_back_satisfied_motion_guarded_actions =
+                        [this, &motion_object_from_base_matrix, &gravity_accel, &motion_object_frame,
+                        &motion_object_forward_direction_in_world_space, &motion_object_up_direction_in_world_space,
+                        &motion_object_linear_velocity_in_world_space, &motion_object_angular_velocity_in_world_space,
+                        &candidate_records] (skeletal_motion_templates::motion_template_cursor const&  cursor) -> void {
+                            skeletal_motion_templates::guarded_actions_ptr const  satisfied_guarded_actions =
+                                    get_satisfied_motion_guarded_actions(
                                             cursor,
-                                            motion_object_frame.origin(),
-                                            motion_object_forward_direction_in_world_space,
-                                            motion_object_up_direction_in_world_space,
+                                            get_blackboard()->m_motion_templates,
+                                            get_blackboard()->m_collision_contacts,
+                                            m_motion_object_nid,
                                             motion_object_linear_velocity_in_world_space,
-                                            motion_object_angular_velocity_in_world_space
-                                            )
+                                            motion_object_from_base_matrix,
+                                            gravity_accel
+                                            );
+                            if (satisfied_guarded_actions != nullptr)
+                                candidate_records.push_back(
+                                        std::make_shared<detail::find_best_keyframe_queue_record>(
+                                                cursor,
+                                                motion_object_frame.origin(),
+                                                motion_object_forward_direction_in_world_space,
+                                                motion_object_up_direction_in_world_space,
+                                                motion_object_linear_velocity_in_world_space,
+                                                motion_object_angular_velocity_in_world_space
+                                                )
+                                        );
+                        };
+                    for (auto const& eq_cursor : keyframe_equivalences->at(src_pose_cursor.keyframe_index))
+                        push_back_satisfied_motion_guarded_actions(eq_cursor);
+                    if (src_pose_cursor.keyframe_index + 1U < motion_template->keyframes.num_keyframes())
+                        push_back_satisfied_motion_guarded_actions({src_pose_cursor.motion_name, src_pose_cursor.keyframe_index + 1U});
+                }
+                if (candidate_records.empty())
+                {
+                    INVARIANT(keyframe_equivalences->at(src_pose_cursor.keyframe_index).size() == 1UL
+                              && src_pose_cursor.keyframe_index + 1U == motion_template->keyframes.num_keyframes());
+                    src_pose_cursor = keyframe_equivalences->at(src_pose_cursor.keyframe_index).front();
+                    ++src_pose_cursor.keyframe_index;
+                    INVARIANT(src_pose_cursor.motion_name != start_motion_name);
+                    motion_template = &get_blackboard()->m_motion_templates.motions_map().at(src_pose_cursor.motion_name);
+                    keyframe_equivalences = &motion_template->keyframe_equivalences;
+                }
+                else
+                {
+                    m_template_motion_info.total_interpolation_time_in_seconds =
+                            detail::find_best_keyframe(
+                                    detail::find_best_keyframe_constants(
+                                            &m_desire,
+                                            get_blackboard()->m_motion_templates,
+                                            time_step_in_seconds,
+                                            1.0f,
+                                            0.25f,
+                                            gravity_accel,
+                                            motion_object_frame.origin()
+                                            ),
+                                    candidate_records,
+                                    m_template_motion_info.dst_pose
                                     );
-                    };
-                for (auto const& eq_cursor : keyframe_equivalences.at(src_pose_cursor.keyframe_index))
-                    push_back_satisfied_motion_guarded_actions(eq_cursor);
-                if (src_pose_cursor.keyframe_index + 1U < motion_template.keyframes.num_keyframes())
-                    push_back_satisfied_motion_guarded_actions({src_pose_cursor.motion_name, src_pose_cursor.keyframe_index + 1U});
+                    break;
+                }
             }
-            if (candidate_records.empty())
-            {
-                INVARIANT(keyframe_equivalences.at(src_pose_cursor.keyframe_index).size() == 1UL
-                          && src_pose_cursor.keyframe_index + 1U == motion_template.keyframes.num_keyframes());
-                m_template_motion_info.dst_pose = keyframe_equivalences.at(src_pose_cursor.keyframe_index).front();
-                ++m_template_motion_info.dst_pose.keyframe_index;
-                m_template_motion_info.total_interpolation_time_in_seconds =
-                    motion_template.keyframes.keyframe_at(m_template_motion_info.dst_pose.keyframe_index).get_time_point() -
-                    motion_template.keyframes.keyframe_at(m_template_motion_info.dst_pose.keyframe_index - 1U).get_time_point();
-            }
-            else
-                m_template_motion_info.total_interpolation_time_in_seconds =
-                        detail::find_best_keyframe(
-                                detail::find_best_keyframe_constants(
-                                        &m_desire,
-                                        get_blackboard()->m_motion_templates,
-                                        time_step_in_seconds,
-                                        1.0f,
-                                        0.25f,
-                                        gravity_accel,
-                                        motion_object_frame.origin()
-                                        ),
-                                candidate_records,
-                                m_template_motion_info.dst_pose
-                                );
         }
 
         m_current_motion_template_cursor = m_template_motion_info.src_pose;
