@@ -1133,15 +1133,14 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
     else
         m_motion_action_data.clear();
 
-    // Choose another pair of keyframes to interpolate, if we exhaused all interpolation time of the previous pair.
-    if (m_template_motion_info.consumed_time_in_seconds + time_step_in_seconds > m_template_motion_info.total_interpolation_time_in_seconds)
+    // Choose another pair of keyframes to interpolate, if action constraint does not hold true or we exhaused all interpolation time of the previous pair.
+    if (satisfied_guarded_actions == nullptr || m_template_motion_info.consumed_time_in_seconds + time_step_in_seconds > m_template_motion_info.total_interpolation_time_in_seconds)
     {
         float_32_bit const  time_till_dst_pose =
                 m_template_motion_info.total_interpolation_time_in_seconds - m_template_motion_info.consumed_time_in_seconds;
         INVARIANT(time_till_dst_pose >= 0.0f);
 
-        time_step_in_seconds -= time_till_dst_pose;
-        INVARIANT(time_step_in_seconds >= 0.0f);
+        time_step_in_seconds = std::max(0.0f, time_step_in_seconds - time_till_dst_pose);
 
         m_template_motion_info.consumed_time_in_seconds = 0.0f;
         m_template_motion_info.src_pose = m_template_motion_info.dst_pose;
