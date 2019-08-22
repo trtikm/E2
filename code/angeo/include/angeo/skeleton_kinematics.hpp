@@ -5,6 +5,7 @@
 #   include <angeo/coordinate_system.hpp>
 #   include <vector>
 #   include <unordered_map>
+#   include <unordered_set>
 
 namespace angeo {
 
@@ -36,6 +37,7 @@ void  skeleton_look_at(
         std::vector<coordinate_system> const&  pose_frames, // pose coordinate systems of bones, i.e. in a neutral position from which to start the look at algo; DO NOT PASS THE CURRENT COORDINATE SYSTEMS OF BONES.
         std::vector<integer_32_bit> const&  parents,        // value -1 at index 'i' means, the bone 'i' does not have a parent
         std::vector<std::vector<joint_rotation_props> > const&  rotation_props, // specification of rotation props of each bone at joint to its parent bone.
+        std::unordered_set<integer_32_bit> const&  bones_to_consider,	// bones to be considered in the algo; i.e. a subset of 'parents' parameter.
         std::unordered_map<integer_32_bit, std::vector<natural_32_bit> >* const  involved_rotations_of_bones = nullptr,
         natural_32_bit const  max_iterations = 25U,
         float_32_bit const  angle_range_epsilon = 0.1f * (PI() / 180.0f)
@@ -73,6 +75,7 @@ void  compute_to_bone_space_matrix(
         integer_32_bit  bone_index,
         std::vector<coordinate_system> const&  frames,
         std::vector<integer_32_bit> const&  parents,
+        std::unordered_set<integer_32_bit> const&  bones_to_consider,	// bones to be considered in the algo; i.e. a subset of 'parents' parameter.
         matrix44&  W
         );
 

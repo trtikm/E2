@@ -3,6 +3,7 @@
 
 #   include <angeo/coordinate_system.hpp>
 #   include <angeo/tensor_math.hpp>
+#	include <angeo/skeleton_kinematics.hpp>
 #   include <qtgl/keyframe.hpp>
 #   include <qtgl/modelspace.hpp>
 #   include <utility/async_resource_load.hpp>
@@ -280,6 +281,47 @@ struct  keyframe_equivalences : public async::resource_accessor<keyframe_equival
 };
 
 
+}}}
+
+namespace ai { namespace detail { namespace meta {
+
+
+struct  free_bones_for_look_at
+{
+	std::vector<natural_32_bit>  all_bones;
+	std::vector<natural_32_bit>  end_effector_bones;
+
+    bool  operator==(free_bones_for_look_at const&  other) const;
+    bool  operator!=(free_bones_for_look_at const&  other) const { return !(*this == other); }
+};
+using  free_bones_for_look_at_ptr = std::shared_ptr<free_bones_for_look_at const>;
+
+struct  free_bones_data
+{
+    explicit free_bones_data(async::finalise_load_on_destroy_ptr const  finaliser);
+    ~free_bones_data();
+
+    std::vector<free_bones_for_look_at_ptr>  look_at;
+};
+
+struct  free_bones : public async::resource_accessor<free_bones_data>
+{
+	free_bones() : async::resource_accessor<free_bones_data>() {}
+	free_bones(
+        boost::filesystem::path const&  path,
+        async::load_priority_type const  priority,
+        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
+        )
+        : async::resource_accessor<free_bones_data>(
+			{ "ai::skeletal_motion_templates::meta::free_bones",path.string() },
+            priority,
+            parent_finaliser
+            )
+    {}
+    std::vector<free_bones_for_look_at_ptr> const& look_at() const { return resource().look_at; }
+    std::size_t size() const { return look_at().size(); }
+};
+
 
 }}}
 
@@ -391,6 +433,39 @@ struct  bone_lengths : public async::resource_accessor<bone_lengths_data>
 namespace ai { namespace detail {
 
 
+struct  bone_joints_data
+{
+    explicit bone_joints_data(async::finalise_load_on_destroy_ptr const  finaliser);
+    ~bone_joints_data();
+
+    std::vector<std::vector<angeo::joint_rotation_props> >  data;
+};
+
+struct  bone_joints : public async::resource_accessor<bone_joints_data>
+{
+	bone_joints() : async::resource_accessor<bone_joints_data>() {}
+	bone_joints(
+        boost::filesystem::path const&  path,
+        async::load_priority_type const  priority,
+        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
+        )
+        : async::resource_accessor<bone_joints_data>(
+			{ "ai::skeletal_motion_templates::bone_joints",path.string() },
+            priority,
+            parent_finaliser
+            )
+    {}
+	std::vector<std::vector<angeo::joint_rotation_props> > const&  data() const { return resource().data; }
+	std::vector<angeo::joint_rotation_props>  at(natural_32_bit const  index) const { return data().at(index); }
+    std::size_t size() const { return data().size(); }
+};
+
+
+}}
+
+namespace ai { namespace detail {
+
+
 struct  anim_space_directions_data
 {
     explicit anim_space_directions_data(async::finalise_load_on_destroy_ptr const  finaliser);
@@ -445,14 +520,14 @@ struct  skeletal_motion_templates_data
         meta::colliders  colliders;
         meta::motion_actions  actions;
         meta::keyframe_equivalences  keyframe_equivalences;
+		meta::free_bones  free_bones;
     };
 
     modelspace  pose_frames;
     bone_names  names;
     bone_hierarchy  hierarchy;
     bone_lengths  lengths;
-
-    // std::vector<std::vector<angeo::joint_rotation_props> > rotation_props;     // NOT USED YET!
+	bone_joints  joints;
 
     // NOTE: 'anim' space is the space in which pose bones without a parent are defined. In other words, it is the common frame of reference
     //       of coord. systems of all pose bones without parent bones. Note also that all keyframes are defined in this 'anim' space.
@@ -506,7 +581,8 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  bone_names = detail::bone_names;
     using  bone_hierarchy = detail::bone_hierarchy;
     using  bone_lengths = detail::bone_lengths;
-    using  anim_space_directions = detail::anim_space_directions;
+	using  bone_joints = detail::bone_joints;
+	using  anim_space_directions = detail::anim_space_directions;
 
     using  motion_template = detail::skeletal_motion_templates_data::motion_template;
 
@@ -641,7 +717,8 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     bone_names  names() const { return resource().names; }
     bone_hierarchy  hierarchy() const { return resource().hierarchy; }
     bone_lengths  lengths() const { return resource().lengths; }
-    anim_space_directions  directions() const { return resource().directions; }
+	bone_joints  joints() const { return resource().joints; }
+	anim_space_directions  directions() const { return resource().directions; }
 
     std::unordered_map<std::string, motion_template> const&  motions_map() const { return resource().motions_map; }
     motion_template const&  at(std::string const&  motion_name) const { return motions_map().at(motion_name); }

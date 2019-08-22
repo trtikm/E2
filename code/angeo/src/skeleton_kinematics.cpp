@@ -81,6 +81,7 @@ void  skeleton_look_at(
         std::vector<coordinate_system> const&  pose_frames,
         std::vector<integer_32_bit> const&  parents,
         std::vector<std::vector<joint_rotation_props> > const&  rotation_props,
+        std::unordered_set<integer_32_bit> const&  bones_to_consider,
         std::unordered_map<integer_32_bit, std::vector<natural_32_bit> >* const  involved_rotations_of_bones,
         natural_32_bit const  max_iterations,
         float_32_bit const  angle_range_epsilon
@@ -88,8 +89,9 @@ void  skeleton_look_at(
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(!pose_frames.empty() && pose_frames.size() == parents.size() && pose_frames.size() == rotation_props.size());
-    ASSUMPTION(!look_at_targets.empty());
+    ASSUMPTION(!pose_frames.empty() && pose_frames.size() == parents.size());
+    ASSUMPTION(!look_at_targets.empty() && !bones_to_consider.empty() && max_iterations > 0U);
+	ASSUMPTION(angle_range_epsilon > 0.0f);
 
     output_frames = pose_frames;
 
@@ -108,7 +110,7 @@ void  skeleton_look_at(
     {
         std::unordered_map<integer_32_bit, std::vector<float_32_bit> >  angles;
         {
-            for (integer_32_bit  bone = target_info.first; bone >= 0; bone = props.parents->at(bone))
+            for (integer_32_bit  bone = target_info.first; bones_to_consider.count(bone) != 0ULL; bone = props.parents->at(bone))
                 angles[bone].resize(props.rotation_props->at(bone).size());
 
             std::vector<std::pair<vector2, vector2> >  angle_convergence_lines;
@@ -118,7 +120,7 @@ void  skeleton_look_at(
                 vector3  to_target_vector;
                 {
                     matrix44  from_world_to_parent_frame;
-                    compute_to_bone_space_matrix(props.parents->at(target_info.first), *props.frames, *props.parents, from_world_to_parent_frame);
+                    compute_to_bone_space_matrix(props.parents->at(target_info.first), *props.frames, *props.parents, bones_to_consider, from_world_to_parent_frame);
                     vector3 const  target_in_parent_bone = transform_point(target_info.second.second, from_world_to_parent_frame);
                     to_target_vector = target_in_parent_bone - frame.origin();
                 }
@@ -163,7 +165,7 @@ void  skeleton_look_at(
 
                 // 3. Compute rotation angles and apply them to frames of all inner bones (i.e. to all parents of the target bone).
                 for (integer_32_bit  child_bone = target_info.first, bone = props.parents->at(target_info.first);
-                     bone >= 0;
+					 bones_to_consider.count(bone) != 0ULL;
                      child_bone = bone, bone = props.parents->at(bone))
                 {
                     coordinate_system&  frame = props.frames->at(bone);
@@ -232,7 +234,7 @@ void  skeleton_look_at(
                     vector3  to_target_vector;
                     {
                         matrix44  from_world_to_parent_frame;
-                        compute_to_bone_space_matrix(props.parents->at(target_info.first), *props.frames, *props.parents, from_world_to_parent_frame);
+                        compute_to_bone_space_matrix(props.parents->at(target_info.first), *props.frames, *props.parents, bones_to_consider, from_world_to_parent_frame);
                         vector3 const  target_in_parent_bone = transform_point(target_info.second.second, from_world_to_parent_frame);
                         to_target_vector = target_in_parent_bone - frame.origin();
                     }
@@ -275,7 +277,7 @@ void  skeleton_look_at(
                             float_32_bit  angle_clipped = std::max(-0.5f * rot_props.m_max_angle, std::min(angle, 0.5f * rot_props.m_max_angle));
                             if (std::fabs(Q(0) - P(0)) < 1e-3f)
                             {
-                                // We got to almost horisontal convergence line; this situation is particularly bad
+                                // We got to almost vertical convergence line; this situation is particularly bad
                                 // at angle limits when we cannot recover from initial over-shooting towards the limit
                                 // and now we cannot go back. So, we detect these situations and resolve them by reseting
                                 // the new angle toward the center of the valid angle range of the rotation axis.
@@ -345,7 +347,7 @@ void  skeleton_look_at(
         vector3  to_target_vector;
         {
             matrix44  from_world_to_parent_frame;
-            compute_to_bone_space_matrix(props.parents->at(target_it->first), *props.frames, *props.parents, from_world_to_parent_frame);
+            compute_to_bone_space_matrix(props.parents->at(target_it->first), *props.frames, *props.parents, bones_to_consider, from_world_to_parent_frame);
             vector3 const  target_in_parent_bone = transform_point(target_it->second.second, from_world_to_parent_frame);
             to_target_vector = target_in_parent_bone - frame.origin();
         }
@@ -461,11 +463,12 @@ void  compute_to_bone_space_matrix(
         integer_32_bit  bone_index,
         std::vector<coordinate_system> const&  frames,
         std::vector<integer_32_bit> const&  parents,
+        std::unordered_set<integer_32_bit> const&  bones_to_consider,
         matrix44&  W
         )
 {
     W = matrix44_identity();
-    for ( ; bone_index >= 0; bone_index = parents.at(bone_index))
+    for ( ; bones_to_consider.count(bone_index) != 0ULL; bone_index = parents.at(bone_index))
     {
         matrix44  B;
         to_base_matrix(frames.at(bone_index), B);

@@ -27,6 +27,7 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <unordered_set>
 
 namespace detail {
 
@@ -547,7 +548,8 @@ void  __agent_look_at_object(
 
     std::vector<angeo::coordinate_system>  target_frames;
     std::unordered_map<integer_32_bit, std::vector<natural_32_bit> >  bones_to_rotate;
-    angeo::skeleton_look_at(target_frames, look_at_targets, pose_frames, parents, rotation_props, &bones_to_rotate);
+	std::unordered_set<integer_32_bit> const  bones_to_consider(parents.begin(), parents.end());
+	angeo::skeleton_look_at(target_frames, look_at_targets, pose_frames, parents, rotation_props, bones_to_consider, &bones_to_rotate);
 
     std::vector<angeo::coordinate_system>  frames;
     for (auto const& node_ptr : agent_nodes)

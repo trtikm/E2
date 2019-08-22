@@ -88,6 +88,12 @@ class Config:
                 "upper_foot.R",
                 "lower_foot.R",
             ]
+            self.bones = {
+                # "neck": False,
+                # "head": False,
+                "eye.L": True,
+                # "eye.R": True
+            }
             self.distance_threshold = 1.0
             self.delta_time_in_seconds = 0.25
             self.motion_error_multiplier = 1.0
@@ -688,6 +694,37 @@ def command_colliders():
             else:
                 raise Exception("Unknown shape '" + state.shape + "' in the state variable 'shape'.")
             f.write(_float_to_string(state.weight) + "\n")
+
+
+def command_free_bones_help():
+    return """
+free_bones [look_at]
+    TODO!
+"""
+
+
+def command_free_bones():
+    if len(Config.instance.cmdline.arguments) != 1:
+        raise Exception("Wrong number of arguments.")
+    if Config.instance.cmdline.arguments[0] not in ["look_at"]:
+        raise Exception("Unknown argument '" + str(Config.instance.cmdline.arguments[0]) + "'.")
+    if not os.path.isfile(_get_meta_reference_frames_pathname()):
+        raise Exception("The file '" + _get_meta_reference_frames_pathname() + "' does not exist. "
+                        "Please, run the command 'reference_frames' first.")
+    with open(_get_meta_reference_frames_pathname(), "r") as f:
+        num_frames = int(f.readline().strip())
+    bone_names = _load_bone_names()
+    state = Config.instance.state
+    assert all(x in bone_names for x in state.bones.keys())
+    with open(os.path.join(_get_keyframes_dir(), "meta_free_bones.txt"), "w") as f:
+        f.write(str(num_frames) + "\n")
+        for i in range(num_frames):
+            f.write("%% " + str(i) + "\n")
+            f.write("@" + str(Config.instance.cmdline.arguments[0]) + "\n")
+            for bone, flag in state.bones.items():
+                f.write("%% " + str(bone) + "\n")
+                f.write(str(bone_names.index(bone)) + "\n")
+                f.write(str(1 if flag is True else 0) + "\n")
 
 
 def command_get_help():

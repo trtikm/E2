@@ -12,6 +12,7 @@
 #include <utility/log.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/property_tree/info_parser.hpp>
 #include <unordered_set>
 #include <deque>
 
@@ -485,6 +486,79 @@ keyframe_equivalences_data::~keyframe_equivalences_data()
 
 }}}
 
+namespace ai { namespace detail { namespace meta {
+
+
+bool  free_bones_for_look_at::operator==(free_bones_for_look_at const&  other) const
+{
+    if (this == &other) return true;
+    if (all_bones.size() != other.all_bones.size() || end_effector_bones.size() != other.end_effector_bones.size())
+    {
+        return false;
+    }
+    for (natural_32_bit i = 0; i != all_bones.size(); ++i)
+    {
+        if (all_bones.at(i) != other.all_bones.at(i))
+        {
+            return false;
+        }
+    }
+    for (natural_32_bit i = 0; i != end_effector_bones.size(); ++i)
+    {
+        if (end_effector_bones.at(i) != other.end_effector_bones.at(i))
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+free_bones_data::free_bones_data(async::finalise_load_on_destroy_ptr const  finaliser)
+    : look_at()
+{
+    TMPROF_BLOCK();
+
+    read_meta_data_records<free_bones_for_look_at_ptr, natural_32_bit>(
+            finaliser->get_key().get_unique_id(),
+            [](std::vector<free_bones_for_look_at_ptr>&  output,
+               std::string const&  keyword,
+               std::vector<natural_32_bit> const&  params,
+               boost::filesystem::path const&  pathname,
+               natural_32_bit const  line_index,
+               free_bones_for_look_at_ptr&  last
+               ) -> void
+            {
+                if (params.size() % 2UL != 0UL)
+                    throw std::runtime_error(msgstream() << "Wrong number of parameters around line " << line_index << "in the file '" << pathname << "'. Expected is even number of params.");
+                if (keyword == "look_at")
+                {
+                    free_bones_for_look_at  record;
+                    for (natural_32_bit i = 0U; i < params.size(); i += 2)
+                    {
+                        record.all_bones.push_back(params.at(i));
+                        if (params.at(i + 1U) == 1U)
+                            record.end_effector_bones.push_back(params.at(i));
+                    }
+                    last = last != nullptr && *last == record ? last : std::make_shared<free_bones_for_look_at>(record);
+                    output.push_back(last);
+                }
+                else
+                    throw std::runtime_error(msgstream() << "Unknown keyword " << keyword << " around line " << line_index << "in the file '" << pathname << "'. Expected is even number of params.");
+            },
+            false,
+            &look_at,
+            nullptr
+            );
+}
+
+free_bones_data::~free_bones_data()
+{
+    TMPROF_BLOCK();
+}
+
+
+}}}
+
 namespace ai { namespace detail {
 
 
@@ -606,6 +680,58 @@ bone_lengths_data::~bone_lengths_data()
 namespace ai { namespace detail {
 
 
+bone_joints_data::bone_joints_data(async::finalise_load_on_destroy_ptr const  finaliser)
+	: data()
+{
+    TMPROF_BLOCK();
+
+    boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
+	std::unique_ptr<boost::property_tree::ptree> const  ptree(new boost::property_tree::ptree);
+	if (!boost::filesystem::is_regular_file(pathname))
+		throw std::runtime_error(msgstream() << "Cannot access the file '" << pathname << "'.");
+	boost::property_tree::read_info(pathname.string(), *ptree);
+	data.resize(ptree->size());
+	natural_32_bit i = 0U;
+	for (boost::property_tree::ptree::value_type const& bone_and_props : *ptree)
+	{
+		std::vector<angeo::joint_rotation_props>&  data_at_i = data.at(i);
+		data_at_i.resize(bone_and_props.second.size());
+		natural_32_bit j = 0U;
+		for (boost::property_tree::ptree::value_type const& none_and_props : bone_and_props.second)
+		{
+			boost::property_tree::ptree const&  joint_ptree = none_and_props.second;
+			angeo::joint_rotation_props&  joint = data_at_i.at(j);
+			joint.m_axis = vector3(joint_ptree.get<float_32_bit>("axis.x"),
+								   joint_ptree.get<float_32_bit>("axis.y"),
+								   joint_ptree.get<float_32_bit>("axis.z"));
+			joint.m_axis_in_parent_space = joint_ptree.get<bool>("axis_in_parent_space");
+			joint.m_zero_angle_direction = vector3(joint_ptree.get<float_32_bit>("zero_angle_direction.x"),
+												   joint_ptree.get<float_32_bit>("zero_angle_direction.y"),
+												   joint_ptree.get<float_32_bit>("zero_angle_direction.z"));
+			joint.m_direction = vector3(joint_ptree.get<float_32_bit>("direction.x"),
+										joint_ptree.get<float_32_bit>("direction.y"),
+										joint_ptree.get<float_32_bit>("direction.z"));
+			joint.m_max_angle = joint_ptree.get<float_32_bit>("max_angle");
+			joint.m_stiffness_with_parent_bone = joint_ptree.get<float_32_bit>("stiffness_with_parent_bone");
+			joint.m_max_angular_speed = joint_ptree.get<float_32_bit>("max_angular_speed");
+
+			++j;
+		}
+		++i;
+	}
+}
+
+bone_joints_data::~bone_joints_data()
+{
+    TMPROF_BLOCK();
+}
+
+
+}}
+
+namespace ai { namespace detail {
+
+
 anim_space_directions_data::anim_space_directions_data(async::finalise_load_on_destroy_ptr const  finaliser)
 {
     TMPROF_BLOCK();
@@ -671,6 +797,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                     throw std::runtime_error("The 'directions' were not loaded.");
                 if (motions_map.empty())
                     throw std::runtime_error("The 'motions_map' is empty.");
+                if (joints.empty())
+                    throw std::runtime_error("The 'joints' is empty.");
 
                 if (pose_frames.size() == 0U)
                     throw std::runtime_error("The 'pose_frames' is empty.");
@@ -680,6 +808,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                     throw std::runtime_error("The size of 'pose_frames' and 'hierarchy.parents()' are different.");
                 if (pose_frames.size() != lengths.size())
                     throw std::runtime_error("The size of 'pose_frames' and 'lengths' are different.");
+                if (joints.size() != names.size())
+                    throw std::runtime_error("The size of 'joints' and 'names' are different.");
 
                 if (hierarchy.parent(0U) != -1)
                     throw std::runtime_error("Invariant failure: hierarchy.parent(0) != -1.");
@@ -700,6 +830,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The 'motion_actions' were not loaded to 'motions_map[" << entry.first << "]'.");
                     if (record.keyframe_equivalences.empty())
                         throw std::runtime_error(msgstream() << "The 'keyframe_equivalences' were not loaded to 'motions_map[" << entry.first << "]'.");
+                    if (record.free_bones.empty())
+                        throw std::runtime_error(msgstream() << "The 'free_bones' were not loaded to 'motions_map[" << entry.first << "]'.");
 
                     if (record.keyframes.num_keyframes() < 2U)
                         throw std::runtime_error(msgstream() << "The count of keyframes is less than 2 in 'motions_map[" << entry.first << "]'.");
@@ -713,6 +845,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'motion_actions' differ in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.keyframe_equivalences.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'keyframe_equivalences' differ in 'motions_map[" << entry.first << "]'.");
+                    if (record.keyframes.num_keyframes() != record.free_bones.size())
+                        throw std::runtime_error(msgstream() << "The count of keyframes and 'free_bones' differ in 'motions_map[" << entry.first << "]'.");
                 }
             },
             finaliser
@@ -754,6 +888,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             lengths = bone_lengths(pathname / "lengths.txt", 10U, ultimate_finaliser);
         if (directions.empty() && boost::filesystem::is_regular_file(pathname / "directions.txt"))
             directions = anim_space_directions(pathname / "directions.txt", 10U, ultimate_finaliser);
+        if (joints.empty() && boost::filesystem::is_regular_file(pathname / "joints.txt"))
+            joints = bone_joints(pathname / "joints.txt", 10U, ultimate_finaliser);
 
         for (boost::filesystem::directory_entry& entry : boost::filesystem::directory_iterator(pathname))
             if (boost::filesystem::is_directory(entry.path()))
@@ -783,6 +919,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                             record.actions = meta::motion_actions(animation_pathname / "meta_motion_actions.txt", 1U, ultimate_finaliser);
                         if (record.keyframe_equivalences.empty() && boost::filesystem::is_regular_file(animation_pathname / "meta_keyframe_equivalences.txt"))
                             record.keyframe_equivalences = meta::keyframe_equivalences(animation_pathname / "meta_keyframe_equivalences.txt", 1U, ultimate_finaliser);
+                        if (record.free_bones.empty() && boost::filesystem::is_regular_file(animation_pathname / "meta_free_bones.txt"))
+                            record.free_bones = meta::free_bones(animation_pathname / "meta_free_bones.txt", 1U, ultimate_finaliser);
                     }
                 if (has_keyframes)
                     record.keyframes = keyframes(animation_pathname, 1U, ultimate_finaliser);
