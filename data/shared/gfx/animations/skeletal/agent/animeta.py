@@ -721,10 +721,10 @@ def command_free_bones():
         for i in range(num_frames):
             f.write("%% " + str(i) + "\n")
             f.write("@" + str(Config.instance.cmdline.arguments[0]) + "\n")
-            for bone, flag in state.bones.items():
+            for bone in sorted(state.bones.keys()):
                 f.write("%% " + str(bone) + "\n")
                 f.write(str(bone_names.index(bone)) + "\n")
-                f.write(str(1 if flag is True else 0) + "\n")
+                f.write(str(1 if state.bones[bone] is True else 0) + "\n")
 
 
 def command_get_help():
