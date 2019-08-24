@@ -1,4 +1,4 @@
-#include <gfxtuner/window_tabs/tab_scene_record_batch.hpp>
+#include <gfxtuner/window_tabs/tab_scene_record_agent.hpp>
 #include <gfxtuner/window_tabs/tab_scene.hpp>
 #include <gfxtuner/window_tabs/tab_scene_utils.hpp>
 #include <gfxtuner/program_window.hpp>
@@ -7,7 +7,6 @@
 #include <scene/scene_history.hpp>
 #include <scene/scene_node_record_id.hpp>
 #include <scene/scene_utils_specialised.hpp>
-#include <scene/records/agent/agent.hpp>
 #include <ai/agents.hpp>
 #include <ai/skeleton_utils.hpp>
 #include <angeo/skeleton_kinematics.hpp>
@@ -257,3 +256,36 @@ void  register_record_handler_for_save_scene_record(
 
 
 }}}
+
+namespace window_tabs { namespace tab_scene { namespace record_agent {
+
+
+void  reset_skeleton_joint_nodes_under_agent_node(
+        scn::scene_record_id const&  agent_record_id,
+        scn::skeleton_props_const_ptr const  skeleton_props,
+        widgets* const  w
+        )
+{
+    std::vector<scn::scene_node_id>  processed_nodes{ agent_record_id.get_node_id() };
+    for (natural_32_bit i = 0U; i != skeleton_props->skeletal_motion_templates.pose_frames().size(); ++i)
+    {
+        angeo::coordinate_system const&  bone_pose_coord_system = skeleton_props->skeletal_motion_templates.pose_frames().at(i);
+        scn::scene_node_id const  bone_node_id =
+            processed_nodes.at(skeleton_props->skeletal_motion_templates.hierarchy().parents().at(i) + 1)
+            / skeleton_props->skeletal_motion_templates.names().at(i);
+        scn::scene_node_ptr const  bone_node_ptr = w->wnd()->glwindow().call_now(&simulator::get_scene_node, bone_node_id);
+        w->get_scene_history()->insert<scn::scene_history_coord_system_relocate>(
+                bone_node_ptr->get_id(),
+                bone_node_ptr->get_coord_system()->origin(),
+                bone_node_ptr->get_coord_system()->orientation(),
+                bone_pose_coord_system.origin(),
+                bone_pose_coord_system.orientation()
+                );
+        bone_node_ptr->relocate(bone_pose_coord_system.origin(), bone_pose_coord_system.orientation());
+        processed_nodes.push_back(bone_node_id);
+    }
+}
+
+
+}}}
+

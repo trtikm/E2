@@ -4,6 +4,7 @@
 #include <gfxtuner/window_tabs/tab_scene_insert_number_dialog.hpp>
 #include <gfxtuner/window_tabs/tab_scene_record_id_reverse_builder.hpp>
 #include <gfxtuner/window_tabs/tab_scene_records_integration.hpp>
+#include <gfxtuner/window_tabs/tab_scene_record_agent.hpp>
 #include <gfxtuner/window_tabs/tab_scene_utils.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
@@ -1603,6 +1604,40 @@ void  widgets::on_scene_move_pivot_to_selection()
     get_scene_history()->commit();
     update_coord_system_location_widgets();
 }
+
+
+void  widgets::on_scene_agent_reset_skeleton_pose()
+{
+    if (!is_editing_enabled())
+        return;
+
+    std::unordered_map<scn::scene_record_id, scn::skeleton_props_const_ptr>  agents;
+    foreach(QTreeWidgetItem const*  item, m_scene_tree->selectedItems())
+    {
+        while (item->parent() != nullptr)
+            item = item->parent();
+        tree_widget_item const* const  tree_item = dynamic_cast<tree_widget_item const*>(item);
+        INVARIANT(tree_item != nullptr && represents_coord_system(tree_item));
+        scn::scene_node_id const  coord_system_id = scene_record_id_reverse_builder::run(tree_item).get_node_id();
+        if (coord_system_id == scn::get_pivot_node_id())
+            continue;
+        scn::scene_record_id const  agent_id(coord_system_id, "agent", "instance");
+        if (scene_tree()->find(agent_id) == nullptr)
+            continue;
+        scn::skeleton_props_const_ptr const  skeleton_props_ptr =
+            wnd()->glwindow().call_now(&simulator::get_agent_info, coord_system_id);
+        INVARIANT(skeleton_props_ptr != nullptr);
+        agents.insert({ agent_id, skeleton_props_ptr });
+    }
+    if (agents.empty())
+    {
+        wnd()->print_status_message("WARNING: There is no agent selected => no skeleton pose was reset.", 10000);
+        return;
+    }
+    for (auto const& id_and_props : agents)
+        record_agent::reset_skeleton_joint_nodes_under_agent_node(id_and_props.first, id_and_props.second, this);
+}
+
 
 void  widgets::on_scene_undo()
 {

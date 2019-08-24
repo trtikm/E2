@@ -71,6 +71,7 @@ menu_bar::menu_bar(program_window* const  wnd)
     , m_edit_action_toggle_pivot_selection(new QAction(QString("To&ggle pivot selection"), wnd))
     , m_edit_action_move_selection_to_pivot(new QAction(QString("Move se&lection to pivot"), wnd))
     , m_edit_action_move_pivot_to_selection(new QAction(QString("Move &pivot to selection"), wnd))
+    , m_edit_action_agent_reset_skeleton_pose(new QAction(QString("Reset s&keleton pose"), wnd))
     , m_edit_action_undo(new QAction(QString("&Undo"), wnd))
     , m_edit_action_redo(new QAction(QString("Red&o"), wnd))
 
@@ -182,6 +183,7 @@ void  menu_bar::toggle_enable_state_of_menu_items_for_simulation_mode(bool const
     get_edit_action_toggle_pivot_selection()->setDisabled(simulation_resumed);
     get_edit_action_move_selection_to_pivot()->setDisabled(simulation_resumed);
     get_edit_action_move_pivot_to_selection()->setDisabled(simulation_resumed);
+    get_edit_action_agent_reset_skeleton_pose()->setDisabled(simulation_resumed);
     get_edit_action_undo()->setDisabled(simulation_resumed);
     get_edit_action_redo()->setDisabled(simulation_resumed);
 
@@ -373,6 +375,17 @@ void  make_menu_bar_content(menu_bar const&  w)
         "corresponding axis vectors of the selected non-'@pivot' coord. system. It does not matter, whether '@pivot' is selected or not."
         );
     QObject::connect(w.get_edit_action_move_pivot_to_selection(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_move_pivot_to_selection);
+
+    w.get_menu_edit()->addSeparator();
+
+    w.get_menu_edit()->addAction(w.get_edit_action_agent_reset_skeleton_pose());
+    w.get_edit_action_agent_reset_skeleton_pose()->setShortcut(QString("Ctrl+Shift+K"));
+    w.get_edit_action_agent_reset_skeleton_pose()->setToolTip(
+        "For each selected agent the action resets its current pose to the default one (as defined in the 'pose.txt' file).\n"
+        "An agent is considered as selected if any of its node in the 'Scene' tab is selected (i.e. any coord. system, forlder,\n"
+        "or record can be selected)."
+    );
+    QObject::connect(w.get_edit_action_agent_reset_skeleton_pose(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_agent_reset_skeleton_pose);
 
     w.get_menu_edit()->addSeparator();
 

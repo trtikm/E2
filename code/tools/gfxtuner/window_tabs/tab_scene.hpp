@@ -78,6 +78,7 @@ struct  widgets
     void  on_scene_toggle_pivot_selection();
     void  on_scene_move_selection_to_pivot();
     void  on_scene_move_pivot_to_selection();
+    void  on_scene_agent_reset_skeleton_pose();
 
     void  on_scene_undo();
     void  on_scene_redo();

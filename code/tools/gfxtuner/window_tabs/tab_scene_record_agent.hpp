@@ -3,6 +3,7 @@
 
 #   include <scene/scene_record_id.hpp>
 #   include <scene/scene_node_record_id.hpp>
+#   include <scene/records/agent/agent.hpp>
 #   include <unordered_map>
 #   include <unordered_set>
 #   include <functional>
@@ -58,6 +59,18 @@ void  register_record_handler_for_save_scene_record(
                                                            scn::scene_node_record_id const&,
                                                            boost::property_tree::ptree&)>>&
                 save_record_handlers
+        );
+
+
+}}}
+
+namespace window_tabs { namespace tab_scene { namespace record_agent {
+
+
+void  reset_skeleton_joint_nodes_under_agent_node(
+        scn::scene_record_id const&  agent_record_id,
+        scn::skeleton_props_const_ptr const  skeleton_props,
+        widgets* const  w
         );
 
 

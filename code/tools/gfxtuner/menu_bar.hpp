@@ -42,6 +42,7 @@ struct  menu_bar
     QAction*  get_edit_action_toggle_pivot_selection() const { return m_edit_action_toggle_pivot_selection; }
     QAction*  get_edit_action_move_selection_to_pivot() const { return m_edit_action_move_selection_to_pivot; }
     QAction*  get_edit_action_move_pivot_to_selection() const { return m_edit_action_move_pivot_to_selection; }
+    QAction*  get_edit_action_agent_reset_skeleton_pose() const { return m_edit_action_agent_reset_skeleton_pose; }
     QAction*  get_edit_action_undo() const { return m_edit_action_undo; }
     QAction*  get_edit_action_redo() const { return m_edit_action_redo; }
 
@@ -99,6 +100,7 @@ private:
     QAction*  m_edit_action_toggle_pivot_selection;
     QAction*  m_edit_action_move_selection_to_pivot;
     QAction*  m_edit_action_move_pivot_to_selection;
+    QAction*  m_edit_action_agent_reset_skeleton_pose;
     QAction*  m_edit_action_undo;
     QAction*  m_edit_action_redo;
 
