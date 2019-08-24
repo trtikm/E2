@@ -178,6 +178,15 @@ widgets::widgets(program_window* const  wnd)
             return new s(wnd);
         }(m_wnd)
         )
+    , m_coord_system_axis_x_x(new QLineEdit)
+    , m_coord_system_axis_x_y(new QLineEdit)
+    , m_coord_system_axis_x_z(new QLineEdit)
+    , m_coord_system_axis_y_x(new QLineEdit)
+    , m_coord_system_axis_y_y(new QLineEdit)
+    , m_coord_system_axis_y_z(new QLineEdit)
+    , m_coord_system_axis_z_x(new QLineEdit)
+    , m_coord_system_axis_z_y(new QLineEdit)
+    , m_coord_system_axis_z_z(new QLineEdit)
 
     , m_coord_system_location_backup_buffer()
     , m_pending_scene_dir_to_load()
@@ -1889,6 +1898,16 @@ void  widgets::enable_coord_system_location_widgets(bool const  state, bool cons
     m_coord_system_pitch->setEnabled(state);
     m_coord_system_roll->setEnabled(state);
 
+    m_coord_system_axis_x_x->setEnabled(state);
+    m_coord_system_axis_x_y->setEnabled(state);
+    m_coord_system_axis_x_z->setEnabled(state);
+    m_coord_system_axis_y_x->setEnabled(state);
+    m_coord_system_axis_y_y->setEnabled(state);
+    m_coord_system_axis_y_z->setEnabled(state);
+    m_coord_system_axis_z_x->setEnabled(state);
+    m_coord_system_axis_z_y->setEnabled(state);
+    m_coord_system_axis_z_z->setEnabled(state);
+
     if (state == false)
     {
         m_coord_system_pos_x->setText("");
@@ -1903,6 +1922,16 @@ void  widgets::enable_coord_system_location_widgets(bool const  state, bool cons
         m_coord_system_yaw->setText("");
         m_coord_system_pitch->setText("");
         m_coord_system_roll->setText("");
+
+        m_coord_system_axis_x_x->setText("");
+        m_coord_system_axis_x_y->setText("");
+        m_coord_system_axis_x_z->setText("");
+        m_coord_system_axis_y_x->setText("");
+        m_coord_system_axis_y_y->setText("");
+        m_coord_system_axis_y_z->setText("");
+        m_coord_system_axis_z_x->setText("");
+        m_coord_system_axis_z_y->setText("");
+        m_coord_system_axis_z_z->setText("");
     }
     else
     {
@@ -1918,6 +1947,16 @@ void  widgets::enable_coord_system_location_widgets(bool const  state, bool cons
         m_coord_system_yaw->setReadOnly(read_only);
         m_coord_system_pitch->setReadOnly(read_only);
         m_coord_system_roll->setReadOnly(read_only);
+
+        m_coord_system_axis_x_x->setReadOnly(true);
+        m_coord_system_axis_x_y->setReadOnly(true);
+        m_coord_system_axis_x_z->setReadOnly(true);
+        m_coord_system_axis_y_x->setReadOnly(true);
+        m_coord_system_axis_y_y->setReadOnly(true);
+        m_coord_system_axis_y_z->setReadOnly(true);
+        m_coord_system_axis_z_x->setReadOnly(true);
+        m_coord_system_axis_z_y->setReadOnly(true);
+        m_coord_system_axis_z_z->setReadOnly(true);
     }
 }
 
@@ -1945,6 +1984,21 @@ void  widgets::refresh_text_in_coord_system_rotation_widgets(quaternion const&  
     m_coord_system_yaw->setText(QString::number(yaw * 180.0f / PI()));
     m_coord_system_pitch->setText(QString::number(pitch * 180.0f / PI()));
     m_coord_system_roll->setText(QString::number(roll * 180.0f / PI()));
+
+    vector3 x, y, z;
+    rotation_matrix_to_basis(quaternion_to_rotation_matrix(q), x, y, z);
+    normalise(x);
+    normalise(y);
+    normalise(z);
+    m_coord_system_axis_x_x->setText(QString::number(x(0)));
+    m_coord_system_axis_x_y->setText(QString::number(x(1)));
+    m_coord_system_axis_x_z->setText(QString::number(x(2)));
+    m_coord_system_axis_y_x->setText(QString::number(y(0)));
+    m_coord_system_axis_y_y->setText(QString::number(y(1)));
+    m_coord_system_axis_y_z->setText(QString::number(y(2)));
+    m_coord_system_axis_z_x->setText(QString::number(z(0)));
+    m_coord_system_axis_z_y->setText(QString::number(z(1)));
+    m_coord_system_axis_z_z->setText(QString::number(z(2)));
 }
 
 
@@ -1998,70 +2052,82 @@ QWidget*  make_scene_tab_content(widgets const&  w)
             {
                 QVBoxLayout* const selected_layout = new QVBoxLayout();
                 {
-                    QWidget* const position_group = new QGroupBox("Position in meters [xyz]");
+                    selected_layout->addWidget(new QLabel("Origin [xyz]"));
+                    QHBoxLayout* const position_layout = new QHBoxLayout;
                     {
-                        QHBoxLayout* const position_layout = new QHBoxLayout;
-                        {
-                            position_layout->addWidget(w.coord_system_pos_x());
-                            position_layout->addWidget(w.coord_system_pos_y());
-                            position_layout->addWidget(w.coord_system_pos_z());
-
-                            w.wnd()->glwindow().register_listener(
-                                        simulator_notifications::scene_node_position_update_started(),
-                                        { &program_window::on_scene_coord_system_position_started, w.wnd() }
-                                        );
-                            w.wnd()->glwindow().register_listener(
-                                        simulator_notifications::scene_node_position_updated(),
-                                        { &program_window::scene_coord_system_position_listener, w.wnd() }
-                                        );
-                            w.wnd()->glwindow().register_listener(
-                                        simulator_notifications::scene_node_position_update_finished(),
-                                        { &program_window::on_scene_coord_system_position_finished, w.wnd() }
-                                        );
-                        }
-                        position_group->setLayout(position_layout);
+                        position_layout->addWidget(w.coord_system_pos_x());
+                        position_layout->addWidget(w.coord_system_pos_y());
+                        position_layout->addWidget(w.coord_system_pos_z());
                     }
-                    selected_layout->addWidget(position_group);
+                    selected_layout->addLayout(position_layout);
 
-                    QWidget* const rotation_group = new QGroupBox("Rotation");
+                    selected_layout->addWidget(new QLabel("Quaternion [wxyz]"));
+                    QHBoxLayout* const quaternion_layout = new QHBoxLayout;
                     {
-                        QVBoxLayout* const rotation_layout = new QVBoxLayout;
-                        {
-                            rotation_layout->addWidget(new QLabel("Quaternion [wxyz]"));
-                            QHBoxLayout* const quaternion_layout = new QHBoxLayout;
-                            {
-                                quaternion_layout->addWidget(w.coord_system_rot_w());
-                                quaternion_layout->addWidget(w.coord_system_rot_x());
-                                quaternion_layout->addWidget(w.coord_system_rot_y());
-                                quaternion_layout->addWidget(w.coord_system_rot_z());
-                            }
-                            rotation_layout->addLayout(quaternion_layout);
-
-                            rotation_layout->addWidget(new QLabel("Tait-Bryan angles in degrees [yaw(z)-pitch(y')-roll(x'')]"));
-                            QHBoxLayout* const tait_bryan_layout = new QHBoxLayout;
-                            {
-                                tait_bryan_layout->addWidget(w.coord_system_yaw());
-                                tait_bryan_layout->addWidget(w.coord_system_pitch());
-                                tait_bryan_layout->addWidget(w.coord_system_roll());
-                            }
-                            rotation_layout->addLayout(tait_bryan_layout);
-                        }
-                        rotation_group->setLayout(rotation_layout);
-
-                        w.wnd()->glwindow().register_listener(
-                                    simulator_notifications::scene_node_orientation_update_started(),
-                                    { &program_window::on_scene_coord_system_rotation_started, w.wnd() }
-                                    );
-                        w.wnd()->glwindow().register_listener(
-                                    simulator_notifications::scene_node_orientation_updated(),
-                                    { &program_window::scene_coord_system_rotation_listener, w.wnd() }
-                                    );
-                        w.wnd()->glwindow().register_listener(
-                                    simulator_notifications::scene_node_orientation_update_finished(),
-                                    { &program_window::on_scene_coord_system_rotation_finished, w.wnd() }
-                                    );
+                        quaternion_layout->addWidget(w.coord_system_rot_w());
+                        quaternion_layout->addWidget(w.coord_system_rot_x());
+                        quaternion_layout->addWidget(w.coord_system_rot_y());
+                        quaternion_layout->addWidget(w.coord_system_rot_z());
                     }
-                    selected_layout->addWidget(rotation_group);
+                    selected_layout->addLayout(quaternion_layout);
+
+                    selected_layout->addWidget(new QLabel("Tait-Bryan angles in degrees [yaw(z)-pitch(y')-roll(x'')]"));
+                    QHBoxLayout* const tait_bryan_layout = new QHBoxLayout;
+                    {
+                        tait_bryan_layout->addWidget(w.coord_system_yaw());
+                        tait_bryan_layout->addWidget(w.coord_system_pitch());
+                        tait_bryan_layout->addWidget(w.coord_system_roll());
+                    }
+                    selected_layout->addLayout(tait_bryan_layout);
+
+                    selected_layout->addWidget(new QLabel("Basis vectors X, Y, and Z; for each coords [xyz]"));
+                    QHBoxLayout*  axis_layout = new QHBoxLayout;
+                    {
+                        axis_layout->addWidget(w.get_coord_system_axis_x_x());
+                        axis_layout->addWidget(w.get_coord_system_axis_x_y());
+                        axis_layout->addWidget(w.get_coord_system_axis_x_z());
+                    }
+                    selected_layout->addLayout(axis_layout);
+                    axis_layout = new QHBoxLayout;
+                    {
+                        axis_layout->addWidget(w.get_coord_system_axis_y_x());
+                        axis_layout->addWidget(w.get_coord_system_axis_y_y());
+                        axis_layout->addWidget(w.get_coord_system_axis_y_z());
+                    }
+                    selected_layout->addLayout(axis_layout);
+                    axis_layout = new QHBoxLayout;
+                    {
+                        axis_layout->addWidget(w.get_coord_system_axis_z_x());
+                        axis_layout->addWidget(w.get_coord_system_axis_z_y());
+                        axis_layout->addWidget(w.get_coord_system_axis_z_z());
+                    }
+                    selected_layout->addLayout(axis_layout);
+
+                    w.wnd()->glwindow().register_listener(
+                            simulator_notifications::scene_node_position_update_started(),
+                            { &program_window::on_scene_coord_system_position_started, w.wnd() }
+                            );
+                    w.wnd()->glwindow().register_listener(
+                            simulator_notifications::scene_node_position_updated(),
+                            { &program_window::scene_coord_system_position_listener, w.wnd() }
+                            );
+                    w.wnd()->glwindow().register_listener(
+                            simulator_notifications::scene_node_position_update_finished(),
+                            { &program_window::on_scene_coord_system_position_finished, w.wnd() }
+                            );
+
+                    w.wnd()->glwindow().register_listener(
+                            simulator_notifications::scene_node_orientation_update_started(),
+                            { &program_window::on_scene_coord_system_rotation_started, w.wnd() }
+                            );
+                    w.wnd()->glwindow().register_listener(
+                            simulator_notifications::scene_node_orientation_updated(),
+                            { &program_window::scene_coord_system_rotation_listener, w.wnd() }
+                            );
+                    w.wnd()->glwindow().register_listener(
+                            simulator_notifications::scene_node_orientation_update_finished(),
+                            { &program_window::on_scene_coord_system_rotation_finished, w.wnd() }
+                            );
                 }
                 selected_group->setLayout(selected_layout);
             }

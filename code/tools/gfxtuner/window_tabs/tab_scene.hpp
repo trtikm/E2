@@ -49,6 +49,16 @@ struct  widgets
     QLineEdit* coord_system_pitch() const { return m_coord_system_pitch; }
     QLineEdit* coord_system_roll() const { return m_coord_system_roll; }
 
+    QLineEdit* get_coord_system_axis_x_x() const { return m_coord_system_axis_x_x; }
+    QLineEdit* get_coord_system_axis_x_y() const { return m_coord_system_axis_x_y; }
+    QLineEdit* get_coord_system_axis_x_z() const { return m_coord_system_axis_x_z; }
+    QLineEdit* get_coord_system_axis_y_x() const { return m_coord_system_axis_y_x; }
+    QLineEdit* get_coord_system_axis_y_y() const { return m_coord_system_axis_y_y; }
+    QLineEdit* get_coord_system_axis_y_z() const { return m_coord_system_axis_y_z; }
+    QLineEdit* get_coord_system_axis_z_x() const { return m_coord_system_axis_z_x; }
+    QLineEdit* get_coord_system_axis_z_y() const { return m_coord_system_axis_z_y; }
+    QLineEdit* get_coord_system_axis_z_z() const { return m_coord_system_axis_z_z; }
+
     void  on_simulator_started();
     void  process_pending_scene_load_requst_if_any();
 
@@ -195,6 +205,16 @@ private:
     QLineEdit*  m_coord_system_yaw;
     QLineEdit*  m_coord_system_pitch;
     QLineEdit*  m_coord_system_roll;
+
+    QLineEdit*  m_coord_system_axis_x_x;
+    QLineEdit*  m_coord_system_axis_x_y;
+    QLineEdit*  m_coord_system_axis_x_z;
+    QLineEdit*  m_coord_system_axis_y_x;
+    QLineEdit*  m_coord_system_axis_y_y;
+    QLineEdit*  m_coord_system_axis_y_z;
+    QLineEdit*  m_coord_system_axis_z_x;
+    QLineEdit*  m_coord_system_axis_z_y;
+    QLineEdit*  m_coord_system_axis_z_z;
 
     std::unordered_map<scn::scene_node_id, angeo::coordinate_system>  m_coord_system_location_backup_buffer;
 
