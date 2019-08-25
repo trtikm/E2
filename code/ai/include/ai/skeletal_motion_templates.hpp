@@ -253,39 +253,6 @@ struct  motion_actions : public async::resource_accessor<motion_actions_data>
 namespace ai { namespace detail { namespace meta {
 
 
-struct  keyframe_equivalences_data
-{
-    explicit keyframe_equivalences_data(async::finalise_load_on_destroy_ptr const  finaliser);
-    ~keyframe_equivalences_data();
-
-    std::vector<std::vector<motion_template_cursor> >  data;
-};
-
-struct  keyframe_equivalences : public async::resource_accessor<keyframe_equivalences_data>
-{
-    keyframe_equivalences() : async::resource_accessor<keyframe_equivalences_data>() {}
-    keyframe_equivalences(
-        boost::filesystem::path const&  path,
-        async::load_priority_type const  priority,
-        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
-        )
-        : async::resource_accessor<keyframe_equivalences_data>(
-    { "ai::skeletal_motion_templates::meta::keyframe_equivalences",path.string() },
-            priority,
-            parent_finaliser
-            )
-    {}
-    std::vector<std::vector<motion_template_cursor> > const&  data() const { return resource().data; }
-    std::vector<motion_template_cursor> const&  at(natural_32_bit const  index) const { return data().at(index); }
-    std::size_t size() const { return data().size(); }
-};
-
-
-}}}
-
-namespace ai { namespace detail { namespace meta {
-
-
 struct  free_bones_for_look_at
 {
 	std::vector<natural_32_bit>  all_bones;
@@ -503,6 +470,45 @@ struct  anim_space_directions : public async::resource_accessor<anim_space_direc
 namespace ai { namespace detail {
 
 
+struct  motion_template_transitions_data
+{
+    explicit motion_template_transitions_data(async::finalise_load_on_destroy_ptr const  finaliser);
+    ~motion_template_transitions_data();
+
+    using  transitions_graph = std::unordered_multimap<motion_template_cursor, std::pair<motion_template_cursor, float_32_bit>, motion_template_cursor::hasher>;
+
+    transitions_graph  data;
+};
+
+struct  motion_template_transitions : public async::resource_accessor<motion_template_transitions_data>
+{
+    using  transitions_graph = motion_template_transitions_data::transitions_graph;
+    using  target_motions_range = std::pair<transitions_graph::const_iterator, transitions_graph::const_iterator>;
+
+    motion_template_transitions() : async::resource_accessor<motion_template_transitions_data>() {}
+    motion_template_transitions(
+        boost::filesystem::path const&  path,
+        async::load_priority_type const  priority,
+        async::finalise_load_on_destroy_ptr const  parent_finaliser = nullptr
+        )
+        : async::resource_accessor<motion_template_transitions_data>(
+    { "ai::skeletal_motion_templates::motion_template_transitions",path.string() },
+            priority,
+            parent_finaliser
+            )
+    {}
+
+    transitions_graph const&  data() const { return resource().data; }
+    target_motions_range  find_targets(motion_template_cursor const&  cursor) const { return data().equal_range(cursor); }
+    bool  has_targets(motion_template_cursor const& cursor) const { auto const x = data().equal_range(cursor); return x.first != x.second; }
+};
+
+
+}}
+
+namespace ai { namespace detail {
+
+
 struct  skeletal_motion_templates_data
 {
     using  keyframe = qtgl::keyframe;
@@ -519,7 +525,6 @@ struct  skeletal_motion_templates_data
         meta::mass_distributions  mass_distributions;
         meta::colliders  colliders;
         meta::motion_actions  actions;
-        meta::keyframe_equivalences  keyframe_equivalences;
 		meta::free_bones  free_bones;
     };
 
@@ -533,6 +538,8 @@ struct  skeletal_motion_templates_data
     //       of coord. systems of all pose bones without parent bones. Note also that all keyframes are defined in this 'anim' space.
     // NOTE: The two vectors below should also represent forward and up directions in each meta-reference-frame of each keyframe.
     anim_space_directions  directions;
+
+    motion_template_transitions  transitions;
 
     std::unordered_map<std::string, motion_template>  motions_map;
 
@@ -583,6 +590,7 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  bone_lengths = detail::bone_lengths;
 	using  bone_joints = detail::bone_joints;
 	using  anim_space_directions = detail::anim_space_directions;
+    using  motion_template_transitions = detail::motion_template_transitions;
 
     using  motion_template = detail::skeletal_motion_templates_data::motion_template;
 
@@ -719,6 +727,7 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     bone_lengths  lengths() const { return resource().lengths; }
 	bone_joints  joints() const { return resource().joints; }
 	anim_space_directions  directions() const { return resource().directions; }
+    motion_template_transitions  transitions() const { return resource().transitions; }
 
     std::unordered_map<std::string, motion_template> const&  motions_map() const { return resource().motions_map; }
     motion_template const&  at(std::string const&  motion_name) const { return motions_map().at(motion_name); }

@@ -452,43 +452,6 @@ motion_actions_data::~motion_actions_data()
 namespace ai { namespace detail { namespace meta {
 
 
-keyframe_equivalences_data::keyframe_equivalences_data(async::finalise_load_on_destroy_ptr const  finaliser)
-    : data()
-{
-    TMPROF_BLOCK();
-
-    read_meta_data_records<motion_template_cursor, natural_32_bit>(
-            finaliser->get_key().get_unique_id(),
-            [](std::vector<motion_template_cursor>&  output,
-               std::string const&  keyword,
-               std::vector<natural_32_bit> const&  params,
-               boost::filesystem::path const&  pathname,
-               natural_32_bit const  line_index,
-               motion_template_cursor&
-               ) -> void
-            {
-                if (params.empty())
-                    throw std::runtime_error(msgstream() << "Wrong number of parameters for equivalence motion_template_cursor at line " << line_index << "in the file '" << pathname << "'.");
-                for (natural_32_bit  index : params)
-                    output.push_back({keyword, index});
-            },
-            false,
-            nullptr,
-            &data
-            );
-}
-
-keyframe_equivalences_data::~keyframe_equivalences_data()
-{
-    TMPROF_BLOCK();
-}
-
-
-}}}
-
-namespace ai { namespace detail { namespace meta {
-
-
 bool  free_bones_for_look_at::operator==(free_bones_for_look_at const&  other) const
 {
     if (this == &other) return true;
@@ -770,6 +733,112 @@ anim_space_directions_data::~anim_space_directions_data()
 namespace ai { namespace detail {
 
 
+motion_template_transitions_data::motion_template_transitions_data(async::finalise_load_on_destroy_ptr const  finaliser)
+    : data()
+{
+    TMPROF_BLOCK();
+
+    boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
+
+    std::ifstream  istr;
+    open_file_stream_for_reading(istr, pathname);
+
+    natural_32_bit  line_index = 0U;
+    natural_32_bit  column = 0U;
+
+    while (true)
+    {
+        std::string  line = read_line(istr, &line_index);
+        if (line == "digraph G {")
+            break;
+    }
+    while (true)
+    {
+        std::string  line = read_line(istr, &line_index);
+        if (!line.empty() && line.front() == '}')
+            break;
+        if (is_empty_line(line))
+            continue;
+        try
+        {
+            column = 0U;
+
+            std::string  src_anim_name;
+            {
+                while (line.at(column) != '"') ++column; ++column;
+                natural_32_bit const  begin = column;
+                while (line.at(column) != '"') ++column;
+                if (column - begin == 0U)
+                    throw std::runtime_error(msgstream() << "Empty animation name.");
+                src_anim_name = line.substr(begin, column - begin);
+                ++column;
+            }
+            std::string  dst_anim_name;
+            {
+                while (line.at(column) != '"') ++column; ++column;
+                natural_32_bit const  begin = column;
+                while (line.at(column) != '"') ++column;
+                if (column - begin == 0U)
+                    throw std::runtime_error(msgstream() << "Empty animation name.");
+                dst_anim_name = line.substr(begin, column - begin);
+                ++column;
+            }
+            float_32_bit  time_in_seconds;
+            {
+                while (line.at(column) != '"') ++column; ++column;
+                natural_32_bit const  begin = column;
+                while (line.at(column) != '\\') ++column;
+                if (column - begin == 0U)
+                    throw std::runtime_error(msgstream() << "No transition time specified.");
+                time_in_seconds = (float_32_bit)std::atof(line.substr(begin, column - begin).c_str());
+                if (time_in_seconds <= 0.0f)
+                    throw std::runtime_error(msgstream() << "The transition time is not greater than 0.0f.");
+                ++column;
+                ++column;
+            }
+            natural_32_bit  src_keyframe_index;
+            {
+                natural_32_bit const  begin = column;
+                while (line.at(column) != ';') ++column;
+                src_keyframe_index = (column - begin == 0U) ? std::numeric_limits<natural_32_bit>::max() :  // this will be resolved later (once we know count of keyframes)
+                    std::atoi(line.substr(begin, column - begin).c_str());
+                ++column;
+            }
+            natural_32_bit  dst_keyframe_index;
+            {
+                natural_32_bit const  begin = column;
+                while (line.at(column) != '"') ++column;
+                dst_keyframe_index = (column - begin == 0U) ? 0U : std::atoi(line.substr(begin, column - begin).c_str());
+            }
+
+            motion_template_cursor const  src_cursor{ src_anim_name, src_keyframe_index };
+            motion_template_cursor const  dst_cursor{ dst_anim_name, dst_keyframe_index };
+
+            auto  targets_range = data.equal_range(src_cursor);
+            for (auto it = targets_range.first; it != targets_range.second; ++it)
+                if (it->second.first == dst_cursor)
+                    throw std::runtime_error("Duplicate transition (note: transition time is NOT considered).");
+
+            data.insert({ src_cursor, { dst_cursor, time_in_seconds} });
+        }
+        catch (std::exception const&  e)
+        {
+            throw std::runtime_error(msgstream() << "[line=" << line_index << ", column=" << column << "]: '" << line << "': "<< e.what());
+        }
+    }
+}
+
+motion_template_transitions_data::~motion_template_transitions_data()
+{
+    TMPROF_BLOCK();
+}
+
+
+}}
+
+namespace ai { namespace detail {
+
+
 skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : pose_frames()
     , names()
@@ -814,6 +883,43 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                 if (hierarchy.parent(0U) != -1)
                     throw std::runtime_error("Invariant failure: hierarchy.parent(0) != -1.");
 
+                // Here we resolve 'std::numeric_limits<natural_32_bit>::max()' keyframe indices in the transitions graph.
+                {
+                    motion_template_transitions_data::transitions_graph  resolved_graph;
+                    for (auto const& src_and_tgt_and_time : transitions.data())
+                        resolved_graph.insert({
+                            {
+                                src_and_tgt_and_time.first.motion_name,
+                                src_and_tgt_and_time.first.keyframe_index == std::numeric_limits<natural_32_bit>::max() ?
+                                        (natural_32_bit)(motions_map.at(src_and_tgt_and_time.first.motion_name).keyframes.num_keyframes() - 1U) :
+                                        src_and_tgt_and_time.first.keyframe_index
+                                },
+                            src_and_tgt_and_time.second
+                            });
+                    const_cast<motion_template_transitions_data::transitions_graph&>(transitions.data()).swap(resolved_graph);
+                }
+
+                // And we rather check for consistency of the transitions graph.
+                for (auto const&  src_and_tgt_and_time : transitions.data())
+                {
+                    std::vector<std::string> const  names{
+                        src_and_tgt_and_time.first.motion_name,
+                        src_and_tgt_and_time.second.first.motion_name
+                    };
+                    std::vector<natural_32_bit> const  indices{
+                        src_and_tgt_and_time.first.keyframe_index,
+                        src_and_tgt_and_time.second.first.keyframe_index
+                    };
+                    std::vector<std::string> const  type{ "source", "target" };
+                    for (int i = 0; i != 2; ++i)
+                    {
+                        if (motions_map.count(names.at(i)) == 0UL)
+                            throw std::runtime_error(msgstream() << "The 'transitions' graph contains unknown " << type.at(i) << " animation name '" << names.at(i) << ".");
+                        if (motions_map.at(names.at(i)).keyframes.num_keyframes() <= indices.at(i))
+                            throw std::runtime_error(msgstream() << "The 'transitions' graph contains wrong keyframe index '" << indices.at(i)<< "' for the " << type.at(i) << " animation name '" << names.at(i) << ".");
+                    }
+                }
+
                 for (auto const&  entry : motions_map)
                 {
                     motion_template const&  record = entry.second;
@@ -828,8 +934,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The 'colliders' were not loaded to 'motions_map[" << entry.first << "]'.");
                     if (record.actions.empty())
                         throw std::runtime_error(msgstream() << "The 'motion_actions' were not loaded to 'motions_map[" << entry.first << "]'.");
-                    if (record.keyframe_equivalences.empty())
-                        throw std::runtime_error(msgstream() << "The 'keyframe_equivalences' were not loaded to 'motions_map[" << entry.first << "]'.");
                     if (record.free_bones.empty())
                         throw std::runtime_error(msgstream() << "The 'free_bones' were not loaded to 'motions_map[" << entry.first << "]'.");
 
@@ -843,8 +947,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'colliders' differ in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.actions.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'motion_actions' differ in 'motions_map[" << entry.first << "]'.");
-                    if (record.keyframes.num_keyframes() != record.keyframe_equivalences.size())
-                        throw std::runtime_error(msgstream() << "The count of keyframes and 'keyframe_equivalences' differ in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.free_bones.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'free_bones' differ in 'motions_map[" << entry.first << "]'.");
                 }
@@ -890,6 +992,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             directions = anim_space_directions(pathname / "directions.txt", 10U, ultimate_finaliser);
         if (joints.empty() && boost::filesystem::is_regular_file(pathname / "joints.txt"))
             joints = bone_joints(pathname / "joints.txt", 10U, ultimate_finaliser);
+        if (transitions.empty() && boost::filesystem::is_regular_file(pathname / "transitions.dot"))
+            transitions = motion_template_transitions(pathname / "transitions.dot", 10U, ultimate_finaliser);
 
         for (boost::filesystem::directory_entry& entry : boost::filesystem::directory_iterator(pathname))
             if (boost::filesystem::is_directory(entry.path()))
@@ -917,8 +1021,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                             record.colliders = meta::colliders(animation_pathname / "meta_motion_colliders.txt", 1U, ultimate_finaliser);
                         if (record.actions.empty() && boost::filesystem::is_regular_file(animation_pathname / "meta_motion_actions.txt"))
                             record.actions = meta::motion_actions(animation_pathname / "meta_motion_actions.txt", 1U, ultimate_finaliser);
-                        if (record.keyframe_equivalences.empty() && boost::filesystem::is_regular_file(animation_pathname / "meta_keyframe_equivalences.txt"))
-                            record.keyframe_equivalences = meta::keyframe_equivalences(animation_pathname / "meta_keyframe_equivalences.txt", 1U, ultimate_finaliser);
                         if (record.free_bones.empty() && boost::filesystem::is_regular_file(animation_pathname / "meta_free_bones.txt"))
                             record.free_bones = meta::free_bones(animation_pathname / "meta_free_bones.txt", 1U, ultimate_finaliser);
                     }

@@ -877,9 +877,9 @@ float_32_bit  find_best_keyframe(
 
         std::vector<skeletal_motion_templates::motion_template_cursor>  cursors{ current->cursor };
         {
-            skeletal_motion_templates::motion_template const&  motion_template = constants.motion_templates.motions_map().at(current->cursor.motion_name);
-            for (auto const& eq_cursor : motion_template.keyframe_equivalences.at(current->cursor.keyframe_index))
-                cursors.push_back(eq_cursor);
+            auto const  targets_range = constants.motion_templates.transitions().find_targets(current->cursor);
+            for (auto it = targets_range.first; it != targets_range.second; ++it)
+                cursors.push_back(it->second.first);
         }
 
         for (auto const&  cursor : cursors)
@@ -1146,9 +1146,9 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
         m_template_motion_info.src_pose = m_template_motion_info.dst_pose;
 
         auto const*  motion_template = &get_blackboard()->m_motion_templates.motions_map().at(m_template_motion_info.src_pose.motion_name);
-        auto const*  keyframe_equivalences = &motion_template->keyframe_equivalences;
+        auto const&  motion_template_transitions = get_blackboard()->m_motion_templates.transitions();
 
-        if (keyframe_equivalences->at(m_template_motion_info.src_pose.keyframe_index).empty() && satisfied_guarded_actions != nullptr)
+        if (!motion_template_transitions.has_targets(m_template_motion_info.src_pose) && satisfied_guarded_actions != nullptr)
         {
             ++m_template_motion_info.dst_pose.keyframe_index;
 
@@ -1163,7 +1163,7 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
             std::string const start_motion_name = src_pose_cursor.motion_name;
             while (true)
             {
-                for ( ; keyframe_equivalences->at(src_pose_cursor.keyframe_index).empty(); ++src_pose_cursor.keyframe_index)
+                for ( ; !motion_template_transitions.has_targets(src_pose_cursor); ++src_pose_cursor.keyframe_index)
                     ;
 
                 std::vector<std::shared_ptr<detail::find_best_keyframe_queue_record> >  candidate_records;
@@ -1195,20 +1195,21 @@ void  action_controller_human::next_round(float_32_bit  time_step_in_seconds)
                                                 )
                                         );
                         };
-                    for (auto const& eq_cursor : keyframe_equivalences->at(src_pose_cursor.keyframe_index))
-                        push_back_satisfied_motion_guarded_actions(eq_cursor);
+                    auto const  targets_range = motion_template_transitions.find_targets(src_pose_cursor);
+                    for (auto  it = targets_range.first; it != targets_range.second; ++it)
+                        push_back_satisfied_motion_guarded_actions(it->second.first);
                     if (src_pose_cursor.keyframe_index + 1U < motion_template->keyframes.num_keyframes())
                         push_back_satisfied_motion_guarded_actions({src_pose_cursor.motion_name, src_pose_cursor.keyframe_index + 1U});
                 }
                 if (candidate_records.empty())
                 {
-                    INVARIANT(keyframe_equivalences->at(src_pose_cursor.keyframe_index).size() == 1UL
+                    auto const  targets_range = motion_template_transitions.find_targets(src_pose_cursor);
+                    INVARIANT(std::distance(targets_range.first, targets_range.second) == 1UL
                               && src_pose_cursor.keyframe_index + 1U == motion_template->keyframes.num_keyframes());
-                    src_pose_cursor = keyframe_equivalences->at(src_pose_cursor.keyframe_index).front();
+                    src_pose_cursor = targets_range.first->second.first;
                     ++src_pose_cursor.keyframe_index;
                     INVARIANT(src_pose_cursor.motion_name != start_motion_name);
                     motion_template = &get_blackboard()->m_motion_templates.motions_map().at(src_pose_cursor.motion_name);
-                    keyframe_equivalences = &motion_template->keyframe_equivalences;
                 }
                 else
                 {
