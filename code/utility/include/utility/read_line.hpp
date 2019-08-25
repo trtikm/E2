@@ -87,8 +87,8 @@ inline bool  is_empty_line(std::string const&  line)
 // The empty string returned means the read in the end of the stream.
 // In case you want to read a raw line from a stream use function 'std::getline' instead.
 
-std::ifstream&  read_line(std::ifstream&  istr, std::string&  line);
-std::string  read_line(std::ifstream&  istr);
+std::ifstream&  read_line(std::ifstream&  istr, std::string&  line, natural_32_bit* const  line_number = nullptr);
+std::string  read_line(std::ifstream&  istr, natural_32_bit* const  line_number = nullptr);
 
 
 #endif

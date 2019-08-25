@@ -69,10 +69,13 @@ bool  is_empty_line(natural_8_bit const*  begin, natural_8_bit const* const  end
 }
 
 
-std::ifstream&  read_line(std::ifstream&  istr, std::string&  line)
+std::ifstream&  read_line(std::ifstream&  istr, std::string&  line, natural_32_bit* const  line_number)
 {
     TMPROF_BLOCK();
-    while (std::getline(istr,line))
+    while (std::getline(istr, line))
+    {
+        if (line_number != nullptr)
+            ++(*line_number);
         if (!line.empty())
         {
             while (!line.empty() && (line.back() == '\r' || line.back() == '\n' || line.back() == ' ' || line.back() == '\t'))
@@ -80,13 +83,14 @@ std::ifstream&  read_line(std::ifstream&  istr, std::string&  line)
             if (!line.empty())
                 break;
         }
+    }
     return istr;
 }
 
 
-std::string  read_line(std::ifstream&  istr)
+std::string  read_line(std::ifstream&  istr, natural_32_bit* const  line_number)
 {
     std::string  line;
-    read_line(istr, line);
+    read_line(istr, line, line_number);
     return line;
 }
