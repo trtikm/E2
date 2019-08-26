@@ -949,6 +949,46 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'motion_actions' differ in 'motions_map[" << entry.first << "]'.");
                     if (record.keyframes.num_keyframes() != record.free_bones.size())
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'free_bones' differ in 'motions_map[" << entry.first << "]'.");
+
+                    // We transform keyframes from anim space to the space of corresponding reference frame.
+                    // Because of the hierarchy of local spaces of bones, this operation can be applied only
+                    // to root bones (i.e. those with no parent).
+                    // We believe, this transformation improves quality of blending of animations (namely the root bones).
+                    for (natural_32_bit keyframe_idx = 0U; keyframe_idx != record.keyframes.num_keyframes(); ++keyframe_idx)
+                    {
+                        std::vector<angeo::coordinate_system>&  coord_systems =
+                            const_cast<std::vector<angeo::coordinate_system>&>(record.keyframes.keyframe_at(keyframe_idx).get_coord_systems());
+
+                        matrix44  Ainv;
+                        angeo::to_base_matrix(record.reference_frames.at(keyframe_idx), Ainv);
+
+                        for (natural_32_bit bone = 0; bone != coord_systems.size(); ++bone)
+                            if (hierarchy.parent(bone) < 0)
+                            {
+                                vector3  u;
+                                matrix33  R;
+                                {
+                                    // Technically, a root bone lies in the space of the corresponding pose bone
+                                    // due to the rule of relative positions of keyframe bones to pose bones. So,
+                                    // we need to consider the pose bone space in the transformation.
+                                    // NOTE: rotations keyframe bones are absolute (in the space of parent bone),
+                                    //       so no rotation is involved in this transformation.
+                                    matrix44  P;
+                                    angeo::from_base_matrix({ pose_frames.at(bone).origin(), quaternion_identity() }, P);
+
+                                    matrix44  N;
+                                    angeo::from_base_matrix(coord_systems.at(bone), N);
+                                    decompose_matrix44(Ainv * P * N, u, R);
+
+                                    // Although 'u' is now correct position in the reference frame we have to
+                                    // make it relatice to the origin of the corresponding pose bone in order
+                                    // to be consistent to the rule of relative positions of keyframe bones to
+                                    // pose bones.
+                                    u -= pose_frames.at(bone).origin();
+                                }
+                                coord_systems.at(bone) = { u, normalised(rotation_matrix_to_quaternion(R)) };
+                            }
+                    }
                 }
             },
             finaliser
