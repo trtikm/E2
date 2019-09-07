@@ -30,6 +30,7 @@ add_library(${THIS_TARGET_NAME}
     ./src/sensory_controller_human.cpp
 
     ./include/ai/action_controller.hpp
+    ./src/action_controller.cpp
     ./include/ai/action_controller_human.hpp
     ./src/action_controller_human.cpp
 
@@ -42,9 +43,18 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/ai/skeletal_motion_templates.hpp
     ./src/skeletal_motion_templates.cpp
-
+    
     ./include/ai/skeleton_utils.hpp
     ./src/skeleton_utils.cpp
+ 
+    ./include/ai/detail/rigid_body_motion.hpp
+    ./src/detail/rigid_body_motion.cpp
+
+    ./include/ai/detail/motion_desire_props.hpp
+    ./src/detail/motion_desire_props.cpp
+
+    ./include/ai/detail/guarded_motion_actions_processor.hpp 
+    ./src/detail/guarded_motion_actions_processor.cpp 
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

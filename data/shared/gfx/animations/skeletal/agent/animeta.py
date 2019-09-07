@@ -1333,6 +1333,20 @@ motion_actions  <begin> <end>
                             vec_velocity(2) * up.
                 - 'max_linear_accel'
                         maximal magnitude of the linear acceleration
+        * 'set_angular_velocity':
+            Applies a force so that agent's angular velocity becomes the one
+            specified in this action.
+            Used state variables:
+                - 'vec_velocity'
+                        A angular velocity to be set to agent. Namely, if
+                        'fwd' and 'up' are forward and up direction vectors
+                        of the agent in the world space then the velocity
+                        to set is the vector:
+                            vec_velocity(0) * cross_product(fwd,up) +
+                            vec_velocity(1) * fwd +
+                            vec_velocity(2) * up.
+                - 'max_angular_accel'
+                        maximal magnitude of the angular acceleration
         * 'cancel_gravity_accel':
             Applies a force that cancels the effect of the gravitational
             acceleration on the agent.
@@ -1418,6 +1432,11 @@ def command_motion_actions():
                     actions[-1].append(state.vec_velocity[1])
                     actions[-1].append(state.vec_velocity[2])
                     actions[-1].append(state.max_linear_accel)
+                elif action == "set_angular_velocity":
+                    actions[-1].append(state.vec_velocity[0])
+                    actions[-1].append(state.vec_velocity[1])
+                    actions[-1].append(state.vec_velocity[2])
+                    actions[-1].append(state.max_angular_accel)
                 elif action == "cancel_gravity_accel":
                     pass    # no arguments
                 else:

@@ -417,6 +417,16 @@ motion_actions_data::motion_actions_data(async::finalise_load_on_destroy_ptr con
                         action.max_linear_accel = params.at(3);
                         constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
                     }
+                    else if (action_name == "set_angular_velocity")
+                    {
+                        if (params.size() != 4UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for set_angular_velocity at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::action_set_angular_velocity  action;
+                        action.angular_velocity(0) = params.at(0);
+                        action.angular_velocity(1) = params.at(1);
+                        action.angular_velocity(2) = params.at(2);
+                        action.max_angular_accel = params.at(3);
+                        constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
+                    }
                     else if (action_name == "cancel_gravity_accel")
                     {
                         if (!params.empty()) throw std::runtime_error(msgstream() << "Wrong number of parameters for meta action 'cancel_gravity_accel' at line " << line_index << "in the file '" << pathname << "'.");
@@ -1075,6 +1085,56 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
 skeletal_motion_templates_data::~skeletal_motion_templates_data()
 {
     TMPROF_BLOCK();
+}
+
+
+natural_32_bit  skeletal_motion_templates_data::get_outdegree_of_keyframe(motion_template_cursor const& cursor) const
+{
+    natural_32_bit  count = cursor.keyframe_index + 1U < motions_map.at(cursor.motion_name).keyframes.get_keyframes().size() ? 1U : 0U;
+    auto const  range = transitions.find_targets(cursor);
+    count += (natural_32_bit)std::distance(range.first, range.second);
+    return  count;
+}
+
+
+bool  skeletal_motion_templates_data::is_branching_keyframe(motion_template_cursor const& cursor) const
+{
+    return get_outdegree_of_keyframe(cursor) > 1U;
+}
+
+
+void  skeletal_motion_templates_data::get_successor_keyframes(
+        motion_template_cursor const& cursor,
+        std::vector<std::pair<motion_template_cursor /* target_cursor */, float_32_bit /* transition_time */> >&  output
+        ) const
+{
+    for_each_successor_keyframe(
+        cursor,
+        [this, &output](skeletal_motion_templates::motion_template_cursor const&  c, float_32_bit const  t)
+        {
+            output.push_back({ c, t });
+            return true;
+        });
+}
+
+
+void  skeletal_motion_templates_data::for_each_successor_keyframe(
+        motion_template_cursor const&  cursor,
+        std::function<bool(motion_template_cursor const& /* target_cursor */, float_32_bit /* transition_time */)> const&  callback
+        ) const
+
+{
+    auto const&  motion_template = motions_map.at(cursor.motion_name);
+    if (cursor.keyframe_index + 1U < motion_template.keyframes.get_keyframes().size())
+        if (!callback(
+                { cursor.motion_name, cursor.keyframe_index + 1U },
+                motion_template.keyframes.keyframe_at(cursor.keyframe_index + 1U).get_time_point()
+                    - motion_template.keyframes.keyframe_at(cursor.keyframe_index).get_time_point()))
+            return;
+    auto const  range = transitions.find_targets(cursor);
+    for (auto it = range.first; it != range.second; ++it)
+        if (!callback(it->second.first, it->second.second))
+            return;
 }
 
 

@@ -12,6 +12,7 @@
 #   include <string>
 #   include <vector>
 #   include <memory>
+#   include <functional>
 
 namespace ai { namespace detail {
 
@@ -31,6 +32,12 @@ struct  motion_template_cursor
     bool  operator<(motion_template_cursor const&  other) const
     {
         return motion_name < other.motion_name || (motion_name == other.motion_name && keyframe_index < other.keyframe_index);
+    }
+
+    void  swap(motion_template_cursor&  other)
+    {
+        motion_name.swap(other.motion_name);
+        std::swap(keyframe_index, other.keyframe_index);
     }
 };
 
@@ -516,6 +523,7 @@ struct  skeletal_motion_templates_data
     using  modelspace = qtgl::modelspace; 
 
     using  guarded_actions_ptr = detail::meta::guarded_actions_ptr;
+    using  action_ptr = detail::meta::action_ptr;
     using  disjunction_of_guarded_actions = detail::meta::motion_actions::disjunction_of_guarded_actions;
 
     struct  motion_template
@@ -545,6 +553,21 @@ struct  skeletal_motion_templates_data
 
     explicit skeletal_motion_templates_data(async::finalise_load_on_destroy_ptr const  finaliser);
     ~skeletal_motion_templates_data();
+
+    natural_32_bit  get_outdegree_of_keyframe(motion_template_cursor const&  cursor) const;
+    bool  is_branching_keyframe(motion_template_cursor const&  cursor) const;
+    void  get_successor_keyframes(
+            motion_template_cursor const& cursor,
+            std::vector<std::pair<motion_template_cursor /* target_cursor */, float_32_bit /* transition_time */> >&  output
+                    // Whenever '{ cursor.motion_name, cursor.keyframe_index + 1 }' is a valid cursor, then it will always be
+                    // the cursor 'output.front().first'.
+            ) const;
+    void  for_each_successor_keyframe(
+            motion_template_cursor const&  cursor,
+            std::function<bool(motion_template_cursor const& /* target_cursor */, float_32_bit /* transition_time */)> const&  callback
+                    // Whenever '{ cursor.motion_name, cursor.keyframe_index + 1 }' is a valid cursor, then it will always be
+                    // passed in the first call of the 'callback' function.
+            ) const;
 };
 
 
@@ -573,14 +596,6 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
 
     using  motion_template_cursor = detail::motion_template_cursor;
 
-    struct  template_motion_info
-    {
-        motion_template_cursor  src_pose;
-        motion_template_cursor  dst_pose;
-        float_32_bit  total_interpolation_time_in_seconds;
-        float_32_bit  consumed_time_in_seconds;
-    };
-
     using  keyframe = detail::skeletal_motion_templates_data::keyframe;
     using  keyframes = detail::skeletal_motion_templates_data::keyframes;
     using  modelspace = detail::skeletal_motion_templates_data::modelspace;
@@ -590,14 +605,22 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  bone_lengths = detail::bone_lengths;
 	using  bone_joints = detail::bone_joints;
 	using  anim_space_directions = detail::anim_space_directions;
+
     using  motion_template_transitions = detail::motion_template_transitions;
+    using  transitions_graph = motion_template_transitions::transitions_graph;
+    using  target_motions_range = motion_template_transitions::target_motions_range;
 
     using  motion_template = detail::skeletal_motion_templates_data::motion_template;
 
     using  guarded_actions_ptr = detail::skeletal_motion_templates_data::guarded_actions_ptr;
+    using  action_ptr = detail::skeletal_motion_templates_data::action_ptr;
     using  disjunction_of_guarded_actions = detail::skeletal_motion_templates_data::disjunction_of_guarded_actions;
 
     using  mass_distribution = detail::meta::mass_distribution;
+    using  mass_distribution_ptr = detail::meta::mass_distribution_ptr;
+
+    using  free_bones_for_look_at_ptr = detail::meta::free_bones_for_look_at_ptr;
+
 
     using  constraint = detail::meta::constraint;
     using  constraint_ptr = detail::meta::constraint_ptr;
@@ -700,6 +723,18 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
         }
     };
 
+    struct  action_set_angular_velocity : public action
+    {
+        vector3  angular_velocity;
+        float_32_bit  max_angular_accel;
+
+        bool  equals(action const& other) const override { return *this == dynamic_cast<action_set_angular_velocity const&>(other); }
+        bool  operator==(action_set_angular_velocity const& other) const
+        {
+            return are_equal(max_angular_accel, other.max_angular_accel, 0.0001f) && are_equal_3d(angular_velocity, other.angular_velocity, 0.0001f);
+        }
+    };
+
     struct  action_cancel_gravity_accel : public action
     {
         bool  equals(action const&  other) const override { return *this == dynamic_cast<action_cancel_gravity_accel const&>(other); }
@@ -731,6 +766,23 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
 
     std::unordered_map<std::string, motion_template> const&  motions_map() const { return resource().motions_map; }
     motion_template const&  at(std::string const&  motion_name) const { return motions_map().at(motion_name); }
+
+    natural_32_bit  get_outdegree_of_keyframe(motion_template_cursor const&  cursor) const { return resource().get_outdegree_of_keyframe(cursor); }
+    bool  is_branching_keyframe(motion_template_cursor const&  cursor) const { return resource().is_branching_keyframe(cursor); }
+    void  get_successor_keyframes(
+            motion_template_cursor const& cursor,
+            std::vector<std::pair<motion_template_cursor /* target_cursor */, float_32_bit /* transition_time */> >&  output
+            ) const
+    {
+        resource().get_successor_keyframes(cursor, output);
+    }
+    void  for_each_successor_keyframe(
+            motion_template_cursor const&  cursor,
+            std::function<bool(motion_template_cursor const& /* target_cursor */, float_32_bit /* transition_time */)> const&  callback
+            ) const
+    {
+        resource().for_each_successor_keyframe(cursor, callback); 
+    }
 };
 
 
