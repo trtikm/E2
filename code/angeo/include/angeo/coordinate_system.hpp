@@ -35,6 +35,13 @@ private:
 void  translate(coordinate_system&  coord_system, vector3 const&  shift);
 void  rotate(coordinate_system&  coord_system, quaternion const&  rotation);
 
+void  integrate(
+        coordinate_system&  coord_system,
+        float_32_bit const  time_step_in_seconds,
+        vector3 const&  linear_velocity,
+        vector3 const&  angular_velocity
+        );
+
 void  from_base_matrix(coordinate_system const&  coord_system, matrix44&  output);
 void  to_base_matrix(coordinate_system const&  coord_system, matrix44&  output);
 

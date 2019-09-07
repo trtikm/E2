@@ -38,6 +38,17 @@ void  rotate(coordinate_system&  coord_system, quaternion const&  rotation)
     coord_system.set_orientation( composed );
 }
 
+void  integrate(
+        coordinate_system& coord_system,
+        float_32_bit const  time_step_in_seconds,
+        vector3 const& linear_velocity,
+        vector3 const& angular_velocity
+        )
+{
+    coord_system.set_origin(coord_system.origin() + time_step_in_seconds * linear_velocity);
+    quaternion const  orientation_derivative = scale(0.5f, make_quaternion(0.0f, angular_velocity) * coord_system.orientation());
+    coord_system.set_orientation( normalised(coord_system.orientation() + scale(time_step_in_seconds, orientation_derivative)) );
+}
 
 void  from_base_matrix(coordinate_system const&  coord_system, matrix44&  output)
 {
