@@ -154,6 +154,7 @@ action_controller::action_controller(blackboard_ptr const  blackboard_)
     , m_current_intepolation_state()
 
     , m_dst_cursor{ get_blackboard()->m_motion_templates.motions_map().begin()->first, 0U }
+    , m_dst_frames()
     , m_ideal_linear_velocity_in_world_space(vector3_zero())
     , m_ideal_angular_velocity_in_world_space(vector3_zero())
 
@@ -161,11 +162,21 @@ action_controller::action_controller(blackboard_ptr const  blackboard_)
 {
     TMPROF_BLOCK();
 
-    auto const  collider = get_blackboard()->m_motion_templates.motions_map().at(m_dst_cursor.motion_name).colliders
-                                                                             .at(m_dst_cursor.keyframe_index);
+    transform_keyframes_to_reference_frame(
+            get_blackboard()->m_motion_templates.at(m_dst_cursor.motion_name).keyframes.get_keyframes()
+                                                .at(m_dst_cursor.keyframe_index).get_coord_systems(),
+            get_blackboard()->m_motion_templates.at(m_dst_cursor.motion_name).reference_frames
+                                                .at(m_dst_cursor.keyframe_index),
+            get_blackboard()->m_motion_templates.pose_frames().get_coord_systems(),
+            get_blackboard()->m_motion_templates.hierarchy().parents(),
+            m_dst_frames
+            );
+
+    auto const  collider = get_blackboard()->m_motion_templates.at(m_dst_cursor.motion_name).colliders
+                                                               .at(m_dst_cursor.keyframe_index);
     auto const  mass_distribution =
-        get_blackboard()->m_motion_templates.motions_map().at(m_dst_cursor.motion_name).mass_distributions
-                                                          .at(m_dst_cursor.keyframe_index);
+        get_blackboard()->m_motion_templates.at(m_dst_cursor.motion_name).mass_distributions
+                                             .at(m_dst_cursor.keyframe_index);
 
     angeo::coordinate_system  agent_frame;
     {
@@ -266,6 +277,15 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
                 m_ideal_linear_velocity_in_world_space,
                 m_ideal_angular_velocity_in_world_space
                 );
+        transform_keyframes_to_reference_frame(
+                get_blackboard()->m_motion_templates.at(m_dst_cursor.motion_name).keyframes.get_keyframes()
+                                                    .at(m_dst_cursor.keyframe_index).get_coord_systems(),
+                get_blackboard()->m_motion_templates.at(m_dst_cursor.motion_name).reference_frames
+                                                    .at(m_dst_cursor.keyframe_index),
+                get_blackboard()->m_motion_templates.pose_frames().get_coord_systems(),
+                get_blackboard()->m_motion_templates.hierarchy().parents(),
+                m_dst_frames
+                );
     }
 
     m_consumed_time_in_seconds += interpolation_time_step_in_seconds;
@@ -274,22 +294,15 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
     float_32_bit const  interpolation_param = m_consumed_time_in_seconds / m_total_interpolation_time_in_seconds;
 
     interpolate(interpolation_param);
-    //look_at_target(time_step_in_seconds, interpolation_param);
+    look_at_target(time_step_in_seconds, interpolation_param);
 
     // Next we update frames of scene nodes corresponding to the interpolated frames of bones.
     for (natural_32_bit bone = 0; bone != m_current_intepolation_state.frames.size(); ++bone)
-    {
-        auto const&  frame = m_current_intepolation_state.frames.at(bone);
         get_blackboard()->m_scene->set_frame_of_scene_node(
                 get_blackboard()->m_bone_nids.at(bone),
                 true,
-                //m_current_intepolation_state.frames.at(bone)
-                // We always have to add origins of pose bones to corresponding keyframe bones,
-                // because keyframe bone positions are relative to the pose bone positions.
-                // NOTE: Rotations are absolute (in the space of parent bone), so nothing to do for rotations.
-                { frame.origin() + get_blackboard()->m_motion_templates.pose_frames().at(bone).origin(), frame.orientation() }
+                m_current_intepolation_state.frames.at(bone)
                 );
-    }
 
     // And finally, we update dynamics of agent's motion object (forces and torques).
     skeletal_motion_templates::guarded_actions_ptr const  satisfied_guarded_actions =
@@ -361,12 +374,7 @@ void  action_controller::interpolate(float_32_bit const  interpolation_param)
     skeletal_motion_templates::motion_template const&  dst_motion_template =
             get_blackboard()->m_motion_templates.motions_map().at(m_dst_cursor.motion_name);
 
-    interpolate_keyframes_spherical(
-            m_src_intepolation_state.frames,
-            dst_motion_template.keyframes.keyframe_at(m_dst_cursor.keyframe_index).get_coord_systems(),
-            interpolation_param,
-            m_current_intepolation_state.frames
-            );
+    interpolate_keyframes_spherical(m_src_intepolation_state.frames, m_dst_frames, interpolation_param, m_current_intepolation_state.frames);
 
     skeletal_motion_templates::free_bones_for_look_at_ptr const  dst_free_bones_look_at =
             dst_motion_template.free_bones.look_at().at(m_dst_cursor.keyframe_index);
@@ -487,7 +495,7 @@ void  action_controller::look_at_target(float_32_bit const  time_step_in_seconds
             get_blackboard()->m_bone_nids.at(bone_and_anges.first),
             true,
             frames.at(bone_and_anges.first)
-        );
+            );
 
     angeo::skeleton_rotate_bones_towards_target_pose(
         frames,
@@ -495,7 +503,7 @@ void  action_controller::look_at_target(float_32_bit const  time_step_in_seconds
         get_blackboard()->m_motion_templates.joints().data(),
         bones_to_rotate,
         time_step_in_seconds
-    );
+        );
 
     // And write results to the vector 'm_current_intepolation_state.frames' of final frames.
 
@@ -503,17 +511,12 @@ void  action_controller::look_at_target(float_32_bit const  time_step_in_seconds
     float_32_bit const  dst_param = dst_look_at_bones->all_bones.empty() ? 0.0f : 1.0f;
     float_32_bit const  param = src_param + interpolation_param * (dst_param - src_param);
     for (auto bone : bones_to_consider)
-    {
-        auto const&  frame = frames.at(bone);
         angeo::interpolate_spherical(
-                m_current_intepolation_state.frames.at(bone),
-                // We have to subtract origins of pose bones from look-at frames in order to get them
-                // to the same coordinates as frames in 'm_current_intepolation_state'.
-                { frame.origin() - get_blackboard()->m_motion_templates.pose_frames().at(bone).origin(), frame.orientation() },
-                param,
-                m_current_intepolation_state.frames.at(bone)
-                );
-    }
+            m_current_intepolation_state.frames.at(bone),
+            frames.at(bone),
+            param,
+            m_current_intepolation_state.frames.at(bone)
+            );
 }
 
 

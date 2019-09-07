@@ -104,6 +104,20 @@ void  skeleton_enumerate_nodes_of_bones(
 }
 
 
+scn::scene_node_id  skeleton_build_scene_node_id_of_bones(
+        natural_32_bit const  bone,
+        std::vector<integer_32_bit> const&  parents,
+        ai::skeletal_motion_templates::bone_names const&  names
+        )
+{
+    scn::scene_node_id::path_type  path;
+    for (integer_32_bit b = (integer_32_bit)bone; b >= 0; b = parents.at(b))
+        path.push_back(names.at(b));
+    std::reverse(path.begin(), path.end());
+    return scn::scene_node_id{ path };
+}
+
+
 }
 
 
@@ -978,6 +992,25 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                                   * ach_ptr->get_desired_props().linear_velocity_unit_direction_in_world_space
                             });
                     m_cache_of_batches_of_ai_agents.lines->second.push_back({0.75f, 0.25f, 0.75f, 1.0f}); // PURPLE
+
+                    for (natural_32_bit  bone : ach_ptr->get_free_bones_for_look_at()->end_effector_bones)
+                    {
+                        scn::scene_node_id const  raw_bone_id = detail::skeleton_build_scene_node_id_of_bones(
+                                bone,
+                                ach_ptr->get_blackboard()->m_motion_templates.hierarchy().parents(),
+                                ach_ptr->get_blackboard()->m_motion_templates.names()
+                                );
+                        scn::scene_node_id const  bone_id = agent_id_and_node_id.second / raw_bone_id;
+                        scn::scene_node_ptr const  bone_node_ptr = get_scene_node(bone_id);
+                        if (bone_node_ptr != nullptr)
+                        {
+                            m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                                    transform_point(vector3_zero(), bone_node_ptr->get_world_matrix()),
+                                    transform_point(5.0f * vector3_unit_y(), bone_node_ptr->get_world_matrix())
+                                    });
+                            m_cache_of_batches_of_ai_agents.lines->second.push_back({ 0.85f, 0.85f, 0.85f, 1.0f }); // GRAY
+                        }
+                    }
                 }
             }
     }

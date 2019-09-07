@@ -893,6 +893,37 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                 if (hierarchy.parent(0U) != -1)
                     throw std::runtime_error("Invariant failure: hierarchy.parent(0) != -1.");
 
+                for (auto const&  entry : motions_map)
+                {
+                    motion_template const&  record = entry.second;
+
+                    if (record.keyframes.empty())
+                        throw std::runtime_error(msgstream() << "The 'keyframes' were not loaded to 'motions_map[" << entry.first << "]'.");
+                    if (record.reference_frames.empty())
+                        throw std::runtime_error(msgstream() << "The 'reference_frames' were not loaded to 'motions_map[" << entry.first << "]'.");
+                    if (record.mass_distributions.empty())
+                        throw std::runtime_error(msgstream() << "The 'mass_distributions' were not loaded to 'motions_map[" << entry.first << "]'.");
+                    if (record.colliders.empty())
+                        throw std::runtime_error(msgstream() << "The 'colliders' were not loaded to 'motions_map[" << entry.first << "]'.");
+                    if (record.actions.empty())
+                        throw std::runtime_error(msgstream() << "The 'motion_actions' were not loaded to 'motions_map[" << entry.first << "]'.");
+                    if (record.free_bones.empty())
+                        throw std::runtime_error(msgstream() << "The 'free_bones' were not loaded to 'motions_map[" << entry.first << "]'.");
+
+                    if (record.keyframes.num_keyframes() < 2U)
+                        throw std::runtime_error(msgstream() << "The count of keyframes is less than 2 in 'motions_map[" << entry.first << "]'.");
+                    if (record.keyframes.num_keyframes() != record.reference_frames.size())
+                        throw std::runtime_error(msgstream() << "The count of keyframes and 'reference_frames' differ in 'motions_map[" << entry.first << "]'.");
+                    if (record.keyframes.num_keyframes() != record.mass_distributions.size())
+                        throw std::runtime_error(msgstream() << "The count of keyframes and 'mass_distributions' differ in 'motions_map[" << entry.first << "]'.");
+                    if (record.keyframes.num_keyframes() != record.colliders.size())
+                        throw std::runtime_error(msgstream() << "The count of keyframes and 'colliders' differ in 'motions_map[" << entry.first << "]'.");
+                    if (record.keyframes.num_keyframes() != record.actions.size())
+                        throw std::runtime_error(msgstream() << "The count of keyframes and 'motion_actions' differ in 'motions_map[" << entry.first << "]'.");
+                    if (record.keyframes.num_keyframes() != record.free_bones.size())
+                        throw std::runtime_error(msgstream() << "The count of keyframes and 'free_bones' differ in 'motions_map[" << entry.first << "]'.");
+                }
+
                 // Here we resolve 'std::numeric_limits<natural_32_bit>::max()' keyframe indices in the transitions graph.
                 {
                     motion_template_transitions_data::transitions_graph  resolved_graph;
@@ -927,77 +958,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                             throw std::runtime_error(msgstream() << "The 'transitions' graph contains unknown " << type.at(i) << " animation name '" << names.at(i) << ".");
                         if (motions_map.at(names.at(i)).keyframes.num_keyframes() <= indices.at(i))
                             throw std::runtime_error(msgstream() << "The 'transitions' graph contains wrong keyframe index '" << indices.at(i)<< "' for the " << type.at(i) << " animation name '" << names.at(i) << ".");
-                    }
-                }
-
-                for (auto const&  entry : motions_map)
-                {
-                    motion_template const&  record = entry.second;
-
-                    if (record.keyframes.empty())
-                        throw std::runtime_error(msgstream() << "The 'keyframes' were not loaded to 'motions_map[" << entry.first << "]'.");
-                    if (record.reference_frames.empty())
-                        throw std::runtime_error(msgstream() << "The 'reference_frames' were not loaded to 'motions_map[" << entry.first << "]'.");
-                    if (record.mass_distributions.empty())
-                        throw std::runtime_error(msgstream() << "The 'mass_distributions' were not loaded to 'motions_map[" << entry.first << "]'.");
-                    if (record.colliders.empty())
-                        throw std::runtime_error(msgstream() << "The 'colliders' were not loaded to 'motions_map[" << entry.first << "]'.");
-                    if (record.actions.empty())
-                        throw std::runtime_error(msgstream() << "The 'motion_actions' were not loaded to 'motions_map[" << entry.first << "]'.");
-                    if (record.free_bones.empty())
-                        throw std::runtime_error(msgstream() << "The 'free_bones' were not loaded to 'motions_map[" << entry.first << "]'.");
-
-                    if (record.keyframes.num_keyframes() < 2U)
-                        throw std::runtime_error(msgstream() << "The count of keyframes is less than 2 in 'motions_map[" << entry.first << "]'.");
-                    if (record.keyframes.num_keyframes() != record.reference_frames.size())
-                        throw std::runtime_error(msgstream() << "The count of keyframes and 'reference_frames' differ in 'motions_map[" << entry.first << "]'.");
-                    if (record.keyframes.num_keyframes() != record.mass_distributions.size())
-                        throw std::runtime_error(msgstream() << "The count of keyframes and 'mass_distributions' differ in 'motions_map[" << entry.first << "]'.");
-                    if (record.keyframes.num_keyframes() != record.colliders.size())
-                        throw std::runtime_error(msgstream() << "The count of keyframes and 'colliders' differ in 'motions_map[" << entry.first << "]'.");
-                    if (record.keyframes.num_keyframes() != record.actions.size())
-                        throw std::runtime_error(msgstream() << "The count of keyframes and 'motion_actions' differ in 'motions_map[" << entry.first << "]'.");
-                    if (record.keyframes.num_keyframes() != record.free_bones.size())
-                        throw std::runtime_error(msgstream() << "The count of keyframes and 'free_bones' differ in 'motions_map[" << entry.first << "]'.");
-
-                    // We transform keyframes from anim space to the space of corresponding reference frame.
-                    // Because of the hierarchy of local spaces of bones, this operation can be applied only
-                    // to root bones (i.e. those with no parent).
-                    // We believe, this transformation improves quality of blending of animations (namely the root bones).
-                    for (natural_32_bit keyframe_idx = 0U; keyframe_idx != record.keyframes.num_keyframes(); ++keyframe_idx)
-                    {
-                        std::vector<angeo::coordinate_system>&  coord_systems =
-                            const_cast<std::vector<angeo::coordinate_system>&>(record.keyframes.keyframe_at(keyframe_idx).get_coord_systems());
-
-                        matrix44  Ainv;
-                        angeo::to_base_matrix(record.reference_frames.at(keyframe_idx), Ainv);
-
-                        for (natural_32_bit bone = 0; bone != coord_systems.size(); ++bone)
-                            if (hierarchy.parent(bone) < 0)
-                            {
-                                vector3  u;
-                                matrix33  R;
-                                {
-                                    // Technically, a root bone lies in the space of the corresponding pose bone
-                                    // due to the rule of relative positions of keyframe bones to pose bones. So,
-                                    // we need to consider the pose bone space in the transformation.
-                                    // NOTE: rotations keyframe bones are absolute (in the space of parent bone),
-                                    //       so no rotation is involved in this transformation.
-                                    matrix44  P;
-                                    angeo::from_base_matrix({ pose_frames.at(bone).origin(), quaternion_identity() }, P);
-
-                                    matrix44  N;
-                                    angeo::from_base_matrix(coord_systems.at(bone), N);
-                                    decompose_matrix44(Ainv * P * N, u, R);
-
-                                    // Although 'u' is now correct position in the reference frame we have to
-                                    // make it relatice to the origin of the corresponding pose bone in order
-                                    // to be consistent to the rule of relative positions of keyframe bones to
-                                    // pose bones.
-                                    u -= pose_frames.at(bone).origin();
-                                }
-                                coord_systems.at(bone) = { u, normalised(rotation_matrix_to_quaternion(R)) };
-                            }
                     }
                 }
             },

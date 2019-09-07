@@ -39,6 +39,7 @@ struct  action_controller
 
     scene::node_id const& get_motion_object_node_id() const { return m_motion_object_motion.nid; }
     detail::motion_desire_props const&  get_desired_props() const { return m_motion_desire_props; }
+    skeletal_motion_templates::free_bones_for_look_at_ptr  get_free_bones_for_look_at() const { return m_current_intepolation_state.free_bones_look_at; }
 
 protected:
 
@@ -67,6 +68,7 @@ private:
     intepolation_state  m_current_intepolation_state;
 
     skeletal_motion_templates::motion_template_cursor  m_dst_cursor;
+    std::vector<angeo::coordinate_system>  m_dst_frames;
     vector3  m_ideal_linear_velocity_in_world_space;
     vector3  m_ideal_angular_velocity_in_world_space;
 
