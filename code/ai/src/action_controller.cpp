@@ -12,17 +12,6 @@
 namespace ai { namespace detail { namespace {
 
 
-//struct  skeletal_motion_template_walk_info
-//{
-//    float_32_bit  cost;
-//    skeletal_motion_templates::motion_template_cursor  cursor;
-//    rigid_body_motion  m_motion;
-//    float_32_bit  consumed_time;
-//
-//    natural_32_bit  data_id;
-//};
-
-
 float_32_bit  distance_of_object_motion_to_desired_motion(
         rigid_body_motion const&  motion,
         vector3 const&  current_origin,
@@ -32,10 +21,7 @@ float_32_bit  distance_of_object_motion_to_desired_motion(
 {
     float_32_bit const  d_pos  = length(current_origin + time_step * desire.linear_speed * desire.linear_velocity_unit_direction_in_world_space - motion.frame.origin());
     float_32_bit const  d_fwd  = angle(desire.forward_unit_vector_in_world_space, motion.forward) / PI();
-    //float_32_bit const  d_vlin = length(desire.linear_speed * desire.linear_velocity_unit_direction_in_world_space - motion.velocity.m_linear);
-    //float_32_bit const  d_vang = length(desire.angular_speed * desire.angular_velocity_unit_axis_in_world_space - motion.velocity.m_angular);
-    float_32_bit const  total_cost = 1.0f * d_pos + 2.0f * d_fwd;// +1.0f * d_vlin + 1.0f * d_vang;
-//std::cout << "d_pos: " << d_pos << ", d_fwd: " << d_fwd  << ", total: "<< total_cost << std::endl; std::cout.flush();
+    float_32_bit const  total_cost = 1.0f * d_pos + 2.0f * d_fwd;
     return total_cost;
 }
 
@@ -545,11 +531,6 @@ std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit>  acti
     if (satisfied_transitions.size() == 1UL)
         return successors.at(satisfied_transitions.front());
 
-//if (m_motion_desire_props.linear_speed > 0.1f)
-//{
-//    int iii = 0;
-//}
-
     natural_32_bit  best_index;
     {
         best_index = std::numeric_limits<natural_32_bit>::max();
@@ -616,8 +597,6 @@ std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit>  acti
                 }
             }
 
-//std::cout << successors.at(satisfied_transitions.at(i)).first.motion_name << ": ";
-
             float_32_bit const  cost =
                     detail::distance_of_object_motion_to_desired_motion(
                             motion,
@@ -625,137 +604,15 @@ std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit>  acti
                             time_horizon,
                             m_motion_desire_props);
 
-//std::cout << "    " << " origin: " << motion.frame.origin()(0) << ", "
-//                                   << motion.frame.origin()(1) << ", "
-//                                   << motion.frame.origin()(2) << std::endl; std::cout.flush();
-//std::cout << "    " << " forward: " << motion.forward(0) << ", "
-//                                    << motion.forward(1) << ", "
-//                                    << motion.forward(2) << std::endl; std::cout.flush();
-
             if (cost < best_cost)
             {
                 best_cost = cost;
                 best_index = satisfied_transitions.at(i);
             }
         }
-
-//std::cout << "current origin: " << m_motion_object_motion.frame.origin()(0) << ", "
-//                                << m_motion_object_motion.frame.origin()(1) << ", "
-//                                << m_motion_object_motion.frame.origin()(2) << std::endl; std::cout.flush();
-//vector3  dst_pos = m_motion_object_motion.frame.origin() + time_horizon * m_motion_desire_props.linear_speed * m_motion_desire_props.linear_velocity_unit_direction_in_world_space;
-//std::cout << "target origin: " << dst_pos(0) << ", "
-//                               << dst_pos(1) << ", "
-//                               << dst_pos(2) << std::endl; std::cout.flush();
-//std::cout << "target forward: " << m_motion_desire_props.forward_unit_vector_in_world_space(0) << ", "
-//                                << m_motion_desire_props.forward_unit_vector_in_world_space(1) << ", "
-//                                << m_motion_desire_props.forward_unit_vector_in_world_space(2) << std::endl; std::cout.flush();
-//std::cout << "------------------------------------" << std::endl; std::cout.flush();
-//if (successors.at(best_index).first.motion_name != "stand")
-//{
-//    int iii = 0;
-//}
-//if (successors.at(best_index).first.motion_name == "jump_onto")
-//{
-//    int iii = 0;
-//}
-
     }
 
-
     return  successors.at(best_index);
-
-    //natural_32_bit  best_data_id;
-    //{
-    //    best_data_id = std::numeric_limits<natural_32_bit>::max();
-    //    float_32_bit  best_cost = std::numeric_limits<float_32_bit>::max();
-
-    //    float_32_bit const  time_horizon = 1.0f;
-    //    float_32_bit const  integration_time_step = 0.1f;
-
-    //    std::priority_queue<
-    //            detail::skeletal_motion_template_walk_info,
-    //            std::vector<detail::skeletal_motion_template_walk_info>,
-    //            std::function<bool(detail::skeletal_motion_template_walk_info const&, detail::skeletal_motion_template_walk_info const&)>
-    //            >
-    //        queue([](detail::skeletal_motion_template_walk_info const&  left, detail::skeletal_motion_template_walk_info const&  right) {
-    //                // We need inverse order: obtain lower costs first.
-    //                return left.cost > right.cost;
-    //                });
-    //    detail::rigid_body_motion  initial_motion = m_motion_object_motion;
-    //    initial_motion.acceleration.m_linear = initial_motion.acceleration.m_angular = vector3_zero();
-    //    float_32_bit const  initial_cost =
-    //            detail::distance_of_object_motion_to_desired_motion(
-    //                    initial_motion,
-    //                    m_motion_object_motion.frame.origin(),
-    //                    m_motion_desire_props);
-    //    for (auto const i : satisfied_transitions)
-    //        queue.push({ initial_cost, successors.at(i).first, initial_motion, 0.0f, i });
-    //    do
-    //    {
-    //        detail::skeletal_motion_template_walk_info const  walk_info = queue.top();
-    //        queue.pop();
-
-    //        if (walk_info.consumed_time >= time_horizon)
-    //        {
-    //            if (walk_info.cost < best_cost)
-    //            {
-    //                best_cost = walk_info.cost;
-    //                best_data_id = walk_info.data_id;
-    //            }
-    //            continue;
-    //        }
-
-    //        std::vector<std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit> > walk_successors;
-    //        float_32_bit  consumed_time = 0.0f;
-    //        {
-    //            skeletal_motion_templates::motion_template_cursor  cursor = walk_info.cursor;
-    //            while (true)
-    //            {
-    //                walk_successors.clear();
-    //                get_blackboard()->m_motion_templates.get_successor_keyframes(cursor, walk_successors);
-    //                if (walk_successors.size() > 1UL ||
-    //                    consumed_time + walk_successors.front().second > integration_time_step ||
-    //                    walk_info.consumed_time + consumed_time + walk_successors.front().second > time_horizon)
-    //                    break;
-    //                cursor = walk_successors.front().first;
-    //                consumed_time += walk_successors.front().second;
-    //            }
-    //        }
-    //        for (auto const&  cursor_and_time : walk_successors)
-    //        {
-    //            detail::motion_action_persistent_data_map  discardable_motion_action_data;
-    //            std::vector<skeletal_motion_templates::action_ptr>  actions;
-    //            for (auto const&  disjunction : get_blackboard()->m_motion_templates.motions_map().at(cursor_and_time.first.motion_name)
-    //                                                                                              .actions
-    //                                                                                              .at(cursor_and_time.first.keyframe_index))
-    //                for (auto const  action_ptr : disjunction->actions)
-    //                    actions.push_back(action_ptr);
-    //            detail::skeletal_motion_template_walk_info  walk_succ_info = walk_info;
-    //            walk_succ_info.consumed_time += consumed_time + cursor_and_time.second;
-    //            walk_succ_info.cursor = cursor_and_time.first;
-    //            execute_satisfied_motion_guarded_actions(
-    //                    actions,
-    //                    consumed_time + cursor_and_time.second,
-    //                    m_current_intepolation_state.linear_velocity_in_world_space,
-    //                    m_current_intepolation_state.angular_velocity_in_world_space,
-    //                    vector3_zero(),
-    //                    m_motion_desire_props,
-    //                    m_motion_action_data,
-    //                    walk_succ_info.m_motion,
-    //                    discardable_motion_action_data
-    //                    );
-    //            walk_succ_info.m_motion.integrate(consumed_time + cursor_and_time.second);
-    //            walk_succ_info.cost =
-    //                    detail::distance_of_object_motion_to_desired_motion(
-    //                            walk_succ_info.m_motion,
-    //                            m_motion_object_motion.frame.origin(),
-    //                            m_motion_desire_props);
-    //            queue.push(walk_succ_info);
-    //        }
-    //    }
-    //    while (!queue.empty());
-    //}
-    //return successors.at(best_data_id);
 }
 
 
