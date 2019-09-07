@@ -55,6 +55,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/ai/detail/guarded_motion_actions_processor.hpp 
     ./src/detail/guarded_motion_actions_processor.cpp 
+    
+    ./include/ai/detail/ideal_velocity_buider.hpp 
+    ./src/detail/ideal_velocity_buider.cpp 
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

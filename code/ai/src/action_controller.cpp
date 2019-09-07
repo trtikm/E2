@@ -1,6 +1,7 @@
 #include <ai/action_controller.hpp>
 #include <ai/skeleton_utils.hpp>
 #include <ai/detail/rigid_body_motion.hpp>
+#include <ai/detail/ideal_velocity_buider.hpp>
 #include <angeo/skeleton_kinematics.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -8,111 +9,6 @@
 #include <utility/timeprof.hpp>
 #include <queue>
 #include <functional>
-
-namespace ai { namespace detail { namespace {
-
-
-float_32_bit  distance_of_object_motion_to_desired_motion(
-        rigid_body_motion const&  motion,
-        vector3 const&  current_origin,
-        float_32_bit const  time_step,
-        motion_desire_props const&  desire
-        )
-{
-    float_32_bit const  d_pos  = length(current_origin + time_step * desire.linear_speed * desire.linear_velocity_unit_direction_in_world_space - motion.frame.origin());
-    float_32_bit const  d_fwd  = angle(desire.forward_unit_vector_in_world_space, motion.forward) / PI();
-    float_32_bit const  total_cost = 1.0f * d_pos + 2.0f * d_fwd;
-    return total_cost;
-}
-
-
-void  extend_cursor_path(
-        std::vector<skeletal_motion_templates::motion_template_cursor>&  cursor_path,
-        skeletal_motion_templates::motion_template_cursor const&  cursor,
-        float_32_bit const  transition_time
-        )
-{
-
-    if ((cursor_path.size() & 1UL) == 0UL)
-    {
-        // Even number of cursors.
-
-        if (cursor.motion_name == cursor_path.back().motion_name && cursor.keyframe_index > cursor_path.back().keyframe_index)
-            cursor_path.back() = cursor;
-        else
-            cursor_path.push_back(cursor);
-    }
-    else
-    {
-        // Odd number of cursors.
-
-        if (cursor.motion_name == cursor_path.back().motion_name && cursor.keyframe_index > cursor_path.back().keyframe_index)
-            cursor_path.push_back(cursor);
-        else if (transition_time < 0.001f)
-            cursor_path.back() = cursor;
-        else
-        {
-            if (cursor_path.back().keyframe_index > 0U)
-                --cursor_path.back().keyframe_index;
-            cursor_path.push_back(cursor_path.back());
-            ++cursor_path.back().keyframe_index;
-            cursor_path.push_back(cursor);
-        }
-    }
-}
-
-
-void  close_cursor_path(
-        std::vector<skeletal_motion_templates::motion_template_cursor>&  cursor_path,
-        skeletal_motion_templates const&  motion_templates)
-{
-    if ((cursor_path.size() & 1UL) != 0UL)
-    {
-        // Odd number of cursors.
-
-        if (cursor_path.back().keyframe_index + 1U >= motion_templates.at(cursor_path.back().motion_name).keyframes.num_keyframes())
-            --cursor_path.back().keyframe_index;
-        cursor_path.push_back(cursor_path.back());
-        ++cursor_path.back().keyframe_index;
-    }
-}
-
-
-void  compute_ideal_linear_and_angular_velocity(
-        std::vector<skeletal_motion_templates::motion_template_cursor> const&  cursor_path,
-        skeletal_motion_templates const  motion_templates,
-        angeo::coordinate_system const&  motion_object_frame,
-        float_32_bit const  consumed_time,
-        vector3&  ideal_linear_velocity_in_world_space,
-        vector3&  ideal_angular_velocity_in_world_space
-        )
-{
-    ASSUMPTION((cursor_path.size() & 1UL) == 0UL && consumed_time > 0.0001f);
-
-    matrix44  A, M = matrix44_identity();
-    for (auto rit = cursor_path.crbegin(); rit != cursor_path.crend(); ++rit)
-    {
-        angeo::from_base_matrix(motion_templates.at(rit->motion_name).reference_frames.at(rit->keyframe_index), A);
-        M = A * M;
-        ++rit;
-        angeo::to_base_matrix(motion_templates.at(rit->motion_name).reference_frames.at(rit->keyframe_index), A);
-        M = A * M;
-    }
-    vector3  pos;
-    matrix33  rot;
-    decompose_matrix44(M, pos, rot);
-
-    angeo::from_base_matrix(motion_object_frame, A);
-
-    ideal_linear_velocity_in_world_space = transform_vector(pos, A) / consumed_time;
-
-    vector3  axis;
-    float_32_bit const angle = quaternion_to_angle_axis(rotation_matrix_to_quaternion(rot), axis);
-    ideal_angular_velocity_in_world_space = (angle / consumed_time) * transform_vector(axis, A);
-}
-
-
-}}}
 
 namespace ai {
 
@@ -244,25 +140,24 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
         m_total_interpolation_time_in_seconds -= m_consumed_time_in_seconds;
         m_consumed_time_in_seconds = 0.0f;
 
-        std::vector<skeletal_motion_templates::motion_template_cursor>  cursor_path{ m_dst_cursor };
         float_32_bit  consumed_time = 0.0f;
+        detail::ideal_velocity_buider  ideal_velocity_buider(m_dst_cursor, get_blackboard()->m_motion_templates);
+
         while (m_consumed_time_in_seconds + interpolation_time_step_in_seconds >= m_total_interpolation_time_in_seconds)
         {
             std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit> const  best_transition = choose_transition();
             m_dst_cursor = best_transition.first;
             m_total_interpolation_time_in_seconds += best_transition.second;
-            detail::extend_cursor_path(cursor_path, best_transition.first, best_transition.second);
             consumed_time += best_transition.second;
+            ideal_velocity_buider.extend(best_transition.first, best_transition.second);
         }
-        detail::close_cursor_path(cursor_path, get_blackboard()->m_motion_templates);
-        detail::compute_ideal_linear_and_angular_velocity(
-                cursor_path,
-                get_blackboard()->m_motion_templates,
+
+        ideal_velocity_buider.close(
                 m_motion_object_motion.frame,
-                consumed_time,
                 m_ideal_linear_velocity_in_world_space,
                 m_ideal_angular_velocity_in_world_space
                 );
+
         transform_keyframes_to_reference_frame(
                 get_blackboard()->m_motion_templates.at(m_dst_cursor.motion_name).keyframes.get_keyframes()
                                                     .at(m_dst_cursor.keyframe_index).get_coord_systems(),
@@ -543,19 +438,19 @@ std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit>  acti
             float_32_bit  consumed_time = 0.0f;
             {
                 skeletal_motion_templates::motion_template_cursor  cursor = successors.at(satisfied_transitions.at(i)).first;
-                std::vector<skeletal_motion_templates::motion_template_cursor>  cursor_path{ cursor };
+                detail::ideal_velocity_buider  ideal_velocity_buider(cursor, get_blackboard()->m_motion_templates );
                 float_32_bit  integration_time = 0.0f;
                 while (consumed_time < time_horizon)
                 {
                     get_blackboard()->m_motion_templates.for_each_successor_keyframe(
                             cursor,
-                            [&cursor, &cursor_path, &consumed_time, &integration_time]
+                            [&cursor, &ideal_velocity_buider, &consumed_time, &integration_time]
                             (skeletal_motion_templates::motion_template_cursor const&  target_cursor, float_32_bit const  transition_time)
                             {
                                 cursor = target_cursor;
                                 consumed_time += transition_time;
                                 integration_time += transition_time;
-                                detail::extend_cursor_path(cursor_path, target_cursor, transition_time);
+                                ideal_velocity_buider.extend(target_cursor, transition_time);
                                 return false;   // We need only the first successor to stay in the initial animation as long as possible.
                                                 // When all successors goes out from the initial animation, then take any => the first is ok.
                             });
@@ -569,15 +464,12 @@ std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit>  acti
                                 actions.push_back(action_ptr);
                         motion.acceleration.m_linear = motion.acceleration.m_angular = vector3_zero();
                         vector3  ideal_linear_velocity_in_world_space, ideal_angular_velocity_in_world_space;
-                        detail::close_cursor_path(cursor_path, get_blackboard()->m_motion_templates);
-                        detail::compute_ideal_linear_and_angular_velocity(
-                                cursor_path,
-                                get_blackboard()->m_motion_templates,
+                        ideal_velocity_buider.close(
                                 motion.frame,
-                                integration_time,
                                 ideal_linear_velocity_in_world_space,
                                 ideal_angular_velocity_in_world_space
                                 );
+                        ideal_velocity_buider.reset(cursor);
                         execute_satisfied_motion_guarded_actions(
                                 actions,
                                 integration_time,
@@ -591,18 +483,19 @@ std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit>  acti
                                 );
                         motion.integrate(integration_time);
                         integration_time = 0.0f;
-                        cursor_path.clear();
-                        cursor_path.push_back(cursor);
                     }
                 }
             }
 
-            float_32_bit const  cost =
-                    detail::distance_of_object_motion_to_desired_motion(
-                            motion,
-                            m_motion_object_motion.frame.origin(),
-                            time_horizon,
-                            m_motion_desire_props);
+            float_32_bit  cost;
+            {
+                vector3 const&  current_origin = m_motion_object_motion.frame.origin();
+
+                float_32_bit const  d_pos = length(current_origin + time_horizon * m_motion_desire_props.linear_speed * m_motion_desire_props.linear_velocity_unit_direction_in_world_space - motion.frame.origin());
+                float_32_bit const  d_fwd = angle(m_motion_desire_props.forward_unit_vector_in_world_space, motion.forward) / PI();
+                
+                cost = 1.0f * d_pos + 2.0f * d_fwd;
+            }
 
             if (cost < best_cost)
             {
