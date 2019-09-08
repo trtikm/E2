@@ -1272,7 +1272,7 @@ motion_actions  <begin> <end>
                         (in this case a difference of ideal and actual speed
                         of the motion object). The motion error has a direct
                         impact on increase/decrease of the animation speed.
-        * 'chase_linear_velocity_by_forward_vector':
+        * 'rotate_forward_vector_towards_desired_linear_velocity':
             Rotates the reference frame in the world so that distance between
             the linear velocity and the forward direction is minimal. The
             rotation axis is the up direction of the agent (see the file
@@ -1416,7 +1416,7 @@ def command_motion_actions():
                 elif action == "move_forward_with_ideal_speed":
                     actions[-1].append(state.max_linear_accel)
                     actions[-1].append(state.motion_error_multiplier)
-                elif action == "chase_linear_velocity_by_forward_vector":
+                elif action == "rotate_forward_vector_towards_desired_linear_velocity":
                     actions[-1].append(state.max_angular_speed)
                     actions[-1].append(state.max_angular_accel)
                     actions[-1].append(state.min_linear_speed)

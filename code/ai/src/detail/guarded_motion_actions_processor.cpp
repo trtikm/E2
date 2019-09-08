@@ -171,11 +171,11 @@ void  execute_satisfied_motion_guarded_actions(
             motion_object_motion.acceleration.m_linear += agent_linear_acceleration;
         }
         else if (auto const  action_ptr =
-            std::dynamic_pointer_cast<skeletal_motion_templates::action_chase_linear_velocity_by_forward_vector const>(action_props))
+            std::dynamic_pointer_cast<skeletal_motion_templates::action_rotate_forward_vector_towards_desired_linear_velocity const>(action_props))
         {
             float_32_bit const  ideal_linear_speed = length(ideal_linear_velocity_in_world_space);
             float_32_bit const  max_anglular_speed = 
-                    action_ptr->max_angular_speed * std::min(1.0f, std::max(0.0f, ideal_linear_speed / action_ptr->min_linear_speed));
+                    action_ptr->max_angular_speed * std::min(1.0f, std::max(0.0f, ideal_linear_speed / std::max(action_ptr->min_linear_speed, 0.001f)));
     
             float_32_bit const  rot_angle =
                     angeo::compute_rotation_angle(

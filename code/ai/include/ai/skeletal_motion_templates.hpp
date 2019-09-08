@@ -676,7 +676,7 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
         float_32_bit  motion_error_multiplier;
     };
 
-    struct  action_chase_linear_velocity_by_forward_vector : public action
+    struct  action_rotate_forward_vector_towards_desired_linear_velocity : public action
     {
         float_32_bit  max_angular_speed;
         float_32_bit  max_angular_accel;

@@ -376,10 +376,10 @@ motion_actions_data::motion_actions_data(async::finalise_load_on_destroy_ptr con
                         action.motion_error_multiplier = params.at(1);
                         constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
                     }
-                    else if (action_name == "chase_linear_velocity_by_forward_vector")
+                    else if (action_name == "rotate_forward_vector_towards_desired_linear_velocity")
                     {
-                        if (params.size() != 3UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for chase_linear_velocity_by_forward_vector at line " << line_index << "in the file '" << pathname << "'.");
-                        skeletal_motion_templates::action_chase_linear_velocity_by_forward_vector  action;
+                        if (params.size() != 3UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for rotate_forward_vector_towards_desired_linear_velocity at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::action_rotate_forward_vector_towards_desired_linear_velocity  action;
                         action.max_angular_speed = params.at(0);
                         action.max_angular_accel = params.at(1);
                         action.min_linear_speed = params.at(2);
