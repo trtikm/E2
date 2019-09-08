@@ -670,7 +670,7 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
         bool  operator==(action_none const&  other) const { return true; }
     };
 
-    struct  action_chase_ideal_linear_velocity : public action
+    struct  action_move_forward_with_ideal_speed : public action
     {
         float_32_bit  max_linear_accel;
         float_32_bit  motion_error_multiplier;

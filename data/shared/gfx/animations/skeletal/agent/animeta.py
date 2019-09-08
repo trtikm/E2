@@ -1260,7 +1260,7 @@ motion_actions  <begin> <end>
         * 'none':
             Do nothing, i.e. ignore desired motion of agent's cortex.
             Used state variables: None
-        * 'chase_ideal_linear_velocity':
+        * 'move_forward_with_ideal_speed':
             Applies a force to agent's motion object so that linear velocity
             gets closer to the ideal linear velocity as defined by the
             keyframes.
@@ -1413,7 +1413,7 @@ def command_motion_actions():
                 actions.append([action])
                 if action == "none":
                     pass    # no arguments
-                elif action == "chase_ideal_linear_velocity":
+                elif action == "move_forward_with_ideal_speed":
                     actions[-1].append(state.max_linear_accel)
                     actions[-1].append(state.motion_error_multiplier)
                 elif action == "chase_linear_velocity_by_forward_vector":

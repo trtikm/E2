@@ -160,7 +160,7 @@ void  execute_satisfied_motion_guarded_actions(
         if (action_props == nullptr || std::dynamic_pointer_cast<skeletal_motion_templates::action_none const>(action_props) != nullptr)
             continue;
         else if (auto const  action_ptr =
-            std::dynamic_pointer_cast<skeletal_motion_templates::action_chase_ideal_linear_velocity const>(action_props))
+            std::dynamic_pointer_cast<skeletal_motion_templates::action_move_forward_with_ideal_speed const>(action_props))
         {
             float_32_bit const  ideal_linear_speed = length(ideal_linear_velocity_in_world_space);
             vector3  agent_linear_acceleration =

@@ -368,10 +368,10 @@ motion_actions_data::motion_actions_data(async::finalise_load_on_destroy_ptr con
                         skeletal_motion_templates::action_none  action;
                         constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
                     }
-                    else if (action_name == "chase_ideal_linear_velocity")
+                    else if (action_name == "move_forward_with_ideal_speed")
                     {
-                        if (params.size() != 2UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for chase_ideal_linear_velocity at line " << line_index << "in the file '" << pathname << "'.");
-                        skeletal_motion_templates::action_chase_ideal_linear_velocity  action;
+                        if (params.size() != 2UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for move_forward_with_ideal_speed at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::action_move_forward_with_ideal_speed  action;
                         action.max_linear_accel = params.at(0);
                         action.motion_error_multiplier = params.at(1);
                         constructed_actions.actions.push_back(_find_or_create_motion_action_component(action, last_actions));
