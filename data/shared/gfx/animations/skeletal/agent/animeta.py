@@ -1526,7 +1526,7 @@ reference_frames  move_straight|
             }
         where 'R(i) = _quaternion_to_rotation_matrix(
         _axis_angle_to_quaternion(vec_down_mult * vec_down, i * angle /
-        <num-keyframes>))', where 'vec_down_mult', 'vec_down', and
+        <num-keyframes>))', where 'vec_fwd/down_mult', 'vec_fwd/down', and
         'angle' are state variables and the <num-keyframes> is automatically
         inferred from the animation in the 'anim_dir'.
     * all_same_as_first:
