@@ -381,6 +381,7 @@ void  action_controller::look_at_target(float_32_bit const  time_step_in_seconds
     angeo::skeleton_rotate_bones_towards_target_pose(
         frames,
         target_frames,
+        get_blackboard()->m_motion_templates.pose_frames().get_coord_systems(),
         get_blackboard()->m_motion_templates.joints().data(),
         bones_to_rotate,
         time_step_in_seconds

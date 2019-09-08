@@ -47,6 +47,7 @@ void  skeleton_look_at(
 void  skeleton_rotate_bones_towards_target_pose(
         std::vector<coordinate_system>&  frames,    // coordinate systems of bones in the current pose which (some of them) will be moved towards the target pose frames 'target_pose_frames'.
         std::vector<coordinate_system> const&  target_pose_frames,  // coordinate systems of bones in the target pose.
+        std::vector<coordinate_system> const&  pose_frames,
         std::vector<std::vector<joint_rotation_props> > const&  rotation_props, // specification of rotation props of each bone at joint to its parent bone.
         std::unordered_map<integer_32_bit, std::vector<natural_32_bit> > const&  bones_to_rotate,
         float_32_bit const  dt

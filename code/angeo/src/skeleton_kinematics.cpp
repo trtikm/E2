@@ -379,6 +379,7 @@ void  skeleton_look_at(
 void  skeleton_rotate_bones_towards_target_pose(
         std::vector<coordinate_system>&  frames,
         std::vector<coordinate_system> const&  target_pose_frames,
+        std::vector<coordinate_system> const&  pose_frames,
         std::vector<std::vector<joint_rotation_props> > const&  rotation_props,
         std::unordered_map<integer_32_bit, std::vector<natural_32_bit> > const&  bones_to_rotate,
         float_32_bit const  dt
@@ -393,15 +394,16 @@ void  skeleton_rotate_bones_towards_target_pose(
 
         auto const&  rotations = rotation_props.at(bone_and_rotations.first);
 
+        coordinate_system  result_cs = pose_frames.at(bone_and_rotations.first);
         for (natural_32_bit  idx : bone_and_rotations.second)
         {
             joint_rotation_props const&  rot_props = rotations.at(idx);
 
             vector3 const  axis = rot_props.m_axis_in_parent_space ? rot_props.m_axis : detail::vector_from_frame(rot_props.m_axis, frame);
 
-            float_32_bit  angle;
+            float_32_bit  angle, current_angle;
             {
-                float_32_bit const  current_angle =
+                current_angle =
                     compute_rotation_angle(
                             axis,
                             rot_props.m_zero_angle_direction,
@@ -422,7 +424,10 @@ void  skeleton_rotate_bones_towards_target_pose(
             }
 
             rotate(frame, angle_axis_to_quaternion(angle, axis));
+            rotate(result_cs, angle_axis_to_quaternion(angle + current_angle, axis));
         }
+
+        frame.set_orientation(result_cs.orientation());
     }
 }
 
