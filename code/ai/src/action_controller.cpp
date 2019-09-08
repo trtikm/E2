@@ -441,8 +441,12 @@ std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit>  acti
                 skeletal_motion_templates::motion_template_cursor  cursor = successors.at(satisfied_transitions.at(i)).first;
                 detail::ideal_velocity_buider  ideal_velocity_buider(cursor, get_blackboard()->m_motion_templates );
                 float_32_bit  integration_time = 0.0f;
-                while (consumed_time < time_horizon)
+                bool  passed_branching = false;
+                while (consumed_time < time_horizon || !passed_branching)
                 {
+                    if (consumed_time >= time_horizon && get_blackboard()->m_motion_templates.is_branching_keyframe(cursor))
+                        passed_branching = true;
+
                     get_blackboard()->m_motion_templates.for_each_successor_keyframe(
                             cursor,
                             [&cursor, &ideal_velocity_buider, &consumed_time, &integration_time]
@@ -492,7 +496,7 @@ std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit>  acti
             {
                 vector3 const&  current_origin = m_motion_object_motion.frame.origin();
 
-                float_32_bit const  d_pos = length(current_origin + time_horizon * m_motion_desire_props.linear_speed * m_motion_desire_props.linear_velocity_unit_direction_in_world_space - motion.frame.origin());
+                float_32_bit const  d_pos = length(current_origin + consumed_time * m_motion_desire_props.linear_speed * m_motion_desire_props.linear_velocity_unit_direction_in_world_space - motion.frame.origin());
                 float_32_bit const  d_fwd = angle(m_motion_desire_props.forward_unit_vector_in_world_space, motion.forward) / PI();
                 
                 cost = 1.0f * d_pos + 2.0f * d_fwd;
