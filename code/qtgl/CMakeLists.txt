@@ -100,6 +100,9 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/qtgl/detail/window.hpp
     ./src/detail/window.cpp
+
+    ./include/qtgl/offscreen.hpp
+    ./src/offscreen.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES
