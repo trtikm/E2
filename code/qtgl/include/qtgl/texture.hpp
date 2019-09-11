@@ -253,6 +253,8 @@ struct texture_data
     GLuint  id() const { return m_id; }
     natural_32_bit  width() const { return m_image_props.width(); }
     natural_32_bit  height() const { return m_image_props.height(); }
+    natural_32_bit  pixel_components() const { return m_image_props.pixel_components(); }
+    natural_32_bit  pixel_components_type() const { return m_image_props.pixel_components_type(); }
     natural_32_bit  pixel_format() const { return m_texture_props.pixel_format(); }
     natural_32_bit  x_wrapping_type() const { return m_texture_props.x_wrapping_type(); }
     natural_32_bit  y_wrapping_type() const { return m_texture_props.y_wrapping_type(); }
@@ -310,6 +312,8 @@ struct texture : public async::resource_accessor<detail::texture_data>
     GLuint  id() const { return resource().id(); }
     natural_32_bit  width() const { return resource().width(); }
     natural_32_bit  height() const { return resource().height(); }
+    natural_32_bit  pixel_components() const { return resource().pixel_components(); }
+    natural_32_bit  pixel_components_type() const { return resource().pixel_components_type(); }
     natural_32_bit  pixel_format() const { return resource().pixel_format(); }
     natural_32_bit  x_wrapping_type() const { return resource().x_wrapping_type(); }
     natural_32_bit  y_wrapping_type() const { return resource().y_wrapping_type(); }

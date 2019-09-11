@@ -147,12 +147,13 @@ void  texture_file_data::initialise(
 {
     TMPROF_BLOCK();
 
-    if (!boost::filesystem::exists(image_pathname) || !boost::filesystem::is_regular_file(image_pathname))
+    if (!image_pathname.empty() && (!boost::filesystem::exists(image_pathname) || !boost::filesystem::is_regular_file(image_pathname)))
         throw std::runtime_error(msgstream() << "The image file '" << image_pathname << "' does not exist.");
     if (pixel_format != GL_RGB
         && pixel_format != GL_RGBA
         && pixel_format != GL_COMPRESSED_RGB
-        && pixel_format != GL_COMPRESSED_RGBA)
+        && pixel_format != GL_COMPRESSED_RGBA
+        && pixel_format != GL_DEPTH_COMPONENT)
         throw std::runtime_error(msgstream() << "Unknown pixel format '" << pixel_format << "'.");
     if (x_wrapping_type != GL_REPEAT && x_wrapping_type != GL_CLAMP)
         throw std::runtime_error(msgstream() << "Unknown x-wrapping type '" << x_wrapping_type << "'.");
@@ -161,8 +162,9 @@ void  texture_file_data::initialise(
     if (min_filtering_type != GL_NEAREST_MIPMAP_NEAREST &&
             min_filtering_type != GL_NEAREST_MIPMAP_LINEAR &&
             min_filtering_type != GL_LINEAR_MIPMAP_NEAREST &&
-            min_filtering_type != GL_LINEAR_MIPMAP_LINEAR
-            )
+            min_filtering_type != GL_LINEAR_MIPMAP_LINEAR &&
+            min_filtering_type != GL_NEAREST &&
+            min_filtering_type != GL_LINEAR)
         throw std::runtime_error(msgstream() << "Unknown min filtering type '" << min_filtering_type << "'.");
     if (mag_filtering_type != GL_NEAREST && mag_filtering_type != GL_LINEAR)
         throw std::runtime_error(msgstream() << "Unknown mag filtering type '" << mag_filtering_type << "'.");
@@ -261,8 +263,7 @@ void  texture_image_data::initialise(
     TMPROF_BLOCK();
 
     ASSUMPTION(width > 0U && height > 0U);
-    ASSUMPTION(data_begin != nullptr && data_end != nullptr);
-    ASSUMPTION((
+    ASSUMPTION(((data_begin == nullptr && data_end == nullptr) ||
         [width, height, data_begin, data_end]() -> bool {
             integer_64_bit  size = data_end - data_begin;
             return size % ((natural_64_bit)width * (natural_64_bit)height) == 0ULL &&
@@ -273,7 +274,7 @@ void  texture_image_data::initialise(
 
     m_width = width;
     m_height = height;
-    m_data = std::unique_ptr< std::vector<natural_8_bit> >(new std::vector<natural_8_bit>(data_begin, data_end));
+    m_data = data_begin == nullptr ? nullptr : std::unique_ptr< std::vector<natural_8_bit> >(new std::vector<natural_8_bit>(data_begin, data_end));
     m_pixel_components = pixel_components;
     m_pixel_components_type = pixel_components_type;
 }
