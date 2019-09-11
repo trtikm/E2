@@ -55,4 +55,90 @@ batch  create_triangle_mesh(
 }
 
 
+batch  create_triangle_mesh(
+        qtgl::buffer  vertex_buffer,
+        qtgl::buffer  index_buffer,
+        qtgl::buffer  texcoord_buffer,
+        texture const&  diffuse,
+        FOG_TYPE const  fog_type_,
+        std::string const&  id
+        )
+{
+    TMPROF_BLOCK();
+
+    batch const  pbatch = batch(
+        id.empty() ? id : "/generic/triangle_mesh/batch/" + id,
+        buffers_binding(
+            0U,
+            index_buffer,
+            {
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION, vertex_buffer },
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0, texcoord_buffer },
+            },
+            id.empty() ? id : "/generic/triangle_mesh/buffers_binding/" + id
+            ),
+        textures_binding({
+            { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, diffuse }
+            }),
+        texcoord_binding({
+            { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0 }
+            }),
+        effects_config{
+            {}, // Light types.
+            {{LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::TEXTURE}},
+            {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
+            fog_type_
+            },
+        draw_state(nullptr),
+        modelspace(),
+        skeleton_alignment()
+        );
+    return pbatch;
+}
+
+
+batch  create_triangle_mesh(
+        std::vector< std::array<float_32_bit, 3> > const&  vertices,
+        std::vector< std::array<float_32_bit, 2> > const&  texcoords,
+        texture const&  diffuse,
+        FOG_TYPE const  fog_type_,
+        std::string const&  id
+        )
+{
+    TMPROF_BLOCK();
+
+    batch const  pbatch = batch(
+        id.empty() ? id : "/generic/triangle_mesh/batch/" + id,
+        buffers_binding(
+            0U,
+            3U,
+            {
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
+                  buffer(vertices, true, (id.empty() ? id : "/generic/triangle_mesh/buffer/vertices/" + id)) },
+                { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0,
+                  buffer(texcoords, (id.empty() ? id : "/generic/triangle_mesh/buffer/texcoords/" + id)) },
+            },
+            id.empty() ? id : "/generic/triangle_mesh/buffers_binding/" + id
+            ),
+        textures_binding({
+            { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, diffuse }
+            }),
+        texcoord_binding({
+            { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0 }
+            }),
+        effects_config{
+            {}, // Light types.
+            {{LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::TEXTURE}},
+            {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
+            fog_type_
+            },
+        draw_state(nullptr),
+        modelspace(),
+        skeleton_alignment()
+        );
+    return pbatch;
+}
+
+
+
 }

@@ -116,6 +116,25 @@ batch  create_triangle_mesh(
         );
 
 
+batch  create_triangle_mesh(
+        qtgl::buffer  vertex_buffer,
+        qtgl::buffer  index_buffer,
+        qtgl::buffer  texcoord_buffer,
+        texture const&  diffuse,
+        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
+        std::string const&  id = ""
+        );
+
+
+batch  create_triangle_mesh(
+        std::vector< std::array<float_32_bit, 3> > const&  vertices,
+        std::vector< std::array<float_32_bit, 2> > const&  texcoords,
+        texture const&  diffuse,
+        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
+        std::string const&  id = ""
+        );
+
+
 batch  create_wireframe_perspective_frustum(
         float_32_bit const  near_plane,
         float_32_bit const  far_plane,
