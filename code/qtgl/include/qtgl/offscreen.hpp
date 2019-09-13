@@ -7,15 +7,19 @@
 #   include <vector>
 #   include <array>
 #   include <memory>
+#   include <type_traits>
 
 namespace qtgl {
 
 
 struct  offscreen final
 {
-    struct  depth_image
+    template<typename T, bool return_by_value>
+    struct  image
     {
-        depth_image(natural_32_bit const  width_in_pixels, natural_32_bit const  height_in_pixels)
+        using  element_type = T;
+
+        image(natural_32_bit const  width_in_pixels, natural_32_bit const  height_in_pixels)
             : m_width_in_pixels(width_in_pixels)
             , m_height_in_pixels(height_in_pixels)
             , m_data()
@@ -26,52 +30,27 @@ struct  offscreen final
         natural_32_bit  get_width_in_pixels() const { return m_width_in_pixels; }
         natural_32_bit  get_height_in_pixels() const { return m_height_in_pixels; }
 
-        float_32_bit  operator()(natural_32_bit const  row, natural_32_bit const  column) const
+        typename std::conditional<return_by_value, element_type, element_type const&>::type
+        operator()(natural_32_bit const  row, natural_32_bit const  column) const
         {
             return m_data.at(row * get_width_in_pixels() + column);
         }
 
         natural_32_bit  num_pixels() const { return (natural_32_bit)m_data.size(); }
 
-        float_32_bit const*  data_ptr() const { return m_data.data(); }
-        float_32_bit*  data_ptr() { return m_data.data(); }
+        element_type const*  data_ptr() const { return m_data.data(); }
+        element_type*  data_ptr() { return m_data.data(); }
 
     private:
         natural_32_bit  m_width_in_pixels;
         natural_32_bit  m_height_in_pixels;
-        std::vector<float_32_bit>  m_data;
+        std::vector<element_type>  m_data;
     };
 
-    struct  colour_image
-    {
-        struct  rgb { natural_8_bit  r, g, b; };
+    struct  rgb { natural_8_bit  r, g, b; };
 
-        colour_image(natural_32_bit const  width_in_pixels, natural_32_bit const  height_in_pixels)
-            : m_width_in_pixels(width_in_pixels)
-            , m_height_in_pixels(height_in_pixels)
-            , m_data()
-        {
-            m_data.resize(width_in_pixels * height_in_pixels);
-        }
-
-        natural_32_bit  get_width_in_pixels() const { return m_width_in_pixels; }
-        natural_32_bit  get_height_in_pixels() const { return m_height_in_pixels; }
-
-        rgb const&  operator()(natural_32_bit const  row, natural_32_bit const  column) const
-        {
-            return m_data.at(row * get_width_in_pixels() + column);
-        }
-
-        natural_32_bit  num_pixels() const { return (natural_32_bit)m_data.size(); }
-
-        rgb const*  data_ptr() const { return m_data.data(); }
-        rgb*  data_ptr() { return m_data.data(); }
-
-    private:
-        natural_32_bit  m_width_in_pixels;
-        natural_32_bit  m_height_in_pixels;
-        std::vector<rgb>  m_data;
-    };
+    using  depth_image = image<float_32_bit, true>;
+    using  colour_image = image<rgb, false>;
 
     offscreen(natural_32_bit const  width_in_pixels, natural_32_bit const  height_in_pixels, bool const  use_colour_texture);
     ~offscreen();
@@ -99,7 +78,9 @@ using  offscreen_colour_image_ptr = std::shared_ptr<offscreen::colour_image>;
 
 offscreen_ptr  make_offscreen(natural_32_bit const  width_in_pixels, natural_32_bit const  height_in_pixels, bool const  use_colour_texture);
 offscreen_depth_image_ptr  make_offscreen_depth_image(offscreen const&  ofs);
-offscreen_colour_image_ptr  make_offscreen_colour_image(offscreen const&  ofs);
+offscreen_depth_image_ptr  make_offscreen_depth_image(natural_32_bit const  width_in_pixels, natural_32_bit const  height_in_pixels);
+offscreen_colour_image_ptr  make_offscreen_colour_image(offscreen const& ofs);
+offscreen_colour_image_ptr  make_offscreen_colour_image(natural_32_bit const  width_in_pixels, natural_32_bit const  height_in_pixels);
 
 texture  make_offscreen_compatible_depth_texture(offscreen const&  ofs);
 texture  make_offscreen_compatible_colour_texture(offscreen const&  ofs);
@@ -116,6 +97,10 @@ private:
     void  release();
     offscreen const*  m_offscreen_ptr;
 };
+
+
+void  clear_offscreen_depth_image(offscreen::depth_image&  image);
+void  clear_offscreen_colour_image(offscreen::colour_image&  image);
 
 
 void  update_offscreen_depth_image(offscreen::depth_image&  image, make_current_offsceen const&  mofs);

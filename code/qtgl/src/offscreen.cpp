@@ -112,13 +112,25 @@ offscreen_ptr  make_offscreen(natural_32_bit const  width_in_pixels, natural_32_
 
 offscreen_depth_image_ptr  make_offscreen_depth_image(offscreen const& ofs)
 {
-    return std::make_shared<offscreen::depth_image>(ofs.get_width_in_pixels(), ofs.get_height_in_pixels());
+    return make_offscreen_depth_image(ofs.get_width_in_pixels(), ofs.get_height_in_pixels());
+}
+
+
+offscreen_depth_image_ptr  make_offscreen_depth_image(natural_32_bit const  width_in_pixels, natural_32_bit const  height_in_pixels)
+{
+    return std::make_shared<offscreen::depth_image>(width_in_pixels, height_in_pixels);
 }
 
 
 offscreen_colour_image_ptr  make_offscreen_colour_image(offscreen const& ofs)
 {
-    return std::make_shared<offscreen::colour_image>(ofs.get_width_in_pixels(), ofs.get_height_in_pixels());
+    return make_offscreen_colour_image(ofs.get_width_in_pixels(), ofs.get_height_in_pixels());
+}
+
+
+offscreen_colour_image_ptr  make_offscreen_colour_image(natural_32_bit const  width_in_pixels, natural_32_bit const  height_in_pixels)
+{
+    return std::make_shared<offscreen::colour_image>(width_in_pixels, height_in_pixels);
 }
 
 
@@ -153,6 +165,20 @@ void  make_current_offsceen::release()
 {
     glapi().glBindFramebuffer(GL_FRAMEBUFFER, 0);
     INVARIANT(glapi().glGetError() == 0U);
+}
+
+
+void  clear_offscreen_depth_image(offscreen::depth_image& image)
+{
+    for (float_32_bit*  ptr = image.data_ptr(), *  end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr)
+        *ptr = 0.0f;
+}
+
+
+void  clear_offscreen_colour_image(offscreen::colour_image&  image)
+{
+    for (offscreen::rgb*  ptr = image.data_ptr(), *  end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr)
+        *ptr = {0U, 0U, 0U};
 }
 
 
