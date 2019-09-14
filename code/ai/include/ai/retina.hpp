@@ -23,6 +23,9 @@ struct  retina
         if (m_colour_image != nullptr) qtgl::clear_offscreen_colour_image(*m_colour_image);
     }
 
+    natural_32_bit  get_width_in_pixels() const { return m_depth_image->get_width_in_pixels(); }
+    natural_32_bit  get_height_in_pixels() const { return m_depth_image->get_height_in_pixels(); }
+
     depth_image_ptr  get_depth_image() const { return m_depth_image; }
     colour_image_ptr  get_colour_image() const { return m_colour_image; }
 
