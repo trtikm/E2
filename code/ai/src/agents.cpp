@@ -23,7 +23,8 @@ agents::agents(scene_ptr const  scene_)
 
 agent_id  agents::insert(
         scene::node_id const&  agent_nid,
-        skeletal_motion_templates const  motion_templates
+        skeletal_motion_templates const  motion_templates,
+        retina_ptr const  retina_or_null
         )
 {
     TMPROF_BLOCK();
@@ -39,6 +40,7 @@ agent_id  agents::insert(
     props->agent_ptr = nullptr;
     props->agent_nid = agent_nid;
     props->motion_templates = motion_templates;
+    props->retina_ptr = retina_or_null;
 
     if (id == m_agents.size())
         m_agents.resize(m_agents.size() + 1U, nullptr);
@@ -55,6 +57,7 @@ void  agents::construct_agent(agent_id const  id, agent_props&  props)
     blackboard_ptr const  bb = std::make_shared<blackboard_human>();
     bb->m_motion_templates = props.motion_templates;
     bb->m_agent_id = id;
+    bb->m_retina_ptr = props.retina_ptr;
     bb->m_scene = m_scene;
     bb->m_agent_nid = props.agent_nid;
     bb->m_bone_nids.resize(props.motion_templates.pose_frames().size());

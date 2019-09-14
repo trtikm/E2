@@ -15,6 +15,7 @@
 #   include <qtgl/free_fly.hpp>
 #   include <qtgl/draw.hpp>
 #   include <qtgl/batch_generators.hpp>
+#   include <qtgl/offscreen.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/collision_scene.hpp>
 #   include <angeo/rigid_body_simulator.hpp>
@@ -269,6 +270,7 @@ private:
 
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
     void  perform_simulation_micro_step(float_64_bit const  time_to_simulate_in_seconds, bool const  is_last_micro_step);
+    void  update_retina_of_agents_from_offscreen_images();
     void  render_simulation_state(
             matrix44 const&  matrix_from_world_to_camera,
             matrix44 const&  matrix_from_camera_to_clipspace,
@@ -394,6 +396,8 @@ private:
     std::shared_ptr<angeo::collision_scene>  m_collision_scene_ptr;
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
     std::shared_ptr<ai::agents>  m_agents_ptr;
+    std::unordered_map<ai::agent_id, std::pair<qtgl::offscreen_ptr, qtgl::offscreen_ptr> >  m_offscreens;
+    std::unordered_map<ai::agent_id, qtgl::camera_perspective_ptr>  m_offscreen_cameras;
 
     std::unordered_map<angeo::collision_object_id, angeo::rigid_body_id>  m_binding_of_collision_objects;
     std::unordered_map<angeo::rigid_body_id, scn::scene_node_ptr>  m_binding_of_rigid_bodies;

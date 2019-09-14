@@ -363,6 +363,8 @@ simulator::simulator()
     , m_collision_scene_ptr(std::make_shared<angeo::collision_scene>())
     , m_rigid_body_simulator_ptr(std::make_shared<angeo::rigid_body_simulator>())
     , m_agents_ptr(std::make_shared<ai::agents>(std::make_shared<bind_ai_scene_to_simulator>(this)))
+    , m_offscreens()
+    , m_offscreen_cameras()
 
     , m_binding_of_collision_objects()
     , m_binding_of_rigid_bodies()
@@ -619,6 +621,9 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
         }
     }
 
+    if (is_simulation_round)
+        update_retina_of_agents_from_offscreen_images();
+
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     qtgl::glapi().glViewport(0, 0, window_props().width_in_pixels(), window_props().height_in_pixels());
     qtgl::glapi().glPolygonMode(GL_FRONT_AND_BACK, m_render_in_wireframe ? GL_LINE : GL_FILL);
@@ -665,6 +670,44 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
         if (m_do_show_batches)
             render_scene_batches(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
         render_scene_coord_systems(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
+    }
+
+static bool  render_retinas = true;
+if (keyboard_props().was_just_released(qtgl::KEY_F2()))
+    render_retinas = !render_retinas;
+if (render_retinas)
+    for (auto const& agent_id_and_node_id : m_binding_of_agents_to_scene)
+    {
+        if (!m_agents_ptr->ready(agent_id_and_node_id.first))
+            continue;
+
+        ai::retina_ptr const  retina_ptr = m_agents_ptr->at(agent_id_and_node_id.first).get_blackboard()->m_retina_ptr;
+        if (retina_ptr == nullptr)
+            continue;
+
+        auto  offscreen_it = m_offscreens.find(agent_id_and_node_id.first);
+        if (offscreen_it == m_offscreens.cend())
+            continue;
+
+        float_32_bit const  scale = 3.0f;
+
+        qtgl::dbg::draw_offscreen_depth_image(
+            *retina_ptr->get_depth_image(),
+            0U,
+            0U,
+            window_props().width_in_pixels(),
+            window_props().height_in_pixels(),
+            scale
+            );
+        if (retina_ptr->get_colour_image() != nullptr)
+            qtgl::dbg::draw_offscreen_colour_image(
+                *retina_ptr->get_colour_image(),
+                (natural_32_bit)(scale * retina_ptr->get_depth_image()->get_width_in_pixels()),
+                0U,
+                window_props().width_in_pixels(),
+                window_props().height_in_pixels(),
+                scale
+                );
     }
 
     qtgl::swap_buffers();
@@ -971,6 +1014,99 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                 );
 
         update_collider_locations_in_subtree(rb_node_ptr);
+    }
+}
+
+
+void  simulator::update_retina_of_agents_from_offscreen_images()
+{
+    TMPROF_BLOCK();
+
+    for (auto const& agent_id_and_node_id : m_binding_of_agents_to_scene)
+    {
+        if (!m_agents_ptr->ready(agent_id_and_node_id.first))
+            continue;
+
+        ai::retina_ptr const  retina_ptr = m_agents_ptr->at(agent_id_and_node_id.first).get_blackboard()->m_retina_ptr;
+        if (retina_ptr == nullptr)
+            continue;
+
+        auto  offscreen_it = m_offscreens.find(agent_id_and_node_id.first);
+        auto  camera_it = m_offscreen_cameras.find(agent_id_and_node_id.first);
+
+        bool const  was_present_in_last_round = offscreen_it != m_offscreens.cend();
+        if (!was_present_in_last_round)
+        {
+            offscreen_it = m_offscreens.insert({
+                    agent_id_and_node_id.first,
+                    {
+                        qtgl::make_offscreen(
+                            retina_ptr->get_width_in_pixels(),
+                            retina_ptr->get_height_in_pixels(),
+                            retina_ptr->get_colour_image() != nullptr
+                            ),
+                        qtgl::make_offscreen(
+                            retina_ptr->get_width_in_pixels(),
+                            retina_ptr->get_height_in_pixels(),
+                            retina_ptr->get_colour_image() != nullptr
+                            )
+                        }
+                    }).first;
+
+            INVARIANT(camera_it == m_offscreen_cameras.cend());
+
+            camera_it = m_offscreen_cameras.insert({
+                    agent_id_and_node_id.first,
+                    qtgl::camera_perspective::create(
+                            angeo::coordinate_system::create(vector3_zero(), quaternion_identity()),
+                            0.25f,
+                            50.0f,
+                            window_props()
+                            )
+                    }).first;
+        }
+        INVARIANT(camera_it != m_offscreen_cameras.cend());
+
+        if (was_present_in_last_round)
+        {
+            TMPROF_BLOCK();
+
+            qtgl::update_offscreen_depth_image(*retina_ptr->get_depth_image(), *offscreen_it->second.first);
+            //qtgl::from_screen_space_to_camera_space(*retina_ptr->get_depth_image(), camera_it->second->near_plane(), camera_it->second->far_plane());
+            //qtgl::from_camera_space_to_interval_01(*retina_ptr->get_depth_image(), camera_it->second->near_plane(), camera_it->second->far_plane());
+            qtgl::normalise_offscreen_depth_image_interval_01(*retina_ptr->get_depth_image());
+            if (retina_ptr->get_colour_image() != nullptr)
+            {
+                qtgl::update_offscreen_colour_image(*retina_ptr->get_colour_image(), *offscreen_it->second.first);
+                qtgl::modulate_offscreen_colour_image_by_depth_image(*retina_ptr->get_colour_image(), *retina_ptr->get_depth_image());
+            }
+        }
+
+        TMPROF_BLOCK();
+        {
+            qtgl::make_current_offscreen const  offscreen_guard(*offscreen_it->second.second);
+
+            TMPROF_BLOCK();
+
+            {
+                // TODO: here update 'camera_it->second' according to scene nodes of 'free_bones_look_at' of the agent!
+                camera_it->second->set_coordinate_system(*m_camera->coordinate_system());
+            }
+
+            matrix44  offscreen_matrix_from_world_to_camera;
+            camera_it->second->to_camera_space_matrix(offscreen_matrix_from_world_to_camera);
+            matrix44  offscreen_matrix_from_camera_to_clipspace;
+            camera_it->second->projection_matrix(offscreen_matrix_from_camera_to_clipspace);
+            qtgl::draw_state  offscreen_draw_state;
+
+            qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            qtgl::glapi().glViewport(0, 0, offscreen_it->second.second->get_width_in_pixels(), offscreen_it->second.second->get_height_in_pixels());
+            qtgl::glapi().glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+            render_scene_batches(offscreen_matrix_from_world_to_camera, offscreen_matrix_from_camera_to_clipspace, offscreen_draw_state);
+        }
+
+        std::swap(offscreen_it->second.first, offscreen_it->second.second);
     }
 }
 
@@ -2306,7 +2442,8 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::skeleton_pro
     ai::agent_id const  agent_id =
             m_agents_ptr->insert(
                     id.get_node_id(),
-                    props->skeletal_motion_templates
+                    props->skeletal_motion_templates,
+                    ai::make_retina(100U, 100U, true)
                     );
     scn::insert_agent(*node_ptr, agent_id, props);
     m_binding_of_agents_to_scene[agent_id] = id.get_node_id();

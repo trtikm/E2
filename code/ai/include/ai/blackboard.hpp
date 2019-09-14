@@ -3,6 +3,7 @@
 
 #   include <ai/agent_id.hpp>
 #   include <ai/scene.hpp>
+#   include <ai/retina.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <unordered_map>
 #   include <memory>
@@ -22,6 +23,8 @@ struct blackboard
     skeletal_motion_templates  m_motion_templates;
 
     agent_id  m_agent_id;
+
+    retina_ptr  m_retina_ptr;
 
     scene_ptr  m_scene;
     scene::node_id  m_agent_nid;
