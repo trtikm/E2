@@ -98,6 +98,14 @@ inline vector3  transform_vector(vector3 const& u, matrix44 const& M) { return t
 
 vector3  interpolate_linear(vector3 const&  u, vector3 const&  v, float_32_bit const  t);
 
+inline vector4  vector4_zero() { return vector4::Zero(); }
+inline vector4  vector4_unit_x() { return vector4::UnitX(); }
+inline vector4  vector4_unit_y() { return vector4::UnitY(); }
+inline vector4  vector4_unit_z() { return vector4::UnitZ(); }
+inline vector4  vector4_unit_w() { return vector4::UnitW(); }
+
+inline vector6  vector6_zero() { return vector6::Zero(); }
+
 inline quaternion  quaternion_identity() { return quaternion::Identity(); }
 inline quaternion  make_quaternion(scalar const w, vector3 const& v) { return quaternion(w, v(0), v(1), v(2)); }
 inline quaternion  make_quaternion_wxyz(scalar const w, scalar const x, scalar const y, scalar const z) { return quaternion(w,x,y,z); }
