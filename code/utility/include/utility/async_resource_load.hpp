@@ -352,9 +352,10 @@ void  resource_cache::insert_load_request(
 
     if (is_terminated())
     {
-        parent_finaliser->force_finalisation_as_failure(msgstream() <<
-            "ERROR: Resource loading was terminated. So, terminating also load of the resource " << parent_finaliser->get_key() << "."
-            );
+        if (parent_finaliser != nullptr)
+            parent_finaliser->force_finalisation_as_failure(msgstream() <<
+                "ERROR: Resource loading was terminated. So, terminating also load of the resource " << parent_finaliser->get_key() << "."
+                );
         return;
     }
 
@@ -449,9 +450,10 @@ void  resource_cache::insert_resource(
 
     if (is_terminated())
     {
-        parent_finaliser->force_finalisation_as_failure(msgstream() <<
-            "ERROR: Resource loading was terminated. So, terminating also load of the resource " << parent_finaliser->get_key() << "."
-            );
+        if (parent_finaliser != nullptr)
+            parent_finaliser->force_finalisation_as_failure(msgstream() <<
+                "ERROR: Resource loading was terminated. So, terminating also load of the resource " << parent_finaliser->get_key() << "."
+                );
         return;
     }
 
