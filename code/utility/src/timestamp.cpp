@@ -3,6 +3,7 @@
 #include <boost/chrono.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include <ctime>
+#include <iomanip>
 
 
 std::string  compute_timestamp()
@@ -18,10 +19,15 @@ std::string  compute_timestamp()
     std::stringstream sstr;
     sstr << "--"
          << ptm->tm_year + 1900 << "-"
+         << std::setfill('0') << std::setw(2)
          << ptm->tm_mon << "-"
+         << std::setfill('0') << std::setw(2)
          << ptm->tm_mday << "--"
+         << std::setfill('0') << std::setw(2)
          << ptm->tm_hour << "-"
+         << std::setfill('0') << std::setw(2)
          << ptm->tm_min << "-"
+         << std::setfill('0') << std::setw(2)
          << ptm->tm_sec
          ;
     return sstr.str();
