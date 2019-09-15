@@ -88,6 +88,8 @@ struct simulator : public qtgl::real_time_simulator
     scn::scene_node_ptr  get_scene_node(scn::scene_node_id const&  id) const
     { return get_scene().get_scene_node(id); }
 
+    scn::scene_node_ptr  insert_scene_simulation_node(scn::scene_node_id const& id);
+
     scn::scene_node_ptr  insert_scene_node(scn::scene_node_id const&  id)
     { return insert_scene_node_at(id, vector3_zero(), quaternion_identity()); }
 
@@ -95,6 +97,8 @@ struct simulator : public qtgl::real_time_simulator
     { return get_scene().insert_scene_node(id, origin, orientation); }
 
     void  erase_scene_node(scn::scene_node_id const&  id);
+
+    void  erase_scene_simulation_node(scn::scene_node_id const& id);
 
     void  insert_batch_to_scene_node(
             scn::scene_node::record_name const&  batch_name,

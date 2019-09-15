@@ -1845,6 +1845,32 @@ void  widgets::on_simulation_resumed()
 }
 
 
+void  widgets::simulation_nodes_changed_listener()
+{
+    if (!wnd()->glwindow().has_simulator())
+        return;
+
+    std::vector<tree_widget_item*>  items_to_erase;
+    for (int i = 0, n = m_scene_tree->topLevelItemCount(); i != n; ++i)
+    {
+        tree_widget_item* const  item_ptr = as_tree_widget_item(m_scene_tree->topLevelItem(i));
+
+        if (!represents_coord_system(item_ptr))
+            continue;
+        scn::scene_node_id const  node_id = scene_record_id_reverse_builder::run(item_ptr).get_node_id();
+        if (node_id == scn::get_pivot_node_id() || node_id.path_element(0U).front() != '@')
+            continue;
+        if (wnd()->glwindow().call_now(&simulator::get_scene_node, std::cref(node_id)) != nullptr)
+            continue;
+
+        items_to_erase.push_back(item_ptr);
+    }
+
+    for (auto  item_ptr : items_to_erase)
+        m_scene_tree->erase(item_ptr);
+}
+
+
 void  widgets::on_scene_escape_widget()
 {
     wnd()->set_focus_to_glwindow(false);
@@ -2035,6 +2061,11 @@ QWidget*  make_scene_tab_content(widgets const&  w)
             w.wnd()->glwindow().register_listener(
                         simulator_notifications::resumed(),
                         { &program_window::scene_listener_simulation_resumed, w.wnd() }
+                        );
+
+            w.wnd()->glwindow().register_listener(
+                        simulator_notifications::scene_simulation_nodes_changed(),
+                        { &program_window::scene_listener_simulation_nodes_changed, w.wnd() }
                         );
 
             {

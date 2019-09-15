@@ -98,6 +98,8 @@ struct  widgets
     void  on_simulation_paused();
     void  on_simulation_resumed();
 
+    void  simulation_nodes_changed_listener();
+
     void  on_scene_escape_widget();
 
     bool  is_editing_enabled() const;

@@ -65,7 +65,7 @@ void  bind_ai_scene_to_simulator::insert_scene_node(
         )
 {
     ASSUMPTION(m_simulator_ptr != nullptr && (!frame_is_in_parent_space || nid.path().size() > 1UL));
-    auto const  node_ptr = m_simulator_ptr->insert_scene_node(nid);
+    auto const  node_ptr = m_simulator_ptr->insert_scene_simulation_node(nid);
     ASSUMPTION(node_ptr != nullptr);
     detail::relocate_node(node_ptr, frame, frame_is_in_parent_space);
 }
@@ -133,7 +133,7 @@ void  bind_ai_scene_to_simulator::erase_scene_node(node_id const&  nid)
                 return true;
             }()
         ));
-    m_simulator_ptr->erase_scene_node(nid);
+    m_simulator_ptr->erase_scene_simulation_node(nid);
 }
 
 

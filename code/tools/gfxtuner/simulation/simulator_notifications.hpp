@@ -24,6 +24,8 @@ inline std::string  scene_node_orientation_update_finished() { return "SCENE_NOD
 inline std::string  scene_edit_mode_changed() { return "SCENE_EDIT_MODE_CHANGED"; }
 inline std::string  scene_scene_selection_changed() { return "SCENE_SELECTION_CHANGED"; }
 
+inline std::string  scene_simulation_nodes_changed() { return "SCENE_SIMULATION_NODES_CHANGED"; }
+
 
 }
 

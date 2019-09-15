@@ -621,6 +621,11 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
         }
     }
 
+static bool  update_retinas = false;
+if (keyboard_props().was_just_released(qtgl::KEY_F2()))
+    update_retinas = !update_retinas;
+
+if (update_retinas)
     if (is_simulation_round)
         update_retina_of_agents_from_offscreen_images();
 
@@ -672,9 +677,10 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
         render_scene_coord_systems(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
     }
 
-static bool  render_retinas = true;
-if (keyboard_props().was_just_released(qtgl::KEY_F2()))
+static bool  render_retinas = false;
+if (keyboard_props().was_just_released(qtgl::KEY_F3()))
     render_retinas = !render_retinas;
+
 if (render_retinas)
     for (auto const& agent_id_and_node_id : m_binding_of_agents_to_scene)
     {
@@ -1841,6 +1847,21 @@ void  simulator::render_ai_action_controller_props(
                 );
         draw_state = m_cache_of_batches_of_ai_agents.lines_batch.get_draw_state();
     }
+}
+
+
+scn::scene_node_ptr simulator::insert_scene_simulation_node(scn::scene_node_id const&  id)
+{
+    scn::scene_node_ptr const n = insert_scene_node(id);
+    call_listeners(simulator_notifications::scene_simulation_nodes_changed());
+    return n;
+}
+
+
+void simulator::erase_scene_simulation_node(scn::scene_node_id const&  id)
+{
+    erase_scene_node(id);
+    call_listeners(simulator_notifications::scene_simulation_nodes_changed());
 }
 
 
