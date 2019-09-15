@@ -225,7 +225,11 @@ void  execute_satisfied_motion_guarded_actions(
     
             // TODO: The computaion of 'dt' on the next line looks suspicious. RE-EVALUATE!
             float_32_bit const  dt = std::max(1.0f / 25.0f, time_step_in_seconds);
-            vector3 const  next_motion_object_origin = motion_object_motion.frame.origin() + dt * motion_object_motion.velocity.m_linear;
+            vector3 const  next_motion_object_origin =
+                    motion_object_motion.frame.origin() +
+                    dt * motion_object_motion.velocity.m_linear +
+                    (0.5f * dt * dt) * motion_object_motion.acceleration.m_linear
+                    ;
             vector3 const  position_delta = action_data_ref.position - next_motion_object_origin;
             vector3  agent_linear_acceleration = (1.0f / (dt * dt)) * position_delta;
             float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
