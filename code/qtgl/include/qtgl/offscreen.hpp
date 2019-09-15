@@ -47,10 +47,11 @@ struct  offscreen final
         std::vector<element_type>  m_data;
     };
 
-    struct  rgb { natural_8_bit  r, g, b; };
+    using  depth_image_pixel = float_32_bit;
+    struct  colour_image_pixel { float_32_bit  r, g, b, a; };
 
-    using  depth_image = image<float_32_bit, true>;
-    using  colour_image = image<rgb, false>;
+    using  depth_image = image<depth_image_pixel, true>;
+    using  colour_image = image<colour_image_pixel, false>;
 
     offscreen(natural_32_bit const  width_in_pixels, natural_32_bit const  height_in_pixels, bool const  use_colour_texture);
     ~offscreen();
@@ -99,8 +100,8 @@ offscreen_depth_image_ptr  make_offscreen_depth_image(natural_32_bit const  widt
 offscreen_colour_image_ptr  make_offscreen_colour_image(offscreen const& ofs);
 offscreen_colour_image_ptr  make_offscreen_colour_image(natural_32_bit const  width_in_pixels, natural_32_bit const  height_in_pixels);
 
-void  clear_offscreen_depth_image(offscreen::depth_image&  image, float_32_bit const  value = 0.0f);
-void  clear_offscreen_colour_image(offscreen::colour_image&  image, offscreen::rgb const&  value = {0U, 0U, 0U});
+void  clear_offscreen_depth_image(offscreen::depth_image&  image, offscreen::depth_image_pixel const  value = 0.0f);
+void  clear_offscreen_colour_image(offscreen::colour_image&  image, offscreen::colour_image_pixel const&  value = {0.0f, 0.0f, 0.0f, 0.0f});
 
 void  update_offscreen_depth_image(offscreen::depth_image&  image, offscreen const&  ofs);
 void  update_offscreen_colour_image(offscreen::colour_image&  image, offscreen const&  ofs);

@@ -38,7 +38,7 @@ texture  make_offscreen_texture(
             height_in_pixels,
             nullptr,
             nullptr,
-            pixel_format == GL_DEPTH_COMPONENT ? 1U : 3U,
+            pixel_format == GL_DEPTH_COMPONENT ? 1U : 4U,
             pixel_components_type
             )
         );
@@ -55,12 +55,7 @@ GLuint  make_pixel_buffer_object_for_offscreen_texture(texture const t)
     glapi().glGenBuffers(1, &pbo_id);
     INVARIANT(pbo_id != 0U);
 
-    natural_32_bit const  num_bytes =
-        t.width() *
-        t.height() *
-        t.pixel_components() *
-        (t.pixel_components_type() == GL_FLOAT ? sizeof(float_32_bit) : sizeof(natural_8_bit))
-        ;
+    natural_32_bit const  num_bytes = t.width() * t.height() * t.pixel_components() * sizeof(float_32_bit);
 
     glapi().glBindBuffer(GL_PIXEL_PACK_BUFFER, pbo_id);
     glapi().glBufferData(GL_PIXEL_PACK_BUFFER, num_bytes, 0, GL_STREAM_READ);
@@ -97,7 +92,7 @@ offscreen::offscreen(natural_32_bit const  width_in_pixels, natural_32_bit const
 
     if (use_colour_texture)
     {
-        m_colour_texture = detail::make_offscreen_texture(m_width_in_pixels, m_height_in_pixels, GL_RGB, GL_UNSIGNED_BYTE);
+        m_colour_texture = detail::make_offscreen_texture(m_width_in_pixels, m_height_in_pixels, GL_RGBA, GL_FLOAT);
         m_colour_texture_pixel_buffer_object = detail::make_pixel_buffer_object_for_offscreen_texture(m_colour_texture);
     }
 
@@ -170,7 +165,7 @@ void  make_current_offscreen::release()
     {
         TMPROF_BLOCK();
         glapi().glBindBuffer(GL_PIXEL_PACK_BUFFER, m_ofs->get_colour_texture_pixel_buffer_object());
-        glapi().glReadPixels(0, 0, m_ofs->get_width_in_pixels(), m_ofs->get_height_in_pixels(), GL_RGB, GL_UNSIGNED_BYTE, 0);
+        glapi().glReadPixels(0, 0, m_ofs->get_width_in_pixels(), m_ofs->get_height_in_pixels(), GL_RGBA, GL_FLOAT, 0);
     }
 
     glapi().glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
@@ -210,20 +205,20 @@ offscreen_colour_image_ptr  make_offscreen_colour_image(natural_32_bit const  wi
 }
 
 
-void  clear_offscreen_depth_image(offscreen::depth_image& image, float_32_bit const  value)
+void  clear_offscreen_depth_image(offscreen::depth_image& image, offscreen::depth_image_pixel const  value)
 {
     TMPROF_BLOCK();
 
-    for (float_32_bit*  ptr = image.data_ptr(), *  end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr)
+    for (offscreen::depth_image_pixel*  ptr = image.data_ptr(), *  end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr)
         *ptr = value;
 }
 
 
-void  clear_offscreen_colour_image(offscreen::colour_image&  image, offscreen::rgb const&  value)
+void  clear_offscreen_colour_image(offscreen::colour_image&  image, offscreen::colour_image_pixel const&  value)
 {
     TMPROF_BLOCK();
 
-    for (offscreen::rgb*  ptr = image.data_ptr(), *  end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr)
+    for (offscreen::colour_image_pixel*  ptr = image.data_ptr(), *  end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr)
         *ptr = value;
 }
 
@@ -233,10 +228,11 @@ void  update_offscreen_depth_image(offscreen::depth_image&  image, offscreen con
     TMPROF_BLOCK();
 
     glapi().glBindBuffer(GL_PIXEL_PACK_BUFFER, ofs.get_depth_texture_pixel_buffer_object());
-    float_32_bit const*  src_data_ptr = (float_32_bit const*)glapi().glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+    offscreen::depth_image_pixel const*  src_data_ptr =
+            (offscreen::depth_image_pixel const*)glapi().glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
     INVARIANT(qtgl::glapi().glGetError() == 0U && src_data_ptr != nullptr);
 
-    for (float_32_bit* ptr = image.data_ptr(), *end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr, ++src_data_ptr)
+    for (offscreen::depth_image_pixel* ptr = image.data_ptr(), *end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr, ++src_data_ptr)
         *ptr = *src_data_ptr;
 
     glapi().glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
@@ -251,11 +247,12 @@ void  update_offscreen_colour_image(offscreen::colour_image&  image, offscreen c
     TMPROF_BLOCK();
 
     glapi().glBindBuffer(GL_PIXEL_PACK_BUFFER, ofs.get_colour_texture_pixel_buffer_object());
-    offscreen::rgb const* src_data_ptr = (offscreen::rgb const*)glapi().glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+    offscreen::colour_image_pixel const* src_data_ptr =
+            (offscreen::colour_image_pixel const*)glapi().glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
     INVARIANT(qtgl::glapi().glGetError() == 0U && src_data_ptr != nullptr);
 
-    for (offscreen::rgb* ptr = image.data_ptr(), *end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr, ++src_data_ptr)
-        * ptr = *src_data_ptr;
+    for (offscreen::colour_image_pixel* ptr = image.data_ptr(), *end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr, ++src_data_ptr)
+        *ptr = *src_data_ptr;
 
     glapi().glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
     glapi().glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
@@ -276,7 +273,7 @@ void  from_screen_space_to_camera_space(offscreen::depth_image&  image, float_32
     float_32_bit const  a = 2.0f * near_plane * far_plane;
     float_32_bit const  b = near_plane + far_plane;
     float_32_bit const  c = far_plane - near_plane;
-    for (float_32_bit*  ptr = image.data_ptr(), *  end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr)
+    for (offscreen::depth_image_pixel*  ptr = image.data_ptr(), *  end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr)
         *ptr = a / (b - c * (2.0f * (*ptr) - 1.0f));
 }
 
@@ -291,7 +288,7 @@ void  from_camera_space_to_interval_01(offscreen::depth_image& image, float_32_b
         );
 
     float_32_bit const  a = 1.0f / (far_plane - near_plane);
-    for (float_32_bit*  ptr = image.data_ptr(), *  end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr)
+    for (offscreen::depth_image_pixel*  ptr = image.data_ptr(), *  end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr)
         *ptr = std::max(0.0f, std::min(1.0f, 1.0f - (*ptr) * a));
 }
 
@@ -302,7 +299,7 @@ void  normalise_offscreen_depth_image_interval_01(offscreen::depth_image&  image
 
     ASSUMPTION(image.num_pixels() == image.get_width_in_pixels() * image.get_height_in_pixels());
 
-    for (float_32_bit* ptr = image.data_ptr(), *end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr)
+    for (offscreen::depth_image_pixel* ptr = image.data_ptr(), *end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr)
         //*ptr = (*ptr) * (*ptr) * (*ptr);
         //*ptr = 1.0f - std::pow((*ptr), 5);
         *ptr = std::sqrt(std::max(0.0f, 1.0f - *ptr));
@@ -315,13 +312,14 @@ void  modulate_offscreen_colour_image_by_depth_image(offscreen::colour_image&  c
 
     ASSUMPTION(colour_image.num_pixels() == depth_image.num_pixels());
 
-    float_32_bit const*  depth_ptr = depth_image.data_ptr();
-    for (offscreen::rgb*  ptr = colour_image.data_ptr(), *end = colour_image.data_ptr() + colour_image.num_pixels(); ptr != end; ++ptr, ++depth_ptr)
+    offscreen::depth_image_pixel const*  depth_ptr = depth_image.data_ptr();
+    for (offscreen::colour_image_pixel*  ptr = colour_image.data_ptr(), *end = colour_image.data_ptr() + colour_image.num_pixels(); ptr != end; ++ptr, ++depth_ptr)
     {
-        float_32_bit const  d = *depth_ptr;
+        offscreen::depth_image_pixel const  d = *depth_ptr;
         ptr->r *= d;
         ptr->g *= d;
         ptr->b *= d;
+        ptr->a *= d;
     }
 }
 
@@ -375,16 +373,16 @@ static void  copy_offscreen_depth_image_to_texture(offscreen::depth_image const&
         txt.loaded_successfully() && txt.id() != 0 &&
         image.get_width_in_pixels() == txt.width() &&
         image.get_height_in_pixels() == txt.height() &&
-        txt.pixel_format() == GL_RGB &&
-        txt.pixel_components_type() == GL_UNSIGNED_BYTE
+        txt.pixel_format() == GL_RGBA &&
+        txt.pixel_components_type() == GL_FLOAT
     );
 
-    std::vector<offscreen::rgb>  pixels;
+    std::vector<offscreen::colour_image_pixel>  pixels;
     {
         pixels.resize(image.num_pixels());
-        offscreen::rgb* dst_pixels_ptr = pixels.data();
-        for (float_32_bit const* ptr = image.data_ptr(), *end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr, ++dst_pixels_ptr)
-            dst_pixels_ptr->r = dst_pixels_ptr->g = dst_pixels_ptr->b = (natural_8_bit)(255.0f * (*ptr));
+        offscreen::colour_image_pixel* dst_pixels_ptr = pixels.data();
+        for (offscreen::depth_image_pixel const* ptr = image.data_ptr(), *end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr, ++dst_pixels_ptr)
+            dst_pixels_ptr->r = dst_pixels_ptr->g = dst_pixels_ptr->b = dst_pixels_ptr->a = *ptr;
     }
 
     qtgl::glapi().glBindTexture(GL_TEXTURE_2D, txt.id());
@@ -410,8 +408,8 @@ static void  copy_offscreen_colour_image_to_texture(offscreen::colour_image cons
         txt.loaded_successfully() && txt.id() != 0 &&
         image.get_width_in_pixels() == txt.width() &&
         image.get_height_in_pixels() == txt.height() &&
-        txt.pixel_format() == GL_RGB &&
-        txt.pixel_components_type() == GL_UNSIGNED_BYTE
+        txt.pixel_format() == GL_RGBA &&
+        txt.pixel_components_type() == GL_FLOAT
         );
 
     qtgl::glapi().glBindTexture(GL_TEXTURE_2D, txt.id());
@@ -477,7 +475,7 @@ void  draw_offscreen_depth_image(
     TMPROF_BLOCK();
 
     texture const  t =
-        detail::make_offscreen_texture(image.get_width_in_pixels(), image.get_height_in_pixels(), GL_RGB, GL_UNSIGNED_BYTE);
+        detail::make_offscreen_texture(image.get_width_in_pixels(), image.get_height_in_pixels(), GL_RGBA, GL_FLOAT);
 
     copy_offscreen_depth_image_to_texture(image, t);
     draw_offscreen_batch(
@@ -503,7 +501,7 @@ void  draw_offscreen_colour_image(
     TMPROF_BLOCK();
 
     texture const  t =
-        detail::make_offscreen_texture(image.get_width_in_pixels(), image.get_height_in_pixels(), GL_RGB, GL_UNSIGNED_BYTE);
+        detail::make_offscreen_texture(image.get_width_in_pixels(), image.get_height_in_pixels(), GL_RGBA, GL_FLOAT);
     copy_offscreen_colour_image_to_texture(image, t);
     draw_offscreen_batch(
         create_triangle_mesh(detail::get_vertices_of_screen_quad(), detail::get_texcoords_of_screen_quad(), t),
