@@ -28,6 +28,7 @@ skeletal_motion_templates::guarded_actions_ptr  get_first_satisfied_motion_guard
         std::vector<skeletal_motion_templates::guarded_actions_ptr> const&  guarded_actions_to_check,
         blackboard::collision_contacts_map const&  collision_contacts,
         detail::rigid_body_motion const&  motion_object_motion,
+        motion_desire_props const&  desire,
         vector3 const&  gravity_acceleration_in_world_space
         );
 

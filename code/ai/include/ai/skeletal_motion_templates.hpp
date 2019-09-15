@@ -655,6 +655,18 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
         }
     };
 
+    struct  constraint_desired_forward_vector_inside_cone : public constraint
+    {
+        vector3  unit_axis;
+        float_32_bit  angle_in_radians;
+
+        bool  equals(constraint const& other) const override { return *this == dynamic_cast<constraint_desired_forward_vector_inside_cone const&>(other); }
+        bool  operator==(constraint_desired_forward_vector_inside_cone const& other) const
+        {
+            return are_equal_3d(unit_axis, other.unit_axis, 0.0001f) && are_equal(angle_in_radians, other.angle_in_radians, 0.0001f);
+        }
+    };
+
     struct  constraint_always : public constraint
     {
         bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_always const&>(other); }

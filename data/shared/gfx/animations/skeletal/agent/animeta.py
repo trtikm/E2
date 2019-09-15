@@ -59,6 +59,7 @@ class Config:
             self.vec_fwd_end = [0.0, -1.0, 0.0]
             self.vec_down_mult = -1.0
             self.vec_fwd_mult = -1.0
+            self.vec_direction = [0.0, -1.0, 0.0]
             self.min_linear_speed = 0.5
             self.max_linear_speed = 1.5
             self.max_linear_accel = 20.0
@@ -1234,7 +1235,8 @@ motion_actions  <begin> <end>
             and contact lies in the cone.
             Used state variables:
                 - 'vec_down_mult * vec_down'
-                        defines the axis of cone (unit vector).
+                        defines the axis of cone (unit vector) in motion object
+                        space.
                 - 'angle'
                         defines a maximal angle between a current normal and
                         the axis of the cone.
@@ -1254,6 +1256,15 @@ motion_actions  <begin> <end>
                         linear speed defined here, then the constraint
                         is trivially false. Otherwise the proper check
                         of the velocity vector in the cone is applied.
+        * 'desired_forward_vector_inside_cone':
+            The desired forward vector of the motion object lies in the cone.
+            Used state variables:
+                - 'vec_direction'
+                        defines the axis of cone (unit vector) in motion object
+                        space.
+                - 'angle'
+                        defines a maximal angle between the desired forward
+                        vector and the axis of the cone.
         * 'always':
             The guard represents true.
     Here is a list of supported actions (for <action-name>s list):
@@ -1403,6 +1414,11 @@ def command_motion_actions():
                 elif constraint == "linear_velocity_in_falling_cone":
                     constraints[-1].append(state.angle)
                     constraints[-1].append(state.min_linear_speed)
+                elif constraint == "desired_forward_vector_inside_cone":
+                    constraints[-1].append(state.vec_direction[0])
+                    constraints[-1].append(state.vec_direction[1])
+                    constraints[-1].append(state.vec_direction[2])
+                    constraints[-1].append(state.angle)
                 elif constraint == "always":
                     pass    # no arguments
                 else:

@@ -346,6 +346,16 @@ motion_actions_data::motion_actions_data(async::finalise_load_on_destroy_ptr con
                         constraint.min_linear_speed = params.at(1);
                         predicates.push_back(_find_or_create_motion_action_component(constraint, last_predicates));
                     }
+                    else if (guard_name == "desired_forward_vector_inside_cone")
+                    {
+                        if (params.size() != 4UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for desired_forward_vector_inside_cone at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::constraint_desired_forward_vector_inside_cone  constraint;
+                        constraint.unit_axis(0) = params.at(0);
+                        constraint.unit_axis(1) = params.at(1);
+                        constraint.unit_axis(2) = params.at(2);
+                        constraint.angle_in_radians = params.at(3);
+                        predicates.push_back(_find_or_create_motion_action_component(constraint, last_predicates));
+                    }
                     else if (guard_name == "always")
                     {
                         if (!params.empty()) throw std::runtime_error(msgstream() << "Wrong number of parameters for always at line " << line_index << "in the file '" << pathname << "'.");

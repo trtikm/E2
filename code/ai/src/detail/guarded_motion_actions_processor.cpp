@@ -63,6 +63,7 @@ skeletal_motion_templates::guarded_actions_ptr  get_first_satisfied_motion_guard
         std::vector<skeletal_motion_templates::guarded_actions_ptr> const&  guarded_actions_to_check,
         blackboard::collision_contacts_map const&  collision_contacts,
         detail::rigid_body_motion const&  motion_object_motion,
+        motion_desire_props const&  desire,
         vector3 const&  gravity_acceleration_in_world_space
         )
 {
@@ -70,7 +71,7 @@ skeletal_motion_templates::guarded_actions_ptr  get_first_satisfied_motion_guard
 
     matrix44 W;
     angeo::from_base_matrix(motion_object_motion.frame, W);
-    auto const  check_constraint = [&collision_contacts, &motion_object_motion, &gravity_acceleration_in_world_space, &W]
+    auto const  check_constraint = [&collision_contacts, &motion_object_motion, &desire, &gravity_acceleration_in_world_space, &W]
         (skeletal_motion_templates::constraint_ptr const  any_constraint_ptr) -> bool {
             if (auto constraint_ptr =
                     std::dynamic_pointer_cast<skeletal_motion_templates::constraint_contact_normal_cone const>(any_constraint_ptr))
@@ -103,6 +104,11 @@ skeletal_motion_templates::guarded_actions_ptr  get_first_satisfied_motion_guard
                 if (gravity_accel < 0.001f)
                     return false;
                 return angle(motion_object_motion.velocity.m_linear, gravity_acceleration_in_world_space) <= constraint_ptr->cone_angle_in_radians;
+            }
+            else if (auto constraint_ptr =
+                    std::dynamic_pointer_cast<skeletal_motion_templates::constraint_desired_forward_vector_inside_cone const>(any_constraint_ptr))
+            {
+                return angle(transform_vector(constraint_ptr->unit_axis, W), desire.forward_unit_vector_in_world_space) <= constraint_ptr->angle_in_radians;
             }
             else if (auto constraint_ptr =
                 std::dynamic_pointer_cast<skeletal_motion_templates::constraint_always const>(any_constraint_ptr))

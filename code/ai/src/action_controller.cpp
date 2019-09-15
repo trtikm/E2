@@ -191,6 +191,7 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
                 m_current_intepolation_state.disjunction_of_guarded_actions,
                 get_blackboard()->m_collision_contacts,
                 m_motion_object_motion,
+                m_motion_desire_props,
                 m_gravity_acceleration
                 );
     if (satisfied_guarded_actions != nullptr)
@@ -419,6 +420,7 @@ std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit>  acti
                                                                           .at(successors.at(i).first.keyframe_index),
                         get_blackboard()->m_collision_contacts,
                         m_motion_object_motion,
+                        m_motion_desire_props,
                         m_gravity_acceleration
                         );
         if (satisfied_guarded_actions != nullptr)
