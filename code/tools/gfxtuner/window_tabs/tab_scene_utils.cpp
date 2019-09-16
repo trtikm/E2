@@ -148,4 +148,23 @@ bool  update_history_according_to_change_in_selection(
 }
 
 
+void  build_cache_from_item_to_its_direct_children(tree_widget_item const* const  subtree_root, tree_widgent_items_cache& output_cache)
+{
+    TMPROF_BLOCK();
+
+    for (QTreeWidgetItemIterator item_it((QTreeWidgetItem*)subtree_root); *item_it; ++item_it)
+    {
+        tree_widget_item const* const  item_ptr = as_tree_widget_item(*item_it);
+        auto  it = output_cache.find(item_ptr);
+        if (it == output_cache.end())
+            it = output_cache.insert({ item_ptr, {} }).first;
+        tree_widget_item const* const  parent_item_ptr = as_tree_widget_item(item_ptr->parent());
+        it = output_cache.find(parent_item_ptr);
+        if (it == output_cache.end())
+            it = output_cache.insert({ parent_item_ptr, {} }).first;
+        it->second.push_back(item_ptr);
+    }
+}
+
+
 }}

@@ -5,7 +5,6 @@
 #include <gfxtuner/window_tabs/tab_scene_record_id_reverse_builder.hpp>
 #include <gfxtuner/window_tabs/tab_scene_records_integration.hpp>
 #include <gfxtuner/window_tabs/tab_scene_record_agent.hpp>
-#include <gfxtuner/window_tabs/tab_scene_utils.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <gfxtuner/simulation/simulator_notifications.hpp>
@@ -788,7 +787,11 @@ void  widgets::erase_subtree_at_root_item(tree_widget_item* const  root_item, st
 }
 
 
-void  widgets::duplicate_subtree(tree_widget_item const* const  source_item, tree_widget_item* const  target_item)
+void  widgets::duplicate_subtree(
+        tree_widget_item const* const  source_item,
+        tree_widget_item* const  target_item,
+        tree_widgent_items_cache const&  tree_item_children_cache
+        )
 {
     TMPROF_BLOCK();
 
@@ -797,9 +800,8 @@ void  widgets::duplicate_subtree(tree_widget_item const* const  source_item, tre
     scn::scene_node_id const  target_coord_system_id = scene_record_id_reverse_builder::run(target_item).get_node_id();
     std::string const  source_item_name = get_tree_widget_item_name(source_item);
     std::string const  target_item_name = get_tree_widget_item_name(target_item);
-    for (int i = 0, n = source_item->childCount(); i != n; ++i)
+    for (auto const  item : tree_item_children_cache.at(source_item))
     {
-        auto const  item = as_tree_widget_item(source_item->child(i));
         std::string const  item_name = get_tree_widget_item_name(item);
         if (represents_coord_system(item))
         {
@@ -819,21 +821,19 @@ void  widgets::duplicate_subtree(tree_widget_item const* const  source_item, tre
                     node->get_coord_system()->orientation(),
                     false
                     );
-            duplicate_subtree(item, duplicate_item);
+            duplicate_subtree(item, duplicate_item, tree_item_children_cache);
         }
     }
-    for (int i = 0, n = source_item->childCount(); i != n; ++i)
+    for (auto const item : tree_item_children_cache.at(source_item))
     {
-        auto const  item = as_tree_widget_item(source_item->child(i));
         std::string const  item_name = get_tree_widget_item_name(item);
 
         if (represents_coord_system(item))
             continue;
         INVARIANT(represents_folder(item));
 
-        for (int j = 0, m = item->childCount(); j != m; ++j)
+        for (auto const record_item : tree_item_children_cache.at(item))
         {
-            auto const  record_item = as_tree_widget_item(item->child(j));
             INVARIANT(represents_record(record_item));
             std::string const  record_item_name = get_tree_widget_item_name(record_item);
             scn::scene_record_id  src_record_id{ source_coord_system_id, item_name, record_item_name };
@@ -980,6 +980,9 @@ void  widgets::on_scene_duplicate_selected()
         }
         vector3 const  origin_shift = pivot_origin - source_origin;
 
+        tree_widgent_items_cache  tree_item_children_cache;
+        build_cache_from_item_to_its_direct_children(source_item, tree_item_children_cache);
+
         for (natural_32_bit  i = 0U; i != num_copies; ++i)
         {
             std::string const  name = i == 0U ? base_name : choose_name(base_name, parent_item_id);
@@ -992,7 +995,7 @@ void  widgets::on_scene_duplicate_selected()
                     pivot_orientation,
                     false
                     );
-            duplicate_subtree(source_item, tree_item);
+            duplicate_subtree(source_item, tree_item, tree_item_children_cache);
 
             std::unordered_set<scn::scene_node_id>  selected_scene_nodes{ parent_item_id / name };
             std::unordered_set<scn::scene_record_id>  selected_records;

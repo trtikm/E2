@@ -7,6 +7,8 @@
 #   include <scene/scene_node_record_id.hpp>
 #   include <scene/scene_history.hpp>
 #   include <QTreeWidget>
+#   include <QTreeWidgetItem>
+#   include <unordered_map>
 #   include <string>
 #   include <vector>
 
@@ -49,6 +51,12 @@ bool  update_history_according_to_change_in_selection(
         scn::scene_history_ptr const  scene_history_ptr,
         bool  apply_commit = true
         );
+
+
+using  tree_widgent_items_cache = std::unordered_map<tree_widget_item const*, std::vector<tree_widget_item const*> >;
+
+
+void  build_cache_from_item_to_its_direct_children(tree_widget_item const* const  subtree_root, tree_widgent_items_cache&  output_cache);
 
 
 }}

@@ -2,6 +2,7 @@
 #   define E2_TOOL_GFXTUNER_WINDOW_TABS_TAB_SCENE_HPP_INCLUDED
 
 #   include <gfxtuner/window_tabs/tab_scene_tree_widget.hpp>
+#   include <gfxtuner/window_tabs/tab_scene_utils.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <scene/scene.hpp>
 #   include <scene/scene_history.hpp>
@@ -120,7 +121,11 @@ struct  widgets
     void  save();
 
 private:
-    void  duplicate_subtree(tree_widget_item const* const  source_item, tree_widget_item* const  target_item);
+    void  duplicate_subtree(
+            tree_widget_item const* const  source_item,
+            tree_widget_item* const  target_item,
+            tree_widgent_items_cache const&  tree_item_children_cache
+            );
 
     tree_widget_item*  insert_coord_system(
                 scn::scene_node_id const&  id,
