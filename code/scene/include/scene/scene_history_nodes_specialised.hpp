@@ -7,5 +7,6 @@
 #   include <scene/records/batch/history_nodes.hpp>
 #   include <scene/records/collider/history_nodes.hpp>
 #   include <scene/records/rigid_body/history_nodes.hpp>
+#   include <scene/records/agent/history_nodes.hpp>
 
 #endif

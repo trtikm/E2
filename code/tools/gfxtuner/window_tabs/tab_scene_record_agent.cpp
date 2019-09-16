@@ -70,6 +70,90 @@ void  insert_skeleton_joint_nodes_under_agent_node(
 }
 
 
+struct  agent_props_dialog : public QDialog
+{
+    agent_props_dialog(program_window* const  wnd, scn::skeleton_props_const_ptr const  current_skeleton_props);
+
+    bool  ok() const { return m_ok; }
+
+    scn::skeleton_props_const_ptr  get_new_skeleton_props() const { return m_new_skeleton_props; }
+
+public slots:
+
+    void  accept();
+    void  reject();
+
+private:
+    program_window*  m_wnd;
+    bool  m_ok;
+    QPushButton* m_widget_ok;
+
+    scn::skeleton_props_const_ptr  m_current_skeleton_props;
+    scn::skeleton_props_const_ptr  m_new_skeleton_props;
+};
+
+
+agent_props_dialog::agent_props_dialog(program_window* const  wnd, scn::skeleton_props_const_ptr const  current_skeleton_props)
+    : QDialog(wnd)
+    , m_wnd(wnd)
+    , m_ok(false)
+    , m_widget_ok(
+            [](agent_props_dialog* wnd) {
+                    struct OK : public QPushButton {
+                        OK(agent_props_dialog* wnd) : QPushButton("OK")
+                        {
+                            QObject::connect(this, SIGNAL(released()), wnd, SLOT(accept()));
+                        }
+                    };
+                    return new OK(wnd);
+                }(this)
+            )
+
+    , m_current_skeleton_props(current_skeleton_props)
+    , m_new_skeleton_props()
+{
+    QVBoxLayout* const dlg_layout = new QVBoxLayout;
+    {
+        dlg_layout->addWidget(new QLabel("TODO!"));
+
+        QHBoxLayout* const buttons_layout = new QHBoxLayout;
+        {
+            buttons_layout->addWidget(m_widget_ok);
+            buttons_layout->addWidget(
+                [](agent_props_dialog* wnd) {
+                    struct Close : public QPushButton {
+                        Close(agent_props_dialog* wnd) : QPushButton("Cancel")
+                        {
+                            QObject::connect(this, SIGNAL(released()), wnd, SLOT(reject()));
+                        }
+                    };
+                    return new Close(wnd);
+                }(this)
+                );
+            buttons_layout->addStretch(1);
+        }
+        dlg_layout->addLayout(buttons_layout);
+    }
+    this->setLayout(dlg_layout);
+    this->setWindowTitle("Agent");
+
+    m_widget_ok->setEnabled(false);
+}
+
+
+void  agent_props_dialog::accept()
+{
+    m_ok = true;
+    QDialog::accept();
+}
+
+
+void  agent_props_dialog::reject()
+{
+    QDialog::reject();
+}
+
+
 }}}}
 
 namespace window_tabs { namespace tab_scene { namespace record_agent {
@@ -86,6 +170,35 @@ void  register_record_icons(std::unordered_map<std::string, QIcon>& icons_of_rec
 
 void  register_record_undo_redo_processors(widgets* const  w)
 {
+    scn::scene_history_agent_insert::set_undo_processor(
+        [w](scn::scene_history_agent_insert const&  history_node) {
+            INVARIANT(history_node.get_id().get_folder_name() == scn::get_agent_folder_name());
+            w->wnd()->glwindow().call_now(&simulator::erase_agent, std::cref(history_node.get_id()));
+            remove_record_from_tree_widget(w->scene_tree(), history_node.get_id());
+        });
+    scn::scene_history_agent_insert::set_redo_processor(
+        [w](scn::scene_history_agent_insert const&  history_node) {
+            INVARIANT(history_node.get_id().get_folder_name() == scn::get_agent_folder_name());
+            w->wnd()->glwindow().call_now(&simulator::insert_agent, std::cref(history_node.get_id()), history_node.get_skeleton_props());
+            insert_record_to_tree_widget(
+                    w->scene_tree(),
+                    history_node.get_id(),
+                    w->get_record_icon(scn::get_agent_folder_name()),
+                    w->get_folder_icon());
+        });
+
+    scn::scene_history_agent_update_props::set_undo_processor(
+        [w](scn::scene_history_agent_update_props const&  history_node) {
+            INVARIANT(history_node.get_id().get_folder_name() == scn::get_agent_folder_name());
+            w->wnd()->glwindow().call_now(&simulator::erase_agent, std::cref(history_node.get_id()));
+            w->wnd()->glwindow().call_now(&simulator::insert_agent, std::cref(history_node.get_id()), history_node.get_old_skeleton_props());
+        });
+    scn::scene_history_agent_update_props::set_redo_processor(
+        [w](scn::scene_history_agent_update_props const&  history_node) {
+            INVARIANT(history_node.get_id().get_folder_name() == scn::get_agent_folder_name());
+            w->wnd()->glwindow().call_now(&simulator::erase_agent, std::cref(history_node.get_id()));
+            w->wnd()->glwindow().call_now(&simulator::insert_agent, std::cref(history_node.get_id()), history_node.get_new_skeleton_props());
+        });
 }
 
 
@@ -144,12 +257,8 @@ void  register_record_handler_for_insert_scene_record(
                                     scn::skeleton_props_ptr const  props =
                                         scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates);
                                     detail::insert_skeleton_joint_nodes_under_agent_node(record_id, props, w);
-                                    w->wnd()->glwindow().call_now(
-                                            &simulator::insert_agent,
-                                            std::cref(record_id),
-                                            props
-                                            );
-                                    //w->get_scene_history()->insert<scn::scene_history_agent_insert>(record_id, false);
+                                    w->wnd()->glwindow().call_now(&simulator::insert_agent, std::cref(record_id), props);
+                                    w->get_scene_history()->insert<scn::scene_history_agent_insert>(record_id, props, false);
                                 }
                             };
                     }
@@ -162,6 +271,24 @@ void  register_record_handler_for_update_scene_record(
         std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)> >&  update_record_handlers
         )
 {
+    update_record_handlers.insert({
+            scn::get_agent_folder_name(),
+            [](widgets* const  w, scn::scene_record_id const&  record_id) -> void {
+                    scn::skeleton_props_const_ptr const  old_skeleton_props =
+                            w->wnd()->glwindow().call_now(&simulator::get_agent_info, std::cref(record_id.get_node_id()));
+                    detail::agent_props_dialog  dlg(w->wnd(), old_skeleton_props);
+                    dlg.exec();
+                    if (!dlg.ok())
+                        return;
+                    w->get_scene_history()->insert<scn::scene_history_agent_update_props>(
+                            record_id,
+                            old_skeleton_props,
+                            dlg.get_new_skeleton_props(),
+                            false);
+                    w->wnd()->glwindow().call_now(&simulator::erase_agent, std::cref(record_id));
+                    w->wnd()->glwindow().call_now(&simulator::insert_agent, std::cref(record_id), dlg.get_new_skeleton_props());
+                }
+            });
 }
 
 
@@ -175,13 +302,8 @@ void  register_record_handler_for_duplicate_scene_record(
             [](widgets* const  w, scn::scene_record_id const&  src_record_id, scn::scene_record_id const&  dst_record_id) -> void {
                     scn::skeleton_props_const_ptr const  skeleton_props =
                             w->wnd()->glwindow().call_now(&simulator::get_agent_info, std::cref(src_record_id.get_node_id()));
-                    //detail::insert_skeleton_joint_nodes_under_agent_node(dst_record_id, skeleton_props, w);
-                    w->wnd()->glwindow().call_now(
-                            &simulator::insert_agent,
-                            std::cref(dst_record_id),
-                            skeleton_props
-                            );
-                    //w->get_scene_history()->insert<scn::scene_history_agent_insert>(dst_record_id, false);
+                    w->wnd()->glwindow().call_now(&simulator::insert_agent, std::cref(dst_record_id), skeleton_props);
+                    w->get_scene_history()->insert<scn::scene_history_agent_insert>(dst_record_id, skeleton_props, false);
                 }
             });
 }
@@ -195,11 +317,10 @@ void  register_record_handler_for_erase_scene_record(
     erase_record_handlers.insert({
             scn::get_agent_folder_name(),
             [](widgets* const  w, scn::scene_record_id const&  id) -> void {
-                    //w->get_scene_history()->insert<scn::scene_history_agent_insert>(id, true);
-                    w->wnd()->glwindow().call_now(
-                            &simulator::erase_agent,
-                            std::cref(id)
-                            );
+                    scn::skeleton_props_const_ptr const  skeleton_props =
+                            w->wnd()->glwindow().call_now(&simulator::get_agent_info, std::cref(id.get_node_id()));
+                    w->get_scene_history()->insert<scn::scene_history_agent_insert>(id, skeleton_props, true);
+                    w->wnd()->glwindow().call_now(&simulator::erase_agent, std::cref(id));
                 }
             });
 }
