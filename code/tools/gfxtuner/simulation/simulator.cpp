@@ -716,6 +716,72 @@ if (render_retinas)
                 );
     }
 
+static bool  render_text = false;
+if (keyboard_props().was_just_released(qtgl::KEY_F4()))
+render_text = !render_text;
+
+if (render_text)
+{
+    static std::string const  text =
+        "! \" # $ % & ' ( ) * + , - . \n"
+        "/ 0 1 2 3 4 5 6 7 8 9 : ; < \n"
+        "= > ? @ A B C D E F G H I J \n"
+        "K L M N O P Q R S T U V W X \n"
+        "Y Z [ \\ ] ^ _ ` a b c d e f \n"
+        "g h i j k l m n o p q r s t \n"
+        "u v w x y z { | } ~ \n"
+        "Hello World!\n"
+        "Here we defined a uniform array called offsets that contain a total of 100 offset vectors. "
+        "Within the vertex shader we then retrieve an offset vector for each instance by indexing the "
+        "offsets array using gl_InstanceID. If we were to draw 100 quads using instanced drawing we'd "
+        "get 100 quads located at different positions with just this vertex shader.\n"
+        "We do need to actually set the offset positions that we calculate in a nested for-loop before "
+        "we enter the game loop:\n"
+        "glm::vec2 translations[100];\n"
+        "int index = 0;\n"
+        "float offset = 0.1f;\n"
+        "for(int y = -10; y < 10; y += 2)\n"
+        "{\n"
+        "    for(int x = -10; x < 10; x += 2)\n"
+        "    {\n"
+        "        glm::vec2 translation;\n"
+        "        translation.x = (float)x / 10.0f + offset;\n"
+        "        translation.y = (float)y / 10.0f + offset;\n"
+        "        translations[index++] = translation;\n"
+        "    }\n"
+        "}  \n"
+        "Here we create a set of 100 translation vectors that contains a translation vector for all "
+        "positions in a 10x10 grid. Aside from generating the translations array we'd also need to "
+        "transfer the data to the vertex shader's uniform array:    \n"
+        ;
+    static float_32_bit  scale = 1.0f;
+    static vector3  pos{
+        m_camera->left() + 0 * m_font_props.char_width,
+        m_camera->top() + 0 * m_font_props.char_height,
+        -m_camera->near_plane()
+    };
+    static vector3  ambient_colour{ 1.0f, 0.0f, 0.0f };
+    qtgl::batch const  text_batch = qtgl::create_text(
+        text,
+        m_font_props,
+        (m_camera->right() - pos(0)) / scale
+        );
+    if (qtgl::make_current(text_batch, draw_state))
+    {
+        matrix44 ortho;
+        m_camera->projection_matrix_orthogonal(ortho);
+
+        qtgl::render_batch(
+            text_batch,
+            pos,
+            scale,
+            ortho,
+            ambient_colour
+            );
+        draw_state = text_batch.get_draw_state();
+    }
+}
+
     qtgl::swap_buffers();
 }
 
