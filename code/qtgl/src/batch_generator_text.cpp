@@ -1,6 +1,7 @@
 #include <qtgl/batch_generators.hpp>
 #include <qtgl/batch.hpp>
 #include <qtgl/texture.hpp>
+#include <qtgl/glapi.hpp>
 #include <utility/msgstream.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -162,6 +163,8 @@ batch  create_text(
             { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0 }
             });
 
+        draw_state const  dstate(nullptr, true, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
         props.__batch_template__ = batch(
             id.empty() ? id : "/generic/text/batch/" + id,
             buffers_binding_,
@@ -173,17 +176,17 @@ batch  create_text(
                 {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
                 FOG_TYPE::NONE
                 },
-            draw_state(nullptr),
+            dstate,
             modelspace(),
             skeleton_alignment(),
             batch_available_resources(
                 buffers_binding_.get_buffers(),
                 textures_binding_paths,
                 texcoord_binding_,
-                draw_state(),
+                dstate,
                 shaders_effects_config_type(
                     true,
-                    0.2f,
+                    0.01f,
                     SHADER_PROGRAM_TYPE::VERTEX,
                     SHADER_PROGRAM_TYPE::VERTEX
                     )

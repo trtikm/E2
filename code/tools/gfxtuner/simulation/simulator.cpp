@@ -731,36 +731,61 @@ if (render_text)
         "g h i j k l m n o p q r s t \n"
         "u v w x y z { | } ~ \n"
         "Hello World!\n"
-        "Here we defined a uniform array called offsets that contain a total of 100 offset vectors. "
-        "Within the vertex shader we then retrieve an offset vector for each instance by indexing the "
-        "offsets array using gl_InstanceID. If we were to draw 100 quads using instanced drawing we'd "
-        "get 100 quads located at different positions with just this vertex shader.\n"
-        "We do need to actually set the offset positions that we calculate in a nested for-loop before "
-        "we enter the game loop:\n"
-        "glm::vec2 translations[100];\n"
-        "int index = 0;\n"
-        "float offset = 0.1f;\n"
-        "for(int y = -10; y < 10; y += 2)\n"
-        "{\n"
-        "    for(int x = -10; x < 10; x += 2)\n"
-        "    {\n"
-        "        glm::vec2 translation;\n"
-        "        translation.x = (float)x / 10.0f + offset;\n"
-        "        translation.y = (float)y / 10.0f + offset;\n"
-        "        translations[index++] = translation;\n"
-        "    }\n"
-        "}  \n"
-        "Here we create a set of 100 translation vectors that contains a translation vector for all "
-        "positions in a 10x10 grid. Aside from generating the translations array we'd also need to "
-        "transfer the data to the vertex shader's uniform array:    \n"
+        "The proximity map provides fast search for objects distributed in 3D space.\n"
+        "A shape of an object is approximated by an axis aligned bounding box. The\n"
+        "map this assumes, there is a fast algorithm obtaining a bounding box for\n"
+        "any objects inserted into the map. Instead of requiring the type of objects\n"
+        "contain a method for obtaining a bounding box, the map rather accepts two\n"
+        "algorithms in the initialisation providing minimal and maximal corner points\n"
+        "of a bounding box for any object in the map. For example, let type of our\n"
+        "objects looks like this:\n"
+        "\n"
+        "     struct my_object3d_type\n"
+        "     {\n"
+        "         vector3 lo, hi; // min. and max. corner points of the bounding box.\n"
+        "     };\n"
+        "\n"
+        "Then we can initialise a proximity map of these objects as follows:\n"
+        "\n"
+        "     angeo::proximity_map<my_object3d_type*> map(\n"
+        "             [](my_object3d_type* obj) { return obj->lo; },  // getter for min. corner\n"
+        "             [](my_object3d_type* obj) { return obj->hi; }   // getter for max. corner\n"
+        "             );\n"
+        "\n"
+        "The typical usage of the map in a 3d simulation is as follows. In the initial\n"
+        "step, we insert objects into the map. \n"
+        "\n"
+        "     std::vector<my_object3d_type*>  my_objects_to_simulate;\n"
+        "     ...  // Create and initialise your objects\n"
+        "     for (my_object3d_type* obj :  my_objects_to_simulate)\n"
+        "         map.insert(obj);  // Insert objects into the map.\n"
+        "     map.rebalance();  // Optimize the map structure for subsequent search operations.\n"
+        "\n"
+        "In the update step of the simulation (from the current state to the next one)\n"
+        "you use the map to search for objects in desired space. For example, a search\n"
+        "for objects in a 3d space denoted by an axis aligned bounding box will look\n"
+        "like this:\n"
+        "\n"
+        "     vector3 query_bbox_min_corner, query_bbox_max_corner; // Defines 3d space where to search for objects\n"
+        "     ...  // Initialise the corner points to desired values.\n"
+        "     std::unordered_set<my_object3d_type*>  collected_objects;  // Will be filled in by found objects.\n"
+        "     map.find_by_bbox(\n"
+        "             query_bbox_min_corner,\n"
+        "             query_bbox_max_corner,\n"
+        "             [&collected_objects](my_object3d_type* obj) {\n"
+        "                 collected_objects.insert(obj);\n"
+        "                 return true; // Tell the map to continue the search for remaining objects (if any).\n"
+        "                              // The return value 'false' would instruct the map to terminate the search.\n"
+        "              });\n"
         ;
     static float_32_bit  scale = 1.0f;
-    static vector3  pos{
-        m_camera->left() + 0 * m_font_props.char_width,
-        m_camera->top() + 0 * m_font_props.char_height,
+    static vector3  shift{0.0f, -1.0f, 0.0f};
+    static vector3  ambient_colour{ 0.9f, 0.9f, 0.95f };
+    vector3 const  pos{
+        m_camera->left() + scale * shift(0) * m_font_props.char_width,
+        m_camera->top() + scale * shift(1)* m_font_props.char_height,
         -m_camera->near_plane()
     };
-    static vector3  ambient_colour{ 1.0f, 0.0f, 0.0f };
     qtgl::batch const  text_batch = qtgl::create_text(
         text,
         m_font_props,
