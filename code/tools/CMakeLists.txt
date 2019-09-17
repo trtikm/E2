@@ -5,3 +5,6 @@ add_subdirectory(./netviewer)
 
 add_subdirectory(./gfxtuner)
     message("-- gfxtuner")
+
+add_subdirectory(./setimagealphachannel)
+    message("-- setimagealphachannel")
