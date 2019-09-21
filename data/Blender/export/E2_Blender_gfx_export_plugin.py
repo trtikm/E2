@@ -1369,16 +1369,12 @@ def save_keyframe_coord_systems_of_bones(
 
             class meta_irregular_data_tracker:
                 def __init__(self):
-                    self.scale = None
                     self.collider_weight = 1.0
                     self.inverted_mass = 0.016667
                     self.inverted_inertia_tensor = self.get_default_inverted_inertia_tensor()
 
                 def on_frame(self, frame):
-                    self.scale = meta_object.scale.copy() if self.scale is None else self.scale
                     if frame in meta_keyframes:
-                        if vector3_length(vector3_sub(meta_object.scale, self.scale)) > 0.001:
-                            self.scale = meta_object.scale.copy()
                         # Here we read information from the custom properties of the 'meta_object'
                         if "e2_collider_weight" in meta_object:
                             self.collider_weight = meta_object["e2_collider_weight"]
@@ -1438,7 +1434,7 @@ def save_keyframe_coord_systems_of_bones(
                     "orientation": meta_object.rotation_quaternion.copy()
                 }
                 meta_colliders[t] = {
-                    "collider": collision_shape(data_tracker.scale),
+                    "collider": collision_shape(meta_object.scale.copy()),
                     "weight": data_tracker.collider_weight
                 }
                 meta_inverted_masses[t] = data_tracker.inverted_mass
