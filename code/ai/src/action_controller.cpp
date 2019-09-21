@@ -280,21 +280,23 @@ void  action_controller::interpolate(float_32_bit const  interpolation_param)
         interpolated_collider = dst_collider;
         interpolated_mass_distribution = dst_motion_template.mass_distributions.at(m_dst_cursor.keyframe_index);
     }
-    if (*interpolated_collider != *m_current_intepolation_state.collider || interpolated_mass_distribution != m_current_intepolation_state.mass_distribution)
+    if (*interpolated_collider != *m_current_intepolation_state.collider || *interpolated_mass_distribution != *m_current_intepolation_state.mass_distribution)
     {
+        m_current_intepolation_state.collider = interpolated_collider;
+        m_current_intepolation_state.mass_distribution = interpolated_mass_distribution;
+        m_motion_object_motion.inverted_mass = interpolated_mass_distribution->mass_inverted;
+        m_motion_object_motion.inverted_inertia_tensor = interpolated_mass_distribution->inertia_tensor_inverted;
+
         get_blackboard()->m_scene->unregister_to_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_agent_id);
         detail::destroy_collider_and_rigid_bofy_of_motion_scene_node(get_blackboard()->m_scene, m_motion_object_motion.nid);
         detail::create_collider_and_rigid_body_of_motion_scene_node(
                 get_blackboard()->m_scene,
                 m_motion_object_motion.nid,
-                m_src_intepolation_state.collider,
+                m_current_intepolation_state.collider,
                 m_motion_object_motion
                 );
         get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_agent_id);
     }
-
-    m_current_intepolation_state.collider = interpolated_collider;
-    m_current_intepolation_state.mass_distribution = interpolated_mass_distribution;
 
     m_current_intepolation_state.disjunction_of_guarded_actions =
             (interpolation_param < motion_object_interpolation_param) ?
