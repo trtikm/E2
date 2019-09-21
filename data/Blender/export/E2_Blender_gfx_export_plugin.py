@@ -1220,16 +1220,26 @@ def save_keyframe_coord_systems_of_bones(
     """
     with TimeProf.instance().start("save_keyframe_coord_systems_of_bones"):
 
-        if not armature.animation_data:
-            return
-
         parents = export_info["armature"]["bone_parents"]                           # this is computed in 'save_hierarchy_of_bones'
         local_coord_systems = export_info["armature"]["bone_local_coord_systems"]   # this is computed in 'save_coord_systems_of_bones'
 
+        armature.animation_data_create()     # Ensures animation data of the armature are available
         active_action_backup = armature.animation_data.action
 
         scene = bpy.context.scene
         frame_current_backup = bpy.context.scene.frame_current
+
+        meta_object_name = armature.name + "/meta"
+        meta_object = bpy.data.objects[meta_object_name] if meta_object_name in bpy.data.objects else None
+        if meta_object is None:
+            print("INFO: The meta-object '" + meta_object_name + "' was NOT found!.")
+            print("      => No meta-data will be exported for the armature '" + armature.name + "'!")
+        else:
+            meta_object.animation_data_create()     # Ensures animation data of the object are available
+            old_meta_object_action = meta_object.animation_data.action
+
+        def time_of_time_point(start_time_point, current_time_point):
+            return (current_time_point - start_time_point) * 0.041666666
 
         for action in bpy.data.actions:
             if not (action.name.startswith(armature.name + "/")
@@ -1287,10 +1297,10 @@ def save_keyframe_coord_systems_of_bones(
                         "orientation": rot
                         })
                     bone_idx += 1
-                coord_systems_of_frames[(frame - start_frame) * 0.041666666] = coord_systems
+                coord_systems_of_frames[time_of_time_point(start_frame, frame)] = coord_systems
 
-            # It remains to save the computed coordinate systems of bones in individual frames to disc.
-            # We store each frame into a separate file. But all files will be written into the same output directory:
+            # Next we save the computed coordinate systems of bones in individual frames to disc.
+            # We store each frame into a separate file. But all files will be written into the same output directory.
 
             keyframes_output_dir = os.path.join(
                 export_info["root_dir"],
@@ -1319,6 +1329,165 @@ def save_keyframe_coord_systems_of_bones(
                             f.write(float_to_string(system["orientation"][i]) + "\n")
                 frame_idx += 1
 
+            # In case the meta-object and meta-action are available, then we also compute meta-data.
+
+            if meta_object is None:
+                continue
+
+            meta_action_name = "#meta/" + action_name
+            if meta_action_name not in bpy.data.actions:
+                meta_action_name = "#meta." + action_name
+                if meta_action_name not in bpy.data.actions:
+                    print("INFO: The meta-object '" + meta_object_name + "' was NOT found!.")
+                    print("      => No meta-data will be exported for the action '" + action_name + "'!")
+                    continue
+
+            meta_action = bpy.data.actions[meta_action_name]
+
+            meta_keyframes = set()
+            for fcurve in meta_action.fcurves:
+                for point in fcurve.keyframe_points:
+                    meta_keyframes.add(round(point.co[0]))
+
+            def check_consistency_of_meta_keyframes_with_keyframes():
+                if min(keyframes) != min(meta_keyframes):
+                    print("ERROR: action '" + action_name + "' and meta-action '" + meta_action_name + "' starts at different time-point.")
+                    return False
+                if max(keyframes) != max(meta_keyframes):
+                    print("ERROR: action '" + action_name + "' and meta-action '" + meta_action_name + "' end at different time-point.")
+                    return False
+                for time_point in meta_keyframes:
+                    if time_point not in keyframes:
+                        print("ERROR: time point '" + str(time_point) + "' of meta-action '" + meta_action_name + "' is NOT a time-point of the action '" + action_name + "'.")
+                        return False
+                return True
+            if check_consistency_of_meta_keyframes_with_keyframes() is False:
+                print("       => No meta-data will be exported for the action '" + action_name + "'!")
+                continue
+
+            meta_object.animation_data.action = meta_action
+
+            class meta_irregular_data_tracker:
+                def __init__(self):
+                    self.scale = None
+                    self.collider_weight = 1.0
+                    self.inverted_mass = 0.016667
+                    self.inverted_inertia_tensor = self.get_default_inverted_inertia_tensor()
+
+                def on_frame(self, frame):
+                    self.scale = meta_object.scale.copy() if self.scale is None else self.scale
+                    if frame in meta_keyframes:
+                        if vector3_length(vector3_sub(meta_object.scale, self.scale)) > 0.001:
+                            self.scale = meta_object.scale.copy()
+                        # Here we read information from the custom properties of the 'meta_object'
+                        if "e2_collider_weight" in meta_object:
+                            self.collider_weight = meta_object["e2_collider_weight"]
+                        if "e2_inverted_mass" in meta_object:
+                            self.inverted_mass = meta_object["e2_inverted_mass"]
+                        self.inverted_inertia_tensor = self.get_default_inverted_inertia_tensor()
+                        for i in range(3):
+                            for j in range(3):
+                                key = "e2_inverted_inertia" + str(i) + str(j)
+                                if key in meta_object:
+                                    self.inverted_inertia_tensor[i][j] = meta_object[key]
+
+                @staticmethod
+                def get_default_inverted_inertia_tensor():
+                    return [
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 0.0],
+                        [0.0, 0.0, 1.0]
+                    ]
+
+            class collision_shape:
+                def __init__(self, scale_of_cube_with_edges_long_2_meters):
+                    self.radius = max(abs(scale_of_cube_with_edges_long_2_meters[0]), abs(scale_of_cube_with_edges_long_2_meters[1]))
+                    self.length = abs(scale_of_cube_with_edges_long_2_meters[2]) - self.radius
+                    if self.length > 0.001:
+                        self.shape = "capsule"
+                    else:
+                        self.shape = "sphere"
+
+                def save(self, f):
+                    f.write("@" + self.shape + "\n")
+                    if self.shape == "capsule":
+                        f.write(float_to_string(self.length) + "\n")
+                        f.write(float_to_string(self.radius) + "\n")
+                    elif self.shape == "sphere":
+                        f.write(float_to_string(self.radius) + "\n")
+                    else:
+                        print("ERROR: UNEXPECTED! Collider with unknown shape '" + str(self.shape) + "'")
+                        print("       => the saved file will NOT be correct!")
+
+            data_tracker = meta_irregular_data_tracker()
+
+            meta_coord_systems_of_frames = {}
+            meta_colliders = {}
+            meta_inverted_masses = {}
+            meta_inverted_innertia_tensors = {}
+
+            for frame in keyframes:
+                scene.frame_set(frame)
+
+                data_tracker.on_frame(frame)
+
+                t = time_of_time_point(start_frame, frame)
+
+                meta_coord_systems_of_frames[t] = {
+                    "position": meta_object.location.copy(),
+                    "orientation": meta_object.rotation_quaternion.copy()
+                }
+                meta_colliders[t] = {
+                    "collider": collision_shape(data_tracker.scale),
+                    "weight": data_tracker.collider_weight
+                }
+                meta_inverted_masses[t] = data_tracker.inverted_mass
+                meta_inverted_innertia_tensors[t] = data_tracker.inverted_inertia_tensor
+
+            # Next we save the computed meta-data of individual frames to disc.
+
+            export_info["meta"] = []    # Here we store pathnames of all saved meta-data files.
+
+            export_info["meta"].append(os.path.join(keyframes_output_dir, "meta_reference_frames.txt"))
+            print("Saving keyframe meta-data file " + os.path.relpath(export_info["meta"][-1], export_info["root_dir"]))
+            with open(export_info["meta"][-1], "w") as f:
+                f.write(str(len(meta_coord_systems_of_frames)) + "\n")
+                for time_stamp in sorted(meta_coord_systems_of_frames.keys()):
+                    system = meta_coord_systems_of_frames[time_stamp]
+                    for i in range(3):
+                        f.write(float_to_string(system["position"][i]) + "\n")
+                    for i in range(4):
+                        f.write(float_to_string(system["orientation"][i]) + "\n")
+
+            export_info["meta"].append(os.path.join(keyframes_output_dir, "meta_motion_colliders.txt"))
+            print("Saving keyframe meta-data file " + os.path.relpath(export_info["meta"][-1], export_info["root_dir"]))
+            with open(export_info["meta"][-1], "w") as f:
+                f.write(str(len(meta_colliders)) + "\n")
+                frame_idx = 0
+                for time_stamp in sorted(meta_colliders.keys()):
+                    f.write("%% " + str(frame_idx) + "\n")
+                    collider_and_weight = meta_colliders[time_stamp]
+                    collider_and_weight["collider"].save(f)
+                    f.write(float_to_string(collider_and_weight["weight"]) + "\n")
+                    frame_idx += 1
+
+            export_info["meta"].append(os.path.join(keyframes_output_dir, "meta_mass_distributions.txt"))
+            print("Saving keyframe meta-data file " + os.path.relpath(export_info["meta"][-1], export_info["root_dir"]))
+            with open(export_info["meta"][-1], "w") as f:
+                f.write(str(len(meta_inverted_masses)) + "\n")
+                frame_idx = 0
+                for time_stamp in sorted(meta_inverted_masses.keys()):
+                    f.write("%% " + str(frame_idx) + "\n")
+                    f.write("@_\n")
+                    f.write(float_to_string(meta_inverted_masses[time_stamp]) + "\n")
+                    tensors = meta_inverted_innertia_tensors[time_stamp]
+                    for i in range(3):
+                        for j in range(3):
+                            f.write(float_to_string(tensors[i][j]) + "\n")
+                    frame_idx += 1
+
+        if meta_object is not None:
+            meta_object.animation_data.action = old_meta_object_action
         armature.animation_data.action = active_action_backup
         scene.frame_set(frame_current_backup)
 
@@ -1530,7 +1699,7 @@ class E2_gfx_exporter(bpy.types.Operator):
             if success is True:
                 pass    # print(TimeProf.instance().to_json())
         except Exception as e:
-            print("EXCEPTION (unhandled): " + str(e))
+            print("EXCEPTION: " + str(e))
             print(traceback.format_exc())
         return{'FINISHED'}
 
