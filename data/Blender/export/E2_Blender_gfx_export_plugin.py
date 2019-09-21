@@ -1492,6 +1492,102 @@ def save_keyframe_coord_systems_of_bones(
         scene.frame_set(frame_current_backup)
 
 
+def save_skeleton_template_files(
+        armature,       # An instance of "bpy.types.Armature"
+        export_info     # A dictionary holding properties of the export. Both keys and values are strings.
+        ):
+    with TimeProf.instance().start("save_template_files_for_skeleton_extension"):
+        output_dir = os.path.join(export_info["root_dir"], "animations", "skeletal", remove_ignored_part_of_name(armature.name, "SKELETAL"))
+
+        export_info["joints"] = os.path.join(output_dir, "joints.txt")
+        print("Saving skeleton template file " + os.path.relpath(export_info["joints"], export_info["root_dir"]))
+        with open(export_info["joints"], "w") as f:
+            for bone in [bone.name for bone in armature.data.bones if bone.use_deform is True]:
+                f.write(bone + "\n{}\n")
+
+        export_info["directions"] = os.path.join(output_dir, "directions.txt")
+        print("Saving skeleton template file " + os.path.relpath(export_info["directions"], export_info["root_dir"]))
+        with open(export_info["directions"], "w") as f:
+            for kwd, default_coord in [("fwd", [0.0, -1.0, 0.0]), ("up", [0.0, 0.0, 1.0])]:
+                for i in range(3):
+                    key = "e2_" + kwd + "_dir" + str(i)
+                    f.write(float_to_string(armature[key] if key in armature else default_coord) + "\n")
+
+        export_info["transitions"] = os.path.join(output_dir, "transitions.dot")
+        print("Saving skeleton template file " + os.path.relpath(export_info["transitions"], export_info["root_dir"]))
+        with open(export_info["transitions"], "w") as f:
+            f.write(
+"""/*
+SYNTAX RESTRICTION OF DOT FILE (FOR E2 PARSER)
+==============================================
+
+E2 can read only specific/restricted Graphviz's DOT files. Their syntax is described below.
+NOTE: It is always good to keep in mind that E2 parses the text line-by-line.
+
+- All lines before the opennig line (exact!): digraph G {
+  are ignored.
+- Inside digraph (i.e. after the openning line):
+    - Empty lines and lines consising only of spaces and tabs are skiped.
+    - Any other line must represent edge definition. I.e. an edge is defined on a single line!
+    - Syntax of an edge definition line:
+        - Any number of spaces or tabs.
+        - Source animation name in double quotes.
+          No spaces around the name!
+          However, spaces inside the name are allowed.
+          The name itself may NOT contain the double quotes character!
+        - Any number of spaces or tabs.
+        - The arrow keyword (exact!): ->
+        - Any number of spaces or tabs.
+        - Target animation name in double quotes.
+          No spaces around the name!
+          However, spaces inside the name are allowed.
+          The name itself may NOT contain the double quotes character!
+        - Any number of spaces or tabs.
+        - Definition of the label (always must be present):
+            - Prefix (exact!): [label="
+            - Time in seconds of the transition (i.e. a floating point number)
+            - Separator (exact!): \n
+              I.e. 2 characters '\' and 'n'
+            - Keyframe index in the source animation. However, if the index denotes
+              the last keyframe, then it can be omited (i.e. just do not write it at all)
+            - Separator (exact!): ;
+            - Keyframe index in the target animation. However, if the index denotes
+              the first keyframe, then it can be omited (i.e. just do not write it at all)
+            - Suffix (exact!): "]
+            - Any number of spaces or tabs.
+- The parsing is stopped after reaching a line starting with the character: }
+
+Example of a transition:
+    "stand" -> "walk" [label="0.15\n8;"]
+
+
+
+SEMANTIC EXTENSION OF DOT FILE (FOR E2 PARSER)
+==============================================
+
+The source animation name of the first transition in the graph
+definition represents the start animation, i.e. the animation
+in which an AI agent will occur after its creation.
+
+
+PDF VISUALISATION
+=================
+
+To get PDF of the graph below type this command to console:
+
+    dot -otransitions.pdf -Tpdf transitions.dot
+
+It is assumed you have installed Graphviz tools and the 'dot'
+utility is in the PATH environment variable.
+*/
+
+digraph G {
+
+}
+"""
+            )
+
+
 def save_batch(
         material_name,  # Material name of that part of the exported mash having the material.
         armature_name,  # Name of the armature deforming the mesh. It can be None (when no armature exists).
@@ -1636,6 +1732,7 @@ def export_object_armature(
         save_hierarchy_of_bones(obj, export_info)
         save_coord_systems_of_bones(obj, export_info)
         save_keyframe_coord_systems_of_bones(obj, export_info)
+        save_skeleton_template_files(obj, export_info)
 
 
 def export_object(
