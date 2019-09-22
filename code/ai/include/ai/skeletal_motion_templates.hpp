@@ -485,6 +485,7 @@ struct  motion_template_transitions_data
     using  transitions_graph = std::unordered_multimap<motion_template_cursor, std::pair<motion_template_cursor, float_32_bit>, motion_template_cursor::hasher>;
 
     transitions_graph  data;
+    std::string  initial_motion_name;
 };
 
 struct  motion_template_transitions : public async::resource_accessor<motion_template_transitions_data>
@@ -506,6 +507,7 @@ struct  motion_template_transitions : public async::resource_accessor<motion_tem
     {}
 
     transitions_graph const&  data() const { return resource().data; }
+    std::string const&  initial_motion_name() const { return resource().initial_motion_name; }
     target_motions_range  find_targets(motion_template_cursor const&  cursor) const { return data().equal_range(cursor); }
     bool  has_targets(motion_template_cursor const& cursor) const { auto const x = data().equal_range(cursor); return x.first != x.second; }
 };

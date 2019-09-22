@@ -35,7 +35,7 @@ action_controller::action_controller(blackboard_ptr const  blackboard_)
     , m_src_intepolation_state()
     , m_current_intepolation_state()
 
-    , m_dst_cursor{ get_blackboard()->m_motion_templates.motions_map().begin()->first, 0U }
+    , m_dst_cursor{ get_blackboard()->m_motion_templates.transitions().initial_motion_name(), 0U }
     , m_dst_frames()
     , m_ideal_linear_velocity_in_world_space(vector3_zero())
     , m_ideal_angular_velocity_in_world_space(vector3_zero())

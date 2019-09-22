@@ -755,6 +755,7 @@ namespace ai { namespace detail {
 
 motion_template_transitions_data::motion_template_transitions_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : data()
+    , initial_motion_name()
 {
     TMPROF_BLOCK();
 
@@ -840,6 +841,8 @@ motion_template_transitions_data::motion_template_transitions_data(async::finali
                     throw std::runtime_error("Duplicate transition (note: transition time is NOT considered).");
 
             data.insert({ src_cursor, { dst_cursor, time_in_seconds} });
+            if (initial_motion_name.empty())
+                initial_motion_name = src_cursor.motion_name;
         }
         catch (std::exception const&  e)
         {
