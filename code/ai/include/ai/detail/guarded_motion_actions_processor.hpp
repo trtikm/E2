@@ -45,6 +45,25 @@ void  execute_satisfied_motion_guarded_actions(
         );
 
 
+struct importance_of_ideal_velocities_to_guarded_actions
+{
+    importance_of_ideal_velocities_to_guarded_actions();
+
+    void  normalise_sum_of_importances_to_range_01();
+    float_32_bit  sum() const;
+
+    // All members are greater or equal to 0.0; where 0.0 means no desire at all.
+    float_32_bit  linear;
+    float_32_bit  angular;
+};
+
+
+void  compute_importance_of_ideal_velocities_to_guarded_actions(
+        std::vector<skeletal_motion_templates::guarded_actions_ptr> const&  guarded_actions_to_check,
+        importance_of_ideal_velocities_to_guarded_actions&  importances
+        );
+
+
 }}
 
 #endif

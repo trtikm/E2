@@ -297,4 +297,83 @@ void  execute_satisfied_motion_guarded_actions(
 }
 
 
+importance_of_ideal_velocities_to_guarded_actions::importance_of_ideal_velocities_to_guarded_actions()
+    : linear(0.0f)
+    , angular(0.0f)
+{}
+
+
+void  importance_of_ideal_velocities_to_guarded_actions::normalise_sum_of_importances_to_range_01()
+{
+    float_32_bit const  s = sum();
+    if (s > 1.0f)
+    {
+        linear /= s;
+        angular /= s;
+    }
+}
+
+
+float_32_bit  importance_of_ideal_velocities_to_guarded_actions::sum() const
+{
+    return linear + angular;
+}
+
+
+void  compute_importance_of_ideal_velocities_to_guarded_actions(
+        std::vector<skeletal_motion_templates::guarded_actions_ptr> const&  guarded_actions_to_check,
+        importance_of_ideal_velocities_to_guarded_actions&  importances
+        )
+{
+    TMPROF_BLOCK();
+
+    for (skeletal_motion_templates::guarded_actions_ptr  guarded_actions : guarded_actions_to_check)
+        for (auto const action_props : guarded_actions->actions)
+            if (action_props == nullptr || std::dynamic_pointer_cast<skeletal_motion_templates::action_none const>(action_props) != nullptr)
+                continue;
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_move_forward_with_ideal_speed const>(action_props))
+            {
+                importances.linear += 1.0f;
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_rotate_forward_vector_towards_desired_linear_velocity const>(action_props))
+            {
+                importances.linear += 1.0f;
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_turn_around const>(action_props))
+            {
+                importances.angular += 1.0f;
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_dont_move const>(action_props))
+            {
+                // No imporance here.
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_dont_rotate const>(action_props))
+            {
+                // No imporance here.
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_set_linear_velocity const>(action_props))
+            {
+                // No imporance here.
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_set_angular_velocity const>(action_props))
+            {
+                // No imporance here.
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_cancel_gravity_accel const>(action_props))
+            {
+                // No imporance here.
+            }
+            else
+                NOT_IMPLEMENTED_YET();
+}
+
+
 }}

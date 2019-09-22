@@ -224,28 +224,41 @@ void  action_controller::next_round_internal(float_32_bit)
 
 float_32_bit  action_controller::compute_interpolation_speed() const
 {
-    // TODO: include also angular speed to the computation.
+    TMPROF_BLOCK();
 
-    float_32_bit const  real_linear_speed = length(m_motion_object_motion.velocity.m_linear);
-    float_32_bit const  ideal_linear_speed = length(m_ideal_linear_velocity_in_world_space);
-    //float_32_bit const  real_angular_speed = length(m_motion_object_motion.velocity.m_angular);
-    //float_32_bit const  ideal_angular_speed = length(m_ideal_angular_velocity_in_world_space);
+    detail::importance_of_ideal_velocities_to_guarded_actions  importances;
+    detail::compute_importance_of_ideal_velocities_to_guarded_actions(
+            m_current_intepolation_state.disjunction_of_guarded_actions,
+            importances
+            );
+    importances.normalise_sum_of_importances_to_range_01();
 
-    float_32_bit const  linear_interpolantion_speed =
-            ideal_linear_speed < 0.0001f ? 1.0f + real_linear_speed : real_linear_speed / ideal_linear_speed
+    float_32_bit const  min_coef_value = 0.5f;
+    float_32_bit const  max_coef_value = 1.5f;
+    auto const  compute_speed_coef = [min_coef_value, max_coef_value](float_32_bit const  real_speed, float_32_bit const  ideal_speed)
+    {
+        float_32_bit const  raw_coef = ideal_speed < 0.0001f ? 1.0f + real_speed : real_speed / ideal_speed;
+        return std::max(min_coef_value, std::min(raw_coef, max_coef_value));
+    };
+
+    float_32_bit const  linear_speed_coef = compute_speed_coef(
+            length(m_motion_object_motion.velocity.m_linear),
+            length(m_ideal_linear_velocity_in_world_space)
+            );
+    float_32_bit const  angular_speed_coef = compute_speed_coef(
+            length(m_motion_object_motion.velocity.m_angular),
+            length(m_ideal_angular_velocity_in_world_space)
+            );
+
+    float_32_bit const  raw_interpolation_speed =
+            importances.linear * linear_speed_coef +
+            importances.angular * angular_speed_coef +
+            (1.0f - importances.sum()) * 1.0f
             ;
-    float_32_bit const  angular_interpolantion_speed =
-            1.0f
-            //ideal_angular_speed < 0.0001f ? 1.0f + real_angular_speed : real_angular_speed / ideal_angular_speed
-            ;
 
-    float_32_bit const  raw_interpolantion_speed =
-            std::fabs(linear_interpolantion_speed - 1.0f) >= std::fabs(angular_interpolantion_speed - 1.0f) ?
-                    linear_interpolantion_speed :
-                    angular_interpolantion_speed
-                    ;
+    float_32_bit const  interpolation_speed = std::max(min_coef_value, std::min(raw_interpolation_speed, max_coef_value));
 
-    return std::max(0.5f, std::min(raw_interpolantion_speed, 1.5f));
+    return interpolation_speed;
 }
 
 
