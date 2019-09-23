@@ -59,6 +59,9 @@ add_library(${THIS_TARGET_NAME}
     
     ./include/ai/detail/ideal_velocity_buider.hpp 
     ./src/detail/ideal_velocity_buider.cpp 
+    
+    ./include/ai/detail/collider_utils.hpp
+    ./src/detail/collider_utils.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

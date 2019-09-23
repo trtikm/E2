@@ -397,6 +397,15 @@ bool  is_point_inside_capsule(
         );
 
 
+float_32_bit  distance_from_center_of_capsule_to_surface_in_direction(
+        float_32_bit const  half_distance_between_end_points, // end-points of the central line are aligned along the z-axis.
+        float_32_bit const  thickness_from_central_line,
+        vector3 const&  unit_direction
+        );
+
+
+inline float_32_bit  distance_from_center_of_sphere_to_surface(float_32_bit const  radius) { return radius; }
+
 
 enum struct POINT_SET_TYPE : natural_8_bit
 {

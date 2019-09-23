@@ -1311,6 +1311,29 @@ bool  is_point_inside_capsule(
 }
 
 
+float_32_bit  distance_from_center_of_capsule_to_surface_in_direction(
+        float_32_bit const  half_distance_between_end_points, // end-points of the central line are aligned along the z-axis.
+        float_32_bit const  thickness_from_central_line,
+        vector3 const&  unit_direction
+        )
+{
+    vector3 const  xy_projection(unit_direction(0), unit_direction(1), 0.0f);
+    float_32_bit const  xy_projection_length = length(xy_projection);
+    if (xy_projection_length < 1e-5f)
+        return half_distance_between_end_points + thickness_from_central_line;
+    vector3 const cylinder_surface_contact_vector = (thickness_from_central_line / xy_projection_length) * unit_direction;
+    if (std::fabs(cylinder_surface_contact_vector(2)) < half_distance_between_end_points)
+        return length(cylinder_surface_contact_vector);
+    float_32_bit const  cos_alpha = std::fabs(unit_direction(2));
+    float_32_bit const  D =
+            thickness_from_central_line * thickness_from_central_line -
+            half_distance_between_end_points * half_distance_between_end_points * (1.0f - cos_alpha * cos_alpha)
+            ;
+    float_32_bit const  D0 = std::max(0.0f, D);
+    return  half_distance_between_end_points * cos_alpha + std::sqrt(D0);
+}
+
+
 POINT_SET_TYPE  clip_polygon(
         std::vector<vector2> const&  polygon_points,
         vector2 const&  clip_origin,

@@ -150,6 +150,7 @@ void  create_collider_and_rigid_body_of_motion_scene_node(
     {
         NOT_IMPLEMENTED_YET();
     }
+    s->set_frame_of_scene_node(motion_object_nid, false, rb_motion.frame);
     s->insert_rigid_body_to_scene_node(
             motion_object_nid,
             rb_motion.velocity.m_linear,

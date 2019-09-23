@@ -66,11 +66,13 @@ private:
 
     intepolation_state  m_src_intepolation_state;
     intepolation_state  m_current_intepolation_state;
+    bool  m_use_inverted_collider_center_offset_interpolation;
 
     skeletal_motion_templates::motion_template_cursor  m_dst_cursor;
     std::vector<angeo::coordinate_system>  m_dst_frames;
     vector3  m_ideal_linear_velocity_in_world_space;
     vector3  m_ideal_angular_velocity_in_world_space;
+    vector3  m_collider_center_offset_in_reference_frame;
 
     detail::motion_action_persistent_data_map  m_motion_action_data;
 };

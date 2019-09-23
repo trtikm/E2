@@ -2,6 +2,7 @@
 #include <ai/skeleton_utils.hpp>
 #include <ai/detail/rigid_body_motion.hpp>
 #include <ai/detail/ideal_velocity_buider.hpp>
+#include <ai/detail/collider_utils.hpp>
 #include <angeo/skeleton_kinematics.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -34,11 +35,13 @@ action_controller::action_controller(blackboard_ptr const  blackboard_)
 
     , m_src_intepolation_state()
     , m_current_intepolation_state()
+    , m_use_inverted_collider_center_offset_interpolation(false)
 
     , m_dst_cursor{ get_blackboard()->m_motion_templates.transitions().initial_motion_name(), 0U }
     , m_dst_frames()
     , m_ideal_linear_velocity_in_world_space(vector3_zero())
     , m_ideal_angular_velocity_in_world_space(vector3_zero())
+    , m_collider_center_offset_in_reference_frame(vector3_zero())
 
     , m_motion_action_data()
 {
@@ -80,9 +83,7 @@ action_controller::action_controller(blackboard_ptr const  blackboard_)
     angeo::coordinate_system  motion_object_frame;
     get_blackboard()->m_scene->get_frame_of_scene_node(m_motion_object_motion.nid, false, motion_object_frame);
 
-    m_current_intepolation_state.frames =
-        get_blackboard()->m_motion_templates.motions_map().at(m_dst_cursor.motion_name).keyframes.get_keyframes()
-                                                          .at(m_dst_cursor.keyframe_index).get_coord_systems();
+    m_current_intepolation_state.frames = m_dst_frames;
     m_current_intepolation_state.free_bones_look_at =
         get_blackboard()->m_motion_templates.motions_map().at(m_dst_cursor.motion_name).free_bones.look_at()
                                                           .at(m_dst_cursor.keyframe_index);
@@ -167,6 +168,15 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
                 get_blackboard()->m_motion_templates.hierarchy().parents(),
                 m_dst_frames
                 );
+
+        m_collider_center_offset_in_reference_frame = 
+                detail::compute_offset_for_center_of_second_collider_to_get_surfaces_alignment_in_direction(
+                        m_src_intepolation_state.collider,
+                        get_blackboard()->m_motion_templates.motions_map().at(m_dst_cursor.motion_name).colliders
+                                                                          .at(m_dst_cursor.keyframe_index),
+                        -get_blackboard()->m_motion_templates.directions().up()
+                        );
+        m_use_inverted_collider_center_offset_interpolation = false;
     }
 
     m_consumed_time_in_seconds += interpolation_time_step_in_seconds;
@@ -178,12 +188,25 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
     look_at_target(time_step_in_seconds, interpolation_param);
 
     // Next we update frames of scene nodes corresponding to the interpolated frames of bones.
-    for (natural_32_bit bone = 0; bone != m_current_intepolation_state.frames.size(); ++bone)
-        get_blackboard()->m_scene->set_frame_of_scene_node(
-                get_blackboard()->m_bone_nids.at(bone),
-                true,
-                m_current_intepolation_state.frames.at(bone)
-                );
+    {
+        vector3 const  offset =
+                (interpolation_param - (m_use_inverted_collider_center_offset_interpolation ? 1.0f : 0.0f))
+                * m_collider_center_offset_in_reference_frame
+                ;
+        auto const&  parents = get_blackboard()->m_motion_templates.hierarchy().parents();
+        for (natural_32_bit bone = 0; bone != m_current_intepolation_state.frames.size(); ++bone)
+            get_blackboard()->m_scene->set_frame_of_scene_node(
+                    get_blackboard()->m_bone_nids.at(bone),
+                    true,
+                    parents.at(bone) < 0 ?
+                        angeo::coordinate_system{
+                            m_current_intepolation_state.frames.at(bone).origin() + offset,
+                            m_current_intepolation_state.frames.at(bone).orientation()
+                            }
+                        :
+                        m_current_intepolation_state.frames.at(bone)
+                    );
+    }
 
     // And finally, we update dynamics of agent's motion object (forces and torques).
     skeletal_motion_templates::guarded_actions_ptr const  satisfied_guarded_actions =
@@ -299,6 +322,13 @@ void  action_controller::interpolate(float_32_bit const  interpolation_param)
         m_current_intepolation_state.mass_distribution = interpolated_mass_distribution;
         m_motion_object_motion.inverted_mass = interpolated_mass_distribution->mass_inverted;
         m_motion_object_motion.inverted_inertia_tensor = interpolated_mass_distribution->inertia_tensor_inverted;
+        {
+            matrix44  W;
+            angeo::from_base_matrix(m_motion_object_motion.frame, W);
+            vector3 const  offset = transform_vector(m_collider_center_offset_in_reference_frame, W);
+            angeo::translate(m_motion_object_motion.frame, offset);
+            m_use_inverted_collider_center_offset_interpolation = true;
+        }
 
         get_blackboard()->m_scene->unregister_to_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_agent_id);
         detail::destroy_collider_and_rigid_bofy_of_motion_scene_node(get_blackboard()->m_scene, m_motion_object_motion.nid);
@@ -309,6 +339,7 @@ void  action_controller::interpolate(float_32_bit const  interpolation_param)
                 m_motion_object_motion
                 );
         get_blackboard()->m_scene->register_to_collision_contacts_stream(m_motion_object_motion.nid, get_blackboard()->m_agent_id);
+        m_motion_object_motion.commit_frame(get_blackboard()->m_scene, get_blackboard()->m_agent_nid);
     }
 
     m_current_intepolation_state.disjunction_of_guarded_actions =
