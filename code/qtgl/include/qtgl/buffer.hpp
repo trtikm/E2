@@ -82,10 +82,10 @@ struct  buffer_file_data
     bool  has_boundary() const { return m_boundary.operator bool(); }
     spatial_boundary const&  boundary() const { return *m_boundary; }
 
-    void  create_gl_buffer();
-    void  destroy_gl_buffer();
+    void  create_gl_buffer() const;
+    void  destroy_gl_buffer() const;
 
-    bool  make_current(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  start_location, bool const  use_per_instance);
+    bool  make_current(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  start_location, bool const  use_per_instance) const;
 
 private:
     void  initialise(
@@ -108,7 +108,7 @@ private:
             spatial_boundary const* const  boundary
             );
 
-    GLuint  m_id;
+    mutable GLuint  m_id;
     natural_32_bit  m_num_primitives;
     natural_8_bit  m_num_components_per_primitive;
     natural_8_bit  m_num_bytes_per_component;

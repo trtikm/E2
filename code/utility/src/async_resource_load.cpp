@@ -1,14 +1,28 @@
 #include <utility/async_resource_load.hpp>
+#include <boost/algorithm/string.hpp>
 
 
 namespace async { namespace detail {
 
 
+natural_64_bit  key_type::generate_next_unique_id()
+{
+    static std::atomic<natural_64_bit>  s_fresh_key_id = 0ULL;
+    return ++s_fresh_key_id;
+}
+
 std::string  key_type::generate_unique_id()
 {
-    static natural_64_bit  s_fresh_key_id = 0ULL;
     static std::string const  s_uid_prefix(get_prefix_of_generated_fresh_unique_id());
-    return s_uid_prefix + std::to_string(++s_fresh_key_id);
+    return s_uid_prefix + std::to_string(generate_next_unique_id());
+}
+
+std::string  key_type::generate_unique_custom_id(std::string  custom_prefix)
+{
+    boost::algorithm::replace_all(custom_prefix, "\n", "\\n");
+    boost::algorithm::replace_all(custom_prefix, "\r", "\\r");
+    boost::algorithm::replace_all(custom_prefix, "\t", "\\t");
+    return custom_prefix + "#" + std::to_string(generate_next_unique_id());
 }
 
 key_type const&  key_type::get_invalid_key()

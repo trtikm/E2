@@ -1,15 +1,19 @@
 mesh meshes/dock
-draw_state
+skins
 {
-   use_alpha_blending              false
-   alpha_blending_src_function     SRC_ALPHA
-   alpha_blending_dst_function     ONE_MINUS_CONSTANT_ALPHA
-   cull_face_mode                  BACK
-}
-effects
-{
-   use_alpha_testing               false
-   alpha_test_constant             0.0
-   lighting_algo_location          fragment_program
-   fog_algo_location               vertex_program
+    default
+    {
+        draw_state
+        {
+           use_alpha_blending              false
+           alpha_blending_src_function     SRC_ALPHA
+           alpha_blending_dst_function     ONE_MINUS_CONSTANT_ALPHA
+           cull_face_mode                  BACK
+        }
+        alpha_testing
+        {
+           use_alpha_testing               false
+           alpha_test_constant             0.0
+        }
+    }
 }

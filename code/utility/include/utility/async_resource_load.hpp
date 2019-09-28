@@ -54,10 +54,13 @@ struct  key_type
     static char const*  get_prefix_of_generated_fresh_unique_id() noexcept { return "@async::uid#"; }
 
     static std::string  generate_unique_id();
+    static std::string  generate_unique_custom_id(std::string  custom_prefix);
 
     static key_type const&  get_invalid_key();
 
 private:
+    static natural_64_bit  generate_next_unique_id();
+
     std::string  m_data_type_name;
     std::string  m_unique_id;
 };
@@ -662,7 +665,18 @@ struct  resource_accessor
         return m_data_ptr->first;
     }
 
-    resource_type&  resource() const
+    resource_type const&  resource_const() const
+    {
+        ASSUMPTION(is_load_finished());
+        return *reinterpret_cast<resource_type const*>(m_data_ptr->second->resource_ptr());
+    }
+
+    resource_type const&  resource() const
+    {
+        return resource_const();
+    }
+
+    resource_type&  resource()
     {
         ASSUMPTION(is_load_finished());
         return *reinterpret_cast<resource_type*>(m_data_ptr->second->resource_ptr());
@@ -748,13 +762,15 @@ resource_accessor<resource_type__>  insert_resource(
 }
 
 
-key_type  get_key_of_resource_just_being_loaded();
-
-
 }
 
 namespace async {
 
+
+key_type  get_key_of_resource_just_being_loaded();
+
+inline std::string  generate_unique_custom_id(std::string const& custom_prefix)
+{ return detail::key_type::generate_unique_custom_id(custom_prefix); }
 
 inline void  clear() { detail::resource_load_planner::instance().clear(); }
 inline void  terminate() { detail::terminate(); }

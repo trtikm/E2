@@ -323,7 +323,7 @@ texture_data::texture_data(
 }
 
 
-void  texture_data::create_gl_image()
+void  texture_data::create_gl_image() const
 {
     if (m_id != 0U)
         return;
@@ -352,7 +352,7 @@ void  texture_data::create_gl_image()
 }
 
 
-void  texture_data::destroy_gl_image()
+void  texture_data::destroy_gl_image() const
 {
     if (m_id == 0U)
         return;

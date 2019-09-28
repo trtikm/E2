@@ -1604,36 +1604,36 @@ def save_batch(
             ofile.write("mesh " + disk_path_to_string(os.path.relpath(buffers_export_info["mesh_root_dir"], export_info["root_dir"])) + "\n")
             if armature_name is not None:
                 ofile.write("skeleton " + armature_name + "\n")
+            ofile.write("skins\n{\n    default\n    {\n")
             if "texture_links" in buffers_export_info:
-                ofile.write("textures\n{\n")
+                ofile.write("        textures\n        {\n")
                 for texture_type in buffers_export_info["texture_links"]:
                     texture_info = buffers_export_info["texture_links"][texture_type]
                     ofile.write(
-                        "    " + texture_type + "\n"
-                        "    {\n"
-                        "        texcoord_index " + str(texture_info[0]) + "\n"
-                        "        pathname " + disk_path_to_string(texture_info[1]) + "\n"
-                        "    }\n"
+                        "            " + texture_type + "\n"
+                        "            {\n"
+                        "                texcoord_index " + str(texture_info[0]) + "\n"
+                        "                pathname " + disk_path_to_string(texture_info[1]) + "\n"
+                        "            }\n"
                         )
-                ofile.write("}\n")
+                ofile.write("        }\n")
             ofile.write(
-                "draw_state\n"
-                "{\n"
-                "   use_alpha_blending              false\n"
-                "   alpha_blending_src_function     SRC_ALPHA\n"
-                "   alpha_blending_dst_function     ONE_MINUS_CONSTANT_ALPHA\n"
-                "   cull_face_mode                  BACK\n"
-                "}\n"
+                "        draw_state\n"
+                "        {\n"
+                "           use_alpha_blending              false\n"
+                "           alpha_blending_src_function     SRC_ALPHA\n"
+                "           alpha_blending_dst_function     ONE_MINUS_CONSTANT_ALPHA\n"
+                "           cull_face_mode                  BACK\n"
+                "        }\n"
                 )
             ofile.write(
-                "effects\n"
-                "{\n"
-                "   use_alpha_testing               false\n"
-                "   alpha_test_constant             0.0\n"
-                "   lighting_algo_location          fragment_program\n"
-                "   fog_algo_location               vertex_program\n"
-                "}\n"
+                "        alpha_testing\n"
+                "        {\n"
+                "           use_alpha_testing               false\n"
+                "           alpha_test_constant             0.0\n"
+                "        }\n"
                 )
+            ofile.write("    }\n}\n")
 
 
 def export_object_mesh(

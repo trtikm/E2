@@ -32,17 +32,21 @@ batch  create_lines3d(
             },
             id.empty() ? id : "/generic/lines3d_with_colours/buffers_binding/" + id
             ),
-        textures_binding(),
+        textures_binding_map_type{},
         {}, // Texcoord binding.
         effects_config{
+            nullptr,
             {}, // Light types.
-            {{LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::BUFFER}},
+            {{LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::BUFFER}}, // Lighting data types.
+            SHADER_PROGRAM_TYPE::VERTEX, // lighting algo locaciton
             {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
-            fog_type_
+            fog_type_,
+            SHADER_PROGRAM_TYPE::VERTEX // fog algo location
             },
         draw_state(nullptr),
         modelspace(),
-        skeleton_alignment()
+        skeleton_alignment(),
+        batch_available_resources::alpha_testing_props()
         );
     return pbatch;
 }

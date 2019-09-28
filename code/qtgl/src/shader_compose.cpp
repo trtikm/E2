@@ -104,7 +104,8 @@ static void  add_new_line_terminators(std::vector<std::string>&  lines_of_shader
 
 static shader_compose_result_type  compose_vertex_and_fragment_shader(
         batch_available_resources const  resources,
-        effects_config const&  effects,
+        std::string const&  skin_name,
+        effects_config_data const&  effects,
         std::vector<std::string>&  vs_source,
         std::vector<std::string>&  vs_source_instancing,
         std::string&  vs_uid,
@@ -131,6 +132,8 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
         result.second.set_fog_type(FOG_TYPE::NONE);
         return result;
     }
+
+    batch_available_resources::skin_type const&  skin = resources.skins().at(skin_name);
 
     if (effects.get_shader_output_types().size() == 1UL &&
         *effects.get_shader_output_types().cbegin() == SHADER_DATA_OUTPUT_TYPE::DEFAULT)
@@ -334,7 +337,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                         //    };
                         //}
                         //else
-                        if (resources.shaders_effects_config().use_alpha_testing())
+                        if (skin.alpha_testing().use_alpha_testing())
                         {
                             fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                                 "#version 420",
@@ -367,7 +370,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                     }
                     break;
                 case SHADER_DATA_INPUT_TYPE::TEXTURE:
-                    if (resources.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE) == 0UL)
+                    if (skin.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE) == 0UL)
                     {
                         result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Diffuse texture is not available.";
                         result.second.get_lighting_data_types().begin()->second = SHADER_DATA_INPUT_TYPE::BUFFER;
@@ -382,7 +385,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 vs_backward_compatibility_declarations(),
 
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
-                                varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+                                varying("in_texture_coords", skin.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
                                 varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
 
                                 uniform(VS_UNIFORM::MATRIX_FROM_MODEL_TO_CAMERA, vs_uniforms),
@@ -401,7 +404,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
 
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input_instancing),
                                 varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input_instancing),
-                                varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input_instancing),
+                                varying("in_texture_coords", skin.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input_instancing),
                                 varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
 
                                 uniform(VS_UNIFORM::MATRIX_FROM_CAMERA_TO_CLIPSPACE, vs_uniforms_instancing),
@@ -421,7 +424,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 vs_backward_compatibility_declarations(),
 
                                 varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
-                                varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+                                varying("in_texture_coords", skin.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
                                 varying("in_indices_of_matrices", VS_IN::BINDING_IN_INDICES_OF_MATRICES, vs_input),
                                 varying("in_weights_of_matrices", VS_IN::BINDING_IN_WEIGHTS_OF_MATRICES, vs_input),
                                 varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
@@ -444,7 +447,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 "}",
                             };
                         }
-                        if (resources.shaders_effects_config().use_alpha_testing())
+                        if (skin.alpha_testing().use_alpha_testing())
                         {
                             fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                                 "#version 420",
@@ -502,7 +505,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                 "    out_colour = in_colour;",
                                 "}",
                             };
-                            if (resources.shaders_effects_config().use_alpha_testing())
+                            if (skin.alpha_testing().use_alpha_testing())
                             {
                                 fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                                     "#version 420",
@@ -845,7 +848,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                             //    };
                                             //}
                                             //else
-                                            if (resources.shaders_effects_config().use_alpha_testing())
+                                            if (skin.alpha_testing().use_alpha_testing())
                                             {
                                                 fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                                                     "#version 420",
@@ -878,7 +881,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                         }
                                         break;
                                     case SHADER_DATA_INPUT_TYPE::TEXTURE:
-                                        if (resources.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE) == 0UL)
+                                        if (skin.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE) == 0UL)
                                         {
                                             result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Diffuse texture is not available.";
                                             result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::DIFFUSE] = SHADER_DATA_INPUT_TYPE::BUFFER;
@@ -894,7 +897,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
-                                                    varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+                                                    varying("in_texture_coords", skin.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
                                                     varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
                                                     varying("out_colour_mult", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
 
@@ -926,7 +929,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input_instancing),
                                                     varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input_instancing),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input_instancing),
-                                                    varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input_instancing),
+                                                    varying("in_texture_coords", skin.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input_instancing),
                                                     varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
                                                     varying("out_colour_mult", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
 
@@ -959,7 +962,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
 
                                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
-                                                    varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+                                                    varying("in_texture_coords", skin.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
                                                     varying("in_indices_of_matrices", VS_IN::BINDING_IN_INDICES_OF_MATRICES, vs_input),
                                                     varying("in_weights_of_matrices", VS_IN::BINDING_IN_WEIGHTS_OF_MATRICES, vs_input),
                                                     varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
@@ -997,7 +1000,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "}",
                                                 };
                                             }
-                                            if (resources.shaders_effects_config().use_alpha_testing())
+                                            if (skin.alpha_testing().use_alpha_testing())
                                             {
                                                 fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                                                     "#version 420",
@@ -1070,7 +1073,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "    out_colour = colour_mult * in_colour;",
                                                     "}",
                                                 };
-                                                if (resources.shaders_effects_config().use_alpha_testing())
+                                                if (skin.alpha_testing().use_alpha_testing())
                                                 {
                                                     fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                                                         "#version 420",
@@ -1132,7 +1135,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                     result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Bitangents buffer is not available. Normals texture cannot be used.";
                                     result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::NORMAL] = SHADER_DATA_INPUT_TYPE::BUFFER;
                                 }
-                                else if (resources.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_NORMAL) == 0UL)
+                                else if (skin.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_NORMAL) == 0UL)
                                 {
                                     result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Normals texture is not available.";
                                     result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::NORMAL] = SHADER_DATA_INPUT_TYPE::BUFFER;
@@ -1150,7 +1153,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                         result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::NORMAL] = SHADER_DATA_INPUT_TYPE::BUFFER;
                                         break;
                                     case SHADER_DATA_INPUT_TYPE::TEXTURE:
-                                        if (resources.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE) == 0UL)
+                                        if (skin.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE) == 0UL)
                                         {
                                             result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Diffuse texture is not available.";
                                             result.second.get_lighting_data_types()[LIGHTING_DATA_TYPE::DIFFUSE] = SHADER_DATA_INPUT_TYPE::BUFFER;
@@ -1168,7 +1171,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
                                                     varying("in_tangent", VS_IN::BINDING_IN_TANGENT, vs_input),
                                                     varying("in_bitangent", VS_IN::BINDING_IN_BITANGENT, vs_input),
-                                                    varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+                                                    varying("in_texture_coords", skin.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
 
                                                     varying("out_normal", VS_OUT::BINDING_OUT_NORMAL, vs_output),
                                                     varying("out_tangent", VS_OUT::BINDING_OUT_TANGENT, vs_output),
@@ -1196,7 +1199,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input_instancing),
                                                     varying("in_tangent", VS_IN::BINDING_IN_TANGENT, vs_input_instancing),
                                                     varying("in_bitangent", VS_IN::BINDING_IN_BITANGENT, vs_input_instancing),
-                                                    varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input_instancing),
+                                                    varying("in_texture_coords", skin.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input_instancing),
 
                                                     varying("out_normal", VS_OUT::BINDING_OUT_NORMAL, vs_output),
                                                     varying("out_tangent", VS_OUT::BINDING_OUT_TANGENT, vs_output),
@@ -1225,7 +1228,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     varying("in_normal", VS_IN::BINDING_IN_NORMAL, vs_input),
                                                     varying("in_tangent", VS_IN::BINDING_IN_TANGENT, vs_input),
                                                     varying("in_bitangent", VS_IN::BINDING_IN_BITANGENT, vs_input),
-                                                    varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+                                                    varying("in_texture_coords", skin.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
                                                     varying("in_indices_of_matrices", VS_IN::BINDING_IN_INDICES_OF_MATRICES, vs_input),
                                                     varying("in_weights_of_matrices", VS_IN::BINDING_IN_WEIGHTS_OF_MATRICES, vs_input),
 
@@ -1266,7 +1269,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                                     "}",
                                                 };
                                             }
-                                            if (resources.shaders_effects_config().use_alpha_testing())
+                                            if (skin.alpha_testing().use_alpha_testing())
                                             {
                                                 fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                                                     "#version 420",
@@ -1378,7 +1381,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                 {
                     if (effects.get_lighting_data_types().at(LIGHTING_DATA_TYPE::DIFFUSE) == SHADER_DATA_INPUT_TYPE::TEXTURE)
                     {
-                        if (resources.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE) != 0UL)
+                        if (skin.textures().count(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE) != 0UL)
                         {
                             if (resources.skeletal() == nullptr)
                             {
@@ -1388,7 +1391,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                     vs_backward_compatibility_declarations(),
 
                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
-                                    varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+                                    varying("in_texture_coords", skin.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
                                     varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
                                     varying("out_colour_mult", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
 
@@ -1410,7 +1413,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
 
                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input_instancing),
                                     varying("in_from_model_to_camera", VS_IN::BINDING_IN_INSTANCED_MATRIX_FROM_MODEL_TO_CAMERA, vs_input_instancing),
-                                    varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input_instancing),
+                                    varying("in_texture_coords", skin.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input_instancing),
                                     varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
                                     varying("out_colour_mult", VS_OUT::BINDING_OUT_DIFFUSE, vs_output),
 
@@ -1433,7 +1436,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                     vs_backward_compatibility_declarations(),
 
                                     varying("in_position", VS_IN::BINDING_IN_POSITION, vs_input),
-                                    varying("in_texture_coords", resources.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
+                                    varying("in_texture_coords", skin.textures().at(FS_UNIFORM::TEXTURE_SAMPLER_DIFFUSE).first, vs_input),
                                     varying("in_indices_of_matrices", VS_IN::BINDING_IN_INDICES_OF_MATRICES, vs_input),
                                     varying("in_weights_of_matrices", VS_IN::BINDING_IN_WEIGHTS_OF_MATRICES, vs_input),
                                     varying("out_texture_coords", VS_OUT::BINDING_OUT_TEXCOORD0, vs_output),
@@ -1460,7 +1463,7 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                                     "}",
                                 };
                             }
-                            if (resources.shaders_effects_config().use_alpha_testing())
+                            if (skin.alpha_testing().use_alpha_testing())
                             {
                                 fs_uid = E2_QTGL_GENERATE_FRAGMENT_SHADER_ID(); fs_source = {
                                     "#version 420",
@@ -1536,7 +1539,8 @@ namespace qtgl {
 
 shader_compose_result_type  compose_vertex_and_fragment_shader(
         batch_available_resources const  resources,
-        effects_config const&  effects,
+        std::string const&  skin_name,
+        effects_config_data const&  effects,
         std::vector<std::string>&  vs_source,
         std::vector<std::string>&  vs_source_instancing,
         std::string&  vs_uid,
@@ -1558,6 +1562,7 @@ shader_compose_result_type  compose_vertex_and_fragment_shader(
     shader_compose_result_type const  result =
             detail::compose_vertex_and_fragment_shader(
                     resources,
+                    skin_name,
                     effects,
                     vs_source,
                     vs_source_instancing,

@@ -18,13 +18,12 @@ namespace qtgl { namespace detail {
 
 batch_available_resources_data::batch_available_resources_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : m_buffers()
-    , m_textures()
     , m_skeletal()
     , m_batch_pathname(canonical_path(finaliser->get_key().get_unique_id()).string())
     , m_data_root_dir()
     , m_mesh_path()
     , m_num_indices_per_primitive(0xFFU)   // i.e. an illegal value (correct value will be set during the load below)
-    , m_shaders_effects_config()
+    , m_skins()
 {
     TMPROF_BLOCK();
 
@@ -91,37 +90,60 @@ batch_available_resources_data::batch_available_resources_data(async::finalise_l
     if (m_num_indices_per_primitive != 0U) // TODO: Extend structure of 'batch' file on the disk, so that non-index buffer batches could be loaded.
         throw std::runtime_error(msgstream() << "Cannot find the index buffer file: " << (buffers_dir / "indices.txt"));
 
-    if (batch_ptree.count("textures") != 0UL)
+    boost::property_tree::ptree const&  skins_ptree = batch_ptree.find("skins")->second;
+    for (auto  skin_it = skins_ptree.begin(); skin_it != skins_ptree.end(); ++skin_it)
     {
-        boost::property_tree::ptree const&  textures_ptree = batch_ptree.find("textures")->second;
-        for (auto it = textures_ptree.begin(); it != textures_ptree.end(); ++it)
+        textures_dictionary_type  textures;
+        if (skin_it->second.count("textures") != 0UL)
         {
-            FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME  sampler_location;
-            if (it->first == "diffuse")
-                sampler_location = FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE;
-            else if (it->first == "specular")
-                sampler_location = FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_SPECULAR;
-            else if (it->first == "normal")
-                sampler_location = FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_NORMAL;
-            else
-                throw std::runtime_error(msgstream() << "Unknown/unsupported texture type '" << it->first
-                                                        << "' in the batch file '" << batch_pathname() << "'.");
+            boost::property_tree::ptree const&  textures_ptree = skin_it->second.find("textures")->second;
+            for (auto it = textures_ptree.begin(); it != textures_ptree.end(); ++it)
+            {
+                FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME  sampler_location;
+                if (it->first == "diffuse")
+                    sampler_location = FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE;
+                else if (it->first == "specular")
+                    sampler_location = FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_SPECULAR;
+                else if (it->first == "normal")
+                    sampler_location = FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_NORMAL;
+                else
+                    throw std::runtime_error(msgstream() << "Unknown/unsupported texture type '" << it->first
+                                                            << "' in the batch file '" << batch_pathname() << "'.");
 
-            natural_8_bit const  texcoord_index = it->second.get<unsigned int>("texcoord_index");
-            if (valid_texcoord_indices.count(texcoord_index) == 0UL)
-                throw std::runtime_error(msgstream() << "The texture type '" << it->first
-                                                        << "' references a non-existing texcoord file of index "
-                                                        << texcoord_index);
+                natural_8_bit const  texcoord_index = it->second.get<unsigned int>("texcoord_index");
+                if (valid_texcoord_indices.count(texcoord_index) == 0UL)
+                    throw std::runtime_error(msgstream() << "The texture type '" << it->first
+                                                            << "' references a non-existing texcoord file of index "
+                                                            << texcoord_index);
 
-            std::string const  texure_pathname = (data_root_dir / it->second.get<std::string>("pathname")).string();
-            if (!boost::filesystem::is_regular_file(texure_pathname))
-                throw std::runtime_error(msgstream() << "The texture type '" << it->first
-                                                        << "' references a non-existing texture file: "
-                                                        << texure_pathname);
+                std::string const  texure_pathname = (data_root_dir / it->second.get<std::string>("pathname")).string();
+                if (!boost::filesystem::is_regular_file(texure_pathname))
+                    throw std::runtime_error(msgstream() << "The texture type '" << it->first
+                                                            << "' references a non-existing texture file: "
+                                                            << texure_pathname);
 
-            m_textures.insert({ sampler_location, { get_texcoord_binding_location(texcoord_index), texure_pathname } });
+                bool const  success =
+                    textures.insert({ sampler_location, { get_texcoord_binding_location(texcoord_index), texure_pathname } }).second;
+                if (!success)
+                    throw std::runtime_error(msgstream() << "The insertion of texture '" << texure_pathname << "' has FAILED.");
+
+            }
         }
+        draw_state const  dstate = create_draw_state(skin_it->second.find("draw_state")->second);
+
+        boost::property_tree::ptree const& alpha_testing_ptree = skin_it->second.find("alpha_testing")->second;
+        alpha_testing_props const  alpha_testing(
+                alpha_testing_ptree.get("use_alpha_testing", false),
+                alpha_testing_ptree.get("alpha_test_constant", 0.0f)
+                );
+
+        bool const  success = m_skins.insert({ skin_it->first, { textures, dstate, alpha_testing } }).second;
+        if (!success)
+            throw std::runtime_error(msgstream() << "The insertion of skin '" << skin_it->first << "' has FAILED.");
     }
+
+    if (m_skins.empty())
+        throw std::runtime_error(msgstream() << "No skin was found.");
 
     boost::filesystem::path const  skeletal_dir = buffers_dir / "skeletal";
     if (boost::filesystem::is_directory(skeletal_dir))
@@ -156,51 +178,29 @@ batch_available_resources_data::batch_available_resources_data(async::finalise_l
     }
     else if (batch_ptree.count("skeleton") != 0UL)
         throw std::runtime_error(msgstream() << "Skeletal buffer files are missing for the batch file '" << batch_pathname() << "'.");
-
-    m_draw_state = create_draw_state(batch_ptree.find("draw_state")->second);
-
-    boost::property_tree::ptree const&  shader_effects_ptree = batch_ptree.find("effects")->second;
-    auto const  convert_string_to_shader_program_type = 
-            [](std::string const&  shader_program_name) -> SHADER_PROGRAM_TYPE
-            {
-                if (shader_program_name == "vertex_program")
-                    return SHADER_PROGRAM_TYPE::VERTEX;
-                if (shader_program_name == "fragment_program")
-                    return SHADER_PROGRAM_TYPE::FRAGMENT;
-                throw std::runtime_error(msgstream() << "Unknown/unsupported shader program type '"
-                                                        << shader_program_name << "'.");
-            };
-    m_shaders_effects_config = shaders_effects_config_type(
-            shader_effects_ptree.get("use_alpha_testing", false),
-            shader_effects_ptree.get("alpha_test_constant", 0.0f),
-            convert_string_to_shader_program_type(shader_effects_ptree.get<std::string>("lighting_algo_location")),
-            convert_string_to_shader_program_type(shader_effects_ptree.get<std::string>("fog_algo_location"))
-            );
 }
 
 
 batch_available_resources_data::batch_available_resources_data(
         async::finalise_load_on_destroy_ptr,
         buffers_dictionaty_type const&  buffers_,
-        textures_dictionary_type const&  textures_,
         skeletal_info_const_ptr const&  skeletal_,
         std::string const&  batch_pathname_,
         std::string const&  data_root_dir_,
         std::string const&  mesh_path_,
         natural_8_bit const  num_indices_per_primitive_,
-        draw_state const  draw_state_,
-        shaders_effects_config_type const&  shaders_effects_config_
+        skins_dictionary const&  skins_
         )
     : m_buffers(buffers_)
-    , m_textures(textures_)
     , m_skeletal(skeletal_)
     , m_batch_pathname(batch_pathname_)
     , m_data_root_dir(data_root_dir_)
     , m_mesh_path(mesh_path_)
     , m_num_indices_per_primitive(num_indices_per_primitive_)
-    , m_draw_state(draw_state_)
-    , m_shaders_effects_config(shaders_effects_config_)
-{}
+    , m_skins(skins_)
+{
+    ASSUMPTION(!m_skins.empty());
+}
 
 
 }}

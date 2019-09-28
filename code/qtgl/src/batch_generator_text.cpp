@@ -166,54 +166,57 @@ batch  create_text(
         draw_state const  dstate(nullptr, true, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
         props.__batch_template__ = batch(
-            id.empty() ? id : "/generic/text/batch/" + id,
+            id.empty() ?
+                async::generate_unique_custom_id(
+                        "/generic/text/batch/__batch_template__<" +
+                        boost::filesystem::path(props.font_texture).filename().string() +
+                        ">")
+                :
+                "/generic/text/batch/" + id,
             buffers_binding_,
-            textures_binding(textures_binding_paths),
+            textures_binding_paths,
             texcoord_binding_,
             effects_config{
+                nullptr,
                 { LIGHT_TYPE::AMBIENT }, // Light types.
                 { { LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::TEXTURE} }, // Lighting data types.
+                SHADER_PROGRAM_TYPE::VERTEX, // lighting algo locaciton
                 {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
-                FOG_TYPE::NONE
+                FOG_TYPE::NONE,
+                SHADER_PROGRAM_TYPE::VERTEX // fog algo location
                 },
             dstate,
             modelspace(),
             skeleton_alignment(),
-            batch_available_resources(
-                buffers_binding_.get_buffers(),
-                textures_binding_paths,
-                texcoord_binding_,
-                dstate,
-                shaders_effects_config_type(
-                    true,
-                    0.01f,
-                    SHADER_PROGRAM_TYPE::VERTEX,
-                    SHADER_PROGRAM_TYPE::VERTEX
-                    )
-                )
+            batch_available_resources::alpha_testing_props(0.01f)
             );
     }
 
     return batch(
-        id.empty() ? id : "/generic/text/batch/" + id,
+        id.empty() ?
+            async::generate_unique_custom_id("/generic/text/batch/" + text.substr(0UL, 50UL))
+            :
+            "/generic/text/batch/" + id,
         buffers_binding(
             0U,
             3U,
             {
                 { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_POSITION,
-                buffer(xyz, true, (id.empty() ? id : "/generic/text/buffer/vertices/" + id)) },
+                        buffer(xyz, true, (id.empty() ? id : "/generic/text/buffer/vertices/" + id)) },
                 { VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0,
-            buffer(uv, (id.empty() ? id : "/generic/text/buffer/texcoord/" + id)) },
+                        buffer(uv, (id.empty() ? id : "/generic/text/buffer/texcoord/" + id)) },
             },
             id.empty() ? id : "/generic/text/buffers_binding/" + id
             ),
         props.__batch_template__.get_shaders_binding(),
         props.__batch_template__.get_textures_binding(),
+        props.__batch_template__.get_effects_config(),
         props.__batch_template__.get_draw_state(),
         props.__batch_template__.get_modelspace(),
         props.__batch_template__.get_skeleton_alignment(),
         props.__batch_template__.get_available_resources(),
         *props.__batch_template__.get_instancing_data_ptr(),
+        props.__batch_template__.get_skin_name(),
         nullptr
         );
 }

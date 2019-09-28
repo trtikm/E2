@@ -261,12 +261,12 @@ struct texture_data
     natural_32_bit  min_filtering_type() const { return m_texture_props.min_filtering_type(); }
     natural_32_bit  mag_filtering_type() const { return m_texture_props.mag_filtering_type(); }
 
-    void  create_gl_image();
-    void  destroy_gl_image();
+    void  create_gl_image() const;
+    void  destroy_gl_image() const;
 
 private:
 
-    GLuint  m_id;
+    mutable GLuint  m_id;
     texture_file  m_texture_props;
     texture_image  m_image_props;
 };

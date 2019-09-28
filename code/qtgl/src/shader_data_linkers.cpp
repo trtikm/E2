@@ -150,7 +150,7 @@ bool  vertex_shader_instanced_data_provider::make_current() const
             default: UNREACHABLE();
             }
     }
-    for (auto const&  location_and_buffer : m_buffers)
+    for (auto&  location_and_buffer : m_buffers)
         if (location_and_buffer.second.make_current(location_and_buffer.first, true) == false)
             return false;
 

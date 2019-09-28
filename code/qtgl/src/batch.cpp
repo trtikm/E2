@@ -21,20 +21,9 @@
 namespace qtgl { namespace detail {
 
 
-batch_data::batch_data(
-        async::finalise_load_on_destroy_ptr const  finaliser,
-        boost::filesystem::path const&  path,
-        effects_config const&  effects
-        )
+batch_data::~batch_data()
 {
     TMPROF_BLOCK();
-
-    async::finalise_load_on_destroy_ptr const  available_resources_finaliser =
-        async::finalise_load_on_destroy::create(
-                std::bind(&batch_data::load, this, effects, std::placeholders::_1),
-                finaliser
-                );
-    m_available_resources.insert_load_request(path.string(), available_resources_finaliser);
 }
 
 
@@ -43,14 +32,32 @@ batch_data::batch_data(
         buffers_binding const  buffers_binding_,
         textures_binding const  textures_binding_,
         texcoord_binding const&  texcoord_binding_,
-        effects_config const&  effects,
+        effects_config const  effects_,
         draw_state const  draw_state_,
         modelspace const  modelspace_,
         skeleton_alignment const  skeleton_alignment_,
-        batch_available_resources const&  resources
+        batch_available_resources const  resources_,
+        std::string const&  skin_name_
         )
+    : m_buffers_binding(buffers_binding_)
+    , m_shaders_binding()
+    , m_textures_binding(textures_binding_)
+    , m_effects_config(effects_)
+    , m_draw_state(draw_state_)
+    , m_modelspace(modelspace_)
+    , m_skeleton_alignment(skeleton_alignment_)
+    , m_available_resources(resources_)
+    , m_instancing_data()
+    , m_skin_name(skin_name_)
+    , m_ready(false)
 {
     TMPROF_BLOCK();
+
+    ASSUMPTION(
+        !m_available_resources.empty() &&
+        !m_available_resources.skins().empty() &&
+        m_available_resources.skins().find(m_skin_name) != m_available_resources.skins().end()
+        );
 
     std::vector<std::string>  vs_source;
     std::vector<std::string>  vs_source_instancing;
@@ -66,12 +73,13 @@ batch_data::batch_data(
     std::unordered_set<FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION>  fs_input;
     std::unordered_set<FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION>  fs_output;
     std::unordered_set<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME>  fs_uniforms;
-    shader_compose_result_type  result{"", effects};
+    shader_compose_result_type  result{"", get_effects_config().resource_const()};
     while (true)
     {
-        effects_config const  old_effects = result.second;
+        effects_config_data const  old_effects = result.second;
         result = compose_vertex_and_fragment_shader(
-                        resources,
+                        get_available_resources(),
+                        get_skin_name(),
                         old_effects,
                         vs_source,
                         vs_source_instancing,
@@ -102,12 +110,20 @@ batch_data::batch_data(
                                             // and the error message (in result.first) must have been produced.
         result.first.clear();
     }
+    m_effects_config = effects_config(
+            nullptr,
+            result.second.get_light_types(),
+            result.second.get_lighting_data_types(),
+            result.second.get_lighting_algo_location(),
+            result.second.get_shader_output_types(),
+            result.second.get_fog_type(),
+            result.second.get_fog_algo_location()
+            );
 
     fragment_shader const  frag_shader{ fs_input, fs_output, fs_uniforms, fs_source, fs_uid, finaliser };
 
-    shaders_binding  shaders_binding_;
     if (!vs_source.empty())
-        shaders_binding_ =
+        m_shaders_binding =
             {
                 vertex_shader{vs_input, vs_output, vs_uniforms, vs_source, vs_uid, finaliser },
                 frag_shader,
@@ -116,7 +132,7 @@ batch_data::batch_data(
             };
 
     batch_instancing_data  instancing_data;
-    if (resources.skeletal() == nullptr && !vs_source_instancing.empty())
+    if (m_available_resources.skeletal() == nullptr && !vs_source_instancing.empty())
     {
         for (auto const& location : vs_input_instancing)
         {
@@ -138,35 +154,22 @@ batch_data::batch_data(
                 };
     }
 
-    INVARIANT(!shaders_binding_.empty() || !instancing_data.m_shaders_binding.empty());
+    INVARIANT(!m_shaders_binding.empty() || !instancing_data.m_shaders_binding.empty());
 
-    initialise(
-            buffers_binding_,
-            shaders_binding_,
-            textures_binding_,
-            draw_state_,
-            modelspace_,
-            skeleton_alignment_,
-            resources,
-            instancing_data
-            );
+    m_instancing_data = make_instancing_data_from(instancing_data);
 }
 
 
-batch_data::~batch_data()
-{
-    TMPROF_BLOCK();
-}
-
-
-void  batch_data::load(
-        effects_config const&  effects,
-        async::finalise_load_on_destroy_ptr const  finaliser
-        )
+void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(get_available_resources().loaded_successfully());
+    ASSUMPTION(
+        get_available_resources().loaded_successfully() &&
+        !m_available_resources.empty() &&
+        !m_available_resources.skins().empty() &&
+        m_available_resources.skins().find(m_skin_name) != m_available_resources.skins().end()
+        );
 
     std::vector<std::string>  vs_source;
     std::vector<std::string>  vs_source_instancing;
@@ -182,12 +185,13 @@ void  batch_data::load(
     std::unordered_set<FRAGMENT_SHADER_INPUT_BUFFER_BINDING_LOCATION>  fs_input;
     std::unordered_set<FRAGMENT_SHADER_OUTPUT_BINDING_LOCATION>  fs_output;
     std::unordered_set<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME>  fs_uniforms;
-    shader_compose_result_type  result{"", effects};
+    shader_compose_result_type  result{"", get_effects_config().resource_const()};
     while (true)
     {
-        effects_config const  old_effects = result.second;
+        effects_config_data const  old_effects = result.second;
         result = compose_vertex_and_fragment_shader(
                         get_available_resources(),
+                        get_skin_name(),
                         old_effects,
                         vs_source,
                         vs_source_instancing,
@@ -218,6 +222,26 @@ void  batch_data::load(
                                             // and the error message (in result.first) must have been produced.
         result.first.clear();
     }
+    m_effects_config = effects_config(
+            nullptr,
+            result.second.get_light_types(),
+            result.second.get_lighting_data_types(),
+            result.second.get_lighting_algo_location(),
+            result.second.get_shader_output_types(),
+            result.second.get_fog_type(),
+            result.second.get_fog_algo_location()
+            );
+
+    fragment_shader const  frag_shader(fs_input, fs_output, fs_uniforms, fs_source, fs_uid, finaliser);
+
+    if (!vs_source.empty())
+        m_shaders_binding =
+            {
+                vertex_shader(vs_input, vs_output, vs_uniforms, vs_source, vs_uid, finaliser),
+                frag_shader,
+                "{" + vs_uid + "}{" + fs_uid + "}",
+                finaliser
+            };
 
     std::unordered_map<VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION, boost::filesystem::path>  buffer_paths;
     std::unordered_map<FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME, boost::filesystem::path>  texture_paths;
@@ -248,7 +272,7 @@ void  batch_data::load(
             {
                 buffer_paths.insert({location, get_available_resources().buffers().at(location)});
                 bool  used = false;
-                for (auto const&  elem : get_available_resources().textures())
+                for (auto const&  elem : get_available_resources().skins().at(get_skin_name()).textures())
                     if (fs_uniforms.count(elem.first) != 0UL && elem.second.first == location)
                     {
                         texture_paths.insert({elem.first, elem.second.second});
@@ -265,18 +289,51 @@ void  batch_data::load(
             UNREACHABLE();
         }
     }
+    m_buffers_binding = 
+            get_available_resources().has_index_buffer() ?
+                    buffers_binding(
+                        (boost::filesystem::path(get_available_resources().data_root_dir())
+                            / get_available_resources().mesh_path()
+                            / "indices.txt"
+                            ).string(),
+                        buffer_paths,
+                        (boost::filesystem::path(get_available_resources().data_root_dir())
+                            / get_available_resources().mesh_path()
+                            ).string(),
+                        finaliser
+                        )
+                    :
+                    buffers_binding(
+                        get_available_resources().num_indices_per_primitive(),
+                        buffer_paths,
+                        (boost::filesystem::path(get_available_resources().data_root_dir())
+                            / get_available_resources().mesh_path()
+                            ).string(),
+                        finaliser
+                        )
+                    ;
+    m_textures_binding = textures_binding(texture_paths, "", finaliser);
 
-    fragment_shader const  frag_shader(fs_input, fs_output, fs_uniforms, fs_source, fs_uid, finaliser);
-
-    shaders_binding  shaders_binding_;
-    if (!vs_source.empty())
-        shaders_binding_ =
-            {
-                vertex_shader(vs_input, vs_output, vs_uniforms, vs_source, vs_uid, finaliser),
-                frag_shader,
-                "{" + vs_uid + "}{" + fs_uid + "}",
-                finaliser
-            };
+    m_draw_state = get_available_resources().skins().at(get_skin_name()).get_draw_state();
+    m_modelspace = 
+            get_available_resources().skeletal() == nullptr ?
+                    modelspace()
+                    :
+                    modelspace(
+                        boost::filesystem::path(get_available_resources().data_root_dir())
+                        / "animations"
+                        / "skeletal"
+                        / get_available_resources().skeletal()->skeleton_name()
+                        / "pose.txt",
+                        10U,
+                        finaliser)
+                    ;
+    m_skeleton_alignment =
+            get_available_resources().skeletal() == nullptr ?
+                    skeleton_alignment()
+                    :
+                    skeleton_alignment(get_available_resources().skeletal()->alignment(), finaliser)
+                    ;
 
     batch_instancing_data  instancing_data;
     if (get_available_resources().skeletal() == nullptr && !vs_source_instancing.empty())
@@ -301,76 +358,9 @@ void  batch_data::load(
                 };
     }
 
-    INVARIANT(!shaders_binding_.empty() || !instancing_data.m_shaders_binding.empty());
+    INVARIANT(!m_shaders_binding.empty() || !instancing_data.m_shaders_binding.empty());
 
-    initialise(
-        get_available_resources().has_index_buffer() ?
-            buffers_binding(
-                (boost::filesystem::path(get_available_resources().data_root_dir())
-                    / get_available_resources().mesh_path()
-                    / "indices.txt"
-                    ).string(),
-                buffer_paths,
-                (boost::filesystem::path(get_available_resources().data_root_dir())
-                    / get_available_resources().mesh_path()
-                    ).string(),
-                finaliser
-                ):
-            buffers_binding(
-                get_available_resources().num_indices_per_primitive(),
-                buffer_paths,
-                (boost::filesystem::path(get_available_resources().data_root_dir())
-                    / get_available_resources().mesh_path()
-                    ).string(),
-                finaliser
-                ),
-        shaders_binding_,
-        textures_binding(texture_paths, "", finaliser),
-        get_available_resources().get_draw_state(),
-        get_available_resources().skeletal() == nullptr ?
-            modelspace() :
-            modelspace(
-                boost::filesystem::path(get_available_resources().data_root_dir())
-                    / "animations"
-                    / "skeletal"
-                    / get_available_resources().skeletal()->skeleton_name()
-                    / "pose.txt",
-                10U,
-                finaliser),
-        get_available_resources().skeletal() == nullptr ?
-            skeleton_alignment() :
-            skeleton_alignment(get_available_resources().skeletal()->alignment(), finaliser),
-        get_available_resources(),
-        instancing_data
-        );
-}
-
-
-void  batch_data::initialise(
-        buffers_binding const  buffers_binding_,
-        shaders_binding const  shaders_binding_,
-        textures_binding const  textures_binding_,
-        draw_state const  draw_state_,
-        modelspace const  modelspace_,
-        skeleton_alignment const  skeleton_alignment_,
-        batch_available_resources const  available_resources_,
-        batch_instancing_data const&  instancing_data
-        )
-{
-    TMPROF_BLOCK();
-
-    ASSUMPTION(modelspace_.empty() == skeleton_alignment_.empty());
-
-    m_buffers_binding = buffers_binding_;
-    m_shaders_binding = shaders_binding_;
-    m_textures_binding = textures_binding_;
-    m_draw_state = draw_state_;
-    m_modelspace = modelspace_;
-    m_skeleton_alignment = skeleton_alignment_;
-    m_available_resources = available_resources_;
-    m_instancing_data = instancing_data.m_buffers.empty() || instancing_data.m_shaders_binding.empty() ?
-                                nullptr : std::make_unique<batch_instancing_data>(instancing_data);
-    m_ready = false;
+    m_instancing_data = make_instancing_data_from(instancing_data);
 }
 
 

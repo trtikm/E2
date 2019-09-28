@@ -403,7 +403,7 @@ void  buffer_file_data::initialise(
 }
 
 
-void  buffer_file_data::create_gl_buffer()
+void  buffer_file_data::create_gl_buffer() const
 {
     if (id() != 0U)
         return;
@@ -425,7 +425,7 @@ void  buffer_file_data::create_gl_buffer()
 }
 
 
-void  buffer_file_data::destroy_gl_buffer()
+void  buffer_file_data::destroy_gl_buffer() const
 {
     if (id() == 0U)
         return;
@@ -437,7 +437,7 @@ void  buffer_file_data::destroy_gl_buffer()
 }
 
 
-bool  buffer_file_data::make_current(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  start_location, bool const  use_per_instance)
+bool  buffer_file_data::make_current(VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION const  start_location, bool const  use_per_instance) const
 {
     TMPROF_BLOCK();
 

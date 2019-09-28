@@ -12,12 +12,13 @@
 namespace qtgl {
 
 
-using  shader_compose_result_type = std::pair<std::string, effects_config>;
+using  shader_compose_result_type = std::pair<std::string, effects_config_data>;
 
 
 shader_compose_result_type  compose_vertex_and_fragment_shader(
         batch_available_resources const  resources,
-        effects_config const&  effects,
+        std::string const&  skin_name,
+        effects_config_data const&  effects,
         std::vector<std::string>&  vs_source,
         std::vector<std::string>&  vs_source_instancing,
         std::string&  vs_uid,

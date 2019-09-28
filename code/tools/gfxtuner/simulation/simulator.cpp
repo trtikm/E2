@@ -280,6 +280,7 @@ simulator::simulator()
     , m_camera_target_vector_invalidated(true)
 
     , m_effects_config(
+            nullptr,
             qtgl::effects_config::light_types{
                 qtgl::LIGHT_TYPE::AMBIENT,
                 qtgl::LIGHT_TYPE::DIRECTIONAL,
@@ -288,12 +289,15 @@ simulator::simulator()
                 { qtgl::LIGHTING_DATA_TYPE::POSITION, qtgl::SHADER_DATA_INPUT_TYPE::UNIFORM },
                 { qtgl::LIGHTING_DATA_TYPE::NORMAL, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE },
                 { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE },
+                //{ qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::UNIFORM },
                 { qtgl::LIGHTING_DATA_TYPE::SPECULAR, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE }
                 },
+            qtgl::SHADER_PROGRAM_TYPE::VERTEX,
             qtgl::effects_config::shader_output_types{
                 qtgl::SHADER_DATA_OUTPUT_TYPE::DEFAULT
                 },
-            qtgl::FOG_TYPE::NONE
+            qtgl::FOG_TYPE::NONE,
+            qtgl::SHADER_PROGRAM_TYPE::VERTEX
             )
     , m_diffuse_colour{ 1.0f, 1.0f, 1.0f, 1.0f }
     , m_ambient_colour{ 0.5f, 0.5f, 0.5f }

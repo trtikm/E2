@@ -39,17 +39,21 @@ batch  create_triangle_mesh(
             },
             id.empty() ? id : "/generic/triangle_mesh/buffers_binding/" + id
             ),
-        textures_binding(),
+        textures_binding_map_type{},
         {}, // Texcoord binding.
         effects_config{
+            nullptr,
             {}, // Light types.
-            {{LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::BUFFER}},
+            {{LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::BUFFER}}, // Lighting data types.
+            SHADER_PROGRAM_TYPE::VERTEX, // lighting algo locaciton
             {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
-            fog_type_
+            fog_type_,
+            SHADER_PROGRAM_TYPE::VERTEX // fog algo location
             },
         draw_state(nullptr),
         modelspace(),
-        skeleton_alignment()
+        skeleton_alignment(),
+        batch_available_resources::alpha_testing_props()
         );
     return pbatch;
 }
@@ -77,21 +81,25 @@ batch  create_triangle_mesh(
             },
             id.empty() ? id : "/generic/triangle_mesh/buffers_binding/" + id
             ),
-        textures_binding({
+        textures_binding_map_type({
             { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, diffuse }
             }),
         texcoord_binding({
             { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0 }
             }),
         effects_config{
+            nullptr,
             {}, // Light types.
-            {{LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::TEXTURE}},
+            {{LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::TEXTURE}}, // Lighting data types.
+            SHADER_PROGRAM_TYPE::VERTEX, // lighting algo locaciton
             {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
-            fog_type_
+            fog_type_,
+            SHADER_PROGRAM_TYPE::VERTEX // fog algo location
             },
         draw_state(nullptr),
         modelspace(),
-        skeleton_alignment()
+        skeleton_alignment(),
+        batch_available_resources::alpha_testing_props()
         );
     return pbatch;
 }
@@ -120,21 +128,25 @@ batch  create_triangle_mesh(
             },
             id.empty() ? id : "/generic/triangle_mesh/buffers_binding/" + id
             ),
-        textures_binding({
+        textures_binding_map_type({
             { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, diffuse }
             }),
         texcoord_binding({
             { FRAGMENT_SHADER_UNIFORM_SYMBOLIC_NAME::TEXTURE_SAMPLER_DIFFUSE, VERTEX_SHADER_INPUT_BUFFER_BINDING_LOCATION::BINDING_IN_TEXCOORD0 }
             }),
         effects_config{
+            nullptr,
             {}, // Light types.
-            {{LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::TEXTURE}},
+            {{LIGHTING_DATA_TYPE::DIFFUSE, SHADER_DATA_INPUT_TYPE::TEXTURE}}, // Lighting data types.
+            SHADER_PROGRAM_TYPE::VERTEX, // lighting algo locaciton
             {SHADER_DATA_OUTPUT_TYPE::DEFAULT},
-            fog_type_
+            fog_type_,
+            SHADER_PROGRAM_TYPE::VERTEX // fog algo location
             },
         draw_state(nullptr),
         modelspace(),
-        skeleton_alignment()
+        skeleton_alignment(),
+        batch_available_resources::alpha_testing_props()
         );
     return pbatch;
 }
