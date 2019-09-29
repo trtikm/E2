@@ -39,10 +39,6 @@ add_executable(${THIS_TARGET_NAME}
     window_tabs/tab_scene.hpp
     window_tabs/tab_scene.cpp
     window_tabs/tab_scene_bool_lock.hpp
-    window_tabs/tab_scene_insert_name_dialog.hpp
-    window_tabs/tab_scene_insert_name_dialog.cpp
-    window_tabs/tab_scene_insert_number_dialog.hpp
-    window_tabs/tab_scene_insert_number_dialog.cpp
     window_tabs/tab_scene_record_id_reverse_builder.hpp
     window_tabs/tab_scene_record_id_reverse_builder.cpp
     window_tabs/tab_scene_records_integration.hpp
@@ -74,6 +70,13 @@ add_executable(${THIS_TARGET_NAME}
     window_tabs/tab_statistics_physics.cpp
     window_tabs/tab_statistics_ai.hpp
     window_tabs/tab_statistics_ai.cpp
+
+    dialog/effects_config_dialog.hpp
+    dialog/effects_config_dialog.cpp
+    dialog/insert_name_dialog.hpp
+    dialog/insert_name_dialog.cpp
+    dialog/insert_number_dialog.hpp
+    dialog/insert_number_dialog.cpp
 
     simulation/simulator.hpp
     simulation/simulator.cpp

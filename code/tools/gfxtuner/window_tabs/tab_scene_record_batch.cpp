@@ -1,6 +1,7 @@
 #include <gfxtuner/window_tabs/tab_scene_record_batch.hpp>
 #include <gfxtuner/window_tabs/tab_scene.hpp>
 #include <gfxtuner/window_tabs/tab_scene_utils.hpp>
+#include <gfxtuner/dialog/effects_config_dialog.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <scene/scene.hpp>
@@ -12,118 +13,6 @@
 #include <utility/canonical_path.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
-#include <QFileDialog>
-#include <QDialog>
-#include <QHBoxLayout>
-#include <QVBoxLayout>
-#include <QLabel>
-#include <QPushButton>
-#include <QCheckBox>
-#include <QComboBox>
-#include <QLineEdit>
-#include <QGroupBox>
-
-namespace window_tabs { namespace tab_scene { namespace record_batch { namespace detail {
-
-
-struct  batch_props_dialog : public QDialog
-{
-    batch_props_dialog(
-            program_window* const  wnd,
-            qtgl::effects_config_data const&  old_effects_data,
-            std::string const&  old_skin_name
-            );
-
-    bool  ok() const { return m_ok; }
-
-    qtgl::effects_config_data const&  get_new_effects_data() const { return m_new_effects_data; }
-    std::string const&  get_new_skin_name() const { return m_new_skin_name; }
-
-public slots:
-
-    void  accept();
-    void  reject();
-
-private:
-    program_window*  m_wnd;
-    bool  m_ok;
-    QPushButton* m_widget_ok;
-
-    qtgl::effects_config_data  m_old_effects_data;
-    std::string  m_old_skin_name;
-    qtgl::effects_config_data  m_new_effects_data;
-    std::string  m_new_skin_name;
-};
-
-
-batch_props_dialog::batch_props_dialog(
-        program_window* const  wnd,
-        qtgl::effects_config_data const&  old_effects_data,
-        std::string const&  old_skin_name
-        )
-    : QDialog(wnd)
-    , m_wnd(wnd)
-    , m_ok(false)
-    , m_widget_ok(
-            [](batch_props_dialog* wnd) {
-                    struct OK : public QPushButton {
-                        OK(batch_props_dialog* wnd) : QPushButton("OK")
-                        {
-                            QObject::connect(this, SIGNAL(released()), wnd, SLOT(accept()));
-                        }
-                    };
-                    return new OK(wnd);
-                }(this)
-            )
-
-    , m_old_effects_data(old_effects_data)
-    , m_old_skin_name(old_skin_name)
-    , m_new_effects_data(old_effects_data)
-    , m_new_skin_name(old_skin_name)
-{
-    QVBoxLayout* const dlg_layout = new QVBoxLayout;
-    {
-        dlg_layout->addWidget(new QLabel("TODO!"));
-
-        QHBoxLayout* const buttons_layout = new QHBoxLayout;
-        {
-            buttons_layout->addWidget(m_widget_ok);
-            buttons_layout->addWidget(
-                [](batch_props_dialog* wnd) {
-                    struct Close : public QPushButton {
-                        Close(batch_props_dialog* wnd) : QPushButton("Cancel")
-                        {
-                            QObject::connect(this, SIGNAL(released()), wnd, SLOT(reject()));
-                        }
-                    };
-                    return new Close(wnd);
-                }(this)
-                );
-            buttons_layout->addStretch(1);
-        }
-        dlg_layout->addLayout(buttons_layout);
-    }
-    this->setLayout(dlg_layout);
-    this->setWindowTitle("Batch");
-
-    m_widget_ok->setEnabled(false);
-}
-
-
-void  batch_props_dialog::accept()
-{
-    m_ok = true;
-    QDialog::accept();
-}
-
-
-void  batch_props_dialog::reject()
-{
-    QDialog::reject();
-}
-
-
-}}}}
 
 namespace window_tabs { namespace tab_scene { namespace record_batch {
 
@@ -284,7 +173,15 @@ void  register_record_handler_for_update_scene_record(
                     scn::scene_node_ptr const  src_node_ptr =
                             w->wnd()->glwindow().call_now(&simulator::get_scene_node, record_id.get_node_id());
                     qtgl::batch const  old_batch = scn::get_batch(*src_node_ptr, record_id.get_record_name());
-                    detail::batch_props_dialog  dlg(w->wnd(), old_batch.get_effects_config().resource_const(), old_batch.get_skin_name());
+                    std::vector<std::string>  skin_names;
+                    for (auto const&  elem : old_batch.get_available_resources().skins())
+                        skin_names.push_back(elem.first);
+                    dialog::effects_config_dialog  dlg(
+                            w->wnd(),
+                            old_batch.get_effects_config().resource_const(),
+                            old_batch.get_skin_name(),
+                            skin_names
+                            );
                     dlg.exec();
                     if (!dlg.ok())
                         return;

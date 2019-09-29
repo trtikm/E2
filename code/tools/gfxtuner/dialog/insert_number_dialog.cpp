@@ -1,11 +1,11 @@
-#include <gfxtuner/window_tabs/tab_scene_insert_number_dialog.hpp>
+#include <gfxtuner/dialog/insert_number_dialog.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QString>
 #include <locale>
 
-namespace window_tabs { namespace tab_scene {
+namespace dialog {
 
 
 insert_number_dialog::insert_number_dialog(
@@ -118,4 +118,4 @@ void  insert_number_dialog::reject()
 }
 
 
-}}
+}

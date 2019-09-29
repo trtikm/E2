@@ -1,10 +1,10 @@
-#include <gfxtuner/window_tabs/tab_scene_insert_name_dialog.hpp>
+#include <gfxtuner/dialog/insert_name_dialog.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QString>
 
-namespace window_tabs { namespace tab_scene {
+namespace dialog {
 
 
 insert_name_dialog::insert_name_dialog(program_window* const  wnd,
@@ -112,4 +112,4 @@ bool  is_scene_forbidden_name(std::string const&  name)
 }
 
 
-}}
+}
