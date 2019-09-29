@@ -49,6 +49,7 @@ batch_data::batch_data(
     , m_available_resources(resources_)
     , m_instancing_data()
     , m_skin_name(skin_name_)
+    , m_path()
     , m_ready(false)
 {
     TMPROF_BLOCK();
@@ -110,15 +111,7 @@ batch_data::batch_data(
                                             // and the error message (in result.first) must have been produced.
         result.first.clear();
     }
-    m_effects_config = effects_config(
-            nullptr,
-            result.second.get_light_types(),
-            result.second.get_lighting_data_types(),
-            result.second.get_lighting_algo_location(),
-            result.second.get_shader_output_types(),
-            result.second.get_fog_type(),
-            result.second.get_fog_algo_location()
-            );
+    m_effects_config = effects_config::make(result.second);
 
     fragment_shader const  frag_shader{ fs_input, fs_output, fs_uniforms, fs_source, fs_uid, finaliser };
 
@@ -222,15 +215,7 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
                                             // and the error message (in result.first) must have been produced.
         result.first.clear();
     }
-    m_effects_config = effects_config(
-            nullptr,
-            result.second.get_light_types(),
-            result.second.get_lighting_data_types(),
-            result.second.get_lighting_algo_location(),
-            result.second.get_shader_output_types(),
-            result.second.get_fog_type(),
-            result.second.get_fog_algo_location()
-            );
+    m_effects_config = effects_config::make(result.second);
 
     fragment_shader const  frag_shader(fs_input, fs_output, fs_uniforms, fs_source, fs_uid, finaliser);
 

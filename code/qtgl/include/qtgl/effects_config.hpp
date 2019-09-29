@@ -165,6 +165,19 @@ struct  effects_config : public async::resource_accessor<effects_config_data>
             )
     {}
 
+    static inline effects_config  make(effects_config_data const&  data)
+    {
+        return effects_config(
+                    nullptr,
+                    data.get_light_types(),
+                    data.get_lighting_data_types(),
+                    data.get_lighting_algo_location(),
+                    data.get_shader_output_types(),
+                    data.get_fog_type(),
+                    data.get_fog_algo_location()
+                    );
+    }
+
     light_types const&  get_light_types() const { return resource().get_light_types(); }
     lighting_data_types const&  get_lighting_data_types() const { return resource().get_lighting_data_types(); }
     shader_output_types const&  get_shader_output_types() const { return resource().get_shader_output_types(); }
@@ -191,8 +204,6 @@ private:
 
 inline bool  operator==(effects_config const  left, effects_config const  right) { return left.operator==(right); }
 inline bool  operator!=(effects_config const  left, effects_config const  right) { return !(left == right); }
-
-
 
 
 }

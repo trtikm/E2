@@ -1533,7 +1533,7 @@ void  simulator::render_scene_batches(
                     qtgl::batch const  batch = scn::as_batch(name_holder.second);
                     if (!batch.loaded_successfully())
                         continue;
-                    auto&  record = batches[batch.path_component_of_uid()];
+                    auto&  record = batches[batch.key().get_unique_id()];
                     if (record.first.empty())
                         record.first = batch;
                     INVARIANT(record.first == batch);
@@ -2061,13 +2061,15 @@ void  simulator::update_collider_locations_in_subtree(scn::scene_node_ptr  node_
 void  simulator::insert_batch_to_scene_node(
         scn::scene_node::record_name const&  batch_name,
         boost::filesystem::path const&  batch_pathname,
+        std::string const&  skin_name,
+        qtgl::effects_config const  effects,
         scn::scene_node_id const&  id
         )
 {
     TMPROF_BLOCK();
 
     ASSUMPTION(scn::has_node(get_scene(), id));
-    auto const  batch = qtgl::batch(canonical_path(batch_pathname), get_effects_config());
+    auto const  batch = qtgl::batch(canonical_path(batch_pathname), effects, skin_name);
     scn::insert_batch(*get_scene_node(id), batch_name, batch);
 }
 

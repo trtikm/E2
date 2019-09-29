@@ -279,7 +279,7 @@ void simulator::next_round(float_64_bit const  miliseconds_from_previous_call,
 void  simulator::insert_batch(boost::filesystem::path const&  batch_pathname)
 {
     if (std::find_if(m_batches.cbegin(),m_batches.cend(),
-                     [&batch_pathname](qtgl::batch const  ptr) { return ptr.path_component_of_uid() == batch_pathname; })
+                     [&batch_pathname](qtgl::batch const  ptr) { return ptr.key().get_unique_id() == batch_pathname; })
             == m_batches.cend())
         m_batches.push_back(qtgl::batch(batch_pathname, get_effects_config()));
 }
@@ -287,7 +287,7 @@ void  simulator::insert_batch(boost::filesystem::path const&  batch_pathname)
 void  simulator::erase_batch(boost::filesystem::path const&  batch_pathname)
 {
     auto const  it = std::remove_if(m_batches.begin(),m_batches.end(),
-                                    [&batch_pathname](qtgl::batch const  ptr){ return ptr.path_component_of_uid() == batch_pathname; });
+                                    [&batch_pathname](qtgl::batch const  ptr){ return ptr.key().get_unique_id() == batch_pathname; });
     if (it != m_batches.cend())
         m_batches.erase(it);
 }

@@ -46,6 +46,7 @@ struct batch_data
         , m_available_resources()
         , m_instancing_data()
         , m_skin_name(skin_name_)
+        , m_path(path)
         , m_ready(false)
     {
         m_available_resources.insert_load_request(
@@ -90,6 +91,7 @@ struct batch_data
         , m_available_resources(resources_)
         , m_instancing_data(make_instancing_data_from(instancing_data_))
         , m_skin_name(skin_name_)
+        , m_path()
         , m_ready(false)
     {
         ASSUMPTION(modelspace_.empty() == skeleton_alignment_.empty());
@@ -107,6 +109,7 @@ struct batch_data
     batch_available_resources  get_available_resources() const { return m_available_resources; }
     std::string const&  get_skin_name() const { return m_skin_name; }
     batch_instancing_data const*  get_instancing_data_ptr() const { return m_instancing_data.get(); }
+    boost::filesystem::path const&  get_path() const { return m_path; }
 
     bool  is_attached_to_skeleton() const { return !get_modelspace().empty(); }
     bool  has_instancing_data() const { return m_instancing_data != nullptr; }
@@ -133,6 +136,7 @@ private:
     batch_available_resources  m_available_resources;
     batch_instancing_data_ptr  m_instancing_data;
     std::string  m_skin_name;
+    boost::filesystem::path  m_path;
     bool  m_ready;
 };
 
@@ -242,7 +246,7 @@ struct batch : public async::resource_accessor<detail::batch_data>
     batch_instancing_data const*  get_instancing_data_ptr() const { return resource().get_instancing_data_ptr(); }
 
     std::string  uid() const { return key().get_data_type_name() + key().get_unique_id(); }
-    std::string const&  path_component_of_uid() const { return key().get_unique_id(); }
+    boost::filesystem::path const&  get_path() const { return resource().get_path(); }
 
     bool  is_attached_to_skeleton() const { return resource().is_attached_to_skeleton(); }
     bool  has_instancing_data() const { return resource().has_instancing_data(); }

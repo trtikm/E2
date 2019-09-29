@@ -103,6 +103,8 @@ struct simulator : public qtgl::real_time_simulator
     void  insert_batch_to_scene_node(
             scn::scene_node::record_name const&  batch_name,
             boost::filesystem::path const&  batch_pathname,
+            std::string const&  skin_name,
+            qtgl::effects_config const  effects,
             scn::scene_node_id const&  scene_node_id
             );
 
@@ -246,8 +248,8 @@ struct simulator : public qtgl::real_time_simulator
 
     scn::scene_edit_data const&  get_scene_edit_data() const { return m_scene_edit_data; }
 
-    qtgl::effects_config const&  get_effects_config() const { return m_effects_config; }
-    qtgl::effects_config&  effects_config_ref() { return m_effects_config; }
+    qtgl::effects_config  get_effects_config() const { return m_effects_config; }
+    void  set_effects_config(qtgl::effects_config const  config) { m_effects_config = config; }
 
     scn::scene_node_id const&  get_scene_node_of_agent(ai::agent_id const  id) const { return m_binding_of_agents_to_scene.at(id); }
 
