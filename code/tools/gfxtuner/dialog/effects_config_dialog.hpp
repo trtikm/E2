@@ -6,6 +6,7 @@
 #   include <QFileDialog>
 #   include <QDialog>
 #   include <QPushButton>
+#   include <QComboBox>
 #   include <vector>
 #   include <string>
 
@@ -41,6 +42,8 @@ private:
     qtgl::effects_config_data  m_new_effects_data;
     std::string  m_new_skin_name;
     std::vector<std::string>  m_available_skin_names;
+
+    QComboBox*  m_skins_combo_box;
 };
 
 

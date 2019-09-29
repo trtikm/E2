@@ -172,43 +172,39 @@ void  register_record_handler_for_update_scene_record(
             [](widgets* const  w, scn::scene_record_id const&  record_id) -> void {
                     scn::scene_node_ptr const  src_node_ptr =
                             w->wnd()->glwindow().call_now(&simulator::get_scene_node, record_id.get_node_id());
-                    qtgl::batch const  old_batch = scn::get_batch(*src_node_ptr, record_id.get_record_name());
+
+                    boost::filesystem::path  pathname;
+                    qtgl::effects_config old_effects_config;
+                    std::string  old_skin_name;
                     std::vector<std::string>  skin_names;
-                    for (auto const&  elem : old_batch.get_available_resources().skins())
-                        skin_names.push_back(elem.first);
-                    dialog::effects_config_dialog  dlg(
-                            w->wnd(),
-                            old_batch.get_effects_config().resource_const(),
-                            old_batch.get_skin_name(),
-                            skin_names
-                            );
+                    {
+                        qtgl::batch const  old_batch = scn::get_batch(*src_node_ptr, record_id.get_record_name());
+                        pathname = old_batch.get_path();
+                        old_effects_config = old_batch.get_effects_config();
+                        old_skin_name = old_batch.get_skin_name();
+                        for (auto const& elem : old_batch.get_available_resources().skins())
+                            skin_names.push_back(elem.first);
+                    }
+                    dialog::effects_config_dialog  dlg(w->wnd(), old_effects_config.resource_const(), old_skin_name, skin_names);
                     dlg.exec();
                     if (!dlg.ok())
                         return;
-                    qtgl::batch const  new_batch(
-                            old_batch.get_path(),
-                            qtgl::effects_config::make(dlg.get_new_effects_data()),
-                            dlg.get_new_skin_name()
-                            );
+                    qtgl::effects_config const  new_effects_config = qtgl::effects_config::make(dlg.get_new_effects_data());
+                    std::string const  new_skin_name = dlg.get_new_skin_name();
+
                     w->get_scene_history()->insert<scn::scene_history_batch_update_props>(
                             std::cref(record_id),
-                            std::cref(old_batch.get_path()),
-                            std::cref(old_batch.get_skin_name()),
-                            old_batch.get_effects_config(),
-                            std::cref(new_batch.get_skin_name()),
-                            new_batch.get_effects_config(),
+                            std::cref(pathname),
+                            std::cref(old_skin_name),
+                            old_effects_config,
+                            std::cref(new_skin_name),
+                            new_effects_config,
                             false);
                     w->wnd()->glwindow().call_now(
-                            &simulator::erase_batch_from_scene_node,
+                            &simulator::replace_batch_in_scene_node,
                             std::cref(record_id.get_record_name()),
-                            std::cref(record_id.get_node_id())
-                            );
-                    w->wnd()->glwindow().call_now(
-                            &simulator::insert_batch_to_scene_node,
-                            std::cref(record_id.get_record_name()),
-                            std::cref(new_batch.get_path()),
-                            std::cref(new_batch.get_skin_name()),
-                            new_batch.get_effects_config(),
+                            std::cref(new_skin_name),
+                            new_effects_config,
                             std::cref(record_id.get_node_id())
                             );
                 }

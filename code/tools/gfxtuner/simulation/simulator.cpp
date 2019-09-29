@@ -2063,14 +2063,35 @@ void  simulator::insert_batch_to_scene_node(
         boost::filesystem::path const&  batch_pathname,
         std::string const&  skin_name,
         qtgl::effects_config const  effects,
-        scn::scene_node_id const&  id
+        scn::scene_node_id const&  scene_node_id
         )
 {
     TMPROF_BLOCK();
 
-    ASSUMPTION(scn::has_node(get_scene(), id));
+    ASSUMPTION(scn::has_node(get_scene(), scene_node_id));
     auto const  batch = qtgl::batch(canonical_path(batch_pathname), effects, skin_name);
-    scn::insert_batch(*get_scene_node(id), batch_name, batch);
+    scn::insert_batch(*get_scene_node(scene_node_id), batch_name, batch);
+}
+
+void  simulator::replace_batch_in_scene_node(
+        scn::scene_node::record_name const&  batch_name,
+        std::string const&  new_skin_name,
+        qtgl::effects_config const  new_effects,
+        scn::scene_node_id const&  scene_node_id
+        )
+{
+    TMPROF_BLOCK();
+
+    scn::scene_node_ptr const  node_ptr = get_scene_node(scene_node_id);
+    ASSUMPTION(node_ptr != nullptr);
+
+    qtgl::batch const  old_batch = scn::get_batch(*node_ptr, batch_name);
+    ASSUMPTION(!old_batch.empty());
+
+    qtgl::batch const  new_batch = qtgl::batch(old_batch.get_path(), new_effects, new_skin_name);
+
+    scn::erase_batch(*node_ptr, batch_name);
+    scn::insert_batch(*node_ptr, batch_name, new_batch);
 }
 
 void  simulator::erase_batch_from_scene_node(

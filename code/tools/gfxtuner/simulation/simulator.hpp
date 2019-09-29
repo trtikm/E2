@@ -108,6 +108,13 @@ struct simulator : public qtgl::real_time_simulator
             scn::scene_node_id const&  scene_node_id
             );
 
+    void  replace_batch_in_scene_node(
+            scn::scene_node::record_name const&  batch_name,
+            std::string const&  new_skin_name,
+            qtgl::effects_config const  new_effects,
+            scn::scene_node_id const&  scene_node_id
+            );
+
     void  erase_batch_from_scene_node(
             scn::scene_node::record_name const&  batch_name,
             scn::scene_node_id const&  scene_node_id
