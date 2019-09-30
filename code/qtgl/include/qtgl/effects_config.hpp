@@ -77,7 +77,7 @@ struct  effects_config_data
         : m_light_types()
         , m_lighting_data_types()
         , m_lighting_algo_location(SHADER_PROGRAM_TYPE::VERTEX)
-        , m_shader_output_types{ SHADER_DATA_OUTPUT_TYPE::DEFAULT }
+        , m_shader_output_types()
         , m_fog_type(FOG_TYPE::NONE)
         , m_fog_algo_location(SHADER_PROGRAM_TYPE::VERTEX)
     {}

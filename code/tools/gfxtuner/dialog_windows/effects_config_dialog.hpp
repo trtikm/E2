@@ -50,6 +50,10 @@ private:
     std::map<qtgl::LIGHT_TYPE, QCheckBox*>  m_ligh_type_check_boxes;
     std::map<qtgl::LIGHTING_DATA_TYPE, QComboBox*>  m_ligh_data_type_combo_boxes;
     static std::pair<std::vector<std::string>, std::vector<qtgl::SHADER_DATA_INPUT_TYPE> >  s_shader_data_input_types;
+    QComboBox*  m_lighting_algo_location_combo_box;
+    std::map<qtgl::SHADER_DATA_OUTPUT_TYPE, QCheckBox*>  m_shader_output_types_check_boxes;
+    QComboBox*  m_fog_type_combo_box;
+    QComboBox*  m_fog_algo_location_combo_box;
 };
 
 
