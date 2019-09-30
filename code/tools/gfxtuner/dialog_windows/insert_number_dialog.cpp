@@ -1,11 +1,11 @@
-#include <gfxtuner/dialog/insert_number_dialog.hpp>
+#include <gfxtuner/dialog_windows/insert_number_dialog.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QString>
 #include <locale>
 
-namespace dialog {
+namespace dialog_windows {
 
 
 insert_number_dialog::insert_number_dialog(

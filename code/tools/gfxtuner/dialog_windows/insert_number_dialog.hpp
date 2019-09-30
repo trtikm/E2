@@ -1,5 +1,5 @@
-#ifndef E2_TOOL_GFXTUNER_DIALOG_INSERT_NUMBER_DIALOG_HPP_INCLUDED
-#   define E2_TOOL_GFXTUNER_DIALOG_INSERT_NUMBER_DIALOG_HPP_INCLUDED
+#ifndef E2_TOOL_GFXTUNER_DIALOG_WINDOWS_INSERT_NUMBER_DIALOG_HPP_INCLUDED
+#   define E2_TOOL_GFXTUNER_DIALOG_WINDOWS_INSERT_NUMBER_DIALOG_HPP_INCLUDED
 
 #   include <gfxtuner/program_window.hpp>
 #   include <utility/basic_numeric_types.hpp>
@@ -8,7 +8,7 @@
 #   include <QPushButton>
 #   include <string>
 
-namespace dialog {
+namespace dialog_windows {
 
 
 struct  insert_number_dialog : public QDialog

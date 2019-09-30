@@ -559,12 +559,12 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
             if (effects.get_light_types().count(LIGHT_TYPE::DIRECTIONAL) != 0UL)
             {
                 if (effects.get_lighting_data_types().size() >= 3UL &&
-                    effects.get_lighting_data_types().count(LIGHTING_DATA_TYPE::POSITION) != 0UL &&
+                    effects.get_lighting_data_types().count(LIGHTING_DATA_TYPE::DIRECTION) != 0UL &&
                     effects.get_lighting_data_types().count(LIGHTING_DATA_TYPE::NORMAL) != 0UL &&
                     effects.get_lighting_data_types().count(LIGHTING_DATA_TYPE::DIFFUSE) != 0UL
                     )
                 {
-                    if (effects.get_lighting_data_types().at(LIGHTING_DATA_TYPE::POSITION) == SHADER_DATA_INPUT_TYPE::UNIFORM)
+                    if (effects.get_lighting_data_types().at(LIGHTING_DATA_TYPE::DIRECTION) == SHADER_DATA_INPUT_TYPE::UNIFORM)
                     {
                         if (effects.get_lighting_data_types().count(LIGHTING_DATA_TYPE::SPECULAR) == 0UL)
                         {
@@ -1362,13 +1362,13 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                     }
                     else
                     {
-                        result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "POSITION lighting data type is not assigned to UNIFOR shader input.";
-                        result.second.get_lighting_data_types()[qtgl::LIGHTING_DATA_TYPE::POSITION] = SHADER_DATA_INPUT_TYPE::UNIFORM;
+                        result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "DIRECTION lighting data type is not assigned to UNIFOR shader input.";
+                        result.second.get_lighting_data_types()[qtgl::LIGHTING_DATA_TYPE::DIRECTION] = SHADER_DATA_INPUT_TYPE::UNIFORM;
                     }
                 }
                 else
                 {
-                    result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "The lighting data types does not contain all POSITION, NORMAL, and DIFFUSE.";
+                    result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "The lighting data types does not contain all DIRECTION, NORMAL, and DIFFUSE.";
                     result.second.get_lighting_data_types() = { { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE } };
                     result.second.get_light_types().clear();
                 }
@@ -1520,6 +1520,11 @@ static shader_compose_result_type  compose_vertex_and_fragment_shader(
                     result.second.get_light_types().clear();
                 }
             }
+        }
+        else
+        {
+            result.first = E2_QTGL_ERROR_MESSAGE_PREFIX() + "Light types are not empty and the AMBIENT ligt type is not present.";
+            result.second.get_light_types().insert(LIGHT_TYPE::AMBIENT);
         }
     }
     else

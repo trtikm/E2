@@ -1,10 +1,10 @@
-#include <gfxtuner/dialog/insert_name_dialog.hpp>
+#include <gfxtuner/dialog_windows/insert_name_dialog.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QString>
 
-namespace dialog {
+namespace dialog_windows {
 
 
 insert_name_dialog::insert_name_dialog(program_window* const  wnd,

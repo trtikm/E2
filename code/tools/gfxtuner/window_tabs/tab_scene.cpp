@@ -3,8 +3,8 @@
 #include <gfxtuner/window_tabs/tab_scene_record_id_reverse_builder.hpp>
 #include <gfxtuner/window_tabs/tab_scene_records_integration.hpp>
 #include <gfxtuner/window_tabs/tab_scene_record_agent.hpp>
-#include <gfxtuner/dialog/insert_name_dialog.hpp>
-#include <gfxtuner/dialog/insert_number_dialog.hpp>
+#include <gfxtuner/dialog_windows/insert_name_dialog.hpp>
+#include <gfxtuner/dialog_windows/insert_number_dialog.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <gfxtuner/simulation/simulator_notifications.hpp>
@@ -517,9 +517,9 @@ void  widgets::on_scene_insert_coord_system()
         ++g_new_coord_system_id_counter;
     }
     while (wnd()->glwindow().call_now(&simulator::get_scene_node, inserted_item_id) != nullptr);
-    dialog::insert_name_dialog  dlg(wnd(), name,
+    dialog_windows::insert_name_dialog  dlg(wnd(), name,
         [this, &parent_item_id](std::string const&  name) {
-            return !dialog::is_scene_forbidden_name(name) &&
+            return !dialog_windows::is_scene_forbidden_name(name) &&
                    wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) == nullptr;
         });
     dlg.exec();
@@ -635,9 +635,9 @@ void  widgets::on_scene_insert_record(std::string const&  record_kind, std::stri
             record_name = msgstream() << record_name_and_system_inserted.first << "_" << counter;
             ++counter;
         }
-        dialog::insert_name_dialog  dlg(wnd(), record_name,
+        dialog_windows::insert_name_dialog  dlg(wnd(), record_name,
             [&used_names](std::string const&  name) {
-            return !dialog::is_scene_forbidden_name(name) && used_names.count(name) == 0UL;
+            return !dialog_windows::is_scene_forbidden_name(name) && used_names.count(name) == 0UL;
         });
         dlg.exec();
         record_name = dlg.get_name();
@@ -902,7 +902,7 @@ void  widgets::on_scene_duplicate_selected()
     vector3 const  world_pivot_origin = pivot->get_coord_system()->origin();
     quaternion const  world_pivot_orientation = pivot->get_coord_system()->orientation();
 
-    dialog::insert_number_dialog  dlg(wnd(), "Duplications count", 1, 1, 10000, true);
+    dialog_windows::insert_number_dialog  dlg(wnd(), "Duplications count", 1, 1, 10000, true);
     if (dlg.exec() == 0)
         return;
     natural_32_bit const  num_copies = (natural_32_bit)dlg.get_value();
@@ -957,9 +957,9 @@ void  widgets::on_scene_duplicate_selected()
 
         if (source_nodes.size() == 1UL)
         {
-            dialog::insert_name_dialog  dlg(wnd(), base_name,
+            dialog_windows::insert_name_dialog  dlg(wnd(), base_name,
                 [this, &parent_item_id](std::string const&  name) {
-                return !dialog::is_scene_forbidden_name(name) &&
+                return !dialog_windows::is_scene_forbidden_name(name) &&
                        wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) == nullptr;
             });
             if (dlg.exec() == 0)

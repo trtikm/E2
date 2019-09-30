@@ -71,12 +71,12 @@ add_executable(${THIS_TARGET_NAME}
     window_tabs/tab_statistics_ai.hpp
     window_tabs/tab_statistics_ai.cpp
 
-    dialog/effects_config_dialog.hpp
-    dialog/effects_config_dialog.cpp
-    dialog/insert_name_dialog.hpp
-    dialog/insert_name_dialog.cpp
-    dialog/insert_number_dialog.hpp
-    dialog/insert_number_dialog.cpp
+    dialog_windows/effects_config_dialog.hpp
+    dialog_windows/effects_config_dialog.cpp
+    dialog_windows/insert_name_dialog.hpp
+    dialog_windows/insert_name_dialog.cpp
+    dialog_windows/insert_number_dialog.hpp
+    dialog_windows/insert_number_dialog.cpp
 
     simulation/simulator.hpp
     simulation/simulator.cpp

@@ -45,7 +45,7 @@ enum struct  LIGHT_TYPE : natural_8_bit
 
 enum struct  LIGHTING_DATA_TYPE : natural_8_bit
 {
-    POSITION    = 0,
+    DIRECTION   = 0,
     NORMAL      = 1,
     DIFFUSE     = 2,
     SPECULAR    = 3,
@@ -72,6 +72,15 @@ struct  effects_config_data
     using  light_types = std::set<LIGHT_TYPE>;
     using  lighting_data_types = std::map<LIGHTING_DATA_TYPE, SHADER_DATA_INPUT_TYPE>;
     using  shader_output_types = std::set<SHADER_DATA_OUTPUT_TYPE>;
+
+    effects_config_data()
+        : m_light_types()
+        , m_lighting_data_types()
+        , m_lighting_algo_location(SHADER_PROGRAM_TYPE::VERTEX)
+        , m_shader_output_types{ SHADER_DATA_OUTPUT_TYPE::DEFAULT }
+        , m_fog_type(FOG_TYPE::NONE)
+        , m_fog_algo_location(SHADER_PROGRAM_TYPE::VERTEX)
+    {}
 
     effects_config_data(
             async::finalise_load_on_destroy_ptr,

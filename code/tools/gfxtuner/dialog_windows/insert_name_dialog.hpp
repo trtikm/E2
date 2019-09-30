@@ -1,5 +1,5 @@
-#ifndef E2_TOOL_GFXTUNER_DIALOG_INSERT_NAME_DIALOG_HPP_INCLUDED
-#   define E2_TOOL_GFXTUNER_DIALOG_INSERT_NAME_DIALOG_HPP_INCLUDED
+#ifndef E2_TOOL_GFXTUNER_DIALOG_WINDOWS_INSERT_NAME_DIALOG_HPP_INCLUDED
+#   define E2_TOOL_GFXTUNER_DIALOG_WINDOWS_INSERT_NAME_DIALOG_HPP_INCLUDED
 
 #   include <gfxtuner/program_window.hpp>
 #   include <QDialog>
@@ -9,7 +9,7 @@
 #   include <functional>
 #   include <string>
 
-namespace dialog {
+namespace dialog_windows {
 
 
 struct  insert_name_dialog : public QDialog

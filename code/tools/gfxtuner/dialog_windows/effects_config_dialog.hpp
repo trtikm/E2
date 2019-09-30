@@ -1,5 +1,5 @@
-#ifndef E2_TOOL_GFXTUNER_DIALOG_EFFECTS_CONFIG_DIALOG_HPP_INCLUDED
-#   define E2_TOOL_GFXTUNER_DIALOG_EFFECTS_CONFIG_DIALOG_HPP_INCLUDED
+#ifndef E2_TOOL_GFXTUNER_DIALOG_WINDOWS_EFFECTS_CONFIG_DIALOG_HPP_INCLUDED
+#   define E2_TOOL_GFXTUNER_DIALOG_WINDOWS_EFFECTS_CONFIG_DIALOG_HPP_INCLUDED
 
 #   include <gfxtuner/program_window.hpp>
 #   include <qtgl/effects_config.hpp>
@@ -7,10 +7,13 @@
 #   include <QDialog>
 #   include <QPushButton>
 #   include <QComboBox>
+#   include <QCheckBox>
 #   include <vector>
+#   include <map>
 #   include <string>
+#   include <utility>
 
-namespace dialog {
+namespace dialog_windows {
 
 
 struct  effects_config_dialog : public QDialog
@@ -44,6 +47,9 @@ private:
     std::vector<std::string>  m_available_skin_names;
 
     QComboBox*  m_skins_combo_box;
+    std::map<qtgl::LIGHT_TYPE, QCheckBox*>  m_ligh_type_check_boxes;
+    std::map<qtgl::LIGHTING_DATA_TYPE, QComboBox*>  m_ligh_data_type_combo_boxes;
+    static std::pair<std::vector<std::string>, std::vector<qtgl::SHADER_DATA_INPUT_TYPE> >  s_shader_data_input_types;
 };
 
 

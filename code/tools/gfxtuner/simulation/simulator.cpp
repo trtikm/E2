@@ -286,7 +286,7 @@ simulator::simulator()
                 qtgl::LIGHT_TYPE::DIRECTIONAL,
                 },
             qtgl::effects_config::lighting_data_types{
-                { qtgl::LIGHTING_DATA_TYPE::POSITION, qtgl::SHADER_DATA_INPUT_TYPE::UNIFORM },
+                { qtgl::LIGHTING_DATA_TYPE::DIRECTION, qtgl::SHADER_DATA_INPUT_TYPE::UNIFORM },
                 { qtgl::LIGHTING_DATA_TYPE::NORMAL, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE },
                 { qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::TEXTURE },
                 //{ qtgl::LIGHTING_DATA_TYPE::DIFFUSE, qtgl::SHADER_DATA_INPUT_TYPE::UNIFORM },

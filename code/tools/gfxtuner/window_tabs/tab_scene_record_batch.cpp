@@ -1,7 +1,7 @@
 #include <gfxtuner/window_tabs/tab_scene_record_batch.hpp>
 #include <gfxtuner/window_tabs/tab_scene.hpp>
 #include <gfxtuner/window_tabs/tab_scene_utils.hpp>
-#include <gfxtuner/dialog/effects_config_dialog.hpp>
+#include <gfxtuner/dialog_windows/effects_config_dialog.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <scene/scene.hpp>
@@ -185,7 +185,7 @@ void  register_record_handler_for_update_scene_record(
                         for (auto const& elem : old_batch.get_available_resources().skins())
                             skin_names.push_back(elem.first);
                     }
-                    dialog::effects_config_dialog  dlg(w->wnd(), old_effects_config.resource_const(), old_skin_name, skin_names);
+                    dialog_windows::effects_config_dialog  dlg(w->wnd(), old_effects_config.resource_const(), old_skin_name, skin_names);
                     dlg.exec();
                     if (!dlg.ok())
                         return;
