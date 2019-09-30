@@ -55,8 +55,8 @@ struct  scene_history_batch_update_props final : public scene_history_record_upd
         , m_batch_pathname(batch_pathname)
         , m_old_skin_name(old_skin_name)
         , m_old_effects(old_effects)
-        , m_new_skin_name(old_skin_name)
-        , m_new_effects(old_effects)
+        , m_new_skin_name(new_skin_name)
+        , m_new_effects(new_effects)
     {}
 
     boost::filesystem::path const& get_batch_pathname() const { return m_batch_pathname; }

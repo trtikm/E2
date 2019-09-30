@@ -214,12 +214,14 @@ effects_config_dialog::effects_config_dialog(
                         };
                         auto const set_current_value_in_combo_box = [this](QComboBox* const  combo_box, qtgl::LIGHTING_DATA_TYPE const  type)
                         {
-                            auto it = m_old_effects_data.get_lighting_data_types().find(type);
-                            if (it == m_old_effects_data.get_lighting_data_types().cend())
+                            auto const  lighting_data_it = m_old_effects_data.get_lighting_data_types().find(type);
+                            if (lighting_data_it == m_old_effects_data.get_lighting_data_types().cend())
                                 combo_box->setCurrentText("NONE");
                             else
                             {
-                                auto const  begin = m_old_effects_data.get_lighting_data_types().begin();
+                                auto const  begin = s_shader_data_input_types.second.cbegin();
+                                auto const  it = std::find(begin, s_shader_data_input_types.second.cend(), lighting_data_it->second);
+                                INVARIANT(it != s_shader_data_input_types.second.cend());
                                 combo_box->setCurrentText(s_shader_data_input_types.first.at(std::distance(begin, it)).c_str());
                             }
                         };

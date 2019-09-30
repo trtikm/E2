@@ -274,6 +274,21 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
             UNREACHABLE();
         }
     }
+
+    std::string  buffers_binding_uid;
+    {
+        msgstream  sstr;
+        sstr << "PATH="
+             << (boost::filesystem::path(get_available_resources().data_root_dir()) / get_available_resources().mesh_path()).string()
+             << ",BUFFERS=";
+        std::set<std::string>  names;
+        for (auto const& x : buffer_paths)
+            names.insert(name(x.first).substr(11)); // 11 == len("BINDING_IN_");
+        for (auto const&  name : names)
+            sstr << name << ",";
+        buffers_binding_uid = sstr.get();
+    }
+
     m_buffers_binding = 
             get_available_resources().has_index_buffer() ?
                     buffers_binding(
@@ -282,22 +297,36 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
                             / "indices.txt"
                             ).string(),
                         buffer_paths,
-                        (boost::filesystem::path(get_available_resources().data_root_dir())
-                            / get_available_resources().mesh_path()
-                            ).string(),
+                        buffers_binding_uid,
                         finaliser
                         )
                     :
                     buffers_binding(
                         get_available_resources().num_indices_per_primitive(),
                         buffer_paths,
-                        (boost::filesystem::path(get_available_resources().data_root_dir())
-                            / get_available_resources().mesh_path()
-                            ).string(),
+                        buffers_binding_uid,
                         finaliser
                         )
                     ;
-    m_textures_binding = textures_binding(texture_paths, "", finaliser);
+
+    std::string  textures_binding_uid;
+    {
+        std::string const  root_dir = boost::filesystem::path(get_available_resources().data_root_dir()).normalize().string();
+        std::set<std::string>  names;
+        for (auto const& x : texture_paths)
+        {
+            std::string  p = boost::filesystem::path(x.second).normalize().string();
+            if (p.find(root_dir) == 0UL)
+                p = p.substr(root_dir.size());
+            names.insert(msgstream() << name(x.first).substr(16) << "=" << p); // 16 == len("TEXTURE_SAMPLER_");
+        }
+        msgstream  sstr;
+        for (auto const& name : names)
+            sstr << name << ",";
+        textures_binding_uid = sstr.get();
+    }
+
+    m_textures_binding = textures_binding(texture_paths, textures_binding_uid, finaliser);
 
     m_draw_state = get_available_resources().skins().at(get_skin_name()).get_draw_state();
     m_modelspace = 
