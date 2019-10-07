@@ -87,7 +87,7 @@ offscreen::offscreen(natural_32_bit const  width_in_pixels, natural_32_bit const
     glapi().glGenFramebuffers(1, &m_frame_buffer_object);
     ASSUMPTION(m_frame_buffer_object != 0U);
 
-    m_depth_texture = detail::make_offscreen_texture(m_width_in_pixels, m_height_in_pixels, GL_DEPTH_COMPONENT, GL_FLOAT);
+    m_depth_texture = detail::make_offscreen_texture(m_width_in_pixels, m_height_in_pixels, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT);
     m_depth_texture_pixel_buffer_object = detail::make_pixel_buffer_object_for_offscreen_texture(m_depth_texture);
 
     if (use_colour_texture)
@@ -158,7 +158,7 @@ void  make_current_offscreen::release()
     {
         TMPROF_BLOCK();
         glapi().glBindBuffer(GL_PIXEL_PACK_BUFFER, m_ofs->get_depth_texture_pixel_buffer_object());
-        glapi().glReadPixels(0, 0, m_ofs->get_width_in_pixels(), m_ofs->get_height_in_pixels(), GL_DEPTH_COMPONENT, GL_FLOAT, 0);
+        glapi().glReadPixels(0, 0, m_ofs->get_width_in_pixels(), m_ofs->get_height_in_pixels(), GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, 0);
     }
 
     if (!m_ofs->get_colour_texture().empty())
@@ -228,12 +228,13 @@ void  update_offscreen_depth_image(offscreen::depth_image&  image, offscreen con
     TMPROF_BLOCK();
 
     glapi().glBindBuffer(GL_PIXEL_PACK_BUFFER, ofs.get_depth_texture_pixel_buffer_object());
-    offscreen::depth_image_pixel const*  src_data_ptr =
-            (offscreen::depth_image_pixel const*)glapi().glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+    using  raw_depth_image_pixel = natural_32_bit;
+    raw_depth_image_pixel const*  src_data_ptr =
+            (raw_depth_image_pixel const*)glapi().glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
     INVARIANT(qtgl::glapi().glGetError() == 0U && src_data_ptr != nullptr);
 
     for (offscreen::depth_image_pixel* ptr = image.data_ptr(), *end = image.data_ptr() + image.num_pixels(); ptr != end; ++ptr, ++src_data_ptr)
-        *ptr = *src_data_ptr;
+        *ptr = ((float_32_bit)*src_data_ptr) / (float_32_bit)std::numeric_limits<natural_32_bit>::max();
 
     glapi().glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
     glapi().glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
