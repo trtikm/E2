@@ -399,6 +399,7 @@ void  widgets::on_scene_hierarchy_item_update_action(tree_widget_item* const  it
     it->second(this, id);
     if (get_scene_history()->has_not_commited_data())
         get_scene_history()->commit();
+    set_window_title();
 }
 
 void  widgets::selection_changed_listener()
