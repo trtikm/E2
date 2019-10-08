@@ -277,20 +277,44 @@ void  register_record_handler_for_erase_scene_record(
 void  register_record_handler_for_load_scene_record(
         std::unordered_map<std::string, std::function<void(widgets*,
                                                            scn::scene_record_id const&,
-                                                           boost::property_tree::ptree const&)>>&
+                                                           boost::property_tree::ptree const&,
+                                                           std::unordered_map<std::string, boost::property_tree::ptree> const&)>>&
                 load_record_handlers
         )
 {
     load_record_handlers.insert({
             scn::get_batches_folder_name(),
-            [](widgets* const  w, scn::scene_record_id const&  id, boost::property_tree::ptree const&  data) -> void {
-                    boost::filesystem::path const  pathname = data.get<std::string>("pathname");
+            []( widgets* const  w,
+                scn::scene_record_id const&  id,
+                boost::property_tree::ptree const&  data,
+                std::unordered_map<std::string, boost::property_tree::ptree> const&  infos) -> void {
+                    boost::property_tree::ptree const&  effects = infos.at("effects").get_child(data.get<std::string>("effects"));
+                    qtgl::effects_config::light_types  light_types;
+                    for (auto const& lt_and_tree : effects.get_child("light_types"))
+                        light_types.insert((qtgl::LIGHT_TYPE)lt_and_tree.second.get_value<int>());
+                    qtgl::effects_config::lighting_data_types  lighting_data_types;
+                    for (auto const& ldt_and_tree : effects.get_child("lighting_data_types"))
+                        lighting_data_types.insert({
+                            (qtgl::LIGHTING_DATA_TYPE)std::atoi(ldt_and_tree.first.c_str()),
+                            (qtgl::SHADER_DATA_INPUT_TYPE)ldt_and_tree.second.get_value<int>()
+                        });
+                    qtgl::effects_config::shader_output_types  shader_output_types;
+                    for (auto const& sot_and_tree : effects.get_child("shader_output_types"))
+                        shader_output_types.insert((qtgl::SHADER_DATA_OUTPUT_TYPE)sot_and_tree.second.get_value<int>());
                     w->wnd()->glwindow().call_now(
                             &simulator::insert_batch_to_scene_node,
                             std::cref(id.get_record_name()),
-                            std::cref(pathname),
-                            std::cref("default"),
-                            w->wnd()->glwindow().call_now(&simulator::get_effects_config),
+                            data.get<std::string>("pathname"),
+                            data.get<std::string>("skin"),
+                            qtgl::effects_config(
+                                    nullptr,
+                                    light_types,
+                                    lighting_data_types,
+                                    (qtgl::SHADER_PROGRAM_TYPE)effects.get<int>("lighting_algo_location"),
+                                    shader_output_types,
+                                    (qtgl::FOG_TYPE)effects.get<int>("fog_type"),
+                                    (qtgl::SHADER_PROGRAM_TYPE)effects.get<int>("fog_algo_location")
+                                    ),
                             std::cref(id.get_node_id())
                             );
                     insert_record_to_tree_widget(
@@ -308,7 +332,8 @@ void  register_record_handler_for_save_scene_record(
         std::unordered_map<std::string, std::function<void(widgets*,
                                                            scn::scene_node_ptr,
                                                            scn::scene_node_record_id const&,
-                                                           boost::property_tree::ptree&)>>&
+                                                           boost::property_tree::ptree&,
+                                                           std::unordered_map<std::string, boost::property_tree::ptree>&)>>&
                 save_record_handlers
         )
 {
@@ -317,9 +342,50 @@ void  register_record_handler_for_save_scene_record(
             []( widgets*,
                 scn::scene_node_ptr const  node_ptr,
                 scn::scene_node_record_id const&  id,
-                boost::property_tree::ptree&  data) -> void {
+                boost::property_tree::ptree&  data,
+                std::unordered_map<std::string, boost::property_tree::ptree>&  infos) -> void {
                     qtgl::batch const  b = scn::get_batch(*node_ptr, id.get_record_name());
-                    data.put("pathname", b.get_path());
+                    data.put("pathname", b.get_path().string());
+                    data.put("skin", b.get_skin_name());
+                    data.put("effects", b.get_effects_config().key().get_unique_id());
+
+                    if (infos.at("effects").count(b.get_effects_config().key().get_unique_id()) == 0UL)
+                    {
+                        boost::property_tree::ptree  effect;
+                        {
+                            boost::property_tree::ptree  light_types;
+                            for (auto lt : b.get_effects_config().get_light_types())
+                            {
+                                boost::property_tree::ptree p;
+                                p.put_value((int)lt);
+                                light_types.push_back(boost::property_tree::ptree::value_type("", p));
+                            }
+                            effect.add_child("light_types", light_types);
+
+                            boost::property_tree::ptree  lighting_data_types;
+                            for (auto const& ldt : b.get_effects_config().get_lighting_data_types())
+                            {
+                                boost::property_tree::ptree p;
+                                lighting_data_types.put(std::to_string((int)ldt.first), (int)ldt.second);
+                            }
+                            effect.add_child("lighting_data_types", lighting_data_types);
+
+                            effect.put("lighting_algo_location", (int)b.get_effects_config().get_lighting_algo_location());
+                            
+                            boost::property_tree::ptree  shader_output_types;
+                            for (auto sot : b.get_effects_config().get_shader_output_types())
+                            {
+                                boost::property_tree::ptree p;
+                                p.put_value((int)sot);
+                                shader_output_types.push_back(boost::property_tree::ptree::value_type("", p));
+                            }
+                            effect.add_child("shader_output_types", shader_output_types);
+
+                            effect.put("fog_type", (int)b.get_effects_config().get_fog_type());
+                            effect.put("fog_algo_location", (int)b.get_effects_config().get_fog_algo_location());
+                        }
+                        infos.at("effects").add_child(b.get_effects_config().key().get_unique_id(), effect);
+                    }
                 }
             });
 }

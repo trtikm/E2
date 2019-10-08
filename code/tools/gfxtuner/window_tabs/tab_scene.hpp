@@ -141,22 +141,29 @@ private:
     void  erase_scene_record(scn::scene_record_id const&  id);
     void  erase_subtree_at_root_item(tree_widget_item* const  root_item, std::unordered_set<void*>&  erased_items, bool const  is_root = true);
 
-    void  load_scene_record(scn::scene_record_id const&  id, boost::property_tree::ptree const&  data);
+    void  load_scene_record(
+            scn::scene_record_id const&  id,
+            boost::property_tree::ptree const&  data,
+            std::unordered_map<std::string, boost::property_tree::ptree> const&  infos
+            );
     void  save_scene_record(
             scn::scene_node_ptr const  node_ptr,
             scn::scene_node_record_id const&  id,
-            boost::property_tree::ptree&  data
+            boost::property_tree::ptree&  data,
+            std::unordered_map<std::string, boost::property_tree::ptree>&  infos
             );
 
     tree_widget_item*  load_scene_node(
             scn::scene_node_id const&  id,
             boost::property_tree::ptree const&  node_tree,
+            std::unordered_map<std::string, boost::property_tree::ptree> const&  infos,
             tree_widget_item*  parent_item
             );
 
     void  save_scene_node(
             tree_widget_item* const  item_ptr,
-            boost::property_tree::ptree& save_tree
+            boost::property_tree::ptree&  save_tree,
+            std::unordered_map<std::string, boost::property_tree::ptree>&  infos
             );
 
     void  update_coord_system_location_widgets();
@@ -188,12 +195,16 @@ private:
             m_duplicate_record_handlers;
     std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&)>>
             m_erase_record_handlers;
-    std::unordered_map<std::string, std::function<void(widgets*, scn::scene_record_id const&, boost::property_tree::ptree const&)>>
+    std::unordered_map<std::string, std::function<void(widgets*,
+                                                       scn::scene_record_id const&,
+                                                       boost::property_tree::ptree const&,
+                                                       std::unordered_map<std::string, boost::property_tree::ptree> const&)>>
             m_load_record_handlers;
     std::unordered_map<std::string, std::function<void(widgets*,
                                                        scn::scene_node_ptr,
                                                        scn::scene_node_record_id const&,
-                                                       boost::property_tree::ptree&)>>
+                                                       boost::property_tree::ptree&,
+                                                       std::unordered_map<std::string, boost::property_tree::ptree>&)>>
             m_save_record_handlers;
 
     bool  m_processing_selection_change;

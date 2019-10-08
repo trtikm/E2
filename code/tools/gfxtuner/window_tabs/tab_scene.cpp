@@ -1034,24 +1034,30 @@ void  widgets::clear_scene()
 }
 
 
-void  widgets::load_scene_record(scn::scene_record_id const&  id, boost::property_tree::ptree const&  data)
+void  widgets::load_scene_record(
+        scn::scene_record_id const&  id,
+        boost::property_tree::ptree const&  data,
+        std::unordered_map<std::string, boost::property_tree::ptree> const&  infos
+        )
 {
-    m_load_record_handlers.at(id.get_folder_name())(this, id, data);
+    m_load_record_handlers.at(id.get_folder_name())(this, id, data, infos);
 }
 
 void  widgets::save_scene_record(
         scn::scene_node_ptr const  node_ptr,
         scn::scene_node_record_id const&  id,
-        boost::property_tree::ptree&  data
+        boost::property_tree::ptree&  data,
+        std::unordered_map<std::string, boost::property_tree::ptree>&  infos
         )
 {
-    m_save_record_handlers.at(id.get_folder_name())(this, node_ptr, id, data);
+    m_save_record_handlers.at(id.get_folder_name())(this, node_ptr, id, data, infos);
 }
 
 
 tree_widget_item*  widgets::load_scene_node(
         scn::scene_node_id const&  id,
         boost::property_tree::ptree const&  node_tree,
+        std::unordered_map<std::string, boost::property_tree::ptree> const&  infos,
         tree_widget_item*  parent_item
         )
 {
@@ -1081,12 +1087,12 @@ tree_widget_item*  widgets::load_scene_node(
 
     boost::property_tree::ptree const&  children = node_tree.find("children")->second;
     for (auto it = children.begin(); it != children.end(); ++it)
-        load_scene_node(id / it->first, it->second, current_node_item);
+        load_scene_node(id / it->first, it->second, infos, current_node_item);
 
     boost::property_tree::ptree const&  folders = node_tree.find("folders")->second;
     for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
         for (auto record_it = folder_it->second.begin(); record_it != folder_it->second.end(); ++record_it)
-            load_scene_record({ id, folder_it->first, record_it->first }, record_it->second);
+            load_scene_record({ id, folder_it->first, record_it->first }, record_it->second, infos);
 
     return current_node_item;
 }
@@ -1109,11 +1115,15 @@ void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
 
     try
     {
-        boost::property_tree::ptree  load_tree;
-        boost::property_tree::read_info((scene_root_dir / "hierarchy.info").string(), load_tree);
-
+        std::unordered_map<std::string, boost::property_tree::ptree>  infos{
+            { "hierarchy", boost::property_tree::ptree() },
+            { "effects", boost::property_tree::ptree() }
+        };
+        for (auto&  name_and_info : infos)
+            boost::property_tree::read_info((scene_root_dir / (name_and_info.first + ".info")).string(), name_and_info.second);
+        boost::property_tree::ptree&  load_tree = infos.at("hierarchy");
         for (auto  it = load_tree.begin(); it != load_tree.end(); ++it)
-            load_scene_node(scn::scene_node_id(it->first), it->second, nullptr);
+            load_scene_node(scn::scene_node_id(it->first), it->second, infos, nullptr);
         //m_scene_tree->expandAll();
         wnd()->set_title(scene_root_dir.string());
         wnd()->print_status_message("Loading of the scene has finished.", 10000);
@@ -1134,7 +1144,8 @@ void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
 
 void  widgets::save_scene_node(
         tree_widget_item* const  node_item_ptr,
-        boost::property_tree::ptree& save_tree
+        boost::property_tree::ptree&  save_tree,
+        std::unordered_map<std::string, boost::property_tree::ptree>&  infos
         )
 {
     ASSUMPTION(node_item_ptr != nullptr);
@@ -1165,7 +1176,7 @@ void  widgets::save_scene_node(
     boost::property_tree::ptree  children;
     for (int i = 0, n = node_item_ptr->childCount(); i != n; ++i)
         if (represents_coord_system(node_item_ptr->child(i)))
-            save_scene_node(as_tree_widget_item(node_item_ptr->child(i)), children);
+            save_scene_node(as_tree_widget_item(node_item_ptr->child(i)), children, infos);
         else
         {
             tree_widget_item* const  folder_ptr = as_tree_widget_item(node_item_ptr->child(i));
@@ -1182,7 +1193,7 @@ void  widgets::save_scene_node(
                 boost::property_tree::path const  record_name_path(record_name, '/');
 
                 boost::property_tree::ptree  record;
-                save_scene_record(node_ptr, { folder_name, record_name }, record);
+                save_scene_record(node_ptr, { folder_name, record_name }, record, infos);
                 records.put_child(record_name_path, record);
             }
             folders.put_child(folder_name_path, records);
@@ -1201,12 +1212,16 @@ void  widgets::save_scene(boost::filesystem::path const&  scene_root_dir)
         return;
     }
 
-    boost::property_tree::ptree save_tree;
+    std::unordered_map<std::string, boost::property_tree::ptree>  infos{
+        { "hierarchy", boost::property_tree::ptree() },
+        { "effects", boost::property_tree::ptree() }
+    };
+    boost::property_tree::ptree&  save_tree = infos.at("hierarchy");
     for (int i = 0, n = m_scene_tree->topLevelItemCount(); i != n; ++i)
-        save_scene_node(as_tree_widget_item(m_scene_tree->topLevelItem(i)), save_tree);
-
+        save_scene_node(as_tree_widget_item(m_scene_tree->topLevelItem(i)), save_tree, infos);
     boost::filesystem::create_directories(scene_root_dir);
-    boost::property_tree::write_info((scene_root_dir / "hierarchy.info").string(), save_tree);
+    for (auto& name_and_info : infos)
+        boost::property_tree::write_info((scene_root_dir / (name_and_info.first + ".info")).string(), name_and_info.second);
     wnd()->print_status_message(std::string("SUCCESS: Scene saved to: ") + scene_root_dir.string(), 5000);
     wnd()->set_title(scene_root_dir.string());
     m_save_commit_id = get_scene_history()->get_active_commit_id();
