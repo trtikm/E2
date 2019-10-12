@@ -529,6 +529,28 @@ def _show_lines_2d(plot_data):
     _show_points_2d_impl(plot_data, "-", "None")
 
 
+def _show_lines_list_2d(plot_data):
+    assert plot_data["num_dimensions"] == 2
+    new_plot_data = {
+        "num_dimensions": 2,
+        "points": [
+            {
+                "x": [],     # x-coords of all first points of lines
+                "y": []      # y-coords of all first points of lines
+            },
+            {
+                "x": [],     # x-coords of all second points of lines
+                "y": []      # y-coords of all second points of lines
+            }
+        ]
+    }
+    for i, p in enumerate(plot_data["points"]):
+        j = i % 2
+        new_plot_data["points"][j]["x"].append(p["x"])
+        new_plot_data["points"][j]["y"].append(p["y"])
+    _show_points_2d_impl(new_plot_data, "-", "None")
+
+
 def _show_points_and_lines_2d(plot_data):
     _show_points_2d_impl(plot_data, "-", ".")
 
@@ -648,6 +670,7 @@ def _get_plot_kinds_bindings():
     return {
         "points_2d": _show_points_2d,
         "lines_2d": _show_lines_2d,
+        "lines_list_2d": _show_lines_list_2d,
         "points_and_lines_2d": _show_points_and_lines_2d,
         "points_3d": _show_points_3d,
         "lines_3d": _show_lines_3d,
