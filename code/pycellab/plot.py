@@ -508,7 +508,7 @@ def _autodetect_plot_kind(plot_data):
     return None
 
 
-def _show_points_2d_impl(plot_data, line_style, point_style):
+def _show_points_2d_impl(plot_data, line_style, point_style, xlim=None, ylim=None):
     fig = plt.figure(dpi=100)
     ax = fig.gca()
     ax.set_title(plot_data["plot_title"] if "plot_title" in plot_data else "points_2d")
@@ -517,6 +517,10 @@ def _show_points_2d_impl(plot_data, line_style, point_style):
     ax.grid(plot_data["plot_show_grid"] if "plot_show_grid" in plot_data else True, linestyle='dotted')
     fx = [p["x"] for p in plot_data["points"]]
     fy = [p["y"] for p in plot_data["points"]]
+    if xlim is not None:
+        ax.set_xlim(xlim[0], xlim[1])
+    if ylim is not None:
+        ax.set_ylim(ylim[0], ylim[1])
     ax.plot(fx, fy, linestyle=line_style, marker=point_style)
     plt.show()
 
@@ -544,11 +548,15 @@ def _show_lines_list_2d(plot_data):
             }
         ]
     }
+    coords = []
     for i, p in enumerate(plot_data["points"]):
         j = i % 2
+        coords.append(p["x"])
+        coords.append(p["y"])
         new_plot_data["points"][j]["x"].append(p["x"])
         new_plot_data["points"][j]["y"].append(p["y"])
-    _show_points_2d_impl(new_plot_data, "-", "None")
+    lim = [min(coords), max(coords)]
+    _show_points_2d_impl(new_plot_data, "-", "None", xlim=lim, ylim=lim)
 
 
 def _show_points_and_lines_2d(plot_data):
