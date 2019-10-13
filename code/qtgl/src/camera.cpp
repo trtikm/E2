@@ -53,6 +53,20 @@ camera_perspective_ptr  camera_perspective::create(
 }
 
 
+camera_perspective_ptr  camera_perspective::create(
+        angeo::coordinate_system_ptr  coordinate_system,
+        float_32_bit const  near,
+        float_32_bit const  far,
+        float_32_bit const  left,
+        float_32_bit const  right,
+        float_32_bit const  bottom,
+        float_32_bit const  top
+        )
+{
+    return std::make_shared<camera_perspective>(coordinate_system, near, far, left, right, bottom, top);
+}
+
+
 camera_perspective::camera_perspective(
         angeo::coordinate_system_ptr  coordinate_system,
         float_32_bit const  near,

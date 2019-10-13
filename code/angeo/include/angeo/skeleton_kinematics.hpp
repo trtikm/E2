@@ -54,6 +54,10 @@ void  skeleton_rotate_bones_towards_target_pose(
         );
 
 
+vector3  compute_common_look_at_target_for_multiple_eyes(
+        std::vector<std::pair<vector3, vector3> > const&  vector_of_eye_pos_and_eye_unit_dir_pairs
+        );
+
 
 /// Given a parent for a bone (-1 when no parent), the function computes children the bone.
 void  skeleton_compute_child_bones(std::vector<integer_32_bit> const&  parents, std::vector<std::vector<integer_32_bit> >&  children);

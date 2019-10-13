@@ -11,7 +11,7 @@ namespace angeo { namespace detail {
 
 inline vector3  project_vector_to_plane(vector3 const&  unit_plane_normal, vector3 const&  u, float_32_bit const  param_mult = 1.0f)
 {
-    return u - param_mult * dot_product(u, unit_plane_normal) * unit_plane_normal;
+    return u - param_mult * project_to_unit_vector(u, unit_plane_normal);
 }
 
 
@@ -429,6 +429,41 @@ void  skeleton_rotate_bones_towards_target_pose(
 
         frame.set_orientation(result_cs.orientation());
     }
+}
+
+
+vector3  compute_common_look_at_target_for_multiple_eyes(
+        std::vector<std::pair<vector3, vector3> > const&  vector_of_eye_pos_and_eye_unit_dir_pairs
+        )
+{
+    TMPROF_BLOCK();
+
+    natural_32_bit  num_candidates = 0U;
+    vector3  target = vector3_zero();
+    for (natural_32_bit  i = 0U; i < vector_of_eye_pos_and_eye_unit_dir_pairs.size(); ++i)
+    {
+        std::pair<vector3, vector3> const&  pos_and_dir_i = vector_of_eye_pos_and_eye_unit_dir_pairs.at(i);
+        vector3 const&  P_i = pos_and_dir_i.first;
+        vector3 const&  d_i = pos_and_dir_i.second;
+        for (natural_32_bit j = i + 1U; j < vector_of_eye_pos_and_eye_unit_dir_pairs.size(); ++j)
+        {
+            std::pair<vector3, vector3> const& pos_and_dir_j = vector_of_eye_pos_and_eye_unit_dir_pairs.at(j);
+            vector3 const& P_j = pos_and_dir_j.first;
+            vector3 const& d_j = pos_and_dir_j.second;
+
+            vector3 const  S = 0.5f * (P_i + P_j);
+            vector3 const  w = 0.5f * (d_i + d_j);
+            float_32_bit const  d = 0.5f * (length(detail::project_vector_to_plane(w, P_i)) + length(detail::project_vector_to_plane(w, P_j)));
+            float_32_bit const  a = 0.5f * (angle(d_i, w) + angle(d_j, w));
+            float_32_bit const  t = std::fabsf(a) < 0.001f || std::fabsf(a) > PI() / 2.0 - 0.001f ? 1.0f : d / std::tanf(a);
+
+            target += S + t * w;
+            ++num_candidates;
+        }
+    }
+    if (num_candidates > 1U)
+        target = (1.0f / (float_32_bit)num_candidates) * target;
+    return target;
 }
 
 
