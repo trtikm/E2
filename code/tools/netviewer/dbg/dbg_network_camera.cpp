@@ -30,8 +30,8 @@ void  dbg_network_camera::enable(qtgl::camera_perspective_ptr const  camera)
 
     m_batch_camera_frustum =
         qtgl::create_wireframe_perspective_frustum(
-                m_camera->near_plane(),
-                m_camera->far_plane(),
+                -m_camera->near_plane(),
+                -m_camera->far_plane(),
                 m_camera->left(),
                 m_camera->right(),
                 m_camera->top(),
@@ -58,8 +58,8 @@ void  dbg_network_camera::set_far_plane(float_32_bit const  value)
 
         m_batch_camera_frustum =
             qtgl::create_wireframe_perspective_frustum(
-                    m_camera->near_plane(),
-                    m_camera->far_plane(),
+                    -m_camera->near_plane(),
+                    -m_camera->far_plane(),
                     m_camera->left(),
                     m_camera->right(),
                     m_camera->top(),
@@ -76,8 +76,8 @@ void  dbg_network_camera::on_window_resized(qtgl::window_props const&  window_pr
 
     m_batch_camera_frustum =
         qtgl::create_wireframe_perspective_frustum(
-                m_camera->near_plane(),
-                m_camera->far_plane(),
+                -m_camera->near_plane(),
+                -m_camera->far_plane(),
                 m_camera->left(),
                 m_camera->right(),
                 m_camera->top(),
@@ -111,16 +111,11 @@ void  dbg_network_camera::render_camera_frustum(
 
     if (qtgl::make_current(m_batch_camera_frustum, draw_state))
     {
-        float_32_bit const  param = -0.5f * (m_camera->near_plane() + m_camera->far_plane());
-
         qtgl::render_batch(
             m_batch_camera_frustum,
             matrix_from_world_to_camera,
             matrix_from_camera_to_clipspace,
-            angeo::coordinate_system(
-                m_camera->coordinate_system()->origin() + param * angeo::axis_z(*m_camera->coordinate_system()),
-                m_camera->coordinate_system()->orientation()
-                ),
+            *m_camera->coordinate_system(),
             vector4(1.0f, 1.0f, 1.0f, 1.0f)
             );
 

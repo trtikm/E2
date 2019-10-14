@@ -392,6 +392,7 @@ private:
     {
         std::unique_ptr<std::pair<std::vector< std::pair<vector3, vector3> >, std::vector<vector4> > >  lines;
         qtgl::batch  lines_batch;
+        std::unordered_map<ai::agent_id, qtgl::batch>  sight_frustum_batches;
     };
     cache_of_batches_of_ai_agents  m_cache_of_batches_of_ai_agents;
 

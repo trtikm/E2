@@ -143,6 +143,7 @@ batch  create_wireframe_perspective_frustum(
         float_32_bit const  top_plane,
         float_32_bit const  bottom_plane,
         vector4 const&  colour,
+        bool const  with_axis = false,
         FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
         std::string const&  id = ""
         );

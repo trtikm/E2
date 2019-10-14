@@ -1123,7 +1123,11 @@ void  simulator::update_retina_of_agents_from_offscreen_images()
 {
     TMPROF_BLOCK();
 
-    for (auto const& agent_id_and_node_id : m_binding_of_agents_to_scene)
+    float_32_bit const  camera_FOV_angle = PI() / 2.0f;
+    float_32_bit const  camera_proj_dist = 0.05f;
+    float_32_bit const  camera_origin_z_shift = 0.0f;
+
+    for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
     {
         if (!m_agents_ptr->ready(agent_id_and_node_id.first))
             continue;
@@ -1132,69 +1136,11 @@ void  simulator::update_retina_of_agents_from_offscreen_images()
         if (retina_ptr == nullptr)
             continue;
 
-        auto  offscreen_it = m_offscreens.find(agent_id_and_node_id.first);
         auto  camera_it = m_offscreen_cameras.find(agent_id_and_node_id.first);
-
-        bool const  was_present_in_last_round = offscreen_it != m_offscreens.cend();
-        if (!was_present_in_last_round)
-        {
-            offscreen_it = m_offscreens.insert({
-                    agent_id_and_node_id.first,
-                    {
-                        qtgl::make_offscreen(
-                            retina_ptr->get_width_in_pixels(),
-                            retina_ptr->get_height_in_pixels(),
-                            retina_ptr->get_colour_image() != nullptr
-                            ),
-                        qtgl::make_offscreen(
-                            retina_ptr->get_width_in_pixels(),
-                            retina_ptr->get_height_in_pixels(),
-                            retina_ptr->get_colour_image() != nullptr
-                            )
-                        }
-                    }).first;
-
-            INVARIANT(camera_it == m_offscreen_cameras.cend());
-
-            float_32_bit const  camera_FOV_angle = PI() / 2.0f;
-            float_32_bit const  tan_half_FOV_angle = std::tanf(camera_FOV_angle * 0.5f);
-            float_32_bit const  camera_proj_dist = 0.1f;
-            float_32_bit const  camera_window_half_size = camera_proj_dist * tan_half_FOV_angle;
-
-            camera_it = m_offscreen_cameras.insert({
-                    agent_id_and_node_id.first,
-                    qtgl::camera_perspective::create(
-                            angeo::coordinate_system::create(vector3_zero(), quaternion_identity()),
-                            camera_proj_dist,
-                            50.0f,
-                            -camera_window_half_size,
-                            camera_window_half_size,
-                            -camera_window_half_size,
-                            camera_window_half_size
-                            )
-                    }).first;
-        }
-        INVARIANT(camera_it != m_offscreen_cameras.cend());
-
-        if (was_present_in_last_round)
-        {
-            TMPROF_BLOCK();
-
-            qtgl::update_offscreen_depth_image(*retina_ptr->get_depth_image(), *offscreen_it->second.first);
-            //qtgl::from_screen_space_to_camera_space(*retina_ptr->get_depth_image(), camera_it->second->near_plane(), camera_it->second->far_plane());
-            //qtgl::from_camera_space_to_interval_01(*retina_ptr->get_depth_image(), camera_it->second->near_plane(), camera_it->second->far_plane());
-            qtgl::normalise_offscreen_depth_image_interval_01(*retina_ptr->get_depth_image());
-            if (retina_ptr->get_colour_image() != nullptr)
-            {
-                qtgl::update_offscreen_colour_image(*retina_ptr->get_colour_image(), *offscreen_it->second.first);
-                //qtgl::modulate_offscreen_colour_image_by_depth_image(*retina_ptr->get_colour_image(), *retina_ptr->get_depth_image());
-            }
-        }
-
-        // TODO: here update 'camera_it->second' according to scene nodes of 'free_bones_look_at' of the agent!
 
         angeo::coordinate_system  camera_coord_system;
         {
+            TMPROF_BLOCK();
 
             std::vector<std::pair<vector3, vector3> >  look_at_props;
             std::vector<vector3>  eye_right_directions;
@@ -1222,7 +1168,10 @@ void  simulator::update_retina_of_agents_from_offscreen_images()
                 }
             }
             if (look_at_props.empty())
+            {
+                m_offscreen_cameras.erase(camera_it);
                 continue;
+            }
 
             vector3  camera_origin;
             {
@@ -1238,7 +1187,10 @@ void  simulator::update_retina_of_agents_from_offscreen_images()
 
                 float_32_bit const  d = length(camera_z_axis);
                 if (std::fabs(d) < 0.001f)
+                {
+                    m_offscreen_cameras.erase(camera_it);
                     continue;
+                }
 
                 camera_z_axis = (1.0f / d) * camera_z_axis;
             }
@@ -1252,7 +1204,10 @@ void  simulator::update_retina_of_agents_from_offscreen_images()
 
                 float_32_bit const  d = length(camera_y_axis);
                 if (std::fabs(d) < 0.001f)
+                {
+                    m_offscreen_cameras.erase(camera_it);
                     continue;
+                }
 
                 camera_y_axis = (1.0f / d) * camera_y_axis;
                 camera_x_axis = cross_product(camera_y_axis, camera_z_axis);
@@ -1260,11 +1215,61 @@ void  simulator::update_retina_of_agents_from_offscreen_images()
             matrix33 R;
             basis_to_rotation_matrix(camera_x_axis, camera_y_axis, camera_z_axis, R);
 
-            float_32_bit const  ORIGIN_Z_SHIFT = 0.5f * camera_it->second->near_plane();
-
-            camera_coord_system = { camera_origin + ORIGIN_Z_SHIFT * camera_z_axis, rotation_matrix_to_quaternion(R) };
+            camera_coord_system = { camera_origin + camera_origin_z_shift * camera_z_axis, rotation_matrix_to_quaternion(R) };
         }
+
+        if (camera_it == m_offscreen_cameras.cend())
+        {
+            float_32_bit const  tan_half_FOV_angle = std::tanf(camera_FOV_angle * 0.5f);
+            float_32_bit const  camera_window_half_size = camera_proj_dist * tan_half_FOV_angle;
+
+            camera_it = m_offscreen_cameras.insert({
+                    agent_id_and_node_id.first,
+                    qtgl::camera_perspective::create(
+                            angeo::coordinate_system::create(vector3_zero(), quaternion_identity()),
+                            camera_proj_dist,
+                            50.0f,
+                            -camera_window_half_size,
+                            camera_window_half_size,
+                            -camera_window_half_size,
+                            camera_window_half_size
+                            )
+                    }).first;
+        }
+
         camera_it->second->set_coordinate_system(camera_coord_system);
+
+        auto  offscreen_it = m_offscreens.find(agent_id_and_node_id.first);
+        if (offscreen_it == m_offscreens.cend())
+            offscreen_it = m_offscreens.insert({
+                    agent_id_and_node_id.first,
+                    {
+                        qtgl::make_offscreen(
+                            retina_ptr->get_width_in_pixels(),
+                            retina_ptr->get_height_in_pixels(),
+                            retina_ptr->get_colour_image() != nullptr
+                            ),
+                        qtgl::make_offscreen(
+                            retina_ptr->get_width_in_pixels(),
+                            retina_ptr->get_height_in_pixels(),
+                            retina_ptr->get_colour_image() != nullptr
+                            )
+                        }
+                    }).first;
+        else
+        {
+            TMPROF_BLOCK();
+
+            qtgl::update_offscreen_depth_image(*retina_ptr->get_depth_image(), *offscreen_it->second.first);
+            //qtgl::from_screen_space_to_camera_space(*retina_ptr->get_depth_image(), camera_it->second->near_plane(), camera_it->second->far_plane());
+            //qtgl::from_camera_space_to_interval_01(*retina_ptr->get_depth_image(), camera_it->second->near_plane(), camera_it->second->far_plane());
+            qtgl::normalise_offscreen_depth_image_interval_01(*retina_ptr->get_depth_image());
+            if (retina_ptr->get_colour_image() != nullptr)
+            {
+                qtgl::update_offscreen_colour_image(*retina_ptr->get_colour_image(), *offscreen_it->second.first);
+                //qtgl::modulate_offscreen_colour_image_by_depth_image(*retina_ptr->get_colour_image(), *retina_ptr->get_depth_image());
+            }
+        }
 
         matrix44  offscreen_matrix_from_world_to_camera;
         camera_it->second->to_camera_space_matrix(offscreen_matrix_from_world_to_camera);
@@ -1272,15 +1277,19 @@ void  simulator::update_retina_of_agents_from_offscreen_images()
         camera_it->second->projection_matrix(offscreen_matrix_from_camera_to_clipspace);
         qtgl::draw_state  offscreen_draw_state;
 
-        qtgl::make_current_offscreen const  offscreen_guard(*offscreen_it->second.second);
+        {
+            TMPROF_BLOCK();
 
-        qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        qtgl::glapi().glViewport(0, 0, offscreen_it->second.second->get_width_in_pixels(), offscreen_it->second.second->get_height_in_pixels());
-        qtgl::glapi().glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            qtgl::make_current_offscreen const  offscreen_guard(*offscreen_it->second.second);
 
-        render_scene_batches(offscreen_matrix_from_world_to_camera, offscreen_matrix_from_camera_to_clipspace, offscreen_draw_state);
+            qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            qtgl::glapi().glViewport(0, 0, offscreen_it->second.second->get_width_in_pixels(), offscreen_it->second.second->get_height_in_pixels());
+            qtgl::glapi().glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-        std::swap(offscreen_it->second.first, offscreen_it->second.second);
+            render_scene_batches(offscreen_matrix_from_world_to_camera, offscreen_matrix_from_camera_to_clipspace, offscreen_draw_state);
+
+            std::swap(offscreen_it->second.first, offscreen_it->second.second);
+        }
     }
 }
 
@@ -2014,6 +2023,62 @@ void  simulator::render_ai_action_controller_props(
                 matrix_from_camera_to_clipspace
                 );
         draw_state = m_cache_of_batches_of_ai_agents.lines_batch.get_draw_state();
+    }
+
+    for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
+    {
+        if (!m_agents_ptr->ready(agent_id_and_node_id.first))
+            continue;
+
+        auto const  camera_it = m_offscreen_cameras.find(agent_id_and_node_id.first);
+        if (camera_it == m_offscreen_cameras.cend())
+        {
+            m_cache_of_batches_of_ai_agents.sight_frustum_batches.erase(agent_id_and_node_id.first);
+            continue;
+        }
+
+        matrix44  from_sight_to_camera_matrix;
+        {
+            matrix44  W;
+            angeo::from_base_matrix(*camera_it->second->coordinate_system(), W);
+            from_sight_to_camera_matrix = matrix_from_world_to_camera * W;
+        }
+
+        if (qtgl::make_current(m_batch_coord_system, draw_state))
+        {
+            qtgl::render_batch(
+                m_batch_coord_system,
+                from_sight_to_camera_matrix,
+                matrix_from_camera_to_clipspace
+            );
+            draw_state = m_batch_coord_system.get_draw_state();
+        }
+
+        auto  frustum_batch_it = m_cache_of_batches_of_ai_agents.sight_frustum_batches.find(agent_id_and_node_id.first);
+        if (frustum_batch_it == m_cache_of_batches_of_ai_agents.sight_frustum_batches.end())
+            frustum_batch_it = m_cache_of_batches_of_ai_agents.sight_frustum_batches.insert({
+                    agent_id_and_node_id.first,
+                    qtgl::create_wireframe_perspective_frustum(
+                            -camera_it->second->near_plane(),
+                            -camera_it->second->far_plane(),
+                            camera_it->second->left(),
+                            camera_it->second->right(),
+                            camera_it->second->top(),
+                            camera_it->second->bottom(),
+                            vector4{0.5f, 0.5f, 0.5f, 1.0f},
+                            true
+                            )
+                    }).first;
+
+        if (qtgl::make_current(frustum_batch_it->second, draw_state))
+        {
+            qtgl::render_batch(
+                frustum_batch_it->second,
+                from_sight_to_camera_matrix,
+                matrix_from_camera_to_clipspace
+            );
+            draw_state = frustum_batch_it->second.get_draw_state();
+        }
     }
 }
 
@@ -2892,6 +2957,7 @@ void  simulator::clear_scene()
 
     m_cache_of_batches_of_ai_agents.lines.release();
     m_cache_of_batches_of_ai_agents.lines_batch.release();
+    m_cache_of_batches_of_ai_agents.sight_frustum_batches.clear();
 
     m_agents_ptr->clear();
     m_binding_of_agents_to_scene.clear();
