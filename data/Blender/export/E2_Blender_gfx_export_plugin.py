@@ -1232,8 +1232,8 @@ def save_keyframe_coord_systems_of_bones(
         meta_object_name = armature.name + "/meta"
         meta_object = bpy.data.objects[meta_object_name] if meta_object_name in bpy.data.objects else None
         if meta_object is None:
-            print("INFO: The meta-object '" + meta_object_name + "' was NOT found!.")
-            print("      => No meta-data will be exported for the armature '" + armature.name + "'!")
+            print("INFO: The animation meta-object '" + meta_object_name + "' was NOT found!.")
+            print("      => No animation meta-data will be exported for the armature '" + armature.name + "'!")
         else:
             meta_object.animation_data_create()     # Ensures animation data of the object are available
             old_meta_object_action = meta_object.animation_data.action
@@ -1498,8 +1498,63 @@ def save_skeleton_template_files(
         export_info["joints"] = os.path.join(output_dir, "joints.txt")
         print("Saving skeleton template file " + os.path.relpath(export_info["joints"], export_info["root_dir"]))
         with open(export_info["joints"], "w") as f:
-            for bone in [bone.name for bone in armature.data.bones if bone.use_deform is True]:
-                f.write(bone + "\n{}\n")
+            coord_systems = export_info["armature"]["bone_local_coord_systems"]
+            joint_props_keys = [
+                "e2_joint_axis",
+                "e2_joint_axis_in_parent_space",
+                "e2_joint_max_angle",
+                "e2_joint_stiffness_with_parent_bone",
+                "e2_joint_max_angular_speed",
+                ]
+            axis_vectors = [vector3_axis_x(), vector3_axis_y(), vector3_axis_z()]
+            for bone_idx, bone in enumerate(armature.pose.bones):
+                f.write(bone.name + "\n{")
+                if all(x in bone and len(bone[x]) == len(bone[joint_props_keys[0]]) for x in joint_props_keys):
+                    f.write("\n")
+                    num_constraints = len(bone[joint_props_keys[0]])
+                    for i in range(num_constraints):
+                        current_cs = coord_systems[bone_idx]
+
+                        def get_axis_vector(idx, in_parent_space):
+                            u = axis_vectors[idx]
+                            if in_parent_space is True:
+                                W = from_base_matrix(current_cs["position"], current_cs["orientation"])
+                                u = W * mathutils.Vector((u[0], u[1], u[2], 0.0))
+                            return u
+
+                        def get_complementary_axis_index():
+                            for k, idx in enumerate(bone["e2_joint_axis"]):
+                                if k != i and idx != bone["e2_joint_axis"][i]:
+                                    return idx
+                            assert len(bone["e2_joint_axis"]) == 1
+                            return (bone["e2_joint_axis"][0] + 1) % len(axis_vectors)
+
+                        def write_coords(u):
+                            f.write("        {\n")
+                            f.write("            x " + float_to_string(u[0]) + "\n")
+                            f.write("            y " + float_to_string(u[1]) + "\n")
+                            f.write("            z " + float_to_string(u[2]) + "\n")
+                            f.write("        }\n")
+
+                        j = get_complementary_axis_index()
+
+                        f.write("    \"\"\n")
+                        f.write("    {\n")
+                        f.write("        axis\n")
+                        vec = get_axis_vector(bone["e2_joint_axis"][i], bone["e2_joint_axis_in_parent_space"][i] != 0)
+                        write_coords(vec)
+                        f.write("        axis_in_parent_space " + ("true" if bone["e2_joint_axis_in_parent_space"][i] else "false") + "\n")
+                        f.write("        zero_angle_direction\n")
+                        vec = get_axis_vector(j, True)
+                        write_coords(vec)
+                        f.write("        direction\n")
+                        vec = get_axis_vector(j, False)
+                        write_coords(vec)
+                        f.write("        max_angle " + float_to_string(bone["e2_joint_max_angle"][i]) + "\n")
+                        f.write("        stiffness_with_parent_bone " + float_to_string(bone["e2_joint_stiffness_with_parent_bone"][i]) + "\n")
+                        f.write("        max_angular_speed " + float_to_string(bone["e2_joint_max_angular_speed"][i]) + "\n")
+                        f.write("    }\n")
+                f.write("}\n")
 
         export_info["directions"] = os.path.join(output_dir, "directions.txt")
         print("Saving skeleton template file " + os.path.relpath(export_info["directions"], export_info["root_dir"]))
@@ -1507,7 +1562,7 @@ def save_skeleton_template_files(
             for kwd, default_coord in [("fwd", [0.0, -1.0, 0.0]), ("up", [0.0, 0.0, 1.0])]:
                 for i in range(3):
                     key = "e2_" + kwd + "_dir" + str(i)
-                    f.write(float_to_string(armature[key] if key in armature else default_coord) + "\n")
+                    f.write(float_to_string(armature[key] if key in armature else default_coord[i]) + "\n")
 
         export_info["transitions"] = os.path.join(output_dir, "transitions.dot")
         print("Saving skeleton template file " + os.path.relpath(export_info["transitions"], export_info["root_dir"]))
