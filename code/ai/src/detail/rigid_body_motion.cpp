@@ -19,6 +19,21 @@ rigid_body_motion::rigid_body_motion()
 {}
 
 rigid_body_motion::rigid_body_motion(
+        scene::node_id const&  motion_object_nid,
+        angeo::coordinate_system const&  frame_
+        )
+    : nid(motion_object_nid)
+    , frame(frame_)
+    , forward(vector3_zero())
+    , up(vector3_zero())
+    , velocity({ vector3_zero(),vector3_zero() })
+    , acceleration({ vector3_zero(),vector3_zero() })
+    , inverted_mass(0.0f)
+    , inverted_inertia_tensor(matrix33_zero())
+{}
+
+
+rigid_body_motion::rigid_body_motion(
         scene_ptr const  s,
         scene::node_id const&  motion_object_nid,
         skeletal_motion_templates::anim_space_directions const& directions
@@ -185,7 +200,7 @@ scene::node_id  create_motion_scene_node(
         )
 {
     s->insert_scene_node(motion_object_nid, frame_in_world_space, false);
-    rigid_body_motion  rb_motion;
+    rigid_body_motion  rb_motion(motion_object_nid, frame_in_world_space);
     rb_motion.set_linear_acceleration(s->get_gravity_acceleration_at_point(frame_in_world_space.origin()));
     rb_motion.set_inverted_mass(mass_distribution);
     rb_motion.set_inverted_inertia_tensor(mass_distribution);

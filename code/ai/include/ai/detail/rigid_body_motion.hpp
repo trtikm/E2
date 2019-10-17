@@ -12,6 +12,7 @@ namespace ai { namespace detail {
 struct  rigid_body_motion
 {
     rigid_body_motion();
+    rigid_body_motion(scene::node_id const&  motion_object_nid, angeo::coordinate_system const&  frame_);
     rigid_body_motion(
             scene_ptr const  s,
             scene::node_id const&  motion_object_nid,

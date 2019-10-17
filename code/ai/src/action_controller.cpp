@@ -61,7 +61,7 @@ action_controller::action_controller(blackboard_ptr const  blackboard_)
                                                                .at(m_dst_cursor.keyframe_index);
     auto const  mass_distribution =
         get_blackboard()->m_motion_templates.at(m_dst_cursor.motion_name).mass_distributions
-                                             .at(m_dst_cursor.keyframe_index);
+                                            .at(m_dst_cursor.keyframe_index);
 
     angeo::coordinate_system  agent_frame;
     {
