@@ -1229,7 +1229,7 @@ def save_keyframe_coord_systems_of_bones(
         scene = bpy.context.scene
         frame_current_backup = bpy.context.scene.frame_current
 
-        meta_object_name = armature.name + "/meta"
+        meta_object_name = armature.name + "/#meta"
         meta_object = bpy.data.objects[meta_object_name] if meta_object_name in bpy.data.objects else None
         if meta_object is None:
             print("INFO: The animation meta-object '" + meta_object_name + "' was NOT found!.")
@@ -1338,7 +1338,7 @@ def save_keyframe_coord_systems_of_bones(
             if meta_action_name not in bpy.data.actions:
                 meta_action_name = "#meta." + action_name
                 if meta_action_name not in bpy.data.actions:
-                    print("INFO: The meta-object '" + meta_object_name + "' was NOT found!.")
+                    print("INFO: The meta-action '" + meta_action_name + "' was NOT found for the meta-object '" + meta_object_name + "'.")
                     print("      => No meta-data will be exported for the action '" + action_name + "'!")
                     continue
 
