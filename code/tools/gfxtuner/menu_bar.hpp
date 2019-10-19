@@ -27,6 +27,7 @@ struct  menu_bar
     QAction*  get_file_action_new_scene() const { return m_file_action_new_scene; }
     QAction*  get_file_action_open_scene() const { return m_file_action_open_scene; }
     QMenu*    get_file_submenu_open_recent_scene() const { return m_file_submenu_open_recent_scene; }
+    QAction*  get_file_action_reload_scene() const { return m_file_action_reload_scene; }
     QAction*  get_file_action_save_scene() const { return m_file_action_save_scene; }
     QAction*  get_file_action_save_as_scene() const { return m_file_action_save_as_scene; }
     QAction*  get_file_action_exit() const { return m_file_action_exit; }
@@ -55,6 +56,7 @@ struct  menu_bar
     void  on_file_action_new_scene();
     bool  on_file_action_open_scene();
     void  on_file_action_open_recent_scene();
+    bool  on_file_action_reload_scene();
     bool  on_file_action_save_scene();
     bool  on_file_action_save_as_scene();
     bool  on_file_action_exit();
@@ -82,6 +84,7 @@ private:
     QAction*  m_file_action_new_scene;
     QAction*  m_file_action_open_scene;
     QMenu*  m_file_submenu_open_recent_scene;
+    QAction*  m_file_action_reload_scene;
     QAction*  m_file_action_save_scene;
     QAction*  m_file_action_save_as_scene;
     QAction*  m_file_action_exit;

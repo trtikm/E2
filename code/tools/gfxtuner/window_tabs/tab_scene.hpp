@@ -119,6 +119,7 @@ struct  widgets
     void  save_scene(boost::filesystem::path const&  scene_root_dir);
 
     void  save();
+    void  reload_scene(boost::filesystem::path const&  scene_root_dir);
 
 private:
     void  duplicate_subtree(

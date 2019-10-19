@@ -52,7 +52,8 @@ menu_bar::menu_bar(program_window* const  wnd)
     , m_menu_file(new detail::menu("&File",wnd))
     , m_file_action_new_scene(new QAction(QString("&New scene"), wnd))
     , m_file_action_open_scene(new QAction(QString("&Open scene"), wnd))
-    , m_file_submenu_open_recent_scene(new QMenu(QString("Open &recent scene"), wnd))
+    , m_file_submenu_open_recent_scene(new QMenu(QString("Open r&ecent scene"), wnd))
+    , m_file_action_reload_scene(new QAction(QString("Fast &reload scene"), wnd))
     , m_file_action_save_scene(new QAction(QString("&Save scene"), wnd))
     , m_file_action_save_as_scene(new QAction(QString("Save&As scene"), wnd))
     , m_file_action_exit(new QAction(QString("E&xit"), wnd))
@@ -122,6 +123,16 @@ void  menu_bar::on_file_action_open_recent_scene()
 
 }
 
+bool  menu_bar::on_file_action_reload_scene()
+{
+    if (m_current_scene_dir.empty())
+    {
+        wnd()->print_status_message("ERROR: Cannot reload scene which was not saved on the disk.", 10000);
+        return false;
+    }
+    return true;
+}
+
 bool  menu_bar::on_file_action_save_scene()
 {
     if (get_current_scene_dir().empty())
@@ -168,9 +179,11 @@ void  menu_bar::toggle_enable_state_of_menu_items_for_simulation_mode(bool const
 {
     get_file_action_new_scene()->setDisabled(simulation_resumed);
     get_file_action_open_scene()->setDisabled(simulation_resumed);
+    get_file_submenu_open_recent_scene()->setDisabled(simulation_resumed);
+    get_file_action_reload_scene()->setDisabled(simulation_resumed);
     get_file_action_save_scene()->setDisabled(simulation_resumed);
     get_file_action_save_as_scene()->setDisabled(simulation_resumed);
-    get_file_action_exit()->setDisabled(simulation_resumed);
+    get_file_action_exit()->setDisabled(false);
 
     get_edit_action_insert_coord_system()->setDisabled(simulation_resumed);
     for (auto const& record_kind_and_action : get_edit_actions_of_records())
@@ -223,6 +236,11 @@ void  make_menu_bar_content(menu_bar const&  w)
     QObject::connect(w.get_file_action_open_scene(), &QAction::triggered, w.wnd(),&program_window::on_menu_open_scene);
 
     w.get_menu_file()->addMenu(w.get_file_submenu_open_recent_scene());
+
+    w.get_menu_file()->addAction(w.get_file_action_reload_scene());
+    w.get_file_action_reload_scene()->setShortcut(QString("Ctrl+R"));
+    w.get_file_action_reload_scene()->setToolTip("Reloads the current scene, except for graphics data (batches, shaders, buffers, textures, etc.)");
+    QObject::connect(w.get_file_action_reload_scene(), &QAction::triggered, w.wnd(), &program_window::on_menu_reload_scene);
 
     w.get_menu_file()->addSeparator();
 

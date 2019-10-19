@@ -1234,6 +1234,27 @@ void  widgets::save()
     //wnd()->ptree().put("draw.show_grid", m_show_grid->isChecked());
 }
 
+void  widgets::reload_scene(boost::filesystem::path const&  scene_root_dir)
+{
+    TMPROF_BLOCK();
+
+    std::vector<qtgl::batch>  batches;
+    wnd()->glwindow().call_now<scn::scene const&(simulator::*)()const>(&simulator::get_scene).foreach_node(
+            [&batches](scn::scene_node_ptr const  node_ptr) -> bool {
+                for (auto const& name_holder : scn::get_batch_holders(*node_ptr))
+                {
+                    qtgl::batch const  batch = scn::as_batch(name_holder.second);
+                    if (batch.loaded_successfully())
+                        batches.push_back(batch);
+                }
+                return true;
+            },
+            false
+            );
+    open_scene(scene_root_dir);
+}
+
+
 void  widgets::on_coord_system_pos_changed()
 {
     vector3 const  pos(m_coord_system_pos_x->text().toFloat(),
