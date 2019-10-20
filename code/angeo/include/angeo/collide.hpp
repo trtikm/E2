@@ -456,7 +456,7 @@ POINT_SET_TYPE  clip_polygon(
 POINT_SET_TYPE  clip_polygon(
         std::vector<vector2> const&  polygon_points,    // The first and the last point must be the same.
         matrix44 const&  to_polygon_space_matrix,
-        std::vector< std::pair<vector3,vector3> > const&  clip_planes,
+        std::vector< std::pair<vector3 const*,vector3> > const&  clip_planes_in_world_space,
         std::vector<vector2>* const  output_clipped_polygon_points,
         std::vector<natural_32_bit>* const  output_indices_of_intersection_points
         );
