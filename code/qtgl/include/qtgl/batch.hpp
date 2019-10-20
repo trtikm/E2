@@ -113,6 +113,7 @@ struct batch_data
 
     bool  is_attached_to_skeleton() const { return !get_modelspace().empty(); }
     bool  has_instancing_data() const { return m_instancing_data != nullptr; }
+    bool  is_translucent() const;
     bool  ready() const { return m_ready; }
     void  set_ready() { m_ready = true; }
 
@@ -250,6 +251,7 @@ struct batch : public async::resource_accessor<detail::batch_data>
 
     bool  is_attached_to_skeleton() const { return resource().is_attached_to_skeleton(); }
     bool  has_instancing_data() const { return resource().has_instancing_data(); }
+    bool  is_translucent() const { return resource().is_translucent(); }
     bool  ready() const;
 
     bool  make_current(draw_state const&  previous_state, bool const  for_instancing) const;

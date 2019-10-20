@@ -1604,49 +1604,57 @@ void  simulator::render_scene_batches(
 {
     TMPROF_BLOCK();
 
-    std::unordered_map<
-            std::string,    // batch ID
-            std::pair<qtgl::batch, std::vector<scn::scene_node_ptr> > >
-        batches;
+    using  batch_and_nodes_vector = std::pair<qtgl::batch, std::vector<scn::scene_node_ptr> >;
+    using  vector_index_and_element_index = std::pair<natural_32_bit, natural_32_bit>;
+
+    std::array<std::vector<batch_and_nodes_vector>, 2>  opaque_and_tanslucent_batches;
+    std::unordered_map<std::string, vector_index_and_element_index> from_batch_id_to_indices;
     get_scene().foreach_node(
-        [this, &batches](scn::scene_node_ptr const  node_ptr) -> bool {
+        [this, &from_batch_id_to_indices , &opaque_and_tanslucent_batches](scn::scene_node_ptr const  node_ptr) -> bool {
                 for (auto const& name_holder : scn::get_batch_holders(*node_ptr))
                 {
                     qtgl::batch const  batch = scn::as_batch(name_holder.second);
                     if (!batch.loaded_successfully())
                         continue;
-                    auto&  record = batches[batch.key().get_unique_id()];
-                    if (record.first.empty())
-                        record.first = batch;
-                    INVARIANT(record.first == batch);
-                    record.second.push_back(node_ptr);
+                    auto  it = from_batch_id_to_indices.find(batch.key().get_unique_id());
+                    if (it == from_batch_id_to_indices.end())
+                    {
+                        natural_32_bit const  vector_index = batch.is_translucent() ? 1U : 0U;
+                        std::vector<batch_and_nodes_vector>&  nodes = opaque_and_tanslucent_batches.at(vector_index);
+                        natural_32_bit const  element_index = nodes.size();
+                        nodes.push_back({batch, {node_ptr}});
+                        it = from_batch_id_to_indices.insert({batch.key().get_unique_id(), {vector_index, element_index}}).first;
+                    }
+                    else
+                        opaque_and_tanslucent_batches.at(it->second.first).at(it->second.second).second.push_back(node_ptr);
                 }
                 return true;
             },
         false
         );
-    for (auto const& elem : batches)
+    for (auto const& tasks : opaque_and_tanslucent_batches)
+    for (auto const& batch_and_nodes : tasks)
     {
         bool const  use_instancing =
-                elem.second.first.get_available_resources().skeletal() == nullptr &&
-                elem.second.first.has_instancing_data() &&
-                elem.second.second.size() > 1UL
+                batch_and_nodes.first.get_available_resources().skeletal() == nullptr &&
+                batch_and_nodes.first.has_instancing_data() &&
+                batch_and_nodes.second.size() > 1UL
                 ;
-        if (!qtgl::make_current(elem.second.first, draw_state, use_instancing))
+        if (!qtgl::make_current(batch_and_nodes.first, draw_state, use_instancing))
             continue;
 
         if (use_instancing)
         {
-            qtgl::vertex_shader_instanced_data_provider  instanced_data_provider(elem.second.first);
-            for (auto const& node_ptr : elem.second.second)
+            qtgl::vertex_shader_instanced_data_provider  instanced_data_provider(batch_and_nodes.first);
+            for (auto const& node_ptr : batch_and_nodes.second)
                 instanced_data_provider.insert_from_model_to_camera_matrix(
                         matrix_from_world_to_camera * node_ptr->get_world_matrix()
                         );
             qtgl::render_batch(
-                    elem.second.first,
+                    batch_and_nodes.first,
                     instanced_data_provider,
                     qtgl::vertex_shader_uniform_data_provider(
-                            elem.second.first,
+                            batch_and_nodes.first,
                             {},
                             matrix_from_camera_to_clipspace,
                             m_diffuse_colour,
@@ -1671,7 +1679,7 @@ void  simulator::render_scene_batches(
                     );
         }
         else
-            for (auto const& node_ptr : elem.second.second)
+            for (auto const& node_ptr : batch_and_nodes.second)
             {
                 ai::skeletal_motion_templates  motion_templates;
                 {
@@ -1682,9 +1690,9 @@ void  simulator::render_scene_batches(
                 if (!motion_templates.loaded_successfully())
                 {
                     qtgl::render_batch(
-                            elem.second.first,
+                            batch_and_nodes.first,
                             qtgl::vertex_shader_uniform_data_provider(
-                                    elem.second.first,
+                                    batch_and_nodes.first,
                                     { matrix_from_world_to_camera * node_ptr->get_world_matrix() },
                                     matrix_from_camera_to_clipspace,
                                     m_diffuse_colour,
@@ -1713,7 +1721,7 @@ void  simulator::render_scene_batches(
                 std::vector<matrix44>  frame;
                 {
                     matrix44 alignment_matrix;
-                    angeo::from_base_matrix(elem.second.first.get_skeleton_alignment().get_skeleton_alignment(), alignment_matrix);
+                    angeo::from_base_matrix(batch_and_nodes.first.get_skeleton_alignment().get_skeleton_alignment(), alignment_matrix);
 
                     std::vector<matrix44>  to_bone_matrices;
                     {
@@ -1760,9 +1768,9 @@ void  simulator::render_scene_batches(
                 }
 
                 qtgl::render_batch(
-                        elem.second.first,
+                        batch_and_nodes.first,
                         qtgl::vertex_shader_uniform_data_provider(
-                                elem.second.first,
+                                batch_and_nodes.first,
                                 frame,
                                 matrix_from_camera_to_clipspace,
                                 m_diffuse_colour,
@@ -1786,7 +1794,7 @@ void  simulator::render_scene_batches(
                                 )
                         );
             }
-        draw_state = elem.second.first.get_draw_state();
+        draw_state = batch_and_nodes.first.get_draw_state();
     }
 }
 

@@ -377,6 +377,14 @@ void  batch_data::load(async::finalise_load_on_destroy_ptr const  finaliser)
     m_instancing_data = make_instancing_data_from(instancing_data);
 }
 
+bool  batch_data::is_translucent() const
+{
+    if (!get_draw_state().loaded_successfully())
+        return false;
+    return get_draw_state().use_alpha_blending() ||
+           get_available_resources().skins().at(get_skin_name()).alpha_testing().use_alpha_testing();
+}
+
 
 }}
 
