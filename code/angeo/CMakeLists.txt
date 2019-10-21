@@ -3,6 +3,9 @@ set(THIS_TARGET_NAME angeo)
 add_library(${THIS_TARGET_NAME}
     ./include/angeo/tensor_math.hpp
     ./src/tensor_math.cpp
+
+    ./include/angeo/tensor_hash.hpp
+    ./include/angeo/tensor_equal_to.hpp
     
     ./include/angeo/tensor_std_specialisations.hpp
 
