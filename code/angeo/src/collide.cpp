@@ -1,9 +1,12 @@
 #include <angeo/collide.hpp>
+#include <angeo/tensor_hash.hpp>
+#include <angeo/tensor_equal_to.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <utility/development.hpp>
+#include <unordered_set>
 #include <array>
 #include <tuple>
 
@@ -1689,28 +1692,14 @@ void  express_box_in_terms_of_its_faces(
         vector3 const&  min_corner_in_box_space,
         vector3 const&  max_corner_in_box_space,
 
-        vector3&  output_min_corner_in_world_space,
-        vector3&  output_max_corner_in_world_space,
         std::vector<std::vector<vector2> >&  output_polygons,   // INVARIANT: output_polygons.size() == 6 && foreach i : output_polygons.at(i).size() == 5
-        std::vector<matrix44>&  output_to_polygon_space_matrices,    // INVARIANT: output_to_polygon_space_matrices.size() == 6
-        std::vector< std::pair<vector3 const*, vector3> >* const  output_origins_and_unit_normals_in_world_space // INVARIANT: output_origins_and_unit_normals_in_world_space.size() == 6
-                                                                                                                 // Normals point OUTSIDE (i.e. away from) the box!
+        std::vector<matrix44>&  output_to_polygon_space_matrices,   // INVARIANT: output_to_polygon_space_matrices.size() == 6
+        std::vector<matrix44>&  output_from_polygon_space_matrices, // INVARIANT: output_from_polygon_space_matrices.size() == 6
+        std::vector< std::pair<vector3 const*, vector3> >* const  output_origins_and_unit_normals_in_world_space,   // INVARIANT: output_origins_and_unit_normals_in_world_space.size() == 6
+        bool const  normals_should_point_outside_the_box    // Whther the normals in 'output_origins_and_unit_normals_in_world_space' should point from the box or into the box.
         )
 {
     TMPROF_BLOCK();
-
-    {
-        matrix44  from_space_matrix;
-        compose_from_base_matrix(
-                origin_in_world_space,
-                basis_x_vector_in_world_space,
-                basis_y_vector_in_world_space,
-                basis_z_vector_in_world_space,
-                from_space_matrix
-                );
-        output_min_corner_in_world_space = transform_point(min_corner_in_box_space, from_space_matrix);
-        output_max_corner_in_world_space = transform_point(max_corner_in_box_space, from_space_matrix);
-    }
 
     output_polygons.resize(6U);
     output_to_polygon_space_matrices.resize(6U);
@@ -1721,12 +1710,21 @@ void  express_box_in_terms_of_its_faces(
 
     // xy-face for z-min
     {
+        vector3 const  face_center_in_world_space = origin_in_world_space + min_corner_in_box_space(2) * basis_z_vector_in_world_space;
+
         compose_to_base_matrix(
-                output_min_corner_in_world_space,
+                face_center_in_world_space,
                 basis_x_vector_in_world_space,
                 -basis_y_vector_in_world_space,
                 -basis_z_vector_in_world_space,
                 output_to_polygon_space_matrices.at(idx)
+                );
+        compose_from_base_matrix(
+                face_center_in_world_space,
+                basis_x_vector_in_world_space,
+                -basis_y_vector_in_world_space,
+                -basis_z_vector_in_world_space,
+                output_from_polygon_space_matrices.at(idx)
                 );
 
         std::vector<vector2>&  points = output_polygons.at(idx);
@@ -1739,7 +1737,7 @@ void  express_box_in_terms_of_its_faces(
 
         if (output_origins_and_unit_normals_in_world_space != nullptr)
             output_origins_and_unit_normals_in_world_space->at(idx) = {
-                    &output_min_corner_in_world_space,
+                    &face_center_in_world_space,
                     -basis_z_vector_in_world_space
                     };
     }
@@ -1747,12 +1745,22 @@ void  express_box_in_terms_of_its_faces(
 
     // xz-face for y-min
     {
+        vector3 const  face_center_in_world_space = origin_in_world_space + min_corner_in_box_space(1) * basis_y_vector_in_world_space;
+
         compose_to_base_matrix(
-                output_min_corner_in_world_space,
+                face_center_in_world_space,
                 basis_x_vector_in_world_space,
                 basis_z_vector_in_world_space,
                 -basis_y_vector_in_world_space,
                 output_to_polygon_space_matrices.at(idx)
+                );
+
+        compose_from_base_matrix(
+                face_center_in_world_space,
+                basis_x_vector_in_world_space,
+                basis_z_vector_in_world_space,
+                -basis_y_vector_in_world_space,
+                output_from_polygon_space_matrices.at(idx)
                 );
 
         std::vector<vector2>&  points = output_polygons.at(idx);
@@ -1765,7 +1773,7 @@ void  express_box_in_terms_of_its_faces(
 
         if (output_origins_and_unit_normals_in_world_space != nullptr)
             output_origins_and_unit_normals_in_world_space->at(idx) = {
-                    &output_min_corner_in_world_space,
+                    &face_center_in_world_space,
                     -basis_y_vector_in_world_space
                     };
     }
@@ -1773,12 +1781,21 @@ void  express_box_in_terms_of_its_faces(
 
     // yz-face for x-min
     {
+        vector3 const  face_center_in_world_space = origin_in_world_space + min_corner_in_box_space(0) * basis_x_vector_in_world_space;
+
         compose_to_base_matrix(
-                output_min_corner_in_world_space,
+                face_center_in_world_space,
                 basis_y_vector_in_world_space,
                 -basis_z_vector_in_world_space,
                 -basis_x_vector_in_world_space,
                 output_to_polygon_space_matrices.at(idx)
+                );
+        compose_from_base_matrix(
+                face_center_in_world_space,
+                basis_y_vector_in_world_space,
+                -basis_z_vector_in_world_space,
+                -basis_x_vector_in_world_space,
+                output_from_polygon_space_matrices.at(idx)
                 );
 
         std::vector<vector2>&  points = output_polygons.at(idx);
@@ -1791,7 +1808,7 @@ void  express_box_in_terms_of_its_faces(
 
         if (output_origins_and_unit_normals_in_world_space != nullptr)
             output_origins_and_unit_normals_in_world_space->at(idx) = {
-                    &output_min_corner_in_world_space,
+                    &face_center_in_world_space,
                     -basis_x_vector_in_world_space
                     };
     }
@@ -1799,12 +1816,21 @@ void  express_box_in_terms_of_its_faces(
 
     // xy-face for z-max
     {
+        vector3 const  face_center_in_world_space = origin_in_world_space + max_corner_in_box_space(2) * basis_z_vector_in_world_space;
+
         compose_to_base_matrix(
-                output_max_corner_in_world_space,
+                face_center_in_world_space,
                 basis_x_vector_in_world_space,
                 basis_y_vector_in_world_space,
                 basis_z_vector_in_world_space,
                 output_to_polygon_space_matrices.at(idx)
+                );
+        compose_from_base_matrix(
+                face_center_in_world_space,
+                basis_x_vector_in_world_space,
+                basis_y_vector_in_world_space,
+                basis_z_vector_in_world_space,
+                output_from_polygon_space_matrices.at(idx)
                 );
 
         std::vector<vector2>&  points = output_polygons.at(idx);
@@ -1817,7 +1843,7 @@ void  express_box_in_terms_of_its_faces(
 
         if (output_origins_and_unit_normals_in_world_space != nullptr)
             output_origins_and_unit_normals_in_world_space->at(idx) = {
-                    &output_max_corner_in_world_space,
+                    &face_center_in_world_space,
                     basis_z_vector_in_world_space
                     };
     }
@@ -1825,12 +1851,21 @@ void  express_box_in_terms_of_its_faces(
 
     // xz-face for y-max
     {
+        vector3 const  face_center_in_world_space = origin_in_world_space + max_corner_in_box_space(1) * basis_y_vector_in_world_space;
+
         compose_to_base_matrix(
-                output_max_corner_in_world_space,
+                face_center_in_world_space,
                 basis_x_vector_in_world_space,
                 -basis_z_vector_in_world_space,
                 basis_y_vector_in_world_space,
                 output_to_polygon_space_matrices.at(idx)
+                );
+        compose_from_base_matrix(
+                face_center_in_world_space,
+                basis_x_vector_in_world_space,
+                -basis_z_vector_in_world_space,
+                basis_y_vector_in_world_space,
+                output_from_polygon_space_matrices.at(idx)
                 );
 
         std::vector<vector2>&  points = output_polygons.at(idx);
@@ -1843,7 +1878,7 @@ void  express_box_in_terms_of_its_faces(
 
         if (output_origins_and_unit_normals_in_world_space != nullptr)
             output_origins_and_unit_normals_in_world_space->at(idx) = {
-                    &output_max_corner_in_world_space,
+                    &face_center_in_world_space,
                     basis_y_vector_in_world_space
                     };
     }
@@ -1851,12 +1886,21 @@ void  express_box_in_terms_of_its_faces(
 
     // yz-face for x-max
     {
+        vector3 const  face_center_in_world_space = origin_in_world_space + max_corner_in_box_space(0) * basis_x_vector_in_world_space;
+
         compose_to_base_matrix(
-                output_max_corner_in_world_space,
+                face_center_in_world_space,
                 basis_y_vector_in_world_space,
                 basis_z_vector_in_world_space,
                 basis_x_vector_in_world_space,
                 output_to_polygon_space_matrices.at(idx)
+                );
+        compose_from_base_matrix(
+                face_center_in_world_space,
+                basis_y_vector_in_world_space,
+                basis_z_vector_in_world_space,
+                basis_x_vector_in_world_space,
+                output_from_polygon_space_matrices.at(idx)
                 );
 
         std::vector<vector2>& points = output_polygons.at(idx);
@@ -1869,7 +1913,7 @@ void  express_box_in_terms_of_its_faces(
 
         if (output_origins_and_unit_normals_in_world_space != nullptr)
             output_origins_and_unit_normals_in_world_space->at(idx) = {
-                    &output_max_corner_in_world_space,
+                    &face_center_in_world_space,
                     basis_x_vector_in_world_space
                     };
     }
@@ -1877,7 +1921,7 @@ void  express_box_in_terms_of_its_faces(
 }
 
 
-void  collision_box_box(
+bool  collision_box_box(
         vector3 const&  box_1_origin_in_world_space,
         vector3 const&  box_1_basis_x_vector_in_world_space,
         vector3 const&  box_1_basis_y_vector_in_world_space,
@@ -1892,16 +1936,17 @@ void  collision_box_box(
         vector3 const&  box_2_min_corner_in_box_space,
         vector3 const&  box_2_max_corner_in_box_space,
 
-        std::vector<vector3>* const  output_collision_plane_points_in_world_space,
-        vector3* const  ouptut_collision_plane_unit_normal_in_world_space
+        vector3* const  ouptut_collision_plane_unit_normal_in_world_space,
+        std::vector<vector3>* const  output_collision_plane_points_in_world_space
         )
 {
     TMPROF_BLOCK();
 
-    vector3  box_1_min_corner_in_world_space;
-    vector3  box_1_max_corner_in_world_space;
+    ASSUMPTION(output_collision_plane_points_in_world_space == nullptr || ouptut_collision_plane_unit_normal_in_world_space != nullptr);
+
     std::vector<std::vector<vector2> >  box_1_polygons;
     std::vector<matrix44>  box_1_to_polygon_space_matrices;
+    std::vector<matrix44>  box_1_from_polygon_space_matrices;
     std::vector< std::pair<vector3 const*, vector3> >  box_1_origins_and_unit_normals_in_world_space;
     express_box_in_terms_of_its_faces(
             box_1_origin_in_world_space,
@@ -1910,17 +1955,16 @@ void  collision_box_box(
             box_1_basis_z_vector_in_world_space,
             box_1_min_corner_in_box_space,
             box_1_max_corner_in_box_space,
-            box_1_min_corner_in_world_space,
-            box_1_max_corner_in_world_space,
             box_1_polygons,
             box_1_to_polygon_space_matrices,
-            &box_1_origins_and_unit_normals_in_world_space
+            box_1_from_polygon_space_matrices,
+            &box_1_origins_and_unit_normals_in_world_space,
+            false
             );
 
-    vector3  box_2_min_corner_in_world_space;
-    vector3  box_2_max_corner_in_world_space;
     std::vector<std::vector<vector2> >  box_2_polygons;
     std::vector<matrix44>  box_2_to_polygon_space_matrices;
+    std::vector<matrix44>  box_2_from_polygon_space_matrices;
     std::vector< std::pair<vector3 const*, vector3> >  box_2_origins_and_unit_normals_in_world_space;
     express_box_in_terms_of_its_faces(
             box_2_origin_in_world_space,
@@ -1929,23 +1973,87 @@ void  collision_box_box(
             box_2_basis_z_vector_in_world_space,
             box_2_min_corner_in_box_space,
             box_2_max_corner_in_box_space,
-            box_2_min_corner_in_world_space,
-            box_2_max_corner_in_world_space,
             box_2_polygons,
             box_2_to_polygon_space_matrices,
-            &box_2_origins_and_unit_normals_in_world_space
+            box_2_from_polygon_space_matrices,
+            &box_2_origins_and_unit_normals_in_world_space,
+            false
             );
 
+    std::unordered_set<vector3, tensor_hash<vector3, 1000U>, tensor_equal_to<vector3, 1000U> >  raw_collision_points;
 
+    for (natural_32_bit  i = 0U, n = (natural_32_bit)box_1_polygons.size(); i < n; ++i)
+    {
+        std::vector<vector2>  clipped_polygon;
+        POINT_SET_TYPE const  type = clip_polygon(
+                box_1_polygons.at(i),
+                box_1_to_polygon_space_matrices.at(i),
+                box_2_origins_and_unit_normals_in_world_space,
+                &clipped_polygon,
+                nullptr
+                );
 
+        if (type == POINT_SET_TYPE::EMPTY)
+            continue;
 
-}
+        std::vector<vector2> const* const  raw_collision_points_in_box_space = (type == POINT_SET_TYPE::FULL) ?
+                &box_1_polygons.at(i)   :
+                &clipped_polygon        ;
+        for (natural_32_bit j = 0U, m = (natural_32_bit)raw_collision_points_in_box_space->size() - 1U; j < m; ++m)
+            raw_collision_points.insert(transform_point(expand23(raw_collision_points_in_box_space->at(j)), box_1_from_polygon_space_matrices.at(i)));
+    }
 
+    for (natural_32_bit  i = 0U, n = (natural_32_bit)box_2_polygons.size(); i < n; ++i)
+    {
+        std::vector<vector2>  clipped_polygon;
+        POINT_SET_TYPE const  type = clip_polygon(
+                box_2_polygons.at(i),
+                box_2_to_polygon_space_matrices.at(i),
+                box_1_origins_and_unit_normals_in_world_space,
+                &clipped_polygon,
+                nullptr
+                );
 
-bool  intersection_of_covex_polytopes(
-    )
-{
-    return false;
+        if (type == POINT_SET_TYPE::EMPTY)
+            continue;
+
+        std::vector<vector2> const* const  raw_collision_points_in_box_space = (type == POINT_SET_TYPE::FULL) ?
+                &box_2_polygons.at(i)   :
+                &clipped_polygon        ;
+        for (natural_32_bit j = 0U, m = (natural_32_bit)raw_collision_points_in_box_space->size() - 1U; j < m; ++m)
+            raw_collision_points.insert(transform_point(expand23(raw_collision_points_in_box_space->at(j)), box_2_from_polygon_space_matrices.at(i)));
+    }
+
+    if (raw_collision_points.empty())
+        return false;
+
+    vector3  mass_center_of_collision_points;
+
+    if (ouptut_collision_plane_unit_normal_in_world_space != nullptr)
+    {
+        mass_center_of_collision_points = vector3_zero();
+        for (vector3 const& p : raw_collision_points)
+            mass_center_of_collision_points += p;
+        mass_center_of_collision_points /= (float_32_bit)raw_collision_points.size();
+
+        // TODO: use 'mass_center_of_collision_points' to ask box_1 and box_2 to compute normal vector
+        //       'ouptut_collision_plane_unit_normal_in_world_space' of the collision plane.
+        NOT_IMPLEMENTED_YET();
+    }
+
+    if (output_collision_plane_points_in_world_space != nullptr)
+    {
+        std::unordered_set<vector3, tensor_hash<vector3, 1000U>, tensor_equal_to<vector3, 1000U> >  collision_points;
+        for (vector3 const& p : raw_collision_points)
+            collision_points.insert(
+                p - project_to_unit_vector(p - mass_center_of_collision_points, *ouptut_collision_plane_unit_normal_in_world_space)
+                );
+        output_collision_plane_points_in_world_space->clear();
+        for (vector3 const&  p : collision_points)
+            output_collision_plane_points_in_world_space->push_back(p);
+    }
+
+    return true;
 }
 
 
