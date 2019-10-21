@@ -1621,7 +1621,7 @@ void  simulator::render_scene_batches(
                     {
                         natural_32_bit const  vector_index = batch.is_translucent() ? 1U : 0U;
                         std::vector<batch_and_nodes_vector>&  nodes = opaque_and_tanslucent_batches.at(vector_index);
-                        natural_32_bit const  element_index = nodes.size();
+                        natural_32_bit const  element_index = (natural_32_bit)nodes.size();
                         nodes.push_back({batch, {node_ptr}});
                         it = from_batch_id_to_indices.insert({batch.key().get_unique_id(), {vector_index, element_index}}).first;
                     }
