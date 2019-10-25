@@ -1737,9 +1737,10 @@ void  simulator::render_scene_batches(
                     detail::skeleton_enumerate_nodes_of_bones(
                             node_ptr,
                             motion_templates,
-                            [&frame, &matrix_from_world_to_camera, motion_templates, &alignment_matrix, &to_bone_matrices](
+                            [&frame, &matrix_from_world_to_camera, motion_templates, &alignment_matrix, &to_bone_matrices, node_ptr](
                                 natural_32_bit const bone, scn::scene_node_ptr const  bone_node_ptr, bool const  has_parent) -> bool
                                 {
+
                                     if (bone_node_ptr != nullptr)
                                         frame.push_back(
                                                 matrix_from_world_to_camera *
@@ -1749,7 +1750,10 @@ void  simulator::render_scene_batches(
                                                 );
                                     else
                                     {
-                                        // This case is mostly for debug purposes. In release, we should never get here.
+                                        // The deformable mesh is in inconsistent state: the controlling scene nodes
+                                        // are not available; they were perhaps manually deleted from the scene bu the
+                                        // user. The code below is supposed to render the object in default pose despite
+                                        // of the inconsistency. The code is not optimal (slow) though.
                                         matrix44 result;
                                         angeo::from_base_matrix(motion_templates.pose_frames().at(bone), result);
                                         for (integer_32_bit  bone_idx = motion_templates.hierarchy().parents().at(bone);
@@ -1760,7 +1764,13 @@ void  simulator::render_scene_batches(
                                             angeo::from_base_matrix(motion_templates.pose_frames().at(bone_idx), M);
                                             result = M * result;
                                         }
-                                        frame.push_back(matrix_from_world_to_camera * result);
+                                        frame.push_back(
+                                                matrix_from_world_to_camera *
+                                                node_ptr->get_world_matrix() *
+                                                result *
+                                                to_bone_matrices.at(bone) *
+                                                alignment_matrix
+                                                );
                                     }
                                     return true;
                                 }
