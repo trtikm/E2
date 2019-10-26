@@ -68,6 +68,7 @@ menu_bar::menu_bar(program_window* const  wnd)
     , m_edit_action_erase_selected(new QAction(QString("&Erase selected"), wnd))
     , m_edit_action_duplicate_selected(new QAction(QString("&Duplicate selected"), wnd))
     , m_edit_action_change_parent_of_selected(new QAction(QString("C&hange parent of selected"), wnd))
+    , m_edit_action_rename_scene_object(new QAction(QString("Rena&me selected"), wnd))
     , m_edit_action_mode_select(new QAction(QString("&Selection"), wnd))
     , m_edit_action_mode_translate(new QAction(QString("&Translation"), wnd))
     , m_edit_action_mode_rotate(new QAction(QString("&Rotation"), wnd))
@@ -213,6 +214,7 @@ void  menu_bar::toggle_enable_state_of_menu_items_for_simulation_mode(bool const
     get_edit_action_erase_selected()->setDisabled(simulation_resumed);
     get_edit_action_duplicate_selected()->setDisabled(simulation_resumed);
     get_edit_action_change_parent_of_selected()->setDisabled(simulation_resumed);
+    get_edit_action_rename_scene_object()->setDisabled(simulation_resumed);
     get_edit_action_mode_select()->setDisabled(simulation_resumed);
     get_edit_action_mode_translate()->setDisabled(simulation_resumed);
     get_edit_action_mode_rotate()->setDisabled(simulation_resumed);
@@ -373,6 +375,13 @@ void  make_menu_bar_content(menu_bar const&  w)
         "then all selected nodes will have no parent (i.e. they will become root-level nodes in the scene)."
         );
     QObject::connect(w.get_edit_action_change_parent_of_selected(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_change_parent_of_selected);
+
+    w.get_menu_edit()->addAction(w.get_edit_action_rename_scene_object());
+    w.get_edit_action_rename_scene_object()->setShortcut(QString("Ctrl+Shift+R"));
+    w.get_edit_action_rename_scene_object()->setToolTip(
+        "TODO"
+        );
+    QObject::connect(w.get_edit_action_rename_scene_object(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_rename_scene_object);
 
     w.get_menu_edit()->addSeparator();
 

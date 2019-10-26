@@ -74,6 +74,7 @@ struct  widgets
     void  on_scene_erase_selected();
     void  on_scene_duplicate_selected();
     void  on_scene_change_parent_of_selected();
+    void  on_scene_rename_scene_object();
 
     void  on_coord_system_pos_changed();
     void  on_coord_system_rot_changed();

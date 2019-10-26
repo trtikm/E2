@@ -1161,6 +1161,158 @@ void  widgets::on_scene_change_parent_of_selected()
 }
 
 
+void  widgets::on_scene_rename_scene_object()
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(!processing_selection_change());
+    lock_bool const  _(&m_processing_selection_change);
+
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Scene editing is disabled.", 10000);
+        return;
+    }
+
+    if (m_scene_tree->currentItem() == nullptr)
+    {
+        wnd()->print_status_message("ERROR: There is no current item in the scene tree widget.", 10000);
+        return;
+    }
+
+    tree_widget_item* const  item_ptr = as_tree_widget_item(m_scene_tree->currentItem());
+    if (represents_folder(item_ptr))
+    {
+        wnd()->print_status_message("ERROR: A folder cannot be renamed.", 10000);
+        return;
+    }
+
+    scn::scene_record_id const  object_id = scene_record_id_reverse_builder::run(item_ptr).get_record_id();
+    if (object_id.get_node_id().path().front().front() == '@')
+    {
+        wnd()->print_status_message("ERROR: Cannot perform rename operation in sub-tree of a special scene node.", 10000);
+        return;
+    }
+
+    QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
+    if (old_selection.size() > 1 || (old_selection.size() == 1 && old_selection.front() != m_scene_tree->currentItem()))
+    {
+        wnd()->print_status_message("ERROR: Cannot rename a scene object while another object is selected.", 10000);
+        return;
+    }
+
+    if (represents_coord_system(item_ptr))
+    {
+        scn::scene_node_id const  parent_object_id = object_id.get_node_id().get_direct_parent_id();
+
+        dialog_windows::insert_name_dialog  dlg(wnd(), object_id.get_node_id().path_last_element(),
+            [this, &parent_object_id](std::string const& name) {
+                return  !dialog_windows::is_scene_forbidden_name(name) &&
+                        wnd()->glwindow().call_now(&simulator::get_scene_node, parent_object_id / name) == nullptr;
+            });
+        dlg.exec();
+        if (dlg.get_name().empty())
+            return;
+
+        std::string const  name = dlg.get_name();
+        scn::scene_node_const_ptr const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, object_id.get_node_id());
+
+        tree_widget_item* const  renamed_tree_item =
+                insert_coord_system(
+                        parent_object_id / name,
+                        node_ptr->get_coord_system()->origin(),
+                        node_ptr->get_coord_system()->orientation(),
+                        as_tree_widget_item(item_ptr->parent())
+                        );
+        get_scene_history()->insert<scn::scene_history_coord_system_insert>(
+                parent_object_id / name,
+                node_ptr->get_coord_system()->origin(),
+                node_ptr->get_coord_system()->orientation(),
+                false
+                );
+
+        tree_widgent_items_cache  tree_item_children_cache;
+        build_cache_from_item_to_its_direct_children(item_ptr, tree_item_children_cache);
+        duplicate_subtree(item_ptr, renamed_tree_item, tree_item_children_cache);
+
+        if (item_ptr->isSelected())
+        {
+            std::unordered_set<scn::scene_node_id>  selected_scene_nodes{ object_id.get_node_id() };
+            std::unordered_set<scn::scene_record_id>  selected_records;
+            m_wnd->glwindow().call_now(&simulator::erase_from_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_records));
+
+            selected_scene_nodes = { parent_object_id / name };
+            selected_records = {};
+            m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_records));
+
+            item_ptr->setSelected(false);
+            renamed_tree_item->setSelected(true);
+
+            update_history_according_to_change_in_selection(old_selection, m_scene_tree->selectedItems(), get_scene_history(), false);
+        }
+
+        std::unordered_set<void*>  erased_items;
+        erase_subtree_at_root_item(item_ptr, erased_items);
+    }
+    else if (object_id.get_folder_name() == scn::get_batches_folder_name())
+    {
+        scn::scene_node_const_ptr const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, object_id.get_node_id());
+
+        auto const&  batch_holders = scn::get_batch_holders(*node_ptr);
+        dialog_windows::insert_name_dialog  dlg(wnd(), object_id.get_record_name(),
+            [this, &batch_holders](std::string const& name) {
+                return  !dialog_windows::is_scene_forbidden_name(name) && batch_holders.count(name) == 0UL;
+            });
+        dlg.exec();
+        if (dlg.get_name().empty())
+            return;
+
+        std::string const  name = dlg.get_name();
+
+        scn::scene_record_id  renamed_record_id = scn::make_batch_record_id(object_id.get_node_id(), name);
+        m_duplicate_record_handlers.at(scn::get_batches_folder_name())(this, object_id, renamed_record_id);
+        tree_widget_item*  renamed_tree_item =
+                insert_record_to_tree_widget(
+                        m_scene_tree,
+                        renamed_record_id,
+                        m_icons_of_records.at(scn::get_batches_folder_name()),
+                        m_folder_icon
+                        );
+
+        if (item_ptr->isSelected())
+        {
+            std::unordered_set<scn::scene_node_id>  selected_scene_nodes;
+            std::unordered_set<scn::scene_record_id>  selected_records{ object_id };
+            m_wnd->glwindow().call_now(&simulator::erase_from_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_records));
+
+            selected_scene_nodes = {};
+            selected_records = { renamed_record_id };
+            m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_records));
+
+            item_ptr->setSelected(false);
+            renamed_tree_item->setSelected(true);
+
+            update_history_according_to_change_in_selection(old_selection, m_scene_tree->selectedItems(), get_scene_history(), false);
+        }
+
+        erase_scene_record(object_id);
+        m_scene_tree->erase(item_ptr);
+    }
+    else
+    {
+        wnd()->print_status_message(msgstream() << "ERROR: A record inside the folder '"
+                                                << object_id.get_folder_name()
+                                                << "' cannot be renamed.", 10000);
+        return;
+    }
+
+    get_scene_history()->commit();
+    set_window_title();
+
+    update_coord_system_location_widgets();
+}
+
+
 void  widgets::clear_scene()
 {
     if (!is_editing_enabled())
