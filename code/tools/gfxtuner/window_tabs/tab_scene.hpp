@@ -12,6 +12,8 @@
 #   include <boost/filesystem/path.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <QWidget>
+#   include <QLineEdit>
+#   include <QPushButton>
 #   include <QTreeWidget>
 #   include <QColor>
 #   include <QIcon>
@@ -60,6 +62,8 @@ struct  widgets
     QLineEdit* get_coord_system_axis_z_y() const { return m_coord_system_axis_z_y; }
     QLineEdit* get_coord_system_axis_z_z() const { return m_coord_system_axis_z_z; }
 
+    QPushButton* get_coord_system_reset_button() const { return m_coord_system_reset_button; }
+
     void  on_simulator_started();
     void  process_pending_scene_load_requst_if_any();
 
@@ -81,6 +85,8 @@ struct  widgets
     void  on_coord_system_rotation_started();
     void  coord_system_rotation_listener();
     void  on_coord_system_rotation_finished();
+
+    void  on_scene_coord_system_reset();
 
     void  on_scene_mode_selection();
     void  on_scene_mode_translation();
@@ -180,6 +186,7 @@ private:
     void  update_coord_system_location_widgets();
     void  enable_coord_system_location_widgets(bool const  state, bool const  read_only);
     void  refresh_text_in_coord_system_location_widgets(scn::scene_node_ptr const  node_ptr);
+    void  refresh_text_in_coord_system_position_widgets(vector3 const&  p);
     void  refresh_text_in_coord_system_rotation_widgets(quaternion const&  q);
 
     void  set_window_title();
@@ -245,6 +252,8 @@ private:
     QLineEdit*  m_coord_system_axis_z_x;
     QLineEdit*  m_coord_system_axis_z_y;
     QLineEdit*  m_coord_system_axis_z_z;
+
+    QPushButton*  m_coord_system_reset_button;
 
     std::unordered_map<scn::scene_node_id, angeo::coordinate_system>  m_coord_system_location_backup_buffer;
 

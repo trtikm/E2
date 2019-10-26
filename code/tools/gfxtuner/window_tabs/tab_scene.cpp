@@ -22,11 +22,9 @@
 #include <boost/property_tree/info_parser.hpp>
 #include <QLabel>
 #include <QDialog>
-#include <QLineEdit>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGroupBox>
-#include <QPushButton>
 #include <QColorDialog>
 #include <QString>
 #include <QIntValidator>
@@ -186,6 +184,17 @@ widgets::widgets(program_window* const  wnd)
     , m_coord_system_axis_z_x(new QLineEdit)
     , m_coord_system_axis_z_y(new QLineEdit)
     , m_coord_system_axis_z_z(new QLineEdit)
+    , m_coord_system_reset_button(
+        [](program_window* wnd) {
+            struct reset : public QPushButton {
+                reset(program_window*  wnd) : QPushButton("Reset")
+                {
+                    QObject::connect(this, SIGNAL(released()), wnd, SLOT(on_scene_coord_system_reset()));
+                }
+            };
+            return new reset(wnd);
+        }(m_wnd)
+        )
 
     , m_coord_system_location_backup_buffer()
     , m_pending_scene_dir_to_load()
@@ -1533,6 +1542,53 @@ void  widgets::on_coord_system_rotation_finished()
     on_coord_system_position_finished();
 }
 
+
+void  widgets::on_scene_coord_system_reset()
+{
+    scn::scene_node_id const  coord_system_id =
+            scene_record_id_reverse_builder::run(get_active_coord_system_item_in_tree_widget(*m_scene_tree)).get_node_id();
+    auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, coord_system_id);
+    INVARIANT(node_ptr != nullptr);
+
+    scn::SCENE_EDIT_MODE const  mode = wnd()->glwindow().call_now(&simulator::get_scene_edit_mode);
+    if (mode == scn::SCENE_EDIT_MODE::TRANSLATE_SELECTED_NODES)
+    {
+        vector3 const  old_pos = node_ptr->get_coord_system()->origin();
+        if (are_equal_3d(old_pos, vector3_zero(), 1e-4f))
+            return;
+        wnd()->glwindow().call_later(&simulator::set_position_of_scene_node, coord_system_id, vector3_zero());
+        refresh_text_in_coord_system_position_widgets(vector3_zero());
+        get_scene_history()->insert<scn::scene_history_coord_system_relocate>(
+                coord_system_id,
+                old_pos,
+                node_ptr->get_coord_system()->orientation(),
+                vector3_zero(),
+                node_ptr->get_coord_system()->orientation()
+                );
+    }
+    else if (mode == scn::SCENE_EDIT_MODE::ROTATE_SELECTED_NODES)
+    {
+        quaternion const  old_rot = node_ptr->get_coord_system()->orientation();
+        if (are_equal(old_rot, quaternion_identity(), 1e-4f))
+            return;
+        wnd()->glwindow().call_later(&simulator::set_orientation_of_scene_node, coord_system_id, quaternion_identity());
+        refresh_text_in_coord_system_rotation_widgets(quaternion_identity());
+        get_scene_history()->insert<scn::scene_history_coord_system_relocate>(
+            coord_system_id,
+            node_ptr->get_coord_system()->origin(),
+            old_rot,
+            node_ptr->get_coord_system()->origin(),
+            quaternion_identity()
+            );
+    }
+    else return;
+
+    get_scene_history()->commit();
+    set_window_title();
+    wnd()->set_focus_to_glwindow();
+}
+
+
 void  widgets::on_scene_mode_selection()
 {
     if (is_editing_enabled())
@@ -2092,6 +2148,8 @@ void  widgets::enable_coord_system_location_widgets(bool const  state, bool cons
     m_coord_system_axis_z_y->setEnabled(state);
     m_coord_system_axis_z_z->setEnabled(state);
 
+    m_coord_system_reset_button->setEnabled(state && !read_only);
+
     if (state == false)
     {
         m_coord_system_pos_x->setText("");
@@ -2149,11 +2207,15 @@ void  widgets::refresh_text_in_coord_system_location_widgets(scn::scene_node_ptr
     ASSUMPTION(node_ptr != nullptr);
 
     auto const  coord_system_ptr = node_ptr->get_coord_system();
-    m_coord_system_pos_x->setText(QString::number(coord_system_ptr->origin()(0)));
-    m_coord_system_pos_y->setText(QString::number(coord_system_ptr->origin()(1)));
-    m_coord_system_pos_z->setText(QString::number(coord_system_ptr->origin()(2)));
-
+    refresh_text_in_coord_system_position_widgets(coord_system_ptr->origin());
     refresh_text_in_coord_system_rotation_widgets(coord_system_ptr->orientation());
+}
+
+void  widgets::refresh_text_in_coord_system_position_widgets(vector3 const&  p)
+{
+    m_coord_system_pos_x->setText(QString::number(p(0)));
+    m_coord_system_pos_y->setText(QString::number(p(1)));
+    m_coord_system_pos_z->setText(QString::number(p(2)));
 }
 
 void  widgets::refresh_text_in_coord_system_rotation_widgets(quaternion const&  q)
@@ -2269,25 +2331,32 @@ QWidget*  make_scene_tab_content(widgets const&  w)
                     }
                     selected_layout->addLayout(tait_bryan_layout);
 
-                    selected_layout->addWidget(new QLabel("Basis vectors X, Y, and Z; for each coords [xyz]"));
-                    QHBoxLayout*  axis_layout = new QHBoxLayout;
+                    QHBoxLayout* const  axis_labels_layout = new QHBoxLayout;
+                    {
+                        axis_labels_layout->addWidget(new QLabel("X-basis vector [xyz]"));
+                        axis_labels_layout->addWidget(new QLabel("Y-basis vector [xyz]"));
+                        axis_labels_layout->addWidget(new QLabel("Z-basis vector [xyz]"));
+                    }
+                    selected_layout->addLayout(axis_labels_layout);
+
+                    QHBoxLayout* axis_layout = new QHBoxLayout;
                     {
                         axis_layout->addWidget(w.get_coord_system_axis_x_x());
-                        axis_layout->addWidget(w.get_coord_system_axis_x_y());
-                        axis_layout->addWidget(w.get_coord_system_axis_x_z());
-                    }
-                    selected_layout->addLayout(axis_layout);
-                    axis_layout = new QHBoxLayout;
-                    {
                         axis_layout->addWidget(w.get_coord_system_axis_y_x());
-                        axis_layout->addWidget(w.get_coord_system_axis_y_y());
-                        axis_layout->addWidget(w.get_coord_system_axis_y_z());
+                        axis_layout->addWidget(w.get_coord_system_axis_z_x());
                     }
                     selected_layout->addLayout(axis_layout);
                     axis_layout = new QHBoxLayout;
                     {
-                        axis_layout->addWidget(w.get_coord_system_axis_z_x());
+                        axis_layout->addWidget(w.get_coord_system_axis_x_y());
+                        axis_layout->addWidget(w.get_coord_system_axis_y_y());
                         axis_layout->addWidget(w.get_coord_system_axis_z_y());
+                    }
+                    selected_layout->addLayout(axis_layout);
+                    axis_layout = new QHBoxLayout;
+                    {
+                        axis_layout->addWidget(w.get_coord_system_axis_x_z());
+                        axis_layout->addWidget(w.get_coord_system_axis_y_z());
                         axis_layout->addWidget(w.get_coord_system_axis_z_z());
                     }
                     selected_layout->addLayout(axis_layout);
@@ -2317,6 +2386,12 @@ QWidget*  make_scene_tab_content(widgets const&  w)
                             simulator_notifications::scene_node_orientation_update_finished(),
                             { &program_window::on_scene_coord_system_rotation_finished, w.wnd() }
                             );
+
+                    selected_layout->addWidget(w.get_coord_system_reset_button());
+                    w.get_coord_system_reset_button()->setToolTip(
+                        "In translation edit mode resets the origin of selected the coord. system to zero vector.\n"
+                        "In rotation edit mode resets the quaternion of the selected coord. system to unit quaternion."
+                        );
                 }
                 selected_group->setLayout(selected_layout);
             }
