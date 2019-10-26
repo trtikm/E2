@@ -92,7 +92,7 @@ tree_widget_item*  find_nearest_coord_system_item(
 
 void tree_widget::keyReleaseEvent(QKeyEvent* const event)
 {
-    std::cout << "tree_widget::keyReleaseEvent" << event->key() << ")\n";
+    //std::cout << "tree_widget::keyReleaseEvent" << event->key() << ")\n";
     if (event->key() == Qt::Key_Escape)
         m_on_escape_widget();
     else if (event->key() == Qt::Key_Return)
