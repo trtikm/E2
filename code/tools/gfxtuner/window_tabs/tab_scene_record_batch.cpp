@@ -278,7 +278,8 @@ void  register_record_handler_for_load_scene_record(
         std::unordered_map<std::string, std::function<void(widgets*,
                                                            scn::scene_record_id const&,
                                                            boost::property_tree::ptree const&,
-                                                           std::unordered_map<std::string, boost::property_tree::ptree> const&)>>&
+                                                           std::unordered_map<std::string, boost::property_tree::ptree> const&,
+                                                           bool)>>&
                 load_record_handlers
         )
 {
@@ -287,7 +288,8 @@ void  register_record_handler_for_load_scene_record(
             []( widgets* const  w,
                 scn::scene_record_id const&  id,
                 boost::property_tree::ptree const&  data,
-                std::unordered_map<std::string, boost::property_tree::ptree> const&  infos) -> void {
+                std::unordered_map<std::string, boost::property_tree::ptree> const&  infos,
+                bool const  do_update_history) -> void {
                     boost::property_tree::ptree const&  effects = infos.at("effects").get_child(data.get<std::string>("effects"));
                     qtgl::effects_config::light_types  light_types;
                     for (auto const& lt_and_tree : effects.get_child("light_types"))
@@ -301,20 +303,23 @@ void  register_record_handler_for_load_scene_record(
                     qtgl::effects_config::shader_output_types  shader_output_types;
                     for (auto const& sot_and_tree : effects.get_child("shader_output_types"))
                         shader_output_types.insert((qtgl::SHADER_DATA_OUTPUT_TYPE)sot_and_tree.second.get_value<int>());
+                    std::string const  pathname = data.get<std::string>("pathname");
+                    std::string const  skin = data.get<std::string>("skin");
+                    qtgl::effects_config const  effects_config(
+                            nullptr,
+                            light_types,
+                            lighting_data_types,
+                            (qtgl::SHADER_PROGRAM_TYPE)effects.get<int>("lighting_algo_location"),
+                            shader_output_types,
+                            (qtgl::FOG_TYPE)effects.get<int>("fog_type"),
+                            (qtgl::SHADER_PROGRAM_TYPE)effects.get<int>("fog_algo_location")
+                            );
                     w->wnd()->glwindow().call_now(
                             &simulator::insert_batch_to_scene_node,
                             std::cref(id.get_record_name()),
-                            data.get<std::string>("pathname"),
-                            data.get<std::string>("skin"),
-                            qtgl::effects_config(
-                                    nullptr,
-                                    light_types,
-                                    lighting_data_types,
-                                    (qtgl::SHADER_PROGRAM_TYPE)effects.get<int>("lighting_algo_location"),
-                                    shader_output_types,
-                                    (qtgl::FOG_TYPE)effects.get<int>("fog_type"),
-                                    (qtgl::SHADER_PROGRAM_TYPE)effects.get<int>("fog_algo_location")
-                                    ),
+                            std::cref(pathname),
+                            std::cref(skin),
+                            std::cref(effects_config),
                             std::cref(id.get_node_id())
                             );
                     insert_record_to_tree_widget(
@@ -323,6 +328,16 @@ void  register_record_handler_for_load_scene_record(
                             w->get_record_icon(scn::get_batches_folder_name()),
                             w->get_folder_icon()
                             );
+                    if (do_update_history)
+                    {
+                        w->get_scene_history()->insert<scn::scene_history_batch_insert>(
+                                id,
+                                pathname,
+                                skin,
+                                effects_config,
+                                false
+                                );
+                    }
                 }
             });
 }

@@ -54,6 +54,7 @@ menu_bar::menu_bar(program_window* const  wnd)
     , m_file_action_open_scene(new QAction(QString("&Open scene"), wnd))
     , m_file_submenu_open_recent_scene(new QMenu(QString("Open r&ecent scene"), wnd))
     , m_file_action_reload_scene(new QAction(QString("Fast &reload scene"), wnd))
+    , m_file_action_import_scene(new QAction(QString("I&mport scene"), wnd))
     , m_file_action_save_scene(new QAction(QString("&Save scene"), wnd))
     , m_file_action_save_as_scene(new QAction(QString("Save&As scene"), wnd))
     , m_file_action_exit(new QAction(QString("E&xit"), wnd))
@@ -106,6 +107,7 @@ bool  menu_bar::on_file_action_open_scene()
     QFileDialog  dialog(wnd());
     dialog.setDirectory(get_default_scene_root_dir().string().c_str());
     dialog.setFileMode(QFileDialog::DirectoryOnly);
+    dialog.setWindowTitle("Open scene");
     if (!dialog.exec())
         return false;
     QStringList const  selected = dialog.selectedFiles();
@@ -133,6 +135,23 @@ bool  menu_bar::on_file_action_reload_scene()
     return true;
 }
 
+std::string  menu_bar::on_file_action_import_scene()
+{
+    QFileDialog  dialog(wnd());
+    dialog.setDirectory(get_default_scene_root_dir().string().c_str());
+    dialog.setFileMode(QFileDialog::DirectoryOnly);
+    dialog.setWindowTitle("Import scene");
+    if (!dialog.exec())
+        return "";
+    QStringList const  selected = dialog.selectedFiles();
+    if (selected.size() != 1)
+    {
+        wnd()->print_status_message("ERROR: A single load directory must be selected.", 10000);
+        return "";
+    }
+    return qtgl::to_string(selected.at(0));;
+}
+
 bool  menu_bar::on_file_action_save_scene()
 {
     if (get_current_scene_dir().empty())
@@ -147,6 +166,7 @@ bool  menu_bar::on_file_action_save_as_scene()
     QFileDialog  dialog(wnd());
     dialog.setDirectory(output_dir.string().c_str());
     dialog.setFileMode(QFileDialog::DirectoryOnly);
+    dialog.setWindowTitle("Save as scene");
     if (!dialog.exec())
         return false;
     QStringList const  selected = dialog.selectedFiles();
@@ -181,6 +201,7 @@ void  menu_bar::toggle_enable_state_of_menu_items_for_simulation_mode(bool const
     get_file_action_open_scene()->setDisabled(simulation_resumed);
     get_file_submenu_open_recent_scene()->setDisabled(simulation_resumed);
     get_file_action_reload_scene()->setDisabled(simulation_resumed);
+    get_file_action_import_scene()->setDisabled(simulation_resumed);
     get_file_action_save_scene()->setDisabled(simulation_resumed);
     get_file_action_save_as_scene()->setDisabled(simulation_resumed);
     get_file_action_exit()->setDisabled(false);
@@ -241,6 +262,21 @@ void  make_menu_bar_content(menu_bar const&  w)
     w.get_file_action_reload_scene()->setShortcut(QString("Ctrl+R"));
     w.get_file_action_reload_scene()->setToolTip("Reloads the current scene, except for graphics data (batches, shaders, buffers, textures, etc.)");
     QObject::connect(w.get_file_action_reload_scene(), &QAction::triggered, w.wnd(), &program_window::on_menu_reload_scene);
+
+    w.get_menu_file()->addAction(w.get_file_action_import_scene());
+    w.get_file_action_import_scene()->setShortcut(QString("Ctrl+Shift+I"));
+    w.get_file_action_import_scene()->setToolTip(
+        "Imports a given scene into the current one. The world coordinate system of the imported scene\n"
+        "will be represented by the '@pivot' node in the current scene. It means that '@pivot' denotes\n"
+        "where the imported nodes will be located and how they will be oriented. Further, each root node\n"
+        "of imported scene will also be a root node in the final scene. However, if its name is already\n"
+        "used in the current scene, then the imported root node is renamed to a unique name by appending\n"
+        "it a unique suffix. The selection in the current scene will be cleared and all imported root nodes\n"
+        "will be selected in the final scene. The final scene will NOT keep the information about what scene\n"
+        "was imported. The final scene will keep the disk pathname of the original scene. Root nodes with\n"
+        "names starting with the special character '@' are NOT imported (i.e. they are skipped)."
+        );
+    QObject::connect(w.get_file_action_import_scene(), &QAction::triggered, w.wnd(), &program_window::on_menu_import_scene);
 
     w.get_menu_file()->addSeparator();
 

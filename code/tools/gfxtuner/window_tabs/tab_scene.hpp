@@ -121,6 +121,8 @@ struct  widgets
     void  save();
     void  reload_scene(boost::filesystem::path const&  scene_root_dir);
 
+    void  import_scene(boost::filesystem::path const&  scene_root_dir);
+
 private:
     void  duplicate_subtree(
             tree_widget_item const* const  source_item,
@@ -145,7 +147,8 @@ private:
     void  load_scene_record(
             scn::scene_record_id const&  id,
             boost::property_tree::ptree const&  data,
-            std::unordered_map<std::string, boost::property_tree::ptree> const&  infos
+            std::unordered_map<std::string, boost::property_tree::ptree> const&  infos,
+            bool const  do_update_history
             );
     void  save_scene_record(
             scn::scene_node_ptr const  node_ptr,
@@ -165,6 +168,13 @@ private:
             tree_widget_item* const  item_ptr,
             boost::property_tree::ptree&  save_tree,
             std::unordered_map<std::string, boost::property_tree::ptree>&  infos
+            );
+
+    tree_widget_item*  import_scene_node(
+            scn::scene_node_id const&  id,
+            boost::property_tree::ptree const&  node_tree,
+            std::unordered_map<std::string, boost::property_tree::ptree> const&  infos,
+            tree_widget_item*  parent_item
             );
 
     void  update_coord_system_location_widgets();
@@ -199,7 +209,8 @@ private:
     std::unordered_map<std::string, std::function<void(widgets*,
                                                        scn::scene_record_id const&,
                                                        boost::property_tree::ptree const&,
-                                                       std::unordered_map<std::string, boost::property_tree::ptree> const&)>>
+                                                       std::unordered_map<std::string, boost::property_tree::ptree> const&,
+                                                       bool)>>
             m_load_record_handlers;
     std::unordered_map<std::string, std::function<void(widgets*,
                                                        scn::scene_node_ptr,

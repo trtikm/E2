@@ -1038,10 +1038,11 @@ void  widgets::clear_scene()
 void  widgets::load_scene_record(
         scn::scene_record_id const&  id,
         boost::property_tree::ptree const&  data,
-        std::unordered_map<std::string, boost::property_tree::ptree> const&  infos
+        std::unordered_map<std::string, boost::property_tree::ptree> const&  infos,
+        bool const  do_update_history
         )
 {
-    m_load_record_handlers.at(id.get_folder_name())(this, id, data, infos);
+    m_load_record_handlers.at(id.get_folder_name())(this, id, data, infos, do_update_history);
 }
 
 void  widgets::save_scene_record(
@@ -1093,7 +1094,7 @@ tree_widget_item*  widgets::load_scene_node(
     boost::property_tree::ptree const&  folders = node_tree.find("folders")->second;
     for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
         for (auto record_it = folder_it->second.begin(); record_it != folder_it->second.end(); ++record_it)
-            load_scene_record({ id, folder_it->first, record_it->first }, record_it->second, infos);
+            load_scene_record({ id, folder_it->first, record_it->first }, record_it->second, infos, false);
 
     return current_node_item;
 }
@@ -1252,6 +1253,123 @@ void  widgets::reload_scene(boost::filesystem::path const&  scene_root_dir)
             false
             );
     open_scene(scene_root_dir);
+}
+
+void  widgets::import_scene(boost::filesystem::path const& scene_root_dir)
+{
+    ASSUMPTION(!processing_selection_change());
+    lock_bool const  _(&m_processing_selection_change);
+
+    TMPROF_BLOCK();
+
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Scene import is disabled.", 10000);
+        return;
+    }
+
+    wnd()->print_status_message("Importing scene '" + scene_root_dir.string() + "' ...", 10000);
+
+    try
+    {
+        QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
+
+        std::unordered_map<std::string, boost::property_tree::ptree>  infos{
+            { "hierarchy", boost::property_tree::ptree() },
+            { "effects", boost::property_tree::ptree() }
+        };
+        for (auto&  name_and_info : infos)
+            boost::property_tree::read_info((scene_root_dir / (name_and_info.first + ".info")).string(), name_and_info.second);
+        boost::property_tree::ptree&  load_tree = infos.at("hierarchy");
+        std::unordered_set<scn::scene_node_id>  selected_scene_nodes;
+        for (auto  it = load_tree.begin(); it != load_tree.end(); ++it)
+        {
+            if (it->first.empty() || it->first.front() == '@')
+                continue;
+            scn::scene_node_id  node_id(it->first);
+            while (wnd()->glwindow().call_now(&simulator::get_scene_node, std::cref(node_id)) != nullptr)
+            {
+                node_id = scn::scene_node_id{ msgstream() << it->first << g_new_coord_system_id_counter };
+                ++g_new_coord_system_id_counter;
+            }
+            import_scene_node(node_id, it->second, infos, nullptr);
+            selected_scene_nodes.insert(node_id);
+        }
+
+        m_scene_tree->clearSelection();
+        for (auto const&  id : selected_scene_nodes)
+            add_tree_item_to_selection(m_scene_tree->find(id));
+        wnd()->glwindow().call_now(&simulator::set_scene_selection, selected_scene_nodes, std::unordered_set<scn::scene_record_id>());
+        update_history_according_to_change_in_selection(old_selection, m_scene_tree->selectedItems(), get_scene_history(), false);
+        get_scene_history()->commit();
+        update_coord_system_location_widgets();
+        set_window_title();
+
+        wnd()->print_status_message("Importing of the scene has finished.", 10000);
+    }
+    catch (boost::property_tree::ptree_error const&  e)
+    {
+        wnd()->print_status_message(std::string("ERROR: Import of scene has FAILED. ") + e.what(), 10000);
+        wnd()->get_current_scene_dir().clear();
+        clear_scene();
+    }
+    catch (std::exception const&  e)
+    {
+        wnd()->print_status_message(std::string("ERROR: Import of scene has FAILED. ") + e.what(), 10000);
+        wnd()->get_current_scene_dir().clear();
+        clear_scene();
+    }
+}
+
+tree_widget_item*  widgets::import_scene_node(
+        scn::scene_node_id const&  id,
+        boost::property_tree::ptree const&  node_tree,
+        std::unordered_map<std::string, boost::property_tree::ptree> const&  infos,
+        tree_widget_item*  parent_item
+        )
+{
+    ASSUMPTION(id != scn::get_pivot_node_id());
+
+    boost::property_tree::ptree const&  origin_tree = node_tree.find("origin")->second;
+    vector3  origin(
+            origin_tree.get<scalar>("x"),
+            origin_tree.get<scalar>("y"),
+            origin_tree.get<scalar>("z")
+            );
+
+    boost::property_tree::ptree const&  orientation_tree = node_tree.find("orientation")->second;
+    quaternion  orientation = make_quaternion_xyzw(
+            orientation_tree.get<scalar>("x"),
+            orientation_tree.get<scalar>("y"),
+            orientation_tree.get<scalar>("z"),
+            orientation_tree.get<scalar>("w")
+            );
+
+    if (parent_item == nullptr)
+    {
+        matrix44 V;
+        scn::scene_node_ptr const  pivot = wnd()->glwindow().call_now(&simulator::get_scene_node, scn::get_pivot_node_id());
+        angeo::from_base_matrix(*pivot->get_coord_system(), V);
+        matrix44 W;
+        angeo::from_base_matrix({ origin, orientation }, W);
+        matrix33 R;
+        decompose_matrix44(V * W, origin, R);
+        orientation = rotation_matrix_to_quaternion(R);
+    }
+
+    tree_widget_item* const  current_node_item = insert_coord_system(id, origin, orientation, parent_item);
+    get_scene_history()->insert<scn::scene_history_coord_system_insert>(id, origin, orientation, false);
+
+    boost::property_tree::ptree const&  children = node_tree.find("children")->second;
+    for (auto it = children.begin(); it != children.end(); ++it)
+        import_scene_node(id / it->first, it->second, infos, current_node_item);
+
+    boost::property_tree::ptree const&  folders = node_tree.find("folders")->second;
+    for (auto folder_it = folders.begin(); folder_it != folders.end(); ++folder_it)
+        for (auto record_it = folder_it->second.begin(); record_it != folder_it->second.end(); ++record_it)
+            load_scene_record({ id, folder_it->first, record_it->first }, record_it->second, infos, true);
+
+    return current_node_item;
 }
 
 

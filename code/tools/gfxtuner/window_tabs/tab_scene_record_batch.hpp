@@ -49,7 +49,8 @@ void  register_record_handler_for_load_scene_record(
         std::unordered_map<std::string, std::function<void(widgets*,
                                                            scn::scene_record_id const&,
                                                            boost::property_tree::ptree const&,
-                                                           std::unordered_map<std::string, boost::property_tree::ptree> const&)>>&
+                                                           std::unordered_map<std::string, boost::property_tree::ptree> const&,
+                                                           bool)>>&
                 load_record_handlers
         );
 

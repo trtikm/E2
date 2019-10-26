@@ -113,6 +113,7 @@ public slots:
     void  on_menu_new_scene() { m_menu_bar.on_file_action_new_scene(); m_tab_scene_widgets.clear_scene(); }
     void  on_menu_open_scene() { if (m_menu_bar.on_file_action_open_scene()) m_tab_scene_widgets.open_scene(get_current_scene_dir()); }
     void  on_menu_reload_scene() { if (m_menu_bar.on_file_action_reload_scene()) m_tab_scene_widgets.reload_scene(get_current_scene_dir()); }
+    void  on_menu_import_scene() { std::string const pathname = m_menu_bar.on_file_action_import_scene(); if (!pathname.empty()) m_tab_scene_widgets.import_scene(pathname); }
     void  on_menu_save_scene() { if (m_menu_bar.on_file_action_save_scene()) m_tab_scene_widgets.save_scene(get_current_scene_dir()); }
     void  on_menu_save_as_scene() { if (m_menu_bar.on_file_action_save_as_scene()) m_tab_scene_widgets.save_scene(get_current_scene_dir()); }
     void  on_menu_exit() { if (m_menu_bar.on_file_action_exit()) PostQuitMessage(0); }

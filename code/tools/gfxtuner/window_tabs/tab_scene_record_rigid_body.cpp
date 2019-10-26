@@ -725,7 +725,8 @@ void  register_record_handler_for_load_scene_record(
         std::unordered_map<std::string, std::function<void(widgets*,
                                                            scn::scene_record_id const&,
                                                            boost::property_tree::ptree const&,
-                                                           std::unordered_map<std::string, boost::property_tree::ptree> const&)>>&
+                                                           std::unordered_map<std::string, boost::property_tree::ptree> const&,
+                                                           bool)>>&
                 load_record_handlers
         )
 {
@@ -734,7 +735,8 @@ void  register_record_handler_for_load_scene_record(
             []( widgets* const  w,
                 scn::scene_record_id const&  id,
                 boost::property_tree::ptree const&  data,
-                std::unordered_map<std::string, boost::property_tree::ptree> const&  infos) -> void {
+                std::unordered_map<std::string, boost::property_tree::ptree> const&  infos,
+                bool const  do_update_history) -> void {
                     w->wnd()->glwindow().call_now(
                             &simulator::load_rigid_body,
                             std::cref(data),
@@ -746,6 +748,23 @@ void  register_record_handler_for_load_scene_record(
                             w->get_record_icon(scn::get_rigid_body_folder_name()),
                             w->get_folder_icon()
                             );
+                    if (do_update_history)
+                    {
+                        bool  auto_compute_mass_and_inertia_tensor;
+                        scn::rigid_body_props  rb_props;
+                        w->wnd()->glwindow().call_now(
+                                &simulator::get_rigid_body_info,
+                                std::cref(id.get_node_id()),
+                                std::ref(auto_compute_mass_and_inertia_tensor),
+                                std::ref(rb_props)
+                                );
+                        w->get_scene_history()->insert<scn::scene_history_rigid_body_insert>(
+                                id,
+                                auto_compute_mass_and_inertia_tensor,
+                                rb_props,
+                                false
+                                );
+                    }
                 }
             });
 }

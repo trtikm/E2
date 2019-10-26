@@ -339,7 +339,8 @@ void  register_record_handler_for_load_scene_record(
         std::unordered_map<std::string, std::function<void(widgets*,
                                                            scn::scene_record_id const&,
                                                            boost::property_tree::ptree const&,
-                                                           std::unordered_map<std::string, boost::property_tree::ptree> const&)>>&
+                                                           std::unordered_map<std::string, boost::property_tree::ptree> const&,
+                                                           bool)>>&
                 load_record_handlers
         )
 {
@@ -348,7 +349,8 @@ void  register_record_handler_for_load_scene_record(
             []( widgets* const  w,
                 scn::scene_record_id const&  id,
                 boost::property_tree::ptree const&  data,
-                std::unordered_map<std::string, boost::property_tree::ptree> const&  infos) -> void {
+                std::unordered_map<std::string, boost::property_tree::ptree> const&  infos,
+                bool const  do_update_history) -> void {
                     w->wnd()->glwindow().call_now(
                             &simulator::load_agent,
                             std::cref(data),
@@ -360,6 +362,12 @@ void  register_record_handler_for_load_scene_record(
                             w->get_record_icon(scn::get_agent_folder_name()),
                             w->get_folder_icon()
                             );
+                    if (do_update_history)
+                    {
+                        scn::skeleton_props_const_ptr const  skeleton_props =
+                            w->wnd()->glwindow().call_now(&simulator::get_agent_info, std::cref(id.get_node_id()));
+                        w->get_scene_history()->insert<scn::scene_history_agent_insert>(id, skeleton_props, false);
+                    }
                 }
             });
 }
