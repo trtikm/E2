@@ -73,6 +73,7 @@ struct  widgets
     void  on_scene_insert_record(std::string const&  record_kind, std::string const&  mode);
     void  on_scene_erase_selected();
     void  on_scene_duplicate_selected();
+    void  on_scene_change_parent_of_selected();
 
     void  on_coord_system_pos_changed();
     void  on_coord_system_rot_changed();
@@ -135,6 +136,7 @@ private:
             tree_widget_item* const  target_item,
             tree_widgent_items_cache const&  tree_item_children_cache
             );
+    std::string  choose_scene_node_name(std::string const&  orig_name, scn::scene_node_id const&  parent_item_id);
 
     tree_widget_item*  insert_coord_system(
                 scn::scene_node_id const&  id,

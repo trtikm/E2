@@ -124,6 +124,7 @@ public slots:
     void  on_menu_edit_insert_record(std::string const&  record_kind, std::string const&  mode) { m_tab_scene_widgets.on_scene_insert_record(record_kind, mode); }
     void  on_menu_edit_erase_selected() { m_tab_scene_widgets.on_scene_erase_selected(); }
     void  on_menu_edit_duplicate_selected() { m_tab_scene_widgets.on_scene_duplicate_selected(); }
+    void  on_menu_edit_change_parent_of_selected() { m_tab_scene_widgets.on_scene_change_parent_of_selected(); }
     void  on_menu_edit_mode_selection() { m_tab_scene_widgets.on_scene_mode_selection(); }
     void  on_menu_edit_mode_translation() { m_tab_scene_widgets.on_scene_mode_translation(); }
     void  on_menu_edit_mode_rotation() { m_tab_scene_widgets.on_scene_mode_rotation(); }

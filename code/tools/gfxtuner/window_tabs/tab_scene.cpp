@@ -855,6 +855,37 @@ void  widgets::duplicate_subtree(
 }
 
 
+std::string  widgets::choose_scene_node_name(std::string const&  orig_name, scn::scene_node_id const&  parent_item_id)
+{
+    if (wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / orig_name) == nullptr)
+        return orig_name;
+    natural_64_bit  counter = 1UL;
+    std::string  base = orig_name;
+    {
+        std::string  counter_text;
+        while (!base.empty() && std::isdigit(base.back(), std::locale::classic()))
+        {
+            counter_text.push_back(base.back());
+            base.pop_back();
+        }
+        if (!base.empty() && base.back() != '_' && base.back() != '#')
+            base.push_back('_');
+        if (!counter_text.empty())
+        {
+            std::reverse(counter_text.begin(), counter_text.end());
+            counter = std::atol(counter_text.c_str());
+        }
+    }
+    std::string  name;
+    do
+    {
+        name = msgstream() << base << counter;
+        ++counter;
+    } while (wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) != nullptr);
+    return name;
+}
+
+
 void  widgets::on_scene_duplicate_selected()
 {
     TMPROF_BLOCK();
@@ -924,34 +955,6 @@ void  widgets::on_scene_duplicate_selected()
             std::unordered_set<scn::scene_record_id>()
             );
 
-    auto const choose_name =
-        [this](std::string const&  orig_name, scn::scene_node_id const&  parent_item_id) -> std::string {
-            natural_64_bit  counter = 1UL;
-            std::string  base = orig_name;
-            {
-                std::string  counter_text;
-                while (!base.empty() && std::isdigit(base.back(), std::locale::classic()))
-                {
-                    counter_text.push_back(base.back());
-                    base.pop_back();
-                }
-                if (!base.empty() && base.back() != '_' && base.back() != '#')
-                    base.push_back('_');
-                if (!counter_text.empty())
-                {
-                    std::reverse(counter_text.begin(), counter_text.end());
-                    counter = std::atol(counter_text.c_str());
-                }
-            }
-            std::string  name;
-            do
-            {
-                name = msgstream() << base << counter;
-                ++counter;
-            } while (wnd()->glwindow().call_now(&simulator::get_scene_node, parent_item_id / name) != nullptr);
-            return name;
-        };
-
     for (auto const&  item_and_source_node : source_nodes)
     {
         tree_widget_item const* const  source_item = item_and_source_node.first;
@@ -963,7 +966,7 @@ void  widgets::on_scene_duplicate_selected()
 
         INVARIANT((parent_tree_item == nullptr) == (parent_node == nullptr));
 
-        std::string  base_name = choose_name(source_node->get_name(), parent_item_id);
+        std::string  base_name = choose_scene_node_name(source_node->get_name(), parent_item_id);
 
         if (source_nodes.size() == 1UL)
         {
@@ -995,7 +998,7 @@ void  widgets::on_scene_duplicate_selected()
 
         for (natural_32_bit  i = 0U; i != num_copies; ++i)
         {
-            std::string const  name = i == 0U ? base_name : choose_name(base_name, parent_item_id);
+            std::string const  name = i == 0U ? base_name : choose_scene_node_name(base_name, parent_item_id);
 
             vector3 const  shifted_origin = source_node->get_coord_system()->origin() + (float_32_bit)(i + 1U) * origin_shift;
             auto const  tree_item = insert_coord_system(parent_item_id / name, shifted_origin, pivot_orientation, parent_tree_item);
@@ -1014,6 +1017,140 @@ void  widgets::on_scene_duplicate_selected()
             add_tree_item_to_selection(tree_item);
         }
     }
+
+    update_history_according_to_change_in_selection(old_selection, m_scene_tree->selectedItems(), get_scene_history(), false);
+
+    get_scene_history()->commit();
+    set_window_title();
+
+    update_coord_system_location_widgets();
+}
+
+
+void  widgets::on_scene_change_parent_of_selected()
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(!processing_selection_change());
+    lock_bool const  _(&m_processing_selection_change);
+
+    if (!is_editing_enabled())
+    {
+        wnd()->print_status_message("ERROR: Scene editing is disabled.", 10000);
+        return;
+    }
+
+    QList<QTreeWidgetItem*>  old_selection = m_scene_tree->selectedItems();
+    std::unordered_map<tree_widget_item*, scn::scene_node_const_ptr>  source_nodes;
+    {
+        if (old_selection.size() == 0)
+        {
+            wnd()->print_status_message("ERROR: No coordinate system node is selected for parent change.", 10000);
+            return;
+        }
+
+        std::unordered_set<tree_widget_item*>  selection;
+        for (QTreeWidgetItem*  item_ptr : old_selection)
+            selection.insert(as_tree_widget_item(item_ptr));
+
+        for (QTreeWidgetItem* item_ptr : old_selection)
+        {
+            if (!represents_coord_system(item_ptr))
+            {
+                wnd()->print_status_message("ERROR: A selected scene object is NOT a coordinate system.", 10000);
+                return;
+            }
+            scn::scene_node_id const  item_id = scene_record_id_reverse_builder::run(item_ptr).get_node_id();
+            if (scene_record_id_reverse_builder::run(item_ptr).get_node_id().path().front().front() == '@')
+            {
+                wnd()->print_status_message("ERROR: Cannot change parent of a special coordinate system (containing '@' in the name).", 10000);
+                return;
+            }
+            for (QTreeWidgetItem* ptr = item_ptr->parent(); ptr != nullptr; ptr = ptr->parent())
+                if (selection.count(as_tree_widget_item(ptr)) != 0UL)
+                {
+                    wnd()->print_status_message("ERROR: Sub-trees of selected coord. systems overlap.", 10000);
+                    return;
+                }
+            scn::scene_node_const_ptr const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, item_id);
+            source_nodes.insert({ as_tree_widget_item(item_ptr), node_ptr });
+        }
+    }
+
+    tree_widget_item*  new_parent_tree_item;
+    scn::scene_node_id  new_parent_id;
+    matrix44  to_new_parent_space_matrix;
+    {
+        new_parent_tree_item = nullptr;
+        scn::scene_node_ptr  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, scn::get_pivot_node_id());
+        if (m_scene_tree->currentItem() != nullptr)
+        {
+            if (old_selection.count(m_scene_tree->currentItem()) != 0UL)
+            {
+                wnd()->print_status_message("ERROR: The target node (i.e. the new parent) is amongst the selected objects.", 10000);
+                return;
+            }
+            tree_widget_item* const  candidate_item = as_tree_widget_item(m_scene_tree->currentItem());
+            if (represents_coord_system(candidate_item))
+            {
+                scn::scene_node_id const  id = scene_record_id_reverse_builder::run(candidate_item).get_node_id();
+                if (id.path().front().front() != '@')
+                {
+                    new_parent_tree_item = candidate_item;
+                    new_parent_id = id;
+                    node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, std::cref(id));
+                }
+            }
+        }
+        to_new_parent_space_matrix = inverse44(node_ptr->get_world_matrix());
+    }
+
+    m_scene_tree->clearSelection();
+    wnd()->glwindow().call_now(
+            &simulator::set_scene_selection,
+            std::unordered_set<scn::scene_node_id>(),
+            std::unordered_set<scn::scene_record_id>()
+            );
+    update_history_according_to_change_in_selection(old_selection, m_scene_tree->selectedItems(), get_scene_history(), false);
+    old_selection = m_scene_tree->selectedItems();
+
+    for (auto const&  item_and_source_node : source_nodes)
+    {
+        tree_widget_item const* const  source_item = item_and_source_node.first;
+        scn::scene_node_const_ptr const  source_node = item_and_source_node.second;
+
+        std::string const  name = choose_scene_node_name(source_node->get_name(), new_parent_id);
+
+        vector3  origin;
+        quaternion  orientation;
+        {
+            matrix33  R ;
+            decompose_matrix44(to_new_parent_space_matrix * source_node->get_world_matrix(), origin, R);
+            orientation = normalised(rotation_matrix_to_quaternion(R));
+        }
+
+        auto const  tree_item = insert_coord_system(new_parent_id / name, origin, orientation, new_parent_tree_item);
+        get_scene_history()->insert<scn::scene_history_coord_system_insert>(
+                new_parent_id / name,
+                origin,
+                orientation,
+                false
+                );
+
+        tree_widgent_items_cache  tree_item_children_cache;
+        build_cache_from_item_to_its_direct_children(source_item, tree_item_children_cache);
+        duplicate_subtree(source_item, tree_item, tree_item_children_cache);
+
+        std::unordered_set<scn::scene_node_id>  selected_scene_nodes{ new_parent_id / name };
+        std::unordered_set<scn::scene_record_id>  selected_records;
+        m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_records));
+
+        add_tree_item_to_selection(tree_item);
+    }
+
+    std::unordered_set<void*>  erased_items;
+    for (auto const&  item_and_source_node : source_nodes)
+        erase_subtree_at_root_item(item_and_source_node.first, erased_items);
 
     update_history_according_to_change_in_selection(old_selection, m_scene_tree->selectedItems(), get_scene_history(), false);
 

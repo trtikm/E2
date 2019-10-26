@@ -67,6 +67,7 @@ menu_bar::menu_bar(program_window* const  wnd)
     , m_record_menu_items()
     , m_edit_action_erase_selected(new QAction(QString("&Erase selected"), wnd))
     , m_edit_action_duplicate_selected(new QAction(QString("&Duplicate selected"), wnd))
+    , m_edit_action_change_parent_of_selected(new QAction(QString("C&hange parent of selected"), wnd))
     , m_edit_action_mode_select(new QAction(QString("&Selection"), wnd))
     , m_edit_action_mode_translate(new QAction(QString("&Translation"), wnd))
     , m_edit_action_mode_rotate(new QAction(QString("&Rotation"), wnd))
@@ -211,6 +212,7 @@ void  menu_bar::toggle_enable_state_of_menu_items_for_simulation_mode(bool const
         record_kind_and_action.second.first->setDisabled(simulation_resumed);
     get_edit_action_erase_selected()->setDisabled(simulation_resumed);
     get_edit_action_duplicate_selected()->setDisabled(simulation_resumed);
+    get_edit_action_change_parent_of_selected()->setDisabled(simulation_resumed);
     get_edit_action_mode_select()->setDisabled(simulation_resumed);
     get_edit_action_mode_translate()->setDisabled(simulation_resumed);
     get_edit_action_mode_rotate()->setDisabled(simulation_resumed);
@@ -348,8 +350,6 @@ void  make_menu_bar_content(menu_bar const&  w)
         );
     QObject::connect(w.get_edit_action_erase_selected(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_erase_selected);
 
-    w.get_menu_edit()->addSeparator();
-
     w.get_menu_edit()->addAction(w.get_edit_action_duplicate_selected());
     w.get_edit_action_duplicate_selected()->setShortcut(QString("Ctrl+D"));
     w.get_edit_action_duplicate_selected()->setToolTip(
@@ -363,6 +363,13 @@ void  make_menu_bar_content(menu_bar const&  w)
         "duplicated node has the name of the source node suffixed by a unique number."
         );
     QObject::connect(w.get_edit_action_duplicate_selected(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_duplicate_selected);
+
+    w.get_menu_edit()->addAction(w.get_edit_action_change_parent_of_selected());
+    w.get_edit_action_change_parent_of_selected()->setShortcut(QString("Ctrl+Shift+H"));
+    w.get_edit_action_change_parent_of_selected()->setToolTip(
+        "TODO."
+        );
+    QObject::connect(w.get_edit_action_change_parent_of_selected(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_change_parent_of_selected);
 
     w.get_menu_edit()->addSeparator();
 

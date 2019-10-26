@@ -38,6 +38,7 @@ struct  menu_bar
     std::multimap<std::string, std::pair<QAction*, std::string> > const& get_edit_actions_of_records() const { return m_record_menu_items; }
     QAction*  get_edit_action_erase_selected() const { return m_edit_action_erase_selected; }
     QAction*  get_edit_action_duplicate_selected() const { return m_edit_action_duplicate_selected; }
+    QAction*  get_edit_action_change_parent_of_selected() const { return m_edit_action_change_parent_of_selected; }
     QAction*  get_edit_action_mode_select() const { return m_edit_action_mode_select; }
     QAction*  get_edit_action_mode_translate() const { return m_edit_action_mode_translate; }
     QAction*  get_edit_action_mode_rotate() const { return m_edit_action_mode_rotate; }
@@ -100,6 +101,7 @@ private:
     std::multimap<std::string, std::pair<QAction*, std::string> >  m_record_menu_items;
     QAction*  m_edit_action_erase_selected;
     QAction*  m_edit_action_duplicate_selected;
+    QAction*  m_edit_action_change_parent_of_selected;
     QAction*  m_edit_action_mode_select;
     QAction*  m_edit_action_mode_translate;
     QAction*  m_edit_action_mode_rotate;
