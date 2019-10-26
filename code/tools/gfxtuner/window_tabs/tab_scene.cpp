@@ -832,6 +832,8 @@ void  widgets::duplicate_subtree(
                     false
                     );
             duplicate_subtree(item, duplicate_item, tree_item_children_cache);
+
+            duplicate_item->setExpanded(item->isExpanded());
         }
     }
     for (auto const item : tree_item_children_cache.at(source_item))
@@ -849,7 +851,9 @@ void  widgets::duplicate_subtree(
             scn::scene_record_id  src_record_id{ source_coord_system_id, item_name, record_item_name };
             scn::scene_record_id  duplicated_record_id{ target_coord_system_id, item_name, record_item_name };
             m_duplicate_record_handlers.at(item_name)(this, src_record_id, duplicated_record_id);
-            insert_record_to_tree_widget(m_scene_tree, duplicated_record_id, m_icons_of_records.at(item_name), m_folder_icon);
+            auto const  duplicate_item =
+                    insert_record_to_tree_widget(m_scene_tree, duplicated_record_id, m_icons_of_records.at(item_name), m_folder_icon);
+            duplicate_item->parent()->setExpanded(item->isExpanded());
         }
     }
 }
@@ -1010,6 +1014,8 @@ void  widgets::on_scene_duplicate_selected()
                     );
             duplicate_subtree(source_item, tree_item, tree_item_children_cache);
 
+            tree_item->setExpanded(source_item->isExpanded());
+
             std::unordered_set<scn::scene_node_id>  selected_scene_nodes{ parent_item_id / name };
             std::unordered_set<scn::scene_record_id>  selected_records;
             m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_records));
@@ -1141,6 +1147,8 @@ void  widgets::on_scene_change_parent_of_selected()
         build_cache_from_item_to_its_direct_children(source_item, tree_item_children_cache);
         duplicate_subtree(source_item, tree_item, tree_item_children_cache);
 
+        tree_item->setExpanded(source_item->isExpanded());
+
         std::unordered_set<scn::scene_node_id>  selected_scene_nodes{ new_parent_id / name };
         std::unordered_set<scn::scene_record_id>  selected_records;
         m_wnd->glwindow().call_now(&simulator::insert_to_scene_selection, std::cref(selected_scene_nodes), std::cref(selected_records));
@@ -1234,6 +1242,8 @@ void  widgets::on_scene_rename_scene_object()
         tree_widgent_items_cache  tree_item_children_cache;
         build_cache_from_item_to_its_direct_children(item_ptr, tree_item_children_cache);
         duplicate_subtree(item_ptr, renamed_tree_item, tree_item_children_cache);
+
+        renamed_tree_item->setExpanded(item_ptr->isExpanded());
 
         if (item_ptr->isSelected())
         {
