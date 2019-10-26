@@ -369,7 +369,7 @@ void  make_menu_bar_content(menu_bar const&  w)
     w.get_menu_edit()->addAction(w.get_edit_action_change_parent_of_selected());
     w.get_edit_action_change_parent_of_selected()->setShortcut(QString("Ctrl+Shift+H"));
     w.get_edit_action_change_parent_of_selected()->setToolTip(
-        "Changes parent node of each selected coord. system nodes in the scene by the coord. system node corresponding to\n"
+        "Changes parent node of each selected coord. system nodes in the scene by the coord. system node corresponding to the\n"
         "current (active) item in the scene tree widget. The current tree item must NOT be selected (hint: hold 'Ctrl' key\n"
         "to toggle selection of the current tree item). When the current tree item corresponds to the '@pivot' scene node,\n"
         "then all selected nodes will have no parent (i.e. they will become root-level nodes in the scene)."
@@ -377,9 +377,11 @@ void  make_menu_bar_content(menu_bar const&  w)
     QObject::connect(w.get_edit_action_change_parent_of_selected(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_change_parent_of_selected);
 
     w.get_menu_edit()->addAction(w.get_edit_action_rename_scene_object());
-    w.get_edit_action_rename_scene_object()->setShortcut(QString("Ctrl+Shift+R"));
+    w.get_edit_action_rename_scene_object()->setShortcut(Qt::Key::Key_F2);
     w.get_edit_action_rename_scene_object()->setToolTip(
-        "TODO"
+        "Renames a scene object corresponding to the current (active) node in the scene tree widget. Regular coord. system\n"
+        "nodes and batches can be renamed. The operation can only be performed, if either none or the renamed object is\n"
+        "selected in the scene (note: the current item in the scene tree widget may correspond to not-selected scene object)."
         );
     QObject::connect(w.get_edit_action_rename_scene_object(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_rename_scene_object);
 
