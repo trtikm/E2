@@ -367,7 +367,10 @@ void  make_menu_bar_content(menu_bar const&  w)
     w.get_menu_edit()->addAction(w.get_edit_action_change_parent_of_selected());
     w.get_edit_action_change_parent_of_selected()->setShortcut(QString("Ctrl+Shift+H"));
     w.get_edit_action_change_parent_of_selected()->setToolTip(
-        "TODO."
+        "Changes parent node of each selected coord. system nodes in the scene by the coord. system node corresponding to\n"
+        "current (active) item in the scene tree widget. The current tree item must NOT be selected (hint: hold 'Ctrl' key\n"
+        "to toggle selection of the current tree item). When the current tree item corresponds to the '@pivot' scene node,\n"
+        "then all selected nodes will have no parent (i.e. they will become root-level nodes in the scene)."
         );
     QObject::connect(w.get_edit_action_change_parent_of_selected(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_change_parent_of_selected);
 
@@ -376,7 +379,8 @@ void  make_menu_bar_content(menu_bar const&  w)
     w.get_menu_edit()->addAction(w.get_edit_action_mode_select());
     w.get_edit_action_mode_select()->setShortcut(Qt::Key::Key_C);
     w.get_edit_action_mode_select()->setToolTip(
-        "Allows you to select or deselect scene objects (i.e. coord. systems and batches) using mouse buttons. By pressing left mouse\n"
+        "Activates the 'SELECT' edit mode. The active edit mode is shown in the status bar (3rd widget from the right). This mode\n"
+        "allows you to select or deselect scene objects (i.e. coord. systems and batches) using mouse buttons. By pressing left mouse\n"
         "button all scene objects are deselected and then a scene object under the mouse is selected, if there is any. By pressing\n"
         "right mouse button the current selection either unchanged, if no scene object is under mouse, or it is updated so that the\n"
         "secne object under the mouse is added, if it was not in the selection, and it is removed from the selection, if it already\n"
@@ -387,7 +391,8 @@ void  make_menu_bar_content(menu_bar const&  w)
     w.get_menu_edit()->addAction(w.get_edit_action_mode_translate());
     w.get_edit_action_mode_translate()->setShortcut(Qt::Key::Key_T);
     w.get_edit_action_mode_translate()->setToolTip(
-        "Allows you to translate selected scene objects using the mouse. The operation is done in the reference coord. system. It is\n"
+        "Activates the 'TRANSLATE' edit mode. The active edit mode is shown in the status bar (3rd widget from the right). This mode\n"
+        "allows you to translate selected scene objects using the mouse. The operation is done in the reference coord. system. It is\n"
         "either the 'world' coord. system (default), or '@pivot' coord. system (if selected). Keep left mouse button pressed and move\n"
         "the mouse to perfotm the translation. Holding also any pair of keys X, Y, or Z pressed allows you to specify along what\n"
         "axes/planes the operation will be performed. When none of the keys is pressed then X and Y are active by default."
@@ -397,7 +402,8 @@ void  make_menu_bar_content(menu_bar const&  w)
     w.get_menu_edit()->addAction(w.get_edit_action_mode_rotate());
     w.get_edit_action_mode_rotate()->setShortcut(Qt::Key::Key_R);
     w.get_edit_action_mode_rotate()->setToolTip(
-        "Allows you to rotate selected scene objects using the mouse. The operation is done in the reference coord. system. It is either\n"
+        "Activates the 'ROTATE' edit mode. The active edit mode is shown in the status bar (3rd widget from the right). This mode\n"
+        "allows you to rotate selected scene objects using the mouse. The operation is done in the reference coord. system. It is either\n"
         "the 'world' coord. system (default), or '@pivot' coord. system (if selected). Keep left mouse button pressed and move the mouse\n"
         "to perfotm the rotation. Holding also a key X, Y, or Z pressed allows you to specify along what axis the operation will be\n"
         "performed. When none of the keys is pressed then Z axis is active by default. The right mouse button pressed instead of the left\n"
