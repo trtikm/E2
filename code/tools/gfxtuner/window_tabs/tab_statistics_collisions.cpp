@@ -270,7 +270,7 @@ QWidget*  make_tab_content(widgets const&  w)
                     {
                         hbox_layout = new QHBoxLayout;
                         {
-                            hbox_layout->addWidget(new QLabel("Setches by bbox:"));
+                            hbox_layout->addWidget(new QLabel("Searches by bbox:"));
                             hbox_layout->addWidget(w.proximity_static_num_searches_by_bbox_in_last_frame());
                             hbox_layout->addStretch(1);
                         }
@@ -367,7 +367,7 @@ QWidget*  make_tab_content(widgets const&  w)
                     {
                         hbox_layout = new QHBoxLayout;
                         {
-                            hbox_layout->addWidget(new QLabel("Setches by bbox:"));
+                            hbox_layout->addWidget(new QLabel("Searches by bbox:"));
                             hbox_layout->addWidget(w.proximity_dynamic_num_searches_by_bbox_in_last_frame());
                             hbox_layout->addStretch(1);
                         }
