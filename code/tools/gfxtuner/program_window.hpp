@@ -156,9 +156,9 @@ private:
 
     Q_OBJECT
 
-    bool  event(QEvent* const event);
-    void  timerEvent(QTimerEvent* const event);
-    void  closeEvent(QCloseEvent* const  event);
+    bool  event(QEvent* const event) override;
+    void  timerEvent(QTimerEvent* const event) override;
+    void  closeEvent(QCloseEvent* const  event) override;
 
     boost::filesystem::path  m_ptree_pathname;
     std::unique_ptr<boost::property_tree::ptree>  m_ptree;

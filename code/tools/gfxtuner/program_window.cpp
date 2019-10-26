@@ -97,9 +97,10 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 
     make_status_bar_content(m_status_bar);
 
-    this->show();
-
-    qtgl::set_splitter_sizes(*m_splitter, ptree().get("window.splitter_ratio", 3.0f / 4.0f));
+    if (ptree().get("window.show_maximised", false))
+        this->showMaximized();
+    else
+        this->show();
 
     this->setFocus();
 
@@ -135,8 +136,7 @@ void program_window::timerEvent(QTimerEvent* const event)
 
     if (m_is_this_first_timer_event)
     {
-        if (ptree().get("window.show_maximised", false))
-            this->showMaximized();
+        qtgl::set_splitter_sizes(*m_splitter, ptree().get("window.splitter_ratio", 3.0f / 4.0f));
         m_is_this_first_timer_event = false;
 
         // Below put calls to methods 'on_simulator_started' of those widgets 
