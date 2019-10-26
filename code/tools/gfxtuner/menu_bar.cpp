@@ -266,15 +266,16 @@ void  make_menu_bar_content(menu_bar const&  w)
     w.get_menu_file()->addAction(w.get_file_action_import_scene());
     w.get_file_action_import_scene()->setShortcut(QString("Ctrl+Shift+I"));
     w.get_file_action_import_scene()->setToolTip(
-        "Imports a given scene into the current one. The world coordinate system of the imported scene\n"
-        "will be represented by the '@pivot' node in the current scene. It means that '@pivot' denotes\n"
-        "where the imported nodes will be located and how they will be oriented. Further, each root node\n"
-        "of imported scene will also be a root node in the final scene. However, if its name is already\n"
-        "used in the current scene, then the imported root node is renamed to a unique name by appending\n"
-        "it a unique suffix. The selection in the current scene will be cleared and all imported root nodes\n"
-        "will be selected in the final scene. The final scene will NOT keep the information about what scene\n"
-        "was imported. The final scene will keep the disk pathname of the original scene. Root nodes with\n"
-        "names starting with the special character '@' are NOT imported (i.e. they are skipped)."
+        "Imports a given scene into the current one. If exactly one regular coord. system node is selected, then the scene\n"
+        "is imported under the node (i.e. root-level nodes of the imported scene become direct children of the selected node).\n"
+        "Otherwise, all root-level nodes of the imported scene become root-level nodes in the final scene and their coordinate\n"
+        "system will be located relative to the '@pivot' node of the original scene (i.e. they will be located as if '@pivot'\n"
+        "was their parent node). If name of an imported node at root-level in the imported scene is already used in the current\n"
+        "scene (at the place where it is imported to), then the imported node is renamed to a unique name by appending it a unique\n"
+        "suffix. The selection in the current scene will be cleared and all imported root nodes will be selected in the final\n"
+        "scene. The final scene will NOT keep the information about what scene was imported. The final scene will keep the disk\n"
+        "pathname of the original scene. Non-regular nodes of the imported scene (i.e. those containing '@' in the name) are NOT\n"
+        "imported (i.e. they are skipped)."
         );
     QObject::connect(w.get_file_action_import_scene(), &QAction::triggered, w.wnd(), &program_window::on_menu_import_scene);
 

@@ -1283,6 +1283,25 @@ void  widgets::import_scene(boost::filesystem::path const& scene_root_dir)
     {
         QList<QTreeWidgetItem*> const  old_selection = m_scene_tree->selectedItems();
 
+        scn::scene_node_id  root_node_id;
+        tree_widget_item*  root_tree_item;
+        {
+            root_tree_item = nullptr;
+            if (old_selection.size() == 1)
+            {
+                tree_widget_item* const  candidate_item = as_tree_widget_item(old_selection.front());
+                if (represents_coord_system(candidate_item))
+                {
+                    scn::scene_node_id const  id = scene_record_id_reverse_builder::run(old_selection.front()).get_node_id();
+                    if (id.path().front().front() != '@')
+                    {
+                        root_node_id = id;
+                        root_tree_item = candidate_item;
+                    }
+                }
+            }
+        }
+
         std::unordered_map<std::string, boost::property_tree::ptree>  infos{
             { "hierarchy", boost::property_tree::ptree() },
             { "effects", boost::property_tree::ptree() }
@@ -1295,13 +1314,13 @@ void  widgets::import_scene(boost::filesystem::path const& scene_root_dir)
         {
             if (it->first.empty() || it->first.front() == '@')
                 continue;
-            scn::scene_node_id  node_id(it->first);
+            scn::scene_node_id  node_id = root_node_id / it->first;
             while (wnd()->glwindow().call_now(&simulator::get_scene_node, std::cref(node_id)) != nullptr)
             {
-                node_id = scn::scene_node_id{ msgstream() << it->first << g_new_coord_system_id_counter };
+                node_id = root_node_id / scn::scene_node_id{ msgstream() << it->first << g_new_coord_system_id_counter };
                 ++g_new_coord_system_id_counter;
             }
-            import_scene_node(node_id, it->second, infos, nullptr);
+            import_scene_node(node_id, it->second, infos, root_tree_item);
             selected_scene_nodes.insert(node_id);
         }
 
