@@ -11,6 +11,7 @@
 #include <boost/property_tree/info_parser.hpp>
 #include <QString>
 #include <QIcon>
+#include <QStackedWidget>
 #include <sstream>
 
 
@@ -101,7 +102,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     else
         this->show();
 
-    set_focus_to_glwindow();
+    this->setFocus();
 
     glwindow().register_listener(
         simulator_notifications::escape_simulator_window(),
@@ -120,7 +121,8 @@ bool program_window::event(QEvent* const event)
     switch (event->type())
     {
     case QEvent::WindowActivate:
-        set_focus_to_glwindow();
+        if (m_is_this_first_timer_event == false)
+            set_focus_to_glwindow();
         return QMainWindow::event(event);
     default:
         return QMainWindow::event(event);
@@ -233,4 +235,17 @@ void  program_window::set_title(std::string const&  text)
     if (!text.empty())
         sstr << " [" << text << "]";
     this->setWindowTitle(sstr.str().c_str());
+}
+
+void  program_window::set_focus_to_glwindow()
+{
+    m_gl_window_widget->setFocus();
+}
+
+void  program_window::set_focus_to_widgets()
+{
+    QWidget* w = m_tabs->currentWidget()->nextInFocusChain();
+    while (dynamic_cast<QStackedWidget*>(w) != nullptr)
+        w = dynamic_cast<QStackedWidget*>(w)->currentWidget()->nextInFocusChain();
+    w->setFocus();
 }
