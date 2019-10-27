@@ -26,6 +26,7 @@ inline std::string  scene_scene_selection_changed() { return "SCENE_SELECTION_CH
 
 inline std::string  scene_simulation_nodes_changed() { return "SCENE_SIMULATION_NODES_CHANGED"; }
 
+inline std::string  escape_simulator_window() { return "ESCAPE_SIMULATOR_WINDOW"; }
 
 }
 

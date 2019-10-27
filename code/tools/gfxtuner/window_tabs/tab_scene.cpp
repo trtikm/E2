@@ -1711,10 +1711,7 @@ void  widgets::on_coord_system_pos_changed()
     auto const  node_ptr = wnd()->glwindow().call_now(&simulator::get_scene_node, coord_system_id);
     INVARIANT(node_ptr != nullptr);
     if(length(pos - node_ptr->get_coord_system()->origin()) < 1e-4f)
-    {
-        wnd()->set_focus_to_glwindow();
         return;
-    }
 
     wnd()->glwindow().call_later(&simulator::set_position_of_scene_node, coord_system_id, pos);
 
@@ -1727,7 +1724,6 @@ void  widgets::on_coord_system_pos_changed()
             );
     get_scene_history()->commit();
     set_window_title();
-    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::on_coord_system_rot_changed()
@@ -1748,10 +1744,7 @@ void  widgets::on_coord_system_rot_changed()
     INVARIANT(node_ptr != nullptr);
     if (length_4d(quaternion_coefficients_xyzw(q) -
                   quaternion_coefficients_xyzw(node_ptr->get_coord_system()->orientation())) < 1e-4f)
-    {
-        wnd()->set_focus_to_glwindow();
         return;
-    }
 
     wnd()->glwindow().call_later(&simulator::set_orientation_of_scene_node, coord_system_id, q);
 
@@ -1764,7 +1757,6 @@ void  widgets::on_coord_system_rot_changed()
             );
     get_scene_history()->commit();
     set_window_title();
-    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::on_coord_system_rot_tait_bryan_changed()
@@ -1784,10 +1776,7 @@ void  widgets::on_coord_system_rot_tait_bryan_changed()
     INVARIANT(node_ptr != nullptr);
     if (length_4d(quaternion_coefficients_xyzw(q) -
                   quaternion_coefficients_xyzw(node_ptr->get_coord_system()->orientation())) < 1e-4f)
-    {
-        wnd()->set_focus_to_glwindow();
         return;
-    }
 
     wnd()->glwindow().call_later(&simulator::set_orientation_of_scene_node, coord_system_id, q);
 
@@ -1800,7 +1789,6 @@ void  widgets::on_coord_system_rot_tait_bryan_changed()
             );
     get_scene_history()->commit();
     set_window_title();
-    wnd()->set_focus_to_glwindow();
 }
 
 
@@ -1903,7 +1891,7 @@ void  widgets::on_scene_coord_system_reset()
 
     get_scene_history()->commit();
     set_window_title();
-    wnd()->set_focus_to_glwindow();
+    on_scene_escape_widget();
 }
 
 
@@ -2405,7 +2393,7 @@ void  widgets::simulation_nodes_changed_listener()
 
 void  widgets::on_scene_escape_widget()
 {
-    wnd()->set_focus_to_glwindow(false);
+    wnd()->set_focus_to_glwindow();
 }
 
 

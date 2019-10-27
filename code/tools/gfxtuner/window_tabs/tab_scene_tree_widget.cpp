@@ -86,13 +86,8 @@ tree_widget_item*  find_nearest_coord_system_item(
 }
 
 
-//bool  tree_widget::event(QEvent* const  event)
-//{
-//}
-
 void tree_widget::keyReleaseEvent(QKeyEvent* const event)
 {
-    //std::cout << "tree_widget::keyReleaseEvent" << event->key() << ")\n";
     if (event->key() == Qt::Key_Escape)
         m_on_escape_widget();
     else if (event->key() == Qt::Key_Return)
@@ -101,22 +96,6 @@ void tree_widget::keyReleaseEvent(QKeyEvent* const event)
         if (selection.size() == 1)
             m_on_item_double_clicked(as_tree_widget_item(selection.front()));
     }
-    //{
-    //    std::cout << "tree_widget::keyReleaseEvent" << event->key() << ")\n";
-    //}
-    //if (event->key() == Qt::Key_Escape)
-    //{
-    //    std::cout << "tree_widget::keyReleaseEvent" << event->key() << ")\n";
-    //}
-    //auto const  it = qtkey_to_keyname().find(event->key());
-    //if (it != qtkey_to_keyname().cend())
-    //{
-    //    m_keyboard_pressed.erase(it->second);
-    //    m_keyboard_just_released.insert(it->second);
-    //}
-//    else
-//        std::cout << "opengl_window::keyReleaseEvent(" << event->key() << ")\n";
-
     event->accept();
 }
 

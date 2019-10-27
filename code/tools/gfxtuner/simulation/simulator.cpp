@@ -423,6 +423,9 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
 
     seconds_from_previous_call = std::min(seconds_from_previous_call, m_fixed_time_step_in_seconds);
 
+    if (keyboard_props().was_just_released(qtgl::KEY_ESCAPE()))
+        call_listeners(simulator_notifications::escape_simulator_window());
+
     bool  is_simulation_round = false;
     if (!is_this_pure_redraw_request)
     {

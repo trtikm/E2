@@ -33,15 +33,13 @@ struct program_window : public QMainWindow
     { m_status_bar.print_status_message(msg, num_miliseconds_to_show); }
 
     void  set_title(std::string const&  text = "");
-    void  set_focus_to_glwindow(bool const  immediatelly = true)
+    void  set_focus_to_glwindow()
     {
-        if (immediatelly)
-        {
-            if (!m_gl_window_widget->hasFocus())
-                m_gl_window_widget->setFocus();
-        }
-        else
-            m_focus_just_received = true;
+        m_gl_window_widget->setFocus();
+    }
+    void  set_focus_to_widgets()
+    {
+        m_tabs->currentWidget()->setFocus();
     }
 
 public slots:
@@ -161,14 +159,15 @@ private:
     Q_OBJECT
 
     bool  event(QEvent* const event) override;
-    void  timerEvent(QTimerEvent* const event) override;
+    void  timerEvent(QTimerEvent* const  event) override;
+    void  keyReleaseEvent(QKeyEvent* const  event) override;
     void  closeEvent(QCloseEvent* const  event) override;
+
+    void  escape_simulator_window();
 
     boost::filesystem::path  m_ptree_pathname;
     std::unique_ptr<boost::property_tree::ptree>  m_ptree;
     qtgl::window<simulator>  m_glwindow;
-    bool  m_has_focus;
-    bool  m_focus_just_received;
     int  m_idleTimerId;
     bool  m_is_this_first_timer_event;
 

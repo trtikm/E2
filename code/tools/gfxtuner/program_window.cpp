@@ -2,6 +2,7 @@
 #include <gfxtuner/program_info.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <gfxtuner/simulation/simulator.hpp>
+#include <gfxtuner/simulation/simulator_notifications.hpp>
 #include <qtgl/window.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <qtgl/widget_base.hpp>
@@ -43,8 +44,6 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     , m_ptree_pathname(ptree_pathname)
     , m_ptree(load_ptree(m_ptree_pathname))
     , m_glwindow()
-    , m_has_focus(false)
-    , m_focus_just_received(true)
     , m_idleTimerId(-1)
     , m_is_this_first_timer_event(true)
 
@@ -102,7 +101,12 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
     else
         this->show();
 
-    this->setFocus();
+    set_focus_to_glwindow();
+
+    glwindow().register_listener(
+        simulator_notifications::escape_simulator_window(),
+        { &program_window::escape_simulator_window, this }
+    );
 
     m_idleTimerId = startTimer(100); // In milliseconds.
 }
@@ -116,27 +120,24 @@ bool program_window::event(QEvent* const event)
     switch (event->type())
     {
     case QEvent::WindowActivate:
-    case QEvent::FocusIn:
-        m_has_focus = true;
-        m_focus_just_received = true;
-        return QMainWindow::event(event);
-    case QEvent::WindowDeactivate:
-    case QEvent::FocusOut:
-        m_has_focus = false;
+        set_focus_to_glwindow();
         return QMainWindow::event(event);
     default:
         return QMainWindow::event(event);
     }
 }
 
-void program_window::timerEvent(QTimerEvent* const event)
+void program_window::timerEvent(QTimerEvent* const  event)
 {
     if (event->timerId() != m_idleTimerId)
+        return;
+    if (!glwindow().has_simulator())
         return;
 
     if (m_is_this_first_timer_event)
     {
         qtgl::set_splitter_sizes(*m_splitter, ptree().get("window.splitter_ratio", 3.0f / 4.0f));
+        set_focus_to_glwindow();
         m_is_this_first_timer_event = false;
 
         // Below put calls to methods 'on_simulator_started' of those widgets 
@@ -148,9 +149,6 @@ void program_window::timerEvent(QTimerEvent* const event)
     else
     {
         // Here put time-dependent updates...
-
-        if (!glwindow().has_simulator())
-            return;
 
         m_status_bar.update();
 
@@ -172,14 +170,16 @@ void program_window::timerEvent(QTimerEvent* const event)
 
         m_tab_scene_widgets.process_pending_scene_load_requst_if_any();
     }
-
-    if (m_focus_just_received)
-    {
-        m_focus_just_received = false;
-        m_gl_window_widget->activateWindow();
-        m_gl_window_widget->setFocus();
-    }
 }
+
+
+void  program_window::keyReleaseEvent(QKeyEvent* const  event)
+{
+    if (event->key() == Qt::Key_Escape)
+        set_focus_to_glwindow();
+    event->accept();
+}
+
 
 void  program_window::closeEvent(QCloseEvent* const  event)
 {
@@ -202,6 +202,11 @@ void  program_window::closeEvent(QCloseEvent* const  event)
     ptree().put("simulation.paused", m_glwindow.call_now(&simulator::paused));
 
     boost::property_tree::write_info(m_ptree_pathname.string(), ptree());
+}
+
+void  program_window::escape_simulator_window()
+{
+    set_focus_to_widgets();
 }
 
 void  program_window::on_tab_changed(int const  tab_index)

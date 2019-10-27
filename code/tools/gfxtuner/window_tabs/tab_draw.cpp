@@ -365,7 +365,6 @@ void  widgets::on_camera_pos_changed()
         m_camera_pos_y->text().toFloat(),
         m_camera_pos_z->text().toFloat());
     wnd()->glwindow().call_later(&simulator::set_camera_position, pos);
-    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::camera_position_listener()
@@ -394,7 +393,6 @@ void  widgets::on_camera_rot_changed()
 
     update_camera_rot_widgets(q);
     wnd()->glwindow().call_later(&simulator::set_camera_orientation, q);
-    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::on_camera_rot_tait_bryan_changed()
@@ -407,7 +405,6 @@ void  widgets::on_camera_rot_tait_bryan_changed()
     normalise(q);
     update_camera_rot_widgets(q);
     wnd()->glwindow().call_later(&simulator::set_camera_orientation, q);
-    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::camera_rotation_listener()
@@ -443,13 +440,11 @@ void  widgets::on_camera_far_changed()
         m_camera_far_plane->setText(QString("5000"));
     }
     wnd()->glwindow().call_later(&simulator::set_camera_far_plane, far_plane);
-    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::on_camera_speed_changed()
 {
     set_camera_speed(m_camera_speed->text().toFloat());
-    wnd()->set_focus_to_glwindow();
 }
 
 void widgets::on_clear_colour_changed()
@@ -460,7 +455,6 @@ void widgets::on_clear_colour_changed()
         (float_32_bit)m_clear_colour_component_blue->text().toInt() / 255.0f
         );
     wnd()->glwindow().call_later(&simulator::set_clear_color, colour);
-    wnd()->set_focus_to_glwindow();
 }
 
 void widgets::on_clear_colour_set(QColor const&  colour)
@@ -488,7 +482,6 @@ void widgets::on_clear_colour_choose()
         (float_32_bit)m_clear_colour_component_blue->text().toInt() / 255.0f
         );
     wnd()->glwindow().call_later(&simulator::set_clear_color, normalised_colour);
-    wnd()->set_focus_to_glwindow(false);
 }
 
 void widgets::on_clear_colour_reset()
@@ -499,31 +492,26 @@ void widgets::on_clear_colour_reset()
 void widgets::on_show_grid_changed(int const  value)
 {
     wnd()->glwindow().call_later(&simulator::set_show_grid_state, m_show_grid->isChecked());
-    wnd()->set_focus_to_glwindow();
 }
 
 void widgets::on_show_batches_changed(int const  value)
 {
     wnd()->glwindow().call_later(&simulator::set_show_batches, m_show_batches->isChecked());
-    wnd()->set_focus_to_glwindow();
 }
 
 void widgets::on_show_colliders_changed(int const  value)
 {
     wnd()->glwindow().call_later(&simulator::set_show_colliders, m_show_colliders->isChecked());
-    wnd()->set_focus_to_glwindow();
 }
 
 void widgets::on_show_contact_normals_changed(int const  value)
 {
     wnd()->glwindow().call_later(&simulator::set_show_contact_normals, m_show_contact_normals->isChecked());
-    wnd()->set_focus_to_glwindow();
 }
 
 void widgets::on_show_ai_action_control_changed(int const  value)
 {
     wnd()->glwindow().call_later(&simulator::set_show_ai_action_controller_props, m_show_ai_action_control->isChecked());
-    wnd()->set_focus_to_glwindow();
 }
 
 void widgets::on_colliders_colour_changed()
@@ -534,7 +522,6 @@ void widgets::on_colliders_colour_changed()
         (float_32_bit)m_colliders_colour_component_blue->text().toInt() / 255.0f
         );
     wnd()->glwindow().call_later(&simulator::set_colliders_color, colour);
-    wnd()->set_focus_to_glwindow();
 }
 
 void widgets::on_colliders_colour_set(QColor const&  colour)
@@ -562,7 +549,6 @@ void widgets::on_colliders_colour_choose()
         (float_32_bit)m_colliders_colour_component_blue->text().toInt() / 255.0f
         );
     wnd()->glwindow().call_later(&simulator::set_colliders_color, normalised_colour);
-    wnd()->set_focus_to_glwindow(false);
 }
 
 void widgets::on_colliders_colour_reset()
@@ -573,12 +559,10 @@ void widgets::on_colliders_colour_reset()
 void widgets::on_render_in_wireframe_changed(int const  value)
 {
     wnd()->glwindow().call_later(&simulator::set_render_in_wireframe, m_render_in_wireframe->isChecked());
-    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::on_save_pos_rot_changed(int const  value)
 {
-    wnd()->set_focus_to_glwindow();
 }
 
 void  widgets::on_double_camera_speed()
