@@ -11,6 +11,7 @@
 #include <utility/msgstream.hpp>
 #include <utility/canonical_path.hpp>
 #include <boost/property_tree/ptree.hpp>
+#include <boost/algorithm/string.hpp>
 #include <QString>
 #include <QFileDialog>
 #include <QToolTip>
@@ -20,6 +21,25 @@ namespace detail {
 
 
 static char const*  get_none_tooltip_string() { return "<<NONE>>"; }
+
+
+std::pair<boost::filesystem::path, bool>  compute_relative_path(
+        boost::filesystem::path const&  path,
+        boost::filesystem::path const&  prefix_path
+        )
+{
+    std::string  p = boost::algorithm::replace_all_copy(path.string(), "\\", "/");
+    std::string const  r = boost::algorithm::replace_all_copy(prefix_path.string(), "\\", "/");
+    if (p.find(r) == 0UL)
+    {
+        p = p.substr(r.size());
+        while (!p.empty() && p.front() == '/')
+            p = p.substr(1UL);
+        if (!p.empty())
+            return { p, true};
+    }
+    return { path, false };
+}
 
 
 struct  menu : public QMenu
@@ -42,6 +62,47 @@ public:
 };
 
 
+struct recent_scene_menu_item : public QAction
+{
+    explicit recent_scene_menu_item(
+            boost::filesystem::path const&  scene_dir_absolute_path,
+            boost::filesystem::path const&  default_scene_root_dir_absolute_path_,
+            program_window* const  wnd_,
+            QObject* const  parent
+            )
+        : QAction(parent)
+        , scene_dir(scene_dir_absolute_path)
+        , is_relative_path_to_data_root_dir(false)
+        , default_scene_root_dir(default_scene_root_dir_absolute_path_)
+        , wnd(wnd_)
+    {
+        auto const  dir_and_state = compute_relative_path(scene_dir, default_scene_root_dir);
+        scene_dir = dir_and_state.first;
+        is_relative_path_to_data_root_dir = dir_and_state.second;
+        setText(QString(scene_dir.string().c_str()));
+        QObject::connect(this, &QAction::triggered, this, &recent_scene_menu_item::on_item_trigerred);
+    }
+
+    void  on_item_trigerred()
+    {
+        wnd->on_menu_open_recent_scene(get_scene_dir().string());
+    }
+
+    boost::filesystem::path  get_scene_dir() const
+    {
+        if (is_relative_path_to_data_root_dir == false)
+            return scene_dir;
+        return default_scene_root_dir / scene_dir;
+    }
+
+private:
+    boost::filesystem::path  scene_dir;
+    bool is_relative_path_to_data_root_dir;
+    boost::filesystem::path  default_scene_root_dir;
+    program_window*  wnd;
+};
+
+
 }
 
 
@@ -49,7 +110,7 @@ menu_bar::menu_bar(program_window* const  wnd)
     : m_wnd(wnd)
     , m_menu_bar(new QMenuBar(wnd))
 
-    , m_menu_file(new detail::menu("&File",wnd))
+    , m_menu_file(new detail::menu("&File", wnd))
     , m_file_action_new_scene(new QAction(QString("&New scene"), wnd))
     , m_file_action_open_scene(new QAction(QString("&Open scene"), wnd))
     , m_file_submenu_open_recent_scene(new QMenu(QString("Open r&ecent scene"), wnd))
@@ -58,7 +119,7 @@ menu_bar::menu_bar(program_window* const  wnd)
     , m_file_action_save_scene(new QAction(QString("&Save scene"), wnd))
     , m_file_action_save_as_scene(new QAction(QString("Save&As scene"), wnd))
     , m_file_action_exit(new QAction(QString("E&xit"), wnd))
-    , m_default_scene_root_dir(boost::filesystem::absolute(get_program_options()->dataRoot()) / get_program_name())
+    , m_default_scene_root_dir(canonical_path(get_program_options()->dataRoot()) / get_program_name())
     , m_recent_scenes()
     , m_current_scene_dir()
 
@@ -97,6 +158,8 @@ menu_bar::menu_bar(program_window* const  wnd)
         action->setToolTip(QString(record_kind_and_info.second.second.m_tooltip.c_str()));
         m_record_menu_items.insert({record_kind_and_info.first, { action, record_kind_and_info.second.first } });
     }
+
+    load();
 }
 
 void  menu_bar::on_file_action_new_scene()
@@ -104,37 +167,28 @@ void  menu_bar::on_file_action_new_scene()
     m_current_scene_dir.clear();
 }
 
-bool  menu_bar::on_file_action_open_scene()
+std::string  menu_bar::on_file_action_open_scene()
 {
     QFileDialog  dialog(wnd());
     dialog.setDirectory(get_default_scene_root_dir().string().c_str());
     dialog.setFileMode(QFileDialog::DirectoryOnly);
     dialog.setWindowTitle("Open scene");
     if (!dialog.exec())
-        return false;
+        return "";
     QStringList const  selected = dialog.selectedFiles();
     if (selected.size() != 1)
     {
         wnd()->print_status_message("ERROR: A single load directory must be selected.", 10000);
-        return false;
+        return "";
     }
-    get_current_scene_dir() = qtgl::to_string(selected.at(0));
-    return true;
+    return qtgl::to_string(selected.at(0));
 }
 
-void  menu_bar::on_file_action_open_recent_scene()
+std::string  menu_bar::on_file_action_reload_scene()
 {
-
-}
-
-bool  menu_bar::on_file_action_reload_scene()
-{
-    if (m_current_scene_dir.empty())
-    {
+    if (get_current_scene_dir().empty())
         wnd()->print_status_message("ERROR: Cannot reload scene which was not saved on the disk.", 10000);
-        return false;
-    }
-    return true;
+    return get_current_scene_dir().string();
 }
 
 std::string  menu_bar::on_file_action_import_scene()
@@ -154,14 +208,14 @@ std::string  menu_bar::on_file_action_import_scene()
     return qtgl::to_string(selected.at(0));;
 }
 
-bool  menu_bar::on_file_action_save_scene()
+std::string  menu_bar::on_file_action_save_scene()
 {
     if (get_current_scene_dir().empty())
         return on_file_action_save_as_scene();
-    return true;
+    return get_current_scene_dir().string();
 }
 
-bool  menu_bar::on_file_action_save_as_scene()
+std::string  menu_bar::on_file_action_save_as_scene()
 {
     boost::filesystem::path  output_dir =
         get_current_scene_dir().empty() ? get_default_scene_root_dir() : get_current_scene_dir();
@@ -170,20 +224,35 @@ bool  menu_bar::on_file_action_save_as_scene()
     dialog.setFileMode(QFileDialog::DirectoryOnly);
     dialog.setWindowTitle("Save as scene");
     if (!dialog.exec())
-        return false;
+        return "";
     QStringList const  selected = dialog.selectedFiles();
     if (selected.size() != 1)
     {
         wnd()->print_status_message("ERROR: A single output directory must be selected.", 10000);
-        return false;
+        return "";
     }
-    get_current_scene_dir() = qtgl::to_string(selected.at(0));
-    return true;
+    return qtgl::to_string(selected.at(0));
 }
 
 bool  menu_bar::on_file_action_exit()
 {
     return true;
+}
+
+void  menu_bar::set_current_scene_dir(boost::filesystem::path const&  path)
+{
+    m_current_scene_dir = path;
+    if (m_current_scene_dir.empty())
+        return;
+
+    auto const  it = std::find(m_recent_scenes.begin(), m_recent_scenes.end(), m_current_scene_dir);
+    if (it != m_recent_scenes.end())
+        m_recent_scenes.erase(it);
+    m_recent_scenes.push_front(get_current_scene_dir());
+    while (m_recent_scenes.size() > 5UL)
+        m_recent_scenes.pop_back();
+
+    rebuild_recent_scenes_submenu();
 }
 
 void  menu_bar::on_simulation_paused()
@@ -229,13 +298,55 @@ void  menu_bar::toggle_enable_state_of_menu_items_for_simulation_mode(bool const
 }
 
 
-void  menu_bar::save()
+void  menu_bar::load()
 {
-    //wnd()->ptree().put("...",...);
+    if (wnd()->ptree().count("menu") == 0UL)
+        return;
+
+    for (auto const& key_and_tree : wnd()->ptree().get_child("menu.recent_scenes"))
+    {
+        std::string const  raw_path = key_and_tree.second.get<std::string>("path");
+        bool const  is_relative = key_and_tree.second.get<bool>("is_relative");
+        m_recent_scenes.push_back(is_relative ? m_default_scene_root_dir / raw_path : canonical_path(raw_path));
+    }
 }
 
 
-void  make_menu_bar_content(menu_bar const&  w)
+void  menu_bar::save()
+{
+    if (wnd()->ptree().count("menu") != 0UL)
+        wnd()->ptree().get_child("menu.recent_scenes").clear();
+
+    int i = 0;
+    for (auto const&  dir : get_recent_scenes())
+    {
+        boost::property_tree::ptree  record;
+        {
+            auto const  dir_and_state = detail::compute_relative_path(dir, m_default_scene_root_dir);
+            record.put("path", dir_and_state.first.string());
+            record.put("is_relative", dir_and_state.second);
+        }
+        wnd()->ptree().add_child("menu.recent_scenes." + std::to_string(i), record);
+        ++i;
+    }
+}
+
+
+void  menu_bar::rebuild_recent_scenes_submenu()
+{
+    get_file_submenu_open_recent_scene()->clear();
+    for (natural_32_bit i = 0; i < get_recent_scenes().size(); ++i)
+        get_file_submenu_open_recent_scene()->addAction(
+                new detail::recent_scene_menu_item(
+                        get_recent_scenes().at(i),
+                        m_default_scene_root_dir,
+                        wnd(),
+                        m_file_submenu_open_recent_scene)
+                        );
+}
+
+
+void  make_menu_bar_content(menu_bar&  w)
 {
     w.wnd()->glwindow().register_listener(
                 simulator_notifications::paused(),
@@ -261,6 +372,7 @@ void  make_menu_bar_content(menu_bar const&  w)
     QObject::connect(w.get_file_action_open_scene(), &QAction::triggered, w.wnd(),&program_window::on_menu_open_scene);
 
     w.get_menu_file()->addMenu(w.get_file_submenu_open_recent_scene());
+    w.rebuild_recent_scenes_submenu();
 
     w.get_menu_file()->addAction(w.get_file_action_reload_scene());
     w.get_file_action_reload_scene()->setShortcut(QString("Ctrl+R"));

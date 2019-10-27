@@ -7,7 +7,7 @@
 #   include <QMenu>
 #   include <QAction>
 #   include <boost/filesystem.hpp>
-#   include <vector>
+#   include <deque>
 #   include <map>
 #   include <string>
 #   include <tuple>
@@ -57,28 +57,28 @@ struct  menu_bar
 
     // "File" actions
     void  on_file_action_new_scene();
-    bool  on_file_action_open_scene();
-    void  on_file_action_open_recent_scene();
-    bool  on_file_action_reload_scene();
+    std::string  on_file_action_open_scene();
+    std::string  on_file_action_reload_scene();
     std::string  on_file_action_import_scene();
-    bool  on_file_action_save_scene();
-    bool  on_file_action_save_as_scene();
+    std::string  on_file_action_save_scene();
+    std::string  on_file_action_save_as_scene();
     bool  on_file_action_exit();
 
     boost::filesystem::path const&  get_default_scene_root_dir() const { return m_default_scene_root_dir; }
-    std::vector<boost::filesystem::path> const&  get_recent_scenes() const { return m_recent_scenes; }
-    std::vector<boost::filesystem::path>&  get_recent_scenes() { return m_recent_scenes; }
     boost::filesystem::path const&  get_current_scene_dir() const { return m_current_scene_dir; }
-    boost::filesystem::path&  get_current_scene_dir() { return m_current_scene_dir; }
+    void  set_current_scene_dir(boost::filesystem::path const&  path);
 
     void  on_simulation_paused();
     void  on_simulation_resumed();
 
-    // Save menu props/config.
     void  save();
 
+    void  rebuild_recent_scenes_submenu();
+
 private:
+    void  load();
     void  toggle_enable_state_of_menu_items_for_simulation_mode(bool const  simulation_resumed);
+    std::deque<boost::filesystem::path> const&  get_recent_scenes() const { return m_recent_scenes; }
 
     program_window*  m_wnd;
 
@@ -94,7 +94,7 @@ private:
     QAction*  m_file_action_save_as_scene;
     QAction*  m_file_action_exit;
     boost::filesystem::path  m_default_scene_root_dir;
-    std::vector<boost::filesystem::path>  m_recent_scenes;
+    std::deque<boost::filesystem::path>  m_recent_scenes;
     boost::filesystem::path  m_current_scene_dir;
 
     QMenu*  m_menu_edit;
@@ -121,7 +121,7 @@ private:
 };
 
 
-void  make_menu_bar_content(menu_bar const&  w);
+void  make_menu_bar_content(menu_bar&  w);
 
 
 #endif

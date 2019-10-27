@@ -384,10 +384,7 @@ void  widgets::process_pending_scene_load_requst_if_any()
         if (!boost::filesystem::is_directory(scene_dir))
             scene_dir = get_program_options()->dataRoot() / scene_dir;
         if (boost::filesystem::is_directory(scene_dir) && boost::filesystem::is_regular_file(scene_dir / "hierarchy.info"))
-        {
-            wnd()->get_current_scene_dir() = canonical_path(scene_dir);
-            open_scene(wnd()->get_current_scene_dir());
-        }
+            open_scene(canonical_path(scene_dir));
         else
         {
             clear_scene();
@@ -1333,6 +1330,7 @@ void  widgets::clear_scene()
 
     m_scene_tree->clear();
     wnd()->glwindow().call_now(&simulator::clear_scene);
+    wnd()->set_current_scene_dir("");
     get_scene_history()->clear();
     m_save_commit_id = get_scene_history()->get_active_commit_id();
     set_window_title();
@@ -1420,8 +1418,9 @@ void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
     wnd()->print_status_message("Clearing the old scene ...", 10000);
 
     clear_scene();
+    wnd()->set_current_scene_dir(scene_root_dir);
 
-    wnd()->print_status_message("Loading scene '" + scene_root_dir.string() + "' ...", 10000);
+    wnd()->print_status_message("Loading scene '" + wnd()->get_current_scene_dir().string() + "' ...", 10000);
 
     try
     {
@@ -1430,24 +1429,25 @@ void  widgets::open_scene(boost::filesystem::path const&  scene_root_dir)
             { "effects", boost::property_tree::ptree() }
         };
         for (auto&  name_and_info : infos)
-            boost::property_tree::read_info((scene_root_dir / (name_and_info.first + ".info")).string(), name_and_info.second);
+            boost::property_tree::read_info(
+                (wnd()->get_current_scene_dir() / (name_and_info.first + ".info")).string(),
+                name_and_info.second
+                );
         boost::property_tree::ptree&  load_tree = infos.at("hierarchy");
         for (auto  it = load_tree.begin(); it != load_tree.end(); ++it)
             load_scene_node(scn::scene_node_id(it->first), it->second, infos, nullptr);
         //m_scene_tree->expandAll();
-        wnd()->set_title(scene_root_dir.string());
+        wnd()->set_title(wnd()->get_current_scene_dir().string());
         wnd()->print_status_message("Loading of the scene has finished.", 10000);
     }
     catch (boost::property_tree::ptree_error const&  e)
     {
         wnd()->print_status_message(std::string("ERROR: Load of scene has FAILED. ") + e.what(), 10000);
-        wnd()->get_current_scene_dir().clear();
         clear_scene();
     }
     catch (...)
     {
         wnd()->print_status_message("ERROR: Load of scene has FAILED. Reason is unknown.", 10000);
-        wnd()->get_current_scene_dir().clear();
         clear_scene();
     }
 }
@@ -1532,8 +1532,8 @@ void  widgets::save_scene(boost::filesystem::path const&  scene_root_dir)
     boost::filesystem::create_directories(scene_root_dir);
     for (auto& name_and_info : infos)
         boost::property_tree::write_info((scene_root_dir / (name_and_info.first + ".info")).string(), name_and_info.second);
+    wnd()->set_current_scene_dir(scene_root_dir);
     wnd()->print_status_message(std::string("SUCCESS: Scene saved to: ") + scene_root_dir.string(), 5000);
-    wnd()->set_title(scene_root_dir.string());
     m_save_commit_id = get_scene_history()->get_active_commit_id();
     set_window_title();
 }
@@ -1637,13 +1637,11 @@ void  widgets::import_scene(boost::filesystem::path const& scene_root_dir)
     catch (boost::property_tree::ptree_error const&  e)
     {
         wnd()->print_status_message(std::string("ERROR: Import of scene has FAILED. ") + e.what(), 10000);
-        wnd()->get_current_scene_dir().clear();
         clear_scene();
     }
     catch (std::exception const&  e)
     {
         wnd()->print_status_message(std::string("ERROR: Import of scene has FAILED. ") + e.what(), 10000);
-        wnd()->get_current_scene_dir().clear();
         clear_scene();
     }
 }

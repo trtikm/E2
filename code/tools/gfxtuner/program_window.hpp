@@ -105,11 +105,12 @@ public slots:
 
     /// Slots for menu actions
     void  on_menu_new_scene() { m_menu_bar.on_file_action_new_scene(); m_tab_scene_widgets.clear_scene(); }
-    void  on_menu_open_scene() { if (m_menu_bar.on_file_action_open_scene()) m_tab_scene_widgets.open_scene(get_current_scene_dir()); }
-    void  on_menu_reload_scene() { if (m_menu_bar.on_file_action_reload_scene()) m_tab_scene_widgets.reload_scene(get_current_scene_dir()); }
+    void  on_menu_open_scene() { std::string const pathname = m_menu_bar.on_file_action_open_scene(); if (!pathname.empty()) m_tab_scene_widgets.open_scene(pathname); }
+    void  on_menu_open_recent_scene(std::string const  pathname_by_value) { m_tab_scene_widgets.open_scene(pathname_by_value); }
+    void  on_menu_reload_scene() { std::string const pathname = m_menu_bar.on_file_action_reload_scene(); if (!pathname.empty()) m_tab_scene_widgets.reload_scene(pathname); }
     void  on_menu_import_scene() { std::string const pathname = m_menu_bar.on_file_action_import_scene(); if (!pathname.empty()) m_tab_scene_widgets.import_scene(pathname); }
-    void  on_menu_save_scene() { if (m_menu_bar.on_file_action_save_scene()) m_tab_scene_widgets.save_scene(get_current_scene_dir()); }
-    void  on_menu_save_as_scene() { if (m_menu_bar.on_file_action_save_as_scene()) m_tab_scene_widgets.save_scene(get_current_scene_dir()); }
+    void  on_menu_save_scene() { std::string const pathname = m_menu_bar.on_file_action_save_scene(); if (!pathname.empty()) m_tab_scene_widgets.save_scene(pathname); }
+    void  on_menu_save_as_scene() { std::string const pathname = m_menu_bar.on_file_action_save_as_scene(); if (!pathname.empty()) m_tab_scene_widgets.save_scene(pathname); }
     void  on_menu_exit() { if (m_menu_bar.on_file_action_exit()) PostQuitMessage(0); }
 
     void  on_menu_edit_insert_coord_system() { m_tab_scene_widgets.on_scene_insert_coord_system(); }
@@ -144,9 +145,8 @@ public slots:
     void  menu_listener_simulation_paused() { m_menu_bar.on_simulation_paused(); }
     void  menu_listener_simulation_resumed() { m_menu_bar.on_simulation_resumed(); }
 
-
-    boost::filesystem::path&  get_current_scene_dir() { return m_menu_bar.get_current_scene_dir(); }
-
+    boost::filesystem::path const&  get_current_scene_dir() const { return m_menu_bar.get_current_scene_dir(); }
+    void  set_current_scene_dir(boost::filesystem::path const&  path) { m_menu_bar.set_current_scene_dir(path); }
 
 private:
 
