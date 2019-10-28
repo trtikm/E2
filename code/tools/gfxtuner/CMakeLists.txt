@@ -58,6 +58,9 @@ add_executable(${THIS_TARGET_NAME}
     window_tabs/tab_scene_record_agent.hpp
     window_tabs/tab_scene_record_agent.cpp
 
+    window_tabs/tab_simulation.hpp
+    window_tabs/tab_simulation.cpp
+
     window_tabs/tab_statistics.hpp
     window_tabs/tab_statistics.cpp
     window_tabs/tab_statistics_resources.hpp

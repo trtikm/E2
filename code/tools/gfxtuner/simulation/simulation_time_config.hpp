@@ -27,8 +27,12 @@ struct  simulation_time_config
 
     bool  is_paused() const { return m_pause_state == PAUSE_STATE::PAUSED; }
 
+    void  set_paused(bool const  state) { m_pause_state = state ? PAUSE_STATE::PAUSED : PAUSE_STATE::NOT_PAUSED; }
     void  toggle_pause() { m_pause_state = m_pause_state == PAUSE_STATE::PAUSED ? PAUSE_STATE::NOT_PAUSED : PAUSE_STATE::PAUSED; }
     void  perform_single_step() { m_pause_state = PAUSE_STATE::UNPAUSED_FOR_SINGLE_STEP_ONLY; }
+
+    void  set_fixed_time_step_in_seconds(float_32_bit const  dt) { m_fixed_time_step_in_seconds = dt; }
+    void  set_longest_time_step_in_seconds(float_32_bit const  dt) { m_longest_time_step_in_seconds = dt; }
 
     float_32_bit  get_clipped_simulation_time_step_in_seconds(float_32_bit const  duration_of_last_time_step_in_seconds) const;
     float_32_bit  get_raw_simulation_time_step_in_seconds(float_32_bit const  duration_of_last_time_step_in_seconds) const;

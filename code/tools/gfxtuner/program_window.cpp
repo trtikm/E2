@@ -20,6 +20,7 @@ namespace { namespace tab_names {
 
 inline std::string  DRAW() { return "Draw"; }
 inline std::string  SCENE() { return "Scene"; }
+inline std::string  SIMULATION() { return "Simulation"; }
 inline std::string  STATISTICS() { return "Statistics"; }
 
 
@@ -65,6 +66,7 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
 
     , m_tab_draw_widgets(this)
     , m_tab_scene_widgets(this)
+    , m_tab_simulation_widgets(this)
     , m_tab_statistics_widgets(new window_tabs::tab_statistics::widgets(this))
 
     , m_menu_bar(this)
@@ -85,6 +87,8 @@ program_window::program_window(boost::filesystem::path const&  ptree_pathname)
                     QString(tab_names::DRAW().c_str()) );
     m_tabs->addTab( window_tabs::tab_scene::make_scene_tab_content(m_tab_scene_widgets),
                     QString(tab_names::SCENE().c_str()));
+    m_tabs->addTab( window_tabs::tab_simulation::make_simulation_tab_content(m_tab_simulation_widgets),
+                    QString(tab_names::SIMULATION().c_str()));
     m_tabs->addTab( m_tab_statistics_widgets,
                     QString(tab_names::STATISTICS().c_str()));
 
@@ -147,6 +151,7 @@ void program_window::timerEvent(QTimerEvent* const  event)
         // initialisation.
 
         m_tab_scene_widgets.on_simulator_started();
+        m_tab_simulation_widgets.on_simulator_started();
     }
     else
     {
@@ -160,6 +165,10 @@ void program_window::timerEvent(QTimerEvent* const  event)
             // Nothing to do...
         }
         else if (current_tab == tab_names::SCENE())
+        {
+            // Nothing to do...
+        }
+        else if (current_tab == tab_names::SIMULATION())
         {
             // Nothing to do...
         }
@@ -197,11 +206,10 @@ void  program_window::closeEvent(QCloseEvent* const  event)
     ptree().put("window.active_tab", qtgl::to_string(m_tabs->tabText(m_tabs->currentIndex())));
 
     m_tab_draw_widgets.save();
+    m_tab_simulation_widgets.save();
     m_tab_statistics_widgets->save();
 
     m_menu_bar.save();
-
-    ptree().put("simulation.paused", m_glwindow.call_now(&simulator::simulation_time_config_ref).is_paused());
 
     boost::property_tree::write_info(m_ptree_pathname.string(), ptree());
 }
@@ -219,6 +227,10 @@ void  program_window::on_tab_changed(int const  tab_index)
         // Nothing to do...
     }
     else if (tab_name == tab_names::SCENE())
+    {
+        // Nothing to do...
+    }
+    else if (tab_name == tab_names::SIMULATION())
     {
         // Nothing to do...
     }

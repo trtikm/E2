@@ -370,7 +370,18 @@ void  widgets::on_simulator_started()
     clear_scene();
 
     if (get_program_options()->has_scene_dir())
+    {
+        bool const  paused = wnd()->glwindow().call_now(&simulator::simulation_time_config_ref).is_paused();
+        auto const  paused_state = wnd()->glwindow().call_now(&simulator::simulation_time_config_ref).m_pause_state;
+        if (!paused)
+            wnd()->glwindow().call_now(&simulator::simulation_time_config_ref).set_paused(true);
+
         m_pending_scene_dir_to_load = get_program_options()->scene_dir();
+        process_pending_scene_load_requst_if_any();
+
+        if (!paused)
+            wnd()->glwindow().call_now(&simulator::simulation_time_config_ref).m_pause_state = paused_state;
+    }
 }
 
 

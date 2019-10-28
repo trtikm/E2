@@ -4,6 +4,7 @@
 #   include <gfxtuner/simulation/simulator.hpp>
 #   include <gfxtuner/window_tabs/tab_draw.hpp>
 #   include <gfxtuner/window_tabs/tab_scene.hpp>
+#   include <gfxtuner/window_tabs/tab_simulation.hpp>
 #   include <gfxtuner/window_tabs/tab_statistics.hpp>
 #   include <gfxtuner/status_bar.hpp>
 #   include <gfxtuner/menu_bar.hpp>
@@ -99,6 +100,10 @@ public slots:
 
     void  scene_listener_simulation_nodes_changed() { m_tab_scene_widgets.simulation_nodes_changed_listener(); }
 
+    /// Slots for SIMULATION tab
+    void on_simulation_fixed_frequency_changed() { m_tab_simulation_widgets.on_fixed_frequency_changed(); }
+    void on_simulation_min_frequency_changed() { m_tab_simulation_widgets.on_min_frequency_changed(); }
+
     /// Status bar
     void  status_bar_edit_mode_listener() { m_status_bar.edit_mode_listener(); }
     void  status_bar_camera_controller_changed_listener() { m_status_bar.camera_controller_changed_listener(); }
@@ -175,6 +180,7 @@ private:
 
     window_tabs::tab_draw::widgets  m_tab_draw_widgets;
     window_tabs::tab_scene::widgets  m_tab_scene_widgets;
+    window_tabs::tab_simulation::widgets  m_tab_simulation_widgets;
     window_tabs::tab_statistics::widgets*  m_tab_statistics_widgets;
 
     menu_bar  m_menu_bar;
