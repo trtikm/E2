@@ -201,7 +201,7 @@ void  program_window::closeEvent(QCloseEvent* const  event)
 
     m_menu_bar.save();
 
-    ptree().put("simulation.paused", m_glwindow.call_now(&simulator::paused));
+    ptree().put("simulation.paused", m_glwindow.call_now(&simulator::simulation_time_config_ref).is_paused());
 
     boost::property_tree::write_info(m_ptree_pathname.string(), ptree());
 }

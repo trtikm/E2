@@ -338,9 +338,7 @@ simulator::simulator()
 
     // Common and shared data for both modes: Editing and Simulation
 
-    , m_paused(true)
-    , m_do_single_step(false)
-    , m_fixed_time_step_in_seconds(1.0 / 25.0)
+    , m_simulation_time_config()
     , m_scene(new scn::scene)
     , m_cache_of_batches_of_colliders()
     , m_cache_of_batches_of_ai_agents()
@@ -421,7 +419,7 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
 {
     TMPROF_BLOCK();
 
-    seconds_from_previous_call = std::min(seconds_from_previous_call, m_fixed_time_step_in_seconds);
+    simulation_time_config::auto_updater const  time_config(m_simulation_time_config, this);
 
     if (keyboard_props().was_just_released(qtgl::KEY_ESCAPE()))
         call_listeners(simulator_notifications::escape_simulator_window());
@@ -433,7 +431,7 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
 
         bool  camera_controller_changed = false;
         qtgl::free_fly_report  free_fly_report;
-        if (paused())
+        if (time_config().is_paused())
         {
             if (m_scene_selection.get_records().empty()
                     && m_scene_selection.get_nodes().size() == 1UL
@@ -592,40 +590,12 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
         if (free_fly_report.rotated)
             call_listeners(simulator_notifications::camera_orientation_updated());
 
-        bool const  old_paused = paused();
-
-        if (keyboard_props().was_just_released(qtgl::KEY_SPACE()))
-        {
-            if (paused())
-                m_paused = !m_paused;
-            m_do_single_step = true;
-        }
-
-        if (!m_do_single_step && keyboard_props().was_just_released(qtgl::KEY_PAUSE()))
-            m_paused = !m_paused;
-
         get_collision_scene()->get_statistics().on_next_frame();
 
-        if (!paused())
-        {
-            is_simulation_round = true;
-            if (old_paused != paused())
-                on_simulation_resumed();
-            perform_simulation_step(m_do_single_step ? m_fixed_time_step_in_seconds : seconds_from_previous_call);
-        }
+        if (!time_config().is_paused())
+            perform_simulation_step(time_config().get_clipped_simulation_time_step_in_seconds(seconds_from_previous_call));
         else
-        {
-            if (old_paused != paused())
-                on_simulation_paused();
             perform_scene_update(seconds_from_previous_call);
-        }
-
-        if (m_do_single_step)
-        {
-            m_paused = true;
-            on_simulation_paused();
-            m_do_single_step = false;
-        }
     }
 
 static bool  update_retinas = false;

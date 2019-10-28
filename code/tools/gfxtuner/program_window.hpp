@@ -129,6 +129,9 @@ public slots:
     void  on_menu_edit_undo() { m_tab_scene_widgets.on_scene_undo(); }
     void  on_menu_edit_redo() { m_tab_scene_widgets.on_scene_redo(); }
 
+    void  on_menu_simulation_toggle_pause() { glwindow().call_now(&simulator::simulation_time_config_ref).toggle_pause(); }
+    void  on_menu_simulation_single_step() { glwindow().call_now(&simulator::simulation_time_config_ref).perform_single_step(); }
+
     void  on_menu_view_double_camera_speed() { m_tab_draw_widgets.on_double_camera_speed(); }
     void  on_menu_view_half_camera_speed() { m_tab_draw_widgets.on_half_camera_speed(); }
     void  on_menu_view_look_at_selection()

@@ -99,7 +99,7 @@ void status_bar::update()
     if (m_camera_controller_type->text() == " N/A ")
         camera_controller_changed_listener();
 
-    m_mode->setText(wnd()->glwindow().call_now(&simulator::paused) ? " PAUSED " : " RUNNING ");
+    m_mode->setText(wnd()->glwindow().call_now(&simulator::simulation_time_config_ref).is_paused() ? " PAUSED " : " RUNNING ");
 
     {
         std::stringstream  sstr;

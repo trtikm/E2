@@ -140,6 +140,10 @@ menu_bar::menu_bar(program_window* const  wnd)
     , m_edit_action_undo(new QAction(QString("&Undo"), wnd))
     , m_edit_action_redo(new QAction(QString("Red&o"), wnd))
 
+    , m_menu_simulation(new detail::menu("&Simulation", wnd))
+    , m_simulation_action_toggle_pause(new QAction(QString("Toggle &pause"), wnd))
+    , m_simulation_action_single_step(new QAction(QString("Single &step"), wnd))
+
     , m_menu_view(new detail::menu("&View", wnd))
     , m_view_action_double_camera_speed(new QAction(QString("&Double camera speed"), wnd))
     , m_view_action_half_camera_speed(new QAction(QString("&Half camera speed"), wnd))
@@ -293,6 +297,9 @@ void  menu_bar::toggle_enable_state_of_menu_items_for_simulation_mode(bool const
     get_edit_action_agent_reset_skeleton_pose()->setDisabled(simulation_resumed);
     get_edit_action_undo()->setDisabled(simulation_resumed);
     get_edit_action_redo()->setDisabled(simulation_resumed);
+
+    get_simulation_action_toggle_pause()->setDisabled(false);
+    get_simulation_action_single_step()->setDisabled(false);
 
     get_view_action_look_at_selection()->setDisabled(simulation_resumed);
 }
@@ -591,6 +598,28 @@ void  make_menu_bar_content(menu_bar&  w)
     QObject::connect(w.get_edit_action_redo(), &QAction::triggered, w.wnd(), &program_window::on_menu_edit_redo);
 
     w.get_menu_bar()->addMenu(w.get_menu_edit());
+
+
+    // "Simulation" menu
+
+    w.get_menu_simulation()->addAction(w.get_simulation_action_toggle_pause());
+    w.get_simulation_action_toggle_pause()->setShortcut(Qt::Key::Key_Pause);
+    w.get_simulation_action_toggle_pause()->setToolTip(
+        "Pauses and resumes the simulation. Note that editor mode is automatically activated whenever simulation\n"
+        "is paused and it is deactivated whenever the simulation is resumed. Therefore, this menu action also\n"
+        "switches between simulation and editor mode."
+        );
+    QObject::connect(w.get_simulation_action_toggle_pause(), &QAction::triggered, w.wnd(), &program_window::on_menu_simulation_toggle_pause);
+
+    w.get_menu_simulation()->addAction(w.get_simulation_action_single_step());
+    w.get_simulation_action_single_step()->setShortcut(Qt::Key::Key_F10);
+    w.get_simulation_action_single_step()->setToolTip(
+        "Resumes the simulation (if it was paused), then performs a single simulation step, and finally pauses the simulation."
+        );
+    QObject::connect(w.get_simulation_action_single_step(), &QAction::triggered, w.wnd(), &program_window::on_menu_simulation_single_step);
+
+    w.get_menu_bar()->addMenu(w.get_menu_simulation());
+
 
     // "View" menu
 

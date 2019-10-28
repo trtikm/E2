@@ -19,9 +19,9 @@ struct  menu_bar
 {
     menu_bar(program_window* const  wnd);
 
-    program_window*  wnd() const noexcept { return m_wnd; }
+    program_window*  wnd() const { return m_wnd; }
 
-    QMenuBar*  get_menu_bar() const noexcept { return m_menu_bar; }
+    QMenuBar*  get_menu_bar() const { return m_menu_bar; }
 
     QMenu*  get_menu_file() const { return m_menu_file; }
     QAction*  get_file_action_new_scene() const { return m_file_action_new_scene; }
@@ -33,7 +33,7 @@ struct  menu_bar
     QAction*  get_file_action_save_as_scene() const { return m_file_action_save_as_scene; }
     QAction*  get_file_action_exit() const { return m_file_action_exit; }
 
-    QMenu*  get_menu_edit() const noexcept { return m_menu_edit; }
+    QMenu*  get_menu_edit() const { return m_menu_edit; }
     QAction*  get_edit_action_insert_coord_system() const { return m_edit_action_insert_coord_system; }
     std::multimap<std::string, std::pair<QAction*, std::string> > const& get_edit_actions_of_records() const { return m_record_menu_items; }
     QAction*  get_edit_action_erase_selected() const { return m_edit_action_erase_selected; }
@@ -49,6 +49,10 @@ struct  menu_bar
     QAction*  get_edit_action_agent_reset_skeleton_pose() const { return m_edit_action_agent_reset_skeleton_pose; }
     QAction*  get_edit_action_undo() const { return m_edit_action_undo; }
     QAction*  get_edit_action_redo() const { return m_edit_action_redo; }
+
+    QMenu*  get_menu_simulation() const { return m_menu_simulation; }
+    QAction*  get_simulation_action_toggle_pause() const { return m_simulation_action_toggle_pause; }
+    QAction*  get_simulation_action_single_step() const { return m_simulation_action_single_step; }
 
     QMenu*  get_menu_view() const noexcept { return m_menu_view; }
     QAction*  get_view_action_double_camera_speed() const { return m_view_action_double_camera_speed; }
@@ -113,6 +117,10 @@ private:
     QAction*  m_edit_action_agent_reset_skeleton_pose;
     QAction*  m_edit_action_undo;
     QAction*  m_edit_action_redo;
+
+    QMenu*  m_menu_simulation;
+    QAction* m_simulation_action_toggle_pause;
+    QAction* m_simulation_action_single_step;
 
     QMenu*  m_menu_view;
     QAction*  m_view_action_double_camera_speed;

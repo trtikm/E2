@@ -2397,7 +2397,7 @@ void  widgets::on_scene_escape_widget()
 
 bool  widgets::is_editing_enabled() const
 {
-    return wnd()->glwindow().call_now(&simulator::paused);
+    return wnd()->glwindow().call_now(&simulator::simulation_time_config_ref).is_paused();
 }
 
 

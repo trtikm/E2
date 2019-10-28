@@ -1,6 +1,8 @@
 #ifndef E2_TOOL_GFXTUNER_SIMULATOR_HPP_INCLUDED
 #   define E2_TOOL_GFXTUNER_SIMULATOR_HPP_INCLUDED
 
+#   include <gfxtuner/simulation/simulation_time_config.hpp>
+#   include <scene/scene.hpp>
 #   include <scene/scene.hpp>
 #   include <scene/scene_node_id.hpp>
 #   include <scene/scene_record_id.hpp>
@@ -55,7 +57,7 @@ struct simulator : public qtgl::real_time_simulator
             bool const  is_this_pure_redraw_request
             ) override;
 
-    bool  paused() const { return m_paused; }
+    simulation_time_config&  simulation_time_config_ref() { return m_simulation_time_config; }
 
     // Background and grid
 
@@ -270,9 +272,11 @@ struct simulator : public qtgl::real_time_simulator
 
     CAMERA_CONTROLLER_TYPE  get_camera_controller_type() const
     {
-        return paused() ? m_camera_controller_type_in_edit_mode :
-                          get_scene_node(m_camera_target_node_id) != nullptr ? m_camera_controller_type_in_simulation_mode :
-                                                                               CAMERA_CONTROLLER_FREE_FLY;
+        return m_simulation_time_config.is_paused() ?
+                        m_camera_controller_type_in_edit_mode :
+                        get_scene_node(m_camera_target_node_id) != nullptr ?
+                                m_camera_controller_type_in_simulation_mode :
+                                CAMERA_CONTROLLER_FREE_FLY;
     }
     CAMERA_CONTROLLER_TYPE  get_camera_controller_type_in_simulation_mode() const { return m_camera_controller_type_in_simulation_mode; }
     void  set_camera_controller_type_in_simulation_mode(CAMERA_CONTROLLER_TYPE const  type) { m_camera_controller_type_in_simulation_mode = type; }
@@ -372,9 +376,7 @@ private:
 
     // Common and shared data for both modes: Editing and Simulation
 
-    bool  m_paused;
-    bool  m_do_single_step;
-    float_64_bit  m_fixed_time_step_in_seconds;
+    simulation_time_config  m_simulation_time_config;
     scn::scene_ptr  m_scene;
 
     struct  cache_of_batches_of_colliders

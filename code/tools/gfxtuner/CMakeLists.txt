@@ -82,6 +82,9 @@ add_executable(${THIS_TARGET_NAME}
     simulation/simulator.cpp
     simulation/simulator_notifications.hpp
 
+    simulation/simulation_time_config.hpp
+    simulation/simulation_time_config.cpp
+
     simulation/bind_ai_scene_to_simulator.hpp
     simulation/bind_ai_scene_to_simulator.cpp
     )
