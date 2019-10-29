@@ -287,7 +287,7 @@ private:
 
     void  perform_simulation_step(float_64_bit const  time_to_simulate_in_seconds);
     void  perform_simulation_micro_step(float_64_bit const  time_to_simulate_in_seconds, bool const  is_last_micro_step);
-    void  update_retina_of_agents_from_offscreen_images();
+    void  update_retina_of_agents_from_offscreen_images(float_32_bit const  time_to_simulate_in_seconds);
     void  render_simulation_state(
             matrix44 const&  matrix_from_world_to_camera,
             matrix44 const&  matrix_from_camera_to_clipspace,
@@ -414,6 +414,7 @@ private:
     std::shared_ptr<ai::agents>  m_agents_ptr;
     std::unordered_map<ai::agent_id, std::pair<qtgl::offscreen_ptr, qtgl::offscreen_ptr> >  m_offscreens;
     std::unordered_map<ai::agent_id, qtgl::camera_perspective_ptr>  m_offscreen_cameras;
+    std::unordered_map<ai::agent_id, float_32_bit >  m_offscreen_recovery_times;
 
     std::unordered_map<angeo::collision_object_id, angeo::rigid_body_id>  m_binding_of_collision_objects;
     std::unordered_map<angeo::rigid_body_id, scn::scene_node_ptr>  m_binding_of_rigid_bodies;

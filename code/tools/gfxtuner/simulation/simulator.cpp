@@ -367,6 +367,7 @@ simulator::simulator()
     , m_agents_ptr(std::make_shared<ai::agents>(std::make_shared<bind_ai_scene_to_simulator>(this)))
     , m_offscreens()
     , m_offscreen_cameras()
+    , m_offscreen_recovery_times()
 
     , m_binding_of_collision_objects()
     , m_binding_of_rigid_bodies()
@@ -424,7 +425,6 @@ void  simulator::next_round(float_64_bit  seconds_from_previous_call,
     if (keyboard_props().was_just_released(qtgl::KEY_ESCAPE()))
         call_listeners(simulator_notifications::escape_simulator_window());
 
-    bool  is_simulation_round = false;
     if (!is_this_pure_redraw_request)
     {
         qtgl::adjust(*m_camera,window_props());
@@ -603,8 +603,10 @@ if (keyboard_props().was_just_released(qtgl::KEY_F2()))
     update_retinas = !update_retinas;
 
 if (update_retinas)
-    if (is_simulation_round)
-        update_retina_of_agents_from_offscreen_images();
+    if (!time_config().is_paused())
+        update_retina_of_agents_from_offscreen_images(
+                time_config().get_clipped_simulation_time_step_in_seconds(seconds_from_previous_call)
+                );
 
     qtgl::glapi().glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     qtgl::glapi().glViewport(0, 0, window_props().width_in_pixels(), window_props().height_in_pixels());
@@ -645,7 +647,7 @@ if (update_retinas)
     if (m_do_show_ai_action_controller_props)
         render_ai_action_controller_props(matrix_from_world_to_camera, matrix_from_camera_to_clipspace, draw_state);
 
-    if (is_simulation_round)
+    if (!time_config().is_paused())
         render_simulation_state(matrix_from_world_to_camera, matrix_from_camera_to_clipspace ,draw_state);
     else
     {
@@ -1092,7 +1094,7 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
 }
 
 
-void  simulator::update_retina_of_agents_from_offscreen_images()
+void  simulator::update_retina_of_agents_from_offscreen_images(float_32_bit const  time_to_simulate_in_seconds)
 {
     TMPROF_BLOCK();
 
@@ -1108,6 +1110,15 @@ void  simulator::update_retina_of_agents_from_offscreen_images()
         ai::retina_ptr const  retina_ptr = m_agents_ptr->at(agent_id_and_node_id.first).get_blackboard()->m_retina_ptr;
         if (retina_ptr == nullptr)
             continue;
+
+        auto  recovery_time_it = m_offscreen_recovery_times.find(agent_id_and_node_id.first);
+        if (recovery_time_it == m_offscreen_recovery_times.end())
+            recovery_time_it = m_offscreen_recovery_times.insert({ agent_id_and_node_id.first, 0.0f }).first;
+        recovery_time_it->second += time_to_simulate_in_seconds;
+        static float_32_bit  RECOVERY_PERIOD_IN_SECONDS = 0.0f;// 1.0f / 30.0f;
+        if (recovery_time_it->second < RECOVERY_PERIOD_IN_SECONDS)
+            continue;
+        m_offscreen_recovery_times.erase(recovery_time_it);
 
         auto  camera_it = m_offscreen_cameras.find(agent_id_and_node_id.first);
 
