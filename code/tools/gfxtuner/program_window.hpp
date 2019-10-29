@@ -102,6 +102,7 @@ public slots:
 
     /// Slots for SIMULATION tab
     void on_simulation_fixed_frequency_changed() { m_tab_simulation_widgets.on_fixed_frequency_changed(); }
+    void on_simulation_fixed_frequency_use_changed(bool) { m_tab_simulation_widgets.on_fixed_frequency_use_changed(); }
     void on_simulation_min_frequency_changed() { m_tab_simulation_widgets.on_min_frequency_changed(); }
 
     /// Status bar
