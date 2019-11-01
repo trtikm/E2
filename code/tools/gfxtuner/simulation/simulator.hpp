@@ -66,6 +66,9 @@ struct simulator : public qtgl::real_time_simulator
     void  set_show_batches(bool const  state) { m_do_show_batches = state; }
     void  set_show_colliders(bool const  state) { m_do_show_colliders = state; }
     void  set_show_contact_normals(bool const  state) { m_do_show_contact_normals = state; }
+    void  set_show_normals_of_collision_triangles(bool const  state) { m_do_show_normals_of_collision_triangles = state; }
+    bool  set_show_neighbours_of_collision_triangles(bool const  state) { m_do_show_neighbours_of_collision_triangles = state; }
+
     void  set_show_ai_action_controller_props(bool const  state) { m_do_show_ai_action_controller_props = state; }
     void  set_colliders_color(vector3 const&  colour) { m_colliders_colour = expand34(colour); }
     void  set_render_in_wireframe(bool const  state) { m_render_in_wireframe = state; }
@@ -370,6 +373,8 @@ private:
     bool  m_do_show_batches;
     bool  m_do_show_colliders;
     bool  m_do_show_contact_normals;
+    bool  m_do_show_normals_of_collision_triangles;
+    bool  m_do_show_neighbours_of_collision_triangles;
     bool  m_do_show_ai_action_controller_props;
     vector4  m_colliders_colour;
     bool  m_render_in_wireframe;
@@ -381,12 +386,28 @@ private:
 
     struct  cache_of_batches_of_colliders
     {
+        struct  triangle_mesh_batches
+        {
+            qtgl::batch  triangles;
+            qtgl::batch  normals;
+            qtgl::batch  neighbours;
+        };
+
         std::unordered_map<float_32_bit, qtgl::batch>  spheres;
         std::unordered_map<std::pair<float_32_bit, float_32_bit>, qtgl::batch>  capsules;
-        std::unordered_map<std::string, qtgl::batch>  triangle_meshes;
+        std::unordered_map<std::string, triangle_mesh_batches>  triangle_meshes;
 
         std::unique_ptr<std::vector< std::pair<vector3, vector3> > >  collision_normals_points;
         qtgl::batch  collision_normals_batch;
+
+        void clear()
+        {
+            capsules.clear();
+            spheres.clear();
+            triangle_meshes.clear();
+            collision_normals_points.release();
+            collision_normals_batch.release();
+        }
     };
     cache_of_batches_of_colliders  m_cache_of_batches_of_colliders;
 
@@ -395,6 +416,12 @@ private:
         std::unique_ptr<std::pair<std::vector< std::pair<vector3, vector3> >, std::vector<vector4> > >  lines;
         qtgl::batch  lines_batch;
         std::unordered_map<ai::agent_id, qtgl::batch>  sight_frustum_batches;
+
+        void clear()
+        {
+            lines.release();
+            lines_batch.release();
+        }
     };
     cache_of_batches_of_ai_agents  m_cache_of_batches_of_ai_agents;
 
