@@ -85,6 +85,7 @@ collision_scene::collision_scene()
     , m_triangles_geometry()
     , m_triangles_bbox()
     , m_triangles_material()
+    , m_triangles_neighbours_over_edges()
     , m_triangles_end_point_getters()
     , m_triangles_indices_of_invalidated_end_point_getters()
 
@@ -338,7 +339,7 @@ void  collision_scene::insert_triangle_mesh(
                 m_triangles_geometry.push_back(geometry);
                 m_triangles_bbox.push_back(bbox);
                 m_triangles_material.push_back(material);
-
+                m_triangles_neighbours_over_edges.push_back({coid, coid, coid});
             }
             else
             {
@@ -347,6 +348,7 @@ void  collision_scene::insert_triangle_mesh(
                 m_triangles_geometry.at(invalid_ids.back()) = geometry;
                 m_triangles_bbox.at(invalid_ids.back()) = bbox;
                 m_triangles_material.at(invalid_ids.back()) = material;
+                m_triangles_neighbours_over_edges.at(invalid_ids.back()) = { coid, coid, coid };
 
                 invalid_ids.pop_back();
             }
@@ -424,6 +426,7 @@ void  collision_scene::clear()
     m_triangles_geometry.clear();
     m_triangles_bbox.clear();
     m_triangles_material.clear();
+    m_triangles_neighbours_over_edges.clear();
     m_triangles_end_point_getters.clear();
     m_triangles_indices_of_invalidated_end_point_getters.clear();
 
@@ -777,6 +780,25 @@ void  collision_scene::set_trinagle_edges_ignore_mask(collision_object_id const 
     m_triangles_geometry.at(get_instance_index(coid)).edges_ignore_mask = mask;
 }
 
+collision_object_id   collision_scene::get_trinagle_neighbour_over_edge(
+        collision_object_id const  coid,
+        natural_32_bit const  edge_index
+        ) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::TRIANGLE && edge_index < 3U);
+    return m_triangles_neighbours_over_edges.at(get_instance_index(coid)).at(edge_index);
+}
+
+void  collision_scene::set_trinagle_neighbour_over_edge(
+        collision_object_id const  coid,
+        natural_32_bit const  edge_index,
+        collision_object_id const  neighbour_triangle_coid
+        )
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::TRIANGLE && edge_index < 3U);
+    m_triangles_neighbours_over_edges.at(get_instance_index(coid)).at(edge_index) = neighbour_triangle_coid;
+}
+
 COLLISION_MATERIAL_TYPE  collision_scene::get_material(collision_object_id const  coid) const
 {
     switch (get_shape_type(coid))
@@ -808,12 +830,29 @@ void  collision_scene::release_data_of_erased_object(collision_object_id const  
         break; // Nothing to release for these coids.
     case COLLISION_SHAPE_TYPE::TRIANGLE:
         {
-            auto&  geometry = m_triangles_geometry.at(get_instance_index(coid));
+            natural_32_bit const  instance_idx = get_instance_index(coid);
+
+            auto&  geometry = m_triangles_geometry.at(instance_idx);
             auto&  getter_info = m_triangles_end_point_getters.at(geometry.end_points_getter_index);
             ASSUMPTION(getter_info.second > 0U);
             --getter_info.second;
             if (getter_info.second == 0U)
                 m_triangles_indices_of_invalidated_end_point_getters.push_back(geometry.end_points_getter_index);
+
+            std::array<collision_object_id, 3U> const&  neighbours = m_triangles_neighbours_over_edges.at(instance_idx);
+            for (natural_32_bit  i = 0U; i!= 3U; ++i)
+            {
+                collision_object_id const  neighbour_i_coid = neighbours.at(i);
+                if (neighbour_i_coid != coid)
+                {
+                    std::array<collision_object_id, 3U>&  neighbour_i_neighbours =
+                            m_triangles_neighbours_over_edges.at(get_instance_index(neighbour_i_coid))
+                            ;
+                    for (natural_32_bit  j = 0U; j != 3U; ++j)
+                        if (neighbour_i_neighbours.at(j) == coid)
+                            neighbour_i_neighbours.at(j) = neighbour_i_coid;
+                }
+            }
         }
         break;
     default:

@@ -167,6 +167,12 @@ struct  collision_scene
     vector3 const&  get_triangle_unit_normal_in_world_space(collision_object_id const  coid) const;
     natural_8_bit  get_trinagle_edges_ignore_mask(collision_object_id const  coid) const;
     void  set_trinagle_edges_ignore_mask(collision_object_id const  coid, natural_8_bit const  mask);
+    collision_object_id   get_trinagle_neighbour_over_edge(collision_object_id const  coid, natural_32_bit const  edge_index) const;
+    void  set_trinagle_neighbour_over_edge(
+            collision_object_id const  coid,
+            natural_32_bit const  edge_index,
+            collision_object_id const  neighbour_triangle_coid
+            );
 
     COLLISION_MATERIAL_TYPE  get_material(collision_object_id const  coid) const;
 
@@ -373,6 +379,7 @@ private:
     std::vector<triangle_geometry>  m_triangles_geometry;
     std::vector<axis_aligned_bounding_box>  m_triangles_bbox;
     std::vector<COLLISION_MATERIAL_TYPE>  m_triangles_material;
+    std::vector<std::array<collision_object_id, 3U> >  m_triangles_neighbours_over_edges;
     std::vector<std::pair<std::function<vector3(natural_32_bit, natural_8_bit)>, natural_32_bit> >
             m_triangles_end_point_getters;
     std::vector<natural_32_bit>  m_triangles_indices_of_invalidated_end_point_getters;
