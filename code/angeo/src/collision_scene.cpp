@@ -1,9 +1,11 @@
 #include <angeo/collision_scene.hpp>
 #include <angeo/collide.hpp>
+#include <angeo/tensor_std_specialisations.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
 #include <utility/timeprof.hpp>
+#include <unordered_map>
 #include <set>
 
 namespace angeo { namespace detail {
@@ -307,6 +309,7 @@ void  collision_scene::insert_triangle_mesh(
 
     auto const&  getter = m_triangles_end_point_getters.at(getter_index).first;
 
+    std::vector<angeo::collision_object_id>  collider_ids;
     for (natural_32_bit  i = 0U; i != num_triangles; ++i)
     {
         collision_object_id  coid;
@@ -356,7 +359,81 @@ void  collision_scene::insert_triangle_mesh(
         insert_object(coid, is_dynamic);
         output_coids_of_individual_triangles.push_back(coid);
 
+        collider_ids.push_back(coid);
+
         ++m_statistics.num_triangles;
+    }
+    {
+        // The code in this block computes (and sets) for each inserted triangle:
+        //      1. edges_ignore_mask
+        //      2. neighbour for each edge (if there is any)
+
+        struct  edge_props
+        {
+            angeo::collision_object_id  triangle_coid;
+            natural_8_bit  edge_index;
+            natural_8_bit  other_triangle_vertex_index;
+        };
+        natural_32_bit  vertex_counter = 0U;
+        std::unordered_map<vector3, natural_32_bit>  vertex_ids;
+        std::unordered_map<std::pair<natural_32_bit, natural_32_bit>, std::vector<edge_props> >  edges;
+        for (angeo::collision_object_id  coid : collider_ids)
+        {
+            auto  result = vertex_ids.insert({ get_triangle_end_point_in_world_space(coid, 0U), vertex_counter });
+            if (result.second)
+                ++vertex_counter;
+            result = vertex_ids.insert({ get_triangle_end_point_in_world_space(coid, 1U), vertex_counter });
+            if (result.second)
+                ++vertex_counter;
+            result = vertex_ids.insert({ get_triangle_end_point_in_world_space(coid, 2U), vertex_counter });
+            if (result.second)
+                ++vertex_counter;
+
+            std::vector<natural_32_bit> const  indices{
+                vertex_ids.at(get_triangle_end_point_in_world_space(coid, 0U)),
+                vertex_ids.at(get_triangle_end_point_in_world_space(coid, 1U)),
+                vertex_ids.at(get_triangle_end_point_in_world_space(coid, 2U)),
+                vertex_ids.at(get_triangle_end_point_in_world_space(coid, 0U)),
+            };
+            for (natural_8_bit  i = 0U; i != 3U; ++i)
+                edges[{ std::min(indices[i], indices[i + 1]), std::max(indices[i], indices[i + 1]) }].push_back(
+                        { coid, i, (i + 2U) % 3U }
+                        );
+        }
+        for (auto const&  elem : edges)
+            if (elem.second.size() > 1UL)
+            {
+                INVARIANT(elem.second.size() == 2UL);
+
+                edge_props const&  ep0 = elem.second.front();
+                edge_props const&  ep1 = elem.second.back();
+
+                set_trinagle_neighbour_over_edge(ep0.triangle_coid, ep0.edge_index, ep1.triangle_coid);
+                set_trinagle_neighbour_over_edge(ep1.triangle_coid, ep1.edge_index, ep0.triangle_coid);
+
+                float_32_bit  distance_to_plane;
+                {
+                    vector3 const&  plane_origin =
+                            get_triangle_end_point_in_world_space(ep0.triangle_coid, ep0.other_triangle_vertex_index);
+                    vector3 const&  plane_unit_normal = get_triangle_unit_normal_in_world_space(ep0.triangle_coid);
+                    vector3 const&  point =
+                            get_triangle_end_point_in_world_space(ep1.triangle_coid, ep1.other_triangle_vertex_index);
+
+                    angeo::collision_point_and_plane(point, plane_origin, plane_unit_normal, &distance_to_plane, nullptr);
+                }
+
+                if (distance_to_plane > -0.0005f)
+                {
+                    set_trinagle_edges_ignore_mask(
+                            ep0.triangle_coid,
+                            get_trinagle_edges_ignore_mask(ep0.triangle_coid) | (1U << ep0.edge_index)
+                            );
+                    set_trinagle_edges_ignore_mask(
+                            ep1.triangle_coid,
+                            get_trinagle_edges_ignore_mask(ep1.triangle_coid) | (1U << ep1.edge_index)
+                            );
+                }
+            }
     }
 }
 
