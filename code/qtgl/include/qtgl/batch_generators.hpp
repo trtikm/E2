@@ -79,6 +79,14 @@ batch  create_grid(
 batch  create_basis_vectors(FOG_TYPE const  fog_type_ = FOG_TYPE::NONE);
 
 
+batch  create_coord_cross(
+        float_32_bit const  size,
+        vector4 const&  colour,
+        FOG_TYPE const  fog_type_ = FOG_TYPE::NONE,
+        std::string const&  id = ""
+        );
+
+
 batch  create_wireframe_box(
         vector3 const&  lo_corner,
         vector3 const&  hi_corner,
