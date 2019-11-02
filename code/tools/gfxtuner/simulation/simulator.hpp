@@ -23,12 +23,14 @@
 #   include <angeo/rigid_body_simulator.hpp>
 #   include <ai/agents.hpp>
 #   include <utility/std_pair_hash.hpp>
+#   include <utility/random.hpp>
 #   include <boost/property_tree/ptree.hpp>
 #   include <vector>
 #   include <unordered_map>
 #   include <unordered_set>
 #   include <string>
 #   include <list>
+#   include <chrono>
 
 
 enum  CAMERA_CONTROLLER_TYPE
@@ -347,6 +349,9 @@ private:
     void  update_collider_locations_in_subtree(scn::scene_node_id const&  id)
     { update_collider_locations_in_subtree(get_scene().get_scene_node(id)); }
 
+    void  __exp_update_cameras_of_agents();
+    void  __exp_update_vision_of_agents(float_64_bit const  time_to_simulate_in_seconds);
+
     // Data providing feedback loop between a human user and 3D scene in the tool
 
     qtgl::camera_perspective_ptr  m_camera;
@@ -438,14 +443,33 @@ private:
 
     std::shared_ptr<angeo::collision_scene>  m_collision_scene_ptr;
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
-    std::shared_ptr<ai::agents>  m_agents_ptr;
-    std::unordered_map<ai::agent_id, std::pair<qtgl::offscreen_ptr, qtgl::offscreen_ptr> >  m_offscreens;
-    std::unordered_map<ai::agent_id, qtgl::camera_perspective_ptr>  m_offscreen_cameras;
-    std::unordered_map<ai::agent_id, float_32_bit >  m_offscreen_recovery_times;
-
     std::unordered_map<angeo::collision_object_id, angeo::rigid_body_id>  m_binding_of_collision_objects;
     std::unordered_map<angeo::rigid_body_id, scn::scene_node_ptr>  m_binding_of_rigid_bodies;
+    std::shared_ptr<ai::agents>  m_agents_ptr;
     std::unordered_map<ai::agent_id, scn::scene_node_id>  m_binding_of_agents_to_scene;
+
+    // Debugging
+
+    qtgl::batch  __dbg_batch_coord_cross;
+
+    // Experiment
+
+    std::unordered_map<ai::agent_id, qtgl::camera_perspective_ptr>  __exp_cameras_of_agents;
+
+    std::unordered_map<ai::agent_id, std::pair<qtgl::offscreen_ptr, qtgl::offscreen_ptr> >  m_offscreens;
+    std::unordered_map<ai::agent_id, float_32_bit >  m_offscreen_recovery_times;
+
+    struct  __exp_vision_data
+    {
+        std::unordered_map<angeo::collision_object_id, std::chrono::system_clock::time_point>  triangles_with_life_times;
+        std::multimap<std::chrono::system_clock::time_point, angeo::collision_object_id>  from_life_times_to_triangles;
+        // std::greater<std::chrono::system_clock::time_point>
+        std::normal_distribution<float_32_bit>  distribution;
+        random_generator_for_natural_32_bit  generator;
+        __exp_vision_data() : triangles_with_life_times(), from_life_times_to_triangles(), distribution(), generator() {}
+    };
+    std::unordered_map<ai::agent_id, __exp_vision_data>  __exp_vision_of_agents;
+
 };
 
 
