@@ -747,6 +747,134 @@ void  collision_scene::find_objects_in_proximity_to_line(
 }
 
 
+bool  collision_scene::ray_cast_precise_collision_object_acceptor(
+        collision_object_id const  coid,
+        vector3 const&  ray_origin,
+        vector3 const&  ray_end,
+        vector3 const&  ray_unit_direction_vector,
+        float_32_bit const  ray_length,
+        std::function<bool(collision_object_id, float_32_bit)> const&  acceptor,
+        std::unordered_set<collision_object_id> const* const  ignored_coids_ptr
+        )
+{
+    if (ignored_coids_ptr != nullptr && ignored_coids_ptr->count(coid) != 0UL)
+        return true;
+
+    float_32_bit const  DISTANCE_EPSILON = 0.0001f;
+
+    switch (angeo::get_shape_type(coid))
+    {
+    case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
+        {
+            vector3 const&  E1 = get_capsule_end_point_1_in_world_space(coid);
+            vector3 const&  E2 = get_capsule_end_point_2_in_world_space(coid);
+            float_32_bit  t_best = 1.0f;
+            vector3  X, Y;
+            float_32_bit  t;
+        
+            t = angeo::closest_point_on_line_to_point(ray_origin, ray_end, E1, &X);
+            if (length_squared(X - E1) <= DISTANCE_EPSILON * DISTANCE_EPSILON && t < t_best)
+                t_best = t;
+            t = angeo::closest_point_on_line_to_point(ray_origin, ray_end, E2, &X);
+            if (length_squared(X - E2) <= DISTANCE_EPSILON * DISTANCE_EPSILON && t < t_best)
+                t_best = t;
+            if (angeo::closest_points_of_two_lines(ray_origin, ray_end, E1, E2, &X, &t, &Y, nullptr, nullptr, nullptr, nullptr, nullptr) > 0U)
+                if (length_squared(X - Y) <= DISTANCE_EPSILON * DISTANCE_EPSILON && t < t_best)
+                    t_best = t;
+            if (t_best < 1.0f)
+                return acceptor(coid, t_best);
+        }
+        break;
+    case angeo::COLLISION_SHAPE_TYPE::SPHERE:
+        {
+            vector3 const&  S = get_sphere_center_in_world_space(coid);
+            vector3  X;
+            float_32_bit const  t = angeo::closest_point_on_line_to_point(ray_origin, ray_end, S, &X);
+            if (length_squared(X - S) <= DISTANCE_EPSILON * DISTANCE_EPSILON)
+                return acceptor(coid, t);
+        }
+        break;
+    case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
+        {
+            vector3 const& normal = get_triangle_unit_normal_in_world_space(coid);
+            if (dot_product(normal, ray_unit_direction_vector) >= 0.0f)
+                return true;
+            vector3  X,Y;
+            if (angeo::closest_points_of_triangle_and_line(
+                    get_triangle_end_point_in_world_space(coid, 0U),
+                    get_triangle_end_point_in_world_space(coid, 1U),
+                    get_triangle_end_point_in_world_space(coid, 2U),
+                    normal,
+                    ray_origin,
+                    ray_end,
+                    &Y,
+                    nullptr,
+                    &X,
+                    nullptr,
+                    nullptr,
+                    nullptr,
+                    nullptr,
+                    nullptr) == 0U)
+                return true;
+            if (length_squared(X - Y) <= DISTANCE_EPSILON * DISTANCE_EPSILON)
+                return acceptor(coid, std::min(1.0f, std::max(-1.0f, length(X - ray_origin) / ray_length)));
+        }
+        break;
+    }
+    return true;
+}
+
+
+bool  collision_scene::ray_cast(
+        vector3 const&  ray_origin,
+        vector3 const&  ray_unit_direction_vector,
+        float_32_bit const  ray_length,
+        bool const  search_static,
+        bool const  search_dynamic,
+        collision_object_id*  nearest_coid,
+        float_32_bit*  ray_parameter_to_nearest_coid,
+        std::unordered_set<collision_object_id> const* const  ignored_coids_ptr // pass nullptr, if there is nothing to ignore.
+        )
+{
+    collision_object_id  tmp_nearest_coid;
+    if (nearest_coid == nullptr)
+        nearest_coid = &tmp_nearest_coid;
+
+    float_32_bit  tmp_ray_parameter_to_nearest_coid;
+    if (ray_parameter_to_nearest_coid == nullptr)
+        ray_parameter_to_nearest_coid = &tmp_ray_parameter_to_nearest_coid;
+
+    *ray_parameter_to_nearest_coid = 1.0f;
+
+    vector3 const  ray_end = ray_origin + ray_length * ray_unit_direction_vector;
+    find_objects_in_proximity_to_line(
+        ray_origin,
+        ray_end,
+        true,
+        true,
+        [&](angeo::collision_object_id const  coid) -> bool {
+            return ray_cast_precise_collision_object_acceptor(
+                coid,
+                ray_origin,
+                ray_end,
+                ray_unit_direction_vector,
+                ray_length,
+                [nearest_coid, ray_parameter_to_nearest_coid](collision_object_id const  coid, float_32_bit const  ray_param) -> bool {
+                        if (ray_param < *ray_parameter_to_nearest_coid)
+                        {
+                            *ray_parameter_to_nearest_coid = ray_param;
+                            *nearest_coid = coid;
+                        }
+                        return true;
+                    },
+                ignored_coids_ptr
+                );
+        }
+    );
+    return *ray_parameter_to_nearest_coid < 1.0f;
+}
+
+
 vector3  collision_scene::get_object_aabb_min_corner(collision_object_id const  coid) const
 {
     switch (get_shape_type(coid))
@@ -795,6 +923,20 @@ vector3  collision_scene::get_object_aabb_max_corner(collision_object_id const  
     }
 }
 
+vector3 const& collision_scene::get_capsule_end_point_1_in_world_space(collision_object_id const  coid) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::CAPSULE);
+    capsule_geometry const& geometry = m_capsules_geometry.at(get_instance_index(coid));
+    return geometry.end_point_1_in_world_space;
+}
+
+vector3 const& collision_scene::get_capsule_end_point_2_in_world_space(collision_object_id const  coid) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::CAPSULE);
+    capsule_geometry const& geometry = m_capsules_geometry.at(get_instance_index(coid));
+    return geometry.end_point_2_in_world_space;
+}
+
 float_32_bit  collision_scene::get_capsule_half_distance_between_end_points(collision_object_id const  coid) const
 {
     ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::CAPSULE);
@@ -807,6 +949,13 @@ float_32_bit  collision_scene::get_capsule_thickness_from_central_line(collision
     ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::CAPSULE);
     capsule_geometry const&  geometry = m_capsules_geometry.at(get_instance_index(coid));
     return geometry.thickness_from_central_line;
+}
+
+vector3 const&  collision_scene::get_sphere_center_in_world_space(collision_object_id const  coid) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::SPHERE);
+    sphere_geometry const& geometry = m_spheres_geometry.at(get_instance_index(coid));
+    return geometry.center_in_world_space;
 }
 
 float_32_bit  collision_scene::get_sphere_radius(collision_object_id const  coid) const

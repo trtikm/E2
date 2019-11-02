@@ -146,9 +146,30 @@ struct  collision_scene
     void  find_objects_in_proximity_to_line(
             vector3 const&  line_begin,
             vector3 const&  line_end,
-            bool const search_static,
-            bool const search_dynamic,
+            bool const  search_static,
+            bool const  search_dynamic,
             collision_object_acceptor const&  acceptor
+            );
+
+    bool  ray_cast_precise_collision_object_acceptor(
+            collision_object_id const  coid,
+            vector3 const&  ray_origin,
+            vector3 const&  ray_end,
+            vector3 const&  ray_unit_direction_vector,
+            float_32_bit const  ray_length,
+            std::function<bool(collision_object_id, float_32_bit)> const&  acceptor,
+            std::unordered_set<collision_object_id> const* const  ignored_coids_ptr // pass nullptr, if there is nothing to ignore.
+            );
+
+    bool  ray_cast(
+            vector3 const&  ray_origin,
+            vector3 const&  ray_unit_direction_vector,
+            float_32_bit const  ray_length,
+            bool const  search_static,
+            bool const  search_dynamic,
+            collision_object_id*  nearest_coid,
+            float_32_bit*  ray_parameter_to_nearest_coid,
+            std::unordered_set<collision_object_id> const* const  ignored_coids_ptr // pass nullptr, if there is nothing to ignore.
             );
 
     vector3  get_object_aabb_min_corner(collision_object_id const  coid) const;
@@ -156,9 +177,12 @@ struct  collision_scene
 
     bool  is_dynamic(collision_object_id const  coid) const { return m_dynamic_object_ids.count(coid) != 0UL; }
 
+    vector3 const&  get_capsule_end_point_1_in_world_space(collision_object_id const  coid) const;
+    vector3 const&  get_capsule_end_point_2_in_world_space(collision_object_id const  coid) const;
     float_32_bit  get_capsule_half_distance_between_end_points(collision_object_id const  coid) const;
     float_32_bit  get_capsule_thickness_from_central_line(collision_object_id const  coid) const;
 
+    vector3 const&  get_sphere_center_in_world_space(collision_object_id const  coid) const;
     float_32_bit  get_sphere_radius(collision_object_id const  coid) const;
 
     std::function<vector3(natural_32_bit, natural_8_bit)> const&  get_triangle_points_getter(collision_object_id const  coid) const;
