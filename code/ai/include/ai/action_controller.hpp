@@ -29,13 +29,13 @@ struct  action_controller
         skeletal_motion_templates::disjunction_of_guarded_actions  disjunction_of_guarded_actions;
     };
 
-    action_controller(blackboard_ptr const  blackboard_);
+    action_controller(blackboard_weak_ptr const  blackboard_);
     virtual ~action_controller();
 
     // Intentionally NOT virtual. The method calls vitrual method 'next_round_internal', see below.
     void  next_round(float_32_bit const  time_step_in_seconds);
 
-    blackboard_ptr  get_blackboard() const { return m_blackboard; }
+    blackboard_ptr  get_blackboard() const { return m_blackboard.lock(); }
 
     scene::node_id const& get_motion_object_node_id() const { return m_motion_object_motion.nid; }
     detail::motion_desire_props const&  get_desired_props() const { return m_motion_desire_props; }
@@ -59,7 +59,7 @@ private:
     void  look_at_target(float_32_bit const  time_step_in_seconds, float_32_bit const  interpolation_param);
     std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit>  choose_transition() const;
 
-    blackboard_ptr  m_blackboard;
+    blackboard_weak_ptr  m_blackboard;
 
     float_32_bit  m_total_interpolation_time_in_seconds;
     float_32_bit  m_consumed_time_in_seconds;
@@ -76,6 +76,9 @@ private:
 
     detail::motion_action_persistent_data_map  m_motion_action_data;
 };
+
+
+using  action_controller_ptr = std::shared_ptr<action_controller>;
 
 
 }

@@ -10,7 +10,7 @@ namespace ai {
 
 struct  cortex_output_decoder_human : public cortex_output_decoder 
 {
-    cortex_output_decoder_human(cortex_io_ptr const  io, blackboard_ptr const  blackboard_)
+    cortex_output_decoder_human(cortex_io_ptr const  io, blackboard_weak_ptr const  blackboard_)
         : cortex_output_decoder(io, blackboard_)
     {}
 

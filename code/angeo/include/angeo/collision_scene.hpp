@@ -141,7 +141,7 @@ struct  collision_scene
             bool const search_static,
             bool const search_dynamic,
             collision_object_acceptor const&  acceptor
-            );
+            ) const;
 
     void  find_objects_in_proximity_to_line(
             vector3 const&  line_begin,
@@ -149,7 +149,7 @@ struct  collision_scene
             bool const  search_static,
             bool const  search_dynamic,
             collision_object_acceptor const&  acceptor
-            );
+            ) const;
 
     bool  ray_cast_precise_collision_object_acceptor(
             collision_object_id const  coid,
@@ -159,7 +159,7 @@ struct  collision_scene
             float_32_bit const  ray_length,
             std::function<bool(collision_object_id, float_32_bit)> const&  acceptor,
             std::unordered_set<collision_object_id> const* const  ignored_coids_ptr // pass nullptr, if there is nothing to ignore.
-            );
+            ) const;
 
     bool  ray_cast(
             vector3 const&  ray_origin,
@@ -170,7 +170,7 @@ struct  collision_scene
             collision_object_id*  nearest_coid,
             float_32_bit*  ray_parameter_to_nearest_coid,
             std::unordered_set<collision_object_id> const* const  ignored_coids_ptr // pass nullptr, if there is nothing to ignore.
-            );
+            ) const;
 
     vector3  get_object_aabb_min_corner(collision_object_id const  coid) const;
     vector3  get_object_aabb_max_corner(collision_object_id const  coid) const;
@@ -280,8 +280,8 @@ private:
     void  insert_static_object(collision_object_id const  coid);
     void  insert_dynamic_object(collision_object_id const  coid);
 
-    void  rebalance_static_proximity_map_if_needed();
-    void  rebalance_dynamic_proximity_map_if_needed();
+    void  rebalance_static_proximity_map_if_needed() const;
+    void  rebalance_dynamic_proximity_map_if_needed() const;
 
     bool  compute_contacts(
             collision_object_id_pair  cop,
@@ -314,12 +314,12 @@ private:
     /////////////////////////////////////////////////////////////////////////////////
 
 
-    proximity_map<collision_object_id>  m_proximity_static_objects;  ///< These do not collide amongst each other.
-    proximity_map<collision_object_id>  m_proximity_dynamic_objects; ///< These collide amongst each other, plus with
-                                                                            ///< those in 'm_proximity_static_objects' map.
+    mutable proximity_map<collision_object_id>  m_proximity_static_objects;  ///< These do not collide amongst each other.
+    mutable proximity_map<collision_object_id>  m_proximity_dynamic_objects; ///< These collide amongst each other, plus with
+                                                                             ///< those in 'm_proximity_static_objects' map.
     std::unordered_set<collision_object_id>  m_dynamic_object_ids;
-    bool  m_does_proximity_static_need_rebalancing;
-    bool  m_does_proximity_dynamic_need_rebalancing;
+    mutable bool  m_does_proximity_static_need_rebalancing;
+    mutable bool  m_does_proximity_dynamic_need_rebalancing;
 
     std::unordered_set<collision_object_id_pair>  m_disabled_colliding;
 

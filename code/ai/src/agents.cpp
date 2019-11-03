@@ -1,6 +1,12 @@
 #include <ai/agents.hpp>
 #include <ai/blackboard_human.hpp>
 #include <angeo/skeleton_kinematics.hpp>
+#include <ai/cortex_mock_human.hpp>
+#include <ai/cortex_input_encoder_human.hpp>
+#include <ai/cortex_output_decoder_human.hpp>
+#include <ai/sensory_controller.hpp>
+#include <ai/sensory_controller_ray_cast_sight.hpp>
+#include <ai/action_controller_human.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -55,24 +61,38 @@ void  agents::construct_agent(agent_id const  id, agent_props&  props)
     TMPROF_BLOCK();
 
     blackboard_ptr const  bb = std::make_shared<blackboard_human>();
-    bb->m_motion_templates = props.motion_templates;
-    bb->m_agent_id = id;
-    bb->m_retina_ptr = props.retina_ptr;
-    bb->m_scene = m_scene;
-    bb->m_agent_nid = props.agent_nid;
-    bb->m_bone_nids.resize(props.motion_templates.pose_frames().size());
-    for (natural_32_bit bone = 0U; bone != bb->m_bone_nids.size(); ++bone)
     {
-        scene::node_id::path_type  path;
-        for (integer_32_bit parent_bone = (integer_32_bit)bone;
-                parent_bone >= 0;
-                parent_bone = bb->m_motion_templates.hierarchy().parents().at(parent_bone))
-            path.push_back(bb->m_motion_templates.names().at(parent_bone));
-        std::reverse(path.begin(), path.end());
-        bb->m_bone_nids.at(bone) = props.agent_nid / scene::node_id(path);
+        bb->m_motion_templates = props.motion_templates;
+        bb->m_agent_id = id;
+        bb->m_retina_ptr = props.retina_ptr;
+        bb->m_scene = m_scene;
+        bb->m_agent_nid = props.agent_nid;
+        bb->m_bone_nids.resize(props.motion_templates.pose_frames().size());
+        for (natural_32_bit bone = 0U; bone != bb->m_bone_nids.size(); ++bone)
+        {
+            scene::node_id::path_type  path;
+            for (integer_32_bit parent_bone = (integer_32_bit)bone;
+                    parent_bone >= 0;
+                    parent_bone = bb->m_motion_templates.hierarchy().parents().at(parent_bone))
+                path.push_back(bb->m_motion_templates.names().at(parent_bone));
+            std::reverse(path.begin(), path.end());
+            bb->m_bone_nids.at(bone) = props.agent_nid / scene::node_id(path);
+        }
+        cortex_io_ptr const  io = std::make_shared<cortex_io>();
+        io->input.resize(2U);
+        io->num_inner_inputs = 1U;
+        io->output.resize(3U);
+        bb->m_cortex_primary = std::make_shared<cortex_mock_human>(io, m_input_devices);
+        bb->m_cortex_secondary = std::make_shared<cortex>(io); // Not used so far.
+        bb->m_cortex_input_encoder = std::make_shared<cortex_input_encoder_human>(io, bb);
+        bb->m_cortex_output_decoder = std::make_shared<cortex_output_decoder_human>(io, bb);
+        bb->m_sensory_controller = std::make_shared<sensory_controller>(bb, std::make_shared<sensory_controller_ray_cast_sight>(bb,
+                sensory_controller_sight::camera_config(),
+                sensory_controller_ray_cast_sight::ray_cast_config()
+                ));
+        bb->m_action_controller = std::make_shared<action_controller_human>(bb);
     }
-
-    props.agent_ptr = std::make_unique<agent>(bb, m_input_devices);
+    props.agent_ptr = std::make_unique<agent>(bb);
 }
 
 

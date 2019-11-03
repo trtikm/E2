@@ -7,7 +7,7 @@
 namespace ai {
 
 
-action_controller_human::action_controller_human(blackboard_ptr const  blackboard_)
+action_controller_human::action_controller_human(blackboard_weak_ptr const  blackboard_)
     : action_controller(blackboard_)
 {
     TMPROF_BLOCK();

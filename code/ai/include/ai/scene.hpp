@@ -15,6 +15,7 @@ namespace ai {
 struct  scene
 {
     using  node_id = scn::scene_node_id;
+    using  collision_object_id = angeo::collision_object_id;
 
     struct  collicion_contant_info
     {
@@ -109,6 +110,10 @@ struct  scene
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to stop capturing.
             agent_id const  agent_id        // Identifies an agent which will stop receiving the contancts of the collider to its blackboard.
             ) = 0;
+
+    virtual angeo::collision_scene const&  get_collision_scene() const = 0;
+    virtual void  get_coids_under_scene_node(node_id const&  nid, std::function<bool(collision_object_id)> const&  acceptor) const = 0;
+    virtual void  get_coids_under_scene_node_subtree(node_id const&  nid, std::function<bool(collision_object_id)> const&  acceptor) const = 0;
 };
 
 

@@ -10,7 +10,7 @@ namespace ai {
 
 struct  action_controller_human : public action_controller
 {
-    explicit action_controller_human(blackboard_ptr const  blackboard_);
+    explicit action_controller_human(blackboard_weak_ptr const  blackboard_);
     ~action_controller_human();
 
     blackboard_human_ptr  get_blackboard() const { return as<blackboard_human>(action_controller::get_blackboard()); }

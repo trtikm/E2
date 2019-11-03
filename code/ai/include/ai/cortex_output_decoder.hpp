@@ -9,7 +9,7 @@ namespace ai {
 
 struct  cortex_output_decoder
 {
-    cortex_output_decoder(cortex_io_ptr const  io, blackboard_ptr const  blackboard_)
+    cortex_output_decoder(cortex_io_ptr const  io, blackboard_weak_ptr const  blackboard_)
         : m_io(io)
         , m_blackboard(blackboard_)
     {}
@@ -19,11 +19,11 @@ struct  cortex_output_decoder
     virtual void  run() {}
 
     cortex_io_ptr  get_io() const { return m_io; }
-    blackboard_ptr  get_blackboard() const { return m_blackboard; }
+    blackboard_ptr  get_blackboard() const { return m_blackboard.lock(); }
 
 private:
     cortex_io_ptr  m_io;
-    blackboard_ptr  m_blackboard;
+    blackboard_weak_ptr  m_blackboard;
 };
 
 

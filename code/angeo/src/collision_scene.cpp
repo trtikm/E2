@@ -667,7 +667,7 @@ void  collision_scene::find_objects_in_proximity_to_axis_aligned_bounding_box(
         bool const search_static,
         bool const search_dynamic,
         collision_object_acceptor const&  acceptor
-        )
+        ) const
 {
     TMPROF_BLOCK();
 
@@ -710,7 +710,7 @@ void  collision_scene::find_objects_in_proximity_to_line(
         bool const search_static,
         bool const search_dynamic,
         collision_object_acceptor const&  acceptor
-        )
+        ) const
 {
     TMPROF_BLOCK();
 
@@ -755,7 +755,7 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
         float_32_bit const  ray_length,
         std::function<bool(collision_object_id, float_32_bit)> const&  acceptor,
         std::unordered_set<collision_object_id> const* const  ignored_coids_ptr
-        )
+        ) const
 {
     if (ignored_coids_ptr != nullptr && ignored_coids_ptr->count(coid) != 0UL)
         return true;
@@ -834,7 +834,7 @@ bool  collision_scene::ray_cast(
         collision_object_id*  nearest_coid,
         float_32_bit*  ray_parameter_to_nearest_coid,
         std::unordered_set<collision_object_id> const* const  ignored_coids_ptr // pass nullptr, if there is nothing to ignore.
-        )
+        ) const
 {
     collision_object_id  tmp_nearest_coid;
     if (nearest_coid == nullptr)
@@ -1166,7 +1166,7 @@ void  collision_scene::insert_dynamic_object(collision_object_id const  coid)
     m_does_proximity_dynamic_need_rebalancing = true;
 }
 
-void  collision_scene::rebalance_static_proximity_map_if_needed()
+void  collision_scene::rebalance_static_proximity_map_if_needed() const
 {
     if (m_does_proximity_static_need_rebalancing)
     {
@@ -1175,7 +1175,7 @@ void  collision_scene::rebalance_static_proximity_map_if_needed()
     }
 }
 
-void  collision_scene::rebalance_dynamic_proximity_map_if_needed()
+void  collision_scene::rebalance_dynamic_proximity_map_if_needed() const
 {
     if (m_does_proximity_dynamic_need_rebalancing)
     {

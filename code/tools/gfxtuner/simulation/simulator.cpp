@@ -10,6 +10,9 @@
 #include <angeo/utility.hpp>
 #include <angeo/tensor_std_specialisations.hpp>
 #include <ai/skeleton_utils.hpp>
+#include <ai/sensory_controller.hpp>
+#include <ai/sensory_controller_sight.hpp>
+#include <ai/sensory_controller_ray_cast_sight.hpp>
 #include <ai/action_controller_human.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
@@ -377,12 +380,8 @@ simulator::simulator()
 
     // Experiment
 
-    , __exp_cameras_of_agents()
-
     , m_offscreens()
     , m_offscreen_recovery_times()
-
-    , __exp_vision_of_agents()
 {
 }
 
@@ -846,8 +845,6 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
     }
 
     m_agents_ptr->next_round((float_32_bit)time_to_simulate_in_seconds, keyboard_props(), mouse_props(), window_props());
-    __exp_update_cameras_of_agents();
-    __exp_update_vision_of_agents(time_to_simulate_in_seconds);
 
     perform_simulation_micro_step(time_to_simulate_in_seconds, true);
 
@@ -970,194 +967,6 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                     }
                 }
             }
-    }
-}
-
-
-void  simulator::__exp_update_cameras_of_agents()
-{
-    float_32_bit const  camera_FOV_angle = PI() / 2.0f;
-    float_32_bit const  camera_proj_dist = 0.05f;
-    float_32_bit const  camera_origin_z_shift = 0.0f;
-
-    for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
-    {
-        if (!m_agents_ptr->ready(agent_id_and_node_id.first))
-            continue;
-
-        auto  camera_it = __exp_cameras_of_agents.find(agent_id_and_node_id.first);
-
-        angeo::coordinate_system  camera_coord_system;
-        {
-            TMPROF_BLOCK();
-
-            std::vector<std::pair<vector3, vector3> >  look_at_props;
-            std::vector<vector3>  eye_right_directions;
-            {
-                ai::action_controller const* const  action_controller_ptr =
-                        &m_agents_ptr->at(agent_id_and_node_id.first).get_action_controller();
-                for (natural_32_bit bone : action_controller_ptr->get_free_bones_for_look_at()->end_effector_bones)
-                {
-                    scn::scene_node_id const  raw_bone_id =
-                        detail::skeleton_build_scene_node_id_of_bones(
-                                bone,
-                                action_controller_ptr->get_blackboard()->m_motion_templates.hierarchy().parents(),
-                                action_controller_ptr->get_blackboard()->m_motion_templates.names()
-                                );
-                    scn::scene_node_id const  bone_id = agent_id_and_node_id.second / raw_bone_id;
-                    scn::scene_node_ptr const  bone_node_ptr = get_scene_node(bone_id);
-                    if (bone_node_ptr != nullptr)
-                    {
-                        look_at_props.push_back({
-                                transform_point(vector3_zero(), bone_node_ptr->get_world_matrix()),
-                                transform_vector(vector3_unit_y(), bone_node_ptr->get_world_matrix())
-                                });
-                        eye_right_directions.push_back(transform_vector(vector3_unit_x(), bone_node_ptr->get_world_matrix()));
-                    }
-                }
-            }
-            if (look_at_props.empty())
-            {
-                __exp_cameras_of_agents.erase(camera_it);
-                continue;
-            }
-
-            vector3  camera_origin;
-            {
-                camera_origin = vector3_zero();
-                for (auto const&  pos_and_dir : look_at_props)
-                    camera_origin += pos_and_dir.first;
-                camera_origin = (1.0f / (float_32_bit)look_at_props.size()) * camera_origin;
-            }
-            vector3 const  look_at_target = angeo::compute_common_look_at_target_for_multiple_eyes(look_at_props);
-            vector3  camera_z_axis;
-            {
-                camera_z_axis = camera_origin - look_at_target;
-
-                float_32_bit const  d = length(camera_z_axis);
-                if (std::fabs(d) < 0.001f)
-                {
-                    __exp_cameras_of_agents.erase(camera_it);
-                    continue;
-                }
-
-                camera_z_axis = (1.0f / d) * camera_z_axis;
-            }
-            vector3  camera_x_axis, camera_y_axis;
-            {
-                camera_x_axis = vector3_zero();
-                for (auto const& dir : eye_right_directions)
-                    camera_x_axis += dir;
-                camera_x_axis = (1.0f / (float_32_bit)eye_right_directions.size()) * camera_x_axis;
-                camera_y_axis = cross_product(camera_z_axis, camera_x_axis);
-
-                float_32_bit const  d = length(camera_y_axis);
-                if (std::fabs(d) < 0.001f)
-                {
-                    __exp_cameras_of_agents.erase(camera_it);
-                    continue;
-                }
-
-                camera_y_axis = (1.0f / d) * camera_y_axis;
-                camera_x_axis = cross_product(camera_y_axis, camera_z_axis);
-            }
-            matrix33 R;
-            basis_to_rotation_matrix(camera_x_axis, camera_y_axis, camera_z_axis, R);
-
-            camera_coord_system = { camera_origin + camera_origin_z_shift * camera_z_axis, rotation_matrix_to_quaternion(R) };
-        }
-
-        if (camera_it == __exp_cameras_of_agents.cend())
-        {
-            float_32_bit const  tan_half_FOV_angle = std::tanf(camera_FOV_angle * 0.5f);
-            float_32_bit const  camera_window_half_size = camera_proj_dist * tan_half_FOV_angle;
-
-            camera_it = __exp_cameras_of_agents.insert({
-                    agent_id_and_node_id.first,
-                    qtgl::camera_perspective::create(
-                            angeo::coordinate_system::create(vector3_zero(), quaternion_identity()),
-                            camera_proj_dist,
-                            50.0f,
-                            -camera_window_half_size,
-                            camera_window_half_size,
-                            -camera_window_half_size,
-                            camera_window_half_size
-                            )
-                    }).first;
-        }
-
-        camera_it->second->set_coordinate_system(camera_coord_system);
-    }
-}
-
-
-void  simulator::__exp_update_vision_of_agents(float_64_bit const  time_to_simulate_in_seconds)
-{
-    natural_32_bit const  NUM_RAYCASTS_PER_SECOND = 100U;
-    float_32_bit const  MAX_TRIANGLE_LIFE_TIME_IN_SECONDS = 10.0f;
-
-    std::chrono::system_clock::time_point const  now = std::chrono::system_clock::now();
-
-    auto const  num_seconds_till_now = [&now](std::chrono::system_clock::time_point const  time_point) {
-        return std::chrono::duration<float_32_bit>(now - time_point).count();
-    };
-
-    for (auto const& agent_id_and_node_id : m_binding_of_agents_to_scene)
-    {
-        if (!m_agents_ptr->ready(agent_id_and_node_id.first))
-            continue;
-
-        ai::action_controller const* const  action_controller_ptr =
-                &m_agents_ptr->at(agent_id_and_node_id.first).get_action_controller();
-        scn::scene_node_ptr const  motion_object_node_ptr = get_scene_node(action_controller_ptr->get_motion_object_node_id());
-        auto const  collider_ptr = scn::get_collider(*motion_object_node_ptr);
-        if (collider_ptr == nullptr)
-            continue;
-
-        auto const  camera_it = __exp_cameras_of_agents.find(agent_id_and_node_id.first);
-        if (camera_it == __exp_cameras_of_agents.cend())
-            continue;
-
-        __exp_vision_data&  vision = __exp_vision_of_agents[agent_id_and_node_id.first];
-
-        auto const  gen_random_number_in_01 = [&vision]() {
-            return std::min(1.0f, std::max(0.0f, (1.0f + vision.distribution(vision.generator) / 4.0f) / 2.0f));
-        };
-
-        natural_32_bit const  num_raycasts = std::max(1U, (natural_32_bit)(NUM_RAYCASTS_PER_SECOND * time_to_simulate_in_seconds + 0.5));
-        for (natural_32_bit raycast_idx = 0U; raycast_idx < num_raycasts; ++raycast_idx)
-        {
-
-            matrix44  W;
-            angeo::from_base_matrix(*camera_it->second->coordinate_system(), W);
-
-            vector3 const  ray_direction_local{
-                    (camera_it->second->left() + gen_random_number_in_01() * (camera_it->second->right() - camera_it->second->left())),
-                    (camera_it->second->bottom() + gen_random_number_in_01() * (camera_it->second->top() - camera_it->second->bottom())),
-                    -camera_it->second->near_plane()
-                    };
-
-            vector3 const&  ray_origin = camera_it->second->coordinate_system()->origin();
-            vector3 const  ray_unit_direction = normalised(transform_vector(ray_direction_local, W));
-            float_32_bit const  ray_length = camera_it->second->far_plane();
-            std::unordered_set<angeo::collision_object_id>  ignored{ collider_ptr->id() };
-            angeo::collision_object_id  nearest_coid;
-            if (!m_collision_scene_ptr->ray_cast(ray_origin, ray_unit_direction, ray_length, true, true, &nearest_coid, nullptr, &ignored))
-                continue;
-
-            vision.triangles_with_life_times.erase(nearest_coid);
-            vision.triangles_with_life_times[nearest_coid] = now;
-            vision.from_life_times_to_triangles.insert({ now, nearest_coid });
-        }
-
-        while (!vision.from_life_times_to_triangles.empty() &&
-               num_seconds_till_now(vision.from_life_times_to_triangles.begin()->first) >= MAX_TRIANGLE_LIFE_TIME_IN_SECONDS)
-        {
-            auto const  it = vision.triangles_with_life_times.find(vision.from_life_times_to_triangles.begin()->second);
-            if (it != vision.triangles_with_life_times.end() && it->second == vision.from_life_times_to_triangles.begin()->first)
-                vision.triangles_with_life_times.erase(it);
-            vision.from_life_times_to_triangles.erase(vision.from_life_times_to_triangles.begin());
-        }
     }
 }
 
@@ -1314,8 +1123,9 @@ void  simulator::update_retina_of_agents_from_offscreen_images(float_32_bit cons
             continue;
         m_offscreen_recovery_times.erase(recovery_time_it);
 
-        auto const  camera_it = __exp_cameras_of_agents.find(agent_id_and_node_id.first);
-        if (camera_it == __exp_cameras_of_agents.cend())
+        ai::sensory_controller_sight::camera_perspective_ptr const  camera_ptr =
+            m_agents_ptr->at(agent_id_and_node_id.first).get_sensory_controller().get_sight()->get_camera();
+        if (camera_ptr == nullptr)
             continue;
 
         auto  offscreen_it = m_offscreens.find(agent_id_and_node_id.first);
@@ -1351,9 +1161,9 @@ void  simulator::update_retina_of_agents_from_offscreen_images(float_32_bit cons
         }
 
         matrix44  offscreen_matrix_from_world_to_camera;
-        camera_it->second->to_camera_space_matrix(offscreen_matrix_from_world_to_camera);
+        camera_ptr->to_camera_space_matrix(offscreen_matrix_from_world_to_camera);
         matrix44  offscreen_matrix_from_camera_to_clipspace;
-        camera_it->second->projection_matrix(offscreen_matrix_from_camera_to_clipspace);
+        camera_ptr->projection_matrix(offscreen_matrix_from_camera_to_clipspace);
         qtgl::draw_state  offscreen_draw_state;
 
         {
@@ -2184,9 +1994,11 @@ void  simulator::render_ai_action_controller_props(
     {
         if (!m_agents_ptr->ready(agent_id_and_node_id.first))
             continue;
-
-        auto const  camera_it = __exp_cameras_of_agents.find(agent_id_and_node_id.first);
-        if (camera_it == __exp_cameras_of_agents.cend())
+        ai::sensory_controller_sight_ptr const  sight_ptr = m_agents_ptr->at(agent_id_and_node_id.first).get_sensory_controller().get_sight();
+        if (sight_ptr == nullptr)
+            continue;
+        ai::sensory_controller_sight::camera_perspective_ptr const  camera_ptr = sight_ptr->get_camera();
+        if (camera_ptr == nullptr)
         {
             m_cache_of_batches_of_ai_agents.sight_frustum_batches.erase(agent_id_and_node_id.first);
             continue;
@@ -2195,7 +2007,7 @@ void  simulator::render_ai_action_controller_props(
         matrix44  from_sight_to_camera_matrix;
         {
             matrix44  W;
-            angeo::from_base_matrix(*camera_it->second->coordinate_system(), W);
+            angeo::from_base_matrix(*camera_ptr->coordinate_system(), W);
             from_sight_to_camera_matrix = matrix_from_world_to_camera * W;
         }
 
@@ -2214,12 +2026,12 @@ void  simulator::render_ai_action_controller_props(
             frustum_batch_it = m_cache_of_batches_of_ai_agents.sight_frustum_batches.insert({
                     agent_id_and_node_id.first,
                     qtgl::create_wireframe_perspective_frustum(
-                            -camera_it->second->near_plane(),
-                            -camera_it->second->far_plane(),
-                            camera_it->second->left(),
-                            camera_it->second->right(),
-                            camera_it->second->top(),
-                            camera_it->second->bottom(),
+                            -camera_ptr->near_plane(),
+                            -camera_ptr->far_plane(),
+                            camera_ptr->left(),
+                            camera_ptr->right(),
+                            camera_ptr->top(),
+                            camera_ptr->bottom(),
                             vector4{0.5f, 0.5f, 0.5f, 1.0f},
                             true
                             )
@@ -2245,55 +2057,67 @@ void  simulator::render_ai_action_controller_props(
         if (!m_agents_ptr->ready(agent_id_and_node_id.first))
             continue;
 
-        __exp_vision_data const&  vision = __exp_vision_of_agents[agent_id_and_node_id.first];
-        if (vision.triangles_with_life_times.empty())
+        ai::sensory_controller_ray_cast_sight_ptr const  sight_ptr =
+                std::dynamic_pointer_cast<ai::sensory_controller_ray_cast_sight>(
+                        m_agents_ptr->at(agent_id_and_node_id.first).get_sensory_controller().get_sight()
+                        );
+        if (sight_ptr == nullptr)
+            continue;
+        ai::sensory_controller_ray_cast_sight::coids_with_last_seen_times const&  coids_with_times = sight_ptr->get_coids_with_last_seen_times();
+        if (coids_with_times.empty())
             continue;
 
         if (!qtgl::make_current(__dbg_batch_coord_cross, draw_state, use_instancing))
             continue;
+        INVARIANT(use_instancing);
 
-        if (use_instancing)
+        qtgl::vertex_shader_instanced_data_provider  instanced_data_provider(__dbg_batch_coord_cross);
+        for (auto const&  coid_and_time : coids_with_times)
         {
-            qtgl::vertex_shader_instanced_data_provider  instanced_data_provider(__dbg_batch_coord_cross);
-            for (auto const&  coid_and_time : vision.triangles_with_life_times)
+            vector3 pos;
+            switch (angeo::get_shape_type(coid_and_time.first))
             {
-                matrix44  W;
-                {
-                    vector3 const&  P0 = m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid_and_time.first, 0U);
-                    vector3 const&  P1 = m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid_and_time.first, 1U);
-                    vector3 const&  P2 = m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid_and_time.first, 2U);
-                    compose_from_base_matrix((1.0f / 3.0f) * (P0 + P1 + P2), matrix33_identity(), W);
-                }
-                instanced_data_provider.insert_from_model_to_camera_matrix(matrix_from_world_to_camera * W);
+            case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
+                pos = (1.0f / 3.0f) * (
+                            m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid_and_time.first, 0U) +
+                            m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid_and_time.first, 1U) +
+                            m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid_and_time.first, 2U)
+                            );
+                break;
+            default:
+                continue;
             }
-            qtgl::render_batch(
-                    __dbg_batch_coord_cross,
-                    instanced_data_provider,
-                    qtgl::vertex_shader_uniform_data_provider(
-                        __dbg_batch_coord_cross,
-                        {},
-                        matrix_from_camera_to_clipspace,
-                        m_diffuse_colour,
-                        m_ambient_colour,
-                        m_specular_colour,
-                        transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                        m_directional_light_colour,
-                        m_fog_colour,
-                        m_fog_near,
-                        m_fog_far
-                    ),
-                    qtgl::fragment_shader_uniform_data_provider(
-                        m_diffuse_colour,
-                        m_ambient_colour,
-                        m_specular_colour,
-                        transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
-                        m_directional_light_colour,
-                        m_fog_colour,
-                        m_fog_near,
-                        m_fog_far
-                    )
-                    );
+            matrix44  W;
+            compose_from_base_matrix(pos, matrix33_identity(), W);
+            instanced_data_provider.insert_from_model_to_camera_matrix(matrix_from_world_to_camera * W);
         }
+        qtgl::render_batch(
+                __dbg_batch_coord_cross,
+                instanced_data_provider,
+                qtgl::vertex_shader_uniform_data_provider(
+                    __dbg_batch_coord_cross,
+                    {},
+                    matrix_from_camera_to_clipspace,
+                    m_diffuse_colour,
+                    m_ambient_colour,
+                    m_specular_colour,
+                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                    m_directional_light_colour,
+                    m_fog_colour,
+                    m_fog_near,
+                    m_fog_far
+                ),
+                qtgl::fragment_shader_uniform_data_provider(
+                    m_diffuse_colour,
+                    m_ambient_colour,
+                    m_specular_colour,
+                    transform_vector(m_directional_light_direction, matrix_from_world_to_camera),
+                    m_directional_light_colour,
+                    m_fog_colour,
+                    m_fog_near,
+                    m_fog_far
+                )
+                );
     }
 }
 

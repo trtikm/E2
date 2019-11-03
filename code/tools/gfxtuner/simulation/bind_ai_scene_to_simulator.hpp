@@ -99,6 +99,11 @@ struct bind_ai_scene_to_simulator : public ai::scene
             float_32_bit const  normal_force_magnitude
             ) const;
 
+    angeo::collision_scene const&  get_collision_scene() const;
+    void  get_coids_under_scene_node(scn::scene_node_ptr const  node_ptr, std::function<bool(collision_object_id)> const&  acceptor) const;
+    void  get_coids_under_scene_node(node_id const&  nid, std::function<bool(collision_object_id)> const&  acceptor) const;
+    void  get_coids_under_scene_node_subtree(node_id const&  nid, std::function<bool(collision_object_id)> const&  acceptor) const;
+
 private:
 
     simulator*  m_simulator_ptr;

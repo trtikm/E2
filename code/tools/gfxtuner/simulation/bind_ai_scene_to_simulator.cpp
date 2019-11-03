@@ -425,3 +425,38 @@ void  bind_ai_scene_to_simulator::on_collision_contact(
             ai::scene::collicion_contant_info(contact_point, unit_normal, material, normal_force_magnitude)
             );
 }
+
+
+angeo::collision_scene const&  bind_ai_scene_to_simulator::get_collision_scene() const
+{
+    return *m_simulator_ptr->get_collision_scene();
+}
+
+
+void  bind_ai_scene_to_simulator::get_coids_under_scene_node(
+        scn::scene_node_ptr const  node_ptr,
+        std::function<bool(collision_object_id)> const&  acceptor
+        ) const
+{
+    auto const  collider_ptr = node_ptr != nullptr ? scn::get_collider(*node_ptr) : nullptr;
+    if (collider_ptr != nullptr)
+        for (auto  coid : collider_ptr->ids())
+            acceptor(coid);
+}
+
+
+void  bind_ai_scene_to_simulator::get_coids_under_scene_node(node_id const&  nid, std::function<bool(collision_object_id)> const&  acceptor) const
+{
+    get_coids_under_scene_node(m_simulator_ptr->get_scene_node(nid), acceptor);
+}
+
+
+void  bind_ai_scene_to_simulator::get_coids_under_scene_node_subtree(node_id const&  nid, std::function<bool(collision_object_id)> const&  acceptor) const
+{
+    auto const  node_ptr = m_simulator_ptr->get_scene_node(nid);
+    if (node_ptr != nullptr)
+    {
+        get_coids_under_scene_node(node_ptr, acceptor);
+        node_ptr->foreach_child([this, &acceptor](scn::scene_node_ptr const  n) { get_coids_under_scene_node(n, acceptor); return true; }, true);
+    }
+}

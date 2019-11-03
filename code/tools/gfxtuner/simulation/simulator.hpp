@@ -349,9 +349,6 @@ private:
     void  update_collider_locations_in_subtree(scn::scene_node_id const&  id)
     { update_collider_locations_in_subtree(get_scene().get_scene_node(id)); }
 
-    void  __exp_update_cameras_of_agents();
-    void  __exp_update_vision_of_agents(float_64_bit const  time_to_simulate_in_seconds);
-
     // Data providing feedback loop between a human user and 3D scene in the tool
 
     qtgl::camera_perspective_ptr  m_camera;
@@ -454,22 +451,8 @@ private:
 
     // Experiment
 
-    std::unordered_map<ai::agent_id, qtgl::camera_perspective_ptr>  __exp_cameras_of_agents;
-
     std::unordered_map<ai::agent_id, std::pair<qtgl::offscreen_ptr, qtgl::offscreen_ptr> >  m_offscreens;
     std::unordered_map<ai::agent_id, float_32_bit >  m_offscreen_recovery_times;
-
-    struct  __exp_vision_data
-    {
-        std::unordered_map<angeo::collision_object_id, std::chrono::system_clock::time_point>  triangles_with_life_times;
-        std::multimap<std::chrono::system_clock::time_point, angeo::collision_object_id>  from_life_times_to_triangles;
-        // std::greater<std::chrono::system_clock::time_point>
-        std::normal_distribution<float_32_bit>  distribution;
-        random_generator_for_natural_32_bit  generator;
-        __exp_vision_data() : triangles_with_life_times(), from_life_times_to_triangles(), distribution(), generator() {}
-    };
-    std::unordered_map<ai::agent_id, __exp_vision_data>  __exp_vision_of_agents;
-
 };
 
 

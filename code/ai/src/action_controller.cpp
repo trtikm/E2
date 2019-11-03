@@ -23,7 +23,7 @@ action_controller::intepolation_state::intepolation_state()
 {}
 
 
-action_controller::action_controller(blackboard_ptr const  blackboard_)
+action_controller::action_controller(blackboard_weak_ptr const  blackboard_)
     : m_motion_desire_props()
     , m_motion_object_motion()
     , m_gravity_acceleration(vector3_zero())
@@ -71,7 +71,7 @@ action_controller::action_controller(blackboard_ptr const  blackboard_)
         get_blackboard()->m_scene->get_frame_of_scene_node(get_blackboard()->m_agent_nid, false, tmp);
         agent_frame.set_orientation(tmp.orientation());
     }
-    scene::node_id  nid(detail::get_motion_object_nid(blackboard_->m_scene, blackboard_->m_agent_nid));
+    scene::node_id  nid(detail::get_motion_object_nid(get_blackboard()->m_scene, get_blackboard()->m_agent_nid));
     if (!get_blackboard()->m_scene->has_scene_node(nid))
         nid = detail::create_motion_scene_node(get_blackboard()->m_scene, nid, agent_frame, collider, *mass_distribution);
 

@@ -7,6 +7,7 @@
 #   include <ai/scene.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <ai/action_controller.hpp>
+#   include <ai/retina.hpp>
 #   include <memory>
 #   include <vector>
 #   include <functional>

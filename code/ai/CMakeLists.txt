@@ -26,9 +26,13 @@ add_library(${THIS_TARGET_NAME}
     ./src/cortex_output_decoder_human.cpp
 
     ./include/ai/sensory_controller.hpp
-    ./include/ai/sensory_controller_human.hpp
-    ./src/sensory_controller_human.cpp
+    ./src/sensory_controller.cpp
 
+    ./include/ai/sensory_controller_sight.hpp
+    ./src/sensory_controller_sight.cpp 
+    ./include/ai/sensory_controller_ray_cast_sight.hpp 
+    ./src/sensory_controller_ray_cast_sight.cpp 
+    
     ./include/ai/action_controller.hpp
     ./src/action_controller.cpp
     ./include/ai/action_controller_human.hpp
@@ -37,6 +41,8 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/input_devices.hpp
 
     ./include/ai/blackboard.hpp
+    ./src/blackboard.cpp
+
     ./include/ai/blackboard_human.hpp
 
     ./include/ai/scene.hpp
