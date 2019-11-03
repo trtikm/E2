@@ -10,10 +10,7 @@
 #include <angeo/utility.hpp>
 #include <angeo/tensor_std_specialisations.hpp>
 #include <ai/skeleton_utils.hpp>
-#include <ai/sensory_controller.hpp>
-#include <ai/sensory_controller_sight.hpp>
 #include <ai/sensory_controller_ray_cast_sight.hpp>
-#include <ai/action_controller_human.hpp>
 #include <qtgl/glapi.hpp>
 #include <qtgl/draw.hpp>
 #include <qtgl/batch_generators.hpp>
@@ -883,87 +880,84 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
         for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
             if (m_agents_ptr->ready(agent_id_and_node_id.first))
             {
-                ai::action_controller const* const  action_controller_ptr =
-                        &m_agents_ptr->at(agent_id_and_node_id.first).get_action_controller();
-                if (auto const  ach_ptr = dynamic_cast<ai::action_controller_human const*>(action_controller_ptr))
+                ai::blackboard_const_ptr const  blackboard = m_agents_ptr->at(agent_id_and_node_id.first).get_blackboard();
+
+                scn::scene_node_ptr const  node_ptr = get_scene_node(blackboard->m_action_controller->get_motion_object_node_id());
+                if (auto const  rb_ptr = scn::get_rigid_body(*node_ptr))
                 {
-                    scn::scene_node_ptr const  node_ptr = get_scene_node(ach_ptr->get_motion_object_node_id());
-                    if (auto const  rb_ptr = scn::get_rigid_body(*node_ptr))
+                    matrix44  motion_object_from_base_matrix;
+                    angeo::from_base_matrix(*node_ptr->get_coord_system(), motion_object_from_base_matrix);
+
+                    vector3 const  motion_object_forward_direction_in_world_space =
+                        transform_vector(blackboard->m_motion_templates.directions().forward(), motion_object_from_base_matrix);
+                    vector3 const  motion_object_up_direction_in_world_space =
+                        transform_vector(blackboard->m_motion_templates.directions().up(), motion_object_from_base_matrix);
+
+                    m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                            node_ptr->get_coord_system()->origin(),
+                            node_ptr->get_coord_system()->origin() + motion_object_forward_direction_in_world_space
+                            });
+                    m_cache_of_batches_of_ai_agents.lines->second.push_back({0.25f, 0.75f, 0.75f, 1.0f}); // AQUA
+
+                    m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                            node_ptr->get_coord_system()->origin(),
+                            node_ptr->get_coord_system()->origin() + motion_object_up_direction_in_world_space
+                            });
+                    m_cache_of_batches_of_ai_agents.lines->second.push_back({0.25f, 0.5f, 0.75f, 1.0f}); // AZURE
+
+                    m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                            node_ptr->get_coord_system()->origin() + 0.0025f * vector3_unit_z(),
+                            node_ptr->get_coord_system()->origin() + 0.0025f * vector3_unit_z()
+                                + m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id())
+                            });
+                    m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 1.0f, 0.25f, 1.0f}); // YELLOW
+
+                    m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                            node_ptr->get_coord_system()->origin() - 0.0025f * motion_object_forward_direction_in_world_space,
+                            node_ptr->get_coord_system()->origin() - 0.0025f * motion_object_forward_direction_in_world_space
+                                + m_rigid_body_simulator_ptr->get_angular_velocity(rb_ptr->id())
+                            });
+                    m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 0.5f, 0.25f, 1.0f}); // ORANGE
+                }
+
+                m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                        node_ptr->get_coord_system()->origin() + 0.005f * vector3_unit_z(),
+                        node_ptr->get_coord_system()->origin() + 0.005f * vector3_unit_z()
+                            + blackboard->m_cortex->get_motion_desire_props().forward_unit_vector_in_world_space
+                        });
+                m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 1.0f, 1.0f, 1.0f}); // WHITE
+
+                m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                        node_ptr->get_coord_system()->origin() + 0.0075f * vector3_unit_z(),
+                        node_ptr->get_coord_system()->origin() + 0.0075f * vector3_unit_z()
+                            + 0.75f * blackboard->m_cortex->get_motion_desire_props().linear_velocity_unit_direction_in_world_space
+                        });
+                m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 0.5f, 1.0f, 1.0f}); // PINK
+
+                m_cache_of_batches_of_ai_agents.lines->first.push_back({
+                        node_ptr->get_coord_system()->origin() + 0.01f * vector3_unit_z(),
+                        node_ptr->get_coord_system()->origin() + 0.01f * vector3_unit_z()
+                            + blackboard->m_cortex->get_motion_desire_props().linear_speed
+                                * blackboard->m_cortex->get_motion_desire_props().linear_velocity_unit_direction_in_world_space
+                        });
+                m_cache_of_batches_of_ai_agents.lines->second.push_back({0.75f, 0.25f, 0.75f, 1.0f}); // PURPLE
+
+                for (natural_32_bit  bone : blackboard->m_action_controller->get_free_bones_for_look_at()->end_effector_bones)
+                {
+                    scn::scene_node_id const  raw_bone_id = detail::skeleton_build_scene_node_id_of_bones(
+                            bone,
+                            blackboard->m_motion_templates.hierarchy().parents(),
+                            blackboard->m_motion_templates.names()
+                            );
+                    scn::scene_node_id const  bone_id = agent_id_and_node_id.second / raw_bone_id;
+                    scn::scene_node_ptr const  bone_node_ptr = get_scene_node(bone_id);
+                    if (bone_node_ptr != nullptr)
                     {
-                        matrix44  motion_object_from_base_matrix;
-                        angeo::from_base_matrix(*node_ptr->get_coord_system(), motion_object_from_base_matrix);
-
-                        vector3 const  motion_object_forward_direction_in_world_space =
-                            transform_vector(ach_ptr->get_blackboard()->m_motion_templates.directions().forward(), motion_object_from_base_matrix);
-                        vector3 const  motion_object_up_direction_in_world_space =
-                            transform_vector(ach_ptr->get_blackboard()->m_motion_templates.directions().up(), motion_object_from_base_matrix);
-
                         m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                                node_ptr->get_coord_system()->origin(),
-                                node_ptr->get_coord_system()->origin() + motion_object_forward_direction_in_world_space
+                                transform_point(vector3_zero(), bone_node_ptr->get_world_matrix()),
+                                transform_point(5.0f * vector3_unit_y(), bone_node_ptr->get_world_matrix())
                                 });
-                        m_cache_of_batches_of_ai_agents.lines->second.push_back({0.25f, 0.75f, 0.75f, 1.0f}); // AQUA
-
-                        m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                                node_ptr->get_coord_system()->origin(),
-                                node_ptr->get_coord_system()->origin() + motion_object_up_direction_in_world_space
-                                });
-                        m_cache_of_batches_of_ai_agents.lines->second.push_back({0.25f, 0.5f, 0.75f, 1.0f}); // AZURE
-
-                        m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                                node_ptr->get_coord_system()->origin() + 0.0025f * vector3_unit_z(),
-                                node_ptr->get_coord_system()->origin() + 0.0025f * vector3_unit_z()
-                                    + m_rigid_body_simulator_ptr->get_linear_velocity(rb_ptr->id())
-                                });
-                        m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 1.0f, 0.25f, 1.0f}); // YELLOW
-
-                        m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                                node_ptr->get_coord_system()->origin() - 0.0025f * motion_object_forward_direction_in_world_space,
-                                node_ptr->get_coord_system()->origin() - 0.0025f * motion_object_forward_direction_in_world_space
-                                    + m_rigid_body_simulator_ptr->get_angular_velocity(rb_ptr->id())
-                                });
-                        m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 0.5f, 0.25f, 1.0f}); // ORANGE
-                    }
-
-                    m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                            node_ptr->get_coord_system()->origin() + 0.005f * vector3_unit_z(),
-                            node_ptr->get_coord_system()->origin() + 0.005f * vector3_unit_z()
-                                + ach_ptr->get_desired_props().forward_unit_vector_in_world_space
-                            });
-                    m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 1.0f, 1.0f, 1.0f}); // WHITE
-
-                    m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                            node_ptr->get_coord_system()->origin() + 0.0075f * vector3_unit_z(),
-                            node_ptr->get_coord_system()->origin() + 0.0075f * vector3_unit_z()
-                                + 0.75f * ach_ptr->get_desired_props().linear_velocity_unit_direction_in_world_space
-                            });
-                    m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 0.5f, 1.0f, 1.0f}); // PINK
-
-                    m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                            node_ptr->get_coord_system()->origin() + 0.01f * vector3_unit_z(),
-                            node_ptr->get_coord_system()->origin() + 0.01f * vector3_unit_z()
-                                + ach_ptr->get_desired_props().linear_speed
-                                  * ach_ptr->get_desired_props().linear_velocity_unit_direction_in_world_space
-                            });
-                    m_cache_of_batches_of_ai_agents.lines->second.push_back({0.75f, 0.25f, 0.75f, 1.0f}); // PURPLE
-
-                    for (natural_32_bit  bone : ach_ptr->get_free_bones_for_look_at()->end_effector_bones)
-                    {
-                        scn::scene_node_id const  raw_bone_id = detail::skeleton_build_scene_node_id_of_bones(
-                                bone,
-                                ach_ptr->get_blackboard()->m_motion_templates.hierarchy().parents(),
-                                ach_ptr->get_blackboard()->m_motion_templates.names()
-                                );
-                        scn::scene_node_id const  bone_id = agent_id_and_node_id.second / raw_bone_id;
-                        scn::scene_node_ptr const  bone_node_ptr = get_scene_node(bone_id);
-                        if (bone_node_ptr != nullptr)
-                        {
-                            m_cache_of_batches_of_ai_agents.lines->first.push_back({
-                                    transform_point(vector3_zero(), bone_node_ptr->get_world_matrix()),
-                                    transform_point(5.0f * vector3_unit_y(), bone_node_ptr->get_world_matrix())
-                                    });
-                            m_cache_of_batches_of_ai_agents.lines->second.push_back({ 0.85f, 0.85f, 0.85f, 1.0f }); // GRAY
-                        }
+                        m_cache_of_batches_of_ai_agents.lines->second.push_back({ 0.85f, 0.85f, 0.85f, 1.0f }); // GRAY
                     }
                 }
             }

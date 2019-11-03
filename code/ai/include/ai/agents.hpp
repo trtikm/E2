@@ -6,6 +6,9 @@
 #   include <ai/input_devices.hpp>
 #   include <ai/scene.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
+#   include <ai/blackboard.hpp>
+#   include <ai/cortex.hpp>
+#   include <ai/sensory_controller.hpp>
 #   include <ai/action_controller.hpp>
 #   include <ai/retina.hpp>
 #   include <memory>

@@ -29,26 +29,21 @@ struct  action_controller
         skeletal_motion_templates::disjunction_of_guarded_actions  disjunction_of_guarded_actions;
     };
 
-    action_controller(blackboard_weak_ptr const  blackboard_);
+    explicit action_controller(blackboard_weak_ptr const  blackboard_);
     virtual ~action_controller();
 
-    // Intentionally NOT virtual. The method calls vitrual method 'next_round_internal', see below.
-    void  next_round(float_32_bit const  time_step_in_seconds);
+    virtual void  initialise() {}
+    virtual void  next_round(float_32_bit const  time_step_in_seconds);
 
     blackboard_ptr  get_blackboard() const { return m_blackboard.lock(); }
 
     scene::node_id const& get_motion_object_node_id() const { return m_motion_object_motion.nid; }
-    detail::motion_desire_props const&  get_desired_props() const { return m_motion_desire_props; }
+    detail::rigid_body_motion const&  get_motion_object_motion() const { return m_motion_object_motion; }
+    vector3 const&  get_gravity_acceleration() const { return m_gravity_acceleration; }
     skeletal_motion_templates::free_bones_for_look_at_ptr  get_free_bones_for_look_at() const { return m_current_intepolation_state.free_bones_look_at; }
 
 protected:
 
-    // The main purpose to update desires of the agent, and in particular to update the member 'm_motion_desire_props'
-    // The method is called from 'next_frame' method. Child controllers should override the default implementation in
-    // this class, which always sets the 'm_motion_desire_props' to non-motional (standing) state. 
-    virtual void  next_round_internal(float_32_bit  time_step_in_seconds);
-
-    detail::motion_desire_props  m_motion_desire_props;
     detail::rigid_body_motion  m_motion_object_motion;
     vector3  m_gravity_acceleration;
 
@@ -57,7 +52,6 @@ private:
     float_32_bit  compute_interpolation_speed() const;
     void  interpolate(float_32_bit const  interpolation_param);
     void  look_at_target(float_32_bit const  time_step_in_seconds, float_32_bit const  interpolation_param);
-    std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit>  choose_transition() const;
 
     blackboard_weak_ptr  m_blackboard;
 

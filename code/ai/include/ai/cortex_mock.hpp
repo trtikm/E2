@@ -2,7 +2,6 @@
 #   define AI_CORTEX_MOCK_HPP_INCLUDED
 
 #   include <ai/cortex.hpp>
-#   include <ai/cortex_io.hpp>
 #   include <ai/input_devices.hpp>
 
 namespace ai {
@@ -10,8 +9,8 @@ namespace ai {
 
 struct  cortex_mock : public cortex
 {
-    cortex_mock(cortex_io_ptr const  io, input_devices_const_ptr const  input_devices_)
-        : cortex(io)
+    cortex_mock(blackboard_weak_ptr const  blackboard_, input_devices_const_ptr const  input_devices_)
+        : cortex(blackboard_)
         , m_input_devices(input_devices_)
     {}
 

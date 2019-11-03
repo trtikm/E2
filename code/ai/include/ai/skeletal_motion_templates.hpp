@@ -528,6 +528,8 @@ struct  skeletal_motion_templates_data
     using  action_ptr = detail::meta::action_ptr;
     using  disjunction_of_guarded_actions = detail::meta::motion_actions::disjunction_of_guarded_actions;
 
+    using  cursor_and_transition_time = std::pair<motion_template_cursor, float_32_bit>;
+
     struct  motion_template
     {
         keyframes  keyframes;
@@ -601,6 +603,7 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  keyframe = detail::skeletal_motion_templates_data::keyframe;
     using  keyframes = detail::skeletal_motion_templates_data::keyframes;
     using  modelspace = detail::skeletal_motion_templates_data::modelspace;
+    using  cursor_and_transition_time = detail::skeletal_motion_templates_data::cursor_and_transition_time;
 
     using  bone_names = detail::bone_names;
     using  bone_hierarchy = detail::bone_hierarchy;
@@ -785,7 +788,7 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     bool  is_branching_keyframe(motion_template_cursor const&  cursor) const { return resource().is_branching_keyframe(cursor); }
     void  get_successor_keyframes(
             motion_template_cursor const& cursor,
-            std::vector<std::pair<motion_template_cursor /* target_cursor */, float_32_bit /* transition_time */> >&  output
+            std::vector<cursor_and_transition_time>&  output
             ) const
     {
         resource().get_successor_keyframes(cursor, output);

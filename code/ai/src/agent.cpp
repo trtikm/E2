@@ -1,9 +1,9 @@
 #include <ai/agent.hpp>
-#include <ai/cortex_mock_human.hpp>
-#include <ai/cortex_input_encoder_human.hpp>
-#include <ai/cortex_output_decoder_human.hpp>
+#include <ai/cortex.hpp>
 #include <ai/sensory_controller.hpp>
-#include <ai/action_controller_human.hpp>
+#include <ai/action_controller.hpp>
+#include <ai/cortex_mock_human.hpp>
+#include <ai/sensory_controller_ray_cast_sight.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -13,28 +13,65 @@
 namespace ai {
 
 
-agent::agent(
-        blackboard_ptr const  blackboard_)
+blackboard_ptr  agent::create_blackboard(AGENT_KIND const  agent_kind)
+{
+    TMPROF_BLOCK();
+
+    switch (agent_kind)
+    {
+    case AGENT_KIND::MOCK_HUMAN:
+        return std::make_shared<blackboard>();
+    default:
+        UNREACHABLE();
+    }
+}
+
+
+void  agent::create_modules(blackboard_ptr const  bb, input_devices_ptr const  idev)
+{
+    TMPROF_BLOCK();
+
+    switch (bb->m_agent_kind)
+    {
+    case AGENT_KIND::MOCK_HUMAN:
+        bb->m_cortex = std::make_shared<cortex_mock_human>(bb, idev);
+        bb->m_sensory_controller = std::make_shared<sensory_controller>(bb, std::make_shared<sensory_controller_ray_cast_sight>(bb,
+                sensory_controller_sight::camera_config(),
+                sensory_controller_ray_cast_sight::ray_cast_config()
+                ));
+        bb->m_action_controller = std::make_shared<action_controller>(bb);
+        break;
+    default:
+        UNREACHABLE();
+    }
+}
+
+
+}
+
+namespace ai {
+
+
+agent::agent(blackboard_ptr const  blackboard_)
     : m_blackboard(blackboard_)
-{}
+{
+    TMPROF_BLOCK();
+
+    // The initialisation order of agent's modules is important and mandatory.
+    get_blackboard()->m_sensory_controller->initialise();
+    get_blackboard()->m_action_controller->initialise();
+    get_blackboard()->m_cortex->initialise();
+}
 
 
 agent::~agent()
 {
-    get_blackboard()->release_modules();
-}
+    TMPROF_BLOCK();
 
-
-void  agent::set_use_cortex_mock(bool const  state)
-{
-    if (state != uses_cortex_mock())
-        get_blackboard()->m_cortex_primary.swap(get_blackboard()->m_cortex_secondary);
-}
-
-
-bool  agent::uses_cortex_mock() const
-{
-    return dynamic_cast<cortex_mock*>(get_blackboard()->m_cortex_primary.get()) != nullptr;
+    // The release order of agent's modules is important and mandatory.
+    get_blackboard()->m_cortex = nullptr;
+    get_blackboard()->m_sensory_controller = nullptr;
+    get_blackboard()->m_action_controller = nullptr;
 }
 
 
@@ -42,10 +79,9 @@ void  agent::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
+    // The update order of agent's modules is important and mandatory.
     get_blackboard()->m_sensory_controller->next_round(time_step_in_seconds);
-    get_blackboard()->m_cortex_input_encoder->run();
-    get_blackboard()->m_cortex_primary->next_round(time_step_in_seconds);
-    get_blackboard()->m_cortex_output_decoder->run();
+    get_blackboard()->m_cortex->next_round(time_step_in_seconds);
     get_blackboard()->m_action_controller->next_round(time_step_in_seconds);
 }
 

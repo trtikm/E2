@@ -36,6 +36,7 @@ private:
 
 
 using  retina_ptr = std::shared_ptr<retina>;
+using  retina_const_ptr = std::shared_ptr<retina const>;
 
 
 inline retina_ptr  make_retina(natural_32_bit const  width_in_pixels, natural_32_bit const  height_in_pixels, bool const  use_colour_texture)

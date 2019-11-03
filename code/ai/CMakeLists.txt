@@ -5,6 +5,7 @@ add_library(${THIS_TARGET_NAME}
     ./src/agents.cpp
 
     ./include/ai/agent_id.hpp
+    ./include/ai/agent_kind.hpp
     ./include/ai/agent.hpp
     ./src/agent.cpp
     
@@ -14,17 +15,7 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/cortex_mock.hpp
     ./include/ai/cortex_mock_human.hpp
     ./src/cortex_mock_human.cpp
-
-    ./include/ai/cortex_io.hpp
-
-    ./include/ai/cortex_input_encoder.hpp
-    ./include/ai/cortex_input_encoder_human.hpp
-    ./src/cortex_input_encoder_human.cpp
     
-    ./include/ai/cortex_output_decoder.hpp
-    ./include/ai/cortex_output_decoder_human.hpp
-    ./src/cortex_output_decoder_human.cpp
-
     ./include/ai/sensory_controller.hpp
     ./src/sensory_controller.cpp
 
@@ -35,24 +26,21 @@ add_library(${THIS_TARGET_NAME}
     
     ./include/ai/action_controller.hpp
     ./src/action_controller.cpp
-    ./include/ai/action_controller_human.hpp
-    ./src/action_controller_human.cpp
 
     ./include/ai/input_devices.hpp
 
     ./include/ai/blackboard.hpp
     ./src/blackboard.cpp
 
-    ./include/ai/blackboard_human.hpp
-
     ./include/ai/scene.hpp
-    ./include/ai/retina.hpp
 
     ./include/ai/skeletal_motion_templates.hpp
     ./src/skeletal_motion_templates.cpp
     
     ./include/ai/skeleton_utils.hpp
     ./src/skeleton_utils.cpp
+
+    ./include/ai/retina.hpp
  
     ./include/ai/detail/rigid_body_motion.hpp
     ./src/detail/rigid_body_motion.cpp

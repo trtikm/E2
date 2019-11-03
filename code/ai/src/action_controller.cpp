@@ -1,4 +1,5 @@
 #include <ai/action_controller.hpp>
+#include <ai/cortex.hpp>
 #include <ai/skeleton_utils.hpp>
 #include <ai/detail/rigid_body_motion.hpp>
 #include <ai/detail/ideal_velocity_buider.hpp>
@@ -24,8 +25,7 @@ action_controller::intepolation_state::intepolation_state()
 
 
 action_controller::action_controller(blackboard_weak_ptr const  blackboard_)
-    : m_motion_desire_props()
-    , m_motion_object_motion()
+    : m_motion_object_motion()
     , m_gravity_acceleration(vector3_zero())
 
     , m_blackboard(blackboard_)
@@ -94,8 +94,6 @@ action_controller::action_controller(blackboard_weak_ptr const  blackboard_)
                                                           .at(m_dst_cursor.keyframe_index);
 
     m_src_intepolation_state = m_current_intepolation_state;
-
-    action_controller::next_round_internal(0.0f);
 }
 
 
@@ -128,10 +126,6 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
     // Synchronise agent's position in the world space according to its motion object in the previous time step
     m_motion_object_motion.commit_frame(get_blackboard()->m_scene, get_blackboard()->m_agent_nid);
 
-    // Virtual call to child controller (if any). The main purpose to update desires of the agent.
-    // And in particular to update the member 'm_motion_desire_props'
-    next_round_internal(time_step_in_seconds);
-
     float_32_bit const  interpolation_time_step_in_seconds = compute_interpolation_speed() * time_step_in_seconds;
 
     if (m_consumed_time_in_seconds + interpolation_time_step_in_seconds >= m_total_interpolation_time_in_seconds)
@@ -146,7 +140,13 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
 
         while (m_consumed_time_in_seconds + interpolation_time_step_in_seconds >= m_total_interpolation_time_in_seconds)
         {
-            std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit> const  best_transition = choose_transition();
+            std::vector<skeletal_motion_templates::cursor_and_transition_time> successors;
+            get_blackboard()->m_motion_templates.get_successor_keyframes(m_dst_cursor, successors);
+            skeletal_motion_templates::cursor_and_transition_time const  best_transition =
+                    successors.size() == 1UL ?
+                            successors.front() :
+                            get_blackboard()->m_cortex->choose_next_motion_action(successors)
+                            ;
             m_dst_cursor = best_transition.first;
             m_total_interpolation_time_in_seconds += best_transition.second;
             consumed_time += best_transition.second;
@@ -214,7 +214,7 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
                 m_current_intepolation_state.disjunction_of_guarded_actions,
                 get_blackboard()->m_collision_contacts,
                 m_motion_object_motion,
-                m_motion_desire_props,
+                get_blackboard()->m_cortex->get_motion_desire_props(),
                 m_gravity_acceleration
                 );
     if (satisfied_guarded_actions != nullptr)
@@ -225,23 +225,13 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
                 m_ideal_linear_velocity_in_world_space,
                 m_ideal_angular_velocity_in_world_space,
                 m_gravity_acceleration,
-                m_motion_desire_props,
+                get_blackboard()->m_cortex->get_motion_desire_props(),
                 m_motion_action_data,
                 m_motion_object_motion,
                 m_motion_action_data
                 );
         m_motion_object_motion.commit_accelerations(get_blackboard()->m_scene, m_motion_object_motion.nid);
     }
-}
-
-
-void  action_controller::next_round_internal(float_32_bit)
-{
-    m_motion_desire_props.forward_unit_vector_in_world_space = m_motion_object_motion.forward;
-    m_motion_desire_props.linear_velocity_unit_direction_in_world_space = m_motion_desire_props.forward_unit_vector_in_world_space;
-    m_motion_desire_props.linear_speed = 0.0f;
-    m_motion_desire_props.angular_velocity_unit_axis_in_world_space = m_motion_object_motion.up;
-    m_motion_desire_props.angular_speed = 0.0f;
 }
 
 
@@ -372,9 +362,7 @@ void  action_controller::look_at_target(float_32_bit const  time_step_in_seconds
 
     vector3  target;
     {
-        target = m_motion_object_motion.frame.origin() +
-            std::max(1.0f, m_motion_desire_props.linear_speed) *
-            m_motion_desire_props.linear_velocity_unit_direction_in_world_space;
+        target = get_blackboard()->m_cortex->get_look_at_target_in_world_space();
 
         // The target is now in world space, but we need the target in the space of the bone which is the closest parent bone
         // to all bones in 'bones_to_consider'; note that the parent bone cannot be in 'bones_to_consider'.
@@ -446,119 +434,6 @@ void  action_controller::look_at_target(float_32_bit const  time_step_in_seconds
             param,
             m_current_intepolation_state.frames.at(bone)
             );
-}
-
-
-std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit>  action_controller::choose_transition() const
-{
-    TMPROF_BLOCK();
-
-    std::vector<std::pair<skeletal_motion_templates::motion_template_cursor, float_32_bit> > successors;
-    get_blackboard()->m_motion_templates.get_successor_keyframes(m_dst_cursor, successors);
-    if (successors.size() == 1UL)
-        return successors.front();
-    std::vector<natural_32_bit>  satisfied_transitions;
-    for (natural_32_bit  i = 0U; i != successors.size(); ++i)
-    {
-        skeletal_motion_templates::guarded_actions_ptr  satisfied_guarded_actions =
-                detail::get_first_satisfied_motion_guarded_actions(
-                        get_blackboard()->m_motion_templates.motions_map().at(successors.at(i).first.motion_name).actions
-                                                                          .at(successors.at(i).first.keyframe_index),
-                        get_blackboard()->m_collision_contacts,
-                        m_motion_object_motion,
-                        m_motion_desire_props,
-                        m_gravity_acceleration
-                        );
-        if (satisfied_guarded_actions != nullptr)
-            satisfied_transitions.push_back(i);
-    }
-    if (satisfied_transitions.size() == 1UL)
-        return successors.at(satisfied_transitions.front());
-
-    natural_32_bit  best_index;
-    {
-        best_index = std::numeric_limits<natural_32_bit>::max();
-        float_32_bit  best_cost = std::numeric_limits<float_32_bit>::max();
-        float_32_bit const  time_horizon = 0.2f;
-        float_32_bit const  integration_time_step = 0.1f;
-        for (natural_32_bit i = 0U; i != satisfied_transitions.size(); ++i)
-        {
-            detail::rigid_body_motion  motion = m_motion_object_motion;
-            float_32_bit  consumed_time = 0.0f;
-            {
-                skeletal_motion_templates::motion_template_cursor  cursor = successors.at(satisfied_transitions.at(i)).first;
-                detail::ideal_velocity_buider  ideal_velocity_buider(cursor, get_blackboard()->m_motion_templates );
-                float_32_bit  integration_time = 0.0f;
-                bool  passed_branching = false;
-                while (consumed_time < time_horizon || !passed_branching)
-                {
-                    if (consumed_time >= time_horizon && get_blackboard()->m_motion_templates.is_branching_keyframe(cursor))
-                        passed_branching = true;
-
-                    get_blackboard()->m_motion_templates.for_each_successor_keyframe(
-                            cursor,
-                            [&cursor, &ideal_velocity_buider, &consumed_time, &integration_time]
-                            (skeletal_motion_templates::motion_template_cursor const&  target_cursor, float_32_bit const  transition_time)
-                            {
-                                cursor = target_cursor;
-                                consumed_time += transition_time;
-                                integration_time += transition_time;
-                                ideal_velocity_buider.extend(target_cursor, transition_time);
-                                return false;   // We need only the first successor to stay in the initial animation as long as possible.
-                                                // When all successors goes out from the initial animation, then take any => the first is ok.
-                            });
-                    if (integration_time > integration_time_step || consumed_time >= time_horizon)
-                    {
-                        detail::motion_action_persistent_data_map  discardable_motion_action_data;
-                        std::vector<skeletal_motion_templates::action_ptr>  actions;
-                        for (auto const&  disjunction : get_blackboard()->m_motion_templates.motions_map().at(cursor.motion_name).actions
-                                                                                                          .at(cursor.keyframe_index))
-                            for (auto const  action_ptr : disjunction->actions)
-                                actions.push_back(action_ptr);
-                        motion.acceleration.m_linear = motion.acceleration.m_angular = vector3_zero();
-                        vector3  ideal_linear_velocity_in_world_space, ideal_angular_velocity_in_world_space;
-                        ideal_velocity_buider.close(
-                                motion.frame,
-                                ideal_linear_velocity_in_world_space,
-                                ideal_angular_velocity_in_world_space
-                                );
-                        ideal_velocity_buider.reset(cursor);
-                        execute_satisfied_motion_guarded_actions(
-                                actions,
-                                integration_time,
-                                ideal_linear_velocity_in_world_space,
-                                ideal_angular_velocity_in_world_space,
-                                vector3_zero(),
-                                m_motion_desire_props,
-                                m_motion_action_data,
-                                motion,
-                                discardable_motion_action_data
-                                );
-                        motion.integrate(integration_time);
-                        integration_time = 0.0f;
-                    }
-                }
-            }
-
-            float_32_bit  cost;
-            {
-                vector3 const&  current_origin = m_motion_object_motion.frame.origin();
-
-                float_32_bit const  d_pos = length(current_origin + consumed_time * m_motion_desire_props.linear_speed * m_motion_desire_props.linear_velocity_unit_direction_in_world_space - motion.frame.origin());
-                float_32_bit const  d_fwd = angle(m_motion_desire_props.forward_unit_vector_in_world_space, motion.forward) / PI();
-                
-                cost = 1.0f * d_pos + 2.0f * d_fwd;
-            }
-
-            if (cost < best_cost)
-            {
-                best_cost = cost;
-                best_index = satisfied_transitions.at(i);
-            }
-        }
-    }
-
-    return  successors.at(best_index);
 }
 
 
