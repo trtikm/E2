@@ -1117,8 +1117,11 @@ void  simulator::update_retina_of_agents_from_offscreen_images(float_32_bit cons
             continue;
         m_offscreen_recovery_times.erase(recovery_time_it);
 
-        ai::sensory_controller_sight::camera_perspective_ptr const  camera_ptr =
-            m_agents_ptr->at(agent_id_and_node_id.first).get_sensory_controller().get_sight()->get_camera();
+        ai::sensory_controller_sight_ptr const  sight_ptr =
+                m_agents_ptr->at(agent_id_and_node_id.first).get_sensory_controller().get_sight();
+        if (sight_ptr == nullptr)
+            continue;
+        ai::sensory_controller_sight::camera_perspective_ptr const  camera_ptr = sight_ptr->get_camera();
         if (camera_ptr == nullptr)
             continue;
 
