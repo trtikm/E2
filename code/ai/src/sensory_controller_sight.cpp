@@ -62,6 +62,8 @@ void  sensory_controller_sight::next_round(float_32_bit const  time_step_in_seco
             for (auto const&  pos_and_dir : look_at_props)
                 camera_origin += pos_and_dir.first;
             camera_origin = (1.0f / (float_32_bit)look_at_props.size()) * camera_origin;
+            // Let us predict/estimate the position of the origin at the next round.
+            camera_origin += (1.0f * time_step_in_seconds) * get_blackboard()->m_action_controller->get_motion_object_motion().velocity.m_linear;
         }
         vector3 const  look_at_target = angeo::compute_common_look_at_target_for_multiple_eyes(look_at_props);
         vector3  camera_z_axis;
