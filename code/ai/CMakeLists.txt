@@ -15,7 +15,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/cortex_mock.hpp
     ./include/ai/cortex_mock_human.hpp
     ./src/cortex_mock_human.cpp
-    
+    ./include/ai/cortex_robot_humanoid.hpp
+    ./src/cortex_robot_humanoid.cpp
+
     ./include/ai/sensory_controller.hpp
     ./src/sensory_controller.cpp
 
