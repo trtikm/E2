@@ -59,12 +59,13 @@ void  clone_motion_action_data_map(
 }
 
 
-skeletal_motion_templates::guarded_actions_ptr  get_first_satisfied_motion_guarded_actions(
+bool  get_satisfied_motion_guarded_actions(
         std::vector<skeletal_motion_templates::guarded_actions_ptr> const&  guarded_actions_to_check,
         blackboard::collision_contacts_map const&  collision_contacts,
         detail::rigid_body_motion const&  motion_object_motion,
         motion_desire_props const&  desire,
-        vector3 const&  gravity_acceleration_in_world_space
+        vector3 const&  gravity_acceleration_in_world_space,
+        std::vector<skeletal_motion_templates::guarded_actions_ptr>* const  output_satisfied_guarded_actions_ptr
         )
 {
     TMPROF_BLOCK();
@@ -139,15 +140,18 @@ skeletal_motion_templates::guarded_actions_ptr  get_first_satisfied_motion_guard
                 break;
             }
         if (satisfied == true)
-            return guarded_actions;
+            if (output_satisfied_guarded_actions_ptr == nullptr)
+                return true;
+            else
+                output_satisfied_guarded_actions_ptr->push_back(guarded_actions);
     }
 
-    return nullptr;
+    return output_satisfied_guarded_actions_ptr == nullptr ? false : !output_satisfied_guarded_actions_ptr->empty();
 }
 
 
 void  execute_satisfied_motion_guarded_actions(
-        std::vector<skeletal_motion_templates::action_ptr> const&  actions,
+        std::vector<skeletal_motion_templates::guarded_actions_ptr> const&  satisfied_guarded_actions,
         float_32_bit const  time_step_in_seconds,
         vector3 const&  ideal_linear_velocity_in_world_space,
         vector3 const&  ideal_angular_velocity_in_world_space,
@@ -162,136 +166,137 @@ void  execute_satisfied_motion_guarded_actions(
 
     motion_action_persistent_data_map  new_motion_action_data;
 
-    for (auto const action_props : actions)
-        if (action_props == nullptr || std::dynamic_pointer_cast<skeletal_motion_templates::action_none const>(action_props) != nullptr)
-            continue;
-        else if (auto const  action_ptr =
-            std::dynamic_pointer_cast<skeletal_motion_templates::action_move_forward_with_ideal_speed const>(action_props))
-        {
-            float_32_bit const  ideal_linear_speed = length(ideal_linear_velocity_in_world_space);
-            vector3  agent_linear_acceleration =
-                    (ideal_linear_speed * motion_object_motion.forward - motion_object_motion.velocity.m_linear) / time_step_in_seconds;
-            float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
-            if (agent_linear_acceleration_magnitude > action_ptr->max_linear_accel)
-                agent_linear_acceleration *= action_ptr->max_linear_accel / agent_linear_acceleration_magnitude;
-            motion_object_motion.acceleration.m_linear += agent_linear_acceleration;
-        }
-        else if (auto const  action_ptr =
-            std::dynamic_pointer_cast<skeletal_motion_templates::action_rotate_forward_vector_towards_desired_linear_velocity const>(action_props))
-        {
-            float_32_bit const  ideal_linear_speed = length(ideal_linear_velocity_in_world_space);
-            float_32_bit const  max_anglular_speed = 
-                    action_ptr->max_angular_speed * std::min(1.0f, std::max(0.0f, ideal_linear_speed / std::max(action_ptr->min_linear_speed, 0.001f)));
+    for (auto const actions_ptr : satisfied_guarded_actions)
+        for (auto const action_props : actions_ptr->actions)
+            if (action_props == nullptr || std::dynamic_pointer_cast<skeletal_motion_templates::action_none const>(action_props) != nullptr)
+                continue;
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_move_forward_with_ideal_speed const>(action_props))
+            {
+                float_32_bit const  ideal_linear_speed = length(ideal_linear_velocity_in_world_space);
+                vector3  agent_linear_acceleration =
+                        (ideal_linear_speed * motion_object_motion.forward - motion_object_motion.velocity.m_linear) / time_step_in_seconds;
+                float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
+                if (agent_linear_acceleration_magnitude > action_ptr->max_linear_accel)
+                    agent_linear_acceleration *= action_ptr->max_linear_accel / agent_linear_acceleration_magnitude;
+                motion_object_motion.acceleration.m_linear += agent_linear_acceleration;
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_rotate_forward_vector_towards_desired_linear_velocity const>(action_props))
+            {
+                float_32_bit const  ideal_linear_speed = length(ideal_linear_velocity_in_world_space);
+                float_32_bit const  max_anglular_speed = 
+                        action_ptr->max_angular_speed * std::min(1.0f, std::max(0.0f, ideal_linear_speed / std::max(action_ptr->min_linear_speed, 0.001f)));
     
-            float_32_bit const  rot_angle =
-                    angeo::compute_rotation_angle(
-                            motion_object_motion.up,
-                            motion_object_motion.forward,
-                            desire.linear_velocity_unit_direction_in_world_space
-                            );
+                float_32_bit const  rot_angle =
+                        angeo::compute_rotation_angle(
+                                motion_object_motion.up,
+                                motion_object_motion.forward,
+                                desire.linear_velocity_unit_direction_in_world_space
+                                );
             
-            float_32_bit  desired_angular_velocity_magnitude = rot_angle / time_step_in_seconds;
-            if (desired_angular_velocity_magnitude > max_anglular_speed)
-                desired_angular_velocity_magnitude = max_anglular_speed;
-            else if (desired_angular_velocity_magnitude < -max_anglular_speed)
-                desired_angular_velocity_magnitude = -max_anglular_speed;
+                float_32_bit  desired_angular_velocity_magnitude = rot_angle / time_step_in_seconds;
+                if (desired_angular_velocity_magnitude > max_anglular_speed)
+                    desired_angular_velocity_magnitude = max_anglular_speed;
+                else if (desired_angular_velocity_magnitude < -max_anglular_speed)
+                    desired_angular_velocity_magnitude = -max_anglular_speed;
     
-            vector3 const  desired_angular_velocity = desired_angular_velocity_magnitude * motion_object_motion.up;
+                vector3 const  desired_angular_velocity = desired_angular_velocity_magnitude * motion_object_motion.up;
     
-            vector3  agent_angular_acceleration =
-                    (desired_angular_velocity - motion_object_motion.velocity.m_angular) / time_step_in_seconds;
-            float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
-            if (agent_angular_acceleration_magnitude > action_ptr->max_angular_accel)
-                agent_angular_acceleration *= action_ptr->max_angular_accel / agent_angular_acceleration_magnitude;
-            motion_object_motion.acceleration.m_angular += agent_angular_acceleration;
-        }
-        else if (auto const  action_ptr =
-            std::dynamic_pointer_cast<skeletal_motion_templates::action_turn_around const>(action_props))
-        {
-            vector3  agent_angular_acceleration =
-                (ideal_angular_velocity_in_world_space - motion_object_motion.velocity.m_angular) / time_step_in_seconds;
-            float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
-            if (agent_angular_acceleration_magnitude > action_ptr->max_angular_accel)
-                agent_angular_acceleration *= action_ptr->max_angular_accel / agent_angular_acceleration_magnitude;
-            motion_object_motion.acceleration.m_angular += agent_angular_acceleration;
-        }
-        else if (auto const  action_ptr =
-            std::dynamic_pointer_cast<skeletal_motion_templates::action_dont_move const>(action_props))
-        {
-            motion_action_persistent_data__dont_move&  action_data_ref =
-                    copy_or_create_motion_data_and_get_reference<motion_action_persistent_data__dont_move>(
-                            new_motion_action_data,
-                            motion_action_data,
-                            typeid(*action_ptr).name(),
-                            motion_object_motion.frame.origin()
-                            );
+                vector3  agent_angular_acceleration =
+                        (desired_angular_velocity - motion_object_motion.velocity.m_angular) / time_step_in_seconds;
+                float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
+                if (agent_angular_acceleration_magnitude > action_ptr->max_angular_accel)
+                    agent_angular_acceleration *= action_ptr->max_angular_accel / agent_angular_acceleration_magnitude;
+                motion_object_motion.acceleration.m_angular += agent_angular_acceleration;
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_turn_around const>(action_props))
+            {
+                vector3  agent_angular_acceleration =
+                    (ideal_angular_velocity_in_world_space - motion_object_motion.velocity.m_angular) / time_step_in_seconds;
+                float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
+                if (agent_angular_acceleration_magnitude > action_ptr->max_angular_accel)
+                    agent_angular_acceleration *= action_ptr->max_angular_accel / agent_angular_acceleration_magnitude;
+                motion_object_motion.acceleration.m_angular += agent_angular_acceleration;
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_dont_move const>(action_props))
+            {
+                motion_action_persistent_data__dont_move&  action_data_ref =
+                        copy_or_create_motion_data_and_get_reference<motion_action_persistent_data__dont_move>(
+                                new_motion_action_data,
+                                motion_action_data,
+                                typeid(*action_ptr).name(),
+                                motion_object_motion.frame.origin()
+                                );
     
-            if (length(action_data_ref.position - motion_object_motion.frame.origin()) > action_ptr->radius)
-                action_data_ref.position = motion_object_motion.frame.origin();
+                if (length(action_data_ref.position - motion_object_motion.frame.origin()) > action_ptr->radius)
+                    action_data_ref.position = motion_object_motion.frame.origin();
     
-            // TODO: The computaion of 'dt' on the next line looks suspicious. RE-EVALUATE!
-            float_32_bit const  dt = std::max(1.0f / 25.0f, time_step_in_seconds);
-            vector3 const  next_motion_object_origin =
-                    motion_object_motion.frame.origin() +
-                    dt * motion_object_motion.velocity.m_linear +
-                    (0.5f * dt * dt) * motion_object_motion.acceleration.m_linear
-                    ;
-            vector3 const  position_delta = action_data_ref.position - next_motion_object_origin;
-            vector3  agent_linear_acceleration = (1.0f / (dt * dt)) * position_delta;
-            float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
-            if (agent_linear_acceleration_magnitude > action_ptr->max_linear_accel)
-                agent_linear_acceleration *= action_ptr->max_linear_accel / agent_linear_acceleration_magnitude;
-            motion_object_motion.acceleration.m_linear += agent_linear_acceleration;
-        }
-        else if (auto const  action_ptr =
-            std::dynamic_pointer_cast<skeletal_motion_templates::action_dont_rotate const>(action_props))
-        {
-            vector3 const  angular_velocity_to_cancel_in_world_space =
-                    dot_product(motion_object_motion.up, motion_object_motion.velocity.m_angular) * motion_object_motion.up;
+                // TODO: The computaion of 'dt' on the next line looks suspicious. RE-EVALUATE!
+                float_32_bit const  dt = std::max(1.0f / 25.0f, time_step_in_seconds);
+                vector3 const  next_motion_object_origin =
+                        motion_object_motion.frame.origin() +
+                        dt * motion_object_motion.velocity.m_linear +
+                        (0.5f * dt * dt) * motion_object_motion.acceleration.m_linear
+                        ;
+                vector3 const  position_delta = action_data_ref.position - next_motion_object_origin;
+                vector3  agent_linear_acceleration = (1.0f / (dt * dt)) * position_delta;
+                float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
+                if (agent_linear_acceleration_magnitude > action_ptr->max_linear_accel)
+                    agent_linear_acceleration *= action_ptr->max_linear_accel / agent_linear_acceleration_magnitude;
+                motion_object_motion.acceleration.m_linear += agent_linear_acceleration;
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_dont_rotate const>(action_props))
+            {
+                vector3 const  angular_velocity_to_cancel_in_world_space =
+                        dot_product(motion_object_motion.up, motion_object_motion.velocity.m_angular) * motion_object_motion.up;
     
-            vector3  agent_angular_acceleration = -angular_velocity_to_cancel_in_world_space / time_step_in_seconds;
-            float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
-            if (agent_angular_acceleration_magnitude > action_ptr->max_angular_accel)
-                agent_angular_acceleration *= action_ptr->max_angular_accel / agent_angular_acceleration_magnitude;
-            motion_object_motion.acceleration.m_angular += agent_angular_acceleration;
-        }
-        else if (auto const  action_ptr =
-            std::dynamic_pointer_cast<skeletal_motion_templates::action_set_linear_velocity const>(action_props))
-        {
-            vector3 const  target_linear_velocity_in_world_space = 
-                    action_ptr->linear_velocity(0) * cross_product(motion_object_motion.forward, motion_object_motion.up) +
-                    action_ptr->linear_velocity(1) * motion_object_motion.forward +
-                    action_ptr->linear_velocity(2) * motion_object_motion.up
-                    ;
-            vector3  agent_linear_acceleration =
-                    (target_linear_velocity_in_world_space - motion_object_motion.velocity.m_linear) / time_step_in_seconds;
-            float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
-            if (agent_linear_acceleration_magnitude > action_ptr->max_linear_accel)
-                agent_linear_acceleration *= action_ptr->max_linear_accel / agent_linear_acceleration_magnitude;
-            motion_object_motion.acceleration.m_linear += agent_linear_acceleration;
-        }
-        else if (auto const  action_ptr =
-            std::dynamic_pointer_cast<skeletal_motion_templates::action_set_angular_velocity const>(action_props))
-        {
-            vector3 const  target_angular_velocity_in_world_space = 
-                    action_ptr->angular_velocity(0) * cross_product(motion_object_motion.forward, motion_object_motion.up) +
-                    action_ptr->angular_velocity(1) * motion_object_motion.forward +
-                    action_ptr->angular_velocity(2) * motion_object_motion.up
-                    ;
-            vector3  agent_angular_acceleration =
-                    (target_angular_velocity_in_world_space - motion_object_motion.velocity.m_angular) / time_step_in_seconds;
-            float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
-            if (agent_angular_acceleration_magnitude > action_ptr->max_angular_accel)
-                agent_angular_acceleration *= action_ptr->max_angular_accel / agent_angular_acceleration_magnitude;
-            motion_object_motion.acceleration.m_angular += agent_angular_acceleration;
-        }
-        else if (auto const  action_ptr =
-            std::dynamic_pointer_cast<skeletal_motion_templates::action_cancel_gravity_accel const>(action_props))
-        {
-            motion_object_motion.acceleration.m_linear -= gravity_acceleration_in_world_space;
-        }
-        else
-            NOT_IMPLEMENTED_YET();
+                vector3  agent_angular_acceleration = -angular_velocity_to_cancel_in_world_space / time_step_in_seconds;
+                float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
+                if (agent_angular_acceleration_magnitude > action_ptr->max_angular_accel)
+                    agent_angular_acceleration *= action_ptr->max_angular_accel / agent_angular_acceleration_magnitude;
+                motion_object_motion.acceleration.m_angular += agent_angular_acceleration;
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_set_linear_velocity const>(action_props))
+            {
+                vector3 const  target_linear_velocity_in_world_space = 
+                        action_ptr->linear_velocity(0) * cross_product(motion_object_motion.forward, motion_object_motion.up) +
+                        action_ptr->linear_velocity(1) * motion_object_motion.forward +
+                        action_ptr->linear_velocity(2) * motion_object_motion.up
+                        ;
+                vector3  agent_linear_acceleration =
+                        (target_linear_velocity_in_world_space - motion_object_motion.velocity.m_linear) / time_step_in_seconds;
+                float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
+                if (agent_linear_acceleration_magnitude > action_ptr->max_linear_accel)
+                    agent_linear_acceleration *= action_ptr->max_linear_accel / agent_linear_acceleration_magnitude;
+                motion_object_motion.acceleration.m_linear += agent_linear_acceleration;
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_set_angular_velocity const>(action_props))
+            {
+                vector3 const  target_angular_velocity_in_world_space = 
+                        action_ptr->angular_velocity(0) * cross_product(motion_object_motion.forward, motion_object_motion.up) +
+                        action_ptr->angular_velocity(1) * motion_object_motion.forward +
+                        action_ptr->angular_velocity(2) * motion_object_motion.up
+                        ;
+                vector3  agent_angular_acceleration =
+                        (target_angular_velocity_in_world_space - motion_object_motion.velocity.m_angular) / time_step_in_seconds;
+                float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
+                if (agent_angular_acceleration_magnitude > action_ptr->max_angular_accel)
+                    agent_angular_acceleration *= action_ptr->max_angular_accel / agent_angular_acceleration_magnitude;
+                motion_object_motion.acceleration.m_angular += agent_angular_acceleration;
+            }
+            else if (auto const  action_ptr =
+                std::dynamic_pointer_cast<skeletal_motion_templates::action_cancel_gravity_accel const>(action_props))
+            {
+                motion_object_motion.acceleration.m_linear -= gravity_acceleration_in_world_space;
+            }
+            else
+                NOT_IMPLEMENTED_YET();
     
     output_motion_action_data.swap(new_motion_action_data);
 }

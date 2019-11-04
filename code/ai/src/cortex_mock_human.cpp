@@ -98,16 +98,15 @@ skeletal_motion_templates::cursor_and_transition_time  cortex_mock_human::choose
     std::vector<natural_32_bit>  satisfied_transitions;
     for (natural_32_bit  i = 0U; i != possibilities.size(); ++i)
     {
-        skeletal_motion_templates::guarded_actions_ptr  satisfied_guarded_actions =
-                detail::get_first_satisfied_motion_guarded_actions(
-                        get_blackboard()->m_motion_templates.motions_map().at(possibilities.at(i).first.motion_name).actions
-                                                                          .at(possibilities.at(i).first.keyframe_index),
-                        get_blackboard()->m_collision_contacts,
-                        get_blackboard()->m_action_controller->get_motion_object_motion(),
-                        get_motion_desire_props(),
-                        get_blackboard()->m_action_controller->get_gravity_acceleration()
-                        );
-        if (satisfied_guarded_actions != nullptr)
+        if (detail::get_satisfied_motion_guarded_actions(
+                    get_blackboard()->m_motion_templates.motions_map().at(possibilities.at(i).first.motion_name).actions
+                                                                      .at(possibilities.at(i).first.keyframe_index),
+                    get_blackboard()->m_collision_contacts,
+                    get_blackboard()->m_action_controller->get_motion_object_motion(),
+                    get_motion_desire_props(),
+                    get_blackboard()->m_action_controller->get_gravity_acceleration(),
+                    nullptr
+                    ))
             satisfied_transitions.push_back(i);
     }
     if (satisfied_transitions.size() == 1UL)
@@ -149,11 +148,6 @@ skeletal_motion_templates::cursor_and_transition_time  cortex_mock_human::choose
                     if (integration_time > integration_time_step || consumed_time >= time_horizon)
                     {
                         detail::motion_action_persistent_data_map  discardable_motion_action_data;
-                        std::vector<skeletal_motion_templates::action_ptr>  actions;
-                        for (auto const&  disjunction : get_blackboard()->m_motion_templates.motions_map().at(cursor.motion_name).actions
-                                                                                                          .at(cursor.keyframe_index))
-                            for (auto const  action_ptr : disjunction->actions)
-                                actions.push_back(action_ptr);
                         motion.acceleration.m_linear = motion.acceleration.m_angular = vector3_zero();
                         vector3  ideal_linear_velocity_in_world_space, ideal_angular_velocity_in_world_space;
                         ideal_velocity_buider.close(
@@ -163,7 +157,7 @@ skeletal_motion_templates::cursor_and_transition_time  cortex_mock_human::choose
                                 );
                         ideal_velocity_buider.reset(cursor);
                         execute_satisfied_motion_guarded_actions(
-                                actions,
+                                get_blackboard()->m_motion_templates.motions_map().at(cursor.motion_name).actions.at(cursor.keyframe_index),
                                 integration_time,
                                 ideal_linear_velocity_in_world_space,
                                 ideal_angular_velocity_in_world_space,

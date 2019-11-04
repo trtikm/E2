@@ -24,16 +24,20 @@ struct  motion_action_persistent_data
 using  motion_action_persistent_data_map = std::unordered_map<std::string, std::unique_ptr<motion_action_persistent_data> >;
 
 
-skeletal_motion_templates::guarded_actions_ptr  get_first_satisfied_motion_guarded_actions(
-        std::vector<skeletal_motion_templates::guarded_actions_ptr> const&  guarded_actions_to_check,
+/// When 'nullptr' is passed to 'output_satisfied_guarded_actions', then the function stops on the 
+/// first encounter of a satisfied guard disjunct. In all cases the function returns true if at least
+/// one satisfied guard disjunct was found. Otherwise, returns false.
+bool  get_satisfied_motion_guarded_actions(
+        skeletal_motion_templates::disjunction_of_guarded_actions const&  guarded_actions_to_check,
         blackboard::collision_contacts_map const&  collision_contacts,
         detail::rigid_body_motion const&  motion_object_motion,
         motion_desire_props const&  desire,
-        vector3 const&  gravity_acceleration_in_world_space
+        vector3 const&  gravity_acceleration_in_world_space,
+        std::vector<skeletal_motion_templates::guarded_actions_ptr>* const  output_satisfied_guarded_actions_ptr
         );
 
 void  execute_satisfied_motion_guarded_actions(
-        std::vector<skeletal_motion_templates::action_ptr> const&  actions,
+        std::vector<skeletal_motion_templates::guarded_actions_ptr> const&  satisfied_guarded_actions,
         float_32_bit const  time_step_in_seconds,
         vector3 const&  ideal_linear_velocity_in_world_space,
         vector3 const&  ideal_angular_velocity_in_world_space,

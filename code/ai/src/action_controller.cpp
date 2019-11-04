@@ -209,18 +209,18 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
     }
 
     // And finally, we update dynamics of agent's motion object (forces and torques).
-    skeletal_motion_templates::guarded_actions_ptr const  satisfied_guarded_actions =
-        detail::get_first_satisfied_motion_guarded_actions(
-                m_current_intepolation_state.disjunction_of_guarded_actions,
-                get_blackboard()->m_collision_contacts,
-                m_motion_object_motion,
-                get_blackboard()->m_cortex->get_motion_desire_props(),
-                m_gravity_acceleration
-                );
-    if (satisfied_guarded_actions != nullptr)
+    std::vector<skeletal_motion_templates::guarded_actions_ptr>  satisfied_guarded_actions;
+    if (detail::get_satisfied_motion_guarded_actions(
+            m_current_intepolation_state.disjunction_of_guarded_actions,
+            get_blackboard()->m_collision_contacts,
+            m_motion_object_motion,
+            get_blackboard()->m_cortex->get_motion_desire_props(),
+            m_gravity_acceleration,
+            &satisfied_guarded_actions
+            ))
     {
         execute_satisfied_motion_guarded_actions(
-                satisfied_guarded_actions->actions,
+                satisfied_guarded_actions,
                 time_step_in_seconds,
                 m_ideal_linear_velocity_in_world_space,
                 m_ideal_angular_velocity_in_world_space,
