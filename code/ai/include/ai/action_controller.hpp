@@ -40,6 +40,8 @@ struct  action_controller
     scene::node_id const& get_motion_object_node_id() const { return m_motion_object_motion.nid; }
     detail::rigid_body_motion const&  get_motion_object_motion() const { return m_motion_object_motion; }
     vector3 const&  get_gravity_acceleration() const { return m_gravity_acceleration; }
+    vector3 const&  get_ideal_linear_velocity_in_world_space() const { return m_ideal_linear_velocity_in_world_space; }
+    vector3 const&  get_ideal_angular_velocity_in_world_space() const { return m_ideal_angular_velocity_in_world_space; }
     skeletal_motion_templates::free_bones_for_look_at_ptr  get_free_bones_for_look_at() const { return m_current_intepolation_state.free_bones_look_at; }
 
 protected:
@@ -73,6 +75,7 @@ private:
 
 
 using  action_controller_ptr = std::shared_ptr<action_controller>;
+using  action_controller_const_ptr = std::shared_ptr<action_controller const>;
 
 
 }
