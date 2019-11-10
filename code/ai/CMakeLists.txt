@@ -43,7 +43,10 @@ add_library(${THIS_TARGET_NAME}
     ./src/skeleton_utils.cpp
 
     ./include/ai/retina.hpp
- 
+
+    ./include/ai/env/state.hpp
+    ./src/env/state.cpp
+
     ./include/ai/detail/rigid_body_motion.hpp
     ./src/detail/rigid_body_motion.cpp
 
