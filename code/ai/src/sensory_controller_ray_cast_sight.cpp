@@ -12,10 +12,25 @@ namespace ai {
     
 sensory_controller_ray_cast_sight::ray_cast_config::ray_cast_config(
         natural_32_bit const  num_raycasts_per_second_,
-        float_32_bit const  max_coid_life_time_in_seconds_
+        float_32_bit const  max_coid_life_time_in_seconds_,
+        float_32_bit const  max_ray_cast_info_life_time_in_seconds_
         )
     : num_raycasts_per_second(num_raycasts_per_second_)
     , max_coid_life_time_in_seconds(max_coid_life_time_in_seconds_)
+    , max_ray_cast_info_life_time_in_seconds(max_ray_cast_info_life_time_in_seconds_)
+{}
+
+
+sensory_controller_ray_cast_sight::ray_cast_info::ray_cast_info(
+        vector3 const&  ray_origin_,
+        vector3 const&  ray_unit_direction_,
+        float_32_bit const  parameter_to_coid_,
+        angeo::collision_object_id const  coid_
+        )
+    : ray_origin(ray_origin_)
+    , ray_unit_direction(ray_unit_direction_)
+    , parameter_to_coid(parameter_to_coid_)
+    , coid(coid_)
 {}
 
 
@@ -42,12 +57,18 @@ void  sensory_controller_ray_cast_sight::next_round(float_32_bit const  time_ste
     };
 
     while (!m_from_times_to_coids.empty() &&
-            num_seconds_till_now(m_from_times_to_coids.begin()->first) >= m_ray_cast_config.max_coid_life_time_in_seconds)
+           num_seconds_till_now(m_from_times_to_coids.begin()->first) >= m_ray_cast_config.max_coid_life_time_in_seconds)
     {
         auto const  it = m_coids_with_times.find(m_from_times_to_coids.begin()->second);
         if (it != m_coids_with_times.end() && it->second == m_from_times_to_coids.begin()->first)
             m_coids_with_times.erase(it);
         m_from_times_to_coids.erase(m_from_times_to_coids.begin());
+    }
+
+    while (!m_ray_casts_as_performed_in_time.empty() &&
+           num_seconds_till_now(m_ray_casts_as_performed_in_time.begin()->first) >= m_ray_cast_config.max_ray_cast_info_life_time_in_seconds)
+    {
+        m_ray_casts_as_performed_in_time.erase(m_ray_casts_as_performed_in_time.begin());
     }
 
     sensory_controller_sight::next_round(time_step_in_seconds); // Updates the camera.
@@ -80,12 +101,15 @@ void  sensory_controller_ray_cast_sight::next_round(float_32_bit const  time_ste
         vector3 const  ray_unit_direction = normalised(transform_vector(ray_direction_local, W));
         float_32_bit const  ray_length = get_camera()->far_plane();
         scene::collision_object_id  nearest_coid;
-        if (!get_blackboard()->m_scene->get_collision_scene().ray_cast(ray_origin, ray_unit_direction, ray_length, true, true, &nearest_coid, nullptr, &ignored))
+        float_32_bit  parameter_to_nearest_coid;
+        if (!get_blackboard()->m_scene->get_collision_scene().ray_cast(ray_origin, ray_unit_direction, ray_length, true, true, &nearest_coid, &parameter_to_nearest_coid, &ignored))
             continue;
 
         m_coids_with_times.erase(nearest_coid);
         m_coids_with_times[nearest_coid] = now;
         m_from_times_to_coids.insert({ now, nearest_coid });
+
+        m_ray_casts_as_performed_in_time.insert({ now, {ray_origin, ray_unit_direction, parameter_to_nearest_coid * ray_length, nearest_coid} });
     }
 }
 

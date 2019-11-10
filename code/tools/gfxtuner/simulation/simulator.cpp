@@ -2061,7 +2061,8 @@ void  simulator::render_ai_action_controller_props(
         if (sight_ptr == nullptr)
             continue;
         ai::sensory_controller_ray_cast_sight::coids_with_last_seen_times const&  coids_with_times = sight_ptr->get_coids_with_last_seen_times();
-        if (coids_with_times.empty())
+        ai::sensory_controller_ray_cast_sight::ray_casts_as_performed_in_time const&  ray_casts_in_time = sight_ptr->get_ray_casts_as_performed_in_time();
+        if (coids_with_times.empty() && ray_casts_in_time.empty())
             continue;
 
         if (!qtgl::make_current(__dbg_batch_coord_cross, draw_state, use_instancing))
@@ -2086,6 +2087,16 @@ void  simulator::render_ai_action_controller_props(
             }
             matrix44  W;
             compose_from_base_matrix(pos, matrix33_identity(), W);
+            instanced_data_provider.insert_from_model_to_camera_matrix(matrix_from_world_to_camera * W);
+        }
+        for (auto const&  time_and_ray_cast_info : ray_casts_in_time)
+        {
+            vector3 const  contact_point =
+                    time_and_ray_cast_info.second.ray_origin +
+                    time_and_ray_cast_info.second.parameter_to_coid * time_and_ray_cast_info.second.ray_unit_direction
+                    ;
+            matrix44  W;
+            compose_from_base_matrix(contact_point, matrix33_identity(), W);
             instanced_data_provider.insert_from_model_to_camera_matrix(matrix_from_world_to_camera * W);
         }
         qtgl::render_batch(

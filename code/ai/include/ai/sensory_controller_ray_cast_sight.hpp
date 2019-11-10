@@ -19,14 +19,32 @@ struct  sensory_controller_ray_cast_sight : public sensory_controller_sight
     {
         natural_32_bit  num_raycasts_per_second;
         float_32_bit  max_coid_life_time_in_seconds;
+        float_32_bit  max_ray_cast_info_life_time_in_seconds;
 
         ray_cast_config(
-                natural_32_bit const  num_raycasts_per_second_ = 100U,
-                float_32_bit const  max_coid_life_time_in_seconds_ = 10.0f
+                natural_32_bit const  num_raycasts_per_second_ = 600U,
+                float_32_bit const  max_coid_life_time_in_seconds_ = 0.1f,
+                float_32_bit const  max_ray_cast_info_life_time_in_seconds_ = 0.1f
+                );
+    };
+
+    struct  ray_cast_info
+    {
+        vector3  ray_origin;
+        vector3  ray_unit_direction;
+        float_32_bit  parameter_to_coid;
+        angeo::collision_object_id  coid;
+
+        ray_cast_info(
+                vector3 const&  ray_origin_,
+                vector3 const&  ray_unit_direction_,
+                float_32_bit const  parameter_to_coid_,
+                angeo::collision_object_id const  coid_
                 );
     };
 
     using  coids_with_last_seen_times = std::unordered_map<angeo::collision_object_id, std::chrono::system_clock::time_point>;
+    using  ray_casts_as_performed_in_time = std::multimap<std::chrono::system_clock::time_point, ray_cast_info>;
 
     sensory_controller_ray_cast_sight(
             blackboard_weak_ptr const  blackboard_,
@@ -40,17 +58,20 @@ struct  sensory_controller_ray_cast_sight : public sensory_controller_sight
 
     ray_cast_config const&  get_ray_cast_config() const { return m_ray_cast_config; }
     coids_with_last_seen_times const&  get_coids_with_last_seen_times() const { return m_coids_with_times; }
+    ray_casts_as_performed_in_time const&  get_ray_casts_as_performed_in_time() const { return m_ray_casts_as_performed_in_time; }
 
 private:
     ray_cast_config  m_ray_cast_config;
     coids_with_last_seen_times  m_coids_with_times;
     std::multimap<std::chrono::system_clock::time_point, angeo::collision_object_id>  m_from_times_to_coids;
+    ray_casts_as_performed_in_time  m_ray_casts_as_performed_in_time;
     std::normal_distribution<float_32_bit>  m_distribution;
     random_generator_for_natural_32_bit  m_generator;
 };
 
 
 using  sensory_controller_ray_cast_sight_ptr = std::shared_ptr<sensory_controller_ray_cast_sight>;
+using  sensory_controller_ray_cast_sight_const_ptr = std::shared_ptr<sensory_controller_ray_cast_sight const>;
 
 
 }
