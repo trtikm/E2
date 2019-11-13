@@ -13,6 +13,7 @@ namespace ai {
 
 cortex_robot_humanoid::cortex_robot_humanoid(blackboard_weak_ptr const  blackboard_)
     : cortex(blackboard_)
+    , m_snapshots_cache(env::create_snapshots_cache(blackboard_, {}))
 {}
 
 
@@ -29,6 +30,8 @@ void  cortex_robot_humanoid::initialise()
 void  cortex_robot_humanoid::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
+
+    m_snapshots_cache->next_round(time_step_in_seconds);
 
     // TODO
 }

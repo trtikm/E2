@@ -5,6 +5,7 @@
 #   include <ai/blackboard.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <ai/detail/motion_desire_props.hpp>
+#   include <ai/env/snapshots_cache.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <vector>
 
@@ -26,6 +27,9 @@ struct  cortex_robot_humanoid : public cortex
     skeletal_motion_templates::cursor_and_transition_time  choose_next_motion_action(
             std::vector<skeletal_motion_templates::cursor_and_transition_time> const&  possibilities
             ) const override;
+
+private:
+    env::snapshots_cache_ptr  m_snapshots_cache;
 };
 
 

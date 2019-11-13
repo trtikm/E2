@@ -44,8 +44,10 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/ai/retina.hpp
 
-    ./include/ai/env/state.hpp
-    ./src/env/state.cpp
+    ./include/ai/env/snapshot.hpp
+    ./src/env/snapshot.cpp
+    ./include/ai/env/snapshots_cache.hpp
+    ./src/env/snapshots_cache.cpp
 
     ./include/ai/detail/rigid_body_motion.hpp
     ./src/detail/rigid_body_motion.cpp

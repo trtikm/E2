@@ -40,6 +40,9 @@ struct  action_controller
     scene::node_id const& get_motion_object_node_id() const { return m_motion_object_motion.nid; }
     detail::rigid_body_motion const&  get_motion_object_motion() const { return m_motion_object_motion; }
     vector3 const&  get_gravity_acceleration() const { return m_gravity_acceleration; }
+    float_32_bit  get_total_time_till_destination_cursor_in_seconds() const { return m_total_interpolation_time_in_seconds; }
+    float_32_bit  get_consumed_time_till_destination_cursor_in_seconds() const { return m_consumed_time_in_seconds; }
+    skeletal_motion_templates::motion_template_cursor const&  get_destination_cursor() const { return m_dst_cursor; }
     vector3 const&  get_ideal_linear_velocity_in_world_space() const { return m_ideal_linear_velocity_in_world_space; }
     vector3 const&  get_ideal_angular_velocity_in_world_space() const { return m_ideal_angular_velocity_in_world_space; }
     skeletal_motion_templates::free_bones_for_look_at_ptr  get_free_bones_for_look_at() const { return m_current_intepolation_state.free_bones_look_at; }

@@ -49,6 +49,7 @@ using  blackboard_ptr = std::shared_ptr<blackboard>;
 using  blackboard_const_ptr = std::shared_ptr<blackboard const>;
 
 using  blackboard_weak_ptr = std::weak_ptr<blackboard>;
+using  blackboard_weak_const_ptr = std::weak_ptr<blackboard const>;
 
 template<typename T, typename Q>
 inline std::shared_ptr<T>  as(std::shared_ptr<Q>  ptr) { return std::dynamic_pointer_cast<T>(ptr); }
