@@ -1,5 +1,6 @@
 #include <ai/cortex.hpp>
 #include <ai/action_controller.hpp>
+#include <ai/detail/guarded_motion_actions_processor.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -17,18 +18,13 @@ cortex::cortex(blackboard_weak_ptr const  blackboard_)
 
 void  cortex::initialise()
 {
-    detail::rigid_body_motion const&  motion = get_blackboard()->m_action_controller->get_motion_object_motion();
-    m_motion_desire_props.forward_unit_vector_in_world_space = motion.forward;
-    m_motion_desire_props.linear_velocity_unit_direction_in_world_space = m_motion_desire_props.forward_unit_vector_in_world_space;
-    m_motion_desire_props.linear_speed = 0.0f;
-    m_motion_desire_props.angular_velocity_unit_axis_in_world_space = motion.up;
-    m_motion_desire_props.angular_speed = 0.0f;
+    set_stationary_desire();
 }
 
 
 void  cortex::next_round(float_32_bit const  time_step_in_seconds)
 {
-    // Nothing to do.
+    set_stationary_desire();
 }
 
 
@@ -43,7 +39,32 @@ skeletal_motion_templates::cursor_and_transition_time  cortex::choose_next_motio
         std::vector<skeletal_motion_templates::cursor_and_transition_time> const&  possibilities
         ) const
 {
-    return possibilities.front();
+    float_32_bit  best_rank = -1.0f;
+    natural_32_bit  best_index = 0U;
+    for (natural_32_bit  i = 0U; i != possibilities.size(); ++i)
+    {
+        float_32_bit const  rank = detail::get_stationary_rank(
+                get_blackboard()->m_motion_templates.at(possibilities.at(i).first.motion_name).actions
+                                                    .at(possibilities.at(i).first.keyframe_index)
+                );
+        if (best_rank < rank)
+        {
+            best_rank = rank;
+            best_index = i;
+        }
+    }
+    return possibilities.at(best_index);
+}
+
+
+void  cortex::set_stationary_desire()
+{
+    detail::rigid_body_motion const& motion = get_blackboard()->m_action_controller->get_motion_object_motion();
+    m_motion_desire_props.forward_unit_vector_in_world_space = motion.forward;
+    m_motion_desire_props.linear_velocity_unit_direction_in_world_space = m_motion_desire_props.forward_unit_vector_in_world_space;
+    m_motion_desire_props.linear_speed = 0.0f;
+    m_motion_desire_props.angular_velocity_unit_axis_in_world_space = motion.up;
+    m_motion_desire_props.angular_speed = 0.0f;
 }
 
 

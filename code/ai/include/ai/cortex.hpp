@@ -31,6 +31,8 @@ struct  cortex
             ) const;
 
 protected:
+    void  set_stationary_desire();
+
     detail::motion_desire_props  m_motion_desire_props;
 
 private:

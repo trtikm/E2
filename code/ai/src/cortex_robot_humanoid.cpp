@@ -33,13 +33,12 @@ void  cortex_robot_humanoid::next_round(float_32_bit const  time_step_in_seconds
 
     m_snapshots_cache->next_round(time_step_in_seconds);
 
-    // TODO
+    cortex::set_stationary_desire();
 }
 
 
 vector3  cortex_robot_humanoid::get_look_at_target_in_world_space() const
 {
-    // TODO
     return cortex::get_look_at_target_in_world_space();
 }
 
@@ -48,9 +47,6 @@ skeletal_motion_templates::cursor_and_transition_time  cortex_robot_humanoid::ch
         std::vector<skeletal_motion_templates::cursor_and_transition_time> const&  possibilities
         ) const
 {
-    TMPROF_BLOCK();
-
-    // TODO
     return cortex::choose_next_motion_action(possibilities);
 }
 

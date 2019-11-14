@@ -68,6 +68,9 @@ void  compute_importance_of_ideal_velocities_to_guarded_actions(
         );
 
 
+float_32_bit  get_stationary_rank(skeletal_motion_templates::disjunction_of_guarded_actions const&  guarded_actions);
+
+
 }}
 
 #endif
