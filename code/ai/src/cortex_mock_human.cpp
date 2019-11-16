@@ -27,6 +27,7 @@ void  cortex_mock_human::next_round(float_32_bit const  time_step_in_seconds)
 
     update_motion_intensities(time_step_in_seconds);
     update_motion_desire_props();
+    update_look_at_target_in_local_space();
 }
 
 
@@ -81,11 +82,18 @@ void  cortex_mock_human::update_motion_desire_props()
 }
 
 
-vector3  cortex_mock_human::get_look_at_target_in_world_space() const
+void  cortex_mock_human::update_look_at_target_in_local_space()
 {
-    return get_blackboard()->m_action_controller->get_motion_object_motion().frame.origin() +
-                std::max(1.0f, get_motion_desire_props().linear_speed) *
-                get_motion_desire_props().linear_velocity_unit_direction_in_world_space;
+    detail::rigid_body_motion const&  motion = get_blackboard()->m_action_controller->get_motion_object_motion();
+    matrix44  T;
+    angeo::to_base_matrix(motion.frame, T);
+
+    m_look_at_target_in_local_space =
+            transform_point(
+                    motion.frame.origin() + std::max(1.0f, m_motion_desire_props.linear_speed) *
+                                            m_motion_desire_props.linear_velocity_unit_direction_in_world_space,
+                    T
+                    );
 }
 
 

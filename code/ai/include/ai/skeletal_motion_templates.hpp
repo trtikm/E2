@@ -121,6 +121,17 @@ protected:
 };
 using  collider_ptr = std::shared_ptr<collider const>;
 
+struct  collider_capsule : public collider
+{
+    float_32_bit  length;
+    float_32_bit  radius;
+
+    bool  equals(collider const&  other) const override { return *this == dynamic_cast<collider_capsule const&>(other); }
+    bool  operator==(collider_capsule const&  other) const
+    {
+        return are_equal(length, other.length, 0.0001f) && are_equal(radius, other.radius, 0.0001f);
+    }
+};
 
 struct  colliders_data
 {
@@ -169,6 +180,54 @@ protected:
 };
 using  constraint_ptr = std::shared_ptr<constraint const>;
 
+struct  constraint_contact_normal_cone : public constraint
+{
+    vector3  unit_axis;
+    float_32_bit  angle_in_radians;
+
+    bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_contact_normal_cone const&>(other); }
+    bool  operator==(constraint_contact_normal_cone const&  other) const
+    {
+        return are_equal_3d(unit_axis, other.unit_axis, 0.0001f) && are_equal(angle_in_radians, other.angle_in_radians, 0.0001f);
+    }
+};
+
+struct  constraint_has_any_contact : public constraint
+{
+    bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_has_any_contact const&>(other); }
+    bool  operator==(constraint_has_any_contact const&  other) const { return true; }
+};
+
+struct  constraint_linear_velocity_in_falling_cone : public constraint
+{
+    float_32_bit  cone_angle_in_radians;
+    float_32_bit  min_linear_speed;
+
+    bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_linear_velocity_in_falling_cone const&>(other); }
+    bool  operator==(constraint_linear_velocity_in_falling_cone const&  other) const
+    {
+        return are_equal(cone_angle_in_radians, other.cone_angle_in_radians, 0.0001f) && are_equal(min_linear_speed, other.min_linear_speed, 0.0001f);
+    }
+};
+
+struct  constraint_desired_forward_vector_inside_cone : public constraint
+{
+    vector3  unit_axis;
+    float_32_bit  angle_in_radians;
+
+    bool  equals(constraint const& other) const override { return *this == dynamic_cast<constraint_desired_forward_vector_inside_cone const&>(other); }
+    bool  operator==(constraint_desired_forward_vector_inside_cone const& other) const
+    {
+        return are_equal_3d(unit_axis, other.unit_axis, 0.0001f) && are_equal(angle_in_radians, other.angle_in_radians, 0.0001f);
+    }
+};
+
+struct  constraint_always : public constraint
+{
+    bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_always const&>(other); }
+    bool  operator==(constraint_always const&  other) const { return true; }
+};
+
 
 struct  action
 {
@@ -179,10 +238,108 @@ struct  action
         return typeid(*this) == typeid(other) && equals(other);
     }
     bool  operator!=(action const&  other) const { return !(*this == other); }
+    virtual std::string const&  get_unique_name() const = 0;
 protected:
     virtual bool  equals(action const&  other) const { return false; }
 };
 using  action_ptr = std::shared_ptr<action const>;
+
+struct  action_none : public action
+{
+    static std::string const  unique_name;
+    std::string const&  get_unique_name() const override { return unique_name; }
+    bool  equals(action const&  other) const override { return *this == dynamic_cast<action_none const&>(other); }
+    bool  operator==(action_none const&  other) const { return true; }
+};
+
+struct  action_move_forward_with_ideal_speed : public action
+{
+    float_32_bit  max_linear_accel;
+    float_32_bit  motion_error_multiplier;
+
+    static std::string const  unique_name;
+    std::string const&  get_unique_name() const override { return unique_name; }
+};
+
+struct  action_rotate_forward_vector_towards_desired_linear_velocity : public action
+{
+    float_32_bit  max_angular_speed;
+    float_32_bit  max_angular_accel;
+    float_32_bit  min_linear_speed;
+
+    static std::string const  unique_name;
+    std::string const&  get_unique_name() const override { return unique_name; }
+};
+
+struct  action_turn_around : public action
+{
+    float_32_bit  max_angular_accel;
+
+    static std::string const  unique_name;
+    std::string const&  get_unique_name() const override { return unique_name; }
+    bool  equals(action const&  other) const override { return *this == dynamic_cast<action_turn_around const&>(other); }
+    bool  operator==(action_turn_around const&  other) const { return are_equal(max_angular_accel, other.max_angular_accel, 0.0001f); }
+};
+
+struct  action_dont_move : public action
+{
+    float_32_bit  max_linear_accel;
+    float_32_bit  radius;
+
+    static std::string const  unique_name;
+    std::string const&  get_unique_name() const override { return unique_name; }
+    bool  equals(action const&  other) const override { return *this == dynamic_cast<action_dont_move const&>(other); }
+    bool  operator==(action_dont_move const&  other) const
+    {
+        return are_equal(max_linear_accel, other.max_linear_accel, 0.0001f) && are_equal(radius, other.radius, 0.0001f);
+    }
+};
+
+struct  action_dont_rotate : public action
+{
+    float_32_bit  max_angular_accel;
+
+    static std::string const  unique_name;
+    std::string const&  get_unique_name() const override { return unique_name; }
+    bool  equals(action const&  other) const override { return *this == dynamic_cast<action_dont_rotate const&>(other); }
+    bool  operator==(action_dont_rotate const&  other) const { return are_equal(max_angular_accel, other.max_angular_accel, 0.0001f); }
+};
+
+struct  action_set_linear_velocity : public action
+{
+    vector3  linear_velocity;
+    float_32_bit  max_linear_accel;
+
+    static std::string const  unique_name;
+    std::string const&  get_unique_name() const override { return unique_name; }
+    bool  equals(action const&  other) const override { return *this == dynamic_cast<action_set_linear_velocity const&>(other); }
+    bool  operator==(action_set_linear_velocity const&  other) const
+    {
+        return are_equal(max_linear_accel, other.max_linear_accel, 0.0001f) && are_equal_3d(linear_velocity, other.linear_velocity, 0.0001f);
+    }
+};
+
+struct  action_set_angular_velocity : public action
+{
+    vector3  angular_velocity;
+    float_32_bit  max_angular_accel;
+
+    static std::string const  unique_name;
+    std::string const&  get_unique_name() const override { return unique_name; }
+    bool  equals(action const& other) const override { return *this == dynamic_cast<action_set_angular_velocity const&>(other); }
+    bool  operator==(action_set_angular_velocity const& other) const
+    {
+        return are_equal(max_angular_accel, other.max_angular_accel, 0.0001f) && are_equal_3d(angular_velocity, other.angular_velocity, 0.0001f);
+    }
+};
+
+struct  action_cancel_gravity_accel : public action
+{
+    static std::string const  unique_name;
+    std::string const&  get_unique_name() const override { return unique_name; }
+    bool  equals(action const&  other) const override { return *this == dynamic_cast<action_cancel_gravity_accel const&>(other); }
+    bool  operator==(action_cancel_gravity_accel const&  other) const { return true; }
+};
 
 
 struct  guarded_actions
@@ -626,152 +783,29 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
 
     using  free_bones_for_look_at_ptr = detail::meta::free_bones_for_look_at_ptr;
 
+    using  collider = detail::meta::collider;
+    using  collider_ptr = detail::meta::collider_ptr;
+    using  collider_capsule = detail::meta::collider_capsule;
 
     using  constraint = detail::meta::constraint;
     using  constraint_ptr = detail::meta::constraint_ptr;
-
-    struct  constraint_contact_normal_cone : public constraint
-    {
-        vector3  unit_axis;
-        float_32_bit  angle_in_radians;
-
-        bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_contact_normal_cone const&>(other); }
-        bool  operator==(constraint_contact_normal_cone const&  other) const
-        {
-            return are_equal_3d(unit_axis, other.unit_axis, 0.0001f) && are_equal(angle_in_radians, other.angle_in_radians, 0.0001f);
-        }
-    };
-
-    struct  constraint_has_any_contact : public constraint
-    {
-        bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_has_any_contact const&>(other); }
-        bool  operator==(constraint_has_any_contact const&  other) const { return true; }
-    };
-
-    struct  constraint_linear_velocity_in_falling_cone : public constraint
-    {
-        float_32_bit  cone_angle_in_radians;
-        float_32_bit  min_linear_speed;
-
-        bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_linear_velocity_in_falling_cone const&>(other); }
-        bool  operator==(constraint_linear_velocity_in_falling_cone const&  other) const
-        {
-            return are_equal(cone_angle_in_radians, other.cone_angle_in_radians, 0.0001f) && are_equal(min_linear_speed, other.min_linear_speed, 0.0001f);
-        }
-    };
-
-    struct  constraint_desired_forward_vector_inside_cone : public constraint
-    {
-        vector3  unit_axis;
-        float_32_bit  angle_in_radians;
-
-        bool  equals(constraint const& other) const override { return *this == dynamic_cast<constraint_desired_forward_vector_inside_cone const&>(other); }
-        bool  operator==(constraint_desired_forward_vector_inside_cone const& other) const
-        {
-            return are_equal_3d(unit_axis, other.unit_axis, 0.0001f) && are_equal(angle_in_radians, other.angle_in_radians, 0.0001f);
-        }
-    };
-
-    struct  constraint_always : public constraint
-    {
-        bool  equals(constraint const&  other) const override { return *this == dynamic_cast<constraint_always const&>(other); }
-        bool  operator==(constraint_always const&  other) const { return true; }
-    };
+    using  constraint_contact_normal_cone = detail::meta::constraint_contact_normal_cone;
+    using  constraint_has_any_contact = detail::meta::constraint_has_any_contact;
+    using  constraint_linear_velocity_in_falling_cone = detail::meta::constraint_linear_velocity_in_falling_cone;
+    using  constraint_desired_forward_vector_inside_cone = detail::meta::constraint_desired_forward_vector_inside_cone;
+    using  constraint_always = detail::meta::constraint_always;
 
     using  action = detail::meta::action;
     using  action_ptr = detail::meta::action_ptr;
-
-    struct  action_none : public action
-    {
-        bool  equals(action const&  other) const override { return *this == dynamic_cast<action_none const&>(other); }
-        bool  operator==(action_none const&  other) const { return true; }
-    };
-
-    struct  action_move_forward_with_ideal_speed : public action
-    {
-        float_32_bit  max_linear_accel;
-        float_32_bit  motion_error_multiplier;
-    };
-
-    struct  action_rotate_forward_vector_towards_desired_linear_velocity : public action
-    {
-        float_32_bit  max_angular_speed;
-        float_32_bit  max_angular_accel;
-        float_32_bit  min_linear_speed;
-    };
-
-    struct  action_turn_around : public action
-    {
-        float_32_bit  max_angular_accel;
-
-        bool  equals(action const&  other) const override { return *this == dynamic_cast<action_turn_around const&>(other); }
-        bool  operator==(action_turn_around const&  other) const { return are_equal(max_angular_accel, other.max_angular_accel, 0.0001f); }
-    };
-
-    struct  action_dont_move : public action
-    {
-        float_32_bit  max_linear_accel;
-        float_32_bit  radius;
-
-        bool  equals(action const&  other) const override { return *this == dynamic_cast<action_dont_move const&>(other); }
-        bool  operator==(action_dont_move const&  other) const
-        {
-            return are_equal(max_linear_accel, other.max_linear_accel, 0.0001f) && are_equal(radius, other.radius, 0.0001f);
-        }
-    };
-
-    struct  action_dont_rotate : public action
-    {
-        float_32_bit  max_angular_accel;
-
-        bool  equals(action const&  other) const override { return *this == dynamic_cast<action_dont_rotate const&>(other); }
-        bool  operator==(action_dont_rotate const&  other) const { return are_equal(max_angular_accel, other.max_angular_accel, 0.0001f); }
-    };
-
-    struct  action_set_linear_velocity : public action
-    {
-        vector3  linear_velocity;
-        float_32_bit  max_linear_accel;
-
-        bool  equals(action const&  other) const override { return *this == dynamic_cast<action_set_linear_velocity const&>(other); }
-        bool  operator==(action_set_linear_velocity const&  other) const
-        {
-            return are_equal(max_linear_accel, other.max_linear_accel, 0.0001f) && are_equal_3d(linear_velocity, other.linear_velocity, 0.0001f);
-        }
-    };
-
-    struct  action_set_angular_velocity : public action
-    {
-        vector3  angular_velocity;
-        float_32_bit  max_angular_accel;
-
-        bool  equals(action const& other) const override { return *this == dynamic_cast<action_set_angular_velocity const&>(other); }
-        bool  operator==(action_set_angular_velocity const& other) const
-        {
-            return are_equal(max_angular_accel, other.max_angular_accel, 0.0001f) && are_equal_3d(angular_velocity, other.angular_velocity, 0.0001f);
-        }
-    };
-
-    struct  action_cancel_gravity_accel : public action
-    {
-        bool  equals(action const&  other) const override { return *this == dynamic_cast<action_cancel_gravity_accel const&>(other); }
-        bool  operator==(action_cancel_gravity_accel const&  other) const { return true; }
-    };
-
-    using  collider = detail::meta::collider;
-    using  collider_ptr = detail::meta::collider_ptr;
-
-    struct  collider_capsule : public collider
-    {
-        float_32_bit  length;
-        float_32_bit  radius;
-
-        bool  equals(collider const&  other) const override { return *this == dynamic_cast<collider_capsule const&>(other); }
-        bool  operator==(collider_capsule const&  other) const
-        {
-            return are_equal(length, other.length, 0.0001f) && are_equal(radius, other.radius, 0.0001f);
-        }
-    };
+    using  action_none = detail::meta::action_none;
+    using  action_move_forward_with_ideal_speed = detail::meta::action_move_forward_with_ideal_speed;
+    using  action_rotate_forward_vector_towards_desired_linear_velocity = detail::meta::action_rotate_forward_vector_towards_desired_linear_velocity;
+    using  action_turn_around = detail::meta::action_turn_around;
+    using  action_dont_move = detail::meta::action_dont_move;
+    using  action_dont_rotate = detail::meta::action_dont_rotate;
+    using  action_set_linear_velocity = detail::meta::action_set_linear_velocity;
+    using  action_set_angular_velocity = detail::meta::action_set_angular_velocity;
+    using  action_cancel_gravity_accel = detail::meta::action_cancel_gravity_accel;
 
     modelspace  pose_frames() const { return resource().pose_frames; }
     bone_names  names() const { return resource().names; }

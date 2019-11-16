@@ -381,45 +381,54 @@ void  compute_importance_of_ideal_velocities_to_guarded_actions(
 }
 
 
+std::unordered_set<std::string> const&  get_all_action_unique_names()
+{
+    static std::unordered_set<std::string> const  action_names{
+        skeletal_motion_templates::action_none::unique_name,
+        skeletal_motion_templates::action_move_forward_with_ideal_speed::unique_name,
+        skeletal_motion_templates::action_rotate_forward_vector_towards_desired_linear_velocity::unique_name,
+        skeletal_motion_templates::action_turn_around::unique_name,
+        skeletal_motion_templates::action_dont_move::unique_name,
+        skeletal_motion_templates::action_dont_rotate::unique_name,
+        skeletal_motion_templates::action_set_linear_velocity::unique_name,
+        skeletal_motion_templates::action_set_angular_velocity::unique_name,
+        skeletal_motion_templates::action_cancel_gravity_accel::unique_name,
+    };
+    return  action_names;
+}
+
+
+float_32_bit  get_stationary_rank(std::string const&  action_unique_name)
+{
+    static std::unordered_map<std::string, float_32_bit> const  from_action_names_to_rakns{
+        {skeletal_motion_templates::action_none::unique_name, 0.0f},
+        {skeletal_motion_templates::action_move_forward_with_ideal_speed::unique_name, 0.2f },
+        {skeletal_motion_templates::action_rotate_forward_vector_towards_desired_linear_velocity::unique_name, 0.1f},
+        {skeletal_motion_templates::action_turn_around::unique_name, 10.0f},
+        {skeletal_motion_templates::action_dont_move::unique_name, 2000.0f},
+        {skeletal_motion_templates::action_dont_rotate::unique_name, 1000.0f},
+        {skeletal_motion_templates::action_set_linear_velocity::unique_name, 2.0f},
+        {skeletal_motion_templates::action_set_angular_velocity::unique_name, 1.0f},
+        {skeletal_motion_templates::action_cancel_gravity_accel::unique_name, 0.3f},
+    };
+    return  from_action_names_to_rakns.at(action_unique_name);
+}
+
+
+float_32_bit  get_stationary_rank(skeletal_motion_templates::action const&  action)
+{
+    return  get_stationary_rank(action.get_unique_name());
+}
+
+
 float_32_bit  get_stationary_rank(skeletal_motion_templates::disjunction_of_guarded_actions const&  guarded_actions)
 {
     TMPROF_BLOCK();
 
-    auto const  get_rank_of_action = [](skeletal_motion_templates::action_ptr const  action) -> float_32_bit {
-        if (action == nullptr || std::dynamic_pointer_cast<skeletal_motion_templates::action_none const>(action) != nullptr)
-            return 0.0f;
-        else if (auto const  action_ptr =
-                 std::dynamic_pointer_cast<skeletal_motion_templates::action_move_forward_with_ideal_speed const>(action))
-            return 0.2f;
-        else if (auto const  action_ptr =
-                 std::dynamic_pointer_cast<skeletal_motion_templates::action_rotate_forward_vector_towards_desired_linear_velocity const>(action))
-            return 0.1f;
-        else if (auto const  action_ptr =
-                 std::dynamic_pointer_cast<skeletal_motion_templates::action_turn_around const>(action))
-            return 10.0f;
-        else if (auto const  action_ptr =
-                 std::dynamic_pointer_cast<skeletal_motion_templates::action_dont_move const>(action))
-            return 2000.0f;
-        else if (auto const  action_ptr =
-                 std::dynamic_pointer_cast<skeletal_motion_templates::action_dont_rotate const>(action))
-            return 1000.0f;
-        else if (auto const  action_ptr =
-                 std::dynamic_pointer_cast<skeletal_motion_templates::action_set_linear_velocity const>(action))
-            return 2.0f;
-        else if (auto const  action_ptr =
-                 std::dynamic_pointer_cast<skeletal_motion_templates::action_set_angular_velocity const>(action))
-            return 1.0f;
-        else if (auto const  action_ptr =
-                 std::dynamic_pointer_cast<skeletal_motion_templates::action_cancel_gravity_accel const>(action))
-            return 0.3f;
-        else
-            NOT_IMPLEMENTED_YET();
-    };
-
     float_32_bit  rank = 0.0f;
     for (auto const  guarded_actions_ptr : guarded_actions)
         for (auto const  action_ptr : guarded_actions_ptr->actions)
-            rank += get_rank_of_action(action_ptr);
+            rank += get_stationary_rank(*action_ptr);
 
     return rank;
 }

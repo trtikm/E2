@@ -20,14 +20,6 @@ struct  cortex_robot_humanoid : public cortex
     void  initialise() override;
     void  next_round(float_32_bit const  time_step_in_seconds) override;
 
-    // Services for the action controller:
-
-    vector3  get_look_at_target_in_world_space() const override;
-
-    skeletal_motion_templates::cursor_and_transition_time  choose_next_motion_action(
-            std::vector<skeletal_motion_templates::cursor_and_transition_time> const&  possibilities
-            ) const override;
-
 private:
     env::snapshots_cache_ptr  m_snapshots_cache;
 };

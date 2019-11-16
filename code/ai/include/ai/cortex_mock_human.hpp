@@ -16,8 +16,6 @@ struct cortex_mock_human : public cortex_mock
 
     // Services for the action controller:
 
-    vector3  get_look_at_target_in_world_space() const override;
-
     skeletal_motion_templates::cursor_and_transition_time  choose_next_motion_action(
             std::vector<skeletal_motion_templates::cursor_and_transition_time> const& possibilities
             ) const override;
@@ -26,6 +24,8 @@ private:
 
     void  update_motion_intensities(float_32_bit const  time_step_in_seconds);
     void  update_motion_desire_props();
+    void  update_look_at_target_in_local_space();
+
 
     float_32_bit  m_move_intensity;
     float_32_bit  m_turn_intensity;

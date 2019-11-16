@@ -362,9 +362,9 @@ void  action_controller::look_at_target(float_32_bit const  time_step_in_seconds
 
     vector3  target;
     {
-        target = get_blackboard()->m_cortex->get_look_at_target_in_world_space();
+        target = get_blackboard()->m_cortex->get_look_at_target_in_local_space();
 
-        // The target is now in world space, but we need the target in the space of the bone which is the closest parent bone
+        // The target is now in agent's local space, but we need the target in the space of the bone which is the closest parent bone
         // to all bones in 'bones_to_consider'; note that the parent bone cannot be in 'bones_to_consider'.
 
         integer_32_bit  closest_parent_bone = *bones_to_consider.begin();
@@ -378,10 +378,12 @@ void  action_controller::look_at_target(float_32_bit const  time_step_in_seconds
             closest_parent_bone_frame
         );
 
-        matrix44  W;
-        angeo::to_base_matrix(closest_parent_bone_frame, W);
+        matrix44  T;
+        angeo::to_base_matrix(closest_parent_bone_frame, T);
+        matrix44  F;
+        angeo::from_base_matrix(m_motion_object_motion.frame, F);
 
-        target = transform_point(target, W);
+        target = transform_point(target, T * F);
     }
 
     angeo::bone_look_at_targets  look_at_targets;

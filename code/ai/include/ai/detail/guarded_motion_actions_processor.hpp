@@ -10,6 +10,7 @@
 #   include <string>
 #   include <memory>
 #   include <vector>
+#   include <unordered_set>
 #   include <unordered_map>
 
 namespace ai { namespace detail {
@@ -68,6 +69,11 @@ void  compute_importance_of_ideal_velocities_to_guarded_actions(
         );
 
 
+std::unordered_set<std::string> const&  get_all_action_unique_names();
+
+
+float_32_bit  get_stationary_rank(std::string const&  action_unique_name);
+float_32_bit  get_stationary_rank(skeletal_motion_templates::action const&  action);
 float_32_bit  get_stationary_rank(skeletal_motion_templates::disjunction_of_guarded_actions const&  guarded_actions);
 
 

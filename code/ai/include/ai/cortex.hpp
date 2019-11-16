@@ -6,6 +6,8 @@
 #   include <ai/detail/motion_desire_props.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <vector>
+#   include <string>
+#   include <unordered_map>
 
 namespace ai {
 
@@ -23,17 +25,19 @@ struct  cortex
     // Services for the action controller:
 
     detail::motion_desire_props const&  get_motion_desire_props() const { return m_motion_desire_props; }
-
-    virtual vector3  get_look_at_target_in_world_space() const;
-
+    vector3 const&  get_look_at_target_in_local_space() const { return m_look_at_target_in_local_space; }
     virtual skeletal_motion_templates::cursor_and_transition_time  choose_next_motion_action(
-            std::vector<skeletal_motion_templates::cursor_and_transition_time> const&  possibilities
-            ) const;
+                std::vector<skeletal_motion_templates::cursor_and_transition_time> const&  possibilities
+                ) const;
 
 protected:
     void  set_stationary_desire();
+    void  set_stationary_ranks_of_motion_actions();
+    void  set_indifferent_look_at_target();
 
     detail::motion_desire_props  m_motion_desire_props;
+    std::unordered_map<std::string, float_32_bit>  m_ranks_of_motion_actions;
+    vector3  m_look_at_target_in_local_space;
 
 private:
     blackboard_weak_ptr  m_blackboard;

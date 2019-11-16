@@ -259,6 +259,17 @@ colliders_data::~colliders_data()
 namespace ai { namespace detail { namespace meta {
 
 
+std::string const  action_none::unique_name = "none";
+std::string const  action_move_forward_with_ideal_speed::unique_name = "move_forward_with_ideal_speed";
+std::string const  action_rotate_forward_vector_towards_desired_linear_velocity::unique_name = "rotate_forward_vector_towards_desired_linear_velocity";
+std::string const  action_turn_around::unique_name = "turn_around";
+std::string const  action_dont_move::unique_name = "dont_move";
+std::string const  action_dont_rotate::unique_name = "dont_rotate";
+std::string const  action_set_linear_velocity::unique_name = "set_linear_velocity";
+std::string const  action_set_angular_velocity::unique_name = "set_angular_velocity";
+std::string const  action_cancel_gravity_accel::unique_name = "cancel_gravity_accel";
+
+
 template<typename data_type, typename base_data_type>
 std::shared_ptr<base_data_type const>  _find_or_create_motion_action_component(
         data_type const&  key,
