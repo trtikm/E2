@@ -1921,6 +1921,111 @@ void  express_box_in_terms_of_its_faces(
 }
 
 
+std::pair<COLLISION_SHAPE_FEATURE_TYPE, std::pair<COORDINATE, float_32_bit> >  compute_closest_box_feature_to_a_point(
+        vector3 const&  point_in_box_local_space,
+        vector3 const&  box_half_sizes_along_axes_xyz,
+        float_32_bit const  max_edge_thickness = 0.005f
+        )
+{
+    vector3 const  p{
+            std::min(std::fabs(point_in_box_local_space(0) / box_half_sizes_along_axes_xyz(0)), 1.0f),
+            std::min(std::fabs(point_in_box_local_space(1) / box_half_sizes_along_axes_xyz(1)), 1.0f),
+            std::min(std::fabs(point_in_box_local_space(2) / box_half_sizes_along_axes_xyz(2)), 1.0f)
+            };
+    vector3 const  D{
+            std::min(0.1f * box_half_sizes_along_axes_xyz(0), max_edge_thickness),
+            std::min(0.1f * box_half_sizes_along_axes_xyz(1), max_edge_thickness),
+            std::min(0.1f * box_half_sizes_along_axes_xyz(2), max_edge_thickness)
+            };
+
+    natural_32_bit  order[3] = {0, 1, 2};
+    // And we have to sort it in decreasing order.
+    if (p(order[1]) > p(order[0]))
+        std::swap(order[0], order[1]);
+    if (p(order[2]) > p(order[1]))
+    {
+        std::swap(order[1], order[2]);
+        if (p(order[1]) > p(order[0]))
+            std::swap(order[0], order[1]);
+    }
+
+    static_assert((natural_8_bit)COLLISION_SHAPE_FEATURE_TYPE::VERTEX == 0U, "");
+    static_assert((natural_8_bit)COLLISION_SHAPE_FEATURE_TYPE::EDGE == 1U, "");
+    static_assert((natural_8_bit)COLLISION_SHAPE_FEATURE_TYPE::FACE == 2U, "");
+
+    natural_8_bit  feature_kind = 0;  // 0=vertex, 1=edge, 2=face.
+    if (box_half_sizes_along_axes_xyz(order[1]) * p(order[1]) <= (box_half_sizes_along_axes_xyz(order[1]) - D(order[1])) * p(order[0]))
+    {
+        // So, we proved that the resulting feature can NOT be a vertex.
+        ++feature_kind;
+    }
+    if (box_half_sizes_along_axes_xyz(order[2]) * p(order[2]) <= (box_half_sizes_along_axes_xyz(order[2]) - D(order[2])) * p(order[1]))
+    {
+        // So, we proved that the resulting feature can NOT be an edge.
+        ++feature_kind;
+    }
+
+    return { (COLLISION_SHAPE_FEATURE_TYPE)feature_kind, { (COORDINATE)order[0], p(order[0]) } };
+}
+
+
+vector3  compute_collision_unit_normal_from_contact_point(
+        vector3 const&  common_contact_point_in_world_space,
+
+        vector3 const&  box_1_origin_in_world_space,
+        vector3 const&  box_1_basis_x_vector_in_world_space,
+        vector3 const&  box_1_basis_y_vector_in_world_space,
+        vector3 const&  box_1_basis_z_vector_in_world_space,
+        vector3 const&  box_1_min_corner_in_box_space,
+        vector3 const&  box_1_max_corner_in_box_space,
+
+        vector3 const&  box_2_origin_in_world_space,
+        vector3 const&  box_2_basis_x_vector_in_world_space,
+        vector3 const&  box_2_basis_y_vector_in_world_space,
+        vector3 const&  box_2_basis_z_vector_in_world_space,
+        vector3 const&  box_2_min_corner_in_box_space,
+        vector3 const&  box_2_max_corner_in_box_space
+        )
+{
+    std::pair<COLLISION_SHAPE_FEATURE_TYPE, std::pair<COORDINATE, float_32_bit> > const  props_1 =
+            compute_closest_box_feature_to_a_point(
+                    point3_to_orthonormal_base(
+                            common_contact_point_in_world_space,
+                            box_1_origin_in_world_space,
+                            box_1_basis_x_vector_in_world_space,
+                            box_1_basis_y_vector_in_world_space,
+                            box_1_basis_z_vector_in_world_space
+                            ),
+                    vector3{
+                            0.5f * (box_1_max_corner_in_box_space(0) - box_1_min_corner_in_box_space(0)),
+                            0.5f * (box_1_max_corner_in_box_space(1) - box_1_min_corner_in_box_space(1)),
+                            0.5f * (box_1_max_corner_in_box_space(2) - box_1_min_corner_in_box_space(2)),
+                            },
+                    0.005f
+                    );
+    std::pair<COLLISION_SHAPE_FEATURE_TYPE, std::pair<COORDINATE, float_32_bit> > const  props_2 =
+            compute_closest_box_feature_to_a_point(
+                    point3_to_orthonormal_base(
+                            common_contact_point_in_world_space,
+                            box_2_origin_in_world_space,
+                            box_2_basis_x_vector_in_world_space,
+                            box_2_basis_y_vector_in_world_space,
+                            box_2_basis_z_vector_in_world_space
+                            ),
+                    vector3{
+                            0.5f * (box_2_max_corner_in_box_space(0) - box_2_min_corner_in_box_space(0)),
+                            0.5f * (box_2_max_corner_in_box_space(1) - box_2_min_corner_in_box_space(1)),
+                            0.5f * (box_2_max_corner_in_box_space(2) - box_2_min_corner_in_box_space(2)),
+                            },
+                    0.005f
+                    );
+
+    // TODO!
+
+    NOT_IMPLEMENTED_YET();
+}
+
+
 bool  collision_box_box(
         vector3 const&  box_1_origin_in_world_space,
         vector3 const&  box_1_basis_x_vector_in_world_space,
@@ -2036,9 +2141,21 @@ bool  collision_box_box(
             mass_center_of_collision_points += p;
         mass_center_of_collision_points /= (float_32_bit)raw_collision_points.size();
 
-        // TODO: use 'mass_center_of_collision_points' to ask box_1 and box_2 to compute normal vector
-        //       'ouptut_collision_plane_unit_normal_in_world_space' of the collision plane.
-        NOT_IMPLEMENTED_YET();
+        *ouptut_collision_plane_unit_normal_in_world_space = compute_collision_unit_normal_from_contact_point(
+                mass_center_of_collision_points,
+                box_1_origin_in_world_space,
+                box_1_basis_x_vector_in_world_space,
+                box_1_basis_y_vector_in_world_space,
+                box_1_basis_z_vector_in_world_space,
+                box_1_min_corner_in_box_space,
+                box_1_max_corner_in_box_space,
+                box_2_origin_in_world_space,
+                box_2_basis_x_vector_in_world_space,
+                box_2_basis_y_vector_in_world_space,
+                box_2_basis_z_vector_in_world_space,
+                box_2_min_corner_in_box_space,
+                box_2_max_corner_in_box_space
+                );
     }
 
     if (output_collision_plane_points_in_world_space != nullptr)
