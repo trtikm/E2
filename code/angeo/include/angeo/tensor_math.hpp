@@ -98,6 +98,17 @@ inline vector3  transform_point(vector3 const& u, matrix44 const& M, scalar cons
 { return contract43(M * expand34(u,h)); }
 inline vector3  transform_vector(vector3 const& u, matrix44 const& M) { return transform_point(u,M,scalar(0.0)); }
 
+vector3  vector3_to_orthonormal_base(vector3 const&  u, vector3 const&  x_axis, vector3 const&  y_axis, vector3 const&  z_axis);
+vector3  point3_to_orthonormal_base(
+        vector3 const&  p,
+        vector3 const& origin, vector3 const&  x_axis, vector3 const&  y_axis, vector3 const&  z_axis
+        );
+vector3  vector3_from_orthonormal_base(vector3 const&  u, vector3 const&  x_axis, vector3 const&  y_axis, vector3 const&  z_axis);
+vector3  point3_from_orthonormal_base(
+        vector3 const&  p,
+        vector3 const& origin, vector3 const&  x_axis, vector3 const&  y_axis, vector3 const&  z_axis
+        );
+
 vector3  interpolate_linear(vector3 const&  u, vector3 const&  v, float_32_bit const  t);
 
 inline vector4  vector4_zero() { return vector4::Zero(); }

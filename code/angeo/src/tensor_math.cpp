@@ -126,6 +126,36 @@ quaternion  transform(quaternion const&  orientation, matrix44 const&  transform
 }
 
 
+vector3  vector3_to_orthonormal_base(vector3 const&  u, vector3 const&  x_axis, vector3 const&  y_axis, vector3 const&  z_axis)
+{
+    return { dot_product(u, x_axis), dot_product(u, y_axis), dot_product(u, z_axis) };
+}
+
+
+vector3  point3_to_orthonormal_base(
+        vector3 const&  p,
+        vector3 const& origin, vector3 const&  x_axis, vector3 const&  y_axis, vector3 const&  z_axis
+        )
+{
+    return vector3_to_orthonormal_base(p - origin, x_axis, y_axis, z_axis);
+}
+
+
+vector3  vector3_from_orthonormal_base(vector3 const&  u, vector3 const&  x_axis, vector3 const&  y_axis, vector3 const&  z_axis)
+{
+    return u(0) * x_axis + u(1) * y_axis + u(2) * z_axis;
+}
+
+
+vector3  point3_from_orthonormal_base(
+        vector3 const&  p,
+        vector3 const& origin, vector3 const&  x_axis, vector3 const&  y_axis, vector3 const&  z_axis
+        )
+{
+    return origin + vector3_from_orthonormal_base(p, x_axis, y_axis, z_axis);
+}
+
+
 quaternion  interpolate_linear(quaternion const& u, quaternion const& v, float_32_bit const  t)
 {
     quaternion q(u.coeffs() + t * (v.coeffs() - u.coeffs()));
