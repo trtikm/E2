@@ -9,9 +9,9 @@ namespace angeo {
 
 enum struct  COLLISION_SHAPE_FEATURE_TYPE : natural_8_bit
 {
-    EDGE        = 0,
-    FACE        = 1,
-    VERTEX      = 2
+    VERTEX      = 0,
+    EDGE        = 1,
+    FACE        = 2,
 };
 
 
