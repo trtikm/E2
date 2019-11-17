@@ -9,6 +9,17 @@
 namespace angeo {
 
 
+enum struct  COORDINATE : natural_8_bit
+{
+    X = 0,
+    Y = 1,
+    Z = 2,
+    W = 3,
+    U = 4,
+    V = 5,
+};
+
+
 /**
  * It computes a point to a parameter 't' on the line 'X = line_begin + t * (line_end - line_begin)'
  * in range [0,1] such that X is the closest point to the passed one.
