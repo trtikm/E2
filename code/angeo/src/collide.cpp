@@ -7,6 +7,7 @@
 #include <utility/log.hpp>
 #include <utility/development.hpp>
 #include <unordered_set>
+#include <unordered_map>
 #include <array>
 #include <tuple>
 
@@ -1689,8 +1690,7 @@ void  express_box_in_terms_of_its_faces(
         vector3 const&  basis_x_vector_in_world_space,
         vector3 const&  basis_y_vector_in_world_space,
         vector3 const&  basis_z_vector_in_world_space,
-        vector3 const&  min_corner_in_box_space,
-        vector3 const&  max_corner_in_box_space,
+        vector3 const&  half_sizes_along_axes,
 
         std::vector<std::vector<vector2> >&  output_polygons,   // INVARIANT: output_polygons.size() == 6 && foreach i : output_polygons.at(i).size() == 5
         std::vector<matrix44>&  output_to_polygon_space_matrices,   // INVARIANT: output_to_polygon_space_matrices.size() == 6
@@ -1710,7 +1710,7 @@ void  express_box_in_terms_of_its_faces(
 
     // xy-face for z-min
     {
-        vector3 const  face_center_in_world_space = origin_in_world_space + min_corner_in_box_space(2) * basis_z_vector_in_world_space;
+        vector3 const  face_center_in_world_space = origin_in_world_space + -half_sizes_along_axes(2) * basis_z_vector_in_world_space;
 
         compose_to_base_matrix(
                 face_center_in_world_space,
@@ -1729,10 +1729,10 @@ void  express_box_in_terms_of_its_faces(
 
         std::vector<vector2>&  points = output_polygons.at(idx);
         points.resize(5U);
-        points.at(0UL) = vector2(min_corner_in_box_space(0), -max_corner_in_box_space(1));
-        points.at(1UL) = vector2(max_corner_in_box_space(0), -max_corner_in_box_space(1));
-        points.at(2UL) = vector2(max_corner_in_box_space(0), -min_corner_in_box_space(1));
-        points.at(3UL) = vector2(min_corner_in_box_space(0), -min_corner_in_box_space(1));
+        points.at(0UL) = vector2(-half_sizes_along_axes(0), -half_sizes_along_axes(1));
+        points.at(1UL) = vector2(half_sizes_along_axes(0), -half_sizes_along_axes(1));
+        points.at(2UL) = vector2(half_sizes_along_axes(0), half_sizes_along_axes(1));
+        points.at(3UL) = vector2(-half_sizes_along_axes(0), half_sizes_along_axes(1));
         points.at(4UL) = points.front();
 
         if (output_origins_and_unit_normals_in_world_space != nullptr)
@@ -1745,7 +1745,7 @@ void  express_box_in_terms_of_its_faces(
 
     // xz-face for y-min
     {
-        vector3 const  face_center_in_world_space = origin_in_world_space + min_corner_in_box_space(1) * basis_y_vector_in_world_space;
+        vector3 const  face_center_in_world_space = origin_in_world_space + -half_sizes_along_axes(1) * basis_y_vector_in_world_space;
 
         compose_to_base_matrix(
                 face_center_in_world_space,
@@ -1765,10 +1765,10 @@ void  express_box_in_terms_of_its_faces(
 
         std::vector<vector2>&  points = output_polygons.at(idx);
         points.resize(5U);
-        points.at(0UL) = vector2(min_corner_in_box_space(0), min_corner_in_box_space(2));
-        points.at(1UL) = vector2(max_corner_in_box_space(0), min_corner_in_box_space(2));
-        points.at(2UL) = vector2(max_corner_in_box_space(0), max_corner_in_box_space(2));
-        points.at(3UL) = vector2(min_corner_in_box_space(0), max_corner_in_box_space(2));
+        points.at(0UL) = vector2(-half_sizes_along_axes(0), -half_sizes_along_axes(2));
+        points.at(1UL) = vector2(half_sizes_along_axes(0), -half_sizes_along_axes(2));
+        points.at(2UL) = vector2(half_sizes_along_axes(0), half_sizes_along_axes(2));
+        points.at(3UL) = vector2(-half_sizes_along_axes(0), half_sizes_along_axes(2));
         points.at(4UL) = points.front();
 
         if (output_origins_and_unit_normals_in_world_space != nullptr)
@@ -1781,7 +1781,7 @@ void  express_box_in_terms_of_its_faces(
 
     // yz-face for x-min
     {
-        vector3 const  face_center_in_world_space = origin_in_world_space + min_corner_in_box_space(0) * basis_x_vector_in_world_space;
+        vector3 const  face_center_in_world_space = origin_in_world_space + -half_sizes_along_axes(0) * basis_x_vector_in_world_space;
 
         compose_to_base_matrix(
                 face_center_in_world_space,
@@ -1800,10 +1800,10 @@ void  express_box_in_terms_of_its_faces(
 
         std::vector<vector2>&  points = output_polygons.at(idx);
         points.resize(5U);
-        points.at(0UL) = vector2(min_corner_in_box_space(1), -max_corner_in_box_space(2));
-        points.at(1UL) = vector2(max_corner_in_box_space(1), -max_corner_in_box_space(2));
-        points.at(2UL) = vector2(max_corner_in_box_space(1), -min_corner_in_box_space(2));
-        points.at(3UL) = vector2(min_corner_in_box_space(1), -min_corner_in_box_space(2));
+        points.at(0UL) = vector2(-half_sizes_along_axes(1), -half_sizes_along_axes(2));
+        points.at(1UL) = vector2(half_sizes_along_axes(1), -half_sizes_along_axes(2));
+        points.at(2UL) = vector2(half_sizes_along_axes(1), half_sizes_along_axes(2));
+        points.at(3UL) = vector2(-half_sizes_along_axes(1), half_sizes_along_axes(2));
         points.at(4UL) = points.front();
 
         if (output_origins_and_unit_normals_in_world_space != nullptr)
@@ -1816,7 +1816,7 @@ void  express_box_in_terms_of_its_faces(
 
     // xy-face for z-max
     {
-        vector3 const  face_center_in_world_space = origin_in_world_space + max_corner_in_box_space(2) * basis_z_vector_in_world_space;
+        vector3 const  face_center_in_world_space = origin_in_world_space + half_sizes_along_axes(2) * basis_z_vector_in_world_space;
 
         compose_to_base_matrix(
                 face_center_in_world_space,
@@ -1835,10 +1835,10 @@ void  express_box_in_terms_of_its_faces(
 
         std::vector<vector2>&  points = output_polygons.at(idx);
         points.resize(5U);
-        points.at(0UL) = vector2(min_corner_in_box_space(0), min_corner_in_box_space(1));
-        points.at(1UL) = vector2(max_corner_in_box_space(0), min_corner_in_box_space(1));
-        points.at(2UL) = vector2(max_corner_in_box_space(0), max_corner_in_box_space(1));
-        points.at(3UL) = vector2(min_corner_in_box_space(0), max_corner_in_box_space(1));
+        points.at(0UL) = vector2(-half_sizes_along_axes(0), -half_sizes_along_axes(1));
+        points.at(1UL) = vector2(half_sizes_along_axes(0), -half_sizes_along_axes(1));
+        points.at(2UL) = vector2(half_sizes_along_axes(0), half_sizes_along_axes(1));
+        points.at(3UL) = vector2(-half_sizes_along_axes(0), half_sizes_along_axes(1));
         points.at(4UL) = points.front();
 
         if (output_origins_and_unit_normals_in_world_space != nullptr)
@@ -1851,7 +1851,7 @@ void  express_box_in_terms_of_its_faces(
 
     // xz-face for y-max
     {
-        vector3 const  face_center_in_world_space = origin_in_world_space + max_corner_in_box_space(1) * basis_y_vector_in_world_space;
+        vector3 const  face_center_in_world_space = origin_in_world_space + half_sizes_along_axes(1) * basis_y_vector_in_world_space;
 
         compose_to_base_matrix(
                 face_center_in_world_space,
@@ -1870,10 +1870,10 @@ void  express_box_in_terms_of_its_faces(
 
         std::vector<vector2>&  points = output_polygons.at(idx);
         points.resize(5U);
-        points.at(0UL) = vector2(min_corner_in_box_space(0), -max_corner_in_box_space(2));
-        points.at(1UL) = vector2(max_corner_in_box_space(0), -max_corner_in_box_space(2));
-        points.at(2UL) = vector2(max_corner_in_box_space(0), -min_corner_in_box_space(2));
-        points.at(3UL) = vector2(min_corner_in_box_space(0), -min_corner_in_box_space(2));
+        points.at(0UL) = vector2(-half_sizes_along_axes(0), -half_sizes_along_axes(2));
+        points.at(1UL) = vector2(half_sizes_along_axes(0), -half_sizes_along_axes(2));
+        points.at(2UL) = vector2(half_sizes_along_axes(0), half_sizes_along_axes(2));
+        points.at(3UL) = vector2(-half_sizes_along_axes(0), half_sizes_along_axes(2));
         points.at(4UL) = points.front();
 
         if (output_origins_and_unit_normals_in_world_space != nullptr)
@@ -1886,7 +1886,7 @@ void  express_box_in_terms_of_its_faces(
 
     // yz-face for x-max
     {
-        vector3 const  face_center_in_world_space = origin_in_world_space + max_corner_in_box_space(0) * basis_x_vector_in_world_space;
+        vector3 const  face_center_in_world_space = origin_in_world_space + half_sizes_along_axes(0) * basis_x_vector_in_world_space;
 
         compose_to_base_matrix(
                 face_center_in_world_space,
@@ -1905,10 +1905,10 @@ void  express_box_in_terms_of_its_faces(
 
         std::vector<vector2>& points = output_polygons.at(idx);
         points.resize(5U);
-        points.at(0UL) = vector2(min_corner_in_box_space(1), min_corner_in_box_space(2));
-        points.at(1UL) = vector2(max_corner_in_box_space(1), min_corner_in_box_space(2));
-        points.at(2UL) = vector2(max_corner_in_box_space(1), max_corner_in_box_space(2));
-        points.at(3UL) = vector2(min_corner_in_box_space(1), max_corner_in_box_space(2));
+        points.at(0UL) = vector2(-half_sizes_along_axes(1), -half_sizes_along_axes(2));
+        points.at(1UL) = vector2(half_sizes_along_axes(1), -half_sizes_along_axes(2));
+        points.at(2UL) = vector2(half_sizes_along_axes(1), half_sizes_along_axes(2));
+        points.at(3UL) = vector2(-half_sizes_along_axes(1), half_sizes_along_axes(2));
         points.at(4UL) = points.front();
 
         if (output_origins_and_unit_normals_in_world_space != nullptr)
@@ -1921,25 +1921,39 @@ void  express_box_in_terms_of_its_faces(
 }
 
 
-std::pair<COLLISION_SHAPE_FEATURE_TYPE, std::pair<COORDINATE, float_32_bit> >  compute_closest_box_feature_to_a_point(
+struct  closest_box_feature_to_a_point
+{
+    COLLISION_SHAPE_FEATURE_TYPE  feature;
+    COORDINATE  coordinate;
+    float_32_bit  direction_sign;
+    float_32_bit  sum_of_slopes;
+    vector3  feature_vector_in_world_space;
+    float_32_bit  distance_to_feature;
+};
+
+
+void  compute_closest_box_feature_to_a_point(
+        closest_box_feature_to_a_point&  output,
         vector3 const&  point_in_box_local_space,
-        vector3 const&  box_half_sizes_along_axes_xyz,
+        vector3 const&  box_half_sizes_along_axes,
+        vector3 const&  box_origin_in_world_space,
+        std::array<vector3 const*, 3U> const&  box_axis_in_world_space,
         float_32_bit const  max_edge_thickness = 0.005f
         )
 {
     vector3 const  p{
-            std::min(std::fabs(point_in_box_local_space(0) / box_half_sizes_along_axes_xyz(0)), 1.0f),
-            std::min(std::fabs(point_in_box_local_space(1) / box_half_sizes_along_axes_xyz(1)), 1.0f),
-            std::min(std::fabs(point_in_box_local_space(2) / box_half_sizes_along_axes_xyz(2)), 1.0f)
+            std::min(std::fabs(point_in_box_local_space(0) / box_half_sizes_along_axes(0)), 1.0f),
+            std::min(std::fabs(point_in_box_local_space(1) / box_half_sizes_along_axes(1)), 1.0f),
+            std::min(std::fabs(point_in_box_local_space(2) / box_half_sizes_along_axes(2)), 1.0f)
             };
     vector3 const  D{
-            std::min(0.1f * box_half_sizes_along_axes_xyz(0), max_edge_thickness),
-            std::min(0.1f * box_half_sizes_along_axes_xyz(1), max_edge_thickness),
-            std::min(0.1f * box_half_sizes_along_axes_xyz(2), max_edge_thickness)
+            std::min(0.25f * box_half_sizes_along_axes(0), max_edge_thickness),
+            std::min(0.25f * box_half_sizes_along_axes(1), max_edge_thickness),
+            std::min(0.25f * box_half_sizes_along_axes(2), max_edge_thickness)
             };
 
     natural_32_bit  order[3] = {0, 1, 2};
-    // And we have to sort it in decreasing order.
+    // And we have to sort the array in decreasing order.
     if (p(order[1]) > p(order[0]))
         std::swap(order[0], order[1]);
     if (p(order[2]) > p(order[1]))
@@ -1953,76 +1967,163 @@ std::pair<COLLISION_SHAPE_FEATURE_TYPE, std::pair<COORDINATE, float_32_bit> >  c
     static_assert((natural_8_bit)COLLISION_SHAPE_FEATURE_TYPE::EDGE == 1U, "");
     static_assert((natural_8_bit)COLLISION_SHAPE_FEATURE_TYPE::FACE == 2U, "");
 
+    if (p(order[0]) < 0.0001f)
+    {
+        // A special case: The point is very close to the origin of the box.
+        // So, we give up and return to FACE feature with the axis of the most thin side and
+        // the impossiby bad sum of slopes.
+        output.feature = COLLISION_SHAPE_FEATURE_TYPE::FACE;
+        output.coordinate =
+                box_half_sizes_along_axes(0) < box_half_sizes_along_axes(1) ?
+                        (box_half_sizes_along_axes(0) < box_half_sizes_along_axes(2) ? COORDINATE::X : COORDINATE::Z) :
+                        (box_half_sizes_along_axes(1) < box_half_sizes_along_axes(2) ? COORDINATE::Y : COORDINATE::Z) ;
+        output.direction_sign = 1.0f;
+        output.sum_of_slopes = 1000.0f;
+        output.feature_vector_in_world_space = *box_axis_in_world_space[(natural_8_bit)output.coordinate];
+        output.distance_to_feature =
+                box_half_sizes_along_axes((natural_8_bit)output.coordinate) -
+                point_in_box_local_space((natural_8_bit)output.coordinate)
+                ;
+        return;
+    }
+
+    float_32_bit const  slope[2] = { p(order[1]) / p(order[0]), p(order[2]) / p(order[0]) };
+
     natural_8_bit  feature_kind = 0;  // 0=vertex, 1=edge, 2=face.
-    if (box_half_sizes_along_axes_xyz(order[1]) * p(order[1]) <= (box_half_sizes_along_axes_xyz(order[1]) - D(order[1])) * p(order[0]))
+    if (box_half_sizes_along_axes(order[1]) * slope[0] <= box_half_sizes_along_axes(order[1]) - D(order[1]))
     {
         // So, we proved that the resulting feature can NOT be a vertex.
         ++feature_kind;
     }
-    if (box_half_sizes_along_axes_xyz(order[2]) * p(order[2]) <= (box_half_sizes_along_axes_xyz(order[2]) - D(order[2])) * p(order[1]))
+    if (box_half_sizes_along_axes(order[2]) * slope[1] <= box_half_sizes_along_axes(order[2]) - D(order[2]))
     {
         // So, we proved that the resulting feature can NOT be an edge.
         ++feature_kind;
     }
 
-    return { (COLLISION_SHAPE_FEATURE_TYPE)feature_kind, { (COORDINATE)order[0], p(order[0]) } };
+    output.feature = (COLLISION_SHAPE_FEATURE_TYPE)feature_kind;
+    output.coordinate = (COORDINATE)(feature_kind == 2U ? order[0] : order[2]);
+    output.direction_sign = p(order[0]) >= 0.0f ? 1.0f : -1.0f;
+    output.sum_of_slopes = slope[0] + slope[1];
+    switch (output.feature)
+    {
+    case COLLISION_SHAPE_FEATURE_TYPE::VERTEX:
+        output.feature_vector_in_world_space =
+                point3_from_orthonormal_base(
+                        {
+                            (p(order[0]) >= 0.0f ? 1.0f : -1.0f) * box_half_sizes_along_axes(0),
+                            (p(order[1]) >= 0.0f ? 1.0f : -1.0f) * box_half_sizes_along_axes(1),
+                            (p(order[2]) >= 0.0f ? 1.0f : -1.0f) * box_half_sizes_along_axes(2)
+                        },
+                        box_origin_in_world_space,
+                        *box_axis_in_world_space[0],
+                        *box_axis_in_world_space[1],
+                        *box_axis_in_world_space[2]
+                        );
+        output.distance_to_feature = length(output.feature_vector_in_world_space - point_in_box_local_space);
+        break;
+    case COLLISION_SHAPE_FEATURE_TYPE::EDGE:
+        output.feature_vector_in_world_space = *box_axis_in_world_space[(natural_8_bit)output.coordinate];
+        output.distance_to_feature =
+                length_2d(vector2(box_half_sizes_along_axes(order[0]), box_half_sizes_along_axes(order[1])) -
+                          vector2(point_in_box_local_space(order[0]), point_in_box_local_space(order[1])));
+        break;
+    case COLLISION_SHAPE_FEATURE_TYPE::FACE:
+        output.feature_vector_in_world_space = output.direction_sign * *box_axis_in_world_space[(natural_8_bit)output.coordinate];
+        output.distance_to_feature = output.direction_sign * (box_half_sizes_along_axes((natural_8_bit)output.coordinate) -
+                                                              point_in_box_local_space((natural_8_bit)output.coordinate) );
+        break;
+    default: UNREACHABLE();
+    }
 }
 
 
-vector3  compute_collision_unit_normal_from_contact_point(
+vector3  compute_collision_unit_normal_and_penetration_depth_from_contact_point(
         vector3 const&  common_contact_point_in_world_space,
 
         vector3 const&  box_1_origin_in_world_space,
         vector3 const&  box_1_basis_x_vector_in_world_space,
         vector3 const&  box_1_basis_y_vector_in_world_space,
         vector3 const&  box_1_basis_z_vector_in_world_space,
-        vector3 const&  box_1_min_corner_in_box_space,
-        vector3 const&  box_1_max_corner_in_box_space,
+        vector3 const&  box_1_half_sizes_along_axes,
 
         vector3 const&  box_2_origin_in_world_space,
         vector3 const&  box_2_basis_x_vector_in_world_space,
         vector3 const&  box_2_basis_y_vector_in_world_space,
         vector3 const&  box_2_basis_z_vector_in_world_space,
-        vector3 const&  box_2_min_corner_in_box_space,
-        vector3 const&  box_2_max_corner_in_box_space
+        vector3 const&  box_2_half_sizes_along_axes,
+
+        float_32_bit&  output_penetration_depth,
+        COLLISION_SHAPE_FEATURE_TYPE* const  output_feature_ptr
         )
 {
-    std::pair<COLLISION_SHAPE_FEATURE_TYPE, std::pair<COORDINATE, float_32_bit> > const  props_1 =
-            compute_closest_box_feature_to_a_point(
-                    point3_to_orthonormal_base(
-                            common_contact_point_in_world_space,
-                            box_1_origin_in_world_space,
-                            box_1_basis_x_vector_in_world_space,
-                            box_1_basis_y_vector_in_world_space,
-                            box_1_basis_z_vector_in_world_space
-                            ),
-                    vector3{
-                            0.5f * (box_1_max_corner_in_box_space(0) - box_1_min_corner_in_box_space(0)),
-                            0.5f * (box_1_max_corner_in_box_space(1) - box_1_min_corner_in_box_space(1)),
-                            0.5f * (box_1_max_corner_in_box_space(2) - box_1_min_corner_in_box_space(2)),
-                            },
-                    0.005f
+    vector3 const  point_1 =
+            point3_to_orthonormal_base(
+                    common_contact_point_in_world_space,
+                    box_1_origin_in_world_space,
+                    box_1_basis_x_vector_in_world_space,
+                    box_1_basis_y_vector_in_world_space,
+                    box_1_basis_z_vector_in_world_space
                     );
-    std::pair<COLLISION_SHAPE_FEATURE_TYPE, std::pair<COORDINATE, float_32_bit> > const  props_2 =
-            compute_closest_box_feature_to_a_point(
-                    point3_to_orthonormal_base(
-                            common_contact_point_in_world_space,
-                            box_2_origin_in_world_space,
-                            box_2_basis_x_vector_in_world_space,
-                            box_2_basis_y_vector_in_world_space,
-                            box_2_basis_z_vector_in_world_space
-                            ),
-                    vector3{
-                            0.5f * (box_2_max_corner_in_box_space(0) - box_2_min_corner_in_box_space(0)),
-                            0.5f * (box_2_max_corner_in_box_space(1) - box_2_min_corner_in_box_space(1)),
-                            0.5f * (box_2_max_corner_in_box_space(2) - box_2_min_corner_in_box_space(2)),
-                            },
-                    0.005f
+    closest_box_feature_to_a_point  props_1;
+    compute_closest_box_feature_to_a_point(
+            props_1,
+            point_1,
+            box_1_half_sizes_along_axes,
+            box_1_origin_in_world_space,
+            { &box_1_basis_x_vector_in_world_space, &box_1_basis_y_vector_in_world_space, &box_1_basis_z_vector_in_world_space },
+            0.005f
+            );
+
+    if (props_1.feature == COLLISION_SHAPE_FEATURE_TYPE::FACE)
+    {
+        output_penetration_depth = props_1.distance_to_feature;
+        if (output_feature_ptr != nullptr)
+            *output_feature_ptr = props_1.feature;
+        return props_1.feature_vector_in_world_space;
+    }
+
+    vector3 const  point_2 =
+            point3_to_orthonormal_base(
+                    common_contact_point_in_world_space,
+                    box_2_origin_in_world_space,
+                    box_2_basis_x_vector_in_world_space,
+                    box_2_basis_y_vector_in_world_space,
+                    box_2_basis_z_vector_in_world_space
                     );
+    closest_box_feature_to_a_point  props_2;
+    compute_closest_box_feature_to_a_point(
+            props_2,
+            point_2,
+            box_2_half_sizes_along_axes,
+            box_2_origin_in_world_space,
+            { &box_2_basis_x_vector_in_world_space, &box_2_basis_y_vector_in_world_space, &box_2_basis_z_vector_in_world_space },
+            0.005f
+            );
 
-    // TODO!
+    if (props_2.feature == COLLISION_SHAPE_FEATURE_TYPE::FACE)
+    {
+        output_penetration_depth = props_2.distance_to_feature;
+        if (output_feature_ptr != nullptr)
+            *output_feature_ptr = props_2.feature;
+        return -props_2.feature_vector_in_world_space;
+    }
 
-    NOT_IMPLEMENTED_YET();
+    if (props_1.feature == COLLISION_SHAPE_FEATURE_TYPE::EDGE && props_2.feature == COLLISION_SHAPE_FEATURE_TYPE::EDGE)
+    {
+        output_penetration_depth = std::max(props_1.distance_to_feature, props_2.distance_to_feature);
+        if (output_feature_ptr != nullptr)
+            *output_feature_ptr = props_1.feature;
+        vector3  normal = cross_product(props_1.feature_vector_in_world_space, props_2.feature_vector_in_world_space);
+        if (dot_product(normal, common_contact_point_in_world_space - box_1_origin_in_world_space) < 0.0f)
+            normal = -normal;
+        return normalised(normal);
+    }
+
+    output_penetration_depth = std::max(props_1.distance_to_feature, props_2.distance_to_feature);
+    if (output_feature_ptr != nullptr)
+        *output_feature_ptr = COLLISION_SHAPE_FEATURE_TYPE::VERTEX;
+    return normalised(box_2_origin_in_world_space - box_1_origin_in_world_space);
 }
 
 
@@ -2031,23 +2132,20 @@ bool  collision_box_box(
         vector3 const&  box_1_basis_x_vector_in_world_space,
         vector3 const&  box_1_basis_y_vector_in_world_space,
         vector3 const&  box_1_basis_z_vector_in_world_space,
-        vector3 const&  box_1_min_corner_in_box_space,
-        vector3 const&  box_1_max_corner_in_box_space,
+        vector3 const&  box_1_half_sizes_along_axes,
 
         vector3 const&  box_2_origin_in_world_space,
         vector3 const&  box_2_basis_x_vector_in_world_space,
         vector3 const&  box_2_basis_y_vector_in_world_space,
         vector3 const&  box_2_basis_z_vector_in_world_space,
-        vector3 const&  box_2_min_corner_in_box_space,
-        vector3 const&  box_2_max_corner_in_box_space,
+        vector3 const&  box_2_half_sizes_along_axes,
 
         vector3* const  ouptut_collision_plane_unit_normal_in_world_space,
-        std::vector<vector3>* const  output_collision_plane_points_in_world_space
+        std::vector<vector3>* const  output_collision_points_in_world_space,
+        std::vector<float_32_bit>* const  output_penetration_depths_of_collision_points
         )
 {
     TMPROF_BLOCK();
-
-    ASSUMPTION(output_collision_plane_points_in_world_space == nullptr || ouptut_collision_plane_unit_normal_in_world_space != nullptr);
 
     std::vector<std::vector<vector2> >  box_1_polygons;
     std::vector<matrix44>  box_1_to_polygon_space_matrices;
@@ -2058,8 +2156,7 @@ bool  collision_box_box(
             box_1_basis_x_vector_in_world_space,
             box_1_basis_y_vector_in_world_space,
             box_1_basis_z_vector_in_world_space,
-            box_1_min_corner_in_box_space,
-            box_1_max_corner_in_box_space,
+            box_1_half_sizes_along_axes,
             box_1_polygons,
             box_1_to_polygon_space_matrices,
             box_1_from_polygon_space_matrices,
@@ -2076,8 +2173,7 @@ bool  collision_box_box(
             box_2_basis_x_vector_in_world_space,
             box_2_basis_y_vector_in_world_space,
             box_2_basis_z_vector_in_world_space,
-            box_2_min_corner_in_box_space,
-            box_2_max_corner_in_box_space,
+            box_2_half_sizes_along_axes,
             box_2_polygons,
             box_2_to_polygon_space_matrices,
             box_2_from_polygon_space_matrices,
@@ -2133,6 +2229,8 @@ bool  collision_box_box(
         return false;
 
     vector3  mass_center_of_collision_points;
+    float_32_bit  mass_centre_penetration_depth;
+    bool  is_face_collision_type;
 
     if (ouptut_collision_plane_unit_normal_in_world_space != nullptr)
     {
@@ -2141,33 +2239,60 @@ bool  collision_box_box(
             mass_center_of_collision_points += p;
         mass_center_of_collision_points /= (float_32_bit)raw_collision_points.size();
 
-        *ouptut_collision_plane_unit_normal_in_world_space = compute_collision_unit_normal_from_contact_point(
-                mass_center_of_collision_points,
-                box_1_origin_in_world_space,
-                box_1_basis_x_vector_in_world_space,
-                box_1_basis_y_vector_in_world_space,
-                box_1_basis_z_vector_in_world_space,
-                box_1_min_corner_in_box_space,
-                box_1_max_corner_in_box_space,
-                box_2_origin_in_world_space,
-                box_2_basis_x_vector_in_world_space,
-                box_2_basis_y_vector_in_world_space,
-                box_2_basis_z_vector_in_world_space,
-                box_2_min_corner_in_box_space,
-                box_2_max_corner_in_box_space
-                );
+        COLLISION_SHAPE_FEATURE_TYPE  feature;
+        *ouptut_collision_plane_unit_normal_in_world_space =
+                compute_collision_unit_normal_and_penetration_depth_from_contact_point(
+                        mass_center_of_collision_points,
+                        box_1_origin_in_world_space,
+                        box_1_basis_x_vector_in_world_space,
+                        box_1_basis_y_vector_in_world_space,
+                        box_1_basis_z_vector_in_world_space,
+                        box_1_half_sizes_along_axes,
+                        box_2_origin_in_world_space,
+                        box_2_basis_x_vector_in_world_space,
+                        box_2_basis_y_vector_in_world_space,
+                        box_2_basis_z_vector_in_world_space,
+                        box_2_half_sizes_along_axes,
+                        mass_centre_penetration_depth,
+                        &feature
+                        );
+        is_face_collision_type = feature == COLLISION_SHAPE_FEATURE_TYPE::FACE;
+
+        INVARIANT(mass_centre_penetration_depth > 0.0f);
     }
 
-    if (output_collision_plane_points_in_world_space != nullptr)
+    if (output_collision_points_in_world_space != nullptr)
     {
-        std::unordered_set<vector3, tensor_hash<vector3, 1000U>, tensor_equal_to<vector3, 1000U> >  collision_points;
-        for (vector3 const& p : raw_collision_points)
-            collision_points.insert(
-                p - project_to_unit_vector(p - mass_center_of_collision_points, *ouptut_collision_plane_unit_normal_in_world_space)
-                );
-        output_collision_plane_points_in_world_space->clear();
-        for (vector3 const&  p : collision_points)
-            output_collision_plane_points_in_world_space->push_back(p);
+        ASSUMPTION(ouptut_collision_plane_unit_normal_in_world_space != nullptr);
+
+        if (is_face_collision_type)
+        {
+            std::unordered_map<vector3, float_32_bit, tensor_hash<vector3, 1000U>, tensor_equal_to<vector3, 1000U> >  collision_points;
+            for (vector3 const& p : raw_collision_points)
+            {
+                float_32_bit  depth;
+                vector3 const  normal_shift =
+                        project_to_unit_vector(
+                                p - mass_center_of_collision_points,
+                                *ouptut_collision_plane_unit_normal_in_world_space,
+                                depth
+                                );
+                collision_points.insert({ p - normal_shift, depth });
+            }
+            for (auto const&  point_and_depth : collision_points)
+                if (mass_centre_penetration_depth + point_and_depth.second > 0.0f)
+                {
+                    output_collision_points_in_world_space->push_back(point_and_depth.first);
+                    if (output_penetration_depths_of_collision_points != nullptr)
+                        output_penetration_depths_of_collision_points->push_back(mass_centre_penetration_depth + point_and_depth.second);
+                }
+        }
+        else
+        {
+            output_collision_points_in_world_space->push_back(mass_center_of_collision_points);
+            if (output_penetration_depths_of_collision_points != nullptr)
+                output_penetration_depths_of_collision_points->push_back(mass_centre_penetration_depth);
+        }
     }
 
     return true;

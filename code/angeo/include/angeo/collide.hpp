@@ -473,6 +473,60 @@ POINT_SET_TYPE  clip_polygon(
         );
 
 
+void  express_box_in_terms_of_its_faces(
+        vector3 const&  origin_in_world_space,
+        vector3 const&  basis_x_vector_in_world_space,
+        vector3 const&  basis_y_vector_in_world_space,
+        vector3 const&  basis_z_vector_in_world_space,
+        vector3 const&  half_sizes_along_axes,
+
+        std::vector<std::vector<vector2> >&  output_polygons,   // INVARIANT: output_polygons.size() == 6 && foreach i : output_polygons.at(i).size() == 5
+        std::vector<matrix44>&  output_to_polygon_space_matrices,   // INVARIANT: output_to_polygon_space_matrices.size() == 6
+        std::vector<matrix44>&  output_from_polygon_space_matrices, // INVARIANT: output_from_polygon_space_matrices.size() == 6
+        std::vector< std::pair<vector3 const*, vector3> >* const  output_origins_and_unit_normals_in_world_space,   // INVARIANT: output_origins_and_unit_normals_in_world_space.size() == 6
+        bool const  normals_should_point_outside_the_box    // Whther the normals in 'output_origins_and_unit_normals_in_world_space' should point from the box or into the box.
+        );
+
+
+vector3  compute_collision_unit_normal_and_penetration_depth_from_contact_point(
+        vector3 const&  common_contact_point_in_world_space,
+
+        vector3 const&  box_1_origin_in_world_space,
+        vector3 const&  box_1_basis_x_vector_in_world_space,
+        vector3 const&  box_1_basis_y_vector_in_world_space,
+        vector3 const&  box_1_basis_z_vector_in_world_space,
+        vector3 const&  box_1_half_sizes_along_axes,
+
+        vector3 const&  box_2_origin_in_world_space,
+        vector3 const&  box_2_basis_x_vector_in_world_space,
+        vector3 const&  box_2_basis_y_vector_in_world_space,
+        vector3 const&  box_2_basis_z_vector_in_world_space,
+        vector3 const&  box_2_half_sizes_along_axes,
+
+        float_32_bit&  output_penetration_depth,
+        COLLISION_SHAPE_FEATURE_TYPE* const  output_feature_ptr
+        );
+
+
+bool  collision_box_box(
+        vector3 const&  box_1_origin_in_world_space,
+        vector3 const&  box_1_basis_x_vector_in_world_space,
+        vector3 const&  box_1_basis_y_vector_in_world_space,
+        vector3 const&  box_1_basis_z_vector_in_world_space,
+        vector3 const&  box_1_half_sizes_along_axes,
+
+        vector3 const&  box_2_origin_in_world_space,
+        vector3 const&  box_2_basis_x_vector_in_world_space,
+        vector3 const&  box_2_basis_y_vector_in_world_space,
+        vector3 const&  box_2_basis_z_vector_in_world_space,
+        vector3 const&  box_2_half_sizes_along_axes,
+
+        vector3* const  ouptut_collision_plane_unit_normal_in_world_space,
+        std::vector<vector3>* const  output_collision_points_in_world_space,
+        std::vector<float_32_bit>* const  output_penetration_depths_of_collision_points
+        );
+
+
 }
 
 #endif
