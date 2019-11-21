@@ -78,8 +78,8 @@ agent::~agent()
 
     // The release order of agent's modules is important and mandatory.
     get_blackboard()->m_cortex = nullptr;
-    get_blackboard()->m_sensory_controller = nullptr;
     get_blackboard()->m_action_controller = nullptr;
+    get_blackboard()->m_sensory_controller = nullptr;
 }
 
 
