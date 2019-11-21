@@ -488,6 +488,32 @@ void  express_box_in_terms_of_its_faces(
         );
 
 
+inline void  express_box_in_terms_of_its_faces(
+        vector3 const&  half_sizes_along_axes,
+
+        std::vector<std::vector<vector2> >&  output_polygons,   // INVARIANT: output_polygons.size() == 6 && foreach i : output_polygons.at(i).size() == 5
+        std::vector<matrix44>&  output_to_polygon_space_matrices,   // INVARIANT: output_to_polygon_space_matrices.size() == 6
+        std::vector<matrix44>&  output_from_polygon_space_matrices, // INVARIANT: output_from_polygon_space_matrices.size() == 6
+        std::vector< std::pair<vector3 const*, vector3> >* const  output_origins_and_unit_normals_in_world_space,   // INVARIANT: output_origins_and_unit_normals_in_world_space.size() == 6
+        bool const  normals_should_point_outside_the_box    // Whther the normals in 'output_origins_and_unit_normals_in_world_space' should point from the box or into the box.
+        )
+{
+    express_box_in_terms_of_its_faces(
+            vector3_zero(),
+            vector3_unit_x(),
+            vector3_unit_y(),
+            vector3_unit_z(),
+            half_sizes_along_axes,
+
+            output_polygons,
+            output_to_polygon_space_matrices,
+            output_from_polygon_space_matrices,
+            output_origins_and_unit_normals_in_world_space,
+            normals_should_point_outside_the_box
+            );
+}
+
+
 vector3  compute_collision_unit_normal_and_penetration_depth_from_contact_point(
         vector3 const&  common_contact_point_in_world_space,
 
