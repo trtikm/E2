@@ -19,7 +19,13 @@ struct  cortex
 
     blackboard_ptr  get_blackboard() const { return m_blackboard.lock(); }
 
+    // For initialisation steps which cannot be performed/completed in a constructor.
     virtual void  initialise();
+
+    // Any overriden method is required to update the following fields in each call:
+    //      cortex::m_motion_desire_props
+    //      cortex::m_ranks_of_motion_actions
+    //      cortex::m_look_at_target_in_local_space
     virtual void  next_round(float_32_bit const  time_step_in_seconds);
 
     // Services for the action controller:
@@ -35,6 +41,7 @@ protected:
     void  set_stationary_ranks_of_motion_actions();
     void  set_indifferent_look_at_target();
 
+    // The three fileds below have to be updated in each call to the method 'next_round', including any of its overrides:
     detail::motion_desire_props  m_motion_desire_props;
     std::unordered_map<std::string, float_32_bit>  m_ranks_of_motion_actions;
     vector3  m_look_at_target_in_local_space;
