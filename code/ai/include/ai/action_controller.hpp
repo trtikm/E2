@@ -35,6 +35,8 @@ struct  action_controller
     virtual void  initialise() {}
     virtual void  next_round(float_32_bit const  time_step_in_seconds);
 
+    void  synchronise_motion_object_motion_with_scene();
+
     blackboard_ptr  get_blackboard() const { return m_blackboard.lock(); }
 
     scene::node_id const& get_motion_object_node_id() const { return m_motion_object_motion.nid; }
@@ -47,6 +49,8 @@ struct  action_controller
     vector3 const&  get_ideal_angular_velocity_in_world_space() const { return m_ideal_angular_velocity_in_world_space; }
     skeletal_motion_templates::free_bones_for_look_at_ptr  get_free_bones_for_look_at() const { return m_current_intepolation_state.free_bones_look_at; }
 
+    float_32_bit  compute_interpolation_speed() const;
+
 protected:
 
     detail::rigid_body_motion  m_motion_object_motion;
@@ -54,7 +58,6 @@ protected:
 
 private:
 
-    float_32_bit  compute_interpolation_speed() const;
     void  interpolate(float_32_bit const  interpolation_param);
     void  look_at_target(float_32_bit const  time_step_in_seconds, float_32_bit const  interpolation_param);
 

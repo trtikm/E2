@@ -87,6 +87,10 @@ void  agent::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
+    // We need to synchronise motion object (located in the action controller) with the scene
+    // as it can be used by any controllers in their next_round functions.
+    get_blackboard()->m_action_controller->synchronise_motion_object_motion_with_scene();
+
     // The update order of agent's modules is important and mandatory.
     get_blackboard()->m_sensory_controller->next_round(time_step_in_seconds);
     get_blackboard()->m_cortex->next_round(time_step_in_seconds);

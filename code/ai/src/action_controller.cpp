@@ -113,19 +113,6 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
-    m_motion_object_motion.update_frame_with_forward_and_up_directions(get_blackboard()->m_scene, get_blackboard()->m_motion_templates.directions());
-    m_motion_object_motion.update_linear_velocity(get_blackboard()->m_scene);
-    m_motion_object_motion.update_angular_velocity(get_blackboard()->m_scene);
-    m_gravity_acceleration = get_blackboard()->m_scene->get_gravity_acceleration_at_point(m_motion_object_motion.frame.origin());
-
-    // We clear all forces the agent introduced in the previous frame.
-    m_motion_object_motion.set_linear_acceleration(m_gravity_acceleration);
-    m_motion_object_motion.set_angular_acceleration(vector3_zero());
-    m_motion_object_motion.commit_accelerations(get_blackboard()->m_scene, m_motion_object_motion.nid);
-
-    // Synchronise agent's position in the world space according to its motion object in the previous time step
-    m_motion_object_motion.commit_frame(get_blackboard()->m_scene, get_blackboard()->m_agent_nid);
-
     float_32_bit const  interpolation_time_step_in_seconds = compute_interpolation_speed() * time_step_in_seconds;
 
     if (m_consumed_time_in_seconds + interpolation_time_step_in_seconds >= m_total_interpolation_time_in_seconds)
@@ -230,8 +217,26 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
                 m_motion_object_motion,
                 m_motion_action_data
                 );
-        m_motion_object_motion.commit_accelerations(get_blackboard()->m_scene, m_motion_object_motion.nid);
     }
+    m_motion_object_motion.commit_accelerations(get_blackboard()->m_scene, m_motion_object_motion.nid);
+}
+
+
+void  action_controller::synchronise_motion_object_motion_with_scene()
+{
+    TMPROF_BLOCK();
+
+    m_motion_object_motion.update_frame_with_forward_and_up_directions(get_blackboard()->m_scene, get_blackboard()->m_motion_templates.directions());
+    m_motion_object_motion.update_linear_velocity(get_blackboard()->m_scene);
+    m_motion_object_motion.update_angular_velocity(get_blackboard()->m_scene);
+    m_gravity_acceleration = get_blackboard()->m_scene->get_gravity_acceleration_at_point(m_motion_object_motion.frame.origin());
+
+    // We clear all forces the agent introduced in the previous frame.
+    m_motion_object_motion.set_linear_acceleration(m_gravity_acceleration);
+    m_motion_object_motion.set_angular_acceleration(vector3_zero());
+
+    // Synchronise agent's position in the world space according to its motion object in the previous time step
+    m_motion_object_motion.commit_frame(get_blackboard()->m_scene, get_blackboard()->m_agent_nid);
 }
 
 
