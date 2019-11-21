@@ -25,6 +25,7 @@ struct blackboard
     using  collision_contacts_map = std::unordered_multimap<scene::node_id, scene::collicion_contant_info>;
 
     virtual ~blackboard();
+    bool are_all_modules_released() const;
 
     skeletal_motion_templates  m_motion_templates;
 

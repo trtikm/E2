@@ -1,17 +1,18 @@
 #include <ai/blackboard.hpp>
-#include <utility/invariants.hpp>
+#include <cassert>
 
 namespace ai {
 
 
 blackboard::~blackboard()
 {
-    // Check that modules were released from the agent.
-    INVARIANT(
-        m_cortex == nullptr &&
-        m_sensory_controller == nullptr &&
-        m_action_controller == nullptr
-        ); 
+    assert(are_all_modules_released()); 
+}
+
+
+bool  blackboard::are_all_modules_released() const
+{
+    return m_cortex == nullptr && m_sensory_controller == nullptr && m_action_controller == nullptr;
 }
 
 
