@@ -109,7 +109,7 @@ bool  get_satisfied_motion_guarded_actions(
             else if (auto constraint_ptr =
                     std::dynamic_pointer_cast<skeletal_motion_templates::constraint_desired_forward_vector_inside_cone const>(any_constraint_ptr))
             {
-                return angle(transform_vector(constraint_ptr->unit_axis, W), desire.forward_unit_vector_in_world_space) <= constraint_ptr->angle_in_radians;
+                return angle(constraint_ptr->unit_axis, desire.forward_unit_vector_in_local_space) <= constraint_ptr->angle_in_radians;
             }
             else if (auto constraint_ptr =
                 std::dynamic_pointer_cast<skeletal_motion_templates::constraint_always const>(any_constraint_ptr))
@@ -166,6 +166,8 @@ void  execute_satisfied_motion_guarded_actions(
 
     motion_action_persistent_data_map  new_motion_action_data;
 
+    matrix44 W;
+    angeo::from_base_matrix(motion_object_motion.frame, W);
     for (auto const actions_ptr : satisfied_guarded_actions)
         for (auto const action_props : actions_ptr->actions)
             if (action_props == nullptr || std::dynamic_pointer_cast<skeletal_motion_templates::action_none const>(action_props) != nullptr)
@@ -192,7 +194,7 @@ void  execute_satisfied_motion_guarded_actions(
                         angeo::compute_rotation_angle(
                                 motion_object_motion.up,
                                 motion_object_motion.forward,
-                                desire.linear_velocity_unit_direction_in_world_space
+                                transform_vector(desire.linear_velocity_unit_direction_in_local_space, W)
                                 );
             
                 float_32_bit  desired_angular_velocity_magnitude = rot_angle / time_step_in_seconds;
@@ -395,42 +397,6 @@ std::unordered_set<std::string> const&  get_all_action_unique_names()
         skeletal_motion_templates::action_cancel_gravity_accel::unique_name,
     };
     return  action_names;
-}
-
-
-float_32_bit  get_stationary_rank(std::string const&  action_unique_name)
-{
-    static std::unordered_map<std::string, float_32_bit> const  from_action_names_to_rakns{
-        {skeletal_motion_templates::action_none::unique_name, 0.0f},
-        {skeletal_motion_templates::action_move_forward_with_ideal_speed::unique_name, 0.2f },
-        {skeletal_motion_templates::action_rotate_forward_vector_towards_desired_linear_velocity::unique_name, 0.1f},
-        {skeletal_motion_templates::action_turn_around::unique_name, 10.0f},
-        {skeletal_motion_templates::action_dont_move::unique_name, 2000.0f},
-        {skeletal_motion_templates::action_dont_rotate::unique_name, 1000.0f},
-        {skeletal_motion_templates::action_set_linear_velocity::unique_name, 2.0f},
-        {skeletal_motion_templates::action_set_angular_velocity::unique_name, 1.0f},
-        {skeletal_motion_templates::action_cancel_gravity_accel::unique_name, 0.3f},
-    };
-    return  from_action_names_to_rakns.at(action_unique_name);
-}
-
-
-float_32_bit  get_stationary_rank(skeletal_motion_templates::action const&  action)
-{
-    return  get_stationary_rank(action.get_unique_name());
-}
-
-
-float_32_bit  get_stationary_rank(skeletal_motion_templates::disjunction_of_guarded_actions const&  guarded_actions)
-{
-    TMPROF_BLOCK();
-
-    float_32_bit  rank = 0.0f;
-    for (auto const  guarded_actions_ptr : guarded_actions)
-        for (auto const  action_ptr : guarded_actions_ptr->actions)
-            rank += get_stationary_rank(*action_ptr);
-
-    return rank;
 }
 
 

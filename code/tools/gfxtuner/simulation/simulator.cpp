@@ -883,11 +883,12 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                 ai::blackboard_const_ptr const  blackboard = m_agents_ptr->at(agent_id_and_node_id.first).get_blackboard();
 
                 scn::scene_node_ptr const  node_ptr = get_scene_node(blackboard->m_action_controller->get_motion_object_node_id());
+
+                matrix44  motion_object_from_base_matrix;
+                angeo::from_base_matrix(*node_ptr->get_coord_system(), motion_object_from_base_matrix);
+
                 if (auto const  rb_ptr = scn::get_rigid_body(*node_ptr))
                 {
-                    matrix44  motion_object_from_base_matrix;
-                    angeo::from_base_matrix(*node_ptr->get_coord_system(), motion_object_from_base_matrix);
-
                     vector3 const  motion_object_forward_direction_in_world_space =
                         transform_vector(blackboard->m_motion_templates.directions().forward(), motion_object_from_base_matrix);
                     vector3 const  motion_object_up_direction_in_world_space =
@@ -923,14 +924,16 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                 m_cache_of_batches_of_ai_agents.lines->first.push_back({
                         node_ptr->get_coord_system()->origin() + 0.005f * vector3_unit_z(),
                         node_ptr->get_coord_system()->origin() + 0.005f * vector3_unit_z()
-                            + blackboard->m_cortex->get_motion_desire_props().forward_unit_vector_in_world_space
+                            + transform_vector(blackboard->m_cortex->get_motion_desire_props().forward_unit_vector_in_local_space,
+                                               motion_object_from_base_matrix)
                         });
                 m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 1.0f, 1.0f, 1.0f}); // WHITE
 
                 m_cache_of_batches_of_ai_agents.lines->first.push_back({
                         node_ptr->get_coord_system()->origin() + 0.0075f * vector3_unit_z(),
                         node_ptr->get_coord_system()->origin() + 0.0075f * vector3_unit_z()
-                            + 0.75f * blackboard->m_cortex->get_motion_desire_props().linear_velocity_unit_direction_in_world_space
+                            + 0.75f * transform_vector(blackboard->m_cortex->get_motion_desire_props().linear_velocity_unit_direction_in_local_space,
+                                                       motion_object_from_base_matrix)
                         });
                 m_cache_of_batches_of_ai_agents.lines->second.push_back({1.0f, 0.5f, 1.0f, 1.0f}); // PINK
 
@@ -938,7 +941,8 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
                         node_ptr->get_coord_system()->origin() + 0.01f * vector3_unit_z(),
                         node_ptr->get_coord_system()->origin() + 0.01f * vector3_unit_z()
                             + blackboard->m_cortex->get_motion_desire_props().linear_speed
-                                * blackboard->m_cortex->get_motion_desire_props().linear_velocity_unit_direction_in_world_space
+                                * transform_vector(blackboard->m_cortex->get_motion_desire_props().linear_velocity_unit_direction_in_local_space,
+                                                   motion_object_from_base_matrix)
                         });
                 m_cache_of_batches_of_ai_agents.lines->second.push_back({0.75f, 0.25f, 0.75f, 1.0f}); // PURPLE
 

@@ -1,6 +1,6 @@
 #include <ai/agent.hpp>
 #include <ai/cortex.hpp>
-#include <ai/cortex_mock_human.hpp>
+#include <ai/cortex_mock.hpp>
 #include <ai/cortex_robot_humanoid.hpp>
 #include <ai/sensory_controller.hpp>
 #include <ai/sensory_controller_ray_cast_sight.hpp>
@@ -20,7 +20,7 @@ blackboard_ptr  agent::create_blackboard(AGENT_KIND const  agent_kind)
 
     switch (agent_kind)
     {
-    case AGENT_KIND::MOCK_HUMAN:
+    case AGENT_KIND::MOCK:
     case AGENT_KIND::ROBOT_HUMANOID:
         return std::make_shared<blackboard>();
     default:
@@ -35,8 +35,8 @@ void  agent::create_modules(blackboard_ptr const  bb, input_devices_ptr const  i
 
     switch (bb->m_agent_kind)
     {
-    case AGENT_KIND::MOCK_HUMAN:
-        bb->m_cortex = std::make_shared<cortex_mock_human>(bb, idev);
+    case AGENT_KIND::MOCK:
+        bb->m_cortex = std::make_shared<cortex_mock>(bb, idev);
         bb->m_sensory_controller = std::make_shared<sensory_controller>(bb, std::make_shared<sensory_controller_sight>(bb,
                 sensory_controller_sight::camera_config()));
         bb->m_action_controller = std::make_shared<action_controller>(bb);

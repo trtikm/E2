@@ -7,6 +7,7 @@
 #   include <qtgl/keyframe.hpp>
 #   include <qtgl/modelspace.hpp>
 #   include <utility/async_resource_load.hpp>
+#   include <boost/property_tree/ptree.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <unordered_map>
 #   include <string>
@@ -634,22 +635,55 @@ struct  anim_space_directions : public async::resource_accessor<anim_space_direc
 namespace ai { namespace detail {
 
 
+using  keyframe = qtgl::keyframe;
+using  keyframes = qtgl::keyframes;
+
+struct  motion_template
+{
+    keyframes  keyframes;
+    meta::reference_frames  reference_frames;
+    meta::mass_distributions  mass_distributions;
+    meta::colliders  colliders;
+    meta::motion_actions  actions;
+	meta::free_bones  free_bones;
+};
+
+
+}}
+
+namespace ai { namespace detail {
+
+
 struct  motion_template_transitions_data
 {
     explicit motion_template_transitions_data(async::finalise_load_on_destroy_ptr const  finaliser);
     ~motion_template_transitions_data();
 
-    using  transitions_graph = std::unordered_multimap<motion_template_cursor, std::pair<motion_template_cursor, float_32_bit>, motion_template_cursor::hasher>;
+    using  property_tree = boost::property_tree::ptree;
 
-    transitions_graph  data;
+    struct  transition_info
+    {
+        motion_template_cursor  cursor;
+        float_32_bit  time_in_seconds;
+        property_tree const*  guard;
+        property_tree const*  desire;
+    };
+
+    void  find_targets(
+            motion_template_cursor const&  cursor,
+            std::unordered_map<std::string, motion_template> const&  motions_map,
+            std::vector<transition_info>&  output
+            ) const;
+    void  __check_loaded_data__(std::unordered_map<std::string, motion_template> const&  motions_map) const;
+
+    property_tree  data;
+    std::unordered_map<std::string, property_tree const*>  data_lookup;
+    property_tree  mock;
     std::string  initial_motion_name;
 };
 
 struct  motion_template_transitions : public async::resource_accessor<motion_template_transitions_data>
 {
-    using  transitions_graph = motion_template_transitions_data::transitions_graph;
-    using  target_motions_range = std::pair<transitions_graph::const_iterator, transitions_graph::const_iterator>;
-
     motion_template_transitions() : async::resource_accessor<motion_template_transitions_data>() {}
     motion_template_transitions(
         boost::filesystem::path const&  path,
@@ -663,10 +697,22 @@ struct  motion_template_transitions : public async::resource_accessor<motion_tem
             )
     {}
 
-    transitions_graph const&  data() const { return resource().data; }
+    using  transition_info = motion_template_transitions_data::transition_info;
+    using  property_tree = motion_template_transitions_data::property_tree;
+
     std::string const&  initial_motion_name() const { return resource().initial_motion_name; }
-    target_motions_range  find_targets(motion_template_cursor const&  cursor) const { return data().equal_range(cursor); }
-    bool  has_targets(motion_template_cursor const& cursor) const { auto const x = data().equal_range(cursor); return x.first != x.second; }
+
+    void  find_targets(
+            motion_template_cursor const&  cursor,
+            std::unordered_map<std::string, motion_template> const&  motions_map,
+            std::vector<transition_info>&  output
+            ) const
+    { resource().find_targets(cursor, motions_map, output); }
+
+    property_tree const&  get_transitions_mock() const { return resource().mock; }
+
+    void  __check_loaded_data__(std::unordered_map<std::string, motion_template> const&  motions_map) const
+    { resource().__check_loaded_data__(motions_map); }
 };
 
 
@@ -677,25 +723,11 @@ namespace ai { namespace detail {
 
 struct  skeletal_motion_templates_data
 {
-    using  keyframe = qtgl::keyframe;
-    using  keyframes = qtgl::keyframes;
     using  modelspace = qtgl::modelspace; 
 
     using  guarded_actions_ptr = detail::meta::guarded_actions_ptr;
     using  action_ptr = detail::meta::action_ptr;
     using  disjunction_of_guarded_actions = detail::meta::motion_actions::disjunction_of_guarded_actions;
-
-    using  cursor_and_transition_time = std::pair<motion_template_cursor, float_32_bit>;
-
-    struct  motion_template
-    {
-        keyframes  keyframes;
-        meta::reference_frames  reference_frames;
-        meta::mass_distributions  mass_distributions;
-        meta::colliders  colliders;
-        meta::motion_actions  actions;
-		meta::free_bones  free_bones;
-    };
 
     modelspace  pose_frames;
     bone_names  names;
@@ -708,27 +740,11 @@ struct  skeletal_motion_templates_data
     // NOTE: The two vectors below should also represent forward and up directions in each meta-reference-frame of each keyframe.
     anim_space_directions  directions;
 
-    motion_template_transitions  transitions;
-
     std::unordered_map<std::string, motion_template>  motions_map;
+    motion_template_transitions  transitions;
 
     explicit skeletal_motion_templates_data(async::finalise_load_on_destroy_ptr const  finaliser);
     ~skeletal_motion_templates_data();
-
-    natural_32_bit  get_outdegree_of_keyframe(motion_template_cursor const&  cursor) const;
-    bool  is_branching_keyframe(motion_template_cursor const&  cursor) const;
-    void  get_successor_keyframes(
-            motion_template_cursor const& cursor,
-            std::vector<std::pair<motion_template_cursor /* target_cursor */, float_32_bit /* transition_time */> >&  output
-                    // Whenever '{ cursor.motion_name, cursor.keyframe_index + 1 }' is a valid cursor, then it will always be
-                    // the cursor 'output.front().first'.
-            ) const;
-    void  for_each_successor_keyframe(
-            motion_template_cursor const&  cursor,
-            std::function<bool(motion_template_cursor const& /* target_cursor */, float_32_bit /* transition_time */)> const&  callback
-                    // Whenever '{ cursor.motion_name, cursor.keyframe_index + 1 }' is a valid cursor, then it will always be
-                    // passed in the first call of the 'callback' function.
-            ) const;
 };
 
 
@@ -757,10 +773,12 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
 
     using  motion_template_cursor = detail::motion_template_cursor;
 
-    using  keyframe = detail::skeletal_motion_templates_data::keyframe;
-    using  keyframes = detail::skeletal_motion_templates_data::keyframes;
+    using  keyframe = detail::keyframe;
+    using  keyframes = detail::keyframes;
     using  modelspace = detail::skeletal_motion_templates_data::modelspace;
-    using  cursor_and_transition_time = detail::skeletal_motion_templates_data::cursor_and_transition_time;
+
+    using  transition_info = detail::motion_template_transitions::transition_info;
+    using  property_tree = detail::motion_template_transitions_data::property_tree;
 
     using  bone_names = detail::bone_names;
     using  bone_hierarchy = detail::bone_hierarchy;
@@ -769,10 +787,8 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
 	using  anim_space_directions = detail::anim_space_directions;
 
     using  motion_template_transitions = detail::motion_template_transitions;
-    using  transitions_graph = motion_template_transitions::transitions_graph;
-    using  target_motions_range = motion_template_transitions::target_motions_range;
 
-    using  motion_template = detail::skeletal_motion_templates_data::motion_template;
+    using  motion_template = detail::motion_template;
 
     using  guarded_actions_ptr = detail::skeletal_motion_templates_data::guarded_actions_ptr;
     using  action_ptr = detail::skeletal_motion_templates_data::action_ptr;
@@ -813,27 +829,15 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     bone_lengths  lengths() const { return resource().lengths; }
 	bone_joints  joints() const { return resource().joints; }
 	anim_space_directions  directions() const { return resource().directions; }
-    motion_template_transitions  transitions() const { return resource().transitions; }
 
     std::unordered_map<std::string, motion_template> const&  motions_map() const { return resource().motions_map; }
     motion_template const&  at(std::string const&  motion_name) const { return motions_map().at(motion_name); }
+    motion_template_transitions  transitions() const { return resource().transitions; }
 
-    natural_32_bit  get_outdegree_of_keyframe(motion_template_cursor const&  cursor) const { return resource().get_outdegree_of_keyframe(cursor); }
-    bool  is_branching_keyframe(motion_template_cursor const&  cursor) const { return resource().is_branching_keyframe(cursor); }
-    void  get_successor_keyframes(
-            motion_template_cursor const& cursor,
-            std::vector<cursor_and_transition_time>&  output
-            ) const
-    {
-        resource().get_successor_keyframes(cursor, output);
-    }
-    void  for_each_successor_keyframe(
-            motion_template_cursor const&  cursor,
-            std::function<bool(motion_template_cursor const& /* target_cursor */, float_32_bit /* transition_time */)> const&  callback
-            ) const
-    {
-        resource().for_each_successor_keyframe(cursor, callback); 
-    }
+    void  get_successor_keyframes(motion_template_cursor const& cursor, std::vector<transition_info>&  output) const
+    { transitions().find_targets(cursor, motions_map(), output); }
+
+    property_tree const&  get_transitions_mock() const { return transitions().get_transitions_mock(); }
 };
 
 

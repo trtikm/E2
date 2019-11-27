@@ -3,7 +3,7 @@
 
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <ai/detail/rigid_body_motion.hpp>
-#   include <ai/detail/motion_desire_props.hpp>
+#   include <ai/motion_desire_props.hpp>
 #   include <ai/blackboard.hpp>
 #   include <ai/scene.hpp>
 #   include <angeo/tensor_math.hpp>
@@ -70,11 +70,6 @@ void  compute_importance_of_ideal_velocities_to_guarded_actions(
 
 
 std::unordered_set<std::string> const&  get_all_action_unique_names();
-
-
-float_32_bit  get_stationary_rank(std::string const&  action_unique_name);
-float_32_bit  get_stationary_rank(skeletal_motion_templates::action const&  action);
-float_32_bit  get_stationary_rank(skeletal_motion_templates::disjunction_of_guarded_actions const&  guarded_actions);
 
 
 }}

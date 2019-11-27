@@ -4,7 +4,7 @@
 #   include <ai/cortex.hpp>
 #   include <ai/blackboard.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
-#   include <ai/detail/motion_desire_props.hpp>
+#   include <ai/motion_desire_props.hpp>
 #   include <ai/env/snapshots_cache.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <vector>

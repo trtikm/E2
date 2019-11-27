@@ -3,7 +3,7 @@
 
 #   include <ai/blackboard.hpp>
 #   include <ai/scene.hpp>
-#   include <ai/detail/motion_desire_props.hpp>
+#   include <ai/motion_desire_props.hpp>
 #   include <ai/detail/rigid_body_motion.hpp>
 #   include <ai/detail/guarded_motion_actions_processor.hpp>
 #   include <angeo/tensor_math.hpp>

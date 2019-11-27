@@ -1,5 +1,7 @@
 #include <ai/skeletal_motion_templates.hpp>
 #include <ai/skeleton_utils.hpp>
+#include <ai/cortex.hpp>
+#include <ai/cortex_mock.hpp>
 #include <angeo/skeleton_kinematics.hpp>
 #include <angeo/utility.hpp>
 #include <utility/read_line.hpp>
@@ -13,6 +15,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/info_parser.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include <unordered_set>
 #include <deque>
 
@@ -766,105 +769,395 @@ namespace ai { namespace detail {
 
 motion_template_transitions_data::motion_template_transitions_data(async::finalise_load_on_destroy_ptr const  finaliser)
     : data()
+    , data_lookup()
+    , mock()
     , initial_motion_name()
 {
     TMPROF_BLOCK();
 
     boost::filesystem::path const  pathname = finaliser->get_key().get_unique_id();
-
-    std::ifstream  istr;
-    open_file_stream_for_reading(istr, pathname);
-
-    natural_32_bit  line_index = 0U;
-    natural_32_bit  column = 0U;
-
-    while (true)
+    if (!boost::filesystem::is_regular_file(pathname))
+        throw std::runtime_error(msgstream() << "Cannot access the file '" << pathname << "'.");
+    try
     {
-        std::string  line = read_line(istr, &line_index);
-        if (line == "digraph G {")
-            break;
+        boost::property_tree::read_json(pathname.string(), data);
     }
-    while (true)
+    catch (boost::property_tree::json_parser_error const& e)
     {
-        std::string  line = read_line(istr, &line_index);
-        if (!line.empty() && line.front() == '}')
-            break;
-        if (is_empty_line(line))
-            continue;
-        try
-        {
-            column = 0U;
+        LOG(error, "Loading of '" << pathname.string() << "' has FAILED. Details: " << e.what());
+        throw e;
+    }
 
-            std::string  src_anim_name;
-            {
-                while (line.at(column) != '"') ++column; ++column;
-                natural_32_bit const  begin = column;
-                while (line.at(column) != '"') ++column;
-                if (column - begin == 0U)
-                    throw std::runtime_error(msgstream() << "Empty animation name.");
-                src_anim_name = line.substr(begin, column - begin);
-                ++column;
-            }
-            std::string  dst_anim_name;
-            {
-                while (line.at(column) != '"') ++column; ++column;
-                natural_32_bit const  begin = column;
-                while (line.at(column) != '"') ++column;
-                if (column - begin == 0U)
-                    throw std::runtime_error(msgstream() << "Empty animation name.");
-                dst_anim_name = line.substr(begin, column - begin);
-                ++column;
-            }
-            float_32_bit  time_in_seconds;
-            {
-                while (line.at(column) != '"') ++column; ++column;
-                natural_32_bit const  begin = column;
-                while (line.at(column) != '\\') ++column;
-                if (column - begin == 0U)
-                    throw std::runtime_error(msgstream() << "No transition time specified.");
-                time_in_seconds = (float_32_bit)std::atof(line.substr(begin, column - begin).c_str());
-                if (time_in_seconds <= 0.0f)
-                    throw std::runtime_error(msgstream() << "The transition time is not greater than 0.0f.");
-                ++column;
-                ++column;
-            }
-            natural_32_bit  src_keyframe_index;
-            {
-                natural_32_bit const  begin = column;
-                while (line.at(column) != ';') ++column;
-                src_keyframe_index = (column - begin == 0U) ? std::numeric_limits<natural_32_bit>::max() :  // this will be resolved later (once we know count of keyframes)
-                    std::atoi(line.substr(begin, column - begin).c_str());
-                ++column;
-            }
-            natural_32_bit  dst_keyframe_index;
-            {
-                natural_32_bit const  begin = column;
-                while (line.at(column) != '"') ++column;
-                dst_keyframe_index = (column - begin == 0U) ? 0U : std::atoi(line.substr(begin, column - begin).c_str());
-            }
+    initial_motion_name = data.begin()->first;
+    for (auto const&  name_and_child : data)
+        data_lookup.insert({ name_and_child.first, &name_and_child.second });
 
-            motion_template_cursor const  src_cursor{ src_anim_name, src_keyframe_index };
-            motion_template_cursor const  dst_cursor{ dst_anim_name, dst_keyframe_index };
-
-            auto  targets_range = data.equal_range(src_cursor);
-            for (auto it = targets_range.first; it != targets_range.second; ++it)
-                if (it->second.first == dst_cursor)
-                    throw std::runtime_error("Duplicate transition (note: transition time is NOT considered).");
-
-            data.insert({ src_cursor, { dst_cursor, time_in_seconds} });
-            if (initial_motion_name.empty())
-                initial_motion_name = src_cursor.motion_name;
-        }
-        catch (std::exception const&  e)
-        {
-            throw std::runtime_error(msgstream() << "[line=" << line_index << ", column=" << column << "]: '" << line << "': "<< e.what());
-        }
+    boost::filesystem::path const  mock_pathname = pathname.parent_path() / "transitions.mock.json";
+    if (!boost::filesystem::is_regular_file(mock_pathname))
+        throw std::runtime_error(msgstream() << "Cannot access the file '" << mock_pathname << "'.");
+    try
+    {
+        boost::property_tree::read_json(mock_pathname.string(), mock);
+    }
+    catch (boost::property_tree::json_parser_error const& e)
+    {
+        LOG(error, "Loading of '" << mock_pathname.string() << "' has FAILED. Details: " << e.what());
+        throw e;
     }
 }
 
 motion_template_transitions_data::~motion_template_transitions_data()
 {
     TMPROF_BLOCK();
+}
+
+
+void  motion_template_transitions_data::find_targets(
+        motion_template_cursor const&  cursor,
+        std::unordered_map<std::string, motion_template> const&  motions_map,
+        std::vector<transition_info>&  output
+        ) const
+{
+    TMPROF_BLOCK();
+
+    motion_template const&  src_mt = motions_map.at(cursor.motion_name);
+
+    auto const  get_successor_keyframe_index =
+        [&motions_map, &cursor, &src_mt](property_tree const&  record, motion_template const&  dst_mt, natural_32_bit&  successor_index) -> bool {
+            if (record.count("range") != 0UL)
+            {
+                property_tree const&  range = record.get_child("range");
+                INVARIANT(range.size() == 2UL);
+                int const  raw_lo = range.begin()->second.get_value<int>();
+                int const  raw_hi = range.rbegin()->second.get_value<int>();
+                natural_32_bit const  lo = (natural_32_bit)((raw_lo >= 0 ? 0 : (int)src_mt.keyframes.num_keyframes()) + raw_lo);
+                natural_32_bit const  hi = (natural_32_bit)((raw_hi >= 0 ? 0 : (int)src_mt.keyframes.num_keyframes()) + raw_hi);
+                if (cursor.keyframe_index < lo || hi < cursor.keyframe_index)
+                    return false;
+                if (record.count("to") != 0UL)
+                {
+                    property_tree const&  to = record.get_child("to");
+                    INVARIANT(to.size() == 1UL);
+                    int const  raw_index = to.begin()->second.get_value<int>();
+                    successor_index = (natural_32_bit)((raw_index >= 0 ? 0 : (int)dst_mt.keyframes.num_keyframes()) + raw_index);
+                }
+                else
+                {
+                    INVARIANT(&src_mt == &dst_mt);
+                    successor_index = cursor.keyframe_index + 1U;
+                }
+                return true;
+            }
+            else
+            {
+                property_tree const&  from = record.get_child("from");
+                INVARIANT(!from.empty());
+                if (record.count("to") != 0UL)
+                {
+                    property_tree const&  to = record.get_child("to");
+                    INVARIANT(from.size() == to.size());
+                    for (auto  from_it = from.begin(), to_it = to.begin(); from_it != from.end(); ++from_it, ++to_it)
+                    {
+                        int  raw_index = from_it->second.get_value<int>();
+                        natural_32_bit const  src_index = (natural_32_bit)((raw_index >= 0 ? 0 : (int)src_mt.keyframes.num_keyframes()) + raw_index);
+                        if (src_index == cursor.keyframe_index)
+                        {
+                            raw_index = to_it->second.get_value<int>();
+                            successor_index = (natural_32_bit)((raw_index >= 0 ? 0 : (int)dst_mt.keyframes.num_keyframes()) + raw_index);
+                            return true;
+                        }
+                    }
+                }
+                else
+                {
+                    INVARIANT(&src_mt == &dst_mt);
+                    for (auto from_it = from.begin(); from_it != from.end(); ++from_it)
+                    {
+                        int const  raw_index = from_it->second.get_value<int>();
+                        natural_32_bit const  src_index = (natural_32_bit)((raw_index >= 0 ? 0 : (int)src_mt.keyframes.num_keyframes()) + raw_index);
+                        if (src_index == cursor.keyframe_index)
+                        {
+                            successor_index = cursor.keyframe_index + 1U;
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+        };
+    auto const  insert_record = [&output, this](
+            property_tree const&  record,
+            motion_template_cursor const&  successor_cursor,
+            float_32_bit const  time
+        ) -> void {
+            property_tree const&  defaults = data_lookup.at(successor_cursor.motion_name)->get_child("defaults");
+            property_tree const&  guard = (record.count("guard") != 0UL ? record : defaults).get_child("guard");
+            property_tree const&  desire = (record.count("desire") != 0UL ? record : defaults).get_child("desire");
+            output.push_back({ successor_cursor, time, &guard, &desire });
+        };
+
+    float_32_bit  next_frame_interpolation_time = 0.0f;
+    {
+        if (cursor.keyframe_index + 1UL < src_mt.keyframes.num_keyframes())
+            next_frame_interpolation_time = src_mt.keyframes.time_point_at(cursor.keyframe_index + 1UL) -
+                                            src_mt.keyframes.time_point_at(cursor.keyframe_index);
+    }
+
+    property_tree const&  ptree = *data_lookup.at(cursor.motion_name);
+
+    for (auto const&  null_and_child : ptree.get_child("loops"))
+    {
+        natural_32_bit  successor_index;
+        if (get_successor_keyframe_index(null_and_child.second, src_mt, successor_index))
+            insert_record(
+                    null_and_child.second,
+                    { cursor.motion_name, successor_index },
+                    null_and_child.second.get_child("time").get_value<float_32_bit>()
+                    );
+    }
+    for (auto const&  null_and_child : ptree.get_child("successors"))
+    {
+        natural_32_bit  successor_index;
+        if (get_successor_keyframe_index(null_and_child.second, src_mt, successor_index))
+        {
+            INVARIANT(next_frame_interpolation_time > 0.0f);
+            insert_record(
+                    null_and_child.second,
+                    { cursor.motion_name, successor_index },
+                    next_frame_interpolation_time
+                    );
+        }
+    }
+    for (auto const& name_and_records : ptree.get_child("exits"))
+        for (auto const& null_and_child : name_and_records.second)
+        {
+            natural_32_bit  successor_index;
+            if (get_successor_keyframe_index(null_and_child.second, motions_map.at(name_and_records.first), successor_index))
+                insert_record(
+                        null_and_child.second,
+                        { name_and_records.first, successor_index },
+                        null_and_child.second.get_child("time").get_value<float_32_bit>()
+                        );
+        }
+
+    INVARIANT(!output.empty());
+}
+
+
+void  motion_template_transitions_data::__check_loaded_data__(std::unordered_map<std::string, motion_template> const&  motions_map) const
+{
+    TMPROF_BLOCK();
+
+    std::string const  prefix = msgstream() << "motion_template_transitions_data::__check_loaded_data__: ";
+
+    auto const  check_range_from_to = [&prefix](int range, int from, int to, std::string const&  name, std::string const&  kind, bool use_to) -> void {
+        if (range == -2 && from == -1)
+            throw std::runtime_error(msgstream() << prefix << "There is neither 'range' "
+                                                    "nor 'from' key under '" << kind << "' section of source template motion name: " << name << ".");
+        if (range != -2 && from != -1)
+            throw std::runtime_error(msgstream() << prefix << "Both 'range' and 'from' "
+                                                    "keys are present under '" << kind << "' section of source template motion name: " << name << ".");
+        if (std::abs(range) != 2)
+            throw std::runtime_error(msgstream() << prefix << "The 'range' array "
+                                                    "under '" << kind << "' section of source template motion name '" << name << "' does not "
+                                                    "contain exactly two integers.");
+        if (std::abs(from) == 0)
+            throw std::runtime_error(msgstream() << prefix << "The 'from' array "
+                                                    "under '" << kind << "' section of source template motion name '" << name << "' does not "
+                                                    "contain at least one integer.");
+        if (!use_to)
+            return;
+        if (from > 0 && to != from)
+            throw std::runtime_error(msgstream() << prefix << "The 'to' array "
+                                                    "under '" << kind << "' section of source template motion name '" << name << "' does not "
+                                                    "contain does not contain exactly the same number of integers as 'from' array.");
+        if (range > 0 && to != 1)
+            throw std::runtime_error(msgstream() << prefix << "The 'to' array "
+                                                    "under '" << kind << "' section of source template motion name '" << name << "' does not "
+                                                    "contain does not contain exactly one integer (required from the use of 'range' interval).");
+    };
+
+    for (auto const&  name_and_child : data)
+    {
+        if (motions_map.count(name_and_child.first) == 0UL)
+            throw std::runtime_error(msgstream() << prefix << "Unknown source template motion name: "
+                                                 << name_and_child.first << ".");
+        int  num_loops = -1, num_successors = -1, num_exits = -1;
+        for (auto const& kind_and_child : name_and_child.second)
+        {
+            if (kind_and_child.first == "defaults")
+            {
+                int i = 0;
+                for (auto const& type_and_child : kind_and_child.second)
+                {
+                    ++i;
+                    if (type_and_child.first == "guard")
+                        cortex::__check_loaded_guard__(type_and_child.second, msgstream() << prefix << "In '"
+                                                                                          << name_and_child.first << "."
+                                                                                          << kind_and_child.first << "."
+                                                                                          << "[" << i << "]."
+                                                                                          << type_and_child.first << "': ");
+                    else if (type_and_child.first == "desire")
+                        cortex::__check_loaded_desire__(type_and_child.second, msgstream() << prefix << "In '"
+                                                                                           << name_and_child.first << "."
+                                                                                           << kind_and_child.first << "."
+                                                                                           << "[" << i << "]."
+                                                                                           << type_and_child.first << "': ");
+                    else
+                        throw std::runtime_error(msgstream() << prefix << "Unknown key '"
+                                                             << type_and_child.first << "' under 'defaults' of source template motion name: "
+                                                             << name_and_child.first << ".");
+                }
+            }
+            else if (kind_and_child.first == "loops")
+            {
+                num_loops = (int)kind_and_child.second.size();
+                int i = 0;
+                for (auto const& null_and_child : kind_and_child.second)
+                {
+                    ++i;
+                    int  range = -2, from = -1, to = -1, time = 0;
+                    for (auto const& type_and_child : null_and_child.second)
+                    {
+                        if (type_and_child.first == "from")
+                            from = (int)type_and_child.second.size();
+                        else if (type_and_child.first == "range")
+                            range = (int)type_and_child.second.size();
+                        else if (type_and_child.first == "to")
+                            to = (int)type_and_child.second.size();
+                        else if (type_and_child.first == "time")
+                            time = 1;
+                        else if (type_and_child.first == "guard")
+                            cortex::__check_loaded_guard__(type_and_child.second, msgstream() << prefix << "In '"
+                                                                                              << name_and_child.first << "."
+                                                                                              << kind_and_child.first << "."
+                                                                                              << "[" << i << "]."
+                                                                                              << type_and_child.first << "': ");
+                        else if (type_and_child.first == "desire")
+                            cortex::__check_loaded_desire__(type_and_child.second, msgstream() << prefix << "In '"
+                                                                                               << name_and_child.first << "."
+                                                                                               << kind_and_child.first << "."
+                                                                                               << "[" << i << "]."
+                                                                                               << type_and_child.first << "': ");
+                    }
+                    check_range_from_to(range, from, to, name_and_child.first, kind_and_child.first, true);
+                    if (time == 0)
+                        throw std::runtime_error(msgstream() << prefix << "Missing 'time' key "
+                                                                "under 'loops' section of source template motion name: "
+                                                             << name_and_child.first << ".");
+                }
+            }
+            else if (kind_and_child.first == "successors")
+            {
+                num_successors = (int)kind_and_child.second.size();;
+                int i = 0;
+                for (auto const& null_and_child : kind_and_child.second)
+                {
+                    ++i;
+                    int  range = -2, from = -1;
+                    for (auto const& type_and_child : null_and_child.second)
+                    {
+                        if (type_and_child.first == "to" || type_and_child.first == "time")
+                            throw std::runtime_error(msgstream() << prefix << "Illegal use of '"
+                                                                 << type_and_child.first
+                                                                 << "' key under 'successors' section of source template motion name: "
+                                                                 << name_and_child.first << ".");
+                        else if (type_and_child.first == "from")
+                            from = (int)type_and_child.second.size();
+                        else if (type_and_child.first == "range")
+                            range = (int)type_and_child.second.size();
+                        else if (type_and_child.first == "guard")
+                            cortex::__check_loaded_guard__(type_and_child.second, msgstream() << prefix << "In '"
+                                                                                              << name_and_child.first << "."
+                                                                                              << kind_and_child.first << "."
+                                                                                              << "[" << i << "]."
+                                                                                              << type_and_child.first << "': ");
+                        else if (type_and_child.first == "desire")
+                            cortex::__check_loaded_desire__(type_and_child.second, msgstream() << prefix << "In '"
+                                                                                               << name_and_child.first << "."
+                                                                                               << kind_and_child.first << "."
+                                                                                               << "[" << i << "]."
+                                                                                               << type_and_child.first << "': ");
+                    }
+                    check_range_from_to(range, from, -1, name_and_child.first, kind_and_child.first, false);
+                }
+            }
+            else if (kind_and_child.first == "exits")
+            {
+                num_exits = (int)kind_and_child.second.size();
+                for (auto const& template_name_and_child : kind_and_child.second)
+                {
+                    if (motions_map.count(template_name_and_child.first) == 0UL)
+                        throw std::runtime_error(msgstream() << prefix << "Unknown target "
+                                                                "template motion name '"
+                                                             << template_name_and_child.first
+                                                             << "' under 'exits' section of source template motion name '"
+                                                             << name_and_child.first << "'.");
+                    if (template_name_and_child.second.empty())
+                        throw std::runtime_error(msgstream() << prefix << "There is no record  "
+                                                                "under target template motion '"
+                                                             << template_name_and_child.first
+                                                             << "' under 'exits' section of source template motion name '"
+                                                             << name_and_child.first << "'.");
+                    int i = 0;
+                    for (auto const& null_and_child : template_name_and_child.second)
+                    {
+                        ++i;
+                        int  range = -2, from = -1, to = -1, time = 0;
+                        for (auto const& type_and_child : null_and_child.second)
+                        {
+                            if (type_and_child.first == "from")
+                                from = (int)type_and_child.second.size();
+                            else if (type_and_child.first == "range")
+                                range = (int)type_and_child.second.size();
+                            else if (type_and_child.first == "to")
+                                to = (int)type_and_child.second.size();
+                            else if (type_and_child.first == "time")
+                                time = 1;
+                            else if (type_and_child.first == "guard")
+                                cortex::__check_loaded_guard__(type_and_child.second, msgstream() << prefix << "In '"
+                                                                                                  << name_and_child.first << "."
+                                                                                                  << kind_and_child.first << "."
+                                                                                                  << template_name_and_child.first << "."
+                                                                                                  << "[" << i << "]."
+                                                                                                  << type_and_child.first << "': ");
+                            else if (type_and_child.first == "desire")
+                                cortex::__check_loaded_desire__(type_and_child.second, msgstream() << prefix << "In '"
+                                                                                                   << name_and_child.first << "."
+                                                                                                   << kind_and_child.first << "."
+                                                                                                   << template_name_and_child.first << "."
+                                                                                                   << "[" << i << "]."
+                                                                                                   << type_and_child.first << "': ");
+                        }
+                        check_range_from_to(range, from, to, name_and_child.first, kind_and_child.first, true);
+                        if (time == 0)
+                            throw std::runtime_error(msgstream() << prefix << "Missing 'time' key "
+                                                                    "under 'exits' section of target template motion name '"
+                                                                 << template_name_and_child.first << "' of source template motion name: "
+                                                                 << name_and_child.first << ".");
+                    }
+                }
+            }
+            else
+                throw std::runtime_error(msgstream() << prefix << "Unknown key '"
+                                                     << kind_and_child.first << "' under source template motion name: "
+                                                     << name_and_child.first << ".");
+        }
+        if (num_loops == -1)
+            throw std::runtime_error(msgstream() << prefix << "Missing key 'loops' "
+                                                    "under source template motion name: " << name_and_child.first << ".");
+        if (num_successors == -1)
+            throw std::runtime_error(msgstream() << prefix << "Missing key 'successors' "
+                                                    "under source template motion name: " << name_and_child.first << ".");
+        if (num_exits == -1)
+            throw std::runtime_error(msgstream() << prefix << "Missing key 'exits' "
+                                                    "under source template motion name: " << name_and_child.first << ".");
+        if (num_loops + num_exits == 0)
+            throw std::runtime_error(msgstream() << prefix << "The source template motion name: " << name_and_child.first
+                                                 << "is a dead end.");
+    }
+
+    cortex_mock::__check_loaded_data__(mock, prefix);
 }
 
 
@@ -948,42 +1241,7 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
                         throw std::runtime_error(msgstream() << "The count of keyframes and 'free_bones' differ in 'motions_map[" << entry.first << "]'.");
                 }
 
-                // Here we resolve 'std::numeric_limits<natural_32_bit>::max()' keyframe indices in the transitions graph.
-                {
-                    motion_template_transitions_data::transitions_graph  resolved_graph;
-                    for (auto const& src_and_tgt_and_time : transitions.data())
-                        resolved_graph.insert({
-                            {
-                                src_and_tgt_and_time.first.motion_name,
-                                src_and_tgt_and_time.first.keyframe_index == std::numeric_limits<natural_32_bit>::max() ?
-                                        (natural_32_bit)(motions_map.at(src_and_tgt_and_time.first.motion_name).keyframes.num_keyframes() - 1U) :
-                                        src_and_tgt_and_time.first.keyframe_index
-                                },
-                            src_and_tgt_and_time.second
-                            });
-                    const_cast<motion_template_transitions_data::transitions_graph&>(transitions.data()).swap(resolved_graph);
-                }
-
-                // And we rather check for consistency of the transitions graph.
-                for (auto const&  src_and_tgt_and_time : transitions.data())
-                {
-                    std::vector<std::string> const  names{
-                        src_and_tgt_and_time.first.motion_name,
-                        src_and_tgt_and_time.second.first.motion_name
-                    };
-                    std::vector<natural_32_bit> const  indices{
-                        src_and_tgt_and_time.first.keyframe_index,
-                        src_and_tgt_and_time.second.first.keyframe_index
-                    };
-                    std::vector<std::string> const  type{ "source", "target" };
-                    for (int i = 0; i != 2; ++i)
-                    {
-                        if (motions_map.count(names.at(i)) == 0UL)
-                            throw std::runtime_error(msgstream() << "The 'transitions' graph contains unknown " << type.at(i) << " animation name '" << names.at(i) << ".");
-                        if (motions_map.at(names.at(i)).keyframes.num_keyframes() <= indices.at(i))
-                            throw std::runtime_error(msgstream() << "The 'transitions' graph contains wrong keyframe index '" << indices.at(i)<< "' for the " << type.at(i) << " animation name '" << names.at(i) << ".");
-                    }
-                }
+                transitions.__check_loaded_data__(motions_map);
             },
             finaliser
             );
@@ -1026,8 +1284,8 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
             directions = anim_space_directions(pathname / "directions.txt", 10U, ultimate_finaliser);
         if (joints.empty() && boost::filesystem::is_regular_file(pathname / "joints.txt"))
             joints = bone_joints(pathname / "joints.txt", 10U, ultimate_finaliser);
-        if (transitions.empty() && boost::filesystem::is_regular_file(pathname / "transitions.dot"))
-            transitions = motion_template_transitions(pathname / "transitions.dot", 10U, ultimate_finaliser);
+        if (transitions.empty() && boost::filesystem::is_regular_file(pathname / "transitions.json"))
+            transitions = motion_template_transitions(pathname / "transitions.json", 10U, ultimate_finaliser);
 
         for (boost::filesystem::directory_entry& entry : boost::filesystem::directory_iterator(pathname))
             if (boost::filesystem::is_directory(entry.path()))
@@ -1069,56 +1327,6 @@ skeletal_motion_templates_data::skeletal_motion_templates_data(async::finalise_l
 skeletal_motion_templates_data::~skeletal_motion_templates_data()
 {
     TMPROF_BLOCK();
-}
-
-
-natural_32_bit  skeletal_motion_templates_data::get_outdegree_of_keyframe(motion_template_cursor const& cursor) const
-{
-    natural_32_bit  count = cursor.keyframe_index + 1U < motions_map.at(cursor.motion_name).keyframes.get_keyframes().size() ? 1U : 0U;
-    auto const  range = transitions.find_targets(cursor);
-    count += (natural_32_bit)std::distance(range.first, range.second);
-    return  count;
-}
-
-
-bool  skeletal_motion_templates_data::is_branching_keyframe(motion_template_cursor const& cursor) const
-{
-    return get_outdegree_of_keyframe(cursor) > 1U;
-}
-
-
-void  skeletal_motion_templates_data::get_successor_keyframes(
-        motion_template_cursor const& cursor,
-        std::vector<std::pair<motion_template_cursor /* target_cursor */, float_32_bit /* transition_time */> >&  output
-        ) const
-{
-    for_each_successor_keyframe(
-        cursor,
-        [this, &output](skeletal_motion_templates::motion_template_cursor const&  c, float_32_bit const  t)
-        {
-            output.push_back({ c, t });
-            return true;
-        });
-}
-
-
-void  skeletal_motion_templates_data::for_each_successor_keyframe(
-        motion_template_cursor const&  cursor,
-        std::function<bool(motion_template_cursor const& /* target_cursor */, float_32_bit /* transition_time */)> const&  callback
-        ) const
-
-{
-    auto const&  motion_template = motions_map.at(cursor.motion_name);
-    if (cursor.keyframe_index + 1U < motion_template.keyframes.get_keyframes().size())
-        if (!callback(
-                { cursor.motion_name, cursor.keyframe_index + 1U },
-                motion_template.keyframes.keyframe_at(cursor.keyframe_index + 1U).get_time_point()
-                    - motion_template.keyframes.keyframe_at(cursor.keyframe_index).get_time_point()))
-            return;
-    auto const  range = transitions.find_targets(cursor);
-    for (auto it = range.first; it != range.second; ++it)
-        if (!callback(it->second.first, it->second.second))
-            return;
 }
 
 

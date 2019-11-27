@@ -125,19 +125,18 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
         float_32_bit  consumed_time = 0.0f;
         detail::ideal_velocity_buider  ideal_velocity_buider(m_dst_cursor, get_blackboard()->m_motion_templates);
 
+        cortex::context const  ctx{ interpolation_time_step_in_seconds };
         while (m_consumed_time_in_seconds + interpolation_time_step_in_seconds >= m_total_interpolation_time_in_seconds)
         {
-            std::vector<skeletal_motion_templates::cursor_and_transition_time> successors;
+            std::vector<skeletal_motion_templates::transition_info>  successors;
             get_blackboard()->m_motion_templates.get_successor_keyframes(m_dst_cursor, successors);
-            skeletal_motion_templates::cursor_and_transition_time const  best_transition =
-                    successors.size() == 1UL ?
-                            successors.front() :
-                            get_blackboard()->m_cortex->choose_next_motion_action(successors)
-                            ;
-            m_dst_cursor = best_transition.first;
-            m_total_interpolation_time_in_seconds += best_transition.second;
-            consumed_time += best_transition.second;
-            ideal_velocity_buider.extend(best_transition.first, best_transition.second);
+            skeletal_motion_templates::transition_info const&  best_transition = successors.at(
+                    successors.size() == 1UL ? 0U : get_blackboard()->m_cortex->choose_next_motion_action(successors, ctx)
+                    );
+            m_dst_cursor = best_transition.cursor;
+            m_total_interpolation_time_in_seconds += best_transition.time_in_seconds;
+            consumed_time += best_transition.time_in_seconds;
+            ideal_velocity_buider.extend(best_transition.cursor, best_transition.time_in_seconds);
         }
 
         ideal_velocity_buider.close(
@@ -367,7 +366,7 @@ void  action_controller::look_at_target(float_32_bit const  time_step_in_seconds
 
     vector3  target;
     {
-        target = get_blackboard()->m_cortex->get_look_at_target_in_local_space();
+        target = get_blackboard()->m_cortex->get_motion_desire_props().look_at_target_in_local_space;
 
         // The target is now in agent's local space, but we need the target in the space of the bone which is the closest parent bone
         // to all bones in 'bones_to_consider'; note that the parent bone cannot be in 'bones_to_consider'.
