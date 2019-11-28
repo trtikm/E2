@@ -302,6 +302,25 @@ vector3  cortex::evaluate_vector_expression(skeletal_motion_templates::property_
             vector3 const  u = evaluate_vector_expression(*args.front(), ctx);
             return u - project_to_vector(u, evaluate_vector_expression(*args.back(), ctx));
         }
+        if (op == "rotate_towards")
+        {
+            ASSUMPTION(args.size() == 3UL);
+            vector3 const  source = evaluate_vector_expression(*args.front(), ctx);
+            vector3 const  target = evaluate_vector_expression(*args.at(1), ctx);
+            float_32_bit const  max_angle = evaluate_scalar_expression(*args.back(), ctx);
+            float_32_bit const  current_angle = angle(source, target);
+            if (current_angle <= max_angle)
+                return target;
+            vector3  axis = cross_product(source, target);
+            float_32_bit  len = length(axis);
+            if (len < 1e-5f)
+            {
+                axis = orthogonal(source);
+                len = length(axis);
+            }
+            axis = (1.0f / len) * axis;
+            return quaternion_to_rotation_matrix(angle_axis_to_quaternion(max_angle, axis)) * source;
+        }
         UNREACHABLE();
     }
 }
