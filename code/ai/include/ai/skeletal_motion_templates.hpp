@@ -211,6 +211,17 @@ struct  constraint_linear_velocity_in_falling_cone : public constraint
     }
 };
 
+struct  constraint_is_falling_linear_velocity : public constraint
+{
+    float_32_bit  min_falling_speed;
+
+    bool  equals(constraint const& other) const override { return *this == dynamic_cast<constraint_is_falling_linear_velocity const&>(other); }
+    bool  operator==(constraint_is_falling_linear_velocity const&  other) const
+    {
+        return are_equal(min_falling_speed, other.min_falling_speed, 0.0001f);
+    }
+};
+
 struct  constraint_desired_forward_vector_inside_cone : public constraint
 {
     vector3  unit_axis;
@@ -808,6 +819,7 @@ struct  skeletal_motion_templates : public async::resource_accessor<detail::skel
     using  constraint_contact_normal_cone = detail::meta::constraint_contact_normal_cone;
     using  constraint_has_any_contact = detail::meta::constraint_has_any_contact;
     using  constraint_linear_velocity_in_falling_cone = detail::meta::constraint_linear_velocity_in_falling_cone;
+    using  constraint_is_falling_linear_velocity = detail::meta::constraint_is_falling_linear_velocity;
     using  constraint_desired_forward_vector_inside_cone = detail::meta::constraint_desired_forward_vector_inside_cone;
     using  constraint_always = detail::meta::constraint_always;
 

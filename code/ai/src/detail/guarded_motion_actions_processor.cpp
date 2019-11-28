@@ -107,6 +107,13 @@ bool  get_satisfied_motion_guarded_actions(
                 return angle(motion_object_motion.velocity.m_linear, gravity_acceleration_in_world_space) <= constraint_ptr->cone_angle_in_radians;
             }
             else if (auto constraint_ptr =
+                    std::dynamic_pointer_cast<skeletal_motion_templates::constraint_is_falling_linear_velocity const>(any_constraint_ptr))
+            {
+                vector3 const  falling_velocity = project_to_vector(motion_object_motion.velocity.m_linear, gravity_acceleration_in_world_space);
+                float_32_bit const  falling_speed = length(falling_velocity);
+                return falling_speed >= constraint_ptr->min_falling_speed;
+            }
+            else if (auto constraint_ptr =
                     std::dynamic_pointer_cast<skeletal_motion_templates::constraint_desired_forward_vector_inside_cone const>(any_constraint_ptr))
             {
                 return angle(constraint_ptr->unit_axis, desire.forward_unit_vector_in_local_space) <= constraint_ptr->angle_in_radians;

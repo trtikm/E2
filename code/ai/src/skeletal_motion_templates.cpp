@@ -360,6 +360,13 @@ motion_actions_data::motion_actions_data(async::finalise_load_on_destroy_ptr con
                         constraint.min_linear_speed = params.at(1);
                         predicates.push_back(_find_or_create_motion_action_component(constraint, last_predicates));
                     }
+                    else if (guard_name == "is_falling_linear_velocity")
+                    {
+                        if (params.size() != 1UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for is_falling_linear_velocity at line " << line_index << "in the file '" << pathname << "'.");
+                        skeletal_motion_templates::constraint_is_falling_linear_velocity  constraint;
+                        constraint.min_falling_speed = params.front();
+                        predicates.push_back(_find_or_create_motion_action_component(constraint, last_predicates));
+                    }
                     else if (guard_name == "desired_forward_vector_inside_cone")
                     {
                         if (params.size() != 4UL) throw std::runtime_error(msgstream() << "Wrong number of parameters for desired_forward_vector_inside_cone at line " << line_index << "in the file '" << pathname << "'.");
