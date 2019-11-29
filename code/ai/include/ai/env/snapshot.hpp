@@ -41,8 +41,15 @@ struct  snapshot
     vector3  camera_y_axis;
     vector3  camera_z_axis;
 
-    std::vector<vector3>  ray_cast_targets;     // Order does NOT matter.
-    std::vector<vector3>  contact_points;       // Order does NOT matter.
+    struct  ray_cast_event
+    {
+        natural_32_bit  cell_x;
+        natural_32_bit  cell_y;
+        vector3  target_in_local_space;
+    };
+
+    std::vector<ray_cast_event>  ray_cast_targets;  // Order is given by the order of performed raycasts.
+    std::vector<vector3>  contact_points;           // Order does NOT matter.
 };
 
 

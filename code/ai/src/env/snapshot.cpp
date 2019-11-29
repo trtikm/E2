@@ -59,13 +59,19 @@ snapshot::snapshot(blackboard_weak_const_ptr const  blackboard_ptr)
     camera_y_axis = transform_vector(angeo::axis_y(camera_frame), to_agent_space_matrix);
     camera_z_axis = transform_vector(angeo::axis_z(camera_frame), to_agent_space_matrix);
 
-    for (auto const& time_and_ray_cast_info : sight_ptr->get_ray_casts_in_time())
+    if (!sight_ptr->get_ray_casts_in_time().empty())
     {
-        auto const&  info = time_and_ray_cast_info.second;
-        ray_cast_targets.push_back(
-                transform_point(info.ray_origin_in_world_space + info.parameter_to_coid * info.ray_unit_direction_in_world_space,
-                                to_agent_space_matrix)
-                );
+        auto const  range = sight_ptr->get_ray_casts_in_time().equal_range(sight_ptr->get_ray_casts_in_time().crbegin()->first);
+        for (auto  it = range.first; it != range.second; ++it)
+        {
+            auto const&  info = it->second;
+            ray_cast_targets.push_back({
+                    info.cell_x,
+                    info.cell_y,
+                    transform_point(info.ray_origin_in_world_space + info.parameter_to_coid * info.ray_unit_direction_in_world_space,
+                                    to_agent_space_matrix)
+                    });
+        }
     }
     auto const  begin_and_end = bb->m_collision_contacts.equal_range(motion.nid);
     for (auto it = begin_and_end.first; it != begin_and_end.second; ++it)
