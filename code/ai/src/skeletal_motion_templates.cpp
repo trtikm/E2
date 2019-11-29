@@ -922,19 +922,20 @@ void  motion_template_transitions_data::find_targets(
                     null_and_child.second.get_child("time").get_value<float_32_bit>()
                     );
     }
-    for (auto const&  null_and_child : ptree.get_child("successors"))
-    {
-        natural_32_bit  successor_index;
-        if (get_successor_keyframe_index(null_and_child.second, src_mt, successor_index))
+    if (cursor.keyframe_index + 1UL < src_mt.keyframes.num_keyframes())
+        for (auto const&  null_and_child : ptree.get_child("successors"))
         {
-            INVARIANT(next_frame_interpolation_time > 0.0f);
-            insert_record(
-                    null_and_child.second,
-                    { cursor.motion_name, successor_index },
-                    next_frame_interpolation_time
-                    );
+            natural_32_bit  successor_index;
+            if (get_successor_keyframe_index(null_and_child.second, src_mt, successor_index))
+            {
+                INVARIANT(next_frame_interpolation_time > 0.0f);
+                insert_record(
+                        null_and_child.second,
+                        { cursor.motion_name, successor_index },
+                        next_frame_interpolation_time
+                        );
+            }
         }
-    }
     for (auto const& name_and_records : ptree.get_child("exits"))
         for (auto const& null_and_child : name_and_records.second)
         {
