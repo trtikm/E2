@@ -19,23 +19,45 @@ struct  sensory_controller_ray_cast_sight : public sensory_controller_sight
     {
         natural_32_bit  num_raycasts_per_second;
         float_32_bit  max_ray_cast_info_life_time_in_seconds;
+        natural_16_bit  num_cells_along_any_axis;   // Sight cells in "retina" form a regular 2D grid, which is also rectangular;
+                                                    // i.e. there is the same number of cells along both axes. Each ray-cast is
+                                                    // performed for some (randomly chosen) cell.
+        std::function<float_32_bit(float_32_bit)>  distribution_of_cells_in_camera_space; // Although the cells form a regular 2D grid
+                                                    // in the memory model, it still might be useful to define a spatial distribution
+                                                    // of the cells in the camera's projection plane. Typically, the density of cells
+                                                    // inreases as we approach the origin of the projection plane. So, the grid should
+                                                    // be stretched towards the origin. The function here defines the stretching.
+                                                    // The argument is always in range <0.0, 1.0> and the return value must also
+                                                    // always be in range <0.0, 1.0>. Further, these invariants must hold:
+                                                    //      distribution_of_cells_in_camera_space(0.0f) == 0.0f
+                                                    //      distribution_of_cells_in_camera_space(1.0f) == 1.0f
+                                                    // It is typically desired the function being monotonic (increasing).
 
         ray_cast_config(
                 natural_32_bit const  num_raycasts_per_second_ = 600U,
-                float_32_bit const  max_ray_cast_info_life_time_in_seconds_ = 0.1f
+                float_32_bit const  max_ray_cast_info_life_time_in_seconds_ = 0.1f,
+                natural_16_bit const  num_cells_along_any_axis_ = 100U,
+                std::function<float_32_bit(float_32_bit)> const&  distribution_of_cells_in_camera_space_ =
+                    [](float_32_bit const  x) -> float_32_bit { return x * x; } // This is a quadratic stretch of the cell's grid.
                 );
     };
 
     struct  ray_cast_info
     {
-        vector3  ray_origin;
-        vector3  ray_unit_direction;
+        natural_32_bit  cell_x;
+        natural_32_bit  cell_y;
+        vector2  camera_coords_of_cell_coords;
+        vector3  ray_origin_in_world_space;
+        vector3  ray_unit_direction_in_world_space;
         float_32_bit  parameter_to_coid;
         angeo::collision_object_id  coid;
 
         ray_cast_info(
-                vector3 const&  ray_origin_,
-                vector3 const&  ray_unit_direction_,
+                natural_32_bit const  cell_x_,
+                natural_32_bit const  cell_y_,
+                vector2 const&  camera_coords_of_cell_coords_,
+                vector3 const&  ray_origin_in_world_space_,
+                vector3 const&  ray_unit_direction_in_world_space_,
                 float_32_bit const  parameter_to_coid_,
                 angeo::collision_object_id const  coid_
                 );
@@ -59,7 +81,6 @@ struct  sensory_controller_ray_cast_sight : public sensory_controller_sight
 private:
     ray_cast_config  m_ray_cast_config;
     ray_casts_in_time  m_ray_casts_in_time;
-    std::normal_distribution<float_32_bit>  m_distribution;
     random_generator_for_natural_32_bit  m_generator;
     float_32_bit  m_time_buffer;
 };

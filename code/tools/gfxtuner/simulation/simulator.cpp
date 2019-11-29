@@ -2076,8 +2076,8 @@ void  simulator::render_ai_action_controller_props(
         for (auto const&  time_and_ray_cast_info : ray_casts_in_time)
         {
             vector3 const  contact_point =
-                    time_and_ray_cast_info.second.ray_origin +
-                    time_and_ray_cast_info.second.parameter_to_coid * time_and_ray_cast_info.second.ray_unit_direction
+                    time_and_ray_cast_info.second.ray_origin_in_world_space +
+                    time_and_ray_cast_info.second.parameter_to_coid * time_and_ray_cast_info.second.ray_unit_direction_in_world_space
                     ;
             matrix44  W;
             compose_from_base_matrix(contact_point, matrix33_identity(), W);

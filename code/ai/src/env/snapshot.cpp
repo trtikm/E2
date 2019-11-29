@@ -63,7 +63,8 @@ snapshot::snapshot(blackboard_weak_const_ptr const  blackboard_ptr)
     {
         auto const&  info = time_and_ray_cast_info.second;
         ray_cast_targets.push_back(
-                transform_point(info.ray_origin + info.parameter_to_coid * info.ray_unit_direction, to_agent_space_matrix)
+                transform_point(info.ray_origin_in_world_space + info.parameter_to_coid * info.ray_unit_direction_in_world_space,
+                                to_agent_space_matrix)
                 );
     }
     auto const  begin_and_end = bb->m_collision_contacts.equal_range(motion.nid);
