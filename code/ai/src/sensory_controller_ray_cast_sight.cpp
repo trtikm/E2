@@ -12,11 +12,9 @@ namespace ai {
     
 sensory_controller_ray_cast_sight::ray_cast_config::ray_cast_config(
         natural_32_bit const  num_raycasts_per_second_,
-        float_32_bit const  max_coid_life_time_in_seconds_,
         float_32_bit const  max_ray_cast_info_life_time_in_seconds_
         )
     : num_raycasts_per_second(num_raycasts_per_second_)
-    , max_coid_life_time_in_seconds(max_coid_life_time_in_seconds_)
     , max_ray_cast_info_life_time_in_seconds(max_ray_cast_info_life_time_in_seconds_)
 {}
 
@@ -40,10 +38,10 @@ sensory_controller_ray_cast_sight::sensory_controller_ray_cast_sight(
         ray_cast_config const& ray_cast_config_)
     : sensory_controller_sight(blackboard_, camera_config_)
     , m_ray_cast_config(ray_cast_config_)
-    , m_coids_with_times()
-    , m_from_times_to_coids()
+    , m_ray_casts_in_time()
     , m_distribution()
     , m_generator()
+    , m_time_buffer(0.0f)
 {}
 
 
@@ -56,20 +54,8 @@ void  sensory_controller_ray_cast_sight::next_round(float_32_bit const  time_ste
         return std::chrono::duration<float_32_bit>(now - time_point).count();
     };
 
-    while (!m_from_times_to_coids.empty() &&
-           num_seconds_till_now(m_from_times_to_coids.begin()->first) >= m_ray_cast_config.max_coid_life_time_in_seconds)
-    {
-        auto const  it = m_coids_with_times.find(m_from_times_to_coids.begin()->second);
-        if (it != m_coids_with_times.end() && it->second == m_from_times_to_coids.begin()->first)
-            m_coids_with_times.erase(it);
-        m_from_times_to_coids.erase(m_from_times_to_coids.begin());
-    }
-
-    while (!m_ray_casts_as_performed_in_time.empty() &&
-           num_seconds_till_now(m_ray_casts_as_performed_in_time.begin()->first) >= m_ray_cast_config.max_ray_cast_info_life_time_in_seconds)
-    {
-        m_ray_casts_as_performed_in_time.erase(m_ray_casts_as_performed_in_time.begin());
-    }
+    while (!m_ray_casts_in_time.empty() && num_seconds_till_now(m_ray_casts_in_time.begin()->first) >= m_ray_cast_config.max_ray_cast_info_life_time_in_seconds)
+        m_ray_casts_in_time.erase(m_ray_casts_in_time.begin());
 
     sensory_controller_sight::next_round(time_step_in_seconds); // Updates the camera.
     if (get_camera() == nullptr)
@@ -88,8 +74,8 @@ void  sensory_controller_ray_cast_sight::next_round(float_32_bit const  time_ste
     matrix44  W;
     angeo::from_base_matrix(*get_camera()->coordinate_system(), W);
 
-    natural_32_bit const  num_raycasts = std::max(1U, (natural_32_bit)(m_ray_cast_config.num_raycasts_per_second * time_step_in_seconds + 0.5));
-    for (natural_32_bit raycast_idx = 0U; raycast_idx < num_raycasts; ++raycast_idx)
+    float_32_bit const  ray_cast_duration = 1.0f / (float_32_bit)m_ray_cast_config.num_raycasts_per_second;
+    for (m_time_buffer += time_step_in_seconds; m_time_buffer >= ray_cast_duration; m_time_buffer -= ray_cast_duration)
     {
         vector3 const  ray_direction_local{
                 (get_camera()->left() + gen_random_number_in_01() * (get_camera()->right() - get_camera()->left())),
@@ -105,11 +91,7 @@ void  sensory_controller_ray_cast_sight::next_round(float_32_bit const  time_ste
         if (!get_blackboard()->m_scene->get_collision_scene().ray_cast(ray_origin, ray_unit_direction, ray_length, true, true, &nearest_coid, &parameter_to_nearest_coid, &ignored))
             continue;
 
-        m_coids_with_times.erase(nearest_coid);
-        m_coids_with_times[nearest_coid] = now;
-        m_from_times_to_coids.insert({ now, nearest_coid });
-
-        m_ray_casts_as_performed_in_time.insert({ now, {ray_origin, ray_unit_direction, parameter_to_nearest_coid * ray_length, nearest_coid} });
+        m_ray_casts_in_time.insert({ now, {ray_origin, ray_unit_direction, parameter_to_nearest_coid * ray_length, nearest_coid} });
     }
 }
 

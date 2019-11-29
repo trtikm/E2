@@ -2064,9 +2064,8 @@ void  simulator::render_ai_action_controller_props(
                         );
         if (sight_ptr == nullptr)
             continue;
-        ai::sensory_controller_ray_cast_sight::coids_with_last_seen_times const&  coids_with_times = sight_ptr->get_coids_with_last_seen_times();
-        ai::sensory_controller_ray_cast_sight::ray_casts_as_performed_in_time const&  ray_casts_in_time = sight_ptr->get_ray_casts_as_performed_in_time();
-        if (coids_with_times.empty() && ray_casts_in_time.empty())
+        ai::sensory_controller_ray_cast_sight::ray_casts_in_time const&  ray_casts_in_time = sight_ptr->get_ray_casts_in_time();
+        if (ray_casts_in_time.empty())
             continue;
 
         if (!qtgl::make_current(__dbg_batch_coord_cross, draw_state, use_instancing))
@@ -2074,25 +2073,6 @@ void  simulator::render_ai_action_controller_props(
         INVARIANT(use_instancing);
 
         qtgl::vertex_shader_instanced_data_provider  instanced_data_provider(__dbg_batch_coord_cross);
-        for (auto const&  coid_and_time : coids_with_times)
-        {
-            vector3 pos;
-            switch (angeo::get_shape_type(coid_and_time.first))
-            {
-            case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
-                pos = (1.0f / 3.0f) * (
-                            m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid_and_time.first, 0U) +
-                            m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid_and_time.first, 1U) +
-                            m_collision_scene_ptr->get_triangle_end_point_in_world_space(coid_and_time.first, 2U)
-                            );
-                break;
-            default:
-                continue;
-            }
-            matrix44  W;
-            compose_from_base_matrix(pos, matrix33_identity(), W);
-            instanced_data_provider.insert_from_model_to_camera_matrix(matrix_from_world_to_camera * W);
-        }
         for (auto const&  time_and_ray_cast_info : ray_casts_in_time)
         {
             vector3 const  contact_point =
@@ -2103,6 +2083,26 @@ void  simulator::render_ai_action_controller_props(
             compose_from_base_matrix(contact_point, matrix33_identity(), W);
             instanced_data_provider.insert_from_model_to_camera_matrix(matrix_from_world_to_camera * W);
         }
+        if (false) // do we want to draw also seen triangles?
+            for (auto const&  time_and_ray_cast_info : ray_casts_in_time)
+            {
+                vector3 pos;
+                switch (angeo::get_shape_type(time_and_ray_cast_info.second.coid))
+                {
+                case angeo::COLLISION_SHAPE_TYPE::TRIANGLE:
+                    pos = (1.0f / 3.0f) * (
+                        m_collision_scene_ptr->get_triangle_end_point_in_world_space(time_and_ray_cast_info.second.coid, 0U) +
+                        m_collision_scene_ptr->get_triangle_end_point_in_world_space(time_and_ray_cast_info.second.coid, 1U) +
+                        m_collision_scene_ptr->get_triangle_end_point_in_world_space(time_and_ray_cast_info.second.coid, 2U)
+                        );
+                    break;
+                default:
+                    continue;
+                }
+                matrix44  W;
+                compose_from_base_matrix(pos, matrix33_identity(), W);
+                instanced_data_provider.insert_from_model_to_camera_matrix(matrix_from_world_to_camera * W);
+            }
         qtgl::render_batch(
                 __dbg_batch_coord_cross,
                 instanced_data_provider,

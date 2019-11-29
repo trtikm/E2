@@ -59,7 +59,7 @@ snapshot::snapshot(blackboard_weak_const_ptr const  blackboard_ptr)
     camera_y_axis = transform_vector(angeo::axis_y(camera_frame), to_agent_space_matrix);
     camera_z_axis = transform_vector(angeo::axis_z(camera_frame), to_agent_space_matrix);
 
-    for (auto const& time_and_ray_cast_info : sight_ptr->get_ray_casts_as_performed_in_time())
+    for (auto const& time_and_ray_cast_info : sight_ptr->get_ray_casts_in_time())
     {
         auto const&  info = time_and_ray_cast_info.second;
         ray_cast_targets.push_back(
