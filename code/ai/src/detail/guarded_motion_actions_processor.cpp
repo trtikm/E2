@@ -282,7 +282,7 @@ void  execute_satisfied_motion_guarded_actions(
                 float_32_bit const  agent_linear_acceleration_magnitude = length(agent_linear_acceleration);
                 if (agent_linear_acceleration_magnitude > action_ptr->max_linear_accel)
                     agent_linear_acceleration *= action_ptr->max_linear_accel / agent_linear_acceleration_magnitude;
-                motion_object_motion.acceleration.m_linear += agent_linear_acceleration;
+                motion_object_motion.velocity.m_linear += agent_linear_acceleration * time_step_in_seconds;
             }
             else if (auto const  action_ptr =
                 std::dynamic_pointer_cast<skeletal_motion_templates::action_set_angular_velocity const>(action_props))
@@ -297,7 +297,7 @@ void  execute_satisfied_motion_guarded_actions(
                 float_32_bit const  agent_angular_acceleration_magnitude = length(agent_angular_acceleration);
                 if (agent_angular_acceleration_magnitude > action_ptr->max_angular_accel)
                     agent_angular_acceleration *= action_ptr->max_angular_accel / agent_angular_acceleration_magnitude;
-                motion_object_motion.acceleration.m_angular += agent_angular_acceleration;
+                motion_object_motion.velocity.m_angular += agent_angular_acceleration * time_step_in_seconds;
             }
             else if (auto const  action_ptr =
                 std::dynamic_pointer_cast<skeletal_motion_templates::action_cancel_gravity_accel const>(action_props))

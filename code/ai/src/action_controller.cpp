@@ -217,6 +217,7 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
                 m_motion_action_data
                 );
     }
+    m_motion_object_motion.commit_velocities(get_blackboard()->m_scene, m_motion_object_motion.nid);
     m_motion_object_motion.commit_accelerations(get_blackboard()->m_scene, m_motion_object_motion.nid);
 }
 

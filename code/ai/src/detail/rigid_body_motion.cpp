@@ -117,13 +117,17 @@ void  rigid_body_motion::commit(scene_ptr const  s, scene::node_id const&  motio
 {
     //commit_frame(s, motion_object_nid);
 
-    s->set_linear_velocity_of_rigid_body_of_scene_node(motion_object_nid, velocity.m_linear);
-    s->set_angular_velocity_of_rigid_body_of_scene_node(motion_object_nid, velocity.m_angular);
-
+    commit_velocities(s, motion_object_nid);
     commit_accelerations(s, motion_object_nid);
 
     s->set_inverted_mass_of_rigid_body_of_scene_node(motion_object_nid, inverted_mass);
     s->set_inverted_inertia_tensor_of_rigid_body_of_scene_node(motion_object_nid, inverted_inertia_tensor);
+}
+
+void  rigid_body_motion::commit_velocities(scene_ptr const  s, scene::node_id const& motion_object_nid)
+{
+    s->set_linear_velocity_of_rigid_body_of_scene_node(motion_object_nid, velocity.m_linear);
+    s->set_angular_velocity_of_rigid_body_of_scene_node(motion_object_nid, velocity.m_angular);
 }
 
 void  rigid_body_motion::commit_accelerations(scene_ptr const  s, scene::node_id const&  motion_object_nid)

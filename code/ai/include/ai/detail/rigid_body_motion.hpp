@@ -53,6 +53,7 @@ struct  rigid_body_motion
     void  integrate(float_32_bit const  time_step_in_seconds);
 
     void  commit(scene_ptr const  s, scene::node_id const&  motion_object_nid);
+    void  commit_velocities(scene_ptr const  s, scene::node_id const& motion_object_nid);
     void  commit_accelerations(scene_ptr const  s, scene::node_id const&  motion_object_nid);
     void  commit_frame(scene_ptr const  s, scene::node_id const&  motion_object_nid);
 
