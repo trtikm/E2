@@ -104,7 +104,7 @@ bool  cortex::is_desire_vector_variable(std::string const&  var_name)
 }
 
 
-bool  cortex::can_desire_vector_variable_be_zero(std::string const&  var_name)
+bool  cortex::vector_variable_has_to_be_normalised(std::string const&  var_name)
 {
     return var_name == "look_at_target";
 }

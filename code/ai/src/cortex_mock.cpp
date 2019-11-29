@@ -71,7 +71,7 @@ void  cortex_mock::next_round(float_32_bit const  time_step_in_seconds)
                 else
                 {
                     vector3  value = evaluate_vector_expression(expr, ctx);
-                    if (!can_desire_vector_variable_be_zero(var))
+                    if (vector_variable_has_to_be_normalised(var))
                     {
                         float_32_bit const  len = length(value);
                         value = (len < 1e-5f) ? vector3_unit_y() : (1.0f / len) * value;

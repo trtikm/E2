@@ -47,7 +47,7 @@ protected:
 
     static bool  is_desire_scalar_variable(std::string const&  var_name);
     static bool  is_desire_vector_variable(std::string const&  var_name);
-    static bool  can_desire_vector_variable_be_zero(std::string const&  var_name);
+    static bool  vector_variable_has_to_be_normalised(std::string const&  var_name);
 
     float_32_bit*  get_address_of_desire_scalar_variable(std::string const&  var_name);
     vector3*  get_address_of_desire_vector_variable(std::string const&  var_name);
