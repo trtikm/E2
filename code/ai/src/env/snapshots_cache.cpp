@@ -23,7 +23,6 @@ snapshots_cache::config::config(
 snapshots_cache::snapshots_cache(blackboard_weak_const_ptr const  blackboard_ptr, config const& cfg)
     : m_blackboard(blackboard_ptr)
     , m_config(cfg)
-    , m_generator()
     , m_cache()
     , m_time_buffer(0.0f)
 {}

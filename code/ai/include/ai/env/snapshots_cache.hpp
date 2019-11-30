@@ -4,7 +4,6 @@
 #   include <ai/blackboard.hpp>
 #   include <ai/env/snapshot.hpp>
 #   include <angeo/tensor_math.hpp>
-#   include <utility/random.hpp>
 #   include <unordered_map>
 #   include <map>
 #   include <chrono>
@@ -37,7 +36,6 @@ struct  snapshots_cache
 private:
     blackboard_weak_const_ptr  m_blackboard;
     config  m_config;
-    random_generator_for_natural_32_bit  m_generator;
     snapshots_as_taken_in_time  m_cache;
     float_32_bit  m_time_buffer;
 };
