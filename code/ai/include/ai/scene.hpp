@@ -20,18 +20,18 @@ struct  scene
     struct  collicion_contant_info
     {
         collicion_contant_info(
-                vector3 const&  contact_point_,
-                vector3 const&  unit_normal_,
+                vector3 const&  contact_point_in_world_space_,
+                vector3 const&  unit_normal_in_world_space_,
                 angeo::COLLISION_MATERIAL_TYPE const  material_,
                 float_32_bit const  normal_force_magnitude_
                 )
-            : contact_point(contact_point_)
-            , unit_normal(unit_normal_)
+            : contact_point_in_world_space(contact_point_in_world_space_)
+            , unit_normal_in_world_space(unit_normal_in_world_space_)
             , material(material_)
             , normal_force_magnitude(normal_force_magnitude_)
         {}
-        vector3  contact_point;
-        vector3  unit_normal;
+        vector3  contact_point_in_world_space;
+        vector3  unit_normal_in_world_space;
         angeo::COLLISION_MATERIAL_TYPE  material;
         float_32_bit  normal_force_magnitude;
     };

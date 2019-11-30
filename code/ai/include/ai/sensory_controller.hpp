@@ -2,6 +2,7 @@
 #   define AI_SENSORY_CONTROLLER_HPP_INCLUDED
 
 #   include <ai/blackboard.hpp>
+#   include <ai/sensory_controller_collision_contacts.hpp>
 #   include <ai/sensory_controller_sight.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <memory>
@@ -11,12 +12,10 @@ namespace ai {
 
 struct  sensory_controller
 {
-    sensory_controller(
+    explicit sensory_controller(
             blackboard_weak_ptr const  blackboard_,
-            sensory_controller_sight_ptr  const  sight_ = nullptr)
-        : m_blackboard(blackboard_)
-        , m_sight(sight_)
-    {}
+            sensory_controller_sight_ptr  const  sight_ = nullptr
+            );
 
     virtual ~sensory_controller() {}
 
@@ -25,10 +24,12 @@ struct  sensory_controller
 
     blackboard_ptr  get_blackboard() const { return m_blackboard.lock(); }
 
+    sensory_controller_collision_contacts_ptr  get_collision_contacts() const { return m_collision_contacts; }
     sensory_controller_sight_ptr  get_sight() const { return m_sight; }
 
 private:
     blackboard_weak_ptr  m_blackboard;
+    sensory_controller_collision_contacts_ptr  m_collision_contacts;
     sensory_controller_sight_ptr  m_sight;
 };
 

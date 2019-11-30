@@ -61,7 +61,7 @@ void  clone_motion_action_data_map(
 
 bool  get_satisfied_motion_guarded_actions(
         std::vector<skeletal_motion_templates::guarded_actions_ptr> const&  guarded_actions_to_check,
-        blackboard::collision_contacts_map const&  collision_contacts,
+        sensory_controller_collision_contacts::collision_contacts_map const&  collision_contacts,
         detail::rigid_body_motion const&  motion_object_motion,
         motion_desire_props const&  desire,
         vector3 const&  gravity_acceleration_in_world_space,
@@ -81,7 +81,7 @@ bool  get_satisfied_motion_guarded_actions(
                 auto const  begin_and_end = collision_contacts.equal_range(motion_object_motion.nid);
                 for (auto  it = begin_and_end.first; it != begin_and_end.second; ++it)
                     if (it->second.normal_force_magnitude > 0.001f &&
-                        angle(it->second.unit_normal, cone_unit_axis_vector_in_world_space) < constraint_ptr->angle_in_radians)
+                        angle(it->second.unit_normal_in_world_space, cone_unit_axis_vector_in_world_space) < constraint_ptr->angle_in_radians)
                     {
                         return true;
                     }

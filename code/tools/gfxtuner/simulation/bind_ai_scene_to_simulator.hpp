@@ -93,8 +93,8 @@ struct bind_ai_scene_to_simulator : public ai::scene
     bool  do_tracking_collision_contact_of_collision_object(angeo::collision_object_id const  coid) const;
     void  on_collision_contact(
             angeo::collision_object_id const  coid,
-            vector3 const&  contact_point,
-            vector3 const&  unit_normal,
+            vector3 const&  contact_point_in_world_space,
+            vector3 const&  unit_normal_in_world_space,
             angeo::COLLISION_MATERIAL_TYPE const  material,
             float_32_bit const  normal_force_magnitude
             ) const;

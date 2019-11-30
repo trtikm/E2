@@ -1,5 +1,6 @@
 #include <ai/cortex.hpp>
 #include <ai/action_controller.hpp>
+#include <ai/sensory_controller.hpp>
 #include <ai/detail/guarded_motion_actions_processor.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -45,7 +46,7 @@ natural_32_bit  cortex::choose_next_motion_action(std::vector<skeletal_motion_te
                 std::fabs(guard_valid_cost_addon - guard_invalid_cost_addon) > 1e-5f &&
                 detail::get_satisfied_motion_guarded_actions(
                         get_blackboard()->m_motion_templates.at(info.cursor.motion_name).actions.at(info.cursor.keyframe_index),
-                        get_blackboard()->m_collision_contacts,
+                        get_blackboard()->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map(),
                         get_blackboard()->m_action_controller->get_motion_object_motion(),
                         m_motion_desire_props,
                         get_blackboard()->m_action_controller->get_gravity_acceleration(),

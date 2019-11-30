@@ -23,11 +23,13 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/sensory_controller.hpp
     ./src/sensory_controller.cpp
 
+    ./include/ai/sensory_controller_collision_contacts.hpp
+    ./src/sensory_controller_collision_contacts.cpp 
     ./include/ai/sensory_controller_sight.hpp
     ./src/sensory_controller_sight.cpp 
     ./include/ai/sensory_controller_ray_cast_sight.hpp 
     ./src/sensory_controller_ray_cast_sight.cpp 
-    
+
     ./include/ai/action_controller.hpp
     ./src/action_controller.cpp
 

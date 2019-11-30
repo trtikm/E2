@@ -20,7 +20,7 @@ struct agent
     ~agent();
 
     void  next_round(float_32_bit const  time_step_in_seconds);
-    
+
     blackboard_ptr  get_blackboard() { return m_blackboard; }
     blackboard_const_ptr  get_blackboard() const { return m_blackboard; }
 
@@ -37,7 +37,6 @@ struct agent
 
 private:
     blackboard_ptr  m_blackboard;
-    friend struct  ai::agents;
 };
 
 

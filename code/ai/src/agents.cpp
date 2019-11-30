@@ -102,10 +102,7 @@ void  agents::next_round(
         auto const  props = m_agents.at(id);
         if (props != nullptr)
             if (props->agent_ptr != nullptr)
-            {
                 props->agent_ptr->next_round(time_step_in_seconds);
-                props->agent_ptr->get_blackboard()->m_collision_contacts.clear();
-            }
             else if (props->motion_templates.loaded_successfully())
                 construct_agent(id, *props);
     }
@@ -118,7 +115,10 @@ void  agents::on_collision_contact(
         scene::collicion_contant_info const&  contact_info
         )
 {
-    m_agents.at(agent_id)->agent_ptr->get_blackboard()->m_collision_contacts.insert({collider_nid, contact_info});
+    m_agents.at(agent_id)->agent_ptr->get_blackboard()->m_sensory_controller->get_collision_contacts()->on_collision_contact(
+            collider_nid,
+            contact_info
+            );
 }
 
 

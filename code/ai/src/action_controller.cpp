@@ -1,5 +1,6 @@
 #include <ai/action_controller.hpp>
 #include <ai/cortex.hpp>
+#include <ai/sensory_controller.hpp>
 #include <ai/skeleton_utils.hpp>
 #include <ai/detail/rigid_body_motion.hpp>
 #include <ai/detail/ideal_velocity_buider.hpp>
@@ -198,7 +199,7 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
     std::vector<skeletal_motion_templates::guarded_actions_ptr>  satisfied_guarded_actions;
     if (detail::get_satisfied_motion_guarded_actions(
             m_current_intepolation_state.disjunction_of_guarded_actions,
-            get_blackboard()->m_collision_contacts,
+            get_blackboard()->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map(),
             m_motion_object_motion,
             get_blackboard()->m_cortex->get_motion_desire_props(),
             m_gravity_acceleration,

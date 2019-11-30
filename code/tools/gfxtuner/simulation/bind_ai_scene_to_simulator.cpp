@@ -408,8 +408,8 @@ bool  bind_ai_scene_to_simulator::do_tracking_collision_contact_of_collision_obj
 
 void  bind_ai_scene_to_simulator::on_collision_contact(
         angeo::collision_object_id const  coid,
-        vector3 const&  contact_point,
-        vector3 const&  unit_normal,
+        vector3 const&  contact_point_in_world_space,
+        vector3 const&  unit_normal_in_world_space,
         angeo::COLLISION_MATERIAL_TYPE const  material,
         float_32_bit const  normal_force_magnitude
         ) const
@@ -422,7 +422,12 @@ void  bind_ai_scene_to_simulator::on_collision_contact(
     m_simulator_ptr->get_agents()->on_collision_contact(
             it->second.second,
             it->second.first,
-            ai::scene::collicion_contant_info(contact_point, unit_normal, material, normal_force_magnitude)
+            ai::scene::collicion_contant_info(
+                    contact_point_in_world_space,
+                    unit_normal_in_world_space,
+                    material,
+                    normal_force_magnitude
+                    )
             );
 }
 

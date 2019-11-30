@@ -4,6 +4,7 @@
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <ai/detail/rigid_body_motion.hpp>
 #   include <ai/motion_desire_props.hpp>
+#   include <ai/sensory_controller_collision_contacts.hpp>
 #   include <ai/blackboard.hpp>
 #   include <ai/scene.hpp>
 #   include <angeo/tensor_math.hpp>
@@ -30,7 +31,7 @@ using  motion_action_persistent_data_map = std::unordered_map<std::string, std::
 /// one satisfied guard disjunct was found. Otherwise, returns false.
 bool  get_satisfied_motion_guarded_actions(
         skeletal_motion_templates::disjunction_of_guarded_actions const&  guarded_actions_to_check,
-        blackboard::collision_contacts_map const&  collision_contacts,
+        sensory_controller_collision_contacts::collision_contacts_map const&  collision_contacts,
         detail::rigid_body_motion const&  motion_object_motion,
         motion_desire_props const&  desire,
         vector3 const&  gravity_acceleration_in_world_space,

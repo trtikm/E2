@@ -5,7 +5,6 @@
 #   include <ai/agent_kind.hpp>
 #   include <ai/scene.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
-#   include <unordered_map>
 #   include <memory>
 
 namespace ai {
@@ -22,8 +21,6 @@ struct  retina;
 ///       Only the idea of a shared storage is used here.
 struct blackboard
 {
-    using  collision_contacts_map = std::unordered_multimap<scene::node_id, scene::collicion_contant_info>;
-
     virtual ~blackboard();
     bool are_all_modules_released() const;
 
@@ -34,7 +31,6 @@ struct blackboard
     scene_ptr  m_scene;
     scene::node_id  m_agent_nid;
     std::vector<scene::node_id>  m_bone_nids;
-    collision_contacts_map  m_collision_contacts;
 
     std::shared_ptr<retina>  m_retina_ptr; // This should be moved somewhere else, e.g. to sensory_controller_sight_retina?
 
