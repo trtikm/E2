@@ -3,6 +3,7 @@
 #include <ai/cortex_mock.hpp>
 #include <ai/cortex_robot_humanoid.hpp>
 #include <ai/sensory_controller.hpp>
+#include <ai/sensory_controller_collision_contacts.hpp>
 #include <ai/sensory_controller_ray_cast_sight.hpp>
 #include <ai/action_controller.hpp>
 #include <utility/assumptions.hpp>
@@ -37,16 +38,33 @@ void  agent::create_modules(blackboard_ptr const  bb, input_devices_ptr const  i
     {
     case AGENT_KIND::MOCK:
         bb->m_cortex = std::make_shared<cortex_mock>(bb, idev);
-        bb->m_sensory_controller = std::make_shared<sensory_controller>(bb, std::make_shared<sensory_controller_sight>(bb,
-                sensory_controller_sight::camera_config()));
+        bb->m_sensory_controller = std::make_shared<sensory_controller>(
+                bb,
+                std::make_shared<sensory_controller_collision_contacts>(
+                        bb,
+                        sensory_controller_collision_contacts::config()
+                        ),
+                std::make_shared<sensory_controller_sight>(
+                        bb,
+                        sensory_controller_sight::camera_config()
+                        )
+                );
         bb->m_action_controller = std::make_shared<action_controller>(bb);
         break;
     case AGENT_KIND::ROBOT_HUMANOID:
         bb->m_cortex = std::make_shared<cortex_robot_humanoid>(bb);
-        bb->m_sensory_controller = std::make_shared<sensory_controller>(bb, std::make_shared<sensory_controller_ray_cast_sight>(bb,
-                sensory_controller_sight::camera_config(),
-                sensory_controller_ray_cast_sight::ray_cast_config()
-                ));
+        bb->m_sensory_controller = std::make_shared<sensory_controller>(
+                bb,
+                std::make_shared<sensory_controller_collision_contacts>(
+                        bb,
+                        sensory_controller_collision_contacts::config()
+                        ),
+                std::make_shared<sensory_controller_ray_cast_sight>(
+                        bb,
+                        sensory_controller_sight::camera_config(),
+                        sensory_controller_ray_cast_sight::ray_cast_config()
+                        )
+                );
         bb->m_action_controller = std::make_shared<action_controller>(bb);
         break;
     default:

@@ -80,8 +80,8 @@ bool  get_satisfied_motion_guarded_actions(
                 vector3 const  cone_unit_axis_vector_in_world_space = transform_vector(constraint_ptr->unit_axis, W);
                 auto const  begin_and_end = collision_contacts.equal_range(motion_object_motion.nid);
                 for (auto  it = begin_and_end.first; it != begin_and_end.second; ++it)
-                    if (it->second.normal_force_magnitude > 0.001f &&
-                        angle(it->second.unit_normal_in_world_space, cone_unit_axis_vector_in_world_space) < constraint_ptr->angle_in_radians)
+                    if (it->second.data.normal_force_magnitude > 0.001f &&
+                        angle(it->second.data.unit_normal_in_world_space, cone_unit_axis_vector_in_world_space) < constraint_ptr->angle_in_radians)
                     {
                         return true;
                     }

@@ -7,6 +7,7 @@
 #   include <angeo/tensor_math.hpp>
 #   include <utility/random.hpp>
 #   include <unordered_map>
+#   include <functional>
 #   include <map>
 #   include <chrono>
 

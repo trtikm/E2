@@ -14,7 +14,8 @@ struct  sensory_controller
 {
     explicit sensory_controller(
             blackboard_weak_ptr const  blackboard_,
-            sensory_controller_sight_ptr  const  sight_ = nullptr
+            sensory_controller_collision_contacts_ptr const  collision_contacts_,
+            sensory_controller_sight_ptr  const  sight_
             );
 
     virtual ~sensory_controller() {}
@@ -23,7 +24,6 @@ struct  sensory_controller
     virtual void  next_round(float_32_bit const  time_step_in_seconds);
 
     blackboard_ptr  get_blackboard() const { return m_blackboard.lock(); }
-
     sensory_controller_collision_contacts_ptr  get_collision_contacts() const { return m_collision_contacts; }
     sensory_controller_sight_ptr  get_sight() const { return m_sight; }
 

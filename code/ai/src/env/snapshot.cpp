@@ -75,7 +75,7 @@ snapshot::snapshot(blackboard_weak_const_ptr const  blackboard_ptr)
     }
     auto const  begin_and_end = bb->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map().equal_range(motion.nid);
     for (auto it = begin_and_end.first; it != begin_and_end.second; ++it)
-        contact_points.push_back(transform_point(it->second.contact_point_in_world_space, to_agent_space_matrix));
+        contact_points.push_back(transform_point(it->second.data.contact_point_in_world_space, to_agent_space_matrix));
 }
 
 
