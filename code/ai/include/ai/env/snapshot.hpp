@@ -41,6 +41,15 @@ struct  snapshot
     vector3  camera_y_axis;
     vector3  camera_z_axis;
 
+    struct  collision_contact_event
+    {
+        natural_32_bit  cell_x;
+        natural_32_bit  cell_y;
+        vector3  target_in_local_space;
+    };
+
+    std::vector<collision_contact_event>  collision_contact_events; // Not ordered.
+
     struct  ray_cast_event
     {
         natural_32_bit  cell_x;
@@ -48,8 +57,7 @@ struct  snapshot
         vector3  target_in_local_space;
     };
 
-    std::vector<ray_cast_event>  ray_cast_targets;  // Order is given by the order of performed raycasts.
-    std::vector<vector3>  contact_points;           // Order does NOT matter.
+    std::vector<ray_cast_event>  ray_cast_events;  // Order is given by the order of performed raycasts.
 };
 
 
