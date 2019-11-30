@@ -9,8 +9,11 @@ enum AGENT_KIND
     // An agent controlled by a human operator (via keywoard)
     MOCK = 0,
 
-    // Humanoid agent controlled by robotic AI (i.e not using NNET)
-    ROBOT_HUMANOID = 1,
+    // An agent controlled by a cortex choosing actions randomly.
+    RANDOM = 1,
+
+    // An agent controlled by an experimental (prototyped) cortex.
+    ROBOT = 2,
 };
 
 

@@ -14,8 +14,10 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/ai/cortex_mock.hpp
     ./src/cortex_mock.cpp
-    ./include/ai/cortex_robot_humanoid.hpp
-    ./src/cortex_robot_humanoid.cpp
+    ./include/ai/cortex_random.hpp
+    ./src/cortex_random.cpp
+    ./include/ai/cortex_robot.hpp
+    ./src/cortex_robot.cpp
 
     ./include/ai/motion_desire_props.hpp
     ./src/motion_desire_props.cpp
@@ -32,6 +34,8 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/ai/action_controller.hpp
     ./src/action_controller.cpp
+    ./include/ai/action_regulator.hpp
+    ./src/action_regulator.cpp
 
     ./include/ai/input_devices.hpp
 

@@ -30,6 +30,7 @@ action_controller::action_controller(blackboard_weak_ptr const  blackboard_)
     , m_gravity_acceleration(vector3_zero())
 
     , m_blackboard(blackboard_)
+    , m_regulator(this)
 
     , m_total_interpolation_time_in_seconds(0.0f)
     , m_consumed_time_in_seconds(0.0f)
@@ -132,7 +133,12 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
             std::vector<skeletal_motion_templates::transition_info>  successors;
             get_blackboard()->m_motion_templates.get_successor_keyframes(m_dst_cursor, successors);
             skeletal_motion_templates::transition_info const&  best_transition = successors.at(
-                    successors.size() == 1UL ? 0U : get_blackboard()->m_cortex->choose_next_motion_action(successors, ctx)
+                    successors.size() == 1UL ?
+                            0U :
+                            m_regulator.choose_next_motion_action(
+                                    get_blackboard()->m_cortex->choose_next_motion_action(successors, ctx),
+                                    successors
+                                    )
                     );
             m_dst_cursor = best_transition.cursor;
             m_total_interpolation_time_in_seconds += best_transition.time_in_seconds;

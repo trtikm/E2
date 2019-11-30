@@ -2,6 +2,7 @@
 #   define AI_ACTION_CONTROLLER_HPP_INCLUDED
 
 #   include <ai/blackboard.hpp>
+#   include <ai/action_regulator.hpp>
 #   include <ai/scene.hpp>
 #   include <ai/motion_desire_props.hpp>
 #   include <ai/detail/rigid_body_motion.hpp>
@@ -62,6 +63,7 @@ private:
     void  look_at_target(float_32_bit const  time_step_in_seconds, float_32_bit const  interpolation_param);
 
     blackboard_weak_ptr  m_blackboard;
+    action_regulator  m_regulator;
 
     float_32_bit  m_total_interpolation_time_in_seconds;
     float_32_bit  m_consumed_time_in_seconds;

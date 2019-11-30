@@ -1,7 +1,8 @@
 #include <ai/agent.hpp>
 #include <ai/cortex.hpp>
 #include <ai/cortex_mock.hpp>
-#include <ai/cortex_robot_humanoid.hpp>
+#include <ai/cortex_random.hpp>
+#include <ai/cortex_robot.hpp>
 #include <ai/sensory_controller.hpp>
 #include <ai/sensory_controller_collision_contacts.hpp>
 #include <ai/sensory_controller_ray_cast_sight.hpp>
@@ -22,7 +23,8 @@ blackboard_ptr  agent::create_blackboard(AGENT_KIND const  agent_kind)
     switch (agent_kind)
     {
     case AGENT_KIND::MOCK:
-    case AGENT_KIND::ROBOT_HUMANOID:
+    case AGENT_KIND::RANDOM:
+    case AGENT_KIND::ROBOT:
         return std::make_shared<blackboard>();
     default:
         UNREACHABLE();
@@ -51,8 +53,23 @@ void  agent::create_modules(blackboard_ptr const  bb, input_devices_ptr const  i
                 );
         bb->m_action_controller = std::make_shared<action_controller>(bb);
         break;
-    case AGENT_KIND::ROBOT_HUMANOID:
-        bb->m_cortex = std::make_shared<cortex_robot_humanoid>(bb);
+    case AGENT_KIND::RANDOM:
+        bb->m_cortex = std::make_shared<cortex_random>(bb);
+        bb->m_sensory_controller = std::make_shared<sensory_controller>(
+                bb,
+                std::make_shared<sensory_controller_collision_contacts>(
+                        bb,
+                        sensory_controller_collision_contacts::config()
+                        ),
+                std::make_shared<sensory_controller_sight>(
+                        bb,
+                        sensory_controller_sight::camera_config()
+                        )
+                );
+        bb->m_action_controller = std::make_shared<action_controller>(bb);
+        break;
+    case AGENT_KIND::ROBOT:
+        bb->m_cortex = std::make_shared<cortex_robot>(bb);
         bb->m_sensory_controller = std::make_shared<sensory_controller>(
                 bb,
                 std::make_shared<sensory_controller_collision_contacts>(

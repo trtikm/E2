@@ -53,7 +53,7 @@ void  agents::construct_agent(agent_id const  id, agent_props&  props)
 {
     TMPROF_BLOCK();
 
-    AGENT_KIND const  agent_kind = AGENT_KIND::ROBOT_HUMANOID;
+    AGENT_KIND const  agent_kind = AGENT_KIND::MOCK;
 
     blackboard_ptr const  bb = agent::create_blackboard(agent_kind);
     {

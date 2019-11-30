@@ -1,4 +1,4 @@
-#include <ai/cortex_robot_humanoid.hpp>
+#include <ai/cortex_robot.hpp>
 #include <ai/action_controller.hpp>
 #include <ai/detail/guarded_motion_actions_processor.hpp>
 #include <ai/detail/ideal_velocity_buider.hpp>
@@ -11,23 +11,23 @@
 namespace ai {
 
 
-cortex_robot_humanoid::cortex_robot_humanoid(blackboard_weak_ptr const  blackboard_)
+cortex_robot::cortex_robot(blackboard_weak_ptr const  blackboard_)
     : cortex(blackboard_)
     , m_snapshots_cache(env::create_snapshots_cache(blackboard_, {}))
 {}
 
 
-cortex_robot_humanoid::~cortex_robot_humanoid()
+cortex_robot::~cortex_robot()
 {}
 
 
-void  cortex_robot_humanoid::initialise()
+void  cortex_robot::initialise()
 {
     cortex::initialise();
 }
 
 
-void  cortex_robot_humanoid::next_round(float_32_bit const  time_step_in_seconds)
+void  cortex_robot::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
