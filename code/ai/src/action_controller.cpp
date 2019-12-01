@@ -3,6 +3,7 @@
 #include <ai/sensory_controller.hpp>
 #include <ai/skeleton_utils.hpp>
 #include <ai/detail/rigid_body_motion.hpp>
+#include <ai/detail/expression_evaluator.hpp>
 #include <ai/detail/ideal_velocity_buider.hpp>
 #include <ai/detail/collider_utils.hpp>
 #include <angeo/skeleton_kinematics.hpp>
@@ -12,6 +13,64 @@
 #include <utility/timeprof.hpp>
 #include <queue>
 #include <functional>
+
+namespace ai { namespace detail { namespace {
+
+
+natural_32_bit  choose_next_motion_action(
+        std::vector<skeletal_motion_templates::transition_info> const&  possibilities,
+        blackboard_ptr const  bb,
+        eval::context const&  ctx
+        )
+{
+    TMPROF_BLOCK();
+
+    float_32_bit  best_rank = 0.0f;
+    natural_32_bit  best_index = (natural_32_bit)possibilities.size();
+    for (natural_32_bit  i = 0U; i != possibilities.size(); ++i)
+    {
+        skeletal_motion_templates::transition_info const&  info = possibilities.at(i);
+
+        float_32_bit const  guard_valid_cost_addon = info.guard->get_child("valid").get_value<float_32_bit>();
+        float_32_bit const  guard_invalid_cost_addon = info.guard->get_child("invalid").get_value<float_32_bit>();
+
+        float_32_bit  rank =
+                std::fabs(guard_valid_cost_addon - guard_invalid_cost_addon) > 1e-5f &&
+                detail::get_satisfied_motion_guarded_actions(
+                        bb->m_motion_templates.at(info.cursor.motion_name).actions.at(info.cursor.keyframe_index),
+                        bb->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map(),
+                        bb->m_action_controller->get_motion_object_motion(),
+                        *ctx.desire_props_ptr,
+                        bb->m_action_controller->get_gravity_acceleration(),
+                        nullptr
+                        )
+                ? guard_valid_cost_addon : guard_invalid_cost_addon;
+
+        float_32_bit  error = 0.0f;
+        float_32_bit  max_error = 0.0f;
+        for (auto const&  null_and_child : *info.desire)
+        {
+            float_32_bit const  expr_value = evaluate_scalar_expression(null_and_child.second.get_child("expression"), ctx);
+            float_32_bit const  ideal_value = null_and_child.second.get_child("value").get_value<float_32_bit>();
+            error += std::fabs(ideal_value - expr_value);
+            max_error += std::max(std::fabs(1.0f - ideal_value), std::fabs(0.0f - ideal_value));
+        }
+
+        if (max_error > 0.0f)
+            rank += 1.0f - error / max_error;
+
+        if (best_index == possibilities.size() || best_rank < rank)
+        {
+            best_rank = rank;
+            best_index = i;
+        }
+    }
+    INVARIANT(best_index < possibilities.size());
+    return best_index;
+}
+
+
+}}}
 
 namespace ai {
 
@@ -111,9 +170,17 @@ action_controller::~action_controller()
 }
 
 
+void  action_controller::initialise()
+{
+    m_regulator.initialise();
+}
+
+
 void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
+
+    m_regulator.next_round(get_blackboard()->m_cortex->get_motion_desire_props());
 
     float_32_bit const  interpolation_time_step_in_seconds = compute_interpolation_speed() * time_step_in_seconds;
 
@@ -127,18 +194,17 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
         float_32_bit  consumed_time = 0.0f;
         detail::ideal_velocity_buider  ideal_velocity_buider(m_dst_cursor, get_blackboard()->m_motion_templates);
 
-        cortex::context const  ctx{ interpolation_time_step_in_seconds };
+        detail::eval::context const  ctx{
+                &get_regulated_motion_desire_props(),
+                get_blackboard()->m_motion_templates.directions(),
+                interpolation_time_step_in_seconds
+                };
         while (m_consumed_time_in_seconds + interpolation_time_step_in_seconds >= m_total_interpolation_time_in_seconds)
         {
             std::vector<skeletal_motion_templates::transition_info>  successors;
             get_blackboard()->m_motion_templates.get_successor_keyframes(m_dst_cursor, successors);
             skeletal_motion_templates::transition_info const&  best_transition = successors.at(
-                    successors.size() == 1UL ?
-                            0U :
-                            m_regulator.choose_next_motion_action(
-                                    get_blackboard()->m_cortex->choose_next_motion_action(successors, ctx),
-                                    successors
-                                    )
+                    successors.size() == 1UL ? 0U : detail::choose_next_motion_action(successors, get_blackboard(), ctx)
                     );
             m_dst_cursor = best_transition.cursor;
             m_total_interpolation_time_in_seconds += best_transition.time_in_seconds;
@@ -207,7 +273,7 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
             m_current_intepolation_state.disjunction_of_guarded_actions,
             get_blackboard()->m_sensory_controller->get_collision_contacts()->get_collision_contacts_map(),
             m_motion_object_motion,
-            get_blackboard()->m_cortex->get_motion_desire_props(),
+            get_regulated_motion_desire_props(),
             m_gravity_acceleration,
             &satisfied_guarded_actions
             ))
@@ -218,7 +284,7 @@ void  action_controller::next_round(float_32_bit const  time_step_in_seconds)
                 m_ideal_linear_velocity_in_world_space,
                 m_ideal_angular_velocity_in_world_space,
                 m_gravity_acceleration,
-                get_blackboard()->m_cortex->get_motion_desire_props(),
+                get_regulated_motion_desire_props(),
                 m_motion_action_data,
                 m_motion_object_motion,
                 m_motion_action_data
@@ -374,7 +440,7 @@ void  action_controller::look_at_target(float_32_bit const  time_step_in_seconds
 
     vector3  target;
     {
-        target = get_blackboard()->m_cortex->get_motion_desire_props().look_at_target_in_local_space;
+        target = get_regulated_motion_desire_props().look_at_target_in_local_space;
 
         // The target is now in agent's local space, but we need the target in the space of the bone which is the closest parent bone
         // to all bones in 'bones_to_consider'; note that the parent bone cannot be in 'bones_to_consider'.

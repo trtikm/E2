@@ -65,7 +65,10 @@ add_library(${THIS_TARGET_NAME}
     
     ./include/ai/detail/ideal_velocity_buider.hpp 
     ./src/detail/ideal_velocity_buider.cpp 
-    
+
+    ./include/ai/detail/expression_evaluator.hpp
+    ./src/detail/expression_evaluator.cpp
+
     ./include/ai/detail/collider_utils.hpp
     ./src/detail/collider_utils.cpp
     )

@@ -33,7 +33,7 @@ struct  action_controller
     explicit action_controller(blackboard_weak_ptr const  blackboard_);
     virtual ~action_controller();
 
-    virtual void  initialise() {}
+    virtual void  initialise();
     virtual void  next_round(float_32_bit const  time_step_in_seconds);
 
     void  synchronise_motion_object_motion_with_scene();
@@ -49,6 +49,8 @@ struct  action_controller
     vector3 const&  get_ideal_linear_velocity_in_world_space() const { return m_ideal_linear_velocity_in_world_space; }
     vector3 const&  get_ideal_angular_velocity_in_world_space() const { return m_ideal_angular_velocity_in_world_space; }
     skeletal_motion_templates::free_bones_for_look_at_ptr  get_free_bones_for_look_at() const { return m_current_intepolation_state.free_bones_look_at; }
+
+    motion_desire_props const&  get_regulated_motion_desire_props() const { return m_regulator.get_motion_desire_props(); }
 
     float_32_bit  compute_interpolation_speed() const;
 

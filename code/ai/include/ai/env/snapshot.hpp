@@ -2,6 +2,7 @@
 #   define AI_ENV_SNAPSHOT_HPP_INCLUDED
 
 #   include <ai/blackboard.hpp>
+#   include <ai/motion_desire_props.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <memory>
 
@@ -14,11 +15,8 @@ struct  snapshot
 
     // All vectors are in agent's local frame!
 
-    vector3  desired_forward_unit_vector;
-    vector3  desired_linear_velocity_unit_direction;
-    float_32_bit  desired_linear_speed;
-    vector3  desired_angular_velocity_unit_axis;
-    float_32_bit  desired_angular_speed;
+    motion_desire_props  desire_computed_by_cortex;
+    motion_desire_props  regulated_desire;
 
     vector3  forward;
     vector3  up;

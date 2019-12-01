@@ -2,6 +2,7 @@
 #include <ai/skeleton_utils.hpp>
 #include <ai/cortex.hpp>
 #include <ai/cortex_mock.hpp>
+#include <ai/detail/expression_evaluator.hpp>
 #include <angeo/skeleton_kinematics.hpp>
 #include <angeo/utility.hpp>
 #include <utility/read_line.hpp>
@@ -956,6 +957,84 @@ void  motion_template_transitions_data::__check_loaded_data__(std::unordered_map
 {
     TMPROF_BLOCK();
 
+    struct local
+    {
+        static void  __check_loaded_guard__(property_tree const&  guard, std::string const&  message_prefix)
+        {
+            std::string const  prefix = message_prefix + " [cortex/guard]: ";
+            if (guard.count("valid") != 1UL)
+                throw std::runtime_error(msgstream() << prefix << "The 'guard' does not have exactly 1 'valid' key.");
+            if (!guard.get_child("valid").empty())
+                throw std::runtime_error(msgstream() << prefix << "The 'valid' key of the 'guard' does not map to a float.");
+            if (guard.count("invalid") != 1UL)
+                throw std::runtime_error(msgstream() << prefix << "The 'guard' does not have exactly 1 'invalid' key.");
+            if (!guard.get_child("invalid").empty())
+                throw std::runtime_error(msgstream() << prefix << "The 'invalid' key of the 'guard' does not map to a float.");
+            if (guard.size() != 2UL)
+                throw std::runtime_error(msgstream() << prefix << "The 'guard' does not have exactly 2 keys: 'valid' and 'invalid'.");
+        }
+
+
+        static void  __check_loaded_desire__(property_tree const&  desire, std::string const&  message_prefix)
+        {
+            std::string const  prefix = message_prefix + " [cortex/desire]: ";
+            int i = 0;
+            for (auto const& null_and_child : desire)
+            {
+                ++i;
+                if (null_and_child.second.count("expression") != 1UL)
+                    throw std::runtime_error(msgstream() << prefix << "The desire rule no. " << i << " does not have exactly 1 'expression' key.");
+                eval::__check_loaded_expression__(null_and_child.second.get_child("expression"), prefix);
+                if (null_and_child.second.count("value") != 1UL)
+                    throw std::runtime_error(msgstream() << prefix << "The desire rule no. " << i << " does not have exactly 1 'value' key.");
+                if (!null_and_child.second.get_child("value").empty())
+                    throw std::runtime_error(msgstream() << prefix << "The 'value' key of the desire rule no. " << i << " does not map to a float.");
+                if (std::fabs(null_and_child.second.get_child("value").get_value<float_32_bit>()) > 1.0f)
+                    throw std::runtime_error(msgstream() << prefix << "The 'value' key of the desire rule no. " << i << " is not in the interval [0, 1].");
+                if (null_and_child.second.size() != 2UL)
+                    throw std::runtime_error(msgstream() << prefix << "The desire rule no. " << i << " does not have exactly 2 keys: 'expression' and 'value'.");
+            }
+        }
+
+        static void  __check_loaded_mock__(property_tree const&  data, std::string const&  message_prefix)
+        {
+            std::string const  prefix = message_prefix + " [cortex_mock]: ";
+            int i = 0;
+            for (auto const& null_and_child : data)
+            {
+                ++i;
+                if (null_and_child.second.size() != 3UL)
+                    throw std::runtime_error(msgstream() << prefix << "In command no. " << i << ": Wrong number of keys; expecting 3, found "
+                        << null_and_child.second.size());
+                if (null_and_child.second.count("down") != 1UL)
+                    throw std::runtime_error(msgstream() << prefix << "In command no. " << i << ": The key 'down' must be present exactly once.");
+                if (null_and_child.second.count("up") != 1UL)
+                    throw std::runtime_error(msgstream() << prefix << "In command no. " << i << ": The key 'up' must be present exactly once.");
+                if (null_and_child.second.count("assignments") != 1UL)
+                    throw std::runtime_error(msgstream() << prefix << "In command no. " << i << ": The key 'assignments' must be present exactly once.");
+
+                int j = 0;
+                for (auto const& null_and_assignment : null_and_child.second.get_child("assignments"))
+                {
+                    ++j;
+                    if (null_and_assignment.second.size() != 2UL)
+                        throw std::runtime_error(msgstream() << prefix << "In command no. " << i << " assignment no. " << j << ": "
+                            << "Wrong number of keys; expecting 2, found " << null_and_assignment.second.size());
+                    if (null_and_assignment.second.count("var") != 1UL)
+                        throw std::runtime_error(msgstream() << prefix << "In command no. " << i << " assignment no. " << j << ": "
+                            << "The key 'var' must be present exactly once.");
+                    if (null_and_assignment.second.count("value") != 1UL)
+                        throw std::runtime_error(msgstream() << prefix << "In command no. " << i << " assignment no. " << j << ": "
+                            << "The key 'value' must be present exactly once.");
+                    std::string const  var = null_and_assignment.second.get_child("var").get_value<std::string>();
+                    if (!eval::is_desire_scalar_variable(var) && !eval::is_desire_vector_variable(var))
+                        throw std::runtime_error(msgstream() << prefix << "In command no. " << i << " assignment no. " << j << ": "
+                            << "The assigned variable is neither scalar nor vector desire variable.");
+                }
+            }
+        }
+    };
+
     std::string const  prefix = msgstream() << "motion_template_transitions_data::__check_loaded_data__: ";
 
     auto const  check_range_from_to = [&prefix](int range, int from, int to, std::string const&  name, std::string const&  kind, bool use_to) -> void {
@@ -1000,17 +1079,17 @@ void  motion_template_transitions_data::__check_loaded_data__(std::unordered_map
                 {
                     ++i;
                     if (type_and_child.first == "guard")
-                        cortex::__check_loaded_guard__(type_and_child.second, msgstream() << prefix << "In '"
+                        local::__check_loaded_guard__(type_and_child.second, msgstream() << prefix << "In '"
+                                                                                         << name_and_child.first << "."
+                                                                                         << kind_and_child.first << "."
+                                                                                         << "[" << i << "]."
+                                                                                         << type_and_child.first << "': ");
+                    else if (type_and_child.first == "desire")
+                        local::__check_loaded_desire__(type_and_child.second, msgstream() << prefix << "In '"
                                                                                           << name_and_child.first << "."
                                                                                           << kind_and_child.first << "."
                                                                                           << "[" << i << "]."
                                                                                           << type_and_child.first << "': ");
-                    else if (type_and_child.first == "desire")
-                        cortex::__check_loaded_desire__(type_and_child.second, msgstream() << prefix << "In '"
-                                                                                           << name_and_child.first << "."
-                                                                                           << kind_and_child.first << "."
-                                                                                           << "[" << i << "]."
-                                                                                           << type_and_child.first << "': ");
                     else
                         throw std::runtime_error(msgstream() << prefix << "Unknown key '"
                                                              << type_and_child.first << "' under 'defaults' of source template motion name: "
@@ -1036,17 +1115,17 @@ void  motion_template_transitions_data::__check_loaded_data__(std::unordered_map
                         else if (type_and_child.first == "time")
                             time = 1;
                         else if (type_and_child.first == "guard")
-                            cortex::__check_loaded_guard__(type_and_child.second, msgstream() << prefix << "In '"
+                            local::__check_loaded_guard__(type_and_child.second, msgstream() << prefix << "In '"
+                                                                                             << name_and_child.first << "."
+                                                                                             << kind_and_child.first << "."
+                                                                                             << "[" << i << "]."
+                                                                                             << type_and_child.first << "': ");
+                        else if (type_and_child.first == "desire")
+                            local::__check_loaded_desire__(type_and_child.second, msgstream() << prefix << "In '"
                                                                                               << name_and_child.first << "."
                                                                                               << kind_and_child.first << "."
                                                                                               << "[" << i << "]."
                                                                                               << type_and_child.first << "': ");
-                        else if (type_and_child.first == "desire")
-                            cortex::__check_loaded_desire__(type_and_child.second, msgstream() << prefix << "In '"
-                                                                                               << name_and_child.first << "."
-                                                                                               << kind_and_child.first << "."
-                                                                                               << "[" << i << "]."
-                                                                                               << type_and_child.first << "': ");
                     }
                     check_range_from_to(range, from, to, name_and_child.first, kind_and_child.first, true);
                     if (time == 0)
@@ -1075,17 +1154,17 @@ void  motion_template_transitions_data::__check_loaded_data__(std::unordered_map
                         else if (type_and_child.first == "range")
                             range = (int)type_and_child.second.size();
                         else if (type_and_child.first == "guard")
-                            cortex::__check_loaded_guard__(type_and_child.second, msgstream() << prefix << "In '"
+                            local::__check_loaded_guard__(type_and_child.second, msgstream() << prefix << "In '"
+                                                                                             << name_and_child.first << "."
+                                                                                             << kind_and_child.first << "."
+                                                                                             << "[" << i << "]."
+                                                                                             << type_and_child.first << "': ");
+                        else if (type_and_child.first == "desire")
+                            local::__check_loaded_desire__(type_and_child.second, msgstream() << prefix << "In '"
                                                                                               << name_and_child.first << "."
                                                                                               << kind_and_child.first << "."
                                                                                               << "[" << i << "]."
                                                                                               << type_and_child.first << "': ");
-                        else if (type_and_child.first == "desire")
-                            cortex::__check_loaded_desire__(type_and_child.second, msgstream() << prefix << "In '"
-                                                                                               << name_and_child.first << "."
-                                                                                               << kind_and_child.first << "."
-                                                                                               << "[" << i << "]."
-                                                                                               << type_and_child.first << "': ");
                     }
                     check_range_from_to(range, from, -1, name_and_child.first, kind_and_child.first, false);
                 }
@@ -1123,19 +1202,19 @@ void  motion_template_transitions_data::__check_loaded_data__(std::unordered_map
                             else if (type_and_child.first == "time")
                                 time = 1;
                             else if (type_and_child.first == "guard")
-                                cortex::__check_loaded_guard__(type_and_child.second, msgstream() << prefix << "In '"
+                                local::__check_loaded_guard__(type_and_child.second, msgstream() << prefix << "In '"
+                                                                                                 << name_and_child.first << "."
+                                                                                                 << kind_and_child.first << "."
+                                                                                                 << template_name_and_child.first << "."
+                                                                                                 << "[" << i << "]."
+                                                                                                 << type_and_child.first << "': ");
+                            else if (type_and_child.first == "desire")
+                                local::__check_loaded_desire__(type_and_child.second, msgstream() << prefix << "In '"
                                                                                                   << name_and_child.first << "."
                                                                                                   << kind_and_child.first << "."
                                                                                                   << template_name_and_child.first << "."
                                                                                                   << "[" << i << "]."
                                                                                                   << type_and_child.first << "': ");
-                            else if (type_and_child.first == "desire")
-                                cortex::__check_loaded_desire__(type_and_child.second, msgstream() << prefix << "In '"
-                                                                                                   << name_and_child.first << "."
-                                                                                                   << kind_and_child.first << "."
-                                                                                                   << template_name_and_child.first << "."
-                                                                                                   << "[" << i << "]."
-                                                                                                   << type_and_child.first << "': ");
                         }
                         check_range_from_to(range, from, to, name_and_child.first, kind_and_child.first, true);
                         if (time == 0)
@@ -1165,7 +1244,7 @@ void  motion_template_transitions_data::__check_loaded_data__(std::unordered_map
                                                  << "is a dead end.");
     }
 
-    cortex_mock::__check_loaded_data__(mock, prefix);
+    local::__check_loaded_mock__(mock, prefix);
 }
 
 

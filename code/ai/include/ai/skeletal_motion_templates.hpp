@@ -685,6 +685,7 @@ struct  motion_template_transitions_data
             std::unordered_map<std::string, motion_template> const&  motions_map,
             std::vector<transition_info>&  output
             ) const;
+
     void  __check_loaded_data__(std::unordered_map<std::string, motion_template> const&  motions_map) const;
 
     property_tree  data;

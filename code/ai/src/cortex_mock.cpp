@@ -1,4 +1,5 @@
 #include <ai/cortex_mock.hpp>
+#include <ai/detail/expression_evaluator.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -55,69 +56,30 @@ void  cortex_mock::next_round(float_32_bit const  time_step_in_seconds)
         return true;
     };
 
-    context const  ctx { time_step_in_seconds };
+    detail::eval::context const  ctx { &m_motion_desire_props, get_blackboard()->m_motion_templates.directions(), time_step_in_seconds };
     for (auto const&  null_and_step : get_blackboard()->m_motion_templates.get_transitions_mock())
         if (check_keys(null_and_step.second.get_child("down"), true) && check_keys(null_and_step.second.get_child("up"), false))
             for (auto const& null_and_assignment : null_and_step.second.get_child("assignments"))
             {
                 std::string const  var = null_and_assignment.second.get_child("var").get_value<std::string>();
                 skeletal_motion_templates::property_tree const&  expr = null_and_assignment.second.get_child("value");
-                if (is_desire_scalar_variable(var))
+                if (detail::eval::is_desire_scalar_variable(var))
                 {
                     float_32_bit  value = evaluate_scalar_expression(expr, ctx);
                     value = std::max(0.0f, std::min(1.0f, value));
-                    *get_address_of_desire_scalar_variable(var) = value;
+                    *detail::eval::get_address_of_desire_scalar_variable(var, m_motion_desire_props) = value;
                 }
                 else
                 {
                     vector3  value = evaluate_vector_expression(expr, ctx);
-                    if (vector_variable_has_to_be_normalised(var))
+                    if (detail::eval::vector_variable_has_to_be_normalised(var))
                     {
                         float_32_bit const  len = length(value);
                         value = (len < 1e-5f) ? vector3_unit_y() : (1.0f / len) * value;
                     }
-                    *get_address_of_desire_vector_variable(var) = value;
+                    *detail::eval::get_address_of_desire_vector_variable(var, m_motion_desire_props) = value;
                 }
             }
-}
-
-
-void  cortex_mock::__check_loaded_data__(skeletal_motion_templates::property_tree const&  data, std::string const&  message_prefix)
-{
-    std::string const  prefix = message_prefix + " [cortex_mock]: ";
-    int i = 0;
-    for (auto const&  null_and_child : data)
-    {
-        ++i;
-        if (null_and_child.second.size() != 3UL)
-            throw std::runtime_error(msgstream() << prefix << "In command no. " << i << ": Wrong number of keys; expecting 3, found "
-                                                 << null_and_child.second.size());
-        if (null_and_child.second.count("down") != 1UL)
-            throw std::runtime_error(msgstream() << prefix << "In command no. " << i << ": The key 'down' must be present exactly once.");
-        if (null_and_child.second.count("up") != 1UL)
-            throw std::runtime_error(msgstream() << prefix << "In command no. " << i << ": The key 'up' must be present exactly once.");
-        if (null_and_child.second.count("assignments") != 1UL)
-            throw std::runtime_error(msgstream() << prefix << "In command no. " << i << ": The key 'assignments' must be present exactly once.");
-
-        int j = 0;
-        for (auto const& null_and_assignment : null_and_child.second.get_child("assignments"))
-        {
-            ++j;
-            if (null_and_assignment.second.size() != 2UL)
-                throw std::runtime_error(msgstream() << prefix << "In command no. " << i << " assignment no. " << j << ": "
-                                                     << "Wrong number of keys; expecting 2, found " << null_and_assignment.second.size());
-            if (null_and_assignment.second.count("var") != 1UL)
-                throw std::runtime_error(msgstream() << prefix << "In command no. " << i << " assignment no. " << j << ": "
-                                                     << "The key 'var' must be present exactly once.");
-            if (null_and_assignment.second.count("value") != 1UL)
-                throw std::runtime_error(msgstream() << prefix << "In command no. " << i << " assignment no. " << j << ": "
-                                                     << "The key 'value' must be present exactly once.");
-            std::string const  var = null_and_assignment.second.get_child("var").get_value<std::string>();
-            if (!cortex::is_desire_scalar_variable(var) && !cortex::is_desire_vector_variable(var))
-                throw std::runtime_error(msgstream() << prefix << "In command no. " << i << " assignment no. " << j << ": "
-                                                     << "The assigned variable is neither scalar nor vector desire variable.");
-        }
-    }
 }
 
 

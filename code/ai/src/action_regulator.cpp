@@ -1,6 +1,6 @@
 #include <ai/action_regulator.hpp>
 #include <ai/action_controller.hpp>
-#include <ai/skeletal_motion_templates.hpp>
+#include <ai/cortex.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/development.hpp>
@@ -11,19 +11,25 @@ namespace ai {
 
 action_regulator::action_regulator(action_controller const* const  controller_ptr)
     : m_controller(controller_ptr)
+    , m_motion_desire_props()
 {
     ASSUMPTION(controller_ptr != nullptr);
 }
 
 
-natural_32_bit  action_regulator::choose_next_motion_action(
-        natural_32_bit const  index_chosen_by_cortex,
-        std::vector<skeletal_motion_templates::transition_info> const&  possibilities)
+void  action_regulator::initialise()
+{
+    set_stationary_desire(m_motion_desire_props, m_controller->get_blackboard());
+}
+
+
+void  action_regulator::next_round(motion_desire_props const&  motion_desire_props_of_the_cortex)
 {
     TMPROF_BLOCK();
 
+    m_motion_desire_props = motion_desire_props_of_the_cortex;
+
     // TODO!
-    return index_chosen_by_cortex;
 }
 
 

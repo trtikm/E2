@@ -21,7 +21,6 @@ snapshot::snapshot(blackboard_weak_const_ptr const  blackboard_ptr)
 
     blackboard_const_ptr const  bb = blackboard_ptr.lock();
     ASSUMPTION(bb != nullptr);
-    motion_desire_props const&  desire = bb->m_cortex->get_motion_desire_props();
     action_controller const&  actions = *bb->m_action_controller;
     detail::rigid_body_motion const&  motion = actions.get_motion_object_motion();
     ASSUMPTION(bb->m_sensory_controller->get_sight() != nullptr);
@@ -31,11 +30,8 @@ snapshot::snapshot(blackboard_weak_const_ptr const  blackboard_ptr)
     matrix44  to_agent_space_matrix;
     angeo::to_base_matrix(motion.frame, to_agent_space_matrix);
 
-    desired_forward_unit_vector = transform_vector(desire.forward_unit_vector_in_local_space, to_agent_space_matrix);
-    desired_linear_velocity_unit_direction = transform_vector(desire.linear_velocity_unit_direction_in_local_space, to_agent_space_matrix);
-    desired_linear_speed = desire.linear_speed;
-    desired_angular_velocity_unit_axis = transform_vector(desire.angular_velocity_unit_axis_in_local_space, to_agent_space_matrix);
-    desired_angular_speed = desire.angular_speed;
+    desire_computed_by_cortex = bb->m_cortex->get_motion_desire_props();
+    regulated_desire = actions.get_regulated_motion_desire_props();
 
     forward = transform_vector(motion.forward, to_agent_space_matrix);
     up = transform_vector(motion.up, to_agent_space_matrix);

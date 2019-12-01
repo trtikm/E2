@@ -18,8 +18,6 @@ struct  cortex_mock : public cortex
 
     void  next_round(float_32_bit const  time_step_in_seconds) override;
 
-    static void  __check_loaded_data__(skeletal_motion_templates::property_tree const&  data, std::string const&  message_prefix);
-
 private:
     input_devices_const_ptr  m_input_devices;
 };
