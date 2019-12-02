@@ -376,7 +376,7 @@ void  skeleton_look_at(
 }
 
 
-void  skeleton_rotate_bones_towards_target_pose(
+bool  skeleton_rotate_bones_towards_target_pose(
         std::vector<coordinate_system>&  frames,
         std::vector<coordinate_system> const&  target_pose_frames,
         std::vector<coordinate_system> const&  pose_frames,
@@ -387,6 +387,7 @@ void  skeleton_rotate_bones_towards_target_pose(
 {
     TMPROF_BLOCK();
 
+    bool  target_pose_reached = true;
     for (auto const&  bone_and_rotations : bones_to_rotate)
     {
         coordinate_system&  frame = frames.at(bone_and_rotations.first);
@@ -421,6 +422,9 @@ void  skeleton_rotate_bones_towards_target_pose(
 
                 angle = angle_delta < 0.0f ? std::max(angle_delta, -rot_props.m_max_angular_speed * dt) :
                                              std::min(angle_delta,  rot_props.m_max_angular_speed * dt) ;
+
+                if (target_pose_reached && std::fabs(angle_delta) > rot_props.m_max_angular_speed * dt)
+                    target_pose_reached = false;
             }
 
             rotate(frame, angle_axis_to_quaternion(angle, axis));
@@ -429,6 +433,7 @@ void  skeleton_rotate_bones_towards_target_pose(
 
         frame.set_orientation(result_cs.orientation());
     }
+    return target_pose_reached;
 }
 
 

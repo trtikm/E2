@@ -44,7 +44,8 @@ void  skeleton_look_at(
         );
 
 
-void  skeleton_rotate_bones_towards_target_pose(
+// Returns true if the target pose was reached and false otherwise.
+bool  skeleton_rotate_bones_towards_target_pose(
         std::vector<coordinate_system>&  frames,    // coordinate systems of bones in the current pose which (some of them) will be moved towards the target pose frames 'target_pose_frames'.
         std::vector<coordinate_system> const&  target_pose_frames,  // coordinate systems of bones in the target pose.
         std::vector<coordinate_system> const&  pose_frames,

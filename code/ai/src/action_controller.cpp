@@ -493,7 +493,7 @@ void  action_controller::look_at_target(float_32_bit const  time_step_in_seconds
             frames.at(bone_and_anges.first)
             );
 
-    angeo::skeleton_rotate_bones_towards_target_pose(
+    bool const target_pose_reached = angeo::skeleton_rotate_bones_towards_target_pose(
         frames,
         target_frames,
         get_blackboard()->m_motion_templates.pose_frames().get_coord_systems(),
@@ -501,6 +501,8 @@ void  action_controller::look_at_target(float_32_bit const  time_step_in_seconds
         bones_to_rotate,
         time_step_in_seconds
         );
+    if (target_pose_reached)
+        m_regulator.on_look_at_target_pose_reached();
 
     // And write results to the vector 'm_current_intepolation_state.frames' of final frames.
 

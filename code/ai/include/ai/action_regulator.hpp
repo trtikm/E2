@@ -19,9 +19,18 @@ struct  action_regulator
 
     motion_desire_props const&  get_motion_desire_props() const { return m_motion_desire_props; }
 
+    void  on_look_at_target_pose_reached() { m_look_at_target_info.target_pose_reached = true; }
+
 private:
     action_controller const*  m_controller;
     motion_desire_props  m_motion_desire_props;
+
+    struct  look_at_target_info
+    {
+        bool  target_pose_reached;
+    };
+    look_at_target_info  m_look_at_target_info;
+    void  update_look_at_target(vector3 const& look_at_target_from_cortex);
 };
 
 

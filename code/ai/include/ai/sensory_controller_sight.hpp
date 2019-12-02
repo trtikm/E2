@@ -41,6 +41,7 @@ struct  sensory_controller_sight
     blackboard_ptr  get_blackboard() const { return m_blackboard.lock(); }
 
     camera_config const&  get_camera_config() const { return m_camera_config; }
+    // NOTE: Camera's coord. system is in the world space, i.e. NOT in agent's local space!
     camera_perspective_ptr  get_camera() const { return m_camera; }
 
 private:
