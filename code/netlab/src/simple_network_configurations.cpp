@@ -15,9 +15,9 @@ const std::array<network_layer::config::events::data, network_layer::config::eve
 network_layer::config::configurations_of_events{
     // UNIVERSAL
     {
-        1.0f,       // EVENT_TREASHOLD                      Must be > 0.0f
-        1.0f,       // EVENT_RECOVERY_POTENTIAL             Must be < EVENT_TREASHOLD
-        1.0f        // EVENT_POTENTIAL_DECAY_COEF           Must be > 0.0f and < 1.0f
+        5.0f,       // EVENT_TREASHOLD                      Must be > 0.0f
+        0.0f,       // EVENT_RECOVERY_POTENTIAL             Must be < EVENT_TREASHOLD
+        0.98f       // EVENT_POTENTIAL_DECAY_COEF           Must be > 0.0f and < 1.0f
     }
 };
 
@@ -26,8 +26,8 @@ const std::array<network_layer::config::weights::data, network_layer::config::we
 network_layer::config::configurations_of_weights{
     // UNIVERSAL
     {
-        1.0f,       // WEIGHT_PER_POTENTIAL                 Must be > 0.0f
-        1.0f        // WEIGHT_EQUILIBRIUM_TREASHOLD         Must be > 0.0f
+        0.025f,     // WEIGHT_PER_POTENTIAL                 Must be > 0.0f
+        0.75f       // WEIGHT_EQUILIBRIUM_TREASHOLD         Must be > 0.0f
     }
 };
 
@@ -37,7 +37,7 @@ network_layer::config::configurations_of_sockets{
     // UNIVERSAL
     {
         1.0f,       // SOCKET_CONNECTION_TREASHOLD          Must be > 0.0f
-        1.0f        // SOCKET_DISCONNECTION_TREASHOLD       Must be > 0.0f and <= SOCKET_CONNECTION_TREASHOLD
+        0.25f       // SOCKET_DISCONNECTION_TREASHOLD       Must be > 0.0f and <= SOCKET_CONNECTION_TREASHOLD
     }
 };
 
