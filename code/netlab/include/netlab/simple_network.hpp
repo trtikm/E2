@@ -152,6 +152,23 @@ struct  network
         NAME  config_name;
     };
 
+    // PREFABS:
+
+    struct prefab
+    {
+        enum NAME
+        {
+            UNIVERSAL = 0
+        };
+        static constexpr int NUM_PREFABS = 1;
+        struct data
+        {
+            config  network_config;
+            std::vector<network_layer::config>  layers_configs;
+        };
+        static const std::array<prefab::data, NUM_PREFABS>  prefabs;
+    };
+
     // CONSTANTS:
 
     float_32_bit  EVENT_POTENTIAL_MAGNITUDE;            // Must be > 0.0f
@@ -172,6 +189,10 @@ struct  network
     // FUNCTIONS:
 
     network(config const&  network_config, std::vector<network_layer::config> const&  layers_configs, natural_32_bit const  seed = 0U);
+
+    network(prefab::NAME const  prefab_name, natural_32_bit const  seed = 0U)
+        : network(prefab::prefabs.at(prefab_name).network_config, prefab::prefabs.at(prefab_name).layers_configs, seed)
+    {}
 
     void  next_round();
 
