@@ -26,12 +26,14 @@ network::network(config const&  network_config, std::vector<network_layer::confi
 
     ,random_generator(seed)
 {
+    TMPROF_BLOCK();
+
     ASSUMPTION(!layers_configs.empty());
 
     EVENT_POTENTIAL_MAGNITUDE = config::configurations.at(network_config.config_name).EVENT_POTENTIAL_MAGNITUDE;
 
     layers.resize(layers_configs.size());
-    for (natural_16_bit  layer_idx = 0U; layer_idx < layers_configs.size(); ++layer_idx)
+    for (natural_8_bit  layer_idx = 0U; layer_idx < layers_configs.size(); ++layer_idx)
     {
         network_layer::config const&  layer_config = layers_configs.at(layer_idx);
         ASSUMPTION(layer_config.num_units > 0U && layer_config.num_sockets_per_unit > 0U);
@@ -60,9 +62,45 @@ network::network(config const&  network_config, std::vector<network_layer::confi
         for (natural_16_bit unit_idx = 0U; unit_idx < layer_config.num_units; ++unit_idx)
         {
             computation_unit&  unit = layer.units.at(unit_idx);
+            unit.event_potential = layer.EVENT_RECOVERY_POTENTIAL;
             unit.inputs.reserve(layer_config.num_sockets_per_unit);
             unit.outputs.reserve(layer_config.num_sockets_per_unit);
         }
+    }
+
+    natural_32_bit  num_units_total, expected_remainder;
+    std::vector<natural_16_bit>  num_remaining_layer_iterations;
+    {
+        num_units_total = 0U;
+        expected_remainder = 0U;
+        num_remaining_layer_iterations.reserve(layers_configs.size());
+        for (network_layer::config const&  layer_config : layers_configs)
+        {
+            num_units_total += layer_config.num_units;
+            expected_remainder += layer_config.num_sockets_per_unit;
+            num_remaining_layer_iterations.push_back(layer_config.num_sockets_per_unit);
+        }
+    }
+    open_inputs.reserve(num_units_total + expected_remainder);
+    open_outputs.reserve(num_units_total + expected_remainder);
+    while (true)
+    {
+        bool  work_lists_updated = false;
+        for (natural_8_bit  i = 0U; i < layers.size(); ++i)
+            if (num_remaining_layer_iterations.at(i) > 0U)
+            {
+                --num_remaining_layer_iterations.at(i);
+                work_lists_updated = true;
+                for (natural_16_bit j = 0U, n = (natural_16_bit)layers.at(i).units.size(); j < n; ++j)
+                {
+                    uid const  id{ i, j, 0U };
+                    open_inputs.push_back(id);
+                    open_outputs.push_back(id);
+                }
+            }
+        if (!work_lists_updated)
+            break;
+        update_open_sockets();
     }
 }
 
