@@ -37,6 +37,7 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/netlab/simple_network.hpp
     ./src/simple_network.cpp
+    ./src/simple_network_configurations.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

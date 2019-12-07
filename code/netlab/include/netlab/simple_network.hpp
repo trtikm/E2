@@ -1,25 +1,33 @@
 #ifndef NETLAB_SIMPLE_NETWORK_HPP_INCLUDED
 #   define NETLAB_SIMPLE_NETWORK_HPP_INCLUDED
 
-#   include <utility/array_of_derived.hpp>
-#   include <utility/random.hpp>
 #   include <angeo/tensor_math.hpp>
+#   include <utility/random.hpp>
 #   include <vector>
-#   include <memory>
-#   include <string>
-#   include <deque>
-#   include <unordered_set>
+#   include <array>
 
 namespace netlab { namespace simple {
 
 
 struct uid
 {
-    natural_32_bit  layer :  6, // 64
-                    unit  : 14, // 16384
-                    socket: 12; // 4096
+    static constexpr natural_8_bit  NUM_LAYER_BITS  = 6;
+    static constexpr natural_8_bit  NUM_UNIT_BITS   = 14;
+    static constexpr natural_8_bit  NUM_SOCKET_BITS = 12;
+
+    static constexpr natural_8_bit   MAX_NUM_LAYERS             = 1 << NUM_LAYER_BITS;
+    static constexpr natural_16_bit  MAX_NUM_UNITS_PER_LAYER    = 1 << NUM_UNIT_BITS;
+    static constexpr natural_16_bit  MAX_NUM_SOCKETS_PER_UNIT   = 1 << NUM_SOCKET_BITS;
+
+    static_assert(uid::MAX_NUM_LAYERS           == 64, "");
+    static_assert(uid::MAX_NUM_UNITS_PER_LAYER  == 16384, "");
+    static_assert(uid::MAX_NUM_SOCKETS_PER_UNIT == 4096, "");
+
+    natural_32_bit  layer : NUM_LAYER_BITS,
+                    unit  : NUM_UNIT_BITS,
+                    socket: NUM_SOCKET_BITS;
 };
-static_assert(sizeof(uid) == sizeof(natural_32_bit), "The uid must exactly fit to 32 bits.");
+static_assert(sizeof(uid) == sizeof(natural_32_bit), "");
 
 
 struct  input_socket
@@ -47,6 +55,63 @@ struct  computation_unit
 
 struct  network_layer
 {
+    // CONFIGURATIONS:
+
+    struct  config
+    {
+        struct  events
+        {
+            enum NAME
+            {
+                UNIVERSAL = 0
+            };
+            static constexpr int NUM_CONFIGURATIONS = 1;
+            struct data
+            {
+                float_32_bit  EVENT_TREASHOLD;                      // Must be > 0.0f
+                float_32_bit  EVENT_RECOVERY_POTENTIAL;             // Must be < EVENT_TREASHOLD
+                float_32_bit  EVENT_POTENTIAL_DECAY_COEF;           // Must be > 0.0f and < 1.0f
+            };
+        };
+        struct  weights
+        {
+            enum NAME
+            {
+                UNIVERSAL = 0
+            };
+            static constexpr int NUM_CONFIGURATIONS = 1;
+            struct data
+            {
+                float_32_bit  WEIGHT_PER_POTENTIAL;                 // Must be > 0.0f
+                float_32_bit  WEIGHT_EQUILIBRIUM_TREASHOLD;         // Must be > 0.0f
+            };
+        };
+        struct  sockets
+        {
+            enum NAME
+            {
+                UNIVERSAL = 0
+            };
+            static constexpr int NUM_CONFIGURATIONS = 1;
+            struct data
+            {
+                float_32_bit  SOCKET_CONNECTION_TREASHOLD;          // Must be > 0.0f
+                float_32_bit  SOCKET_DISCONNECTION_TREASHOLD;       // Must be > 0.0f and <= SOCKET_CONNECTION_TREASHOLD
+            };
+        };
+
+        static const std::array<config::events::data, config::events::NUM_CONFIGURATIONS>  configurations_of_events;
+        static const std::array<config::weights::data, config::weights::NUM_CONFIGURATIONS>  configurations_of_weights;
+        static const std::array<config::sockets::data, config::sockets::NUM_CONFIGURATIONS>  configurations_of_sockets;
+
+        bool  is_excitatory;
+        natural_16_bit  num_units;
+        natural_16_bit  num_sockets_per_unit;
+        events::NAME  events_config_name;
+        weights::NAME  weithts_config_name;
+        sockets::NAME  sockets_config_name;
+    };
+
     // CONSTANTS:
 
     float_32_bit  EVENT_TREASHOLD;                      // Must be > 0.0f
@@ -68,6 +133,25 @@ struct  network_layer
 
 struct  network
 {
+    // CONFIGURATIONS:
+
+    struct  config
+    {
+        enum NAME
+        {
+            UNIVERSAL = 0
+        };
+        static constexpr int NUM_CONFIGURATIONS = 1;
+        struct data
+        {
+            float_32_bit  EVENT_POTENTIAL_MAGNITUDE;     // Must be > 0.0f
+        };
+
+        static const std::array<config::data, config::NUM_CONFIGURATIONS>  configurations;
+
+        NAME  config_name;
+    };
+
     // CONSTANTS:
 
     float_32_bit  EVENT_POTENTIAL_MAGNITUDE;            // Must be > 0.0f
@@ -86,6 +170,8 @@ struct  network
     random_generator_for_natural_32_bit  random_generator;
 
     // FUNCTIONS:
+
+    network(config const&  network_config, std::vector<network_layer::config> const&  layers_configs, natural_32_bit const  seed = 0U);
 
     void  next_round();
 

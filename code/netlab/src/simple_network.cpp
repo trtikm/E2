@@ -4,10 +4,6 @@
 #include <utility/timeprof.hpp>
 #include <utility/log.hpp>
 #include <utility/development.hpp>
-#include <array>
-#include <algorithm>
-#include <limits>
-#include <iterator>
 
 namespace netlab { namespace simple { namespace detail {
 
@@ -17,6 +13,58 @@ namespace netlab { namespace simple { namespace detail {
 }}}
 
 namespace netlab { namespace simple {
+
+
+network::network(config const&  network_config, std::vector<network_layer::config> const&  layers_configs, natural_32_bit const  seed)
+    : layers()
+
+    , events()
+    , next_events()
+
+    , open_inputs()
+    , open_outputs()
+
+    ,random_generator(seed)
+{
+    ASSUMPTION(!layers_configs.empty());
+
+    EVENT_POTENTIAL_MAGNITUDE = config::configurations.at(network_config.config_name).EVENT_POTENTIAL_MAGNITUDE;
+
+    layers.resize(layers_configs.size());
+    for (natural_16_bit  layer_idx = 0U; layer_idx < layers_configs.size(); ++layer_idx)
+    {
+        network_layer::config const&  layer_config = layers_configs.at(layer_idx);
+        ASSUMPTION(layer_config.num_units > 0U && layer_config.num_sockets_per_unit > 0U);
+
+        network_layer&  layer = layers.at(layer_idx);
+
+        {
+            auto const&  cfg = network_layer::config::configurations_of_events.at(layer_config.events_config_name);
+            layer.EVENT_TREASHOLD = cfg.EVENT_TREASHOLD;
+            layer.EVENT_RECOVERY_POTENTIAL = cfg.EVENT_RECOVERY_POTENTIAL;
+            layer.EVENT_POTENTIAL_DECAY_COEF = cfg.EVENT_POTENTIAL_DECAY_COEF;
+        }
+        layer.EVENT_POTENTIAL_SIGN = layer_config.is_excitatory ? 1.0f : -1.0f;
+        {
+            auto const&  cfg = network_layer::config::configurations_of_weights.at(layer_config.weithts_config_name);
+            layer.WEIGHT_PER_POTENTIAL = cfg.WEIGHT_PER_POTENTIAL;
+            layer.WEIGHT_EQUILIBRIUM_TREASHOLD = cfg.WEIGHT_EQUILIBRIUM_TREASHOLD;
+        }
+        {
+            auto const&  cfg = network_layer::config::configurations_of_sockets.at(layer_config.sockets_config_name);
+            layer.SOCKET_CONNECTION_TREASHOLD = cfg.SOCKET_CONNECTION_TREASHOLD;
+            layer.SOCKET_DISCONNECTION_TREASHOLD = cfg.SOCKET_DISCONNECTION_TREASHOLD;
+        }
+
+        layer.units.resize(layer_config.num_units);
+        for (natural_16_bit unit_idx = 0U; unit_idx < layer_config.num_units; ++unit_idx)
+        {
+            computation_unit&  unit = layer.units.at(unit_idx);
+            unit.inputs.reserve(layer_config.num_sockets_per_unit);
+            unit.outputs.reserve(layer_config.num_sockets_per_unit);
+        }
+    }
+}
 
 
 void  network::next_round()
