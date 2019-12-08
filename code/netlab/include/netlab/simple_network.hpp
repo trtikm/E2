@@ -1,33 +1,14 @@
 #ifndef NETLAB_SIMPLE_NETWORK_HPP_INCLUDED
 #   define NETLAB_SIMPLE_NETWORK_HPP_INCLUDED
 
-#   include <angeo/tensor_math.hpp>
+#   include <netlab/simple_network_uid.hpp>
 #   include <utility/random.hpp>
 #   include <vector>
 #   include <array>
+#   include <deque>
+#   include <unordered_map>
 
 namespace netlab { namespace simple {
-
-
-struct uid
-{
-    static constexpr natural_8_bit  NUM_LAYER_BITS  = 6;
-    static constexpr natural_8_bit  NUM_UNIT_BITS   = 14;
-    static constexpr natural_8_bit  NUM_SOCKET_BITS = 12;
-
-    static constexpr natural_8_bit   MAX_NUM_LAYERS             = 1 << NUM_LAYER_BITS;
-    static constexpr natural_16_bit  MAX_NUM_UNITS_PER_LAYER    = 1 << NUM_UNIT_BITS;
-    static constexpr natural_16_bit  MAX_NUM_SOCKETS_PER_UNIT   = 1 << NUM_SOCKET_BITS;
-
-    static_assert(uid::MAX_NUM_LAYERS           == 64, "");
-    static_assert(uid::MAX_NUM_UNITS_PER_LAYER  == 16384, "");
-    static_assert(uid::MAX_NUM_SOCKETS_PER_UNIT == 4096, "");
-
-    natural_32_bit  layer : NUM_LAYER_BITS,
-                    unit  : NUM_UNIT_BITS,
-                    socket: NUM_SOCKET_BITS;
-};
-static_assert(sizeof(uid) == sizeof(natural_32_bit), "");
 
 
 struct  input_socket
@@ -133,7 +114,7 @@ struct  network_layer
 
 struct  network
 {
-    // CONFIGURATIONS:
+    // CONFIGURATIONS & STATISTICS:
 
     struct  config
     {
@@ -152,8 +133,6 @@ struct  network
         NAME  config_name;
     };
 
-    // PREFABS:
-
     struct prefab
     {
         enum NAME
@@ -169,6 +148,69 @@ struct  network
         static const std::array<prefab::data, NUM_PREFABS>  prefabs;
     };
 
+    struct  statistics
+    {
+        struct  config
+        {
+            natural_32_bit  NUM_ROUNDS_PER_SNAPSHOT;        // When == 0, then statistics are NOT collected/updated at all!
+            natural_32_bit  SNAPSHOTS_HISTORY_SIZE;
+            float_32_bit  RATIO_OF_PROBED_UNITS_PER_LAYER;  // Must be >= 0.0f and <= 1.0f
+            config(natural_32_bit const  num_rounds_per_snapshot,
+                   natural_32_bit const  snapshots_history_size = 1U,
+                   float_32_bit const  ratio_of_probed_units_per_layer = 0.1f);
+        };
+
+        struct  probe
+        {
+            natural_32_bit  num_events_received;
+            natural_32_bit  num_events_produced;
+            natural_32_bit  num_connected_input_sockets;
+            natural_32_bit  num_connected_output_sockets;
+            natural_32_bit  num_disconnected_input_sockets;
+            natural_32_bit  num_disconnected_output_sockets;
+            probe();
+        };
+
+        struct  overall
+        {
+            natural_32_bit  num_events;
+            natural_32_bit  num_connected_sockets;
+            natural_32_bit  num_disconnected_sockets;
+            overall();
+        };
+
+        // CONSTANTS:
+
+        natural_32_bit  NUM_ROUNDS_PER_SNAPSHOT;            // When == 0, then statistics are NOT collected/updated!
+        natural_32_bit  SNAPSHOTS_HISTORY_SIZE;
+
+        // DATA:
+
+        natural_64_bit  num_passed_rounds;
+        natural_32_bit  num_passed_rounds_in_current_snapshot;
+        std::unordered_map<uid, std::deque<probe> >  probes_history;    // For each uid, the size of the deque is > 0
+                                                                        // and <= SNAPSHOTS_HISTORY_SIZE + 1.
+                                                                        // The front element in each deque is the probe of the
+                                                                        // currently processed snapshot, for the related unit's uid.
+        std::deque<overall>  overall_history;   // The size is > 0 and <= SNAPSHOTS_HISTORY_SIZE + 1. The front element
+                                                // is the one of the currently processed snapshot.
+
+        // FUNCTIONS:
+
+        statistics(config const&  cfg, std::vector<network_layer::config> const&  layers_configs);
+        bool  enabled() const { return NUM_ROUNDS_PER_SNAPSHOT != 0U; }
+        void  on_next_round();
+        void  on_event_received(uid const  id);
+        void  on_event_produced(uid const  id);
+        void  on_connect(uid const  iid, uid const  oid);
+        void  on_disconnect(
+                std::vector<input_socket> const&  inputs,
+                natural_16_bit const  input_socket,
+                std::vector<output_socket> const&  outputs,
+                natural_16_bit const  output_socket
+                );
+    };
+
     // CONSTANTS:
 
     float_32_bit  EVENT_POTENTIAL_MAGNITUDE;            // Must be > 0.0f
@@ -180,18 +222,22 @@ struct  network
     std::vector<uid>  events;
     std::vector<uid>  next_events;
 
-    // Both vectors must always have the same size.
     std::vector<uid>  open_inputs;
-    std::vector<uid>  open_outputs;
+    std::vector<uid>  open_outputs;                     // INVARIANT: open_outputs.size() == open_inputs.size()
 
     random_generator_for_natural_32_bit  random_generator;
 
+    statistics  stats;
+
     // FUNCTIONS:
 
-    network(config const&  network_config, std::vector<network_layer::config> const&  layers_configs, natural_32_bit const  seed = 0U);
+    network(config const&  network_config,
+            std::vector<network_layer::config> const&  layers_configs,
+            statistics::config const&  stats_config,
+            natural_32_bit const  seed = 0U);
 
-    network(prefab::NAME const  prefab_name, natural_32_bit const  seed = 0U)
-        : network(prefab::prefabs.at(prefab_name).network_config, prefab::prefabs.at(prefab_name).layers_configs, seed)
+    network(prefab::NAME const  prefab_name, statistics::config const&  stats_config, natural_32_bit const  seed = 0U)
+        : network(prefab::prefabs.at(prefab_name).network_config, prefab::prefabs.at(prefab_name).layers_configs, stats_config, seed)
     {}
 
     void  next_round();
@@ -202,11 +248,11 @@ struct  network
 
     bool  connect(uid  iid, uid  oid);
     void  disconnect(
-        std::vector<input_socket>&  inputs,
-        natural_16_bit const  input_socket,
-        std::vector<output_socket>&  outputs,
-        natural_16_bit const  output_socket
-        );
+            std::vector<input_socket>&  inputs,
+            natural_16_bit const  input_socket,
+            std::vector<output_socket>&  outputs,
+            natural_16_bit const  output_socket
+            );
 };
 
 

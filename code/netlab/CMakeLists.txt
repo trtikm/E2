@@ -36,9 +36,11 @@ add_library(${THIS_TARGET_NAME}
     ./src/tracked_object_stats.cpp
 
     ./include/netlab/simple_network.hpp
+    ./include/netlab/simple_network_uid.hpp
     ./src/simple_network.cpp
     ./src/simple_network_configurations.cpp
     ./src/simple_network_prefabs.cpp
+    ./src/simple_network_statistics.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

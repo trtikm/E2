@@ -2,20 +2,16 @@
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
 #include <utility/timeprof.hpp>
-#include <utility/log.hpp>
-#include <utility/development.hpp>
-
-namespace netlab { namespace simple { namespace detail {
-
-
-
-
-}}}
 
 namespace netlab { namespace simple {
 
 
-network::network(config const&  network_config, std::vector<network_layer::config> const&  layers_configs, natural_32_bit const  seed)
+network::network(
+        config const&  network_config,
+        std::vector<network_layer::config> const&  layers_configs,
+        statistics::config const&  stats_config,
+        natural_32_bit const  seed
+        )
     : layers()
 
     , events()
@@ -24,7 +20,9 @@ network::network(config const&  network_config, std::vector<network_layer::confi
     , open_inputs()
     , open_outputs()
 
-    ,random_generator(seed)
+    , random_generator(seed)
+
+    , stats(stats_config, layers_configs)
 {
     TMPROF_BLOCK();
 
@@ -109,6 +107,8 @@ void  network::next_round()
 {
     TMPROF_BLOCK();
 
+    stats.on_next_round();
+
     update_computation_units();
     deliver_events();
     update_open_sockets();
@@ -127,8 +127,11 @@ void   network::update_computation_units()
             computation_unit&  unit = layer.units.at(j);
             if (unit.event_potential >= layer.EVENT_TREASHOLD)
             {
-                next_events.push_back({ i, j, 0 });
+                uid const  id{ i, j, 0U };
+                next_events.push_back(id);
                 unit.event_potential = layer.EVENT_RECOVERY_POTENTIAL;
+
+                stats.on_event_produced(id);
             }
             else
                 unit.event_potential *= layer.EVENT_POTENTIAL_DECAY_COEF;
@@ -159,8 +162,8 @@ void  network::deliver_events()
             if (input.weight < layer.SOCKET_DISCONNECTION_TREASHOLD)
             {
                 disconnect(inputs, i, other_unit.outputs, other_id.socket);
-                open_inputs.push_back(id);
-                open_outputs.push_back(other_id);
+                open_inputs.push_back(uid::as_unit(id));
+                open_outputs.push_back(uid::as_unit(other_id));
             }
             else
             {
@@ -182,8 +185,8 @@ void  network::deliver_events()
             if (other_input.weight < other_layer.SOCKET_DISCONNECTION_TREASHOLD)
             {
                 disconnect(other_unit.inputs, other_id.socket, outputs, i);
-                open_inputs.push_back(other_id);
-                open_outputs.push_back(id);
+                open_inputs.push_back(uid::as_unit(other_id));
+                open_outputs.push_back(uid::as_unit(id));
             }
             else
             {
@@ -192,6 +195,8 @@ void  network::deliver_events()
                 float_32_bit const  other_excitation_level = (other_unit.event_potential - other_layer.EVENT_RECOVERY_POTENTIAL) /
                                                              (other_layer.EVENT_TREASHOLD - other_layer.EVENT_RECOVERY_POTENTIAL);
                 other_input.weight += other_layer.WEIGHT_PER_POTENTIAL * (other_excitation_level - other_layer.WEIGHT_EQUILIBRIUM_TREASHOLD);
+
+                stats.on_event_received(other_id);
             }
         }
     }
@@ -242,6 +247,8 @@ bool  network::connect(uid  iid, uid  oid)
     inputs.push_back({ oid, input_layer.SOCKET_CONNECTION_TREASHOLD });
     outputs.push_back({ iid });
 
+    stats.on_connect(iid, oid);
+
     return true;
 }
 
@@ -253,6 +260,8 @@ void  network::disconnect(
         natural_16_bit const  output_socket
         )
 {
+    stats.on_disconnect(inputs, input_socket, outputs, output_socket);
+
     uid const  oid = inputs.back().other;
     layers.at(oid.layer).units.at(oid.unit).outputs.at(oid.socket).other.socket = input_socket;
 
