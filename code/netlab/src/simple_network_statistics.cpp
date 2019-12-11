@@ -36,7 +36,11 @@ network::statistics::overall::overall()
 {}
 
 
-network::statistics::statistics(config const&  cfg, std::vector<network_layer::config> const&  layers_configs)
+network::statistics::statistics(
+        config const&  cfg,
+        natural_8_bit const  num_input_layers,
+        std::vector<network_layer::config> const&  layers_configs
+        )
     : NUM_ROUNDS_PER_SNAPSHOT(cfg.NUM_ROUNDS_PER_SNAPSHOT)
     , SNAPSHOTS_HISTORY_SIZE(cfg.SNAPSHOTS_HISTORY_SIZE)
     , num_passed_rounds(0UL)
@@ -44,6 +48,7 @@ network::statistics::statistics(config const&  cfg, std::vector<network_layer::c
     , probes_history()
     , overall_history()
 {
+    ASSUMPTION(num_input_layers + layers_configs.size() <= uid::MAX_NUM_LAYERS);
     ASSUMPTION(cfg.RATIO_OF_PROBED_UNITS_PER_LAYER >= 0.0f && cfg.RATIO_OF_PROBED_UNITS_PER_LAYER <= 1.0f);
 
     if (!enabled())
@@ -53,13 +58,14 @@ network::statistics::statistics(config const&  cfg, std::vector<network_layer::c
     {
         network_layer::config const&  layer_config = layers_configs.at(layer_idx);
 
-        natural_16_bit const  num_probes = (natural_16_bit)(layer_config.num_units * cfg.RATIO_OF_PROBED_UNITS_PER_LAYER + 0.5f);
+        natural_16_bit const  num_probes =
+                (natural_16_bit)(layer_config.sign_and_geometry_info.num_units * cfg.RATIO_OF_PROBED_UNITS_PER_LAYER + 0.5f);
         if (num_probes == 0U)
             continue;
 
-        natural_16_bit const  stride = layer_config.num_units / num_probes;
-        for (natural_16_bit  unit_idx = 0U; unit_idx < layer_config.num_units; unit_idx += stride)
-            probes_history.insert({ {layer_idx, unit_idx, 0U}, { {} } });
+        natural_16_bit const  stride = layer_config.sign_and_geometry_info.num_units / num_probes;
+        for (natural_16_bit  unit_idx = 0U; unit_idx < layer_config.sign_and_geometry_info.num_units; unit_idx += stride)
+            probes_history.insert({ {(natural_8_bit)(num_input_layers + layer_idx), unit_idx, 0U}, { {} } });
     }
 
     overall_history.push_front({});

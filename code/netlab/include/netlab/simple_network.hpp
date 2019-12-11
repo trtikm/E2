@@ -7,11 +7,12 @@
 #   include <array>
 #   include <deque>
 #   include <unordered_map>
+#   include <unordered_set>
 
 namespace netlab { namespace simple {
 
 
-struct  input_socket
+struct  input_socket                                                // Note: Instances do not apper in units of input layers.
 {
     uid  other;
     float_32_bit  weight;
@@ -26,9 +27,9 @@ struct  output_socket
 
 struct  computation_unit
 {
-    float_32_bit  event_potential;
+    float_32_bit  event_potential;                                  // Is not used, when the unit is in an input layer.
 
-    std::vector<input_socket>  inputs;
+    std::vector<input_socket>  inputs;                              // Is empty and not used, when the unit is in an input layer.
     std::vector<output_socket>  outputs;
 
 };
@@ -85,9 +86,14 @@ struct  network_layer
         static const std::array<config::weights::data, config::weights::NUM_CONFIGURATIONS>  configurations_of_weights;
         static const std::array<config::sockets::data, config::sockets::NUM_CONFIGURATIONS>  configurations_of_sockets;
 
-        bool  is_excitatory;
-        natural_16_bit  num_units;
-        natural_16_bit  num_sockets_per_unit;
+        struct  sign_and_geometry
+        {
+            bool  is_excitatory;
+            natural_16_bit  num_units;
+            natural_16_bit  num_sockets_per_unit;
+        };
+
+        sign_and_geometry  sign_and_geometry_info;
         events::NAME  events_config_name;
         weights::NAME  weithts_config_name;
         sockets::NAME  sockets_config_name;
@@ -148,13 +154,20 @@ struct  network
         static const std::array<prefab::data, NUM_PREFABS>  prefabs;
     };
 
+    enum  INPUTS_DISTRUBUTION_STRATEGY
+    {
+        RANDOM          = 0,
+        LAYERS_FIRST    = 1,
+        UNITS_FIRST     = 2
+    };
+
     struct  statistics
     {
         struct  config
         {
-            natural_32_bit  NUM_ROUNDS_PER_SNAPSHOT;        // When == 0, then statistics are NOT collected/updated at all!
+            natural_32_bit  NUM_ROUNDS_PER_SNAPSHOT;                    // When == 0, then statistics are NOT collected/updated at all!
             natural_32_bit  SNAPSHOTS_HISTORY_SIZE;
-            float_32_bit  RATIO_OF_PROBED_UNITS_PER_LAYER;  // Must be >= 0.0f and <= 1.0f
+            float_32_bit  RATIO_OF_PROBED_UNITS_PER_LAYER;              // Must be >= 0.0f and <= 1.0f
             config(natural_32_bit const  num_rounds_per_snapshot,
                    natural_32_bit const  snapshots_history_size = 1U,
                    float_32_bit const  ratio_of_probed_units_per_layer = 0.1f);
@@ -181,7 +194,7 @@ struct  network
 
         // CONSTANTS:
 
-        natural_32_bit  NUM_ROUNDS_PER_SNAPSHOT;            // When == 0, then statistics are NOT collected/updated!
+        natural_32_bit  NUM_ROUNDS_PER_SNAPSHOT;                        // When == 0, then statistics are NOT collected/updated!
         natural_32_bit  SNAPSHOTS_HISTORY_SIZE;
 
         // DATA:
@@ -197,7 +210,7 @@ struct  network
 
         // FUNCTIONS:
 
-        statistics(config const&  cfg, std::vector<network_layer::config> const&  layers_configs);
+        statistics(config const&  cfg, natural_8_bit const  num_input_layers, std::vector<network_layer::config> const&  layers_configs);
         bool  enabled() const { return NUM_ROUNDS_PER_SNAPSHOT != 0U; }
         void  on_next_round();
         void  on_event_received(uid const  id);
@@ -211,36 +224,41 @@ struct  network
                 );
     };
 
-    // CONSTANTS:
-
-    float_32_bit  EVENT_POTENTIAL_MAGNITUDE;            // Must be > 0.0f
-
-    // DATA:
-
-    std::vector<network_layer>  layers;                 // Cannot be empty.
-
-    std::vector<uid>  events;
-    std::vector<uid>  next_events;
-
-    std::vector<uid>  open_inputs;
-    std::vector<uid>  open_outputs;                     // INVARIANT: open_outputs.size() == open_inputs.size()
-
-    random_generator_for_natural_32_bit  random_generator;
-
-    statistics  stats;
-
     // FUNCTIONS:
 
     network(config const&  network_config,
+            std::vector<network_layer::config::sign_and_geometry> const&  input_layers_configs,
+            INPUTS_DISTRUBUTION_STRATEGY const  inputs_distrubution_strategy,
             std::vector<network_layer::config> const&  layers_configs,
+            std::vector<natural_8_bit> const&  output_layer_indices,
             statistics::config const&  stats_config,
             natural_32_bit const  seed = 0U);
 
-    network(prefab::NAME const  prefab_name, statistics::config const&  stats_config, natural_32_bit const  seed = 0U)
-        : network(prefab::prefabs.at(prefab_name).network_config, prefab::prefabs.at(prefab_name).layers_configs, stats_config, seed)
+    network(prefab::NAME const  prefab_name,
+            std::vector<network_layer::config::sign_and_geometry> const&  input_layers_configs,
+            INPUTS_DISTRUBUTION_STRATEGY const  inputs_distrubution_strategy,
+            std::vector<natural_8_bit> const&  output_layer_indices,
+            statistics::config const&  stats_config,
+            natural_32_bit const  seed = 0U
+            )
+        : network(
+            prefab::prefabs.at(prefab_name).network_config,
+            input_layers_configs,
+            inputs_distrubution_strategy,
+            prefab::prefabs.at(prefab_name).layers_configs,
+            output_layer_indices,
+            stats_config,
+            seed
+            )
     {}
 
+    void  insert_input_event(uid const  input_unit_id);
     void  next_round();
+    std::vector<uid> const&  get_output_events() const { return output_events; }
+
+    statistics const&  get_statisitcs() const { return stats; }
+
+private:
 
     void  update_computation_units();
     void  deliver_events();
@@ -253,6 +271,28 @@ struct  network
             std::vector<output_socket>&  outputs,
             natural_16_bit const  output_socket
             );
+
+    // CONSTANTS:
+
+    float_32_bit  EVENT_POTENTIAL_MAGNITUDE;                        // Must be > 0.0f
+    natural_8_bit  NUM_INPUT_LAYERS;
+    std::unordered_set<natural_8_bit>  OUTPUT_LAYER_INDICES;
+
+    // DATA:
+
+    std::vector<network_layer>  layers;                             // Cannot be empty.
+
+    std::vector<uid>  events;
+    std::vector<uid>  next_events;
+
+    std::vector<uid>  open_inputs;
+    std::vector<uid>  open_outputs;
+
+    std::vector<uid>  output_events;
+
+    random_generator_for_natural_32_bit  random_generator;
+
+    statistics  stats;
 };
 
 
