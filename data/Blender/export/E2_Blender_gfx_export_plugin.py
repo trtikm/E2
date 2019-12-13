@@ -1234,6 +1234,7 @@ def save_keyframe_coord_systems_of_bones(
         if meta_object is None:
             print("INFO: The animation meta-object '" + meta_object_name + "' was NOT found!.")
             print("      => No animation meta-data will be exported for the armature '" + armature.name + "'!")
+            old_meta_object_action = None
         else:
             meta_object.animation_data_create()     # Ensures animation data of the object are available
             old_meta_object_action = meta_object.animation_data.action
@@ -1311,15 +1312,20 @@ def save_keyframe_coord_systems_of_bones(
                 )
             os.makedirs(keyframes_output_dir, exist_ok=True)
 
-            export_info["keyframes"] = []  # Here we store pathnames of all saved files.
+            if "keyframes" not in export_info:
+                export_info["keyframes"] = {}
+            export_info["keyframes"][action_name] = []  # Here we store pathnames of all saved files.
+
+            current_export_list = export_info["keyframes"][action_name]
+
             frame_idx = 0
             for time_stamp in sorted(coord_systems_of_frames.keys()):
-                export_info["keyframes"].append(
+                current_export_list.append(
                     os.path.join(keyframes_output_dir, "keyframe" + str(frame_idx) + ".txt")
                     )
-                with open(export_info["keyframes"][-1], "w") as f:
+                with open(current_export_list[-1], "w") as f:
                     print("Saving keyframe " + str(frame_idx + 1) + "/" + str(len(coord_systems_of_frames)) + ": " +
-                          os.path.relpath(export_info["keyframes"][-1], export_info["root_dir"]))
+                          os.path.relpath(current_export_list[-1], export_info["root_dir"]))
                     f.write(float_to_string(time_stamp) + "\n")
                     f.write(str(len(coord_systems_of_frames[time_stamp])) + "\n")
                     for system in coord_systems_of_frames[time_stamp]:
@@ -1442,11 +1448,15 @@ def save_keyframe_coord_systems_of_bones(
 
             # Next we save the computed meta-data of individual frames to disc.
 
-            export_info["meta"] = []    # Here we store pathnames of all saved meta-data files.
+            if "meta" not in export_info:
+                export_info["meta"] = {}
+            export_info["meta"][action_name] = []  # Here we store pathnames of all saved meta-data files.
 
-            export_info["meta"].append(os.path.join(keyframes_output_dir, "meta_reference_frames.txt"))
-            print("Saving keyframe meta-data file " + os.path.relpath(export_info["meta"][-1], export_info["root_dir"]))
-            with open(export_info["meta"][-1], "w") as f:
+            current_export_list = export_info["meta"][action_name]
+
+            current_export_list.append(os.path.join(keyframes_output_dir, "meta_reference_frames.txt"))
+            print("Saving keyframe meta-data file " + os.path.relpath(current_export_list[-1], export_info["root_dir"]))
+            with open(current_export_list[-1], "w") as f:
                 f.write(str(len(meta_coord_systems_of_frames)) + "\n")
                 for time_stamp in sorted(meta_coord_systems_of_frames.keys()):
                     system = meta_coord_systems_of_frames[time_stamp]
@@ -1455,9 +1465,9 @@ def save_keyframe_coord_systems_of_bones(
                     for i in range(4):
                         f.write(float_to_string(system["orientation"][i]) + "\n")
 
-            export_info["meta"].append(os.path.join(keyframes_output_dir, "meta_motion_colliders.txt"))
-            print("Saving keyframe meta-data file " + os.path.relpath(export_info["meta"][-1], export_info["root_dir"]))
-            with open(export_info["meta"][-1], "w") as f:
+            current_export_list.append(os.path.join(keyframes_output_dir, "meta_motion_colliders.txt"))
+            print("Saving keyframe meta-data file " + os.path.relpath(current_export_list[-1], export_info["root_dir"]))
+            with open(current_export_list[-1], "w") as f:
                 f.write(str(len(meta_colliders)) + "\n")
                 frame_idx = 0
                 for time_stamp in sorted(meta_colliders.keys()):
@@ -1467,9 +1477,9 @@ def save_keyframe_coord_systems_of_bones(
                     f.write(float_to_string(collider_and_weight["weight"]) + "\n")
                     frame_idx += 1
 
-            export_info["meta"].append(os.path.join(keyframes_output_dir, "meta_mass_distributions.txt"))
-            print("Saving keyframe meta-data file " + os.path.relpath(export_info["meta"][-1], export_info["root_dir"]))
-            with open(export_info["meta"][-1], "w") as f:
+            current_export_list.append(os.path.join(keyframes_output_dir, "meta_mass_distributions.txt"))
+            print("Saving keyframe meta-data file " + os.path.relpath(current_export_list[-1], export_info["root_dir"]))
+            with open(current_export_list[-1], "w") as f:
                 f.write(str(len(meta_inverted_masses)) + "\n")
                 frame_idx = 0
                 for time_stamp in sorted(meta_inverted_masses.keys()):
@@ -1564,79 +1574,145 @@ def save_skeleton_template_files(
                     key = "e2_" + kwd + "_dir" + str(i)
                     f.write(float_to_string(armature[key] if key in armature else default_coord[i]) + "\n")
 
-        export_info["transitions"] = os.path.join(output_dir, "transitions.dot")
-        print("Saving skeleton template file " + os.path.relpath(export_info["transitions"], export_info["root_dir"]))
-        with open(export_info["transitions"], "w") as f:
-            f.write(
-"""/*
-SYNTAX RESTRICTION OF DOT FILE (FOR E2 PARSER)
-==============================================
-
-E2 can read only specific/restricted Graphviz's DOT files. Their syntax is described below.
-NOTE: It is always good to keep in mind that E2 parses the text line-by-line.
-
-- All lines before the opennig line (exact!): digraph G {
-  are ignored.
-- Inside digraph (i.e. after the openning line):
-    - Empty lines and lines consising only of spaces and tabs are skiped.
-    - Any other line must represent edge definition. I.e. an edge is defined on a single line!
-    - Syntax of an edge definition line:
-        - Any number of spaces or tabs.
-        - Source animation name in double quotes.
-          No spaces around the name!
-          However, spaces inside the name are allowed.
-          The name itself may NOT contain the double quotes character!
-        - Any number of spaces or tabs.
-        - The arrow keyword (exact!): ->
-        - Any number of spaces or tabs.
-        - Target animation name in double quotes.
-          No spaces around the name!
-          However, spaces inside the name are allowed.
-          The name itself may NOT contain the double quotes character!
-        - Any number of spaces or tabs.
-        - Definition of the label (always must be present):
-            - Prefix (exact!): [label="
-            - Time in seconds of the transition (i.e. a floating point number)
-            - Separator (exact!): \n
-              I.e. 2 characters '\' and 'n'
-            - Keyframe index in the source animation. However, if the index denotes
-              the last keyframe, then it can be omited (i.e. just do not write it at all)
-            - Separator (exact!): ;
-            - Keyframe index in the target animation. However, if the index denotes
-              the first keyframe, then it can be omited (i.e. just do not write it at all)
-            - Suffix (exact!): "]
-            - Any number of spaces or tabs.
-- The parsing is stopped after reaching a line starting with the character: }
-
-Example of a transition:
-    "stand" -> "walk" [label="0.15\n8;"]
-
-
-
-SEMANTIC EXTENSION OF DOT FILE (FOR E2 PARSER)
-==============================================
-
-The source animation name of the first transition in the graph
-definition represents the start animation, i.e. the animation
-in which an AI agent will occur after its creation.
-
-
-PDF VISUALISATION
-=================
-
-To get PDF of the graph below type this command to console:
-
-    dot -otransitions.pdf -Tpdf transitions.dot
-
-It is assumed you have installed Graphviz tools and the 'dot'
-utility is in the PATH environment variable.
-*/
-
-digraph G {
-
-}
+        if "keyframes" in export_info:
+            export_info["transitions"] = os.path.join(output_dir, "transitions.json")
+            print("Saving skeleton template file " + os.path.relpath(export_info["transitions"], export_info["root_dir"]))
+            with open(export_info["transitions"], "w") as f:
+                f.write("{\n")
+                anim_names = sorted(list(export_info["keyframes"].keys()))
+                for anim_name in anim_names:
+                    f.write("    \"" + anim_name + "\": {")
+                    f.write(
 """
-            )
+        "defaults": {
+            "guard": {"valid": 0.0, "invalid": 0.0},
+            "desire": [
+                {"expression": ["angle01", "forward_unit_vector", "up"], "value": 0.5},
+                {"expression": ["angle01", "forward_unit_vector", "linear_velocity_unit_direction"], "value": 0.0},
+                {"expression": "linear_speed", "value": 0.5},
+                {"expression": "angular_speed", "value": 0.0}
+            ]
+        },
+        "loops": [{"from": [-1], "to": [0], "time": 0.041667}],
+        "successors": [{"range": [0, -2]}],
+        "exits": {
+"""
+                    )
+                    for other_anim_name in anim_names:
+                        if other_anim_name != anim_name:
+                            f.write("            \"" + other_anim_name + "\": [{\"range\": [0, -1], \"to\": [0], \"time\": 0.15}]")
+                            f.write(("," if other_anim_name != anim_names[-1] else "") + "\n")
+                    f.write("    }" + ("," if anim_name != anim_names[-1] else "") + "\n")
+                f.write("}\n")
+            export_info["transitions_mock"] = os.path.join(output_dir, "transitions.mock.json")
+            print("Saving skeleton template file " + os.path.relpath(export_info["transitions_mock"], export_info["root_dir"]))
+            with open(export_info["transitions_mock"], "w") as f:
+                f.write(
+# This is the default cortex mock configuration file.
+"""
+[
+    {
+        "down": ["UP"],
+        "up": ["DOWN"],
+        "assignments": [
+            {"var": "forward_unit_vector", "value": ["rotate_towards", "forward_unit_vector", "forward", ["*", 1.57, "dt"]]}
+        ]
+    },
+    {
+        "down": ["DOWN"],
+        "up": ["UP"],
+        "assignments": [
+            {"var": "forward_unit_vector", "value": ["rotate_towards", "forward_unit_vector", "forward", ["*", 1.57, "dt"]]}
+        ]
+    },
+
+    {
+        "down": ["LEFT"],
+        "up": ["RIGHT"],
+        "assignments": [
+            {"var": "forward_unit_vector", "value": ["rotate", "forward_unit_vector", "up", ["*", 3.1415, "dt"]]}
+        ]
+    },
+    {
+        "down": ["RIGHT"],
+        "up": ["LEFT"],
+        "assignments": [
+            {"var": "forward_unit_vector", "value": ["rotate", "forward_unit_vector", "down", ["*", 3.1415, "dt"]]}
+        ]
+    },
+    {
+        "down": ["DOWN"],
+        "up": ["UP"],
+        "assignments": [
+            {"var": "angular_velocity_unit_axis", "value": ["scale", ["sign", ["dot", "forward_unit_vector", "left"]], "up"]},
+            {"var": "linear_speed", "value": 0.0},
+            {"var": "angular_speed", "value": 1.0}
+        ]
+    },
+
+    {
+        "down": [],
+        "up": ["UP", "DOWN"],
+        "assignments": [
+            {"var": "forward_unit_vector", "value": ["orthogonal_component", "forward_unit_vector", "up"]},
+            {"var": "linear_speed", "value": 0.0},
+            {"var": "angular_speed", "value": 0.0}
+        ]
+    },
+
+
+    {
+        "down": ["UP"],
+        "up": ["DOWN", "?SHIFT", "?CTRL"],
+        "assignments": [
+            {"var": "forward_unit_vector", "value": ["orthogonal_component", "forward_unit_vector", "up"]},
+            {"var": "linear_velocity_unit_direction", "value": "forward_unit_vector"},
+            {"var": "linear_speed", "value": 0.5},
+            {"var": "angular_speed", "value": 0.0}
+        ]
+    },
+    {
+        "down": ["UP", "?CTRL"],
+        "up": ["DOWN", "?SHIFT"],
+        "assignments": [
+            {"var": "forward_unit_vector", "value": ["orthogonal_component", "forward_unit_vector", "up"]},
+            {"var": "linear_velocity_unit_direction", "value": ["add", "forward_unit_vector", "up"]},
+            {"var": "linear_speed", "value": 0.5},
+            {"var": "angular_speed", "value": 0.0}
+        ]
+    },
+
+    {
+        "down": ["UP", "?SHIFT"],
+        "up": ["DOWN", "?CTRL"],
+        "assignments": [
+            {"var": "forward_unit_vector", "value": ["orthogonal_component", "forward_unit_vector", "up"]},
+            {"var": "linear_velocity_unit_direction", "value": "forward_unit_vector"},
+            {"var": "linear_speed", "value": 0.75},
+            {"var": "angular_speed", "value": 0.0}
+        ]
+    },
+    {
+        "down": ["UP", "?SHIFT", "?CTRL"],
+        "up": ["DOWN"],
+        "assignments": [
+            {"var": "forward_unit_vector", "value": ["orthogonal_component", "forward_unit_vector", "up"]},
+            {"var": "linear_velocity_unit_direction", "value": ["add", "forward_unit_vector", "up"]},
+            {"var": "linear_speed", "value": 1.0},
+            {"var": "angular_speed", "value": 0.0}
+        ]
+    },
+
+    {
+        "down": [],
+        "up": [],
+        "assignments": [
+            {"var": "look_at_target", "value": ["add", ["scale", ["+", 1.0, "linear_speed"], "forward_unit_vector"], "up"]}
+        ]
+    }
+]
+"""
+                )
 
 
 def save_batch(
