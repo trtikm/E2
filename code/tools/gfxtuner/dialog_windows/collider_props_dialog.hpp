@@ -1,5 +1,5 @@
-#ifndef ANGEO_COLLISION_SCENE_RECORD_COLLIDER_PROPS_DIALOG_HPP_INCLUDED
-#   define ANGEO_COLLISION_SCENE_RECORD_COLLIDER_PROPS_DIALOG_HPP_INCLUDED
+#ifndef E2_TOOL_GFXTUNER_DIALOG_WINDOWS_COLLIDER_PROPS_DIALOG_HPP_INCLUDED
+#   define E2_TOOL_GFXTUNER_DIALOG_WINDOWS_COLLIDER_PROPS_DIALOG_HPP_INCLUDED
 
 #   include <gfxtuner/program_window.hpp>
 #   include <angeo/collision_material.hpp>
@@ -15,7 +15,7 @@
 #   include <QComboBox>
 #   include <QLineEdit>
 
-namespace window_tabs { namespace tab_scene { namespace record_collider { namespace detail {
+namespace dialog_windows {
 
 
 std::string  check_triangle_mesh_buffers_directory(boost::filesystem::path const&  buffers_dir);
@@ -63,7 +63,7 @@ private:
 };
 
 
-}}}}
+}
 
 
 #endif

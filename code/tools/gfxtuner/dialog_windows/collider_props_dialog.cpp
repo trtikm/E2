@@ -1,4 +1,4 @@
-#include <gfxtuner/window_tabs/tab_scene_record_collider_props_dialog.hpp>
+#include <gfxtuner/dialog_windows/collider_props_dialog.hpp>
 #include <qtgl/gui_utils.hpp>
 #include <utility/assumptions.hpp>
 #include <utility/invariants.hpp>
@@ -12,7 +12,7 @@
 #include <QLabel>
 #include <QGroupBox>
 
-namespace window_tabs { namespace tab_scene { namespace record_collider { namespace detail {
+namespace dialog_windows {
 
 
 std::string  check_triangle_mesh_buffers_directory(boost::filesystem::path const&  buffers_dir)
@@ -296,4 +296,4 @@ void  collider_props_dialog::reject()
 }
 
 
-}}}}
+}

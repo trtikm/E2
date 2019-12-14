@@ -1,7 +1,7 @@
 #include <gfxtuner/window_tabs/tab_scene_record_collider.hpp>
-#include <gfxtuner/window_tabs/tab_scene_record_collider_props_dialog.hpp>
 #include <gfxtuner/window_tabs/tab_scene.hpp>
 #include <gfxtuner/window_tabs/tab_scene_utils.hpp>
+#include <gfxtuner/dialog_windows/collider_props_dialog.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
 #include <angeo/collision_material.hpp>
@@ -241,7 +241,7 @@ void  register_record_handler_for_insert_scene_record(
                         }
                         std::shared_ptr<scn::collider_props>  props = std::make_shared<scn::collider_props>();
                         detail::set_collider_props_to_defaults(shape_type, *props);
-                        detail::collider_props_dialog  dlg(w->wnd(), props.get());
+                        dialog_windows::collider_props_dialog  dlg(w->wnd(), props.get());
                         dlg.exec();
                         if (!dlg.ok())
                             return{ "",{} };
@@ -268,7 +268,7 @@ void  register_record_handler_for_update_scene_record(
                     scn::collider_props  props;
                     detail::read_collider_props_from_simulator(w, record_id, props);
                     scn::collider_props  old_props = props;
-                    detail::collider_props_dialog  dlg(w->wnd(), &props);
+                    dialog_windows::collider_props_dialog  dlg(w->wnd(), &props);
                     dlg.exec();
                     if (!dlg.ok())
                         return;
