@@ -9,11 +9,14 @@ enum AGENT_KIND
     // An agent controlled by a human operator (via keywoard)
     MOCK = 0,
 
+    // An agent controlled by a cortex choosing most sttationary actions.
+    STATIONARY = 1,
+
     // An agent controlled by a cortex choosing actions randomly.
-    RANDOM = 1,
+    RANDOM = 2,
 
     // An agent controlled by an experimental (prototyped) cortex.
-    ROBOT = 2,
+    ROBOT = 3,
 };
 
 

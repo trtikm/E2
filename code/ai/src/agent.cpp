@@ -23,6 +23,7 @@ blackboard_ptr  agent::create_blackboard(AGENT_KIND const  agent_kind)
     switch (agent_kind)
     {
     case AGENT_KIND::MOCK:
+    case AGENT_KIND::STATIONARY:
     case AGENT_KIND::RANDOM:
     case AGENT_KIND::ROBOT:
         return std::make_shared<blackboard>();
@@ -46,10 +47,19 @@ void  agent::create_modules(blackboard_ptr const  bb, input_devices_ptr const  i
                         bb,
                         sensory_controller_collision_contacts::config()
                         ),
-                std::make_shared<sensory_controller_sight>(
+                nullptr
+                );
+        bb->m_action_controller = std::make_shared<action_controller>(bb);
+        break;
+    case AGENT_KIND::STATIONARY:
+        bb->m_cortex = std::make_shared<cortex>(bb);
+        bb->m_sensory_controller = std::make_shared<sensory_controller>(
+                bb,
+                std::make_shared<sensory_controller_collision_contacts>(
                         bb,
-                        sensory_controller_sight::camera_config()
-                        )
+                        sensory_controller_collision_contacts::config()
+                        ),
+                nullptr
                 );
         bb->m_action_controller = std::make_shared<action_controller>(bb);
         break;
