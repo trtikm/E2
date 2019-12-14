@@ -612,7 +612,7 @@ void  make_menu_bar_content(menu_bar&  w)
     QObject::connect(w.get_simulation_action_toggle_pause(), &QAction::triggered, w.wnd(), &program_window::on_menu_simulation_toggle_pause);
 
     w.get_menu_simulation()->addAction(w.get_simulation_action_single_step());
-    w.get_simulation_action_single_step()->setShortcut(Qt::Key::Key_F10);
+    w.get_simulation_action_single_step()->setShortcut(Qt::Key::Key_Space);
     w.get_simulation_action_single_step()->setToolTip(
         "Resumes the simulation (if it was paused), then performs a single simulation step, and finally pauses the simulation."
         );
