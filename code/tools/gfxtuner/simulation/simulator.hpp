@@ -211,7 +211,7 @@ struct simulator : public qtgl::real_time_simulator
             scn::rigid_body_props&  props
             );
 
-    void  insert_agent(scn::scene_record_id const&  id, scn::skeleton_props_const_ptr const  props);
+    void  insert_agent(scn::scene_record_id const&  id, scn::agent_props const&  props);
     void  erase_agent(scn::scene_record_id const&  id);
 
     void  load_collider(boost::property_tree::ptree const&  data, scn::scene_node_id const&  id);
@@ -223,7 +223,7 @@ struct simulator : public qtgl::real_time_simulator
     void  load_agent(boost::property_tree::ptree const&  data, scn::scene_record_id const&  id);
     void  save_agent(scn::scene_node_ptr const  node_ptr, boost::property_tree::ptree&  data);
 
-    scn::skeleton_props_const_ptr  get_agent_info(scn::scene_node_id const& id);
+    void  get_agent_info(scn::scene_node_id const& id, scn::agent_props&  props);
 
     void  clear_scene();
 

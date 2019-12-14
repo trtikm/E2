@@ -1,14 +1,17 @@
 set(THIS_TARGET_NAME ai)
 
 add_library(${THIS_TARGET_NAME}
-    ./include/ai/agents.hpp
-    ./src/agents.cpp
-
     ./include/ai/agent_id.hpp
+
     ./include/ai/agent_kind.hpp
+    ./src/agent_kind.cpp
+
     ./include/ai/agent.hpp
     ./src/agent.cpp
     
+    ./include/ai/agents.hpp
+    ./src/agents.cpp
+
     ./include/ai/cortex.hpp
     ./src/cortex.cpp
 

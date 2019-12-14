@@ -2162,8 +2162,9 @@ void  widgets::on_scene_agent_reset_skeleton_pose()
         scn::scene_record_id const  agent_id(coord_system_id, "agent", "instance");
         if (scene_tree()->find(agent_id) == nullptr)
             continue;
-        scn::skeleton_props_const_ptr const  skeleton_props_ptr =
-            wnd()->glwindow().call_now(&simulator::get_agent_info, coord_system_id);
+        scn::agent_props  props;
+        wnd()->glwindow().call_now(&simulator::get_agent_info, std::cref(coord_system_id), std::ref(props));
+        scn::skeleton_props_const_ptr const  skeleton_props_ptr = props.m_skeleton_props;
         INVARIANT(skeleton_props_ptr != nullptr);
         agents.insert({ agent_id, skeleton_props_ptr });
     }

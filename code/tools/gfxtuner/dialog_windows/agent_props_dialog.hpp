@@ -5,6 +5,7 @@
 #   include <scene/scene_record_id.hpp>
 #   include <scene/scene_node_record_id.hpp>
 #   include <scene/records/agent/agent.hpp>
+#   include <ai/agent_kind.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <QDialog>
 #   include <QPushButton>
@@ -15,11 +16,11 @@ namespace dialog_windows {
 
 struct  agent_props_dialog : public QDialog
 {
-    agent_props_dialog(program_window* const  wnd, scn::skeleton_props_const_ptr const  current_skeleton_props);
+    agent_props_dialog(program_window* const  wnd, scn::agent_props const&  current_props);
 
     bool  ok() const { return m_ok; }
 
-    scn::skeleton_props_const_ptr  get_new_skeleton_props() const { return m_new_skeleton_props; }
+    scn::agent_props const&  get_new_props() const { return m_new_props; }
 
 public slots:
 
@@ -30,9 +31,10 @@ private:
     program_window*  m_wnd;
     bool  m_ok;
     QPushButton* m_widget_ok;
+    QComboBox*  m_agent_kind_combobox;
 
-    scn::skeleton_props_const_ptr  m_current_skeleton_props;
-    scn::skeleton_props_const_ptr  m_new_skeleton_props;
+    scn::agent_props  m_current_props;
+    scn::agent_props  m_new_props;
 };
 
 

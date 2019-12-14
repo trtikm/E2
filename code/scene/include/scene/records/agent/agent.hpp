@@ -4,6 +4,7 @@
 #   include <scene/scene_node_id.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
 #   include <ai/agent_id.hpp>
+#   include <ai/agent_kind.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <vector>
 #   include <memory>
@@ -36,19 +37,26 @@ inline skeleton_props_ptr  create_skeleton_props(
 }
 
 
+struct  agent_props
+{
+    ai::AGENT_KIND  m_agent_kind;
+    skeleton_props_const_ptr  m_skeleton_props;
+};
+
+
 struct  agent  final
 {
-    agent(ai::agent_id const  id, skeleton_props_const_ptr const  props)
+    agent(ai::agent_id const  id, agent_props const&  props)
         : m_id(id)
-        , m_skeleton_props(props)
+        , m_props(props)
     {}
 
     ai::agent_id  id() const { return m_id; }
-    skeleton_props_const_ptr  get_skeleton_props() const { return m_skeleton_props; }
+    agent_props const&  get_props() const { return m_props; }
 
 private:
     ai::agent_id  m_id;
-    skeleton_props_const_ptr  m_skeleton_props;
+    agent_props  m_props;
 };
 
 

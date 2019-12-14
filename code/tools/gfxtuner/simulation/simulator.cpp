@@ -1574,8 +1574,8 @@ void  simulator::render_scene_batches(
                 ai::skeletal_motion_templates  motion_templates;
                 {
                     scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
-                    if (agent_ptr != nullptr && agent_ptr->get_skeleton_props() != nullptr)
-                        motion_templates = agent_ptr->get_skeleton_props()->skeletal_motion_templates;
+                    if (agent_ptr != nullptr && agent_ptr->get_props().m_skeleton_props != nullptr)
+                        motion_templates = agent_ptr->get_props().m_skeleton_props->skeletal_motion_templates;
                 }
                 if (!motion_templates.loaded_successfully())
                 {
@@ -2694,7 +2694,7 @@ void  simulator::get_rigid_body_info(
 }
 
 
-void  simulator::insert_agent(scn::scene_record_id const&  id, scn::skeleton_props_const_ptr const  props)
+void  simulator::insert_agent(scn::scene_record_id const&  id, scn::agent_props const&  props)
 {
     TMPROF_BLOCK();
 
@@ -2703,8 +2703,8 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::skeleton_pro
     ai::agent_id const  agent_id =
             m_agents_ptr->insert(
                     id.get_node_id(),
-                    props->skeletal_motion_templates,
-                    ai::AGENT_KIND::MOCK,
+                    props.m_skeleton_props->skeletal_motion_templates,
+                    props.m_agent_kind,
                     ai::make_retina(100U, 100U, true)
                     );
     scn::insert_agent(*node_ptr, agent_id, props);
@@ -2909,7 +2909,10 @@ void  simulator::load_agent(boost::property_tree::ptree const&  data, scn::scene
 
     boost::filesystem::path const  skeleton_dir = data.get<std::string>("skeleton_dir");
     ai::skeletal_motion_templates const skeletal_motion_templates(skeleton_dir, 75U);
-    scn::skeleton_props_ptr const  props = scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates);
+    scn::agent_props const  props{
+        ai::as_agent_kind(data.get<std::string>("kind")),
+        scn::create_skeleton_props(skeleton_dir, skeletal_motion_templates)
+    };
     insert_agent(id, props);
 }
 
@@ -2920,13 +2923,16 @@ void  simulator::save_agent(scn::scene_node_ptr const  node_ptr, boost::property
 
     scn::agent* const  agent_ptr = scn::get_agent(*node_ptr);
     ASSUMPTION(agent_ptr != nullptr);
-    data.put("skeleton_dir", agent_ptr->get_skeleton_props()->skeleton_directory.string());
+    data.put("kind", ai::as_string(agent_ptr->get_props().m_agent_kind));
+    data.put("skeleton_dir", agent_ptr->get_props().m_skeleton_props->skeleton_directory.string());
 }
 
 
-scn::skeleton_props_const_ptr  simulator::get_agent_info(scn::scene_node_id const& id)
+void  simulator::get_agent_info(scn::scene_node_id const& id, scn::agent_props&  props)
 {
-    return scn::get_agent(*get_scene_node(id))->get_skeleton_props();
+    scn::agent* const  agent_ptr = scn::get_agent(*get_scene_node(id));
+    ASSUMPTION(agent_ptr != nullptr);
+    props = agent_ptr->get_props();
 }
 
 
