@@ -2704,6 +2704,7 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::skeleton_pro
             m_agents_ptr->insert(
                     id.get_node_id(),
                     props->skeletal_motion_templates,
+                    ai::AGENT_KIND::MOCK,
                     ai::make_retina(100U, 100U, true)
                     );
     scn::insert_agent(*node_ptr, agent_id, props);

@@ -23,6 +23,7 @@ agents::agents(scene_ptr const  scene_)
 agent_id  agents::insert(
         scene::node_id const&  agent_nid,
         skeletal_motion_templates const  motion_templates,
+        AGENT_KIND const  agent_kind,
         retina_ptr const  retina_or_null
         )
 {
@@ -39,6 +40,7 @@ agent_id  agents::insert(
     props->agent_ptr = nullptr;
     props->agent_nid = agent_nid;
     props->motion_templates = motion_templates;
+    props->agent_kind = agent_kind;
     props->retina_ptr = retina_or_null;
 
     if (id == m_agents.size())
@@ -53,13 +55,11 @@ void  agents::construct_agent(agent_id const  id, agent_props&  props)
 {
     TMPROF_BLOCK();
 
-    AGENT_KIND const  agent_kind = AGENT_KIND::MOCK;
-
-    blackboard_ptr const  bb = agent::create_blackboard(agent_kind);
+    blackboard_ptr const  bb = agent::create_blackboard(props.agent_kind);
     {
         bb->m_motion_templates = props.motion_templates;
         bb->m_agent_id = id;
-        bb->m_agent_kind = agent_kind;
+        bb->m_agent_kind = props.agent_kind;
         bb->m_retina_ptr = props.retina_ptr;
         bb->m_scene = m_scene;
         bb->m_agent_nid = props.agent_nid;

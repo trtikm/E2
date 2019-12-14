@@ -25,6 +25,7 @@ struct agents
     agent_id  insert(
             scene::node_id const&  agent_nid,
             skeletal_motion_templates const  motion_templates,
+            AGENT_KIND const  agent_kind,
             retina_ptr const  retina_or_null
             );
     void  erase(agent_id const  id) { m_agents.at(id) = nullptr; }
@@ -57,6 +58,7 @@ private:
         std::unique_ptr<agent>  agent_ptr;
         scene::node_id  agent_nid;
         skeletal_motion_templates  motion_templates;
+        AGENT_KIND  agent_kind;
         retina_ptr  retina_ptr;
     };
 
