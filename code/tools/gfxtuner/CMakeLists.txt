@@ -80,6 +80,8 @@ add_executable(${THIS_TARGET_NAME}
     dialog_windows/insert_name_dialog.cpp
     dialog_windows/insert_number_dialog.hpp
     dialog_windows/insert_number_dialog.cpp
+    dialog_windows/rigid_body_props_dialog.hpp
+    dialog_windows/rigid_body_props_dialog.cpp
 
     simulation/simulator.hpp
     simulation/simulator.cpp
