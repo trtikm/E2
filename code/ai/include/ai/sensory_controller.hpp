@@ -14,8 +14,8 @@ struct  sensory_controller
 {
     explicit sensory_controller(
             blackboard_weak_ptr const  blackboard_,
-            sensory_controller_collision_contacts_ptr const  collision_contacts_,
-            sensory_controller_sight_ptr  const  sight_
+            sensory_controller_collision_contacts_ptr const  collision_contacts_, // Can NOT be nullptr
+            sensory_controller_sight_ptr  const  sight_ // Can be nullptr
             );
 
     virtual ~sensory_controller() {}
