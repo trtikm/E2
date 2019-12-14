@@ -82,7 +82,7 @@ network::network(
         network_layer::config::sign_and_geometry const&  sign_and_geometry_info = layer_config.sign_and_geometry_info;
         ASSUMPTION(sign_and_geometry_info.num_units > 0U && sign_and_geometry_info.num_sockets_per_unit > 0U);
 
-        network_layer&  layer = layers.at(layer_idx);
+        network_layer&  layer = layers.at(NUM_INPUT_LAYERS + layer_idx);
 
         {
             auto const&  cfg = network_layer::config::configurations_of_events.at(layer_config.events_config_name);
@@ -164,8 +164,8 @@ network::network(
                             if (other_id.layer == num_layers)
                             {
                                 other_id.layer = NUM_INPUT_LAYERS;
-                                for (++other_id.unit; other_id.unit >= (natural_16_bit)layers.at(other_id.layer).units.size(); ++other_id.layer)
-                                    if (other_id.layer == num_layers)
+                                for (++other_id.unit; other_id.unit >= (natural_16_bit)layers.at(other_id.layer).units.size(); )
+                                    if (++other_id.layer == num_layers)
                                     {
                                         other_id.layer = NUM_INPUT_LAYERS;
                                         other_id.unit = 0U;
