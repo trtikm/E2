@@ -3,6 +3,7 @@
 #include <gfxtuner/window_tabs/tab_scene_utils.hpp>
 #include <gfxtuner/program_window.hpp>
 #include <gfxtuner/program_options.hpp>
+#include <gfxtuner/dialog_windows/agent_props_dialog.hpp>
 #include <scene/scene.hpp>
 #include <scene/scene_history.hpp>
 #include <scene/scene_node_record_id.hpp>
@@ -76,90 +77,6 @@ void  insert_skeleton_joint_nodes_under_agent_node(
             inserted_nodes.push_back({ bone_node_id, bone_tree_item });
         }
     }
-}
-
-
-struct  agent_props_dialog : public QDialog
-{
-    agent_props_dialog(program_window* const  wnd, scn::skeleton_props_const_ptr const  current_skeleton_props);
-
-    bool  ok() const { return m_ok; }
-
-    scn::skeleton_props_const_ptr  get_new_skeleton_props() const { return m_new_skeleton_props; }
-
-public slots:
-
-    void  accept();
-    void  reject();
-
-private:
-    program_window*  m_wnd;
-    bool  m_ok;
-    QPushButton* m_widget_ok;
-
-    scn::skeleton_props_const_ptr  m_current_skeleton_props;
-    scn::skeleton_props_const_ptr  m_new_skeleton_props;
-};
-
-
-agent_props_dialog::agent_props_dialog(program_window* const  wnd, scn::skeleton_props_const_ptr const  current_skeleton_props)
-    : QDialog(wnd)
-    , m_wnd(wnd)
-    , m_ok(false)
-    , m_widget_ok(
-            [](agent_props_dialog* wnd) {
-                    struct OK : public QPushButton {
-                        OK(agent_props_dialog* wnd) : QPushButton("OK")
-                        {
-                            QObject::connect(this, SIGNAL(released()), wnd, SLOT(accept()));
-                        }
-                    };
-                    return new OK(wnd);
-                }(this)
-            )
-
-    , m_current_skeleton_props(current_skeleton_props)
-    , m_new_skeleton_props()
-{
-    QVBoxLayout* const dlg_layout = new QVBoxLayout;
-    {
-        dlg_layout->addWidget(new QLabel("TODO!"));
-
-        QHBoxLayout* const buttons_layout = new QHBoxLayout;
-        {
-            buttons_layout->addWidget(m_widget_ok);
-            buttons_layout->addWidget(
-                [](agent_props_dialog* wnd) {
-                    struct Close : public QPushButton {
-                        Close(agent_props_dialog* wnd) : QPushButton("Cancel")
-                        {
-                            QObject::connect(this, SIGNAL(released()), wnd, SLOT(reject()));
-                        }
-                    };
-                    return new Close(wnd);
-                }(this)
-                );
-            buttons_layout->addStretch(1);
-        }
-        dlg_layout->addLayout(buttons_layout);
-    }
-    this->setLayout(dlg_layout);
-    this->setWindowTitle("Agent");
-
-    m_widget_ok->setEnabled(false);
-}
-
-
-void  agent_props_dialog::accept()
-{
-    m_ok = true;
-    QDialog::accept();
-}
-
-
-void  agent_props_dialog::reject()
-{
-    QDialog::reject();
 }
 
 
@@ -285,7 +202,7 @@ void  register_record_handler_for_update_scene_record(
             [](widgets* const  w, scn::scene_record_id const&  record_id) -> void {
                     scn::skeleton_props_const_ptr const  old_skeleton_props =
                             w->wnd()->glwindow().call_now(&simulator::get_agent_info, std::cref(record_id.get_node_id()));
-                    detail::agent_props_dialog  dlg(w->wnd(), old_skeleton_props);
+                    dialog_windows::agent_props_dialog  dlg(w->wnd(), old_skeleton_props);
                     dlg.exec();
                     if (!dlg.ok())
                         return;

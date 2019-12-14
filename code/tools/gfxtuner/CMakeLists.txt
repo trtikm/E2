@@ -72,6 +72,8 @@ add_executable(${THIS_TARGET_NAME}
     window_tabs/tab_statistics_ai.hpp
     window_tabs/tab_statistics_ai.cpp
 
+    dialog_windows/agent_props_dialog.hpp
+    dialog_windows/agent_props_dialog.cpp
     dialog_windows/collider_props_dialog.hpp 
     dialog_windows/collider_props_dialog.cpp 
     dialog_windows/effects_config_dialog.hpp
