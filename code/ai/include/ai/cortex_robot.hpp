@@ -3,11 +3,8 @@
 
 #   include <ai/cortex.hpp>
 #   include <ai/blackboard.hpp>
-#   include <ai/skeletal_motion_templates.hpp>
-#   include <ai/motion_desire_props.hpp>
-#   include <ai/env/snapshots_cache.hpp>
+#   include <netlab/simple_network.hpp>
 #   include <angeo/tensor_math.hpp>
-#   include <vector>
 
 namespace ai {
 
@@ -21,7 +18,11 @@ struct  cortex_robot : public cortex
     void  next_round(float_32_bit const  time_step_in_seconds) override;
 
 private:
-    env::snapshots_cache_ptr  m_snapshots_cache;
+
+    static constexpr float_32_bit  NETWORK_TIMES_STEP_DURATION_IN_SECONDS = 0.01f;
+
+    netlab::simple::network  network;
+    float_32_bit  time_buffer_in_seconds;
 };
 
 
