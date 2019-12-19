@@ -60,6 +60,11 @@ add_library(${THIS_TARGET_NAME}
     ./include/ai/env/snapshots_cache.hpp
     ./src/env/snapshots_cache.cpp
 
+    ./include/ai/env/sinet/snapshot_encoder.hpp 
+    ./src/env/sinet/snapshot_encoder.cpp 
+    ./include/ai/env/sinet/number_encoder.hpp 
+    ./src/env/sinet/number_encoder.cpp 
+
     ./include/ai/detail/rigid_body_motion.hpp
     ./src/detail/rigid_body_motion.cpp
 

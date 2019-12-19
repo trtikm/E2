@@ -2,9 +2,11 @@
 #   define AI_CORTEX_ROBOT_HPP_INCLUDED
 
 #   include <ai/cortex.hpp>
+#   include <ai/env/sinet/snapshot_encoder.hpp>
 #   include <ai/blackboard.hpp>
 #   include <netlab/simple_network.hpp>
 #   include <angeo/tensor_math.hpp>
+#   include <memory>
 
 namespace ai {
 
@@ -19,9 +21,10 @@ struct  cortex_robot : public cortex
 
 private:
 
-    static constexpr float_32_bit  NETWORK_TIMES_STEP_DURATION_IN_SECONDS = 0.01f;
+    static constexpr float_32_bit  NETWORK_TIME_STEP_DURATION_IN_SECONDS = 0.01f;
 
-    netlab::simple::network  network;
+    std::unique_ptr<env::sinet::snapshot_encoder>  snapshot_encoder;
+    std::unique_ptr<netlab::simple::network>  network;
     float_32_bit  time_buffer_in_seconds;
 };
 

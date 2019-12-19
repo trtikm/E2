@@ -19,24 +19,8 @@ namespace ai {
 
 cortex_robot::cortex_robot(blackboard_weak_ptr const  blackboard_)
     : cortex(blackboard_)
-    , network(
-        sinet::network::prefab::UNIVERSAL,        
-        { // input_layers_configs
-            sinet::network_layer::config::sign_and_geometry {
-                true,       // is_excitatory
-                100U,       // num_units
-                100U        // num_sockets_per_unit
-                }
-            },
-        sinet::network::INPUTS_DISTRUBUTION_STRATEGY::LAYERS_FIRST,
-        { // output_layer_indices
-            1U
-            },
-        sinet::network::statistics::config { // stats_config
-            500U
-            },
-        0U // seed
-        )
+    , snapshot_encoder(nullptr)
+    , network(nullptr)
     , time_buffer_in_seconds(0.0f)
 {}
 
@@ -48,6 +32,24 @@ cortex_robot::~cortex_robot()
 void  cortex_robot::initialise()
 {
     cortex::initialise();
+
+    snapshot_encoder = std::make_unique<env::sinet::snapshot_encoder>(get_blackboard(), 0U);
+
+    std::vector<netlab::simple::network_layer::config::sign_and_geometry>  input_layers_configs;
+    snapshot_encoder->get_layers_configs(input_layers_configs);
+
+    network = std::make_unique<netlab::simple::network>(
+                sinet::network::prefab::UNIVERSAL,
+                input_layers_configs,
+                sinet::network::INPUTS_DISTRUBUTION_STRATEGY::LAYERS_FIRST,
+                std::vector<natural_8_bit>{ (natural_8_bit)input_layers_configs.size() },   // output_layer_indices
+                sinet::network::statistics::config{
+                        500U,   // num_rounds_per_snapshot
+                        1U,     // snapshots_history_size
+                        0.1f    // ratio_of_probed_units_per_layer
+                        },
+                0U              // seed
+                );
 }
 
 
@@ -55,17 +57,19 @@ void  cortex_robot::next_round(float_32_bit const  time_step_in_seconds)
 {
     TMPROF_BLOCK();
 
-    cortex::next_round(time_step_in_seconds);
-
     //env::snapshot_const_ptr  snapshot_ptr;
+    //std::unordered_set<netlab::simple::uid>  spiking_units;
     //for (time_buffer_in_seconds += time_step_in_seconds;
-    //     time_buffer_in_seconds >= NETWORK_TIMES_STEP_DURATION_IN_SECONDS; 
-    //     time_buffer_in_seconds -= NETWORK_TIMES_STEP_DURATION_IN_SECONDS)
+    //     time_buffer_in_seconds >= NETWORK_TIME_STEP_DURATION_IN_SECONDS; 
+    //     time_buffer_in_seconds -= NETWORK_TIME_STEP_DURATION_IN_SECONDS)
     //{
     //    if (snapshot_ptr == nullptr)
     //        snapshot_ptr = env::create_snapshot(get_blackboard());
-
-    //    network.next_round();
+    //    spiking_units.clear();
+    //    snapshot_encoder->next_round(NETWORK_TIME_STEP_DURATION_IN_SECONDS, *snapshot_ptr, spiking_units);
+    //    for (netlab::simple::uid  uid : spiking_units)
+    //        network->insert_input_event(uid);
+    //    network->next_round();
     //}
     //m_motion_desire_props.forward_unit_vector_in_local_space = ;
     //m_motion_desire_props.linear_velocity_unit_direction_in_local_space = ;
@@ -73,6 +77,10 @@ void  cortex_robot::next_round(float_32_bit const  time_step_in_seconds)
     //m_motion_desire_props.angular_velocity_unit_axis_in_local_space = ;
     //m_motion_desire_props.angular_speed = ;
     //m_motion_desire_props.look_at_target_in_local_space = ;
+
+
+
+    cortex::next_round(time_step_in_seconds); // REMOVE THIS LINE, ONCE THE PROPER IMPLEMENTATION ABOVE IS COMPLETE!!!
 }
 
 
