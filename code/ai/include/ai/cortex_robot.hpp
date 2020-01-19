@@ -3,6 +3,7 @@
 
 #   include <ai/cortex.hpp>
 #   include <ai/env/sinet/snapshot_encoder.hpp>
+#   include <ai/env/sinet/motion_desire_decoder.hpp>
 #   include <ai/blackboard.hpp>
 #   include <netlab/simple_network.hpp>
 #   include <angeo/tensor_math.hpp>
@@ -24,6 +25,7 @@ private:
     static constexpr float_32_bit  NETWORK_TIME_STEP_DURATION_IN_SECONDS = 0.01f;
 
     std::unique_ptr<env::sinet::snapshot_encoder>  snapshot_encoder;
+    std::unique_ptr<env::sinet::motion_desire_decoder>  motion_desire_decoder;
     std::unique_ptr<netlab::simple::network>  network;
     float_32_bit  time_buffer_in_seconds;
 };

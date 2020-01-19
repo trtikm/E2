@@ -20,6 +20,7 @@ namespace ai {
 cortex_robot::cortex_robot(blackboard_weak_ptr const  blackboard_)
     : cortex(blackboard_)
     , snapshot_encoder(nullptr)
+    , motion_desire_decoder(nullptr)
     , network(nullptr)
     , time_buffer_in_seconds(0.0f)
 {}
@@ -37,6 +38,9 @@ void  cortex_robot::initialise()
 
     std::vector<netlab::simple::network_layer::config::sign_and_geometry>  input_layers_configs;
     snapshot_encoder->get_layers_configs(input_layers_configs);
+
+    motion_desire_decoder =
+            std::make_unique<env::sinet::motion_desire_decoder>(m_motion_desire_props, (natural_8_bit)input_layers_configs.size());
 
     network = std::make_unique<netlab::simple::network>(
                 sinet::network::prefab::UNIVERSAL,
@@ -70,15 +74,8 @@ void  cortex_robot::next_round(float_32_bit const  time_step_in_seconds)
     //    for (netlab::simple::uid  uid : spiking_units)
     //        network->insert_input_event(uid);
     //    network->next_round();
+    //    motion_desire_decoder->next_round(NETWORK_TIME_STEP_DURATION_IN_SECONDS, network->get_output_events());
     //}
-    //m_motion_desire_props.forward_unit_vector_in_local_space = ;
-    //m_motion_desire_props.linear_velocity_unit_direction_in_local_space = ;
-    //m_motion_desire_props.linear_speed = ;
-    //m_motion_desire_props.angular_velocity_unit_axis_in_local_space = ;
-    //m_motion_desire_props.angular_speed = ;
-    //m_motion_desire_props.look_at_target_in_local_space = ;
-
-
 
     cortex::next_round(time_step_in_seconds); // REMOVE THIS LINE, ONCE THE PROPER IMPLEMENTATION ABOVE IS COMPLETE!!!
 }
