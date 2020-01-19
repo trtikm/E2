@@ -240,23 +240,37 @@ void  snapshot_encoder::next_round(
         natural_16_bit  unit_index;
         layer_props*  props;
         std::unordered_set<netlab::simple::uid>*  spiking_units;
+        std::unordered_set<natural_16_bit>  visited_encoder_indices;
 
         void  begin(layer_props& p)
         {
             encoder_index = 0U;
             unit_index = 0U;
             props = &p;
+            visited_encoder_indices.clear();
+        }
+
+        void  update_next(float_32_bit const* const  value_ptr)
+        {
+            std::unordered_set<natural_8_bit>  indices;
+            number_encoder& encoder = props->encoders.at(encoder_index);
+            encoder.next_round(TIME_STEP_IN_SECONDS, value_ptr, indices);
+            for (natural_8_bit idx : indices)
+                spiking_units->insert({ props->INDEX, (natural_16_bit)(unit_index + idx), 0U });
+            visited_encoder_indices.insert(encoder_index);
+            ++encoder_index;
+            unit_index += encoder.num_units();
+        };
+
+        void  skip_next()
+        {
+            unit_index += props->encoders.at(encoder_index).num_units();
+            ++encoder_index;
         }
 
         void  update_next(float_32_bit const  value)
         {
-            std::unordered_set<natural_8_bit>  indices;
-            number_encoder&  encoder = props->encoders.at(encoder_index);
-            encoder.next_round(TIME_STEP_IN_SECONDS, &value, indices);
-            for (natural_8_bit idx : indices)
-                spiking_units->insert({ props->INDEX, (natural_16_bit)(unit_index + idx), 0U });
-            ++encoder_index;
-            unit_index += encoder.num_units();
+            update_next(&value);
         };
 
         void update_next(vector3 const&  value)
@@ -275,7 +289,7 @@ void  snapshot_encoder::next_round(
 
         void  end_grid_cell()
         {
-            INVARIANT(unit_index == (encoder_index + 1U) * props->encoders.front().num_units());
+            INVARIANT(unit_index == encoder_index * props->encoders.front().num_units());
         }
 
         void  update_grid_cell(natural_16_bit const  x, natural_16_bit const  y, float_32_bit const  value)
@@ -287,7 +301,19 @@ void  snapshot_encoder::next_round(
 
         void  end()
         {
-            INVARIANT(props->NUM_ENCODERS_PER_GRID_CELL > 0U || unit_index == props->SIGN_AND_GEOMETRY_INFO.num_units);
+            if (props->NUM_ENCODERS_PER_GRID_CELL > 0U)
+            {
+                encoder_index = 0U;
+                unit_index = 0U;
+                natural_16_bit  n = (natural_16_bit)props->encoders.size();
+                while (encoder_index != n)
+                    if (visited_encoder_indices.count(encoder_index) == 0UL)
+                        update_next(nullptr);
+                    else
+                        skip_next();
+            }
+            INVARIANT(visited_encoder_indices.size() == props->encoders.size() &&
+                      unit_index == props->SIGN_AND_GEOMETRY_INFO.num_units);
         }
     };
     input_units_updater  updater{ time_step_in_seconds, 0U, 0U, nullptr, &spiking_units };
