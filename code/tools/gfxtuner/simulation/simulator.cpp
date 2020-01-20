@@ -2298,6 +2298,7 @@ void  simulator::erase_batch_from_scene_node(
 void  simulator::insert_collision_sphere_to_scene_node(
         float_32_bit const  radius,
         angeo::COLLISION_MATERIAL_TYPE const  material,
+        angeo::COLLISION_CLASS const  collision_class,
         float_32_bit const  density_multiplier,
         bool const  as_dynamic,
         scn::scene_record_id const&  id
@@ -2308,7 +2309,7 @@ void  simulator::insert_collision_sphere_to_scene_node(
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     ASSUMPTION(node_ptr != nullptr);
     angeo::collision_object_id const  collider_id =
-            m_collision_scene_ptr->insert_sphere(radius, node_ptr->get_world_matrix(), material, as_dynamic);
+            m_collision_scene_ptr->insert_sphere(radius, node_ptr->get_world_matrix(), material, collision_class, as_dynamic);
     scn::insert_collider(*node_ptr, id.get_record_name(), collider_id, density_multiplier);
 
     if (scn::scene_node_ptr const  phs_node = find_nearest_rigid_body_node(node_ptr))
@@ -2319,6 +2320,7 @@ void  simulator::insert_collision_capsule_to_scene_node(
         float_32_bit const  half_distance_between_end_points,
         float_32_bit const  thickness_from_central_line,
         angeo::COLLISION_MATERIAL_TYPE const  material,
+        angeo::COLLISION_CLASS const  collision_class,
         float_32_bit const  density_multiplier,
         bool const  as_dynamic,
         scn::scene_record_id const&  id
@@ -2334,6 +2336,7 @@ void  simulator::insert_collision_capsule_to_scene_node(
                     thickness_from_central_line,
                     node_ptr->get_world_matrix(),
                     material,
+                    collision_class,
                     as_dynamic
                     );
     scn::insert_collider(*node_ptr, id.get_record_name(), collider_id, density_multiplier);
@@ -2346,6 +2349,7 @@ void  simulator::insert_collision_trianle_mesh_to_scene_node(
         qtgl::buffer const  vertex_buffer,
         qtgl::buffer const  index_buffer,
         angeo::COLLISION_MATERIAL_TYPE const  material,
+        angeo::COLLISION_CLASS const  collision_class,
         float_32_bit const  density_multiplier,
         scn::scene_record_id const&  id
         )
@@ -2361,6 +2365,7 @@ void  simulator::insert_collision_trianle_mesh_to_scene_node(
             getter,
             node_ptr->get_world_matrix(),
             material,
+            collision_class,
             false,
             collider_ids
             );
@@ -2402,6 +2407,7 @@ void  simulator::get_collision_sphere_info(
         scn::scene_record_id const&  id,
         float_32_bit&  radius,
         angeo::COLLISION_MATERIAL_TYPE&  material,
+        angeo::COLLISION_CLASS&  collision_class,
         float_32_bit&  density_multiplier,
         bool&  is_dynamic
         )
@@ -2410,6 +2416,7 @@ void  simulator::get_collision_sphere_info(
     ASSUMPTION(collider != nullptr);
     radius = m_collision_scene_ptr->get_sphere_radius(collider->id());
     material = m_collision_scene_ptr->get_material(collider->id());
+    collision_class = m_collision_scene_ptr->get_collision_class(collider->id());
     density_multiplier = collider->get_density_multiplier();
     is_dynamic = m_collision_scene_ptr->is_dynamic(collider->id());
 }
@@ -2419,6 +2426,7 @@ void  simulator::get_collision_capsule_info(
         float_32_bit&  half_distance_between_end_points,
         float_32_bit&  thickness_from_central_line,
         angeo::COLLISION_MATERIAL_TYPE&  material,
+        angeo::COLLISION_CLASS&  collision_class,
         float_32_bit&  density_multiplier,
         bool&  is_dynamic
         )
@@ -2428,6 +2436,7 @@ void  simulator::get_collision_capsule_info(
     half_distance_between_end_points = m_collision_scene_ptr->get_capsule_half_distance_between_end_points(collider->id());
     thickness_from_central_line = m_collision_scene_ptr->get_capsule_thickness_from_central_line(collider->id());
     material = m_collision_scene_ptr->get_material(collider->id());
+    collision_class = m_collision_scene_ptr->get_collision_class(collider->id());
     density_multiplier = collider->get_density_multiplier();
     is_dynamic = m_collision_scene_ptr->is_dynamic(collider->id());
 }
@@ -2438,6 +2447,7 @@ void  simulator::get_collision_triangle_mesh_info(
         qtgl::buffer&  vertex_buffer,
         qtgl::buffer&  index_buffer,
         angeo::COLLISION_MATERIAL_TYPE&  material,
+        angeo::COLLISION_CLASS&  collision_class,
         float_32_bit&  density_multiplier
         )
 {
@@ -2448,6 +2458,7 @@ void  simulator::get_collision_triangle_mesh_info(
     vertex_buffer = vertices_getter_ptr->get_vertex_buffer();
     index_buffer = vertices_getter_ptr->get_index_buffer();
     material = m_collision_scene_ptr->get_material(collider->id());
+    collision_class = m_collision_scene_ptr->get_collision_class(collider->id());
     density_multiplier = collider->get_density_multiplier();
 }
 
@@ -2739,6 +2750,7 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
                 data.get<float_32_bit>("half_distance_between_end_points"),
                 data.get<float_32_bit>("thickness_from_central_line"),
                 angeo::read_collison_material_from_string(data.get<std::string>("material")),
+                angeo::read_collison_class_from_string(data.get<std::string>("collision_class")),
                 data.get<float_32_bit>("density_multiplier"),
                 data.get<bool>("is_dynamic"),
                 scn::make_collider_record_id(id, shape_type)
@@ -2747,6 +2759,7 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
         insert_collision_sphere_to_scene_node(
                 data.get<float_32_bit>("radius"),
                 angeo::read_collison_material_from_string(data.get<std::string>("material")),
+                angeo::read_collison_class_from_string(data.get<std::string>("collision_class")),
                 data.get<float_32_bit>("density_multiplier"),
                 data.get<bool>("is_dynamic"),
                 scn::make_collider_record_id(id, shape_type)
@@ -2764,6 +2777,7 @@ void  simulator::load_collider(boost::property_tree::ptree const&  data, scn::sc
                 vertex_buffer,
                 index_buffer,
                 angeo::read_collison_material_from_string(data.get<std::string>("material")),
+                angeo::read_collison_class_from_string(data.get<std::string>("collision_class")),
                 data.get<float_32_bit>("density_multiplier"),
                 scn::make_collider_record_id(id, shape_type)
                 );

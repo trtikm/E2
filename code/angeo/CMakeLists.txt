@@ -39,6 +39,9 @@ add_library(${THIS_TARGET_NAME}
     ./include/angeo/contact_id.hpp
     ./include/angeo/contact_acceptor.hpp
 
+    ./include/angeo/collision_class.hpp
+    ./src/collision_class.cpp
+
     ./include/angeo/collision_scene.hpp
     ./src/collision_scene.cpp
 

@@ -161,6 +161,7 @@ void  create_collider_and_rigid_body_of_motion_scene_node(
                 capsule_ptr->length,
                 capsule_ptr->radius,
                 angeo::COLLISION_MATERIAL_TYPE::NO_FRINCTION_NO_BOUNCING,
+                angeo::COLLISION_CLASS::AGENT_MOTION_OBJECT,
                 1.0f,
                 true
                 );

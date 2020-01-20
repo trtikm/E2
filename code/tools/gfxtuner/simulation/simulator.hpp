@@ -130,6 +130,7 @@ struct simulator : public qtgl::real_time_simulator
     void  insert_collision_sphere_to_scene_node(
             float_32_bit const  radius,
             angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  collision_class,
             float_32_bit const  density_multiplier,
             bool const  as_dynamic,
             scn::scene_record_id const&  id
@@ -139,6 +140,7 @@ struct simulator : public qtgl::real_time_simulator
             float_32_bit const  half_distance_between_end_points,
             float_32_bit const  thickness_from_central_line,
             angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  collision_class,
             float_32_bit const  density_multiplier,
             bool const  as_dynamic,
             scn::scene_record_id const&  id
@@ -148,6 +150,7 @@ struct simulator : public qtgl::real_time_simulator
             qtgl::buffer const  vertex_buffer,
             qtgl::buffer const  index_buffer,
             angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  collision_class,
             float_32_bit const  density_multiplier,
             scn::scene_record_id const&  id
             );
@@ -160,6 +163,7 @@ struct simulator : public qtgl::real_time_simulator
             scn::scene_record_id const&  id,
             float_32_bit&  radius,
             angeo::COLLISION_MATERIAL_TYPE&  material,
+            angeo::COLLISION_CLASS&  collision_class,
             float_32_bit&  density_multiplier,
             bool&  is_dynamic
             );
@@ -169,6 +173,7 @@ struct simulator : public qtgl::real_time_simulator
             float_32_bit&  half_distance_between_end_points,
             float_32_bit&  thickness_from_central_line,
             angeo::COLLISION_MATERIAL_TYPE&  material,
+            angeo::COLLISION_CLASS&  collision_class,
             float_32_bit&  density_multiplier,
             bool&  is_dynamic
             );
@@ -178,6 +183,7 @@ struct simulator : public qtgl::real_time_simulator
             qtgl::buffer&  vertex_buffer,
             qtgl::buffer&  index_buffer,
             angeo::COLLISION_MATERIAL_TYPE&  material,
+            angeo::COLLISION_CLASS&  collision_class,
             float_32_bit&  density_multiplier
             );
 

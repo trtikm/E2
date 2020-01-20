@@ -10,6 +10,7 @@
 #   include <angeo/collision_object_id_pair.hpp>
 #   include <angeo/collision_shape_feature_id.hpp>
 #   include <angeo/collision_shape_id.hpp>
+#   include <angeo/collision_class.hpp>
 #   include <angeo/contact_acceptor.hpp>
 #   include <angeo/contact_id.hpp>
 #   include <angeo/proximity_map.hpp>
@@ -72,6 +73,7 @@ struct  collision_scene
             float_32_bit const  thickness_from_central_line,
             matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
+            COLLISION_CLASS const  collision_class,
             bool const  is_dynamic
             );
 
@@ -82,6 +84,7 @@ struct  collision_scene
             float_32_bit const  half_distance_between_end_points,
             matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
+            COLLISION_CLASS const  collision_class,
             bool const  is_dynamic
             );
 
@@ -90,6 +93,7 @@ struct  collision_scene
     collision_object_id  insert_point(
             matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
+            COLLISION_CLASS const  collision_class,
             bool const  is_dynamic
             );
 
@@ -99,6 +103,7 @@ struct  collision_scene
             float_32_bit const  radius,
             matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
+            COLLISION_CLASS const  collision_class,
             bool const  is_dynamic
             );
 
@@ -114,6 +119,7 @@ struct  collision_scene
             std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
             matrix44 const&  from_base_matrix,
             COLLISION_MATERIAL_TYPE const  material,
+            COLLISION_CLASS const  collision_class,
             bool const  is_dynamic, // Although not mandatory, it is recomended to pass 'false' here (for performance reasons).
             std::vector<collision_object_id>&  output_coids_of_individual_triangles
             );
@@ -199,6 +205,7 @@ struct  collision_scene
             );
 
     COLLISION_MATERIAL_TYPE  get_material(collision_object_id const  coid) const;
+    COLLISION_CLASS  get_collision_class(collision_object_id const  coid) const;
 
     struct  statistics
     {
@@ -345,6 +352,7 @@ private:
     std::vector<capsule_geometry>  m_capsules_geometry;
     std::vector<axis_aligned_bounding_box>  m_capsules_bbox;
     std::vector<COLLISION_MATERIAL_TYPE>  m_capsules_material;
+    std::vector<COLLISION_CLASS>  m_capsules_collision_class;
 
     /////////////////////////////////////////////////////////////////////////////////
     // LINES
@@ -364,12 +372,14 @@ private:
     std::vector<line_geometry>  m_lines_geometry;
     std::vector<axis_aligned_bounding_box>  m_lines_bbox;
     std::vector<COLLISION_MATERIAL_TYPE>  m_lines_material;
+    std::vector<COLLISION_CLASS>  m_lines_collision_class;
 
     /////////////////////////////////////////////////////////////////////////////////
     // POINTS
 
     std::vector<vector3>  m_points_geometry;
     std::vector<COLLISION_MATERIAL_TYPE>  m_points_material;
+    std::vector<COLLISION_CLASS>  m_points_collision_class;
 
     /////////////////////////////////////////////////////////////////////////////////
     // SPHERES
@@ -382,6 +392,7 @@ private:
 
     std::vector<sphere_geometry>  m_spheres_geometry;
     std::vector<COLLISION_MATERIAL_TYPE>  m_spheres_material;
+    std::vector<COLLISION_CLASS>  m_spheres_collision_class;
 
     /////////////////////////////////////////////////////////////////////////////////
     // TRIANGLES
@@ -403,11 +414,11 @@ private:
     std::vector<triangle_geometry>  m_triangles_geometry;
     std::vector<axis_aligned_bounding_box>  m_triangles_bbox;
     std::vector<COLLISION_MATERIAL_TYPE>  m_triangles_material;
+    std::vector<COLLISION_CLASS>  m_triangles_collision_class;
     std::vector<std::array<collision_object_id, 3U> >  m_triangles_neighbours_over_edges;
     std::vector<std::pair<std::function<vector3(natural_32_bit, natural_8_bit)>, natural_32_bit> >
             m_triangles_end_point_getters;
     std::vector<natural_32_bit>  m_triangles_indices_of_invalidated_end_point_getters;
-
 
     /////////////////////////////////////////////////////////////////////////////////
 

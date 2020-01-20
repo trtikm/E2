@@ -142,6 +142,7 @@ void  bind_ai_scene_to_simulator::insert_collision_capsule_to_scene_node(
         float_32_bit const  half_distance_between_end_points,
         float_32_bit const  thickness_from_central_line,
         angeo::COLLISION_MATERIAL_TYPE const  material,
+        angeo::COLLISION_CLASS const  collision_class,
         float_32_bit const  density_multiplier,
         bool const  as_dynamic
         )
@@ -152,6 +153,7 @@ void  bind_ai_scene_to_simulator::insert_collision_capsule_to_scene_node(
             half_distance_between_end_points,
             thickness_from_central_line,
             material,
+            collision_class,
             density_multiplier,
             as_dynamic,
             scn::make_collider_record_id(nid, angeo::as_string(angeo::COLLISION_SHAPE_TYPE::CAPSULE))

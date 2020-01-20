@@ -3,6 +3,7 @@
 
 #   include <angeo/collision_object_id.hpp>
 #   include <angeo/collision_material.hpp>
+#   include <angeo/collision_class.hpp>
 #   include <utility/basic_numeric_types.hpp>
 #   include <boost/filesystem/path.hpp>
 #   include <vector>
@@ -44,6 +45,7 @@ struct  collider_props final
 
     bool  m_as_dynamic;
     angeo::COLLISION_MATERIAL_TYPE  m_material;
+    angeo::COLLISION_CLASS  m_collision_class;
     float_32_bit  m_density_multiplier;
 
     // DATA OF CAPSULE

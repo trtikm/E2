@@ -35,6 +35,7 @@ void  set_collider_props_to_defaults(std::string const&  shape_type, scn::collid
     props.m_shape_type = shape_type;
     props.m_as_dynamic = true;
     props.m_material = angeo::COLLISION_MATERIAL_TYPE::WOOD;
+    props.m_collision_class = angeo::COLLISION_CLASS::COMMON_SCENE_OBJECT;
     props.m_density_multiplier = 1.0f;
     if (props.m_shape_type == "capsule")
     {
@@ -69,6 +70,7 @@ void  insert_collider_to_simulator(widgets* const  w, scn::collider_props const&
                 props.m_capsule_half_distance_between_end_points,
                 props.m_capsule_thickness_from_central_line,
                 props.m_material,
+                props.m_collision_class,
                 props.m_density_multiplier,
                 props.m_as_dynamic,
                 std::cref(record_id)
@@ -80,6 +82,7 @@ void  insert_collider_to_simulator(widgets* const  w, scn::collider_props const&
                 &simulator::insert_collision_sphere_to_scene_node,
                 props.m_sphere_radius,
                 props.m_material,
+                props.m_collision_class,
                 props.m_density_multiplier,
                 props.m_as_dynamic,
                 std::cref(record_id)
@@ -108,6 +111,7 @@ void  insert_collider_to_simulator(widgets* const  w, scn::collider_props const&
                 vertex_buffer,
                 index_buffer,
                 props.m_material,
+                props.m_collision_class,
                 props.m_density_multiplier,
                 // props.m_as_dynamic, <-- Is always assumed to be 'false'.
                 std::cref(record_id)
@@ -138,6 +142,7 @@ void  read_collider_props_from_simulator(widgets* const  w, scn::scene_record_id
                 std::ref(props.m_capsule_half_distance_between_end_points),
                 std::ref(props.m_capsule_thickness_from_central_line),
                 std::ref(props.m_material),
+                std::ref(props.m_collision_class),
                 std::ref(props.m_density_multiplier),
                 std::ref(props.m_as_dynamic)
                 );
@@ -147,6 +152,7 @@ void  read_collider_props_from_simulator(widgets* const  w, scn::scene_record_id
                 std::cref(record_id),
                 std::ref(props.m_sphere_radius),
                 std::ref(props.m_material),
+                std::ref(props.m_collision_class),
                 std::ref(props.m_density_multiplier),
                 std::ref(props.m_as_dynamic)
                 );
@@ -160,6 +166,7 @@ void  read_collider_props_from_simulator(widgets* const  w, scn::scene_record_id
                 std::ref(vertex_buffer),
                 std::ref(index_buffer),
                 std::ref(props.m_material),
+                std::ref(props.m_collision_class),
                 std::ref(props.m_density_multiplier)
                 );
         props.m_triangle_mesh_buffers_directory =

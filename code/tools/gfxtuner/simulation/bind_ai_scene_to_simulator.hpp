@@ -50,6 +50,7 @@ struct bind_ai_scene_to_simulator : public ai::scene
             float_32_bit const  half_distance_between_end_points,
             float_32_bit const  thickness_from_central_line,
             angeo::COLLISION_MATERIAL_TYPE const  material,
+            angeo::COLLISION_CLASS const  collision_class,
             float_32_bit const  density_multiplier,
             bool const  as_dynamic
             ) override;

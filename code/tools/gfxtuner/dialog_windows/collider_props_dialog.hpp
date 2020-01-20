@@ -46,6 +46,7 @@ private:
 
     QCheckBox*  m_widget_as_dynamic;
     QComboBox*  m_widget_material;
+    QComboBox*  m_widget_collision_class;
     QLineEdit*  m_density_multiplier;
 
     // WIDGETS FOR CAPSULE

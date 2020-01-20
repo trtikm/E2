@@ -73,20 +73,25 @@ collision_scene::collision_scene()
     , m_capsules_geometry()
     , m_capsules_bbox()
     , m_capsules_material()
+    , m_capsules_collision_class()
 
     , m_lines_geometry()
     , m_lines_bbox()
     , m_lines_material()
+    , m_lines_collision_class()
 
     , m_points_geometry()
     , m_points_material()
+    , m_points_collision_class()
 
     , m_spheres_geometry()
     , m_spheres_material()
+    , m_spheres_collision_class()
 
     , m_triangles_geometry()
     , m_triangles_bbox()
     , m_triangles_material()
+    , m_triangles_collision_class()
     , m_triangles_neighbours_over_edges()
     , m_triangles_end_point_getters()
     , m_triangles_indices_of_invalidated_end_point_getters()
@@ -100,6 +105,7 @@ collision_object_id  collision_scene::insert_capsule(
         float_32_bit const  thickness_from_central_line,
         matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
+        COLLISION_CLASS const  collision_class,
         bool const  is_dynamic
         )
 {
@@ -131,6 +137,7 @@ collision_object_id  collision_scene::insert_capsule(
             m_capsules_geometry.push_back(geometry);
             m_capsules_bbox.push_back(bbox);
             m_capsules_material.push_back(material);
+            m_capsules_collision_class.push_back(collision_class);
         }
         else
         {
@@ -139,6 +146,7 @@ collision_object_id  collision_scene::insert_capsule(
             m_capsules_geometry.at(invalid_ids.back()) = geometry;
             m_capsules_bbox.at(invalid_ids.back()) = bbox;
             m_capsules_material.at(invalid_ids.back()) = material;
+            m_capsules_collision_class.at(invalid_ids.back()) = collision_class;
 
             invalid_ids.pop_back();
         }
@@ -155,6 +163,7 @@ collision_object_id  collision_scene::insert_line(
         float_32_bit const  half_distance_between_end_points,
         matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
+        COLLISION_CLASS const  collision_class,
         bool const  is_dynamic
         )
 {
@@ -181,7 +190,7 @@ collision_object_id  collision_scene::insert_line(
             m_lines_geometry.push_back(geometry);
             m_lines_bbox.push_back(bbox);
             m_lines_material.push_back(material);
-
+            m_lines_collision_class.push_back(collision_class);
         }
         else
         {
@@ -190,6 +199,7 @@ collision_object_id  collision_scene::insert_line(
             m_lines_geometry.at(invalid_ids.back()) = geometry;
             m_lines_bbox.at(invalid_ids.back()) = bbox;
             m_lines_material.at(invalid_ids.back()) = material;
+            m_lines_collision_class.at(invalid_ids.back()) = collision_class;
 
             invalid_ids.pop_back();
         }
@@ -205,6 +215,7 @@ collision_object_id  collision_scene::insert_line(
 collision_object_id  collision_scene::insert_point(
         matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
+        COLLISION_CLASS const  collision_class,
         bool const  is_dynamic  
         )
 {
@@ -221,7 +232,7 @@ collision_object_id  collision_scene::insert_point(
 
             m_points_geometry.push_back(position_in_world_space);
             m_points_material.push_back(material);
-
+            m_points_collision_class.push_back(collision_class);
         }
         else
         {
@@ -229,6 +240,7 @@ collision_object_id  collision_scene::insert_point(
 
             m_points_geometry.at(invalid_ids.back()) = position_in_world_space;
             m_points_material.at(invalid_ids.back()) = material;
+            m_points_collision_class.at(invalid_ids.back()) = collision_class;
 
             invalid_ids.pop_back();
         }
@@ -245,6 +257,7 @@ collision_object_id  collision_scene::insert_sphere(
         float_32_bit const  radius,
         matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
+        COLLISION_CLASS const  collision_class,
         bool const  is_dynamic
         )
 {
@@ -261,7 +274,7 @@ collision_object_id  collision_scene::insert_sphere(
 
             m_spheres_geometry.push_back(geometry);
             m_spheres_material.push_back(material);
-
+            m_spheres_collision_class.push_back(collision_class);
         }
         else
         {
@@ -269,6 +282,7 @@ collision_object_id  collision_scene::insert_sphere(
 
             m_spheres_geometry.at(invalid_ids.back()) = geometry;
             m_spheres_material.at(invalid_ids.back()) = material;
+            m_spheres_collision_class.at(invalid_ids.back()) = collision_class;
 
             invalid_ids.pop_back();
         }
@@ -286,6 +300,7 @@ void  collision_scene::insert_triangle_mesh(
         std::function<vector3(natural_32_bit, natural_8_bit)> const&  getter_of_end_points_in_model_space,
         matrix44 const&  from_base_matrix,
         COLLISION_MATERIAL_TYPE const  material,
+        COLLISION_CLASS const  collision_class,
         bool const  is_dynamic, // Although not mandatory, it is recomended to pass 'false' here (for performance reasons).
         std::vector<collision_object_id>&  output_coids_of_individual_triangles
         )
@@ -342,6 +357,7 @@ void  collision_scene::insert_triangle_mesh(
                 m_triangles_geometry.push_back(geometry);
                 m_triangles_bbox.push_back(bbox);
                 m_triangles_material.push_back(material);
+                m_triangles_collision_class.push_back(collision_class);
                 m_triangles_neighbours_over_edges.push_back({coid, coid, coid});
             }
             else
@@ -351,6 +367,7 @@ void  collision_scene::insert_triangle_mesh(
                 m_triangles_geometry.at(invalid_ids.back()) = geometry;
                 m_triangles_bbox.at(invalid_ids.back()) = bbox;
                 m_triangles_material.at(invalid_ids.back()) = material;
+                m_triangles_collision_class.at(invalid_ids.back()) = collision_class;
                 m_triangles_neighbours_over_edges.at(invalid_ids.back()) = { coid, coid, coid };
 
                 invalid_ids.pop_back();
@@ -489,20 +506,25 @@ void  collision_scene::clear()
     m_capsules_geometry.clear();
     m_capsules_bbox.clear();
     m_capsules_material.clear();
+    m_capsules_collision_class.clear();
 
     m_lines_geometry.clear();
     m_lines_bbox.clear();
     m_lines_material.clear();
+    m_lines_collision_class.clear();
 
     m_points_geometry.clear();
     m_points_material.clear();
+    m_points_collision_class.clear();
 
     m_spheres_geometry.clear();
     m_spheres_material.clear();
+    m_spheres_collision_class.clear();
 
     m_triangles_geometry.clear();
     m_triangles_bbox.clear();
     m_triangles_material.clear();
+    m_triangles_collision_class.clear();
     m_triangles_neighbours_over_edges.clear();
     m_triangles_end_point_getters.clear();
     m_triangles_indices_of_invalidated_end_point_getters.clear();
@@ -571,6 +593,8 @@ void  collision_scene::compute_contacts_of_all_dynamic_objects(contact_acceptor 
                     {
                         collision_object_id_pair const coid_pair =
                                 make_collision_object_id_pair(*it, *next_it);
+                        if (!are_colliding(get_collision_class(coid_pair.first), get_collision_class(coid_pair.second)))
+                            continue;
                         if (m_disabled_colliding.count(coid_pair) != 0UL)
                             continue;
                         if (processed_collision_queries.count(coid_pair) == 0UL)
@@ -633,6 +657,8 @@ void  collision_scene::compute_contacts_of_single_dynamic_object(
                         if (visited.count(other_coid) != 0UL)
                             return true;
                         collision_object_id_pair const coid_pair = make_collision_object_id_pair(coid, other_coid);
+                        if (!are_colliding(get_collision_class(coid_pair.first), get_collision_class(coid_pair.second)))
+                            return true;
                         if (m_disabled_colliding.count(coid_pair) != 0UL)
                             return true;
                         visited.insert(other_coid);
@@ -651,6 +677,8 @@ void  collision_scene::compute_contacts_of_single_dynamic_object(
                         if (visited.count(other_coid) != 0UL)
                             return true;
                         collision_object_id_pair const coid_pair = make_collision_object_id_pair(coid, other_coid);
+                        if (!are_colliding(get_collision_class(coid_pair.first), get_collision_class(coid_pair.second)))
+                            return true;
                         if (m_disabled_colliding.count(coid_pair) != 0UL)
                             return true;
                         visited.insert(other_coid);
@@ -1039,6 +1067,26 @@ COLLISION_MATERIAL_TYPE  collision_scene::get_material(collision_object_id const
         return m_spheres_material.at(get_instance_index(coid));
     case COLLISION_SHAPE_TYPE::TRIANGLE:
         return m_triangles_material.at(get_instance_index(coid));
+    default:
+        UNREACHABLE();
+    }
+}
+
+
+COLLISION_CLASS  collision_scene::get_collision_class(collision_object_id const  coid) const
+{
+    switch (get_shape_type(coid))
+    {
+    case COLLISION_SHAPE_TYPE::CAPSULE:
+        return m_capsules_collision_class.at(get_instance_index(coid));
+    case COLLISION_SHAPE_TYPE::LINE:
+        return m_lines_collision_class.at(get_instance_index(coid));
+    case COLLISION_SHAPE_TYPE::POINT:
+        return m_points_collision_class.at(get_instance_index(coid));
+    case COLLISION_SHAPE_TYPE::SPHERE:
+        return m_spheres_collision_class.at(get_instance_index(coid));
+    case COLLISION_SHAPE_TYPE::TRIANGLE:
+        return m_triangles_collision_class.at(get_instance_index(coid));
     default:
         UNREACHABLE();
     }

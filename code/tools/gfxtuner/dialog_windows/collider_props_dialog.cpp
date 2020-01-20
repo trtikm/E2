@@ -48,6 +48,7 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, scn::co
 
     , m_widget_as_dynamic(new QCheckBox("Movable during simulation"))
     , m_widget_material(new QComboBox)
+    , m_widget_collision_class(new QComboBox)
     , m_density_multiplier(new QLineEdit)
 
     // WIDGETS FOR CAPSULE
@@ -198,6 +199,26 @@ collider_props_dialog::collider_props_dialog(program_window* const  wnd, scn::co
             }
             common_props_layout->addWidget(material_group);
 
+            QHBoxLayout* const collision_class_layout = new QHBoxLayout;
+            {
+                collision_class_layout->addWidget(new QLabel("Collision class"));
+
+                collision_class_layout->addWidget(m_widget_collision_class);
+                m_widget_collision_class->setEditable(false);
+                m_widget_collision_class->setToolTip(
+                    "Adds this collider to the selected collision class. Two colliders may collide only if\n"
+                    "their collision classes allow for collision detection. Here is the table (only the lower\n"
+                    "triangle as the table is symetrix) of collision classes:\n"
+                    "   TODO: print here the table of collision classes."
+                );
+                for (natural_8_bit cc_id = 0U; cc_id != angeo::get_num_collision_classes(); ++cc_id)
+                    m_widget_collision_class->insertItem(cc_id, angeo::to_string(angeo::as_collision_class(cc_id)));
+                m_widget_collision_class->setCurrentIndex(angeo::as_number(m_props->m_collision_class));
+
+                collision_class_layout->addStretch(1);
+            }
+            common_props_layout->addLayout(collision_class_layout);
+
             common_props_layout->addWidget(m_widget_as_dynamic);
             m_widget_as_dynamic->setChecked(m_props->m_as_dynamic);
 
@@ -283,6 +304,7 @@ void  collider_props_dialog::accept()
 
     m_props->m_as_dynamic = m_widget_as_dynamic->isChecked();
     m_props->m_material = (angeo::COLLISION_MATERIAL_TYPE)m_widget_material->currentIndex();
+    m_props->m_collision_class = (angeo::COLLISION_CLASS)m_widget_collision_class->currentIndex();
     m_props->m_density_multiplier = std::atof(qtgl::to_string(m_density_multiplier->text()).c_str());
 
     m_ok = true;
