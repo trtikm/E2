@@ -28,6 +28,7 @@ bool  makes_sense_to_check_bboxes_intersection(
             )
 {
     static std::unordered_set<std::pair<COLLISION_SHAPE_TYPE, COLLISION_SHAPE_TYPE> > const  useless_bbox_checks {
+        make_collision_shape_type_pair(COLLISION_SHAPE_TYPE::POINT, COLLISION_SHAPE_TYPE::BOX),
         make_collision_shape_type_pair(COLLISION_SHAPE_TYPE::POINT, COLLISION_SHAPE_TYPE::CAPSULE),
         make_collision_shape_type_pair(COLLISION_SHAPE_TYPE::POINT, COLLISION_SHAPE_TYPE::LINE),
         make_collision_shape_type_pair(COLLISION_SHAPE_TYPE::POINT, COLLISION_SHAPE_TYPE::POINT),
@@ -70,6 +71,11 @@ collision_scene::collision_scene()
 
     , m_invalid_object_ids()
 
+    , m_boxes_geometry()
+    , m_boxes_bbox()
+    , m_boxes_material()
+    , m_boxes_collision_class()
+
     , m_capsules_geometry()
     , m_capsules_bbox()
     , m_capsules_material()
@@ -98,6 +104,85 @@ collision_scene::collision_scene()
 
     , m_statistics(m_proximity_static_objects, m_proximity_dynamic_objects)
 {}
+
+
+collision_object_id  collision_scene::insert_box(
+        vector3 const&  half_sizes_along_axes,
+        matrix44 const&  from_base_matrix,
+        COLLISION_MATERIAL_TYPE const  material,
+        COLLISION_CLASS const  collision_class,
+        bool const  is_dynamic
+        )
+{
+    TMPROF_BLOCK();
+
+    ASSUMPTION(half_sizes_along_axes(0) > 0.0001f && half_sizes_along_axes(1) > 0.0001f && half_sizes_along_axes(1) > 0.0001f);
+
+    collision_object_id  coid;
+    {
+        box_geometry  geometry;
+        {
+            geometry.half_sizes_along_axes = half_sizes_along_axes;
+
+            matrix33  R;
+            decompose_matrix44(from_base_matrix, geometry.origin_in_world_space, R);
+            rotation_matrix_to_basis(
+                    R,
+                    geometry.basis_x_vector_in_world_space,
+                    geometry.basis_y_vector_in_world_space,
+                    geometry.basis_z_vector_in_world_space
+                    );
+
+            express_box_in_terms_of_its_faces(
+                    geometry.origin_in_world_space,
+                    geometry.basis_x_vector_in_world_space,
+                    geometry.basis_y_vector_in_world_space,
+                    geometry.basis_z_vector_in_world_space,
+                    geometry.half_sizes_along_axes,
+                    &geometry.polygons,
+                    geometry.to_polygon_space_matrices,
+                    geometry.from_polygon_space_matrices,
+                    &geometry.origins_and_unit_normals_in_world_space,
+                    false
+            );
+        }
+        axis_aligned_bounding_box const  bbox =
+                compute_aabb_of_box(
+                        geometry.origin_in_world_space,
+                        geometry.basis_x_vector_in_world_space,
+                        geometry.basis_y_vector_in_world_space,
+                        geometry.basis_z_vector_in_world_space,
+                        geometry.half_sizes_along_axes
+                        );
+
+        auto&  invalid_ids = m_invalid_object_ids.at(as_number(COLLISION_SHAPE_TYPE::BOX));
+        if (invalid_ids.empty())
+        {
+            coid = make_collision_object_id(COLLISION_SHAPE_TYPE::BOX, (natural_32_bit)m_boxes_geometry.size());
+
+            m_boxes_geometry.push_back(geometry);
+            m_boxes_bbox.push_back(bbox);
+            m_boxes_material.push_back(material);
+            m_boxes_collision_class.push_back(collision_class);
+        }
+        else
+        {
+            coid = make_collision_object_id(COLLISION_SHAPE_TYPE::BOX, invalid_ids.back());
+
+            m_boxes_geometry.at(invalid_ids.back()) = geometry;
+            m_boxes_bbox.at(invalid_ids.back()) = bbox;
+            m_boxes_material.at(invalid_ids.back()) = material;
+            m_boxes_collision_class.at(invalid_ids.back()) = collision_class;
+
+            invalid_ids.pop_back();
+        }
+    }
+    insert_object(coid, is_dynamic);
+
+    ++m_statistics.num_boxes;
+
+    return coid;
+}
 
 
 collision_object_id  collision_scene::insert_capsule(
@@ -478,11 +563,13 @@ void  collision_scene::erase_object(collision_object_id const  coid)
 
     switch (get_shape_type(coid))
     {
+    case COLLISION_SHAPE_TYPE::BOX: --m_statistics.num_boxes; break;
     case COLLISION_SHAPE_TYPE::CAPSULE: --m_statistics.num_capsules; break;
     case COLLISION_SHAPE_TYPE::LINE: --m_statistics.num_lines; break;
     case COLLISION_SHAPE_TYPE::POINT: --m_statistics.num_points; break;
     case COLLISION_SHAPE_TYPE::SPHERE: --m_statistics.num_spheres; break;
     case COLLISION_SHAPE_TYPE::TRIANGLE: --m_statistics.num_triangles; break;
+    default: UNREACHABLE();
     }
 }
 
@@ -502,6 +589,11 @@ void  collision_scene::clear()
 
     for (auto&  vec : m_invalid_object_ids)
         vec.clear();
+
+    m_boxes_geometry.clear();
+    m_boxes_bbox.clear();
+    m_boxes_material.clear();
+    m_boxes_collision_class.clear();
 
     m_capsules_geometry.clear();
     m_capsules_bbox.clear();
@@ -792,6 +884,35 @@ bool  collision_scene::ray_cast_precise_collision_object_acceptor(
 
     switch (angeo::get_shape_type(coid))
     {
+    case angeo::COLLISION_SHAPE_TYPE::BOX:
+        {
+            box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
+            float_32_bit  t;
+            if (clip_line_into_bbox(
+                        point3_to_orthonormal_base(
+                                ray_origin,
+                                geometry.origin_in_world_space,
+                                geometry.basis_x_vector_in_world_space,
+                                geometry.basis_y_vector_in_world_space,
+                                geometry.basis_z_vector_in_world_space
+                                ),
+                        point3_to_orthonormal_base(
+                                ray_end,
+                                geometry.origin_in_world_space,
+                                geometry.basis_x_vector_in_world_space,
+                                geometry.basis_y_vector_in_world_space,
+                                geometry.basis_z_vector_in_world_space
+                                ),
+                        -geometry.half_sizes_along_axes,
+                        geometry.half_sizes_along_axes,
+                        nullptr,
+                        nullptr,
+                        &t,
+                        nullptr
+                        ))
+                return acceptor(coid, t);
+        }
+        break;
     case angeo::COLLISION_SHAPE_TYPE::CAPSULE:
         {
             vector3 const&  E1 = get_capsule_end_point_1_in_world_space(coid);
@@ -907,6 +1028,8 @@ vector3  collision_scene::get_object_aabb_min_corner(collision_object_id const  
 {
     switch (get_shape_type(coid))
     {
+    case COLLISION_SHAPE_TYPE::BOX:
+        return m_boxes_bbox.at(get_instance_index(coid)).min_corner;
     case COLLISION_SHAPE_TYPE::CAPSULE:
         return m_capsules_bbox.at(get_instance_index(coid)).min_corner;
     case COLLISION_SHAPE_TYPE::LINE:
@@ -933,6 +1056,8 @@ vector3  collision_scene::get_object_aabb_max_corner(collision_object_id const  
 {
     switch (get_shape_type(coid))
     {
+    case COLLISION_SHAPE_TYPE::BOX:
+        return m_boxes_bbox.at(get_instance_index(coid)).max_corner;
     case COLLISION_SHAPE_TYPE::CAPSULE:
         return m_capsules_bbox.at(get_instance_index(coid)).max_corner;
     case COLLISION_SHAPE_TYPE::LINE:
@@ -950,6 +1075,71 @@ vector3  collision_scene::get_object_aabb_max_corner(collision_object_id const  
         UNREACHABLE();
     }
 }
+
+
+vector3 const&  collision_scene::get_box_origin_in_world_space(collision_object_id const  coid) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX);
+    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
+    return geometry.origin_in_world_space;
+}
+
+vector3 const&  collision_scene::get_box_basis_x_vector_in_world_space(collision_object_id const  coid) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX);
+    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
+    return geometry.basis_x_vector_in_world_space;
+}
+
+vector3 const&  collision_scene::get_box_basis_y_vector_in_world_space(collision_object_id const  coid) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX);
+    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
+    return geometry.basis_y_vector_in_world_space;
+}
+
+vector3 const&  collision_scene::get_box_basis_z_vector_in_world_space(collision_object_id const  coid) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX);
+    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
+    return geometry.basis_z_vector_in_world_space;
+}
+
+vector3 const&  collision_scene::get_box_polygon_origin_in_world_space(collision_object_id const  coid, natural_8_bit const  polygon_index) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX && polygon_index < 6U);
+    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
+    return geometry.origins_and_unit_normals_in_world_space.at(polygon_index).first;
+}
+
+vector3 const&  collision_scene::get_box_polygon_unit_normal_in_world_space(collision_object_id const  coid, natural_8_bit const  polygon_index) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX && polygon_index < 6U);
+    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
+    return geometry.origins_and_unit_normals_in_world_space.at(polygon_index).second;
+}
+
+matrix44 const&  collision_scene::get_box_to_polygon_space_matrix(collision_object_id const  coid, natural_8_bit const  polygon_index) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX && polygon_index < 6U);
+    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
+    return geometry.to_polygon_space_matrices.at(polygon_index);
+}
+
+matrix44 const&  collision_scene::get_box_from_polygon_space_matrix(collision_object_id const  coid, natural_8_bit const  polygon_index) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX && polygon_index < 6U);
+    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
+    return geometry.from_polygon_space_matrices.at(polygon_index);
+}
+
+vector3 const&  collision_scene::get_box_half_sizes_along_axes(collision_object_id const  coid) const
+{
+    ASSUMPTION(get_shape_type((coid)) == COLLISION_SHAPE_TYPE::BOX);
+    box_geometry const&  geometry = m_boxes_geometry.at(get_instance_index(coid));
+    return geometry.half_sizes_along_axes;
+}
+
 
 vector3 const& collision_scene::get_capsule_end_point_1_in_world_space(collision_object_id const  coid) const
 {
@@ -1057,6 +1247,8 @@ COLLISION_MATERIAL_TYPE  collision_scene::get_material(collision_object_id const
 {
     switch (get_shape_type(coid))
     {
+    case COLLISION_SHAPE_TYPE::BOX:
+        return m_boxes_material.at(get_instance_index(coid));
     case COLLISION_SHAPE_TYPE::CAPSULE:
         return m_capsules_material.at(get_instance_index(coid));
     case COLLISION_SHAPE_TYPE::LINE:
@@ -1077,6 +1269,8 @@ COLLISION_CLASS  collision_scene::get_collision_class(collision_object_id const 
 {
     switch (get_shape_type(coid))
     {
+    case COLLISION_SHAPE_TYPE::BOX:
+        return m_boxes_collision_class.at(get_instance_index(coid));
     case COLLISION_SHAPE_TYPE::CAPSULE:
         return m_capsules_collision_class.at(get_instance_index(coid));
     case COLLISION_SHAPE_TYPE::LINE:
@@ -1097,6 +1291,7 @@ void  collision_scene::release_data_of_erased_object(collision_object_id const  
 {
     switch (get_shape_type(coid))
     {
+    case COLLISION_SHAPE_TYPE::BOX:
     case COLLISION_SHAPE_TYPE::CAPSULE:
     case COLLISION_SHAPE_TYPE::LINE:
     case COLLISION_SHAPE_TYPE::POINT:
@@ -1141,6 +1336,35 @@ void  collision_scene::update_shape_position(collision_object_id const  coid, ma
 
     switch (get_shape_type(coid))
     {
+    case COLLISION_SHAPE_TYPE::BOX:
+        {
+            matrix33  R;
+            auto&  geometry = m_boxes_geometry.at(get_instance_index(coid));
+            decompose_matrix44(from_base_matrix, geometry.origin_in_world_space, R);
+            rotation_matrix_to_basis(R, geometry.basis_x_vector_in_world_space, geometry.basis_y_vector_in_world_space, geometry.basis_z_vector_in_world_space);
+            express_box_in_terms_of_its_faces(
+                    geometry.origin_in_world_space,
+                    geometry.basis_x_vector_in_world_space,
+                    geometry.basis_y_vector_in_world_space,
+                    geometry.basis_z_vector_in_world_space,
+                    geometry.half_sizes_along_axes,
+                    nullptr,
+                    geometry.to_polygon_space_matrices,
+                    geometry.from_polygon_space_matrices,
+                    &geometry.origins_and_unit_normals_in_world_space,
+                    false
+                    );
+
+            m_boxes_bbox.at(get_instance_index(coid)) =
+                    compute_aabb_of_box(
+                            geometry.origin_in_world_space,
+                            geometry.basis_x_vector_in_world_space,
+                            geometry.basis_y_vector_in_world_space,
+                            geometry.basis_z_vector_in_world_space,
+                            geometry.half_sizes_along_axes
+                            );
+        }
+        break;
     case COLLISION_SHAPE_TYPE::CAPSULE:
         {
             auto&  geometry = m_capsules_geometry.at(get_instance_index(coid));
@@ -1280,6 +1504,24 @@ bool  collision_scene::compute_contacts(
 
     switch (shape_type_1)
     {
+    case COLLISION_SHAPE_TYPE::BOX:
+        switch (shape_type_2)
+        {
+        case COLLISION_SHAPE_TYPE::BOX:
+            return compute_contacts__box_vs_capsule(cop.first, cop.second, acceptor);
+        case COLLISION_SHAPE_TYPE::CAPSULE:
+            return compute_contacts__box_vs_capsule(cop.first, cop.second, acceptor);
+        case COLLISION_SHAPE_TYPE::LINE:
+            return compute_contacts__box_vs_line(cop.first, cop.second, acceptor);
+        case COLLISION_SHAPE_TYPE::POINT:
+            return compute_contacts__box_vs_point(cop.first, cop.second, acceptor);
+        case COLLISION_SHAPE_TYPE::SPHERE:
+            return compute_contacts__box_vs_sphere(cop.first, cop.second, acceptor);
+        case COLLISION_SHAPE_TYPE::TRIANGLE:
+            return compute_contacts__box_vs_triangle(cop.first, cop.second, acceptor);
+        default: UNREACHABLE();
+        }
+        break;
     case COLLISION_SHAPE_TYPE::CAPSULE:
         switch (shape_type_2)
         {
@@ -1299,8 +1541,6 @@ bool  collision_scene::compute_contacts(
     case COLLISION_SHAPE_TYPE::LINE:
         switch (shape_type_2)
         {
-        case COLLISION_SHAPE_TYPE::CAPSULE:
-            return compute_contacts__capsule_vs_line(cop.second, cop.first, swap_acceptor);
         case COLLISION_SHAPE_TYPE::LINE:
             return compute_contacts__line_vs_line(cop.first, cop.second, acceptor);
         case COLLISION_SHAPE_TYPE::POINT:
@@ -1315,10 +1555,6 @@ bool  collision_scene::compute_contacts(
     case COLLISION_SHAPE_TYPE::POINT:
         switch (shape_type_2)
         {
-        case COLLISION_SHAPE_TYPE::CAPSULE:
-            return compute_contacts__capsule_vs_point(cop.second, cop.first, swap_acceptor);
-        case COLLISION_SHAPE_TYPE::LINE:
-            return compute_contacts__line_vs_point(cop.second, cop.first, swap_acceptor);
         case COLLISION_SHAPE_TYPE::POINT:
             return compute_contacts__point_vs_point(cop.first, cop.second, acceptor);
         case COLLISION_SHAPE_TYPE::SPHERE:
@@ -1331,12 +1567,6 @@ bool  collision_scene::compute_contacts(
     case COLLISION_SHAPE_TYPE::SPHERE:
         switch (shape_type_2)
         {
-        case COLLISION_SHAPE_TYPE::CAPSULE:
-            return compute_contacts__capsule_vs_sphere(cop.second, cop.first, swap_acceptor);
-        case COLLISION_SHAPE_TYPE::LINE:
-            return compute_contacts__line_vs_sphere(cop.second, cop.first, swap_acceptor);
-        case COLLISION_SHAPE_TYPE::POINT:
-            return compute_contacts__point_vs_sphere(cop.second, cop.first, swap_acceptor);
         case COLLISION_SHAPE_TYPE::SPHERE:
             return compute_contacts__sphere_vs_sphere(cop.first, cop.second, acceptor);
         case COLLISION_SHAPE_TYPE::TRIANGLE:
@@ -1347,14 +1577,6 @@ bool  collision_scene::compute_contacts(
     case COLLISION_SHAPE_TYPE::TRIANGLE:
         switch (shape_type_2)
         {
-        case COLLISION_SHAPE_TYPE::CAPSULE:
-            return compute_contacts__capsule_vs_triangle(cop.second, cop.first, swap_acceptor);
-        case COLLISION_SHAPE_TYPE::LINE:
-            return compute_contacts__line_vs_triangle(cop.second, cop.first, swap_acceptor);
-        case COLLISION_SHAPE_TYPE::POINT:
-            return compute_contacts__point_vs_triangle(cop.second, cop.first, swap_acceptor);
-        case COLLISION_SHAPE_TYPE::SPHERE:
-            return compute_contacts__sphere_vs_triangle(cop.second, cop.first, swap_acceptor);
         case COLLISION_SHAPE_TYPE::TRIANGLE:
             return compute_contacts__triangle_vs_triangle(cop.first, cop.second, acceptor);
         default: UNREACHABLE();
@@ -1364,6 +1586,88 @@ bool  collision_scene::compute_contacts(
     }
 
     return true; // I.e. do not stop a high-level contact search algorithm.
+}
+
+
+bool  collision_scene::compute_contacts__box_vs_box(
+        collision_object_id const  coid_1,
+        collision_object_id const  coid_2,
+        contact_acceptor const& acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    NOT_IMPLEMENTED_YET();
+}
+
+
+bool  collision_scene::compute_contacts__box_vs_capsule(
+        collision_object_id const  coid_1,
+        collision_object_id const  coid_2,
+        contact_acceptor const& acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    capsule_geometry const& geometry_2 = m_capsules_geometry.at(get_instance_index(coid_2));
+
+    NOT_IMPLEMENTED_YET();
+}
+
+
+bool  collision_scene::compute_contacts__box_vs_line(
+        collision_object_id const  coid_1,
+        collision_object_id const  coid_2,
+        contact_acceptor const& acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    line_geometry const& geometry_2 = m_lines_geometry.at(get_instance_index(coid_2));
+
+    NOT_IMPLEMENTED_YET();
+}
+
+
+bool  collision_scene::compute_contacts__box_vs_point(
+        collision_object_id const  coid_1,
+        collision_object_id const  coid_2,
+        contact_acceptor const& acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    vector3 const& point_2 = m_points_geometry.at(get_instance_index(coid_2));
+
+    NOT_IMPLEMENTED_YET();
+}
+
+
+bool  collision_scene::compute_contacts__box_vs_sphere(
+        collision_object_id const  coid_1,
+        collision_object_id const  coid_2,
+        contact_acceptor const& acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    sphere_geometry const& geometry_2 = m_spheres_geometry.at(get_instance_index(coid_2));
+
+    NOT_IMPLEMENTED_YET();
+}
+
+
+bool  collision_scene::compute_contacts__box_vs_triangle(
+        collision_object_id const  coid_1,
+        collision_object_id const  coid_2,
+        contact_acceptor const& acceptor
+        )
+{
+    TMPROF_BLOCK();
+
+    triangle_geometry const& geometry_2 = m_triangles_geometry.at(get_instance_index(coid_2));
+
+    NOT_IMPLEMENTED_YET();
 }
 
 

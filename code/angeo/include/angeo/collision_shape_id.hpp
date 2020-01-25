@@ -13,7 +13,7 @@ namespace angeo {
  */
 enum struct  COLLISION_SHAPE_TYPE : natural_8_bit
 {
-    //BOX                     = 0,
+    BOX                     = 0,
     CAPSULE                 = 1,
     //CONE                    = 2,
     //CYLINDER                = 3,

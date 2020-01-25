@@ -10,8 +10,8 @@ namespace angeo {
 
 struct  collision_object_id
 {
-    natural_32_bit   m_shape_type : 4,
-                     m_instance_index : 32 - 4;
+    natural_32_bit   m_instance_index : 32 - 4,
+                     m_shape_type : 4;
 };
 
 

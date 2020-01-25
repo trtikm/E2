@@ -8,7 +8,7 @@ char const*  as_string(COLLISION_SHAPE_TYPE const  cst)
 {
     switch (cst)
     {
-    //case COLLISION_SHAPE_TYPE::BOX: return "box";
+    case COLLISION_SHAPE_TYPE::BOX: return "box";
     case COLLISION_SHAPE_TYPE::CAPSULE: return "capsule";
     //case COLLISION_SHAPE_TYPE::CONE: return "cone";
     //case COLLISION_SHAPE_TYPE::CYLINDER: return "cylinder";

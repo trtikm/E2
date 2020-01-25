@@ -65,6 +65,20 @@ struct  collision_scene
 {
     collision_scene();
 
+    /// In the models space the box is defined as follows:
+    ///      origin_in_world_space = vector3_zero()
+    ///      basis_x_vector_in_world_space = vector3_unit_x()
+    ///      basis_y_vector_in_world_space = vector3_unit_y()
+    ///      basis_z_vector_in_world_space = vector3_unit_z()
+    ///      half_sizes_along_axes = distances of sides of the box from origin along x, y, and z axes respectively.
+    collision_object_id  insert_box(
+            vector3 const&  half_sizes_along_axes,
+            matrix44 const&  from_base_matrix,
+            COLLISION_MATERIAL_TYPE const  material,
+            COLLISION_CLASS const  collision_class,
+            bool const  is_dynamic
+            );
+
     /// In the models space the end points have coordinates:
     ///      end_point_1_in_model_space = vector3(0,0,+half_distance_between_end_points)
     ///      end_point_2_in_model_space = vector3(0,0,-half_distance_between_end_points)
@@ -183,6 +197,16 @@ struct  collision_scene
 
     bool  is_dynamic(collision_object_id const  coid) const { return m_dynamic_object_ids.count(coid) != 0UL; }
 
+    vector3 const&  get_box_origin_in_world_space(collision_object_id const  coid) const;
+    vector3 const&  get_box_basis_x_vector_in_world_space(collision_object_id const  coid) const;
+    vector3 const&  get_box_basis_y_vector_in_world_space(collision_object_id const  coid) const;
+    vector3 const&  get_box_basis_z_vector_in_world_space(collision_object_id const  coid) const;
+    vector3 const&  get_box_polygon_origin_in_world_space(collision_object_id const  coid, natural_8_bit const  polygon_index) const;
+    vector3 const&  get_box_polygon_unit_normal_in_world_space(collision_object_id const  coid, natural_8_bit const  polygon_index) const;
+    matrix44 const&  get_box_to_polygon_space_matrix(collision_object_id const  coid, natural_8_bit const  polygon_index) const;
+    matrix44 const&  get_box_from_polygon_space_matrix(collision_object_id const  coid, natural_8_bit const  polygon_index) const;
+    vector3 const&  get_box_half_sizes_along_axes(collision_object_id const  coid) const;
+
     vector3 const&  get_capsule_end_point_1_in_world_space(collision_object_id const  coid) const;
     vector3 const&  get_capsule_end_point_2_in_world_space(collision_object_id const  coid) const;
     float_32_bit  get_capsule_half_distance_between_end_points(collision_object_id const  coid) const;
@@ -213,7 +237,8 @@ struct  collision_scene
                 proximity_map<collision_object_id> const& static_proximity_map,
                 proximity_map<collision_object_id> const& dynamic_proximity_map
                 )
-            : num_capsules(0U)
+            : num_boxes(0U)
+            , num_capsules(0U)
             , num_lines(0U)
             , num_points(0U)
             , num_spheres(0U)
@@ -228,6 +253,7 @@ struct  collision_scene
 
         void  clear()
         {
+            num_boxes = 0U;
             num_capsules = 0U;
             num_lines = 0U;
             num_points = 0U;
@@ -259,6 +285,7 @@ struct  collision_scene
             dynamic_objects_proximity->on_next_frame();
         }
 
+        natural_32_bit  num_boxes;
         natural_32_bit  num_capsules;
         natural_32_bit  num_lines;
         natural_32_bit  num_points;
@@ -296,25 +323,33 @@ private:
             bool const  bboxes_of_objects_surely_intersect = false
             );
 
-    bool  compute_contacts__capsule_vs_capsule(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor );
-    bool  compute_contacts__capsule_vs_line(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__capsule_vs_point(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__capsule_vs_sphere(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__capsule_vs_triangle(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__box_vs_box(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const& acceptor);
+    bool  compute_contacts__box_vs_capsule(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const& acceptor);
+    bool  compute_contacts__box_vs_line(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const& acceptor);
+    bool  compute_contacts__box_vs_point(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const& acceptor);
+    bool  compute_contacts__box_vs_sphere(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const& acceptor);
+    bool  compute_contacts__box_vs_triangle(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const& acceptor);
 
-    bool  compute_contacts__line_vs_line(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__line_vs_point(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__line_vs_sphere(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__line_vs_triangle(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__capsule_vs_capsule(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor );
+    bool  compute_contacts__capsule_vs_line(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__capsule_vs_point(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__capsule_vs_sphere(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__capsule_vs_triangle(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor);
 
-    bool  compute_contacts__point_vs_point(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__point_vs_sphere(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__point_vs_triangle(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__line_vs_line(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__line_vs_point(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__line_vs_sphere(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__line_vs_triangle(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor);
 
-    bool  compute_contacts__sphere_vs_sphere(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
-    bool  compute_contacts__sphere_vs_triangle(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__point_vs_point(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__point_vs_sphere(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__point_vs_triangle(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor);
 
-    bool  compute_contacts__triangle_vs_triangle(collision_object_id const  coid1, collision_object_id const  coid2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__sphere_vs_sphere(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor);
+    bool  compute_contacts__sphere_vs_triangle(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor);
+
+    bool  compute_contacts__triangle_vs_triangle(collision_object_id const  coid_1, collision_object_id const  coid_2, contact_acceptor const&  acceptor);
+
 
     /////////////////////////////////////////////////////////////////////////////////
     // DATA
@@ -331,6 +366,38 @@ private:
     std::unordered_set<collision_object_id_pair>  m_disabled_colliding;
 
     std::array<std::vector<natural_32_bit>, get_max_collision_shape_type_id() + 1U>  m_invalid_object_ids;
+
+    /////////////////////////////////////////////////////////////////////////////////
+    // BOXES
+
+    struct box_geometry
+    {
+        // Compact representation of a box in world space.
+        vector3  origin_in_world_space;
+        vector3  basis_x_vector_in_world_space;
+        vector3  basis_y_vector_in_world_space;
+        vector3  basis_z_vector_in_world_space;
+
+        // Explicit representation of a box in world space: in terms of its 6 sides.
+        std::vector<std::vector<vector2> >  polygons;
+        std::vector<matrix44>  to_polygon_space_matrices;
+        std::vector<matrix44>  from_polygon_space_matrices;
+        std::vector< std::pair<vector3, vector3> >  origins_and_unit_normals_in_world_space;
+
+        // In the models space the box is defined as follows:
+        //      origin_in_world_space = vector3_zero()
+        //      basis_x_vector_in_world_space = vector3_unit_x()
+        //      basis_y_vector_in_world_space = vector3_unit_y()
+        //      basis_z_vector_in_world_space = vector3_unit_z()
+        //      half_sizes_along_axes = distances of sides of the box from origin along x, y, and z axes respectively.
+        // So, in model space we only need the half sizes:
+        vector3  half_sizes_along_axes;
+    };
+
+    std::vector<box_geometry>  m_boxes_geometry;
+    std::vector<axis_aligned_bounding_box>  m_boxes_bbox;
+    std::vector<COLLISION_MATERIAL_TYPE>  m_boxes_material;
+    std::vector<COLLISION_CLASS>  m_boxes_collision_class;
 
     /////////////////////////////////////////////////////////////////////////////////
     // CAPSULES

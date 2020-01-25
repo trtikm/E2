@@ -60,6 +60,32 @@ axis_aligned_bounding_box  compute_aabb_of_triangle(
 }
 
 
+axis_aligned_bounding_box  compute_aabb_of_box(
+        vector3 const&  origin,
+        vector3 const&  basis_x_vector,
+        vector3 const&  basis_y_vector,
+        vector3 const&  basis_z_vector,
+        vector3 const&  half_sizes_along_axes
+        )
+{
+    vector3 const  v(
+            half_sizes_along_axes(0) * (absolute_value(basis_x_vector(0)) +
+                                        absolute_value(basis_y_vector(0)) +
+                                        absolute_value(basis_z_vector(0)) ),
+
+            half_sizes_along_axes(1) * (absolute_value(basis_x_vector(1)) +
+                                        absolute_value(basis_y_vector(1)) +
+                                        absolute_value(basis_z_vector(1)) ),
+
+            half_sizes_along_axes(2) * (absolute_value(basis_x_vector(2)) +
+                                        absolute_value(basis_y_vector(2)) +
+                                        absolute_value(basis_z_vector(2)) )
+            );
+
+    return  { origin - v, origin + v };
+}
+
+
 void  compute_union_bbox(
         axis_aligned_bounding_box const&  bbox_1,
         axis_aligned_bounding_box const&  bbox_2,
