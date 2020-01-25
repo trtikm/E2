@@ -841,8 +841,6 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
         m_cache_of_batches_of_ai_agents.lines_batch.release();
     }
 
-    m_agents_ptr->next_round((float_32_bit)time_to_simulate_in_seconds, keyboard_props(), mouse_props(), window_props());
-
     perform_simulation_micro_step(time_to_simulate_in_seconds, true);
 
     //constexpr float_64_bit  min_micro_time_step_in_seconds = 0.001;
@@ -874,6 +872,8 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
     //            std::chrono::duration<float_64_bit>(std::chrono::high_resolution_clock::now() - start_time_point).count();
     //    max_computation_time_in_seconds -= duration_of_last_simulation_step_in_seconds;
     //}
+
+    m_agents_ptr->next_round((float_32_bit)time_to_simulate_in_seconds, keyboard_props(), mouse_props(), window_props());
 
     if (m_do_show_ai_action_controller_props)
     {
