@@ -1,7 +1,7 @@
 #ifndef AI_ACTION_CONTROLLER_HPP_INCLUDED
 #   define AI_ACTION_CONTROLLER_HPP_INCLUDED
 
-#   include <ai/blackboard.hpp>
+#   include <ai/blackboard_agent.hpp>
 #   include <ai/action_regulator.hpp>
 #   include <ai/scene.hpp>
 #   include <ai/motion_desire_props.hpp>
@@ -30,7 +30,7 @@ struct  action_controller
         skeletal_motion_templates::disjunction_of_guarded_actions  disjunction_of_guarded_actions;
     };
 
-    explicit action_controller(blackboard_weak_ptr const  blackboard_);
+    explicit action_controller(blackboard_agent_weak_ptr const  blackboard_);
     virtual ~action_controller();
 
     virtual void  initialise();
@@ -38,7 +38,7 @@ struct  action_controller
 
     void  synchronise_motion_object_motion_with_scene();
 
-    blackboard_ptr  get_blackboard() const { return m_blackboard.lock(); }
+    blackboard_agent_ptr  get_blackboard() const { return m_blackboard.lock(); }
 
     scene::node_id const& get_motion_object_node_id() const { return m_motion_object_motion.nid; }
     detail::rigid_body_motion const&  get_motion_object_motion() const { return m_motion_object_motion; }
@@ -64,7 +64,7 @@ private:
     void  interpolate(float_32_bit const  interpolation_param);
     void  look_at_target(float_32_bit const  time_step_in_seconds, float_32_bit const  interpolation_param);
 
-    blackboard_weak_ptr  m_blackboard;
+    blackboard_agent_weak_ptr  m_blackboard;
     action_regulator  m_regulator;
 
     float_32_bit  m_total_interpolation_time_in_seconds;

@@ -10,7 +10,7 @@
 namespace ai {
 
 
-cortex::cortex(blackboard_weak_ptr const  blackboard_)
+cortex::cortex(blackboard_agent_weak_ptr const  blackboard_)
     : m_blackboard(blackboard_)
     , m_motion_desire_props()
 {}
@@ -33,7 +33,7 @@ void  cortex::next_round(float_32_bit const  time_step_in_seconds)
 namespace ai {
 
 
-void  set_stationary_desire(motion_desire_props&  desire_props, blackboard_ptr const  bb)
+void  set_stationary_desire(motion_desire_props&  desire_props, blackboard_agent_ptr const  bb)
 {
     detail::rigid_body_motion const&  motion = bb->m_action_controller->get_motion_object_motion();
     desire_props.forward_unit_vector_in_local_space = bb->m_motion_templates.directions().forward();

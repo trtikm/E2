@@ -9,7 +9,7 @@ namespace ai {
 
 
 sensory_controller::sensory_controller(
-        blackboard_weak_ptr const  blackboard_,
+        blackboard_agent_weak_ptr const  blackboard_,
         sensory_controller_collision_contacts_ptr const  collision_contacts_,
         sensory_controller_sight_ptr  const  sight_
         )

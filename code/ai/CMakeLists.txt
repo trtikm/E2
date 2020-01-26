@@ -1,6 +1,11 @@
 set(THIS_TARGET_NAME ai)
 
 add_library(${THIS_TARGET_NAME}
+    ./include/ai/simulator.hpp
+    ./src/simulator.cpp
+
+    ./include/ai/object_id.hpp
+
     ./include/ai/agent_id.hpp
 
     ./include/ai/agent_kind.hpp
@@ -44,6 +49,10 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/ai/blackboard.hpp
     ./src/blackboard.cpp
+    ./include/ai/blackboard_agent.hpp
+    ./src/blackboard_agent.cpp
+    ./include/ai/blackboard_device.hpp
+    ./src/blackboard_device.cpp
 
     ./include/ai/scene.hpp
 
@@ -83,6 +92,28 @@ add_library(${THIS_TARGET_NAME}
 
     ./include/ai/detail/collider_utils.hpp
     ./src/detail/collider_utils.cpp
+
+    ./include/ai/device_id.hpp
+
+    ./include/ai/device_kind.hpp
+    ./src/device_kind.cpp
+
+    ./include/ai/device.hpp
+    ./src/device.cpp
+    
+    ./include/ai/devices.hpp
+    ./src/devices.cpp
+
+    ./include/ai/sensor_id.hpp
+
+    ./include/ai/sensor_kind.hpp
+    ./src/sensor_kind.cpp
+
+    ./include/ai/sensor.hpp
+    ./src/sensor.cpp
+    
+    ./include/ai/sensors.hpp
+    ./src/sensors.cpp
     )
 
 set_target_properties(${THIS_TARGET_NAME} PROPERTIES

@@ -9,7 +9,7 @@
 namespace ai { namespace env { namespace sinet {
 
 
-snapshot_encoder::snapshot_encoder(blackboard_const_ptr const  blackboard_ptr, natural_8_bit const  start_layer_index)
+snapshot_encoder::snapshot_encoder(blackboard_agent_const_ptr const  blackboard_ptr, natural_8_bit const  start_layer_index)
     : START_LAYER_INDEX(start_layer_index)
 
     , desire_computed_by_cortex

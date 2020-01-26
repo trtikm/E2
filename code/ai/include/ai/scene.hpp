@@ -1,7 +1,7 @@
 #ifndef AI_SCENE_HPP_INCLUDED
 #   define AI_SCENE_HPP_INCLUDED
 
-#   include <ai/agent_id.hpp>
+#   include <ai/object_id.hpp>
 #   include <angeo/coordinate_system.hpp>
 #   include <scene/scene_node_id.hpp>
 #   include <scene/scene_record_id.hpp>
@@ -41,7 +41,7 @@ struct  scene
     // When an agent wants to create auxiliary scene nodes outside the subtree under its agent node,
     // then he should use this method to obtain a 'standard' auxiliary root node of the passed name
     // for the agent.
-    virtual node_id  get_aux_root_node_for_agent(node_id const&  agent_nid, std::string const&  aux_root_node_name) = 0;
+    virtual node_id  get_aux_root_node(OBJECT_KIND const  kind, node_id const&  nid, std::string const&  aux_root_node_name) = 0;
 
     virtual bool  has_scene_node(node_id const&  nid) const = 0;
     virtual void  insert_scene_node(
@@ -105,11 +105,11 @@ struct  scene
 
     virtual void  register_to_collision_contacts_stream(
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to capture.
-            agent_id const  agent_id        // Identifies an agent which will receive the contancts of the collider to its blackboard.
+            object_id const&  oid           // Identifies an ai object which will receive the contancts of the collider to its blackboard.
             ) = 0;
     virtual void  unregister_to_collision_contacts_stream(
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to stop capturing.
-            agent_id const  agent_id        // Identifies an agent which will stop receiving the contancts of the collider to its blackboard.
+            object_id const&  oid           // Identifies an ai object which will stop receiving the contancts of the collider to its blackboard.
             ) = 0;
 
     virtual angeo::collision_scene const&  get_collision_scene() const = 0;

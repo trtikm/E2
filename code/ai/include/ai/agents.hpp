@@ -6,14 +6,13 @@
 #   include <ai/input_devices.hpp>
 #   include <ai/scene.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
-#   include <ai/blackboard.hpp>
+#   include <ai/blackboard_agent.hpp>
 #   include <ai/cortex.hpp>
 #   include <ai/sensory_controller.hpp>
 #   include <ai/action_controller.hpp>
 #   include <ai/retina.hpp>
 #   include <memory>
 #   include <vector>
-#   include <functional>
 
 namespace ai {
 
@@ -32,7 +31,7 @@ struct agents
 
     void  clear() { m_agents.clear(); }
 
-    bool  ready(agent_id const  id) { return m_agents.at(id)->agent_ptr.operator bool(); }
+    bool  ready(agent_id const  id) const { return m_agents.at(id)->agent_ptr.operator bool(); }
     agent&  at(agent_id const  id) { return *m_agents.at(id)->agent_ptr; }
     agent const&  at(agent_id const  id) const { return *m_agents.at(id)->agent_ptr; }
 
@@ -46,9 +45,11 @@ struct agents
             );
 
     void  on_collision_contact(
-            agent_id const  agent_id,
+            agent_id const  id,
             scene::node_id const&  collider_nid,
-            scene::collicion_contant_info const&  contact_info
+            scene::collicion_contant_info const&  contact_info,
+            object_id const&  other_id,
+            scene::node_id const&  other_collider_nid
             );
 
 private:
@@ -67,7 +68,6 @@ private:
     std::vector<std::shared_ptr<agent_props> >  m_agents; // Should be 'std::vector<std::unique_ptr<agent_props> >', but does not compile :-(
     scene_ptr  m_scene;
     input_devices_ptr  m_input_devices;
-    std::vector<std::unique_ptr<std::function<void()> > >  m_scene_update_events;
 };
 
 

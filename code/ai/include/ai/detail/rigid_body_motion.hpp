@@ -3,6 +3,7 @@
 
 #   include <ai/scene.hpp>
 #   include <ai/skeletal_motion_templates.hpp>
+#   include <ai/object_id.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/rigid_body.hpp>
 
@@ -84,7 +85,7 @@ void  create_collider_and_rigid_body_of_motion_scene_node(
 void  destroy_collider_and_rigid_bofy_of_motion_scene_node(scene_ptr const  s, scene::node_id const&  motion_object_nid);
 
 
-scene::node_id  get_motion_object_nid(scene_ptr const  s, scene::node_id const  agent_nid);
+scene::node_id  get_motion_object_nid(scene_ptr const  s, OBJECT_KIND const  kind, scene::node_id const  agent_nid);
 
 
 scene::node_id  create_motion_scene_node(

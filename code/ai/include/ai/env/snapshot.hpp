@@ -1,7 +1,7 @@
 #ifndef AI_ENV_SNAPSHOT_HPP_INCLUDED
 #   define AI_ENV_SNAPSHOT_HPP_INCLUDED
 
-#   include <ai/blackboard.hpp>
+#   include <ai/blackboard_agent.hpp>
 #   include <ai/motion_desire_props.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <memory>
@@ -11,7 +11,7 @@ namespace ai { namespace env {
 
 struct  snapshot
 {
-    explicit snapshot(blackboard_weak_const_ptr const  blackboard_ptr);
+    explicit snapshot(blackboard_agent_weak_const_ptr const  blackboard_ptr);
 
     // All vectors are in agent's local frame!
 
@@ -62,7 +62,7 @@ struct  snapshot
 using  snapshot_const_ptr = std::shared_ptr<snapshot const>;
 
 
-snapshot_const_ptr  create_snapshot(blackboard_weak_const_ptr const  blackboard_ptr);
+snapshot_const_ptr  create_snapshot(blackboard_agent_weak_const_ptr const  blackboard_ptr);
 
 
 }}

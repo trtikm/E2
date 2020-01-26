@@ -17,7 +17,7 @@ namespace ai {
 
 
 
-cortex_robot::cortex_robot(blackboard_weak_ptr const  blackboard_)
+cortex_robot::cortex_robot(blackboard_agent_weak_ptr const  blackboard_)
     : cortex(blackboard_)
     , snapshot_encoder(nullptr)
     , motion_desire_decoder(nullptr)

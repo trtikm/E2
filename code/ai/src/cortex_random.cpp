@@ -43,7 +43,7 @@ vector3  gen_random_unit_vector(
 namespace ai {
 
 
-cortex_random::cortex_random(blackboard_weak_ptr const  blackboard_)
+cortex_random::cortex_random(blackboard_agent_weak_ptr const  blackboard_)
     : cortex(blackboard_)
     , m_generator()
 {}

@@ -1,7 +1,7 @@
 #ifndef AI_SENSORY_CONTROLLER_RAY_CAST_SIGHT_HPP_INCLUDED
 #   define AI_SENSORY_CONTROLLER_RAY_CAST_SIGHT_HPP_INCLUDED
 
-#   include <ai/blackboard.hpp>
+#   include <ai/blackboard_agent.hpp>
 #   include <ai/sensory_controller_sight.hpp>
 #   include <angeo/collision_object_id.hpp>
 #   include <angeo/tensor_math.hpp>
@@ -67,7 +67,7 @@ struct  sensory_controller_ray_cast_sight : public sensory_controller_sight
     using  ray_casts_in_time = std::multimap<std::chrono::system_clock::time_point, ray_cast_info>;
 
     sensory_controller_ray_cast_sight(
-            blackboard_weak_ptr const  blackboard_,
+            blackboard_agent_weak_ptr const  blackboard_,
             sensory_controller_sight::camera_config const&  camera_config_,
             ray_cast_config const& ray_cast_config_
             );

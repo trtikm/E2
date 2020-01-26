@@ -24,7 +24,7 @@ sensory_controller_sight::camera_config::camera_config(
 
 
 sensory_controller_sight::sensory_controller_sight(
-        blackboard_weak_ptr const  blackboard_,
+        blackboard_agent_weak_ptr const  blackboard_,
         camera_config const&  camera_config_)
     : m_blackboard(blackboard_)
     , m_camera_config(camera_config_)

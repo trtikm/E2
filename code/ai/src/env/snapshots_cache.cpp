@@ -20,7 +20,7 @@ snapshots_cache::config::config(
 }
 
 
-snapshots_cache::snapshots_cache(blackboard_weak_const_ptr const  blackboard_ptr, config const& cfg)
+snapshots_cache::snapshots_cache(blackboard_agent_weak_const_ptr const  blackboard_ptr, config const& cfg)
     : m_blackboard(blackboard_ptr)
     , m_config(cfg)
     , m_cache()
@@ -46,7 +46,7 @@ void  snapshots_cache::next_round(float_32_bit const  time_step_in_seconds)
 }
 
 
-snapshots_cache_ptr  create_snapshots_cache(blackboard_weak_const_ptr const  blackboard_ptr, snapshots_cache::config const& cfg)
+snapshots_cache_ptr  create_snapshots_cache(blackboard_agent_weak_const_ptr const  blackboard_ptr, snapshots_cache::config const& cfg)
 {
     return std::make_shared<snapshots_cache>(blackboard_ptr, cfg);
 }

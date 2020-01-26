@@ -35,7 +35,7 @@ sensory_controller_collision_contacts::collicion_contact_info::collicion_contact
 
 
 sensory_controller_collision_contacts::sensory_controller_collision_contacts(
-        blackboard_weak_ptr const  blackboard_,
+        blackboard_agent_weak_ptr const  blackboard_,
         config const&  config_
         )
     : m_blackboard(blackboard_)

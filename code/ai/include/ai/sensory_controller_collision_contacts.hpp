@@ -1,7 +1,7 @@
 #ifndef AI_SENSORY_CONTROLLER_COLLISION_CONTACTS_HPP_INCLUDED
 #   define AI_SENSORY_CONTROLLER_COLLISION_CONTACTS_HPP_INCLUDED
 
-#   include <ai/blackboard.hpp>
+#   include <ai/blackboard_agent.hpp>
 #   include <ai/scene.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <unordered_map>
@@ -61,9 +61,9 @@ struct  sensory_controller_collision_contacts final
 
     using  collision_contacts_map = std::unordered_multimap<scene::node_id, collicion_contact_info>;
 
-    sensory_controller_collision_contacts(blackboard_weak_ptr const  blackboard_, config const&  config_);
+    sensory_controller_collision_contacts(blackboard_agent_weak_ptr const  blackboard_, config const&  config_);
 
-    blackboard_ptr  get_blackboard() const { return m_blackboard.lock(); }
+    blackboard_agent_ptr  get_blackboard() const { return m_blackboard.lock(); }
     collision_contacts_map const&  get_collision_contacts_map() const { return  m_collision_contacts.front(); }
     config const&  get_config() const { return m_config; }
 
@@ -74,7 +74,7 @@ struct  sensory_controller_collision_contacts final
             );
 
 private:
-    blackboard_weak_ptr  m_blackboard;
+    blackboard_agent_weak_ptr  m_blackboard;
     std::array<collision_contacts_map, 2>  m_collision_contacts;
     config  m_config;
 };

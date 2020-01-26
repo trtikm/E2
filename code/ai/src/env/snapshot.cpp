@@ -15,11 +15,11 @@
 namespace ai { namespace env {
 
 
-snapshot::snapshot(blackboard_weak_const_ptr const  blackboard_ptr)
+snapshot::snapshot(blackboard_agent_weak_const_ptr const  blackboard_ptr)
 {
     TMPROF_BLOCK();
 
-    blackboard_const_ptr const  bb = blackboard_ptr.lock();
+    blackboard_agent_const_ptr const  bb = blackboard_ptr.lock();
     ASSUMPTION(bb != nullptr);
     action_controller const&  actions = *bb->m_action_controller;
     detail::rigid_body_motion const&  motion = actions.get_motion_object_motion();
@@ -76,7 +76,7 @@ snapshot::snapshot(blackboard_weak_const_ptr const  blackboard_ptr)
 }
 
 
-snapshot_const_ptr  create_snapshot(blackboard_weak_const_ptr const  blackboard_ptr)
+snapshot_const_ptr  create_snapshot(blackboard_agent_weak_const_ptr const  blackboard_ptr)
 {
     return std::make_shared<snapshot const>(blackboard_ptr);
 }

@@ -4,7 +4,7 @@
 #   include <ai/cortex.hpp>
 #   include <ai/env/sinet/snapshot_encoder.hpp>
 #   include <ai/env/sinet/motion_desire_decoder.hpp>
-#   include <ai/blackboard.hpp>
+#   include <ai/blackboard_agent.hpp>
 #   include <netlab/simple_network.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <memory>
@@ -14,7 +14,7 @@ namespace ai {
 
 struct  cortex_robot : public cortex
 {
-    explicit cortex_robot(blackboard_weak_ptr const  blackboard_);
+    explicit cortex_robot(blackboard_agent_weak_ptr const  blackboard_);
     ~cortex_robot();
 
     void  initialise() override;

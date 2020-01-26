@@ -1,7 +1,7 @@
 #ifndef AI_ENV_SNAPSHOTS_CACHE_HPP_INCLUDED
 #   define AI_ENV_SNAPSHOTS_CACHE_HPP_INCLUDED
 
-#   include <ai/blackboard.hpp>
+#   include <ai/blackboard_agent.hpp>
 #   include <ai/env/snapshot.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <unordered_map>
@@ -27,14 +27,14 @@ struct  snapshots_cache
 
     using  snapshots_as_taken_in_time = std::multimap<std::chrono::system_clock::time_point, snapshot_const_ptr>;
 
-    snapshots_cache(blackboard_weak_const_ptr const  blackboard_ptr, config const&  cfg);
+    snapshots_cache(blackboard_agent_weak_const_ptr const  blackboard_ptr, config const&  cfg);
 
     void  next_round(float_32_bit const  time_step_in_seconds);
 
     snapshots_as_taken_in_time const&  get_snapshots_as_taken_in_time() const { return m_cache; }
 
 private:
-    blackboard_weak_const_ptr  m_blackboard;
+    blackboard_agent_weak_const_ptr  m_blackboard;
     config  m_config;
     snapshots_as_taken_in_time  m_cache;
     float_32_bit  m_time_buffer;
@@ -44,7 +44,7 @@ private:
 using  snapshots_cache_ptr = std::shared_ptr<snapshots_cache>;
 
 
-snapshots_cache_ptr  create_snapshots_cache(blackboard_weak_const_ptr const  blackboard_ptr, snapshots_cache::config const& cfg);
+snapshots_cache_ptr  create_snapshots_cache(blackboard_agent_weak_const_ptr const  blackboard_ptr, snapshots_cache::config const& cfg);
 
 
 }}

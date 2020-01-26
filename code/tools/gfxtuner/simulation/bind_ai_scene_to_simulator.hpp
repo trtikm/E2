@@ -25,7 +25,7 @@ struct bind_ai_scene_to_simulator : public ai::scene
         m_simulator_ptr = nullptr;
     }
 
-    node_id  get_aux_root_node_for_agent(node_id const&  agent_nid, std::string const&  aux_root_node_name) override;
+    node_id  get_aux_root_node(ai::OBJECT_KIND const  kind, node_id const&  nid, std::string const&  aux_root_node_name) override;
 
     bool  has_scene_node(node_id const&  nid) const override;
     void  insert_scene_node(
@@ -85,11 +85,11 @@ struct bind_ai_scene_to_simulator : public ai::scene
 
     void  register_to_collision_contacts_stream(
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to capture.
-            ai::agent_id const  agent_id    // Identifies an agent which will receive the contancts of the collider to its blackboard.
+            ai::object_id const&  oid       // Identifies an ai object which will receive the contancts of the collider to its blackboard.
             ) override;
     void  unregister_to_collision_contacts_stream(
             node_id const&  collider_nid,   // A scene node with a collider whose collision contacts with other scene objects to stop capturing.
-            ai::agent_id const  agent_id    // Identifies an agent which will stop receiving the contancts of the collider to its blackboard.
+            ai::object_id const&  oid       // Identifies an ai object which will stop receiving the contancts of the collider to its blackboard.
             ) override;
     bool  do_tracking_collision_contact_of_collision_object(angeo::collision_object_id const  coid) const;
     void  on_collision_contact(
@@ -97,7 +97,8 @@ struct bind_ai_scene_to_simulator : public ai::scene
             vector3 const&  contact_point_in_world_space,
             vector3 const&  unit_normal_in_world_space,
             angeo::COLLISION_MATERIAL_TYPE const  material,
-            float_32_bit const  normal_force_magnitude
+            float_32_bit const  normal_force_magnitude,
+            angeo::collision_object_id const* const  other_coid_ptr
             ) const;
 
     angeo::collision_scene const&  get_collision_scene() const;
@@ -107,8 +108,19 @@ struct bind_ai_scene_to_simulator : public ai::scene
 
 private:
 
+    using collision_contacts_stream_type = std::unordered_map<angeo::collision_object_id, std::pair<node_id, ai::object_id> >;
+
+    void  on_collision_contact(
+            collision_contacts_stream_type::const_iterator const  it,
+            vector3 const&  contact_point_in_world_space,
+            vector3 const&  unit_normal_in_world_space,
+            angeo::COLLISION_MATERIAL_TYPE const  material,
+            float_32_bit const  normal_force_magnitude,
+            collision_contacts_stream_type::const_iterator const  other_it
+            ) const;
+
     simulator*  m_simulator_ptr;
-    std::unordered_map<angeo::collision_object_id, std::pair<node_id, ai::agent_id> >  m_collision_contacts_stream;
+    collision_contacts_stream_type  m_collision_contacts_stream;
 };
 
 

@@ -21,7 +21,7 @@
 #   include <angeo/tensor_math.hpp>
 #   include <angeo/collision_scene.hpp>
 #   include <angeo/rigid_body_simulator.hpp>
-#   include <ai/agents.hpp>
+#   include <ai/simulator.hpp>
 #   include <utility/std_pair_hash.hpp>
 #   include <utility/random.hpp>
 #   include <boost/property_tree/ptree.hpp>
@@ -236,7 +236,7 @@ struct simulator : public qtgl::real_time_simulator
     scn::scene_history_ptr  get_scene_history() { return m_scene_history; }
     std::shared_ptr<angeo::collision_scene>  get_collision_scene() const { return m_collision_scene_ptr; }
     std::shared_ptr<angeo::rigid_body_simulator>  get_rigid_body_simulator() const { return m_rigid_body_simulator_ptr; }
-    std::shared_ptr<ai::agents>  get_agents() const { return m_agents_ptr; }
+    std::shared_ptr<ai::simulator>  get_ai_simulator() const { return m_ai_simulator_ptr; }
 
     void  set_position_of_scene_node(scn::scene_node_id const&  id, vector3 const&  new_origin);
     void  set_orientation_of_scene_node(scn::scene_node_id const&  id, quaternion const&  new_orientation);
@@ -272,6 +272,8 @@ struct simulator : public qtgl::real_time_simulator
     void  set_effects_config(qtgl::effects_config const  config) { m_effects_config = config; }
 
     scn::scene_node_id const&  get_scene_node_of_agent(ai::agent_id const  id) const { return m_binding_of_agents_to_scene.at(id); }
+    scn::scene_node_id const&  get_scene_node_of_device(ai::device_id const  id) const { return m_binding_of_devices_to_scene.at(id); }
+    scn::scene_node_id const&  get_scene_node_of_sensor(ai::sensor_id const  id) const { return m_binding_of_sensors_to_scene.at(id); }
 
     scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_ptr  node_ptr);
     scn::scene_node_ptr  find_nearest_rigid_body_node(scn::scene_node_id const&  id)
@@ -448,8 +450,10 @@ private:
     std::shared_ptr<angeo::rigid_body_simulator>  m_rigid_body_simulator_ptr;
     std::unordered_map<angeo::collision_object_id, angeo::rigid_body_id>  m_binding_of_collision_objects;
     std::unordered_map<angeo::rigid_body_id, scn::scene_node_ptr>  m_binding_of_rigid_bodies;
-    std::shared_ptr<ai::agents>  m_agents_ptr;
+    std::shared_ptr<ai::simulator>  m_ai_simulator_ptr;
     std::unordered_map<ai::agent_id, scn::scene_node_id>  m_binding_of_agents_to_scene;
+    std::unordered_map<ai::device_id, scn::scene_node_id>  m_binding_of_devices_to_scene;
+    std::unordered_map<ai::sensor_id, scn::scene_node_id>  m_binding_of_sensors_to_scene;
 
     // Debugging
 

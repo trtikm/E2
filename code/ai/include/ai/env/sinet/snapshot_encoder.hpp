@@ -3,7 +3,7 @@
 
 #   include <ai/env/snapshot.hpp>
 #   include <ai/env/sinet/number_encoder.hpp>
-#   include <ai/blackboard.hpp>
+#   include <ai/blackboard_agent.hpp>
 #   include <netlab/simple_network.hpp>
 #   include <angeo/tensor_math.hpp>
 
@@ -12,7 +12,7 @@ namespace ai { namespace env { namespace sinet {
 
 struct  snapshot_encoder
 {
-    snapshot_encoder(blackboard_const_ptr const  blackboard_ptr, natural_8_bit const  start_layer_index);
+    snapshot_encoder(blackboard_agent_const_ptr const  blackboard_ptr, natural_8_bit const  start_layer_index);
 
     void  next_round(
             float_32_bit const  time_step_in_seconds,

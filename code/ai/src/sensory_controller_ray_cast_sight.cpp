@@ -89,7 +89,7 @@ sensory_controller_ray_cast_sight::ray_cast_info::ray_cast_info(
 
 
 sensory_controller_ray_cast_sight::sensory_controller_ray_cast_sight(
-        blackboard_weak_ptr const  blackboard_,
+        blackboard_agent_weak_ptr const  blackboard_,
         sensory_controller_sight::camera_config const&  camera_config_,
         ray_cast_config const& ray_cast_config_)
     : sensory_controller_sight(blackboard_, camera_config_)

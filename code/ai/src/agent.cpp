@@ -16,7 +16,7 @@
 namespace ai {
 
 
-blackboard_ptr  agent::create_blackboard(AGENT_KIND const  agent_kind)
+blackboard_agent_ptr  agent::create_blackboard(AGENT_KIND const  agent_kind)
 {
     TMPROF_BLOCK();
 
@@ -26,14 +26,14 @@ blackboard_ptr  agent::create_blackboard(AGENT_KIND const  agent_kind)
     case AGENT_KIND::STATIONARY:
     case AGENT_KIND::RANDOM:
     case AGENT_KIND::ROBOT:
-        return std::make_shared<blackboard>();
+        return std::make_shared<blackboard_agent>();
     default:
         UNREACHABLE();
     }
 }
 
 
-void  agent::create_modules(blackboard_ptr const  bb, input_devices_ptr const  idev)
+void  agent::create_modules(blackboard_agent_ptr const  bb, input_devices_ptr const  idev)
 {
     TMPROF_BLOCK();
 
@@ -105,7 +105,7 @@ void  agent::create_modules(blackboard_ptr const  bb, input_devices_ptr const  i
 namespace ai {
 
 
-agent::agent(blackboard_ptr const  blackboard_)
+agent::agent(blackboard_agent_ptr const  blackboard_)
     : m_blackboard(blackboard_)
 {
     TMPROF_BLOCK();

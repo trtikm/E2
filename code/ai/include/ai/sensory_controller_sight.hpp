@@ -1,7 +1,7 @@
 #ifndef AI_SENSORY_CONTROLLER_SIGHT_HPP_INCLUDED
 #   define AI_SENSORY_CONTROLLER_SIGHT_HPP_INCLUDED
 
-#   include <ai/blackboard.hpp>
+#   include <ai/blackboard_agent.hpp>
 #   include <angeo/tensor_math.hpp>
 #   include <qtgl/camera.hpp>
 #   include <memory>
@@ -30,7 +30,7 @@ struct  sensory_controller_sight
     };
 
     sensory_controller_sight(
-            blackboard_weak_ptr const  blackboard_,
+            blackboard_agent_weak_ptr const  blackboard_,
             camera_config const&  camera_config_
             );
 
@@ -38,14 +38,14 @@ struct  sensory_controller_sight
 
     virtual void  next_round(float_32_bit const  time_step_in_seconds);
 
-    blackboard_ptr  get_blackboard() const { return m_blackboard.lock(); }
+    blackboard_agent_ptr  get_blackboard() const { return m_blackboard.lock(); }
 
     camera_config const&  get_camera_config() const { return m_camera_config; }
     // NOTE: Camera's coord. system is in the world space, i.e. NOT in agent's local space!
     camera_perspective_ptr  get_camera() const { return m_camera; }
 
 private:
-    blackboard_weak_ptr  m_blackboard;
+    blackboard_agent_weak_ptr  m_blackboard;
     camera_config  m_camera_config;
     camera_perspective_ptr  m_camera;
 };

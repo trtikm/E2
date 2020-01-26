@@ -14,7 +14,6 @@ agents::agents(scene_ptr const  scene_)
     : m_agents()
     , m_scene(scene_)
     , m_input_devices(std::make_shared<input_devices>())
-    , m_scene_update_events()
 {
     ASSUMPTION(m_scene != nullptr);
 }
@@ -55,7 +54,7 @@ void  agents::construct_agent(agent_id const  id, agent_props&  props)
 {
     TMPROF_BLOCK();
 
-    blackboard_ptr const  bb = agent::create_blackboard(props.agent_kind);
+    blackboard_agent_ptr const  bb = agent::create_blackboard(props.agent_kind);
     {
         bb->m_motion_templates = props.motion_templates;
         bb->m_agent_id = id;
@@ -89,10 +88,6 @@ void  agents::next_round(
 {
     TMPROF_BLOCK();
 
-    for (auto const&  event_handler_ptr : m_scene_update_events)
-        (*event_handler_ptr)();
-    m_scene_update_events.clear();
-
     m_input_devices->keyboard = keyboard;
     m_input_devices->mouse = mouse;
     m_input_devices->window = window;
@@ -110,12 +105,14 @@ void  agents::next_round(
 
 
 void  agents::on_collision_contact(
-        agent_id const  agent_id,
+        agent_id const  id,
         scene::node_id const&  collider_nid,
-        scene::collicion_contant_info const&  contact_info
+        scene::collicion_contant_info const&  contact_info,
+        object_id const&  other_id,
+        scene::node_id const&  other_collider_nid
         )
 {
-    m_agents.at(agent_id)->agent_ptr->get_blackboard()->m_sensory_controller->get_collision_contacts()->on_collision_contact(
+    m_agents.at(id)->agent_ptr->get_blackboard()->m_sensory_controller->get_collision_contacts()->on_collision_contact(
             collider_nid,
             contact_info
             );

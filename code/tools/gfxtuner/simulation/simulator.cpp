@@ -368,8 +368,10 @@ simulator::simulator()
     , m_rigid_body_simulator_ptr(std::make_shared<angeo::rigid_body_simulator>())
     , m_binding_of_collision_objects()
     , m_binding_of_rigid_bodies()
-    , m_agents_ptr(std::make_shared<ai::agents>(std::make_shared<bind_ai_scene_to_simulator>(this)))
+    , m_ai_simulator_ptr(std::make_shared<ai::simulator>(std::make_shared<bind_ai_scene_to_simulator>(this)))
     , m_binding_of_agents_to_scene()
+    , m_binding_of_devices_to_scene()
+    , m_binding_of_sensors_to_scene()
 
     // Debugging
 
@@ -669,10 +671,11 @@ if (keyboard_props().was_just_released(qtgl::KEY_F3()))
 if (render_retinas)
     for (auto const& agent_id_and_node_id : m_binding_of_agents_to_scene)
     {
-        if (!m_agents_ptr->ready(agent_id_and_node_id.first))
+        ai::agents const&  agents = get_ai_simulator()->get_agents();
+        if (!agents.ready(agent_id_and_node_id.first))
             continue;
 
-        ai::retina_ptr const  retina_ptr = m_agents_ptr->at(agent_id_and_node_id.first).get_blackboard()->m_retina_ptr;
+        ai::retina_ptr const  retina_ptr = agents.at(agent_id_and_node_id.first).get_blackboard()->m_retina_ptr;
         if (retina_ptr == nullptr)
             continue;
 
@@ -873,14 +876,15 @@ void  simulator::perform_simulation_step(float_64_bit const  time_to_simulate_in
     //    max_computation_time_in_seconds -= duration_of_last_simulation_step_in_seconds;
     //}
 
-    m_agents_ptr->next_round((float_32_bit)time_to_simulate_in_seconds, keyboard_props(), mouse_props(), window_props());
+    get_ai_simulator()->next_round((float_32_bit)time_to_simulate_in_seconds, keyboard_props(), mouse_props(), window_props());
 
     if (m_do_show_ai_action_controller_props)
     {
+        ai::agents const&  agents = get_ai_simulator()->get_agents();
         for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
-            if (m_agents_ptr->ready(agent_id_and_node_id.first))
+            if (agents.ready(agent_id_and_node_id.first))
             {
-                ai::blackboard_const_ptr const  blackboard = m_agents_ptr->at(agent_id_and_node_id.first).get_blackboard();
+                ai::blackboard_agent_const_ptr const  blackboard = agents.at(agent_id_and_node_id.first).get_blackboard();
 
                 scn::scene_node_ptr const  node_ptr = get_scene_node(blackboard->m_action_controller->get_motion_object_node_id());
 
@@ -973,10 +977,12 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
 {
     TMPROF_BLOCK();
 
-    auto const  ai_scene_binding = std::dynamic_pointer_cast<bind_ai_scene_to_simulator>(m_agents_ptr->get_scene_ptr());
+    auto const  ai_scene_binding = std::dynamic_pointer_cast<bind_ai_scene_to_simulator>(get_ai_simulator()->get_scene_ptr());
 
     struct  contact_props
     {
+        angeo::collision_object_id  other_coid;
+        bool  is_other_coid_tracked;
         vector3  contact_point;
         vector3  unit_normal;
         angeo::COLLISION_MATERIAL_TYPE  material;
@@ -1010,9 +1016,9 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                     if (rb_1_it == m_binding_of_collision_objects.cend() || rb_2_it == m_binding_of_collision_objects.cend())
                     {
                         if (track_coid_1)
-                            ai_scene_binding->on_collision_contact(coid_1, contact_point, unit_normal, material_2, 0.0f);
+                            ai_scene_binding->on_collision_contact(coid_1, contact_point, unit_normal, material_2, 0.0f, nullptr);
                         if (track_coid_2)
-                            ai_scene_binding->on_collision_contact(coid_2, contact_point, -unit_normal, material_1, 0.0f);
+                            ai_scene_binding->on_collision_contact(coid_2, contact_point, -unit_normal, material_1, 0.0f, nullptr);
                         return true;
                     }
 
@@ -1048,6 +1054,8 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                     if (track_coid_1)
                     {
                         auto&  info_ref = ai_scene_binding_contacts[coid_1][output_constraint_ids.front()];
+                        info_ref.other_coid = coid_2;
+                        info_ref.is_other_coid_tracked = track_coid_2;
                         info_ref.contact_point = contact_point;
                         info_ref.unit_normal = unit_normal;
                         info_ref.material = material_2;
@@ -1055,6 +1063,8 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                     if (track_coid_2)
                     {
                         auto&  info_ref = ai_scene_binding_contacts[coid_2][output_constraint_ids.front()];
+                        info_ref.other_coid = coid_1;
+                        info_ref.is_other_coid_tracked = track_coid_1;
                         info_ref.contact_point = contact_point;
                         info_ref.unit_normal = -unit_normal;
                         info_ref.material = material_1;
@@ -1073,7 +1083,8 @@ void  simulator::perform_simulation_micro_step(float_64_bit const  time_to_simul
                     constraint_id_and_info.second.contact_point,
                     constraint_id_and_info.second.unit_normal,
                     constraint_id_and_info.second.material,
-                    m_rigid_body_simulator_ptr->get_constraint_system().get_solution_of_constraint(constraint_id_and_info.first)
+                    m_rigid_body_simulator_ptr->get_constraint_system().get_solution_of_constraint(constraint_id_and_info.first),
+                    constraint_id_and_info.second.is_other_coid_tracked ? &constraint_id_and_info.second.other_coid : nullptr
                     );
 
     m_rigid_body_simulator_ptr->integrate_motion_of_rigid_bodies(time_to_simulate_in_seconds);
@@ -1105,10 +1116,11 @@ void  simulator::update_retina_of_agents_from_offscreen_images(float_32_bit cons
 
     for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
     {
-        if (!m_agents_ptr->ready(agent_id_and_node_id.first))
+        ai::agents const&  agents = get_ai_simulator()->get_agents();
+        if (!agents.ready(agent_id_and_node_id.first))
             continue;
 
-        ai::retina_ptr const  retina_ptr = m_agents_ptr->at(agent_id_and_node_id.first).get_blackboard()->m_retina_ptr;
+        ai::retina_ptr const  retina_ptr = agents.at(agent_id_and_node_id.first).get_blackboard()->m_retina_ptr;
         if (retina_ptr == nullptr)
             continue;
 
@@ -1122,7 +1134,7 @@ void  simulator::update_retina_of_agents_from_offscreen_images(float_32_bit cons
         m_offscreen_recovery_times.erase(recovery_time_it);
 
         ai::sensory_controller_sight_ptr const  sight_ptr =
-                m_agents_ptr->at(agent_id_and_node_id.first).get_sensory_controller().get_sight();
+                agents.at(agent_id_and_node_id.first).get_sensory_controller().get_sight();
         if (sight_ptr == nullptr)
             continue;
         ai::sensory_controller_sight::camera_perspective_ptr const  camera_ptr = sight_ptr->get_camera();
@@ -1991,11 +2003,13 @@ void  simulator::render_ai_action_controller_props(
         draw_state = m_cache_of_batches_of_ai_agents.lines_batch.get_draw_state();
     }
 
+    ai::agents const&  agents = get_ai_simulator()->get_agents();
+
     for (auto const&  agent_id_and_node_id : m_binding_of_agents_to_scene)
     {
-        if (!m_agents_ptr->ready(agent_id_and_node_id.first))
+        if (!agents.ready(agent_id_and_node_id.first))
             continue;
-        ai::sensory_controller_sight_ptr const  sight_ptr = m_agents_ptr->at(agent_id_and_node_id.first).get_sensory_controller().get_sight();
+        ai::sensory_controller_sight_ptr const  sight_ptr = agents.at(agent_id_and_node_id.first).get_sensory_controller().get_sight();
         if (sight_ptr == nullptr)
             continue;
         ai::sensory_controller_sight::camera_perspective_ptr const  camera_ptr = sight_ptr->get_camera();
@@ -2055,12 +2069,12 @@ void  simulator::render_ai_action_controller_props(
             ;
     for (auto const& agent_id_and_node_id : m_binding_of_agents_to_scene)
     {
-        if (!m_agents_ptr->ready(agent_id_and_node_id.first))
+        if (!agents.ready(agent_id_and_node_id.first))
             continue;
 
         ai::sensory_controller_ray_cast_sight_ptr const  sight_ptr =
                 std::dynamic_pointer_cast<ai::sensory_controller_ray_cast_sight>(
-                        m_agents_ptr->at(agent_id_and_node_id.first).get_sensory_controller().get_sight()
+                        agents.at(agent_id_and_node_id.first).get_sensory_controller().get_sight()
                         );
         if (sight_ptr == nullptr)
             continue;
@@ -2712,7 +2726,7 @@ void  simulator::insert_agent(scn::scene_record_id const&  id, scn::agent_props 
     scn::scene_node_ptr const  node_ptr = get_scene_node(id.get_node_id());
     ASSUMPTION(node_ptr != nullptr && !node_ptr->has_parent());
     ai::agent_id const  agent_id =
-            m_agents_ptr->insert(
+            get_ai_simulator()->insert_agent(
                     id.get_node_id(),
                     props.m_skeleton_props->skeletal_motion_templates,
                     props.m_agent_kind,
@@ -2732,7 +2746,7 @@ void  simulator::erase_agent(scn::scene_record_id const&  id)
     scn::agent const* const  agent_ptr = scn::get_agent(*node_ptr);
     ASSUMPTION(agent_ptr != nullptr);
 
-    m_agents_ptr->erase(agent_ptr->id());
+    get_ai_simulator()->erase_agent(agent_ptr->id());
     m_binding_of_agents_to_scene.erase(agent_ptr->id());
 
     m_scene_selection.erase_record(id);
@@ -2964,8 +2978,10 @@ void  simulator::clear_scene()
     m_cache_of_batches_of_ai_agents.lines_batch.release();
     m_cache_of_batches_of_ai_agents.sight_frustum_batches.clear();
 
-    m_agents_ptr->clear();
+    get_ai_simulator()->clear();
     m_binding_of_agents_to_scene.clear();
+    m_binding_of_devices_to_scene.clear();
+    m_binding_of_sensors_to_scene.clear();
 
     m_rigid_body_simulator_ptr->clear();
     m_binding_of_rigid_bodies.clear();

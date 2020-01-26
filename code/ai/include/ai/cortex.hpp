@@ -1,7 +1,7 @@
 #ifndef AI_CORTEX_HPP_INCLUDED
 #   define AI_CORTEX_HPP_INCLUDED
 
-#   include <ai/blackboard.hpp>
+#   include <ai/blackboard_agent.hpp>
 #   include <ai/motion_desire_props.hpp>
 #   include <angeo/tensor_math.hpp>
 
@@ -10,10 +10,10 @@ namespace ai {
 
 struct  cortex
 {
-    explicit cortex(blackboard_weak_ptr const  blackboard_);
+    explicit cortex(blackboard_agent_weak_ptr const  blackboard_);
     virtual ~cortex() {}
 
-    blackboard_ptr  get_blackboard() const { return m_blackboard.lock(); }
+    blackboard_agent_ptr  get_blackboard() const { return m_blackboard.lock(); }
     motion_desire_props const&  get_motion_desire_props() const { return m_motion_desire_props; }
 
     // For initialisation steps which cannot be performed/completed in a constructor.
@@ -28,11 +28,11 @@ protected:
     motion_desire_props  m_motion_desire_props;
 
 private:
-    blackboard_weak_ptr  m_blackboard;
+    blackboard_agent_weak_ptr  m_blackboard;
 };
 
 
-void  set_stationary_desire(motion_desire_props&  desire_props, blackboard_ptr const  bb);
+void  set_stationary_desire(motion_desire_props&  desire_props, blackboard_agent_ptr const  bb);
 
 
 }

@@ -190,9 +190,9 @@ void  destroy_collider_and_rigid_bofy_of_motion_scene_node(scene_ptr const  s, s
 }
 
 
-scene::node_id  get_motion_object_nid(scene_ptr const  s, scene::node_id const  agent_nid)
+scene::node_id  get_motion_object_nid(scene_ptr const  s, OBJECT_KIND const  kind, scene::node_id const  agent_nid)
 {
-    return s->get_aux_root_node_for_agent(agent_nid, "motion_object");
+    return s->get_aux_root_node(kind, agent_nid, "motion_object");
 }
 
 

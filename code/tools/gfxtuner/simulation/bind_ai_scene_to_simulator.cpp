@@ -37,14 +37,22 @@ void  relocate_node(scn::scene_node_ptr const  node_ptr, angeo::coordinate_syste
 }
 
 
-ai::scene::node_id  bind_ai_scene_to_simulator::get_aux_root_node_for_agent(
-        node_id const&  agent_nid,
+ai::scene::node_id  bind_ai_scene_to_simulator::get_aux_root_node(
+        ai::OBJECT_KIND const  kind,
+        node_id const&  nid,
         std::string const&  aux_root_node_name
         )
 {
     std::stringstream  sstr;
     sstr << detail::get_ai_node_name_prefix();
-    for (auto const&  name : agent_nid.path())
+    switch (kind)
+    {
+    case ai::OBJECT_KIND::AGENT: sstr << "agent."; break;
+    case ai::OBJECT_KIND::DEVICE: sstr << "device."; break;
+    case ai::OBJECT_KIND::SENSOR: sstr << "sensor."; break;
+    default: UNREACHABLE();
+    }
+    for (auto const&  name : nid.path())
         sstr << name << '.';
     sstr << aux_root_node_name;
     return node_id(sstr.str());
@@ -374,7 +382,7 @@ vector3  bind_ai_scene_to_simulator::get_gravity_acceleration_at_point(vector3 c
 
 void  bind_ai_scene_to_simulator::register_to_collision_contacts_stream(
         node_id const&  collider_nid,
-        ai::agent_id const  agent_id
+        ai::object_id const&  oid
         )
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
@@ -383,13 +391,13 @@ void  bind_ai_scene_to_simulator::register_to_collision_contacts_stream(
     auto const  collider_ptr = scn::get_collider(*node_ptr);
     ASSUMPTION(collider_ptr != nullptr && collider_ptr->ids().size() == 1UL);
     ASSUMPTION(m_collision_contacts_stream.count(collider_ptr->id()) == 0UL);
-    m_collision_contacts_stream.insert({ collider_ptr->id() , {collider_nid, agent_id} });
+    m_collision_contacts_stream.insert({ collider_ptr->id() , {collider_nid, oid} });
 }
 
 
 void  bind_ai_scene_to_simulator::unregister_to_collision_contacts_stream(
         node_id const&  collider_nid,
-        ai::agent_id const  agent_id
+        ai::object_id const&  oid
         )
 {
     ASSUMPTION(m_simulator_ptr != nullptr);
@@ -413,15 +421,36 @@ void  bind_ai_scene_to_simulator::on_collision_contact(
         vector3 const&  contact_point_in_world_space,
         vector3 const&  unit_normal_in_world_space,
         angeo::COLLISION_MATERIAL_TYPE const  material,
-        float_32_bit const  normal_force_magnitude
+        float_32_bit const  normal_force_magnitude,
+        angeo::collision_object_id const* const  other_coid_ptr
         ) const
 {
-    ASSUMPTION(m_simulator_ptr != nullptr);
+    on_collision_contact(
+            m_collision_contacts_stream.find(coid),
+            contact_point_in_world_space,
+            unit_normal_in_world_space,
+            material,
+            normal_force_magnitude,
+            other_coid_ptr == nullptr ? m_collision_contacts_stream.cend() : m_collision_contacts_stream.find(*other_coid_ptr)
+            );
+}
 
-    auto  it = m_collision_contacts_stream.find(coid);
-    ASSUMPTION(it != m_collision_contacts_stream.cend());
 
-    m_simulator_ptr->get_agents()->on_collision_contact(
+void  bind_ai_scene_to_simulator::on_collision_contact(
+        collision_contacts_stream_type::const_iterator const  it,
+        vector3 const&  contact_point_in_world_space,
+        vector3 const&  unit_normal_in_world_space,
+        angeo::COLLISION_MATERIAL_TYPE const  material,
+        float_32_bit const  normal_force_magnitude,
+        collision_contacts_stream_type::const_iterator const  other_it
+        ) const
+{
+
+    ASSUMPTION(m_simulator_ptr != nullptr && it != m_collision_contacts_stream.cend());
+
+    bool const  has_other = other_it != m_collision_contacts_stream.cend();
+
+    m_simulator_ptr->get_ai_simulator()->on_collision_contact(
             it->second.second,
             it->second.first,
             ai::scene::collicion_contant_info(
@@ -429,7 +458,9 @@ void  bind_ai_scene_to_simulator::on_collision_contact(
                     unit_normal_in_world_space,
                     material,
                     normal_force_magnitude
-                    )
+                    ),
+            has_other ? other_it->second.second : ai::object_id::make_invalid(),
+            has_other ? other_it->second.first : node_id{}
             );
 }
 
